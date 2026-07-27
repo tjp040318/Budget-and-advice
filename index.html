@@ -1,0 +1,2536 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Payment scheduling engine — v1 prototype</title>
+<style>
+/* ============================================================================
+   Palette: cool ledger paper. Ground is a slightly cyan grey, surfaces white,
+   ink a deep slate rather than black. Teal carries structure and action; slate
+   blue is reserved for credit-score timing moves so "we did something clever"
+   never reads the same as "here is a bill"; moss means covered.
+
+   Red appears in exactly one situation: something is actually wrong. Not for
+   debt, not for money going out. A person with $40k of debt should not open
+   this and see a wall of red.
+
+   Type: no webfonts (nothing external loads). The pairing is structural — a
+   humanist sans for prose, monospace with tabular figures for every number, so
+   columns line up the way a ledger does.
+   ============================================================================ */
+:root{
+  --bg:#EEF2F3; --surface:#FFFFFF; --surface-2:#F7FAFA;
+  --line:#DCE3E5; --line-strong:#C3CFD2;
+  --ink:#0F2229; --ink-2:#43606A; --ink-3:#7C949C;
+  --teal:#0E5A61; --teal-soft:#E2EFEF; --teal-line:#9CC4C5;
+  --slate:#3C5C8C; --slate-soft:#E7ECF4; --slate-line:#A9BCD8;
+  --moss:#3F6B4A; --moss-soft:#E7EEE8;
+  --alert:#A32118; --alert-soft:#FBEAE8; --alert-line:#E0A9A3;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --radius:3px;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--sans);
+  font-size:15px; line-height:1.5; -webkit-font-smoothing:antialiased;
+}
+.num{font-family:var(--mono); font-variant-numeric:tabular-nums; font-feature-settings:"tnum" 1}
+
+/* ------------------------------------------------------------------ shell */
+.shell{display:grid; grid-template-columns:248px minmax(0,1fr); min-height:100vh}
+.rail{
+  background:var(--surface); border-right:1px solid var(--line);
+  padding:22px 0 24px; display:flex; flex-direction:column; gap:22px;
+  position:sticky; top:0; height:100vh; overflow-y:auto;
+}
+.brand{padding:0 20px}
+.brand h1{font-size:15px; margin:0; letter-spacing:-0.01em; font-weight:640}
+.brand p{margin:3px 0 0; font-size:12.5px; color:var(--ink-3); line-height:1.35}
+nav{display:flex; flex-direction:column}
+nav button{
+  all:unset; cursor:pointer; padding:8px 20px; font-size:14px; color:var(--ink-2);
+  border-left:2px solid transparent; display:flex; justify-content:space-between; align-items:center; gap:8px;
+}
+nav button:hover{background:var(--surface-2); color:var(--ink)}
+nav button[aria-current="true"]{
+  color:var(--ink); font-weight:600; border-left-color:var(--teal); background:var(--teal-soft);
+}
+nav button .tick{font-size:11px; color:var(--ink-3); font-family:var(--mono)}
+nav button[aria-current="true"] .tick{color:var(--teal)}
+.rail h2{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3);
+  margin:0 0 8px; padding:0 20px; font-weight:640;
+}
+.people{display:flex; flex-direction:column}
+.person{
+  all:unset; cursor:pointer; padding:9px 20px; border-left:2px solid transparent;
+}
+.person:hover{background:var(--surface-2)}
+.person[aria-current="true"]{border-left-color:var(--ink); background:var(--surface-2)}
+.person b{display:block; font-size:13.5px; font-weight:600}
+.person span{display:block; font-size:11.5px; color:var(--ink-3); margin-top:1px}
+.rail-note{
+  margin-top:auto; padding:0 20px; font-size:11.5px; color:var(--ink-3); line-height:1.5;
+}
+.rail-note code{font-family:var(--mono); font-size:11px; color:var(--ink-2)}
+
+/* ------------------------------------------------------------------- main */
+main{min-width:0; padding:0 0 72px}
+.banner{
+  padding:9px 34px; font-size:13px; border-bottom:1px solid var(--line);
+  display:flex; align-items:center; gap:10px; background:var(--moss-soft); color:var(--moss);
+}
+.banner.bad{background:var(--alert-soft); color:var(--alert); border-bottom-color:var(--alert-line); font-weight:600}
+.banner button{
+  all:unset; cursor:pointer; text-decoration:underline; text-underline-offset:2px; font-size:12.5px;
+}
+.wrap{padding:30px 34px; max-width:1160px}
+.page-head{margin-bottom:22px}
+.page-head h2{margin:0; font-size:23px; letter-spacing:-0.02em; font-weight:650}
+.page-head .sub{margin:6px 0 0; color:var(--ink-2); font-size:14.5px; max-width:74ch}
+.eyebrow{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink-3);
+  font-weight:640; margin:0 0 5px;
+}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); margin-bottom:20px}
+.card > header{
+  padding:13px 18px; border-bottom:1px solid var(--line); display:flex;
+  justify-content:space-between; align-items:baseline; gap:14px; flex-wrap:wrap;
+}
+.card > header h3{margin:0; font-size:14px; font-weight:640; letter-spacing:-0.005em}
+.card > header .aside{font-size:12.5px; color:var(--ink-3)}
+.card .body{padding:16px 18px}
+.card .body.flush{padding:0}
+
+/* ---------------------------------------------------------------- ledger */
+.day-head{
+  display:flex; align-items:baseline; gap:10px; padding:11px 18px 6px;
+  border-top:1px solid var(--line); background:var(--surface-2);
+}
+.day-head:first-child{border-top:none}
+.day-head b{font-size:12.5px; font-weight:640; letter-spacing:.01em}
+.day-head span{font-size:11.5px; color:var(--ink-3)}
+.day-head .bal{margin-left:auto; font-size:11.5px; color:var(--ink-3)}
+.row{
+  display:grid; grid-template-columns:minmax(0,1fr) auto; gap:4px 18px;
+  padding:11px 18px; border-top:1px solid var(--line);
+}
+.row:first-child{border-top:none}
+.row .what{display:flex; align-items:center; gap:8px; flex-wrap:wrap; min-width:0}
+.row .what b{font-weight:600; font-size:14.5px}
+.row .amt{font-size:14.5px; font-weight:600; text-align:right; white-space:nowrap}
+.row .why{grid-column:1/-1; font-size:13px; color:var(--ink-2); max-width:82ch; line-height:1.5}
+.row.muted .what b, .row.muted .amt{font-weight:400; color:var(--ink-2)}
+.row.muted{background:var(--surface-2)}
+.row.util{box-shadow:inset 2px 0 0 var(--slate)}
+.row.move{box-shadow:inset 2px 0 0 var(--teal-line)}
+.row.cond{box-shadow:inset 2px 0 0 var(--ink-3)}
+.row.cond .amt{color:var(--ink-2)}
+
+.chip{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.07em; font-weight:640;
+  padding:2px 6px; border-radius:2px; white-space:nowrap;
+  background:var(--surface-2); color:var(--ink-3); border:1px solid var(--line);
+}
+.chip.teal{background:var(--teal-soft); color:var(--teal); border-color:var(--teal-line)}
+.chip.slate{background:var(--slate-soft); color:var(--slate); border-color:var(--slate-line)}
+.chip.moss{background:var(--moss-soft); color:var(--moss); border-color:#B9CFBD}
+.chip.alert{background:var(--alert-soft); color:var(--alert); border-color:var(--alert-line)}
+
+/* ----------------------------------------------------------------- table */
+table{border-collapse:collapse; width:100%; font-size:14px}
+th{
+  text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.08em;
+  color:var(--ink-3); font-weight:640; padding:10px 14px; border-bottom:1px solid var(--line);
+  white-space:nowrap;
+}
+td{padding:12px 14px; border-bottom:1px solid var(--line); vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+tr.total td{border-top:1px solid var(--line-strong); font-weight:640; background:var(--surface-2)}
+.r{text-align:right}
+.tbl-scroll{overflow-x:auto}
+
+.meter{height:5px; background:var(--line); border-radius:3px; overflow:hidden; margin-top:6px; width:132px}
+.meter i{display:block; height:100%; background:var(--slate)}
+.meter.low i{background:var(--moss)}
+
+/* ---------------------------------------------------------------- charts */
+.chart{width:100%; display:block}
+.legend{display:flex; gap:18px; flex-wrap:wrap; font-size:12px; color:var(--ink-2); padding:0 18px 16px}
+.legend i{display:inline-block; width:16px; height:0; border-top-width:2px; border-top-style:solid; vertical-align:middle; margin-right:6px}
+.legend .dot{display:inline-block; width:8px; height:8px; border-radius:50%; vertical-align:middle; margin-right:6px}
+
+/* --------------------------------------------------------------- calendar */
+.months{display:grid; grid-template-columns:repeat(auto-fit,minmax(232px,1fr)); gap:20px; padding:16px 18px}
+.month h4{margin:0 0 8px; font-size:12.5px; font-weight:640}
+.dow{display:grid; grid-template-columns:repeat(7,1fr); font-size:10px; color:var(--ink-3); text-align:center; margin-bottom:3px}
+.grid{display:grid; grid-template-columns:repeat(7,1fr); gap:2px}
+.cell{
+  aspect-ratio:1/1; border:1px solid transparent; border-radius:2px; padding:2px 0 0;
+  display:flex; flex-direction:column; align-items:center; font-size:10.5px; color:var(--ink-3);
+  font-family:var(--mono);
+}
+.cell.on{background:var(--surface-2); border-color:var(--line); color:var(--ink-2)}
+.cell.today{border-color:var(--ink); color:var(--ink); font-weight:700}
+.cell .marks{display:flex; gap:1.5px; margin-top:1px; flex-wrap:wrap; justify-content:center}
+.cell .m{width:4px; height:4px; border-radius:50%}
+.m.in{background:var(--teal)}
+.m.out{background:var(--ink-2)}
+.m.utl{background:var(--slate)}
+.m.swp{background:var(--ink-3)}
+.m.cls{width:5px; height:5px; border-radius:0; background:none; border:1px solid var(--slate-line)}
+
+/* ---------------------------------------------------------------- what-if */
+.controls{display:grid; grid-template-columns:repeat(auto-fit,minmax(258px,1fr)); gap:22px; padding:18px}
+.ctl label{display:block; font-size:12.5px; font-weight:600; margin-bottom:3px}
+.ctl .hint{font-size:12px; color:var(--ink-3); margin-bottom:9px; line-height:1.45}
+.ctl output{font-family:var(--mono); font-size:15px; font-weight:600; color:var(--teal)}
+input[type=range]{width:100%; accent-color:var(--teal); margin:2px 0 0}
+.seg{display:flex; border:1px solid var(--line-strong); border-radius:var(--radius); overflow:hidden}
+.seg button{
+  all:unset; cursor:pointer; flex:1; text-align:center; padding:7px 4px; font-size:13px;
+  color:var(--ink-2); border-right:1px solid var(--line);
+}
+.seg button:last-child{border-right:none}
+.seg button:hover{background:var(--surface-2)}
+.seg button[aria-pressed="true"]{background:var(--teal); color:#fff; font-weight:600}
+.ctl label.toggle,.toggle{display:flex; align-items:center; gap:9px; cursor:pointer; font-size:13.5px}
+.toggle input{accent-color:var(--teal); width:16px; height:16px; margin:0}
+
+.deltas{display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:1px; background:var(--line)}
+.delta{background:var(--surface); padding:15px 18px}
+.delta .k{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-3); font-weight:640}
+.delta .v{font-family:var(--mono); font-size:19px; font-weight:600; margin-top:5px; letter-spacing:-0.01em}
+.delta .d{font-size:12.5px; margin-top:3px; color:var(--ink-2)}
+.delta .d.better{color:var(--moss); font-weight:600}
+.delta .d.worse{color:var(--ink-2)}
+
+/* ----------------------------------------------------------------- tests */
+.check{display:grid; grid-template-columns:22px minmax(0,1fr); gap:0 12px; padding:12px 18px; border-top:1px solid var(--line)}
+.check:first-child{border-top:none}
+.check .mark{font-family:var(--mono); font-size:12px; font-weight:700; color:var(--moss); padding-top:1px}
+.check.fail{background:var(--alert-soft)}
+.check.fail .mark{color:var(--alert)}
+.check.skip .mark{color:var(--ink-3)}
+.check b{font-size:14px; font-weight:600}
+.check.fail b{color:var(--alert)}
+.check p{margin:3px 0 0; font-size:12.5px; color:var(--ink-2); line-height:1.5; font-family:var(--mono)}
+
+.note{
+  font-size:13px; color:var(--ink-2); background:var(--surface-2); border:1px solid var(--line);
+  border-left:2px solid var(--teal-line); border-radius:var(--radius); padding:12px 15px; margin:0 0 20px; max-width:88ch;
+}
+.note b{color:var(--ink)}
+.empty{padding:26px 18px; color:var(--ink-2); font-size:14px; max-width:70ch}
+.empty b{display:block; color:var(--ink); font-size:15px; margin-bottom:5px}
+.sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
+
+@media (max-width:840px){
+  .shell{grid-template-columns:1fr}
+  .rail{position:static; height:auto; flex-direction:column}
+  .wrap{padding:22px 18px}
+  .banner{padding:9px 18px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+  <aside class="rail">
+    <div class="brand">
+      <h1>Payment scheduling engine</h1>
+      <p>v1 prototype &middot; mock data, no bank connections</p>
+    </div>
+
+    <nav aria-label="Views">
+      <button data-view="week">This week <span class="tick">1</span></button>
+      <button data-view="timeline">Timeline <span class="tick">2</span></button>
+      <button data-view="debts">Debts <span class="tick">3</span></button>
+      <button data-view="whatif">What if <span class="tick">4</span></button>
+      <button data-view="tests">Engine checks <span class="tick">&#9679;</span></button>
+    </nav>
+
+    <div>
+      <h2>Whose plan</h2>
+      <div class="people">
+        <button class="person" data-persona="steady">
+          <b>Dana Reyes</b><span>Steady W-2 &middot; biweekly</span></button>
+        <button class="person" data-persona="freelance">
+          <b>Priya Nandakumar</b><span>Freelance &middot; income swings</span></button>
+        <button class="person" data-persona="household">
+          <b>Alex &amp; Sam Ortega</b><span>Two incomes &middot; three accounts</span></button>
+      </div>
+    </div>
+
+    <p class="rail-note" id="railNote"></p>
+  </aside>
+
+  <main>
+    <div class="banner" id="banner"></div>
+    <div id="view"></div>
+  </main>
+</div>
+
+<script>
+/* ============================================================================
+   PAYMENT SCHEDULING ENGINE — v1 prototype
+   ----------------------------------------------------------------------------
+   No dependencies. No DOM access in this file. Deterministic.
+
+   ADAPTER BOUNDARY
+   ----------------------------------------------------------------------------
+   The engine never learns where data came from. Everything enters through a
+   DataSource. MockDataSource ships today; PlaidDataSource (balances,
+   transactions, deposit history) and MethodDataSource (liability detail,
+   payment execution) drop in behind the same shape with zero engine changes.
+
+     interface DataSource {
+       getProfile()                 -> { id, name, tagline, note }
+       getAccounts()                -> Account[]
+       getLiabilities()             -> Liability[]
+       getExpenses()                -> Expense[]
+       getIncomeEvents(startDn, n)  -> IncomeEvent[]   // n days from startDn
+       getDepositHistory(streamId)  -> number[]        // trailing net deposits
+       getSettings()                -> Settings
+     }
+
+   Day numbers ("dn") are integer days since the Unix epoch, UTC. Every date in
+   the engine is a dn. Calendars and formatting live at the edges.
+
+   TYPES
+   ----------------------------------------------------------------------------
+   IncomeEvent  { id, streamId, label, amount, dn, confidence,
+                  accountId, planAmount }
+                confidence: 'certain' | 'likely' | 'variable'
+                amount     = nominal / expected deposit
+                planAmount = what the plan is allowed to commit against.
+                             For 'variable' this is the conservative income
+                             floor (p25 of trailing history), not the mean.
+
+   Account      { id, name, type: 'checking'|'savings', balance }
+
+   Liability    { id, name, kind, balance, apr, minimumPayment, dueDayOfMonth,
+                  statementCloseDay, creditLimit, autopayEnabled, accountId }
+                kind: 'credit_card'|'auto_loan'|'student_loan'|'mortgage'
+                      |'personal_loan'|'rent'|'utility'
+                apr, statementCloseDay, creditLimit are null where they do not
+                apply. accountId names the account the obligation is drafted
+                from — required for honest multi-account households; defaults
+                to the primary checking account when absent.
+
+   Expense      { id, label, amount, cadence:'monthly'|'weekly',
+                  dayOfMonth|weekday, accountId, category }
+                DOCUMENTED EXTENSION to the brief's model. Without recurring
+                living costs the projection is a fantasy: every persona would
+                look like it has thousands of dollars of monthly slack. These
+                are background outflow, not scheduled payments — the engine
+                reserves against them but never "decides" them.
+
+   Settings     { bufferFloor, strategy, optimizeForCreditScore, horizonDays,
+                  extraMonthly }
+                bufferFloor is enforced on the HOUSEHOLD total across checking
+                accounts. Every individual checking account must additionally
+                stay at or above zero; the engine moves money between accounts
+                itself when an obligation is drafted from a thin account.
+
+   ScheduledPayment { id, dn, type, liabilityId, label, amount, fromAccountId,
+                      toAccountId, dueDn, reason, conditional, tags }
+                type: 'minimum' | 'statement_close' | 'extra' | 'sweep'
+                      | 'transfer'
+   ============================================================================ */
+
+'use strict';
+
+/* ---------------------------------------------------------------- calendar */
+
+const DAY_MS = 86400000;
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const MONTHS_LONG = ['January','February','March','April','May','June','July',
+                     'August','September','October','November','December'];
+const WEEKDAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+function dnFromISO(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return Math.round(Date.UTC(y, m - 1, d) / DAY_MS);
+}
+function dnFromParts(y, m, d) { return Math.round(Date.UTC(y, m, d) / DAY_MS); }
+function dparts(n) {
+  const dt = new Date(n * DAY_MS);
+  return { y: dt.getUTCFullYear(), m: dt.getUTCMonth(), d: dt.getUTCDate(), w: dt.getUTCDay() };
+}
+function isoFromDn(n) { return new Date(n * DAY_MS).toISOString().slice(0, 10); }
+function daysInMonth(y, m) { return new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); }
+
+function fmtD(n)   { const p = dparts(n); return MONTHS[p.m] + ' ' + p.d; }
+function fmtDW(n)  { const p = dparts(n); return WEEKDAYS[p.w] + ' ' + MONTHS[p.m] + ' ' + p.d; }
+function fmtDY(n)  { const p = dparts(n); return MONTHS[p.m] + ' ' + p.d + ', ' + p.y; }
+function fmtMY(n)  { const p = dparts(n); return MONTHS_LONG[p.m] + ' ' + p.y; }
+
+/** Every occurrence of `day`-of-month in [fromDn, toDn], clamped to month end. */
+function monthlyDates(fromDn, toDn, day) {
+  const out = [];
+  if (toDn < fromDn) return out;
+  const s = dparts(fromDn);
+  let y = s.y, m = s.m - 1;
+  if (m < 0) { m = 11; y--; }
+  const steps = Math.ceil((toDn - fromDn) / 28) + 3;
+  for (let i = 0; i < steps; i++) {
+    const dd = Math.min(day, daysInMonth(y, m));
+    const n = dnFromParts(y, m, dd);
+    if (n >= fromDn && n <= toDn) out.push(n);
+    m++; if (m > 11) { m = 0; y++; }
+  }
+  return out;
+}
+
+/** Last day of each month in range (for "paid on the last business day" style). */
+function monthEndDates(fromDn, toDn) { return monthlyDates(fromDn, toDn, 31); }
+
+function nextWeekday(fromDn, weekday) {
+  let n = fromDn;
+  while (dparts(n).w !== weekday) n++;
+  return n;
+}
+
+/* ------------------------------------------------------------------- money */
+
+function r2(x) { return Math.round((x + Number.EPSILON) * 100) / 100; }
+function money(x) {
+  const s = Math.abs(x).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return (x < 0 ? '-$' : '$') + s;
+}
+function money0(x) {
+  const s = Math.round(Math.abs(x)).toLocaleString('en-US');
+  return (x < 0 ? '-$' : '$') + s;
+}
+function pct(x) { return Math.round(x * 100) + '%'; }
+function pct1(x) { return (Math.round(x * 1000) / 10).toFixed(1) + '%'; }
+
+/** Linear-interpolated percentile. Used for the conservative income floor. */
+function percentile(values, p) {
+  if (!values || !values.length) return 0;
+  const v = values.slice().sort((a, b) => a - b);
+  if (v.length === 1) return v[0];
+  const idx = p * (v.length - 1);
+  const lo = Math.floor(idx), hi = Math.ceil(idx);
+  if (lo === hi) return v[lo];
+  return v[lo] + (v[hi] - v[lo]) * (idx - lo);
+}
+
+/* --------------------------------------------------------------- constants */
+
+const LEAD_MANUAL   = 2;   // days ahead of due date for a hand-made payment
+const CLOSE_LEAD    = 3;   // days ahead of statement close for the utilization move
+const RESERVE_DAYS  = 45;  // forward window the plan holds cash back for
+const MIN_EXTRA     = 25;  // don't schedule surplus payments smaller than this
+const EPS           = 0.005;
+const MAX_CLOSE_GAP = 40;  // a close more than this far before a due date isn't its cycle
+const TRANSFER_PAD  = 12;  // days of an account's own needs a top-up transfer covers
+const UTIL_MATERIAL = 0.30;// below this, moving the reported number barely touches a score
+
+/* ============================================================================
+   SIMULATION CORE
+   ----------------------------------------------------------------------------
+   One deterministic forward pass over the horizon, day by day:
+     1. income lands
+     2. background expenses clear
+     3. interest accrues
+     4. obligations get paid — as late as safe, or early when that buys
+        something (statement close), never past the due date
+     5. on paydays, whatever is genuinely spare goes at the target debt
+     6. end-of-day balances are recorded
+
+   Two run modes:
+     'plan'   — commits against planAmount (the conservative income floor) and
+                produces the schedule the user is shown.
+     'replay' — takes that schedule as fixed, runs it against nominal income,
+                and sweeps anything above the floor at the target debt.
+   ============================================================================ */
+
+function runSim(cfg) {
+  const S = cfg.settings;
+  const floor = S.bufferFloor;
+  const startDn = cfg.startDn;
+  const days = cfg.days;
+  const endDn = startDn + days;
+  const pad = RESERVE_DAYS + 5;
+  const N = days + pad;
+  const useNominal = !!cfg.useNominal;
+  const replay = !!cfg.fixedPayments;
+
+  const accounts = cfg.accounts.map(a => ({ ...a, bal: a.balance }));
+  const A = {}; accounts.forEach(a => A[a.id] = a);
+  const checkingIds = accounts.filter(a => a.type === 'checking').map(a => a.id);
+  const savingsIds = accounts.filter(a => a.type === 'savings').map(a => a.id);
+  const primaryId = checkingIds[0];
+  let owedToSavings = 0;   // drawn to defend the floor; put back at the first payday with slack
+  const totalChecking = () => { let s = 0; for (const id of checkingIds) s += A[id].bal; return s; };
+
+  const liabs = cfg.liabilities.map(l => ({
+    ...l,
+    accountId: l.accountId || primaryId,
+    bal: l.balance,
+    interestAccrued: 0,
+    paidTotal: 0,
+    payoffDn: l.balance <= EPS ? startDn : null
+  }));
+  const L = {}; liabs.forEach(l => L[l.id] = l);
+  const debts = liabs.filter(l => l.apr !== null && l.apr !== undefined);
+
+  /* ---- events indexed by day offset ---- */
+  const incomeByDay = new Map();
+  const planOnDay = new Float64Array(N + 2);
+  for (const ev of cfg.incomeEvents) {
+    const i = ev.dn - startDn;
+    if (i < 0 || i >= N) continue;
+    if (!incomeByDay.has(i)) incomeByDay.set(i, []);
+    incomeByDay.get(i).push(ev);
+    planOnDay[i] += ev.planAmount;
+  }
+  const expOnDay = new Float64Array(N + 2);
+  const expensesByDay = new Map();
+  for (const ex of cfg.expenseEvents) {
+    const i = ex.dn - startDn;
+    if (i < 0 || i >= N) continue;
+    if (!expensesByDay.has(i)) expensesByDay.set(i, []);
+    expensesByDay.get(i).push(ex);
+    expOnDay[i] += ex.amount;
+  }
+
+  /* Per-account flows. A top-up transfer should cover what that account has
+     to do over the next stretch, not the one bill that triggered it. */
+  const acctExp = {}, acctInc = {}, acctFixed = {};
+  for (const a of accounts) {
+    acctExp[a.id] = new Float64Array(N + 2);
+    acctInc[a.id] = new Float64Array(N + 2);
+    acctFixed[a.id] = new Float64Array(N + 2);
+  }
+  for (const ev of cfg.incomeEvents) {
+    const i = ev.dn - startDn;
+    if (i >= 0 && i < N && acctInc[ev.accountId]) acctInc[ev.accountId][i] += ev.planAmount;
+  }
+  for (const ex of cfg.expenseEvents) {
+    const i = ex.dn - startDn;
+    if (i >= 0 && i < N && acctExp[ex.accountId]) acctExp[ex.accountId][i] += ex.amount;
+  }
+
+  /* ---- obligations: one per liability per billing period ---- */
+  const KIND_PRIORITY = { rent: 0, mortgage: 0, utility: 1, auto_loan: 2, student_loan: 3, personal_loan: 4, credit_card: 5 };
+  const obligations = [];
+  let obSeq = 0;
+  for (const l of liabs) {
+    for (const due of monthlyDates(startDn, endDn + pad, l.dueDayOfMonth)) {
+      obligations.push({ id: 'ob' + (obSeq++), lid: l.id, dueDn: due, paid: false, paidAmount: 0, paidDn: null });
+    }
+  }
+  obligations.sort((a, b) => a.dueDn - b.dueDn ||
+    (KIND_PRIORITY[L[a.lid].kind] - KIND_PRIORITY[L[b.lid].kind]) ||
+    (a.id < b.id ? -1 : 1));
+
+  /* ---- statement closes ---- */
+  const closesByLid = {};
+  for (const l of liabs) {
+    closesByLid[l.id] = (l.statementCloseDay == null)
+      ? []
+      : monthlyDates(startDn - MAX_CLOSE_GAP - 5, endDn + pad, l.statementCloseDay);
+  }
+  function lastCloseBefore(lid, d) {
+    const arr = closesByLid[lid]; let out = null;
+    for (const c of arr) { if (c < d) out = c; else break; }
+    return out;
+  }
+  function nextCloseOnOrAfter(lid, d) {
+    for (const c of closesByLid[lid]) if (c >= d) return c;
+    return null;
+  }
+
+  const isRecurringBill = l => l.kind === 'rent' || l.kind === 'utility';
+  function obligationAmount(ob) {
+    const l = L[ob.lid];
+    if (isRecurringBill(l)) return l.minimumPayment;
+    return r2(Math.min(l.minimumPayment, l.bal));
+  }
+  function obligationLive(ob) {
+    const l = L[ob.lid];
+    return isRecurringBill(l) || l.bal > EPS;
+  }
+
+  /** The date this obligation could be pulled forward to in order to land
+   *  ahead of the statement that precedes its due date. Null when there is no
+   *  such statement. Whether the plan actually uses it is decided at the time,
+   *  by shiftIsWorthIt(). */
+  function shiftCandidate(ob) {
+    const l = L[ob.lid];
+    if (l.kind !== 'credit_card' || !S.optimizeForCreditScore) return null;
+    const c = lastCloseBefore(l.id, ob.dueDn);
+    if (c === null) return null;
+    const target = c - CLOSE_LEAD;
+    const lead = l.autopayEnabled ? 0 : LEAD_MANUAL;
+    if (target < startDn || target >= ob.dueDn - lead) return null;
+    if (ob.dueDn - target > MAX_CLOSE_GAP) return null;
+    return target;
+  }
+
+  /** Is moving this card's payment ahead of its close worth doing?
+   *
+   *  Three ways the answer is no, and all three are cases where a naive
+   *  implementation quietly makes things worse:
+   *
+   *  1. The card is under ~30% utilization. The reported number is already in
+   *     the range where moving it does almost nothing to a score.
+   *  2. The card is the current surplus target. Every spare dollar is already
+   *     being sent there at the earliest date cash allows, so the statement is
+   *     coming down before it closes regardless. Pulling the minimum forward
+   *     just reserves the same money for a later date — it costs a day or two
+   *     of interest and reports the same balance.
+   *  3. Another card with worse utilization has a statement closing in the
+   *     same window. Utilization is reported per card and the worst card is
+   *     what hurts, so the two cannot both have first claim on the cash. The
+   *     worse card wins. */
+  function shiftIsWorthIt(l, t) {
+    if (!l.creditLimit || l.bal <= EPS) return false;
+    const u = l.bal / l.creditLimit;
+    if (u <= UTIL_MATERIAL) return false;
+    const tgt = pickTarget();
+    if (tgt && tgt.l.id === l.id) return false;
+    for (const o of liabs) {
+      if (o.id === l.id || o.kind !== 'credit_card' || !o.creditLimit || o.bal <= EPS) continue;
+      const oc = nextCloseOnOrAfter(o.id, t);
+      if (oc === null || oc - t > RESERVE_DAYS) continue;
+      if (o.bal / o.creditLimit > u + 1e-9) return false;
+    }
+    return true;
+  }
+  obligations.forEach(ob => {
+    ob.mandatoryDn = Math.max(startDn, ob.dueDn - (L[ob.lid].autopayEnabled ? 0 : LEAD_MANUAL));
+    ob.shiftDn = shiftCandidate(ob);
+    ob.preferDn = ob.shiftDn !== null ? ob.shiftDn : ob.mandatoryDn;
+    ob.closeDn = L[ob.lid].kind === 'credit_card' ? lastCloseBefore(ob.lid, ob.dueDn) : null;
+  });
+
+  /* Walking the obligation list for the lookahead. Obligations are sorted by
+     due date and paid roughly in order, so a pointer past the settled prefix
+     plus an early break keeps this to a dozen items per call. */
+  let firstOpenOb = 0;
+  function advanceOb() {
+    while (firstOpenOb < obligations.length && obligations[firstOpenOb].paid) firstOpenOb++;
+  }
+
+  /** The day the plan should hold cash back for this obligation: its shift
+   *  date when the statement-close move is actually going to be taken, its
+   *  mandatory date otherwise. Reserving against a move the engine then
+   *  declines would let the credit-score flag change plans it never touches. */
+  function reserveDayFor(ob, t) {
+    if (ob.shiftDn !== null && ob.shiftDn >= t && ob.closeDn !== null &&
+        ob.shiftDn < ob.closeDn && shiftIsWorthIt(L[ob.lid], t)) return ob.shiftDn;
+    return ob.mandatoryDn;
+  }
+
+  const _pend = new Float64Array(RESERVE_DAYS + 2);
+
+  /* In replay the schedule is already decided, so the lookahead reserves
+     against those dated payments rather than re-deriving obligations — which
+     would double-count everything the replayed plan has already sent. */
+  const fixedOnDay = new Float64Array(N + 2);
+  if (replay) {
+    for (const p of cfg.fixedPayments) {
+      if (p.type === 'transfer') continue;
+      const i = p.dn - startDn;
+      if (i >= 0 && i < N) {
+        fixedOnDay[i] += p.amount;
+        const acct = p.liabilityId && L[p.liabilityId] ? L[p.liabilityId].accountId : p.fromAccountId;
+        if (acctFixed[acct]) acctFixed[acct][i] += p.amount;
+      }
+    }
+  }
+
+  /** How much cash is genuinely spare right now.
+   *
+   *  Not a net total — a running minimum. Walking the next 45 days in order
+   *  and taking the worst point is the whole difference between a plan that
+   *  survives and one that overdrafts the week before payday: a paycheck that
+   *  arrives on the 15th cannot pay rent that is due on the 1st, even though
+   *  the month nets out fine. */
+  function availableAt(t, skipOb) {
+    const limit = t + RESERVE_DAYS;
+    _pend.fill(0);
+    if (replay) {
+      // today's committed payments have already cleared by the time this runs
+      for (let k = 1; k <= RESERVE_DAYS; k++) {
+        const i = t - startDn + k;
+        if (i > N) break;
+        _pend[k] = fixedOnDay[i];
+      }
+      let run = totalChecking();
+      let lo = run;
+      for (let k = 1; k <= RESERVE_DAYS; k++) {
+        const i = t - startDn + k;
+        if (i > N) break;
+        run = r2(run + (planOnDay[i] || 0) - (expOnDay[i] || 0) - _pend[k]);
+        if (run < lo) lo = run;
+      }
+      return r2(lo - floor);
+    }
+    advanceOb();
+    for (let k = firstOpenOb; k < obligations.length; k++) {
+      const ob = obligations[k];
+      if (ob.dueDn > limit + LEAD_MANUAL) break;
+      if (ob.paid || ob === skipOb || !obligationLive(ob)) continue;
+      let day = reserveDayFor(ob, t);
+      if (day < t) day = t;
+      if (day > limit) continue;
+      _pend[day - t] += obligationAmount(ob);
+    }
+    let running = r2(totalChecking() - _pend[0]);
+    let low = running;
+    for (let k = 1; k <= RESERVE_DAYS; k++) {
+      const i = t - startDn + k;
+      if (i > N) break;
+      running = r2(running + (planOnDay[i] || 0) - (expOnDay[i] || 0) - _pend[k]);
+      if (running < low) low = running;
+    }
+    return r2(low - floor);
+  }
+  const savingsTotal = () => savingsIds.reduce((x, id) => x + A[id].bal, 0);
+
+  /* ---- output ---- */
+  const payments = [];
+  const series = { dn: [], total: [], byAccount: {} };
+  checkingIds.forEach(id => series.byAccount[id] = []);
+  const liabSeries = {}; liabs.forEach(l => liabSeries[l.id] = []);
+  const closeSnapshots = [];
+  const breaches = [];
+  const shortfalls = [];
+  const lates = [];
+  const expenseLog = [];
+  let paySeq = 0;
+  let totalIncomeApplied = 0, totalExpenseApplied = 0;
+
+  function push(p) { payments.push({ id: 'p' + (paySeq++), ...p }); return payments[payments.length - 1]; }
+
+  /** What this account has to do out of its own pocket over the next `days`,
+   *  net of what lands in it. Used to size top-up transfers. */
+  function accountNeedAhead(id, t, days) {
+    const from = t - startDn + 1;
+    const to = Math.min(N, t - startDn + days);
+    let need = 0;
+    for (let i = from; i <= to; i++) {
+      need += (acctExp[id][i] || 0) - (acctInc[id][i] || 0);
+      if (replay) need += acctFixed[id][i] || 0;
+    }
+    if (!replay) {
+      advanceOb();
+      for (let k = firstOpenOb; k < obligations.length; k++) {
+        const ob = obligations[k];
+        if (ob.dueDn > t + days + LEAD_MANUAL) break;
+        if (ob.paid || !obligationLive(ob)) continue;
+        if (L[ob.lid].accountId !== id) continue;
+        if (ob.mandatoryDn <= t || ob.mandatoryDn - startDn > to) continue;
+        need += obligationAmount(ob);
+      }
+    }
+    return r2(need);
+  }
+
+  /** Make sure `accountId` can cover `amount`, moving money between the
+   *  household's checking accounts if it can't.
+   *
+   *  Sized to cover the account's next couple of weeks rather than the single
+   *  bill that triggered it — six transfers of $85 across a fortnight is
+   *  mechanically correct and useless to read. Savings only ever covers the
+   *  bare shortfall; the padding comes from other checking accounts, and only
+   *  out of what those accounts do not need themselves.
+   *  Returns false only if the household as a whole is short. */
+  function ensureFunds(t, accountId, amount, forLabel) {
+    const short = r2(amount - A[accountId].bal);
+    if (short <= EPS) return true;
+    const pad = Math.max(0, accountNeedAhead(accountId, t, TRANSFER_PAD));
+    const chk = checkingIds.filter(id => id !== accountId).sort((a, b) => A[b].bal - A[a].bal);
+    let need = short, extra = pad, moved = 0, sources = [];
+
+    const take = (d, want, spare) => {
+      const cap = spare ? Math.max(0, r2(A[d].bal - Math.max(0, accountNeedAhead(d, t, TRANSFER_PAD)))) : A[d].bal;
+      const amt = r2(Math.min(cap, want));
+      if (amt <= EPS) return 0;
+      A[d].bal = r2(A[d].bal - amt);
+      A[accountId].bal = r2(A[accountId].bal + amt);
+      moved = r2(moved + amt);
+      sources.push(d);
+      return amt;
+    };
+
+    for (const d of chk) { if (need <= EPS) break; need = r2(need - take(d, need, false)); }
+    if (need > EPS) for (const d of savingsIds) { if (need <= EPS) break; need = r2(need - take(d, need, false)); }
+    if (need <= EPS) for (const d of chk) { if (extra <= EPS) break; extra = r2(extra - take(d, extra, true)); }
+
+    if (moved > EPS) {
+      const src = [...new Set(sources)];
+      const covered = r2(moved - short);
+      push({
+        dn: t, type: 'transfer', liabilityId: null,
+        label: 'Transfer to ' + A[accountId].name,
+        amount: moved, fromAccountId: src[0], toAccountId: accountId, dueDn: null,
+        conditional: false, tags: ['transfer'],
+        reason: 'Move ' + money(moved) + ' from ' + src.map(id => A[id].name).join(' and ') + ' into ' +
+                A[accountId].name + ' on ' + fmtD(t) + ' so ' + forLabel + ' clears without overdrawing it' +
+                (covered > 1
+                  ? '. Sized to cover the next ' + TRANSFER_PAD + ' days of everything else drafted from that account too, so it is one move rather than several.'
+                  : '.')
+      });
+    }
+    return need <= EPS;
+  }
+
+  function applyToLiability(l, amount) {
+    if (isRecurringBill(l)) return;
+    l.bal = r2(Math.max(0, l.bal - amount));
+    l.paidTotal = r2(l.paidTotal + amount);
+    targetMemo = undefined;
+  }
+
+  /* -------------------------------------------------------- reason strings */
+
+  function reasonMinimum(l, ob, t, amt, endBal, hhBal) {
+    const gap = ob.dueDn - t;
+    const when = gap === 0 ? 'on its ' + fmtD(ob.dueDn) + ' due date'
+      : gap === 1 ? 'the day before it\'s due ' + fmtD(ob.dueDn)
+      : gap + ' days ahead of the ' + fmtD(ob.dueDn) + ' due date';
+    const acct = A[l.accountId].name;
+    if (l.kind === 'rent' || l.kind === 'mortgage')
+      return 'Rent of ' + money(amt) + ' clears ' + when + ', from ' + acct +
+             '. Checking across the household sits at ' + money0(hhBal) + ' afterwards, over your ' +
+             money0(floor) + ' floor.';
+    if (l.kind === 'utility')
+      return l.name + ' — ' + money(amt) + ', ' + when + ', from ' + acct + '. Fixed bill, nothing to optimize here.';
+    if (l.autopayEnabled)
+      return 'Autopay pulls ' + money(amt) + ' for ' + l.name + ' ' + when +
+             '. It\'s already covered: ' + acct + ' holds ' + money0(endBal) + ' after it goes out.';
+    return 'Minimum on ' + l.name + ' — ' + money(amt) + ', ' + when + ', from ' + acct +
+           '. Sent early enough to post on time, late enough to keep the cash working.';
+  }
+
+  function reasonStatementClose(l, ob, t, amt, before, after) {
+    const c = ob.closeDn;
+    const util = l.creditLimit ? ' The bureaus will see ' + pct(after / l.creditLimit) +
+      ' utilization on this card instead of ' + pct(before / l.creditLimit) + '.' : '';
+    const gap = c - t;
+    const lead = gap === 1 ? 'the day before' : gap + ' days before';
+    return 'Paying ' + money(amt) + ' on ' + fmtD(t) + ' — ' + lead +
+           ' the statement closes ' + fmtD(c) + ', rather than waiting for the ' +
+           fmtD(ob.dueDn) + ' due date. Same dollars, same month.' + util;
+  }
+
+  function reasonExtra(l, t, amt, incomeLabel, clears, rank, plural) {
+    const head = 'Extra ' + money(amt) + ' to ' + l.name + ' on ' + fmtD(t) +
+                 (incomeLabel ? ', the day ' + incomeLabel + (plural ? ' land' : ' lands') : '') + '.';
+    let why;
+    if (rank === 'apr')
+      why = ' At ' + pct1(l.apr) + ' it\'s the most expensive balance you carry, so this is where the next dollar buys the most.';
+    else if (rank === 'smallest')
+      why = ' It\'s your smallest balance at ' + money0(l.bal + amt) + ' — clearing it frees ' +
+            money0(l.minimumPayment) + '/mo of minimums for everything else.';
+    else
+      why = ' Smallest balance that\'s reachable inside 60 days, so it goes first; after that the plan switches to highest rate.';
+    const tail = clears ? ' This payment clears ' + l.name + '.' : '';
+    return head + why + tail;
+  }
+
+  function reasonSweep(l, t, amt, ev, floorAmt) {
+    return 'If ' + ev.label + ' lands above the ' + money0(floorAmt) + ' the plan was built on, sweep the difference — ' +
+           'projected ' + money(amt) + ' — to ' + l.name + ' on ' + fmtD(t) +
+           '. If that deposit comes in light instead, nothing else on this plan moves.';
+  }
+
+  /* ------------------------------------------------------- target selection */
+
+  let targetMemo;
+  function pickTarget() {
+    if (targetMemo !== undefined) return targetMemo;
+    targetMemo = pickTargetUncached();
+    return targetMemo;
+  }
+  function pickTargetUncached() {
+    const cand = debts.filter(l => l.bal > EPS);
+    if (!cand.length) return null;
+    const byApr = cand.slice().sort((a, b) => b.apr - a.apr || a.bal - b.bal);
+    const byBal = cand.slice().sort((a, b) => a.bal - b.bal || b.apr - a.apr);
+    if (S.strategy === 'avalanche') return { l: byApr[0], rank: 'apr' };
+    if (S.strategy === 'snowball') return { l: byBal[0], rank: 'smallest' };
+    // hybrid: smallest balance first, but only if it's genuinely clearable in 60 days
+    const small = byBal[0];
+    const perMonth = (cfg.monthlySurplusEstimate || 0) + small.minimumPayment;
+    if (perMonth > 0 && small.bal / perMonth <= 2) return { l: small, rank: 'hybrid-quick' };
+    return { l: byApr[0], rank: 'apr' };
+  }
+
+  /* --------------------------------------------------------- fixed schedule */
+
+  const fixedByDay = new Map();
+  if (replay) {
+    for (const p of cfg.fixedPayments) {
+      if (p.type === 'transfer') continue; // transfers are regenerated from live balances
+      const i = p.dn - startDn;
+      if (!fixedByDay.has(i)) fixedByDay.set(i, []);
+      fixedByDay.get(i).push(p);
+    }
+  }
+
+  /* ------------------------------------------------------------- main pass */
+
+  for (let t = startDn; t < endDn; t++) {
+    const i = t - startDn;
+
+    // 1. income
+    const todaysIncome = incomeByDay.get(i) || [];
+    for (const ev of todaysIncome) {
+      const amt = useNominal ? ev.amount : ev.planAmount;
+      A[ev.accountId].bal = r2(A[ev.accountId].bal + amt);
+      totalIncomeApplied = r2(totalIncomeApplied + amt);
+    }
+
+    // 2. background expenses
+    for (const ex of (expensesByDay.get(i) || [])) {
+      ensureFunds(t, ex.accountId, ex.amount, ex.label);
+      A[ex.accountId].bal = r2(A[ex.accountId].bal - ex.amount);
+      totalExpenseApplied = r2(totalExpenseApplied + ex.amount);
+      if (t < endDn) expenseLog.push({ dn: t, label: ex.label, amount: ex.amount, accountId: ex.accountId, category: ex.category });
+    }
+
+    // 3. interest
+    targetMemo = undefined;
+    for (const l of debts) {
+      if (l.bal > EPS) {
+        const int = l.bal * (l.apr / 365);
+        l.bal = r2(l.bal + int);
+        l.interestAccrued = r2(l.interestAccrued + int);
+      }
+    }
+
+    // 4. obligations
+    if (replay) {
+      for (const p of (fixedByDay.get(i) || [])) {
+        const l = p.liabilityId ? L[p.liabilityId] : null;
+        if (!l) continue;
+        const amt = isRecurringBill(l) ? p.amount : r2(Math.min(p.amount, l.bal));
+        if (amt <= EPS) continue;
+        ensureFunds(t, l.accountId, amt, l.name);
+        A[l.accountId].bal = r2(A[l.accountId].bal - amt);
+        applyToLiability(l, amt);
+        if (!isRecurringBill(l) && l.bal <= EPS && l.payoffDn === null) l.payoffDn = t;
+      }
+    } else {
+      for (const ob of obligations) {
+        if (ob.paid) continue;
+        if (t < ob.preferDn) continue;
+        if (ob.dueDn < t) continue;              // handled below as a miss
+        if (!obligationLive(ob)) { ob.paid = true; ob.skipped = true; continue; }
+
+        const l = L[ob.lid];
+        const amt = obligationAmount(ob);
+        if (amt <= EPS) { ob.paid = true; ob.skipped = true; continue; }
+
+        const mandatory = t >= ob.mandatoryDn;
+        const afterTotal = totalChecking() - amt;
+
+        if (!mandatory) {
+          // Voluntary early move, and only when it buys something: the
+          // statement must still be open, the move must be worth taking, and
+          // the next 45 days of commitments must clear at every point along
+          // the way. Otherwise fall through and pay at the due date.
+          if (ob.closeDn === null || t >= ob.closeDn) continue;
+          if (!shiftIsWorthIt(l, t)) continue;
+          if (availableAt(t, ob) < amt - EPS) continue;
+        } else if (afterTotal < floor - EPS && t < ob.dueDn) {
+          continue; // wait for more income; still inside the due window
+        }
+
+        const balBefore = l.bal;
+        const funded = ensureFunds(t, l.accountId, amt, l.name);
+        const payAmt = funded ? amt : r2(Math.max(0, A[l.accountId].bal));
+        if (!funded && t < ob.dueDn) continue;   // keep trying until the due date
+
+        A[l.accountId].bal = r2(A[l.accountId].bal - payAmt);
+        applyToLiability(l, payAmt);
+        const clears = !isRecurringBill(l) && l.bal <= EPS;
+        if (clears && l.payoffDn === null) l.payoffDn = t;
+
+        const isEarlyForClose = !mandatory && ob.closeDn !== null;
+        const rec = push({
+          dn: t,
+          type: isEarlyForClose ? 'statement_close' : 'minimum',
+          liabilityId: l.id,
+          label: l.name,
+          amount: payAmt,
+          fromAccountId: l.accountId,
+          toAccountId: null,
+          dueDn: ob.dueDn,
+          closeDn: ob.closeDn,
+          conditional: false,
+          tags: isEarlyForClose ? ['utilization'] : [],
+          reason: isEarlyForClose
+            ? reasonStatementClose(l, ob, t, payAmt, balBefore, balBefore - payAmt)
+            : reasonMinimum(l, ob, t, payAmt, A[l.accountId].bal, totalChecking())
+        });
+
+        ob.paid = true; ob.paidAmount = payAmt; ob.paidDn = t;
+        if (payAmt < amt - EPS) {
+          ob.short = true;
+          rec.shortfall = true;
+          shortfalls.push({ dn: t, liabilityId: l.id, required: amt, paid: payAmt, dueDn: ob.dueDn });
+        }
+      }
+      // anything that blew past its due date
+      for (const ob of obligations) {
+        if (ob.paid || ob.dueDn !== t - 1) continue;
+        if (!obligationLive(ob)) { ob.paid = true; ob.skipped = true; continue; }
+        ob.paid = true; ob.late = true;
+        lates.push({ dueDn: ob.dueDn, liabilityId: ob.lid, amount: obligationAmount(ob) });
+      }
+    }
+
+    /* 4.5 Place money before allocating it. On any day cash arrives, top up
+       each checking account to what it has to cover over the next couple of
+       weeks, out of whatever another account is holding spare. Doing this
+       before the surplus step is what stops the plan draining one account to
+       the floor and then shuffling money back a bill at a time. */
+    if (todaysIncome.length && checkingIds.length > 1) {
+      for (const id of checkingIds) {
+        const want = accountNeedAhead(id, t, TRANSFER_PAD);
+        const gap = r2(want - A[id].bal);
+        if (gap <= MIN_EXTRA) continue;
+        let left = gap, moved = 0, from = [];
+        for (const d of checkingIds) {
+          if (d === id || left <= EPS) continue;
+          const spare = Math.max(0, r2(A[d].bal - Math.max(0, accountNeedAhead(d, t, TRANSFER_PAD))));
+          const amt = r2(Math.min(spare, left));
+          if (amt <= EPS) continue;
+          A[d].bal = r2(A[d].bal - amt);
+          A[id].bal = r2(A[id].bal + amt);
+          left = r2(left - amt); moved = r2(moved + amt); from.push(d);
+        }
+        if (moved > EPS) {
+          push({
+            dn: t, type: 'transfer', liabilityId: null,
+            label: 'Top up ' + A[id].name, amount: moved,
+            fromAccountId: from[0], toAccountId: id, dueDn: null,
+            conditional: false, tags: ['topup'],
+            reason: 'Move ' + money(moved) + ' from ' + [...new Set(from)].map(x => A[x].name).join(' and ') +
+                    ' into ' + A[id].name + ' on ' + fmtD(t) + ', the day money lands. That covers everything ' +
+                    A[id].name + ' has to pay over the next ' + TRANSFER_PAD +
+                    ' days in one move, instead of a transfer per bill.'
+          });
+        }
+      }
+    }
+
+    // 5. surplus
+    if (todaysIncome.length && !cfg.noAllocation) {
+      const labels = [...new Set(todaysIncome.map(e => e.label))];
+      const incomeLabel = labels.length > 1
+        ? labels.slice(0, -1).join(', ') + ' and ' + labels[labels.length - 1]
+        : labels[0];
+      const incomePlural = labels.length > 1;
+
+      if (replay) {
+        // sweep: only what arrived above the conservative floor
+        let above = 0;
+        for (const ev of todaysIncome) above = r2(above + Math.max(0, ev.amount - ev.planAmount));
+        if (above > EPS) {
+          let avail = r2(Math.min(above, availableAt(t, null) - owedToSavings));
+          while (avail >= MIN_EXTRA) {
+            const tgt = pickTarget();
+            if (!tgt) break;
+            const amt = r2(Math.min(avail, tgt.l.bal));
+            if (amt < MIN_EXTRA) break;
+            if (!ensureFunds(t, tgt.l.accountId, amt, tgt.l.name)) break;
+            A[tgt.l.accountId].bal = r2(A[tgt.l.accountId].bal - amt);
+            applyToLiability(tgt.l, amt);
+            const clears = tgt.l.bal <= EPS;
+            if (clears && tgt.l.payoffDn === null) tgt.l.payoffDn = t;
+            const varEv = todaysIncome.find(e => e.confidence === 'variable') || todaysIncome[0];
+            push({
+              dn: t, type: 'sweep', liabilityId: tgt.l.id, label: tgt.l.name,
+              amount: amt, fromAccountId: tgt.l.accountId, toAccountId: null, dueDn: null,
+              conditional: true, tags: ['sweep'],
+              reason: reasonSweep(tgt.l, t, amt, varEv, varEv.planAmount)
+            });
+            avail = r2(avail - amt);
+            if (!clears) break;
+          }
+        }
+      } else {
+        let avail = availableAt(t, null);
+        /* Never strip an account below what it has to cover on its own over
+           the next stretch. Household-level slack is the right safety test,
+           but spending down to it leaves accounts needing a transfer per bill
+           for the rest of the month. */
+        if (checkingIds.length > 1) {
+          let placed = 0;
+          for (const id of checkingIds) {
+            placed = r2(placed + Math.max(0, r2(A[id].bal - Math.max(0, accountNeedAhead(id, t, TRANSFER_PAD)))));
+          }
+          if (placed < avail) avail = placed;
+        }
+        if (owedToSavings > EPS && avail > EPS) {
+          const back = r2(Math.min(owedToSavings, avail));
+          const dest = savingsIds[0];
+          if (dest && back > EPS && ensureFunds(t, primaryId, back, 'the savings top-up')) {
+            A[primaryId].bal = r2(A[primaryId].bal - back);
+            A[dest].bal = r2(A[dest].bal + back);
+            owedToSavings = r2(owedToSavings - back);
+            avail = r2(avail - back);
+            push({
+              dn: t, type: 'transfer', liabilityId: null,
+              label: 'Back to ' + A[dest].name, amount: back,
+              fromAccountId: primaryId, toAccountId: dest, dueDn: null,
+              conditional: false, tags: ['restore'],
+              reason: 'Put ' + money(back) + ' back into ' + A[dest].name + ' on ' + fmtD(t) +
+                      ', now that the buffer has recovered. Savings gets made whole before any extra goes at the debt.'
+            });
+          }
+        }
+        avail = r2(avail - owedToSavings);
+        while (avail >= MIN_EXTRA) {
+          const tgt = pickTarget();
+          if (!tgt) break;
+          const amt = r2(Math.min(avail, tgt.l.bal));
+          if (amt < MIN_EXTRA) break;
+          if (!ensureFunds(t, tgt.l.accountId, amt, tgt.l.name)) break;
+          A[tgt.l.accountId].bal = r2(A[tgt.l.accountId].bal - amt);
+          applyToLiability(tgt.l, amt);
+          const clears = tgt.l.bal <= EPS;
+          if (clears && tgt.l.payoffDn === null) tgt.l.payoffDn = t;
+          const nextClose = nextCloseOnOrAfter(tgt.l.id, t);
+          const tags = ['surplus'];
+          let reason = reasonExtra(tgt.l, t, amt, incomeLabel, clears, tgt.rank, incomePlural);
+          if (S.optimizeForCreditScore && nextClose !== null && nextClose - t <= 10 && tgt.l.creditLimit) {
+            tags.push('utilization');
+            reason += ' It also lands before the ' + fmtD(nextClose) + ' statement close, so the lower balance is what gets reported.';
+          }
+          push({
+            dn: t, type: 'extra', liabilityId: tgt.l.id, label: tgt.l.name,
+            amount: amt, fromAccountId: tgt.l.accountId, toAccountId: null, dueDn: null,
+            conditional: false, tags, reason
+          });
+          avail = r2(avail - amt);
+          if (!clears) break;
+        }
+      }
+    }
+
+    // 6. defend the floor from savings when required outflow left it short.
+    //    This is a decision, so it gets a row and a sentence like any other.
+    if (totalChecking() < floor - EPS && savingsTotal() > EPS) {
+      const need = r2(Math.min(floor - totalChecking(), savingsTotal()));
+      let remaining = need;
+      const thin = checkingIds.slice().sort((a, b) => A[a].bal - A[b].bal)[0];
+      for (const sid of savingsIds) {
+        if (remaining <= EPS) break;
+        const take = r2(Math.min(A[sid].bal, remaining));
+        if (take <= EPS) continue;
+        A[sid].bal = r2(A[sid].bal - take);
+        A[thin].bal = r2(A[thin].bal + take);
+        remaining = r2(remaining - take);
+        owedToSavings = r2(owedToSavings + take);
+        push({
+          dn: t, type: 'transfer', liabilityId: null,
+          label: 'Cover from ' + A[sid].name, amount: take,
+          fromAccountId: sid, toAccountId: thin, dueDn: null,
+          conditional: false, tags: ['savings_draw'],
+          reason: 'Move ' + money(take) + ' from ' + A[sid].name + ' into ' + A[thin].name + ' on ' + fmtD(t) +
+                  '. Everything due today is required, and without it your checking would sit at ' +
+                  money0(totalChecking() - take) + ' against a ' + money0(floor) +
+                  ' floor. The plan returns it at the next payday with room.'
+        });
+      }
+    }
+
+    // 7. record
+    series.dn.push(t);
+    let tot = 0;
+    for (const id of checkingIds) { series.byAccount[id].push(A[id].bal); tot = r2(tot + A[id].bal); }
+    series.total.push(tot);
+    for (const l of liabs) liabSeries[l.id].push(l.bal);
+
+    if (tot < floor - EPS) breaches.push({ dn: t, total: tot, floor, deficit: r2(floor - tot) });
+    for (const id of checkingIds) {
+      if (A[id].bal < -EPS) breaches.push({ dn: t, accountId: id, total: A[id].bal, floor: 0, deficit: r2(-A[id].bal) });
+    }
+
+    // statement close snapshots (what the bureaus would see)
+    for (const l of liabs) {
+      if (l.kind !== 'credit_card' || !l.creditLimit) continue;
+      if (closesByLid[l.id].includes(t)) {
+        closeSnapshots.push({ dn: t, liabilityId: l.id, balance: l.bal, limit: l.creditLimit, utilization: l.bal / l.creditLimit });
+      }
+    }
+
+    if (cfg.stopWhenDebtFree && debts.length && debts.every(l => l.bal <= EPS)) {
+      // record the tail so callers always see a terminated series
+      break;
+    }
+  }
+
+  const debtFreeDn = debts.length && debts.every(l => l.bal <= EPS)
+    ? Math.max(...debts.map(l => l.payoffDn || startDn)) : null;
+
+  return {
+    payments, series, liabSeries,
+    liabilities: liabs, accounts,
+    obligations, closeSnapshots, breaches, shortfalls, lates, expenseLog,
+    totalIncomeApplied, totalExpenseApplied,
+    totalInterest: r2(debts.reduce((s, l) => s + l.interestAccrued, 0)),
+    debtFreeDn,
+    lastDn: series.dn.length ? series.dn[series.dn.length - 1] : startDn
+  };
+}
+
+/* ============================================================================
+   buildPlan — the public entry point
+   ============================================================================ */
+
+function buildPlan(ds, overrides) {
+  const base = ds.getSettings();
+  const settings = Object.assign({}, base, overrides || {});
+  const startDn = settings.startDn != null ? settings.startDn : todayDn();
+  const horizon = settings.horizonDays;
+  const pad = RESERVE_DAYS + 5;
+
+  const accounts = ds.getAccounts();
+  const liabilities = ds.getLiabilities();
+  const primaryId = (accounts.find(a => a.type === 'checking') || accounts[0]).id;
+
+  /* ---- income, with the conservative floor applied to variable streams ---- */
+  const rawIncome = ds.getIncomeEvents(startDn, horizon + pad);
+  const floors = {};
+  for (const ev of rawIncome) {
+    if (ev.confidence !== 'variable' || floors[ev.streamId] !== undefined) continue;
+    const hist = ds.getDepositHistory(ev.streamId) || [];
+    floors[ev.streamId] = hist.length ? r2(percentile(hist, 0.25)) : ev.amount;
+  }
+  let incomeEvents = rawIncome.map(ev => ({
+    ...ev,
+    planAmount: ev.confidence === 'variable'
+      ? r2(Math.min(ev.amount, floors[ev.streamId]))
+      : ev.amount
+  }));
+
+  /* ---- what-if: money freed up from spending behaves like certain income --- */
+  if (settings.extraMonthly > 0) {
+    for (const d of monthlyDates(startDn, startDn + horizon + pad, 1)) {
+      incomeEvents.push({
+        id: 'extra-' + d, streamId: 'whatif', label: 'freed-up spending',
+        amount: settings.extraMonthly, planAmount: settings.extraMonthly,
+        dn: d, confidence: 'certain', accountId: primaryId, synthetic: true
+      });
+    }
+    incomeEvents.sort((a, b) => a.dn - b.dn);
+  }
+
+  const expenseEvents = expandExpenses(ds.getExpenses(), startDn, startDn + horizon + pad, primaryId);
+
+  /* ---- rough monthly slack, used only by the hybrid rule ---- */
+  const monthlyIncome = incomeEvents.reduce((s, e) => s + e.planAmount, 0) / (horizon + pad) * 30.44;
+  const monthlyExpense = expenseEvents.reduce((s, e) => s + e.amount, 0) / (horizon + pad) * 30.44;
+  const monthlyMinimums = liabilities.reduce((s, l) => s + l.minimumPayment, 0);
+  const monthlySurplusEstimate = r2(monthlyIncome - monthlyExpense - monthlyMinimums);
+
+  const common = {
+    startDn, accounts, liabilities, incomeEvents, expenseEvents, settings, monthlySurplusEstimate
+  };
+
+  /* ---- pass 1: the committed plan, built on the income floor ---- */
+  const planRun = runSim({ ...common, days: horizon });
+
+  /* ---- pass 2: the same schedule against nominal income, plus sweeps ---- */
+  const expectedRun = runSim({
+    ...common, days: horizon, useNominal: true,
+    fixedPayments: planRun.payments.filter(p => p.type !== 'sweep')
+  });
+
+  /* ---- pass 3: long projection for payoff dates and lifetime interest ---- */
+  const LONG_DAYS = 365 * 15;
+  let longRun;
+  if (settings.skipProjection) {
+    longRun = { liabilities: liabilities.map(l => ({ ...l, bal: l.balance, interestAccrued: 0, payoffDn: null })),
+                debtFreeDn: null, totalInterest: 0 };
+  } else {
+    const longIncome = withFloors(ds.getIncomeEvents(startDn, LONG_DAYS + pad), floors, settings, primaryId, startDn, LONG_DAYS + pad);
+    const longExpense = expandExpenses(ds.getExpenses(), startDn, startDn + LONG_DAYS + pad, primaryId);
+    longRun = runSim({
+      ...common, days: LONG_DAYS, incomeEvents: longIncome, expenseEvents: longExpense,
+      stopWhenDebtFree: true
+    });
+  }
+
+  /* ---- reported utilization: peak of what the bureaus would actually see --- */
+  const utilByCard = {};
+  for (const s of planRun.closeSnapshots) {
+    if (!utilByCard[s.liabilityId]) utilByCard[s.liabilityId] = [];
+    utilByCard[s.liabilityId].push(s);
+  }
+  // A statement closing in the next couple of days cannot be influenced by any
+  // schedule, so it is not evidence for or against the optimization.
+  const actionable = planRun.closeSnapshots.filter(s => s.dn >= startDn + CLOSE_LEAD);
+  const peakReportedUtilization = actionable.length
+    ? Math.max(...actionable.map(s => s.utilization)) : 0;
+  const firstActionableCloseDn = actionable.length ? actionable[0].dn : null;
+
+  const horizonPayments = mergeTransfers(planRun.payments, accounts)
+    .filter(p => p.dn >= startDn && p.dn < startDn + horizon)
+    .sort((a, b) => a.dn - b.dn || typeRank(a.type) - typeRank(b.type));
+  const sweeps = expectedRun.payments.filter(p => p.type === 'sweep');
+
+  const perLiability = {};
+  for (const l of longRun.liabilities) {
+    perLiability[l.id] = {
+      payoffDn: l.payoffDn,
+      lifetimeInterest: l.interestAccrued,
+      cleared: l.bal <= EPS
+    };
+  }
+
+  const totals = {
+    inflowPlanned: r2(incomeEvents.filter(e => e.dn < startDn + horizon).reduce((s, e) => s + e.planAmount, 0)),
+    inflowExpected: r2(incomeEvents.filter(e => e.dn < startDn + horizon).reduce((s, e) => s + e.amount, 0)),
+    startingCash: r2(accounts.filter(a => a.type === 'checking').reduce((s, a) => s + a.balance, 0)),
+    expenses: r2(planRun.expenseLog.reduce((s, e) => s + e.amount, 0)),
+    scheduledOutflow: r2(horizonPayments.filter(p => p.type !== 'transfer').reduce((s, p) => s + p.amount, 0)),
+    sweepOutflow: r2(sweeps.reduce((s, p) => s + p.amount, 0))
+  };
+
+  return {
+    settings, startDn, horizonDays: horizon,
+    accounts, liabilities,
+    profile: ds.getProfile(),
+    incomeEvents: incomeEvents.filter(e => e.dn < startDn + horizon),
+    expenseEvents: planRun.expenseLog,
+    incomeFloors: floors,
+    payments: horizonPayments,
+    sweeps,
+    series: planRun.series,
+    expectedSeries: expectedRun.series,
+    liabSeries: planRun.liabSeries,
+    closeSnapshots: planRun.closeSnapshots,
+    utilByCard,
+    peakReportedUtilization,
+    actionableCloses: actionable,
+    firstActionableCloseDn,
+    breaches: planRun.breaches.concat(expectedRun.breaches),
+    shortfalls: planRun.shortfalls,
+    lates: planRun.lates,
+    obligations: planRun.obligations.filter(o => o.dueDn < startDn + horizon),
+    projection: {
+      debtFreeDn: longRun.debtFreeDn,
+      monthsToDebtFree: longRun.debtFreeDn ? Math.round((longRun.debtFreeDn - startDn) / 30.44) : null,
+      totalInterest: longRun.totalInterest,
+      perLiability,
+      cappedAt: LONG_DAYS
+    },
+    monthlySurplusEstimate,
+    totals
+  };
+}
+
+/** Two moves between the same pair of accounts on the same day are one move.
+ *  The simulation makes them separately because it discovers the need bill by
+ *  bill; the person makes a single transfer. */
+function mergeTransfers(payments, accounts) {
+  const name = id => (accounts.find(a => a.id === id) || {}).name || id;
+  const out = [], byKey = new Map();
+  for (const p of payments) {
+    if (p.type !== 'transfer') { out.push(p); continue; }
+    const key = p.dn + '>' + p.fromAccountId + '>' + p.toAccountId;
+    if (!byKey.has(key)) { byKey.set(key, { ...p, merged: 1 }); out.push(byKey.get(key)); continue; }
+    const m = byKey.get(key);
+    m.amount = r2(m.amount + p.amount);
+    m.merged++;
+    m.reason = 'Move ' + money(m.amount) + ' from ' + name(m.fromAccountId) + ' into ' + name(m.toAccountId) +
+               ' on ' + fmtD(m.dn) + ' — one transfer covering the ' + m.merged +
+               ' things drafted from that account today, so none of them overdraws it.';
+  }
+  return out;
+}
+
+function typeRank(t) {
+  return { transfer: 0, minimum: 1, statement_close: 1, extra: 2, sweep: 3 }[t] ?? 9;
+}
+
+function withFloors(events, floors, settings, primaryId, startDn, spanDays) {
+  const out = events.map(ev => ({
+    ...ev,
+    planAmount: ev.confidence === 'variable'
+      ? r2(Math.min(ev.amount, floors[ev.streamId] !== undefined ? floors[ev.streamId] : ev.amount))
+      : ev.amount
+  }));
+  if (settings.extraMonthly > 0) {
+    for (const d of monthlyDates(startDn, startDn + spanDays, 1)) {
+      out.push({
+        id: 'extra-' + d, streamId: 'whatif', label: 'freed-up spending',
+        amount: settings.extraMonthly, planAmount: settings.extraMonthly,
+        dn: d, confidence: 'certain', accountId: primaryId, synthetic: true
+      });
+    }
+    out.sort((a, b) => a.dn - b.dn);
+  }
+  return out;
+}
+
+function expandExpenses(expenses, fromDn, toDn, primaryId) {
+  const out = [];
+  for (const ex of expenses) {
+    const accountId = ex.accountId || primaryId;
+    if (ex.cadence === 'weekly') {
+      let d = nextWeekday(fromDn, ex.weekday);
+      for (; d <= toDn; d += 7) out.push({ dn: d, amount: ex.amount, label: ex.label, accountId, category: ex.category });
+    } else {
+      for (const d of monthlyDates(fromDn, toDn, ex.dayOfMonth)) {
+        out.push({ dn: d, amount: ex.amount, label: ex.label, accountId, category: ex.category });
+      }
+    }
+  }
+  out.sort((a, b) => a.dn - b.dn);
+  return out;
+}
+
+function todayDn() {
+  const now = new Date();
+  return dnFromParts(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+
+/* ============================================================================
+   MOCK DATA — three personas, chosen as stress cases rather than showcases.
+   ----------------------------------------------------------------------------
+   Numbers are deliberately unround. Round numbers hide off-by-a-cent bugs and
+   make a demo look like a mockup.
+
+   1. steady    — biweekly W-2, one card, one auto loan, rent. Baseline.
+   2. freelance — deposits swinging 2.4k–4.4k month to month. Income-floor logic.
+   3. household — two paychecks on offset schedules, three checking accounts,
+                  shared and individual debts. Multi-account handling.
+   ============================================================================ */
+
+const PERSONAS = {
+
+  /* ------------------------------------------------------------- persona 1 */
+  steady: {
+    profile: {
+      id: 'steady',
+      name: 'Dana Reyes',
+      tagline: 'Steady W-2 · biweekly',
+      note: 'One card, one nearly-paid-off car, rent. The baseline case: if the engine gets this wrong, nothing else matters.'
+    },
+    settings: {
+      bufferFloor: 500,
+      strategy: 'avalanche',
+      optimizeForCreditScore: true,
+      horizonDays: 90,
+      extraMonthly: 0
+    },
+    accounts: [
+      { id: 'chk', name: 'Everyday Checking', type: 'checking', balance: 1284.55 },
+      { id: 'sav', name: 'Emergency Savings', type: 'savings',  balance: 2150.00 }
+    ],
+    incomeStreams: [
+      { id: 'pay', label: 'your paycheck', cadence: 'biweekly', weekday: 5,
+        amount: 1742.36, confidence: 'certain', accountId: 'chk' }
+    ],
+    depositHistory: {},
+    liabilities: [
+      { id: 'rent', name: 'Rent — Arbor Court', kind: 'rent', balance: 0, apr: null,
+        minimumPayment: 1495.00, dueDayOfMonth: 1, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: true, accountId: 'chk' },
+      { id: 'power', name: 'Duke Energy', kind: 'utility', balance: 0, apr: null,
+        minimumPayment: 132.00, dueDayOfMonth: 18, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: false, accountId: 'chk' },
+      { id: 'auto', name: 'Civic — Fifth Third Auto', kind: 'auto_loan', balance: 7412.88,
+        apr: 0.0739, minimumPayment: 394.12, dueDayOfMonth: 12, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: true, accountId: 'chk' },
+      { id: 'card', name: 'Chase Freedom Unlimited', kind: 'credit_card', balance: 9846.20,
+        apr: 0.2624, minimumPayment: 265.00, dueDayOfMonth: 22, statementCloseDay: 26,
+        creditLimit: 13500, autopayEnabled: false, accountId: 'chk' }
+    ],
+    expenses: [
+      { id: 'e1', label: 'Groceries',      amount: 135.00, cadence: 'weekly',  weekday: 6, accountId: 'chk', category: 'food' },
+      { id: 'e2', label: 'Gas + transit',  amount: 48.00,  cadence: 'weekly',  weekday: 1, accountId: 'chk', category: 'transport' },
+      { id: 'e3', label: 'Car insurance',  amount: 148.00, cadence: 'monthly', dayOfMonth: 5,  accountId: 'chk', category: 'insurance' },
+      { id: 'e4', label: 'Phone',          amount: 72.00,  cadence: 'monthly', dayOfMonth: 8,  accountId: 'chk', category: 'utilities' },
+      { id: 'e5', label: 'Everything else',amount: 180.00, cadence: 'monthly', dayOfMonth: 15, accountId: 'chk', category: 'discretionary' }
+    ]
+  },
+
+  /* ------------------------------------------------------------- persona 2 */
+  freelance: {
+    profile: {
+      id: 'freelance',
+      name: 'Priya Nandakumar',
+      tagline: 'Freelance · income swings 2.4k–4.4k',
+      note: 'Every committed payment is sized against the 25th percentile of her deposit history, not the average. Good months sweep; bad months change nothing.'
+    },
+    settings: {
+      bufferFloor: 800,
+      strategy: 'avalanche',
+      optimizeForCreditScore: true,
+      horizonDays: 90,
+      extraMonthly: 0
+    },
+    accounts: [
+      { id: 'chk', name: 'Business Checking', type: 'checking', balance: 3412.80 },
+      { id: 'sav', name: 'Tax + Buffer Savings', type: 'savings', balance: 4800.00 }
+    ],
+    incomeStreams: [
+      { id: 'retainer', label: 'the Halcyon retainer', cadence: 'monthly', dayOfMonth: 5,
+        amount: 3591, confidence: 'variable', accountId: 'chk' },
+      { id: 'invoices', label: 'project invoices', cadence: 'monthly', dayOfMonth: 20,
+        amount: 1101, confidence: 'variable', accountId: 'chk' }
+    ],
+    depositHistory: {
+      // trailing 12 months of actual net deposits
+      retainer: [4100, 2850, 3600, 2400, 3900, 2950, 4400, 3300, 2600, 3700, 3050, 4250],
+      invoices: [1450, 620, 1980, 890, 1310, 240, 1720, 1050, 760, 1580, 430, 1190]
+    },
+    liabilities: [
+      { id: 'rent', name: 'Rent — Kestrel Flats', kind: 'rent', balance: 0, apr: null,
+        minimumPayment: 1320.00, dueDayOfMonth: 1, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: false, accountId: 'chk' },
+      { id: 'util', name: 'Power + internet', kind: 'utility', balance: 0, apr: null,
+        minimumPayment: 118.00, dueDayOfMonth: 16, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: false, accountId: 'chk' },
+      { id: 'quicksilver', name: 'Capital One Quicksilver', kind: 'credit_card', balance: 4180.55,
+        apr: 0.2290, minimumPayment: 110.00, dueDayOfMonth: 15, statementCloseDay: 19,
+        creditLimit: 4500, autopayEnabled: false, accountId: 'chk' },
+      { id: 'discover', name: 'Discover it', kind: 'credit_card', balance: 9612.30,
+        apr: 0.2799, minimumPayment: 255.00, dueDayOfMonth: 26, statementCloseDay: 30,
+        creditLimit: 19000, autopayEnabled: false, accountId: 'chk' },
+      { id: 'student', name: 'Nelnet student loan', kind: 'student_loan', balance: 23480.00,
+        apr: 0.0680, minimumPayment: 242.00, dueDayOfMonth: 21, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: true, accountId: 'chk' }
+    ],
+    expenses: [
+      { id: 'e1', label: 'Health insurance',    amount: 412.00, cadence: 'monthly', dayOfMonth: 3,  accountId: 'chk', category: 'insurance' },
+      { id: 'e2', label: 'Groceries',           amount: 95.00,  cadence: 'weekly',  weekday: 3,     accountId: 'chk', category: 'food' },
+      { id: 'e3', label: 'Gas + transit',       amount: 30.00,  cadence: 'weekly',  weekday: 0,     accountId: 'chk', category: 'transport' },
+      { id: 'e4', label: 'Phone',               amount: 65.00,  cadence: 'monthly', dayOfMonth: 10, accountId: 'chk', category: 'utilities' },
+      { id: 'e5', label: 'Software + subs',     amount: 60.00,  cadence: 'monthly', dayOfMonth: 12, accountId: 'chk', category: 'business' },
+      { id: 'e6', label: 'Quarterly tax set-aside', amount: 200.00, cadence: 'monthly', dayOfMonth: 15, accountId: 'chk', category: 'tax' },
+      { id: 'e7', label: 'Everything else',     amount: 120.00, cadence: 'monthly', dayOfMonth: 24, accountId: 'chk', category: 'discretionary' }
+    ]
+  },
+
+  /* ------------------------------------------------------------- persona 3 */
+  household: {
+    profile: {
+      id: 'household',
+      name: 'Alex & Sam Ortega',
+      tagline: 'Two incomes · three checking accounts',
+      note: 'Offset pay schedules and separate cards. The plan moves money between accounts itself instead of assuming one pot.'
+    },
+    settings: {
+      bufferFloor: 1200,
+      strategy: 'avalanche',
+      optimizeForCreditScore: true,
+      horizonDays: 90,
+      extraMonthly: 0
+    },
+    accounts: [
+      { id: 'joint', name: 'Joint Checking',  type: 'checking', balance: 3140.22 },
+      { id: 'alex',  name: 'Alex Checking',   type: 'checking', balance: 780.15 },
+      { id: 'sam',   name: 'Sam Checking',    type: 'checking', balance: 845.35 },
+      { id: 'sav',   name: 'Joint Savings',   type: 'savings',  balance: 6200.00 }
+    ],
+    incomeStreams: [
+      { id: 'alexpay', label: "Alex's paycheck", cadence: 'biweekly', weekday: 5,
+        amount: 1918.44, confidence: 'certain', accountId: 'joint' },
+      { id: 'sampay',  label: "Sam's paycheck",  cadence: 'semimonthly',
+        amount: 1655.10, confidence: 'certain', accountId: 'sam' }
+    ],
+    depositHistory: {},
+    liabilities: [
+      { id: 'rent', name: 'Rent — Marion Row', kind: 'rent', balance: 0, apr: null,
+        minimumPayment: 2240.00, dueDayOfMonth: 1, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: true, accountId: 'joint' },
+      { id: 'util', name: 'Power + water', kind: 'utility', balance: 0, apr: null,
+        minimumPayment: 186.00, dueDayOfMonth: 20, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: false, accountId: 'joint' },
+      { id: 'auto', name: 'CR-V — Honda Financial', kind: 'auto_loan', balance: 14655.40,
+        apr: 0.0649, minimumPayment: 438.77, dueDayOfMonth: 18, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: true, accountId: 'joint' },
+      { id: 'amex', name: 'Amex Blue Cash — Alex', kind: 'credit_card', balance: 3208.90,
+        apr: 0.2549, minimumPayment: 95.00, dueDayOfMonth: 9, statementCloseDay: 13,
+        creditLimit: 3800, autopayEnabled: false, accountId: 'alex' },
+      { id: 'citi', name: 'Citi Double Cash — Sam', kind: 'credit_card', balance: 7914.75,
+        apr: 0.2824, minimumPayment: 215.00, dueDayOfMonth: 24, statementCloseDay: 28,
+        creditLimit: 9000, autopayEnabled: false, accountId: 'sam' }
+    ],
+    expenses: [
+      { id: 'e1', label: 'Childcare',       amount: 1340.00, cadence: 'monthly', dayOfMonth: 1,  accountId: 'joint', category: 'care' },
+      { id: 'e2', label: 'Groceries',       amount: 210.00,  cadence: 'weekly',  weekday: 6,     accountId: 'joint', category: 'food' },
+      { id: 'e3', label: 'Gas + transit',   amount: 85.00,   cadence: 'weekly',  weekday: 1,     accountId: 'joint', category: 'transport' },
+      { id: 'e4', label: 'Auto + renters insurance', amount: 214.00, cadence: 'monthly', dayOfMonth: 7, accountId: 'joint', category: 'insurance' },
+      { id: 'e5', label: 'Phones',          amount: 145.00,  cadence: 'monthly', dayOfMonth: 6,  accountId: 'joint', category: 'utilities' },
+      { id: 'e6', label: 'Internet',        amount: 79.00,   cadence: 'monthly', dayOfMonth: 14, accountId: 'joint', category: 'utilities' },
+      { id: 'e7', label: "Alex — personal", amount: 240.00,  cadence: 'monthly', dayOfMonth: 10, accountId: 'alex',  category: 'discretionary' },
+      { id: 'e8', label: "Sam — personal",  amount: 240.00,  cadence: 'monthly', dayOfMonth: 10, accountId: 'sam',   category: 'discretionary' }
+    ]
+  }
+};
+
+/* ============================================================================
+   MockDataSource — implements the DataSource interface. The engine sees only
+   this shape, never PERSONAS. A PlaidDataSource / MethodDataSource pair
+   replaces this file and nothing else.
+   ============================================================================ */
+
+function MockDataSource(personaId) {
+  const p = PERSONAS[personaId];
+  if (!p) throw new Error('unknown persona: ' + personaId);
+
+  function expandStream(s, startDn, days) {
+    const endDn = startDn + days;
+    const out = [];
+    const hist = p.depositHistory[s.id];
+    let occ = 0;
+    const emit = (dn) => {
+      // Variable streams draw deterministically from trailing history so the
+      // "expected" run is reproducible run to run — no randomness anywhere.
+      const amount = (s.confidence === 'variable' && hist && hist.length)
+        ? hist[(occ + 3) % hist.length]
+        : s.amount;
+      out.push({
+        id: s.id + '-' + dn, streamId: s.id, label: s.label,
+        amount: r2(amount), dn, confidence: s.confidence, accountId: s.accountId
+      });
+      occ++;
+    };
+    if (s.cadence === 'biweekly') {
+      for (let d = nextWeekday(startDn, s.weekday); d <= endDn; d += 14) emit(d);
+    } else if (s.cadence === 'weekly') {
+      for (let d = nextWeekday(startDn, s.weekday); d <= endDn; d += 7) emit(d);
+    } else if (s.cadence === 'semimonthly') {
+      const mid = monthlyDates(startDn, endDn, 15);
+      const end = monthlyDates(startDn, endDn, 31);
+      mid.concat(end).sort((a, b) => a - b).forEach(emit);
+    } else {
+      monthlyDates(startDn, endDn, s.dayOfMonth).forEach(emit);
+    }
+    return out;
+  }
+
+  return {
+    getProfile:    () => ({ ...p.profile }),
+    getAccounts:   () => p.accounts.map(a => ({ ...a })),
+    getLiabilities:() => p.liabilities.map(l => ({ ...l })),
+    getExpenses:   () => p.expenses.map(e => ({ ...e })),
+    getSettings:   () => ({ ...p.settings }),
+    getDepositHistory: (streamId) => (p.depositHistory[streamId] || []).slice(),
+    getIncomeStreams:  () => p.incomeStreams.map(s => ({ ...s })),
+    getIncomeEvents: (startDn, days) => {
+      const out = [];
+      for (const s of p.incomeStreams) out.push(...expandStream(s, startDn, days));
+      out.sort((a, b) => a.dn - b.dn || (a.id < b.id ? -1 : 1));
+      return out;
+    }
+  };
+}
+
+const PERSONA_IDS = ['steady', 'freelance', 'household'];
+
+
+/* ============================================================================
+   TESTS — run on load, results rendered into the app. No console-only failures.
+   Every assertion is a property of the plan, not a golden value, so the suite
+   still means something after the numbers change.
+   ============================================================================ */
+
+function runTests() {
+  const suites = [];
+  const t0 = Date.now();
+
+  for (const pid of PERSONA_IDS) {
+    const ds = MockDataSource(pid);
+    const profile = ds.getProfile();
+    const checks = [];
+    const startDn = todayDn();
+    const plan = buildPlan(ds, { startDn });
+    const S = plan.settings;
+    const horizonEnd = startDn + plan.horizonDays;
+    const acctName = id => (plan.accounts.find(a => a.id === id) || {}).name || id;
+
+    /* ---- 1. hard constraint: the buffer floor holds, every day ---- */
+    (() => {
+      const worstIdx = plan.series.total.indexOf(Math.min(...plan.series.total));
+      const worst = plan.series.total[worstIdx];
+      const worstExp = Math.min(...plan.expectedSeries.total);
+      let overdrafts = 0, odDetail = '';
+      for (const id of Object.keys(plan.series.byAccount)) {
+        plan.series.byAccount[id].forEach((v, i) => {
+          if (v < -0.005 && !overdrafts++) odDetail = acctName(id) + ' at ' + money(v) + ' on ' + fmtD(plan.series.dn[i]);
+        });
+      }
+      checks.push({
+        name: 'Projected balance never breaches the buffer floor',
+        pass: worst >= S.bufferFloor - 0.005 && worstExp >= S.bufferFloor - 0.005 && overdrafts === 0,
+        detail: 'Floor ' + money0(S.bufferFloor) + '. Lowest projected household checking over ' +
+                plan.horizonDays + ' days: ' + money(worst) + ' on ' + fmtD(plan.series.dn[worstIdx]) +
+                ' (conservative), ' + money(worstExp) + ' (expected). ' +
+                (overdrafts ? overdrafts + ' account-level overdraft(s): ' + odDetail
+                            : 'No individual account goes below zero.')
+      });
+    })();
+
+    /* ---- 2. hard constraint: no minimum is ever late or short ---- */
+    (() => {
+      const late = plan.lates.length;
+      const short = plan.shortfalls.length;
+      const dueInHorizon = plan.obligations.filter(o => !o.skipped);
+      let latestGap = Infinity, worstOb = null;
+      for (const ob of dueInHorizon) {
+        if (ob.paidDn == null) continue;
+        const gap = ob.dueDn - ob.paidDn;
+        if (gap < latestGap) { latestGap = gap; worstOb = ob; }
+      }
+      checks.push({
+        name: 'Every minimum is scheduled on or before its due date',
+        pass: late === 0 && short === 0 && latestGap >= 0,
+        detail: dueInHorizon.length + ' obligations fall inside the horizon; ' + late + ' late, ' +
+                short + ' short. Tightest margin: ' +
+                (worstOb ? latestGap + ' day(s) before the ' + fmtD(worstOb.dueDn) + ' due date.' : 'n/a')
+      });
+    })();
+
+    /* ---- 3. hard constraint: nothing is spent before it arrives ---- */
+    (() => {
+      const available = r2(plan.totals.startingCash + plan.totals.inflowPlanned);
+      const out = r2(plan.totals.scheduledOutflow + plan.totals.expenses);
+      const tight = out <= r2(available - S.bufferFloor) + 0.005;
+      checks.push({
+        name: 'Total outflow never exceeds starting balance plus inflow',
+        pass: plan.totals.scheduledOutflow <= available + 0.005 && tight,
+        detail: 'Scheduled payments ' + money(plan.totals.scheduledOutflow) + ' + background spending ' +
+                money(plan.totals.expenses) + ' = ' + money(out) + ' against ' + money(plan.totals.startingCash) +
+                ' on hand plus ' + money(plan.totals.inflowPlanned) + ' of committed income. ' +
+                money(r2(available - out)) + ' left over, floor is ' + money0(S.bufferFloor) + '.'
+      });
+    })();
+
+    /* ---- 4. avalanche beats snowball at the expensive debt ---- */
+    (() => {
+      const debts = plan.liabilities.filter(l => l.apr != null);
+      const top = debts.slice().sort((a, b) => b.apr - a.apr)[0];
+      const dollarsTo = (strategy) => {
+        const p = buildPlan(ds, { startDn, strategy, skipProjection: true });
+        return r2(p.payments.filter(x => x.liabilityId === top.id && x.type !== 'transfer')
+                            .reduce((s, x) => s + x.amount, 0));
+      };
+      const av = dollarsTo('avalanche'), sn = dollarsTo('snowball');
+      checks.push({
+        name: 'Avalanche sends strictly more to the highest-APR debt than snowball',
+        pass: av > sn + 0.005,
+        detail: 'Highest rate is ' + top.name + ' at ' + pct1(top.apr) + '. Over ' + plan.horizonDays +
+                ' days avalanche directs ' + money(av) + ' at it, snowball ' + money(sn) +
+                ' — a ' + money(r2(av - sn)) + ' difference.'
+      });
+    })();
+
+    /* ---- 5. statement-close timing actually moves reported utilization ---- */
+    (() => {
+      // Swept across strategies on purpose. The engine declines the move when
+      // the card is already the surplus target — pulling the minimum forward
+      // would reserve the same dollars for a later date and report the same
+      // balance. So the property that must hold everywhere is "never worse",
+      // and it must be strictly better wherever the move is available.
+      const rows = ['avalanche', 'snowball', 'hybrid'].map(strategy => {
+        const on  = buildPlan(ds, { startDn, strategy, optimizeForCreditScore: true,  skipProjection: true });
+        const off = buildPlan(ds, { startDn, strategy, optimizeForCreditScore: false, skipProjection: true });
+        return {
+          strategy,
+          on: on.peakReportedUtilization,
+          off: off.peakReportedUtilization,
+          moves: on.payments.filter(p => p.type === 'statement_close').length
+        };
+      });
+      const neverWorse = rows.every(r => r.on <= r.off + 0.0001);
+      const helped = rows.filter(r => r.on < r.off - 0.0001);
+      const anyMoves = rows.some(r => r.moves > 0);
+      checks.push({
+        name: 'Statement-close timing lowers peak reported utilization',
+        pass: neverWorse && helped.length > 0 && anyMoves,
+        detail: rows.map(r => r.strategy + ': ' + pct1(r.on) + ' vs ' + pct1(r.off) +
+          (r.moves ? ' (' + r.moves + ' move' + (r.moves > 1 ? 's' : '') + ')' : ' (declined — that card is already the surplus target)')
+        ).join(' · ') + '. Best improvement ' +
+        (Math.round(Math.max(...rows.map(r => r.off - r.on)) * 1000) / 10) + ' points of peak utilization.'
+      });
+    })();
+
+    /* ---- 6. every payment lands inside the horizon ---- */
+    (() => {
+      const bad = plan.payments.filter(p => p.dn < startDn || p.dn >= horizonEnd);
+      const beforeDue = plan.payments.filter(p => p.dueDn != null && p.dn > p.dueDn);
+      checks.push({
+        name: 'No payment is dated outside the horizon or after its due date',
+        pass: bad.length === 0 && beforeDue.length === 0,
+        detail: plan.payments.length + ' payments, all inside ' + fmtD(startDn) + '–' + fmtD(horizonEnd - 1) + '.'
+      });
+    })();
+
+    /* ---- 7. every decision explains itself in a real sentence ---- */
+    (() => {
+      const all = plan.payments.concat(plan.sweeps);
+      const weak = all.filter(p => !p.reason || p.reason.length < 45 ||
+        !/\$/.test(p.reason) || !/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)/.test(p.reason));
+      const lens = all.map(p => p.reason.length);
+      checks.push({
+        name: 'Every scheduled payment carries a specific, generated reason',
+        pass: weak.length === 0 && all.length > 0,
+        detail: all.length + ' payments, all with a dated, dollar-specific sentence. Shortest ' +
+                Math.min(...lens) + ' chars, longest ' + Math.max(...lens) + '. ' +
+                (weak.length ? 'Weak: ' + weak[0].reason : '')
+      });
+    })();
+
+    /* ---- 8. the engine is deterministic ---- */
+    (() => {
+      const a = buildPlan(ds, { startDn, skipProjection: true });
+      const b = buildPlan(ds, { startDn, skipProjection: true });
+      const key = p => p.payments.map(x => [x.dn, x.type, x.liabilityId, x.amount, x.reason].join('|')).join('\n');
+      checks.push({
+        name: 'Two runs of the same inputs produce an identical plan',
+        pass: key(a) === key(b),
+        detail: 'Same schedule, same amounts, same sentences. No randomness, no clock reads inside the solver.'
+      });
+    })();
+
+    /* ---- 9. irregular income is planned against a floor, not an average ---- */
+    (() => {
+      const streams = ds.getIncomeStreams().filter(s => s.confidence === 'variable');
+      if (!streams.length) {
+        checks.push({
+          name: 'Income floor logic (no variable income for this persona)',
+          pass: true, skipped: true,
+          detail: 'All deposits are certain, so the plan commits against the full amount.'
+        });
+        return;
+      }
+      let ok = true; const bits = [];
+      for (const s of streams) {
+        const hist = ds.getDepositHistory(s.id);
+        const mean = hist.reduce((x, y) => x + y, 0) / hist.length;
+        const p25 = r2(percentile(hist, 0.25));
+        const used = plan.incomeFloors[s.id];
+        if (!(used === p25 && used < mean)) ok = false;
+        bits.push(s.label + ': floor ' + money0(used) + ' vs ' + money0(mean) + ' average (' +
+                  Math.round((1 - used / mean) * 100) + '% haircut)');
+      }
+      const committed = plan.payments.filter(p => !p.conditional).length;
+      checks.push({
+        name: 'Variable income is committed against the 25th percentile, not the mean',
+        pass: ok && plan.sweeps.length > 0,
+        detail: bits.join('; ') + '. ' + committed + ' committed payments survive a floor month; ' +
+                plan.sweeps.length + ' conditional sweeps totalling ' + money(plan.totals.sweepOutflow) +
+                ' fire only if the deposits come in above it.'
+      });
+    })();
+
+    /* ---- 10. the plan does not fall apart on awkward start dates ---- */
+    (() => {
+      const offsets = [0, 1, 2, 3, 5, 8, 13, 17, 21, 26, 30, 45, 60, 97, 128, 160, 200, 245];
+      const bad = [];
+      for (const off of offsets) {
+        const p = buildPlan(ds, { startDn: startDn + off, skipProjection: true });
+        if (p.breaches.length || p.lates.length || p.shortfalls.length) {
+          bad.push(fmtDY(startDn + off) + ' (' + p.breaches.length + ' breach / ' +
+                   p.lates.length + ' late / ' + p.shortfalls.length + ' short)');
+        }
+      }
+      checks.push({
+        name: 'Constraints hold from any start date, including month boundaries',
+        pass: bad.length === 0,
+        detail: offsets.length + ' start dates swept across ' +
+                fmtDY(startDn) + '–' + fmtDY(startDn + 245) + ', covering month ends, short months and ' +
+                'every weekday. ' + (bad.length ? 'Failed: ' + bad.join(', ') : 'All clean.')
+      });
+    })();
+
+    /* ---- 11. the long projection terminates ---- */
+    (() => {
+      const debts = plan.liabilities.filter(l => l.apr != null);
+      const unpaid = debts.filter(l => !plan.projection.perLiability[l.id].cleared);
+      checks.push({
+        name: 'Every interest-bearing debt is paid off inside the projection',
+        pass: unpaid.length === 0 && plan.projection.debtFreeDn !== null,
+        detail: unpaid.length === 0
+          ? 'Debt-free ' + fmtDY(plan.projection.debtFreeDn) + ' — ' + plan.projection.monthsToDebtFree +
+            ' months, ' + money(plan.projection.totalInterest) + ' of interest along the way.'
+          : 'Still open after 15 years: ' + unpaid.map(l => l.name).join(', ')
+      });
+    })();
+
+    suites.push({
+      persona: profile,
+      checks,
+      passed: checks.filter(c => c.pass).length,
+      total: checks.length,
+      plan
+    });
+  }
+
+  const total = suites.reduce((s, x) => s + x.total, 0);
+  const passed = suites.reduce((s, x) => s + x.passed, 0);
+  return { suites, total, passed, failed: total - passed, ms: Date.now() - t0 };
+}
+
+
+/* ============================================================================
+   UI. Four views, in the order they matter: this week, timeline, debts,
+   what-if — plus the test panel, which is always one click away and shouts
+   from the top bar when anything is red.
+   ============================================================================ */
+
+const state = {
+  personaId: 'steady',
+  view: 'week',
+  whatif: null,
+  testResults: null
+};
+
+const planCache = new Map();
+function planFor(personaId, overrides) {
+  const key = personaId + '|' + JSON.stringify(overrides || {});
+  if (!planCache.has(key)) planCache.set(key, buildPlan(MockDataSource(personaId), overrides || {}));
+  return planCache.get(key);
+}
+const START_DN = todayDn();
+const currentPlan = () => planFor(state.personaId, { startDn: START_DN });
+
+function esc(s) {
+  return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+const nameOf = (plan, id) => (plan.accounts.find(a => a.id === id) || {}).name || id;
+/* With a single checking account, stamping its name on every row is noise. */
+const multiAccount = plan => plan.accounts.filter(a => a.type === 'checking').length > 1;
+const acctChip = (plan, id) => multiAccount(plan) ? '<span class="chip">' + esc(nameOf(plan, id)) + '</span>' : '';
+
+const KIND_LABEL = {
+  credit_card: 'credit card', auto_loan: 'auto loan', student_loan: 'student loan',
+  mortgage: 'mortgage', personal_loan: 'personal loan', rent: 'rent', utility: 'utility'
+};
+
+/* ------------------------------------------------------------------ chrome */
+
+function renderChrome() {
+  const t = state.testResults;
+  const bad = t && t.failed > 0;
+  document.getElementById('banner').className = 'banner' + (bad ? ' bad' : '');
+  document.getElementById('banner').innerHTML = bad
+    ? '<span>' + t.failed + ' of ' + t.total + ' engine checks are failing. The plan below should not be trusted until they are green.</span>' +
+      '<button data-view="tests">Open the test panel</button>'
+    : '<span>' + (t ? t.passed + ' of ' + t.total + ' engine checks pass across all three personas' : 'running checks…') + '</span>' +
+      '<button data-view="tests">See what they cover</button>';
+
+  document.querySelectorAll('nav button').forEach(b =>
+    b.setAttribute('aria-current', String(b.dataset.view === state.view)));
+  document.querySelectorAll('.person').forEach(b =>
+    b.setAttribute('aria-current', String(b.dataset.persona === state.personaId)));
+
+  const plan = currentPlan();
+  const floors = Object.keys(plan.incomeFloors);
+  document.getElementById('railNote').innerHTML =
+    'Plan built ' + esc(fmtDY(plan.startDn)) + ' over ' + plan.horizonDays + ' days.<br>' +
+    'Buffer floor <code>' + esc(money0(plan.settings.bufferFloor)) + '</code> across checking.<br>' +
+    (floors.length
+      ? 'Variable income committed at the 25th percentile of the last 12 deposits.'
+      : 'All income is fixed and dated.');
+}
+
+/* -------------------------------------------------------------- components */
+
+function chip(text, tone) { return '<span class="chip ' + (tone || '') + '">' + esc(text) + '</span>'; }
+
+function paymentRow(plan, p) {
+  let cls = 'row', chips = '';
+  if (p.type === 'statement_close') { cls += ' util'; chips = chip('utilization move', 'slate'); }
+  else if (p.type === 'extra')      { cls += ' move';  chips = chip('extra', 'teal'); }
+  else if (p.type === 'sweep')      { cls += ' cond';  chips = chip('only if income allows'); }
+  else if (p.type === 'transfer')   {
+    cls += ' muted';
+    chips = chip(p.tags.includes('savings_draw') ? 'from savings'
+              : p.tags.includes('restore') ? 'back to savings' : 'between accounts');
+  } else {
+    const l = plan.liabilities.find(x => x.id === p.liabilityId);
+    chips = chip(l && l.autopayEnabled ? 'autopay' : 'minimum');
+  }
+  const where = p.type === 'transfer'
+    ? '<span class="chip">' + esc(nameOf(plan, p.fromAccountId) + ' \u2192 ' + nameOf(plan, p.toAccountId)) + '</span>'
+    : acctChip(plan, p.fromAccountId);
+  return '<div class="' + cls + '">' +
+    '<div class="what"><b>' + esc(p.label) + '</b>' + chips + where + '</div>' +
+    '<div class="amt num">' + (p.type === 'transfer' ? '' : '−') + esc(money(p.amount)) + '</div>' +
+    '<div class="why">' + esc(p.reason) + '</div>' +
+  '</div>';
+}
+
+function incomeRow(plan, ev) {
+  const conf = ev.confidence === 'variable'
+    ? chip('planned at ' + money0(ev.planAmount), 'slate') : chip('expected', 'teal');
+  return '<div class="row"><div class="what"><b>' + esc(ev.label.replace(/^the /, '')) + '</b>' +
+    conf + acctChip(plan, ev.accountId) + '</div>' +
+    '<div class="amt num">+' + esc(money(ev.amount)) + '</div>' +
+    (ev.confidence === 'variable'
+      ? '<div class="why">The plan only commits ' + esc(money(ev.planAmount)) +
+        ' of this. Anything above that gets swept at the target debt instead of quietly absorbed.</div>' : '') +
+  '</div>';
+}
+
+function expenseRow(plan, ex) {
+  return '<div class="row muted"><div class="what"><b>' + esc(ex.label) + '</b>' +
+    chip('spending') + acctChip(plan, ex.accountId) + '</div>' +
+    '<div class="amt num">−' + esc(money(ex.amount)) + '</div></div>';
+}
+
+/* ============================================================= 1. this week */
+
+function viewWeek(plan) {
+  const start = plan.startDn, end = start + 7;
+  const inRange = d => d >= start && d < end;
+  const pays = plan.payments.filter(p => inRange(p.dn));
+  const sweeps = plan.sweeps.filter(p => inRange(p.dn));
+  const income = plan.incomeEvents.filter(e => inRange(e.dn));
+  const spend = plan.expenseEvents.filter(e => inRange(e.dn));
+  const balAt = d => plan.series.total[plan.series.dn.indexOf(d)];
+
+  const out = r2(pays.filter(p => p.type !== 'transfer').reduce((s, p) => s + p.amount, 0));
+  const week = plan.series.total.slice(0, 7);
+  const lowIdx = week.indexOf(Math.min(...week));
+  const headroom = r2(week[lowIdx] - plan.settings.bufferFloor);
+
+  let summary;
+  if (!pays.length && !sweeps.length) {
+    summary = 'Nothing is scheduled to leave in the next seven days. The next payment is ' +
+      (plan.payments.length ? esc(plan.payments[0].label) + ' on ' + fmtD(plan.payments[0].dn) : 'outside this horizon') + '.';
+  } else {
+    const nPay = pays.filter(p => p.type !== 'transfer').length;
+    summary = nPay + ' payment' + (nPay === 1 ? '' : 's') + ' totalling ' + money(out) +
+      (nPay === 1 ? ' leaves' : ' leave') + ' between ' + fmtDW(start) + ' and ' + fmtDW(end - 1) +
+      '. Your thinnest day is ' +
+      fmtDW(plan.series.dn[lowIdx]) + ' at ' + money(week[lowIdx]) + ' — ' + money(headroom) +
+      ' above the floor you set.';
+  }
+
+  let rows = '';
+  let any = false;
+  for (let d = start; d < end; d++) {
+    const dayPays = pays.filter(p => p.dn === d);
+    const daySweeps = sweeps.filter(p => p.dn === d);
+    const dayIn = income.filter(e => e.dn === d);
+    const daySpend = spend.filter(e => e.dn === d);
+    if (!dayPays.length && !dayIn.length && !daySpend.length && !daySweeps.length) continue;
+    any = true;
+    rows += '<div class="day-head"><b>' + esc(fmtDW(d)) + '</b>' +
+      (d === start ? '<span>today</span>' : '') +
+      '<span class="bal num">' + (multiAccount(plan) ? 'all checking closes at ' : 'closes at ') +
+      esc(money(balAt(d))) + '</span></div>';
+    dayIn.forEach(e => rows += incomeRow(plan, e));
+    dayPays.forEach(p => rows += paymentRow(plan, p));
+    daySweeps.forEach(p => rows += paymentRow(plan, p));
+    daySpend.forEach(e => rows += expenseRow(plan, e));
+  }
+  if (!any) {
+    rows = '<div class="empty"><b>A quiet week.</b>Nothing moves before ' + esc(fmtDW(end)) +
+      '. The Timeline view shows where the plan picks back up.</div>';
+  }
+
+  /* For a variable-income persona this is the most important thing on the
+     screen, and the deposits themselves often fall outside week one. */
+  let floorNote = '';
+  const floorIds = Object.keys(plan.incomeFloors);
+  if (floorIds.length) {
+    const streams = plan.incomeEvents.filter(e => e.confidence === 'variable');
+    const committed = r2(streams.reduce((s, e) => s + e.planAmount, 0));
+    const expected = r2(streams.reduce((s, e) => s + e.amount, 0));
+    const first = plan.sweeps[0];
+    floorNote = '<div class="note"><b>This plan is built on a floor, not an average.</b> ' +
+      'Over the next ' + plan.horizonDays + ' days your variable work is forecast at ' + esc(money0(expected)) +
+      ', but every payment here is sized against ' + esc(money0(committed)) +
+      ' — roughly the 25th percentile of your last twelve deposits. A bad month does not break the schedule. ' +
+      (first
+        ? 'The ' + esc(money0(r2(expected - committed))) + ' difference is already earmarked: ' + plan.sweeps.length +
+          ' conditional sweep' + (plan.sweeps.length === 1 ? '' : 's') + ' at ' + esc(first.label) +
+          ', the first on ' + esc(fmtD(first.dn)) + ', each one firing only if that deposit clears the floor.'
+        : 'Anything above the floor sweeps to the target debt as it arrives.') +
+      '</div>';
+  }
+
+  const shifts = plan.payments.filter(p => p.type === 'statement_close');
+  const cards = plan.liabilities.filter(l => l.kind === 'credit_card');
+  let utilNote = '';
+  if (plan.settings.optimizeForCreditScore && cards.length) {
+    if (shifts.length) {
+      const names = [...new Set(shifts.map(s => s.label))];
+      utilNote = '<div class="note"><b>Credit-score timing is on.</b> ' + esc(names.join(' and ')) +
+        ' gets paid before the statement closes rather than at the due date. Same money, same month — ' +
+        'the difference is which balance the bureaus are shown. Peak reported utilization across the horizon is ' +
+        pct1(plan.peakReportedUtilization) + '.</div>';
+    } else {
+      utilNote = '<div class="note"><b>Nothing worth re-timing this cycle.</b> ' +
+        'Every spare dollar is already going at ' +
+        esc((plan.liabilities.find(l => l.kind === 'credit_card' && l.balance > 0) || {}).name || 'your card') +
+        ' on the day it lands, which is ahead of every statement close anyway. Pulling the minimum forward too ' +
+        'would reserve the same money for a later date and report the same balance, so the plan leaves it alone.</div>';
+    }
+  }
+
+  return '<div class="wrap">' +
+    '<div class="page-head"><p class="eyebrow">This week</p>' +
+      '<h2>' + esc(plan.profile.name) + '</h2>' +
+      '<p class="sub">' + summary + '</p></div>' +
+    floorNote + utilNote +
+    '<div class="card"><header><h3>What moves, when, and why</h3>' +
+      '<span class="aside">' + esc(fmtDY(start)) + ' – ' + esc(fmtDY(end - 1)) + '</span></header>' +
+      '<div class="body flush">' + rows + '</div></div>' +
+    upcomingCard(plan) +
+  '</div>';
+}
+
+function upcomingCard(plan) {
+  const start = plan.startDn + 7, end = plan.startDn + 21;
+  const pays = plan.payments.filter(p => p.dn >= start && p.dn < end && p.type !== 'transfer');
+  if (!pays.length) return '';
+  let rows = '';
+  pays.forEach(p => {
+    rows += '<div class="row"><div class="what"><b>' + esc(fmtD(p.dn)) + ' · ' + esc(p.label) + '</b>' +
+      (p.type === 'statement_close' ? chip('utilization move', 'slate') : p.type === 'extra' ? chip('extra', 'teal') : '') +
+      '</div><div class="amt num">−' + esc(money(p.amount)) + '</div></div>';
+  });
+  return '<div class="card"><header><h3>The two weeks after that</h3>' +
+    '<span class="aside">reasons on the Timeline view</span></header>' +
+    '<div class="body flush">' + rows + '</div></div>';
+}
+
+/* ============================================================== 2. timeline */
+
+function balanceChart(plan) {
+  const W = 1000, H = 300, padL = 70, padR = 20, padT = 18, padB = 52;
+  const s = plan.series, n = s.dn.length;
+  const expected = plan.expectedSeries.total;
+  const differs = expected.some((v, i) => Math.abs(v - s.total[i]) > 0.5);
+  const floor = plan.settings.bufferFloor;
+  const all = s.total.concat(differs ? expected : [], [floor]);
+  let lo = Math.min(...all), hi = Math.max(...all);
+  const span = Math.max(hi - lo, 100);
+  lo = Math.max(0, lo - span * 0.16); hi = hi + span * 0.14;
+  const X = i => padL + (i / Math.max(n - 1, 1)) * (W - padL - padR);
+  const Y = v => padT + (1 - (v - lo) / (hi - lo)) * (H - padT - padB);
+
+  // Red is only ever for something actually going wrong. A floor the plan
+  // respects is a boundary, not an alarm.
+  const breached = plan.breaches.length > 0;
+  const floorColour = breached ? '#A32118' : '#7C949C';
+  const line = arr => arr.map((v, i) => (i ? 'L' : 'M') + X(i).toFixed(1) + ' ' + Y(v).toFixed(1)).join(' ');
+  const area = line(s.total) + ' L' + X(n - 1).toFixed(1) + ' ' + Y(lo).toFixed(1) +
+               ' L' + X(0).toFixed(1) + ' ' + Y(lo).toFixed(1) + ' Z';
+
+  let g = '';
+  for (let k = 0; k <= 3; k++) {
+    const v = lo + (hi - lo) * k / 3;
+    g += '<line x1="' + padL + '" y1="' + Y(v).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + Y(v).toFixed(1) +
+         '" stroke="#DCE3E5" stroke-width="1"/>' +
+         '<text x="' + (padL - 10) + '" y="' + (Y(v) + 4).toFixed(1) + '" text-anchor="end" font-size="11.5" ' +
+         'font-family="ui-monospace,monospace" fill="#7C949C">' + esc(money0(v)) + '</text>';
+  }
+
+  let months = '';
+  s.dn.forEach((d, i) => {
+    const p = dparts(d);
+    if (p.d !== 1 && i !== 0) return;
+    if (i !== 0) months += '<line x1="' + X(i).toFixed(1) + '" y1="' + padT + '" x2="' + X(i).toFixed(1) +
+      '" y2="' + (H - padB) + '" stroke="#C3CFD2" stroke-width="1" stroke-dasharray="2 3"/>';
+    months += '<text x="' + (X(i) + 6).toFixed(1) + '" y="' + (H - padB + 17) + '" font-size="12" ' +
+      'font-family="ui-sans-serif,system-ui" fill="#43606A">' + esc(MONTHS_LONG[p.m]) + '</text>';
+  });
+
+  const idx = {}; s.dn.forEach((d, i) => idx[d] = i);
+  let marks = '';
+  plan.incomeEvents.forEach(e => {
+    const i = idx[e.dn]; if (i === undefined) return;
+    marks += '<path d="M' + (X(i) - 4).toFixed(1) + ' ' + (H - padB + 3) + ' L' + (X(i) + 4).toFixed(1) +
+      ' ' + (H - padB + 3) + ' L' + X(i).toFixed(1) + ' ' + (H - padB - 3) + ' Z" fill="#0E5A61"/>' +
+      '<title>' + esc(e.label + ' — ' + money(e.amount) + ' on ' + fmtD(e.dn)) + '</title>';
+  });
+  plan.payments.forEach(p => {
+    const i = idx[p.dn]; if (i === undefined || p.type === 'transfer') return;
+    const col = p.type === 'statement_close' ? '#3C5C8C' : p.type === 'extra' ? '#0E5A61' : '#43606A';
+    const r = p.type === 'minimum' ? 2.4 : 3.4;
+    marks += '<circle cx="' + X(i).toFixed(1) + '" cy="' + Y(s.total[i]).toFixed(1) + '" r="' + r +
+      '" fill="' + col + '"><title>' + esc(fmtD(p.dn) + ' · ' + p.label + ' · ' + money(p.amount)) + '</title></circle>';
+  });
+
+  return '<svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" ' +
+    'aria-label="Projected checking balance across the horizon">' +
+    '<defs><linearGradient id="fade" x1="0" x2="0" y1="0" y2="1">' +
+      '<stop offset="0%" stop-color="#0E5A61" stop-opacity="0.13"/>' +
+      '<stop offset="100%" stop-color="#0E5A61" stop-opacity="0.01"/></linearGradient></defs>' +
+    g + months +
+    '<path d="' + area + '" fill="url(#fade)"/>' +
+    '<line x1="' + padL + '" y1="' + Y(floor).toFixed(1) + '" x2="' + (W - padR) + '" y2="' + Y(floor).toFixed(1) +
+      '" stroke="' + floorColour + '" stroke-width="1.5" stroke-dasharray="5 4"/>' +
+    '<text x="' + (W - padR) + '" y="' + (Y(floor) - 7).toFixed(1) + '" text-anchor="end" font-size="11.5" ' +
+      'font-family="ui-sans-serif,system-ui" fill="' + floorColour + '">buffer floor ' + esc(money0(floor)) +
+      (breached ? ' — breached' : '') + '</text>' +
+    (differs ? '<path d="' + line(expected) + '" fill="none" stroke="#3C5C8C" stroke-width="1.5" stroke-dasharray="4 3"/>' : '') +
+    '<path d="' + line(s.total) + '" fill="none" stroke="#0E5A61" stroke-width="2"/>' +
+    marks +
+  '</svg>';
+}
+
+function calendars(plan) {
+  const start = plan.startDn, end = start + plan.horizonDays;
+  const byDay = new Map();
+  const put = (d, k) => { if (!byDay.has(d)) byDay.set(d, new Set()); byDay.get(d).add(k); };
+  plan.incomeEvents.forEach(e => put(e.dn, 'in'));
+  plan.payments.forEach(p => put(p.dn, p.type === 'statement_close' ? 'utl' : p.type === 'transfer' ? '' : 'out'));
+  plan.sweeps.forEach(p => put(p.dn, 'swp'));
+  plan.closeSnapshots.forEach(c => put(c.dn, 'cls'));
+
+  const first = dparts(start), last = dparts(end - 1);
+  let out = '';
+  let y = first.y, m = first.m;
+  while (y < last.y || (y === last.y && m <= last.m)) {
+    const dim = daysInMonth(y, m);
+    const lead = dparts(dnFromParts(y, m, 1)).w;
+    let cells = '';
+    for (let i = 0; i < lead; i++) cells += '<div class="cell"></div>';
+    for (let d = 1; d <= dim; d++) {
+      const dn = dnFromParts(y, m, d);
+      const on = dn >= start && dn < end;
+      const marks = byDay.get(dn);
+      let mk = '';
+      if (on && marks) ['in', 'out', 'utl', 'swp', 'cls'].forEach(k => {
+        if (marks.has(k)) mk += '<span class="m ' + k + '"></span>';
+      });
+      cells += '<div class="cell' + (on ? ' on' : '') + (dn === start ? ' today' : '') + '">' +
+        d + '<span class="marks">' + mk + '</span></div>';
+    }
+    out += '<div class="month"><h4>' + esc(MONTHS_LONG[m] + ' ' + y) + '</h4>' +
+      '<div class="dow"><span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span></div>' +
+      '<div class="grid">' + cells + '</div></div>';
+    m++; if (m > 11) { m = 0; y++; }
+  }
+  return '<div class="months">' + out + '</div>';
+}
+
+function viewTimeline(plan) {
+  const floorLegend = plan.breaches.length ? '#A32118' : '#7C949C';
+  const lowIdx = plan.series.total.indexOf(Math.min(...plan.series.total));
+  const maxGap = plan.expectedSeries.total.reduce(
+    (m, v, i) => Math.max(m, Math.abs(v - plan.series.total[i])), 0);
+  const differs = maxGap > 25;
+  let rows = '';
+  plan.payments.concat(plan.sweeps).sort((a, b) => a.dn - b.dn).forEach(p => {
+    rows += '<div class="day-head"><b>' + esc(fmtDW(p.dn)) + '</b></div>' + paymentRow(plan, p);
+  });
+
+  return '<div class="wrap">' +
+    '<div class="page-head"><p class="eyebrow">Next ' + plan.horizonDays + ' days</p>' +
+      '<h2>Timeline</h2>' +
+      '<p class="sub">The line is your projected checking balance across every account. It never touches the ' +
+      'floor, because keeping it off the floor is the constraint the whole engine solves for. Lowest point: ' +
+      esc(money(plan.series.total[lowIdx])) + ' on ' + esc(fmtDY(plan.series.dn[lowIdx])) + '.' +
+      (plan.sweeps.length && !differs
+        ? ' The expected-income line sits on top of the committed one because every dollar above the floor ' +
+          'is swept at the debt as it arrives, rather than piling up in checking.'
+        : '') + '</p></div>' +
+    '<div class="card"><header><h3>Projected balance</h3>' +
+      '<span class="aside">' + esc(fmtDY(plan.startDn)) + ' – ' + esc(fmtDY(plan.startDn + plan.horizonDays - 1)) + '</span></header>' +
+      balanceChart(plan) +
+      '<div class="legend">' +
+        '<span><i style="border-color:#0E5A61"></i>committed plan (built on income you can count on)</span>' +
+        (differs ? '<span><i style="border-color:#3C5C8C;border-top-style:dashed"></i>expected, if deposits land as forecast</span>' : '') +
+        '<span><i style="border-color:' + floorLegend + ';border-top-style:dashed"></i>buffer floor</span>' +
+        '<span><span class="dot" style="background:#0E5A61"></span>income / extra payment</span>' +
+        '<span><span class="dot" style="background:#3C5C8C"></span>statement-close move</span>' +
+      '</div></div>' +
+    '<div class="card"><header><h3>Calendar</h3><span class="aside">' +
+      'deposits · payments · statement closes</span></header>' + calendars(plan) + '</div>' +
+    '<div class="card"><header><h3>Every scheduled payment</h3>' +
+      '<span class="aside">' + plan.payments.length + ' committed, ' + plan.sweeps.length + ' conditional</span></header>' +
+      '<div class="body flush">' + rows + '</div></div>' +
+  '</div>';
+}
+
+/* ================================================================= 3. debts */
+
+function viewDebts(plan) {
+  const debts = plan.liabilities.filter(l => l.apr != null);
+  const bills = plan.liabilities.filter(l => l.apr == null);
+  const proj = plan.projection;
+  const target = debts.slice().sort((a, b) =>
+    plan.settings.strategy === 'snowball' ? a.balance - b.balance : b.apr - a.apr)[0];
+
+  let rows = '';
+  debts.slice().sort((a, b) => b.apr - a.apr).forEach(l => {
+    const pl = proj.perLiability[l.id] || {};
+    const util = l.creditLimit ? l.balance / l.creditLimit : null;
+    rows += '<tr><td><b>' + esc(l.name) + '</b><br>' +
+        '<span style="color:var(--ink-3);font-size:12.5px">' + esc(KIND_LABEL[l.kind]) +
+        (l.id === target.id ? ' · <span style="color:var(--teal)">where extra money goes</span>' : '') + '</span>' +
+        (util !== null ? '<div class="meter' + (util < 0.3 ? ' low' : '') + '"><i style="width:' +
+          Math.min(100, util * 100).toFixed(0) + '%"></i></div>' +
+          '<span style="font-size:11.5px;color:var(--ink-3)" class="num">' + esc(pct1(util)) + ' of ' +
+          esc(money0(l.creditLimit)) + '</span>' : '') +
+      '</td>' +
+      '<td class="r num">' + esc(money(l.balance)) + '</td>' +
+      '<td class="r num">' + esc(pct1(l.apr)) + '</td>' +
+      '<td class="r num">' + esc(money(l.minimumPayment)) + '</td>' +
+      '<td class="r num">' + (pl.payoffDn ? esc(fmtDY(pl.payoffDn)) : 'beyond 15 yrs') + '</td>' +
+      '<td class="r num">' + esc(money(pl.lifetimeInterest || 0)) + '</td></tr>';
+  });
+
+  const totBal = r2(debts.reduce((s, l) => s + l.balance, 0));
+  const totMin = r2(plan.liabilities.reduce((s, l) => s + l.minimumPayment, 0));
+
+  let billRows = '';
+  bills.forEach(l => {
+    billRows += '<tr><td><b>' + esc(l.name) + '</b> <span style="color:var(--ink-3);font-size:12.5px">' +
+      esc(KIND_LABEL[l.kind]) + '</span></td>' +
+      '<td class="r num">' + esc(money(l.minimumPayment)) + '</td>' +
+      '<td class="r num">day ' + l.dueDayOfMonth + '</td>' +
+      '<td class="r">' + (l.autopayEnabled ? chip('autopay') : chip('scheduled')) + '</td></tr>';
+  });
+
+  const strategyCopy = {
+    avalanche: 'Avalanche: every spare dollar goes at the highest rate first. Cheapest in total interest.',
+    snowball: 'Snowball: smallest balance first. Costs more in interest, closes accounts sooner.',
+    hybrid: 'Hybrid: smallest balance first only when it can be cleared inside 60 days, then highest rate.'
+  }[plan.settings.strategy];
+
+  return '<div class="wrap">' +
+    '<div class="page-head"><p class="eyebrow">Under the current plan</p><h2>Debts</h2>' +
+      '<p class="sub">' + esc(money(totBal)) + ' across ' + debts.length + ' balances. ' +
+      (proj.debtFreeDn
+        ? 'Clear on ' + esc(fmtDY(proj.debtFreeDn)) + ' — ' + proj.monthsToDebtFree + ' months — paying ' +
+          esc(money(proj.totalInterest)) + ' of interest on the way. '
+        : 'Not cleared inside the 15-year projection at these amounts. ') +
+      'Payoff dates assume income at the level the plan commits against, so they are a floor, not a hope.</p></div>' +
+    '<div class="note">' + esc(strategyCopy) + '</div>' +
+    '<div class="card"><header><h3>Interest-bearing balances</h3>' +
+      '<span class="aside">sorted by rate</span></header><div class="tbl-scroll"><table>' +
+      '<thead><tr><th>Debt</th><th class="r">Balance</th><th class="r">APR</th>' +
+      '<th class="r">Minimum</th><th class="r">Paid off</th><th class="r">Interest to come</th></tr></thead>' +
+      '<tbody>' + rows +
+      '<tr class="total"><td>Total</td><td class="r num">' + esc(money(totBal)) + '</td><td></td>' +
+      '<td class="r num">' + esc(money(r2(debts.reduce((s, l) => s + l.minimumPayment, 0)))) + '</td>' +
+      '<td class="r num">' + (proj.debtFreeDn ? esc(fmtDY(proj.debtFreeDn)) : '—') + '</td>' +
+      '<td class="r num">' + esc(money(proj.totalInterest)) + '</td></tr>' +
+      '</tbody></table></div></div>' +
+    (billRows ? '<div class="card"><header><h3>Fixed obligations</h3>' +
+      '<span class="aside">no balance to pay down — they just have to clear on time</span></header>' +
+      '<div class="tbl-scroll"><table><thead><tr><th>Bill</th><th class="r">Monthly</th>' +
+      '<th class="r">Due</th><th>How</th></tr></thead><tbody>' + billRows + '</tbody></table></div></div>' : '') +
+    '<div class="card"><header><h3>Committed every month</h3></header><div class="body">' +
+      '<span class="num" style="font-size:19px;font-weight:600">' + esc(money(totMin)) + '</span> ' +
+      'of minimums and fixed bills, against roughly <span class="num">' +
+      esc(money0(plan.monthlySurplusEstimate)) + '</span> a month of genuine slack after everyday spending. ' +
+      'That slack is what the schedule has to work with.</div></div>' +
+  '</div>';
+}
+
+/* =============================================================== 4. what-if */
+
+function whatifState(plan) {
+  if (!state.whatif || state.whatif.persona !== state.personaId) {
+    state.whatif = {
+      persona: state.personaId,
+      extraMonthly: 0,
+      bufferFloor: plan.settings.bufferFloor,
+      strategy: plan.settings.strategy,
+      optimizeForCreditScore: plan.settings.optimizeForCreditScore
+    };
+  }
+  return state.whatif;
+}
+
+function deltaBlock(k, value, delta, betterWhenNegative) {
+  let d = '';
+  if (delta !== null && Math.abs(delta.n) > 0.004) {
+    const better = betterWhenNegative ? delta.n < 0 : delta.n > 0;
+    d = '<div class="d ' + (better ? 'better' : 'worse') + '">' + esc(delta.text) + '</div>';
+  } else if (delta !== null) {
+    d = '<div class="d">no change</div>';
+  }
+  return '<div class="delta"><div class="k">' + esc(k) + '</div>' +
+    '<div class="v">' + esc(value) + '</div>' + d + '</div>';
+}
+
+function viewWhatIf(plan) {
+  const w = whatifState(plan);
+  const alt = planFor(state.personaId, {
+    startDn: START_DN,
+    extraMonthly: w.extraMonthly,
+    bufferFloor: w.bufferFloor,
+    strategy: w.strategy,
+    optimizeForCreditScore: w.optimizeForCreditScore
+  });
+  const base = plan;
+
+  const months = alt.projection.monthsToDebtFree, bMonths = base.projection.monthsToDebtFree;
+  const mDelta = (months !== null && bMonths !== null)
+    ? { n: months - bMonths, text: months === bMonths ? '' : Math.abs(months - bMonths) + ' month' +
+        (Math.abs(months - bMonths) === 1 ? '' : 's') + (months < bMonths ? ' sooner' : ' later') } : null;
+  const iDelta = { n: alt.projection.totalInterest - base.projection.totalInterest,
+    text: money(Math.abs(r2(alt.projection.totalInterest - base.projection.totalInterest))) +
+      (alt.projection.totalInterest < base.projection.totalInterest ? ' less interest' : ' more interest') };
+  const lowAlt = Math.min(...alt.series.total), lowBase = Math.min(...base.series.total);
+  const uDelta = { n: alt.peakReportedUtilization - base.peakReportedUtilization,
+    text: (Math.round(Math.abs(alt.peakReportedUtilization - base.peakReportedUtilization) * 1000) / 10) +
+      ' points ' + (alt.peakReportedUtilization < base.peakReportedUtilization ? 'lower' : 'higher') };
+
+  let cmp = '';
+  alt.liabilities.filter(l => l.apr != null).sort((a, b) => b.apr - a.apr).forEach(l => {
+    const a = alt.projection.perLiability[l.id] || {}, b = base.projection.perLiability[l.id] || {};
+    const shift = (a.payoffDn && b.payoffDn) ? Math.round((b.payoffDn - a.payoffDn) / 30.44) : null;
+    cmp += '<tr><td><b>' + esc(l.name) + '</b></td>' +
+      '<td class="r num">' + esc(pct1(l.apr)) + '</td>' +
+      '<td class="r num">' + (b.payoffDn ? esc(fmtDY(b.payoffDn)) : '—') + '</td>' +
+      '<td class="r num">' + (a.payoffDn ? esc(fmtDY(a.payoffDn)) : '—') + '</td>' +
+      '<td class="r num" style="color:' + (shift > 0 ? 'var(--moss)' : 'var(--ink-2)') + '">' +
+        (shift === null ? '—' : shift === 0 ? 'same' : (shift > 0 ? shift + ' mo sooner' : Math.abs(shift) + ' mo later')) +
+      '</td></tr>';
+  });
+
+  const warn = alt.breaches.length || alt.lates.length || alt.shortfalls.length;
+
+  return '<div class="wrap">' +
+    '<div class="page-head"><p class="eyebrow">Move the inputs, watch the plan</p><h2>What if</h2>' +
+      '<p class="sub">Everything below is recomputed by the same engine that builds the real schedule — ' +
+      'no shortcuts, no separate math. Numbers compare against ' + esc(plan.profile.name) + '&rsquo;s current settings.</p></div>' +
+
+    (warn ? '<div class="note" style="border-left-color:var(--alert);background:var(--alert-soft)">' +
+      '<b>These settings break the plan.</b> ' + alt.breaches.length + ' day(s) below the floor, ' +
+      alt.lates.length + ' late payment(s), ' + alt.shortfalls.length + ' underpaid minimum(s). ' +
+      'Lower the buffer floor or free up more each month.</div>' : '') +
+
+    '<div class="card"><header><h3>Inputs</h3></header><div class="controls">' +
+      '<div class="ctl"><label for="wExtra">Free up extra each month</label>' +
+        '<p class="hint">Money you stop spending elsewhere. It behaves like certain income.</p>' +
+        '<output class="num" id="wExtraOut">' + esc(money0(w.extraMonthly)) + '</output>' +
+        '<input type="range" id="wExtra" min="0" max="800" step="25" value="' + w.extraMonthly + '"></div>' +
+      '<div class="ctl"><label for="wFloor">Buffer floor</label>' +
+        '<p class="hint">The balance the plan is never allowed to go below, across all checking.</p>' +
+        '<output class="num" id="wFloorOut">' + esc(money0(w.bufferFloor)) + '</output>' +
+        '<input type="range" id="wFloor" min="0" max="3000" step="50" value="' + w.bufferFloor + '"></div>' +
+      '<div class="ctl"><label>Order to attack debt</label>' +
+        '<p class="hint">Which balance the spare money goes at first.</p>' +
+        '<div class="seg" id="wStrategy">' +
+          ['avalanche', 'snowball', 'hybrid'].map(s =>
+            '<button data-strategy="' + s + '" aria-pressed="' + (w.strategy === s) + '">' +
+            s[0].toUpperCase() + s.slice(1) + '</button>').join('') +
+        '</div>' +
+        '<label class="toggle" style="margin-top:14px;font-weight:400">' +
+          '<input type="checkbox" id="wUtil"' + (w.optimizeForCreditScore ? ' checked' : '') + '>' +
+          'Pay cards before the statement closes</label></div>' +
+    '</div>' +
+    '<div class="deltas">' +
+      deltaBlock('Debt-free', months === null ? 'beyond 15 yrs' : months + ' months', mDelta, true) +
+      deltaBlock('Interest from here', money0(alt.projection.totalInterest), iDelta, true) +
+      deltaBlock('Peak reported utilization', pct1(alt.peakReportedUtilization), uDelta, true) +
+      deltaBlock('Thinnest projected day', money0(lowAlt),
+        { n: lowAlt - lowBase, text: money0(Math.abs(r2(lowAlt - lowBase))) +
+          (lowAlt > lowBase ? ' more headroom' : ' less headroom') }, false) +
+    '</div></div>' +
+
+    '<div class="card"><header><h3>Payoff dates, debt by debt</h3>' +
+      '<span class="aside">current settings vs. these</span></header><div class="tbl-scroll"><table>' +
+      '<thead><tr><th>Debt</th><th class="r">APR</th><th class="r">Now</th><th class="r">With these settings</th>' +
+      '<th class="r">Difference</th></tr></thead><tbody>' + cmp + '</tbody></table></div></div>' +
+  '</div>';
+}
+
+/* ================================================================= 5. tests */
+
+function viewTests() {
+  const t = state.testResults;
+  if (!t) return '<div class="wrap"><div class="empty">Running…</div></div>';
+  let out = '';
+  t.suites.forEach(s => {
+    let checks = '';
+    s.checks.forEach(c => {
+      checks += '<div class="check' + (c.pass ? (c.skipped ? ' skip' : '') : ' fail') + '">' +
+        '<div class="mark">' + (c.pass ? (c.skipped ? '–' : 'OK') : '!!') + '</div>' +
+        '<div><b>' + esc(c.name) + '</b><p>' + esc(c.detail) + '</p></div></div>';
+    });
+    out += '<div class="card"><header><h3>' + esc(s.persona.name) + '</h3>' +
+      '<span class="aside">' + esc(s.persona.tagline) + ' · ' + s.passed + '/' + s.total + '</span></header>' +
+      '<div class="body flush">' + checks + '</div></div>';
+  });
+  return '<div class="wrap">' +
+    '<div class="page-head"><p class="eyebrow">Run on every load, in ' + t.ms + 'ms</p><h2>Engine checks</h2>' +
+    '<p class="sub">Properties of the plan, not golden values — they keep meaning something after the numbers ' +
+    'change. Three personas, ' + t.total + ' assertions, ' + t.failed + ' failing.</p></div>' + out + '</div>';
+}
+
+/* ================================================================== render */
+
+function render() {
+  renderChrome();
+  const plan = currentPlan();
+  const el = document.getElementById('view');
+  el.innerHTML =
+    state.view === 'week' ? viewWeek(plan) :
+    state.view === 'timeline' ? viewTimeline(plan) :
+    state.view === 'debts' ? viewDebts(plan) :
+    state.view === 'whatif' ? viewWhatIf(plan) : viewTests();
+  window.scrollTo(0, 0);
+}
+
+function rerenderWhatIf() {
+  document.getElementById('view').innerHTML = viewWhatIf(currentPlan());
+}
+
+document.addEventListener('click', e => {
+  const nav = e.target.closest('[data-view]');
+  if (nav) { state.view = nav.dataset.view; render(); return; }
+  const per = e.target.closest('[data-persona]');
+  if (per) { state.personaId = per.dataset.persona; state.whatif = null; render(); return; }
+  const strat = e.target.closest('[data-strategy]');
+  if (strat) { state.whatif.strategy = strat.dataset.strategy; rerenderWhatIf(); }
+});
+
+document.addEventListener('input', e => {
+  if (e.target.id === 'wExtra') {
+    state.whatif.extraMonthly = +e.target.value;
+    document.getElementById('wExtraOut').textContent = money0(state.whatif.extraMonthly);
+    scheduleWhatIf();
+  } else if (e.target.id === 'wFloor') {
+    state.whatif.bufferFloor = +e.target.value;
+    document.getElementById('wFloorOut').textContent = money0(state.whatif.bufferFloor);
+    scheduleWhatIf();
+  } else if (e.target.id === 'wUtil') {
+    state.whatif.optimizeForCreditScore = e.target.checked;
+    rerenderWhatIf();
+  }
+});
+
+let whatIfPending = false;
+function scheduleWhatIf() {
+  if (whatIfPending) return;
+  whatIfPending = true;
+  requestAnimationFrame(() => {
+    whatIfPending = false;
+    const focus = document.activeElement && document.activeElement.id;
+    rerenderWhatIf();
+    if (focus) { const n = document.getElementById(focus); if (n) n.focus(); }
+  });
+}
+
+/* Tests run before the first paint. If the engine is wrong, the user is told
+   at the top of the screen, not in a console they will never open. */
+state.testResults = runTests();
+render();
+
+</script>
+</body>
+</html>
