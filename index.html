@@ -229,6 +229,75 @@ input[type=range]{width:100%; accent-color:var(--teal); margin:2px 0 0}
 .empty b{display:block; color:var(--ink); font-size:15px; margin-bottom:5px}
 .sr{position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0)}
 
+/* ------------------------------------------------------------------ forms */
+.fi{
+  font:inherit; font-size:13.5px; color:var(--ink); background:var(--surface);
+  border:1px solid var(--line-strong); border-radius:var(--radius); padding:6px 8px; width:100%;
+  min-width:0;
+}
+.fi.num{font-family:var(--mono); font-variant-numeric:tabular-nums}
+.fi.r{text-align:right}
+.fi.narrow{max-width:72px}
+.fi.wide{min-width:210px}
+.fi:focus{outline:2px solid var(--teal); outline-offset:-1px; border-color:var(--teal)}
+.fi:disabled{background:var(--surface-2); color:var(--ink-2); cursor:not-allowed}
+select.fi{cursor:pointer}
+td .fi{margin:-3px 0}
+table.edit{table-layout:fixed}
+table.edit td,table.edit th{padding:9px 8px}
+table.edit td:first-child,table.edit th:first-child{padding-left:18px}
+.na{color:var(--ink-3); font-size:12.5px}
+td.c,th.c{text-align:center}
+input[type=checkbox]{accent-color:var(--teal); width:16px; height:16px}
+
+.btn{
+  font:inherit; font-size:13.5px; cursor:pointer; padding:7px 13px;
+  background:var(--surface); color:var(--ink); border:1px solid var(--line-strong);
+  border-radius:var(--radius);
+}
+.btn:hover{background:var(--surface-2); border-color:var(--ink-3)}
+.btn.primary{background:var(--teal); color:#fff; border-color:var(--teal); font-weight:600}
+.btn.primary:hover{background:#0B4A50}
+.btn.danger{color:var(--alert); border-color:var(--alert-line)}
+.btn.danger:hover{background:var(--alert-soft)}
+.btnrow{display:flex; gap:9px; flex-wrap:wrap}
+.add{
+  all:unset; cursor:pointer; font-size:13px; color:var(--teal); font-weight:600;
+  padding:4px 2px; border-bottom:1px solid transparent;
+}
+.add:hover{border-bottom-color:var(--teal)}
+.del{
+  all:unset; cursor:pointer; color:var(--ink-3); font-size:17px; line-height:1;
+  padding:1px 6px; border-radius:2px;
+}
+.del:hover{color:var(--alert); background:var(--alert-soft)}
+.link{
+  all:unset; cursor:pointer; color:var(--teal); text-decoration:underline;
+  text-underline-offset:2px; font-weight:600;
+}
+.hint{font-size:12px; color:var(--ink-3); line-height:1.45}
+.note.alert{border-left-color:var(--alert); background:var(--alert-soft)}
+
+.toast{
+  position:fixed; left:50%; bottom:26px; transform:translate(-50%,14px);
+  background:var(--ink); color:#fff; font-size:13.5px; padding:10px 16px;
+  border-radius:var(--radius); opacity:0; pointer-events:none; transition:opacity .18s, transform .18s;
+  max-width:min(560px,90vw); z-index:50;
+}
+.toast.show{opacity:1; transform:translate(-50%,0)}
+.toast.bad{background:var(--alert)}
+
+/* ------------------------------------------------------------------ print */
+@media print{
+  .rail,.banner,.no-print,.toast{display:none !important}
+  .shell{grid-template-columns:1fr}
+  body{background:#fff; font-size:11pt}
+  .wrap{padding:0; max-width:none}
+  .card{break-inside:avoid; border-color:#bbb; margin-bottom:14px}
+  .row .why{color:#333}
+  a[href]:after{content:""}
+}
+
 @media (max-width:840px){
   .shell{grid-template-columns:1fr}
   .rail{position:static; height:auto; flex-direction:column}
@@ -242,7 +311,7 @@ input[type=range]{width:100%; accent-color:var(--teal); margin:2px 0 0}
   <aside class="rail">
     <div class="brand">
       <h1>Payment scheduling engine</h1>
-      <p>v1 prototype &middot; mock data, no bank connections</p>
+      <p>Your numbers, saved in this browser. No accounts, no server.</p>
     </div>
 
     <nav aria-label="Views">
@@ -250,17 +319,23 @@ input[type=range]{width:100%; accent-color:var(--teal); margin:2px 0 0}
       <button data-view="timeline">Timeline <span class="tick">2</span></button>
       <button data-view="debts">Debts <span class="tick">3</span></button>
       <button data-view="whatif">What if <span class="tick">4</span></button>
+      <button data-view="money">Your money <span class="tick">5</span></button>
       <button data-view="tests">Engine checks <span class="tick">&#9679;</span></button>
     </nav>
 
     <div>
       <h2>Whose plan</h2>
       <div class="people">
-        <button class="person" data-persona="steady">
+        <button class="person" data-profile="mine">
+          <b id="mineLabel">My plan</b><span>saved in this browser</span></button>
+      </div>
+      <h2 style="margin-top:18px">Examples to look at</h2>
+      <div class="people">
+        <button class="person" data-profile="steady">
           <b>Dana Reyes</b><span>Steady W-2 &middot; biweekly</span></button>
-        <button class="person" data-persona="freelance">
+        <button class="person" data-profile="freelance">
           <b>Priya Nandakumar</b><span>Freelance &middot; income swings</span></button>
-        <button class="person" data-persona="household">
+        <button class="person" data-profile="household">
           <b>Alex &amp; Sam Ortega</b><span>Two incomes &middot; three accounts</span></button>
       </div>
     </div>
@@ -273,6 +348,8 @@ input[type=range]{width:100%; accent-color:var(--teal); margin:2px 0 0}
     <div id="view"></div>
   </main>
 </div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ============================================================================
@@ -373,6 +450,7 @@ function fmtMY(n)  { const p = dparts(n); return MONTHS_LONG[p.m] + ' ' + p.y; }
 function monthlyDates(fromDn, toDn, day) {
   const out = [];
   if (toDn < fromDn) return out;
+  day = Math.min(31, Math.max(1, Math.round(day) || 1));
   const s = dparts(fromDn);
   let y = s.y, m = s.m - 1;
   if (m < 0) { m = 11; y--; }
@@ -390,8 +468,9 @@ function monthlyDates(fromDn, toDn, day) {
 function monthEndDates(fromDn, toDn) { return monthlyDates(fromDn, toDn, 31); }
 
 function nextWeekday(fromDn, weekday) {
+  const w = Math.min(6, Math.max(0, Math.round(weekday) || 0));
   let n = fromDn;
-  while (dparts(n).w !== weekday) n++;
+  for (let i = 0; i < 7 && dparts(n).w !== w; i++) n++;
   return n;
 }
 
@@ -461,6 +540,7 @@ function runSim(cfg) {
   const useNominal = !!cfg.useNominal;
   const replay = !!cfg.fixedPayments;
 
+  const isRecurringBill = l => l.kind === 'rent' || l.kind === 'utility';
   const accounts = cfg.accounts.map(a => ({ ...a, bal: a.balance }));
   const A = {}; accounts.forEach(a => A[a.id] = a);
   const checkingIds = accounts.filter(a => a.type === 'checking').map(a => a.id);
@@ -471,30 +551,32 @@ function runSim(cfg) {
 
   const liabs = cfg.liabilities.map(l => ({
     ...l,
-    accountId: l.accountId || primaryId,
+    accountId: A[l.accountId] ? l.accountId : primaryId,
     bal: l.balance,
     interestAccrued: 0,
     paidTotal: 0,
     payoffDn: l.balance <= EPS ? startDn : null
   }));
   const L = {}; liabs.forEach(l => L[l.id] = l);
-  const debts = liabs.filter(l => l.apr !== null && l.apr !== undefined);
+  const debts = liabs.filter(l => l.apr !== null && l.apr !== undefined && !isRecurringBill(l));
 
   /* ---- events indexed by day offset ---- */
   const incomeByDay = new Map();
   const planOnDay = new Float64Array(N + 2);
-  for (const ev of cfg.incomeEvents) {
+  for (let ev of cfg.incomeEvents) {
     const i = ev.dn - startDn;
     if (i < 0 || i >= N) continue;
+    if (!A[ev.accountId]) ev = { ...ev, accountId: primaryId };
     if (!incomeByDay.has(i)) incomeByDay.set(i, []);
     incomeByDay.get(i).push(ev);
     planOnDay[i] += ev.planAmount;
   }
   const expOnDay = new Float64Array(N + 2);
   const expensesByDay = new Map();
-  for (const ex of cfg.expenseEvents) {
+  for (let ex of cfg.expenseEvents) {
     const i = ex.dn - startDn;
     if (i < 0 || i >= N) continue;
+    if (!A[ex.accountId]) ex = { ...ex, accountId: primaryId };
     if (!expensesByDay.has(i)) expensesByDay.set(i, []);
     expensesByDay.get(i).push(ex);
     expOnDay[i] += ex.amount;
@@ -508,11 +590,11 @@ function runSim(cfg) {
     acctInc[a.id] = new Float64Array(N + 2);
     acctFixed[a.id] = new Float64Array(N + 2);
   }
-  for (const ev of cfg.incomeEvents) {
+  for (let ev of cfg.incomeEvents) {
     const i = ev.dn - startDn;
     if (i >= 0 && i < N && acctInc[ev.accountId]) acctInc[ev.accountId][i] += ev.planAmount;
   }
-  for (const ex of cfg.expenseEvents) {
+  for (let ex of cfg.expenseEvents) {
     const i = ex.dn - startDn;
     if (i >= 0 && i < N && acctExp[ex.accountId]) acctExp[ex.accountId][i] += ex.amount;
   }
@@ -547,7 +629,6 @@ function runSim(cfg) {
     return null;
   }
 
-  const isRecurringBill = l => l.kind === 'rent' || l.kind === 'utility';
   function obligationAmount(ob) {
     const l = L[ob.lid];
     if (isRecurringBill(l)) return l.minimumPayment;
@@ -1201,6 +1282,8 @@ function buildPlan(ds, overrides) {
 
   const accounts = ds.getAccounts();
   const liabilities = ds.getLiabilities();
+  if (!accounts.length) throw new Error('This plan has no accounts. Add one under Your money.');
+  if (!accounts.some(a => a.type === 'checking')) throw new Error('This plan has no checking account to pay from.');
   const primaryId = (accounts.find(a => a.type === 'checking') || accounts[0]).id;
 
   /* ---- income, with the conservative floor applied to variable streams ---- */
@@ -1579,15 +1662,201 @@ const PERSONAS = {
   }
 };
 
+
 /* ============================================================================
-   MockDataSource — implements the DataSource interface. The engine sees only
-   this shape, never PERSONAS. A PlaidDataSource / MethodDataSource pair
-   replaces this file and nothing else.
+   PROFILES, STORAGE, VALIDATION, EXPORT
+   ----------------------------------------------------------------------------
+   A "profile" is one household's raw data. It is the only thing that persists,
+   and it is the only thing the user edits.
+
+   makeDataSource(profile) turns a profile into the DataSource the engine
+   consumes. MockDataSource (demo personas) and LocalDataSource (your own data,
+   from localStorage) are the same function with different inputs — which is
+   the point of the adapter boundary: PlaidDataSource and MethodDataSource slot
+   in beside them without the engine noticing.
    ============================================================================ */
 
-function MockDataSource(personaId) {
-  const p = PERSONAS[personaId];
-  if (!p) throw new Error('unknown persona: ' + personaId);
+const CADENCES = ['weekly', 'biweekly', 'semimonthly', 'monthly'];
+const KINDS = ['credit_card', 'auto_loan', 'student_loan', 'mortgage', 'personal_loan', 'rent', 'utility'];
+const CONFIDENCES = ['certain', 'likely', 'variable'];
+const STRATEGIES = ['avalanche', 'snowball', 'hybrid'];
+const NO_BALANCE_KINDS = ['rent', 'utility'];
+
+function uid(prefix) {
+  return prefix + Math.random().toString(36).slice(2, 9);
+}
+
+/* --------------------------------------------------------------- normalise */
+
+const num = (v, d) => { const n = parseFloat(v); return Number.isFinite(n) ? n : (d || 0); };
+const clampInt = (v, lo, hi, d) => {
+  const n = Math.round(num(v, d));
+  return Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : d));
+};
+const oneOf = (v, list, d) => list.indexOf(v) >= 0 ? v : d;
+
+/** Coerce anything the editor can produce into something the engine can trust.
+ *  The engine assumes valid ranges everywhere; this is the single place that
+ *  guarantees them, so hand-entered data can never reach the solver malformed. */
+function normalizeProfile(p) {
+  const out = {
+    profile: {
+      id: (p.profile && p.profile.id) || 'mine',
+      name: ((p.profile && p.profile.name) || '').trim() || 'Your plan',
+      tagline: (p.profile && p.profile.tagline) || '',
+      note: (p.profile && p.profile.note) || '',
+      balancesAsOf: (p.profile && p.profile.balancesAsOf) || null,
+      startedAt: (p.profile && p.profile.startedAt) || null
+    },
+    accounts: [], liabilities: [], incomeStreams: [], expenses: [],
+    depositHistory: {}, settings: {}
+  };
+
+  out.accounts = (p.accounts || []).map(a => ({
+    id: a.id || uid('acct'),
+    name: (a.name || '').trim() || 'Account',
+    type: oneOf(a.type, ['checking', 'savings'], 'checking'),
+    balance: Math.max(0, num(a.balance, 0))
+  }));
+  // Every household needs somewhere for money to sit.
+  if (out.accounts.length && !out.accounts.some(a => a.type === 'checking')) {
+    out.accounts[0].type = 'checking';
+  }
+  const ids = out.accounts.map(a => a.id);
+  const primary = (out.accounts.find(a => a.type === 'checking') || out.accounts[0] || {}).id;
+  const acct = id => ids.indexOf(id) >= 0 ? id : primary;
+
+  out.liabilities = (p.liabilities || []).map(l => {
+    const kind = oneOf(l.kind, KINDS, 'credit_card');
+    const noBalance = NO_BALANCE_KINDS.indexOf(kind) >= 0;
+    const isCard = kind === 'credit_card';
+    return {
+      id: l.id || uid('liab'),
+      name: (l.name || '').trim() || 'Untitled',
+      kind,
+      balance: noBalance ? 0 : Math.max(0, num(l.balance, 0)),
+      apr: noBalance ? null : Math.max(0, Math.min(1, num(l.apr, 0))),
+      minimumPayment: Math.max(0, num(l.minimumPayment, 0)),
+      dueDayOfMonth: clampInt(l.dueDayOfMonth, 1, 31, 1),
+      statementCloseDay: isCard && l.statementCloseDay != null && l.statementCloseDay !== ''
+        ? clampInt(l.statementCloseDay, 1, 31, 1) : null,
+      creditLimit: isCard && num(l.creditLimit, 0) > 0 ? num(l.creditLimit, 0) : null,
+      autopayEnabled: !!l.autopayEnabled,
+      accountId: acct(l.accountId)
+    };
+  });
+
+  out.incomeStreams = (p.incomeStreams || []).map(s => {
+    const cadence = oneOf(s.cadence, CADENCES, 'monthly');
+    return {
+      id: s.id || uid('inc'),
+      label: (s.label || '').trim() || 'income',
+      cadence,
+      amount: Math.max(0, num(s.amount, 0)),
+      dayOfMonth: clampInt(s.dayOfMonth, 1, 31, 1),
+      weekday: clampInt(s.weekday, 0, 6, 5),
+      confidence: oneOf(s.confidence, CONFIDENCES, 'certain'),
+      accountId: acct(s.accountId)
+    };
+  });
+
+  out.expenses = (p.expenses || []).map(e => ({
+    id: e.id || uid('exp'),
+    label: (e.label || '').trim() || 'Spending',
+    amount: Math.max(0, num(e.amount, 0)),
+    cadence: oneOf(e.cadence, ['weekly', 'monthly'], 'monthly'),
+    dayOfMonth: clampInt(e.dayOfMonth, 1, 31, 1),
+    weekday: clampInt(e.weekday, 0, 6, 1),
+    accountId: acct(e.accountId),
+    category: e.category || 'other'
+  }));
+
+  for (const s of out.incomeStreams) {
+    const hist = (p.depositHistory || {})[s.id] || [];
+    out.depositHistory[s.id] = hist.map(v => num(v, 0)).filter(v => v > 0);
+  }
+
+  const st = p.settings || {};
+  out.settings = {
+    bufferFloor: Math.max(0, num(st.bufferFloor, 500)),
+    strategy: oneOf(st.strategy, STRATEGIES, 'avalanche'),
+    optimizeForCreditScore: st.optimizeForCreditScore !== false,
+    horizonDays: clampInt(st.horizonDays, 30, 365, 90),
+    extraMonthly: Math.max(0, num(st.extraMonthly, 0))
+  };
+  return out;
+}
+
+/* -------------------------------------------------------------- validation */
+
+/** Problems worth telling someone about before they trust the plan.
+ *  Errors block the plan; warnings do not. */
+function validateProfile(p) {
+  const errors = [], warnings = [];
+  const cash = p.accounts.filter(a => a.type === 'checking');
+  if (!p.accounts.length) errors.push('Add at least one account — the plan needs somewhere to pay from.');
+  else if (!cash.length) errors.push('Add a checking account. Savings alone cannot be scheduled against.');
+
+  if (!p.liabilities.length) errors.push('Add at least one debt or bill. Without something to pay there is nothing to schedule.');
+
+  const totalCash = cash.reduce((s, a) => s + a.balance, 0);
+  if (p.settings.bufferFloor > totalCash && cash.length) {
+    warnings.push('Your buffer floor (' + money0(p.settings.bufferFloor) + ') is above what is in checking right now (' +
+      money0(totalCash) + '). The plan will draw on savings to hold the line, or flag a breach if it cannot.');
+  }
+
+  if (!p.incomeStreams.length) {
+    warnings.push('No income yet. The plan will schedule from your current balance only, which will run out.');
+  }
+
+  for (const l of p.liabilities) {
+    const noBal = NO_BALANCE_KINDS.indexOf(l.kind) >= 0;
+    if (l.minimumPayment <= 0) warnings.push('"' + l.name + '" has no minimum payment, so nothing will be scheduled for it.');
+    if (!noBal && l.balance > 0 && l.apr === 0) warnings.push('"' + l.name + '" is at 0% APR. If that is a promotional rate, remember it ends.');
+    if (!noBal && l.balance > 0 && l.minimumPayment > 0 && l.apr > 0) {
+      const monthlyInterest = l.balance * l.apr / 12;
+      if (l.minimumPayment <= monthlyInterest) {
+        errors.push('"' + l.name + '" accrues ' + money(monthlyInterest) + ' of interest a month but its minimum is only ' +
+          money(l.minimumPayment) + '. That balance grows no matter what the plan does — check the numbers.');
+      }
+    }
+    if (l.kind === 'credit_card' && !l.creditLimit) {
+      warnings.push('"' + l.name + '" has no credit limit set, so utilization cannot be reported or optimised for it.');
+    }
+    if (l.kind === 'credit_card' && l.statementCloseDay == null) {
+      warnings.push('"' + l.name + '" has no statement close day, so its payment cannot be timed ahead of the close.');
+    }
+  }
+
+  for (const s of p.incomeStreams) {
+    if (s.confidence === 'variable') {
+      const n = (p.depositHistory[s.id] || []).length;
+      if (n === 0) warnings.push('"' + s.label + '" is marked variable but has no deposit history, so the plan has to trust the figure you typed.');
+      else if (n < 6) warnings.push('"' + s.label + '" has only ' + n + ' past deposits. A floor gets meaningful around 8–12.');
+    }
+  }
+
+  /* The arithmetic that decides whether any of this is possible. */
+  const monthlyIn = p.incomeStreams.reduce((s, x) => {
+    const per = { weekly: 52 / 12, biweekly: 26 / 12, semimonthly: 2, monthly: 1 }[x.cadence];
+    const amt = x.confidence === 'variable' && (p.depositHistory[x.id] || []).length
+      ? percentile(p.depositHistory[x.id], 0.25) : x.amount;
+    return s + amt * per;
+  }, 0);
+  const monthlyOut = p.liabilities.reduce((s, l) => s + l.minimumPayment, 0) +
+    p.expenses.reduce((s, e) => s + e.amount * (e.cadence === 'weekly' ? 52 / 12 : 1), 0);
+  if (p.incomeStreams.length && monthlyOut > monthlyIn) {
+    errors.push('Your committed outgoings (' + money0(monthlyOut) + '/mo) exceed the income the plan can count on (' +
+      money0(monthlyIn) + '/mo). No payment schedule fixes a gap like that — something has to change first.');
+  }
+
+  return { errors, warnings, monthlyIn, monthlyOut, slack: r2(monthlyIn - monthlyOut) };
+}
+
+/* ------------------------------------------------------------- data source */
+
+function makeDataSource(rawProfile) {
+  const p = normalizeProfile(rawProfile);
 
   function expandStream(s, startDn, days) {
     const endDn = startDn + days;
@@ -1595,7 +1864,7 @@ function MockDataSource(personaId) {
     const hist = p.depositHistory[s.id];
     let occ = 0;
     const emit = (dn) => {
-      // Variable streams draw deterministically from trailing history so the
+      // Variable streams draw deterministically from trailing history, so the
       // "expected" run is reproducible run to run — no randomness anywhere.
       const amount = (s.confidence === 'variable' && hist && hist.length)
         ? hist[(occ + 3) % hist.length]
@@ -1611,9 +1880,8 @@ function MockDataSource(personaId) {
     } else if (s.cadence === 'weekly') {
       for (let d = nextWeekday(startDn, s.weekday); d <= endDn; d += 7) emit(d);
     } else if (s.cadence === 'semimonthly') {
-      const mid = monthlyDates(startDn, endDn, 15);
-      const end = monthlyDates(startDn, endDn, 31);
-      mid.concat(end).sort((a, b) => a - b).forEach(emit);
+      monthlyDates(startDn, endDn, 15).concat(monthlyDates(startDn, endDn, 31))
+        .sort((a, b) => a - b).forEach(emit);
     } else {
       monthlyDates(startDn, endDn, s.dayOfMonth).forEach(emit);
     }
@@ -1621,14 +1889,15 @@ function MockDataSource(personaId) {
   }
 
   return {
-    getProfile:    () => ({ ...p.profile }),
-    getAccounts:   () => p.accounts.map(a => ({ ...a })),
-    getLiabilities:() => p.liabilities.map(l => ({ ...l })),
-    getExpenses:   () => p.expenses.map(e => ({ ...e })),
-    getSettings:   () => ({ ...p.settings }),
+    raw: p,
+    getProfile:        () => ({ ...p.profile }),
+    getAccounts:       () => p.accounts.map(a => ({ ...a })),
+    getLiabilities:    () => p.liabilities.map(l => ({ ...l })),
+    getExpenses:       () => p.expenses.map(e => ({ ...e })),
+    getSettings:       () => ({ ...p.settings }),
     getDepositHistory: (streamId) => (p.depositHistory[streamId] || []).slice(),
     getIncomeStreams:  () => p.incomeStreams.map(s => ({ ...s })),
-    getIncomeEvents: (startDn, days) => {
+    getIncomeEvents:   (startDn, days) => {
       const out = [];
       for (const s of p.incomeStreams) out.push(...expandStream(s, startDn, days));
       out.sort((a, b) => a.dn - b.dn || (a.id < b.id ? -1 : 1));
@@ -1637,7 +1906,134 @@ function MockDataSource(personaId) {
   };
 }
 
+const clone = o => JSON.parse(JSON.stringify(o));
+function MockDataSource(personaId) {
+  const p = PERSONAS[personaId];
+  if (!p) throw new Error('unknown persona: ' + personaId);
+  return makeDataSource(clone(p));
+}
 const PERSONA_IDS = ['steady', 'freelance', 'household'];
+
+/* ------------------------------------------------------------------ storage */
+
+const STORE_KEY = 'debt-scheduler.profile.v1';
+
+function blankProfile() {
+  const chk = uid('acct');
+  return {
+    profile: { id: 'mine', name: '', tagline: '', note: '', balancesAsOf: null, startedAt: null },
+    settings: { bufferFloor: 500, strategy: 'avalanche', optimizeForCreditScore: true, horizonDays: 90, extraMonthly: 0 },
+    accounts: [{ id: chk, name: 'Checking', type: 'checking', balance: 0 }],
+    incomeStreams: [], depositHistory: {}, liabilities: [], expenses: []
+  };
+}
+
+function loadProfile() {
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.data) return null;
+    return parsed.data;
+  } catch (e) {
+    return null;
+  }
+}
+
+function saveProfile(data) {
+  try {
+    localStorage.setItem(STORE_KEY, JSON.stringify({ version: 1, savedAt: new Date().toISOString(), data }));
+    return true;
+  } catch (e) {
+    return false;   // private browsing, quota, disabled storage
+  }
+}
+
+function clearProfile() {
+  try { localStorage.removeItem(STORE_KEY); } catch (e) { /* nothing to do */ }
+}
+
+/** A persona, copied into an editable profile of your own. */
+function profileFromPersona(personaId) {
+  const p = clone(PERSONAS[personaId]);
+  return {
+    profile: { id: 'mine', name: '', tagline: '', note: '', balancesAsOf: new Date().toISOString() },
+    settings: p.settings,
+    accounts: p.accounts,
+    incomeStreams: p.incomeStreams,
+    depositHistory: p.depositHistory,
+    liabilities: p.liabilities,
+    expenses: p.expenses
+  };
+}
+
+/* ------------------------------------------------------------------ exports */
+
+function download(filename, text, mime) {
+  const blob = new Blob([text], { type: (mime || 'text/plain') + ';charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function csvCell(v) {
+  const s = String(v == null ? '' : v);
+  return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+
+function planToCSV(plan) {
+  const name = id => (plan.accounts.find(a => a.id === id) || {}).name || '';
+  const rows = [['Date', 'Type', 'Payee', 'Amount', 'From account', 'Due date', 'Conditional', 'Why']];
+  plan.payments.concat(plan.sweeps).sort((a, b) => a.dn - b.dn).forEach(p => {
+    rows.push([
+      isoFromDn(p.dn), p.type, p.label, p.amount.toFixed(2),
+      name(p.fromAccountId) + (p.toAccountId ? ' -> ' + name(p.toAccountId) : ''),
+      p.dueDn ? isoFromDn(p.dueDn) : '', p.conditional ? 'yes' : 'no', p.reason
+    ]);
+  });
+  return rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+}
+
+/** Fold to 75 octets and escape per RFC 5545, so real calendar apps accept it. */
+function icsLine(line) {
+  const esc = line.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+  const out = [];
+  let s = esc;
+  while (s.length > 74) { out.push(s.slice(0, 74)); s = ' ' + s.slice(74); }
+  out.push(s);
+  return out.join('\r\n');
+}
+
+function planToICS(plan) {
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const name = id => (plan.accounts.find(a => a.id === id) || {}).name || '';
+  const lines = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//debt payoff scheduler//v1//EN',
+    'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+    icsLine('X-WR-CALNAME:' + (plan.profile.name || 'Payment plan'))
+  ];
+  plan.payments.concat(plan.sweeps).sort((a, b) => a.dn - b.dn).forEach((p, i) => {
+    if (p.type === 'transfer' && p.tags.indexOf('topup') < 0 && p.tags.indexOf('savings_draw') < 0) return;
+    const d = isoFromDn(p.dn).replace(/-/g, '');
+    const title = (p.conditional ? 'If income allows: ' : '') +
+      (p.type === 'transfer' ? 'Move ' + money(p.amount) + ' to ' + name(p.toAccountId)
+                             : 'Pay ' + money(p.amount) + ' — ' + p.label);
+    lines.push('BEGIN:VEVENT');
+    lines.push('UID:' + p.id + '-' + d + '-' + i + '@debt-scheduler');
+    lines.push('DTSTAMP:' + stamp);
+    lines.push('DTSTART;VALUE=DATE:' + d);
+    lines.push('DTEND;VALUE=DATE:' + isoFromDn(p.dn + 1).replace(/-/g, ''));
+    lines.push(icsLine('SUMMARY:' + title));
+    lines.push(icsLine('DESCRIPTION:' + p.reason));
+    lines.push('BEGIN:VALARM', 'TRIGGER:-PT9H', 'ACTION:DISPLAY',
+               icsLine('DESCRIPTION:' + title), 'END:VALARM');
+    lines.push('END:VEVENT');
+  });
+  lines.push('END:VCALENDAR');
+  return lines.join('\r\n');
+}
 
 
 /* ============================================================================
@@ -1891,20 +2287,49 @@ function runTests() {
    ============================================================================ */
 
 const state = {
-  personaId: 'steady',
+  profileId: 'mine',      // 'mine' | a demo persona id
   view: 'week',
   whatif: null,
-  testResults: null
+  testResults: null,
+  myProfile: null,        // raw, editable, persisted
+  rev: 0,                 // bumped on every edit to bust the plan cache
+  saveFailed: false,
+  toast: null
 };
 
+const isMine = () => state.profileId === 'mine';
+/* "Set up" is an explicit act, not something inferred from whether data
+   happens to exist — otherwise choosing to start from an empty plan bounces
+   you straight back to the screen you just left. */
+const hasOwnData = () => !!state.myProfile && (
+  !!state.myProfile.profile.startedAt ||
+  state.myProfile.liabilities.length > 0 || state.myProfile.accounts.length > 1 ||
+  (state.myProfile.accounts[0] && state.myProfile.accounts[0].balance > 0));
+
+function activeDataSource() {
+  return isMine() ? makeDataSource(state.myProfile) : MockDataSource(state.profileId);
+}
+
 const planCache = new Map();
-function planFor(personaId, overrides) {
-  const key = personaId + '|' + JSON.stringify(overrides || {});
-  if (!planCache.has(key)) planCache.set(key, buildPlan(MockDataSource(personaId), overrides || {}));
+function planFor(overrides) {
+  const key = state.profileId + '|' + state.rev + '|' + JSON.stringify(overrides || {});
+  if (!planCache.has(key)) planCache.set(key, buildPlan(activeDataSource(), overrides || {}));
   return planCache.get(key);
 }
 const START_DN = todayDn();
-const currentPlan = () => planFor(state.personaId, { startDn: START_DN });
+
+/** Never let a bad profile take the whole page down — show it instead. */
+function currentPlan() {
+  try { return planFor({ startDn: START_DN }); }
+  catch (e) { return { __error: e.message || String(e) }; }
+}
+
+function commit(touchBalances) {
+  if (touchBalances) state.myProfile.profile.balancesAsOf = new Date().toISOString();
+  state.rev++;
+  planCache.clear();
+  state.saveFailed = !saveProfile(state.myProfile);
+}
 
 function esc(s) {
   return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -1934,16 +2359,33 @@ function renderChrome() {
   document.querySelectorAll('nav button').forEach(b =>
     b.setAttribute('aria-current', String(b.dataset.view === state.view)));
   document.querySelectorAll('.person').forEach(b =>
-    b.setAttribute('aria-current', String(b.dataset.persona === state.personaId)));
+    b.setAttribute('aria-current', String(b.dataset.profile === state.profileId)));
+  const mineLabel = document.getElementById('mineLabel');
+  if (mineLabel) mineLabel.textContent = hasOwnData()
+    ? ((state.myProfile.profile.name || '').trim() || 'My plan') : 'My plan — not set up yet';
 
   const plan = currentPlan();
+  const note = document.getElementById('railNote');
+  if (plan.__error) { note.innerHTML = 'No plan yet. Open <b>Your money</b> to set one up.'; return; }
   const floors = Object.keys(plan.incomeFloors);
-  document.getElementById('railNote').innerHTML =
+  const stale = staleDays();
+  note.innerHTML =
     'Plan built ' + esc(fmtDY(plan.startDn)) + ' over ' + plan.horizonDays + ' days.<br>' +
     'Buffer floor <code>' + esc(money0(plan.settings.bufferFloor)) + '</code> across checking.<br>' +
     (floors.length
-      ? 'Variable income committed at the 25th percentile of the last 12 deposits.'
-      : 'All income is fixed and dated.');
+      ? 'Variable income committed at the 25th percentile of your deposit history.'
+      : 'All income is fixed and dated.') +
+    (stale !== null && stale > 7
+      ? '<br><br>Balances last updated ' + stale + ' days ago. They drift — refresh them under Your money.'
+      : '');
+}
+
+/** How long since the balances were touched, or null if unknown/not yours. */
+function staleDays() {
+  if (!isMine() || !state.myProfile || !state.myProfile.profile.balancesAsOf) return null;
+  const then = new Date(state.myProfile.profile.balancesAsOf);
+  if (isNaN(then.getTime())) return null;
+  return Math.floor((Date.now() - then.getTime()) / 86400000);
 }
 
 /* -------------------------------------------------------------- components */
@@ -2083,15 +2525,45 @@ function viewWeek(plan) {
     }
   }
 
+  /* If the plan cannot satisfy its own constraints on real numbers, that is
+     the first thing on the screen — not a footnote. */
+  let health = '';
+  const bad = plan.breaches.length + plan.lates.length + plan.shortfalls.length;
+  if (bad) {
+    const bits = [];
+    if (plan.breaches.length) bits.push(plan.breaches.length + ' day' + (plan.breaches.length === 1 ? '' : 's') +
+      ' where the balance drops below your floor');
+    if (plan.lates.length) bits.push(plan.lates.length + ' payment' + (plan.lates.length === 1 ? '' : 's') + ' that would land late');
+    if (plan.shortfalls.length) bits.push(plan.shortfalls.length + ' minimum' + (plan.shortfalls.length === 1 ? '' : 's') + ' the money does not cover');
+    health = '<div class="note alert"><b>This plan does not hold together.</b> ' + esc(bits.join(', ')) + '. ' +
+      'That is arithmetic, not scheduling — there is not enough coming in to cover what is going out. ' +
+      'Lower the buffer floor, check the figures under Your money, or look at What if to see what would have to change.</div>';
+  }
+  const stale = staleDays();
+  const staleNote = (stale !== null && stale > 7)
+    ? '<div class="note"><b>These balances are ' + stale + ' days old.</b> ' +
+      'The dates below are only right if the starting balances are. ' +
+      '<button class="link" data-view="money">Update them</button>, it takes a minute.</div>' : '';
+
   return '<div class="wrap">' +
     '<div class="page-head"><p class="eyebrow">This week</p>' +
       '<h2>' + esc(plan.profile.name) + '</h2>' +
       '<p class="sub">' + summary + '</p></div>' +
-    floorNote + utilNote +
+    health + staleNote + floorNote + utilNote +
     '<div class="card"><header><h3>What moves, when, and why</h3>' +
       '<span class="aside">' + esc(fmtDY(start)) + ' – ' + esc(fmtDY(end - 1)) + '</span></header>' +
       '<div class="body flush">' + rows + '</div></div>' +
     upcomingCard(plan) +
+    '<div class="card no-print"><header><h3>Act on it</h3>' +
+      '<span class="aside">the plan is only worth anything if it reaches you on the day</span></header>' +
+      '<div class="body"><div class="btnrow">' +
+        '<button class="btn primary" data-action="export-ics">Add payments to my calendar</button>' +
+        '<button class="btn" data-action="export-csv">Download the schedule (CSV)</button>' +
+        '<button class="btn" data-action="print">Print this week</button>' +
+      '</div><p class="hint" style="margin:12px 0 0">The calendar file covers all ' +
+      plan.payments.filter(p => p.type !== 'transfer').length + ' payments in the horizon, each with a reminder ' +
+      'the morning it is due and the reason attached. Conditional sweeps are labelled as such, so a light month ' +
+      'never looks like a missed payment.</p></div></div>' +
   '</div>';
 }
 
@@ -2341,9 +2813,9 @@ function viewDebts(plan) {
 /* =============================================================== 4. what-if */
 
 function whatifState(plan) {
-  if (!state.whatif || state.whatif.persona !== state.personaId) {
+  if (!state.whatif || state.whatif.persona !== state.profileId) {
     state.whatif = {
-      persona: state.personaId,
+      persona: state.profileId,
       extraMonthly: 0,
       bufferFloor: plan.settings.bufferFloor,
       strategy: plan.settings.strategy,
@@ -2367,7 +2839,7 @@ function deltaBlock(k, value, delta, betterWhenNegative) {
 
 function viewWhatIf(plan) {
   const w = whatifState(plan);
-  const alt = planFor(state.personaId, {
+  const alt = planFor({
     startDn: START_DN,
     extraMonthly: w.extraMonthly,
     bufferFloor: w.bufferFloor,
@@ -2472,17 +2944,433 @@ function viewTests() {
     'change. Three personas, ' + t.total + ' assertions, ' + t.failed + ' failing.</p></div>' + out + '</div>';
 }
 
+
+/* ============================================================ edit plumbing */
+
+const ENT_LIST = { account: 'accounts', liability: 'liabilities', income: 'incomeStreams', expense: 'expenses' };
+
+function findEntity(ent, id) {
+  if (ent === 'settings') return state.myProfile.settings;
+  if (ent === 'meta') return state.myProfile.profile;
+  const list = state.myProfile[ENT_LIST[ent]];
+  return list && list.find(x => x.id === id);
+}
+
+/** Apply one field edit. Numbers stay as typed rather than being clamped on
+ *  the spot — normalizeProfile() enforces ranges on the way into the engine,
+ *  so the editor never fights the person typing. */
+function applyEdit(ent, id, f, el) {
+  const obj = findEntity(ent, id);
+  if (!obj) return false;
+  let touchesBalance = false;
+
+  if (f === 'history') {
+    const nums = el.value.split(/[\s,;]+/).map(x => parseFloat(x)).filter(x => Number.isFinite(x) && x > 0);
+    state.myProfile.depositHistory[id] = nums;
+    return false;
+  }
+  if (el.type === 'checkbox') { obj[f] = el.checked; return false; }
+
+  if (f === 'aprPct') {
+    obj.apr = el.value === '' ? null : Math.max(0, parseFloat(el.value) || 0) / 100;
+    return false;
+  }
+  if (el.type === 'number') {
+    if (el.value === '') {
+      obj[f] = (f === 'statementCloseDay' || f === 'creditLimit') ? null : 0;
+    } else {
+      obj[f] = parseFloat(el.value);
+      if (!Number.isFinite(obj[f])) obj[f] = 0;
+    }
+    if (f === 'balance' && ent === 'account') touchesBalance = true;
+  } else {
+    obj[f] = el.value;
+  }
+
+  // Switching a debt to rent/utility drops the fields that no longer apply.
+  if (ent === 'liability' && f === 'kind') {
+    if (NO_BALANCE_KINDS.indexOf(obj.kind) >= 0) { obj.balance = 0; obj.apr = null; }
+    else if (obj.apr == null) obj.apr = 0;
+    if (obj.kind !== 'credit_card') { obj.statementCloseDay = null; obj.creditLimit = null; }
+  }
+  return touchesBalance;
+}
+
+function addEntity(ent) {
+  const p = state.myProfile;
+  const firstChk = (p.accounts.find(a => a.type === 'checking') || p.accounts[0] || {}).id;
+  if (ent === 'account') p.accounts.push({ id: uid('acct'), name: '', type: 'checking', balance: 0 });
+  if (ent === 'liability') p.liabilities.push({
+    id: uid('liab'), name: '', kind: 'credit_card', balance: 0, apr: 0.2299,
+    minimumPayment: 0, dueDayOfMonth: 15, statementCloseDay: 19, creditLimit: null,
+    autopayEnabled: false, accountId: firstChk
+  });
+  if (ent === 'income') p.incomeStreams.push({
+    id: uid('inc'), label: '', cadence: 'biweekly', amount: 0, dayOfMonth: 1,
+    weekday: 5, confidence: 'certain', accountId: firstChk
+  });
+  if (ent === 'expense') p.expenses.push({
+    id: uid('exp'), label: '', amount: 0, cadence: 'monthly', dayOfMonth: 1,
+    weekday: 1, accountId: firstChk, category: 'other'
+  });
+}
+
+function removeEntity(ent, id) {
+  const p = state.myProfile;
+  const key = ENT_LIST[ent];
+  p[key] = p[key].filter(x => x.id !== id);
+  if (ent === 'income') delete p.depositHistory[id];
+  if (ent === 'account') {
+    // Anything pointing at a deleted account falls back to the first one left.
+    const fallback = (p.accounts.find(a => a.type === 'checking') || p.accounts[0] || {}).id;
+    ['liabilities', 'incomeStreams', 'expenses'].forEach(k =>
+      p[k].forEach(x => { if (x.accountId === id) x.accountId = fallback; }));
+  }
+}
+
+function importBackup() {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/json,.json';
+  input.onchange = () => {
+    const file = input.files && input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(String(reader.result));
+        const data = parsed && parsed.data ? parsed.data : parsed;
+        if (!data || !Array.isArray(data.accounts)) throw new Error('not a plan backup');
+        state.myProfile = data;
+        ['accounts', 'liabilities', 'incomeStreams', 'expenses'].forEach(k => {
+          if (!Array.isArray(state.myProfile[k])) state.myProfile[k] = [];
+        });
+        if (!state.myProfile.depositHistory) state.myProfile.depositHistory = {};
+        if (!state.myProfile.profile) state.myProfile.profile = { id: 'mine', name: '' };
+        if (!state.myProfile.settings) state.myProfile.settings = blankProfile().settings;
+        state.profileId = 'mine';
+        commit(false);
+        toast('Backup loaded.');
+        render();
+      } catch (err) {
+        toast('That file is not a plan backup.', true);
+      }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function toast(msg, bad) {
+  state.toast = { msg, bad };
+  const el = document.getElementById('toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'toast show' + (bad ? ' bad' : '');
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.className = 'toast'; state.toast = null; }, 3200);
+}
+
+function fileStem() {
+  const plan = currentPlan();
+  const base = (isMine() ? (state.myProfile.profile.name || 'my-plan') : plan.profile.name || 'plan');
+  return base.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + isoFromDn(START_DN);
+}
+
+function doExport(kind) {
+  const plan = currentPlan();
+  if (plan.__error) { toast('Nothing to export yet.', true); return; }
+  if (kind === 'json') {
+    download(fileStem() + '.json',
+      JSON.stringify({ version: 1, savedAt: new Date().toISOString(), data: state.myProfile }, null, 2),
+      'application/json');
+    toast('Backup downloaded.');
+  } else if (kind === 'csv') {
+    download(fileStem() + '-schedule.csv', planToCSV(plan), 'text/csv');
+    toast('Schedule downloaded.');
+  } else if (kind === 'ics') {
+    download(fileStem() + '.ics', planToICS(plan), 'text/calendar');
+    toast('Calendar file downloaded — open it to add the payments to your calendar.');
+  }
+}
+
+/* ============================================================ 5. your money */
+
+const WEEKDAY_OPTS = WEEKDAYS.map((w, i) => [i, w]);
+const KIND_OPTS = [
+  ['credit_card', 'Credit card'], ['auto_loan', 'Auto loan'], ['student_loan', 'Student loan'],
+  ['mortgage', 'Mortgage'], ['personal_loan', 'Personal loan'], ['rent', 'Rent'], ['utility', 'Utility bill']
+];
+const CADENCE_OPTS = [['weekly', 'Every week'], ['biweekly', 'Every two weeks'],
+                      ['semimonthly', '15th & last day'], ['monthly', 'Once a month']];
+const CONF_OPTS = [['certain', 'Certain'], ['likely', 'Likely'], ['variable', 'Varies']];
+
+function fld(ent, id, f) { return 'data-ent="' + ent + '" data-id="' + esc(id) + '" data-f="' + f + '"'; }
+function inp(ent, id, f, v, opts) {
+  const o = opts || {};
+  return '<input class="' + (o.cls || 'fi') + '" type="' + (o.type || 'text') + '" ' + fld(ent, id, f) +
+    (o.step ? ' step="' + o.step + '"' : '') + (o.min != null ? ' min="' + o.min + '"' : '') +
+    (o.max != null ? ' max="' + o.max + '"' : '') +
+    (o.placeholder ? ' placeholder="' + esc(o.placeholder) + '"' : '') +
+    (o.disabled ? ' disabled' : '') +
+    ' value="' + esc(v == null ? '' : v) + '">';
+}
+function sel(ent, id, f, v, options, disabled) {
+  return '<select class="fi" ' + fld(ent, id, f) + (disabled ? ' disabled' : '') + '>' +
+    options.map(([val, label]) =>
+      '<option value="' + esc(val) + '"' + (String(val) === String(v) ? ' selected' : '') + '>' +
+      esc(label) + '</option>').join('') + '</select>';
+}
+function chk(ent, id, f, v, disabled) {
+  return '<input type="checkbox" ' + fld(ent, id, f) + (v ? ' checked' : '') + (disabled ? ' disabled' : '') + '>';
+}
+function delBtn(ent, id, editable) {
+  return editable ? '<button class="del" data-del-ent="' + ent + '" data-del-id="' + esc(id) +
+    '" title="Remove" aria-label="Remove">&times;</button>' : '';
+}
+function addBtn(ent, label) {
+  return '<button class="add" data-add="' + ent + '">+ ' + esc(label) + '</button>';
+}
+
+function acctOpts(p) { return p.accounts.map(a => [a.id, a.name || 'Account']); }
+
+/* Fixed column widths beat letting the browser squeeze a name field down to
+   "Chase F". Narrow screens scroll the table instead of compressing it. */
+function cols(widths) {
+  return '<colgroup>' + widths.map(w => '<col style="width:' + w + 'px">').join('') + '</colgroup>';
+}
+function editTable(widths, head, body, empty, span) {
+  return '<div class="tbl-scroll"><table class="edit" style="min-width:' +
+    widths.reduce((a, b) => a + b, 0) + 'px">' + cols(widths) +
+    '<thead><tr>' + head + '</tr></thead><tbody>' +
+    (body || '<tr><td colspan="' + span + '" class="na">' + esc(empty) + '</td></tr>') +
+    '</tbody></table></div>';
+}
+
+function viewMoney() {
+  const editable = isMine();
+  const p = editable ? state.myProfile : activeDataSource().raw;
+
+  if (editable && !hasOwnData()) return onboarding();
+
+  const ds = makeDataSource(p);
+  const v = validateProfile(ds.raw);
+  const ro = !editable;
+
+  /* ------------------------------------------------------------- accounts */
+  let accRows = p.accounts.map(a =>
+    '<tr><td>' + inp('account', a.id, 'name', a.name, { disabled: ro, placeholder: 'Everyday Checking' }) + '</td>' +
+    '<td>' + sel('account', a.id, 'type', a.type, [['checking', 'Checking'], ['savings', 'Savings']], ro) + '</td>' +
+    '<td class="r">' + inp('account', a.id, 'balance', a.balance, { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro }) + '</td>' +
+    '<td>' + delBtn('account', a.id, editable) + '</td></tr>').join('');
+
+  /* ------------------------------------------------------------ liabilities */
+  let liabRows = p.liabilities.map(l => {
+    const card = l.kind === 'credit_card';
+    const noBal = NO_BALANCE_KINDS.indexOf(l.kind) >= 0;
+    return '<tr><td>' + inp('liability', l.id, 'name', l.name, { disabled: ro, placeholder: 'Chase Freedom' }) + '</td>' +
+      '<td>' + sel('liability', l.id, 'kind', l.kind, KIND_OPTS, ro) + '</td>' +
+      '<td class="r">' + (noBal ? '<span class="na">n/a</span>'
+        : inp('liability', l.id, 'balance', l.balance, { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro })) + '</td>' +
+      '<td class="r">' + (noBal ? '<span class="na">n/a</span>'
+        : inp('liability', l.id, 'aprPct', l.apr == null ? '' : r2(l.apr * 100), { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro })) + '</td>' +
+      '<td class="r">' + inp('liability', l.id, 'minimumPayment', l.minimumPayment, { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro }) + '</td>' +
+      '<td class="r">' + inp('liability', l.id, 'dueDayOfMonth', l.dueDayOfMonth, { type: 'number', min: 1, max: 31, cls: 'fi num r narrow', disabled: ro }) + '</td>' +
+      '<td class="r">' + (card ? inp('liability', l.id, 'statementCloseDay', l.statementCloseDay == null ? '' : l.statementCloseDay,
+            { type: 'number', min: 1, max: 31, cls: 'fi num r narrow', disabled: ro, placeholder: '—' })
+        : '<span class="na">—</span>') + '</td>' +
+      '<td class="r">' + (card ? inp('liability', l.id, 'creditLimit', l.creditLimit == null ? '' : l.creditLimit,
+            { type: 'number', step: '1', min: 0, cls: 'fi num r', disabled: ro, placeholder: '—' })
+        : '<span class="na">—</span>') + '</td>' +
+      '<td>' + sel('liability', l.id, 'accountId', l.accountId, acctOpts(p), ro) + '</td>' +
+      '<td class="c">' + chk('liability', l.id, 'autopayEnabled', l.autopayEnabled, ro) + '</td>' +
+      '<td>' + delBtn('liability', l.id, editable) + '</td></tr>';
+  }).join('');
+
+  /* --------------------------------------------------------------- income */
+  let incRows = p.incomeStreams.map(s => {
+    const when = s.cadence === 'weekly' || s.cadence === 'biweekly'
+      ? sel('income', s.id, 'weekday', s.weekday, WEEKDAY_OPTS, ro)
+      : s.cadence === 'semimonthly' ? '<span class="na">15th &amp; last</span>'
+      : inp('income', s.id, 'dayOfMonth', s.dayOfMonth, { type: 'number', min: 1, max: 31, cls: 'fi num r narrow', disabled: ro });
+    const variable = s.confidence === 'variable';
+    const hist = (p.depositHistory && p.depositHistory[s.id]) || [];
+    return '<tr><td>' + inp('income', s.id, 'label', s.label, { disabled: ro, placeholder: 'your paycheck' }) + '</td>' +
+      '<td class="r">' + inp('income', s.id, 'amount', s.amount, { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro }) + '</td>' +
+      '<td>' + sel('income', s.id, 'cadence', s.cadence, CADENCE_OPTS, ro) + '</td>' +
+      '<td>' + when + '</td>' +
+      '<td>' + sel('income', s.id, 'accountId', s.accountId, acctOpts(p), ro) + '</td>' +
+      '<td>' + sel('income', s.id, 'confidence', s.confidence, CONF_OPTS, ro) + '</td>' +
+      '<td>' + (variable
+        ? inp('income', s.id, 'history', hist.join(', '), { disabled: ro, cls: 'fi num wide', placeholder: '3200, 2850, 3600…' })
+        : '<span class="na">not needed</span>') + '</td>' +
+      '<td>' + delBtn('income', s.id, editable) + '</td></tr>';
+  }).join('');
+
+  /* -------------------------------------------------------------- expenses */
+  let expRows = p.expenses.map(e =>
+    '<tr><td>' + inp('expense', e.id, 'label', e.label, { disabled: ro, placeholder: 'Groceries' }) + '</td>' +
+    '<td class="r">' + inp('expense', e.id, 'amount', e.amount, { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro }) + '</td>' +
+    '<td>' + sel('expense', e.id, 'cadence', e.cadence, [['weekly', 'Every week'], ['monthly', 'Once a month']], ro) + '</td>' +
+    '<td>' + (e.cadence === 'weekly'
+      ? sel('expense', e.id, 'weekday', e.weekday, WEEKDAY_OPTS, ro)
+      : inp('expense', e.id, 'dayOfMonth', e.dayOfMonth, { type: 'number', min: 1, max: 31, cls: 'fi num r narrow', disabled: ro })) + '</td>' +
+    '<td>' + sel('expense', e.id, 'accountId', e.accountId, acctOpts(p), ro) + '</td>' +
+    '<td>' + delBtn('expense', e.id, editable) + '</td></tr>').join('');
+
+  const st = p.settings;
+  const stale = staleDays();
+
+  const problems = (v.errors.length || v.warnings.length)
+    ? '<div class="card"><header><h3>' + (v.errors.length ? 'Needs attention' : 'Worth knowing') + '</h3>' +
+      '<span class="aside">checked as you type</span></header><div class="body flush">' +
+      v.errors.map(m => '<div class="check fail"><div class="mark">!!</div><div><b>' + esc(m) + '</b></div></div>').join('') +
+      v.warnings.map(m => '<div class="check skip"><div class="mark">·</div><div><b>' + esc(m) + '</b></div></div>').join('') +
+      '</div></div>'
+    : '';
+
+  return '<div class="wrap">' +
+    '<div class="page-head"><p class="eyebrow">' + (editable ? 'Everything the plan is built from' : 'Demo profile — read only') + '</p>' +
+      '<h2>Your money</h2>' +
+      '<p class="sub">' + (editable
+        ? 'Type over anything. It saves to this browser as you go and never leaves your machine. ' +
+          'The schedule rebuilds on every change.'
+        : 'This is one of the built-in examples. Copy it into your own plan if you want a starting point you can edit.') +
+      '</p></div>' +
+
+    (ro ? '<div class="note"><b>You are looking at ' + esc(p.profile.name) + '.</b> ' +
+      '<button class="link" data-copy-persona="' + esc(state.profileId) + '">Copy this setup into my plan</button>' +
+      ' — it becomes yours to edit, and replaces anything already there.</div>' : '') +
+
+    (state.saveFailed ? '<div class="note" style="border-left-color:var(--alert);background:var(--alert-soft)">' +
+      '<b>Could not save to this browser.</b> Private browsing or blocked storage will do that. ' +
+      'Your work is live in this tab but will not survive a reload — export a backup instead.</div>' : '') +
+
+    problems +
+
+    (editable ? '<div class="card"><header><h3>This plan</h3></header><div class="controls">' +
+      '<div class="ctl"><label for="pname">Call it something</label>' +
+        '<p class="hint">Only used on screen and in exports.</p>' +
+        inp('meta', 'profile', 'name', p.profile.name, { placeholder: 'My plan' }) + '</div>' +
+      '<div class="ctl"><label>Balances</label>' +
+        '<p class="hint">' + (stale === null ? 'Not stamped yet.'
+          : stale === 0 ? 'Updated today.' : 'Updated ' + stale + ' day' + (stale === 1 ? '' : 's') + ' ago.') +
+        ' The plan is only as current as these.</p>' +
+        '<button class="btn" data-action="stamp">I have just updated my balances</button></div>' +
+      '<div class="ctl"><label>Backup and portability</label>' +
+        '<p class="hint">Everything lives in this browser. Export if you clear cookies or switch machines.</p>' +
+        '<div class="btnrow"><button class="btn" data-action="export-json">Export a backup</button>' +
+        '<button class="btn" data-action="import-json">Load a backup</button></div></div>' +
+    '</div></div>' : '') +
+
+    '<div class="card"><header><h3>Accounts</h3><span class="aside">where money sits</span></header>' +
+      editTable([260, 150, 150, 44],
+        '<th>Name</th><th>Type</th><th class="r">Balance now</th><th></th>',
+        accRows, 'No accounts yet.', 4) +
+      (editable ? '<div class="body">' + addBtn('account', 'Add an account') + '</div>' : '') + '</div>' +
+
+    '<div class="card"><header><h3>Debts and bills</h3>' +
+      '<span class="aside">rent and utilities have no balance — they just have to clear on time</span></header>' +
+      editTable([182, 126, 102, 84, 98, 78, 94, 96, 132, 72, 40],
+        '<th>Name</th><th>Type</th><th class="r">Balance</th>' +
+        '<th class="r">APR&nbsp;%</th><th class="r">Minimum</th><th class="r">Due day</th><th class="r">Stmt closes</th>' +
+        '<th class="r">Limit</th><th>Paid from</th><th class="c">Autopay</th><th></th>',
+        liabRows, 'Nothing to pay yet.', 11) +
+      (editable ? '<div class="body">' + addBtn('liability', 'Add a debt or bill') + '</div>' : '') + '</div>' +
+
+    '<div class="card"><header><h3>Income</h3>' +
+      '<span class="aside">mark anything unpredictable as “Varies” and paste the last few deposits</span></header>' +
+      editTable([200, 115, 165, 105, 155, 120, 240, 44],
+        '<th>What is it</th><th class="r">Amount</th><th>How often</th>' +
+        '<th>When</th><th>Into</th><th>Reliability</th><th>Past deposits</th><th></th>',
+        incRows, 'No income yet.', 8) +
+      (editable ? '<div class="body">' + addBtn('income', 'Add income') + '</div>' : '') + '</div>' +
+
+    '<div class="card"><header><h3>Everyday spending</h3>' +
+      '<span class="aside">groceries, fuel, childcare — the plan reserves for these but never schedules them</span></header>' +
+      editTable([230, 115, 150, 105, 155, 44],
+        '<th>What</th><th class="r">Amount</th><th>How often</th><th>When</th><th>From</th><th></th>',
+        expRows, 'Nothing yet. Leaving this empty makes the plan look far richer than it is.', 6) +
+      (editable ? '<div class="body">' + addBtn('expense', 'Add spending') + '</div>' : '') + '</div>' +
+
+    '<div class="card"><header><h3>How the plan should behave</h3></header><div class="controls">' +
+      '<div class="ctl"><label for="sFloor">Buffer floor</label>' +
+        '<p class="hint">The balance across all checking that the plan may never go below.</p>' +
+        inp('settings', 'settings', 'bufferFloor', st.bufferFloor, { type: 'number', step: '25', min: 0, cls: 'fi num', disabled: ro }) + '</div>' +
+      '<div class="ctl"><label>Order to attack debt</label>' +
+        '<p class="hint">Avalanche is cheapest. Snowball closes accounts sooner.</p>' +
+        sel('settings', 'settings', 'strategy', st.strategy,
+            [['avalanche', 'Avalanche — highest rate first'], ['snowball', 'Snowball — smallest balance first'],
+             ['hybrid', 'Hybrid — quick wins, then rate']], ro) + '</div>' +
+      '<div class="ctl"><label>Statement timing</label>' +
+        '<p class="hint">Pay cards before the statement closes so a lower balance gets reported.</p>' +
+        '<label class="toggle" style="font-weight:400">' + chk('settings', 'settings', 'optimizeForCreditScore', st.optimizeForCreditScore, ro) +
+        'Optimise for reported utilization</label></div>' +
+      '<div class="ctl"><label for="sHorizon">How far ahead to plan</label>' +
+        '<p class="hint">Days. 90 is the sweet spot; longer gets speculative.</p>' +
+        inp('settings', 'settings', 'horizonDays', st.horizonDays, { type: 'number', min: 30, max: 365, cls: 'fi num', disabled: ro }) + '</div>' +
+    '</div></div>' +
+
+    (editable ? '<div class="card"><header><h3>Start over</h3>' +
+      '<span class="aside">both of these replace what is here — export a backup first if you want one</span></header>' +
+      '<div class="body">' +
+      '<p class="hint" style="margin:0 0 10px">Replace my plan with a worked example, then edit it:</p>' +
+      '<div class="btnrow" style="margin-bottom:16px">' +
+        PERSONA_IDS.map(id => '<button class="btn" data-copy-persona="' + id + '">' +
+          esc(PERSONAS[id].profile.name) + '</button>').join('') +
+      '</div>' +
+      '<button class="btn danger" data-action="reset">Erase everything and start again</button>' +
+      '</div></div>' : '') +
+  '</div>';
+}
+
+function onboarding() {
+  return '<div class="wrap">' +
+    '<div class="page-head"><p class="eyebrow">Nothing saved yet</p><h2>Set up your plan</h2>' +
+    '<p class="sub">Two ways in. Either works — you can change everything afterwards, and nothing you type ' +
+    'leaves this browser.</p></div>' +
+    '<div class="card"><header><h3>Start from scratch</h3></header><div class="body">' +
+      '<p style="margin:0 0 14px;max-width:64ch;color:var(--ink-2)">You will need, roughly in this order: your ' +
+      'checking balance, each debt with its balance, APR, minimum and due day, your income and when it lands, ' +
+      'and what you actually spend in a normal month. Ten minutes, once.</p>' +
+      '<button class="btn primary" data-action="start-blank">Start with an empty plan</button></div></div>' +
+    '<div class="card"><header><h3>Start from an example and edit it</h3>' +
+      '<span class="aside">faster if your situation resembles one of them</span></header><div class="body flush">' +
+      PERSONA_IDS.map(id => {
+        const pr = PERSONAS[id].profile;
+        return '<div class="row"><div class="what"><b>' + esc(pr.name) + '</b>' +
+          '<span class="chip">' + esc(pr.tagline) + '</span></div>' +
+          '<div class="amt"><button class="btn" data-copy-persona="' + id + '">Use as a starting point</button></div>' +
+          '<div class="why">' + esc(pr.note) + '</div></div>';
+      }).join('') +
+    '</div></div>' +
+    '<div class="card"><header><h3>Already have a backup</h3></header><div class="body">' +
+      '<button class="btn" data-action="import-json">Load a backup file</button></div></div>' +
+  '</div>';
+}
+
 /* ================================================================== render */
 
 function render() {
   renderChrome();
-  const plan = currentPlan();
   const el = document.getElementById('view');
+  if (state.view === 'money')  { el.innerHTML = viewMoney(); window.scrollTo(0, 0); return; }
+  if (state.view === 'tests')  { el.innerHTML = viewTests(); window.scrollTo(0, 0); return; }
+
+  const plan = currentPlan();
+  if (plan.__error) {
+    el.innerHTML = '<div class="wrap"><div class="page-head"><h2>No plan yet</h2>' +
+      '<p class="sub">' + esc(plan.__error) + '</p></div>' +
+      '<div class="card"><div class="empty"><b>Set your money up first.</b>' +
+      'Once there is an account and something to pay, this fills in on its own.<br><br>' +
+      '<button class="btn primary" data-view="money">Open Your money</button></div></div></div>';
+    window.scrollTo(0, 0);
+    return;
+  }
   el.innerHTML =
     state.view === 'week' ? viewWeek(plan) :
     state.view === 'timeline' ? viewTimeline(plan) :
-    state.view === 'debts' ? viewDebts(plan) :
-    state.view === 'whatif' ? viewWhatIf(plan) : viewTests();
+    state.view === 'debts' ? viewDebts(plan) : viewWhatIf(plan);
   window.scrollTo(0, 0);
 }
 
@@ -2493,10 +3381,63 @@ function rerenderWhatIf() {
 document.addEventListener('click', e => {
   const nav = e.target.closest('[data-view]');
   if (nav) { state.view = nav.dataset.view; render(); return; }
-  const per = e.target.closest('[data-persona]');
-  if (per) { state.personaId = per.dataset.persona; state.whatif = null; render(); return; }
+  const per = e.target.closest('[data-profile]');
+  if (per) { state.profileId = per.dataset.profile; state.whatif = null; render(); return; }
   const strat = e.target.closest('[data-strategy]');
-  if (strat) { state.whatif.strategy = strat.dataset.strategy; rerenderWhatIf(); }
+  if (strat) { state.whatif.strategy = strat.dataset.strategy; rerenderWhatIf(); return; }
+
+  const copy = e.target.closest('[data-copy-persona]');
+  if (copy) {
+    if (hasOwnData() && !confirm('This replaces everything currently in your plan. Export a backup first if you need one.\n\nReplace it?')) return;
+    state.myProfile = profileFromPersona(copy.dataset.copyPersona);
+    state.myProfile.profile.startedAt = new Date().toISOString();
+    state.profileId = 'mine'; state.view = 'money'; state.whatif = null;
+    commit(true); toast('Copied. Edit anything you like.'); render(); return;
+  }
+
+  const add = e.target.closest('[data-add]');
+  if (add) { addEntity(add.dataset.add); commit(false); render(); return; }
+
+  const del = e.target.closest('[data-del-ent]');
+  if (del) { removeEntity(del.dataset.delEnt, del.dataset.delId); commit(false); render(); return; }
+
+  const act = e.target.closest('[data-action]');
+  if (act) {
+    const a = act.dataset.action;
+    if (a === 'start-blank') {
+      state.myProfile = blankProfile();
+      state.myProfile.profile.startedAt = new Date().toISOString();
+      commit(true); render();
+    }
+    else if (a === 'stamp') { commit(true); toast('Balances marked as current.'); render(); }
+    else if (a === 'export-json') doExport('json');
+    else if (a === 'export-csv') doExport('csv');
+    else if (a === 'export-ics') doExport('ics');
+    else if (a === 'import-json') importBackup();
+    else if (a === 'print') window.print();
+    else if (a === 'reset') {
+      if (confirm('Erase everything saved in this browser and start again?')) {
+        clearProfile(); state.myProfile = blankProfile(); state.whatif = null;
+        commit(false); state.myProfile.profile.balancesAsOf = null; render();
+      }
+    }
+    return;
+  }
+});
+
+/* Field edits commit on change (blur / select / checkbox), not per keystroke:
+   the plan rebuild is too expensive to run on every character, and re-rendering
+   mid-word would steal the caret. */
+document.addEventListener('change', e => {
+  const el = e.target;
+  if (!el.dataset || !el.dataset.ent || !isMine()) return;
+  const touched = applyEdit(el.dataset.ent, el.dataset.id, el.dataset.f, el);
+  commit(touched);
+  const focusKey = el.dataset.ent + '|' + el.dataset.id + '|' + el.dataset.f;
+  render();
+  const back = document.querySelector('[data-ent="' + el.dataset.ent + '"][data-id="' + el.dataset.id +
+    '"][data-f="' + el.dataset.f + '"]');
+  if (back && focusKey) back.focus();
 });
 
 document.addEventListener('input', e => {
@@ -2529,6 +3470,17 @@ function scheduleWhatIf() {
 /* Tests run before the first paint. If the engine is wrong, the user is told
    at the top of the screen, not in a console they will never open. */
 state.testResults = runTests();
+
+state.myProfile = loadProfile() || blankProfile();
+['accounts', 'liabilities', 'incomeStreams', 'expenses'].forEach(k => {
+  if (!Array.isArray(state.myProfile[k])) state.myProfile[k] = [];
+});
+if (!state.myProfile.depositHistory) state.myProfile.depositHistory = {};
+if (!state.myProfile.settings) state.myProfile.settings = blankProfile().settings;
+if (!state.myProfile.profile) state.myProfile.profile = { id: 'mine', name: '', balancesAsOf: null };
+
+// First run lands on setup; a returning user lands on their week.
+if (!hasOwnData()) state.view = 'money';
 render();
 
 </script>
