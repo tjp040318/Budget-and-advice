@@ -5,10 +5,32 @@ Open it in a browser and it runs.
 
 ## Using it on your own money
 
-Open `index.html`, go to **Your money**, and either start from an empty plan or copy one of
-the three worked examples and edit it. You will need your checking balance, each debt with
-its balance / APR / minimum / due day, your income and when it lands, and roughly what you
-spend in a normal month. Ten minutes, once.
+Open `index.html` and go to **Import statements**. Drop in the transaction exports your bank
+already produces — CSV, or Quicken `.qfx`/`.ofx`/`.qbo` — for each current account, savings
+account and credit card. Three to six months each. The files are read in the tab and never
+uploaded anywhere.
+
+From the transactions alone it works out:
+
+- **which accounts you have** and their closing balances
+- **every recurring deposit** — its cadence, its day, and how much it swings. That variation
+  is the deposit history the income floor is built from, so irregular income is handled from
+  real numbers rather than a figure you guessed
+- **fixed bills** (rent, utilities) separated from **repeating spending** separated from
+  genuine one-offs, which are totalled and averaged into a measured weekly figure
+- **card balances**, the statement close day, and the **APR — read back out of the interest
+  you were actually charged**
+- **money moved between your own accounts**, matched up and excluded so nothing is counted
+  twice. A card payment leaving checking is not spending; the card's purchases already are.
+
+You review what it found — every line shows its evidence, and anything wrong can be unticked
+— then build the plan. Three things are never present in any transaction export, so they are
+asked for rather than invented: **credit limits**, and the **balance and rate of any loan you
+only see as a payment leaving checking**. Those are highlighted in blue on the next screen and
+counted down as you fill them in. Nothing is silently guessed.
+
+Everything remains editable afterwards under **Your money**, and you can skip the import
+entirely: start from an empty plan, or copy one of the three worked examples and edit it.
 
 Everything you type is saved to that browser's `localStorage` and never leaves your machine.
 There is no server, no account, and nothing to sign up for. That also means:
@@ -19,6 +41,10 @@ There is no server, no account, and nothing to sign up for. That also means:
 - **Private browsing may block saving.** The app detects that and says so rather than
   silently losing your work.
 
+If you would rather see the import work before trusting it with your own files, *Try it with
+sample statements* runs six months of synthetic exports — two bank CSVs and a Quicken card
+file — through exactly the same parser. No shortcut path.
+
 From **This week** you can push the whole schedule to your calendar as an `.ics` file — every
 payment as an all-day event with a reminder the morning it is due and the reason attached, so
 the plan acts on you instead of sitting in a tab. There is also a CSV of the schedule and a
@@ -26,7 +52,8 @@ print layout.
 
 ### What it still is not
 
-It does not connect to your bank and it does not move money. Both need things a single HTML
+It does not connect to your bank and it does not move money. Importing a statement export is
+the automated route that works without one. Both need things a single HTML
 file cannot have: Plaid and Method require merchant accounts, API keys and a backend to hold
 them, and moving money requires licensing. What the file *does* have is the boundary those
 would plug into — see **Adapter boundary** below. Balances are whatever you last typed, so
@@ -201,12 +228,21 @@ rather than golden values, so they keep meaning something after the numbers chan
 - **constraints hold from 18 different start dates** spanning month ends, short months and
   every weekday — this one caught several genuine bugs
 
-A separate browser-driven suite (`e2e.js`, run during development, not shipped in the file)
-covers the app around it: first-run onboarding, starting blank, copying a template, editing a
+A third suite covers the import path and runs on load with the others: both formats parsing
+into one shape, day-first dates with split debit/credit columns and currency symbols, the
+amount and date formats that break naive parsers, income cadence and variability detection,
+bills told apart from spending, the card APR derived from interest charged, internal transfers
+excluded from both sides, unknown figures staying visibly unknown, and the derived profile
+building a working plan end to end.
+
+Two browser-driven suites (`e2e.js` and `e2e-import.js`, run during development, not shipped
+in the file) cover the app around it: first-run onboarding, starting blank, copying a template, editing a
 field and seeing the payoff recompute, persistence across reload, adding and removing rows,
 fields appearing and disappearing as a debt's type changes, ICS/CSV/JSON export shape, an
 impossible plan being flagged rather than silently scheduled, and demo profiles staying
-read-only. 20 checks, all green.
+read-only — plus the whole import flow driven with real files written to disk: drop, analyse,
+untick a finding, build, fill an outstanding figure and watch the highlight clear, reload, and
+a non-statement file rejected with an explanation. 20 and 15 checks, all green.
 
 ## Personas
 
@@ -220,6 +256,27 @@ In each persona the highest-APR debt is deliberately *not* the smallest balance,
 highest-utilization card, so avalanche, snowball and statement-close timing produce genuinely
 different plans instead of collapsing into the same move.
 
+## How the import works
+
+`parseStatementFile()` handles the two formats that are near-universal. OFX/QFX/QBO is SGML
+with frequently unclosed tags, so it is read by tag boundary rather than parsed as a tree.
+CSV is worse: the tokenizer sniffs the separator (comma, semicolon, tab, pipe), handles quoted
+fields with embedded separators and newlines, maps columns by header, and falls back to
+inspecting the data when a file has no usable header row. Amounts arrive as `(1,234.56)`,
+`1234.56-`, `12.34 CR`, `$1,234.56` and `1.234,56`; dates as `YYYYMMDD`, `03/09/2026`,
+`09/03/2026` and `9 Mar 2026`. The DD/MM versus MM/DD ambiguity is settled by scanning the
+whole file for a date whose first component exceeds 12.
+
+`analyzeStatements()` groups transactions by a normalised merchant key — store numbers,
+posting dates, routing noise and trailing state codes stripped — then looks at the spacing of
+each group. Biweekly and semimonthly are told apart by weekday consistency: a fortnightly
+payday holds its weekday, the 15th and the 30th cannot. Amount variance decides whether the
+plan may commit against a figure (`certain`), hedge slightly (`likely`), or fall back to the
+25th-percentile floor (`variable`).
+
+Every output carries the evidence that produced it — how many occurrences, over what dates, in
+what range — because inference that cannot show its working should not be trusted.
+
 ## Views
 
 | | |
@@ -229,7 +286,11 @@ different plans instead of collapsing into the same move.
 | **Debts** | Every balance with APR, payoff date and interest still to come. |
 | **What if** | Sliders for extra monthly and buffer floor, plus strategy — recomputed live by the same engine. |
 | **Your money** | Everything the plan is built from. Editable, saved locally. |
+| **Import statements** | Drop in bank exports; the plan builds itself from the transactions. |
 | **Engine checks** | The test suite, always one click away. |
+
+Views are numbered 1–6 in the sidebar; those are working keyboard shortcuts, and `t` opens the
+tests.
 
 ## Out of scope
 

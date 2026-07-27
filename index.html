@@ -287,6 +287,26 @@ input[type=checkbox]{accent-color:var(--teal); width:16px; height:16px}
 .toast.show{opacity:1; transform:translate(-50%,0)}
 .toast.bad{background:var(--alert)}
 
+/* ----------------------------------------------------------------- import */
+.drop{
+  border:2px dashed var(--line-strong); border-radius:var(--radius); background:var(--surface-2);
+  padding:44px 22px; text-align:center; cursor:pointer; display:flex; flex-direction:column;
+  align-items:center; gap:9px; transition:border-color .15s, background .15s;
+}
+.drop:hover,.drop:focus-visible{border-color:var(--teal); background:var(--teal-soft); outline:none}
+.drop.over{border-color:var(--teal); background:var(--teal-soft)}
+.drop b{font-size:16px}
+.drop span{font-size:13px; color:var(--ink-3)}
+.drop .btn{margin-top:6px}
+.steps{margin:0; padding-left:20px; max-width:78ch; color:var(--ink-2); font-size:13.5px; line-height:1.65}
+.steps li{margin-bottom:7px}
+.steps b{color:var(--ink)}
+.pick{display:flex; align-items:center; gap:8px; cursor:pointer}
+.row.off{opacity:.45}
+.row.off .amt{text-decoration:line-through}
+.fi.want{border-color:var(--slate); background:var(--slate-soft); box-shadow:inset 0 0 0 1px var(--slate-line)}
+.fi.want:focus{background:var(--surface)}
+
 /* ------------------------------------------------------------------ print */
 @media print{
   .rail,.banner,.no-print,.toast{display:none !important}
@@ -320,6 +340,7 @@ input[type=checkbox]{accent-color:var(--teal); width:16px; height:16px}
       <button data-view="debts">Debts <span class="tick">3</span></button>
       <button data-view="whatif">What if <span class="tick">4</span></button>
       <button data-view="money">Your money <span class="tick">5</span></button>
+      <button data-view="import">Import statements <span class="tick">6</span></button>
       <button data-view="tests">Engine checks <span class="tick">&#9679;</span></button>
     </nav>
 
@@ -1664,6 +1685,944 @@ const PERSONAS = {
 
 
 /* ============================================================================
+   STATEMENT PARSERS
+   ----------------------------------------------------------------------------
+   Every bank and card issuer exports transactions. Almost none of them agree on
+   the format. These parsers take the two that are near-universal — OFX/QFX/QBO
+   (Quicken/Money download) and CSV — and turn them into one shape:
+
+     Statement {
+       accountKey, accountName, accountType: 'checking'|'savings'|'credit_card',
+       balance | null, balanceDate | null,
+       periodStart | null, periodEnd | null,
+       transactions: [{ dn, amount, description, type }]
+     }
+
+   amount is signed from the account holder's point of view: money in is
+   positive, money out is negative. On a credit card account a purchase is a
+   negative amount (it costs you) and a payment is positive, so the same
+   recurrence detection works on both without special cases.
+
+   Nothing here touches the DOM or the network. Everything is pure text in,
+   objects out, which is why it can be tested directly.
+   ============================================================================ */
+
+/* --------------------------------------------------------------- dates */
+
+const MONTH_NAMES = {
+  jan: 0, feb: 1, mar: 2, apr: 3, may: 4, jun: 5,
+  jul: 6, aug: 7, sep: 8, oct: 9, nov: 10, dec: 11
+};
+
+/** Parse a date in any of the formats statements actually use.
+ *  `dayFirst` resolves the DD/MM vs MM/DD ambiguity; the caller works it out
+ *  by scanning the whole file first. Returns a day number or null. */
+function parseDate(raw, dayFirst) {
+  if (raw == null) return null;
+  const s = String(raw).trim().replace(/^["']|["']$/g, '');
+  if (!s) return null;
+
+  // OFX: YYYYMMDD, optionally YYYYMMDDHHMMSS[-5:EST]
+  let m = s.match(/^(\d{4})(\d{2})(\d{2})/);
+  if (m && s.length >= 8 && !/[-/]/.test(s.slice(0, 8))) {
+    return safeDn(+m[1], +m[2] - 1, +m[3]);
+  }
+  // ISO: YYYY-MM-DD
+  m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (m) return safeDn(+m[1], +m[2] - 1, +m[3]);
+
+  // 5 Jan 2026 / Jan 5, 2026 / 5-Jan-26
+  m = s.match(/^(\d{1,2})[\s\-/]([A-Za-z]{3,})[\s\-/](\d{2,4})/);
+  if (m) {
+    const mo = MONTH_NAMES[m[2].slice(0, 3).toLowerCase()];
+    if (mo != null) return safeDn(fullYear(+m[3]), mo, +m[1]);
+  }
+  m = s.match(/^([A-Za-z]{3,})[\s\-/](\d{1,2}),?[\s\-/]*(\d{2,4})/);
+  if (m) {
+    const mo = MONTH_NAMES[m[1].slice(0, 3).toLowerCase()];
+    if (mo != null) return safeDn(fullYear(+m[3]), mo, +m[2]);
+  }
+
+  // Numeric with separators: D/M/Y or M/D/Y
+  m = s.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);
+  if (m) {
+    const a = +m[1], b = +m[2], y = fullYear(+m[3]);
+    if (a > 12) return safeDn(y, b - 1, a);          // unambiguous day-first
+    if (b > 12) return safeDn(y, a - 1, b);          // unambiguous month-first
+    return dayFirst ? safeDn(y, b - 1, a) : safeDn(y, a - 1, b);
+  }
+  return null;
+}
+
+function fullYear(y) { return y < 100 ? (y < 70 ? 2000 + y : 1900 + y) : y; }
+
+function safeDn(y, m, d) {
+  if (!Number.isFinite(y) || !Number.isFinite(m) || !Number.isFinite(d)) return null;
+  if (m < 0 || m > 11 || d < 1 || d > 31 || y < 1970 || y > 2200) return null;
+  return dnFromParts(y, m, d);
+}
+
+/** Does this file use day-first dates? Decided by looking for any date whose
+ *  first component exceeds 12 — one is proof. */
+function detectDayFirst(samples) {
+  let dayFirst = false, monthFirst = false;
+  for (const s of samples) {
+    const m = String(s || '').trim().match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2,4})/);
+    if (!m) continue;
+    if (+m[1] > 12) dayFirst = true;
+    if (+m[2] > 12) monthFirst = true;
+  }
+  return dayFirst && !monthFirst;
+}
+
+/* -------------------------------------------------------------- amounts */
+
+/** Handles 1,234.56 · -1234.56 · (1,234.56) · $1 234,56 · 1234.56- · 12.34 CR */
+function parseAmount(raw) {
+  if (raw == null) return null;
+  let s = String(raw).trim();
+  if (!s) return null;
+  let sign = 1;
+  if (/^\(.*\)$/.test(s)) { sign = -1; s = s.slice(1, -1); }
+  if (/(^|\s)(DR|debit)$/i.test(s)) { sign = -1; }
+  if (/(^|\s)(CR|credit)$/i.test(s)) { sign = 1; }
+  s = s.replace(/\b(DR|CR|debit|credit)\b/gi, '');
+  s = s.replace(/[^\d.,\-+]/g, '');
+  if (/-$/.test(s)) { sign = -1; s = s.replace(/-$/, ''); }
+  if (/^-/.test(s)) { sign = -1; s = s.replace(/^-/, ''); }
+  if (/^\+/.test(s)) s = s.slice(1);
+  if (!s) return null;
+
+  // Work out which separator is the decimal point.
+  const lastComma = s.lastIndexOf(','), lastDot = s.lastIndexOf('.');
+  if (lastComma > -1 && lastDot > -1) {
+    if (lastComma > lastDot) s = s.replace(/\./g, '').replace(',', '.');
+    else s = s.replace(/,/g, '');
+  } else if (lastComma > -1) {
+    // 1,234 is thousands; 1,23 is a decimal comma
+    s = (s.length - lastComma - 1) === 3 && s.indexOf(',') === lastComma && /^\d{1,3},\d{3}$/.test(s)
+      ? s.replace(',', '') : s.replace(',', '.');
+    s = s.replace(/,/g, '');
+  }
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? sign * n : null;
+}
+
+/* ------------------------------------------------------------------ CSV */
+
+/** RFC-4180-ish tokenizer: quotes, embedded separators and newlines, doubled
+ *  quotes. Separator is sniffed from the first line outside quotes. */
+function parseCSVRows(text) {
+  const clean = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  const firstLine = clean.split('\n').find(l => l.trim().length) || '';
+  let sep = ',';
+  let best = 0;
+  for (const cand of [',', ';', '\t', '|']) {
+    let count = 0, inQ = false;
+    for (let i = 0; i < firstLine.length; i++) {
+      const ch = firstLine[i];
+      if (ch === '"') inQ = !inQ;
+      else if (ch === cand && !inQ) count++;
+    }
+    if (count > best) { best = count; sep = cand; }
+  }
+
+  const rows = [];
+  let row = [], cell = '', inQ = false;
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (inQ) {
+      if (ch === '"') {
+        if (clean[i + 1] === '"') { cell += '"'; i++; }
+        else inQ = false;
+      } else cell += ch;
+    } else if (ch === '"') inQ = true;
+    else if (ch === sep) { row.push(cell); cell = ''; }
+    else if (ch === '\n') { row.push(cell); rows.push(row); row = []; cell = ''; }
+    else cell += ch;
+  }
+  if (cell.length || row.length) { row.push(cell); rows.push(row); }
+  return rows.filter(r => r.some(c => String(c).trim().length));
+}
+
+const HEADER_PATTERNS = {
+  date:    /^(transaction\s*)?(date|posted|post date|posting date|date posted|value date)/i,
+  desc:    /(description|payee|narrative|details|memo|reference|merchant|name|particulars|transaction)/i,
+  amount:  /^(amount|value|transaction amount|amt)/i,
+  debit:   /(debit|withdrawal|money out|paid out|charges?)/i,
+  credit:  /(credit|deposit|money in|paid in)/i,
+  balance: /balance/i,
+  type:    /^(type|transaction type|dr\/cr|cr\/dr|indicator)/i
+};
+
+/** Map header names to roles; fall back to inspecting the data when a file has
+ *  no usable header row (plenty do not). */
+function mapColumns(rows) {
+  const head = rows[0].map(h => String(h).trim());
+  const idx = { date: -1, desc: -1, amount: -1, debit: -1, credit: -1, balance: -1, type: -1 };
+  let matched = 0;
+  head.forEach((h, i) => {
+    for (const role of ['date', 'balance', 'amount', 'debit', 'credit', 'type', 'desc']) {
+      if (idx[role] >= 0) continue;
+      if (HEADER_PATTERNS[role].test(h)) { idx[role] = i; matched++; return; }
+    }
+  });
+  // A header row should not itself parse as a transaction.
+  const headerLooksLikeData = parseDate(head[Math.max(idx.date, 0)], false) !== null;
+  if (matched >= 2 && !headerLooksLikeData) return { idx, dataFrom: 1 };
+
+  // Positional fallback: first column that parses as a date, the numeric
+  // column with the most decimals, and the longest free-text column.
+  const body = rows.slice(0, 40);
+  const width = Math.max(...body.map(r => r.length));
+  const dayFirst = detectDayFirst(body.map(r => r[0]));
+  const score = { date: [], amt: [], text: [] };
+  for (let c = 0; c < width; c++) {
+    let dates = 0, nums = 0, textLen = 0;
+    for (const r of body) {
+      const v = r[c];
+      if (parseDate(v, dayFirst) !== null) dates++;
+      else if (parseAmount(v) !== null && /\d/.test(String(v))) nums++;
+      textLen += /[A-Za-z]{3}/.test(String(v || '')) ? String(v).length : 0;
+    }
+    score.date.push(dates); score.amt.push(nums); score.text.push(textLen);
+  }
+  const best = arr => arr.indexOf(Math.max(...arr));
+  return {
+    idx: { date: best(score.date), desc: best(score.text), amount: best(score.amt),
+           debit: -1, credit: -1, balance: -1, type: -1 },
+    dataFrom: 0
+  };
+}
+
+function parseCSVStatement(text, fileName) {
+  const rows = parseCSVRows(text);
+  if (rows.length < 2) return null;
+  const { idx, dataFrom } = mapColumns(rows);
+  if (idx.date < 0) return null;
+
+  const body = rows.slice(dataFrom);
+  const dayFirst = detectDayFirst(body.map(r => r[idx.date]));
+  const txns = [];
+  let lastBalance = null, lastBalanceDn = null;
+
+  for (const r of body) {
+    const dn = parseDate(r[idx.date], dayFirst);
+    if (dn === null) continue;
+    let amount = null;
+    if (idx.amount >= 0) amount = parseAmount(r[idx.amount]);
+    if (amount === null && idx.debit >= 0) {
+      const d = parseAmount(r[idx.debit]);
+      if (d !== null && d !== 0) amount = -Math.abs(d);
+    }
+    if (amount === null && idx.credit >= 0) {
+      const c = parseAmount(r[idx.credit]);
+      if (c !== null && c !== 0) amount = Math.abs(c);
+    }
+    if (amount === null) continue;
+    // A "type" column overrides sign when the amount column is unsigned.
+    if (idx.type >= 0) {
+      const t = String(r[idx.type] || '').toLowerCase();
+      if (/^(d|dr|debit|withdrawal)/.test(t)) amount = -Math.abs(amount);
+      else if (/^(c|cr|credit|deposit)/.test(t)) amount = Math.abs(amount);
+    }
+    const desc = idx.desc >= 0 ? String(r[idx.desc] || '').trim() : '';
+    txns.push({ dn, amount: r2(amount), description: desc, type: '' });
+    if (idx.balance >= 0) {
+      const b = parseAmount(r[idx.balance]);
+      if (b !== null && (lastBalanceDn === null || dn >= lastBalanceDn)) { lastBalance = b; lastBalanceDn = dn; }
+    }
+  }
+  if (!txns.length) return null;
+  txns.sort((a, b) => a.dn - b.dn);
+
+  return {
+    accountKey: 'csv:' + fileName,
+    accountName: guessAccountName(fileName),
+    accountType: null,               // decided later, from the transaction mix
+    balance: lastBalance,
+    balanceDate: lastBalanceDn,
+    periodStart: txns[0].dn,
+    periodEnd: txns[txns.length - 1].dn,
+    transactions: txns,
+    source: fileName + ' (CSV)'
+  };
+}
+
+function guessAccountName(fileName) {
+  const base = String(fileName || 'Imported account').replace(/\.[a-z]+$/i, '')
+    .replace(/[_\-]+/g, ' ').replace(/\d{4,}/g, '').replace(/\s+/g, ' ').trim();
+  if (!base) return 'Imported account';
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+/* ------------------------------------------------------------------ OFX */
+
+function ofxTag(block, tag) {
+  const m = block.match(new RegExp('<' + tag + '>([^<\\r\\n]*)', 'i'));
+  return m ? m[1].trim() : null;
+}
+
+/** OFX/QFX/QBO are SGML, not XML — tags are frequently unclosed, so this reads
+ *  by tag boundary rather than trying to build a tree. */
+function parseOFXStatements(text, fileName) {
+  if (!/<OFX>/i.test(text)) return [];
+  const out = [];
+  const blocks = text.split(/<(?=(?:STMTRS|CCSTMTRS)\b)/i).slice(1);
+  const wholeIsCard = /<CREDITCARDMSGSRSV1|<CCSTMTRS/i.test(text);
+
+  const chunks = blocks.length ? blocks : [text];
+  chunks.forEach((chunk, i) => {
+    const isCard = blocks.length ? /^CCSTMTRS/i.test(chunk) : wholeIsCard;
+    const acctId = ofxTag(chunk, 'ACCTID') || '';
+    const acctTypeRaw = (ofxTag(chunk, 'ACCTTYPE') || '').toUpperCase();
+    const bal = parseAmount(ofxTag(chunk, 'BALAMT'));
+    const balDn = parseDate(ofxTag(chunk, 'DTASOF'), false);
+    const start = parseDate(ofxTag(chunk, 'DTSTART'), false);
+    const end = parseDate(ofxTag(chunk, 'DTEND'), false);
+
+    const txns = [];
+    const trnBlocks = chunk.split(/<STMTTRN>/i).slice(1);
+    for (const t of trnBlocks) {
+      const body = t.split(/<\/STMTTRN>/i)[0];
+      const dn = parseDate(ofxTag(body, 'DTPOSTED'), false);
+      const amt = parseAmount(ofxTag(body, 'TRNAMT'));
+      if (dn === null || amt === null) continue;
+      const name = ofxTag(body, 'NAME') || '';
+      const memo = ofxTag(body, 'MEMO') || '';
+      txns.push({
+        dn, amount: r2(amt),
+        description: (name + (memo && memo !== name ? ' ' + memo : '')).trim(),
+        type: (ofxTag(body, 'TRNTYPE') || '').toUpperCase()
+      });
+    }
+    if (!txns.length && bal === null) return;
+    txns.sort((a, b) => a.dn - b.dn);
+
+    // On a card, OFX signs a purchase negative and a payment positive already,
+    // and BALAMT is negative when you owe money. Normalise the balance to the
+    // amount owed as a positive number.
+    const type = isCard ? 'credit_card' : (acctTypeRaw === 'SAVINGS' ? 'savings' : 'checking');
+    out.push({
+      accountKey: 'ofx:' + (acctId || fileName + ':' + i),
+      accountName: (isCard ? 'Card ' : acctTypeRaw === 'SAVINGS' ? 'Savings ' : 'Checking ') +
+        (acctId ? '••' + acctId.slice(-4) : guessAccountName(fileName)),
+      accountType: type,
+      balance: bal === null ? null : (isCard ? Math.abs(bal) : bal),
+      balanceDate: balDn,
+      periodStart: start !== null ? start : (txns[0] || {}).dn,
+      periodEnd: end !== null ? end : (txns[txns.length - 1] || {}).dn,
+      transactions: txns,
+      source: fileName + ' (OFX)'
+    });
+  });
+  return out;
+}
+
+/* ------------------------------------------------------------ entry point */
+
+function parseStatementFile(fileName, text) {
+  const ofx = parseOFXStatements(text, fileName);
+  if (ofx.length) return ofx;
+  const csv = parseCSVStatement(text, fileName);
+  return csv ? [csv] : [];
+}
+
+
+/* ============================================================================
+   TRANSACTION ANALYSIS
+   ----------------------------------------------------------------------------
+   Turns parsed statements into a plan profile without anyone typing a number.
+
+   What can honestly be derived from transactions:
+     · which accounts exist, and their balances
+     · every recurring deposit — its cadence, its day, and how much it varies,
+       which is exactly the deposit history the income floor needs
+     · recurring bills, split into fixed obligations and ordinary spending
+     · card balances, and an APR estimated from the interest actually charged
+     · what is left over: real discretionary spending, measured rather than guessed
+
+   What cannot, and is therefore asked for rather than invented:
+     · credit limits (never present in a transaction export)
+     · loan balances and APRs, when only the payment is visible from checking
+   Those come back as `needs` on the finding, and the UI makes them the only
+   things left to fill in.
+   ============================================================================ */
+
+const median = a => {
+  if (!a.length) return 0;
+  const v = a.slice().sort((x, y) => x - y);
+  const m = v.length >> 1;
+  return v.length % 2 ? v[m] : (v[m - 1] + v[m]) / 2;
+};
+const mean = a => a.length ? a.reduce((s, x) => s + x, 0) / a.length : 0;
+const stdev = a => {
+  if (a.length < 2) return 0;
+  const m = mean(a);
+  return Math.sqrt(a.reduce((s, x) => s + (x - m) * (x - m), 0) / (a.length - 1));
+};
+function modeOf(a) {
+  const c = new Map();
+  let best = a[0], bestN = 0;
+  for (const x of a) {
+    const n = (c.get(x) || 0) + 1; c.set(x, n);
+    if (n > bestN) { bestN = n; best = x; }
+  }
+  return { value: best, share: a.length ? bestN / a.length : 0 };
+}
+
+/* ------------------------------------------------------- description keys */
+
+const NOISE = /\b(POS|PURCHASE|DEBIT CARD|CARD PURCHASE|VISA|MASTERCARD|ACH|DIRECT DEP|DIRECT DEBIT|WEB ID|PPD ID|CCD ID|TRACE|REF|CONF|AUTH|RECURRING|ONLINE|MOBILE|TRANSACTION|PAYMENT FROM|XXXXX+)\b/gi;
+
+/** Collapse "SQ *BLUE BOTTLE 8842 SEATTLE WA 04/12" and its siblings onto one
+ *  key so the same merchant groups together across months. */
+function descKey(desc) {
+  let s = String(desc || '').toUpperCase();
+  s = s.replace(/\d{1,2}\/\d{1,2}(\/\d{2,4})?/g, ' ');   // embedded dates
+  s = s.replace(NOISE, ' ');
+  s = s.replace(/[*#]/g, ' ');
+  s = s.replace(/\b[A-Z]{2}\b(?=\s*$)/, ' ');            // trailing state code
+  s = s.replace(/\b\d{3,}\b/g, ' ');                     // store / ref numbers
+  s = s.replace(/[^A-Z ]/g, ' ').replace(/\s+/g, ' ').trim();
+  return s.split(' ').slice(0, 4).join(' ');
+}
+
+/** A name a person would recognise. Bank descriptions carry store numbers,
+ *  posting dates, routing noise and a trailing state code; none of that helps
+ *  anyone identify the line on their own plan. */
+function prettyLabel(desc) {
+  let s = String(desc || '').trim();
+  if (!s) return 'Recurring item';
+  const allCaps = s === s.toUpperCase();
+  s = s.replace(/\d{1,2}\/\d{1,2}(\/\d{2,4})?/g, ' ')      // embedded dates
+       .replace(/\b(ACH|POS|DIRECT DEP|DIR DEP|DEBIT CARD|CARD PURCHASE|WEB ID|PPD ID|CCD ID|TRACE|REF|CONF|AUTH|XXXXX+)\b/gi, ' ')
+       .replace(/[*#]/g, ' ')
+       .replace(/\b\d{3,}\b/g, ' ')                        // store and account numbers
+       .replace(/\s+[A-Z]{2}\s*$/, ' ')                     // trailing state code
+       .replace(/\s+/g, ' ').trim()
+       .replace(/^(CREDIT|DEBIT|PAYMENT)\s+(?=\S)/i, '');    // leading ledger word
+  if (!s) return 'Recurring item';
+  const words = s.split(' ').filter(Boolean).slice(0, 4);
+  const out = words.join(' ');
+  if (!allCaps) return out.length > 40 ? out.slice(0, 40).trim() : out;
+  return words.map(w => w.length > 2 && /^[A-Z.&']+$/.test(w)
+    ? w.charAt(0) + w.slice(1).toLowerCase() : w).join(' ');
+}
+
+/* ------------------------------------------------------------- recurrence */
+
+/** Work out whether a set of dates repeats, and on what schedule.
+ *  Returns null when the spacing is too irregular to commit a plan against. */
+function detectCadence(dns) {
+  if (dns.length < 3) return null;
+  const d = dns.slice().sort((a, b) => a - b);
+  const gaps = [];
+  for (let i = 1; i < d.length; i++) gaps.push(d[i] - d[i - 1]);
+  const med = median(gaps);
+  const share = (lo, hi) => gaps.filter(g => g >= lo && g <= hi).length / gaps.length;
+  const weekday = modeOf(d.map(x => dparts(x).w));
+  const dom = modeOf(d.map(x => dparts(x).d));
+
+  if (med >= 6 && med <= 8 && share(5, 9) >= 0.7) {
+    return { cadence: 'weekly', weekday: weekday.value, dayOfMonth: dom.value, fit: share(5, 9) };
+  }
+  // Biweekly holds the same weekday; semimonthly cannot, because 15th and 30th
+  // drift through the week. That is the cleanest way to tell them apart.
+  if (med >= 12 && med <= 17 && share(11, 18) >= 0.7) {
+    if (weekday.share >= 0.8) {
+      return { cadence: 'biweekly', weekday: weekday.value, dayOfMonth: dom.value, fit: share(11, 18) };
+    }
+    return { cadence: 'semimonthly', weekday: weekday.value, dayOfMonth: dom.value, fit: share(11, 18) };
+  }
+  if (med >= 26 && med <= 35 && share(25, 36) >= 0.6) {
+    return { cadence: 'monthly', dayOfMonth: dom.value, weekday: weekday.value, fit: share(25, 36) };
+  }
+  return null;
+}
+
+/** How steady are the amounts? This is what decides whether the plan may
+ *  commit against the figure or has to fall back to a floor. */
+function amountConfidence(amounts) {
+  const abs = amounts.map(Math.abs);
+  const m = mean(abs);
+  if (!m) return { confidence: 'variable', cv: 1 };
+  const cv = stdev(abs) / m;
+  return { confidence: cv <= 0.02 ? 'certain' : cv <= 0.12 ? 'likely' : 'variable', cv };
+}
+
+/* --------------------------------------------------------- classification */
+
+const PAT = {
+  rent:     /\b(RENT|LANDLORD|PROPERTY MGMT|PROPERTY MANAGEMENT|APARTMENTS|LEASING|REALTY|MORTGAGE|MTG\b|LOANCARE|MR COOPER)\b/i,
+  utility:  /\b(ELECTRIC|POWER|ENERGY|WATER|SEWER|GAS CO|UTILIT|INTERNET|BROADBAND|COMCAST|XFINITY|SPECTRUM|COX COMM|VERIZON|AT&T|ATT\b|T-MOBILE|TMOBILE|SPRINT|PHONE|WASTE|RECOLOGY|DUKE ENERGY|CON ED|CONED|NATIONAL GRID|PG&E|PGANDE)\b/i,
+  card:     /\b(CARD\s*(PMT|PAYMENT)|CRD\s*PMT|CREDIT CRD|CREDITCARD|CC\s*PMT|PAYMENT THANK|CHASE CARD|AMEX|AMERICAN EXPRESS|DISCOVER|CAPITAL ONE|CAPITALONE|CITI CARD|CITICARD|SYNCHRONY|BARCLAYCARD|BANK OF AMERICA CC)\b/i,
+  loan:     /\b(LOAN|NELNET|SALLIE|NAVIENT|FEDLOAN|MOHELA|GREAT LAKES|AIDVANTAGE|AUTO PAY|AUTOFIN|HONDA FIN|TOYOTA FIN|FORD CREDIT|ALLY AUTO|CARMAX|CAPITAL ONE AUTO|CHRYSLER CAP|SANTANDER)\b/i,
+  transfer: /\b(TRANSFER|XFER|ZELLE|VENMO|CASH APP|PAYPAL TRANSFER|INTERNAL|TO SAVINGS|FROM SAVINGS|ONLINE BANKING TRANSFER)\b/i,
+  interest: /\b(INTEREST CHARGE|FINANCE CHARGE|PURCHASE INTEREST|INTEREST CHARGED)\b/i,
+  fee:      /\b(ANNUAL FEE|LATE FEE|OVERDRAFT|NSF|SERVICE CHARGE|MAINTENANCE FEE)\b/i,
+  payroll:  /\b(PAYROLL|SALARY|DIRECT DEP|DIR DEP|PAY\s*CHECK|PAYCHECK|GUSTO|ADP|PAYCHEX|PAYCOM|WAGES|EMPLOYER)\b/i
+};
+
+const ACCOUNT_TYPE_HINTS = /\b(SAVINGS|SAV\b|MONEY MARKET)\b/i;
+
+/* ----------------------------------------------------------- the analysis */
+
+function analyzeStatements(statements) {
+  const issues = [];
+  const stmts = statements.filter(s => s && s.transactions);
+  if (!stmts.length) return null;
+
+  /* -- decide what each imported file actually is -------------------------- */
+  stmts.forEach((s, i) => {
+    if (!s.accountType) {
+      const debits = s.transactions.filter(t => t.amount < 0).length;
+      const credits = s.transactions.filter(t => t.amount > 0).length;
+      // A card export is nearly all charges with a handful of payments; a
+      // current account has deposits landing regularly.
+      s.accountType = ACCOUNT_TYPE_HINTS.test(s.accountName + ' ' + s.source) ? 'savings'
+        : (credits <= Math.max(2, debits * 0.12) && debits >= 8) ? 'credit_card' : 'checking';
+    }
+    s.accountId = 'acct-imp-' + i;
+    if (s.balance === null) {
+      issues.push('No closing balance found in ' + s.source + '. You will need to type that one figure.');
+    }
+  });
+
+  const allTx = [];
+  for (const s of stmts) {
+    for (const t of s.transactions) allTx.push({ ...t, acct: s.accountId, stmt: s });
+  }
+  allTx.sort((a, b) => a.dn - b.dn);
+  if (!allTx.length) return null;
+
+  const from = allTx[0].dn, to = allTx[allTx.length - 1].dn;
+  const days = Math.max(1, to - from + 1);
+  const weeks = days / 7;
+
+  /* -- drop money moving between accounts we imported ---------------------- */
+  const matched = new Set();
+  let transfersExcluded = 0;
+  for (let i = 0; i < allTx.length; i++) {
+    const a = allTx[i];
+    if (matched.has(i) || a.amount >= 0) continue;
+    for (let j = 0; j < allTx.length; j++) {
+      if (i === j || matched.has(j)) continue;
+      const b = allTx[j];
+      if (b.acct === a.acct) continue;
+      if (Math.abs(b.amount + a.amount) > 0.005) continue;
+      if (Math.abs(b.dn - a.dn) > 3) continue;
+      matched.add(i); matched.add(j); transfersExcluded += 2;
+      break;
+    }
+  }
+  allTx.forEach((t, i) => { t.internal = matched.has(i); });
+
+  /* -- group by merchant, per direction ------------------------------------ */
+  const groups = new Map();
+  for (const t of allTx) {
+    if (t.internal) continue;
+    const key = (t.amount >= 0 ? '+' : '-') + '|' + t.acct + '|' + descKey(t.description);
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(t);
+  }
+
+  const findings = [];
+  const consumed = new Set();
+  let fid = 0;
+  const push = f => { findings.push({ id: 'f' + (fid++), accept: true, needs: [], ...f }); };
+
+  for (const [key, txs] of groups) {
+    if (txs.length < 3) continue;
+    const cad = detectCadence(txs.map(t => t.dn));
+    if (!cad) continue;
+    const amounts = txs.map(t => t.amount);
+    const { confidence, cv } = amountConfidence(amounts);
+    const inflow = amounts[0] > 0;
+    const label = prettyLabel(txs[txs.length - 1].description);
+    const typical = r2(Math.abs(median(amounts)));
+    if (typical < 1) continue;
+    const stmt = txs[0].stmt;
+    const dates = txs.map(t => fmtD(t.dn));
+    const evidence = txs.length + ' times between ' + fmtD(txs[0].dn) + ' and ' + fmtD(txs[txs.length - 1].dn) +
+      ' · ' + CADENCE_WORD[cad.cadence] + ' · amounts ' +
+      (confidence === 'certain' ? 'identical at ' + money(typical)
+        : money(r2(Math.min(...amounts.map(Math.abs)))) + '–' + money(r2(Math.max(...amounts.map(Math.abs)))) +
+          ' (±' + Math.round(cv * 100) + '%)');
+
+    txs.forEach(t => consumed.add(t));
+
+    if (inflow) {
+      push({
+        kind: 'income', label, amount: typical, cadence: cad.cadence,
+        dayOfMonth: cad.dayOfMonth, weekday: cad.weekday, confidence,
+        accountId: stmt.accountId,
+        history: amounts.map(a => r2(Math.abs(a))).slice(-12),
+        occurrences: txs.length, dates, evidence,
+        floor: confidence === 'variable' ? r2(percentile(amounts.map(Math.abs), 0.25)) : null
+      });
+      continue;
+    }
+
+    const desc = txs[txs.length - 1].description;
+    if (PAT.rent.test(desc)) {
+      push({ kind: 'bill', billKind: 'rent', label, amount: typical, cadence: cad.cadence,
+             dayOfMonth: cad.dayOfMonth, accountId: stmt.accountId, occurrences: txs.length, dates, evidence });
+      continue;
+    }
+    if (PAT.utility.test(desc)) {
+      push({ kind: 'bill', billKind: 'utility', label, amount: typical, cadence: cad.cadence,
+             dayOfMonth: cad.dayOfMonth, accountId: stmt.accountId, occurrences: txs.length, dates, evidence });
+      continue;
+    }
+    if (PAT.card.test(desc) || PAT.loan.test(desc)) {
+      const isCard = PAT.card.test(desc);
+      push({
+        kind: 'debt', label, amount: r2(Math.min(...amounts.map(Math.abs))),
+        cadence: cad.cadence, dayOfMonth: cad.dayOfMonth, accountId: stmt.accountId,
+        debtKind: isCard ? 'credit_card' : (/AUTO|HONDA|TOYOTA|FORD|ALLY|CARMAX|SANTANDER|CHRYSLER/i.test(desc) ? 'auto_loan'
+          : /NELNET|SALLIE|NAVIENT|FEDLOAN|MOHELA|GREAT LAKES|AIDVANTAGE|STUDENT/i.test(desc) ? 'student_loan' : 'personal_loan'),
+        occurrences: txs.length, dates,
+        evidence: evidence + ' · paid from ' + stmt.accountName,
+        needs: ['balance', 'apr'].concat(isCard ? ['creditLimit'] : [])
+      });
+      continue;
+    }
+    if (PAT.fee.test(desc) || PAT.interest.test(desc)) { txs.forEach(t => consumed.delete(t)); continue; }
+    push({
+      kind: 'expense', label, amount: typical,
+      cadence: cad.cadence === 'biweekly' || cad.cadence === 'semimonthly' ? 'monthly' : cad.cadence,
+      dayOfMonth: cad.dayOfMonth, weekday: cad.weekday,
+      accountId: stmt.accountId, occurrences: txs.length, dates, evidence
+    });
+  }
+
+  /* -- credit card statements become liabilities directly ------------------ */
+  for (const s of stmts) {
+    if (s.accountType !== 'credit_card') continue;
+    const interest = s.transactions.filter(t => PAT.interest.test(t.description));
+    const bal = s.balance;
+    let apr = null, aprBasis = '';
+    if (interest.length && bal) {
+      const monthly = mean(interest.map(t => Math.abs(t.amount)));
+      const est = (monthly / bal) * 12;
+      if (est > 0.03 && est < 0.40) {
+        apr = Math.round(est * 10000) / 10000;
+        aprBasis = 'estimated from ' + money(r2(monthly)) + ' of interest charged against a ' +
+          money0(bal) + ' balance';
+      }
+    }
+    const closeDn = s.periodEnd;
+    // A payment posting on the card tells us when the bill is actually due.
+    const payments = s.transactions.filter(t => t.amount > 0 && !PAT.interest.test(t.description));
+    const dueDom = payments.length ? modeOf(payments.map(t => dparts(t.dn).d)).value
+      : (closeDn ? ((dparts(closeDn).d + 21 - 1) % 28) + 1 : 15);
+    const needs = ['creditLimit'].concat(apr === null ? ['apr'] : []);
+    push({
+      kind: 'card_account', label: s.accountName, accountId: s.accountId,
+      balance: bal === null ? 0 : r2(bal), apr,
+      statementCloseDay: closeDn ? dparts(closeDn).d : null,
+      dayOfMonth: dueDom,
+      minimumPayment: payments.length ? r2(Math.min(...payments.map(t => t.amount)))
+        : r2(Math.max(35, (bal || 0) * 0.02)),
+      minimumEstimated: !payments.length,
+      occurrences: s.transactions.length,
+      evidence: 'from ' + s.source + ' · balance ' + (bal === null ? 'not stated' : money(bal)) +
+        (closeDn ? ' · statement closed ' + fmtD(closeDn) : '') +
+        (aprBasis ? ' · APR ' + aprBasis : ' · APR not derivable from this file'),
+      needs
+    });
+    if (bal === null) issues.push(s.accountName + ' has no balance in the file — enter it before trusting the payoff dates.');
+  }
+
+  /* -- what is left is real, measured, discretionary spending -------------- */
+  const leftovers = allTx.filter(t =>
+    !t.internal && t.amount < 0 && !consumed.has(t) &&
+    !PAT.transfer.test(t.description) && !PAT.card.test(t.description) &&
+    !PAT.loan.test(t.description) && !PAT.interest.test(t.description) && !PAT.fee.test(t.description));
+  const spendTotal = r2(leftovers.reduce((s, t) => s + Math.abs(t.amount), 0));
+  const weekly = r2(spendTotal / weeks);
+  if (weekly >= 1) {
+    const byMerchant = new Map();
+    for (const t of leftovers) {
+      const k = prettyLabel(t.description) || 'other';
+      byMerchant.set(k, r2((byMerchant.get(k) || 0) + Math.abs(t.amount)));
+    }
+    const top = [...byMerchant.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+      .map(([k, v]) => k + ' ' + money0(v));
+    push({
+      kind: 'discretionary', label: 'Everyday spending', amount: weekly, cadence: 'weekly',
+      weekday: 6, accountId: (stmts.find(s => s.accountType === 'checking') || stmts[0]).accountId,
+      occurrences: leftovers.length,
+      evidence: money(spendTotal) + ' across ' + leftovers.length + ' transactions over ' +
+        Math.round(weeks) + ' weeks — ' + money(weekly) + ' a week. Biggest: ' + top.join(', ')
+    });
+  }
+
+  const cadenceCount = findings.filter(f => f.kind === 'income').length;
+  if (!cadenceCount) issues.push('No recurring deposits found. Either the export is too short, or income lands under names that never repeat.');
+  if (days < 75) issues.push('Only ' + days + ' days of history here. Three months or more makes the cadence and income floor much more reliable.');
+
+  return {
+    statements: stmts.map(s => ({
+      accountId: s.accountId, name: s.accountName, type: s.accountType,
+      balance: s.balance, source: s.source, count: s.transactions.length,
+      from: s.periodStart, to: s.periodEnd
+    })),
+    findings, issues,
+    range: { from, to, days },
+    transactions: allTx.length,
+    transfersExcluded,
+    spend: { weekly, total: spendTotal, count: leftovers.length }
+  };
+}
+
+/** Which issuer a description belongs to, so the same card is not counted
+ *  twice when both its statement and the payment out of checking are imported. */
+function issuerOf(text) {
+  const s = String(text || '').toUpperCase();
+  const brands = ['CHASE', 'AMEX', 'AMERICAN EXPRESS', 'DISCOVER', 'CAPITAL ONE', 'CAPITALONE',
+    'CITI', 'BARCLAY', 'SYNCHRONY', 'WELLS FARGO', 'BANK OF AMERICA', 'US BANK', 'APPLE CARD'];
+  for (const b of brands) if (s.indexOf(b) >= 0) return b.replace('AMERICAN EXPRESS', 'AMEX').replace('CAPITALONE', 'CAPITAL ONE');
+  return null;
+}
+
+const CADENCE_WORD = {
+  weekly: 'every week', biweekly: 'every two weeks',
+  semimonthly: 'twice a month', monthly: 'once a month'
+};
+
+/* --------------------------------------------- analysis → editable profile */
+
+function profileFromAnalysis(a) {
+  const p = blankProfile();
+  p.profile.startedAt = new Date().toISOString();
+  p.profile.balancesAsOf = new Date().toISOString();
+  p.profile.name = '';
+  p.accounts = [];
+  p.liabilities = []; p.incomeStreams = []; p.expenses = []; p.depositHistory = {};
+
+  // A card payment leaving checking and the card's own statement are the same
+  // debt seen twice. Match them by issuer so importing one card of three does
+  // not silently drop the other two.
+  const importedIssuers = new Set(
+    a.findings.filter(f => f.kind === 'card_account' && f.accept)
+      .map(f => issuerOf(f.label)).filter(Boolean));
+
+  for (const s of a.statements) {
+    // A credit card statement is a debt, not somewhere money sits.
+    if (s.type === 'credit_card') continue;
+    p.accounts.push({ id: s.accountId, name: s.name, type: s.type, balance: s.balance == null ? 0 : Math.max(0, s.balance) });
+  }
+  if (!p.accounts.length) p.accounts.push({ id: uid('acct'), name: 'Checking', type: 'checking', balance: 0 });
+  const fallback = p.accounts[0].id;
+  const acctOr = id => p.accounts.some(x => x.id === id) ? id : fallback;
+
+  for (const f of a.findings) {
+    if (!f.accept) continue;
+    if (f.kind === 'income') {
+      const id = uid('inc');
+      p.incomeStreams.push({
+        id, label: f.label, cadence: f.cadence, amount: f.amount,
+        dayOfMonth: f.dayOfMonth, weekday: f.weekday,
+        confidence: f.confidence, accountId: acctOr(f.accountId)
+      });
+      if (f.confidence === 'variable' && f.history && f.history.length) p.depositHistory[id] = f.history;
+    } else if (f.kind === 'bill') {
+      p.liabilities.push({
+        id: uid('liab'), name: f.label, kind: f.billKind, balance: 0, apr: null,
+        minimumPayment: f.amount, dueDayOfMonth: f.dayOfMonth, statementCloseDay: null,
+        creditLimit: null, autopayEnabled: true, accountId: acctOr(f.accountId)
+      });
+    } else if (f.kind === 'card_account') {
+      p.liabilities.push({
+        id: uid('liab'), name: f.label, kind: 'credit_card',
+        balance: f.balance, apr: f.apr == null ? 0.2299 : f.apr,
+        minimumPayment: f.minimumPayment, dueDayOfMonth: f.dayOfMonth,
+        statementCloseDay: f.statementCloseDay, creditLimit: f.creditLimit || null,
+        autopayEnabled: false, accountId: fallback
+      });
+    } else if (f.kind === 'debt') {
+      // Only visible as a payment leaving checking, so the balance is unknown.
+      const iss = issuerOf(f.label);
+      if (f.debtKind === 'credit_card' && iss && importedIssuers.has(iss)) continue;
+      p.liabilities.push({
+        id: uid('liab'), name: f.label, kind: f.debtKind, balance: f.balance || 0,
+        apr: f.apr == null ? (f.debtKind === 'credit_card' ? 0.2299 : 0.0699) : f.apr,
+        minimumPayment: f.amount, dueDayOfMonth: f.dayOfMonth,
+        statementCloseDay: f.debtKind === 'credit_card' ? ((f.dayOfMonth + 25) % 28) + 1 : null,
+        creditLimit: null, autopayEnabled: true, accountId: acctOr(f.accountId)
+      });
+    } else if (f.kind === 'expense' || f.kind === 'discretionary') {
+      p.expenses.push({
+        id: uid('exp'), label: f.label, amount: f.amount,
+        cadence: f.cadence === 'weekly' ? 'weekly' : 'monthly',
+        dayOfMonth: f.dayOfMonth || 1, weekday: f.weekday == null ? 1 : f.weekday,
+        accountId: acctOr(f.accountId), category: f.kind === 'discretionary' ? 'discretionary' : 'recurring'
+      });
+    }
+  }
+
+  // Half a month of measured everyday spending — fixed bills excluded, since
+  // the schedule already reserves for those by date. Defensible starting point,
+  // and adjustable on the What if screen.
+  const monthlyEveryday = p.expenses.reduce(
+    (s, e) => s + e.amount * (e.cadence === 'weekly' ? 52 / 12 : 1), 0);
+  p.settings.bufferFloor = Math.max(300, Math.round(monthlyEveryday / 2 / 50) * 50);
+  return p;
+}
+
+/** Everything the import could not work out, as a to-do list. */
+function outstandingNeeds(a) {
+  const out = [];
+  for (const f of a.findings) {
+    if (!f.accept || !f.needs.length) continue;
+    out.push({ label: f.label, needs: f.needs.slice(), kind: f.kind });
+  }
+  return out;
+}
+
+
+/* ============================================================================
+   SAMPLE STATEMENTS
+   ----------------------------------------------------------------------------
+   Synthetic exports in the formats real banks actually produce. They exist for
+   two reasons: the test suite runs the real parsers against them on every load,
+   and anyone can try the import flow before trusting it with their own files.
+
+   Generated from a fixed anchor date so the tests are stable whatever day it
+   is. Nothing here is a shortcut — the sample path goes through exactly the
+   same parse-and-analyse code as a file you drop in.
+   ============================================================================ */
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function usDate(dn) { const p = dparts(dn); return pad2(p.m + 1) + '/' + pad2(p.d) + '/' + p.y; }
+function ukDate(dn) { const p = dparts(dn); return pad2(p.d) + '/' + pad2(p.m + 1) + '/' + p.y; }
+function ofxDate(dn) { const p = dparts(dn); return '' + p.y + pad2(p.m + 1) + pad2(p.d) + '120000[-5:EST]'; }
+
+/* A tiny deterministic jitter so amounts vary the way real ones do without
+   pulling in randomness the tests could not reproduce. */
+function wobble(seed, spread) {
+  const x = Math.sin(seed * 12.9898) * 43758.5453;
+  return (x - Math.floor(x) - 0.5) * 2 * spread;
+}
+
+const SAMPLE_ANCHOR = '2025-09-01';
+
+function buildSampleFiles() {
+  const start = dnFromISO(SAMPLE_ANCHOR);
+  const end = start + 181;                       // six months of history
+  const tx = [];
+  const add = (dn, description, amount) => { if (dn >= start && dn <= end) tx.push({ dn, description, amount: r2(amount) }); };
+
+  // Salary, every second Friday, to the cent.
+  let seed = 1;
+  for (let d = nextWeekday(start, 5); d <= end; d += 14) {
+    add(d, 'DIRECT DEP MERIDIAN HEALTH PAYROLL PPD ID 9912', 1742.36);
+  }
+  // A second, irregular income: freelance invoices, once a month, swinging hard.
+  for (const d of monthlyDates(start, end, 22)) {
+    add(d, 'ACH CREDIT HALCYON STUDIO INVOICE', 900 + wobble(seed++, 620) + 620);
+  }
+  // Fixed obligations.
+  for (const d of monthlyDates(start, end, 1)) add(d, 'RENT PAYMENT ARBOR COURT PROPERTY MGMT', -1495);
+  for (const d of monthlyDates(start, end, 18)) add(d, 'DUKE ENERGY WEB PMT 4471', -(128 + wobble(seed++, 22)));
+  for (const d of monthlyDates(start, end, 8)) add(d, 'VERIZON WIRELESS AUTOPAY', -72);
+  // Debts, seen only as money leaving.
+  for (const d of monthlyDates(start, end, 20)) add(d, 'CHASE CARD PMT EPAY 8842', -265);
+  for (const d of monthlyDates(start, end, 12)) add(d, 'ALLY AUTO PAY LOAN 55120', -394.12);
+  // Money moved to savings — should be recognised as internal, not spending.
+  for (const d of monthlyDates(start, end, 5)) add(d, 'ONLINE TRANSFER TO SAVINGS XXXXX4471', -300);
+  // Ordinary life.
+  for (let d = nextWeekday(start, 6); d <= end; d += 7) {
+    add(d, 'SAFEWAY #1428 SEATTLE WA ' + usDate(d).slice(0, 5), -(118 + wobble(seed++, 34)));
+  }
+  for (let d = nextWeekday(start, 1); d <= end; d += 7) {
+    add(d, 'SHELL OIL 57320981 SEATTLE WA', -(44 + wobble(seed++, 13)));
+  }
+  // One-offs that must not be mistaken for a pattern.
+  add(start + 23, 'SQ *BLUE BOTTLE COFFEE 8842', -18.4);
+  add(start + 51, 'DELTA AIR 0062418833', -412.9);
+  add(start + 97, 'HOME DEPOT #4471 RENTON WA', -186.22);
+  add(start + 140, 'SEATTLE CITY LIGHT DEPOSIT REFUND', 64.5);
+
+  tx.sort((a, b) => a.dn - b.dn || (a.description < b.description ? -1 : 1));
+  let bal = 1284.55 - tx.reduce((s, t) => s + t.amount, 0);
+  const checkingRows = ['Date,Description,Amount,Balance'];
+  for (const t of tx) {
+    bal = r2(bal + t.amount);
+    checkingRows.push([usDate(t.dn), '"' + t.description + '"', t.amount.toFixed(2), bal.toFixed(2)].join(','));
+  }
+
+  /* -- savings: the other half of each transfer, plus a little interest ----- */
+  const savRows = ['Date,Description,Amount,Balance'];
+  let sbal = 2150;
+  const savTx = [];
+  for (const d of monthlyDates(start, end, 5)) savTx.push({ dn: d, description: 'TRANSFER FROM CHECKING XXXXX1102', amount: 300 });
+  for (const d of monthlyDates(start, end, 28)) savTx.push({ dn: d, description: 'INTEREST PAID', amount: 0.62 });
+  savTx.sort((a, b) => a.dn - b.dn);
+  for (const t of savTx) { sbal = r2(sbal + t.amount); savRows.push([usDate(t.dn), t.description, t.amount.toFixed(2), sbal.toFixed(2)].join(',')); }
+
+  /* -- credit card, as OFX ------------------------------------------------- */
+  const cardTx = [];
+  seed = 500;
+  for (let d = nextWeekday(start, 3); d <= end; d += 7) {
+    cardTx.push({ dn: d, name: 'TRADER JOES #182', amt: -(62 + wobble(seed++, 19)), type: 'DEBIT' });
+  }
+  for (const d of monthlyDates(start, end, 14)) cardTx.push({ dn: d, name: 'NETFLIX.COM', amt: -22.99, type: 'DEBIT' });
+  for (const d of monthlyDates(start, end, 20)) cardTx.push({ dn: d, name: 'PAYMENT THANK YOU', amt: 265, type: 'CREDIT' });
+  // 26.24% APR on $9,846.20 is $215.30 a month — the analyser reads the rate
+  // back out of exactly this line.
+  for (const d of monthlyDates(start, end, 26)) cardTx.push({ dn: d, name: 'INTEREST CHARGE ON PURCHASES', amt: -215.30, type: 'INT' });
+  cardTx.sort((a, b) => a.dn - b.dn);
+
+  const closeDn = monthlyDates(start, end, 26).slice(-1)[0];
+  const ofx = [
+    'OFXHEADER:100', 'DATA:OFXSGML', 'VERSION:102', 'SECURITY:NONE', 'ENCODING:USASCII',
+    'CHARSET:1252', 'COMPRESSION:NONE', 'OLDFILEUID:NONE', 'NEWFILEUID:NONE', '',
+    '<OFX><CREDITCARDMSGSRSV1><CCSTMTTRNRS><TRNUID>1<STATUS><CODE>0<SEVERITY>INFO</STATUS>',
+    '<CCSTMTRS><CURDEF>USD<CCACCTFROM><ACCTID>4147202288848842</CCACCTFROM>',
+    '<BANKTRANLIST><DTSTART>' + ofxDate(start) + '<DTEND>' + ofxDate(closeDn)
+  ];
+  cardTx.forEach((t, i) => {
+    ofx.push('<STMTTRN><TRNTYPE>' + t.type + '<DTPOSTED>' + ofxDate(t.dn) +
+      '<TRNAMT>' + r2(t.amt).toFixed(2) + '<FITID>' + (900000 + i) +
+      '<NAME>' + t.name + '</STMTTRN>');
+  });
+  ofx.push('</BANKTRANLIST>');
+  ofx.push('<LEDGERBAL><BALAMT>-9846.20<DTASOF>' + ofxDate(closeDn) + '</LEDGERBAL>');
+  ofx.push('</CCSTMTRS></CCSTMTTRNRS></CREDITCARDMSGSRSV1></OFX>');
+
+  return {
+    'meridian-checking.csv': checkingRows.join('\n'),
+    'meridian-savings.csv': savRows.join('\n'),
+    'chase-freedom.qfx': ofx.join('\n')
+  };
+}
+
+/** A second format, kept deliberately awkward: day-first dates, separate
+ *  debit and credit columns, no signs, semicolon separated, currency symbols. */
+function buildAwkwardCSV() {
+  const start = dnFromISO(SAMPLE_ANCHOR);
+  const rows = ['Transaction Date;Details;Money Out;Money In;Balance'];
+  let bal = 900;
+  const add = (dn, d, out, inn) => {
+    bal = r2(bal - (out || 0) + (inn || 0));
+    rows.push([ukDate(dn), d, out ? '£' + out.toFixed(2) : '', inn ? '£' + inn.toFixed(2) : '', bal.toFixed(2)].join(';'));
+  };
+  for (let i = 0; i < 6; i++) {
+    const m = monthlyDates(start, start + 181, 25)[i];
+    if (m) add(m, 'SALARY BRIGHTON LTD', 0, 2410.55);
+  }
+  for (let i = 0; i < 6; i++) {
+    const m = monthlyDates(start, start + 181, 3)[i];
+    if (m) add(m, 'BRITISH GAS DD', 88.4, 0);
+  }
+  return rows.join('\n');
+}
+
+
+/* ============================================================================
    PROFILES, STORAGE, VALIDATION, EXPORT
    ----------------------------------------------------------------------------
    A "profile" is one household's raw data. It is the only thing that persists,
@@ -2274,9 +3233,189 @@ function runTests() {
     });
   }
 
+  suites.push(runImportTests());
+
   const total = suites.reduce((s, x) => s + x.total, 0);
   const passed = suites.reduce((s, x) => s + x.passed, 0);
   return { suites, total, passed, failed: total - passed, ms: Date.now() - t0 };
+}
+
+
+/* ============================================================================
+   IMPORT TESTS — the parsers and the detector, run on every load like the rest.
+   Assertions are about behaviour on realistic files, not fixed output blobs.
+   ============================================================================ */
+
+function runImportTests() {
+  const checks = [];
+  const add = (name, pass, detail) => checks.push({ name, pass, detail });
+
+  const files = buildSampleFiles();
+  const statements = [];
+  for (const [name, text] of Object.entries(files)) {
+    statements.push(...parseStatementFile(name, text));
+  }
+
+  /* ---- 1. the formats parse at all ---- */
+  (() => {
+    const csv = statements.filter(s => /CSV/.test(s.source));
+    const ofx = statements.filter(s => /OFX/.test(s.source));
+    const total = statements.reduce((s, x) => s + x.transactions.length, 0);
+    add('Bank CSV and card OFX both parse into one shape',
+      csv.length === 2 && ofx.length === 1 && total > 150,
+      statements.length + ' statements, ' + total + ' transactions. ' +
+      statements.map(s => s.accountName + ' (' + s.transactions.length + ')').join(', ') + '.');
+  })();
+
+  /* ---- 2. awkward format: day-first dates, split debit/credit, currency ---- */
+  (() => {
+    const s = parseStatementFile('brighton.csv', buildAwkwardCSV())[0];
+    const salary = s ? s.transactions.filter(t => t.amount > 0) : [];
+    const gas = s ? s.transactions.filter(t => t.amount < 0) : [];
+    const day25 = salary.every(t => dparts(t.dn).d === 25);
+    add('Day-first dates, split debit/credit columns and currency symbols',
+      !!s && salary.length === 6 && gas.length === 6 && day25 &&
+      Math.abs(salary[0].amount - 2410.55) < 0.005 && Math.abs(gas[0].amount + 88.4) < 0.005,
+      s ? s.transactions.length + ' rows: ' + salary.length + ' credits at ' + money(salary[0].amount) +
+        ' on the 25th, ' + gas.length + ' debits at ' + money(gas[0].amount) +
+        '. Semicolon separated, £ symbols, DD/MM/YYYY — all read correctly.'
+      : 'failed to parse');
+  })();
+
+  /* ---- 3. amount and date edge cases ---- */
+  (() => {
+    const cases = [
+      ['(1,234.56)', -1234.56], ['-1234.56', -1234.56], ['1,234.56', 1234.56],
+      ['$1,234.56', 1234.56], ['1234.56-', -1234.56], ['12.34 CR', 12.34],
+      ['45,50', 45.50], ['1.234,56', 1234.56]
+    ];
+    const badAmt = cases.filter(([raw, want]) => Math.abs(parseAmount(raw) - want) > 0.005);
+    const dates = [
+      ['2026-03-09', 2026, 2, 9], ['03/09/2026', 2026, 2, 9], ['20260309120000[-5:EST]', 2026, 2, 9],
+      ['9 Mar 2026', 2026, 2, 9], ['Mar 9, 2026', 2026, 2, 9], ['09/03/2026', 2026, 2, 9]
+    ];
+    const badDate = dates.filter(([raw, y, m, d], i) => {
+      const dn = parseDate(raw, i === 5);   // last one is explicitly day-first
+      if (dn === null) return true;
+      const p = dparts(dn);
+      return p.y !== y || p.m !== m || p.d !== d;
+    });
+    add('Amount and date formats that break naive parsers',
+      badAmt.length === 0 && badDate.length === 0,
+      cases.length + ' amount formats (brackets for negative, trailing minus, CR suffix, ' +
+      'European decimal comma) and ' + dates.length + ' date formats all read correctly.' +
+      (badAmt.length ? ' Failed: ' + badAmt.map(c => c[0]).join(', ') : '') +
+      (badDate.length ? ' Bad dates: ' + badDate.map(c => c[0]).join(', ') : ''));
+  })();
+
+  const a = analyzeStatements(statements);
+
+  /* ---- 4. recurring income, with cadence and variability ---- */
+  (() => {
+    const income = a.findings.filter(f => f.kind === 'income');
+    const salary = income.find(f => /PAYROLL|MERIDIAN/i.test(f.label));
+    const gig = income.find(f => /HALCYON/i.test(f.label));
+    const ok = salary && salary.cadence === 'biweekly' && salary.confidence === 'certain' &&
+      Math.abs(salary.amount - 1742.36) < 0.01 && salary.weekday === 5 &&
+      gig && gig.cadence === 'monthly' && gig.confidence === 'variable' && gig.floor > 0 &&
+      gig.floor < gig.amount;
+    add('Recurring income found, with its cadence and how much it varies',
+      !!ok,
+      income.length + ' streams. ' +
+      (salary ? 'Salary: ' + money(salary.amount) + ' ' + CADENCE_WORD[salary.cadence] +
+        ' on a ' + WEEKDAYS[salary.weekday] + ', marked "' + salary.confidence + '". ' : 'salary missed. ') +
+      (gig ? 'Freelance: ' + money(gig.amount) + ' typical, marked "' + gig.confidence +
+        '", income floor ' + money(gig.floor) + ' from ' + gig.history.length + ' past deposits.' : 'gig income missed.'));
+  })();
+
+  /* ---- 5. bills separated from ordinary spending ---- */
+  (() => {
+    const rent = a.findings.find(f => f.kind === 'bill' && f.billKind === 'rent');
+    const util = a.findings.find(f => f.kind === 'bill' && f.billKind === 'utility');
+    const disc = a.findings.find(f => f.kind === 'discretionary');
+    const phone = a.findings.find(f => /VERIZON/i.test(f.label));
+    const phoneIsBill = phone && phone.kind === 'bill' && phone.billKind === 'utility';
+    add('Fixed bills told apart from everyday spending',
+      !!rent && rent.dayOfMonth === 1 && Math.abs(rent.amount - 1495) < 0.01 && !!util && !!disc && phoneIsBill,
+      (rent ? 'Rent ' + money(rent.amount) + ' on day ' + rent.dayOfMonth + '. ' : 'rent missed. ') +
+      (util ? 'Utility "' + util.label + '" ' + money(util.amount) + '. ' : 'utility missed. ') +
+      (phone ? 'A phone bill on autopay stays a phone bill (' + phone.kind + '/' +
+        (phone.billKind || phone.debtKind || '-') + '), not a credit card. ' : 'phone line missed. ') +
+      (disc ? 'Whatever is left after the repeating lines: ' + money(disc.amount) + '/week across ' +
+        disc.occurrences + ' one-off transactions — measured, not guessed.' : 'no discretionary total.'));
+  })();
+
+  /* ---- 6. the card statement becomes a debt, APR read from interest ---- */
+  (() => {
+    const card = a.findings.find(f => f.kind === 'card_account');
+    const aprClose = card && card.apr !== null && Math.abs(card.apr - 0.2624) < 0.01;
+    add('Card balance imported and its APR derived from interest charged',
+      !!card && Math.abs(card.balance - 9846.20) < 0.01 && aprClose && card.statementCloseDay === 26,
+      card ? 'Balance ' + money(card.balance) + ' owed, statement closes day ' + card.statementCloseDay +
+        ', APR worked back to ' + pct1(card.apr) + ' from the monthly interest line (true rate 26.24%). ' +
+        'Credit limit is the one thing no export contains, so it is asked for.'
+        : 'card statement not recognised');
+  })();
+
+  /* ---- 7. internal transfers are not counted as income or spending ---- */
+  (() => {
+    const disc = a.findings.find(f => f.kind === 'discretionary');
+    const sawTransferAsIncome = a.findings.some(f => f.kind === 'income' && /TRANSFER/i.test(f.label));
+    add('Money moved between your own accounts is not double counted',
+      a.transfersExcluded >= 10 && !sawTransferAsIncome,
+      a.transfersExcluded + ' transactions matched as internal transfers and excluded from both ' +
+      'income and spending. Card payments out of checking are excluded from spending too, because ' +
+      'the card purchases themselves already are the spending.');
+  })();
+
+  /* ---- 8. debts visible only as payments are flagged, not invented ---- */
+  (() => {
+    const auto = a.findings.find(f => f.kind === 'debt' && f.debtKind === 'auto_loan');
+    const dupCard = a.findings.filter(f => f.kind === 'debt' && f.debtKind === 'credit_card');
+    const needs = outstandingNeeds({ findings: a.findings });
+    add('What the data cannot show is asked for, not made up',
+      !!auto && auto.needs.indexOf('balance') >= 0 && auto.needs.indexOf('apr') >= 0 && needs.length > 0,
+      (auto ? 'Auto loan seen only as ' + money(auto.amount) + ' leaving on day ' + auto.dayOfMonth +
+        ' — payment and date known, balance and APR are not, so both are requested. ' : 'auto loan missed. ') +
+      needs.length + ' items need a figure: ' + needs.map(n => n.label + ' (' + n.needs.join(', ') + ')').join('; ') + '. ' +
+      (dupCard.length ? 'Note: ' + dupCard.length + ' card payment(s) not matched to an imported statement.'
+        : 'The Chase card payment was matched to its statement, so it is counted once.'));
+  })();
+
+  /* ---- 9. the derived profile actually builds a plan ---- */
+  (() => {
+    let plan = null, err = '';
+    const prof = profileFromAnalysis(a);
+    try { plan = buildPlan(makeDataSource(prof), { startDn: todayDn(), skipProjection: true }); }
+    catch (e) { err = e.message; }
+    const v = validateProfile(makeDataSource(prof).raw);
+    add('The imported profile builds a working plan end to end',
+      !!plan && plan.payments.length > 0 && plan.breaches.length === 0 && plan.lates.length === 0 &&
+      prof.settings.bufferFloor >= 300,
+      plan ? prof.accounts.length + ' accounts, ' + prof.liabilities.length + ' debts and bills, ' +
+        prof.incomeStreams.length + ' income streams, ' + prof.expenses.length + ' spending lines — ' +
+        'all derived. Plan: ' + plan.payments.length + ' payments, ' + plan.breaches.length + ' breaches, ' +
+        plan.lates.length + ' late. Buffer floor set to ' + money0(prof.settings.bufferFloor) +
+        ' — half a month of the everyday spending actually observed. ' + v.errors.length + ' blocking issue(s).'
+      : 'plan failed: ' + err);
+  })();
+
+  /* ---- 10. nothing is silently invented ---- */
+  (() => {
+    const prof = profileFromAnalysis(a);
+    const typed = prof.liabilities.filter(l => l.balance === 0 && l.kind !== 'rent' && l.kind !== 'utility');
+    const noLimit = prof.liabilities.filter(l => l.kind === 'credit_card' && !l.creditLimit);
+    add('Unknown figures stay visibly unknown',
+      typed.every(l => l.balance === 0) && noLimit.length >= 1,
+      typed.length + ' debt(s) carry a zero balance because the statements never showed one, and ' +
+      noLimit.length + ' card(s) have no credit limit. They are left blank and listed as outstanding ' +
+      'rather than filled with a plausible-looking guess.');
+  })();
+
+  return {
+    persona: { id: 'import', name: 'Statement import', tagline: 'parsing and inference' },
+    checks, passed: checks.filter(c => c.pass).length, total: checks.length
+  };
 }
 
 
@@ -2294,7 +3433,9 @@ const state = {
   myProfile: null,        // raw, editable, persisted
   rev: 0,                 // bumped on every edit to bust the plan cache
   saveFailed: false,
-  toast: null
+  toast: null,
+  importResult: null,
+  importError: null
 };
 
 const isMine = () => state.profileId === 'mine';
@@ -2757,8 +3898,11 @@ function viewDebts(plan) {
       '<td class="r num">' + esc(money(l.balance)) + '</td>' +
       '<td class="r num">' + esc(pct1(l.apr)) + '</td>' +
       '<td class="r num">' + esc(money(l.minimumPayment)) + '</td>' +
-      '<td class="r num">' + (pl.payoffDn ? esc(fmtDY(pl.payoffDn)) : 'beyond 15 yrs') + '</td>' +
-      '<td class="r num">' + esc(money(pl.lifetimeInterest || 0)) + '</td></tr>';
+      // A zero balance is not "paid off today", it is a figure nobody has supplied.
+      '<td class="r num">' + (!(l.balance > 0) ? '<span class="na">needs a balance</span>'
+        : pl.payoffDn ? esc(fmtDY(pl.payoffDn)) : 'beyond 15 yrs') + '</td>' +
+      '<td class="r num">' + (!(l.balance > 0) ? '<span class="na">—</span>'
+        : esc(money(pl.lifetimeInterest || 0))) + '</td></tr>';
   });
 
   const totBal = r2(debts.reduce((s, l) => s + l.balance, 0));
@@ -2779,6 +3923,16 @@ function viewDebts(plan) {
     hybrid: 'Hybrid: smallest balance first only when it can be cleared inside 60 days, then highest rate.'
   }[plan.settings.strategy];
 
+  // A debt whose balance is still unknown is silently absent from the payoff
+  // maths. Saying so matters more than showing a tidy date.
+  const unknown = debts.filter(l => !(l.balance > 0));
+  const unknownNote = unknown.length
+    ? '<div class="note"><b>' + unknown.length + ' debt' + (unknown.length === 1 ? ' has' : 's have') +
+      ' no balance yet</b> — ' + esc(unknown.map(l => l.name).join(', ')) +
+      '. The payoff date and interest below leave ' + (unknown.length === 1 ? 'it' : 'them') +
+      ' out entirely, so both are better than reality until you add the figure. ' +
+      '<button class="link" data-view="money">Add the balances</button></div>' : '';
+
   return '<div class="wrap">' +
     '<div class="page-head"><p class="eyebrow">Under the current plan</p><h2>Debts</h2>' +
       '<p class="sub">' + esc(money(totBal)) + ' across ' + debts.length + ' balances. ' +
@@ -2787,6 +3941,7 @@ function viewDebts(plan) {
           esc(money(proj.totalInterest)) + ' of interest on the way. '
         : 'Not cleared inside the 15-year projection at these amounts. ') +
       'Payoff dates assume income at the level the plan commits against, so they are a floor, not a hope.</p></div>' +
+    unknownNote +
     '<div class="note">' + esc(strategyCopy) + '</div>' +
     '<div class="card"><header><h3>Interest-bearing balances</h3>' +
       '<span class="aside">sorted by rate</span></header><div class="tbl-scroll"><table>' +
@@ -2944,6 +4099,202 @@ function viewTests() {
     'change. Three personas, ' + t.total + ' assertions, ' + t.failed + ' failing.</p></div>' + out + '</div>';
 }
 
+
+
+/* =============================================================== 6. import */
+
+const FINDING_GROUPS = [
+  ['income', 'Money coming in', 'Detected from repeating deposits. “Varies” streams keep their full history, which is what the income floor is built from.'],
+  ['card_account', 'Cards you imported a statement for', 'Balance and statement date come straight from the file. The APR is read back out of the interest you were charged.'],
+  ['debt', 'Debts seen only as payments leaving', 'The payment and its date are in the data. The balance and rate are not — those are the figures worth finding.'],
+  ['bill', 'Fixed bills', 'Same amount, same day, every month. The plan schedules these on time and never touches them.'],
+  ['expense', 'Repeating spending', 'Regular, but not an obligation. Reserved for, not scheduled.'],
+  ['discretionary', 'Everything else', 'One-off spending, totalled and averaged. Measured from your transactions rather than estimated.']
+];
+
+const NEED_WORD = { balance: 'balance', apr: 'interest rate', creditLimit: 'credit limit' };
+
+function viewImport() {
+  const r = state.importResult;
+
+  if (!r) {
+    return '<div class="wrap">' +
+      '<div class="page-head"><p class="eyebrow">Nothing to type</p><h2>Import your statements</h2>' +
+      '<p class="sub">Drop in the transaction exports your bank already produces and the plan builds itself: ' +
+      'accounts, balances, income and how much it swings, fixed bills, real spending, card balances, even the ' +
+      'APR — read back out of the interest you were charged. Files are parsed in this tab and never uploaded.</p></div>' +
+
+      (state.importError ? '<div class="note alert"><b>Could not read that.</b> ' + esc(state.importError) + '</div>' : '') +
+
+      '<div class="card"><div class="drop" id="drop" tabindex="0" role="button" ' +
+        'aria-label="Choose statement files to import">' +
+        '<b>Drop statement files here</b>' +
+        '<span>CSV, OFX, QFX or QBO &mdash; as many accounts as you like</span>' +
+        '<button class="btn primary" data-action="pick-files">Choose files</button>' +
+        '<input type="file" id="fileInput" multiple accept=".csv,.txt,.ofx,.qfx,.qbo,text/csv" hidden>' +
+      '</div></div>' +
+
+      '<div class="card"><header><h3>Where these come from</h3></header><div class="body">' +
+        '<ol class="steps">' +
+        '<li>Sign in to your bank and find <b>Download</b>, <b>Export</b> or <b>Statements</b> — usually on the ' +
+          'transaction list, sometimes under account settings.</li>' +
+        '<li>Pick <b>CSV</b> or <b>Quicken (QFX/OFX)</b>. Quicken files are better: they carry the closing balance ' +
+          'and the statement period, so less is left to work out.</li>' +
+        '<li>Ask for <b>three to six months</b>. Less than three and the cadence of your income is guesswork.</li>' +
+        '<li>Do the same for each current account, savings account and credit card, then drop them all in at once. ' +
+          'Transfers between them get matched up and excluded automatically.</li>' +
+        '</ol></div></div>' +
+
+      '<div class="card"><header><h3>Rather see it work first?</h3>' +
+        '<span class="aside">runs through the same parser, no shortcuts</span></header><div class="body">' +
+        '<p class="hint" style="margin:0 0 12px">Six months of synthetic statements — a current account and a ' +
+        'savings account as bank CSV, a credit card as a Quicken export.</p>' +
+        '<button class="btn" data-action="sample-import">Try it with sample statements</button></div></div>' +
+    '</div>';
+  }
+
+  /* ------------------------------------------------------------- results */
+  const accepted = r.findings.filter(f => f.accept);
+  const needs = outstandingNeeds(r);
+  const money0safe = v => v == null ? '—' : money0(v);
+
+  let groups = '';
+  for (const [kind, title, blurb] of FINDING_GROUPS) {
+    const fs = r.findings.filter(f => f.kind === kind);
+    if (!fs.length) continue;
+    let rows = '';
+    for (const f of fs) {
+      const bits = [];
+      if (f.kind === 'card_account') {
+        bits.push(money(f.balance) + ' owed');
+        if (f.apr != null) bits.push(pct1(f.apr) + ' APR');
+        if (f.statementCloseDay) bits.push('closes day ' + f.statementCloseDay);
+      } else {
+        bits.push(money(f.amount) + (f.cadence ? ' ' + CADENCE_WORD[f.cadence] : ''));
+        if (f.confidence) bits.push(f.confidence === 'variable'
+          ? 'varies — floor ' + money0safe(f.floor) : f.confidence);
+      }
+      rows += '<div class="row' + (f.accept ? '' : ' off') + '">' +
+        '<div class="what"><label class="pick"><input type="checkbox" data-finding="' + f.id + '"' +
+          (f.accept ? ' checked' : '') + '><b>' + esc(f.label) + '</b></label>' +
+          bits.map(b => '<span class="chip">' + esc(b) + '</span>').join('') +
+          (f.needs && f.needs.length
+            ? '<span class="chip slate">needs ' + f.needs.map(n => NEED_WORD[n]).join(' + ') + '</span>' : '') +
+        '</div>' +
+        '<div class="amt num">' + esc(f.kind === 'card_account' ? money(f.balance) : money(f.amount)) + '</div>' +
+        '<div class="why">' + esc(f.evidence) + '</div></div>';
+    }
+    groups += '<div class="card"><header><h3>' + esc(title) + '</h3>' +
+      '<span class="aside">' + fs.length + ' found</span></header>' +
+      '<div class="body" style="padding-bottom:0"><p class="hint" style="margin:0 0 4px">' + esc(blurb) + '</p></div>' +
+      '<div class="body flush">' + rows + '</div></div>';
+  }
+
+  const acctRows = r.statements.map(s =>
+    '<tr><td><b>' + esc(s.name) + '</b></td>' +
+    '<td>' + esc(s.type === 'credit_card' ? 'credit card' : s.type) + '</td>' +
+    '<td class="r num">' + (s.balance == null ? '<span class="na">not in file</span>' : esc(money(s.balance))) + '</td>' +
+    '<td class="r num">' + s.count + '</td>' +
+    '<td class="num">' + esc(fmtD(s.from) + ' – ' + fmtD(s.to)) + '</td>' +
+    '<td class="na">' + esc(s.source) + '</td></tr>').join('');
+
+  return '<div class="wrap">' +
+    '<div class="page-head"><p class="eyebrow">' + r.transactions + ' transactions read · ' +
+      esc(fmtDY(r.range.from)) + ' to ' + esc(fmtDY(r.range.to)) + '</p>' +
+      '<h2>Here is what is in your statements</h2>' +
+      '<p class="sub">Everything below was worked out from the files — nothing typed. Untick anything that is ' +
+      'wrong or that you would rather leave out, then build the plan. You can edit all of it afterwards.</p></div>' +
+
+    (r.issues.length ? '<div class="note"><b>Worth knowing.</b><ul style="margin:8px 0 0;padding-left:18px">' +
+      r.issues.map(i => '<li>' + esc(i) + '</li>').join('') + '</ul></div>' : '') +
+
+    '<div class="card"><header><h3>Accounts</h3>' +
+      '<span class="aside">' + r.transfersExcluded + ' internal transfers matched and excluded</span></header>' +
+      '<div class="tbl-scroll"><table><thead><tr><th>Account</th><th>Type</th><th class="r">Balance</th>' +
+      '<th class="r">Transactions</th><th>Covering</th><th>From</th></tr></thead><tbody>' + acctRows +
+      '</tbody></table></div></div>' +
+
+    groups +
+
+    '<div class="card"><header><h3>Build the plan</h3>' +
+      '<span class="aside">' + accepted.length + ' of ' + r.findings.length + ' items included</span></header>' +
+      '<div class="body">' +
+      (needs.length
+        ? '<p style="margin:0 0 12px;max-width:74ch">' + needs.length + ' item' + (needs.length === 1 ? '' : 's') +
+          ' need a figure that no transaction export contains — ' +
+          esc(needs.map(n => n.label + ' (' + n.needs.map(x => NEED_WORD[x]).join(' and ') + ')').join('; ')) +
+          '. They will be highlighted for you on the next screen. Everything else is done.</p>'
+        : '<p style="margin:0 0 12px">Nothing left outstanding — every figure the plan needs came out of the files.</p>') +
+      '<div class="btnrow">' +
+        '<button class="btn primary" data-action="apply-import">Build my plan from this</button>' +
+        '<button class="btn" data-action="reset-import">Use different files</button>' +
+      '</div></div></div>' +
+  '</div>';
+}
+
+/* ------------------------------------------------------------ file intake */
+
+function readFiles(fileList) {
+  const files = Array.from(fileList || []).slice(0, 20);
+  if (!files.length) return;
+  const tooBig = files.find(f => f.size > 12 * 1024 * 1024);
+  if (tooBig) { state.importError = tooBig.name + ' is over 12 MB. Export a shorter date range.'; render(); return; }
+
+  Promise.all(files.map(f => new Promise(res => {
+    const rd = new FileReader();
+    rd.onload = () => res({ name: f.name, text: String(rd.result) });
+    rd.onerror = () => res({ name: f.name, text: '' });
+    rd.readAsText(f);
+  }))).then(loaded => {
+    ingest(loaded);
+  });
+}
+
+function ingest(loaded) {
+  const statements = [];
+  const failed = [];
+  for (const { name, text } of loaded) {
+    let parsed = [];
+    try { parsed = parseStatementFile(name, text); } catch (e) { parsed = []; }
+    if (parsed.length) statements.push(...parsed);
+    else failed.push(name);
+  }
+  if (!statements.length) {
+    state.importError = 'None of those files looked like a transaction export. ' +
+      (failed.length ? 'Tried: ' + failed.join(', ') + '. ' : '') +
+      'A CSV needs a date column, a description and an amount; a Quicken file should start with OFXHEADER.';
+    state.importResult = null;
+    render();
+    return;
+  }
+  const analysis = analyzeStatements(statements);
+  if (!analysis) { state.importError = 'Those files parsed but contained no transactions.'; render(); return; }
+  if (failed.length) analysis.issues.unshift('Could not read ' + failed.join(', ') + ' — the rest went through.');
+  state.importError = null;
+  state.importResult = analysis;
+  state.view = 'import';
+  render();
+}
+
+function wireDropZone() {
+  const zone = document.getElementById('drop');
+  const input = document.getElementById('fileInput');
+  if (!zone || !input) return;
+  input.addEventListener('change', () => readFiles(input.files));
+  zone.addEventListener('click', e => { if (!e.target.closest('button')) input.click(); });
+  zone.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.click(); } });
+  ['dragenter', 'dragover'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation(); zone.classList.add('over');
+  }));
+  ['dragleave', 'drop'].forEach(ev => zone.addEventListener(ev, e => {
+    e.preventDefault(); e.stopPropagation();
+    if (ev === 'dragleave' && zone.contains(e.relatedTarget)) return;
+    zone.classList.remove('over');
+  }));
+  zone.addEventListener('drop', e => {
+    if (e.dataTransfer && e.dataTransfer.files) readFiles(e.dataTransfer.files);
+  });
+}
 
 /* ============================================================ edit plumbing */
 
@@ -3171,16 +4522,19 @@ function viewMoney() {
     return '<tr><td>' + inp('liability', l.id, 'name', l.name, { disabled: ro, placeholder: 'Chase Freedom' }) + '</td>' +
       '<td>' + sel('liability', l.id, 'kind', l.kind, KIND_OPTS, ro) + '</td>' +
       '<td class="r">' + (noBal ? '<span class="na">n/a</span>'
-        : inp('liability', l.id, 'balance', l.balance, { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro })) + '</td>' +
+        : inp('liability', l.id, 'balance', l.balance, { type: 'number', step: '0.01', min: 0, disabled: ro,
+            cls: 'fi num r' + (l.balance > 0 ? '' : ' want') })) + '</td>' +
       '<td class="r">' + (noBal ? '<span class="na">n/a</span>'
-        : inp('liability', l.id, 'aprPct', l.apr == null ? '' : r2(l.apr * 100), { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro })) + '</td>' +
+        : inp('liability', l.id, 'aprPct', l.apr == null ? '' : r2(l.apr * 100), { type: 'number', step: '0.01', min: 0, disabled: ro,
+            cls: 'fi num r' + (l.apr ? '' : ' want') })) + '</td>' +
       '<td class="r">' + inp('liability', l.id, 'minimumPayment', l.minimumPayment, { type: 'number', step: '0.01', min: 0, cls: 'fi num r', disabled: ro }) + '</td>' +
       '<td class="r">' + inp('liability', l.id, 'dueDayOfMonth', l.dueDayOfMonth, { type: 'number', min: 1, max: 31, cls: 'fi num r narrow', disabled: ro }) + '</td>' +
       '<td class="r">' + (card ? inp('liability', l.id, 'statementCloseDay', l.statementCloseDay == null ? '' : l.statementCloseDay,
             { type: 'number', min: 1, max: 31, cls: 'fi num r narrow', disabled: ro, placeholder: '—' })
         : '<span class="na">—</span>') + '</td>' +
       '<td class="r">' + (card ? inp('liability', l.id, 'creditLimit', l.creditLimit == null ? '' : l.creditLimit,
-            { type: 'number', step: '1', min: 0, cls: 'fi num r', disabled: ro, placeholder: '—' })
+            { type: 'number', step: '1', min: 0, disabled: ro, placeholder: '—',
+              cls: 'fi num r' + (l.creditLimit ? '' : ' want') })
         : '<span class="na">—</span>') + '</td>' +
       '<td>' + sel('liability', l.id, 'accountId', l.accountId, acctOpts(p), ro) + '</td>' +
       '<td class="c">' + chk('liability', l.id, 'autopayEnabled', l.autopayEnabled, ro) + '</td>' +
@@ -3221,6 +4575,20 @@ function viewMoney() {
   const st = p.settings;
   const stale = staleDays();
 
+  // Anything the import could not derive is marked, and counted here.
+  let wanted = 0;
+  for (const l of p.liabilities) {
+    if (NO_BALANCE_KINDS.indexOf(l.kind) >= 0) continue;
+    if (!(l.balance > 0)) wanted++;
+    if (!l.apr) wanted++;
+    if (l.kind === 'credit_card' && !l.creditLimit) wanted++;
+  }
+  const wantNote = (editable && wanted)
+    ? '<div class="note"><b>' + wanted + ' figure' + (wanted === 1 ? '' : 's') + ' still needed.</b> ' +
+      'Balances, interest rates and credit limits are never in a transaction export, so they are the one thing ' +
+      'that has to come from you. They are highlighted in blue below — a statement or the app for that account ' +
+      'will have all three.</div>' : '';
+
   const problems = (v.errors.length || v.warnings.length)
     ? '<div class="card"><header><h3>' + (v.errors.length ? 'Needs attention' : 'Worth knowing') + '</h3>' +
       '<span class="aside">checked as you type</span></header><div class="body flush">' +
@@ -3246,7 +4614,7 @@ function viewMoney() {
       '<b>Could not save to this browser.</b> Private browsing or blocked storage will do that. ' +
       'Your work is live in this tab but will not survive a reload — export a backup instead.</div>' : '') +
 
-    problems +
+    wantNote + problems +
 
     (editable ? '<div class="card"><header><h3>This plan</h3></header><div class="controls">' +
       '<div class="ctl"><label for="pname">Call it something</label>' +
@@ -3329,11 +4697,17 @@ function onboarding() {
     '<div class="page-head"><p class="eyebrow">Nothing saved yet</p><h2>Set up your plan</h2>' +
     '<p class="sub">Two ways in. Either works — you can change everything afterwards, and nothing you type ' +
     'leaves this browser.</p></div>' +
+    '<div class="card"><header><h3>Import your statements</h3>' +
+      '<span class="aside">recommended &mdash; nothing to type</span></header><div class="body">' +
+      '<p style="margin:0 0 14px;max-width:64ch;color:var(--ink-2)">Drop in the CSV or Quicken exports your bank ' +
+      'already produces. Accounts, balances, income and how much it swings, fixed bills, real spending and card ' +
+      'balances all come straight out of the transactions. Files are read in this tab and never uploaded.</p>' +
+      '<button class="btn primary" data-view="import">Import statements</button></div></div>' +
     '<div class="card"><header><h3>Start from scratch</h3></header><div class="body">' +
       '<p style="margin:0 0 14px;max-width:64ch;color:var(--ink-2)">You will need, roughly in this order: your ' +
       'checking balance, each debt with its balance, APR, minimum and due day, your income and when it lands, ' +
       'and what you actually spend in a normal month. Ten minutes, once.</p>' +
-      '<button class="btn primary" data-action="start-blank">Start with an empty plan</button></div></div>' +
+      '<button class="btn" data-action="start-blank">Start with an empty plan</button></div></div>' +
     '<div class="card"><header><h3>Start from an example and edit it</h3>' +
       '<span class="aside">faster if your situation resembles one of them</span></header><div class="body flush">' +
       PERSONA_IDS.map(id => {
@@ -3354,6 +4728,7 @@ function onboarding() {
 function render() {
   renderChrome();
   const el = document.getElementById('view');
+  if (state.view === 'import') { el.innerHTML = viewImport(); wireDropZone(); window.scrollTo(0, 0); return; }
   if (state.view === 'money')  { el.innerHTML = viewMoney(); window.scrollTo(0, 0); return; }
   if (state.view === 'tests')  { el.innerHTML = viewTests(); window.scrollTo(0, 0); return; }
 
@@ -3404,7 +4779,24 @@ document.addEventListener('click', e => {
   const act = e.target.closest('[data-action]');
   if (act) {
     const a = act.dataset.action;
-    if (a === 'start-blank') {
+    if (a === 'pick-files') { const i = document.getElementById('fileInput'); if (i) i.click(); }
+    else if (a === 'sample-import') {
+      const files = buildSampleFiles();
+      ingest(Object.keys(files).map(name => ({ name, text: files[name] })));
+    }
+    else if (a === 'reset-import') { state.importResult = null; state.importError = null; render(); }
+    else if (a === 'apply-import') {
+      if (hasOwnData() && !confirm('This replaces everything currently in your plan.\n\nReplace it?')) return;
+      state.myProfile = profileFromAnalysis(state.importResult);
+      state.profileId = 'mine';
+      state.whatif = null;
+      commit(true);
+      const left = outstandingNeeds(state.importResult).length;
+      state.view = 'money';
+      toast(left ? left + ' figure(s) left to fill in — highlighted below.' : 'Plan built from your statements.');
+      render();
+    }
+    else if (a === 'start-blank') {
       state.myProfile = blankProfile();
       state.myProfile.profile.startedAt = new Date().toISOString();
       commit(true); render();
@@ -3430,6 +4822,11 @@ document.addEventListener('click', e => {
    mid-word would steal the caret. */
 document.addEventListener('change', e => {
   const el = e.target;
+  if (el.dataset && el.dataset.finding && state.importResult) {
+    const f = state.importResult.findings.find(x => x.id === el.dataset.finding);
+    if (f) { f.accept = el.checked; render(); }
+    return;
+  }
   if (!el.dataset || !el.dataset.ent || !isMine()) return;
   const touched = applyEdit(el.dataset.ent, el.dataset.id, el.dataset.f, el);
   commit(touched);
@@ -3453,6 +4850,18 @@ document.addEventListener('input', e => {
     state.whatif.optimizeForCreditScore = e.target.checked;
     rerenderWhatIf();
   }
+});
+
+/* The rail shows a number beside each view. Those are shortcuts, so they had
+   better work — but never while someone is typing into a field. */
+const SHORTCUT_VIEWS = ['week', 'timeline', 'debts', 'whatif', 'money', 'import'];
+document.addEventListener('keydown', e => {
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const el = document.activeElement;
+  if (el && (el.matches('input, select, textarea') || el.isContentEditable)) return;
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= SHORTCUT_VIEWS.length) { state.view = SHORTCUT_VIEWS[n - 1]; render(); return; }
+  if (e.key === '0' || e.key.toLowerCase() === 't') { state.view = 'tests'; render(); }
 });
 
 let whatIfPending = false;
