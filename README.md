@@ -1,298 +1,141 @@
-# Debt payoff scheduler
+# Pantheon
 
-One self-contained file: `index.html`. No build step, no dependencies, no network calls.
-Open it in a browser and it runs.
+A Summoners War-style gacha RPG for iOS, built in SwiftUI and SceneKit, with real
+3D characters. Greek to start — Zeus is fully built — with the roster designed
+from the ground up to span Roman, Egyptian, Norse, Chinese, Japanese, Hindu,
+Mesopotamian, Aztec, Celtic, Slavic, Yoruba and Polynesian mythology, and to
+cover gods, demigods, heroes, titans, monsters, spirits and primordials.
 
-## Using it on your own money
+This repository holds the complete game base: turn-based combat, the gacha, the
+relic economy, PvE campaign, and PvP arena — all playable end to end today.
 
-Open `index.html` and go to **Import statements**. Drop in the transaction exports your bank
-already produces — CSV, or Quicken `.qfx`/`.ofx`/`.qbo` — for each current account, savings
-account and credit card. Three to six months each. The files are read in the tab and never
-uploaded anywhere.
-
-From the transactions alone it works out:
-
-- **which accounts you have** and their closing balances
-- **every recurring deposit** — its cadence, its day, and how much it swings. That variation
-  is the deposit history the income floor is built from, so irregular income is handled from
-  real numbers rather than a figure you guessed
-- **fixed bills** (rent, utilities) separated from **repeating spending** separated from
-  genuine one-offs, which are totalled and averaged into a measured weekly figure
-- **card balances**, the statement close day, and the **APR — read back out of the interest
-  you were actually charged**
-- **money moved between your own accounts**, matched up and excluded so nothing is counted
-  twice. A card payment leaving checking is not spending; the card's purchases already are.
-
-You review what it found — every line shows its evidence, and anything wrong can be unticked
-— then build the plan. Three things are never present in any transaction export, so they are
-asked for rather than invented: **credit limits**, and the **balance and rate of any loan you
-only see as a payment leaving checking**. Those are highlighted in blue on the next screen and
-counted down as you fill them in. Nothing is silently guessed.
-
-Everything remains editable afterwards under **Your money**, and you can skip the import
-entirely: start from an empty plan, or copy one of the three worked examples and edit it.
-
-Everything you type is saved to that browser's `localStorage` and never leaves your machine.
-There is no server, no account, and nothing to sign up for. That also means:
-
-- **Clearing site data wipes it.** Use *Export a backup* — it writes a JSON file you can load
-  again later or on another machine.
-- **It is per browser and per machine.** The backup file is how you move between them.
-- **Private browsing may block saving.** The app detects that and says so rather than
-  silently losing your work.
-
-If you would rather see the import work before trusting it with your own files, *Try it with
-sample statements* runs six months of synthetic exports — two bank CSVs and a Quicken card
-file — through exactly the same parser. No shortcut path.
-
-From **This week** you can push the whole schedule to your calendar as an `.ics` file — every
-payment as an all-day event with a reminder the morning it is due and the reason attached, so
-the plan acts on you instead of sitting in a tab. There is also a CSV of the schedule and a
-print layout.
-
-### What it still is not
-
-It does not connect to your bank and it does not move money. Importing a statement export is
-the automated route that works without one. Both need things a single HTML
-file cannot have: Plaid and Method require merchant accounts, API keys and a backend to hold
-them, and moving money requires licensing. What the file *does* have is the boundary those
-would plug into — see **Adapter boundary** below. Balances are whatever you last typed, so
-the app tracks how stale they are and nags you when they drift.
-
-Treat the output as a well-argued plan, not financial advice. Every number is derived from
-what you entered.
+> The previous contents of this repo (the debt payoff scheduler) have moved to
+> [`legacy/debt-payoff-scheduler/`](legacy/debt-payoff-scheduler/). Nothing was
+> deleted.
 
 ---
 
-## The problem this is actually solving
+## Running it
 
-Ranking debts by APR is the easy half. The hard half is that income arrives on specific
-dates, obligations are due on other dates, credit card statements close on a third set of
-dates, and the checking balance moves continuously between all of them. The question is not
-"which debt is highest APR" — it is "given the slack this month, on which calendar day does
-each dollar move so that nothing overdrafts, nothing is late, and interest is minimised."
-
-`buildPlan(dataSource, overrides)` is a deterministic solver for that. No model calls
-anywhere, including in the explanation strings.
-
-## Design direction
-
-**Palette — cool ledger paper.** Ground `#EEF2F3`, surfaces white, ink `#0F2229` (deep
-slate, never black). Deep teal `#0E5A61` carries structure and action. Slate blue `#3C5C8C`
-is reserved exclusively for credit-score timing moves, so "we did something clever" never
-reads the same as "here is a bill." Moss `#3F6B4A` means covered.
-
-Red `#A32118` appears in exactly one situation: something is actually going wrong — a failing
-check, a breached floor, a late payment. Never for debt balances, never for outgoing money.
-The buffer-floor line on the chart is grey while the plan respects it, and only turns red if
-it is breached.
-
-Deliberately avoided: cream/serif/terracotta, dark-with-one-acid-accent, and
-big-number-with-small-label hero cards.
-
-**Type.** Nothing external loads, so the pairing is structural rather than decorative: a
-humanist system sans for prose, monospace with `tabular-nums` for every figure. Columns line
-up the way a ledger does. Layout is dated rows, not cards.
-
-## How the engine works
-
-A single deterministic forward pass over the horizon, one day at a time: income lands,
-background spending clears, interest accrues, obligations get paid, spare cash is allocated,
-end-of-day balances are recorded. Three runs make a plan:
-
-1. **plan** — commits against the conservative income floor; this is the schedule shown.
-2. **replay** — takes that schedule as fixed, runs it against nominal income, and sweeps
-   anything above the floor at the target debt.
-3. **projection** — the same engine over 15 years, for payoff dates and lifetime interest.
-   Payoff dates come from the same code path as the schedule, not separate closed-form math.
-
-### Hard constraints
-
-1. Household checking never drops below `bufferFloor` on any day, and no individual checking
-   account ever goes below zero.
-2. Every minimum is scheduled on or before its due date, every period.
-3. No payment is scheduled from money that has not arrived.
-
-### The lookahead is a running minimum, not a net total
-
-The single most important detail in the solver. Available cash is computed by walking the
-next 45 days *in order* and taking the worst point along the way — not by netting income
-against obligations over the window. A paycheck arriving on the 15th cannot pay rent due on
-the 1st, even though the month nets out fine. Netting was the first implementation and it
-overdrafted every persona.
-
-### Statement-close timing, and when it is declined
-
-When `optimizeForCreditScore` is on, a card payment is pulled ahead of the statement close
-rather than left at the due date. Same dollars, lower reported utilization.
-
-The engine refuses the move in three cases, each of which is a way a naive implementation
-quietly makes things worse:
-
-- **The card is under ~30% utilization.** The reported number is already in a range where
-  moving it does almost nothing to a score.
-- **The card is already the surplus target.** Every spare dollar is being sent there on the
-  day it lands, which is ahead of the close anyway. Pulling the minimum forward only reserves
-  the same money for a later date — it costs a day or two of interest and reports an
-  identical balance. Measured on the steady persona, doing it blindly made the reported
-  balance $1.72 *worse*.
-- **Another card with worse utilization has a close in the same window.** Utilization is
-  reported per card and the worst card dominates, so the two cannot both have first claim on
-  the cash. The worse card wins.
-
-Because of this, the feature is correctly invisible on Dana's default screen, and the UI says
-so in plain language rather than pretending. It is live on Priya and on the Ortegas.
-
-### Irregular income
-
-Variable streams are planned against the 25th percentile of the trailing 12 deposits, not the
-mean. Every committed payment is sized against that floor, so a light month changes nothing.
-The difference between the floor and what actually lands becomes a *conditional sweep* — an
-extra payment at the target debt that fires only if that deposit clears the floor.
-
-For Priya this is a ~$1,000/month gap between what the plan promises and what it expects.
-
-### Multi-account households
-
-Obligations are drafted from a named account. The engine moves money between checking
-accounts itself when an account is thin, and tops accounts up on payday for the stretch ahead
-rather than shuffling cash a bill at a time. Same-day transfers between the same pair of
-accounts are merged into one row, because that is what the person actually does.
-
-If required outflow would still breach the floor, the plan draws from savings — explicitly,
-with a sentence, and it repays savings before any further extra goes at the debt.
-
-## Documented extensions to the brief's data model
-
-Three additions, each needed for the projection to be honest:
-
-- **`Expense`** — recurring living costs (groceries, childcare, insurance) with weekly or
-  monthly cadence. Without them every persona appears to have thousands a month of slack and
-  the payoff dates are fiction. These are background outflow the engine reserves against but
-  never "decides."
-- **`Liability.accountId`** — which account an obligation is drafted from. Required for
-  honest multi-account handling; defaults to the primary checking account.
-- **`Settings.extraMonthly`** — what-if input; behaves as certain income.
-
-`bufferFloor` is interpreted as a household total across checking accounts, with a hard zero
-on each individual account.
-
-## Adapter boundary
-
-The engine never learns where data came from. Everything enters through a `DataSource`.
-`makeDataSource(profile)` is the single implementation; the demo personas and your own
-saved data are the same function with different inputs, which is what keeps the boundary
-honest rather than theoretical:
-
-```
-interface DataSource {
-  getProfile()                 -> { id, name, tagline, note }
-  getAccounts()                -> Account[]
-  getLiabilities()             -> Liability[]
-  getExpenses()                -> Expense[]
-  getIncomeEvents(startDn, n)  -> IncomeEvent[]
-  getDepositHistory(streamId)  -> number[]
-  getSettings()                -> Settings
-}
+```bash
+open Pantheon.xcodeproj
 ```
 
-`MockDataSource` (demo personas) and `LocalDataSource` (your saved profile) ship today.
-`PlaidDataSource` (balances, transactions, deposit history) and `MethodDataSource` (liability
-detail, payment execution) implement the same shape with zero engine changes. Dates are
-integer day numbers throughout; calendars and formatting live only at the edges.
+Select the **Pantheon** scheme, pick any iPhone simulator or a device, and run.
+Xcode 16+, iOS 17+. No package dependencies, no CocoaPods, no build script.
 
-`normalizeProfile()` is the one place that guarantees ranges — day-of-month clamped to 1–31,
-APR to 0–1, orphaned account references repointed. Hand-entered data can therefore never
-reach the solver malformed, and the editor never has to fight someone mid-keystroke.
-`validateProfile()` sits alongside it and reports what is wrong in plain language: a minimum
-smaller than the monthly interest, outgoings above income, a card with no statement close
-day. Errors that make a plan impossible are stated as arithmetic, not hidden behind a
-schedule that cannot work.
+```bash
+xcodebuild -scheme Pantheon -destination 'platform=iOS Simulator,name=iPhone 15' test
+```
 
-## Tests
+If the project file ever gets mangled by a merge, `xcodegen generate` rebuilds it
+from `project.yml`.
 
-Two layers. `runTests()` covers the engine and runs on load, rendering into the app — a green strip at the top when passing, a
-loud red banner when not. 33 assertions across the three personas, all properties of the plan
-rather than golden values, so they keep meaning something after the numbers change:
+## It runs with zero art
 
-- the buffer floor holds every day, in both the conservative and expected projections, and no
-  account overdrafts
-- no minimum is ever late or short
-- total outflow never exceeds starting balance plus committed inflow
-- avalanche sends strictly more to the highest-APR debt than snowball over 90 days
-- statement-close timing never raises peak reported utilization, and strictly lowers it
-  wherever the move is available
-- every payment carries a dated, dollar-specific generated sentence
-- two runs of identical inputs produce an identical plan
-- variable income is committed at the 25th percentile and below the trailing mean
-- **constraints hold from 18 different start dates** spanning month ends, short months and
-  every weekday — this one caught several genuine bugs
+This is the part worth knowing before you export anything. Every character that
+has no model loads a **procedural placeholder rig** — correctly sized for its
+archetype, tinted to its element, with the same attachment-point node names a
+real rig exposes. It animates, takes hits, dies and gets summoned on a beam.
 
-A third suite covers the import path and runs on load with the others: both formats parsing
-into one shape, day-first dates with split debit/credit columns and currency symbols, the
-amount and date formats that break naive parsers, income cadence and variability detection,
-bills told apart from spending, the card APR derived from interest charged, internal transfers
-excluded from both sides, unknown figures staying visibly unknown, and the derived profile
-building a working plan end to end.
+So combat pacing, camera work, VFX timing and every screen in the app are already
+finished and testable. Dropping `zeus.usdz` into `Pantheon/Resources/Models/`
+replaces the placeholder with no code change. **More → 3D assets** in the app
+shows a green dot for every character that has a real model and a grey one for
+every character still standing in.
 
-Two browser-driven suites (`e2e.js` and `e2e-import.js`, run during development, not shipped
-in the file) cover the app around it: first-run onboarding, starting blank, copying a template, editing a
-field and seeing the payoff recompute, persistence across reload, adding and removing rows,
-fields appearing and disappearing as a debt's type changes, ICS/CSV/JSON export shape, an
-impossible plan being flagged rather than silently scheduled, and demo profiles staying
-read-only — plus the whole import flow driven with real files written to disk: drop, analyse,
-untick a finding, build, fill an outstanding figure and watch the highlight clear, reload, and
-a non-statement file rejected with an explanation. 20 and 15 checks, all green.
+## What you need to make
 
-## Personas
+The full specification — scale, orientation, materials, rig node names, the
+animation clip list, and the 3D AI Studio → Blender → Mixamo → USDZ route — is in
+**[`Docs/ART_PIPELINE.md`](Docs/ART_PIPELINE.md)**. The short version, for Zeus:
 
-| | |
+| File | Folder |
 |---|---|
-| **Dana Reyes** | Biweekly W-2, one card, one nearly-paid-off car, rent. Baseline correctness. |
-| **Priya Nandakumar** | Deposits swinging $2.4k–$4.4k month to month. Proves the income-floor logic. |
-| **Alex & Sam Ortega** | Two offset pay schedules, three checking accounts, shared and individual debts. Proves multi-account handling. |
+| `zeus.usdz` — rigged, 2.05 m, Y-up, facing +Z, origin at the feet, animations embedded | `Pantheon/Resources/Models/` |
+| `portrait_zeus.png` — 1024×1024 | `Pantheon/Resources/Portraits/` |
+| `banner_olympus_rising.png` — 1284×800 | `Pantheon/Resources/Portraits/` |
+| `spark.png` — 128×128 white radial glow | `Pantheon/Resources/Portraits/` |
+| `olympus_peak.scn` + `olympus_peak_ibl.hdr` — optional | `Pantheon/Resources/Environments/` |
 
-In each persona the highest-APR debt is deliberately *not* the smallest balance, and not the
-highest-utilization card, so avalanche, snowball and statement-close timing produce genuinely
-different plans instead of collapsing into the same move.
+Animation clips the rig needs, by exact name: `idle`, `idle_combat`,
+`attack_basic`, `attack_heavy`, `cast_loop`, `cast_release`, `ultimate`,
+`hit_react`, `death`, `victory`, `summon_reveal`.
 
-## How the import works
+---
 
-`parseStatementFile()` handles the two formats that are near-universal. OFX/QFX/QBO is SGML
-with frequently unclosed tags, so it is read by tag boundary rather than parsed as a tree.
-CSV is worse: the tokenizer sniffs the separator (comma, semicolon, tab, pipe), handles quoted
-fields with embedded separators and newlines, maps columns by header, and falls back to
-inspecting the data when a file has no usable header row. Amounts arrive as `(1,234.56)`,
-`1234.56-`, `12.34 CR`, `$1,234.56` and `1.234,56`; dates as `YYYYMMDD`, `03/09/2026`,
-`09/03/2026` and `9 Mar 2026`. The DD/MM versus MM/DD ambiguity is settled by scanning the
-whole file for a date whose first component exceeds 12.
+## What is built
 
-`analyzeStatements()` groups transactions by a normalised merchant key — store numbers,
-posting dates, routing noise and trailing state codes stripped — then looks at the spacing of
-each group. Biweekly and semimonthly are told apart by weekday consistency: a fortnightly
-payday holds its weekday, the 15th and the 30th cannot. Amount variance decides whether the
-plan may commit against a figure (`certain`), hedge slightly (`likely`), or fall back to the
-25th-percentile floor (`variable`).
+**Combat.** Attack-bar turn order, five-element wheel, crits, glancing hits,
+multi-hit skills, defence-ignore, 24 buffs and debuffs, shields, counterattacks,
+revives, passive skills with triggers, and a full AI that scores every
+(skill, target) pair. Fully deterministic from a seed, so battles replay exactly.
 
-Every output carries the evidence that produced it — how many occurrences, over what dates, in
-what range — because inference that cannot show its working should not be trusted.
+**Zeus.** Three active skills, an awakened passive, a leader skill, an evolution
+path and an awakening cost:
 
-## Views
+- **Arc Lightning** — three strikes, each with a chance to Slow
+- **Thunderbolt** — ignores 30% DEF, 70% Stun
+- **Aegis of Olympus** — hits everything, scales with the debuffs on each target,
+  50% Stun, and buffs the team's attack
+- **Stormlord** *(awakened)* — a kill resets his cooldowns and buffs his attack
+- **Leader** — +33% ATK to Greek allies
 
-| | |
-|---|---|
-| **This week** | What moves, when, from where, and why. The default screen. |
-| **Timeline** | 90 days of income, payments and statement closes, with the projected balance line underneath. |
-| **Debts** | Every balance with APR, payoff date and interest still to come. |
-| **What if** | Sliders for extra monthly and buffer floor, plus strategy — recomputed live by the same engine. |
-| **Your money** | Everything the plan is built from. Editable, saved locally. |
-| **Import statements** | Drop in bank exports; the plan builds itself from the transactions. |
-| **Engine checks** | The test suite, always one click away. |
+**Gacha.** Three scroll types with published rates, banner rate-ups, hard pity at
+90, a soft-pity ramp from 67, the featured-unit guarantee, duplicates converting
+to skill-ups, and a 3D summon reveal.
 
-Views are numbered 1–6 in the sidebar; those are working keyboard shortcuts, and `t` opens the
-tests.
+**Relics.** Six slots, 16 sets, main and sub stats, upgrade rolls to +15,
+auto-equip scored per combat role, and set effects resolved inside the engine.
 
-## Out of scope
+**Campaign.** Two chapters of Olympus, hand-authored and generated, with energy
+costs, star ratings, first-clear rewards and gated progression.
 
-Real bank connections, auth, any backend, actual money movement, LLM calls, investing,
-anything requiring a license.
+**Arena.** Rank points with Elo-flavoured swings, six tiers with floors,
+attack-attempt regeneration, a defence team the AI plays, and a defence simulator
+that tells you how often your team actually holds.
+
+**Progression.** Levelling, evolution to 6★, awakening with element essences,
+skill-ups, and an economy of four currencies.
+
+**Persistence.** Versioned, atomic, migrating saves. A corrupt file is quarantined
+rather than deleted.
+
+## Layout
+
+```
+Pantheon/
+  App/           GameStore — the single source of truth — and the tab shell
+  Core/
+    Models/      Units, stats, skills, statuses, relics, the player
+    Data/        UnitDatabase (Zeus + enemies), StageDatabase
+    Battle/      The engine, damage maths, AI, seeded RNG, event stream
+    Gacha/       Banners, rates, pity
+    Progression/ Levelling, evolution, awakening, relic rolls
+    PvE/         Campaign unlocks and rewards
+    PvP/         Arena tiers, matchmaking, scoring
+    Persistence/ Save file and new-game seeding
+  Render/        SceneKit: model loading, placeholder rig, VFX, camera, playback
+  UI/            SwiftUI screens
+  Resources/     Where art goes
+PantheonTests/   Engine determinism, progression maths, gacha rates, arena, saves
+Docs/            ART_PIPELINE.md, DESIGN.md
+```
+
+The core is deliberately free of SwiftUI and SceneKit. The engine resolves a
+whole turn the moment an action is submitted and hands back a list of events; the
+renderer plays those back. That separation is why battles can be fast-forwarded,
+skipped, simulated headlessly for arena defence scoring, and unit-tested.
+
+`Docs/DESIGN.md` has the combat maths, the economy and the recipe for adding a
+character or a whole new pantheon.
+
+## What comes next
+
+- More of Olympus: Hera, Poseidon, Hades, Athena, Ares, Artemis, Apollo
+- The second pantheon — Egypt is the natural next one, and the leader-skill and
+  campaign systems already scope by pantheon
+- Server-authoritative arena. `ArenaService.pool(for:)` is the only seam that
+  changes; battles are already deterministic and re-verifiable from a seed
+- Guilds, a rune-farming dungeon loop, and a live-ops banner calendar
+- Audio
