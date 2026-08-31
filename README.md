@@ -1,141 +1,122 @@
-# Pantheon
+# Ground Stop
 
-A Summoners War-style gacha RPG for iOS, built in SwiftUI and SceneKit, with real
-3D characters. Greek to start — Zeus is fully built — with the roster designed
-from the ground up to span Roman, Egyptian, Norse, Chinese, Japanese, Hindu,
-Mesopotamian, Aztec, Celtic, Slavic, Yoruba and Polynesian mythology, and to
-cover gods, demigods, heroes, titans, monsters, spirits and primordials.
+A 2D airline crisis-management game. You run a small carrier. Each run is a
+30-day season, each day a real-time shift where flights depart, things break,
+and one grounded aeroplane quietly ruins three others.
 
-This repository holds the complete game base: turn-based combat, the gacha, the
-relic economy, PvE campaign, and PvP arena — all playable end to end today.
+**Every decision makes you more profitable and more fragile.** Efficiency and
+resilience are directly opposed. There are no correct answers.
 
-> The previous contents of this repo (the debt payoff scheduler) have moved to
-> [`legacy/debt-payoff-scheduler/`](legacy/debt-payoff-scheduler/). Nothing was
-> deleted.
+Open `index.html`. That is the whole game — one file, no build step, no
+dependencies, no network. Canvas 2D for everything, WebAudio for everything.
 
 ---
 
-## Running it
+## Where this is up to
 
-```bash
-open Pantheon.xcodeproj
-```
+Stages **1–6** of the build order are done and playable end to end: the board,
+the cascade, player decisions, crew duty hours, passenger connections and
+reputation, and the full season with cash and bankruptcy.
 
-Select the **Pantheon** scheme, pick any iPhone simulator or a device, and run.
-Xcode 16+, iOS 17+. No package dependencies, no CocoaPods, no build script.
+Not built, deliberately: standing procedures (stage 7), airline types and the
+rival (stage 8), the route map, the gate view, and everything in the
+out-of-scope list. Stage 7 is next, once 1–6 have been played enough to know
+whether they are actually fun — that judgement is yours, not mine.
 
-```bash
-xcodebuild -scheme Pantheon -destination 'platform=iOS Simulator,name=iPhone 15' test
-```
+## Playing it
 
-If the project file ever gets mangled by a merge, `xcodegen generate` rebuilds it
-from `project.yml`.
+Tap **BEGIN SEASON**. The day runs 06:00 to 24:00. Pause whenever you like: it
+costs nothing and the game expects you to.
 
-## It runs with zero art
+- **Tap any flight** for its aircraft, its crew's duty clock, and — the number
+  that matters — the ground time between each leg of that tail's day.
+- **Four levers**, each of which costs something: swap a tail, hold a departure,
+  call a reserve crew, cancel the flight.
+- **Two reserve crews a day.** The question is never whether one works. It is
+  whether you will want it more at 19:00.
+- The day ends with a wire report. The operational numbers are today's; the
+  reputation story is **yesterday's**. You can fix the operation and still watch
+  the story break tomorrow.
 
-This is the part worth knowing before you export anything. Every character that
-has no model loads a **procedural placeholder rig** — correctly sized for its
-archetype, tinted to its element, with the same attachment-point node names a
-real rig exposes. It animates, takes hits, dies and gets summoned on a beam.
+### The three things worth understanding
 
-So combat pacing, camera work, VFX timing and every screen in the app are already
-finished and testable. Dropping `zeus.usdz` into `Pantheon/Resources/Models/`
-replaces the placeholder with no code change. **More → 3D assets** in the app
-shows a green dot for every character that has a real model and a grey one for
-every character still standing in.
+**Slack absorbs cascades.** A 40-minute delay vanishes into a 70-minute turn and
+lands whole on a 30-minute one. The flight sheet shows the ground time before
+every leg, colour-coded, because you cannot make that judgement without it.
 
-## What you need to make
+**Ground slack and duty slack pull opposite ways.** Generous turns absorb delays
+but eat the crew's 14-hour clock. Each of the six rotations sits somewhere
+different on that line — N688GS has both, N118GS has all the ground slack and no
+duty margin, N340GS is the reverse. Learn which is which; the schedule never
+changes.
 
-The full specification — scale, orientation, materials, rig node names, the
-animation clip list, and the 3D AI Studio → Blender → Mixamo → USDZ route — is in
-**[`Docs/ART_PIPELINE.md`](Docs/ART_PIPELINE.md)**. The short version, for Zeus:
+**Delays become cancellations.** A crew that cannot legally finish the trip does
+not fly it, and a cancellation costs far more than a delay and hurts far more.
+That conversion is the whole puzzle.
 
-| File | Folder |
+## The numbers
+
+Tuned by simulation, not by feel — see below. As they stand:
+
+| | |
 |---|---|
-| `zeus.usdz` — rigged, 2.05 m, Y-up, facing +Z, origin at the feet, animations embedded | `Pantheon/Resources/Models/` |
-| `portrait_zeus.png` — 1024×1024 | `Pantheon/Resources/Portraits/` |
-| `banner_olympus_rising.png` — 1284×800 | `Pantheon/Resources/Portraits/` |
-| `spark.png` — 128×128 white radial glow | `Pantheon/Resources/Portraits/` |
-| `olympus_peak.scn` + `olympus_peak_ibl.hdr` — optional | `Pantheon/Resources/Environments/` |
+| Break-even | ≈ 82% on time, at the starting reputation of 70 |
+| A clean day at rep 70 | about +$15,000 |
+| Reputation | drives load factor, which drives everything |
+| Season | calm for 3 days, ramps to full by day 19, winter from day 20 |
 
-Animation clips the rig needs, by exact name: `idle`, `idle_combat`,
-`attack_basic`, `attack_heavy`, `cast_loop`, `cast_release`, `ultimate`,
-`hit_react`, `death`, `victory`, `summon_reveal`.
+Against 40 simulated seasons of competent play: 11 bankruptcies, **9 of them on
+days 23–29**, survivors finishing around $250,000. Play passively and you are
+gone by day 12. Defer every maintenance check and you go bankrupt half again as
+often as someone who pays for them.
 
----
+Everything tunable lives in the `CFG` block at the top of the script.
 
-## What is built
+## Verifying changes
 
-**Combat.** Attack-bar turn order, five-element wheel, crits, glancing hits,
-multi-hit skills, defence-ignore, 24 buffs and debuffs, shields, counterattacks,
-revives, passive skills with triggers, and a full AI that scores every
-(skill, target) pair. Fully deterministic from a seed, so battles replay exactly.
+The simulation never touches the canvas or the audio context, so it runs
+headless. `tools/simcheck.mjs` loads the same script the browser does, with no
+`document` and no `window`, and plays whole seasons against four stand-in
+players. It is a dev tool — the game itself still has no dependencies.
 
-**Zeus.** Three active skills, an awakened passive, a leader skill, an evolution
-path and an awakening cost:
-
-- **Arc Lightning** — three strikes, each with a chance to Slow
-- **Thunderbolt** — ignores 30% DEF, 70% Stun
-- **Aegis of Olympus** — hits everything, scales with the debuffs on each target,
-  50% Stun, and buffs the team's attack
-- **Stormlord** *(awakened)* — a kill resets his cooldowns and buffs his attack
-- **Leader** — +33% ATK to Greek allies
-
-**Gacha.** Three scroll types with published rates, banner rate-ups, hard pity at
-90, a soft-pity ramp from 67, the featured-unit guarantee, duplicates converting
-to skill-ups, and a 3D summon reveal.
-
-**Relics.** Six slots, 16 sets, main and sub stats, upgrade rolls to +15,
-auto-equip scored per combat role, and set effects resolved inside the engine.
-
-**Campaign.** Two chapters of Olympus, hand-authored and generated, with energy
-costs, star ratings, first-clear rewards and gated progression.
-
-**Arena.** Rank points with Elo-flavoured swings, six tiers with floors,
-attack-attempt regeneration, a defence team the AI plays, and a defence simulator
-that tells you how often your team actually holds.
-
-**Progression.** Levelling, evolution to 6★, awakening with element essences,
-skill-ups, and an economy of four currencies.
-
-**Persistence.** Versioned, atomic, migrating saves. A corrupt file is quarantined
-rather than deleted.
-
-## Layout
-
-```
-Pantheon/
-  App/           GameStore — the single source of truth — and the tab shell
-  Core/
-    Models/      Units, stats, skills, statuses, relics, the player
-    Data/        UnitDatabase (Zeus + enemies), StageDatabase
-    Battle/      The engine, damage maths, AI, seeded RNG, event stream
-    Gacha/       Banners, rates, pity
-    Progression/ Levelling, evolution, awakening, relic rolls
-    PvE/         Campaign unlocks and rewards
-    PvP/         Arena tiers, matchmaking, scoring
-    Persistence/ Save file and new-game seeding
-  Render/        SceneKit: model loading, placeholder rig, VFX, camera, playback
-  UI/            SwiftUI screens
-  Resources/     Where art goes
-PantheonTests/   Engine determinism, progression maths, gacha rates, arena, saves
-Docs/            ART_PIPELINE.md, DESIGN.md
+```bash
+node tools/simcheck.mjs 40          # 40 seasons per policy: bankruptcies, on-time, cash
+node tools/simcheck.mjs --arc competent 30   # median net, balance, delays day by day
+node tools/simcheck.mjs --day seed1          # one day, minute by minute, every event
 ```
 
-The core is deliberately free of SwiftUI and SceneKit. The engine resolves a
-whole turn the moment an action is submitted and hands back a list of events; the
-renderer plays those back. That separation is why battles can be fast-forwarded,
-skipped, simulated headlessly for arena defence scoring, and unit-tested.
+Change a number in `CFG` and re-run it. The arc view is the one that tells you
+whether the season still has a shape.
 
-`Docs/DESIGN.md` has the combat maths, the economy and the recipe for adding a
-character or a whole new pantheon.
+## How it is put together
 
-## What comes next
+One `state` object of plain serializable objects; no classes, no framework.
 
-- More of Olympus: Hera, Poseidon, Hades, Athena, Ares, Artemis, Apollo
-- The second pantheon — Egypt is the natural next one, and the leader-skill and
-  campaign systems already scope by pantheon
-- Server-authoritative arena. `ArenaService.pool(for:)` is the only seam that
-  changes; battles are already deterministic and re-verifiable from a seed
-- Guilds, a rune-farming dungeon loop, and a live-ops banner calendar
-- Audio
+| | |
+|---|---|
+| `recomputeChain` | the cascade. A flight's earliest departure is the latest of its schedule, its aircraft getting back and turned, its aircraft being repaired, and any hold. Recomputing the whole tail chain from that rule means delays propagate automatically and can never get out of step with the model. |
+| `crewLegality` | duty and flight-time limits, checked at the moment of departure |
+| `simTick` | one in-game minute |
+| `setCell` / `tickCell` | the split-flap. Each character wheel spins *forward* through the alphabet to its new letter, so A→B is instant and Z→B takes a moment. Characters that did not change do not move. |
+| `revealAt` | staggers when the board is *allowed* to show a change. The model is already correct; this is the only thing between the player and being handed the whole cascade at once. |
+
+Chains are keyed on the aircraft rather than the rotation, which is what makes a
+tail swap a single reassignment the cascade picks up for free.
+
+### iOS
+
+Built for portrait Safari under a Capacitor wrapper. Audio context is created on
+the first tap, never on load. `requestAnimationFrame` only. Canvas is sized to
+`devicePixelRatio`. Safe-area insets are read from a hidden probe element,
+because CSS knows them and JS does not. Double-tap zoom, pull-to-refresh and
+rubber-banding are all off. Every touch target is at least 44pt. The loop pauses
+on `visibilitychange`, because phone calls happen mid-day.
+
+Measured at a steady 60fps in headless Chromium at 3× device pixel ratio.
+
+## Known rough edges
+
+- Economy numbers are tuned against a simulated player, not a real one. Expect
+  to move them once someone actually plays it.
+- Audio is synthesized and unmixed; the split-flap click carries most of it.
+- No tutorial. The title screen carries three sentences and that is all.
