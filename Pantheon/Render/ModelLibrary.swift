@@ -239,20 +239,34 @@ enum MaterialTuner {
 
     /// Tints one instance of a shared model toward its element colour.
     ///
-    /// This is the thing that turns one export into five characters. Two
-    /// details make it work:
+    /// This is the thing that turns one export into five characters, and it
+    /// takes two passes because one is not enough on a dark character.
     ///
-    /// `SCNNode.clone()` shares geometry — and therefore materials — with the
-    /// original, so tinting in place would repaint every Anubis on the board,
-    /// including the opponent's. Each instance gets its own copy first.
+    /// **Multiply** handles the light areas. The wash is mostly white — a
+    /// full-strength multiply would flatten the gold, the lapis and the white
+    /// linen into a single colour, whereas about a third keeps the material
+    /// identity and still reads, across a board, as "the fire one".
     ///
-    /// And the wash is mostly white. A full-strength multiply would flatten the
-    /// gold, the lapis and the white linen into a single colour; at around a
-    /// third it keeps the material identity and still reads, across a board, as
-    /// "the fire one".
-    static func applyElementTint(_ node: SCNNode, hex: String, strength: CGFloat = 0.35) {
+    /// **Emission** handles the dark areas, and it is the reason both exist.
+    /// Multiplying cannot lift a near-black surface: black times anything is
+    /// black, so Anubis's jackal head would come out identical in all five
+    /// elements. A little additive light in the element colour tints exactly
+    /// the parts multiply cannot reach. Kept low, because emission applies
+    /// flatly and too much of it makes the whole figure look like a decal.
+    ///
+    /// One structural detail: `SCNNode.clone()` shares geometry — and therefore
+    /// materials — with the original, so tinting in place would repaint every
+    /// Anubis on the board including the opponent's. Each instance gets its own
+    /// copy of the materials first.
+    static func applyElementTint(
+        _ node: SCNNode,
+        hex: String,
+        strength: CGFloat = 0.35,
+        glow: CGFloat = 0.13
+    ) {
         guard let tint = UIColor(hex: hex) else { return }
         let wash = UIColor.white.mixed(with: tint, amount: strength)
+        let lift = UIColor.black.mixed(with: tint, amount: glow)
 
         node.enumerateHierarchy { child, _ in
             guard let geometry = child.geometry,
@@ -260,6 +274,11 @@ enum MaterialTuner {
             unique.materials = geometry.materials.map { source in
                 guard let material = source.copy() as? SCNMaterial else { return source }
                 material.multiply.contents = wash
+                // Never overwrite a real emissive map the export shipped with —
+                // glowing eyes and runes are authored, not incidental.
+                if material.emission.contents == nil {
+                    material.emission.contents = lift
+                }
                 return material
             }
             child.geometry = unique

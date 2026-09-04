@@ -278,10 +278,12 @@ the texturing step on the same mesh with a colour line appended:
 | Dark | "black and dark silver, cold teal glow in the eyes and collar" | `#7FE0C8` |
 
 If you skip this entirely the game still ships five visually distinct units.
-`MaterialTuner.applyElementTint` copies each instance's materials and multiplies
-them by a mostly-white wash biased toward the element colour, so the gold stays
-gold and the linen stays linen while the whole figure reads warm, cold or pale
-across a board. Do the per-element textures when you have time, not before.
+`MaterialTuner.applyElementTint` copies each instance's materials and tints them
+two ways: a mostly-white **multiply** wash for the lit areas, so the gold stays
+gold and the linen stays linen, and a small additive **emission** in the element
+colour for the dark ones. The second pass exists because multiply cannot lift a
+near-black surface — without it Anubis's jackal head would be identical in all
+five elements, which is not enough separation for a collection mechanic. Do the per-element textures when you have time, not before.
 
 **You do need one texture, though.** Untextured, the tint has nothing to tint:
 all five variants render as the same grey statue with differently coloured
