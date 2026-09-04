@@ -190,6 +190,33 @@ If 1–3 are clean, texture it. If any failed, re-roll the mesh from the same
 image before touching the prompt — a concept that already passed the 2D checks
 is not the problem.
 
+### Conversion settings
+
+Worth writing down, because these get repeated once per character family.
+
+| Setting | Geometry pass | Texture pass |
+|---|---|---|
+| Model | Latest available | Latest available |
+| Quality | Highest tier | Highest tier |
+| Generate texture | **Off** | On |
+| Texture size | *(no effect — ignore it)* | **2048** |
+
+The highest quality tier earns its cost on the geometry pass specifically: it is
+the pass that decides whether the model can be rigged at all, and one mesh
+carries all five elemental variants.
+
+**2048, not 4096.** A 4096 map is 64 MB uncompressed and roughly 8–16 MB after
+iOS texture compression. A PBR character wants base colour, normal and
+roughness/metal — three or four maps — so 4096 is about 48 MB per character
+against a 24 MB budget, with up to ten characters on screen. At 2048 it is around
+12 MB and comfortable. The on-screen argument agrees: the character occupies a
+few hundred pixels even in a cinematic push-in, so 4096 buys texel density the
+display cannot resolve.
+
+The one reason to generate at 4096 is to keep a master for hand-editing the five
+colourways. In that case keep it in the art source and downsample to 2048 for the
+bundle.
+
 ### The five elemental variants
 
 You do not need five models. If you want five distinct *textures*, re-run only
