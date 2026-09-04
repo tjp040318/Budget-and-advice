@@ -36,19 +36,54 @@ final class ModelLibrary {
 
     // MARK: - Public API
 
+    /// How much geometry to ask for.
+    ///
+    /// A raw conversion is heavy — the first Anubis landed near 200k triangles,
+    /// which is fine for one character on a summon screen and far too much for
+    /// ten of them behind a bloom and ambient-occlusion pass. Rather than force
+    /// the art down to the worst case, the loader will use `<asset>_lod.usdz`
+    /// when one exists and the stage is crowded, and silently fall back to the
+    /// full model when it does not. Shipping the low-detail export is therefore
+    /// optional and can happen long after the character does.
+    enum DetailLevel: String {
+        case high
+        case low
+
+        /// Suffix appended to the asset name when looking for the file.
+        var suffix: String { self == .low ? "_lod" : "" }
+    }
+
+    /// Below this many combatants, everything renders at full detail.
+    static let crowdedStageThreshold = 4
+
+    static func detail(forCombatantCount count: Int) -> DetailLevel {
+        count > crowdedStageThreshold ? .low : .high
+    }
+
     /// Returns a fresh copy of the model for a spec, ready to be added to a scene.
     /// Always returns a node — never nil — so the renderer has no missing-asset path.
-    func node(for spec: ModelSpec, archetype: Archetype, element: Element) -> SCNNode {
+    func node(
+        for spec: ModelSpec,
+        archetype: Archetype,
+        element: Element,
+        detail: DetailLevel = .high
+    ) -> SCNNode {
         let container = SCNNode()
         container.name = "unit_\(spec.assetName)"
 
+        // Ask for the reduced mesh first when the stage is busy, but never fail
+        // over it: a missing `_lod` file just means the full model is used.
+        let assetName = detail == .low && bundleURL(for: spec.assetName + DetailLevel.low.suffix) != nil
+            ? spec.assetName + DetailLevel.low.suffix
+            : spec.assetName
+
         let model: SCNNode
         var isStandIn = false
-        if let cached = cache[spec.assetName] {
+        if let cached = cache[assetName] {
             model = cached.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex)
-        } else if let loaded = loadFromBundle(spec.assetName) {
-            cache[spec.assetName] = loaded
+        } else if let loaded = loadFromBundle(assetName) {
+            cache[assetName] = loaded
             model = loaded.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex)
         } else {

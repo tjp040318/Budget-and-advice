@@ -4,6 +4,7 @@ Drop `.usdz` files here, named after the unit's `assetName`:
 
 ```
 anubis.usdz                one file, and it serves all five elemental variants
+anubis_lod.usdz            optional reduced mesh, used automatically in a 5v5
 shabti.usdz
 serpopard.usdz
 sun_scarab.usdz

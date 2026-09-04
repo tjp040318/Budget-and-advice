@@ -157,8 +157,12 @@ final class BattleSceneController: NSObject {
     /// Positions both teams. Players face +Z from the near side; opponents face
     /// -Z from the far side, staggered so nobody is hidden behind anybody.
     private func place(combatants: [Combatant]) {
+        // A 5v5 is ten characters plus a full post stack; a 1v1 can afford the
+        // detailed mesh. The loader falls back to the full model when no reduced
+        // export has been shipped.
+        let detail = ModelLibrary.detail(forCombatantCount: combatants.count)
         for combatant in combatants {
-            let node = UnitNode(combatant: combatant)
+            let node = UnitNode(combatant: combatant, detail: detail)
             node.position = position(for: combatant)
             node.eulerAngles.y = combatant.side == .player ? 0 : .pi
             scene.rootNode.addChildNode(node)

@@ -217,6 +217,21 @@ The order is not negotiable, because each step invalidates the last:
 Rig first and decimate after, and the skin weights are destroyed. Texture first
 and decimate after, and the UVs are invalidated and the bake is wasted.
 
+### Shipping a heavy mesh anyway
+
+A conversion that looks right is worth more than one that hits a budget. If the
+good-looking remesh comes in heavy — the first Anubis landed at 99,381 quads,
+about 199k triangles, roughly twice the ceiling — ship it and pay the debt later
+rather than remeshing until the fingers fall off.
+
+The loader supports a second, reduced export. Drop `<asset>_lod.usdz` next to
+`<asset>.usdz` and it is used automatically once a battle has more than four
+combatants; a 1v1 and the summon screen keep the detailed mesh. If the file is
+absent, nothing happens and the full model is used everywhere. So the low-detail
+export is optional, and can be made months after the character.
+
+Do it when the roster is big enough that a 5v5 drops frames, not before.
+
 If the remesh at 30k quads still looks wrong, go to 100k **triangles** instead —
 triangles hold thin features better than quads at a given count, and 100k still
 ships. The trade is joint deformation, which is worth giving up for detail that

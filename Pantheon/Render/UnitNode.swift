@@ -24,7 +24,7 @@ final class UnitNode: SCNNode {
     private var currentClip: AnimationClip = .idleCombat
     private var barWidth: CGFloat { CGFloat(spec.height) * 0.5 }
 
-    init(combatant: Combatant) {
+    init(combatant: Combatant, detail: ModelLibrary.DetailLevel = .high) {
         // Everything is built into locals first: Swift forbids touching `self`
         // before `super.init()`, so the scene graph is assembled here and wired
         // up immediately afterwards.
@@ -36,7 +36,8 @@ final class UnitNode: SCNNode {
         let container = ModelLibrary.shared.node(
             for: combatant.model,
             archetype: combatant.archetype,
-            element: combatant.element
+            element: combatant.element,
+            detail: detail
         )
 
         // Health bar: a dark plate with a coloured fill that scales from its
