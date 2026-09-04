@@ -93,7 +93,7 @@ scene explicitly removed.
 | Art style | Stylized if offered, otherwise Realistic | The genre reads stylized; realistic scans look wrong beside synthesized VFX |
 | Symmetry | On | It is a symmetrical character and this markedly improves limbs |
 | PBR / textures | On, 2048 | The renderer forces physically-based shading on import |
-| Target polycount | 30k–40k triangles | Ten characters on screen on a phone |
+| Target polycount | 30k quads / ~60k triangles | Ten characters on screen on a phone |
 | Topology | Quad, if the remesh step offers it | Deforms far better when animated |
 | Export | **USDZ** (GLB and FBX also work) | USDZ is SceneKit's native path |
 
@@ -200,13 +200,15 @@ That is not a stylistic quibble. 1.54M vertices is roughly 110 MB of vertex and
 index data for one character; ten of them in a 5v5 is over a gigabyte before a
 single texture loads. It will not run, and it will not load.
 
-**Remesh to ~30k triangles before doing anything else**, and take quad topology
-if the tool offers it — edge loops around the shoulder and hip deform
-predictably, whereas triangle soup pinches once the character is animated.
+**Remesh before doing anything else** — but reduce gently. Target 30k *quads*,
+which is about 60k triangles and a 50:1 reduction. Quad topology matters here:
+edge loops around the shoulder and hip deform predictably, whereas triangle soup
+pinches once the character is animated. Going straight to 10k or 20k is a 150:1
+to 300:1 reduction and it will destroy the fingers, the ears and the kilt.
 
 The order is not negotiable, because each step invalidates the last:
 
-1. **Remesh to ~30k.** Quad if offered.
+1. **Remesh gently.** 30k quads (≈60k triangles), Adaptive, Quad topology.
 2. Re-check the silhouette survived — especially fingers and ears.
 3. **Then** texture, at 2048.
 4. **Then** rig.
@@ -215,10 +217,10 @@ The order is not negotiable, because each step invalidates the last:
 Rig first and decimate after, and the skin weights are destroyed. Texture first
 and decimate after, and the UVs are invalidated and the bake is wasted.
 
-If the tool's remesh will not go low enough, Blender's Decimate modifier at a
-0.01 ratio takes 3M to 30k in one pass. Either way some surface detail is lost —
-kilt pleats, muscle definition. On a phone, where the character stands a few
-hundred pixels tall, that detail was never visible.
+If the remesh at 30k quads still looks wrong, go to 100k **triangles** instead —
+triangles hold thin features better than quads at a given count, and 100k still
+ships. The trade is joint deformation, which is worth giving up for detail that
+is actually visible.
 
 ### Conversion settings
 
@@ -372,13 +374,33 @@ into the character's `ModelSpec`.
 
 ## 5. Budgets
 
+The binding constraint is **memory, not triangles**, and it is worth seeing the
+actual numbers before reducing a mesh — an over-tight budget produces a bad
+remesh, which is a worse outcome than a slightly heavy one.
+
+| Mesh | Vertex + index data per character | Ten on screen |
+|---|---|---|
+| 3,000,000 faces (a raw image-to-3D result) | ~110 MB | ~1.1 GB — will not load |
+| 100,000 | ~3.5 MB | 35 MB — fine |
+| 60,000 | ~2.1 MB | 21 MB — comfortable |
+| 20,000 | ~0.7 MB | 7 MB — more than is needed |
+
 | Thing | Budget |
 |---|---|
-| Triangles per character | 15k–40k (a primordial like Apep may go to 70k) |
+| Triangles per character | **40k–80k comfortable, 100k ceiling for a hero** |
 | Characters on screen | 10 (5 v 5) |
-| Total scene triangles | Under 400k |
 | Texture memory per character | Under 24 MB |
 | Target frame rate | 60fps on iPhone 12 and newer |
+
+**Reduce gently.** A raw conversion is around 3M faces; going straight to 20k is
+a 150:1 reduction and it destroys fingers, ears and cloth edges. 30k **quads**
+(≈60k triangles) is a 50:1 reduction, ships comfortably, and keeps the quad
+topology that makes shoulders and hips deform cleanly. Start there.
+
+If a low-poly must match the sculpt exactly, the answer is a **normal-map bake**:
+keep the dense mesh as a high-poly, bake its surface into a normal map on the
+low-poly, and the low-poly shades as though the geometry is still there. Blender
+does this free. It is a refinement, not a prerequisite.
 
 ## 6. Heights
 
