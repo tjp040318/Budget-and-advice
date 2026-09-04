@@ -260,8 +260,15 @@ the texturing step on the same mesh with a colour line appended:
 | Light | "black and white gold, sun-disc motifs, bright polished surfaces" | `#F5D96B` |
 | Dark | "black and dark silver, cold teal glow in the eyes and collar" | `#7FE0C8` |
 
-If you skip this entirely the game still ships five visually distinct units — it
-tints one model per element. Do the textures when you have time, not before.
+If you skip this entirely the game still ships five visually distinct units.
+`MaterialTuner.applyElementTint` copies each instance's materials and multiplies
+them by a mostly-white wash biased toward the element colour, so the gold stays
+gold and the linen stays linen while the whole figure reads warm, cold or pale
+across a board. Do the per-element textures when you have time, not before.
+
+**You do need one texture, though.** Untextured, the tint has nothing to tint:
+all five variants render as the same grey statue with differently coloured
+ground rings. One textured export is the minimum, and it covers the family.
 
 ---
 

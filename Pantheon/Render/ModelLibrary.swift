@@ -21,7 +21,14 @@ final class ModelLibrary {
     /// Extensions tried in order.
     static let searchExtensions = ["usdz", "usdc", "scn", "dae"]
 
+    /// Untinted source nodes, keyed by asset name. A real export is one shared
+    /// mesh for a whole elemental family, so the source is kept neutral and the
+    /// element colour is applied per instance below.
     private var cache: [String: SCNNode] = [:]
+    /// Placeholders build themselves in their element's colour, so they are
+    /// cached per colour — otherwise the first variant to be created would set
+    /// the colour for all five.
+    private var placeholderCache: [String: SCNNode] = [:]
     private var animationCache: [String: [AnimationClip: CAAnimation]] = [:]
     private let queue = DispatchQueue(label: "com.pantheon.modellibrary", attributes: .concurrent)
 
@@ -38,12 +45,16 @@ final class ModelLibrary {
         let model: SCNNode
         if let cached = cache[spec.assetName] {
             model = cached.clone()
+            MaterialTuner.applyElementTint(model, hex: spec.auraHex)
         } else if let loaded = loadFromBundle(spec.assetName) {
             cache[spec.assetName] = loaded
             model = loaded.clone()
+            MaterialTuner.applyElementTint(model, hex: spec.auraHex)
         } else {
-            let placeholder = PlaceholderRig.make(spec: spec, archetype: archetype, element: element)
-            cache[spec.assetName] = placeholder
+            let key = spec.assetName + "|" + spec.auraHex
+            let placeholder = placeholderCache[key]
+                ?? PlaceholderRig.make(spec: spec, archetype: archetype, element: element)
+            placeholderCache[key] = placeholder
             model = placeholder.clone()
         }
 
@@ -180,6 +191,35 @@ enum MaterialTuner {
                 material.diffuse.wrapT = .repeat
                 material.diffuse.mipFilter = .linear
             }
+        }
+    }
+
+    /// Tints one instance of a shared model toward its element colour.
+    ///
+    /// This is the thing that turns one export into five characters. Two
+    /// details make it work:
+    ///
+    /// `SCNNode.clone()` shares geometry — and therefore materials — with the
+    /// original, so tinting in place would repaint every Anubis on the board,
+    /// including the opponent's. Each instance gets its own copy first.
+    ///
+    /// And the wash is mostly white. A full-strength multiply would flatten the
+    /// gold, the lapis and the white linen into a single colour; at around a
+    /// third it keeps the material identity and still reads, across a board, as
+    /// "the fire one".
+    static func applyElementTint(_ node: SCNNode, hex: String, strength: CGFloat = 0.35) {
+        guard let tint = UIColor(hex: hex) else { return }
+        let wash = UIColor.white.mixed(with: tint, amount: strength)
+
+        node.enumerateHierarchy { child, _ in
+            guard let geometry = child.geometry,
+                  let unique = geometry.copy() as? SCNGeometry else { return }
+            unique.materials = geometry.materials.map { source in
+                guard let material = source.copy() as? SCNMaterial else { return source }
+                material.multiply.contents = wash
+                return material
+            }
+            child.geometry = unique
         }
     }
 }
