@@ -162,6 +162,34 @@ is worthless here however good it looks — the auto-rig will fail at the should
 Then feed the chosen image to Meshy's Image-to-3D and continue from step 2 of the
 pipeline below.
 
+### Reviewing the mesh before you texture it
+
+Generate the **untextured mesh first**. Texturing is the slow half, and the risk
+in this pipeline is geometry: a model whose arms welded to its ribs is unriggable
+and no texture repairs it. A good mesh can always be re-textured; a good texture
+cannot be re-meshed.
+
+That trade is even more lopsided here than usual, because the five elemental
+variants share one mesh and differ only by an aura tint. The geometry is doing
+five characters' worth of work; the base texture only has to be neutral enough
+to accept a tint.
+
+Check in this order. The first three are pass/fail:
+
+1. **Armpit gap.** Actual separated surfaces, or did the arms weld to the ribs?
+2. **Between the legs.** Same question. A fused crotch kills the hip rig.
+3. **The back.** Single-image conversion *invents* everything it cannot see, and
+   the back of the head and the fall of the kilt are where it shows. Orbit the
+   model before committing.
+4. **Fingers.** Separated, or one mitten? A mitten is survivable for a game
+   character at this scale; fused arms are not.
+5. **Ears.** Distinct, or melted into the skull silhouette?
+6. **Feet.** Flat on the ground plane, and no invisible pedestal underneath.
+
+If 1–3 are clean, texture it. If any failed, re-roll the mesh from the same
+image before touching the prompt — a concept that already passed the 2D checks
+is not the problem.
+
 ### The five elemental variants
 
 You do not need five models. If you want five distinct *textures*, re-run only
