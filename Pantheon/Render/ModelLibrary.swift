@@ -43,6 +43,7 @@ final class ModelLibrary {
         container.name = "unit_\(spec.assetName)"
 
         let model: SCNNode
+        var isStandIn = false
         if let cached = cache[spec.assetName] {
             model = cached.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex)
@@ -51,6 +52,7 @@ final class ModelLibrary {
             model = loaded.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex)
         } else {
+            isStandIn = true
             let key = spec.assetName + "|" + spec.auraHex
             let placeholder = placeholderCache[key]
                 ?? PlaceholderRig.make(spec: spec, archetype: archetype, element: element)
@@ -59,11 +61,17 @@ final class ModelLibrary {
         }
 
         model.name = "model"
-        // Normalise the export: correct the facing, lift it to stand on the
-        // ground plane, and scale it so a Titan reads as a Titan.
+        // Normalise the export: correct the facing and lift it onto the ground
+        // plane.
         model.eulerAngles.y += spec.yawCorrection * .pi / 180
         model.position.y += spec.yOffset
-        let scale = spec.scale * archetype.modelScale
+
+        // The archetype scale applies to the STAND-IN ONLY. Placeholders are all
+        // built to one size and lean on it to tell a Titan from a Spirit. A real
+        // export is authored at its true height — the table in
+        // Docs/ART_PIPELINE.md — so scaling it again would make every god 15%
+        // too tall and every primordial 60%.
+        let scale = spec.scale * (isStandIn ? archetype.modelScale : 1.0)
         model.scale = SCNVector3(scale, scale, scale)
 
         container.addChildNode(model)

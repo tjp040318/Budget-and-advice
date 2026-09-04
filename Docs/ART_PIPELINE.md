@@ -385,6 +385,12 @@ into the character's `ModelSpec`.
 These drive camera framing and health-bar placement, so a wrong height reads as
 a bug rather than as a choice.
 
+**Export at the real height.** Set it at download time — Meshy's *Resize* toggle
+takes a height in centimetres, so Anubis is `205`. The renderer does not rescale
+a loaded model; the archetype scale in `Archetype.modelScale` applies to the
+procedural stand-in only, which is built at a uniform size and needs it to tell a
+Titan from a Spirit. Export at the table height and it is correct.
+
 | Archetype | Height | In this roster |
 |---|---|---|
 | Spirit | 1.7 m | Shabti |
