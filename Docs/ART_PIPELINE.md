@@ -37,7 +37,9 @@ Enemy models (`shabti`, `serpopard`, `sun_scarab`, `sandstone_sentinel`,
 
 ---
 
-## 2. The Meshy prompt
+## 2. The prompts
+
+### Route A: straight to Text-to-3D
 
 Paste this into **Text to 3D**. It is written the way Meshy responds best: one
 subject, described head to feet, with the pose and the materials stated and the
@@ -97,6 +99,68 @@ scene explicitly removed.
 
 Generate, then use the **refine / high-quality** pass before exporting — the
 preview mesh is not good enough to rig.
+
+### Route B: generate a concept image first, then Image-to-3D
+
+Usually the better path for a character. You art-direct in 2D, where a bad
+result costs seconds, and only convert once the silhouette is right.
+
+The image prompt is **not** the same as the text-to-3D prompt. Three clauses
+exist only because a 2D image is about to become geometry and texture:
+
+- **Flat, shadowless lighting.** Whatever lighting is in the image is baked into
+  the model's texture. A dramatic rim light becomes a permanent white stripe
+  that cannot be relit. This is the most common image-to-3D mistake.
+- **Orthographic front view.** Perspective distortion becomes wrong geometry — a
+  slightly low camera gives a model with oversized feet.
+- **Plain mid-grey background.** Contrasts with both the black head and the white
+  kilt, so background removal does not eat the silhouette. White or black each
+  lose one half of him.
+
+> **Image prompt**
+>
+> ```
+> Full-body character concept of Anubis, the Egyptian jackal-headed god of
+> the dead. Straight-on front view, orthographic, no perspective distortion,
+> camera at chest height. Symmetrical A-pose: arms lowered and held away from
+> the body with a clear gap at the armpits, palms facing the thighs, fingers
+> separated, legs straight and shoulder-width apart, feet flat.
+>
+> Sleek matte-black jackal head, long narrow muzzle, tall upright pointed
+> ears, pale glowing eyes. Athletic humanoid male body, dark bronze skin.
+> Pleated white linen kilt with a gold waistband. Broad ornate gold and
+> lapis-lazuli usekh collar across the chest and shoulders. Gold armbands at
+> the biceps, gold anklets. Striped nemes headcloth falling behind the ears
+> onto the shoulders, close to the head. Hands open and completely empty.
+>
+> Flat even studio lighting, no cast shadows, no rim light, no dramatic
+> contrast. Plain solid mid-grey background. Whole figure visible with margin
+> above the head and below the feet. Sharp focus throughout, no depth of
+> field.
+> ```
+>
+> **Negative prompt**
+>
+> ```
+> staff, spear, weapon, scales, ankh, props, held objects, base, pedestal,
+> plinth, ground shadow, background scenery, hieroglyphs, text, watermark,
+> two characters, wings, cape, flowing fabric, arms raised, arms crossed,
+> dynamic pose, three-quarter view, low angle, dramatic lighting
+> ```
+
+**Image generator settings**
+
+| Setting | Use | Why |
+|---|---|---|
+| Model | The highest-adherence tier available | This prompt holds eight hard constraints at once. That is a prompt-adherence problem, not an aesthetics one — spend the good tier on the image you will actually convert, and use a cheap tier to explore silhouettes |
+| Aspect ratio | **3:4** | A-pose arms make the figure about 0.6x as wide as tall, so 3:4 frames it with margin. 9:16 clips hands or shrinks the figure |
+
+Generate three or four and choose on **silhouette clarity and the gap under the
+arms**, not on which looks prettiest. A render with the arms touching the torso
+is worthless here however good it looks — the auto-rig will fail at the shoulder.
+
+Then feed the chosen image to Meshy's Image-to-3D and continue from step 2 of the
+pipeline below.
 
 ### The five elemental variants
 
