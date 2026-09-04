@@ -95,7 +95,7 @@ scene explicitly removed.
 | PBR / textures | On, 2048 | The renderer forces physically-based shading on import |
 | Target polycount | 30k quads / ~60k triangles | Ten characters on screen on a phone |
 | Topology | Quad, if the remesh step offers it | Deforms far better when animated |
-| Export | **USDZ** (GLB and FBX also work) | USDZ is SceneKit's native path |
+| Export | **USDZ** | SceneKit's native path, and Meshy exports it directly |
 
 Generate, then use the **refine / high-quality** pass before exporting — the
 preview mesh is not good enough to rig.
@@ -294,16 +294,14 @@ ground rings. One textured export is the minimum, and it covers the family.
 ## 3. Getting from Meshy to the game
 
 1. **Generate** with the prompt above. Refine, then export.
-2. **Rig.** If your Meshy plan includes rigging and animation, use it — it is
-   built for exactly this humanoid shape. Otherwise export FBX and run it
-   through **Mixamo**, which auto-rigs and gives you the clip library free.
-3. **Rename the clips** to the exact names in the table below.
-4. **Check the transform in Blender**: real metres, origin between the feet on
-   the ground plane, facing +Z, all transforms applied.
-5. **Convert to USDZ** — Apple's Reality Converter, Blender's USD exporter, or
-   `usdzconvert`.
-6. **Drop it in** `Pantheon/Resources/Models/`. The dot on the asset screen
-   turns green. No code change.
+2. **Rig it in Meshy.** Character type humanoid; the A-pose is already what it
+   wants. Mixamo is no longer a reliable fallback — see below.
+3. **Animate.** Pick clips from Meshy's library and export one file per clip.
+4. **Set the height on export**: Resize on, 205 cm for Anubis, Origin Bottom.
+   That is what makes `scale: 1.0` correct in code.
+5. **Export USDZ** directly. No Reality Converter, no Blender round-trip.
+6. **Drop it in** `Pantheon/Resources/Models/`, named per the clip table. The dot
+   on the asset screen turns green. No code change.
 
 ### Animation clips
 
@@ -327,30 +325,55 @@ falls back to procedural motion, so partial delivery is fine.
 **No root motion.** The engine owns positions; a clip that translates the root
 slides the character off its stage slot. Loops must be seamless. 30 fps is fine.
 
-### Mixamo clip mapping
+### Rigging and animation — stay in Meshy
 
-Mixamo's names are not the game's names. Search for the left column, export it,
-and rename the file to the right column. Anything missing falls back to
-procedural motion, so this can be done a few clips at a time.
+Meshy rigs, animates and exports USDZ, so the whole pipeline is one tool and
+there is no FBX round-trip and no format conversion.
 
-| Search Mixamo for | Save as | Priority |
+Adobe's Mixamo used to be the obvious route for this. As of 2026 it has not been
+formally discontinued, but it has had no meaningful development since the
+acquisition and has suffered an unresolved backend authentication failure since
+June 2025, so it frequently will not load at all. Treat it as unavailable.
+
+What Meshy needs, and what this model already is:
+
+| Requirement | Status here |
+|---|---|
+| Format | Already in Meshy — no import needed |
+| Pose | A-pose. Meshy notes this gives more natural shoulder skinning than T-pose |
+| Character type | Humanoid |
+| Faces | Under 100k rigs faster and skins better. A 197k mesh may still rig; reduce if it struggles |
+| Limb separation | Clear armpit and leg gaps — already checked |
+
+Export **one file per clip**. `ModelLibrary` looks for `<asset>_<clip>.usdz`
+beside `<asset>.usdz`, so a rigged base plus a handful of separately exported
+animations is exactly the layout it wants, and clips can land one at a time.
+
+### The clips to export
+
+Meshy's motion library uses its own names, so search by intent. The right column
+is the filename, and those are a contract — the loader looks them up by string.
+
+| Search the library for | Save as | Priority |
 |---|---|---|
-| Fighting Idle | `anubis_idle_combat.usdz` | **first five** |
-| Punching *or* Sword And Shield Slash | `anubis_attack_basic.usdz` | **first five** |
-| Great Sword Slash | `anubis_attack_heavy.usdz` | **first five** |
-| Standing React Small From Front | `anubis_hit_react.usdz` | **first five** |
-| Standing Death Forward | `anubis_death.usdz` | **first five** |
-| Standing 2H Magic Area Attack | `anubis_ultimate.usdz` | then |
-| Breathing Idle | `anubis_idle.usdz` | then |
-| Standing 1H Magic Attack | `anubis_cast_release.usdz` | then |
-| Magic Spell Casting | `anubis_cast_loop.usdz` | then |
-| Victory Idle *or* Cheering | `anubis_victory.usdz` | then |
-| Look Around *or* Warming Up | `anubis_summon_reveal.usdz` | then |
+| a combat idle / fighting stance | `anubis_idle_combat.usdz` | **first five** |
+| a punch or one-handed melee swing | `anubis_attack_basic.usdz` | **first five** |
+| a heavy two-handed swing or overhead strike | `anubis_attack_heavy.usdz` | **first five** |
+| a flinch / small hit reaction | `anubis_hit_react.usdz` | **first five** |
+| a death / collapse | `anubis_death.usdz` | **first five** |
+| a spellcast or area attack | `anubis_ultimate.usdz` | then |
+| a relaxed breathing idle | `anubis_idle.usdz` | then |
+| a one-handed magic cast | `anubis_cast_release.usdz` | then |
+| a channelled / looping cast | `anubis_cast_loop.usdz` | then |
+| a victory cheer | `anubis_victory.usdz` | then |
+| a slow turn or look-around | `anubis_summon_reveal.usdz` | then |
 
-Those first five give a battle that reads as finished. The rest are polish.
+Those first five give a battle that reads as finished. The rest is polish, and
+anything absent falls back to procedural motion.
 
-Tick **In Place** wherever Mixamo offers it — the engine owns positions, and a
-clip that translates the root slides the character off its stage slot.
+Pick **in-place** variants wherever the library offers them. The engine owns
+positions, and a clip that translates the root slides the character off its
+stage slot.
 
 ### Fix it in data, not in Blender
 
