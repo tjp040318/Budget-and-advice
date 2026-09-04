@@ -190,6 +190,36 @@ If 1–3 are clean, texture it. If any failed, re-roll the mesh from the same
 image before touching the prompt — a concept that already passed the 2D checks
 is not the problem.
 
+### Decimate before anything else
+
+Image-to-3D returns a **sculpt, not a game asset**. The first Anubis conversion
+came back at 3,080,176 faces and 1,540,088 vertices against a budget of 15k–40k
+triangles — about seventy-seven times over.
+
+That is not a stylistic quibble. 1.54M vertices is roughly 110 MB of vertex and
+index data for one character; ten of them in a 5v5 is over a gigabyte before a
+single texture loads. It will not run, and it will not load.
+
+**Remesh to ~30k triangles before doing anything else**, and take quad topology
+if the tool offers it — edge loops around the shoulder and hip deform
+predictably, whereas triangle soup pinches once the character is animated.
+
+The order is not negotiable, because each step invalidates the last:
+
+1. **Remesh to ~30k.** Quad if offered.
+2. Re-check the silhouette survived — especially fingers and ears.
+3. **Then** texture, at 2048.
+4. **Then** rig.
+5. Export USDZ.
+
+Rig first and decimate after, and the skin weights are destroyed. Texture first
+and decimate after, and the UVs are invalidated and the bake is wasted.
+
+If the tool's remesh will not go low enough, Blender's Decimate modifier at a
+0.01 ratio takes 3M to 30k in one pass. Either way some surface detail is lost —
+kilt pleats, muscle definition. On a phone, where the character stands a few
+hundred pixels tall, that detail was never visible.
+
 ### Conversion settings
 
 Worth writing down, because these get repeated once per character family.
