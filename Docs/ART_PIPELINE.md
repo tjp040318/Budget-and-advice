@@ -308,6 +308,45 @@ falls back to procedural motion, so partial delivery is fine.
 **No root motion.** The engine owns positions; a clip that translates the root
 slides the character off its stage slot. Loops must be seamless. 30 fps is fine.
 
+### Mixamo clip mapping
+
+Mixamo's names are not the game's names. Search for the left column, export it,
+and rename the file to the right column. Anything missing falls back to
+procedural motion, so this can be done a few clips at a time.
+
+| Search Mixamo for | Save as | Priority |
+|---|---|---|
+| Fighting Idle | `anubis_idle_combat.usdz` | **first five** |
+| Punching *or* Sword And Shield Slash | `anubis_attack_basic.usdz` | **first five** |
+| Great Sword Slash | `anubis_attack_heavy.usdz` | **first five** |
+| Standing React Small From Front | `anubis_hit_react.usdz` | **first five** |
+| Standing Death Forward | `anubis_death.usdz` | **first five** |
+| Standing 2H Magic Area Attack | `anubis_ultimate.usdz` | then |
+| Breathing Idle | `anubis_idle.usdz` | then |
+| Standing 1H Magic Attack | `anubis_cast_release.usdz` | then |
+| Magic Spell Casting | `anubis_cast_loop.usdz` | then |
+| Victory Idle *or* Cheering | `anubis_victory.usdz` | then |
+| Look Around *or* Warming Up | `anubis_summon_reveal.usdz` | then |
+
+Those first five give a battle that reads as finished. The rest are polish.
+
+Tick **In Place** wherever Mixamo offers it — the engine owns positions, and a
+clip that translates the root slides the character off its stage slot.
+
+### Fix it in data, not in Blender
+
+`ModelSpec` in `UnitDatabase.swift` exists so that an import that comes in wrong
+is a one-line change rather than a re-export:
+
+| Symptom | Field | Try |
+|---|---|---|
+| Far too large or small | `scale` | Mixamo often exports in centimetres — try `0.01` |
+| Sunk into the floor or floating | `yOffset` | Shift until the feet touch |
+| Facing away from the enemy | `yawCorrection` | `180` |
+| Health bar floating too high or clipping the head | `height` | Measure the model, in metres |
+
+Change the number, rebuild, look. Do not re-export until you have tried this.
+
 ### Rig node names
 
 Used as VFX attachment points. Different names are fine — send them and they go
