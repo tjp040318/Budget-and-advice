@@ -18,6 +18,10 @@ struct PantheonApp: App {
             .foregroundColor: UIColor(Theme.textPrimary)
         ]
 
+        // Decode the sound set now so the first hit of the first battle does
+        // not stutter. Off the main thread; a missing file is a silent event.
+        AudioLibrary.shared.preload()
+
         #if DEBUG
         // Reports, once, which models are really in the app and which are
         // standing in. A placeholder and a model that failed to load look
