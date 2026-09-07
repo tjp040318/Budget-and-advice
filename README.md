@@ -52,6 +52,8 @@ tinted five ways, which is how the genre affords a roster of hundreds.
 **[`Docs/ART_PIPELINE.md`](Docs/ART_PIPELINE.md) has the Meshy prompt**, the
 negative prompt, the settings, the five elemental colourways, the animation clip
 contract and the six ways this goes wrong.
+[`Docs/RESOURCES.md`](Docs/RESOURCES.md) documents every resource folder and the
+flat-bundle naming rule that governs all of them.
 
 ## The character, and why it is this one
 
@@ -154,7 +156,8 @@ Pantheon/
   UI/            SwiftUI screens
   Resources/     Where art goes
 PantheonTests/   Engine determinism, progression maths, gacha rates, arena, saves
-Docs/            ART_PIPELINE.md (the Meshy prompt), BALANCE.md, DESIGN.md
+Docs/            ART_PIPELINE.md (the Meshy prompt), RESOURCES.md, BALANCE.md,
+                 DESIGN.md
 tools/           swiftcheck.py, balance.py
 ```
 

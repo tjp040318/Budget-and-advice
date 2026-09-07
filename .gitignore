@@ -1,0 +1,14 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+
+# xcodebuild logs from the terminal build in README.md
+build.log
+
+# macOS
+.DS_Store

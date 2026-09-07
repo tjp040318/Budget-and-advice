@@ -21,6 +21,11 @@ hand and impossible to see by reading it:
   7. Static member access on module enums and structs — `UnitDatabase.zeus`
      when nothing called `zeus` is declared on it. This is the class of error
      that survives a rename sweep, because it looks like ordinary code.
+  8. Duplicate bundle-resource filenames. The Xcode project uses filesystem-
+     synchronised groups, so every non-source file under a target's folder is
+     copied FLAT into the app bundle. Two files that share a basename in
+     different subfolders therefore write to the same path, and the build fails
+     with "Multiple commands produce ...". Reading the tree never shows this.
 
     python3 tools/swiftcheck.py            # check everything
     python3 tools/swiftcheck.py --verbose  # list what it parsed
@@ -379,6 +384,44 @@ def check_unknown_types(files, declared, errors):
             errors.append(f"{path}:{line}: '{t}' is used but never declared in the module "
                           f"({len(sites)} use(s)) — typo, or missing from the allow-list")
 
+# ---------------------------------------------------------------------------
+# Rule 8: duplicate bundle-resource filenames
+# ---------------------------------------------------------------------------
+
+# Compiled as a unit by actool / the Swift driver rather than copied file by
+# file, so same-named files inside these are fine.
+BUNDLE_EXEMPT_DIRS = (".xcassets", ".xcdatamodeld", ".lproj", ".docc")
+
+
+def bundle_resources(root):
+    """Files under `root` that Xcode copies flat into the product bundle."""
+    out = []
+    for dirpath, dirnames, filenames in os.walk(root):
+        dirnames[:] = [d for d in dirnames
+                       if not d.startswith(".")
+                       and not d.endswith(BUNDLE_EXEMPT_DIRS)]
+        for name in filenames:
+            if name.startswith(".") or name.endswith(".swift"):
+                continue
+            out.append(os.path.join(dirpath, name))
+    return out
+
+
+def check_bundle_resources(errors):
+    for root in ROOTS:
+        if not os.path.isdir(root):
+            continue
+        by_name = defaultdict(list)
+        for p in bundle_resources(root):
+            by_name[os.path.basename(p)].append(p)
+        for name, paths in sorted(by_name.items()):
+            if len(paths) > 1:
+                errors.append(
+                    f"{root}: {len(paths)} files named '{name}' all copy to "
+                    f"<product>/{name} — 'Multiple commands produce' at build time: "
+                    + ", ".join(sorted(paths)))
+
+
 def main():
     files = []
     for r in ROOTS:
@@ -392,6 +435,7 @@ def main():
     if "--members" in sys.argv:
         check_static_members(files, collect_static_members(files), errors)
     check_patterns(files, enum_cases, errors)
+    check_bundle_resources(errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 

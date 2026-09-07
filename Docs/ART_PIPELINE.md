@@ -300,7 +300,9 @@ ground rings. One textured export is the minimum, and it covers the family.
 4. **Set the height on export**: Resize on, 205 cm for Anubis, Origin Bottom.
    That is what makes `scale: 1.0` correct in code.
 5. **Export USDZ** directly. No Reality Converter, no Blender round-trip.
-6. **Drop it in** `Pantheon/Resources/Models/`, named per the clip table. The dot
+6. **Drop it in** `Pantheon/Resources/Models/`, named per the clip table — and
+   see `RESOURCES.md` for the flat-bundle rule that makes those names matter
+   more than they look. The dot
    on the asset screen turns green. No code change.
 
 ### Animation clips
