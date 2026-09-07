@@ -196,7 +196,11 @@ final class ModelLibrary {
 
     private func firstAnimation(in node: SCNNode) -> CAAnimation? {
         for key in node.animationKeys {
-            if let player = node.animationPlayer(forKey: key) { return player.animation }
+            // `SCNAnimationPlayer.animation` is an `SCNAnimation`, not a
+            // `CAAnimation`; the bridging initialiser is the way across.
+            if let player = node.animationPlayer(forKey: key) {
+                return CAAnimation(scnAnimation: player.animation)
+            }
         }
         for child in node.childNodes {
             if let found = firstAnimation(in: child) { return found }
