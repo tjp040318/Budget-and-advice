@@ -30,6 +30,8 @@ final class BattleSceneController: NSObject {
     private var queue: [BattleEvent] = []
     private var isPlaying = false
     private var environment: BattleEnvironment = .duatGate
+    /// The clip of the most recent cast, so its hits know how hard to land.
+    private var lastCastClip: AnimationClip = .attackBasic
 
     // MARK: - Setup
 
@@ -205,6 +207,7 @@ final class BattleSceneController: NSObject {
     func flush(combatants: [Combatant]) {
         queue.removeAll()
         isPlaying = false
+        Juice.release(scene)
         sync(combatants: combatants)
         delegate?.battleSceneDidFinishPlayback(self)
     }
@@ -231,9 +234,11 @@ final class BattleSceneController: NSObject {
         isPlaying = true
         let event = queue.removeFirst()
         delegate?.battleScene(self, willPresent: event)
-        present(event)
+        let frozen = present(event)
 
-        let hold = max(0.02, event.presentationDuration / max(0.25, speedMultiplier))
+        // A freeze-frame steals time from the event's hold; give it back so the
+        // cadence between hits stays what the event durations say it is.
+        let hold = max(0.02, event.presentationDuration / max(0.25, speedMultiplier)) + frozen
         DispatchQueue.main.asyncAfter(deadline: .now() + hold) { [weak self] in
             self?.playNext()
         }
@@ -241,7 +246,9 @@ final class BattleSceneController: NSObject {
 
     // MARK: - Presenting one event
 
-    private func present(_ event: BattleEvent) {
+    /// Returns how long the world froze for this event, if it did.
+    @discardableResult
+    private func present(_ event: BattleEvent) -> TimeInterval {
         switch event {
         case .battleStart:
             for node in unitNodes.values { node.play(.idleCombat) }
@@ -250,12 +257,14 @@ final class BattleSceneController: NSObject {
             highlight(actor)
 
         case .turnSkipped(let actor, _):
-            guard let node = unitNodes[actor] else { return }
+            guard let node = unitNodes[actor] else { return 0 }
             floatText("SKIPPED", at: node.headWorldPosition, color: UIColor(hex: "#C8C8C8")!)
 
         case .skillCast(let actor, _, let name, let targets, let shot, let animation, let vfx):
-            guard let casterNode = unitNodes[actor] else { return }
+            guard let casterNode = unitNodes[actor] else { return 0 }
             let targetNode = targets.first.flatMap { unitNodes[$0] }
+            lastCastClip = animation
+            Juice.prepareHaptics()
             director?.perform(shot, on: casterNode, target: targetNode)
             casterNode.play(animation)
             floatText(name, at: casterNode.headWorldPosition, color: .white, scale: 0.7)
@@ -275,16 +284,30 @@ final class BattleSceneController: NSObject {
             }
 
         case .damage(_, let target, let amount, let isCritical, let isGlancing, let matchup, let remaining, _, _):
-            guard let node = unitNodes[target] else { return }
+            guard let node = unitNodes[target] else { return 0 }
             node.play(.hitReact)
             node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
+
+            // How hard did that land? Lethal beats critical beats the clip.
+            let weight: HitWeight
+            if remaining <= 0 {
+                weight = .lethal
+            } else if isCritical {
+                weight = .critical
+            } else if lastCastClip == .ultimate || lastCastClip == .attackHeavy || lastCastClip == .castRelease {
+                weight = .heavy
+            } else if isGlancing {
+                weight = .light
+            } else {
+                weight = .normal
+            }
+            let profile = Juice.profile(for: weight)
 
             let color: UIColor
             var label = "\(Int(amount.rounded()))"
             if isCritical {
                 color = UIColor(hex: "#FFD24F")!
                 label = "\(label)!"
-                director?.shake(intensity: 0.14, duration: 0.25)
                 VFXLibrary.spawn("crit", at: node.chestWorldPosition, in: scene, tint: color)
             } else if isGlancing {
                 color = UIColor(hex: "#9AA3B0")!
@@ -294,42 +317,44 @@ final class BattleSceneController: NSObject {
             } else {
                 color = .white
             }
-            floatText(label, at: node.headWorldPosition, color: color, scale: isCritical ? 1.25 : 1.0)
+            floatText(label, at: node.headWorldPosition, color: color, scale: profile.numberScale, pop: true)
+
+            return Juice.impact(weight, scene: scene, director: director, speed: speedMultiplier)
 
         case .healed(_, let target, let amount, let remaining):
-            guard let node = unitNodes[target] else { return }
+            guard let node = unitNodes[target] else { return 0 }
             node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
             floatText("+\(Int(amount.rounded()))", at: node.headWorldPosition, color: UIColor(hex: "#7FE8A0")!)
             VFXLibrary.spawn("heal", at: node.position, in: scene, tint: UIColor(hex: "#7FE8A0")!)
 
         case .shieldAbsorbed(let target, let amount, _):
-            guard let node = unitNodes[target] else { return }
+            guard let node = unitNodes[target] else { return 0 }
             floatText("\(Int(amount.rounded())) blocked", at: node.headWorldPosition, color: UIColor(hex: "#6BD8F2")!, scale: 0.8)
 
         case .statusApplied(_, let target, let kind, _):
-            guard let node = unitNodes[target] else { return }
+            guard let node = unitNodes[target] else { return 0 }
             VFXLibrary.spawn(kind.isBuff ? "buff" : "debuff", at: node.position, in: scene, tint: .white)
             floatText(kind.displayName, at: node.headWorldPosition,
                       color: kind.isBuff ? UIColor(hex: "#6BD8F2")! : UIColor(hex: "#F2726B")!, scale: 0.7)
 
         case .statusResisted(_, let target, _):
-            guard let node = unitNodes[target] else { return }
+            guard let node = unitNodes[target] else { return 0 }
             floatText("RESIST", at: node.headWorldPosition, color: UIColor(hex: "#C8C8C8")!, scale: 0.8)
 
         case .statusExpired, .statusRemoved, .cooldownStarted, .attackBarChanged:
             break
 
         case .counterattack(let actor, _):
-            guard let node = unitNodes[actor] else { return }
+            guard let node = unitNodes[actor] else { return 0 }
             floatText("COUNTER", at: node.headWorldPosition, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
             node.play(.attackBasic)
 
         case .extraTurnGranted(let actor, _):
-            guard let node = unitNodes[actor] else { return }
+            guard let node = unitNodes[actor] else { return 0 }
             floatText("EXTRA TURN", at: node.headWorldPosition, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
 
         case .passiveTriggered(let actor, let name):
-            guard let node = unitNodes[actor] else { return }
+            guard let node = unitNodes[actor] else { return 0 }
             floatText(name, at: node.headWorldPosition, color: UIColor(hex: "#E8C86A")!, scale: 0.9)
             VFXLibrary.spawn("stormlord_surge", at: node.position, in: scene, tint: UIColor(hex: "#E8C86A")!)
 
@@ -341,6 +366,7 @@ final class BattleSceneController: NSObject {
 
         case .battleEnded(let result):
             director?.returnHome()
+            Juice.notify(result.outcome == .victory ? .success : .error)
             for (_, node) in unitNodes where !node.isDefeated {
                 if (result.outcome == .victory && node.side == .player)
                     || (result.outcome == .defeat && node.side == .opponent) {
@@ -348,6 +374,7 @@ final class BattleSceneController: NSObject {
                 }
             }
         }
+        return 0
     }
 
     /// The engine reports absolute remaining health; the node only knows its
@@ -369,7 +396,7 @@ final class BattleSceneController: NSObject {
 
     // MARK: - Floating text
 
-    private func floatText(_ text: String, at position: SCNVector3, color: UIColor, scale: CGFloat = 1.0) {
+    private func floatText(_ text: String, at position: SCNVector3, color: UIColor, scale: CGFloat = 1.0, pop: Bool = false) {
         guard let image = FloatingTextRenderer.image(text: text, color: color) else { return }
 
         let width = CGFloat(0.02) * image.size.width * scale
@@ -385,7 +412,10 @@ final class BattleSceneController: NSObject {
         plane.firstMaterial = material
 
         let node = SCNNode(geometry: plane)
-        node.position = SCNVector3(position.x, position.y + 0.25, position.z)
+        // Damage numbers scatter a little sideways so a multi-hit reads as a
+        // burst rather than a stack of identical labels.
+        let scatter: Float = pop ? Float.random(in: -0.22...0.22) : 0
+        node.position = SCNVector3(position.x + scatter, position.y + 0.25, position.z)
         node.renderingOrder = 1_000
         let billboard = SCNBillboardConstraint()
         billboard.freeAxes = [.X, .Y]
@@ -394,10 +424,18 @@ final class BattleSceneController: NSObject {
 
         let rise = SCNAction.moveBy(x: 0, y: 1.1, z: 0, duration: 1.0)
         rise.timingMode = .easeOut
-        node.runAction(.sequence([
+        let drift = SCNAction.sequence([
             .group([rise, .sequence([.wait(duration: 0.5), .fadeOut(duration: 0.5)])]),
             .removeFromParentNode()
-        ]))
+        ])
+        if pop {
+            // The plane is authored at final size; start small and let the pop
+            // overshoot and settle before the drift takes over.
+            node.scale = SCNVector3(0.35, 0.35, 0.35)
+            node.runAction(.sequence([Juice.popAction(scale: 1.0), drift]))
+        } else {
+            node.runAction(drift)
+        }
     }
 }
 
