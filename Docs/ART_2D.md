@@ -1,5 +1,22 @@
 # 2D art — what to generate, and exactly where it goes
 
+> **Status:** every asset on this page has been generated and is in
+> `Pantheon/Resources/Portraits/` — 11 portraits, 5 stage backdrops, 2 summon
+> banners and the spark sprite. What follows is how to regenerate or extend
+> them. The tool is `tools/genart.py`, which calls Gemini's image models and
+> saves at the exact size the app expects:
+>
+> ```bash
+> export GEMINI_API_KEY=...                 # never commit this; *.key is ignored
+> python3 tools/genart.py --prompt "..." --out Pantheon/Resources/Portraits/portrait_x.png --size 1024x1024
+> python3 tools/genart.py --prompt "Edit this image ..." --ref base.png --out variant.png
+> ```
+>
+> `--ref` is the important flag. The five Anubis portraits are one generation
+> plus four reference edits, which is why they are the same character in the
+> same pose; five independent prompts would not have held that. The banner
+> used the base portrait as its reference for the same reason.
+
 Every file below is optional: the game runs without any of them. But the cards
 currently show a **letter on a gradient**, and the battle stage is an empty
 coloured void, so these are the difference between "a prototype" and "a game".
