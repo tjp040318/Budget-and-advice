@@ -265,6 +265,7 @@ final class BattleSceneController: NSObject {
             let targetNode = targets.first.flatMap { unitNodes[$0] }
             lastCastClip = animation
             Juice.prepareHaptics()
+            AudioLibrary.shared.play(.whoosh, volume: animation == .ultimate ? 1.0 : 0.6)
             director?.perform(shot, on: casterNode, target: targetNode)
             casterNode.play(animation)
             floatText(name, at: casterNode.headWorldPosition, color: .white, scale: 0.7)
@@ -367,6 +368,7 @@ final class BattleSceneController: NSObject {
         case .battleEnded(let result):
             director?.returnHome()
             Juice.notify(result.outcome == .victory ? .success : .error)
+            AudioLibrary.shared.play(result.outcome == .victory ? .victory : .defeat)
             for (_, node) in unitNodes where !node.isDefeated {
                 if (result.outcome == .victory && node.side == .player)
                     || (result.outcome == .defeat && node.side == .opponent) {

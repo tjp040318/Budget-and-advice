@@ -369,7 +369,10 @@ struct PrimaryButton: View {
     let action: () -> Void
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            AudioLibrary.shared.play(.uiConfirm, volume: 0.7)
+            action()
+        } label: {
             HStack(spacing: 7) {
                 if let systemImage {
                     Image(systemName: systemImage)

@@ -75,9 +75,11 @@ enum Juice {
         let p = profile(for: weight)
         let divisor = max(1.0, speed)
 
-        // The haptic goes with the freeze, not the release: the thumb should
-        // feel the hit at the same instant the eye sees the world stop.
+        // The haptic and the sound go with the freeze, not the release: the
+        // thumb and the ear should get the hit at the instant the eye sees the
+        // world stop.
         if let style = p.haptic { haptic(style) }
+        AudioLibrary.shared.play(sound(for: weight))
 
         guard p.pause > 0 else {
             if p.shake > 0 { director?.shake(intensity: p.shake, duration: p.shakeDuration / divisor) }
@@ -97,6 +99,16 @@ enum Juice {
             }
         }
         return pause
+    }
+
+    static func sound(for weight: HitWeight) -> AudioLibrary.Sound {
+        switch weight {
+        case .light: return .hitLight
+        case .normal: return .hitNormal
+        case .heavy: return .hitHeavy
+        case .critical: return .hitCrit
+        case .lethal: return .hitLethal
+        }
     }
 
     /// Belt and braces: anything that tears the scene down while a freeze is
