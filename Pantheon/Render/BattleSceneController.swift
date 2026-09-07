@@ -84,7 +84,16 @@ final class BattleSceneController: NSObject {
             scene.lightingEnvironment.intensity = 0.35
         }
 
-        scene.background.contents = UIColor(hex: environment.fogHex)?.mixed(with: .black, amount: 0.35)
+        // A painted backdrop if the art shipped, otherwise the fog colour. One
+        // 2048x2048 image per stage replaces the flat void behind the fighters,
+        // which is the single largest visual difference between this and a
+        // finished game — see Docs/ART_PIPELINE.md for the prompts.
+        if let backdrop = UIImage(named: "\(environment.sceneName)_bg") {
+            scene.background.contents = backdrop
+        } else {
+            scene.background.contents = UIColor(hex: environment.fogHex)?
+                .mixed(with: .black, amount: 0.35)
+        }
         scene.fogStartDistance = 14
         scene.fogEndDistance = 42
         scene.fogColor = UIColor(hex: environment.fogHex) ?? .darkGray
