@@ -96,6 +96,18 @@ enum Theme {
     /// The standard panel: gradient body, bevelled edge, and a drop shadow so
     /// it floats off the backdrop instead of being painted onto it.
     static func panel(_ radius: CGFloat = cornerRadius) -> some View {
+        Group {
+            if let painted = Chrome.slice("ui_panel", Chrome.panelInsets) {
+                painted
+                    .shadow(color: .black.opacity(0.55), radius: 8, x: 0, y: 4)
+            } else {
+                drawnPanel(radius)
+            }
+        }
+    }
+
+    /// The code-drawn panel: gradient body, bevelled edge, drop shadow.
+    private static func drawnPanel(_ radius: CGFloat) -> some View {
         RoundedRectangle(cornerRadius: radius, style: .continuous)
             .fill(panelPlate)
             .overlay(
@@ -126,6 +138,44 @@ enum Theme {
             )
         }
         .ignoresSafeArea()
+    }
+}
+
+// MARK: - Painted chrome
+
+/// The painted UI kit — panels, buttons, frames — as 9-slice textures.
+///
+/// This is the half of the genre's look that code-drawn shapes cannot reach:
+/// a carved gold frame is a painting, not a stroke. Every consumer asks here
+/// first and draws its gradient fallback if the file is missing, so the kit
+/// can ship one texture at a time.
+///
+/// Files are `@3x` so a 512px source is ~171pt logical; the cap insets below
+/// are in those logical points and were measured off the art, not guessed.
+/// Sum of opposite insets is the smallest size a texture can be drawn at
+/// without its corners overlapping.
+enum Chrome {
+    private static var cache: [String: UIImage?] = [:]
+
+    static func image(_ name: String) -> UIImage? {
+        if let hit = cache[name] { return hit }
+        let loaded = UIImage(named: name)
+        cache[name] = loaded
+        return loaded
+    }
+
+    /// ui_panel: 512² → 171pt. Corner ornament reaches ~18% in.
+    static let panelInsets = EdgeInsets(top: 31, leading: 31, bottom: 31, trailing: 31)
+    /// ui_button_gold: 640×192 → 213×64pt. Ornate ends are ~22% of the width.
+    static let goldButtonInsets = EdgeInsets(top: 8, leading: 47, bottom: 8, trailing: 47)
+    /// ui_button_dark: same size, plain ends.
+    static let darkButtonInsets = EdgeInsets(top: 10, leading: 17, bottom: 10, trailing: 17)
+    /// ui_ribbon: 640×128 → 213×43pt.
+    static let ribbonInsets = EdgeInsets(top: 9, leading: 17, bottom: 9, trailing: 17)
+
+    static func slice(_ name: String, _ insets: EdgeInsets) -> Image? {
+        guard let ui = image(name) else { return nil }
+        return Image(uiImage: ui).resizable(capInsets: insets, resizingMode: .stretch)
     }
 }
 
@@ -189,6 +239,21 @@ enum Rarity: Int, CaseIterable {
     /// Only the top grades earn an animated sheen. If everything shimmers,
     /// nothing reads as special.
     var hasSheen: Bool { self >= .legendary }
+
+    /// The painted frame for this grade, if it shipped. Square, with a
+    /// transparent centre, designed to sit over the portrait.
+    var frameImageName: String {
+        switch self {
+        case .common: return "ui_frame_common"
+        case .uncommon: return "ui_frame_uncommon"
+        case .rare: return "ui_frame_rare"
+        case .epic: return "ui_frame_epic"
+        case .legendary: return "ui_frame_legendary"
+        case .mythic: return "ui_frame_mythic"
+        }
+    }
+
+    var hasPaintedFrame: Bool { Chrome.image(frameImageName) != nil }
 }
 
 extension Rarity: Comparable {
@@ -277,11 +342,11 @@ extension View {
         self
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(rarity.frame, lineWidth: rarity.frameWidth)
+                    .strokeBorder(rarity.frame, lineWidth: rarity.hasPaintedFrame ? 0 : rarity.frameWidth)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(0.22), lineWidth: 0.5)
+                    .strokeBorder(Color.white.opacity(rarity.hasPaintedFrame ? 0 : 0.22), lineWidth: 0.5)
             )
             .shadow(color: rarity.glow.opacity(rarity.glowRadius > 0 ? 0.7 : 0),
                     radius: rarity.glowRadius, x: 0, y: 0)

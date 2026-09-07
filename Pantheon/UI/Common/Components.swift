@@ -241,6 +241,7 @@ struct UnitCard: View {
             }
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+            .overlay(paintedFrame)
 
             VStack(spacing: 1) {
                 Text(unit.name)
@@ -277,6 +278,19 @@ struct UnitCard: View {
         .shadow(color: isSelected ? Theme.gold.opacity(0.75) : .clear, radius: 10)
         .scaleEffect(isSelected ? 1.04 : 1)
         .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isSelected)
+    }
+
+    /// The carved frame for this grade. Square, transparent centre, sits over
+    /// the portrait so its corner ornament overlaps the art the way a real
+    /// gacha card's does. Nothing when the texture has not shipped — the
+    /// code-drawn stroke in `rarityFrame` covers that case.
+    @ViewBuilder
+    private var paintedFrame: some View {
+        if let frame = Chrome.image(rarity.frameImageName) {
+            Image(uiImage: frame)
+                .resizable()
+                .allowsHitTesting(false)
+        }
     }
 
     /// Uses the portrait art when it exists; otherwise an element-tinted plate
@@ -374,7 +388,7 @@ struct PrimaryButton: View {
                     .blendMode(.plusLighter)
             )
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
-            .foregroundStyle(isEnabled ? Theme.ink : Theme.textSecondary)
+            .foregroundStyle(labelColor)
             .shadow(color: isEnabled ? tint.opacity(0.45) : .clear, radius: 10, y: 3)
             .shadow(color: .black.opacity(0.5), radius: 3, y: 2)
         }
@@ -382,9 +396,25 @@ struct PrimaryButton: View {
         .disabled(!isEnabled)
     }
 
+    private var usesGoldPlate: Bool { tint == Theme.gold }
+
+    private var labelColor: Color {
+        guard isEnabled else { return Theme.textSecondary }
+        // On the painted dark plate the tint carries the meaning, so it goes on
+        // the label; on gold (painted or drawn) ink is the only thing that reads.
+        if !usesGoldPlate, Chrome.image("ui_button_dark") != nil { return tint }
+        return Theme.ink
+    }
+
     @ViewBuilder
     private var plate: some View {
-        if isEnabled {
+        if isEnabled, usesGoldPlate,
+           let painted = Chrome.slice("ui_button_gold", Chrome.goldButtonInsets) {
+            painted
+        } else if isEnabled, !usesGoldPlate,
+                  let painted = Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) {
+            painted
+        } else if isEnabled {
             LinearGradient(
                 colors: [tint.opacity(0.55), tint, tint.opacity(0.72)],
                 startPoint: .top, endPoint: .bottom
@@ -407,6 +437,29 @@ struct SectionHeader: View {
     var accessory: String? = nil
 
     var body: some View {
+        if let ribbon = Chrome.slice("ui_ribbon", Chrome.ribbonInsets) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(title.uppercased())
+                    .font(Theme.title(12))
+                    .tracking(1.6)
+                    .foregroundStyle(Theme.gold)
+                    .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
+                Spacer(minLength: 8)
+                if let accessory {
+                    Text(accessory)
+                        .font(Theme.numeric(11))
+                        .foregroundStyle(Theme.textPrimary)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 7)
+            .background(ribbon)
+        } else {
+            drawn
+        }
+    }
+
+    private var drawn: some View {
         HStack(alignment: .center, spacing: 8) {
             Text(title.uppercased())
                 .font(Theme.title(12))
