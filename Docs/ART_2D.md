@@ -2,7 +2,7 @@
 
 > **Status:** every asset on this page has been generated and is in
 > `Pantheon/Resources/Portraits/` — 11 portraits, 5 stage backdrops, 2 summon
-> banners and the spark sprite. What follows is how to regenerate or extend
+> banners, the spark sprite, and the 10-texture painted UI kit (section 5). What follows is how to regenerate or extend
 > them. The tool is `tools/genart.py`, which calls Gemini's image models and
 > saves at the exact size the app expects:
 >
@@ -195,10 +195,41 @@ Any of them work. What actually matters:
 
 ---
 
-## What this does not cover
+## 5. Painted UI chrome
 
-Painted **UI chrome** — card frames, buttons, panels, ribbons — is the other
-half of why this genre looks the way it does, and it is a different job:
-those need to be authored as 9-slice images with defined stretch regions, not
-just generated. Worth doing, but the portraits and backdrops move the needle
-much further per hour, so they come first.
+Ten textures, all in `Pantheon/Resources/Portraits/`, all named `@3x` so a
+512px source is ~171pt logical — small enough to 9-slice onto a 60pt panel:
+
+```
+ui_frame_common@3x.png     ui_frame_uncommon@3x.png   ui_frame_rare@3x.png
+ui_frame_epic@3x.png       ui_frame_legendary@3x.png  ui_frame_mythic@3x.png
+ui_panel@3x.png            ui_button_gold@3x.png      ui_button_dark@3x.png
+ui_ribbon@3x.png
+```
+
+`Chrome` in `Pantheon/UI/Common/Theme.swift` is the single lookup; `Theme.panel`,
+`PrimaryButton`, `SectionHeader` and `UnitCard` ask it first and draw their
+gradient fallback if a file is missing. Cap insets live next to the lookup and
+were measured off the art.
+
+### How they were made, and how to make more
+
+Two anchors first — `ui_frame_legendary` and `ui_panel` — then everything else
+as a **reference edit** of one of those, so the whole kit shares one ornament
+language. The six frames are edits of the legendary one, which is why their
+geometry is identical and one set of insets serves all six.
+
+The prompt discipline that makes a generated image 9-sliceable:
+
+> corners ornate; the straight edges between corners a uniform repeating band
+> that looks correct stretched; the centre a flat plain dark surface with NO
+> ornament, NO emblem, NO gradient; straight-on, orthographic, filling the
+> image edge to edge
+
+Frames additionally have their flat centre keyed to transparent (luminance
+< 56 inside the border band, 1.2px feather) so they sit *over* the portrait
+with the corner ornament overlapping the art. The one-off script for that is
+in the session history; it is twelve lines of Pillow.
+
+For a new rarity or a new button shape: reference the nearest existing
+texture, describe only what changes, keep the 9-slice sentence.
