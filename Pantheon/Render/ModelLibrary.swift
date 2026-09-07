@@ -1,5 +1,6 @@
 import Foundation
 import SceneKit
+import simd
 import UIKit
 
 /// Loads and caches character models.
