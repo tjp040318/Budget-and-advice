@@ -29,6 +29,11 @@ final class BattleSceneController: NSObject {
     private var director: CameraDirector?
     private var queue: [BattleEvent] = []
     private var isPlaying = false
+    /// Bumped by flush(). A playNext continuation scheduled before the flush
+    /// compares its captured value and steps aside, instead of draining an
+    /// empty queue and reporting "finished" a second time — which in auto-battle
+    /// would take a second turn.
+    private var playbackGeneration = 0
     private var environment: BattleEnvironment = .duatGate
     /// The clip of the most recent cast, so its hits know how hard to land.
     private var lastCastClip: AnimationClip = .attackBasic
@@ -205,6 +210,7 @@ final class BattleSceneController: NSObject {
 
     /// Drops queued animation and snaps to the end state. Used by the skip button.
     func flush(combatants: [Combatant]) {
+        playbackGeneration += 1
         queue.removeAll()
         isPlaying = false
         Juice.release(scene)
@@ -239,8 +245,10 @@ final class BattleSceneController: NSObject {
         // A freeze-frame steals time from the event's hold; give it back so the
         // cadence between hits stays what the event durations say it is.
         let hold = max(0.02, event.presentationDuration / max(0.25, speedMultiplier)) + frozen
+        let generation = playbackGeneration
         DispatchQueue.main.asyncAfter(deadline: .now() + hold) { [weak self] in
-            self?.playNext()
+            guard let self, self.playbackGeneration == generation else { return }
+            self.playNext()
         }
     }
 

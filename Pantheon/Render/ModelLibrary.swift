@@ -112,8 +112,15 @@ final class ModelLibrary {
                 log("'\(assetName)': \(note)")
             }
         }
-        model.eulerAngles.y += spec.yawCorrection * .pi / 180
-        model.eulerAngles.x += spec.pitchCorrection * .pi / 180
+        // Overrides are rotations about the CONTAINER's axes, applied on top of
+        // whatever standUp set. Adding to eulerAngles would not do that once
+        // the node already carries a rotation — Euler components do not
+        // compose — so they are pre-multiplied as quaternions instead.
+        if spec.yawCorrection != 0 || spec.pitchCorrection != 0 {
+            let yaw = simd_quatf(angle: spec.yawCorrection * .pi / 180, axis: SIMD3<Float>(0, 1, 0))
+            let pitch = simd_quatf(angle: spec.pitchCorrection * .pi / 180, axis: SIMD3<Float>(1, 0, 0))
+            model.simdOrientation = yaw * pitch * model.simdOrientation
+        }
         model.position.y += spec.yOffset
 
         // The archetype scale applies to the STAND-IN ONLY. Placeholders are all
