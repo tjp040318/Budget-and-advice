@@ -25,6 +25,9 @@ final class ModelLibrary {
     /// mesh for a whole elemental family, so the source is kept neutral and the
     /// element colour is applied per instance below.
     private var cache: [String: SCNNode] = [:]
+    /// Assets whose auto-orientation has already been reported, so the log
+    /// says it once rather than once per instance.
+    private var orientationLogged: Set<String> = []
     /// Placeholders build themselves in their element's colour, so they are
     /// cached per colour — otherwise the first variant to be created would set
     /// the colour for all five.
@@ -96,8 +99,19 @@ final class ModelLibrary {
         }
 
         model.name = "model"
-        // Normalise the export: correct the facing and lift it onto the ground
-        // plane.
+        container.addChildNode(model)
+
+        // A real export gets stood up from its bounding box — whichever axis
+        // the exporter used for height becomes +Y, feet on the ground — before
+        // the hand-tuned corrections are applied on top. Placeholders are
+        // built upright and skip it.
+        if !isStandIn {
+            let note = ModelOrientation.standUp(model, in: container)
+            if !orientationLogged.contains(assetName) {
+                orientationLogged.insert(assetName)
+                log("'\(assetName)': \(note)")
+            }
+        }
         model.eulerAngles.y += spec.yawCorrection * .pi / 180
         model.eulerAngles.x += spec.pitchCorrection * .pi / 180
         model.position.y += spec.yOffset
@@ -109,8 +123,6 @@ final class ModelLibrary {
         // too tall and every primordial 60%.
         let scale = spec.scale * (isStandIn ? archetype.modelScale : 1.0)
         model.scale = SCNVector3(scale, scale, scale)
-
-        container.addChildNode(model)
         return container
     }
 
