@@ -12,3 +12,6 @@ build.log
 
 # macOS
 .DS_Store
+
+# API keys for tools/genart.py live outside the repo
+*.key
