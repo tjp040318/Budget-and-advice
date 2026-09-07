@@ -321,6 +321,9 @@ enum UnitDatabase {
                 assetName: "anubis",
                 scale: 1.0,
                 height: 2.05,
+                // The export is authored lying on its back. If he ends up
+                // face-down instead, flip this to 90.
+                pitchCorrection: -90,
                 weaponAttachNode: "weapon_r",
                 handAttachNode: "hand_r",
                 chestAttachNode: "spine_03",

@@ -85,6 +85,10 @@ struct ModelSpec: Codable, Equatable, Sendable {
     var yOffset: Float = 0
     /// Degrees of Y rotation needed for the model to face +Z.
     var yawCorrection: Float = 0
+    /// Degrees of X rotation needed for the model to stand up. USD exporters
+    /// disagree about which axis is up, and a generator's rig can be authored
+    /// lying down regardless; `convertToYUp` only fixes the declared case.
+    var pitchCorrection: Float = 0
     /// Node names in the rig used as VFX attachment points.
     var weaponAttachNode: String? = nil
     var handAttachNode: String? = "hand_r"
@@ -100,6 +104,7 @@ struct ModelSpec: Codable, Equatable, Sendable {
         height: Float = 1.9,
         yOffset: Float = 0,
         yawCorrection: Float = 0,
+        pitchCorrection: Float = 0,
         weaponAttachNode: String? = nil,
         handAttachNode: String? = "hand_r",
         chestAttachNode: String? = "spine_03",
@@ -111,6 +116,7 @@ struct ModelSpec: Codable, Equatable, Sendable {
         self.height = height
         self.yOffset = yOffset
         self.yawCorrection = yawCorrection
+        self.pitchCorrection = pitchCorrection
         self.weaponAttachNode = weaponAttachNode
         self.handAttachNode = handAttachNode
         self.chestAttachNode = chestAttachNode

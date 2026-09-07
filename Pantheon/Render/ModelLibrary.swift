@@ -99,6 +99,7 @@ final class ModelLibrary {
         // Normalise the export: correct the facing and lift it onto the ground
         // plane.
         model.eulerAngles.y += spec.yawCorrection * .pi / 180
+        model.eulerAngles.x += spec.pitchCorrection * .pi / 180
         model.position.y += spec.yOffset
 
         // The archetype scale applies to the STAND-IN ONLY. Placeholders are all
@@ -272,9 +273,15 @@ enum MaterialTuner {
                 if material.roughness.contents == nil {
                     material.roughness.contents = 0.55
                 } else if let value = material.roughness.contents as? NSNumber {
-                    material.roughness.contents = min(0.92, max(0.18, value.doubleValue))
+                    material.roughness.contents = min(0.95, max(0.35, value.doubleValue))
                 }
-                if material.metalness.contents == nil {
+                // A fully metallic surface lit by a flat-colour environment
+                // becomes a mirror of that colour: the figure goes chrome and
+                // the midtones blow out to white. Meshy ships metalness 1.0 on
+                // plenty of materials, so clamp rather than only defaulting.
+                if let value = material.metalness.contents as? NSNumber {
+                    material.metalness.contents = min(0.25, value.doubleValue)
+                } else if material.metalness.contents == nil {
                     material.metalness.contents = 0.0
                 }
                 material.normal.wrapS = .repeat

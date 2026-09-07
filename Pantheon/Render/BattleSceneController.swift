@@ -75,8 +75,13 @@ final class BattleSceneController: NSObject {
             scene.lightingEnvironment.contents = iblURL
             scene.lightingEnvironment.intensity = 1.6
         } else {
+            // A flat colour as the lighting environment lights every surface
+            // uniformly in that colour, which is what washed the whole stage
+            // green. It is a stand-in until a real .hdr ships, so keep it weak
+            // enough to be ambient fill and let the three real lights shape the
+            // figure.
             scene.lightingEnvironment.contents = UIColor(hex: environment.keyLightHex)
-            scene.lightingEnvironment.intensity = 0.9
+            scene.lightingEnvironment.intensity = 0.35
         }
 
         scene.background.contents = UIColor(hex: environment.fogHex)?.mixed(with: .black, amount: 0.35)
