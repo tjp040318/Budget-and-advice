@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The battle screen: 3D stage underneath, HUD on top.
 struct BattleView: View {
@@ -128,16 +129,24 @@ struct BattleView: View {
                 ZStack {
                     Circle()
                         .fill(combatant.side == .player ? Theme.info.opacity(0.3) : Theme.danger.opacity(0.3))
+                    if UIImage(named: combatant.model.portraitName) != nil {
+                        Image(combatant.model.portraitName)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .clipShape(Circle())
+                    } else {
+                        Text(String(combatant.name.prefix(1)))
+                            .font(Theme.body(11).weight(.bold))
+                            .foregroundStyle(Theme.textPrimary)
+                    }
                     Circle()
                         .strokeBorder(
                             combatant.element.color,
                             lineWidth: index == 0 ? 2 : 1
                         )
-                    Text(String(combatant.name.prefix(1)))
-                        .font(Theme.body(11).weight(.bold))
-                        .foregroundStyle(Theme.textPrimary)
                 }
-                .frame(width: index == 0 ? 30 : 24, height: index == 0 ? 30 : 24)
+                .frame(width: index == 0 ? 32 : 26, height: index == 0 ? 32 : 26)
+                .shadow(color: index == 0 ? combatant.element.color.opacity(0.8) : .clear, radius: 5)
             }
             Spacer()
         }
@@ -158,6 +167,18 @@ struct BattleView: View {
             HStack(spacing: 10) {
                 // Actor plate
                 VStack(spacing: 3) {
+                    if UIImage(named: actor.model.portraitName) != nil {
+                        Image(actor.model.portraitName)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 48, height: 48)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                    .strokeBorder(actor.element.color, lineWidth: 1.5)
+                            )
+                            .shadow(color: actor.element.color.opacity(0.6), radius: 5)
+                    }
                     Text(actor.name)
                         .font(Theme.body(12).weight(.bold))
                         .foregroundStyle(Theme.textPrimary)
