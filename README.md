@@ -160,7 +160,8 @@ Pantheon/
   Resources/     Where art goes
 PantheonTests/   Engine determinism, progression maths, gacha rates, arena, saves
 Docs/            ART_PIPELINE.md (the Meshy prompt), ART_2D.md (image prompts),
-                 RESOURCES.md, BALANCE.md, DESIGN.md
+                 PLAYTEST.md (what to check on device), RESOURCES.md,
+                 BALANCE.md, DESIGN.md
 tools/           swiftcheck.py, balance.py
 ```
 
