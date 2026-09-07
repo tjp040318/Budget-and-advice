@@ -62,12 +62,14 @@ struct RootView: View {
 struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
     @State private var showResetConfirm = false
+    @State private var soundOn = !AudioLibrary.shared.isMuted
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 16) {
                     accountPanel
+                    soundPanel
                     assetStatusPanel
                     dangerPanel
                 }
@@ -91,13 +93,35 @@ struct SettingsView: View {
         .panelBackground()
     }
 
+    private var soundPanel: some View {
+        VStack(spacing: 9) {
+            SectionHeader(title: "Sound")
+            Toggle(isOn: $soundOn) {
+                Text("Sound effects")
+                    .font(Theme.body(13))
+                    .foregroundStyle(Theme.textPrimary)
+            }
+            .tint(Theme.gold)
+            .onChange(of: soundOn) { _, on in
+                AudioLibrary.shared.isMuted = !on
+                if on { AudioLibrary.shared.play(.uiConfirm) }
+            }
+            Text("Effects mix with your own music and respect the silent switch.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .panelBackground()
+    }
+
     /// Shows which characters still render as placeholders. This is the board
     /// the art pipeline works against — a unit turns green the moment its
     /// `.usdz` is in the bundle, with no code change.
     private var assetStatusPanel: some View {
         VStack(alignment: .leading, spacing: 9) {
             SectionHeader(title: "3D assets")
-            Text("Green means a real model is in the bundle. Grey means the placeholder rig is standing in.")
+            Text("Green means a real model is in the bundle. Grey means the portrait is standing in as a sprite.")
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.textSecondary)
 
