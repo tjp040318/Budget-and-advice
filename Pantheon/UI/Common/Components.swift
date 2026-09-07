@@ -1,21 +1,38 @@
 import SwiftUI
 import UIKit
 
-/// Star grade, drawn as filled pips. Grades above the natural rating are shown
-/// in gold so an evolved unit reads differently from a naturally high one.
+/// Star grade. Grades above the natural rating are shown in bright gold so an
+/// evolved unit reads differently from a naturally high one.
+///
+/// Stars are drawn twice: a dark, slightly larger star behind a gold-gradient
+/// one. Without the dark pass they disappear against a pale portrait, which is
+/// exactly where they matter most.
 struct StarRow: View {
     let stars: Int
     var natural: Int? = nil
     var size: CGFloat = 12
 
     var body: some View {
-        HStack(spacing: 1) {
-            ForEach(0..<max(1, stars), id: \.self) { index in
-                Image(systemName: "star.fill")
-                    .font(.system(size: size))
-                    .foregroundStyle(isEvolved(index) ? Theme.gold : Theme.goldDim)
+        HStack(spacing: size * 0.06) {
+            ForEach(Array(0..<max(1, stars)), id: \.self) { index in
+                star(evolved: isEvolved(index))
             }
         }
+    }
+
+    private func star(evolved: Bool) -> some View {
+        Image(systemName: "star.fill")
+            .font(.system(size: size, weight: .black))
+            .foregroundStyle(
+                evolved
+                    ? LinearGradient(colors: [Color(hex: "#FFF3C4"), Theme.gold,
+                                              Color(hex: "#C9992F")],
+                                     startPoint: .top, endPoint: .bottom)
+                    : LinearGradient(colors: [Theme.goldDim, Theme.goldDeep],
+                                     startPoint: .top, endPoint: .bottom)
+            )
+            .shadow(color: .black.opacity(0.85), radius: 0.5, x: 0, y: 0.5)
+            .shadow(color: evolved ? Theme.gold.opacity(0.6) : .clear, radius: 3)
     }
 
     private func isEvolved(_ index: Int) -> Bool {
@@ -32,18 +49,29 @@ struct ElementBadge: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: element.glyph)
-                .font(.system(size: compact ? 10 : 12, weight: .bold))
+                .font(.system(size: compact ? 10 : 12, weight: .black))
             if !compact {
-                Text(element.displayName)
-                    .font(Theme.body(11).weight(.semibold))
+                Text(element.displayName.uppercased())
+                    .font(Theme.body(10).weight(.black))
+                    .tracking(0.6)
             }
         }
-        .foregroundStyle(element.color)
-        .padding(.horizontal, compact ? 5 : 7)
-        .padding(.vertical, 3)
+        .foregroundStyle(.white)
+        .shadow(color: .black.opacity(0.7), radius: 1, x: 0, y: 0.5)
+        .padding(.horizontal, compact ? 5 : 8)
+        .padding(.vertical, compact ? 3 : 4)
         .background(
-            Capsule().fill(element.color.opacity(0.16))
+            Capsule().fill(
+                LinearGradient(
+                    colors: [element.color, element.color.opacity(0.55)],
+                    startPoint: .top, endPoint: .bottom
+                )
+            )
         )
+        .overlay(
+            Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.75)
+        )
+        .shadow(color: element.color.opacity(0.55), radius: 4)
     }
 }
 
@@ -69,15 +97,33 @@ struct StatBar: View {
                     Spacer()
                     Text("\(Int(value)) / \(Int(maximum))")
                         .font(Theme.numeric(11))
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(Theme.textPrimary)
                 }
             }
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    Capsule().fill(Theme.stroke)
+                    // A recessed track: dark fill, dark top edge. The bar has to
+                    // look like a channel cut into the panel, or the fill reads
+                    // as a floating coloured pill.
+                    Capsule().fill(Theme.ink.opacity(0.85))
+                    Capsule().strokeBorder(Color.black.opacity(0.6), lineWidth: 1)
+
                     Capsule()
-                        .fill(tint)
-                        .frame(width: geometry.size.width * fraction)
+                        .fill(LinearGradient(
+                            colors: [tint.opacity(0.95), tint, tint.opacity(0.65)],
+                            startPoint: .top, endPoint: .bottom
+                        ))
+                        .overlay(
+                            // Specular line along the top of the fill.
+                            Capsule()
+                                .fill(Color.white.opacity(0.4))
+                                .frame(height: max(1, height * 0.28))
+                                .padding(.horizontal, height * 0.3)
+                                .frame(maxHeight: .infinity, alignment: .top)
+                                .padding(.top, height * 0.16)
+                        )
+                        .frame(width: max(0, geometry.size.width * fraction))
+                        .shadow(color: tint.opacity(0.7), radius: 3)
                 }
             }
             .frame(height: height)
@@ -90,23 +136,40 @@ struct WalletBar: View {
     let wallet: Wallet
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             resource(icon: "bolt.fill", value: "\(wallet.energy)/\(wallet.maxEnergy)", tint: Theme.info)
+            divider
             resource(icon: "sparkles", value: "\(wallet.divinity)", tint: Theme.gold)
-            resource(icon: "circle.hexagongrid.fill", value: compact(wallet.drachma), tint: Theme.textSecondary)
+            divider
+            resource(icon: "circle.hexagongrid.fill", value: compact(wallet.drachma), tint: Theme.textPrimary)
+            divider
             resource(icon: "laurel.leading", value: "\(wallet.laurels)", tint: Theme.success)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(Capsule().fill(Theme.surface.opacity(0.9)))
-        .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(
+            Capsule().fill(
+                LinearGradient(colors: [Theme.surfaceHigh, Theme.surface],
+                               startPoint: .top, endPoint: .bottom)
+            )
+        )
+        .overlay(Capsule().strokeBorder(Theme.goldPlate, lineWidth: 1))
+        .overlay(Capsule().strokeBorder(Color.white.opacity(0.18), lineWidth: 0.5))
+        .shadow(color: .black.opacity(0.6), radius: 6, y: 3)
+    }
+
+    private var divider: some View {
+        Rectangle()
+            .fill(Theme.stroke.opacity(0.7))
+            .frame(width: 1, height: 12)
     }
 
     private func resource(icon: String, value: String, tint: Color) -> some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .bold))
+                .font(.system(size: 11, weight: .black))
                 .foregroundStyle(tint)
+                .shadow(color: tint.opacity(0.8), radius: 3)
             Text(value)
                 .font(Theme.numeric(12))
                 .foregroundStyle(Theme.textPrimary)
@@ -123,41 +186,65 @@ struct WalletBar: View {
 }
 
 /// The portrait tile used everywhere a unit appears in a list or a team slot.
+///
+/// The frame carries the star grade. That is deliberate and it is the main
+/// thing this component is for: a player should be able to pick their one
+/// 5★ out of a grid of sixty without reading anything.
 struct UnitCard: View {
     let unit: ResolvedUnit
     var isSelected: Bool = false
     var showPower: Bool = true
     var size: CGFloat = 92
 
+    private var rarity: Rarity { Rarity(stars: unit.stars) }
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
                 portrait
+
+                // Darkens the lower third so the star row and name always have
+                // something to sit on, whatever the art behind them is doing.
+                LinearGradient(
+                    colors: [.clear, .clear, Theme.ink.opacity(0.85)],
+                    startPoint: .top, endPoint: .bottom
+                )
+
                 VStack(alignment: .leading, spacing: 3) {
                     ElementBadge(element: unit.element, compact: true)
                     if unit.unit.isAwakened {
                         Image(systemName: "sun.max.fill")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: 10, weight: .black))
                             .foregroundStyle(Theme.gold)
+                            .shadow(color: Theme.gold.opacity(0.9), radius: 4)
                     }
                 }
                 .padding(5)
 
                 if unit.unit.isLocked {
                     Image(systemName: "lock.fill")
-                        .font(.system(size: 9))
-                        .foregroundStyle(Theme.textSecondary)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Theme.textPrimary.opacity(0.9))
+                        .shadow(color: .black, radius: 2)
                         .padding(5)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                }
+
+                StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars,
+                        size: max(7, size * 0.105))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 4)
+
+                if rarity.hasSheen {
+                    Sheen(cornerRadius: Theme.tightCorner)
                 }
             }
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
 
-            VStack(spacing: 2) {
-                StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars, size: 8)
+            VStack(spacing: 1) {
                 Text(unit.name)
-                    .font(Theme.body(11).weight(.semibold))
+                    .font(Theme.body(11).weight(.heavy))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -168,7 +255,7 @@ struct UnitCard: View {
                     if showPower {
                         Text("\(unit.power)")
                             .font(Theme.numeric(10))
-                            .foregroundStyle(Theme.goldDim)
+                            .foregroundStyle(Theme.gold)
                     }
                 }
             }
@@ -179,12 +266,17 @@ struct UnitCard: View {
         }
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.surfaceRaised)
+                .fill(LinearGradient(colors: [Theme.surfaceRaised, Theme.surface],
+                                     startPoint: .top, endPoint: .bottom))
         )
+        .rarityFrame(rarity, radius: Theme.tightCorner)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .strokeBorder(isSelected ? Theme.gold : Theme.stroke, lineWidth: isSelected ? 2 : 1)
+                .strokeBorder(Theme.gold, lineWidth: isSelected ? 2.5 : 0)
         )
+        .shadow(color: isSelected ? Theme.gold.opacity(0.75) : .clear, radius: 10)
+        .scaleEffect(isSelected ? 1.04 : 1)
+        .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isSelected)
     }
 
     /// Uses the portrait art when it exists; otherwise an element-tinted plate
@@ -197,14 +289,21 @@ struct UnitCard: View {
                 .aspectRatio(contentMode: .fill)
         } else {
             ZStack {
-                LinearGradient(
-                    colors: [unit.element.color.opacity(0.55), Theme.surface],
-                    startPoint: .top,
-                    endPoint: .bottom
+                RadialGradient(
+                    colors: [unit.element.color.opacity(0.75),
+                             unit.element.color.opacity(0.25),
+                             Theme.ink],
+                    center: .init(x: 0.5, y: 0.38),
+                    startRadius: 0,
+                    endRadius: size * 0.85
                 )
                 Text(String(unit.name.prefix(1)))
-                    .font(Theme.display(size * 0.42))
-                    .foregroundStyle(Theme.textPrimary.opacity(0.85))
+                    .font(Theme.display(size * 0.46))
+                    .foregroundStyle(
+                        LinearGradient(colors: [.white.opacity(0.95), .white.opacity(0.35)],
+                                       startPoint: .top, endPoint: .bottom)
+                    )
+                    .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
             }
         }
     }
@@ -216,27 +315,38 @@ struct EmptyTeamSlot: View {
     var label: String = "Empty"
 
     var body: some View {
-        VStack {
+        VStack(spacing: 4) {
             Image(systemName: "plus")
-                .font(.system(size: 20, weight: .light))
-                .foregroundStyle(Theme.textSecondary)
-            Text(label)
-                .font(Theme.body(10))
+                .font(.system(size: 20, weight: .bold))
+                .foregroundStyle(Theme.goldDim)
+            Text(label.uppercased())
+                .font(Theme.body(10).weight(.bold))
+                .tracking(0.8)
                 .foregroundStyle(Theme.textSecondary)
         }
         .frame(width: size, height: size * 1.35)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.surface.opacity(0.5))
+                .fill(Theme.ink.opacity(0.55))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
         )
     }
 }
 
-/// The app's primary button.
+/// Press feedback for anything built to look like a physical plate.
+struct PlateButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .brightness(configuration.isPressed ? -0.06 : 0)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// The app's primary button — a struck metal plate, not a coloured rectangle.
 struct PrimaryButton: View {
     let title: String
     var systemImage: String? = nil
@@ -249,20 +359,45 @@ struct PrimaryButton: View {
             HStack(spacing: 7) {
                 if let systemImage {
                     Image(systemName: systemImage)
-                        .font(.system(size: 14, weight: .bold))
+                        .font(.system(size: 15, weight: .black))
                 }
-                Text(title)
-                    .font(Theme.title(15))
+                Text(title.uppercased())
+                    .font(Theme.title(14))
+                    .tracking(1.1)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 13)
-            .background(
+            .padding(.vertical, 14)
+            .background(plate)
+            .overlay(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(isEnabled ? tint : Theme.stroke)
+                    .strokeBorder(Color.white.opacity(isEnabled ? 0.4 : 0.12), lineWidth: 1)
+                    .blendMode(.plusLighter)
             )
+            .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             .foregroundStyle(isEnabled ? Theme.ink : Theme.textSecondary)
+            .shadow(color: isEnabled ? tint.opacity(0.45) : .clear, radius: 10, y: 3)
+            .shadow(color: .black.opacity(0.5), radius: 3, y: 2)
         }
+        .buttonStyle(PlateButtonStyle())
         .disabled(!isEnabled)
+    }
+
+    @ViewBuilder
+    private var plate: some View {
+        if isEnabled {
+            LinearGradient(
+                colors: [tint.opacity(0.55), tint, tint.opacity(0.72)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .overlay(
+                // Gloss across the top half only — a plate lit from above.
+                LinearGradient(colors: [.white.opacity(0.45), .clear],
+                               startPoint: .top, endPoint: .center)
+            )
+        } else {
+            LinearGradient(colors: [Theme.surfaceHigh, Theme.surface],
+                           startPoint: .top, endPoint: .bottom)
+        }
     }
 }
 
@@ -272,13 +407,17 @@ struct SectionHeader: View {
     var accessory: String? = nil
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: 8) {
             Text(title.uppercased())
-                .font(Theme.body(11).weight(.bold))
-                .tracking(1.4)
-                .foregroundStyle(Theme.goldDim)
+                .font(Theme.title(12))
+                .tracking(1.6)
+                .foregroundStyle(
+                    LinearGradient(colors: [Theme.gold, Theme.goldDim],
+                                   startPoint: .top, endPoint: .bottom)
+                )
             Rectangle()
-                .fill(Theme.stroke)
+                .fill(LinearGradient(colors: [Theme.goldDim.opacity(0.8), .clear],
+                                     startPoint: .leading, endPoint: .trailing))
                 .frame(height: 1)
             if let accessory {
                 Text(accessory)
@@ -296,12 +435,13 @@ struct EmptyState: View {
     let message: String
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 34, weight: .light))
+                .font(.system(size: 38, weight: .light))
                 .foregroundStyle(Theme.stroke)
-            Text(title)
-                .font(Theme.title(17))
+            Text(title.uppercased())
+                .font(Theme.title(16))
+                .tracking(1.2)
                 .foregroundStyle(Theme.textPrimary)
             Text(message)
                 .font(Theme.body(13))
