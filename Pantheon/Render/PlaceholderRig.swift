@@ -16,6 +16,15 @@ import UIKit
 enum PlaceholderRig {
 
     static func make(spec: ModelSpec, archetype: Archetype, element: Element) -> SCNNode {
+        // A character with a portrait but no mesh stands in as its portrait —
+        // a card in the world, billboarded, with a shadow and its element's
+        // glow. It reads as a deliberate style rather than as missing art, and
+        // every enemy in the roster has a portrait today while none has a
+        // model. The primitive rig below remains for the case with neither.
+        if let portrait = UIImage(named: spec.portraitName) {
+            return sprite(portrait: portrait, spec: spec, element: element)
+        }
+
         let root = SCNNode()
         root.name = "placeholder_root"
 
@@ -165,6 +174,100 @@ enum PlaceholderRig {
             mantle.position = SCNVector3(0, Float(height * 0.04), Float(-height * 0.09))
             chest.addChildNode(mantle)
         }
+    }
+
+    // MARK: - Portrait sprite
+
+    /// A billboarded portrait card: the art at ~80% of the unit's height, a
+    /// soft element glow behind it, a contact shadow on the ground, and the
+    /// same attachment node names the primitive rig and a real export expose.
+    private static func sprite(portrait: UIImage, spec: ModelSpec, element: Element) -> SCNNode {
+        let root = SCNNode()
+        root.name = "placeholder_root"
+
+        let tint = UIColor(hex: spec.auraHex) ?? UIColor(hex: element.accentHex) ?? .white
+        let height = CGFloat(spec.height)
+        let cardSize = height * 0.82
+        let cardBottom = height * 0.06
+
+        // The card itself. Constant lighting: it is a picture, and stage lights
+        // raking across it would only expose that.
+        let plane = SCNPlane(width: cardSize, height: cardSize)
+        plane.cornerRadius = cardSize * 0.07
+        let cardMaterial = SCNMaterial()
+        cardMaterial.lightingModel = .constant
+        cardMaterial.diffuse.contents = portrait
+        cardMaterial.isDoubleSided = true
+        cardMaterial.blendMode = .alpha
+        cardMaterial.writesToDepthBuffer = true
+        plane.firstMaterial = cardMaterial
+        let card = SCNNode(geometry: plane)
+        card.name = "portrait_card"
+        card.position = SCNVector3(0, Float(cardBottom + cardSize / 2), 0)
+        card.renderingOrder = 10
+
+        // Element glow behind the card: an additive disc, slightly larger.
+        let glowPlane = SCNPlane(width: cardSize * 1.35, height: cardSize * 1.35)
+        glowPlane.cornerRadius = cardSize * 0.675
+        let glowMaterial = SCNMaterial()
+        glowMaterial.lightingModel = .constant
+        glowMaterial.diffuse.contents = tint.withAlphaComponent(0.28)
+        glowMaterial.blendMode = .add
+        glowMaterial.writesToDepthBuffer = false
+        glowMaterial.isDoubleSided = true
+        glowPlane.firstMaterial = glowMaterial
+        let glow = SCNNode(geometry: glowPlane)
+        glow.name = "portrait_glow"
+        glow.position = SCNVector3(0, 0, -0.03)
+        glow.renderingOrder = 9
+        card.addChildNode(glow)
+
+        // Thin gold rim so the card has an edge against a bright backdrop.
+        let rimPlane = SCNPlane(width: cardSize * 1.03, height: cardSize * 1.03)
+        rimPlane.cornerRadius = cardSize * 0.075
+        let rimMaterial = SCNMaterial()
+        rimMaterial.lightingModel = .constant
+        rimMaterial.diffuse.contents = tint.mixed(with: .white, amount: 0.35).withAlphaComponent(0.9)
+        rimMaterial.writesToDepthBuffer = false
+        rimMaterial.isDoubleSided = true
+        rimPlane.firstMaterial = rimMaterial
+        let rim = SCNNode(geometry: rimPlane)
+        rim.name = "portrait_rim"
+        rim.position = SCNVector3(0, 0, -0.015)
+        rim.renderingOrder = 9
+        card.addChildNode(rim)
+
+        // Face the camera, but stay upright — a card that tilts to follow a
+        // low-angle shot looks like a fridge magnet.
+        let billboard = SCNBillboardConstraint()
+        billboard.freeAxes = .Y
+        card.constraints = [billboard]
+        root.addChildNode(card)
+
+        // Contact shadow: a dark disc flat on the ground.
+        let shadowPlane = SCNPlane(width: cardSize * 0.7, height: cardSize * 0.32)
+        shadowPlane.cornerRadius = cardSize * 0.16
+        let shadowMaterial = SCNMaterial()
+        shadowMaterial.lightingModel = .constant
+        shadowMaterial.diffuse.contents = UIColor.black.withAlphaComponent(0.55)
+        shadowMaterial.writesToDepthBuffer = false
+        shadowPlane.firstMaterial = shadowMaterial
+        let shadow = SCNNode(geometry: shadowPlane)
+        shadow.name = "portrait_shadow"
+        shadow.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        shadow.position = SCNVector3(0, 0.012, 0)
+        shadow.renderingOrder = 8
+        root.addChildNode(shadow)
+
+        // Attachment points at the heights a humanoid would have them.
+        for (name, y) in [("head", 0.92), ("spine_03", 0.62), ("hand_r", 0.5), ("weapon_r", 0.5)] {
+            let anchor = SCNNode()
+            anchor.name = name
+            anchor.position = SCNVector3(name == "hand_r" || name == "weapon_r" ? Float(cardSize * 0.35) : 0,
+                                         Float(height * y), 0)
+            root.addChildNode(anchor)
+        }
+        return root
     }
 
     private static func capsule(radius: CGFloat, height: CGFloat, color: UIColor) -> SCNNode {
