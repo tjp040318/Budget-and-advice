@@ -179,12 +179,25 @@ final class ModelLibrary {
     }
 
     private func loadFromBundle(_ name: String) -> SCNNode? {
-        guard let url = bundleURL(for: name) else { return nil }
-        guard let scene = try? SCNScene(url: url, options: [
-            .animationImportPolicy: SCNSceneSource.AnimationImportPolicy.doNotPlay,
-            .convertToYUp: true,
-            .createNormalsIfAbsent: true
-        ]) else { return nil }
+        guard let url = bundleURL(for: name) else {
+            log("no file in the bundle for '\(name)' — falling back to a placeholder")
+            return nil
+        }
+        let scene: SCNScene
+        do {
+            // Never `try?` here. A model that is present but unreadable and a
+            // model that was never copied into the bundle produce the same grey
+            // stand-in on screen, and only the error tells them apart.
+            scene = try SCNScene(url: url, options: [
+                .animationImportPolicy: SCNSceneSource.AnimationImportPolicy.doNotPlay,
+                .convertToYUp: true,
+                .createNormalsIfAbsent: true
+            ])
+        } catch {
+            log("'\(name)' is in the bundle at \(url.lastPathComponent) but SceneKit "
+                + "could not open it: \(error.localizedDescription)")
+            return nil
+        }
 
         let wrapper = SCNNode()
         for child in scene.rootNode.childNodes {
@@ -192,6 +205,38 @@ final class ModelLibrary {
         }
         MaterialTuner.tune(wrapper)
         return wrapper
+    }
+
+    private func log(_ message: String) {
+        #if DEBUG
+        print("[ModelLibrary] \(message)")
+        #endif
+    }
+
+    /// Prints what the bundle actually contains against what the roster asks
+    /// for. Called once at launch in debug builds, because "the character is
+    /// grey" has two very different causes — the file was never copied into the
+    /// app, or it was copied and will not load — and they are indistinguishable
+    /// on screen.
+    func diagnose(expecting assetNames: [String]) {
+        #if DEBUG
+        let root = Bundle.main.bundleURL
+        let found = (try? FileManager.default.subpathsOfDirectory(atPath: root.path))?
+            .filter { path in Self.searchExtensions.contains((path as NSString).pathExtension) }
+            .sorted() ?? []
+
+        log("bundle: \(root.path)")
+        log("3D files actually inside the app: \(found.isEmpty ? "NONE" : "\(found.count)")")
+        for path in found { log("    \(path)") }
+
+        for name in assetNames.sorted() {
+            if let url = bundleURL(for: name) {
+                log("  OK       \(name) -> \(url.lastPathComponent)")
+            } else {
+                log("  MISSING  \(name) — will render as a placeholder")
+            }
+        }
+        #endif
     }
 
     private func firstAnimation(in node: SCNNode) -> CAAnimation? {

@@ -183,10 +183,17 @@ final class UnitNode: SCNNode {
             ])
         }
 
+        // SceneKit calls this on its rendering thread, part-way through the
+        // node's own action update. Touching the action list from in there —
+        // which `playProcedural` does immediately, via `removeAction` — mutates
+        // the collection SceneKit is iterating and aborts the process. Hop to
+        // main before going anywhere near the scene graph.
         modelContainer.runAction(action, forKey: "clip") { [weak self] in
-            completion?()
-            guard let self, !self.isDefeated, !clip.loops else { return }
-            self.playProcedural(.idleCombat, completion: nil)
+            DispatchQueue.main.async {
+                completion?()
+                guard let self, !self.isDefeated, !clip.loops else { return }
+                self.playProcedural(.idleCombat, completion: nil)
+            }
         }
     }
 

@@ -17,6 +17,15 @@ struct PantheonApp: App {
         UINavigationBar.appearance().largeTitleTextAttributes = [
             .foregroundColor: UIColor(Theme.textPrimary)
         ]
+
+        #if DEBUG
+        // Reports, once, which models are really in the app and which are
+        // standing in. A placeholder and a model that failed to load look
+        // identical on screen; this is the only place the difference shows.
+        ModelLibrary.shared.diagnose(
+            expecting: UnitDatabase.all.map { $0.model.assetName }
+        )
+        #endif
     }
 
     var body: some Scene {
