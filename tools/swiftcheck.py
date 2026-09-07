@@ -21,7 +21,11 @@ hand and impossible to see by reading it:
   7. Static member access on module enums and structs — `UnitDatabase.zeus`
      when nothing called `zeus` is declared on it. This is the class of error
      that survives a rename sweep, because it looks like ordinary code.
-  8. Duplicate bundle-resource filenames. The Xcode project uses filesystem-
+  8. Accessor keywords used as values. `var id: String { set.rawValue }` on a
+     struct with a property named `set` does not compile: the parser reads the
+     first token of the accessor block as the `set` accessor and demands a body.
+     Reads perfectly; fails at parse time. `self.set` is the fix.
+  9. Duplicate bundle-resource filenames. The Xcode project uses filesystem-
      synchronised groups, so every non-source file under a target's folder is
      copied FLAT into the app bundle. Two files that share a basename in
      different subfolders therefore write to the same path, and the build fails
@@ -385,7 +389,29 @@ def check_unknown_types(files, declared, errors):
                           f"({len(sites)} use(s)) — typo, or missing from the allow-list")
 
 # ---------------------------------------------------------------------------
-# Rule 8: duplicate bundle-resource filenames
+# Rule 8: a property named like an accessor, used bare inside an accessor block
+# ---------------------------------------------------------------------------
+
+# `{ set.rawValue }` is parsed as the start of a setter, not as a member access
+# on a property called `set`. Same for get/willSet/didSet. Qualify with `self.`.
+ACCESSOR_AS_VALUE = re.compile(
+    r"\{\s*(get|set|willSet|didSet)\s*(?=[.\[(?!])")
+
+
+def check_accessor_keywords(files, errors):
+    for path in files:
+        src = strip_noise(open(path, encoding="utf-8", errors="replace").read())
+        for m in ACCESSOR_AS_VALUE.finditer(src):
+            line = src.count("\n", 0, m.start()) + 1
+            word = m.group(1)
+            errors.append(
+                f"{path}:{line}: `{word}` opens this accessor block, so it is parsed "
+                f"as the {word} accessor, not as the property named `{word}` — "
+                f"write `self.{word}`")
+
+
+# ---------------------------------------------------------------------------
+# Rule 9: duplicate bundle-resource filenames
 # ---------------------------------------------------------------------------
 
 # Compiled as a unit by actool / the Swift driver rather than copied file by
@@ -435,6 +461,7 @@ def main():
     if "--members" in sys.argv:
         check_static_members(files, collect_static_members(files), errors)
     check_patterns(files, enum_cases, errors)
+    check_accessor_keywords(files, errors)
     check_bundle_resources(errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)

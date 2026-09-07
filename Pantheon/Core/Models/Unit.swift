@@ -90,5 +90,7 @@ struct ActiveRelicSet: Identifiable, Equatable, Sendable {
     var set: RelicSet
     var completions: Int
 
-    var id: String { set.rawValue }
+    // `self.` is load-bearing: a bare `set` here is parsed as the setter
+    // accessor, not as the property.
+    var id: String { self.set.rawValue }
 }
