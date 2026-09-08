@@ -1,0 +1,18 @@
+{
+  "asset": "sekhmet_v2",
+  "created": "2026-09-08T19:15:44Z",
+  "prompt": "",
+  "negative_prompt": "",
+  "image": "Art/Concepts/sekhmet_concept.png",
+  "texture_prompt": "hand-painted stylised mobile game character textures, crimson and burnished gold and near-black palette, black lioness fur, gold sun-disc crown, lapis and carnelian inlays, crisp baked highlights, no photo realism",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 2.0
+  },
+  "stages": {},
+  "history": []
+}

@@ -33,7 +33,7 @@ and the second closed, in which case everything up to `download` works and
 `download` names the host that needs adding.
 """
 
-import argparse, json, os, sys, time
+import argparse, base64, json, os, sys, time
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -68,6 +68,7 @@ TERMINAL = {"SUCCEEDED", "FAILED", "CANCELED", "EXPIRED"}
 ENDPOINT = {
     "preview": "/v2/text-to-3d",
     "refine":  "/v2/text-to-3d",
+    "image":   "/v1/image-to-3d",
     "rig":     "/v1/rigging",
     "clip":    "/v1/animations",
 }
@@ -291,17 +292,29 @@ def cmd_library(a):
             print(f"{it['action_id']:4d}  {it.get('category', ''):15s} {it.get('sub_category', ''):22s} {it.get('name', '')}")
 
 
+def image_data_uri(path):
+    p = Path(path)
+    mime = "image/png" if p.suffix.lower() == ".png" else "image/jpeg"
+    return f"data:{mime};base64," + base64.b64encode(p.read_bytes()).decode()
+
+
 def cmd_generate(a):
     api = Meshy(load_key(a.key_file))
     m = load_manifest(a.asset)
     if m is None:
-        if not a.prompt:
-            sys.exit("the first run for an asset needs --prompt; later runs resume from the manifest")
+        if not a.prompt and not a.image:
+            sys.exit("the first run for an asset needs --prompt or --image; later runs resume from the manifest")
         m = {
             "asset": a.asset,
             "created": now(),
-            "prompt": a.prompt,
+            "prompt": a.prompt or "",
             "negative_prompt": a.negative or "",
+            # Concept-first: a designed full-body drawing (from the portrait,
+            # via Gemini) becomes the model through image-to-3D, which is far
+            # more faithful than a sentence and makes the model match its card.
+            "image": (str(Path(a.image).resolve().relative_to(REPO)) if Path(a.image).resolve().is_relative_to(REPO)
+                      else str(Path(a.image).resolve())) if a.image else "",
+            "texture_prompt": a.texture_prompt or "",
             "settings": {
                 "ai_model": a.ai_model, "art_style": a.style, "topology": a.topology,
                 "target_polycount": a.polycount, "symmetry_mode": a.symmetry,
@@ -318,35 +331,57 @@ def cmd_generate(a):
     start = api.balance()
     print(f"{a.asset}: {start} credits available")
 
-    print("preview")
-    body = {
-        "mode": "preview", "prompt": m["prompt"],
-        "art_style": s["art_style"], "ai_model": s["ai_model"], "topology": s["topology"],
-        "target_polycount": s["target_polycount"], "should_remesh": True,
-        "symmetry_mode": s["symmetry_mode"],
-    }
-    if m["negative_prompt"]:
-        body["negative_prompt"] = m["negative_prompt"]
-    ensure_task(api, m, "preview", body)
-    if wait(api, m, ["preview"]):
-        summary(m)
-        sys.exit("preview failed - re-run to try again with a fresh task")
-    if a.until == "preview":
-        return summary(m)
+    if m.get("image"):
+        # One task does what preview + refine do for text: geometry from the
+        # drawing, remeshed, and textured with PBR maps.
+        print("image-to-3d")
+        image_path = REPO / m["image"] if not Path(m["image"]).is_absolute() else Path(m["image"])
+        body = {
+            "image_url": image_data_uri(image_path),
+            "ai_model": s["ai_model"], "topology": s["topology"],
+            "target_polycount": s["target_polycount"], "should_remesh": True,
+            "should_texture": True, "enable_pbr": True, "symmetry_mode": s["symmetry_mode"],
+        }
+        if m.get("texture_prompt"):
+            body["texture_prompt"] = m["texture_prompt"]
+        ensure_task(api, m, "image", body)
+        if wait(api, m, ["image"]):
+            summary(m)
+            sys.exit("image-to-3d failed - re-run to try again with a fresh task")
+        if a.until in ("preview", "refine"):
+            return summary(m)
+        mesh_task = m["stages"]["image"]["id"]
+    else:
+        print("preview")
+        body = {
+            "mode": "preview", "prompt": m["prompt"],
+            "art_style": s["art_style"], "ai_model": s["ai_model"], "topology": s["topology"],
+            "target_polycount": s["target_polycount"], "should_remesh": True,
+            "symmetry_mode": s["symmetry_mode"],
+        }
+        if m["negative_prompt"]:
+            body["negative_prompt"] = m["negative_prompt"]
+        ensure_task(api, m, "preview", body)
+        if wait(api, m, ["preview"]):
+            summary(m)
+            sys.exit("preview failed - re-run to try again with a fresh task")
+        if a.until == "preview":
+            return summary(m)
 
-    print("refine")
-    ensure_task(api, m, "refine", {
-        "mode": "refine", "preview_task_id": m["stages"]["preview"]["id"], "enable_pbr": True,
-    })
-    if wait(api, m, ["refine"]):
-        summary(m)
-        sys.exit("refine failed - re-run to try again with a fresh task")
-    if a.until == "refine":
-        return summary(m)
+        print("refine")
+        ensure_task(api, m, "refine", {
+            "mode": "refine", "preview_task_id": m["stages"]["preview"]["id"], "enable_pbr": True,
+        })
+        if wait(api, m, ["refine"]):
+            summary(m)
+            sys.exit("refine failed - re-run to try again with a fresh task")
+        if a.until == "refine":
+            return summary(m)
+        mesh_task = m["stages"]["refine"]["id"]
 
     print("rig")
     ensure_task(api, m, "rig", {
-        "input_task_id": m["stages"]["refine"]["id"], "height_meters": s["height_meters"],
+        "input_task_id": mesh_task, "height_meters": s["height_meters"],
     })
     if wait(api, m, ["rig"]):
         summary(m)
@@ -430,7 +465,7 @@ def cmd_download(a):
         if key.startswith("clip:") and st.get("status") == "SUCCEEDED":
             jobs.append((st, "animation", f"{a.asset}_{st['clip']}"))
     if a.include_unrigged:
-        for stage in ("refine", "preview"):
+        for stage in ("refine", "preview", "image"):
             st = m["stages"].get(stage)
             if st and st.get("status") == "SUCCEEDED":
                 jobs.append((st, "model_urls", f"{a.asset}_{stage}"))
@@ -471,8 +506,10 @@ def main():
 
     p = sub.add_parser("generate", help="prompt -> preview -> refine -> rig -> clips, resumable")
     p.add_argument("asset", help="assetName in ModelSpec, e.g. sekhmet")
-    p.add_argument("--prompt", help="required on the first run for an asset")
+    p.add_argument("--prompt", help="required on the first run for an asset, unless --image")
     p.add_argument("--negative", help="negative prompt")
+    p.add_argument("--image", help="a designed full-body concept drawing: image-to-3D instead of text-to-3D")
+    p.add_argument("--texture-prompt", help="guides the texturing of an --image model")
     p.add_argument("--height", type=float, default=2.0, help="character height in metres (Docs/ART_PIPELINE.md §6)")
     p.add_argument("--style", default="realistic", choices=["realistic", "sculpture"])
     p.add_argument("--ai-model", default="latest", help="Meshy model: latest, meshy-5, ...")
