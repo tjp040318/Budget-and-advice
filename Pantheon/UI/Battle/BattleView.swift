@@ -129,9 +129,8 @@ struct BattleView: View {
                 ZStack {
                     Circle()
                         .fill(combatant.side == .player ? Theme.info.opacity(0.3) : Theme.danger.opacity(0.3))
-                    if UIImage(named: combatant.model.portraitName) != nil {
-                        Image(combatant.model.portraitName)
-                            .resizable()
+                    if BundleImage.exists(combatant.model.portraitName) {
+                        BundleImage(name: combatant.model.portraitName)
                             .aspectRatio(contentMode: .fill)
                             .clipShape(Circle())
                     } else {
@@ -167,9 +166,8 @@ struct BattleView: View {
             HStack(spacing: 10) {
                 // Actor plate
                 VStack(spacing: 3) {
-                    if UIImage(named: actor.model.portraitName) != nil {
-                        Image(actor.model.portraitName)
-                            .resizable()
+                    if BundleImage.exists(actor.model.portraitName) {
+                        BundleImage(name: actor.model.portraitName)
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 48, height: 48)
                             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))

@@ -107,10 +107,23 @@ final class UnitNode: SCNNode {
         guard clip != currentClip || !clip.loops else { completion?(); return }
         currentClip = clip
 
-        if let animation = ModelLibrary.shared.animation(clip, for: spec.assetName) {
+        if let shared = ModelLibrary.shared.animation(clip, for: spec.assetName) {
+            // The library hands out one cached animation per clip, so the copy
+            // is what gets configured for this use of it.
+            let animation = (shared.copy() as? CAAnimation) ?? shared
+            if clip == .death {
+                // A one-shot animation is removed when it ends and the model
+                // snaps back to its rest pose, which for a death means the
+                // corpse stands back up in an A-pose. Hold the last frame.
+                animation.isRemovedOnCompletion = false
+                animation.fillMode = .forwards
+            }
             modelContainer.addAnimation(animation, forKey: clip.rawValue)
             if !clip.loops {
                 let duration = animation.duration > 0 ? animation.duration : clip.fallbackDuration
+                if clip == .death {
+                    modelContainer.runAction(.sequence([.wait(duration: duration), .fadeOpacity(to: 0.6, duration: 0.6)]))
+                }
                 DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
                     completion?()
                     if self?.isDefeated == false { self?.play(.idleCombat) }
@@ -269,6 +282,7 @@ final class UnitNode: SCNNode {
     func revive(healthFraction: Double) {
         isDefeated = false
         modelContainer.removeAllActions()
+        modelContainer.removeAnimation(forKey: AnimationClip.death.rawValue)
         modelContainer.eulerAngles = SCNVector3Zero
         modelContainer.opacity = 1
         healthBarRoot.runAction(.fadeIn(duration: 0.3))

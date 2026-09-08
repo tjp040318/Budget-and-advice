@@ -65,9 +65,8 @@ struct SummonView: View {
 
     private var bannerArt: some View {
         ZStack(alignment: .bottomLeading) {
-            if UIImage(named: selectedBanner.artName) != nil {
-                Image(selectedBanner.artName)
-                    .resizable()
+            if BundleImage.exists(selectedBanner.artName) {
+                BundleImage(name: selectedBanner.artName)
                     .aspectRatio(contentMode: .fill)
             } else {
                 LinearGradient(

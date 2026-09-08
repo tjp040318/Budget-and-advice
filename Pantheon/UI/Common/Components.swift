@@ -185,6 +185,27 @@ struct WalletBar: View {
     }
 }
 
+/// A bundle image by name, resolved through UIKit.
+///
+/// On device, SwiftUI's `Image("portrait_anubis_ember")` drew nothing and logged
+/// "No image named 'portrait_anubis_ember' found in asset catalog", while
+/// `UIImage(named:)` on the same name found the file: every portrait in this
+/// project is a loose PNG in the bundle rather than an asset-catalogue entry.
+/// So every bundle image is looked up here, through UIKit, and handed to
+/// SwiftUI already loaded. `resizable()` is applied; add the aspect ratio and
+/// frame at the call site.
+struct BundleImage: View {
+    let name: String
+
+    var body: some View {
+        if let image = UIImage(named: name) {
+            Image(uiImage: image).resizable()
+        }
+    }
+
+    static func exists(_ name: String) -> Bool { UIImage(named: name) != nil }
+}
+
 /// The portrait tile used everywhere a unit appears in a list or a team slot.
 ///
 /// The frame carries the star grade. That is deliberate and it is the main
@@ -297,9 +318,8 @@ struct UnitCard: View {
     /// with the unit's initial, which keeps every screen usable pre-art.
     @ViewBuilder
     private var portrait: some View {
-        if UIImage(named: unit.blueprint.model.portraitName) != nil {
-            Image(unit.blueprint.model.portraitName)
-                .resizable()
+        if BundleImage.exists(unit.blueprint.model.portraitName) {
+            BundleImage(name: unit.blueprint.model.portraitName)
                 .aspectRatio(contentMode: .fill)
         } else {
             ZStack {

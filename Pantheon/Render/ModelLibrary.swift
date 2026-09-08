@@ -103,6 +103,9 @@ final class ModelLibrary {
             model = placeholder.clone()
         }
 
+        if !isStandIn {
+            repairSkinners(in: model, label: assetName)
+        }
         model.name = "model"
         container.addChildNode(model)
 
@@ -233,7 +236,82 @@ final class ModelLibrary {
             wrapper.addChildNode(child)
         }
         MaterialTuner.tune(wrapper)
+        describe(wrapper, label: name)
         return wrapper
+    }
+
+    /// Points every skinner in a cloned hierarchy at the clone's own bones.
+    ///
+    /// `SCNNode.clone()` copies the node tree, but a skinner's `bones` and
+    /// `skeleton` can keep referring to the tree it was cloned FROM. Here that
+    /// tree is the cached original, which is never in a scene and never
+    /// animated, so a clone that kept those references would be skinned at the
+    /// original's scale and position and would ignore every clip played on it.
+    /// Rebuilding the skinner against nodes found by name inside the clone is
+    /// harmless when SceneKit has already done this and decisive when it has
+    /// not. Joint names are unique in every export this loader has seen.
+    private func repairSkinners(in root: SCNNode, label: String) {
+        var repaired = 0
+        root.enumerateHierarchy { node, _ in
+            guard let skinner = node.skinner, let geometry = node.geometry else { return }
+            var bones: [SCNNode] = []
+            for bone in skinner.bones {
+                guard let name = bone.name, let mine = root.childNode(withName: name, recursively: true) else {
+                    self.log("'\(label)': bone '\(bone.name ?? "(unnamed)")' has no counterpart in the clone; skinner left alone")
+                    return
+                }
+                bones.append(mine)
+            }
+            let rebuilt = SCNSkinner(
+                baseGeometry: geometry,
+                bones: bones,
+                boneInverseBindTransforms: skinner.boneInverseBindTransforms,
+                boneWeights: skinner.boneWeights,
+                boneIndices: skinner.boneIndices
+            )
+            rebuilt.baseGeometryBindTransform = skinner.baseGeometryBindTransform
+            if let skeletonName = skinner.skeleton?.name {
+                rebuilt.skeleton = root.childNode(withName: skeletonName, recursively: true)
+            }
+            node.skinner = rebuilt
+            repaired += 1
+        }
+        if repaired > 0 {
+            log("'\(label)': \(repaired) skinner(s) rebound to this instance's own bones")
+        }
+    }
+
+    /// One line per node that carries geometry, a skinner or an animation, so
+    /// the console shows what SceneKit actually built from the file rather
+    /// than what the file was meant to contain. Bounds are the node's own, in
+    /// its local space; for a skinned mesh that is the bind pose.
+    private func describe(_ root: SCNNode, label: String) {
+        #if DEBUG
+        var lines: [String] = []
+        root.enumerateHierarchy { node, _ in
+            var bits: [String] = []
+            if let geometry = node.geometry {
+                let box = node.boundingBox
+                bits.append(String(
+                    format: "geometry %d sources, %d elements, bbox x %.2f..%.2f y %.2f..%.2f z %.2f..%.2f",
+                    geometry.sources.count, geometry.elements.count,
+                    box.min.x, box.max.x, box.min.y, box.max.y, box.min.z, box.max.z
+                ))
+            }
+            if let skinner = node.skinner {
+                bits.append("skinner with \(skinner.bones.count) bones")
+            }
+            if !node.animationKeys.isEmpty {
+                bits.append("animation keys \(node.animationKeys)")
+            }
+            if !bits.isEmpty {
+                lines.append("      \(node.name ?? "(unnamed)"): " + bits.joined(separator: "; "))
+            }
+        }
+        log("'\(label)' built \(lines.count) node(s) of interest:")
+        for line in lines.prefix(16) { print(line) }
+        if lines.count > 16 { print("      … \(lines.count - 16) more") }
+        #endif
     }
 
     private func log(_ message: String) {
@@ -268,18 +346,30 @@ final class ModelLibrary {
         #endif
     }
 
+    /// The clip in a per-clip file. SceneKit may hang the imported skeletal
+    /// animation on the skeleton root as one group, or a track on every joint;
+    /// the longest animation in the file is the whole clip in either case,
+    /// where a depth-first "first one found" could be a single joint's track.
     private func firstAnimation(in node: SCNNode) -> CAAnimation? {
-        for key in node.animationKeys {
-            // `SCNAnimationPlayer.animation` is an `SCNAnimation`, not a
-            // `CAAnimation`; the bridging initialiser is the way across.
-            if let player = node.animationPlayer(forKey: key) {
-                return CAAnimation(scnAnimation: player.animation)
+        var best: CAAnimation?
+        var origin = ""
+        node.enumerateHierarchy { child, _ in
+            for key in child.animationKeys {
+                // `SCNAnimationPlayer.animation` is an `SCNAnimation`, not a
+                // `CAAnimation`; the bridging initialiser is the way across.
+                guard let player = child.animationPlayer(forKey: key) else { continue }
+                let animation = CAAnimation(scnAnimation: player.animation)
+                if best == nil || animation.duration > (best?.duration ?? 0) {
+                    best = animation
+                    origin = "\(child.name ?? "(unnamed)") / \(key)"
+                }
             }
         }
-        for child in node.childNodes {
-            if let found = firstAnimation(in: child) { return found }
+        if let best {
+            log(String(format: "clip animation taken from %@, %.2f s, %@",
+                       origin, best.duration, best is CAAnimationGroup ? "a group" : "a single track"))
         }
-        return nil
+        return best
     }
 }
 

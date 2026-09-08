@@ -329,9 +329,8 @@ struct SummonRevealView: View {
         let rarity = Rarity(stars: result.stars)
         return VStack(spacing: 4) {
             ZStack {
-                if UIImage(named: result.blueprint.model.portraitName) != nil {
-                    Image(result.blueprint.model.portraitName)
-                        .resizable()
+                if BundleImage.exists(result.blueprint.model.portraitName) {
+                    BundleImage(name: result.blueprint.model.portraitName)
                         .aspectRatio(contentMode: .fill)
                 } else {
                     RoundedRectangle(cornerRadius: Theme.tightCorner)
@@ -403,6 +402,14 @@ struct SummonStageView: UIViewRepresentable {
         node.position = SCNVector3(0, 0, 0)
         node.opacity = 0
         scene.rootNode.addChildNode(node)
+        // A canonical export's rest pose is its bind pose, an A-pose, so the
+        // figure gets the idle clip when one is in the bundle and stands
+        // still only when there is nothing to play.
+        let assetName = result.blueprint.model.assetName
+        if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
+            ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
+            node.addAnimation(idle, forKey: "idle")
+        }
         // Fade in, then a slow perpetual turn — enough to show the model is
         // three-dimensional, not so fast the player never sees the face.
         node.runAction(.sequence([

@@ -57,15 +57,19 @@ enum ModelOrientation {
         let centreX = (box.min.x + box.max.x) * 0.5
         let centreZ = (box.min.z + box.max.z) * 0.5
 
-        var note = "Y-up"
-        if extent.z > extent.y, extent.z > extent.x {
+        var note = String(format: "measured x%.2f y%.2f z%.2f", extent.x, extent.y, extent.z)
+        // A canonical export (tools/mesh.py) is already Y-up, so only a
+        // decisive margin rotates anything; a broad-shouldered character in a
+        // wide pose must not be tipped over because its arms span more than
+        // its height.
+        if extent.z > extent.y * 1.25, extent.z > extent.x {
             let sign: Float = centreZ >= 0 ? -1 : 1
             model.eulerAngles.x += sign * .pi / 2
-            note = "Z-up, pitched \(Int(sign * -90))°"
-        } else if extent.x > extent.y, extent.x > extent.z {
+            note += ", Z-up: pitched \(Int(sign * -90))°"
+        } else if extent.x > extent.y * 1.25, extent.x > extent.z {
             let sign: Float = centreX >= 0 ? 1 : -1
             model.eulerAngles.z += sign * .pi / 2
-            note = "X-up, rolled \(Int(sign * 90))°"
+            note += ", X-up: rolled \(Int(sign * 90))°"
         }
 
         // Measure again in the parent's frame so the rotation above is included,
