@@ -83,6 +83,8 @@ final class ModelLibrary {
 
         let model: SCNNode
         var isStandIn = false
+        /// A stand-in that is a portrait sprite rather than the primitive rig.
+        var isPortraitSprite = false
         if let cached = cache[assetName] {
             model = cached.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex)
@@ -92,6 +94,8 @@ final class ModelLibrary {
             MaterialTuner.applyElementTint(model, hex: spec.auraHex)
         } else {
             isStandIn = true
+            isPortraitSprite = UIImage(named: spec.portraitName + "_cut") != nil
+                || UIImage(named: spec.portraitName) != nil
             let key = spec.assetName + "|" + spec.auraHex
             let placeholder = placeholderCache[key]
                 ?? PlaceholderRig.make(spec: spec, archetype: archetype, element: element)
@@ -129,7 +133,11 @@ final class ModelLibrary {
         // export is authored at its true height — the table in
         // Docs/ART_PIPELINE.md — so scaling it again would make every god 15%
         // too tall and every primordial 60%.
-        let scale = spec.scale * (isStandIn ? archetype.modelScale : 1.0)
+        // The archetype scale is a property of the PRIMITIVE rig, which is
+        // built at one size and leans on it to tell a Titan from a Spirit. A
+        // real export and a portrait sprite are both already authored at the
+        // unit's true height, so scaling either again is simply wrong.
+        let scale = spec.scale * (isStandIn && !isPortraitSprite ? archetype.modelScale : 1.0)
         model.scale = SCNVector3(scale, scale, scale)
         return container
     }

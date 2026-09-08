@@ -97,8 +97,15 @@ enum Theme {
     /// The standard panel: gradient body, bevelled edge, and a drop shadow so
     /// it floats off the backdrop instead of being painted onto it.
     static func panel(_ radius: CGFloat = cornerRadius) -> some View {
-        Group {
-            if let painted = Chrome.slice("ui_panel", Chrome.panelInsets) {
+        // The painted panel's corner ornament is 31pt on each side. Below
+        // roughly twice that the four corners meet and the ornament becomes the
+        // whole panel, swamping whatever it is framing — which is exactly what
+        // happened to the 86pt actor plate in battle. Small panels get the
+        // drawn one, which scales down cleanly.
+        GeometryReader { geometry in
+            let fitsPainted = geometry.size.width >= Chrome.paintedPanelMinimum
+                && geometry.size.height >= Chrome.paintedPanelMinimum
+            if fitsPainted, let painted = Chrome.slice("ui_panel", Chrome.panelInsets) {
                 painted
                     .shadow(color: .black.opacity(0.55), radius: 8, x: 0, y: 4)
             } else {
@@ -164,6 +171,11 @@ enum Chrome {
         cache[name] = loaded
         return loaded
     }
+
+    /// Smallest side a painted panel may be drawn at. Below this the corner
+    /// ornament from opposite sides overlaps and the panel reads as a frame
+    /// with no middle.
+    static let paintedPanelMinimum: CGFloat = 130
 
     /// ui_panel: 512² → 171pt. Corner ornament reaches ~18% in.
     static let panelInsets = EdgeInsets(top: 31, leading: 31, bottom: 31, trailing: 31)

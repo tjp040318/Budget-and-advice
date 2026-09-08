@@ -65,8 +65,11 @@ final class BattleSceneController: NSObject {
         } else {
             let ground = SCNNode(geometry: SCNFloor())
             if let floor = ground.geometry as? SCNFloor {
-                floor.reflectivity = 0.08
-                floor.reflectionFalloffEnd = 6
+                // A mirror floor doubles every figure, which with billboarded
+                // sprites means a second upside-down copy of the art. A trace
+                // of sheen is all the stage needs.
+                floor.reflectivity = 0.02
+                floor.reflectionFalloffEnd = 2.5
             }
             let material = SCNMaterial()
             material.lightingModel = .physicallyBased
