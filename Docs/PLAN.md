@@ -88,9 +88,17 @@ one — see phase 3.
 - [x] Model scale/centre/orientation normalised from measured bounds
 - [ ] **Confirm on device.** Needs the `[ModelLibrary] 'anubis':` console line.
 
-### Phase 1 — the model pipeline *(next, ~half a day)*
+### Phase 1 — the model pipeline *(written, not yet run in anger)*
 
-`tools/mesh.py`, run once per character:
+`tools/mesh.py` exists and its read-only `--inspect` path works. The
+decimating path has not been run yet — that is the next command:
+
+```bash
+python3 tools/mesh.py Pantheon/Resources/Models/anubis.usdz --tris 5000 --lod 1500
+```
+
+It keeps the untouched export beside the result as `anubis.orig.usdz`, so a
+bad reduction costs nothing. What it does, once per character:
 
 1. Open the Meshy export with USD.
 2. Decimate to a target triangle budget — **5,000 for a hero, 3,000 for a
