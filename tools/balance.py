@@ -90,6 +90,7 @@ class Fighter:
     atb: float = 0.0
     cds: list = field(default_factory=list)
     defbreak: int = 0
+    burn: int = 0
 
     def __post_init__(self):
         s = grade_mult(self.stars) * level_mult(self.level)
@@ -146,6 +147,13 @@ def simulate(team_a, team_b, seed=0):
         for i in range(len(actor.cds)):
             actor.cds[i] = max(0, actor.cds[i] - 1)
         if actor.defbreak > 0: actor.defbreak -= 1
+        # Burn ticks at the start of the burning unit's turn for a flat 5% of
+        # max HP, ignoring defence — BattleEngine.swift, "Burn ticks for a
+        # flat share of max HP". Two turns per application.
+        if actor.burn > 0:
+            actor.hp -= actor.maxhp * 0.05
+            actor.burn -= 1
+            if not actor.alive: continue
 
         foes = [f for f in (team_b if actor.side == "a" else team_a) if f.alive]
         if not foes: continue
@@ -173,6 +181,7 @@ def simulate(team_a, team_b, seed=0):
                 if not t.alive: continue
                 t.hp -= resolve_hit(actor, t, mult, defign, missbonus, rng)
                 if "break" in name.lower(): t.defbreak = 2
+                if "burn" in name.lower() and rng.random() < 0.30: t.burn = 2
     return "draw", turns
 
 # ---------------------------------------------------------------------------
@@ -196,6 +205,15 @@ AMMIT     = Blueprint("ammit",     "Ammit",             "umbra",    4, 530, 37, 
     skills=[("Three Jaws", 0.90, 3, 0, 0, 0, False), ("Devour", 3.40, 1, 3, 0.25, 0.6, False)])
 APEP      = Blueprint("apep",      "Apep",              "ember",    5, 980, 39, 31,  94,
     skills=[("Coil", 1.90, 1, 0, 0, 0, False), ("Chaos Break", 3.60, 1, 4, 0, 0, True)])
+
+# The second family. Natural 5*, attacker: two-hit claws, a single-target nuke
+# that breaks defence (the sim keys defence break off the word "break"), and an
+# AoE ultimate. The Ember variant is the archetype; the other four are within a
+# few points of it.
+SEKHMET = Blueprint("sekhmet_ember", "Sekhmet (Fire)", "ember", 5, hp=410, atk=38, dfn=23, spd=106,
+    skills=[("Rake of the Lioness (Burn)", 1.50, 2, 0, 0.0, 0.0, False),
+            ("Eye of Ra (Def Break)", 4.80, 1, 3, 0.0, 0.0, False),
+            ("Wrath of the Eye", 2.60, 1, 5, 0.0, 0.0, True)])
 
 def mk(bp, level, stars, relic=1.0, boss=1.0):
     f = Fighter(bp, level, stars, relic)
@@ -244,13 +262,24 @@ def winrate(team_spec, stage_spec, trials=200):
 # ---------------------------------------------------------------------------
 
 def report_curve():
-    print("\nANUBIS STAT CURVE")
-    print(f"{'grade/level':>14}{'HP':>9}{'ATK':>7}{'DEF':>7}{'SPD':>6}{'power':>9}")
-    for stars, lvl in [(4,1),(4,45),(5,1),(5,55),(6,1),(6,65)]:
-        f = mk(ANUBIS, lvl, stars)
-        print(f"{f'{stars}* lv{lvl}':>14}{f.maxhp:>9.0f}{f.atk:>7.0f}{f.dfn:>7.0f}{f.spd:>6.0f}{f.power():>9}")
-    g = mk(ANUBIS, 55, 6, 1.60)
-    print(f"{'6* lv55 geared':>14}{g.maxhp:>9.0f}{g.atk:>7.0f}{g.dfn:>7.0f}{g.spd:>6.0f}{g.power():>9}")
+    for bp, ladder in ((ANUBIS, [(4,1),(4,45),(5,1),(5,55),(6,1),(6,65)]),
+                       (SEKHMET, [(5,1),(5,55),(6,1),(6,65)])):
+        print(f"\n{bp.name.upper()} STAT CURVE")
+        print(f"{'grade/level':>14}{'HP':>9}{'ATK':>7}{'DEF':>7}{'SPD':>6}{'power':>9}")
+        for stars, lvl in ladder:
+            f = mk(bp, lvl, stars)
+            print(f"{f'{stars}* lv{lvl}':>14}{f.maxhp:>9.0f}{f.atk:>7.0f}{f.dfn:>7.0f}{f.spd:>6.0f}{f.power():>9}")
+        g = mk(bp, 55, 6, 1.60)
+        print(f"{'6* lv55 geared':>14}{g.maxhp:>9.0f}{g.atk:>7.0f}{g.dfn:>7.0f}{g.spd:>6.0f}{g.power():>9}")
+
+def report_duel(trials=300):
+    """Sekhmet against Anubis at equal grade and level: the attacker should win
+    a majority of the time but not all of it, or the support kit is pointless."""
+    print("\nDUEL — Sekhmet vs Anubis, 1v1, same grade and level, %d seeded fights" % trials)
+    for stars, lvl in [(5, 1), (5, 30), (6, 55)]:
+        wins = sum(1 for s in range(trials)
+                   if simulate([mk(SEKHMET, lvl, stars)], [mk(ANUBIS, lvl, stars)], seed=s)[0] == "a")
+        print(f"  {stars}* lv{lvl:<3}  Sekhmet wins {wins / trials * 100:3.0f}%")
 
 def report_elements():
     print("\nELEMENT WHEEL (must be a closed cycle plus a mirrored pair)")
@@ -272,6 +301,9 @@ LADDERS = [
     ("4x 4* lv35",        [(ANUBIS, 35, 4, 1.15)] * 4),
     ("4x 5* lv30 +relics",[(ANUBIS, 30, 5, 1.25)] * 4),
     ("4x 6* lv55 max",    [(ANUBIS, 55, 6, 1.60)] * 4),
+    # A summoned Sekhmet beside three Anubis: what one real damage dealer does
+    # to a support-only team's curve.
+    ("3x A lv35 + Sekhmet",[(ANUBIS, 35, 4, 1.15)] * 3 + [(SEKHMET, 35, 5, 1.15)]),
 ]
 
 def report_campaign(trials=200):
@@ -360,5 +392,5 @@ if __name__ == "__main__":
     elif "--curve" in a: report_curve()
     elif "--gacha" in a: report_gacha()
     else:
-        report_curve(); report_elements(); report_campaign(); report_gacha(); report_economy()
+        report_curve(); report_elements(); report_duel(); report_campaign(); report_gacha(); report_economy()
         print()
