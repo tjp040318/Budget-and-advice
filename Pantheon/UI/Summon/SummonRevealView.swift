@@ -217,7 +217,9 @@ struct SummonRevealView: View {
 
             Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
                 .font(Theme.body(12))
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(Theme.textPrimary)
+                // Over the lit floor of the set now, not a dark gradient.
+                .shadow(color: .black.opacity(0.9), radius: 3, y: 1)
                 .opacity(isFullyRevealed ? 1 : 0)
                 .padding(.bottom, 12)
         }
