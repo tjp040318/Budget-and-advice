@@ -77,7 +77,8 @@ environment can and cannot do. The short version:
   banners, a particle sprite and a 10-texture UI kit. `tools/genart.py` makes
   more via Gemini when `GEMINI_API_KEY` is in the environment; it was not, last
   session. Sekhmet's portrait prompt is in `Docs/ART_2D.md`.
-- Sound is 13 synthesised effects. `tools/sfx.py` regenerates them. No music.
+- Sound is 13 synthesised effects (`tools/sfx.py`) and two synthesised music
+  loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 
 ### What this environment can reach
 

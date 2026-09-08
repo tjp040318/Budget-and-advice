@@ -223,8 +223,11 @@ final class BattleSceneController: NSObject {
         director = CameraDirector(cameraNode: cameraNode)
     }
 
-    /// Positions both teams. Players face +Z from the near side; opponents face
-    /// -Z from the far side, staggered so nobody is hidden behind anybody.
+    /// Positions both teams. The camera sits on the +Z side, so the player's
+    /// line stands nearest it at +Z and faces away, toward the enemies at -Z,
+    /// who face +Z — toward the player and the camera. A model's authored
+    /// facing is +Z (Docs/ART_PIPELINE.md), hence the half-turn on the near
+    /// side. Ranks are staggered so nobody is hidden behind anybody.
     private func place(combatants: [Combatant]) {
         // A 5v5 is ten characters plus a full post stack; a 1v1 can afford the
         // detailed mesh. The loader falls back to the full model when no reduced
@@ -233,7 +236,7 @@ final class BattleSceneController: NSObject {
         for combatant in combatants {
             let node = UnitNode(combatant: combatant, detail: detail)
             node.position = position(for: combatant)
-            node.eulerAngles.y = combatant.side == .player ? 0 : .pi
+            node.eulerAngles.y = combatant.side == .player ? .pi : 0
             scene.rootNode.addChildNode(node)
             unitNodes[combatant.id] = node
         }

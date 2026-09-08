@@ -103,8 +103,11 @@ per environment from `keyLightHex` and `fogHex`. The IBL may be `.hdr` or
 
 ## `Audio/`
 
-Not wired up yet. When it is: `sfx_<event>.caf` for effects and
-`music_<screen>.m4a` for loops.
+Thirteen synthesised effects (`tools/sfx.py`) and two synthesised music loops
+(`tools/music.py`): `music_island.wav` under every screen, `music_battle.wav`
+in a fight, crossfaded by `AudioLibrary.playMusic`. Replace any file with a
+recording of the same name and nothing else changes. Music has its own toggle
+under More → Sound.
 
 ---
 

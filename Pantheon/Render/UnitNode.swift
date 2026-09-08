@@ -149,7 +149,9 @@ final class UnitNode: SCNNode {
     /// timing and intent so combat pacing can be tuned before real animation.
     private func playProcedural(_ clip: AnimationClip, completion: (() -> Void)?) {
         modelContainer.removeAction(forKey: "clip")
-        let facing: Float = side == .player ? 1 : -1
+        // Toward the enemy line: the player's side stands at +Z and attacks
+        // into -Z, the opponents the reverse.
+        let facing: Float = side == .player ? -1 : 1
 
         let action: SCNAction
         switch clip {

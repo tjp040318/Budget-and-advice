@@ -37,6 +37,66 @@ final class AudioLibrary {
     }
     private static let muteKey = "audio.muted"
 
+    // MARK: - Music
+
+    /// Loop names, as filenames without extension. Synthesised by
+    /// `tools/music.py`; a recording of the same name replaces one silently.
+    enum Music: String {
+        case island = "music_island"
+        case battle = "music_battle"
+    }
+
+    var isMusicMuted = false {
+        didSet {
+            UserDefaults.standard.set(isMusicMuted, forKey: Self.musicMuteKey)
+            if isMusicMuted {
+                current?.player.pause()
+            } else if let player = current?.player {
+                player.volume = musicVolume
+                player.play()
+            }
+        }
+    }
+    private static let musicMuteKey = "audio.music.muted"
+    private var current: (music: Music, player: AVAudioPlayer)?
+    /// Music sits under the effects, not level with them.
+    private let musicVolume: Float = 0.32
+
+    /// Starts a loop, crossfading out whatever was playing. Asking for the
+    /// loop that is already playing does nothing, so every screen can ask for
+    /// its music on appear without restarting the track.
+    func playMusic(_ music: Music, fade: TimeInterval = 1.2) {
+        if current?.music == music { return }
+        guard let url = Bundle.main.url(forResource: music.rawValue, withExtension: "wav", subdirectory: "Audio")
+            ?? Bundle.main.url(forResource: music.rawValue, withExtension: "wav"),
+              let player = try? AVAudioPlayer(contentsOf: url) else { return }
+        player.numberOfLoops = -1
+        player.volume = 0
+        player.prepareToPlay()
+        if let old = current?.player {
+            old.setVolume(0, fadeDuration: fade)
+            DispatchQueue.main.asyncAfter(deadline: .now() + fade + 0.1) { old.stop() }
+        }
+        current = (music, player)
+        guard !isMusicMuted else { return }
+        player.play()
+        player.setVolume(musicVolume, fadeDuration: fade)
+    }
+
+    func stopMusic(fade: TimeInterval = 0.8) {
+        guard let old = current?.player else { return }
+        current = nil
+        old.setVolume(0, fadeDuration: fade)
+        DispatchQueue.main.asyncAfter(deadline: .now() + fade + 0.1) { old.stop() }
+    }
+
+    /// An ambient-category player is paused when the app leaves the
+    /// foreground and does not restart itself; call this on return.
+    func resumeMusic() {
+        guard !isMusicMuted, let player = current?.player, !player.isPlaying else { return }
+        player.play()
+    }
+
     /// How many simultaneous instances of one sound to allow. Multi-hit skills
     /// land three or four hits within a quarter second.
     private let voicesPerSound = 4
@@ -46,6 +106,7 @@ final class AudioLibrary {
 
     private init() {
         isMuted = UserDefaults.standard.bool(forKey: Self.muteKey)
+        isMusicMuted = UserDefaults.standard.bool(forKey: Self.musicMuteKey)
         // Ambient: mixes with whatever the player is listening to and respects
         // the silent switch, which is what a game is expected to do.
         try? AVAudioSession.sharedInstance().setCategory(.ambient, mode: .default, options: [.mixWithOthers])

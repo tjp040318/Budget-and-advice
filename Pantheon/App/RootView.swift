@@ -52,6 +52,7 @@ struct RootView: View {
         }
         .tint(Theme.gold)
         .preferredColorScheme(.dark)
+        .onAppear { AudioLibrary.shared.playMusic(.island) }
         .alert(
             "Something went wrong",
             isPresented: Binding(
@@ -67,6 +68,7 @@ struct RootView: View {
             switch phase {
             case .active:
                 store.refreshTimedResources()
+                AudioLibrary.shared.resumeMusic()
             case .background, .inactive:
                 Task { await store.saveNow() }
             @unknown default:
@@ -81,6 +83,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
     @State private var showResetConfirm = false
     @State private var soundOn = !AudioLibrary.shared.isMuted
+    @State private var musicOn = !AudioLibrary.shared.isMusicMuted
 
     var body: some View {
         NavigationStack {
@@ -123,6 +126,15 @@ struct SettingsView: View {
             .onChange(of: soundOn) { _, on in
                 AudioLibrary.shared.isMuted = !on
                 if on { AudioLibrary.shared.play(.uiConfirm) }
+            }
+            Toggle(isOn: $musicOn) {
+                Text("Music")
+                    .font(Theme.body(13))
+                    .foregroundStyle(Theme.textPrimary)
+            }
+            .tint(Theme.gold)
+            .onChange(of: musicOn) { _, on in
+                AudioLibrary.shared.isMusicMuted = !on
             }
             Text("Effects mix with your own music and respect the silent switch.")
                 .font(Theme.body(11))

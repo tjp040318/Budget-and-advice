@@ -881,7 +881,8 @@ def synthesize_flinch(source, duration=0.45, fps=30.0, recoil=0.06):
             for j in roots:
                 T[f, j] = t0[j] + amt * np.array([0.0, -0.02, -recoil])
             for j, name in enumerate(char.joints):
-                deg = peak.get(name.split("/")[-1].lower())
+                # "Spine02", "spine_1" and "Spine" are all the spine.
+                deg = peak.get(re.sub(r"[^a-z]", "", name.split("/")[-1].lower()))
                 if deg is None:
                     continue
                 theta = sign * np.radians(deg) * amt

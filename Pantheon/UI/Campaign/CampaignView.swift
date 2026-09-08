@@ -201,6 +201,33 @@ struct StageBriefingView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
+                    // The stage's own painting, so the briefing is a place before
+                    // it is a list.
+                    if BundleImage.exists("\(stage.environment.sceneName)_bg") {
+                        BundleImage(name: "\(stage.environment.sceneName)_bg")
+                            .aspectRatio(contentMode: .fill)
+                            .frame(height: 150)
+                            .frame(maxWidth: .infinity)
+                            .clipped()
+                            .overlay(
+                                LinearGradient(colors: [.clear, Theme.ink.opacity(0.85)],
+                                               startPoint: .center, endPoint: .bottom)
+                            )
+                            .overlay(alignment: .bottomLeading) {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(stage.environment.displayName.uppercased())
+                                        .font(Theme.body(10).weight(.bold))
+                                        .tracking(1.4)
+                                        .foregroundStyle(Theme.textSecondary)
+                                    Text(stage.name)
+                                        .font(Theme.title(20))
+                                        .foregroundStyle(Theme.textPrimary)
+                                }
+                                .padding(12)
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+                    }
+
                     SectionHeader(title: "Opposition", accessory: "\(enemies.count) units")
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
                         ForEach(enemies) { enemy in

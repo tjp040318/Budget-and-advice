@@ -211,8 +211,11 @@ is: the app now opens on it.
 
 ### Phase 4 — sound and feel
 
-- **Music.** The one genuine gap. Suno or Udio: a battle loop, a town loop, a
-  summon sting. ~$10 for a month, an afternoon of prompting.
+- **Music.** Two synthesised loops are in — an island loop of pads, a drone
+  and a plucked melody in E Phrygian dominant, and a 96 BPM battle loop with
+  a kick, a frame drum, a bass ostinato and chord stabs (`tools/music.py`).
+  Stand-ins, but stand-ins that set a mood. Suno or Udio for the real ones:
+  a battle loop, a town loop, a summon sting. ~$10 for a month.
 - **Voice.** ElevenLabs, one summon line per character. Cheap and very genre.
 - Retune `Juice.profile` once there is real animation to sync against.
 

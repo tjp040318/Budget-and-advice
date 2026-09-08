@@ -40,7 +40,11 @@ struct BattleView: View {
             }
         }
         .preferredColorScheme(.dark)
-        .onAppear { model.begin() }
+        .onAppear {
+            model.begin()
+            AudioLibrary.shared.playMusic(.battle)
+        }
+        .onDisappear { AudioLibrary.shared.playMusic(.island) }
         .onChange(of: model.outcome?.outcome) { _, newValue in
             guard newValue != nil else { return }
             // Let the last animation land before the result panel takes over.
