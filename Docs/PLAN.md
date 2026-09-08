@@ -442,6 +442,21 @@ pictures. `StageBuilder` (Render) assembles a set from parts, no scene file:
   the temple ruin further back, mist and dust; the SwiftUI glow and rays still
   show between the pillars.
 
+**What the photographs taught, in three passes.** The first set's platform
+was too wide for its edge to come into frame, so it read as a floor rather
+than a thing in the air; four braziers and the key lit the sandstone near
+white; and the brazier fire drew as black squares, because the particle
+sprite was an opaque picture on black that only additive blending can hide
+(it is a white sprite with real alpha now, which draws right under any
+blend). The second pass showed the summon stage's view drawing its own
+rectangle where the floor stopped, a pillar under the words, and an arena
+close-up taken from inside a front brazier. The set is now radius 7.6 with
+the edge a third of the way down the frame, the floor darker per stage, the
+fire dimmer, the painted horizon lower, the reveal's view edge to edge with
+its pillars behind and to the figure's left, the battle braziers all behind
+the enemy line, and no rim boulders on the front arc where the impact shot's
+camera lands.
+
 **The cost was wrong.** Text-to-3D was estimated at 15 credits a prop (5
 preview + 10 refine) and cost 30: ten props took 300 credits, twice the 150
 agreed, and the balance is 61. The estimate should have been checked on one
