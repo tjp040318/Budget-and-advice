@@ -88,8 +88,9 @@ What differs from the web app:
   tool waits on it, so a re-run resumes and never pays twice. Commit the
   manifest: it is the durable pointer to the heavy files.
 
-Measured on Sekhmet: 20 credits preview, 10 refine, 5 rig, 3 per clip — 53 for
-a character with the six battle clips, about twelve minutes end to end.
+Measured on Sekhmet and again on Zeus: 20 credits preview, 10 refine, 5 rig, 3
+per clip — 53 for a character with the six battle clips, about twelve minutes
+end to end. The second run came out to the credit.
 
 ### The Sekhmet prompt
 
@@ -116,6 +117,36 @@ a character with the six battle clips, about twelve minutes end to end.
 The kilt is short and the legs bare for the reason Anubis's are: a sheath dress
 to the ankle fuses the legs and the hip rig fails. The sun disc is "thick and
 solid" because a thin disc is the first thing a remesh loses.
+
+### The Zeus prompt
+
+Generated with `python3 tools/meshy.py generate zeus --height 2.15 --clips battle`;
+the task ids are in `Art/Models/zeus.meshy.json`.
+
+> ```
+> Full body game character of Zeus, king of the Greek gods, standing in a
+> symmetrical A-pose, arms lowered and held away from the body, legs straight
+> and shoulder-width apart, facing forward. Mature powerful man, long white
+> hair and a full white beard, stern face, bright blue eyes. Muscular build.
+> White linen himation draped over the left shoulder leaving the right arm and
+> chest bare, wide gold belt, gold laurel wreath, gold armbands and bracers,
+> leather sandals. Hands open and empty. Plain empty background, no base.
+> ```
+>
+> **Negative prompt**
+>
+> ```
+> lightning bolt, weapon, staff, sceptre, eagle, shield, props, held objects,
+> throne, base, pedestal, plinth, stand, clouds, background, scenery, text,
+> watermark, two characters, wings, extra limbs, crossed arms, arms raised,
+> floating, cape, flowing cloth
+> ```
+
+No thunderbolt in the hand: a held object fuses to the fingers and rigs as part
+of the arm, so the bolt is a VFX (`thunderbolt`, `thunderclap`, `keraunos` in
+the kit) and the model's hands are open. The himation leaves one arm and both
+legs bare so the rig finds the joints, and "long hair and full beard" is asked
+for as a mass rather than strands, which is all a 30k remesh can keep.
 
 ---
 

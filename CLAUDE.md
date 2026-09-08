@@ -45,9 +45,12 @@ environment can and cannot do. The short version:
 
 - The game builds and runs on an iPhone. Battle, summon, collection, arena and
   campaign all work.
-- Two families are in the code. Anubis: five variants, natural 4★, full art.
-  Sekhmet: five variants, natural 5★, the first damage archetype, no art in the
-  bundle yet — the game shows letter plates and a grey dot until the files land.
+- Three families are in the code. Anubis: five variants, natural 4★, full art.
+  Sekhmet: five variants, natural 5★, the first damage archetype. Zeus: five
+  variants, natural 5★, Greek, the control archetype (a Thunderclap that stuns,
+  freezes, sleeps, knocks back or provokes the whole enemy line). Neither
+  Sekhmet nor Zeus has art in the bundle yet — the game shows letter plates and
+  a grey dot until the files land, and keeps both out of the gacha.
 - Models ship **canonical and decimated**: `tools/mesh.py anubis` reads the
   untouched export in `Art/Models/` and writes Y-up, metre, feet-on-origin,
   rest-equals-bind, four-influence files into `Pantheon/Resources/Models/`
@@ -62,12 +65,13 @@ environment can and cannot do. The short version:
 - Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
   drew nothing for loose bundle PNGs on device; never use it for one.
 - The gacha pool is gated on shipped art (`UnitBlueprint.hasShippedArt`), so
-  Sekhmet is summonable the moment her portraits land and not before. The
+  Sekhmet and Zeus are summonable the moment their portraits land and not
+  before; the "Olympus Stirs" banner appears with Zeus's portraits too. The
   battle camera is solved for a portrait phone (`BattleSceneController`);
   `tools/appicon.py` drew the icon.
-- Meshy is driven from here. `tools/meshy.py` took Sekhmet from a prompt to a
-  rigged model with six clips for 53 credits; the task ids are in
-  `Art/Models/sekhmet.meshy.json`. The files could not be fetched, because
+- Meshy is driven from here. `tools/meshy.py` took Sekhmet and then Zeus from
+  a prompt to a rigged model with six clips for 53 credits each; the task ids
+  are in `Art/Models/sekhmet.meshy.json` and `zeus.meshy.json`. The files could not be fetched, because
   `assets.meshy.ai` is not on the allow-list yet — see below.
 - `tools/character.py` is the one place a rigged character is read (Blender
   USDZ or Meshy GLB), canonicalised, decimated, written and verified;

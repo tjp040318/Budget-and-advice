@@ -141,6 +141,19 @@ Umbra's Wrath curses the enemy line instead of buffing the team — the one
 variant whose rite points outward. The awakened passive turns a kill into
 another turn and a heal.
 
+The third table is Greek. `zeusVariant(_:)` builds the Zeus family — natural 5★,
+the roster's control archetype, and the first unit outside Egypt. Every
+variant's Thunderclap hits the whole enemy line and takes its turn away, the
+way every Sekhmet breaks defence: Ember stuns, Tide freezes, Umbra puts to
+sleep, Gale knocks the attack bar back and slows, and Radiance provokes every
+enemy onto Zeus himself, which is why that variant is the one built to be hit.
+The Keraunos is one bolt through 40% of defence followed by a gift to the team
+(Attack Up, a shield, Immunity, an attack-bar push) or, for Umbra, a Brand on
+the enemy line. The awakened passive raises the whole team's attack bar when the
+battle begins. Leader skills that buff a stat are scoped to Greek allies — today
+that means the Zeus variants, later it means Olympus. `Pantheon.live` lists
+Greece; a Greek campaign chapter does not exist yet.
+
 ## Adding a character
 
 1. Add a family factory to `UnitDatabase` — or a single `UnitBlueprint` if it has

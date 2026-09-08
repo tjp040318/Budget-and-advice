@@ -149,6 +149,43 @@ python3 tools/genart.py --prompt "Edit this image: <recolour line>" --ref Panthe
 Until these exist the five Sekhmet cards show a letter on a gradient, which is
 the designed fallback and not a bug.
 
+### Zeus — the third family, the first Greek
+
+Same recipe again: one base, four `--ref` recolours, the same five suffixes.
+
+```
+portrait_zeus_ember.png     portrait_zeus_tide.png     portrait_zeus_gale.png
+portrait_zeus_radiance.png  portrait_zeus_umbra.png
+```
+
+Base prompt:
+
+> Mobile gacha RPG character portrait, Zeus, king of the Greek gods, upper body
+> and head facing the viewer directly, mature powerful man with long white hair
+> and a full white beard, stern face, bright blue eyes, gold laurel wreath,
+> white linen himation over the left shoulder leaving the right shoulder bare,
+> wide gold belt, gold armbands, storm-dark background with forked lightning
+> behind the head, dramatic rim lighting from behind, painterly semi-realistic
+> game art, rich saturated colour, centred composition, square
+
+Same negative list as Anubis, and the recolour lines are the Anubis table's
+with one change: the lightning behind the head takes the element's colour,
+so the line reads "…and the lightning turns <colour>". He faces the viewer
+where Anubis faces left and Sekhmet right, so the three families read apart on
+a team strip; a king looks straight at you.
+
+```bash
+python3 tools/genart.py --prompt "<base prompt>. amber and white-hot, the lightning turns molten orange, warm firelight" \
+    --out Pantheon/Resources/Portraits/portrait_zeus_ember.png
+python3 tools/genart.py --prompt "Edit this image: <recolour line>" --ref Pantheon/Resources/Portraits/portrait_zeus_ember.png \
+    --out Pantheon/Resources/Portraits/portrait_zeus_tide.png
+```
+
+The banner for the Greek family, `banner_olympus_stirs.png`, follows the
+Anubis banner recipe in §3 with Zeus in place of Anubis and a storm sky in
+place of the Duat gate. The game offers the banner only once the five
+portraits exist, so the banner art can come last.
+
 ## 2. Stage backdrops
 
 Five files, 2048×2048 PNG. These replace the empty coloured void behind the

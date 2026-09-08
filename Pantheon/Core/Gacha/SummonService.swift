@@ -41,14 +41,31 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
         subtitle: "The scales are unattended. Anubis answers the circle — in fire, in water, in wind, in light and in shadow.",
         scroll: .pantheonic,
         pool: [],
-        featured: UnitDatabase.summonPool,
+        featured: UnitDatabase.summonPool.filter { UnitDatabase.blueprint($0)?.pantheon == .egyptian },
         legendaryPity: 90,
         rarePity: 12,
         artName: "banner_duat_opens",
         pantheon: .egyptian
     )
 
-    static let all: [Banner] = [duatOpens, standard]
+    /// The second pantheon's banner. Zeus is featured in all five elements. It
+    /// is only offered once his portraits are in the bundle: a featured list
+    /// with nothing in it is a promise the circle cannot keep, so until then
+    /// the Greek family is simply absent from every banner.
+    static let olympusStirs = Banner(
+        id: "olympus_stirs",
+        title: "Olympus Stirs",
+        subtitle: "Thunder over the Duat. The king of the Greek gods answers a foreign circle — in fire, in water, in wind, in light and in shadow.",
+        scroll: .pantheonic,
+        pool: [],
+        featured: UnitDatabase.summonPool.filter { UnitDatabase.blueprint($0)?.pantheon == .greek },
+        legendaryPity: 90,
+        rarePity: 12,
+        artName: "banner_olympus_stirs",
+        pantheon: .greek
+    )
+
+    static let all: [Banner] = [duatOpens] + (olympusStirs.featured.isEmpty ? [] : [olympusStirs]) + [standard]
 }
 
 /// The outcome of a single summon.

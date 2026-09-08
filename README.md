@@ -2,7 +2,7 @@
 
 A Summoners War-style gacha RPG for iOS, in SwiftUI and SceneKit, with real 3D
 characters. Egypt first — the Anubis family is fully built, in all five elements,
-and the Sekhmet family is in the code with its model generated — with the roster designed from the ground up to span Greek, Roman, Norse,
+the Sekhmet family and the first Greek family, Zeus, are in the code with their models generated — with the roster designed from the ground up to span Greek, Roman, Norse,
 Chinese, Japanese, Hindu, Mesopotamian, Aztec, Celtic, Slavic, Yoruba and
 Polynesian myth, and to cover gods, demigods, heroes, titans, monsters, spirits
 and primordials.
@@ -50,8 +50,8 @@ tinted five ways, which is how the genre affords a roster of hundreds.
 | `spark.png` — 128×128 white radial glow | same |
 
 Or have the environment make it. Meshy is scriptable from Claude Code now, and
-§0 of the pipeline doc is four commands from a prompt to the bundle; Sekhmet, the
-second family, was made that way.
+§0 of the pipeline doc is four commands from a prompt to the bundle; Sekhmet and
+Zeus, the second and third families, were made that way.
 
 **[`Docs/ART_PIPELINE.md`](Docs/ART_PIPELINE.md) has the Meshy prompt**, the
 negative prompt, the settings, the five elemental colourways, the animation clip
@@ -184,8 +184,9 @@ for arena defence scoring, and unit-tested.
 ## What comes next
 
 - Build it once and clear the first round of compile errors
-- The second Egyptian family — Sekhmet or Thoth — to break the mirror-match
-  balance noted in `Docs/BALANCE.md`
-- The second pantheon. Leader skills and campaign chapters already scope by it
+- Art for Sekhmet and Zeus: ten portraits and two model downloads, each
+  blocked on one environment setting noted in `Docs/PLAN.md`
+- A Greek campaign chapter. Zeus is live and leader skills already scope by
+  pantheon; Olympus has no stages yet
 - Arena tuning: nothing has checked whether its rating curve is sane
 - Audio

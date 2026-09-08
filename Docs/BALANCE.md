@@ -45,6 +45,16 @@ Sekhmet, the second family, on the same curve (natural 5★, attacker):
 | 6★ lv65 | 10,663 | 988 | 598 | 106 | 5,775 |
 | 6★ lv55 with relics | 14,855 | 1,377 | 833 | 118 | 11,033 |
 
+Zeus, the third family and the first Greek, on the same curve (natural 5★,
+controller): more health and defence than Sekhmet, a little less attack.
+
+| Grade / level | HP | ATK | DEF | SPD | Power |
+|---|---|---|---|---|---|
+| 5★ lv1 (a fresh summon) | 1,478 | 120 | 83 | 105 | 585 |
+| 5★ lv55 | 7,464 | 604 | 419 | 105 | 3,537 |
+| 6★ lv65 | 11,573 | 936 | 650 | 105 | 6,102 |
+| 6★ lv55 with relics | 16,123 | 1,304 | 906 | 117 | 11,632 |
+
 ## The duel
 
 Sekhmet against Anubis, one on one, same grade and level, 300 seeded fights:
@@ -55,6 +65,17 @@ see. The model now ticks Burn for 5% of max health per turn, two turns per
 application, as the engine does. A nat-5 attacker beating an evolved nat-4
 support most of the time, without the support being pointless, is the intended
 shape.
+
+Zeus against the same two, same terms: he beats Anubis **82%** at 5★ lv1,
+**74%** at 5★ lv30 and **66%** at 6★ lv55, and loses to Sekhmet — **21%**,
+**10%**, **33%**. That is the shape a controller should have. He out-damages a
+support and takes turns away from it, but a 55% stun on one target cannot
+out-race a defence-breaking nuke, so the attacker keeps her job. The model
+learned two things for this: hard control is a one-turn skip rolled per target
+at the chance written in the skill's name, and an area skill is valued by the
+bodies it hits, which is also how `AIController` values it. Before the second
+change no ultimate that hit the line for less than the basic's total was ever
+cast — Sekhmet's Wrath included.
 
 ## The campaign
 
@@ -96,7 +117,10 @@ when the second family lands.
 
 It has. The campaign table gained a column — three Anubis at level 35 with one
 5★ Sekhmet beside them: every stage still clears, and the chapter boss falls in
-45 turns instead of 68. The band is still narrow because the campaign enemies
+46 turns instead of 68. With a 5★ Zeus in her place the boss falls in 50: the
+stun is worth less than the defence break against a single big body, exactly
+as the duel says, and worth more against the three-and-four-enemy stages, where
+the two columns tie. The band is still narrow because the campaign enemies
 have no hard control; that is the next thing to add to the roster, not to the
 tuning.
 

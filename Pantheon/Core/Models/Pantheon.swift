@@ -82,9 +82,9 @@ enum Pantheon: String, Codable, CaseIterable, Identifiable, Sendable {
     /// Pantheons that ship with playable content. The rest are declared so that
     /// data files, art briefs and save games can reference them before release.
     ///
-    /// Egypt is first because the launch family is Egyptian. Adding the next one
-    /// is a case above, a set of blueprints, and a chapter in `StageDatabase` —
-    /// leader skills already scope by pantheon, so "Greek allies gain 33% ATK"
-    /// is one line of data.
-    static var live: [Pantheon] { [.egyptian] }
+    /// Egypt is first because the launch families are Egyptian. Greece went live
+    /// with the Zeus family: a case here, five blueprints, and leader skills
+    /// that already scoped by pantheon, so "Greek allies gain 33% ATK" was one
+    /// line of data. Olympus does not have a campaign chapter yet.
+    static var live: [Pantheon] { [.egyptian, .greek] }
 }

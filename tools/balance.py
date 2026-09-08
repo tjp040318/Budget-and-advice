@@ -19,7 +19,7 @@ the engine; it is the spreadsheet a designer would keep, made executable.
 If a constant changes in Swift, change it here and re-run.
 """
 
-import math, random, statistics, sys
+import math, random, re, statistics, sys
 from dataclasses import dataclass, field
 
 # ---------------------------------------------------------------------------
@@ -91,6 +91,7 @@ class Fighter:
     cds: list = field(default_factory=list)
     defbreak: int = 0
     burn: int = 0
+    stun: int = 0
 
     def __post_init__(self):
         s = grade_mult(self.stars) * level_mult(self.level)
@@ -110,6 +111,12 @@ class Fighter:
         offense = self.atk * (1 + self.crit * self.critdmg)
         surviv  = self.maxhp * (1 + self.dfn / 1000)
         return int((offense * 1.6 + surviv * 0.22) * (self.spd / 100))
+
+def proc(name, keyword, default):
+    """Chance of an on-hit effect, read off the skill's name: "(Burn)" means the
+    default, "(Burn 35%)" means 35%. Keeps the sim's numbers next to the kit's."""
+    m = re.search(keyword + r"\s*(\d+)%", name, re.IGNORECASE)
+    return int(m.group(1)) / 100 if m else default
 
 def resolve_hit(att, dfn, mult, defign, missbonus, rng):
     base = att.atk * mult
@@ -154,6 +161,11 @@ def simulate(team_a, team_b, seed=0):
             actor.hp -= actor.maxhp * 0.05
             actor.burn -= 1
             if not actor.alive: continue
+        # Hard control consumes the turn: BattleEngine skips a stunned, frozen
+        # or sleeping unit's action and ticks the status down.
+        if actor.stun > 0:
+            actor.stun -= 1
+            continue
 
         foes = [f for f in (team_b if actor.side == "a" else team_a) if f.alive]
         if not foes: continue
@@ -172,7 +184,11 @@ def simulate(team_a, team_b, seed=0):
 
         dmg_ready = [i for i in ready if actor.bp.skills[i][1] > 0]
         if not dmg_ready: continue
-        idx = max(dmg_ready, key=lambda i: actor.bp.skills[i][1] * actor.bp.skills[i][2])
+        # An AoE is worth its multiplier times the bodies it hits, which is
+        # how AIController values it too; without this no ultimate that hits
+        # the line for less than the basic's total would ever be cast.
+        idx = max(dmg_ready, key=lambda i: actor.bp.skills[i][1] * actor.bp.skills[i][2]
+                  * (len(foes) if actor.bp.skills[i][6] else 1))
         name, mult, hits, cd, defign, missbonus, aoe = actor.bp.skills[idx]
         actor.cds[idx] = cd
         targets = foes if aoe else [min(foes, key=lambda f: f.hp)]
@@ -181,7 +197,8 @@ def simulate(team_a, team_b, seed=0):
                 if not t.alive: continue
                 t.hp -= resolve_hit(actor, t, mult, defign, missbonus, rng)
                 if "break" in name.lower(): t.defbreak = 2
-                if "burn" in name.lower() and rng.random() < 0.30: t.burn = 2
+                if "burn" in name.lower() and rng.random() < proc(name, "burn", 0.30): t.burn = 2
+                if "stun" in name.lower() and rng.random() < proc(name, "stun", 0.55): t.stun = 1
     return "draw", turns
 
 # ---------------------------------------------------------------------------
@@ -214,6 +231,17 @@ SEKHMET = Blueprint("sekhmet_ember", "Sekhmet (Fire)", "ember", 5, hp=410, atk=3
     skills=[("Rake of the Lioness (Burn)", 1.50, 2, 0, 0.0, 0.0, False),
             ("Eye of Ra (Def Break)", 4.80, 1, 3, 0.0, 0.0, False),
             ("Wrath of the Eye", 2.60, 1, 5, 0.0, 0.0, True)])
+
+# The third family and the first Greek. Natural 5*, controller: one big bolt,
+# an AoE Thunderclap whose stun the sim keys off the word "stun" (one turn,
+# per target, at the chance in the name), and a single-target Keraunos that
+# ignores 40% of defence. The Ember variant is the archetype; the other four
+# trade a little attack for health and swap the stun for a freeze, a sleep, an
+# attack-bar knockback or a provoke, none of which the sim models yet.
+ZEUS = Blueprint("zeus_ember", "Zeus (Fire)", "ember", 5, hp=445, atk=36, dfn=25, spd=105, acc=0.10,
+    skills=[("Thunderbolt (Burn 35%)", 3.10, 1, 0, 0.0, 0.0, False),
+            ("Thunderclap (Stun 55%)", 2.00, 1, 4, 0.0, 0.0, True),
+            ("Keraunos", 5.00, 1, 5, 0.40, 0.0, False)])
 
 def mk(bp, level, stars, relic=1.0, boss=1.0):
     f = Fighter(bp, level, stars, relic)
@@ -263,7 +291,8 @@ def winrate(team_spec, stage_spec, trials=200):
 
 def report_curve():
     for bp, ladder in ((ANUBIS, [(4,1),(4,45),(5,1),(5,55),(6,1),(6,65)]),
-                       (SEKHMET, [(5,1),(5,55),(6,1),(6,65)])):
+                       (SEKHMET, [(5,1),(5,55),(6,1),(6,65)]),
+                       (ZEUS, [(5,1),(5,55),(6,1),(6,65)])):
         print(f"\n{bp.name.upper()} STAT CURVE")
         print(f"{'grade/level':>14}{'HP':>9}{'ATK':>7}{'DEF':>7}{'SPD':>6}{'power':>9}")
         for stars, lvl in ladder:
@@ -273,13 +302,17 @@ def report_curve():
         print(f"{'6* lv55 geared':>14}{g.maxhp:>9.0f}{g.atk:>7.0f}{g.dfn:>7.0f}{g.spd:>6.0f}{g.power():>9}")
 
 def report_duel(trials=300):
-    """Sekhmet against Anubis at equal grade and level: the attacker should win
-    a majority of the time but not all of it, or the support kit is pointless."""
-    print("\nDUEL — Sekhmet vs Anubis, 1v1, same grade and level, %d seeded fights" % trials)
-    for stars, lvl in [(5, 1), (5, 30), (6, 55)]:
-        wins = sum(1 for s in range(trials)
-                   if simulate([mk(SEKHMET, lvl, stars)], [mk(ANUBIS, lvl, stars)], seed=s)[0] == "a")
-        print(f"  {stars}* lv{lvl:<3}  Sekhmet wins {wins / trials * 100:3.0f}%")
+    """One on one at equal grade and level. The attacker should beat the support
+    a majority of the time but not all of it, or the support kit is pointless;
+    the controller should sit between them, and beat the attacker only when the
+    stun lands often enough to matter."""
+    print("\nDUEL — 1v1, same grade and level, %d seeded fights" % trials)
+    for a, b in ((SEKHMET, ANUBIS), (ZEUS, ANUBIS), (ZEUS, SEKHMET)):
+        an, bn = a.name.split()[0], b.name.split()[0]
+        for stars, lvl in [(5, 1), (5, 30), (6, 55)]:
+            wins = sum(1 for s in range(trials)
+                       if simulate([mk(a, lvl, stars)], [mk(b, lvl, stars)], seed=s)[0] == "a")
+            print(f"  {stars}* lv{lvl:<3}  {an} vs {bn:<8} {an} wins {wins / trials * 100:3.0f}%")
 
 def report_elements():
     print("\nELEMENT WHEEL (must be a closed cycle plus a mirrored pair)")
@@ -304,6 +337,8 @@ LADDERS = [
     # A summoned Sekhmet beside three Anubis: what one real damage dealer does
     # to a support-only team's curve.
     ("3x A lv35 + Sekhmet",[(ANUBIS, 35, 4, 1.15)] * 3 + [(SEKHMET, 35, 5, 1.15)]),
+    # And a summoned Zeus instead: what one stun on the enemy line does.
+    ("3x A lv35 + Zeus",   [(ANUBIS, 35, 4, 1.15)] * 3 + [(ZEUS, 35, 5, 1.15)]),
 ]
 
 def report_campaign(trials=200):

@@ -141,8 +141,8 @@ Only the unrigged stages return USDZ; `mesh.py` reads the GLB directly and
 writes the canonical file described above, verified on three Khronos sample
 rigs and on the whole Anubis family by re-skinning the written files in numpy.
 
-The balance was 1,186 credits before Sekhmet and 1,133 after: roughly twenty
-more characters at this rate.
+The balance was 1,186 credits before Sekhmet, 1,133 after her and 1,080 after
+Zeus: roughly twenty more characters at this rate.
 
 **What is still closed.** `assets.meshy.ai`, where the finished files are
 served from, is refused by the environment's network policy, so `download`
@@ -174,7 +174,7 @@ is step 1 below.
 Run in anger and measured above. The pipeline is `Art/Models` → `mesh.py` →
 `Pantheon/Resources/Models`, one command per family.
 
-### Phase 2 — a second and third character family *(Sekhmet: code and model done, art pending)*
+### Phase 2 — a second and third character family *(Sekhmet and Zeus: code and models done, art pending)*
 
 Per family: a kit, a balance pass, five portraits, one mesh through Meshy, and
 the pipeline above.
@@ -189,8 +189,21 @@ the pipeline above.
   - [ ] Download, convert, decimate — needs `assets.meshy.ai` (step 1)
   - [ ] Five portraits — needs `GEMINI_API_KEY` in the environment (step 2);
     the prompt is in `Docs/ART_2D.md`
-- **Thoth** — Radiance support, a cleanse and an attack-bar push. Gives the
-  roster its first real control archetype. Next.
+- **Zeus** — Greek, the roster's control archetype and the first unit outside
+  Egypt. Every variant's Thunderclap hits the enemy line and takes its turn
+  away (stun, freeze, sleep, attack-bar knockback, provoke); the Keraunos
+  ignores 40% of defence and hands the team a buff; the awakened passive
+  pushes the team's attack bar at the start of battle. Natural 5★.
+  - [x] Kit, five variants, in `UnitDatabase.swift`; in the summon pool behind
+    the art gate, with an "Olympus Stirs" banner that appears with his portraits
+  - [x] Balance model updated (stun and area-skill valuation added); he beats
+    Anubis 66–82% and loses to Sekhmet, which is the intended shape
+  - [x] Model, rig and six clips generated (task ids in `Art/Models/zeus.meshy.json`)
+  - [ ] Download, convert, decimate — needs `assets.meshy.ai` (step 1)
+  - [ ] Five portraits — needs `GEMINI_API_KEY` in the environment (step 2);
+    the prompt is in `Docs/ART_2D.md`
+- **Thoth** — Radiance support, a cleanse and an attack-bar push, so the
+  Egyptians have a second support. Next.
 
 ### Phase 3 — the island *(built; the painting is a stand-in)*
 
@@ -238,9 +251,9 @@ Arena rating curve, a second campaign chapter, daily energy, then TestFlight.
    the console (`Docs/PLAYTEST.md` §1 says what each line means) and a
    screenshot of Reed Fields. That paste is what decides whether the canonical
    file is enough or SceneKit's importer needs a further workaround.
-4. **In a new session**, ask for Sekhmet downloaded and built, the five
-   portraits, and the island painting — `Docs/ART_2D.md` §1 and §6 have the
-   prompts; about twenty minutes together.
+4. **In a new session**, ask for Sekhmet and Zeus downloaded and built, the
+   ten portraits, and the island painting — `Docs/ART_2D.md` §1 and §6 have the
+   prompts; about half an hour together.
 
 ---
 
@@ -251,7 +264,7 @@ Arena rating curve, a second campaign chapter, daily energy, then TestFlight.
 | 2D art at volume | ✅ 29 assets in ~40 min, proven — when a Gemini key is present |
 | Sound effects | ✅ synthesised, in the repo |
 | Read, normalise, decimate, re-export 3D | ✅ proven on the whole Anubis family |
-| **Generate, rig and animate a 3D character** | ✅ **proven: Sekhmet, 53 credits, 12 minutes** |
+| **Generate, rig and animate a 3D character** | ✅ **proven twice: Sekhmet and Zeus, 53 credits and ~12 minutes each** |
 | Convert Meshy's rigged GLB to USDZ | ✅ written and verified on sample rigs; not yet on a Meshy file |
 | Fetch the finished files | ❌ until `assets.meshy.ai` is on the allow-list |
 | All code, logic, balance, integration | ✅ |
