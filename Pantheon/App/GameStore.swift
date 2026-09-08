@@ -348,4 +348,38 @@ final class GameStore: ObservableObject {
         seedStream = SeededRandom(seed: fresh.rngSeed)
         markDirty()
     }
+
+    #if DEBUG
+    /// A roster for the screenshot tour: one of each family so the collection,
+    /// the training hall and the battle have something to show. Idempotent —
+    /// a second launch of the tour finds the units already there.
+    func grantTourRoster() {
+        update { player in
+            let wanted = ["anubis_ember", "anubis_tide", "sekhmet_umbra", "zeus_ember",
+                          "shabti_gale", "shabti_gale", "shabti_umbra", "shabti_ember"]
+            for id in wanted {
+                guard let blueprint = UnitDatabase.blueprint(id) else { continue }
+                let owned = player.units.filter { $0.blueprintID == id }.count
+                let alreadyWanted = wanted.filter { $0 == id }.count
+                guard owned < alreadyWanted else { continue }
+                var unit = Unit(blueprint: blueprint, level: id.hasPrefix("shabti") ? 1 : 12)
+                unit.acquiredFrom = "tour"
+                player.units.append(unit)
+            }
+            player.wallet.drachma = max(player.wallet.drachma, 200_000)
+            player.wallet.energy = max(player.wallet.energy, 40)
+            player.wallet.add(.pantheonic, 10)
+            for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {
+                player.essences[id, default: 0] += 12
+            }
+            // The battle shows one of each family: the starter plus Sekhmet and Zeus.
+            let team = ["anubis_umbra", "sekhmet_umbra", "zeus_ember"].compactMap { id in
+                player.units.first { $0.blueprintID == id }?.id
+            }
+            if team.count == 3 {
+                player.campaignTeam = TeamPreset(name: "Campaign", unitIDs: team)
+            }
+        }
+    }
+    #endif
 }

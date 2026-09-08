@@ -34,8 +34,20 @@ struct PantheonApp: App {
 
     var body: some Scene {
         WindowGroup {
+            #if DEBUG
+            // `-tour` is the CI screenshot job: the app drives itself through
+            // its screens while the runner photographs the simulator.
+            if ProcessInfo.processInfo.arguments.contains("-tour") {
+                TourView()
+                    .environmentObject(store)
+            } else {
+                RootView()
+                    .environmentObject(store)
+            }
+            #else
             RootView()
                 .environmentObject(store)
+            #endif
         }
     }
 }

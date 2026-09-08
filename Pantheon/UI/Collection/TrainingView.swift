@@ -211,7 +211,11 @@ struct TrainingView: View {
         if after.level > before.level { parts.append("Lv.\(before.level) → Lv.\(after.level)") }
         let skillUps = zip(after.skillLevels, before.skillLevels).filter { $0 > $1 }.count
         if skillUps > 0 { parts.append("skill-up ×\(skillUps)") }
-        outcome = parts.isEmpty ? "\(after.level == before.level ? "Experience banked" : "Powered up")" : "Powered up: " + parts.joined(separator: ", ")
+        if parts.isEmpty {
+            outcome = after.level == before.level ? "Experience banked" : "Powered up"
+        } else {
+            outcome = "Powered up: " + parts.joined(separator: ", ")
+        }
         Juice.notify(.success)
         AudioLibrary.shared.play(.uiConfirm)
     }

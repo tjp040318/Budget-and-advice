@@ -29,9 +29,12 @@ prints what it measures):
    pose; root joints locked horizontally to the slot; four influences per
    vertex, weights summing to one. The base model decides the transform and
    every clip file gets the same one, so the animations stay in step.
-3. Decimate: 5,000 triangles for the shipped model, 1,500 for the `_lod` and
-   for every clip file, whose geometry the game reads once and discards.
-   UVs and skin weights follow by nearest original vertex.
+3. Decimate: 5,000 triangles for the shipped model, 2,500 for the `_lod` and
+   1,500 for every clip file, whose geometry the game reads once and
+   discards. MeshLab's quadric edge collapse with texture does it, so the
+   UVs go through the reduction and every seam stays a seam; skin weights
+   follow by nearest original vertex. (Copying the nearest vertex's UV as
+   well, as the first version did, smeared the atlas across the whole body.)
 4. Write, in the prim layout SceneKit has already been seen to load, with
    computed normals and the textures downsampled.
 5. Verify: skin the written file again in numpy at the bind pose and at three
@@ -171,7 +174,7 @@ def main():
     ap.add_argument("source", help="an asset name (whole family from Art/Models) or a .usdz/.glb path")
     ap.add_argument("--height", type=float, help="metres; default is ModelSpec.height from UnitDatabase.swift")
     ap.add_argument("--tris", type=int, default=5000, help="triangle target for the shipped model")
-    ap.add_argument("--lod", type=int, default=1500, help="also emit <name>_lod at this target (0 = skip)")
+    ap.add_argument("--lod", type=int, default=2500, help="also emit <name>_lod at this target (0 = skip)")
     ap.add_argument("--texture", type=int, default=1024, help="max texture edge for the shipped model")
     ap.add_argument("--clip-tris", type=int, default=1500, help="triangle target for per-clip files")
     ap.add_argument("--clip-texture", type=int, default=128, help="max texture edge for per-clip files")

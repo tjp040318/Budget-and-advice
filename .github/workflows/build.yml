@@ -35,6 +35,7 @@ jobs:
             -configuration Debug \
             -sdk iphonesimulator \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee build.log | grep -E "error:|warning: (unused|never|will never|immutable)|BUILD (SUCCEEDED|FAILED)|\*\* " || true
           echo "---- errors, if any ----"
@@ -52,6 +53,61 @@ jobs:
             -scheme Pantheon \
             -configuration Debug \
             -destination "platform=iOS Simulator,name=$DEST" \
+            -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             test 2>&1 | tee test.log | grep -E "error:|failed|passed|Executed|\*\* " || true
           grep -q "TEST SUCCEEDED\|\*\* TEST SUCCEEDED" test.log
+
+      # The app photographs itself: launched with -tour it walks its screens
+      # (TourView) while the runner screenshots the simulator. The frames are
+      # uploaded as an artifact and also printed into the log as one base64
+      # contact sheet, which a session with no artifact access can decode.
+      - name: Screenshot tour
+        if: ${{ !cancelled() }}
+        run: |
+          set -o pipefail
+          APP=$(find build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name "Pantheon.app" | head -1)
+          test -n "$APP" || { echo "no built app to photograph"; exit 0; }
+          DEST=$(xcrun simctl list devices available | grep -E "iPhone (16|15)" | head -1 | sed -E 's/^ *([^(]+) \(.*/\1/' | sed 's/ *$//')
+          echo "simulator: $DEST"
+          xcrun simctl boot "$DEST" || true
+          xcrun simctl bootstatus "$DEST" -b
+          xcrun simctl install "$DEST" "$APP"
+          xcrun simctl launch "$DEST" com.pantheon.game -tour
+          mkdir -p shots
+          for i in $(seq -w 1 26); do
+            sleep 4
+            xcrun simctl io "$DEST" screenshot "shots/$i.png" >/dev/null 2>&1 || true
+          done
+          xcrun simctl terminate "$DEST" com.pantheon.game || true
+          ls -la shots | tail -n +2 | wc -l
+          pip3 install -q pillow 2>/dev/null || python3 -m pip install -q pillow
+          python3 - <<'PY'
+          from PIL import Image
+          import glob
+          files = sorted(glob.glob("shots/*.png"))
+          if not files:
+              raise SystemExit("no screenshots")
+          thumbs = [Image.open(f).convert("RGB") for f in files]
+          w = 260
+          h = int(thumbs[0].height * w / thumbs[0].width)
+          cols = 7
+          rows = (len(thumbs) + cols - 1) // cols
+          sheet = Image.new("RGB", (cols * w, rows * h), (0, 0, 0))
+          for i, t in enumerate(thumbs):
+              sheet.paste(t.resize((w, h)), ((i % cols) * w, (i // cols) * h))
+          sheet.save("shots/sheet.jpg", "JPEG", quality=50, optimize=True)
+          print("sheet", sheet.size, "from", len(thumbs), "frames")
+          PY
+          echo "SHEET_BASE64_BEGIN"
+          base64 -i shots/sheet.jpg | tr -d '\n'
+          echo
+          echo "SHEET_BASE64_END"
+
+      - name: Upload screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: tour-screenshots
+          path: shots
+          if-no-files-found: ignore
