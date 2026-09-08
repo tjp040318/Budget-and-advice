@@ -8,8 +8,9 @@ every task id so that a re-run never pays for the same step twice.
     python3 tools/meshy.py generate sekhmet --height 2.0 \
         --prompt "..." --negative "..."           # first run; later runs resume
     python3 tools/meshy.py status sekhmet
-    python3 tools/meshy.py download sekhmet         # -> Art/Models/sekhmet*.usdz
-    python3 tools/mesh.py sekhmet                    # then decimate for the bundle
+    python3 tools/meshy.py download sekhmet         # -> Art/Models/sekhmet*.glb
+    python3 tools/glb2usd.py sekhmet                 # -> Art/Models/sekhmet*.usdz
+    python3 tools/mesh.py sekhmet                    # -> Pantheon/Resources/Models/, decimated
 
 This is the pipeline Docs/ART_PIPELINE.md describes for the web app, done by
 machine:
@@ -450,7 +451,12 @@ def cmd_download(a):
         st.setdefault("downloaded", {})[fmt] = str(out.relative_to(REPO)) if out.is_relative_to(REPO) else str(out)
         print(f"  {name:28s} {fmt:5s} {size / 1048576:6.1f} MB  -> {out}")
     save_manifest(m)
-    print(f"\nnext: python3 tools/mesh.py {a.asset}      # decimate into Pantheon/Resources/Models/")
+    fetched = {fmt for st in m["stages"].values() for fmt in st.get("downloaded", {})}
+    if "glb" in fetched:
+        print(f"\nnext: python3 tools/glb2usd.py {a.asset}   # GLB -> USDZ, the rig and clips only come as GLB")
+        print(f"      python3 tools/mesh.py {a.asset}      # decimate into Pantheon/Resources/Models/")
+    else:
+        print(f"\nnext: python3 tools/mesh.py {a.asset}      # decimate into Pantheon/Resources/Models/")
 
 
 def main():

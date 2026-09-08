@@ -235,7 +235,8 @@ def run_one(src, out, tris, texture):
 def run_family(name, args):
     base = SOURCE_DIR / f"{name}.usdz"
     if not base.exists():
-        sys.exit(f"no authoring source at {base.relative_to(REPO)} - `python3 tools/meshy.py download {name}` puts it there")
+        sys.exit(f"no authoring source at {base.relative_to(REPO)} - `python3 tools/meshy.py download {name}` "
+                 f"then `python3 tools/glb2usd.py {name}` put it there")
     clips = sorted(p for p in SOURCE_DIR.glob(f"{name}_*.usdz") if p.stem != f"{name}_lod")
     print(f"{name}: {base.relative_to(REPO)} + {len(clips)} clip files -> {BUNDLE_DIR.relative_to(REPO)}/")
     report(Usd.Stage.Open(str(base)), "source")
