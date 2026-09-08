@@ -336,6 +336,11 @@ final class BattleSceneController: NSObject {
             let delay = animation.fallbackDuration * 0.45 / max(0.25, speedMultiplier)
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 guard let self else { return }
+                // Lightning has its own sound; everything else lands on the
+                // hit sound `Juice` picks from the damage that follows.
+                if vfx == "thunderbolt" || vfx == "thunderclap" || vfx == "keraunos" {
+                    AudioLibrary.shared.play(.thunder, volume: vfx == "keraunos" ? 1.0 : 0.7)
+                }
                 for targetID in targets {
                     guard let node = self.unitNodes[targetID] else { continue }
                     VFXLibrary.spawn(

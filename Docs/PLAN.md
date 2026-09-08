@@ -199,6 +199,8 @@ the pipeline above.
   - [x] Balance model updated (stun and area-skill valuation added); he beats
     Anubis 66–82% and loses to Sekhmet, which is the intended shape
   - [x] Model, rig and six clips generated (task ids in `Art/Models/zeus.meshy.json`)
+  - [x] Forked-lightning effects for all three skills (`VFXLibrary`), the sky
+    flashes with them, and a synthesised thunder crack (`thunder.wav`)
   - [ ] Download, convert, decimate — needs `assets.meshy.ai` (step 1)
   - [ ] Five portraits — needs `GEMINI_API_KEY` in the environment (step 2);
     the prompt is in `Docs/ART_2D.md`

@@ -61,3 +61,11 @@ n = S(0.9); write("summon_burst", mix(shaped(lowpass([noise() for _ in range(n)]
 write("star_tick", shaped(mix(sweep(0.09, 1320, 1320), gain(sweep(0.09, 2640, 2640), 0.4)), S(0.001), S(0.02), 0.3, S(0.06)))
 write("victory", mix(note(523, 0.25), [0] * S(0.18) + note(659, 0.25), [0] * S(0.36) + note(784, 0.55)))
 write("defeat", mix(note(440, 0.35), [0] * S(0.3) + note(415, 0.35), [0] * S(0.6) + note(349, 0.8)))
+# Thunder, for the Zeus kit: a crack of unfiltered noise, then a long low
+# rumble and a sub-bass sweep under it. Appended last so the seeded noise for
+# the thirteen effects above is unchanged and their files stay byte-identical.
+n = S(1.5)
+crack = shaped([noise() for _ in range(S(0.07))], S(0.001), S(0.02), 0.35, S(0.05)) + [0] * (n - S(0.07))
+rumble = shaped(lowpass([noise() for _ in range(n)], 0.04), S(0.03), S(0.4), 0.45, S(0.9))
+boom = shaped(sweep(1.5, 95, 30), S(0.002), S(0.35), 0.3, S(0.9))
+write("thunder", mix(gain(crack, 1.0), gain(rumble, 1.2), gain(boom, 0.9)))

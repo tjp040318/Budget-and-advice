@@ -23,6 +23,7 @@ final class AudioLibrary {
         case hitCrit = "hit_crit"
         case hitLethal = "hit_lethal"
         case whoosh
+        case thunder
         case uiTap = "ui_tap"
         case uiConfirm = "ui_confirm"
         case summonCharge = "summon_charge"
