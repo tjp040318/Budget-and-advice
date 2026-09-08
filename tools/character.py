@@ -552,6 +552,7 @@ def read_glb(path, animation_index=0, fps=30):
     skin_def = skins[0] if skins else None
 
     joints, parents, bind, rest_local, order, joint_pos = [], np.zeros(0, int), np.zeros((0, 4, 4)), np.zeros((0, 4, 4)), [], {}
+    vertex_frame = np.eye(4)
     if skin_def:
         joint_nodes = list(skin_def["joints"])
         joint_set = set(joint_nodes)
@@ -584,14 +585,42 @@ def read_glb(path, animation_index=0, fps=30):
             path_of[i] = nm if jp is None else f"{path_of[jp]}/{nm}"
         joints = [path_of[i] for i in order]
         parents = np.array([-1 if joint_parent(i) is None else joint_pos[joint_parent(i)] for i in order], dtype=np.int64)
-        skin_users = [i for i, n in enumerate(nodes) if n.get("skin") == 0 and "mesh" in n]
-        skin_world = world(skin_users[0]) if skin_users else np.eye(4)
-        original_pos = {n: k for k, n in enumerate(joint_nodes)}
-        ibm = glb.accessor(skin_def["inverseBindMatrices"]) if "inverseBindMatrices" in skin_def else None
-        bind = np.array([(np.linalg.inv(_gltf_matrix(ibm[original_pos[i]])) if ibm is not None else np.eye(4)) @ skin_world
-                         for i in order])
         rest_world = np.array([world(i) for i in order])
         rest_local = local_from_world(rest_world, parents)
+        original_pos = {n: k for k, n in enumerate(joint_nodes)}
+        ibm = glb.accessor(skin_def["inverseBindMatrices"]) if "inverseBindMatrices" in skin_def else None
+        inv_ibm = np.array([np.linalg.inv(_gltf_matrix(ibm[original_pos[i]])) if ibm is not None else np.eye(4)
+                            for i in order])
+        # glTF skins a vertex as p @ IBM[j] @ G[j] and says the skinned mesh
+        # node's own transform is ignored, so the frame the vertices were
+        # authored in is whatever the exporter chose: the world (Blender bakes
+        # skinned meshes, so Meshy's files - the mesh node carries the
+        # armature's centimetre scale and the vertices are already metres),
+        # the mesh node's frame (the older Khronos samples), or an ancestor's
+        # (RiggedSimple). Assuming the mesh node's frame read Meshy's export
+        # as a two-centimetre figure whose clips exploded to 190 m. With the
+        # rest pose equal to the bind pose, IBM[j] @ G_rest[j] IS that frame
+        # and every joint agrees on it, so it is read off the joints; only
+        # when they disagree (rest != bind) is the mesh node's frame assumed.
+        skin_users = [i for i, n in enumerate(nodes) if n.get("skin") == 0 and "mesh" in n]
+        skin_world = world(skin_users[0]) if skin_users else np.eye(4)
+        frames_ = np.einsum("jab,jbc->jac", np.linalg.inv(inv_ibm), rest_world)
+        spread = np.abs(frames_ - frames_[0]).max()
+        if spread <= 1e-3 * max(1.0, np.abs(frames_[0]).max()):
+            vertex_frame = frames_[0]
+            how = "the joints agree on it (rest pose == bind pose)"
+        else:
+            vertex_frame = skin_world
+            how = f"the joints disagree by {spread:.3g} (rest pose != bind pose); assuming the mesh node's"
+        if np.allclose(vertex_frame, np.eye(4), atol=1e-5):
+            what = "identity"
+        elif np.allclose(vertex_frame, skin_world, atol=1e-5):
+            what = "the mesh node's"
+        else:
+            what = "an ancestor node's"
+        _, _, vf_scale = decompose(vertex_frame)
+        print(f"    vertex frame: {what}, scale {vf_scale.mean():.4g} - {how}")
+        bind = inv_ibm @ vertex_frame
 
     # --- meshes (all primitives concatenated, baked to world space) --------
     P, F, UV, JI, JW, mats = [], [], [], [], [], []
@@ -602,10 +631,11 @@ def read_glb(path, animation_index=0, fps=30):
             continue
         mesh = g["meshes"][node["mesh"]]
         skinned = skin_def is not None and "skin" in node
-        mw = world(ni)
-        # glTF skins a vertex as globalJoint * IBM * p with the IBMs authored
-        # against the skinned mesh node's frame, and the bind above includes
-        # that frame, so a skinned mesh's points are baked with it too.
+        # A skinned mesh's points are in the vertex frame worked out above,
+        # which is where the bind transforms now live too; the node's own
+        # transform is ignored, as glTF says. An unskinned mesh is placed by
+        # its node like any other.
+        mw = vertex_frame if skinned else world(ni)
         for prim in mesh["primitives"]:
             if prim.get("mode", 4) != 4:
                 sys.exit(f"{path.name}: primitive mode {prim.get('mode')}; only triangles are supported")
@@ -695,16 +725,30 @@ def read_glb(path, animation_index=0, fps=30):
     if mats:
         mat = g["materials"][mats[0]]
         pbr = mat.get("pbrMetallicRoughness", {})
-        char.roughness = float(pbr.get("roughnessFactor", 1.0))
+        # glTF's defaults are 1.0 for both. A file that says nothing about
+        # roughness gets the project's 0.55, the same default the game's
+        # MaterialTuner applies, rather than fully matte.
+        if "roughnessFactor" in pbr:
+            char.roughness = float(pbr["roughnessFactor"])
         char.metallic = float(pbr.get("metallicFactor", 1.0))
+        base_image = g["textures"][pbr["baseColorTexture"]["index"]]["source"] if "baseColorTexture" in pbr else None
         for key, role in (("baseColorTexture", "base_color"), ("metallicRoughnessTexture", "metallic_roughness")):
             if key in pbr:
                 data, ext = glb.image_bytes(g["textures"][pbr[key]["index"]]["source"])
                 char.textures.append(Texture(role, data, ext))
         for key, role in (("normalTexture", "normal"), ("emissiveTexture", "emissive")):
-            if key in mat:
-                data, ext = glb.image_bytes(g["textures"][mat[key]["index"]]["source"])
-                char.textures.append(Texture(role, data, ext))
+            if key not in mat:
+                continue
+            image = g["textures"][mat[key]["index"]]["source"]
+            if role == "emissive" and (image == base_image or max(mat.get("emissiveFactor", [0, 0, 0])) <= 0):
+                # Meshy's rigged export wires the base colour into emission at
+                # full strength. That is not an authored glow; shipped, it
+                # would make the whole figure self-lit and flat, and the game
+                # keeps any emissive map an export carries.
+                print("    emissive texture is the base colour; dropped (not an authored glow)")
+                continue
+            data, ext = glb.image_bytes(image)
+            char.textures.append(Texture(role, data, ext))
     return char
 
 

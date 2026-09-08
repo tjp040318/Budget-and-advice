@@ -43,7 +43,7 @@
       "finished_at": 1788836879552,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-08T03:08:00Z"
+      "polled": "2026-09-08T17:10:02Z"
     },
     "refine": {
       "id": "01a07efc-a2d8-758f-9ec1-ddbd37b2e91a",
@@ -75,7 +75,7 @@
       "finished_at": 1788836943346,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-08T03:09:12Z"
+      "polled": "2026-09-08T17:10:02Z"
     },
     "rig": {
       "id": "01a07efd-b96a-7215-9408-0473e3181626",
@@ -102,7 +102,10 @@
       "started_at": 1788836957092,
       "finished_at": 1788836998586,
       "name": "",
-      "polled": "2026-09-08T03:10:07Z"
+      "polled": "2026-09-08T17:10:02Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a07efe-92ef-7667-a62e-85e7d15c816e",
@@ -125,7 +128,10 @@
       "started_at": 1788837008525,
       "finished_at": 1788837023065,
       "name": "",
-      "polled": "2026-09-08T03:10:33Z"
+      "polled": "2026-09-08T17:10:02Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a07efe-95eb-777a-b19d-c67e7dcf54ee",
@@ -148,7 +154,10 @@
       "started_at": 1788837009152,
       "finished_at": 1788837035461,
       "name": "",
-      "polled": "2026-09-08T03:10:43Z"
+      "polled": "2026-09-08T17:10:03Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a07efe-985e-7781-b99f-e04268ded3fa",
@@ -171,7 +180,10 @@
       "started_at": 1788837009774,
       "finished_at": 1788837037585,
       "name": "",
-      "polled": "2026-09-08T03:10:44Z"
+      "polled": "2026-09-08T17:10:03Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a07efe-9ab4-7793-a49e-e4499f0c5bda",
@@ -194,7 +206,10 @@
       "started_at": 1788837010358,
       "finished_at": 1788837024947,
       "name": "",
-      "polled": "2026-09-08T03:10:33Z"
+      "polled": "2026-09-08T17:10:03Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a07efe-9d04-72f6-9b2f-a02b9b8e11de",
@@ -217,7 +232,10 @@
       "started_at": 1788837010961,
       "finished_at": 1788837037555,
       "name": "",
-      "polled": "2026-09-08T03:10:44Z"
+      "polled": "2026-09-08T17:10:03Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a07efe-9f57-7779-a498-97a9a1da27e4",
@@ -240,8 +258,12 @@
       "started_at": 1788837011581,
       "finished_at": 1788837031959,
       "name": "",
-      "polled": "2026-09-08T03:10:33Z"
+      "polled": "2026-09-08T17:10:03Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-08T17:10:03Z"
 }
