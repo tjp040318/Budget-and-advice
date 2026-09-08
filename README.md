@@ -128,6 +128,9 @@ skill-ups, four currencies.
 **Persistence.** Versioned, atomic, migrating saves. A corrupt file is
 quarantined rather than deleted.
 
+**Sound.** Thirteen synthesised effects and two synthesised music loops, an
+island loop and a battle loop, crossfaded as you move between screens.
+
 ## Verifying
 
 No compiler, so two tools stand in for one.

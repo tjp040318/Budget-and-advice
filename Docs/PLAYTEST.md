@@ -12,7 +12,9 @@ Then **⌘R** in Xcode with the console open (**⌘⇧C**).
 
 The app opens on it. Five plaques on a painted island; the ones with something
 to do glow. Tap **Gate of the Duat** and the Campaign tab opens; tap **Summoning
-Circle** and Summon opens. The header shows your name, level and wallet.
+Circle** and Summon opens. The header shows your name, level and wallet. A pad
+loop plays underneath; it changes to drums when a battle starts and back when
+it ends. **More → Sound** has a Music toggle if you would rather not.
 
 Send: a screenshot.
 
@@ -72,7 +74,8 @@ Send: a screenshot at the moment the name is on screen.
   of the screen. The stage is a platform that fades into the backdrop.
 - Anubis is the real model: upright, feet on the ground ring, about the same
   height as the enemy sprites, **breathing in a combat stance** rather than
-  standing frozen in an A-pose. Attacks play the swing at fighting pace, a hit
+  standing frozen in an A-pose. He faces the enemies, so you see his back and
+  shoulders; the enemies face you. Attacks play the swing at fighting pace, a hit
   makes him flinch back for under half a second, a death lies down and stays
   down.
 - Turn-order strip shows **faces**, not letters. The actor plate at the bottom
