@@ -70,6 +70,11 @@ island_bg.png                  1536x2048   the hub screen's painting (tools/isla
                                            paints a stand-in; Docs/ART_2D.md §6 has the prompt)
 ```
 
+A family joins the gacha when its portraits are here: `UnitDatabase.summonPool`
+keeps out any blueprint whose `portrait_<id>.png` is not in the bundle, so a
+5★ reveal never shows a letter on a gradient over a grey stand-in. Sekhmet is
+in the code and out of the pool until her five files land.
+
 Every image here is loaded through `BundleImage`, which goes via
 `UIImage(named:)`. On device SwiftUI's `Image("name")` did not find these loose
 files and drew nothing; UIKit does. Do not reintroduce `Image("...")` for a

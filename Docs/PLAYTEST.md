@@ -67,12 +67,14 @@ Send: a screenshot at the moment the name is on screen.
 - Backdrop is a **painted gate at dusk**, not a coloured void.
 - Enemies are **portrait cards standing in the world** with a shadow and an
   element glow — not green capsule figures. They bob, lunge and tilt.
+- The framing: enemies in the upper half standing against the painting, your
+  team in the lower half above the command panel, nobody cut off by the edge
+  of the screen. The stage is a platform that fades into the backdrop.
 - Anubis is the real model: upright, feet on the ground ring, about the same
   height as the enemy sprites, **breathing in a combat stance** rather than
-  standing frozen in an A-pose. Attacks play the swing, a death lies down and
-  stays down. Every hit on him currently plays a knock-up that throws him in
-  the air — that is the clip that was exported, not a bug; see
-  `Docs/ART_PIPELINE.md`.
+  standing frozen in an A-pose. Attacks play the swing at fighting pace, a hit
+  makes him flinch back for under half a second, a death lies down and stays
+  down.
 - Turn-order strip shows **faces**, not letters. The actor plate at the bottom
   shows the actor's face.
 - Attack. On the hit: the world **freezes for a frame or two**, the camera

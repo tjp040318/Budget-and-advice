@@ -50,6 +50,13 @@ with the export, none of them with the game:
 5. The clips carried horizontal root motion — the combat idle started 49 cm off
    the slot — and floated 5–13 cm above the ground.
 
+Reading the clips frame by frame turned up two more: the hit reaction was a
+knock-up with no flinch in it (airborne by frame three, on his back by frame
+twenty-one), and the attacks ran 2.5–3.9 s against the second or so the engine
+allows a hit. The tool now synthesises a flinch from the combat idle when the
+exported reaction is a fall, and the game plays one-shot clips at the contract's
+pace.
+
 So the pipeline now writes a **canonical** file (`tools/character.py`): Y-up,
 metres, feet on the origin, facing +Z, rest = bind, four influences, root
 locked and grounded, every prim named once. The loader was given a matching
@@ -153,6 +160,11 @@ is step 1 below.
 - [x] Painted panel no longer swamps small plates
 - [x] Model scale/centre/orientation normalised from measured bounds
 - [x] Decimated models in the bundle (above)
+- [x] Battle camera solved for a portrait phone: both lines in the clear band,
+  a finite stage that fades into the painting, the painting cropped to the
+  screen rather than stretched over it
+- [x] Portraits, the summon stage, the island, an app icon; the gacha only
+  produces characters whose art has shipped
 - [ ] **Confirm on device.** Needs the `[ModelLibrary] 'anubis':` console line.
   The bundle now holds 8 model files (the `_lod` is new); Sekhmet shows a
   grey dot and letter plates until her files land, which is correct.

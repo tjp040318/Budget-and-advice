@@ -34,7 +34,7 @@ final class BattleSceneController: NSObject {
     /// empty queue and reporting "finished" a second time — which in auto-battle
     /// would take a second turn.
     private var playbackGeneration = 0
-    private var environment: BattleEnvironment = .duatGate
+    private(set) var environment: BattleEnvironment = .duatGate
     /// The clip of the most recent cast, so its hits know how hard to land.
     private var lastCastClip: AnimationClip = .attackBasic
 
@@ -63,19 +63,22 @@ final class BattleSceneController: NSObject {
                 scene.rootNode.addChildNode(child)
             }
         } else {
-            let ground = SCNNode(geometry: SCNFloor())
-            if let floor = ground.geometry as? SCNFloor {
-                // A mirror floor doubles every figure, which with billboarded
-                // sprites means a second upside-down copy of the art. A trace
-                // of sheen is all the stage needs.
-                floor.reflectivity = 0.02
-                floor.reflectionFalloffEnd = 2.5
-            }
+            // A finite stage, not an infinite floor. The camera looks down at
+            // 39°, and an infinite plane would fill the whole frame; a 30 × 10 m
+            // platform whose far edge fades out leaves the painting visible
+            // above the enemy line, which is the diorama the genre is.
+            let platform = SCNPlane(width: 30, height: 10)
             let material = SCNMaterial()
             material.lightingModel = .physicallyBased
             material.diffuse.contents = UIColor(hex: environment.fogHex)?.mixed(with: .black, amount: 0.5)
             material.roughness.contents = 0.75
-            ground.geometry?.firstMaterial = material
+            material.transparent.contents = Self.floorFade
+            material.transparencyMode = .aOne
+            material.writesToDepthBuffer = true
+            platform.firstMaterial = material
+            let ground = SCNNode(geometry: platform)
+            ground.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+            ground.position = SCNVector3(0, 0, 0)
             scene.rootNode.addChildNode(ground)
         }
 
@@ -98,16 +101,52 @@ final class BattleSceneController: NSObject {
         // 2048x2048 image per stage replaces the flat void behind the fighters,
         // which is the single largest visual difference between this and a
         // finished game — see Docs/ART_PIPELINE.md for the prompts.
+        //
+        // SceneKit stretches a background image over the viewport. On a phone
+        // that turned a square painting into a tall thin one, so it is cropped
+        // to the screen's aspect first, keeping the centre.
         if let backdrop = UIImage(named: "\(environment.sceneName)_bg") {
-            scene.background.contents = backdrop
+            scene.background.contents = Self.cropped(backdrop, toAspectOf: UIScreen.main.bounds.size)
         } else {
             scene.background.contents = UIColor(hex: environment.fogHex)?
                 .mixed(with: .black, amount: 0.35)
         }
-        scene.fogStartDistance = 14
-        scene.fogEndDistance = 42
+        scene.fogStartDistance = 16
+        scene.fogEndDistance = 44
         scene.fogColor = UIColor(hex: environment.fogHex) ?? .darkGray
         scene.fogDensityExponent = 1.4
+    }
+
+    /// Opaque over the near three-quarters of the stage, fading to nothing at
+    /// the far edge, so the platform dissolves into the backdrop instead of
+    /// ending in a hard line. The image's top row maps to the plane's far edge.
+    private static let floorFade: UIImage = {
+        let size = CGSize(width: 4, height: 256)
+        return UIGraphicsImageRenderer(size: size).image { context in
+            for row in 0..<Int(size.height) {
+                let fromTop = CGFloat(row) / size.height
+                let alpha = min(1, max(0, (fromTop - 0.04) / 0.30))
+                context.cgContext.setFillColor(UIColor(white: 1, alpha: alpha).cgColor)
+                context.cgContext.fill(CGRect(x: 0, y: CGFloat(row), width: size.width, height: 1))
+            }
+        }
+    }()
+
+    /// The centre of `image` at the aspect ratio of `size`.
+    static func cropped(_ image: UIImage, toAspectOf size: CGSize) -> UIImage {
+        guard size.width > 0, size.height > 0, let cg = image.cgImage else { return image }
+        let width = CGFloat(cg.width), height = CGFloat(cg.height)
+        let target = size.width / size.height
+        var rect = CGRect(x: 0, y: 0, width: width, height: height)
+        if width / height > target {
+            rect.size.width = height * target
+            rect.origin.x = (width - rect.size.width) / 2
+        } else {
+            rect.size.height = width / target
+            rect.origin.y = (height - rect.size.height) / 2
+        }
+        guard let piece = cg.cropping(to: rect) else { return image }
+        return UIImage(cgImage: piece, scale: image.scale, orientation: image.imageOrientation)
     }
 
     private func buildLighting() {
@@ -153,7 +192,13 @@ final class BattleSceneController: NSObject {
 
     private func buildCamera() {
         let camera = SCNCamera()
-        camera.fieldOfView = 45
+        // Solved numerically for a 9:19.5 portrait screen with the HUD's top
+        // strip and bottom panel taken off: the player line's feet land at 63%
+        // of the screen height, the enemy line's at 38%, enemy heads at 23%, a
+        // second rank still inside the frame, and the far edge of the stage at
+        // 27% so the painting shows behind the enemies. The old framing put the
+        // player's feet at 83%, behind the command panel.
+        camera.fieldOfView = 44
         camera.zNear = 0.1
         camera.zFar = 120
         camera.wantsHDR = true
@@ -170,9 +215,9 @@ final class BattleSceneController: NSObject {
 
         cameraNode = SCNNode()
         cameraNode.camera = camera
-        // Slightly above eye level, angled down, framing both lines.
-        cameraNode.position = SCNVector3(0, 3.4, 9.4)
-        cameraNode.eulerAngles = SCNVector3(-0.20, 0, 0)
+        // High and steep, the way a portrait phone has to look at a stage.
+        cameraNode.position = SCNVector3(0, 8.75, 11.0)
+        cameraNode.eulerAngles = SCNVector3(-0.681, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
 
         director = CameraDirector(cameraNode: cameraNode)
@@ -197,10 +242,12 @@ final class BattleSceneController: NSObject {
     private func position(for combatant: Combatant) -> SCNVector3 {
         let sideSign: Float = combatant.side == .player ? 1 : -1
         // Two ranks of two, so a four-unit team reads clearly from the camera.
+        // Columns two metres apart and ranks 1.5 m deep keep a full team inside
+        // a portrait frame; the old 2.4 m columns put a unit off the edge.
         let column = Float(combatant.slot % 2)
         let rank = Float(combatant.slot / 2)
-        let x = (column - 0.5) * 2.4 + (rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : 0.6)
-        let z = sideSign * (2.6 + rank * 1.9)
+        let x = (column - 0.5) * 2.0 + (rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : 0.5)
+        let z = sideSign * (2.2 + rank * 1.5)
         return SCNVector3(x, 0, z)
     }
 

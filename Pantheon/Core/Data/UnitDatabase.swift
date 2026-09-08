@@ -32,8 +32,13 @@ enum UnitDatabase {
 
     static func blueprint(_ id: String) -> UnitBlueprint? { index[id] }
 
-    /// Unit ids the gacha is allowed to produce. Enemies are deliberately absent.
-    static let summonPool: [String] = (anubisFamily + sekhmetFamily).map { $0.id }
+    /// Unit ids the gacha is allowed to produce. Enemies are deliberately
+    /// absent, and so is any family whose portraits have not shipped yet —
+    /// Sekhmet joins the pool the moment her five files are in the bundle,
+    /// with no code change.
+    static let summonPool: [String] = (anubisFamily + sekhmetFamily)
+        .filter { $0.hasShippedArt }
+        .map { $0.id }
 
     static func summonable(stars: Int) -> [UnitBlueprint] {
         summonPool.compactMap { blueprint($0) }.filter { $0.naturalStars == stars }

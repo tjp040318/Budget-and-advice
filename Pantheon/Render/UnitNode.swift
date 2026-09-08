@@ -118,9 +118,17 @@ final class UnitNode: SCNNode {
                 animation.isRemovedOnCompletion = false
                 animation.fillMode = .forwards
             }
+            // Library clips run long: a 2.5 s punch against a 1.0 s contract
+            // leaves the caster still winding up when the hit lands. One-shots
+            // are played at the pace the engine times its hits to; loops and
+            // the death keep their own tempo.
+            if !clip.loops, clip != .death, animation.duration > clip.fallbackDuration * 1.15 {
+                animation.speed = Float(min(2.8, animation.duration / clip.fallbackDuration))
+            }
             modelContainer.addAnimation(animation, forKey: clip.rawValue)
             if !clip.loops {
-                let duration = animation.duration > 0 ? animation.duration : clip.fallbackDuration
+                let played = animation.duration > 0 ? animation.duration / Double(max(0.1, animation.speed)) : clip.fallbackDuration
+                let duration = played
                 if clip == .death {
                     modelContainer.runAction(.sequence([.wait(duration: duration), .fadeOpacity(to: 0.6, duration: 0.6)]))
                 }

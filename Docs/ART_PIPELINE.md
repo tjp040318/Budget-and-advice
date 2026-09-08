@@ -439,10 +439,19 @@ root is locked horizontally and the clip grounded — but a clip authored in
 place still animates better than one that had its travel removed. Loops must
 be seamless. 30 fps is fine.
 
-**Pick a flinch for `hit_react`.** The current Anubis clip is a knock-up: 47
-frames in which he flies 2.8 m into the air and lands on his back. It plays on
-every hit. A short stagger from the Fighting → GettingHit shelf (Meshy ids 178
-or 179, "Hit Reaction") is the intended clip; re-export it when convenient.
+**`hit_react` is a flinch, and the tool makes sure of it.** The Anubis export
+was a knock-up: 47 frames in which he flies 2.8 m into the air and lands on his
+back, on every hit. `tools/mesh.py` detects a hit reaction that leaves the
+ground or ends lying down and ships a synthesised 0.45 s flinch instead — the
+torso and head pitch back from the combat idle's first frame, the hips give a
+few centimetres, and everything eases home. A real flinch from the Fighting →
+GettingHit shelf (Meshy ids 178 or 179) replaces it the moment one is exported;
+`--keep-hit-react` ships whatever was exported.
+
+**Clips may run long.** Library attacks are 2.5–3.9 s against the 1.0–1.4 s
+the engine times its hits to. `UnitNode` plays one-shots at the pace of the
+contract (up to 2.8× faster) and leaves loops and the death at their own tempo,
+so a punch lands when the number pops.
 
 ### Rigging and animation — stay in Meshy
 

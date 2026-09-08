@@ -15,7 +15,7 @@ final class CameraDirector {
     private var isBusy = false
 
     /// Field of view at rest. Shots narrow it to compress the frame.
-    private let homeFOV: CGFloat = 45
+    private let homeFOV: CGFloat = 44
 
     init(cameraNode: SCNNode) {
         self.cameraNode = cameraNode

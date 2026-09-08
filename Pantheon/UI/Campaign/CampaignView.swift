@@ -61,6 +61,22 @@ struct CampaignView: View {
 
     private func chapterSection(_ chapter: Chapter) -> some View {
         VStack(alignment: .leading, spacing: 10) {
+            // The chapter's first stage painting as a banner, so the list reads
+            // as places rather than as rows of text.
+            if let scene = chapter.stages.first?.environment.sceneName, BundleImage.exists("\(scene)_bg") {
+                BundleImage(name: "\(scene)_bg")
+                    .aspectRatio(contentMode: .fill)
+                    .frame(height: 118)
+                    .frame(maxWidth: .infinity)
+                    .clipped()
+                    .overlay(
+                        LinearGradient(colors: [.clear, Theme.surface.opacity(0.15), Theme.surface],
+                                       startPoint: .top, endPoint: .bottom)
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+                    .padding(.bottom, -4)
+            }
+
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(chapter.realmName.uppercased())

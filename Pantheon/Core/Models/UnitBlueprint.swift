@@ -50,6 +50,15 @@ struct UnitBlueprint: Codable, Equatable, Identifiable, Sendable {
         return resolved
     }
 
+    /// Whether the character's portrait is in the bundle. A character without
+    /// one still exists for the codex and for testing, but it stays out of the
+    /// gacha: a 5★ reveal that shows a letter on a gradient over a grey stand-in
+    /// rig is worse than no 5★ at all. The check is a file lookup, not UIKit,
+    /// so Core stays free of UI frameworks.
+    var hasShippedArt: Bool {
+        Bundle.main.url(forResource: model.portraitName, withExtension: "png") != nil
+    }
+
     var activeSkills: [Skill] { skills.filter { !$0.isPassive } }
     var passiveSkill: Skill? { skills.first(where: { $0.isPassive }) }
 }

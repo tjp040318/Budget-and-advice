@@ -111,6 +111,7 @@ def run_family(name, args):
     if args.lod:
         problems += build(base, BUNDLE_DIR / f"{name}_lod.usdz", args.lod, max(512, args.texture // 2), height)["problems"]
 
+    clips = {}
     for clip in clip_sources(name):
         print(f"\n  reading {clip.name}")
         c = character.read(clip)
@@ -127,7 +128,22 @@ def run_family(name, args):
         if c.anim is None:
             print("    PROBLEM: no animation in a clip file")
             problems.append(f"{clip.name}: no animation")
-        problems += build(c, BUNDLE_DIR / f"{clip.stem}.usdz", args.clip_tris, args.clip_texture, height)["problems"]
+        clips[clip.stem[len(name) + 1:]] = c
+
+    # A hit reaction is a flinch. If the exported one is a knock-up or a
+    # knockdown, ship a synthesised flinch built from the combat idle instead;
+    # the export stays in Art/Models for the day a real flinch replaces it.
+    hit = clips.get("hit_react")
+    if hit is not None and not args.keep_hit_react and character.looks_like_a_fall(hit):
+        source = clips.get("idle_combat") or clips.get("idle") or base
+        print(f"\n  hit_react: the exported clip is a knock-up or knockdown; "
+              f"synthesising a 0.45 s flinch from {'the combat idle' if source is not base else 'the bind pose'} instead "
+              f"(--keep-hit-react ships the export)")
+        clips["hit_react"] = character.synthesize_flinch(source)
+
+    for clip_name, c in clips.items():
+        print(f"\n  building {name}_{clip_name}")
+        problems += build(c, BUNDLE_DIR / f"{name}_{clip_name}.usdz", args.clip_tris, args.clip_texture, height)["problems"]
 
     total = sum(p.stat().st_size for p in BUNDLE_DIR.glob(f"{name}*.usdz"))
     print(f"\n  {name}: {total / 1048576:.1f} MB in the bundle folder")
@@ -161,6 +177,8 @@ def main():
     ap.add_argument("--clip-texture", type=int, default=128, help="max texture edge for per-clip files")
     ap.add_argument("--keep-root-motion", action="store_true", help="keep horizontal root motion in clips")
     ap.add_argument("--keep-base-animation", action="store_true", help="keep whatever clip the base export carries")
+    ap.add_argument("--keep-hit-react", action="store_true",
+                    help="ship the exported hit_react even when it is a knock-up or knockdown")
     ap.add_argument("--inspect", action="store_true", help="report on a file and change nothing")
     ap.add_argument("--out", help="output path for a single file (default: full resolution, beside the source)")
     args = ap.parse_args()

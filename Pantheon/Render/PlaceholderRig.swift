@@ -228,21 +228,22 @@ enum PlaceholderRig {
         card.renderingOrder = 10
         root.addChildNode(card)
 
-        // A soft element glow behind the figure. Kept well behind so it reads
-        // as light in the air rather than as a plate the figure is stuck to.
-        let glowSize = artHeight * (isCutout ? 0.85 : 1.35)
+        // A soft element glow behind the figure. Kept well behind and faint so
+        // it reads as light in the air rather than as the coin the figure is
+        // printed on — at 0.16 alpha over the whole height it read as a token.
+        let glowSize = artHeight * (isCutout ? 0.62 : 1.35)
         let glowPlane = SCNPlane(width: glowSize, height: glowSize)
         glowPlane.cornerRadius = glowSize / 2
         let glowMaterial = SCNMaterial()
         glowMaterial.lightingModel = .constant
-        glowMaterial.diffuse.contents = tint.withAlphaComponent(isCutout ? 0.16 : 0.28)
+        glowMaterial.diffuse.contents = tint.withAlphaComponent(isCutout ? 0.09 : 0.28)
         glowMaterial.blendMode = .add
         glowMaterial.writesToDepthBuffer = false
         glowMaterial.isDoubleSided = true
         glowPlane.firstMaterial = glowMaterial
         let glow = SCNNode(geometry: glowPlane)
         glow.name = "portrait_glow"
-        glow.position = SCNVector3(0, Float(artHeight * 0.45), -0.05)
+        glow.position = SCNVector3(0, Float(artHeight * (isCutout ? 0.38 : 0.45)), -0.05)
         glow.renderingOrder = 9
         root.addChildNode(glow)
 

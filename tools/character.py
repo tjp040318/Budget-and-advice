@@ -831,6 +831,79 @@ def ground_animation(char, tolerance=0.005):
     return shift
 
 
+def smoothstep(x):
+    x = min(1.0, max(0.0, x))
+    return x * x * (3 - 2 * x)
+
+
+def looks_like_a_fall(char):
+    """True when a clip leaves the ground or ends lying down: a knock-up or a
+    knockdown, not the flinch a hit reaction is meant to be."""
+    if not (char.skinned and char.anim):
+        return False
+    lo, hi = bounds(char.points.astype(np.float64))
+    standing = hi[1] - lo[1]
+    frames = len(char.anim["T"])
+    feet, heights = [], []
+    for f in range(0, frames, max(1, frames // 24)):
+        sp = char.skinned_points(char.joint_world_at(f))
+        feet.append(sp[:, 1].min())
+        heights.append(sp[:, 1].max() - sp[:, 1].min())
+    last = char.skinned_points(char.joint_world_at(frames - 1))
+    return max(feet) > 0.35 * standing or (last[:, 1].max() - last[:, 1].min()) < 0.6 * standing
+
+
+def synthesize_flinch(source, duration=0.45, fps=30.0, recoil=0.06):
+    """A hit reaction built from a clip's first frame: the torso and head pitch
+    back, the hips give a few centimetres, and everything eases home in under
+    half a second. It exists because the hit reaction Meshy's library offered
+    was a knock-up, and a character launched into the air on every hit is not a
+    fight anyone can read. The source is the combat idle when there is one,
+    the bind pose otherwise."""
+    char = copy.deepcopy(source)
+    J = len(char.joints)
+    if char.anim:
+        t0, r0, s0 = char.anim["T"][0].copy(), char.anim["R"][0].copy(), char.anim["S"][0].copy()
+    else:
+        parts = [decompose(m) for m in char.rest_local]
+        t0 = np.array([q[0] for q in parts]); r0 = np.array([q[1] for q in parts]); s0 = np.array([q[2] for q in parts])
+    world0 = world_from_local(np.array([trs(t0[j], r0[j], s0[j]) for j in range(J)]), char.parents)
+    frames = max(4, int(round(duration * fps)) + 1)
+    peak = {"spine": 5.0, "spine1": 5.0, "spine2": 6.0, "neck": 4.0, "head": 7.0}     # degrees, matched on the joint's leaf name
+    roots = [j for j in range(J) if char.parents[j] < 0]
+    head = char.joint_index("Head")
+
+    def build(sign):
+        T = np.tile(t0, (frames, 1, 1)); R = np.tile(r0, (frames, 1, 1)); S = np.tile(s0, (frames, 1, 1))
+        for f in range(frames):
+            p = f / (frames - 1)
+            amt = smoothstep(p / 0.28) if p < 0.28 else 1 - smoothstep((p - 0.28) / 0.72)
+            for j in roots:
+                T[f, j] = t0[j] + amt * np.array([0.0, -0.02, -recoil])
+            for j, name in enumerate(char.joints):
+                deg = peak.get(name.split("/")[-1].lower())
+                if deg is None:
+                    continue
+                theta = sign * np.radians(deg) * amt
+                rx = quat_to_rot([np.sin(theta / 2), 0.0, 0.0, np.cos(theta / 2)])
+                pw = world0[char.parents[j]][:3, :3] if char.parents[j] >= 0 else np.eye(3)
+                u, _, vt = np.linalg.svd(pw)
+                pw = u @ vt
+                delta = pw @ rx @ pw.T
+                R[f, j] = rot_to_quat(quat_to_rot(r0[j]) @ delta)
+        return {"T": T, "R": R, "S": S, "fps": float(fps)}
+
+    # Whichever sign moves the head backwards (toward -Z, away from the enemy) is the flinch.
+    anim = build(-1.0)
+    if head is not None:
+        char.anim = anim
+        dz = char.joint_world_at(frames // 4)[head][3, 2] - world0[head][3, 2]
+        if dz > 0:
+            anim = build(1.0)
+    char.anim = anim
+    return char
+
+
 def limit_influences(char, k=4):
     ji, jw = char.joint_indices.astype(np.int64), char.joint_weights.astype(np.float64)
     if ji.shape[1] > k:

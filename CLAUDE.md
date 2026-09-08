@@ -61,6 +61,10 @@ environment can and cannot do. The short version:
   Gemini key.
 - Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
   drew nothing for loose bundle PNGs on device; never use it for one.
+- The gacha pool is gated on shipped art (`UnitBlueprint.hasShippedArt`), so
+  Sekhmet is summonable the moment her portraits land and not before. The
+  battle camera is solved for a portrait phone (`BattleSceneController`);
+  `tools/appicon.py` drew the icon.
 - Meshy is driven from here. `tools/meshy.py` took Sekhmet from a prompt to a
   rigged model with six clips for 53 credits; the task ids are in
   `Art/Models/sekhmet.meshy.json`. The files could not be fetched, because
