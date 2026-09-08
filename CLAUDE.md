@@ -45,10 +45,13 @@ was visible in that render.
 
 **The repository compiles itself.** `.github/workflows/build.yml` builds the
 simulator app and runs the unit tests on a macOS runner on every push, then
-launches the app with `-tour` and screenshots it (`TourView`, debug only).
-Read the run with the GitHub tools (`actions_list`, `get_job_logs`); the log
-ends with one base64 contact sheet between `SHEET_BASE64_BEGIN/END`. Never
-push without reading the run that follows.
+launches the app once per screen with `-tour -tour-step N` (`TourView`,
+debug only) and photographs the simulator. Read the run with the GitHub
+tools (`actions_list`, `get_job_logs`), and look at the frames with
+`python3 tools/ciframes.py`, which fetches the `ci/screens` branch the job
+force-pushes them to (the artifact store is on a host the network policy
+refuses). Never push without reading the run that follows; a push while a
+run is in progress cancels it, so wait for the frames first.
 
 ## Where things stand
 

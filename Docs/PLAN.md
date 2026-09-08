@@ -405,14 +405,18 @@ turns "vibe coded" into "engineered".
 
 1. `git push` → `.github/workflows/build.yml` builds the simulator app and
    runs the 40 unit tests on `macos-15` (about six minutes).
-2. The job then launches the app with `-tour`. `TourView` (debug only) walks
-   island → collection → detail → Hall of Ka → summon → a 5★ reveal → a
-   battle on auto → arena → More, four seconds a step, while the runner
-   screenshots the simulator; the frames are uploaded as an artifact and
-   printed into the log as one base64 contact sheet.
-3. The session reads the job log through the GitHub tools and decodes the
-   sheet. A red build, a failing test or a broken screen is seen before the
-   phone ever pulls the commit.
+2. The job then launches the app in the simulator once per screen, pinned
+   with `-tour -tour-step N` (`TourView`, debug only): island, collection, a
+   unit's detail, the Hall of Ka, summon, a 5★ reveal, a battle on auto,
+   arena, More — several frames for the reveal and the battle. The frames
+   go to an artifact at full size and, as small JPEGs, to the orphan branch
+   `ci/screens`, force-pushed each run.
+3. The session runs `python3 tools/ciframes.py`, which fetches that branch
+   and lays the frames out on one sheet. A red build, a failing test or a
+   broken screen is seen before the phone ever pulls the commit. The first
+   tour taught two things the hard way: the simulator's first screenshot
+   takes most of a minute, so the tour cannot be timed from inside the app,
+   and a stage the account has not unlocked is a black screen.
 4. On the phone, **More → Diagnostics** holds everything the app printed,
    with Copy and Share; and the **Playtest Log** artifact takes issue
    reports the session reads back from its database on request.
