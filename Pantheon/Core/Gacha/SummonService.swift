@@ -32,40 +32,47 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
         pantheon: nil
     )
 
-    /// The launch banner. Every member of the Anubis family is featured, so a
-    /// 5-star-grade pull is not the promise here — the promise is that the
-    /// element you are missing is twice as likely as the ones you have.
+    /// Every summonable of one pantheon, for a banner that promises it.
+    static func pool(of pantheon: Pantheon) -> [String] {
+        UnitDatabase.summonPool.filter { UnitDatabase.blueprint($0)?.pantheon == pantheon }
+    }
+
+    /// The launch banner: Egypt only. The pool is the whole Egyptian roster, so
+    /// a common roll lands on a Shabti, a rare one on an Anubis and a legendary
+    /// on Sekhmet or Thoth, and the Anubis family is featured at double weight
+    /// within its grade. A pantheon banner that handed out the other pantheon's
+    /// commons was the "the Greek banner is all Anubis" complaint.
     static let duatOpens = Banner(
         id: "duat_opens",
         title: "The Duat Opens",
-        subtitle: "The scales are unattended. Anubis answers the circle — in fire, in water, in wind, in light and in shadow.",
+        subtitle: "The scales are unattended. Egypt answers the circle — Anubis first, in fire, in water, in wind, in light and in shadow.",
         scroll: .pantheonic,
-        pool: [],
-        featured: UnitDatabase.summonPool.filter { UnitDatabase.blueprint($0)?.pantheon == .egyptian },
+        pool: pool(of: .egyptian),
+        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("anubis_") },
         legendaryPity: 90,
         rarePity: 12,
         artName: "banner_duat_opens",
         pantheon: .egyptian
     )
 
-    /// The second pantheon's banner. Zeus is featured in all five elements. It
-    /// is only offered once his portraits are in the bundle: a featured list
-    /// with nothing in it is a promise the circle cannot keep, so until then
-    /// the Greek family is simply absent from every banner.
+    /// The Greek banner: Greece only. Zeus is featured in all five elements;
+    /// the rest of Olympus — Ares, the heroes, the creatures and the hoplite —
+    /// fills the grades beneath and beside him. It is offered once at least
+    /// one Greek unit has its portraits in the bundle.
     static let olympusStirs = Banner(
         id: "olympus_stirs",
         title: "Olympus Stirs",
-        subtitle: "Thunder over the Duat. The king of the Greek gods answers a foreign circle — in fire, in water, in wind, in light and in shadow.",
+        subtitle: "The sky opens over Greece. Gods, heroes and the creatures of the old country answer — Zeus first, in every element.",
         scroll: .pantheonic,
-        pool: [],
-        featured: UnitDatabase.summonPool.filter { UnitDatabase.blueprint($0)?.pantheon == .greek },
+        pool: pool(of: .greek),
+        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("zeus_") },
         legendaryPity: 90,
-        rarePity: 12,
+        rarePity: 10,
         artName: "banner_olympus_stirs",
         pantheon: .greek
     )
 
-    static let all: [Banner] = [duatOpens] + (olympusStirs.featured.isEmpty ? [] : [olympusStirs]) + [standard]
+    static let all: [Banner] = [duatOpens] + (olympusStirs.pool.isEmpty ? [] : [olympusStirs]) + [standard]
 }
 
 /// The outcome of a single summon.

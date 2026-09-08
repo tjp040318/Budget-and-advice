@@ -90,11 +90,11 @@ final class ModelLibrary {
         var isPortraitSprite = false
         if let cached = cache[assetName] {
             model = cached.clone()
-            MaterialTuner.applyElementTint(model, hex: spec.auraHex)
+            MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
         } else if let loaded = loadFromBundle(assetName) {
             cache[assetName] = loaded
             model = loaded.clone()
-            MaterialTuner.applyElementTint(model, hex: spec.auraHex)
+            MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
         } else {
             isStandIn = true
             isPortraitSprite = UIImage(named: spec.portraitName + "_cut") != nil
@@ -417,10 +417,12 @@ final class ModelLibrary {
 /// that here, all on the GPU, and none of them touches the art files:
 ///
 /// 1. A **surface shader modifier** recolours the costume per element: every
-///    pixel of the base texture that is clearly coloured and is not skin or
-///    fur takes the element's hue as it is sampled, so the water variant wears
-///    water, not a faintly bluer red. Skin, fur, white linen and black stay as
-///    painted. It runs per fragment, so it costs no memory and no load time.
+///    pixel of the base texture that is strongly coloured and close to the
+///    design's primary accent (`ModelSpec.costumeHue`, gold so far) takes the
+///    element's hue as it is sampled, so the water variant wears water, not a
+///    faintly bluer red. Skin, fur, white linen, black and the design's other
+///    colours stay as painted. It runs per fragment, so it costs no memory
+///    and no load time.
 ///    (The first version did this on the CPU, once per texture and element.
 ///    It stalled the main thread for the whole recolour — the summon reveal
 ///    stayed dark through a CI tour — and would have kept five copies of every
@@ -438,31 +440,38 @@ enum MaterialTuner {
 
     /// Metal. `_surface.diffuse` is the sampled base colour in linear space,
     /// so it is taken to sRGB for the hue test (the thresholds were tuned on
-    /// the PNG's own values) and back afterwards. Skin and fur are a warm hue
-    /// between 11° and 38° at moderate saturation; everything else that is
-    /// clearly coloured is rebuilt with the element's hue, its own brightness
-    /// and no less saturation than the element colour carries. `costumeMix`
-    /// is 0 until `applyElementTint` sets it, so an untinted model renders as
-    /// painted.
+    /// the PNG's own values) and back afterwards. Only the design's PRIMARY
+    /// accent moves: a pixel that is strongly coloured (saturation over 0.5,
+    /// which leaves every skin tone alone) and within `costumeBand` of the
+    /// model's `costumeSourceHue` — gold, on every character so far — is
+    /// rebuilt with the element's hue at its own brightness. The design's
+    /// other colours (Sekhmet's lapis and crimson, Zeus's white) stay, so an
+    /// ember Sekhmet is red-gold, blue and crimson rather than a monochrome.
+    /// The first version recoloured everything saturated and the CI reveal
+    /// showed a lioness in one shade of red. `costumeMix` is 0 until
+    /// `applyElementTint` sets it, so an untinted model renders as painted.
     static let surfaceModifier = """
     #pragma arguments
     float costumeHue;
     float costumeSaturation;
     float costumeMix;
+    float costumeSourceHue;
+    float costumeBand;
     #pragma body
     float3 c = pow(max(_surface.diffuse.rgb, float3(0.0)), float3(1.0 / 2.2));
     float maxC = max(c.r, max(c.g, c.b));
     float minC = min(c.r, min(c.g, c.b));
     float delta = maxC - minC;
-    if (costumeMix > 0.0 && maxC > 0.12 && delta > 0.001 && delta / maxC > 0.28) {
+    if (costumeMix > 0.0 && maxC > 0.12 && delta > 0.001 && delta / maxC > 0.5) {
         float h;
         if (maxC == c.r) { h = (c.g - c.b) / delta; if (h < 0.0) { h += 6.0; } }
         else if (maxC == c.g) { h = (c.b - c.r) / delta + 2.0; }
         else { h = (c.r - c.g) / delta + 4.0; }
         h /= 6.0;
         float s = delta / maxC;
-        bool skinOrFur = (h > 0.03 && h < 0.105 && s < 0.62);
-        if (!skinOrFur) {
+        float away = abs(h - costumeSourceHue);
+        away = min(away, 1.0 - away);
+        if (away < costumeBand) {
             float ns = max(s, costumeSaturation * 0.8);
             float3 k = fract(float3(costumeHue) + float3(1.0, 2.0 / 3.0, 1.0 / 3.0));
             float3 p = abs(k * 6.0 - 3.0);
@@ -530,12 +539,17 @@ enum MaterialTuner {
                     .lightingModel: lightingModifier,
                     .fragment: fragmentModifier,
                 ]
-                material.setValue(NSNumber(value: 0.0), forKey: "costumeHue")
-                material.setValue(NSNumber(value: 0.0), forKey: "costumeSaturation")
-                material.setValue(NSNumber(value: 0.0), forKey: "costumeMix")
+                // Float, and Float again when `applyElementTint` sets them:
+                // SceneKit logs an error and animates wrongly when a key
+                // switches between Double and Float.
+                material.setValue(NSNumber(value: Float(0)), forKey: "costumeHue")
+                material.setValue(NSNumber(value: Float(0)), forKey: "costumeSaturation")
+                material.setValue(NSNumber(value: Float(0)), forKey: "costumeMix")
+                material.setValue(NSNumber(value: Float(45.0 / 360.0)), forKey: "costumeSourceHue")
+                material.setValue(NSNumber(value: Float(32.0 / 360.0)), forKey: "costumeBand")
                 material.setValue(NSValue(scnVector3: SCNVector3(1, 1, 1)), forKey: "rimColor")
-                material.setValue(NSNumber(value: 2.6), forKey: "rimPower")
-                material.setValue(NSNumber(value: 0.55), forKey: "rimStrength")
+                material.setValue(NSNumber(value: Float(2.6)), forKey: "rimPower")
+                material.setValue(NSNumber(value: Float(0.55)), forKey: "rimStrength")
             }
         }
     }
@@ -554,8 +568,9 @@ enum MaterialTuner {
     static func applyElementTint(
         _ node: SCNNode,
         hex: String,
-        strength: CGFloat = 0.12,
-        glow: CGFloat = 0.10,
+        sourceHue: CGFloat = 45,
+        strength: CGFloat = 0.06,
+        glow: CGFloat = 0.04,
         costume: CGFloat = 1.0
     ) {
         guard let tint = UIColor(hex: hex) else { return }
@@ -578,6 +593,7 @@ enum MaterialTuner {
                 material.setValue(NSNumber(value: Float(hue)), forKey: "costumeHue")
                 material.setValue(NSNumber(value: Float(saturation)), forKey: "costumeSaturation")
                 material.setValue(NSNumber(value: Float(costume)), forKey: "costumeMix")
+                material.setValue(NSNumber(value: Float(sourceHue / 360)), forKey: "costumeSourceHue")
                 material.setValue(NSValue(scnVector3: SCNVector3(Float(red), Float(green), Float(blue))), forKey: "rimColor")
                 material.multiply.contents = wash
                 // Never overwrite a real emissive map the export shipped with —
@@ -589,7 +605,7 @@ enum MaterialTuner {
             }
             child.geometry = unique
         }
-        report(node, "\(textured) textured material(s); costume hue \(Int(hue * 360))° for \(hex), recoloured in the surface shader")
+        report(node, "\(textured) textured material(s); the \(Int(sourceHue))° costume accent becomes \(Int(hue * 360))° for \(hex) in the surface shader")
     }
 
     private static func report(_ node: SCNNode, _ message: String) {

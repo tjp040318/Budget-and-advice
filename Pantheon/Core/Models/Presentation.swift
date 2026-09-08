@@ -97,6 +97,13 @@ struct ModelSpec: Codable, Equatable, Sendable {
     var auraHex: String = "#FFFFFF"
     /// Portrait image name in the asset catalogue.
     var portraitName: String
+    /// Whether the character closes to strike. A melee unit dashes to its
+    /// target for a single-target attack clip and dashes back; a caster or an
+    /// archer stays put and its effect crosses the field.
+    var melee: Bool = true
+    /// Hue, in degrees, of the design's primary costume accent — the colour the
+    /// per-element recolour replaces. Gold on every character so far.
+    var costumeHue: Float = 45
 
     init(
         assetName: String,
@@ -109,7 +116,9 @@ struct ModelSpec: Codable, Equatable, Sendable {
         handAttachNode: String? = "hand_r",
         chestAttachNode: String? = "spine_03",
         auraHex: String = "#FFFFFF",
-        portraitName: String? = nil
+        portraitName: String? = nil,
+        melee: Bool = true,
+        costumeHue: Float = 45
     ) {
         self.assetName = assetName
         self.scale = scale
@@ -122,6 +131,8 @@ struct ModelSpec: Codable, Equatable, Sendable {
         self.chestAttachNode = chestAttachNode
         self.auraHex = auraHex
         self.portraitName = portraitName ?? "portrait_\(assetName)"
+        self.melee = melee
+        self.costumeHue = costumeHue
     }
 }
 

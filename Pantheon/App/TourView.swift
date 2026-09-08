@@ -17,6 +17,7 @@ struct TourView: View {
     @State private var index = TourView.pinnedStep ?? 0
     @State private var ticksOnStep = 0
     @State private var battleModel: BattleViewModel?
+    @State private var arenaModel: BattleViewModel?
     @State private var seeded = false
 
     /// `-tour-step N` pins the tour to one screen for the whole run. The CI
@@ -33,7 +34,7 @@ struct TourView: View {
     /// One entry per screen: what to show and how many ticks to hold it.
     private static let schedule: [(name: String, ticks: Int)] = [
         ("island", 2), ("collection", 2), ("detail", 2), ("training", 2),
-        ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("more", 2),
+        ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("arena_battle", 6), ("more", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -60,6 +61,7 @@ struct TourView: View {
         .onAppear {
             seedIfNeeded()
             if current == "battle" { startBattle() }
+            if current == "arena_battle" { startArenaBattle() }
         }
         .onReceive(timer) { _ in
             if Self.pinnedStep == nil { tick() }
@@ -94,6 +96,16 @@ struct TourView: View {
             }
         case "arena":
             ArenaView()
+        case "arena_battle":
+            // The arena fight is a different stage, a 4v4 and an AI-built
+            // enemy team, so the camera and the placement are photographed
+            // here as well as in the campaign.
+            if let arenaModel {
+                BattleView(model: arenaModel)
+            } else {
+                Color.black.ignoresSafeArea()
+                    .onAppear { startArenaBattle() }
+            }
         default:
             SettingsView()
         }
@@ -106,6 +118,7 @@ struct TourView: View {
         if index + 1 < Self.schedule.count {
             index += 1
             if current == "battle" { startBattle() }
+            if current == "arena_battle" { startArenaBattle() }
         }
     }
 
@@ -132,6 +145,15 @@ struct TourView: View {
             battleModel = model
             return
         }
+    }
+
+    private func startArenaBattle() {
+        guard arenaModel == nil else { return }
+        guard let opponent = store.arenaPool.first,
+              let engine = store.startArenaBattle(against: opponent) else { return }
+        let model = BattleViewModel(engine: engine, context: .arena(opponent), store: store)
+        model.autoBattle = false
+        arenaModel = model
     }
 
     /// A 5★ reveal without spending a scroll, so the stage is caught with a

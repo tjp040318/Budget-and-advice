@@ -379,6 +379,14 @@ final class GameStore: ObservableObject {
             if team.count == 3 {
                 player.campaignTeam = TeamPreset(name: "Campaign", unitIDs: team)
             }
+            // The arena step fights a full four, so the offence team is the
+            // three plus a second Anubis rather than the starter alone.
+            let offence = ["anubis_umbra", "sekhmet_umbra", "zeus_ember", "anubis_ember"].compactMap { id in
+                player.units.first { $0.blueprintID == id }?.id
+            }
+            if offence.count == 4 {
+                player.arenaOffenseTeam = TeamPreset(name: "Arena Offense", unitIDs: offence)
+            }
         }
     }
     #endif

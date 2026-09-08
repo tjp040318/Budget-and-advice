@@ -200,6 +200,75 @@ Anubis banner recipe in §3 with Zeus in place of Anubis and a storm sky in
 place of the Duat gate. The game offers the banner only once the five
 portraits exist, so the banner art can come last.
 
+### The stylised recipe — every family since the remake
+
+The user chose a stylised look with Summoners War proportions for every
+character, so the three first families were remade and the seven new ones
+made in it. It is two prompts, and the 3D model comes from the first.
+
+**1. The concept** (`Art/Concepts/<family>_sw.png`, 1024×1024), the source for
+Meshy image-to-3D and for the cards. One style paragraph is shared:
+
+> Full-body character concept for a stylised mobile gacha RPG in the manner of
+> Summoners War: about five heads tall with a slightly large head, big hands
+> and feet, chunky simplified shapes and a strong readable silhouette,
+> hand-painted cel-shaded textures with crisp highlights, a strict palette of
+> three colours plus black and skin. Standing in a relaxed A-pose facing the
+> viewer, feet apart, arms lowered a little away from the body, any weapon
+> held in one hand tight against the body. The whole figure is visible head to
+> toe and centred on a plain flat light-grey background with a plain light-grey
+> floor, soft even studio light, no cast shadows, no text, no frame, one
+> character only. *<the character>* Avoid: realistic proportions,
+> photorealism, anything standing beside the figure, a cape or cloth flying
+> away from the body, wings spread wide, multiple characters, cropping, a
+> dramatic background, text, watermark.
+
+The character sentence names the figure, its costume piece by piece and its
+three-colour palette (Ares: "bronze, crimson and black"). Two rules learned
+the expensive way: a prop stands *in the hand against the body* or Meshy's
+rigger fails on it, and wings are asked for *folded* (the first harpy came
+spread and was redone). The prompts for all ten are in
+`scratchpad/concepts_v2.sh` of the session that made them and, in short, in
+`Docs/PLAN.md` Phase 2c.
+
+**2. Cards from concepts.** The ember card is a `--ref` edit of the concept:
+
+> Edit this image into a mobile gacha RPG character portrait card of the SAME
+> character in the SAME cel-shaded stylised look, CROPPED TO THE WAIST UP:
+> head, shoulders and chest fill the square frame, the head in the upper two
+> thirds, nothing below the belt visible, facing *<three-quarter left / right /
+> the viewer directly>*, dramatic rim light from behind, a dark background with
+> a soft radial glow behind the head, rich saturated colour, no text, no frame,
+> no border, one character. The costume's gold and warm metal glow molten
+> orange with ember cracks, warm firelight; this is the fire form.
+
+The other four are `--ref` edits of the ember card, "keep everything identical
+except that every gold, bronze or warm-metal part of the costume becomes …":
+tide "deep teal and turquoise metal, the glow and rim light turn cool
+underwater blue-green"; gale "pale jade green and silver, the glow and rim
+light turn cold jade"; radiance "luminous white-gold, with a bright warm halo
+of light from above"; umbra "deep violet and black metal, the glow and rim
+light turn cold violet with shadow smoke curling from the shoulders" — each
+ending "Same character, same pose, same crop, same style." That is the same
+rule the in-game recolour follows (only the design's gold moves), so the
+card and the stage agree.
+
+Gemini keeps a full-body concept full-body about a third of the time; if the
+card comes back with legs, run the ember step again with "This is a BUST: only
+the head, neck, shoulders and upper chest are in frame" (Thoth needed it).
+Facing alternates by family so a team strip reads apart: Anubis, Heracles,
+Satyr and Thoth left; Sekhmet, Ares and Harpy right; Zeus, Perseus and the
+Hoplite face the viewer.
+
+Files, five per family, the Anubis suffixes:
+
+```
+portrait_ares_*.png  portrait_heracles_*.png  portrait_perseus_*.png  portrait_thoth_*.png
+portrait_hoplite_*.png  portrait_satyr_*.png  portrait_harpy_*.png
+```
+
+---
+
 ## 2. Stage backdrops
 
 Five files, 2048×2048 PNG. These replace the empty coloured void behind the

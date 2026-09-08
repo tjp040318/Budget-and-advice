@@ -297,6 +297,7 @@ final class BattleSceneController: NSObject {
         guard !queue.isEmpty else {
             isPlaying = false
             director?.returnHome()
+            returnEveryoneHome()
             delegate?.battleSceneDidFinishPlayback(self)
             return
         }
@@ -326,6 +327,7 @@ final class BattleSceneController: NSObject {
             for node in unitNodes.values { node.play(.idleCombat) }
 
         case .turnBegan(let actor, _):
+            returnEveryoneHome()
             highlight(actor)
 
         case .turnSkipped(let actor, _):
@@ -339,6 +341,14 @@ final class BattleSceneController: NSObject {
             Juice.prepareHaptics()
             AudioLibrary.shared.play(.whoosh, volume: animation == .ultimate ? 1.0 : 0.6)
             director?.perform(shot, on: casterNode, target: targetNode)
+            // A melee unit closes on its one victim before the swing and stays
+            // there through the hits; casters, archers and line-wide skills
+            // strike from where they stand.
+            if let targetNode, casterNode.spec.melee, targets.count == 1,
+               targetNode.side != casterNode.side,
+               animation == .attackBasic || animation == .attackHeavy {
+                casterNode.dash(toward: targetNode, duration: 0.16 / max(0.25, speedMultiplier))
+            }
             casterNode.play(animation)
             floatText(name, at: casterNode.headWorldPosition, color: .white, scale: 0.7)
 
@@ -364,6 +374,7 @@ final class BattleSceneController: NSObject {
         case .damage(_, let target, let amount, let isCritical, let isGlancing, let matchup, let remaining, _, _):
             guard let node = unitNodes[target] else { return 0 }
             node.play(.hitReact)
+            node.flashHit()
             node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
 
             // How hard did that land? Lethal beats critical beats the clip.
@@ -471,6 +482,12 @@ final class BattleSceneController: NSObject {
 
     private func highlight(_ actorID: UUID) {
         for (id, node) in unitNodes { node.setHighlighted(id == actorID) }
+    }
+
+    /// Every unit that dashed walks back to its mark. Called as a turn begins
+    /// and when the queue drains, so nobody is left standing in the enemy line.
+    private func returnEveryoneHome() {
+        for node in unitNodes.values { node.returnHome(duration: 0.24 / max(0.25, speedMultiplier)) }
     }
 
     // MARK: - Floating text

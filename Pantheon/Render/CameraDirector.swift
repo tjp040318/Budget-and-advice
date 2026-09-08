@@ -48,10 +48,6 @@ final class CameraDirector {
         target: UnitNode?,
         completion: (() -> Void)? = nil
     ) {
-        guard shot != .standard else {
-            completion?()
-            return
-        }
         cameraNode.removeAllActions()
         isBusy = true
 
@@ -60,6 +56,16 @@ final class CameraDirector {
 
         switch shot {
         case .standard:
+            // Not a cut, but not dead either: a lean of a tenth of the way
+            // toward the action and a touch of zoom, held through the hits and
+            // released when the queue drains. A camera that never moves is
+            // most of what makes a turn-based fight look like a diorama.
+            let focus = target.map { lerp(casterPosition, $0.chestWorldPosition, 0.5) } ?? casterPosition
+            let toward = lerp(homePosition, focus, 0.10)
+            let move = SCNAction.move(to: toward, duration: 0.35)
+            move.timingMode = .easeOut
+            cameraNode.runAction(move)
+            animateFOV(to: homeFOV * 0.94, duration: 0.35)
             completion?()
 
         case .pushIn:

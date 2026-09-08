@@ -366,7 +366,7 @@ def check_unknown_types(files, declared, errors):
         "Codable","Encodable","Decodable","Equatable","Hashable","Identifiable","Sendable",
         "CaseIterable","Comparable","RandomNumberGenerator","LocalizedError","ObservableObject",
         "View","Scene","App","Color","Font","Image","Text","VStack","HStack","ZStack","Button",
-        "ScrollView","LazyVGrid","GridItem","NavigationStack", "NavigationLink", "ShareLink", "ProcessInfo", "UIPasteboard", "UInt8", "UnicodeScalar", "Int8", "Mirror", "CAPropertyAnimation", "CGContext", "CGImage", "CGImageAlphaInfo", "CGBitmapInfo", "CGColorSpaceCreateDeviceRGB", "NSValue","TabView","Picker","Toggle","Spacer",
+        "ScrollView","LazyVGrid","GridItem","NavigationStack", "NavigationLink", "ShareLink", "ProcessInfo", "UIPasteboard", "UInt8", "UnicodeScalar", "Int8", "Mirror", "CAPropertyAnimation", "CGContext", "CGImage", "CGImageAlphaInfo", "CGBitmapInfo", "CGColorSpaceCreateDeviceRGB", "NSValue", "SCNTransaction","TabView","Picker","Toggle","Spacer",
         "Divider","Circle","Capsule","Rectangle","RoundedRectangle","LinearGradient","GeometryReader",
         "ForEach","Binding","State","StateObject","EnvironmentObject","Published","MainActor",
         "SCNNode","SCNScene","SCNView","SCNVector3","SCNVector4","SCNMatrix4","SCNCamera","SCNLight",

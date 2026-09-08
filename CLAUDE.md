@@ -70,13 +70,26 @@ environment can and cannot do. The short version:
   left and words right, and the island painting is 16:9.
 - Battle, summon, collection, arena, campaign and the Hall of Ka (training:
   power-up, skill-ups from duplicates, evolution, awakening) all work.
-- Four families are in the code. Anubis: natural 4★. Sekhmet: natural 5★,
-  the first damage archetype. Zeus: natural 5★, Greek, the control archetype,
-  with the "Olympus Stirs" banner live. Shabti: natural 3★, the gacha's
-  common tier and the training fodder, portraits only (sprites in the
-  world). Twenty characters in the gacha; a common roll that finds no unit
-  of its grade rolls at random within the nearest grade and shows the unit's
-  real stars — the "every summon is a fire Anubis" bug.
+- **Eleven families, 55 characters, ten with models.** Egypt: Anubis (4★),
+  Sekhmet (5★ attacker), Thoth (5★ healer), Shabti (3★ fodder, portraits
+  only). Greece: Zeus (5★ control), Ares (5★ berserker), Heracles (4★
+  defender), Perseus (4★ attacker), Hoplite, Satyr and Harpy (3★). The
+  seven newest live in `UnitDatabase+Roster.swift`, built from three shared
+  per-element tables (`signature`, `control`, `blessing`); a new family is a
+  page of data there. **Banners give their own pantheon only**: The Duat
+  Opens is the Egyptian pool, Olympus Stirs the Greek, the Endless Scroll
+  everything. A common roll that finds no unit of its grade rolls at random
+  within the nearest grade and shows the unit's real stars.
+- **Every character is stylised, Summoners War proportions**, by the user's
+  choice: a Gemini concept (`Art/Concepts/<family>_sw.png`, prompt in
+  `Docs/ART_2D.md`) → `tools/meshy.py generate <asset> --image <concept>
+  --height H --texture-prompt "..."` → `tools/mesh.py <asset> --as <family>
+  --height H` → `tools/preview.py --sheet <family>`. The card is a `--ref`
+  edit of the concept, the other four elements `--ref` edits of the card
+  (`Docs/ART_2D.md`, *Cards from concepts*). Ten pipelines ran at once and
+  Meshy took it. The satyr's hooves need `--clip-tris 3000`. Clip GLBs are
+  gitignored; base exports and manifests are committed. Meshy balance after
+  this session: about 361 credits.
 - Models ship **canonical and decimated**: `tools/mesh.py <family>` reads the
   untouched export in `Art/Models/` (Blender USDZ or Meshy GLB) and writes
   Y-up, metre, feet-on-origin, rest-equals-bind, four-influence files into
@@ -98,11 +111,16 @@ environment can and cannot do. The short version:
   phone shows only the central 62% of the painting's width; the anchors were
   measured off it (`Docs/ART_2D.md` §6). `tools/island.py` is the stand-in
   painter, kept for reference.
+- **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
+  for an attack clip and back at the next turn, every hit flashes the victim
+  white, and the standard camera shot leans a tenth of the way into the
+  action and releases when the queue drains. The CI tour photographs an
+  arena battle (step 8) as well as the campaign one.
 - Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
   drew nothing for loose bundle PNGs on device; never use it for one.
 - The gacha pool is gated on shipped art (`UnitBlueprint.hasShippedArt`, a
-  bundle lookup of `portrait_<id>.png`), which is why all fifteen are in it
-  now with no code change. The battle camera is solved for a portrait phone
+  bundle lookup of `portrait_<id>.png`): a family joins the pool the moment
+  its five cards are in the bundle. The battle camera is solved for a portrait phone
   (`BattleSceneController`); `tools/appicon.py` drew the icon.
 - Meshy is driven from here. `tools/meshy.py` took Sekhmet and then Zeus from
   a prompt to a rigged model with six clips for 53 credits each, and
@@ -131,9 +149,9 @@ environment can and cannot do. The short version:
   read new entries with the Artifact tool's `read_db` on collection
   `issues` (status `open`), reply and set `working`/`fixed` with `write_db`.
   "Check the issues log" means exactly that.
-- Art is done for all four families: 26 painted portraits, 5 stage backdrops,
-  3 summon banners, the island painting, a particle sprite and a 10-texture UI
-  kit. `tools/genart.py` makes more via Gemini; the key is provided as a
+- Art: 55 cards (fifty stylised, from the concepts; the Shabti's five are
+  the stone figurine), 5 stage backdrops, 3 summon banners, the island
+  painting, a particle sprite and a 10-texture UI kit. `tools/genart.py` makes more via Gemini; the key is provided as a
   credential, so it is in the environment and must never be printed or
   written to a file. Every prompt is in `Docs/ART_2D.md`; a family's five
   portraits are one generation plus four `--ref` edits, about two minutes.

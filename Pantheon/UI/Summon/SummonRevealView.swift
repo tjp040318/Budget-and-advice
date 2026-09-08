@@ -465,7 +465,10 @@ struct SummonStageView: UIViewRepresentable {
         let key = SCNLight()
         key.type = .directional
         key.intensity = 1_050
-        key.color = tint.mixed(with: .white, amount: 0.5)
+        // Mostly white: a key light in the element colour on top of the
+        // element recolour and rim made the fourth tour's Sekhmet one shade
+        // of red. The rim carries the colour; the key shows the design.
+        key.color = tint.mixed(with: .white, amount: 0.8)
         let keyNode = SCNNode()
         keyNode.light = key
         keyNode.position = SCNVector3(-3, 5, 4)

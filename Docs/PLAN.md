@@ -260,7 +260,7 @@ each) in under a minute, and the untouched exports are committed in
 Run in anger and measured above. The pipeline is `Art/Models` → `mesh.py` →
 `Pantheon/Resources/Models`, one command per family.
 
-### Phase 2 — a second and third character family *(done; all three remade concept-first)*
+### Phase 2 — a second and third character family *(done; all three remade twice: concept-first, then in the stylised look)*
 
 All three families were remade in this session from designed concepts —
 see *The road to Summoners War* below for how and what it costs. The
@@ -295,8 +295,68 @@ the pipeline above.
   - [x] Downloaded, converted, decimated, verified: 3.8 MB in the bundle
   - [x] Five portraits and the "Olympus Stirs" banner, which the game now
     offers; all fifteen characters are in the summon pool
-- **Thoth** — Radiance support, a cleanse and an attack-bar push, so the
-  Egyptians have a second support. Next.
+- **Thoth** — done in Phase 2c below: the roster's first healer.
+
+### Phase 2c — Olympus filled: the second roster *(done)*
+
+Greece had one god and nothing under him, so a common roll on the Greek
+banner had nowhere to land and the player saw "all Anubis". The user chose
+the direction in a round of questions: characters and battle feel first, a
+**stylised look with Summoners War proportions** for every character from
+now on, Ares as the first new 5★, creatures at 3★ and heroes at 4★, Thoth
+for Egypt, up to 550 Meshy credits. Everything below was built in one
+session from those answers.
+
+- **Seven new families, 35 characters**, in `UnitDatabase+Roster.swift`:
+  Ares (5★ berserker: War Frenzy buffs himself and fills his bar, Slaughter
+  hits harder the more the target has lost and can take another turn; awakened,
+  every kill feeds him), Heracles (4★ defender whose Twelve Labours deal 30%
+  of his own maximum health; the Nemean Roar provokes the line; awakened, a
+  shield the first time he falls below half), Perseus (4★ attacker: two cuts,
+  a Mirror Shield that is Defense Up for the team and a counter for him, the
+  Gorgon's Gaze that takes the whole line's turn away the element's way;
+  awakened, winged sandals at the start of battle), Thoth (5★ Egyptian
+  healer: a 30% team heal with a cleanse, the Book of the Dead for Immunity,
+  the element's blessing and 25% of bar; awakened, the weakest ally is healed
+  at the start of each of his turns), and the 3★ tier of Greece — Hoplite
+  (Phalanx: Defense Up for all and a shield on himself), Satyr (Wild Piping:
+  a 15% team heal and Haste) and Harpy (Talon Rake twice, Screech Dive knocks
+  the bar back). Every basic attack carries the element's signature debuff
+  and every family has a leader skill; the three tables that make five
+  variants of a character (`signature`, `control`, `blessing`) are shared, so
+  the next family is a page of data.
+- **Banners give their own pantheon.** The Duat Opens is the Egyptian pool
+  with the Anubis family featured; Olympus Stirs is the Greek pool with the
+  Zeus family featured; the Endless Scroll is everything. A pantheon banner
+  that handed out the other pantheon's commons was the complaint.
+- **Ten models in the stylised look**, 53 credits each, 530 in all (891 →
+  361): the three remakes and the seven new. Ten Gemini concepts in one
+  prompt style (five heads tall, big hands, chunky shapes, three-colour
+  palettes, A-pose, weapon tight to the body, grey ground), then Meshy
+  image-to-3D + rig + six clips, all ten pipelines at once — Meshy accepted
+  the concurrency and rate-limited a few, which the tool waited out. Every
+  file verified with zero smeared triangles. One lesson: the **satyr's goat
+  hooves** are thin enough that the 1,499-triangle decimation of the clip
+  files ate 12 cm of them and verify reported the feet 12 cm off the floor;
+  `--clip-tris 3000` keeps them. Another: the ten pipelines' per-stage costs
+  in the manifests are wrong because the balance was read while nine other
+  tasks were charging; the total is right.
+- **Fifty portrait cards from the concepts**: each family's ember card is a
+  `--ref` edit of its own concept ("the same character, waist up, dark
+  background, rim light"), and the four other elements are recolours of that
+  card, so the card and the model are the same design. Gemini kept three
+  families full-body on the first pass; a second pass with "cropped to the
+  waist" fixed two and a third pass as a bust fixed Thoth.
+- **Not committed:** the six clip GLBs per character (6–7 MB each, 400 MB in
+  all) — `.gitignore` covers them, the manifests hold the task ids and
+  `meshy.py download` fetches them again while Meshy keeps them. The base
+  export of each character is committed. The superseded concept-first
+  sources (`sekhmet_v2`, `zeus_v2`, `anubis_v3`) left the checkout; their
+  manifests stayed.
+- **Not done:** a model for the Shabti (they remain sprites; 53 credits when
+  wanted), the Roman Legionary (Rome is a pantheon in the data with no banner
+  yet; the user chose a Greek Hoplite now and Rome later), and a Greek
+  campaign chapter.
 
 ### Phase 2b — the common tier and the training hall *(done)*
 
@@ -367,8 +427,9 @@ and each one is either there, half there, or missing.
 | Runes (relics): six slots, sets, sub-stats, upgrades | ✅ | a rune-removal cost, a reappraisal, the "Legend" grade |
 | Turn-based combat: attack bar, elements, buffs, debuffs, leader skills | ✅ | more status kinds as families need them |
 | Campaign chapters, arena, energy | ✅ one chapter, arena, energy | a Greek chapter; Giant's Keep-style dungeons that drop relics |
-| Hundreds of monsters | 20 characters in four families | one family is ~1 hour, 53 Meshy credits and two Gemini calls; the pipeline is proven |
-| Stylised, chunky, readable 3D characters | realistic-leaning text-to-3D; textures being fixed | concept art first, then Meshy image-to-3D from it; a rim-light and outline shader; see below |
+| Hundreds of monsters | 55 characters in eleven families (ten with models) | one family is ~1 hour, 53 Meshy credits and six Gemini calls; ten were made in one session |
+| Stylised, chunky, readable 3D characters | ✅ every model is image-to-3D from a stylised concept in Summoners War proportions, with a painted lighting ramp, a rim light and a per-element recolour | an outline pass |
+| Melee units that close and strike, hits that land | ✅ a dash to the victim for single-target attack clips, a white flash on the hit, the camera leans into every action | impact frames read off each clip |
 | A living island: monsters wander, buildings animate, day and night | a painting with plaques | two phases below |
 | Landscape only | portrait | one build setting, a re-solved battle camera, a compact HUD, a wide island painting |
 | Server, accounts, live events, guilds, real-time arena | none, all local | a backend; out of scope for the build in this repository |
@@ -412,6 +473,15 @@ and a third is under way:
   the empty-handed redo rigged at once. Props go in the hand or nowhere.
   The concepts are in `Art/Concepts/`; the superseded text-to-3D exports
   are in git history (before this commit) and no longer in the checkout.
+- **The look, decided.** Asked which look every character should have, the
+  user chose stylised Summoners War proportions over the painterly
+  semi-realistic look the first remakes had. Every model in the bundle is now
+  from a concept in that style (`Art/Concepts/*_sw.png`), and every card is
+  from its concept, so the character on the card is the character on the
+  stage. The per-element recolour changed with it: it moves only the design's
+  primary accent (`ModelSpec.costumeHue`, gold on every character so far),
+  because recolouring everything saturated made an ember Sekhmet one shade of
+  red on the fourth tour's reveal; her lapis and crimson now stay.
 - **Still to do:** an outline pass (a back-face expansion or an
   `SCNTechnique` edge pass), and per-element costume *variants* rather than
   recolours, which is how the genre makes five characters of one.
@@ -480,16 +550,20 @@ push. Settings → Actions on the repository turns it off.
 
 ## What to do next
 
-1. **Pull, build, run in landscape** and walk `Docs/PLAYTEST.md`: the island's
-   plaques, the retextured models in a battle, the idle, the Hall of Ka, a
-   ten-pull, the Overview's green relic numbers. Log what is wrong in the
-   Playtest Log and paste the block from More → Diagnostics.
+1. **Pull, build, run in landscape** and walk `Docs/PLAYTEST.md`. The phone
+   the last screenshots came from was still on the build before every fix in
+   this document; nothing below has been seen on a device.
 2. **Read the log of the CI run** for the same commit — the contact sheet at
-   the end of it is what the simulator saw — so a phone-only fault (GPU,
-   sound, feel) can be told from a build fault.
-3. **The living island, phase A**, then **Thoth** by the same four commands
-   and two Gemini calls, then a Greek chapter so Zeus has somewhere to fight.
-   Each is a session; none needs new tooling.
+   the end of it is what the simulator saw, and `<step>-console.txt` beside
+   it is what the app said — so a phone-only fault (GPU, sound, feel) can be
+   told from a build fault.
+3. **The living island, phase A**, then a **Greek campaign chapter** so
+   Olympus has somewhere to fight, then **Rome** (a Legionary and a banner)
+   by the same recipe as Greece. Each is a session; none needs new tooling.
+4. **Tune Ares.** The balance sim cannot see a self-buff or an extra turn,
+   so it has him losing to Sekhmet; on the phone he may not. Decide from
+   play, then move the numbers in `UnitDatabase+Roster.swift` and
+   `tools/balance.py` together.
 
 ---
 
@@ -500,10 +574,10 @@ push. Settings → Actions on the repository turns it off.
 | 2D art at volume | ✅ 29 assets in ~40 min, proven — when a Gemini key is present |
 | Sound effects | ✅ synthesised, in the repo |
 | Read, normalise, decimate, re-export 3D | ✅ proven on the whole Anubis family |
-| **Generate, rig and animate a 3D character** | ✅ **proven twice: Sekhmet and Zeus, 53 credits and ~12 minutes each** |
+| **Generate, rig and animate a 3D character** | ✅ **proven thirteen times; ten at once in one session, 53 credits and ~15 minutes each** |
 | Convert Meshy's rigged GLB to USDZ | ✅ proven on both families, after one real bug the verify step caught |
 | Fetch the finished files | ✅ fourteen files in under a minute |
-| Paint a family and an island | ✅ eleven portraits, a banner and the island in ~6 minutes of Gemini time |
+| Paint a family and an island | ✅ fifty cards from ten concepts in ~25 minutes of Gemini time, three families at a time |
 | All code, logic, balance, integration | ✅ |
 | Compile and test the app | ✅ on every push, on GitHub's macOS runner, ~6 minutes |
 | See the app | ✅ the CI screenshot tour; `tools/preview.py` for a model file |

@@ -28,6 +28,11 @@ final class UnitNode: SCNNode {
     private var currentClip: AnimationClip?
     private var barWidth: CGFloat { CGFloat(spec.height) * 0.5 }
 
+    /// Where the unit stands between actions, captured the first time it
+    /// dashes, so `returnHome` can put it back. Nil until then.
+    private var homePosition: SCNVector3?
+    private var homeYaw: Float = 0
+
     init(combatant: Combatant, detail: ModelLibrary.DetailLevel = .high) {
         // Everything is built into locals first: Swift forbids touching `self`
         // before `super.init()`, so the scene graph is assembled here and wired
@@ -220,6 +225,63 @@ final class UnitNode: SCNNode {
                 completion?()
                 guard let self, !self.isDefeated, !clip.loops else { return }
                 self.playProcedural(.idleCombat, completion: nil)
+            }
+        }
+    }
+
+    // MARK: - Movement
+
+    /// Closes on a victim for a melee strike: a fast dash to a stride short of
+    /// it, turning to face it on the way. The genre's melee attacks all do
+    /// this — a swing from four metres away reads as mime — and the unit
+    /// stays there through the hits until `returnHome`.
+    func dash(toward target: UnitNode, duration: TimeInterval) {
+        if homePosition == nil {
+            homePosition = position
+            homeYaw = eulerAngles.y
+        }
+        let from = position
+        let to = target.position
+        let dx = to.x - from.x, dz = to.z - from.z
+        let distance = max(0.001, (dx * dx + dz * dz).squareRoot())
+        let stride = spec.height * 0.7
+        let travel = max(0, distance - stride)
+        let destination = SCNVector3(from.x + dx / distance * travel, from.y, from.z + dz / distance * travel)
+        removeAction(forKey: "dash")
+        let move = SCNAction.move(to: destination, duration: duration)
+        move.timingMode = .easeOut
+        // The model is authored facing +Z, so this yaw faces the victim.
+        let turn = SCNAction.rotateTo(x: 0, y: CGFloat(atan2(dx, dz)), z: 0, duration: duration, usesShortestUnitArc: true)
+        runAction(.group([move, turn]), forKey: "dash")
+    }
+
+    /// Back to the spot it stood on, facing the way it did. Nothing happens
+    /// for a unit that never dashed.
+    func returnHome(duration: TimeInterval) {
+        guard let home = homePosition else { return }
+        removeAction(forKey: "dash")
+        let move = SCNAction.move(to: home, duration: duration)
+        move.timingMode = .easeInEaseOut
+        let turn = SCNAction.rotateTo(x: 0, y: CGFloat(homeYaw), z: 0, duration: duration, usesShortestUnitArc: true)
+        runAction(.group([move, turn]), forKey: "dash")
+    }
+
+    /// A white flash over the whole model on the frame a hit lands, fading
+    /// over a fifth of a second. The emission is what the tint left there,
+    /// and it is put back.
+    func flashHit() {
+        modelContainer.enumerateHierarchy { child, _ in
+            guard let materials = child.geometry?.materials else { return }
+            for material in materials {
+                let previous = material.emission.contents
+                SCNTransaction.begin()
+                SCNTransaction.animationDuration = 0
+                material.emission.contents = UIColor(white: 0.8, alpha: 1)
+                SCNTransaction.commit()
+                SCNTransaction.begin()
+                SCNTransaction.animationDuration = 0.22
+                material.emission.contents = previous
+                SCNTransaction.commit()
             }
         }
     }

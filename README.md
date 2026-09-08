@@ -1,9 +1,10 @@
 # Pantheon
 
 A Summoners War-style gacha RPG for iOS, landscape, in SwiftUI and SceneKit,
-with real 3D characters. Three god families are fully built — Anubis, Sekhmet
-and the first Greek, Zeus: fifteen characters, each with a painted portrait and
-a rigged, animated model — plus the Shabti, the common tier that feeds them,
+with real 3D characters. Eleven families are built — Egypt's Anubis, Sekhmet
+and Thoth, Greece's Zeus, Ares, Heracles, Perseus, Hoplite, Satyr and Harpy:
+fifty characters, each with a painted card and a rigged, animated model in a
+stylised Summoners War look — plus the Shabti, the common tier that feeds them,
 with the roster designed from the ground up to span Greek, Roman, Norse,
 Chinese, Japanese, Hindu, Mesopotamian, Aztec, Celtic, Slavic, Yoruba and
 Polynesian myth, and to cover gods, demigods, heroes, titans, monsters, spirits
@@ -162,7 +163,7 @@ Pantheon/
   App/           GameStore — the single source of truth — and the tab shell
   Core/
     Models/      Units, stats, skills, statuses, relics, the player
-    Data/        UnitDatabase (the Anubis family + enemies), StageDatabase
+    Data/        UnitDatabase (the first four families + enemies), UnitDatabase+Roster (the seven newest), StageDatabase
     Battle/      Engine, damage maths, AI, seeded RNG, event stream
     Gacha/       Banners, rates, pity
     Progression/ Levelling, evolution, awakening, relic rolls

@@ -17,7 +17,7 @@ enum UnitDatabase {
 
     // MARK: - Registry
 
-    static let all: [UnitBlueprint] = anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + [
+    static let all: [UnitBlueprint] = anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster + [
         shabti,
         serpopard,
         sunScarab,
@@ -37,7 +37,7 @@ enum UnitDatabase {
     /// Sekhmet and Zeus joined the pool the moment their five files were in the
     /// bundle, with no code change. The Shabti family is the 3★ tier: what a
     /// common roll gives, and what the Hall of Ka feeds to the gods.
-    static let summonPool: [String] = (anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily)
+    static let summonPool: [String] = (anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster)
         .filter { $0.hasShippedArt }
         .map { $0.id }
 

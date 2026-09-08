@@ -248,6 +248,32 @@ ZEUS = Blueprint("zeus_ember", "Zeus (Fire)", "ember", 5, hp=445, atk=36, dfn=25
             ("Thunderclap (Stun 55%)", 2.00, 1, 4, 0.0, 0.0, True),
             ("Keraunos", 5.00, 1, 5, 0.40, 0.0, False)])
 
+# The second roster. Kits as in Pantheon/Core/Data/UnitDatabase+Roster.swift;
+# the sim reads burn and stun off the skill names and nothing else, so a
+# provoke, a heal or a shield shows up here only as the damage it does not do.
+ARES = Blueprint("ares_ember", "Ares (Fire)", "ember", 5, hp=420, atk=40, dfn=22, spd=104, crit=0.20,
+    skills=[("Sword of War (Burn 30%)", 3.00, 1, 0, 0.0, 0.0, False),
+            ("War Frenzy", 0.0, 0, 3, 0.0, 0.0, False),
+            ("Slaughter", 4.60, 1, 4, 0.0, 0.80, False)])
+HERACLES = Blueprint("heracles_ember", "Heracles (Fire)", "ember", 4, hp=560, atk=26, dfn=30, spd=98,
+    skills=[("Club Swing (Burn 30%)", 2.90, 1, 0, 0.0, 0.0, False),
+            ("Nemean Roar", 1.60, 1, 4, 0.0, 0.0, True),
+            ("Twelve Labours", 0.30 * 560 / 26, 1, 4, 0.30, 0.0, False)])   # 30% of max HP, as attack multiples
+PERSEUS = Blueprint("perseus_ember", "Perseus (Fire)", "ember", 4, hp=470, atk=31, dfn=24, spd=110, acc=0.10,
+    skills=[("Harpe Cuts (Burn 25%)", 1.45, 2, 0, 0.0, 0.0, False),
+            ("Mirror Shield", 0.0, 0, 4, 0.0, 0.0, False),
+            ("Gorgon's Gaze (Stun 45%)", 2.20, 1, 5, 0.0, 0.0, True)])
+THOTH = Blueprint("thoth_ember", "Thoth (Fire)", "ember", 5, hp=520, atk=26, dfn=30, spd=108, acc=0.15, res=0.20,
+    skills=[("Reed Stroke (Burn 35%)", 2.60, 1, 0, 0.0, 0.0, False),
+            ("Words of Healing", 0.0, 0, 4, 0.0, 0.0, False),
+            ("Book of the Dead", 0.0, 0, 5, 0.0, 0.0, False)])
+HOPLITE = Blueprint("hoplite_ember", "Hoplite (Fire)", "ember", 3, hp=340, atk=22, dfn=26, spd=96,
+    skills=[("Spear Jab (Burn 25%)", 1.70, 1, 0, 0.0, 0.0, False), ("Phalanx", 0.0, 0, 4, 0.0, 0.0, False)])
+SATYR = Blueprint("satyr_ember", "Satyr (Fire)", "ember", 3, hp=300, atk=22, dfn=20, spd=104,
+    skills=[("Hoof Kick (Burn 25%)", 1.70, 1, 0, 0.0, 0.0, False), ("Wild Piping", 0.0, 0, 4, 0.0, 0.0, False)])
+HARPY = Blueprint("harpy_ember", "Harpy (Fire)", "ember", 3, hp=270, atk=28, dfn=16, spd=112,
+    skills=[("Talon Rake (Burn 25%)", 1.00, 2, 0, 0.0, 0.0, False), ("Screech Dive", 2.60, 1, 3, 0.0, 0.0, False)])
+
 def mk(bp, level, stars, relic=1.0, boss=1.0):
     f = Fighter(bp, level, stars, relic)
     if boss != 1.0:
@@ -312,7 +338,9 @@ def report_duel(trials=300):
     the controller should sit between them, and beat the attacker only when the
     stun lands often enough to matter."""
     print("\nDUEL — 1v1, same grade and level, %d seeded fights" % trials)
-    for a, b in ((SEKHMET, ANUBIS), (ZEUS, ANUBIS), (ZEUS, SEKHMET), (ANUBIS, SHABTI3)):
+    for a, b in ((SEKHMET, ANUBIS), (ZEUS, ANUBIS), (ZEUS, SEKHMET), (ANUBIS, SHABTI3),
+                 (ARES, SEKHMET), (ARES, ZEUS), (HERACLES, ANUBIS), (PERSEUS, ANUBIS),
+                 (THOTH, ANUBIS), (HOPLITE, SHABTI3), (HARPY, SHABTI3), (SATYR, SHABTI3)):
         an, bn = a.name.split()[0], b.name.split()[0]
         for stars, lvl in [(5, 1), (5, 30), (6, 55)]:
             wins = sum(1 for s in range(trials)

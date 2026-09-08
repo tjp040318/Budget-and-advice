@@ -38,18 +38,19 @@ paste it. The first line names the build and the device. Then, the first time
 a model was loaded:
 
 ```
-[ModelLibrary] 3D files actually inside the app: 24
+[ModelLibrary] 3D files actually inside the app: 80
 [ModelLibrary]   OK       anubis -> anubis.usdz
-[ModelLibrary]   OK       sekhmet -> sekhmet.usdz
+[ModelLibrary]   OK       ares -> ares.usdz
 [ModelLibrary]   OK       zeus -> zeus.usdz
-[ModelLibrary] 'anubis' built 3 node(s) of interest:
-      anubis_mesh: geometry … bbox x -0.59..0.59 y 0.00..2.05 z -0.21..0.21; skinner with 24 bones
+[ModelLibrary] 'anubis' built 1 node(s) of interest:
+[ModelLibrary] model: 1 textured material(s); the 45° costume accent becomes 165° for #7FE0C8 in the surface shader
 [ModelLibrary] 'anubis': 1 skinner(s) rebound to this instance's own bones
-[ModelLibrary] 'anubis': measured x1.18 y2.05 z0.41, 2.05 units → 2.05 m (×1.0000)
+[ModelLibrary] 'anubis': measured x1.11 y2.05 z0.42, 2.1 units → 2.05 m (×0.9991)
 [ModelLibrary] clip animation taken from … , 1.67 s, a group
 ```
 
-- **24 files** — eight per family (the Shabti have no models by design).
+- **80 files** — eight per family, eleven families less the Shabti, who have
+  no models by design.
 - **`y 0.00..2.05` and `×1.0000`** — the file is canonical and the game did
   nothing to it. Sekhmet reads `y 0.00..2.00`, Zeus `y 0.00..2.15`.
 - **`clip animation taken from …, a group`** is the good case. **`assembled
@@ -60,10 +61,13 @@ a model was loaded:
 
 ## 2. Collection
 
-- **Every card is a painted portrait**: Anubis faces left, Sekhmet (lioness,
-  sun disc) faces right, Zeus (white beard, laurel, lightning) faces you, and
-  the Shabti (a cracked stone figurine, arms crossed) in five colours. A
-  letter on a gradient anywhere means a filename is wrong; say which card.
+- **Every card is a painted, stylised portrait** of the same design as the
+  model — chunky, cel-shaded, Summoners War proportions: Anubis, Sekhmet,
+  Zeus, Ares (bronze Corinthian helmet, crimson plume), Heracles (lion pelt
+  hood), Perseus (winged helmet), Hoplite, Satyr (vine wreath, pan-flute),
+  Harpy (dark wings) and Thoth (an ibis bust), each in five element
+  colours, and the Shabti (a cracked stone figurine) in five. A letter on a
+  gradient anywhere means a filename is wrong; say which card.
 - Six or more cards across, the grid fills the width.
 - **Train** at the top left opens the Hall of Ka.
 - Tap a unit: the detail screen opens.
@@ -78,17 +82,21 @@ Send: one screenshot of the grid.
 
 ## 4. Summon
 
-- Two painted banners: **The Duat Opens** and **Olympus Stirs**.
-- Pull ten. Most are **Shabti** now — the common tier — in mixed elements;
-  an Anubis is a 4★ and **shows four stars** on the reveal; a Sekhmet or Zeus
-  is 5★. Ten identical fire Anubis is the old bug; say so if you see it.
+- Three banners: **The Duat Opens** (Egypt), **Olympus Stirs** (Greece) and
+  **The Endless Scroll** (everything).
+- **A banner gives only its own pantheon.** Ten pulls on Olympus Stirs are
+  all Greek: mostly Hoplites, Satyrs and Harpies (3★), some Heracles and
+  Perseus (4★), a Zeus or Ares at 5★. Ten on The Duat Opens are Egyptian:
+  Shabti, Anubis (4★, **four stars on the reveal**), Sekhmet or Thoth. An
+  Anubis or a Shabti out of the Greek banner, or ten identical fire Anubis,
+  is the old build; pull again after checking the build date.
 - The reveal: **dark charge → white flash → figure springs in on the left,
   slowly turning → stars tick in on the right → name slams down → details
-  fade in**. Sekhmet is a black-furred lioness in a gold sun-disc crown, a
-  lapis and carnelian collar and a crimson war skirt, holding a khopesh —
-  the same character as her card — and she should read as that, not as a
-  white silhouette. A grey dot or a letter plate in place of a figure means
-  the model did not load — paste the console block.
+  fade in**. The figure is the stylised model — Sekhmet a black lioness in a
+  gold sun-disc crown with a crimson skirt and a gold khopesh, her lapis and
+  crimson still their own colours under the element's tint. A grey dot or a
+  letter plate in place of a figure means the model did not load — paste the
+  console block.
 - Tap during the sequence: it completes instantly. Tap after: next result.
 
 Send: a screenshot at the moment the name is on screen.
@@ -120,16 +128,24 @@ Send: a screenshot of the Result panel before you tap Power up.
   stands in the open middle, about a third of the screen tall, feet near the
   bottom; the enemies stand behind them, heads below the top row; the
   painting shows above.
-- **The characters are designed now**, remade from painted concepts: Anubis
-  in a striped nemes, a gold and obsidian chest plate and a lapis-panelled
-  kilt; Sekhmet as above; Zeus in gold scale armour and a gold-edged himation
-  with a thunderbolt in hand. Marbled tan bands or a plain figure in one
-  colour mean an old file is still in the build.
+- **The characters are stylised now** — five heads tall, big hands, chunky
+  armour, painted textures, the same design as their cards: Anubis in a
+  striped nemes and a gold-and-lapis collar, Sekhmet as above, Zeus in gold
+  scale over a white himation with a bolt in hand. Realistic proportions or
+  marbled tan bands mean an old file is still in the build.
 - **Look**: every model has a thin edge of light in its element's colour,
-  lifted shadows with a painted two-tone feel, and its costume in the
-  element's colour — a tide Anubis wears blue where the ember one wears
-  orange, with the fur and skin unchanged. Say if anything looks flat, or
-  if a colour landed on skin.
+  lifted shadows with a painted two-tone feel, and its gold turned to the
+  element's colour — a tide Anubis wears blue-green where the ember one
+  wears orange, with the fur, skin, white cloth and the design's other
+  colours unchanged. Say if anything looks flat, or if a colour landed on
+  skin.
+- **Melee attacks close the distance.** Anubis, Sekhmet, Ares, Heracles,
+  Perseus, the Hoplite, the Satyr and the Harpy dash up to their target,
+  turn to face it, swing, and walk back when the next turn begins. Zeus and
+  Thoth cast from where they stand. Every hit flashes the victim white for a
+  blink, and the camera leans a little into each action and settles back.
+  Say if a dash overshoots, if someone is left standing in the enemy line,
+  or if the camera ends a turn somewhere odd.
 - **Idle**: the units breathe in a combat stance from the first second.
   Arms straight out and legs straight is the A-pose; it was a one-line bug
   in the battle unit and should be gone. If you see it, paste the console
@@ -141,10 +157,22 @@ Send: a screenshot of the Result panel before you tap Power up.
 Send: a screenshot mid-battle, and a sentence on whether the framing feels
 like a game or like a diorama seen from a ladder.
 
+## 6b. Arena (Arena tab → pick an opponent → Attack)
+
+- Four against four on the arena stage. Your four stand in two ranks in the
+  lower half, the back pair between and behind the front pair; the enemy
+  four the same way beyond them. Everyone's feet are on screen; nobody is
+  hidden behind anybody.
+- The enemy team is built from the whole roster, so this is where the new
+  characters show up as opponents too. Say if any stand in an A-pose or as a
+  grey stand-in.
+
+Send: a screenshot before the first command.
+
 ## 7. More
 
 - **Diagnostics** → the console, Copy all, Share.
-- **3D assets** → Anubis, Sekhmet and Zeus green; the Shabti and the enemies
+- **3D assets** → the ten modelled families green; the Shabti and the enemies
   grey, which is expected.
 
 ## If it does not build
@@ -161,6 +189,8 @@ compile error on your Mac that CI did not see is worth a look on both sides.
 
 - **Enemies are portrait sprites** by design until their meshes exist, and
   so are the Shabti.
+- **Ares is untuned.** The balance sim cannot see his self-buff or his extra
+  turn, so his numbers are a first guess; say whether he feels weak or wild.
 - **Music is synthesised.** Two loops; real ones want Suno or Udio.
 - **The island is still a painting.** Units idling on it, particles and a
   day-night cycle are the next phase (`Docs/PLAN.md`, *The road to
