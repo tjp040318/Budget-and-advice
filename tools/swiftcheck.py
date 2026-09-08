@@ -372,7 +372,7 @@ def check_unknown_types(files, declared, errors):
         "SCNNode","SCNScene","SCNView","SCNVector3","SCNVector4","SCNMatrix4","SCNCamera","SCNLight",
         "SCNMaterial","SCNGeometry","SCNPlane","SCNBox","SCNSphere","SCNCapsule","SCNCone","SCNTorus",
         "SCNCylinder","SCNPyramid","SCNFloor","SCNText","SCNAction","SCNBillboardConstraint",
-        "SCNLookAtConstraint","SCNParticleSystem","SCNSceneSource","CAAnimation","UIColor","UIImage",
+        "SCNLookAtConstraint","SCNParticleSystem","SCNSceneSource","SCNSkinner","CAAnimation","CAAnimationGroup","UIColor","UIImage",
         "UIFont","UIView","UIViewRepresentable","UITapGestureRecognizer","NSCoder","NSObject",
         "NSAttributedString","UIGraphicsImageRenderer","CGPoint","CGSize","CGRect","Bundle",
         "FileManager","URL","JSONEncoder","JSONDecoder","Timer","AnyCancellable","Task","Notification",
