@@ -18,9 +18,14 @@ is blocked by egress policy — so nothing here is ever compiled or run before i
 is handed over. Two tools stand in and should be run before every commit:
 
 ```bash
-python3 tools/swiftcheck.py --members   # argument order, unknown labels, dead references
-python3 tools/balance.py                # stat curves, campaign win rates, gacha odds
+python3 tools/swiftcheck.py --members --types   # argument order, labels, dead refs,
+                                                # undeclared types, resource collisions
+python3 tools/balance.py                        # stat curves, win rates, gacha odds
 ```
+
+`--types` was noise-only until its allow-list covered the frameworks actually
+used here; it is now clean and worth running. Every rule in the checker was
+proven by reintroducing a real bug and watching it fail.
 
 If a tuning constant changes in Swift, change it in `tools/balance.py` too. They
 are kept in step by hand.

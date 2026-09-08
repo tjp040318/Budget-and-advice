@@ -373,6 +373,22 @@ def check_unknown_types(files, declared, errors):
         "UIFont","UIView","UIViewRepresentable","UITapGestureRecognizer","NSCoder","NSObject",
         "NSAttributedString","UIGraphicsImageRenderer","CGPoint","CGSize","CGRect","Bundle",
         "FileManager","URL","JSONEncoder","JSONDecoder","Timer","AnyCancellable","Task","Notification",
+        # Framework symbols added after the pass was first written. Every one of
+        # these was a false positive, and 55 of them made --types unusable —
+        # noise that loud hides the one real finding it exists to surface.
+        "AngularGradient","RadialGradient","EdgeInsets","StrokeStyle","Group","LazyVStack",
+        "ScrollViewReader","ToolbarItem","WindowGroup","Label","ViewBuilder","ViewModifier",
+        "ButtonStyle","Environment","Configuration","Content","Context","Self","Never",
+        "SCNHitTestSearchMode","SCNMatrix4MakeTranslation","SCNVector3Zero","AnimationImportPolicy",
+        "SIMD3","simd_quatf","simd_float3",
+        "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
+        "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
+        "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64",
+        "ClosedRange","Key","DEBUG","NONE",
+        "XCTest","XCTestCase","XCTAssert","XCTAssertEqual","XCTAssertNotEqual","XCTAssertTrue",
+        "XCTAssertFalse","XCTAssertNil","XCTAssertNotNil","XCTAssertGreaterThan",
+        "XCTAssertGreaterThanOrEqual","XCTAssertLessThan","XCTAssertLessThanOrEqual",
+        "XCTAssertThrowsError","XCTAssertNoThrow","XCTFail","XCTUnwrap",
         "XCTestCase","DispatchQueue","NSNumber","Combine","SwiftUI","Foundation","SceneKit","UIKit",
     }
     used = defaultdict(list)
