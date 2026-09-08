@@ -297,66 +297,6 @@ enum PlaceholderRig {
         return root
     }
 
-    private static func addSilhouetteCue(
-        to chest: SCNNode,
-        archetype: Archetype,
-        tint: UIColor,
-        height: CGFloat
-    ) {
-        switch archetype {
-        case .god, .primordial:
-            let halo = SCNNode(geometry: SCNTorus(ringRadius: height * 0.12, pipeRadius: height * 0.009))
-            halo.name = "cue_halo"
-            let mat = SCNMaterial()
-            mat.lightingModel = .constant
-            mat.diffuse.contents = tint
-            mat.emission.contents = tint
-            halo.geometry?.firstMaterial = mat
-            halo.position = SCNVector3(0, Float(height * 0.30), 0)
-            halo.eulerAngles.x = .pi / 2.6
-            chest.addChildNode(halo)
-            halo.runAction(.repeatForever(.rotateBy(x: 0, y: 1.2, z: 0, duration: 4)))
-
-        case .titan:
-            for offset in [-1.0, 1.0] {
-                let spur = SCNNode(geometry: SCNCone(topRadius: 0, bottomRadius: height * 0.05, height: height * 0.16))
-                spur.geometry?.firstMaterial = material(color: tint)
-                spur.position = SCNVector3(Float(offset * Double(height) * 0.13), Float(height * 0.14), 0)
-                spur.eulerAngles.z = Float(-offset * 0.5)
-                chest.addChildNode(spur)
-            }
-
-        case .monster:
-            let crest = SCNNode(geometry: SCNPyramid(width: height * 0.08, height: height * 0.13, length: height * 0.03))
-            crest.geometry?.firstMaterial = material(color: tint)
-            crest.position = SCNVector3(0, Float(height * 0.20), Float(-height * 0.03))
-            chest.addChildNode(crest)
-
-        case .spirit:
-            let wisp = SCNNode(geometry: SCNSphere(radius: height * 0.035))
-            let mat = SCNMaterial()
-            mat.lightingModel = .constant
-            mat.diffuse.contents = tint
-            mat.emission.contents = tint
-            mat.transparency = 0.4
-            wisp.geometry?.firstMaterial = mat
-            wisp.position = SCNVector3(0, Float(height * 0.24), Float(-height * 0.12))
-            chest.addChildNode(wisp)
-            wisp.runAction(.repeatForever(.sequence([
-                .moveBy(x: 0, y: CGFloat(height) * 0.04, z: 0, duration: 1.4),
-                .moveBy(x: 0, y: CGFloat(-height) * 0.04, z: 0, duration: 1.4)
-            ])))
-
-        case .hero, .demigod:
-            let mantle = SCNNode(geometry: SCNBox(
-                width: height * 0.20, height: height * 0.22, length: height * 0.02, chamferRadius: height * 0.01
-            ))
-            mantle.geometry?.firstMaterial = material(color: tint.mixed(with: .black, amount: 0.2))
-            mantle.position = SCNVector3(0, Float(height * 0.04), Float(-height * 0.09))
-            chest.addChildNode(mantle)
-        }
-    }
-
     // MARK: - Portrait sprite
 
     /// A billboarded portrait card: the art at ~80% of the unit's height, a

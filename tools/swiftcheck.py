@@ -30,6 +30,9 @@ hand and impossible to see by reading it:
      copied FLAT into the app bundle. Two files that share a basename in
      different subfolders therefore write to the same path, and the build fails
      with "Multiple commands produce ...". Reading the tree never shows this.
+ 10. The same function declared twice in one type. A paste that lands twice
+     reads as ordinary code and fails with "Invalid redeclaration". Only a
+     byte-identical signature is flagged, so overloads pass.
 
     python3 tools/swiftcheck.py            # check everything
     python3 tools/swiftcheck.py --verbose  # list what it parsed
@@ -464,6 +467,73 @@ def check_bundle_resources(errors):
                     + ", ".join(sorted(paths)))
 
 
+# ---------------------------------------------------------------------------
+# Rule 10: the same function declared twice in one type
+# ---------------------------------------------------------------------------
+
+FUNC_START = re.compile(
+    r"^\s*(?:@\w+\s+)*((?:public\s+|private\s+|internal\s+|fileprivate\s+|static\s+|"
+    r"class\s+|mutating\s+|final\s+|override\s+|@discardableResult\s+)*)func\s")
+
+
+def check_duplicate_funcs(files, errors):
+    """Two declarations with the same signature in the same type, in one file.
+
+    Found the hard way: PlaceholderRig.addSilhouetteCue was pasted twice in one
+    commit, every earlier rule passed, and the build failed on the phone. Only
+    identical signatures (whitespace aside) count, so overloads by parameter
+    type or return type are left alone; static and instance methods with the
+    same signature may coexist and are keyed apart.
+    """
+    for path in files:
+        src = strip_noise(open(path, encoding="utf-8", errors="replace").read())
+        lines = src.split("\n")
+        stack = []                       # (kind, name, indent)
+        seen = {}                        # (owner, signature) -> first line
+        for idx, ln in enumerate(lines):
+            if not ln.strip():
+                continue
+            indent = len(ln) - len(ln.lstrip())
+            while stack and indent <= stack[-1][2]:
+                stack.pop()
+            dm = DECL.match(ln)
+            if dm:
+                stack.append((dm.group(1), dm.group(2), indent))
+                continue
+            fm = FUNC_START.match(ln)
+            if not fm:
+                continue
+            if stack and stack[-1][0] == "protocol":
+                continue                 # requirements have no body and may be restated
+            # The signature runs from `func` to the body's opening brace, across lines.
+            sig, depth, j = "", 0, idx
+            while j < len(lines):
+                for ch in lines[j]:
+                    if ch == "(":
+                        depth += 1
+                    elif ch == ")":
+                        depth -= 1
+                    elif ch == "{" and depth == 0:
+                        break
+                    sig += ch
+                else:
+                    sig += " "
+                    j += 1
+                    continue
+                break
+            if "func" not in sig:
+                continue
+            sig = re.sub(r"\s+", " ", sig[sig.index("func"):]).strip()
+            static = "static " if re.search(r"\b(static|class)\s", fm.group(1) or "") else ""
+            owner = stack[-1][1] if stack else "<top level>"
+            key = (owner, static + sig)
+            if key in seen:
+                errors.append(f"{path}:{idx + 1}: `{sig}` is declared again in {owner}; "
+                              f"the first is at line {seen[key]} — 'Invalid redeclaration' at build time")
+            else:
+                seen[key] = idx + 1
+
+
 def main():
     files = []
     for r in ROOTS:
@@ -478,6 +548,7 @@ def main():
         check_static_members(files, collect_static_members(files), errors)
     check_patterns(files, enum_cases, errors)
     check_accessor_keywords(files, errors)
+    check_duplicate_funcs(files, errors)
     check_bundle_resources(errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
