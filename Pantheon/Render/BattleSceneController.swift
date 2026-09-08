@@ -249,11 +249,16 @@ final class BattleSceneController: NSObject {
         let sideSign: Float = combatant.side == .player ? 1 : -1
         // Two ranks of two, so a four-unit team reads clearly from the camera.
         // A landscape frame has the width to spare, so columns sit 2.6 m apart
-        // and ranks 1.5 m deep; the far column lands at 64% of the screen.
+        // and ranks 1.5 m deep. Both sides' back ranks stand FURTHER from the
+        // camera than their front ranks — smaller and higher on screen, seen
+        // between the front pair. The first landscape frames had the player's
+        // back rank nearer the camera than the front, so its feet ran off the
+        // bottom edge.
         let column = Float(combatant.slot % 2)
         let rank = Float(combatant.slot / 2)
         let x = (column - 0.5) * 2.6 + (rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : 0.5)
-        let z = sideSign * (2.2 + rank * 1.5)
+        let depth = combatant.side == .player ? (2.2 - rank * 1.5) : (2.2 + rank * 1.5)
+        let z = sideSign * depth
         return SCNVector3(x, 0, z)
     }
 
