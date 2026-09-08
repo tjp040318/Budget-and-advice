@@ -84,7 +84,9 @@ Send: one screenshot of the grid.
   is 5★. Ten identical fire Anubis is the old bug; say so if you see it.
 - The reveal: **dark charge → white flash → figure springs in on the left,
   slowly turning → stars tick in on the right → name slams down → details
-  fade in**. Sekhmet should be a gold and red lioness you can look at, not a
+  fade in**. Sekhmet is a black-furred lioness in a gold sun-disc crown, a
+  lapis and carnelian collar and a crimson war skirt, holding a khopesh —
+  the same character as her card — and she should read as that, not as a
   white silhouette. A grey dot or a letter plate in place of a figure means
   the model did not load — paste the console block.
 - Tap during the sequence: it completes instantly. Tap after: next result.
@@ -118,8 +120,11 @@ Send: a screenshot of the Result panel before you tap Power up.
   stands in the open middle, about a third of the screen tall, feet near the
   bottom; the enemies stand behind them, heads below the top row; the
   painting shows above.
-- **Textures**: Anubis has a black jackal head, a gold and lapis collar and a
-  white kilt. Marbled tan bands mean the old file is still in the build.
+- **The characters are designed now**, remade from painted concepts: Anubis
+  in a striped nemes, a gold and obsidian chest plate and a lapis-panelled
+  kilt; Sekhmet as above; Zeus in gold scale armour and a gold-edged himation
+  with a thunderbolt in hand. Marbled tan bands or a plain figure in one
+  colour mean an old file is still in the build.
 - **Look**: every model has a thin edge of light in its element's colour,
   lifted shadows with a painted two-tone feel, and its costume in the
   element's colour — a tide Anubis wears blue where the ember one wears
