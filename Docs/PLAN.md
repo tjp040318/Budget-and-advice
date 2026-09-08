@@ -561,7 +561,10 @@ turns "vibe coded" into "engineered".
    or shader. The tour photographs an arena battle as well as the campaign
    one, and both battles issue a basic attack every four seconds, so the
    frames catch dashes, hits and flashes instead of a line waiting for a
-   command.
+   command. The first fighting tour showed exactly that — a Thunderbolt, a
+   dash, a fallen enemy, the awakened glow — and one thing to tune: the
+   impact and push-in shots, set for the earlier slimmer models, cut the
+   chunky ones off at the crest, so they now sit a stride further back.
 4. On the phone, **More → Diagnostics** holds everything the app printed,
    with Copy and Share; and the **Playtest Log** artifact takes issue
    reports the session reads back from its database on request.

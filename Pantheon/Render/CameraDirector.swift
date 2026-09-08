@@ -69,18 +69,23 @@ final class CameraDirector {
             completion?()
 
         case .pushIn:
-            let toward = lerp(homePosition, casterPosition, 0.32)
-            let move = SCNAction.move(to: SCNVector3(toward.x, toward.y + 0.4, toward.z), duration: duration * 0.4)
+            // A quarter of the way, not a third: the stylised models are
+            // chunkier than the first ones and a third cut the caster's crest
+            // off at the top of the frame in the arena tour.
+            let toward = lerp(homePosition, casterPosition, 0.25)
+            let move = SCNAction.move(to: SCNVector3(toward.x, toward.y + 0.5, toward.z), duration: duration * 0.4)
             move.timingMode = .easeOut
             run(.sequence([move, .wait(duration: duration * 0.3)]), lookAt: caster, fov: 36, completion: completion)
 
         case .impactClose:
             let focus = target ?? caster
             let position = focus.chestWorldPosition
-            let offset = SCNVector3(position.x + 1.4, position.y + 0.6, position.z + 1.6)
+            // Over the shoulder, a stride further back than before, so a
+            // two-metre figure keeps its head and feet in a landscape frame.
+            let offset = SCNVector3(position.x + 2.0, position.y + 0.9, position.z + 2.4)
             let move = SCNAction.move(to: offset, duration: duration * 0.35)
             move.timingMode = .easeOut
-            run(.sequence([move, .wait(duration: duration * 0.4)]), lookAt: focus, fov: 32, completion: completion)
+            run(.sequence([move, .wait(duration: duration * 0.4)]), lookAt: focus, fov: 34, completion: completion)
 
         case .heroLowAngle:
             let offset = SCNVector3(casterPosition.x + 1.2, 0.7, casterPosition.z + 2.6)
