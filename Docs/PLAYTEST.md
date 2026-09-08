@@ -8,18 +8,34 @@ cd ~/Pantheon && git pull
 ```
 Then **⌘R** in Xcode with the console open (**⌘⇧C**).
 
-## 1. Console, first ten lines
+## 0. The island
 
-Look for these two blocks near the top:
+The app opens on it. Five plaques on a painted island; the ones with something
+to do glow. Tap **Gate of the Duat** and the Campaign tab opens; tap **Summoning
+Circle** and Summon opens. The header shows your name, level and wallet.
+
+Send: a screenshot.
+
+## 1. Console, the `[ModelLibrary]` lines
+
+Look for this block, printed the first time Anubis is loaded:
 
 ```
 [ModelLibrary] 3D files actually inside the app: 8
 [ModelLibrary]   OK       anubis -> anubis.usdz
-[ModelLibrary] 'anubis': Z-up export (x… y… z…) — pitched -90°, feet lifted 0.00 m
+[ModelLibrary] 'anubis' built 3 node(s) of interest:
+      anubis_mesh: geometry … bbox x -0.59..0.59 y 0.00..2.05 z -0.21..0.21; skinner with 24 bones
+[ModelLibrary] 'anubis': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'anubis': measured x1.18 y2.05 z0.41, 2.05 units → 2.05 m (×1.0000)
+[ModelLibrary] clip animation taken from … , 1.67 s, a group
 ```
 
-- **`already Y-up`** or **`pitched`/`rolled`** — either is fine as long as Anubis
-  stands up in step 3. If he is on his side or upside-down, paste the line.
+- **`y 0.00..2.05` and `×1.0000`** — the file is canonical and the game did
+  nothing to it, which is the intent.
+- **`skinner with 24 bones`** missing — SceneKit did not build a skinned mesh;
+  paste the block.
+- **`clip animation taken from Hips`** or **`a single track`** — the loader
+  picked one joint's track instead of the clip; paste the block.
 - **`MISSING anubis`** — the model is not in the bundle; paste the whole block.
 - **`SceneKit could not open it`** — the export is unreadable; paste the error.
 
@@ -51,7 +67,12 @@ Send: a screenshot at the moment the name is on screen.
 - Backdrop is a **painted gate at dusk**, not a coloured void.
 - Enemies are **portrait cards standing in the world** with a shadow and an
   element glow — not green capsule figures. They bob, lunge and tilt.
-- Anubis is the real model, upright.
+- Anubis is the real model: upright, feet on the ground ring, about the same
+  height as the enemy sprites, **breathing in a combat stance** rather than
+  standing frozen in an A-pose. Attacks play the swing, a death lies down and
+  stays down. Every hit on him currently plays a knock-up that throws him in
+  the air — that is the clip that was exported, not a bug; see
+  `Docs/ART_PIPELINE.md`.
 - Turn-order strip shows **faces**, not letters. The actor plate at the bottom
   shows the actor's face.
 - Attack. On the hit: the world **freezes for a frame or two**, the camera

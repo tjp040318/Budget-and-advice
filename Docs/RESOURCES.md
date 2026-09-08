@@ -66,7 +66,14 @@ portrait_anubis_umbra.png      1024x1024
 portrait_shabti.png            1024x1024   (and the rest of the enemies)
 banner_duat_opens.png          1284x800    summon banner splash
 spark.png                       128x128    particle sprite, white radial on black
+island_bg.png                  1536x2048   the hub screen's painting (tools/island.py
+                                           paints a stand-in; Docs/ART_2D.md §6 has the prompt)
 ```
+
+Every image here is loaded through `BundleImage`, which goes via
+`UIImage(named:)`. On device SwiftUI's `Image("name")` did not find these loose
+files and drew nothing; UIKit does. Do not reintroduce `Image("...")` for a
+bundle file.
 
 The five Anubis portraits can be recolours of one render — the same trick the 3D
 side uses. `spark.png` upgrades every particle effect in the game the moment it

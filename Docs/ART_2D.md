@@ -213,6 +213,37 @@ Leave the **lower third quiet** — the rate text and the pull buttons sit there
 
 ---
 
+## 6. The island
+
+One file, `island_bg.png`, 1536×2048 (3:4, so it fills a phone screen with the
+sides cropped a little). `tools/island.py` paints a stand-in; this replaces it
+with the same name and size and nothing else changes.
+
+> Painted game hub, an island at dusk seen from above at a three-quarter angle,
+> mobile gacha RPG style, painterly and saturated. A low sun on the horizon at
+> the upper right, warm sky, calm sea with the sun's reflection. One island of
+> pale sand and green scrub with five Egyptian structures: a ring of pillars
+> around a glowing pool at the centre, a twin-pylon gateway at the lower left,
+> an oval arena of tiered stone at the right, a small pillared hall at the
+> upper left, a single tall obelisk with a lit tip at the upper right. Palms
+> along the shore, soft evening light, no people, no text.
+
+The five structures are the tap targets. Their centres must land near these
+points of the picture (x, y as fractions of width and height), which is where
+`IslandDatabase` puts the plaques; generate, then nudge the prompt or the
+numbers until they agree:
+
+| Landmark | x | y |
+|---|---|---|
+| Summoning circle | 0.50 | 0.60 |
+| Gate of the Duat | 0.24 | 0.72 |
+| Arena of Souls | 0.77 | 0.68 |
+| Hall of Ka | 0.30 | 0.52 |
+| Obelisk | 0.70 | 0.49 |
+
+Buildings that upgrade with the player's level are a second and third state of
+this same painting later; the plaques already show the tier.
+
 ## Which generator
 
 Any of them work. What actually matters:

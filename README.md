@@ -111,6 +111,10 @@ skill-ups, and a 3D summon reveal.
 **Relics.** Six slots, 16 sets, main and sub stats, upgrades to +15, auto-equip
 scored per combat role, set effects resolved inside the engine.
 
+**The island.** The app opens on a painted hub with a landmark for every part
+of the game; the ones with something to do glow. The painting is a generated
+stand-in until a Gemini key is in the environment.
+
 **Campaign.** Two chapters of the Duat, hand-authored and generated, with energy,
 star ratings, first-clear rewards and gated progression.
 
@@ -129,7 +133,7 @@ quarantined rather than deleted.
 No compiler, so two tools stand in for one.
 
 ```bash
-python3 tools/swiftcheck.py --members --types   # 55 files, 71 structs, 318 functions
+python3 tools/swiftcheck.py --members --types   # 57 files, 74 structs, 325 functions
 python3 tools/balance.py                # stat curves, campaign, gacha, economy
 python3 tools/balance.py --tune         # solve enemy levels for a target win rate
 ```

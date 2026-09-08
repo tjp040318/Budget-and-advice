@@ -48,17 +48,27 @@ environment can and cannot do. The short version:
 - Two families are in the code. Anubis: five variants, natural 4★, full art.
   Sekhmet: five variants, natural 5★, the first damage archetype, no art in the
   bundle yet — the game shows letter plates and a grey dot until the files land.
-- Models ship decimated. `Pantheon/Resources/Models/` holds 3 MB for the whole
-  Anubis family (it was 154 MB); the untouched Meshy exports live in
-  `Art/Models/`, outside the bundle. **Unconfirmed on device.** The first thing
-  worth asking for is still the `[ModelLibrary] 'anubis':` console line.
+- Models ship **canonical and decimated**: `tools/mesh.py anubis` reads the
+  untouched export in `Art/Models/` and writes Y-up, metre, feet-on-origin,
+  rest-equals-bind, four-influence files into `Pantheon/Resources/Models/`
+  (2.7 MB for the family, was 154 MB), then re-skins them in numpy to prove it.
+  The first export loaded as gold shards for five reasons listed in
+  `Docs/PLAN.md`, all in the file. **Unconfirmed on device** since the fix; the
+  first thing worth asking for is the `[ModelLibrary]` console block — the
+  loader now prints the bounding box and skinner it built.
+- The app opens on the island (`IslandView`): five landmarks over a painting
+  that `tools/island.py` generated as a stand-in. The real painting wants a
+  Gemini key.
+- Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
+  drew nothing for loose bundle PNGs on device; never use it for one.
 - Meshy is driven from here. `tools/meshy.py` took Sekhmet from a prompt to a
   rigged model with six clips for 53 credits; the task ids are in
   `Art/Models/sekhmet.meshy.json`. The files could not be fetched, because
   `assets.meshy.ai` is not on the allow-list yet — see below.
-- `tools/glb2usd.py` turns Meshy's rigged GLB into the USDZ the game loads
-  (verified on Khronos sample rigs, not yet on a Meshy file); `tools/mesh.py`
-  decimates a family into the bundle in one command.
+- `tools/character.py` is the one place a rigged character is read (Blender
+  USDZ or Meshy GLB), canonicalised, decimated, written and verified;
+  `tools/mesh.py` runs a family through it, `tools/glb2usd.py` converts one
+  file at full size. Nothing has been seen on a phone since the rewrite.
 - Art for Anubis is done: 11 painted portraits, 5 stage backdrops, 2 summon
   banners, a particle sprite and a 10-texture UI kit. `tools/genart.py` makes
   more via Gemini when `GEMINI_API_KEY` is in the environment; it was not, last

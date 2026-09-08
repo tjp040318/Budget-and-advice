@@ -20,9 +20,56 @@ provisioned, so everything in section 3 can be done without a browser:
 ```bash
 python3 tools/meshy.py generate sekhmet --height 2.0 --prompt "..." --negative "..."
 python3 tools/meshy.py download sekhmet      # -> Art/Models/sekhmet*.glb   (needs assets.meshy.ai allowed)
-python3 tools/glb2usd.py sekhmet             # -> Art/Models/sekhmet*.usdz
-python3 tools/mesh.py sekhmet                # -> Pantheon/Resources/Models/, decimated
+python3 tools/mesh.py sekhmet                # -> Pantheon/Resources/Models/, canonical and decimated
 ```
+
+`mesh.py` reads the GLB directly (`tools/glb2usd.py` converts one file at full
+resolution when you want to look at it first). It also reads the USDZ the web
+app exports, so the two routes meet at `Art/Models/` and everything below it
+is the same.
+
+### What the game actually gets
+
+Nothing that comes out of a generator is loaded as-is. `tools/character.py`
+reads the export and writes a **canonical** file:
+
+- Y-up, metres, feet on the origin, centred, facing +Z (read off the toe
+  joints), scaled to `ModelSpec.height` straight out of `UnitDatabase.swift`
+- the mesh points *are* the bind pose, and the rest pose equals the bind pose,
+  so the un-animated model is the A-pose and anything measuring the raw
+  geometry measures the truth
+- four bone influences per vertex, weights summing to one, joints ordered
+  parents-first
+- root joints locked horizontally to the stage slot and each clip grounded on
+  its typical frame, so no clip slides a character off its slot or floats it
+- one identity SkelRoot, a skeleton, a mesh and a material, every prim uniquely
+  named; computed normals; the exporter's light and stale primvars gone
+
+The first Anubis export failed every one of those, which is why it loaded as
+gold shards: the armature's centimetre scale existed only as a time sample, the
+rest pose sat 68 units to one side of the bind pose, the mesh was tilted 90° by
+its own node inside a Z-up stage, every vertex carried ten influences padded
+from a mean of three, and the clips carried root motion. The tool prints what
+it measures at every step and re-skins every written file in numpy at the bind
+pose and three animated frames; `every file verified clean` at the end is the
+line to look for.
+
+### What to send from the console
+
+`ModelLibrary` logs, in a debug build, what SceneKit built from each file:
+
+```
+[ModelLibrary] 'anubis' built 3 node(s) of interest:
+      anubis_mesh: geometry 5 sources, 1 elements, bbox x -0.59..0.59 y 0.00..2.05 z -0.21..0.21; skinner with 24 bones
+[ModelLibrary] 'anubis': 1 skinner(s) rebound to this instance's own bones
+[ModelLibrary] 'anubis': measured x1.18 y2.05 z0.41, 2.05 units → 2.05 m (×1.0000)
+[ModelLibrary] clip animation taken from Skeleton / ..., 1.67 s, a group
+```
+
+A height that is not about 2.05, a bounding box that is not 0..2.05 in y, a
+missing skinner, or a clip "taken from Hips" (a single joint's track rather
+than the whole clip) each point at a different importer behaviour, and that
+block is what to paste.
 
 What differs from the web app:
 
@@ -357,9 +404,10 @@ ground rings. One textured export is the minimum, and it covers the family.
 2. **Rig it in Meshy.** Character type humanoid; the A-pose is already what it
    wants. Mixamo is no longer a reliable fallback — see below.
 3. **Animate.** Pick clips from Meshy's library and export one file per clip.
-4. **Set the height on export**: Resize on, 205 cm for Anubis, Origin Bottom.
-   That is what makes `scale: 1.0` correct in code.
-5. **Export USDZ** directly. No Reality Converter, no Blender round-trip.
+4. **Height and origin are set by the tool**, from `ModelSpec.height`; the
+   web app's Resize toggle is no longer load-bearing.
+5. **Export USDZ or GLB**, whichever the tool offers. No Reality Converter, no
+   Blender round-trip; `tools/mesh.py` does the conversion.
 6. **Drop it in `Art/Models/`**, named per the clip table, and run
    `python3 tools/mesh.py <asset>`: it writes the decimated files the app
    actually bundles into `Pantheon/Resources/Models/`. See `RESOURCES.md` for
@@ -386,7 +434,15 @@ falls back to procedural motion, so partial delivery is fine.
 | `summon_reveal` | no | ~3.0 s | Slow hero turn, for the summon screen |
 
 **No root motion.** The engine owns positions; a clip that translates the root
-slides the character off its stage slot. Loops must be seamless. 30 fps is fine.
+slides the character off its stage slot. `tools/mesh.py` now enforces it — the
+root is locked horizontally and the clip grounded — but a clip authored in
+place still animates better than one that had its travel removed. Loops must
+be seamless. 30 fps is fine.
+
+**Pick a flinch for `hit_react`.** The current Anubis clip is a knock-up: 47
+frames in which he flies 2.8 m into the air and lands on his back. It plays on
+every hit. A short stagger from the Fighting → GettingHit shelf (Meshy ids 178
+or 179, "Hit Reaction") is the intended clip; re-export it when convenient.
 
 ### Rigging and animation — stay in Meshy
 

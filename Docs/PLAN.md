@@ -30,6 +30,33 @@ model and scales, centres and grounds it.
 **Every animation clip is real.** 46 to 155 frames each. The motion was always
 there; nothing could play it at that scale.
 
+## What the second look found
+
+The first build with those files loaded Anubis as a scatter of gold shards. The
+files were re-read with USD and skinned in numpy, and five things were wrong
+with the export, none of them with the game:
+
+1. The armature's centimetre-to-metre scale existed only as a time sample, with
+   no default value, so at rest the file described a 170-unit figure.
+2. The skeleton's rest pose was not its bind pose: the hips sat 68 units to
+   one side and twisted 40°, so the un-animated model — what the summon stage
+   shows — stood somewhere else.
+3. The mesh was Y-up data tilted 90° by its own node inside a Z-up stage, with
+   the same tilt repeated in `geomBindTransform`.
+4. Every vertex carried ten bone influences, padded from a mean of three.
+   Model I/O's skinning attributes are four wide; a reader that assumes four
+   mis-strides the array and glues vertices to random bones, which is what
+   shards are.
+5. The clips carried horizontal root motion — the combat idle started 49 cm off
+   the slot — and floated 5–13 cm above the ground.
+
+So the pipeline now writes a **canonical** file (`tools/character.py`): Y-up,
+metres, feet on the origin, facing +Z, rest = bind, four influences, root
+locked and grounded, every prim named once. The loader was given a matching
+belt-and-braces step — a cloned skinner is rebound to its own bones — and it
+logs the bounding box and skinner it actually built, so the next console paste
+settles what SceneKit does with a clean file.
+
 ## Polygons: the actual comparison
 
 | | triangles |
@@ -88,8 +115,7 @@ at a keyboard. Four commands take a character from a sentence to the bundle:
 ```bash
 python3 tools/meshy.py generate sekhmet --height 2.0 --prompt "..." --negative "..."
 python3 tools/meshy.py download sekhmet      # -> Art/Models/sekhmet*.glb
-python3 tools/glb2usd.py sekhmet             # -> Art/Models/sekhmet*.usdz
-python3 tools/mesh.py sekhmet                # -> Pantheon/Resources/Models/, decimated
+python3 tools/mesh.py sekhmet                # -> Pantheon/Resources/Models/, canonical and decimated
 ```
 
 `generate` runs text-to-3D preview, refine, rigging and one animation task per
@@ -104,9 +130,9 @@ waits, so a re-run resumes rather than paying again. Measured on Sekhmet:
 | six battle clips | 3 each | ~2 min, in parallel | glb fbx only |
 | **one character** | **53** | **~12 min** | |
 
-Only the unrigged stages return USDZ, hence `glb2usd.py`. It writes the same
-prim layout as the Blender exports that already load in the game, verified on
-three Khronos sample rigs by re-skinning the written file in numpy.
+Only the unrigged stages return USDZ; `mesh.py` reads the GLB directly and
+writes the canonical file described above, verified on three Khronos sample
+rigs and on the whole Anubis family by re-skinning the written files in numpy.
 
 The balance was 1,186 credits before Sekhmet and 1,133 after: roughly twenty
 more characters at this rate.
@@ -154,18 +180,22 @@ the pipeline above.
 - **Thoth** — Radiance support, a cleanse and an attack-bar push. Gives the
   roster its first real control archetype. Next.
 
-### Phase 3 — the island
+### Phase 3 — the island *(built; the painting is a stand-in)*
 
 Summoners War's town is not a 3D scene the player navigates. It is a painted
-backdrop with a fixed camera and tappable hotspots, plus a handful of simple
-props. That is a **SwiftUI screen over a painted image**, not a 3D level:
+backdrop with a fixed camera and tappable hotspots. That is what `IslandView`
+is: the app now opens on it.
 
-1. One 2048 × 2048 painted island (Gemini, one prompt).
-2. A `Landmark` model — name, normalised rect, unlock level, destination.
-3. Tap targets over the image, a glow on anything actionable, a level badge.
-4. Buildings that upgrade: swap in a second painted state per level tier.
-
-Two days, most of it art, and it looks the part immediately.
+- [x] `Landmark` model — title, anchor in the painting, unlock level,
+  destination, upgrade tiers — and five landmarks in `IslandDatabase`
+- [x] Tap targets mapped through the painting's aspect-fill frame, a glow on
+  anything actionable (energy, scrolls, arena attacks), a count badge, a tier
+  mark, locked state with a shake
+- [x] A 1536 × 2048 backdrop — painted procedurally by `tools/island.py` so
+  the screen has a horizon today
+- [ ] The real painting: one Gemini prompt, in `Docs/ART_2D.md` §6, once the
+  key is in the environment
+- [ ] Upgrade states of the buildings: a second and third painting per tier
 
 ### Phase 4 — sound and feel
 
@@ -189,11 +219,13 @@ Arena rating curve, a second campaign chapter, daily energy, then TestFlight.
    managers"** ticked → save. New sessions only.
 2. **Add the Gemini key** in the same dialog under **API credentials** as
    `GEMINI_API_KEY`. That opens the host and keeps the key out of the session.
-3. **Start a new session** and ask for: download, convert and decimate Sekhmet,
-   then the five portraits. The commands are the four above plus
-   `tools/genart.py` per `Docs/ART_2D.md`; ~15 minutes.
-4. **Run on device** and paste the `[ModelLibrary]` block from the console.
-   Both the decimated Anubis and, after step 3, Sekhmet are unconfirmed there.
+3. **Pull, build, run** and send two things: the `[ModelLibrary]` block from
+   the console (`Docs/PLAYTEST.md` §1 says what each line means) and a
+   screenshot of Reed Fields. That paste is what decides whether the canonical
+   file is enough or SceneKit's importer needs a further workaround.
+4. **In a new session**, ask for Sekhmet downloaded and built, the five
+   portraits, and the island painting — `Docs/ART_2D.md` §1 and §6 have the
+   prompts; about twenty minutes together.
 
 ---
 
