@@ -124,7 +124,11 @@ struct TourView: View {
             guard let stage = StageDatabase.stage(id),
                   let engine = store.startCampaignBattle(stage: stage) else { continue }
             let model = BattleViewModel(engine: engine, context: .campaign(stage), store: store)
-            model.autoBattle = true
+            // Not on auto: a levelled team won the first gate before the
+            // runner's first frame and every battle frame was the victory
+            // panel. Waiting for a command shows the stage, the HUD and the
+            // idle clips, which is what the frames are for.
+            model.autoBattle = false
             battleModel = model
             return
         }

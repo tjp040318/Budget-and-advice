@@ -430,11 +430,18 @@ struct SummonStageView: UIViewRepresentable {
         disc.firstMaterial = discMaterial
         let discNode = SCNNode(geometry: disc)
         discNode.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
-        discNode.position = SCNVector3(0, 0.01, 0)
-        discNode.opacity = 0
-        scene.rootNode.addChildNode(discNode)
-        discNode.runAction(.sequence([.wait(duration: 0.1), .fadeIn(duration: 0.5)]))
-        discNode.runAction(.repeatForever(.rotateBy(x: 0, y: 0, z: .pi * 2, duration: 9)))
+        // The disc lies flat inside an upright spinner and the spinner turns
+        // about Y. Adding a Z rotation to a node already tilted onto the
+        // floor composes Euler angles rather than spinning in place, and the
+        // CI frames caught the disc standing on its edge between the flat
+        // moments — the orange streak beside Sekhmet's feet.
+        let spinner = SCNNode()
+        spinner.position = SCNVector3(0, 0.01, 0)
+        spinner.opacity = 0
+        spinner.addChildNode(discNode)
+        scene.rootNode.addChildNode(spinner)
+        spinner.runAction(.sequence([.wait(duration: 0.1), .fadeIn(duration: 0.5)]))
+        spinner.runAction(.repeatForever(.rotateBy(x: 0, y: .pi * 2, z: 0, duration: 9)))
 
         // Frame the figure: the camera looks at its chest from slightly above
         // and close enough that it fills most of the view.
