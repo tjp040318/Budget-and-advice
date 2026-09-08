@@ -159,9 +159,9 @@ Pantheon/
   UI/            SwiftUI screens
   Resources/     Where art goes
 PantheonTests/   Engine determinism, progression maths, gacha rates, arena, saves
-Docs/            ART_PIPELINE.md (the Meshy prompt), ART_2D.md (image prompts),
-                 PLAYTEST.md (what to check on device), RESOURCES.md,
-                 BALANCE.md, DESIGN.md
+Docs/            PLAN.md (where this is going and why), ART_PIPELINE.md (the
+                 Meshy prompt), ART_2D.md (image prompts), PLAYTEST.md (what to
+                 check on device), RESOURCES.md, BALANCE.md, DESIGN.md
 tools/           swiftcheck.py, balance.py
 ```
 
