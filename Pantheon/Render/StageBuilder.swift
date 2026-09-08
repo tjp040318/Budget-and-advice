@@ -72,55 +72,60 @@ enum StageBuilder {
         // sides, lotus columns close the back, sphinxes watch from the wings,
         // braziers burn at the corners — behind the enemy line and just off
         // the frame beside the player's, so their fire shows at the edges.
+        // Everything sits inside a platform of radius 7.6 centred at z = -0.8,
+        // whose far edge (z = -8.4) the camera sees about a third of the way
+        // down the frame with the painted distance beyond it. The first set
+        // was a metre and a half wider and its edge never came into frame,
+        // so the platform read as a floor, not as a thing in the air.
         let colossi = [
-            Placement(asset: "prop_anubis_colossus", position: SCNVector3(-6.4, 0, -7.6), standIn: .block),
-            Placement(asset: "prop_anubis_colossus", position: SCNVector3(6.4, 0, -7.6), standIn: .block),
+            Placement(asset: "prop_anubis_colossus", position: SCNVector3(-5.3, 0, -6.3), scale: 0.85, standIn: .block),
+            Placement(asset: "prop_anubis_colossus", position: SCNVector3(5.3, 0, -6.3), scale: 0.85, standIn: .block),
         ]
         let obelisks = [
-            Placement(asset: "prop_obelisk", position: SCNVector3(-8.6, 0, -3.2), standIn: .obelisk),
-            Placement(asset: "prop_obelisk", position: SCNVector3(8.6, 0, -3.2), standIn: .obelisk),
+            Placement(asset: "prop_obelisk", position: SCNVector3(-6.9, 0, -2.4), standIn: .obelisk),
+            Placement(asset: "prop_obelisk", position: SCNVector3(6.9, 0, -2.4), standIn: .obelisk),
         ]
         let columns = [
-            Placement(asset: "prop_lotus_column", position: SCNVector3(-2.8, 0, -9.0)),
-            Placement(asset: "prop_lotus_column", position: SCNVector3(2.8, 0, -9.0)),
+            Placement(asset: "prop_lotus_column", position: SCNVector3(-2.4, 0, -7.0)),
+            Placement(asset: "prop_lotus_column", position: SCNVector3(2.4, 0, -7.0)),
         ]
         let sphinxes = [
-            Placement(asset: "prop_sphinx", position: SCNVector3(-7.0, 0, -0.8), yaw: 90, standIn: .block),
-            Placement(asset: "prop_sphinx", position: SCNVector3(7.0, 0, -0.8), yaw: -90, standIn: .block),
+            Placement(asset: "prop_sphinx", position: SCNVector3(-6.0, 0, -0.4), yaw: 90, standIn: .block),
+            Placement(asset: "prop_sphinx", position: SCNVector3(6.0, 0, -0.4), yaw: -90, standIn: .block),
         ]
         let braziers = [
-            SCNVector3(-4.8, 0, 3.4), SCNVector3(4.8, 0, 3.4),
-            SCNVector3(-4.6, 0, -6.6), SCNVector3(4.6, 0, -6.6),
+            SCNVector3(-6.0, 0, 2.4), SCNVector3(6.0, 0, 2.4),
+            SCNVector3(-4.0, 0, -5.4), SCNVector3(4.0, 0, -5.4),
         ]
         switch environment {
         case .duatGate:
-            return Recipe(floor: "floor_sandstone", floorRepeats: 6, floorTint: nil, rock: "rock_cliff",
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#9C8468", rock: "rock_cliff",
                           backdrop: "duat_gate_bg", props: colossi + obelisks + columns + sphinxes,
                           braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#FFA040",
                           mistHex: "#C8B890", mistCount: 6, dustHex: "#FFD98A")
         case .reedFields:
-            return Recipe(floor: "floor_sandstone", floorRepeats: 6, floorTint: "#C9D6A8", rock: "rock_cliff",
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#94A07C", rock: "rock_cliff",
                           backdrop: "reed_fields_bg", props: [obelisks[1], sphinxes[0], columns[0]],
                           braziers: [braziers[2], braziers[3]], brazierAsset: "prop_brazier", flameHex: "#FFD070",
                           mistHex: "#D8E6C8", mistCount: 9, dustHex: "#E8F0C0")
         case .hallOfTwoTruths:
             let hall = [
-                Placement(asset: "prop_lotus_column", position: SCNVector3(-6.6, 0, -6.4)),
-                Placement(asset: "prop_lotus_column", position: SCNVector3(6.6, 0, -6.4)),
-                Placement(asset: "prop_lotus_column", position: SCNVector3(-7.6, 0, 0.6)),
-                Placement(asset: "prop_lotus_column", position: SCNVector3(7.6, 0, 0.6)),
+                Placement(asset: "prop_lotus_column", position: SCNVector3(-5.6, 0, -5.2)),
+                Placement(asset: "prop_lotus_column", position: SCNVector3(5.6, 0, -5.2)),
+                Placement(asset: "prop_lotus_column", position: SCNVector3(-6.6, 0, 0.8)),
+                Placement(asset: "prop_lotus_column", position: SCNVector3(6.6, 0, 0.8)),
             ]
-            return Recipe(floor: "floor_sandstone", floorRepeats: 6, floorTint: "#FFF0D8", rock: "rock_cliff",
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#B8A088", rock: "rock_cliff",
                           backdrop: "hall_of_two_truths_bg", props: colossi + columns + hall,
                           braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#FFC060",
                           mistHex: "#E0D0A8", mistCount: 4, dustHex: "#FFE8B0")
         case .serpentDeep:
-            return Recipe(floor: "floor_sandstone", floorRepeats: 6, floorTint: "#7A5A9A", rock: "rock_cliff",
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#5E4878", rock: "rock_cliff",
                           backdrop: "serpent_deep_bg", props: obelisks + sphinxes + columns,
                           braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#B07CFF",
                           mistHex: "#8A6AC0", mistCount: 8, dustHex: "#C8A0FF")
         case .arenaOfSouls:
-            return Recipe(floor: "floor_sandstone", floorRepeats: 7, floorTint: "#FFE8C8", rock: "rock_cliff",
+            return Recipe(floor: "floor_sandstone", floorRepeats: 6, floorTint: "#A88C70", rock: "rock_cliff",
                           backdrop: "arena_of_souls_bg", props: colossi + obelisks + columns,
                           braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#FFB050",
                           mistHex: "#D8C8A0", mistCount: 5, dustHex: "#FFE0A0")
@@ -137,9 +142,9 @@ enum StageBuilder {
         stage.name = "stage"
         scene.rootNode.addChildNode(stage)
 
-        stage.addChildNode(platform(radius: 9.4, thickness: 1.6, floor: recipe.floor,
+        stage.addChildNode(platform(radius: 7.6, thickness: 1.8, floor: recipe.floor,
                                     repeats: recipe.floorRepeats, tint: recipe.floorTint, rock: recipe.rock,
-                                    centre: SCNVector3(0, 0, -1.2)))
+                                    centre: SCNVector3(0, 0, -0.8)))
         for chunk in hangingRocks(rock: recipe.rock, seed: environment.rawValue.hashValue) {
             stage.addChildNode(chunk)
         }
@@ -153,7 +158,7 @@ enum StageBuilder {
         }
 
         let mist = UIColor(hex: recipe.mistHex) ?? .white
-        for plane in mistPlanes(count: recipe.mistCount, radius: 8.2, tint: mist, seed: environment.rawValue.hashValue) {
+        for plane in mistPlanes(count: recipe.mistCount, radius: 7.0, tint: mist, seed: environment.rawValue.hashValue) {
             stage.addChildNode(plane)
         }
         stage.addChildNode(dust(tint: UIColor(hex: recipe.dustHex) ?? .white,
@@ -217,6 +222,9 @@ enum StageBuilder {
         }
 
         for plane in mistPlanes(count: 5, radius: 4.6, tint: tint.mixed(with: .white, amount: 0.6), seed: 7) {
+            // Behind the figure only: a plane between the figure and a camera
+            // four metres away would fill the frame with haze.
+            plane.position.z = -abs(plane.position.z) - 1.0
             plane.position.y = 0.2
             stage.addChildNode(plane)
         }
@@ -395,13 +403,13 @@ enum StageBuilder {
         let light = SCNLight()
         light.type = .omni
         light.color = flame
-        light.intensity = 520
+        light.intensity = 300
         light.attenuationStartDistance = 0.5
-        light.attenuationEndDistance = 8
+        light.attenuationEndDistance = 6
         fire.light = light
         let flicker = SCNAction.customAction(duration: 2.3) { node, elapsed in
             let t = Float(elapsed)
-            node.light?.intensity = CGFloat(520 + 110 * sin(t * 11.3) + 70 * sin(t * 4.7 + 1.3))
+            node.light?.intensity = CGFloat(300 + 70 * sin(t * 11.3) + 40 * sin(t * 4.7 + 1.3))
         }
         fire.runAction(.repeatForever(flicker))
         node.addChildNode(fire)
@@ -448,7 +456,7 @@ enum StageBuilder {
             material.isDoubleSided = true
             plane.firstMaterial = material
             let node = SCNNode(geometry: plane)
-            node.opacity = 0.16 + CGFloat(rng.unit()) * 0.12
+            node.opacity = 0.09 + CGFloat(rng.unit()) * 0.08
             let angle = Float(index) / Float(count) * 2 * .pi + Float(rng.unit()) * 0.5
             node.position = SCNVector3(sin(angle) * radius, 0.4 + Float(rng.unit()) * 0.6, cos(angle) * radius - 1.2)
             let billboard = SCNBillboardConstraint()
@@ -476,14 +484,17 @@ enum StageBuilder {
     /// the painting reads as a world far below, which is what makes the
     /// platform float.
     static func farBackdrop(_ image: UIImage) -> SCNNode {
-        let plane = SCNPlane(width: 150, height: 150)
+        let plane = SCNPlane(width: 170, height: 170)
         let material = SCNMaterial()
         material.lightingModel = .constant
         material.diffuse.contents = image
         material.isDoubleSided = false
         plane.firstMaterial = material
         let node = SCNNode(geometry: plane)
-        node.position = SCNVector3(0, -8, -70)
+        // Centred well below the platform, so the painting's horizon sits a
+        // little under the platform's far edge on screen: sky above the edge,
+        // the painted land far below it.
+        node.position = SCNVector3(0, -16, -70)
         node.name = "backdrop"
         return node
     }

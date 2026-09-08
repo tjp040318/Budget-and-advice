@@ -103,7 +103,7 @@ struct SummonRevealView: View {
                 // on the reveal.
                 RadialGradient(
                     colors: [tint.opacity(revealed ? 0.55 : (charging ? 0.22 : 0)), .clear],
-                    center: .init(x: 0.5, y: 0.42),
+                    center: .init(x: 0.3, y: 0.45),
                     startRadius: 0,
                     endRadius: revealed ? 360 : 140
                 )
@@ -124,13 +124,19 @@ struct SummonRevealView: View {
     /// a short screen gives the figure its full height.
     private func single(_ result: SummonResult) -> some View {
         VStack(spacing: 0) {
-            HStack(spacing: 12) {
-            SummonStageView(result: result)
+            ZStack {
+            // The set fills the whole view and is there through the charge —
+            // the rune ring glowing, the braziers burning — and the figure
+            // comes in on the beam when the reveal fires. The camera stands a
+            // little to the right so the figure lands on the left, under the
+            // words' half of the screen there is only the dais's edge and sky.
+            SummonStageView(result: result, revealed: revealed)
                 .id(result.id)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .opacity(revealed ? 1 : 0)
-                .scaleEffect(revealed ? 1 : 0.7)
-                .animation(.spring(response: 0.5, dampingFraction: 0.68), value: revealed)
+
+            HStack(spacing: 12) {
+            Color.clear
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             VStack(spacing: 8) {
                 // Stars tick in one at a time, each one arriving oversized.
@@ -207,6 +213,7 @@ struct SummonRevealView: View {
                 .animation(.easeOut(duration: 0.3), value: detailsShown)
             }
             .frame(maxWidth: .infinity)
+            }
             }
 
             Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
@@ -388,6 +395,18 @@ struct SummonRevealView: View {
 /// and the portrait sprite or placeholder rig until then.
 struct SummonStageView: UIViewRepresentable {
     let result: SummonResult
+    /// Flips true when the charge ends; the figure appears on the beam then.
+    var revealed: Bool = true
+
+    final class Coordinator {
+        var figure: SCNNode?
+        var spinnerStarted = false
+        var shown = false
+        var tint: UIColor = .white
+        var scene: SCNScene?
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> SCNView {
         let view = SCNView()
@@ -414,6 +433,9 @@ struct SummonStageView: UIViewRepresentable {
         node.position = SCNVector3(0, 0, 0)
         node.opacity = 0
         scene.rootNode.addChildNode(node)
+        context.coordinator.figure = node
+        context.coordinator.tint = tint
+        context.coordinator.scene = scene
         // A canonical export's rest pose is its bind pose, an A-pose, so the
         // figure gets the idle clip when one is in the bundle and stands
         // still only when there is nothing to play.
@@ -422,12 +444,9 @@ struct SummonStageView: UIViewRepresentable {
             ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
             node.addAnimation(idle, forKey: "idle")
         }
-        // Fade in, then a slow perpetual turn — enough to show the model is
-        // three-dimensional, not so fast the player never sees the face.
-        node.runAction(.sequence([
-            .wait(duration: 0.1),
-            .fadeIn(duration: 0.35),
-        ]))
+        // A slow perpetual turn — enough to show the model is three-dimensional,
+        // not so fast the player never sees the face. The fade-in waits for the
+        // reveal (see `updateUIView`).
         node.runAction(.repeatForever(.rotateBy(x: 0, y: .pi * 2, z: 0, duration: 16)))
 
         // The summoning circle: a rune dais on a floating rock, a half-ring of
@@ -450,7 +469,9 @@ struct SummonStageView: UIViewRepresentable {
         camera.bloomThreshold = 0.82
         let cameraNode = SCNNode()
         cameraNode.camera = camera
-        cameraNode.position = SCNVector3(0, height * 0.52, height * 2.05)
+        // Offset to the right and still looking straight ahead, so the figure
+        // sits about a third of the way in from the left edge.
+        cameraNode.position = SCNVector3(height * 0.66, height * 0.52, height * 2.05)
         cameraNode.eulerAngles = SCNVector3(-0.04, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
 
@@ -486,10 +507,19 @@ struct SummonStageView: UIViewRepresentable {
         ambientNode.light = ambient
         scene.rootNode.addChildNode(ambientNode)
 
-        VFXLibrary.summonBeam(at: SCNVector3(0, 0, 0), in: scene, tint: tint)
-
+        if revealed { show(context.coordinator) }
         return view
     }
 
-    func updateUIView(_ view: SCNView, context: Context) {}
+    func updateUIView(_ view: SCNView, context: Context) {
+        if revealed { show(context.coordinator) }
+    }
+
+    /// The figure fades in on the beam, once.
+    private func show(_ coordinator: Coordinator) {
+        guard !coordinator.shown, let figure = coordinator.figure, let scene = coordinator.scene else { return }
+        coordinator.shown = true
+        figure.runAction(.sequence([.wait(duration: 0.05), .fadeIn(duration: 0.35)]))
+        VFXLibrary.summonBeam(at: SCNVector3(0, 0, 0), in: scene, tint: coordinator.tint)
+    }
 }
