@@ -111,6 +111,12 @@ environment can and cannot do. The short version:
   phone shows only the central 62% of the painting's width; the anchors were
   measured off it (`Docs/ART_2D.md` §6). `tools/island.py` is the stand-in
   painter, kept for reference.
+- **Awakened forms.** Two cards per awakenable character (`portrait_<id>.png`
+  and `portrait_<id>_awakened.png`); `ModelSpec.portraitName(awakened:)`
+  picks. On the stage an awakened unit gets the awakened look (costume glow,
+  brighter rim, an aura) and would load `<asset>_awakened.usdz` with its own
+  clips if a family shipped one — none has; that is 53 credits a family. The
+  Hall of Ka shows both forms before awakening and plays the reveal after.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
   for an attack clip and back at the next turn, every hit flashes the victim
   white, and the standard camera shot leans a tenth of the way into the

@@ -137,8 +137,8 @@ struct BattleView: View {
                 ZStack {
                     Circle()
                         .fill(combatant.side == .player ? Theme.info.opacity(0.3) : Theme.danger.opacity(0.3))
-                    if BundleImage.exists(combatant.model.portraitName) {
-                        BundleImage(name: combatant.model.portraitName)
+                    if BundleImage.exists(combatant.model.portraitName(awakened: combatant.isAwakened)) {
+                        BundleImage(name: combatant.model.portraitName(awakened: combatant.isAwakened))
                             .aspectRatio(contentMode: .fill)
                             .clipShape(Circle())
                     } else {
@@ -195,8 +195,8 @@ struct BattleView: View {
 
     private func actorPlate(_ actor: Combatant) -> some View {
         HStack(spacing: 8) {
-            if BundleImage.exists(actor.model.portraitName) {
-                BundleImage(name: actor.model.portraitName)
+            if BundleImage.exists(actor.model.portraitName(awakened: actor.isAwakened)) {
+                BundleImage(name: actor.model.portraitName(awakened: actor.isAwakened))
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 44, height: 44)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))

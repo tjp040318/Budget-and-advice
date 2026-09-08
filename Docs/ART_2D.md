@@ -267,6 +267,21 @@ portrait_ares_*.png  portrait_heracles_*.png  portrait_perseus_*.png  portrait_t
 portrait_hoplite_*.png  portrait_satyr_*.png  portrait_harpy_*.png
 ```
 
+**3. The awakened card**, `portrait_<id>_awakened.png`, one `--ref` edit of the
+finished element card:
+
+> Edit this image into the AWAKENED form of the same character for a mobile
+> gacha RPG card, in the same cel-shaded stylised look, same pose, same crop,
+> same facing: the costume becomes a richer ceremonial version of itself with
+> more ornate armour and jewellery, glowing runic markings on the metal and
+> skin in the same colour as the existing glow, the eyes glowing that colour, a
+> bright halo or crown of light behind the head, wisps of that light rising off
+> the shoulders. Still clearly the same character. No text, no frame, no border.
+
+The game shows it for an awakened unit wherever a card appears and falls back
+to the base card until the file exists, so a family can ship without it. The
+Shabti have no awakening and no awakened cards.
+
 ---
 
 ## 2. Stage backdrops

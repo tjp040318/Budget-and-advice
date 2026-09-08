@@ -151,7 +151,7 @@ struct SummonRevealView: View {
                 }
                 .frame(height: 34)
 
-                Text(result.blueprint.name)
+                Text(result.isAwakening ? (result.blueprint.awakening?.awakenedName ?? result.blueprint.name) : result.blueprint.name)
                     .font(Theme.display(38))
                     .foregroundStyle(
                         LinearGradient(colors: [Theme.textPrimary, Theme.textPrimary.opacity(0.75)],
@@ -178,7 +178,13 @@ struct SummonRevealView: View {
                     }
                     .padding(.top, 2)
 
-                    if result.isNew {
+                    if result.isAwakening {
+                        Text("AWAKENED")
+                            .font(Theme.body(12).weight(.black))
+                            .tracking(2.4)
+                            .foregroundStyle(Theme.gold)
+                            .shadow(color: Theme.gold.opacity(0.9), radius: 6)
+                    } else if result.isNew {
                         Text("NEW")
                             .font(Theme.body(12).weight(.black))
                             .tracking(2.4)
@@ -330,8 +336,8 @@ struct SummonRevealView: View {
         let rarity = Rarity(stars: result.stars)
         return VStack(spacing: 4) {
             ZStack {
-                if BundleImage.exists(result.blueprint.model.portraitName) {
-                    BundleImage(name: result.blueprint.model.portraitName)
+                if BundleImage.exists(result.blueprint.model.portraitName(awakened: result.unit.isAwakened || result.isAwakening)) {
+                    BundleImage(name: result.blueprint.model.portraitName(awakened: result.unit.isAwakened || result.isAwakening))
                         .aspectRatio(contentMode: .fill)
                 } else {
                     RoundedRectangle(cornerRadius: Theme.tightCorner)
@@ -395,11 +401,16 @@ struct SummonStageView: UIViewRepresentable {
         let tint = UIColor(hex: result.blueprint.model.auraHex) ?? .white
         let height = result.blueprint.model.height
 
+        let awakened = result.isAwakening || result.unit.isAwakened
         let node = ModelLibrary.shared.node(
             for: result.blueprint.model,
             archetype: result.blueprint.archetype,
-            element: result.blueprint.element
+            element: result.blueprint.element,
+            awakened: awakened
         )
+        if awakened {
+            node.addParticleSystem(VFXLibrary.aura(tint: tint, scale: height / 1.9))
+        }
         node.position = SCNVector3(0, 0, 0)
         node.opacity = 0
         scene.rootNode.addChildNode(node)

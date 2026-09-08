@@ -134,6 +134,20 @@ struct ModelSpec: Codable, Equatable, Sendable {
         self.melee = melee
         self.costumeHue = costumeHue
     }
+
+    /// The card for a unit in a given state. An awakened unit shows its own
+    /// card, `portrait_<id>_awakened.png`, once that file has shipped; until
+    /// then it shows the base card, so awakening never blanks a portrait.
+    func portraitName(awakened: Bool) -> String {
+        guard awakened else { return portraitName }
+        let name = portraitName + "_awakened"
+        return Bundle.main.url(forResource: name, withExtension: "png") != nil ? name : portraitName
+    }
+
+    /// The mesh an awakened unit loads when one has shipped: the base asset's
+    /// name with `_awakened`, beside it in the bundle with its own clips. The
+    /// loader falls back to the base mesh with the awakened look on it.
+    var awakenedAssetName: String { assetName + "_awakened" }
 }
 
 /// A battle stage's visual setting. Each case names a scene file and a lighting

@@ -366,6 +366,11 @@ final class GameStore: ObservableObject {
                 unit.acquiredFrom = "tour"
                 player.units.append(unit)
             }
+            // One awakened unit, so the tour's collection, detail and battle
+            // frames show the awakened card, name and look.
+            if let starter = player.units.firstIndex(where: { $0.blueprintID == "anubis_umbra" }) {
+                player.units[starter].isAwakened = true
+            }
             player.wallet.drachma = max(player.wallet.drachma, 200_000)
             player.wallet.energy = max(player.wallet.energy, 40)
             player.wallet.add(.pantheonic, 10)

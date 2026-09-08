@@ -86,6 +86,9 @@ struct SummonResult: Identifiable, Sendable {
     /// True when hard pity, not luck, produced this result. The reveal screen
     /// says so — hiding it is the kind of thing players find out anyway.
     var fromPity: Bool
+    /// The Hall of Ka reuses the reveal for an awakening: the unit's awakened
+    /// form comes in on the beam under its new name.
+    var isAwakening: Bool = false
 }
 
 /// Runs the gacha.

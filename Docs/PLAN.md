@@ -353,8 +353,26 @@ session from those answers.
   export of each character is committed. The superseded concept-first
   sources (`sekhmet_v2`, `zeus_v2`, `anubis_v3`) left the checkout; their
   manifests stayed.
-- **Not done:** a model for the Shabti (they remain sprites; 53 credits when
-  wanted), the Roman Legionary (Rome is a pantheon in the data with no banner
+- **Awakened forms** (asked for straight after: "there needs to be a base
+  and then awakened"). Every awakenable character has two cards now: the
+  base and `portrait_<id>_awakened.png`, an edit of the base card into a
+  ceremonial version of the costume with glowing markings, glowing eyes and
+  a halo — fifty more Gemini edits. An awakened unit shows its awakened card
+  everywhere a card appears (`ModelSpec.portraitName(awakened:)`, which falls
+  back to the base card until the file ships), its awakened name (already
+  the case), and on the stage the **awakened look**: the costume accent
+  glows in the element colour (`costumeGlow` in the surface shader), the
+  rim widens and brightens, and an aura of light rises from the feet
+  (`VFXLibrary.aura`). The Hall of Ka's Awaken panel shows the two forms
+  side by side before the player pays, and a successful awakening plays the
+  summon reveal with the awakened form under **AWAKENED**. The loader looks
+  for `<asset>_awakened.usdz` first and uses it with its own clips when a
+  family ships a second mesh; none has yet — that is 53 credits a family,
+  and the ten base meshes took the session's budget — so today the awakened
+  form is the base mesh with the glow and the aura, and the card carries the
+  costume change.
+- **Not done:** awakened meshes (above), a model for the Shabti (they remain
+  sprites; 53 credits when wanted), the Roman Legionary (Rome is a pantheon in the data with no banner
   yet; the user chose a Greek Hoplite now and Rome later), and a Greek
   campaign chapter.
 

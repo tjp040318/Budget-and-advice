@@ -116,9 +116,19 @@ Open it from the island or from Collection → Train.
   fodder and 8,000 drachma becomes a 4★ at level 1.
 - **Awaken**: the essence rows show have / need; the button enables when all
   are met. Essences drop in the campaign.
+- **Awaken** also shows the two forms side by side — the card the unit has
+  and the awakened card it becomes, with the new name — before you pay. Tap
+  **Awaken** with the essences in hand: the summon reveal plays, the figure
+  comes in glowing under the new name with **AWAKENED** beneath it, and from
+  then on the collection, the team strips and the battle plate show the
+  awakened card. In battle the awakened unit's costume glows in its element's
+  colour, its rim light is brighter and a slow rise of light comes off its
+  feet. The starter Anubis in a fresh tour save is awakened, so the CI frames
+  show one.
 - Locked units never appear as fodder.
 
-Send: a screenshot of the Result panel before you tap Power up.
+Send: a screenshot of the Result panel before you tap Power up, and one of
+the Awaken panel's two cards.
 
 ## 6. Battle (Campaign → Reed Fields), with Sekhmet or Zeus on the team
 

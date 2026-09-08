@@ -73,16 +73,24 @@ final class ModelLibrary {
         for spec: ModelSpec,
         archetype: Archetype,
         element: Element,
-        detail: DetailLevel = .high
+        detail: DetailLevel = .high,
+        awakened: Bool = false
     ) -> SCNNode {
         let container = SCNNode()
         container.name = "unit_\(spec.assetName)"
 
+        // An awakened unit loads `<asset>_awakened` when that mesh has
+        // shipped and otherwise the base mesh with the awakened look on it:
+        // glowing costume accents, a stronger rim, an aura from the unit node.
+        let baseName = awakened && bundleURL(for: spec.awakenedAssetName) != nil
+            ? spec.awakenedAssetName
+            : spec.assetName
+
         // Ask for the reduced mesh first when the stage is busy, but never fail
         // over it: a missing `_lod` file just means the full model is used.
-        let assetName = detail == .low && bundleURL(for: spec.assetName + DetailLevel.low.suffix) != nil
-            ? spec.assetName + DetailLevel.low.suffix
-            : spec.assetName
+        let assetName = detail == .low && bundleURL(for: baseName + DetailLevel.low.suffix) != nil
+            ? baseName + DetailLevel.low.suffix
+            : baseName
 
         let model: SCNNode
         var isStandIn = false
@@ -108,6 +116,7 @@ final class ModelLibrary {
 
         if !isStandIn {
             repairSkinners(in: model, label: assetName)
+            if awakened { MaterialTuner.applyAwakenedLook(model) }
         }
         model.name = "model"
         container.addChildNode(model)
@@ -188,6 +197,10 @@ final class ModelLibrary {
         }
         return found
     }
+
+    /// Whether a model file of this name is in the bundle. The unit node asks
+    /// so an awakened mesh, when one has shipped, plays its own clips.
+    func hasModel(_ name: String) -> Bool { bundleURL(for: name) != nil }
 
     /// Warms the cache off the main thread before a battle starts.
     func preload(_ specs: [ModelSpec], completion: @escaping () -> Void) {
@@ -457,6 +470,7 @@ enum MaterialTuner {
     float costumeMix;
     float costumeSourceHue;
     float costumeBand;
+    float costumeGlow;
     #pragma body
     float3 c = pow(max(_surface.diffuse.rgb, float3(0.0)), float3(1.0 / 2.2));
     float maxC = max(c.r, max(c.g, c.b));
@@ -477,7 +491,10 @@ enum MaterialTuner {
             float3 p = abs(k * 6.0 - 3.0);
             float3 recoloured = maxC * mix(float3(1.0), saturate(p - 1.0), ns);
             float3 blended = mix(c, recoloured, costumeMix);
-            _surface.diffuse.rgb = pow(blended, float3(2.2));
+            float3 lit = pow(blended, float3(2.2));
+            _surface.diffuse.rgb = lit;
+            // Awakened: the costume accent glows in its own colour.
+            _surface.emission.rgb += lit * costumeGlow;
         }
     }
     """
@@ -547,6 +564,7 @@ enum MaterialTuner {
                 material.setValue(NSNumber(value: Float(0)), forKey: "costumeMix")
                 material.setValue(NSNumber(value: Float(45.0 / 360.0)), forKey: "costumeSourceHue")
                 material.setValue(NSNumber(value: Float(32.0 / 360.0)), forKey: "costumeBand")
+                material.setValue(NSNumber(value: Float(0)), forKey: "costumeGlow")
                 material.setValue(NSValue(scnVector3: SCNVector3(1, 1, 1)), forKey: "rimColor")
                 material.setValue(NSNumber(value: Float(2.6)), forKey: "rimPower")
                 material.setValue(NSNumber(value: Float(0.55)), forKey: "rimStrength")
@@ -606,6 +624,23 @@ enum MaterialTuner {
             child.geometry = unique
         }
         report(node, "\(textured) textured material(s); the \(Int(sourceHue))° costume accent becomes \(Int(hue * 360))° for \(hex) in the surface shader")
+    }
+
+    /// The awakened form on a base mesh: the costume accent glows in its
+    /// element colour and the rim widens and brightens. Runs after
+    /// `applyElementTint`, on the instance's own materials. When a family
+    /// ships an `_awakened` mesh, this runs on that mesh instead, so the
+    /// glow is the constant and the costume is the upgrade.
+    static func applyAwakenedLook(_ node: SCNNode) {
+        node.enumerateHierarchy { child, _ in
+            guard let materials = child.geometry?.materials else { return }
+            for material in materials {
+                material.setValue(NSNumber(value: Float(0.55)), forKey: "costumeGlow")
+                material.setValue(NSNumber(value: Float(2.0)), forKey: "rimPower")
+                material.setValue(NSNumber(value: Float(0.95)), forKey: "rimStrength")
+            }
+        }
+        report(node, "awakened look: costume glow 0.55, rim 0.95")
     }
 
     private static func report(_ node: SCNNode, _ message: String) {

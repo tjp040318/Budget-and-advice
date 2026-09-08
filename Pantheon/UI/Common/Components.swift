@@ -318,8 +318,8 @@ struct UnitCard: View {
     /// with the unit's initial, which keeps every screen usable pre-art.
     @ViewBuilder
     private var portrait: some View {
-        if BundleImage.exists(unit.blueprint.model.portraitName) {
-            BundleImage(name: unit.blueprint.model.portraitName)
+        if BundleImage.exists(unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened)) {
+            BundleImage(name: unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened))
                 .aspectRatio(contentMode: .fill)
         } else {
             ZStack {

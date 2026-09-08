@@ -115,6 +115,29 @@ enum VFXLibrary {
         return system
     }
 
+    /// The awakened aura: a thin, endless rise of light from a disc at the
+    /// feet. Attached to a unit's model node, not spawned and removed.
+    static func aura(tint: UIColor, scale: Float) -> SCNParticleSystem {
+        let system = base(scale: scale)
+        system.loops = true
+        system.emissionDuration = 1.0
+        system.idleDuration = 0
+        system.birthRate = 16
+        system.birthLocation = .volume
+        system.emitterShape = SCNCylinder(radius: CGFloat(0.42 * scale), height: 0.02)
+        system.particleSize = CGFloat(0.045 * scale)
+        system.particleSizeVariation = CGFloat(0.02 * scale)
+        system.particleVelocity = 0.45
+        system.particleVelocityVariation = 0.2
+        system.spreadingAngle = 8
+        system.emittingDirection = SCNVector3(0, 1, 0)
+        system.particleColor = tint.withAlphaComponent(0.85)
+        system.particleLifeSpan = 1.6
+        system.particleLifeSpanVariation = 0.4
+        system.acceleration = SCNVector3(0, 0.35, 0)
+        return system
+    }
+
     private static func sparks(tint: UIColor, count: Int, speed: CGFloat, scale: Float) -> SCNParticleSystem {
         let system = base(scale: scale)
         system.birthRate = CGFloat(count) / 0.12

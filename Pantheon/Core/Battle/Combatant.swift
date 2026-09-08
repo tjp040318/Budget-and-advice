@@ -28,6 +28,8 @@ struct Combatant: Identifiable, Sendable {
     let role: CombatRole
     let model: ModelSpec
     let isLeader: Bool
+    /// Awakened units show their awakened card and form on the stage.
+    let isAwakened: Bool
 
     /// Stats after levels, relics, set bonuses and leader skill — but before
     /// any in-battle status.
@@ -69,6 +71,7 @@ struct Combatant: Identifiable, Sendable {
         self.role = resolved.role
         self.model = resolved.blueprint.model
         self.isLeader = isLeader
+        self.isAwakened = resolved.unit.isAwakened
         let stats = (statsOverride ?? resolved.stats).clamped()
         self.baseStats = stats
         self.skills = resolved.skills

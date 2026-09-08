@@ -13,6 +13,9 @@ final class UnitNode: SCNNode {
     let spec: ModelSpec
     let side: BattleSide
     private(set) var isDefeated = false
+    /// The asset whose clips this unit plays: the awakened mesh's own when
+    /// one has shipped, otherwise the base's.
+    private let clipAsset: String
 
     private let modelContainer: SCNNode
     private let healthBarRoot: SCNNode
@@ -46,8 +49,14 @@ final class UnitNode: SCNNode {
             for: combatant.model,
             archetype: combatant.archetype,
             element: combatant.element,
-            detail: detail
+            detail: detail,
+            awakened: combatant.isAwakened
         )
+        if combatant.isAwakened {
+            // The awakened aura: a slow rise of light in the element colour
+            // from the feet, for as long as the unit stands.
+            container.addParticleSystem(VFXLibrary.aura(tint: tint, scale: Float(modelHeight) / 1.9))
+        }
 
         // Health bar: a dark plate with a coloured fill that scales from its
         // left edge, parented to a billboard so it always faces the camera.
@@ -85,6 +94,9 @@ final class UnitNode: SCNNode {
         self.combatantID = combatant.id
         self.spec = combatant.model
         self.side = combatant.side
+        self.clipAsset = combatant.isAwakened && ModelLibrary.shared.hasModel(combatant.model.awakenedAssetName)
+            ? combatant.model.awakenedAssetName
+            : combatant.model.assetName
         self.elementTint = tint
         self.modelContainer = container
         self.healthBarRoot = barRoot
@@ -116,7 +128,7 @@ final class UnitNode: SCNNode {
         guard clip != currentClip || !clip.loops else { completion?(); return }
         currentClip = clip
 
-        if let shared = ModelLibrary.shared.animation(clip, for: spec.assetName) {
+        if let shared = ModelLibrary.shared.animation(clip, for: clipAsset) {
             // The library hands out one cached animation per clip, so the copy
             // is what gets configured for this use of it.
             let animation = (shared.copy() as? CAAnimation) ?? shared

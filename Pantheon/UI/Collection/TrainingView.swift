@@ -16,6 +16,9 @@ struct TrainingView: View {
     @State private var mode: Mode = .powerUp
     @State private var fodder: Set<UUID> = []
     @State private var outcome: String?
+    /// Set when an awakening succeeds: the summon reveal plays the awakened
+    /// form in on the beam under its new name.
+    @State private var awakenedReveal: SummonResult?
 
     enum Mode: String, CaseIterable, Identifiable {
         case powerUp = "Power up"
@@ -88,6 +91,9 @@ struct TrainingView: View {
             .onChange(of: targetID) { _, _ in
                 fodder = []
                 outcome = nil
+            }
+            .fullScreenCover(item: $awakenedReveal) { result in
+                SummonRevealView(results: [result]) { awakenedReveal = nil }
             }
         }
     }
@@ -301,6 +307,16 @@ struct TrainingView: View {
                     .font(Theme.body(13))
                     .foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
+                // The two forms side by side — the card the unit has and the
+                // card it becomes — the way the genre sells an awakening.
+                HStack(spacing: 14) {
+                    formTile(target.blueprint.model.portraitName, caption: target.blueprint.name)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundStyle(Theme.gold)
+                    formTile(target.blueprint.model.portraitName(awakened: true), caption: awakening.awakenedName)
+                }
+                .frame(maxWidth: .infinity)
                 if target.unit.isAwakened {
                     Text("Already awakened.")
                         .font(Theme.body(12))
@@ -322,6 +338,15 @@ struct TrainingView: View {
                             outcome = "\(after.name) awakened"
                             Juice.notify(.success)
                             AudioLibrary.shared.play(.uiConfirm)
+                            awakenedReveal = SummonResult(
+                                unit: after.unit,
+                                blueprint: after.blueprint,
+                                stars: after.stars,
+                                isNew: false,
+                                isFeatured: false,
+                                fromPity: false,
+                                isAwakening: true
+                            )
                         }
                     }
                 }
@@ -339,6 +364,29 @@ struct TrainingView: View {
     }
 
     // MARK: - Pieces
+
+    /// One form of a unit: its card and a caption. The awakened card is drawn
+    /// before the unit awakens, from the file that ships with the family.
+    private func formTile(_ image: String, caption: String) -> some View {
+        VStack(spacing: 4) {
+            ZStack {
+                if BundleImage.exists(image) {
+                    BundleImage(name: image)
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    RoundedRectangle(cornerRadius: Theme.tightCorner)
+                        .fill(Theme.surface)
+                }
+            }
+            .frame(width: 96, height: 96)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+            Text(caption)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .frame(width: 112)
+        }
+    }
 
     private func fodderGrid(_ candidates: [ResolvedUnit], limit: Int) -> some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 74, maximum: 92), spacing: 8)], spacing: 10) {
