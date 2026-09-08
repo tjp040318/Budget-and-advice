@@ -13,7 +13,7 @@ Then **⌘R** in Xcode with the console open (**⌘⇧C**).
 Look for these two blocks near the top:
 
 ```
-[ModelLibrary] 3D files actually inside the app: 7
+[ModelLibrary] 3D files actually inside the app: 8
 [ModelLibrary]   OK       anubis -> anubis.usdz
 [ModelLibrary] 'anubis': Z-up export (x… y… z…) — pitched -90°, feet lifted 0.00 m
 ```
@@ -25,7 +25,8 @@ Look for these two blocks near the top:
 
 ## 2. Collection
 
-- Every card is a **painted portrait** — no letters on gradients anywhere.
+- Every Anubis card is a **painted portrait**. Sekhmet's five are letters on
+  gradients until her portraits land; nothing else should be.
 - The card frame is **carved metal**, gold for 4★ Anubis. Corners overlap the
   art slightly; that is intentional.
 - Tap a unit: the detail screen opens.
@@ -65,8 +66,8 @@ freeze and shake feel right or too much.
 ## 5. More
 
 - **Sound** toggle turns effects off and on (a chime confirms on).
-- **3D assets** lists Anubis green, everyone else grey — grey means "portrait
-  sprite", which is expected today.
+- **3D assets** lists Anubis green, everyone else grey — Sekhmet included,
+  until her model lands. Grey means "placeholder", which is expected today.
 
 ## If it does not build
 
@@ -83,8 +84,9 @@ without a compiler and has been reviewed, not compiled.
 - **Only Anubis has a 3D model.** Enemies are portrait sprites by design until
   their meshes exist — `Docs/ART_PIPELINE.md` for the Meshy route.
 - **No music.** Effects only; the generator does not make music.
-- **One character family.** The gacha pool is five Anubis; the next family
-  needs a kit, a balance pass and portraits — `tools/genart.py` makes the
-  portraits in minutes.
+- **Sekhmet has no art in the bundle yet.** Her five variants are in the gacha
+  pool (they are its 5★ tier) and render as letter plates over a placeholder
+  rig. The model is generated and waiting on a download, the portraits on a
+  Gemini key — `Docs/PLAN.md`, *What to do next*.
 - **Kill slow-motion** is the longest freeze plus the heaviest shake; SceneKit
   has no global time-scale.

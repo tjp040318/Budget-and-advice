@@ -131,6 +131,16 @@ means a whole family costs one export.
 `UnitDatabase.anubisVariant(_:)` builds all five from one `AnubisFlavour` table.
 A second family is a second table.
 
+That second table exists. `sekhmetVariant(_:)` builds the Sekhmet family —
+natural 5★, attackers, the roster's first damage archetype. Every variant's Eye
+of Ra breaks defence, the way every Anubis revives; they differ by what the
+claws inflict (Burn, Attack Down, Slow, Glancing, Unrecoverable), what rides on
+the Eye (a bigger multiplier, lifesteal, an attack-bar knockback, a guaranteed
+crit, scaling per debuff), what the Wrath grants the team, and the leader skill.
+Umbra's Wrath curses the enemy line instead of buffing the team — the one
+variant whose rite points outward. The awakened passive turns a kill into
+another turn and a heal.
+
 ## Adding a character
 
 1. Add a family factory to `UnitDatabase` — or a single `UnitBlueprint` if it has

@@ -30,30 +30,50 @@ proven by reintroducing a real bug and watching it fail.
 If a tuning constant changes in Swift, change it in `tools/balance.py` too. They
 are kept in step by hand.
 
+The 3D tools need packages that are not preinstalled. PyPI is reachable, so at
+the start of a session that will touch models:
+
+```bash
+pip install -q usd-core numpy pillow scipy fast-simplification
+```
+
 ## Where things stand
 
 Read `Docs/PLAN.md` first. It has the measurements that decisions were based
-on, the phase list, and an honest account of what this environment can and
-cannot do. The short version:
+on, the phase list, the pipeline costs, and an honest account of what this
+environment can and cannot do. The short version:
 
 - The game builds and runs on an iPhone. Battle, summon, collection, arena and
   campaign all work.
-- Art is done for one character family: 11 painted portraits, 5 stage
-  backdrops, 2 summon banners, a particle sprite and a 10-texture UI kit.
-  `tools/genart.py` makes more via Gemini, which is reachable from here.
+- Two families are in the code. Anubis: five variants, natural 4★, full art.
+  Sekhmet: five variants, natural 5★, the first damage archetype, no art in the
+  bundle yet — the game shows letter plates and a grey dot until the files land.
+- Models ship decimated. `Pantheon/Resources/Models/` holds 3 MB for the whole
+  Anubis family (it was 154 MB); the untouched Meshy exports live in
+  `Art/Models/`, outside the bundle. **Unconfirmed on device.** The first thing
+  worth asking for is still the `[ModelLibrary] 'anubis':` console line.
+- Meshy is driven from here. `tools/meshy.py` took Sekhmet from a prompt to a
+  rigged model with six clips for 53 credits; the task ids are in
+  `Art/Models/sekhmet.meshy.json`. The files could not be fetched, because
+  `assets.meshy.ai` is not on the allow-list yet — see below.
+- `tools/glb2usd.py` turns Meshy's rigged GLB into the USDZ the game loads
+  (verified on Khronos sample rigs, not yet on a Meshy file); `tools/mesh.py`
+  decimates a family into the bundle in one command.
+- Art for Anubis is done: 11 painted portraits, 5 stage backdrops, 2 summon
+  banners, a particle sprite and a 10-texture UI kit. `tools/genart.py` makes
+  more via Gemini when `GEMINI_API_KEY` is in the environment; it was not, last
+  session. Sekhmet's portrait prompt is in `Docs/ART_2D.md`.
 - Sound is 13 synthesised effects. `tools/sfx.py` regenerates them. No music.
-- One 3D character, Anubis. `tools/mesh.py` decimates a Meshy export to a
-  shippable triangle budget; its read-only path is tested, its decimating
-  path is not yet run.
-- Anubis's scale bug is fixed but **unconfirmed on device**. The first thing
-  worth asking for is the `[ModelLibrary] 'anubis':` console line from a run.
 
 ### What this environment can reach
 
-`generativelanguage.googleapis.com` (Gemini), GitHub, and the package
-registries. Everything else — Meshy, Tripo, Rodin, OpenAI, Hugging Face — is
-refused by the environment's network policy with a 403 at CONNECT. Do not try
-to route around a policy denial; report it.
+`api.meshy.ai` (with `MESHY_API_KEY` provisioned; task creation and polling
+work), `generativelanguage.googleapis.com` (the Gemini host is open, but no key
+was present), GitHub, and the package registries. **Not** `assets.meshy.ai` or
+`cdn.meshy.ai`, where Meshy serves finished files and previews, nor
+`docs.meshy.ai`. Tripo, Rodin, OpenAI and Hugging Face are also refused by the
+environment's network policy with a 403 at CONNECT. Do not try to route around a
+policy denial; report it.
 
 To add a host: claude.ai/code → the cloud icon above the message box → hover
 the environment → gear → **Network access: Custom** → list the domain →

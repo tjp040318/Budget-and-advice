@@ -116,6 +116,39 @@ portrait_sandstone_sentinel.png   portrait_ammit.png   portrait_apep.png
 
 ---
 
+### Sekhmet — the second family
+
+Same recipe as Anubis: one base, four `--ref` recolours, the same five suffixes.
+
+```
+portrait_sekhmet_ember.png     portrait_sekhmet_tide.png     portrait_sekhmet_gale.png
+portrait_sekhmet_radiance.png  portrait_sekhmet_umbra.png
+```
+
+Base prompt:
+
+> Mobile gacha RPG character portrait, Sekhmet, Egyptian lioness-headed goddess
+> of war, upper body and head facing three-quarter right, tawny golden lioness
+> head with a short broad muzzle and fierce amber eyes, a solid gold sun disc
+> behind the head, broad gold and carnelian usekh collar, crimson linen bodice,
+> gold armbands, dark background with a subtle radial glow behind the head,
+> dramatic rim lighting from behind, painterly semi-realistic game art, rich
+> saturated colour, centred composition, square
+
+Same negative list as Anubis, and the recolour lines are the Anubis table's. She
+faces the opposite way to him on purpose, so two families read apart on a team
+strip.
+
+```bash
+python3 tools/genart.py --prompt "<base prompt>. molten orange and black, glowing ember cracks across the collar, warm firelight" \
+    --out Pantheon/Resources/Portraits/portrait_sekhmet_ember.png
+python3 tools/genart.py --prompt "Edit this image: <recolour line>" --ref Pantheon/Resources/Portraits/portrait_sekhmet_ember.png \
+    --out Pantheon/Resources/Portraits/portrait_sekhmet_tide.png
+```
+
+Until these exist the five Sekhmet cards show a letter on a gradient, which is
+the designed fallback and not a bug.
+
 ## 2. Stage backdrops
 
 Five files, 2048×2048 PNG. These replace the empty coloured void behind the

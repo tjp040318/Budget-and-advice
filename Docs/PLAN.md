@@ -1,8 +1,9 @@
 # The plan
 
 Written after opening the shipped `.usdz` files with Pixar's USD library rather
-than guessing from screenshots. The measurements below are from the actual
-files and they change the answer to "can this look like Summoners War".
+than guessing from screenshots, and revised after the first session in which
+Meshy could be driven from this environment. The measurements below are from the
+actual files and they change the answer to "can this look like Summoners War".
 
 ---
 
@@ -34,38 +35,38 @@ there; nothing could play it at that scale.
 | | triangles |
 |---|---|
 | Summoners War monster (2014, mobile) | ~2,000–5,000 |
-| **This Anubis export** | **197,879** |
-| What ten of them cost on screen | ~2M — far beyond a phone's budget for characters |
+| The raw Anubis export | 197,879 |
+| **What ships now** | **4,999**, plus a 1,499 `_lod` for crowded stages |
 
-Decimation, measured on this exact mesh:
+Decimation, run for real over the whole family with `python3 tools/mesh.py anubis`:
 
 ```
-197,879 → 11,999 tris    0.3 s
-197,879 →  4,999 tris    0.2 s
-197,879 →  2,999 tris    0.2 s
+anubis.usdz              197,879 → 4,999 tris    22.0 → 1.6 MB   1024 texture
+anubis_lod.usdz          197,879 → 1,499 tris    22.0 → 0.5 MB    512 texture
+anubis_<clip>.usdz  × 6  197,879 → 1,499 tris    21.9 → 0.1–0.2 MB each, 128 texture
+                                                153.5 → 3.0 MB in the app bundle, 9 s
 ```
 
-So the answer to "can we build characters the way they did" is **yes, and it is
-seconds of work per model, not hours.** The heavy Meshy export becomes the
-authoring source; the game ships a decimated copy. Skin weights carry across by
-nearest-neighbour remapping from the source vertices, which is standard practice
-and holds well at these ratios.
+Skin weights carry across by nearest-neighbour remapping from the source
+vertices, and every output was re-read with USD afterwards: 24 joints, every
+animation frame, weights renormalised, UVs and material binding intact. The
+per-clip files are cut harder because `ModelLibrary` only lifts the animation
+out of them; their geometry is read once and discarded.
 
-Expected effect on this repo: **154 MB of models → under 10 MB**, and ten
-characters on screen at ~50k triangles total, which any iPhone renders without
-noticing.
+The untouched exports now live in `Art/Models/`, outside the folder Xcode
+synchronises into the app. Moving them cost the repository nothing — same
+blobs — and the bundle 151 MB.
 
 ---
 
 ## Recommendation: stay on iOS/SceneKit
 
-This reverses what I said earlier today, and the reason is the measurements
-above.
+This reverses what I said earlier, and the reason is the measurements above.
 
 The case for Unity was its tooling — a scene editor, an asset pipeline, a way to
 handle models without a DCC package. But the model pipeline turns out to be
-scriptable end to end: reading, normalising, decimating and re-exporting all
-work from Python against the USD files directly. That was the main thing the
+scriptable end to end: generating, rigging, animating, converting, normalising,
+decimating and re-exporting all work from Python. That was the main thing the
 move was buying.
 
 What remains true about Unity: better particle and animation tooling, and an
@@ -78,6 +79,45 @@ one — see phase 3.
 
 ---
 
+## The character pipeline, end to end
+
+`api.meshy.ai` is reachable from this environment and a `MESHY_API_KEY` is
+provisioned, which removes the one step the previous plan said needed a person
+at a keyboard. Four commands take a character from a sentence to the bundle:
+
+```bash
+python3 tools/meshy.py generate sekhmet --height 2.0 --prompt "..." --negative "..."
+python3 tools/meshy.py download sekhmet      # -> Art/Models/sekhmet*.glb
+python3 tools/glb2usd.py sekhmet             # -> Art/Models/sekhmet*.usdz
+python3 tools/mesh.py sekhmet                # -> Pantheon/Resources/Models/, decimated
+```
+
+`generate` runs text-to-3D preview, refine, rigging and one animation task per
+clip, and records every task id in `Art/Models/<asset>.meshy.json` before it
+waits, so a re-run resumes rather than paying again. Measured on Sekhmet:
+
+| Stage | Credits | Wall clock | Output formats |
+|---|---|---|---|
+| preview | 20 | ~1.5 min | glb fbx obj stl **usdz** |
+| refine (textures, PBR) | 10 | ~1.5 min | the above + base colour, metallic, roughness, normal maps |
+| rig at 2.0 m | 5 | ~3 min | glb fbx only |
+| six battle clips | 3 each | ~2 min, in parallel | glb fbx only |
+| **one character** | **53** | **~12 min** | |
+
+Only the unrigged stages return USDZ, hence `glb2usd.py`. It writes the same
+prim layout as the Blender exports that already load in the game, verified on
+three Khronos sample rigs by re-skinning the written file in numpy.
+
+The balance was 1,186 credits before Sekhmet and 1,133 after: roughly twenty
+more characters at this rate.
+
+**What is still closed.** `assets.meshy.ai`, where the finished files are
+served from, is refused by the environment's network policy, so `download`
+could not run. The tasks are done and waiting; nothing is lost. Adding the host
+is step 1 below.
+
+---
+
 ## Phases
 
 ### Phase 0 — make the current build correct *(in progress)*
@@ -86,47 +126,33 @@ one — see phase 3.
 - [x] Mirror floor reflection removed
 - [x] Painted panel no longer swamps small plates
 - [x] Model scale/centre/orientation normalised from measured bounds
+- [x] Decimated models in the bundle (above)
 - [ ] **Confirm on device.** Needs the `[ModelLibrary] 'anubis':` console line.
+  The bundle now holds 8 model files (the `_lod` is new); Sekhmet shows a
+  grey dot and letter plates until her files land, which is correct.
 
-### Phase 1 — the model pipeline *(written, not yet run in anger)*
+### Phase 1 — the model pipeline *(done)*
 
-`tools/mesh.py` exists and its read-only `--inspect` path works. The
-decimating path has not been run yet — that is the next command:
+Run in anger and measured above. The pipeline is `Art/Models` → `mesh.py` →
+`Pantheon/Resources/Models`, one command per family.
 
-```bash
-python3 tools/mesh.py Pantheon/Resources/Models/anubis.usdz --tris 5000 --lod 1500
-```
+### Phase 2 — a second and third character family *(Sekhmet: code and model done, art pending)*
 
-It keeps the untouched export beside the result as `anubis.orig.usdz`, so a
-bad reduction costs nothing. What it does, once per character:
+Per family: a kit, a balance pass, five portraits, one mesh through Meshy, and
+the pipeline above.
 
-1. Open the Meshy export with USD.
-2. Decimate to a target triangle budget — **5,000 for a hero, 3,000 for a
-   trash mob**, matching the genre's actual numbers.
-3. Remap skin weights from the source mesh by nearest neighbour.
-4. Downsample textures to 1024 (2048 buys texel density a phone cannot resolve
-   at the size these are drawn).
-5. Re-export, and emit `<asset>_lod.usdz` at 1,500 triangles for crowded 5v5s —
-   the loader already looks for it.
-6. Report before/after triangles and bytes so a bad reduction is visible.
-
-Then re-run it over Anubis and check the repo drops from 154 MB.
-
-### Phase 2 — a second and third character family *(the real work)*
-
-The game is a mirror match against itself until there is a second family. Per
-family: a kit, a balance pass, five portraits, one mesh through Meshy, and the
-pipeline above.
-
-Suggested next two, chosen so the roster teaches the element wheel:
-
-- **Sekhmet** — Ember bruiser, a defence-break and a bleed. Gives the roster its
-  first real damage archetype.
-- **Thoth** — Radiance support, a cleanse and an attack-bar push. Gives it its
-  first real control archetype.
-
-I generate the portraits; you drive Meshy for the mesh. **This is the only step
-that needs you at a keyboard**, and it is the reason the roster grows slowly.
+- **Sekhmet** — Ember bruiser, the roster's first damage archetype. Every
+  variant's Eye of Ra breaks defence; the claws Burn, Slow, Glance, weaken or
+  make unrecoverable depending on the element. Natural 5★, which also fills
+  the gacha's 5★ tier for the first time.
+  - [x] Kit, five variants, in `UnitDatabase.swift`; in the summon pool
+  - [x] Balance model updated; the duel against Anubis sits at 81–88% for her
+  - [x] Model, rig and six clips generated (task ids in the manifest)
+  - [ ] Download, convert, decimate — needs `assets.meshy.ai` (step 1)
+  - [ ] Five portraits — needs `GEMINI_API_KEY` in the environment (step 2);
+    the prompt is in `Docs/ART_2D.md`
+- **Thoth** — Radiance support, a cleanse and an attack-bar push. Gives the
+  roster its first real control archetype. Next.
 
 ### Phase 3 — the island
 
@@ -154,18 +180,36 @@ Arena rating curve, a second campaign chapter, daily energy, then TestFlight.
 
 ---
 
+## What to do next
+
+1. **Open the download host.** claude.ai/code → cloud icon above the message
+   box → hover the environment → gear → **Network access: Custom** → add
+   `assets.meshy.ai` (and `cdn.meshy.ai`, for animation previews) beside
+   `api.meshy.ai` → keep **"Also include default list of common package
+   managers"** ticked → save. New sessions only.
+2. **Add the Gemini key** in the same dialog under **API credentials** as
+   `GEMINI_API_KEY`. That opens the host and keeps the key out of the session.
+3. **Start a new session** and ask for: download, convert and decimate Sekhmet,
+   then the five portraits. The commands are the four above plus
+   `tools/genart.py` per `Docs/ART_2D.md`; ~15 minutes.
+4. **Run on device** and paste the `[ModelLibrary]` block from the console.
+   Both the decimated Anubis and, after step 3, Sekhmet are unconfirmed there.
+
+---
+
 ## What I can and cannot do
 
 | | |
 |---|---|
-| 2D art at volume | ✅ 29 assets in ~40 min, proven |
+| 2D art at volume | ✅ 29 assets in ~40 min, proven — when a Gemini key is present |
 | Sound effects | ✅ synthesised, in the repo |
-| **Read, normalise, decimate, re-export 3D** | ✅ **proven on this mesh** |
+| Read, normalise, decimate, re-export 3D | ✅ proven on the whole Anubis family |
+| **Generate, rig and animate a 3D character** | ✅ **proven: Sekhmet, 53 credits, 12 minutes** |
+| Convert Meshy's rigged GLB to USDZ | ✅ written and verified on sample rigs; not yet on a Meshy file |
+| Fetch the finished files | ❌ until `assets.meshy.ai` is on the allow-list |
 | All code, logic, balance, integration | ✅ |
-| **Generate a 3D model from nothing** | ❌ Meshy/Tripo/Rodin all blocked by egress policy |
-| **Rig or author animation** | ❌ Meshy does both; you drive it |
 | Compile or see the running app | ❌ — the reason bugs still reach your phone |
 
-The 3D bottleneck is narrower than it looked. It is not "can we do 3D" — it is
-one browser session per character to get a rigged mesh out of Meshy. Everything
-either side of that is scriptable.
+The 3D bottleneck is gone in principle: one command per character, a quarter
+of an hour, two dollars of credits. What remains is one network setting and one
+key, both a minute each in the environment dialog.

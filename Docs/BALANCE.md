@@ -36,6 +36,26 @@ relevant next to a maxed god.
 | 6★ lv65 | 12,484 | 702 | 728 | 107 | 6,370 |
 | 6★ lv55 with relics | 17,391 | 978 | 1,014 | 119 | 12,012 |
 
+Sekhmet, the second family, on the same curve (natural 5★, attacker):
+
+| Grade / level | HP | ATK | DEF | SPD | Power |
+|---|---|---|---|---|---|
+| 5★ lv1 (a fresh summon) | 1,362 | 126 | 76 | 106 | 571 |
+| 5★ lv55 | 6,877 | 637 | 386 | 106 | 3,384 |
+| 6★ lv65 | 10,663 | 988 | 598 | 106 | 5,775 |
+| 6★ lv55 with relics | 14,855 | 1,377 | 833 | 118 | 11,033 |
+
+## The duel
+
+Sekhmet against Anubis, one on one, same grade and level, 300 seeded fights:
+**88%** at 5★ lv1, **81%** at 5★ lv30, **85%** at 6★ lv55 for Sekhmet. Before
+Burn was modelled she won 9%, 0% and 0% — the support's 25% heal every five
+turns outlasted an attacker whose damage-over-time the spreadsheet could not
+see. The model now ticks Burn for 5% of max health per turn, two turns per
+application, as the engine does. A nat-5 attacker beating an evolved nat-4
+support most of the time, without the support being pointless, is the intended
+shape.
+
 ## The campaign
 
 Chapter 1 is tuned so each stage demands **exactly one more thing** than the one
@@ -73,6 +93,12 @@ That is an artefact of a one-family roster, not of the engine. Once there are
 other families — different speeds, hard crowd control, defence breaks — a real
 variance band appears. Do not over-tune against these numbers; re-run the model
 when the second family lands.
+
+It has. The campaign table gained a column — three Anubis at level 35 with one
+5★ Sekhmet beside them: every stage still clears, and the chapter boss falls in
+45 turns instead of 68. The band is still narrow because the campaign enemies
+have no hard control; that is the next thing to add to the roster, not to the
+tuning.
 
 ## Summoning
 

@@ -1,8 +1,8 @@
 # Pantheon
 
 A Summoners War-style gacha RPG for iOS, in SwiftUI and SceneKit, with real 3D
-characters. Egypt first — the Anubis family is fully built, in all five elements
-— with the roster designed from the ground up to span Greek, Roman, Norse,
+characters. Egypt first — the Anubis family is fully built, in all five elements,
+and the Sekhmet family is in the code with its model generated — with the roster designed from the ground up to span Greek, Roman, Norse,
 Chinese, Japanese, Hindu, Mesopotamian, Aztec, Celtic, Slavic, Yoruba and
 Polynesian myth, and to cover gods, demigods, heroes, titans, monsters, spirits
 and primordials.
@@ -48,6 +48,10 @@ tinted five ways, which is how the genre affords a roster of hundreds.
 | `portrait_anubis_<element>.png` — 1024×1024, recolours of one render are fine | `Pantheon/Resources/Portraits/` |
 | `banner_duat_opens.png` — 1284×800 | same |
 | `spark.png` — 128×128 white radial glow | same |
+
+Or have the environment make it. Meshy is scriptable from Claude Code now, and
+§0 of the pipeline doc is four commands from a prompt to the bundle; Sekhmet, the
+second family, was made that way.
 
 **[`Docs/ART_PIPELINE.md`](Docs/ART_PIPELINE.md) has the Meshy prompt**, the
 negative prompt, the settings, the five elemental colourways, the animation clip
@@ -125,7 +129,7 @@ quarantined rather than deleted.
 No compiler, so two tools stand in for one.
 
 ```bash
-python3 tools/swiftcheck.py --members   # 52 files, 67 structs, 295 functions
+python3 tools/swiftcheck.py --members --types   # 55 files, 71 structs, 318 functions
 python3 tools/balance.py                # stat curves, campaign, gacha, economy
 python3 tools/balance.py --tune         # solve enemy levels for a target win rate
 ```

@@ -14,7 +14,11 @@ shows which characters are still standing in.
 
 ## `Models/`
 
-`.usdz` files named after the unit's `assetName`:
+`.usdz` files named after the unit's `assetName`. These are the **decimated**
+files `tools/mesh.py` writes; the untouched Meshy exports live in `Art/Models/`,
+outside `Pantheon/`, so they are never bundled. A raw export is 23 MB and a
+family of them was 154 MB of app; what ships is 3 MB. Never copy a raw export in
+here.
 
 ```
 anubis.usdz                one file, and it serves all five elemental variants
@@ -45,7 +49,8 @@ tries the per-clip file first and falls back to the embedded player.
 Only `anubis.usdz` is ever drawn. The per-clip files exist so
 `ModelLibrary.animation(_:for:)` can lift a `CAAnimation` out of each; their
 geometry and textures are read and discarded, so export those with textures off
-if the tool allows it.
+if the tool allows it. `tools/mesh.py` takes care of it either way: clip files
+come out at 1,500 triangles with a 128-pixel texture, about 150 KB each.
 
 The Meshy prompt, export settings, polycount budget and the six ways this goes
 wrong are in `ART_PIPELINE.md`.

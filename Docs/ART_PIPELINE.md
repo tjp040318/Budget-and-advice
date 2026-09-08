@@ -12,6 +12,66 @@ every screen are finished and testable with an empty `Models/` folder.
 
 ---
 
+## 0. The API route — four commands from this environment
+
+Meshy's API is reachable from the Claude Code environment and the key is
+provisioned, so everything in section 3 can be done without a browser:
+
+```bash
+python3 tools/meshy.py generate sekhmet --height 2.0 --prompt "..." --negative "..."
+python3 tools/meshy.py download sekhmet      # -> Art/Models/sekhmet*.glb   (needs assets.meshy.ai allowed)
+python3 tools/glb2usd.py sekhmet             # -> Art/Models/sekhmet*.usdz
+python3 tools/mesh.py sekhmet                # -> Pantheon/Resources/Models/, decimated
+```
+
+What differs from the web app:
+
+- **Prompts are capped at 600 characters**, the negative prompt too. The Anubis
+  prompt in section 2 was written for the web app and is longer; the Sekhmet
+  prompt below fits.
+- **Only text-to-3D returns USDZ.** Rigging and animation return GLB and FBX, so
+  `tools/glb2usd.py` converts. It writes the same prim layout as the exports the
+  game already loads, and re-skins its own output in numpy as a check.
+- **Clips are picked by id from Meshy's motion library.** `python3 tools/meshy.py
+  library --grep punch` searches it; the default id for each `AnimationClip` is
+  in `DEFAULT_CLIPS` at the top of the tool, and `--clips name=id,...` overrides.
+- **Height is set at rigging** (`--height`, in metres) — the same place the web
+  app's Resize toggle acts.
+- **Every task id is recorded** in `Art/Models/<asset>.meshy.json` before the
+  tool waits on it, so a re-run resumes and never pays twice. Commit the
+  manifest: it is the durable pointer to the heavy files.
+
+Measured on Sekhmet: 20 credits preview, 10 refine, 5 rig, 3 per clip — 53 for
+a character with the six battle clips, about twelve minutes end to end.
+
+### The Sekhmet prompt
+
+> ```
+> Full body game character of Sekhmet, the Egyptian lioness-headed goddess of
+> war, standing in a symmetrical A-pose, arms lowered and held away from the
+> body, legs straight and shoulder-width apart, facing forward. Tawny golden
+> lioness head, short broad muzzle, rounded ears, amber eyes, a thick solid
+> gold sun disc above the head. Athletic bronze-skinned female humanoid body.
+> Crimson linen bodice, short pleated red warrior kilt to the knee, wide gold
+> belt, broad gold and carnelian usekh collar, gold armbands, bracers, greaves
+> and sandals. Hands open and empty. Plain empty background, no base.
+> ```
+>
+> **Negative prompt**
+>
+> ```
+> weapon, spear, bow, staff, shield, scales, ankh, props, held objects, base,
+> pedestal, plinth, stand, background, scenery, hieroglyphs, text, watermark,
+> two characters, wings, extra limbs, crossed arms, arms raised, floating,
+> cape, flowing cloth, long dress, long hair
+> ```
+
+The kilt is short and the legs bare for the reason Anubis's are: a sheath dress
+to the ankle fuses the legs and the hip rig fails. The sun disc is "thick and
+solid" because a thin disc is the first thing a remesh loses.
+
+---
+
 ## 1. The headline: one model covers five characters
 
 The Anubis family is five summonable units — Fire, Water, Wind, Light and Dark —
@@ -300,10 +360,11 @@ ground rings. One textured export is the minimum, and it covers the family.
 4. **Set the height on export**: Resize on, 205 cm for Anubis, Origin Bottom.
    That is what makes `scale: 1.0` correct in code.
 5. **Export USDZ** directly. No Reality Converter, no Blender round-trip.
-6. **Drop it in** `Pantheon/Resources/Models/`, named per the clip table — and
-   see `RESOURCES.md` for the flat-bundle rule that makes those names matter
-   more than they look. The dot
-   on the asset screen turns green. No code change.
+6. **Drop it in `Art/Models/`**, named per the clip table, and run
+   `python3 tools/mesh.py <asset>`: it writes the decimated files the app
+   actually bundles into `Pantheon/Resources/Models/`. See `RESOURCES.md` for
+   the flat-bundle rule that makes those names matter more than they look. The
+   dot on the asset screen turns green. No code change.
 
 ### Animation clips
 
@@ -330,7 +391,9 @@ slides the character off its stage slot. Loops must be seamless. 30 fps is fine.
 ### Rigging and animation — stay in Meshy
 
 Meshy rigs, animates and exports USDZ, so the whole pipeline is one tool and
-there is no FBX round-trip and no format conversion.
+there is no FBX round-trip and no format conversion — in the web app. Through
+the API the rig and the clips come back as GLB, and `tools/glb2usd.py` converts
+them (section 0).
 
 Adobe's Mixamo used to be the obvious route for this. As of 2026 it has not been
 formally discontinued, but it has had no meaningful development since the
