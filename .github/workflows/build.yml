@@ -89,13 +89,26 @@ jobs:
           echo "$(date -u +%T) booted"
           xcrun simctl install "$UDID" "$APP"
           echo "$(date -u +%T) installed"
-          xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour
-          echo "$(date -u +%T) launched"
           mkdir -p shots
-          for i in $(seq -w 1 26); do
-            sleep 4
-            xcrun simctl io "$UDID" screenshot "shots/$i.png" >/dev/null 2>&1 || true
+          # The simulator's first screenshot can take most of a minute, so the
+          # tour is not timed from inside the app: the job launches it pinned
+          # to one step (-tour-step N), waits for the screen to settle, and
+          # photographs it; battle and reveal get several frames each.
+          shoot() { xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || true; }
+          xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
+          sleep 8; shoot warmup
+          echo "$(date -u +%T) warm"
+          names=(island collection detail training summon reveal battle arena more)
+          for step in 0 1 2 3 4 5 6 7 8; do
+            xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step >/dev/null
+            case ${names[$step]} in
+              reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 4; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
+              battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
+              *)      sleep 5; shoot "$step-${names[$step]}" ;;
+            esac
+            echo "$(date -u +%T) ${names[$step]}"
           done
+          rm -f shots/warmup.png
           echo "$(date -u +%T) $(ls shots | wc -l | tr -d ' ') frames"
           xcrun simctl terminate "$UDID" com.pantheon.game || true
           # Small copies for the ci/screens branch, made with the built-in

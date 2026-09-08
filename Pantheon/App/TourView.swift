@@ -14,10 +14,21 @@ import SwiftUI
 struct TourView: View {
     @EnvironmentObject private var store: GameStore
 
-    @State private var index = 0
+    @State private var index = TourView.pinnedStep ?? 0
     @State private var ticksOnStep = 0
     @State private var battleModel: BattleViewModel?
     @State private var seeded = false
+
+    /// `-tour-step N` pins the tour to one screen for the whole run. The CI
+    /// job launches the app once per step and photographs it, because a
+    /// timer-driven tour raced the simulator's first, slow screenshot and
+    /// every frame came out of the last screen.
+    static var pinnedStep: Int? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-step"), at + 1 < args.count,
+              let step = Int(args[at + 1]) else { return nil }
+        return min(max(0, step), schedule.count - 1)
+    }
 
     /// One entry per screen: what to show and how many ticks to hold it.
     private static let schedule: [(name: String, ticks: Int)] = [
@@ -46,8 +57,13 @@ struct TourView: View {
                 .padding(10)
         }
         .preferredColorScheme(.dark)
-        .onAppear { seedIfNeeded() }
-        .onReceive(timer) { _ in tick() }
+        .onAppear {
+            seedIfNeeded()
+            if current == "battle" { startBattle() }
+        }
+        .onReceive(timer) { _ in
+            if Self.pinnedStep == nil { tick() }
+        }
     }
 
     @ViewBuilder
@@ -100,12 +116,18 @@ struct TourView: View {
     }
 
     private func startBattle() {
-        guard battleModel == nil,
-              let stage = StageDatabase.stage("duat_1_2") ?? StageDatabase.stage("duat_1_1"),
-              let engine = store.startCampaignBattle(stage: stage) else { return }
-        let model = BattleViewModel(engine: engine, context: .campaign(stage), store: store)
-        model.autoBattle = true
-        battleModel = model
+        guard battleModel == nil else { return }
+        // The first gate is the one stage every account has open; a fresh
+        // save has not cleared it, so Reed Fields would refuse and the step
+        // would stay black.
+        for id in ["duat_1_1", "duat_1_2"] {
+            guard let stage = StageDatabase.stage(id),
+                  let engine = store.startCampaignBattle(stage: stage) else { continue }
+            let model = BattleViewModel(engine: engine, context: .campaign(stage), store: store)
+            model.autoBattle = true
+            battleModel = model
+            return
+        }
     }
 
     /// A 5★ reveal without spending a scroll, so the stage is caught with a
