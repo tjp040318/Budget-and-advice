@@ -67,8 +67,8 @@ jobs:
 
       # The app photographs itself: launched with -tour it walks its screens
       # (TourView) while the runner screenshots the simulator. The frames are
-      # uploaded as an artifact and also printed into the log as one base64
-      # contact sheet, which a session with no artifact access can decode.
+      # uploaded as an artifact, and small copies go to the ci/screens branch
+      # (below) for a session whose network cannot reach the artifact store.
       - name: Screenshot tour
         if: ${{ !cancelled() }}
         run: |
@@ -98,32 +98,14 @@ jobs:
           done
           echo "$(date -u +%T) $(ls shots | wc -l | tr -d ' ') frames"
           xcrun simctl terminate "$UDID" com.pantheon.game || true
-          python3 -c "import PIL" 2>/dev/null || pip3 install -q pillow 2>/dev/null || python3 -m pip install -q pillow
-          echo "$(date -u +%T) pillow ready"
-          python3 - <<'PY'
-          from PIL import Image
-          import glob
-          files = sorted(glob.glob("shots/*.png"))
-          if not files:
-              raise SystemExit("no screenshots")
-          thumbs = [Image.open(f).convert("RGB") for f in files]
-          # A landscape-only app on a device that thinks it is upright comes
-          # out rotated; stand the frames up so the sheet reads.
-          thumbs = [t.rotate(-90, expand=True) if t.height > t.width else t for t in thumbs]
-          w = 300
-          h = int(thumbs[0].height * w / thumbs[0].width)
-          cols = 7
-          rows = (len(thumbs) + cols - 1) // cols
-          sheet = Image.new("RGB", (cols * w, rows * h), (0, 0, 0))
-          for i, t in enumerate(thumbs):
-              sheet.paste(t.resize((w, h)), ((i % cols) * w, (i // cols) * h))
-          sheet.save("shots/sheet.jpg", "JPEG", quality=50, optimize=True)
-          print("sheet", sheet.size, "from", len(thumbs), "frames")
-          PY
-          echo "SHEET_BASE64_BEGIN"
-          base64 -i shots/sheet.jpg | tr -d '\n'
-          echo
-          echo "SHEET_BASE64_END"
+          # Small copies for the ci/screens branch, made with the built-in
+          # sips (the runner's Python refuses pip installs). The full-size
+          # PNGs go to the artifact.
+          mkdir -p small
+          for f in shots/*.png; do
+            sips -s format jpeg -s formatOptions 72 -Z 1300 "$f" --out "small/$(basename "${f%.png}").jpg" >/dev/null 2>&1 || true
+          done
+          echo "$(date -u +%T) $(ls small | wc -l | tr -d ' ') small frames"
 
       - name: Upload screenshots
         if: ${{ !cancelled() }}
@@ -143,8 +125,7 @@ jobs:
         run: |
           test -d shots && ls shots/*.png >/dev/null 2>&1 || { echo "no frames to publish"; exit 0; }
           rm -rf /tmp/screens && mkdir -p /tmp/screens
-          cp shots/*.png /tmp/screens/
-          cp shots/sheet.jpg /tmp/screens/ 2>/dev/null || true
+          cp small/*.jpg /tmp/screens/ 2>/dev/null || cp shots/*.png /tmp/screens/
           printf '%s\n' "commit ${GITHUB_SHA}" "branch ${GITHUB_REF_NAME}" "run ${GITHUB_RUN_ID}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/screens/SOURCE.txt
           cd /tmp/screens
           git init -q
@@ -153,6 +134,6 @@ jobs:
           git -c user.name=pantheon-ci -c user.email=ci@users.noreply.github.com \
             commit -q -m "Tour screenshots for ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}"
           git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci/screens
-          echo "published $(ls *.png | wc -l | tr -d ' ') frames to ci/screens"
+          echo "published $(ls | grep -c -E 'jpg|png') frames to ci/screens"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
