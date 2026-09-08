@@ -10,7 +10,14 @@ name: build
 
 on:
   push:
+    branches-ignore:
+      - ci/screens        # the job's own output branch; building it would loop
   workflow_dispatch:
+
+# The job writes its screenshots to the ci/screens branch (below), which
+# needs the token to be allowed to push. Nothing else in the job writes.
+permissions:
+  contents: write
 
 concurrency:
   group: build-${{ github.ref }}
@@ -68,20 +75,31 @@ jobs:
           set -o pipefail
           APP=$(find build/Build/Products/Debug-iphonesimulator -maxdepth 1 -name "Pantheon.app" | head -1)
           test -n "$APP" || { echo "no built app to photograph"; exit 0; }
-          DEST=$(xcrun simctl list devices available | grep -E "iPhone (16|15)" | head -1 | sed -E 's/^ *([^(]+) \(.*/\1/' | sed 's/ *$//')
-          echo "simulator: $DEST"
-          xcrun simctl boot "$DEST" || true
-          xcrun simctl bootstatus "$DEST" -b
-          xcrun simctl install "$DEST" "$APP"
-          xcrun simctl launch "$DEST" com.pantheon.game -tour
+          # One device, by identifier: a name like "iPhone 16 Pro" can exist in
+          # several runtimes, and simctl refuses an ambiguous name.
+          UDID=$(xcrun simctl list devices available -j | python3 -c "
+          import json, sys
+          d = json.load(sys.stdin)
+          devs = [x for r in d['devices'].values() for x in r if x['isAvailable']]
+          pick = [x for x in devs if x['name'] == 'iPhone 16 Pro'] or [x for x in devs if x['name'].startswith('iPhone 16')] or [x for x in devs if x['name'].startswith('iPhone 15')] or devs
+          print(pick[0]['udid'])")
+          echo "$(date -u +%T) simulator $UDID"
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b
+          echo "$(date -u +%T) booted"
+          xcrun simctl install "$UDID" "$APP"
+          echo "$(date -u +%T) installed"
+          xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour
+          echo "$(date -u +%T) launched"
           mkdir -p shots
           for i in $(seq -w 1 26); do
             sleep 4
-            xcrun simctl io "$DEST" screenshot "shots/$i.png" >/dev/null 2>&1 || true
+            xcrun simctl io "$UDID" screenshot "shots/$i.png" >/dev/null 2>&1 || true
           done
-          xcrun simctl terminate "$DEST" com.pantheon.game || true
-          ls -la shots | tail -n +2 | wc -l
-          pip3 install -q pillow 2>/dev/null || python3 -m pip install -q pillow
+          echo "$(date -u +%T) $(ls shots | wc -l | tr -d ' ') frames"
+          xcrun simctl terminate "$UDID" com.pantheon.game || true
+          python3 -c "import PIL" 2>/dev/null || pip3 install -q pillow 2>/dev/null || python3 -m pip install -q pillow
+          echo "$(date -u +%T) pillow ready"
           python3 - <<'PY'
           from PIL import Image
           import glob
@@ -89,7 +107,10 @@ jobs:
           if not files:
               raise SystemExit("no screenshots")
           thumbs = [Image.open(f).convert("RGB") for f in files]
-          w = 260
+          # A landscape-only app on a device that thinks it is upright comes
+          # out rotated; stand the frames up so the sheet reads.
+          thumbs = [t.rotate(-90, expand=True) if t.height > t.width else t for t in thumbs]
+          w = 300
           h = int(thumbs[0].height * w / thumbs[0].width)
           cols = 7
           rows = (len(thumbs) + cols - 1) // cols
@@ -111,3 +132,27 @@ jobs:
           name: tour-screenshots
           path: shots
           if-no-files-found: ignore
+
+      # The frames also go to an orphan branch, force-pushed each run so it
+      # only ever holds the latest tour. A session whose network cannot reach
+      # the artifact store can `git fetch origin ci/screens` and look at them
+      # at full size for free. Artifacts keep the history; the branch is a
+      # window.
+      - name: Publish screenshots to the ci/screens branch
+        if: ${{ !cancelled() }}
+        run: |
+          test -d shots && ls shots/*.png >/dev/null 2>&1 || { echo "no frames to publish"; exit 0; }
+          rm -rf /tmp/screens && mkdir -p /tmp/screens
+          cp shots/*.png /tmp/screens/
+          cp shots/sheet.jpg /tmp/screens/ 2>/dev/null || true
+          printf '%s\n' "commit ${GITHUB_SHA}" "branch ${GITHUB_REF_NAME}" "run ${GITHUB_RUN_ID}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/screens/SOURCE.txt
+          cd /tmp/screens
+          git init -q
+          git checkout -q -b ci/screens
+          git add .
+          git -c user.name=pantheon-ci -c user.email=ci@users.noreply.github.com \
+            commit -q -m "Tour screenshots for ${GITHUB_SHA::7} on ${GITHUB_REF_NAME}"
+          git push -q -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci/screens
+          echo "published $(ls *.png | wc -l | tr -d ' ') frames to ci/screens"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
