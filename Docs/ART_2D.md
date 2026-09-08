@@ -315,6 +315,22 @@ there and detail behind them reads as noise. Push interest to the upper corners.
 
 ---
 
+## 2b. Stage textures
+
+Six paintings in `Pantheon/Resources/Stage/`, used by `StageBuilder` on the
+3D sets. Tileable ones were asked for as "seamless tileable texture, viewed
+straight down … edges continue seamlessly, flat even lighting, no shadows, no
+perspective"; the additive ones sit on pure black.
+
+| File | Used for | Prompt in short |
+|---|---|---|
+| `floor_sandstone.png` 1024² | Egyptian platform tops, stand-in columns | worn Egyptian flagstones, tan and ochre, faint hieroglyph borders, sand in the cracks |
+| `floor_marble.png` 1024² | Greek platform tops | white marble slabs, soft grey veining, a thin gold meander inlaid between slabs |
+| `rock_cliff.png` 1024² | platform sides, boulders, hanging rocks | layered weathered rock face, warm grey and ochre, dry grass at the joints |
+| `rune_ring.png` 1024² | the summoning circle (additive, tinted) | two concentric gold rings with glowing gold and turquoise hieroglyphs between, radiating lines, an eight-pointed star at the centre, pure black elsewhere |
+| `sky_night.png` 2048×1024 | a night sky, when a stage wants one | deep indigo and teal with gold and violet nebula clouds, thousands of stars, a soft moon glow near the top |
+| `mist.png` 1024² | drifting mist planes (additive) | soft white cloud puffs on pure black |
+
 ## 3. Particle sprite
 
 One file, 128×128 PNG:

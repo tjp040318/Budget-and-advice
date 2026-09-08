@@ -117,6 +117,13 @@ environment can and cannot do. The short version:
   brighter rim, an aura) and would load `<asset>_awakened.usdz` with its own
   clips if a family shipped one — none has; that is 53 credits a family. The
   Hall of Ka shows both forms before awakening and plays the reveal after.
+- **3D stages.** `StageBuilder` builds every battle set and the summoning
+  circle from parts: a floating platform (tileable painted textures in
+  `Pantheon/Resources/Stage/`), Meshy props (`prop_*.usdz`, shipped by
+  `tools/prop.py <asset> --height H` from `Art/Models/<asset>_refine.usdz`),
+  braziers with fire, mist, dust, and the environment painting far behind
+  for parallax. A missing prop gets a built stand-in. **Meshy text-to-3D
+  props cost 30 credits each, not 15**; the balance is about 61.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
   for an attack clip and back at the next turn, every hit flashes the victim
   white, and the standard camera shot leans a tenth of the way into the

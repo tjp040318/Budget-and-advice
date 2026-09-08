@@ -430,29 +430,11 @@ struct SummonStageView: UIViewRepresentable {
         ]))
         node.runAction(.repeatForever(.rotateBy(x: 0, y: .pi * 2, z: 0, duration: 16)))
 
-        // A summoning circle under the feet: an additive tinted disc.
-        let disc = SCNPlane(width: CGFloat(height) * 1.3, height: CGFloat(height) * 1.3)
-        disc.cornerRadius = CGFloat(height) * 0.65
-        let discMaterial = SCNMaterial()
-        discMaterial.lightingModel = .constant
-        discMaterial.diffuse.contents = tint.withAlphaComponent(0.35)
-        discMaterial.blendMode = .add
-        discMaterial.writesToDepthBuffer = false
-        disc.firstMaterial = discMaterial
-        let discNode = SCNNode(geometry: disc)
-        discNode.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
-        // The disc lies flat inside an upright spinner and the spinner turns
-        // about Y. Adding a Z rotation to a node already tilted onto the
-        // floor composes Euler angles rather than spinning in place, and the
-        // CI frames caught the disc standing on its edge between the flat
-        // moments — the orange streak beside Sekhmet's feet.
-        let spinner = SCNNode()
-        spinner.position = SCNVector3(0, 0.01, 0)
-        spinner.opacity = 0
-        spinner.addChildNode(discNode)
-        scene.rootNode.addChildNode(spinner)
-        spinner.runAction(.sequence([.wait(duration: 0.1), .fadeIn(duration: 0.5)]))
-        spinner.runAction(.repeatForever(.rotateBy(x: 0, y: .pi * 2, z: 0, duration: 9)))
+        // The summoning circle: a rune dais on a floating rock, a half-ring of
+        // pillars and braziers behind the figure, mist and dust, in the
+        // summoned unit's pantheon and element colour. The SwiftUI glow and
+        // rays show through between the pillars.
+        StageBuilder.buildSummoningCircle(pantheon: result.blueprint.pantheon, tint: tint, into: scene)
 
         // Frame the figure: the camera looks at its chest from slightly above
         // and close enough that it fills most of the view.

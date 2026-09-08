@@ -63,23 +63,10 @@ final class BattleSceneController: NSObject {
                 scene.rootNode.addChildNode(child)
             }
         } else {
-            // A finite stage, not an infinite floor. The camera looks down at
-            // 39°, and an infinite plane would fill the whole frame; a 30 × 10 m
-            // platform whose far edge fades out leaves the painting visible
-            // above the enemy line, which is the diorama the genre is.
-            let platform = SCNPlane(width: 30, height: 10)
-            let material = SCNMaterial()
-            material.lightingModel = .physicallyBased
-            material.diffuse.contents = UIColor(hex: environment.fogHex)?.mixed(with: .black, amount: 0.5)
-            material.roughness.contents = 0.75
-            material.transparent.contents = Self.floorFade
-            material.transparencyMode = .aOne
-            material.writesToDepthBuffer = true
-            platform.firstMaterial = material
-            let ground = SCNNode(geometry: platform)
-            ground.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
-            ground.position = SCNVector3(0, 0, 0)
-            scene.rootNode.addChildNode(ground)
+            // The 3D set: a floating platform, ruins and statues, braziers,
+            // mist and dust, with the environment's painting far behind it
+            // for parallax. `StageBuilder` also sets the fog and the sky.
+            StageBuilder.buildBattleStage(environment, into: scene)
         }
 
         // Image-based lighting if the HDR shipped; a coloured ambient if not.
@@ -97,24 +84,6 @@ final class BattleSceneController: NSObject {
             scene.lightingEnvironment.intensity = 0.35
         }
 
-        // A painted backdrop if the art shipped, otherwise the fog colour. One
-        // 2048x2048 image per stage replaces the flat void behind the fighters,
-        // which is the single largest visual difference between this and a
-        // finished game — see Docs/ART_PIPELINE.md for the prompts.
-        //
-        // SceneKit stretches a background image over the viewport. On a phone
-        // that turned a square painting into a tall thin one, so it is cropped
-        // to the screen's aspect first, keeping the centre.
-        if let backdrop = UIImage(named: "\(environment.sceneName)_bg") {
-            scene.background.contents = Self.cropped(backdrop, toAspectOf: UIScreen.main.bounds.size)
-        } else {
-            scene.background.contents = UIColor(hex: environment.fogHex)?
-                .mixed(with: .black, amount: 0.35)
-        }
-        scene.fogStartDistance = 16
-        scene.fogEndDistance = 44
-        scene.fogColor = UIColor(hex: environment.fogHex) ?? .darkGray
-        scene.fogDensityExponent = 1.4
     }
 
     /// Opaque over the near three-quarters of the stage, fading to nothing at

@@ -34,3 +34,7 @@ Art/Models/*_victory.glb
 Art/Models/*_cast_loop.glb
 Art/Models/*_cast_release.glb
 Art/Models/*_summon_reveal.glb
+
+# Meshy preview-stage exports: superseded by the refine stage beside them.
+Art/Models/*_preview.usdz
+Art/Models/*_preview.glb

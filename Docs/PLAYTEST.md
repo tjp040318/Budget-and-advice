@@ -38,7 +38,7 @@ paste it. The first line names the build and the device. Then, the first time
 a model was loaded:
 
 ```
-[ModelLibrary] 3D files actually inside the app: 80
+[ModelLibrary] 3D files actually inside the app: 90
 [ModelLibrary]   OK       anubis -> anubis.usdz
 [ModelLibrary]   OK       ares -> ares.usdz
 [ModelLibrary]   OK       zeus -> zeus.usdz
@@ -49,7 +49,7 @@ a model was loaded:
 [ModelLibrary] clip animation taken from … , 1.67 s, a group
 ```
 
-- **80 files** — eight per family, eleven families less the Shabti, who have
+- **90 files** — eight per family for the ten modelled families, plus ten stage props. The Shabti have
   no models by design.
 - **`y 0.00..2.05` and `×1.0000`** — the file is canonical and the game did
   nothing to it. Sekhmet reads `y 0.00..2.00`, Zeus `y 0.00..2.15`.
@@ -90,6 +90,10 @@ Send: one screenshot of the grid.
   Shabti, Anubis (4★, **four stars on the reveal**), Sekhmet or Thoth. An
   Anubis or a Shabti out of the Greek banner, or ten identical fire Anubis,
   is the old build; pull again after checking the build date.
+- The reveal stage is a **stone summoning circle**: a glowing rune ring on a
+  round dais, on a floating rock, with a half-ring of pillars and two
+  braziers behind the figure (Egyptian lotus columns for an Egyptian unit,
+  Greek columns for a Greek one), mist and dust, the glow and rays behind.
 - The reveal: **dark charge → white flash → figure springs in on the left,
   slowly turning → stars tick in on the right → name slams down → details
   fade in**. The figure is the stylised model — Sekhmet a black lioness in a
@@ -136,8 +140,16 @@ the Awaken panel's two cards.
   order faces, AUTO, ×1, log), an open middle, and a bottom bar with the
   actor's plate at the left and the skill buttons at the right. Your line
   stands in the open middle, about a third of the screen tall, feet near the
-  bottom; the enemies stand behind them, heads below the top row; the
-  painting shows above.
+  bottom; the enemies stand behind them, heads below the top row.
+- **The stage is a 3D set now**: a broken stone platform floating in the air,
+  a painted sandstone floor with a cliff edge and boulders, colossal seated
+  Anubis statues and obelisks at the far edge, lotus columns behind the
+  enemies, braziers burning at the corners with flickering light, mist
+  drifting at the edges, dust in the air, and the stage's painting far
+  behind, with its land showing below the platform's edge. When the camera
+  leans into an action the set shifts against the painting. Say if a statue
+  faces the wrong way, floats, or blocks a unit; if the floor pattern is too
+  big or too small; if the fire is too bright.
 - **The characters are stylised now** — five heads tall, big hands, chunky
   armour, painted textures, the same design as their cards: Anubis in a
   striped nemes and a gold-and-lapis collar, Sekhmet as above, Zeus in gold

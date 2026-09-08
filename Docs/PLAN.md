@@ -414,6 +414,40 @@ is: the app now opens on it.
 - [ ] Phase A of the living island (units idling on it, particles, day and
   night); see *The road to Summoners War*
 
+### Phase 3b — the 3D stages *(built; being photographed)*
+
+Asked for "a cool 3D background for the battles and the summon, like
+Summoners War", and given three answers — up to 150 credits of props,
+floating ruin platforms, a stone summoning circle — the stages stopped being
+pictures. `StageBuilder` (Render) assembles a set from parts, no scene file:
+
+- **The platform**: a cylinder with a painted floor on top (`floor_sandstone`
+  or `floor_marble`, tileable, Gemini), a cliff face round the side
+  (`rock_cliff`), a ring of boulders at the rim and rock chunks hanging below
+  and beyond it, bobbing — the sign that the whole thing is in the air.
+- **Props**: ten Meshy text-to-3D models shipped by `tools/prop.py` as
+  `prop_<name>.usdz` — an Egyptian set (seated Anubis colossus, obelisk, lotus
+  column, brazier, sphinx) and a Greek set (Doric column, broken column, Zeus
+  statue, tripod brazier, temple ruin) — placed by a recipe per environment,
+  each with a built stand-in (a column, an obelisk, a block in the stage's own
+  stone) for a prop that has not shipped, so a set never has a hole in it.
+- **Fire and air**: braziers with a flame and a flickering omni light, drifting
+  additive mist planes, slow dust motes.
+- **The distance**: the environment's painting on a 150 m plane 70 m behind
+  the platform, so the camera's lean puts parallax between the set and the
+  world beyond, and the painting's land reads as a world far below.
+- **The summoning circle**: a rune dais (`rune_ring`, additive, in the element
+  colour, turning) on a small floating rock, a half-ring of pillars and two
+  braziers behind the figure in the summoned unit's pantheon, the colossus or
+  the temple ruin further back, mist and dust; the SwiftUI glow and rays still
+  show between the pillars.
+
+**The cost was wrong.** Text-to-3D was estimated at 15 credits a prop (5
+preview + 10 refine) and cost 30: ten props took 300 credits, twice the 150
+agreed, and the balance is 61. The estimate should have been checked on one
+prop before nine more were launched. Nothing else can be bought until the
+account is topped up; the next character or the awakened meshes wait on that.
+
 ### Phase 4 — sound and feel
 
 - **Music.** Two synthesised loops are in — an island loop of pads, a drone
@@ -448,6 +482,7 @@ and each one is either there, half there, or missing.
 | Hundreds of monsters | 55 characters in eleven families (ten with models) | one family is ~1 hour, 53 Meshy credits and six Gemini calls; ten were made in one session |
 | Stylised, chunky, readable 3D characters | ✅ every model is image-to-3D from a stylised concept in Summoners War proportions, with a painted lighting ramp, a rim light and a per-element recolour | an outline pass |
 | Melee units that close and strike, hits that land | ✅ a dash to the victim for single-target attack clips, a white flash on the hit, the camera leans into every action | impact frames read off each clip |
+| 3D battle stages the camera moves around | ✅ floating ruin platforms with props, fire, mist and a painted distance; a stone summoning circle | more props per pantheon; a Greek set on a Greek chapter |
 | A living island: monsters wander, buildings animate, day and night | a painting with plaques | two phases below |
 | Landscape only | portrait | one build setting, a re-solved battle camera, a compact HUD, a wide island painting |
 | Server, accounts, live events, guilds, real-time arena | none, all local | a backend; out of scope for the build in this repository |

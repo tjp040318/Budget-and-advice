@@ -115,6 +115,55 @@ enum VFXLibrary {
         return system
     }
 
+    /// A brazier's fire: an endless rise of bright motes from a small disc,
+    /// fast and short-lived, in the flame's colour.
+    static func flame(tint: UIColor, scale: Float) -> SCNParticleSystem {
+        let system = base(scale: scale)
+        system.loops = true
+        system.emissionDuration = 1.0
+        system.idleDuration = 0
+        system.birthRate = 34
+        system.birthLocation = .volume
+        system.emitterShape = SCNCylinder(radius: CGFloat(0.22 * scale), height: 0.02)
+        system.particleSize = CGFloat(0.11 * scale)
+        system.particleSizeVariation = CGFloat(0.05 * scale)
+        system.particleVelocity = 1.3
+        system.particleVelocityVariation = 0.5
+        system.spreadingAngle = 12
+        system.emittingDirection = SCNVector3(0, 1, 0)
+        system.particleColor = tint
+        system.particleColorVariation = SCNVector4(0.06, 0.08, 0.02, 0)
+        system.particleLifeSpan = 0.75
+        system.particleLifeSpanVariation = 0.3
+        system.acceleration = SCNVector3(0, 1.6, 0)
+        system.isAffectedByGravity = false
+        return system
+    }
+
+    /// Slow motes in the air over a stage: few, small, long-lived, drifting
+    /// through a box volume.
+    static func dust(tint: UIColor, volume: SCNVector3) -> SCNParticleSystem {
+        let system = base(scale: 1)
+        system.loops = true
+        system.emissionDuration = 1.0
+        system.idleDuration = 0
+        system.birthRate = 7
+        system.birthLocation = .volume
+        system.emitterShape = SCNBox(width: CGFloat(volume.x), height: CGFloat(volume.y), length: CGFloat(volume.z), chamferRadius: 0)
+        system.particleSize = 0.035
+        system.particleSizeVariation = 0.02
+        system.particleVelocity = 0.12
+        system.particleVelocityVariation = 0.1
+        system.spreadingAngle = 180
+        system.emittingDirection = SCNVector3(0, 1, 0)
+        system.particleColor = tint.withAlphaComponent(0.6)
+        system.particleLifeSpan = 7
+        system.particleLifeSpanVariation = 3
+        system.acceleration = SCNVector3(0, 0.02, 0)
+        system.isAffectedByGravity = false
+        return system
+    }
+
     /// The awakened aura: a thin, endless rise of light from a disc at the
     /// feet. Attached to a unit's model node, not spawned and removed.
     static func aura(tint: UIColor, scale: Float) -> SCNParticleSystem {
