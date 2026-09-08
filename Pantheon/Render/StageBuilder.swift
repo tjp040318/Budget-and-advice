@@ -93,9 +93,12 @@ enum StageBuilder {
             Placement(asset: "prop_sphinx", position: SCNVector3(-6.0, 0, -0.4), yaw: 90, standIn: .block),
             Placement(asset: "prop_sphinx", position: SCNVector3(6.0, 0, -0.4), yaw: -90, standIn: .block),
         ]
+        // All behind the enemy line: the two beside the player's line were
+        // where the impact shot's camera lands, and one arena frame was the
+        // inside of a bowl.
         let braziers = [
-            SCNVector3(-6.0, 0, 2.4), SCNVector3(6.0, 0, 2.4),
-            SCNVector3(-4.0, 0, -5.4), SCNVector3(4.0, 0, -5.4),
+            SCNVector3(-6.2, 0, -4.4), SCNVector3(6.2, 0, -4.4),
+            SCNVector3(-3.8, 0, -5.6), SCNVector3(3.8, 0, -5.6),
         ]
         switch environment {
         case .duatGate:
@@ -190,12 +193,12 @@ enum StageBuilder {
 
         let floor = greek ? "floor_marble" : "floor_sandstone"
         stage.addChildNode(platform(radius: 5.6, thickness: 1.4, floor: floor, repeats: 3,
-                                    tint: nil, rock: "rock_cliff", centre: SCNVector3(0, -0.3, -0.6)))
+                                    tint: "#A08A6E", rock: "rock_cliff", centre: SCNVector3(0, -0.3, -0.6)))
         // The dais the figure stands on, a step up from the platform.
         let dais = SCNCylinder(radius: 2.4, height: 0.3)
         dais.radialSegmentCount = 48
         dais.materials = [rockMaterial("rock_cliff", repeats: SCNVector3(4, 1, 1)),
-                          floorMaterial(floor, repeats: 2.2, tint: nil),
+                          floorMaterial(floor, repeats: 2.2, tint: "#A08A6E"),
                           rockMaterial("rock_cliff", repeats: SCNVector3(1, 1, 1))]
         let daisNode = SCNNode(geometry: dais)
         daisNode.position = SCNVector3(0, -0.15, 0)
@@ -203,22 +206,25 @@ enum StageBuilder {
 
         stage.addChildNode(runeRing(radius: 1.95, tint: tint))
 
+        // Everything stands behind the figure and to its left: the camera
+        // is offset so the figure lands on the left of the screen and the
+        // words on the right, and a pillar under the words was noise.
         let pillarAsset = greek ? "prop_doric_column" : "prop_lotus_column"
-        for angle in [157.5, 202.5, 112.5, 247.5, 67.5, 292.5] as [Float] {
+        for angle in [165, 190, 215, 240] as [Float] {
             let radians = angle * .pi / 180
             let position = SCNVector3(sin(radians) * 4.4, 0, cos(radians) * 4.4)
             stage.addChildNode(prop(Placement(asset: pillarAsset, position: position, yaw: 0, scale: 0.78)))
         }
         let brazierAsset = greek ? "prop_tripod_brazier" : "prop_brazier"
-        for angle in [135.0, 225.0] as [Float] {
+        for angle in [200.0, 235.0] as [Float] {
             let radians = angle * .pi / 180
             stage.addChildNode(brazier(asset: brazierAsset, at: SCNVector3(sin(radians) * 3.6, 0, cos(radians) * 3.6),
                                        flame: tint.mixed(with: .orange, amount: 0.4)))
         }
         if greek {
-            stage.addChildNode(prop(Placement(asset: "prop_temple_ruin", position: SCNVector3(0, 0, -6.2), scale: 0.9, standIn: .none)))
+            stage.addChildNode(prop(Placement(asset: "prop_temple_ruin", position: SCNVector3(-1.4, 0, -6.4), scale: 0.9, standIn: .none)))
         } else {
-            stage.addChildNode(prop(Placement(asset: "prop_anubis_colossus", position: SCNVector3(0, 0, -6.4), scale: 0.75, standIn: .none)))
+            stage.addChildNode(prop(Placement(asset: "prop_anubis_colossus", position: SCNVector3(-1.6, 0, -6.6), scale: 0.75, standIn: .none)))
         }
 
         for plane in mistPlanes(count: 5, radius: 4.6, tint: tint.mixed(with: .white, amount: 0.6), seed: 7) {
@@ -256,6 +262,9 @@ enum StageBuilder {
         let count = Int(radius * 2.6)
         for index in 0..<count {
             let angle = Float(index) / Float(count) * 2 * .pi + Float(rng.unit()) * 0.15
+            // None on the front arc: the camera sits outside the rim there
+            // and a close shot that swings low would land inside a boulder.
+            if cos(angle) > 0.72 { continue }
             let size = CGFloat(0.5 + rng.unit() * 0.9) * thickness * 0.55
             let boulder = SCNSphere(radius: size)
             boulder.segmentCount = 10

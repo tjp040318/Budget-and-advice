@@ -38,6 +38,14 @@ struct SummonRevealView: View {
         ZStack {
             backdrop
 
+            // The set fills the screen edge to edge behind the words: an
+            // inset view showed its own rectangle where the floor stopped.
+            if !showAll, let current {
+                SummonStageView(result: current, revealed: revealed)
+                    .id(current.id)
+                    .ignoresSafeArea()
+            }
+
             if showAll {
                 grid
             } else if let current {
@@ -124,16 +132,8 @@ struct SummonRevealView: View {
     /// a short screen gives the figure its full height.
     private func single(_ result: SummonResult) -> some View {
         VStack(spacing: 0) {
-            ZStack {
-            // The set fills the whole view and is there through the charge —
-            // the rune ring glowing, the braziers burning — and the figure
-            // comes in on the beam when the reveal fires. The camera stands a
-            // little to the right so the figure lands on the left, under the
-            // words' half of the screen there is only the dais's edge and sky.
-            SummonStageView(result: result, revealed: revealed)
-                .id(result.id)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
+            // The stage is behind this whole view (see `body`), its camera
+            // offset so the figure lands on the left; the words take the right.
             HStack(spacing: 12) {
             Color.clear
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -213,7 +213,6 @@ struct SummonRevealView: View {
                 .animation(.easeOut(duration: 0.3), value: detailsShown)
             }
             .frame(maxWidth: .infinity)
-            }
             }
 
             Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
@@ -478,7 +477,7 @@ struct SummonStageView: UIViewRepresentable {
         // Key from the front-left in the element's colour.
         let key = SCNLight()
         key.type = .directional
-        key.intensity = 1_050
+        key.intensity = 850
         // Mostly white: a key light in the element colour on top of the
         // element recolour and rim made the fourth tour's Sekhmet one shade
         // of red. The rim carries the colour; the key shows the design.
