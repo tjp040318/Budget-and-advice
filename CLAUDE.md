@@ -110,8 +110,11 @@ environment can and cannot do. The short version:
   --image Art/Concepts/<file>.png --height H` runs Meshy image-to-3D on it,
   then rigs and animates. `--until preview` stops after the mesh so the
   thumbnail can be judged before the rig and clips are paid for. Three are
-  under way as `*_v2`; judge them with `tools/preview.py` and ship the
-  winner under the family's name.
+  done for Sekhmet (`sekhmet_v2`), Zeus (`zeus_v2`) and Anubis
+  (`anubis_v3`; `anubis_v2` failed to rig because of a staff beside the
+  figure — keep props in the hand). `python3 tools/mesh.py <asset>_v2 --as
+  <asset>` ships a remake under the roster name. Every family in the bundle
+  is concept-first now; judge a new one with `tools/preview.py --sheet`.
 - `tools/character.py` is the one place a rigged character is read (Blender
   USDZ or Meshy GLB), canonicalised, decimated, written and verified;
   `tools/mesh.py` runs a family through it, `tools/glb2usd.py` converts one

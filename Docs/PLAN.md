@@ -387,11 +387,22 @@ and a third is under way:
   full-body figure from the card — ornate armour, a big silhouette, a strict
   three-colour palette, an A-pose on a plain ground — and
   `tools/meshy.py generate <asset> --image <that png>` runs Meshy's
-  image-to-3D on it instead of text-to-3D, then rigs and animates as before.
-  The three concepts are in `Art/Concepts/`; the image-to-3D tasks for
-  `sekhmet_v2`, `anubis_v2` and `zeus_v2` are in their manifests. When a
-  result beats the text-to-3D model in `tools/preview.py`, it ships under
-  the family's name.
+  image-to-3D on it instead of text-to-3D, then rigs and animates as before,
+  and `tools/mesh.py <asset>_v2 --as <asset>` ships the result under the
+  family's name so the game's `ModelSpec` never changes. Done for all three
+  in one session, and the difference is not subtle: Sekhmet is a black
+  lioness in a gold sun-disc crown with a cobra, a lapis and carnelian
+  collar, a crimson war skirt with hanging gold plates and a khopesh that
+  follows her hand through every clip; Zeus wears gold scale armour and a
+  gold-edged himation and holds a thunderbolt; Anubis has a striped nemes, a
+  gold and obsidian chest plate and a lapis-panelled kilt. Zero smeared
+  triangles in any file. Costs: 30 credits for the image-to-3D (texturing
+  included), 5 for the rig, 18 for six clips — 53 a character, the same as
+  text-to-3D. One lesson: Meshy's rigger refused the first Anubis concept
+  ("pose estimation failed") because of the tall staff standing beside him;
+  the empty-handed redo rigged at once. Props go in the hand or nowhere.
+  The concepts are in `Art/Concepts/`; the superseded text-to-3D exports
+  are in git history (before this commit) and no longer in the checkout.
 - **Still to do:** an outline pass (a back-face expansion or an
   `SCNTechnique` edge pass), and per-element costume *variants* rather than
   recolours, which is how the genre makes five characters of one.

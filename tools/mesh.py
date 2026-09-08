@@ -75,7 +75,11 @@ def source_for(name):
 def clip_sources(name):
     out = {}
     for p in sorted(SOURCE_DIR.glob(f"{name}_*.*")):
-        if p.suffix.lower() not in (".usdz", ".glb") or p.stem.endswith("_lod"):
+        if p.suffix.lower() not in (".usdz", ".glb"):
+            continue
+        # `download --include-unrigged` leaves the unrigged stages beside the
+        # clips as <asset>_image / _preview / _refine; they carry no skeleton.
+        if p.stem.endswith(("_lod", "_image", "_preview", "_refine")):
             continue
         out.setdefault(p.stem, p)          # .usdz wins over .glb for the same clip
     return list(out.values())
@@ -96,11 +100,15 @@ def run_family(name, args):
     if src is None:
         sys.exit(f"no {name}.usdz or {name}.glb in {SOURCE_DIR.relative_to(REPO)} - "
                  f"`python3 tools/meshy.py download {name}` puts one there")
-    height = args.height or roster_height(name)
+    # A concept-first remake is generated under another asset name
+    # (`sekhmet_v2`) and ships under the roster's (`--as sekhmet`), so the
+    # game's ModelSpec never changes.
+    out_name = args.as_name or name
+    height = args.height or roster_height(out_name)
     if height is None:
         height = 1.9
-        print(f"no ModelSpec for '{name}' in UnitDatabase.swift; assuming {height} m (pass --height)")
-    print(f"{name}: {src.relative_to(REPO)}  ->  {BUNDLE_DIR.relative_to(REPO)}/   target height {height} m")
+        print(f"no ModelSpec for '{out_name}' in UnitDatabase.swift; assuming {height} m (pass --height)")
+    print(f"{name}: {src.relative_to(REPO)}  ->  {BUNDLE_DIR.relative_to(REPO)}/{out_name}*   target height {height} m")
 
     print(f"  reading {src.name}")
     base = character.read(src)
@@ -110,9 +118,10 @@ def run_family(name, args):
     if base.anim and not args.keep_base_animation:
         base.anim = None     # the clips carry the motion; the base is the bind pose
     problems = []
-    problems += build(base, BUNDLE_DIR / f"{name}.usdz", args.tris, args.texture, height)["problems"]
+    base.name = out_name
+    problems += build(base, BUNDLE_DIR / f"{out_name}.usdz", args.tris, args.texture, height)["problems"]
     if args.lod:
-        problems += build(base, BUNDLE_DIR / f"{name}_lod.usdz", args.lod, max(512, args.texture // 2), height)["problems"]
+        problems += build(base, BUNDLE_DIR / f"{out_name}_lod.usdz", args.lod, max(512, args.texture // 2), height)["problems"]
 
     clips = {}
     for clip in clip_sources(name):
@@ -145,11 +154,12 @@ def run_family(name, args):
         clips["hit_react"] = character.synthesize_flinch(source)
 
     for clip_name, c in clips.items():
-        print(f"\n  building {name}_{clip_name}")
-        problems += build(c, BUNDLE_DIR / f"{name}_{clip_name}.usdz", args.clip_tris, args.clip_texture, height)["problems"]
+        c.name = out_name
+        print(f"\n  building {out_name}_{clip_name}")
+        problems += build(c, BUNDLE_DIR / f"{out_name}_{clip_name}.usdz", args.clip_tris, args.clip_texture, height)["problems"]
 
-    total = sum(p.stat().st_size for p in BUNDLE_DIR.glob(f"{name}*.usdz"))
-    print(f"\n  {name}: {total / 1048576:.1f} MB in the bundle folder")
+    total = sum(p.stat().st_size for p in BUNDLE_DIR.glob(f"{out_name}*.usdz"))
+    print(f"\n  {out_name}: {total / 1048576:.1f} MB in the bundle folder")
     if problems:
         print(f"  {len(problems)} problem(s):")
         for p in problems:
@@ -173,6 +183,7 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("source", help="an asset name (whole family from Art/Models) or a .usdz/.glb path")
     ap.add_argument("--height", type=float, help="metres; default is ModelSpec.height from UnitDatabase.swift")
+    ap.add_argument("--as", dest="as_name", help="ship under this asset name (a remake generated as <name>_v2 ships as <name>)")
     ap.add_argument("--tris", type=int, default=5000, help="triangle target for the shipped model")
     ap.add_argument("--lod", type=int, default=2500, help="also emit <name>_lod at this target (0 = skip)")
     ap.add_argument("--texture", type=int, default=1024, help="max texture edge for the shipped model")
