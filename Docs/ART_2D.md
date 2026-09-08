@@ -114,6 +114,20 @@ portrait_shabti.png   portrait_serpopard.png   portrait_sun_scarab.png
 portrait_sandstone_sentinel.png   portrait_ammit.png   portrait_apep.png
 ```
 
+### Shabti — the common tier
+
+Five files, 1024×1024, plus their `_cut` versions from `tools/cutouts.py`:
+
+```
+portrait_shabti_ember.png  portrait_shabti_tide.png  portrait_shabti_gale.png
+portrait_shabti_radiance.png  portrait_shabti_umbra.png
+```
+
+No base prompt: each is a `--ref` recolour of the enemy's `portrait_shabti.png`
+with the Anubis table's line, "keep the same shabti figure, pose, framing and
+composition exactly". The family has no mesh, so in the world it stands as the
+cut-out sprite, the way the enemies do — which is why the cut-outs exist.
+
 ---
 
 ### Sekhmet — the second family
