@@ -40,41 +40,52 @@ enum ModelOrientation {
         return found ? (lo, hi) : nil
     }
 
-    /// Rotates `model` so its longest axis is +Y and translates it so its
-    /// lowest point sits on y = 0. `model` must already be a child of `parent`.
-    /// Returns a one-line description of what it did, for the debug log.
+    /// Stands a model up, scales it to its declared height, and puts it on
+    /// the ground at the origin. `model` must already be a child of `parent`.
+    /// Returns a one-line description for the debug log.
+    ///
+    /// Scale is the part that cannot be skipped. A generator exports in
+    /// whatever units its own pipeline used — the Anubis export measures 320
+    /// units tall with `metersPerUnit = 1`, so taken at face value he is a
+    /// 320-metre statue standing 100 metres off the origin. Nothing downstream
+    /// can recover from that: the camera frames two metres of world, so the
+    /// figure fills the screen with an arbitrary slice of its own shin.
     @discardableResult
-    static func standUp(_ model: SCNNode, in parent: SCNNode) -> String {
+    static func normalise(_ model: SCNNode, in parent: SCNNode, targetHeight: Float) -> String {
         guard let box = bounds(of: model, in: model) else { return "no geometry" }
         let extent = SCNVector3(box.max.x - box.min.x, box.max.y - box.min.y, box.max.z - box.min.z)
-        // Which end of the long axis the mesh mostly occupies. With the origin
-        // at the feet the body extends toward the positive end; if it extends
-        // negative, the head is on the far side and the rotation flips sign.
         let centreX = (box.min.x + box.max.x) * 0.5
         let centreZ = (box.min.z + box.max.z) * 0.5
 
-        var note = "already Y-up"
+        var note = "Y-up"
         if extent.z > extent.y, extent.z > extent.x {
-            // Z is height. Rotate about X so +Z → +Y (or −Z → +Y).
             let sign: Float = centreZ >= 0 ? -1 : 1
             model.eulerAngles.x += sign * .pi / 2
-            note = "Z-up export (\(fmt(extent))) — pitched \(Int(sign * -90))°"
+            note = "Z-up, pitched \(Int(sign * -90))°"
         } else if extent.x > extent.y, extent.x > extent.z {
-            // X is height. Rotate about Z so +X → +Y (or −X → +Y).
             let sign: Float = centreX >= 0 ? 1 : -1
             model.eulerAngles.z += sign * .pi / 2
-            note = "X-up export (\(fmt(extent))) — rolled \(Int(sign * 90))°"
+            note = "X-up, rolled \(Int(sign * 90))°"
         }
 
-        // Ground it. Recomputed in the parent's space so the rotation above is
-        // included; the model has unit scale at this point so the offset is in
-        // metres.
+        // Measure again in the parent's frame so the rotation above is included,
+        // then scale the standing height to what the roster says the unit is.
+        guard let stood = bounds(of: model, in: parent) else { return note + ", no bounds" }
+        let standingHeight = stood.max.y - stood.min.y
+        guard standingHeight > 0.0001, targetHeight > 0 else { return note + ", zero height" }
+
+        let factor = targetHeight / standingHeight
+        model.scale = SCNVector3(model.scale.x * factor, model.scale.y * factor, model.scale.z * factor)
+        note += String(format: ", %.1f units → %.2f m (×%.4f)", standingHeight, targetHeight, factor)
+
+        // Finally centre it over the origin and stand it on the ground. A
+        // generator puts the origin wherever its own bind pose happened to sit,
+        // which for this export is about a third of the way up the torso and a
+        // hundred units to one side.
         if let placed = bounds(of: model, in: parent) {
-            let lift = -placed.min.y
-            if abs(lift) > 0.001 {
-                model.position.y += lift
-                note += String(format: ", feet lifted %.2f m", lift)
-            }
+            model.position.x -= (placed.min.x + placed.max.x) * 0.5
+            model.position.z -= (placed.min.z + placed.max.z) * 0.5
+            model.position.y -= placed.min.y
         }
         return note
     }

@@ -111,7 +111,7 @@ final class ModelLibrary {
         // the hand-tuned corrections are applied on top. Placeholders are
         // built upright and skip it.
         if !isStandIn {
-            let note = ModelOrientation.standUp(model, in: container)
+            let note = ModelOrientation.normalise(model, in: container, targetHeight: spec.height)
             if !orientationLogged.contains(assetName) {
                 orientationLogged.insert(assetName)
                 log("'\(assetName)': \(note)")
