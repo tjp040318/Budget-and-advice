@@ -3,15 +3,33 @@ import SwiftUI
 /// The app's tab shell.
 struct RootView: View {
     @EnvironmentObject private var store: GameStore
-    @State private var tab: Tab = .campaign
+    @State private var tab: Tab = .island
     @Environment(\.scenePhase) private var scenePhase
 
     enum Tab: Hashable {
-        case campaign, arena, summon, collection, settings
+        case island, campaign, arena, summon, collection, settings
+
+        init(_ destination: IslandDestination) {
+            switch destination {
+            case .campaign: self = .campaign
+            case .arena: self = .arena
+            case .summon: self = .summon
+            case .collection: self = .collection
+            case .settings: self = .settings
+            }
+        }
     }
 
     var body: some View {
         TabView(selection: $tab) {
+            // The hub. Every landmark on it is a tab below, so the island is a
+            // way in rather than a fifth place things live.
+            IslandView { destination in
+                withAnimation { tab = Tab(destination) }
+            }
+            .tabItem { Label("Island", systemImage: "sun.haze.fill") }
+            .tag(Tab.island)
+
             CampaignView()
                 .tabItem { Label("Campaign", systemImage: "map.fill") }
                 .tag(Tab.campaign)
