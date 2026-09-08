@@ -65,6 +65,15 @@ struct TourView: View {
         }
         .onReceive(timer) { _ in
             if Self.pinnedStep == nil { tick() }
+            // The battles play themselves a command at a time, so the frames
+            // catch a dash, a hit and a flash rather than a line of units
+            // waiting for a thumb. Auto-battle would win before the first
+            // frame; one basic attack every four seconds is a fight in
+            // progress for the whole step.
+            for model in [battleModel, arenaModel].compactMap({ $0 }) {
+                model.selectSkill(0)
+                model.confirmTarget()
+            }
         }
     }
 

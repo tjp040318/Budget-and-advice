@@ -558,7 +558,10 @@ turns "vibe coded" into "engineered".
    app's stdout and stderr with the frameworks' os_log lines mirrored in,
    plus `system-log.txt` for the process) and `tools/ciframes.py` prints the
    lines that matter — the `[ModelLibrary]` block, anything that says error
-   or shader.
+   or shader. The tour photographs an arena battle as well as the campaign
+   one, and both battles issue a basic attack every four seconds, so the
+   frames catch dashes, hits and flashes instead of a line waiting for a
+   command.
 4. On the phone, **More → Diagnostics** holds everything the app printed,
    with Copy and Share; and the **Playtest Log** artifact takes issue
    reports the session reads back from its database on request.
