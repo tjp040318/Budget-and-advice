@@ -44,7 +44,7 @@ enum IslandDatabase {
             subtitle: "Call a god out of the Duat",
             systemImage: "sparkles",
             destination: .summon,
-            anchor: CGPoint(x: 0.50, y: 0.60),
+            anchor: CGPoint(x: 0.52, y: 0.50),
             unlockLevel: 1,
             upgradeLevels: [8, 20],
             accentHex: "#7FE0FF"
@@ -55,7 +55,7 @@ enum IslandDatabase {
             subtitle: "The campaign",
             systemImage: "map.fill",
             destination: .campaign,
-            anchor: CGPoint(x: 0.24, y: 0.72),
+            anchor: CGPoint(x: 0.28, y: 0.71),
             unlockLevel: 1,
             upgradeLevels: [10, 25],
             accentHex: "#F2A03C"
@@ -66,7 +66,7 @@ enum IslandDatabase {
             subtitle: "Other summoners' defences",
             systemImage: "trophy.fill",
             destination: .arena,
-            anchor: CGPoint(x: 0.77, y: 0.68),
+            anchor: CGPoint(x: 0.68, y: 0.70),
             unlockLevel: 1,
             upgradeLevels: [12, 30],
             accentHex: "#FF5B57"
@@ -77,7 +77,7 @@ enum IslandDatabase {
             subtitle: "Everyone you have summoned",
             systemImage: "person.3.fill",
             destination: .collection,
-            anchor: CGPoint(x: 0.30, y: 0.52),
+            anchor: CGPoint(x: 0.345, y: 0.32),
             unlockLevel: 1,
             upgradeLevels: [6, 15],
             accentHex: "#F5D57A"
@@ -88,7 +88,7 @@ enum IslandDatabase {
             subtitle: "Account, sound, assets",
             systemImage: "gearshape.fill",
             destination: .settings,
-            anchor: CGPoint(x: 0.70, y: 0.49),
+            anchor: CGPoint(x: 0.665, y: 0.45),
             unlockLevel: 1,
             upgradeLevels: [],
             accentHex: "#9E97C4"

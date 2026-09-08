@@ -1,9 +1,11 @@
 # The plan
 
 Written after opening the shipped `.usdz` files with Pixar's USD library rather
-than guessing from screenshots, and revised after the first session in which
-Meshy could be driven from this environment. The measurements below are from the
-actual files and they change the answer to "can this look like Summoners War".
+than guessing from screenshots, revised after the first session in which Meshy
+could be driven from this environment, and again after the session in which
+its files could finally be fetched and both new families were built and
+painted. The measurements below are from the actual files and they change the
+answer to "can this look like Summoners War".
 
 ---
 
@@ -64,6 +66,32 @@ belt-and-braces step — a cloned skinner is rebound to its own bones — and it
 logs the bounding box and skinner it actually built, so the next console paste
 settles what SceneKit does with a clean file.
 
+## What the third look found: Meshy's GLB
+
+The first Meshy file through the pipeline verified at **190 metres tall** in
+every animated frame. The verify step exists for exactly this, and it caught it
+before the phone did. The cause was a convention, not a corruption:
+
+1. Meshy's rigged GLB (a Blender export) parents the mesh to an `Armature`
+   node scaled 0.01 — the joints are in centimetres — while the vertices are
+   already in metres. glTF says a skinned mesh node's own transform is
+   ignored, so which frame the vertices were authored in is the exporter's
+   choice: the world for Blender, the mesh node's frame for the older Khronos
+   samples, an ancestor's for `RiggedSimple`. The reader assumed the mesh
+   node's frame, read a 2 cm figure, and scaled the skeleton by a hundred to
+   compensate. It now recovers the frame from the joints themselves (inverse
+   bind × rest world is one matrix, the same for every joint when rest equals
+   bind) and only falls back to assuming when they disagree. Verified on all
+   five Khronos rigs, which between them use three conventions, and on both
+   families.
+2. The material wires the **base colour into emission at full strength**. The
+   game deliberately keeps an export's emissive map (glowing runes are
+   authored), so shipped as-is both characters would have rendered self-lit
+   and flat. An emissive that is the base colour image is dropped.
+3. Meshy's "Hit Reaction" clip is a real flinch — hips sink 8 cm, the head
+   rocks 10 cm, feet stay planted, the pose recovers — so it ships as
+   exported. Anubis's remains the synthesised one.
+
 ## Polygons: the actual comparison
 
 | | triangles |
@@ -80,6 +108,24 @@ anubis_lod.usdz          197,879 → 1,499 tris    22.0 → 0.5 MB    512 textur
 anubis_<clip>.usdz  × 6  197,879 → 1,499 tris    21.9 → 0.1–0.2 MB each, 128 texture
                                                 153.5 → 3.0 MB in the app bundle, 9 s
 ```
+
+And over the two Meshy families, which arrive lighter (Meshy remeshes to the
+requested 30,000 quads):
+
+```
+sekhmet.usdz              56,281 → 5,000 tris    6.8 → 1.7 MB   1024 texture
+sekhmet_lod.usdz          56,281 → 1,589 tris    6.8 → 0.5 MB    512 texture
+sekhmet_<clip>.usdz × 6   56,281 → 1,589 tris    6.9 → 0.2–0.3 MB each, 128 texture
+                                                48.3 → 3.5 MB in the app bundle
+zeus.usdz                 55,839 → 5,000 tris    7.2 → 1.8 MB   1024 texture
+zeus_lod.usdz             55,839 → 1,980 tris    7.2 → 0.5 MB    512 texture
+zeus_<clip>.usdz × 6      55,839 → 1,980 tris    7.3 → 0.2–0.3 MB each, 128 texture
+                                                51.1 → 3.8 MB in the app bundle
+```
+
+Sekhmet verifies at 2.001 m, Zeus at 2.146 m against 2.15 (the decimator
+shaves the crown), both with feet at y = 0, facing +Z, four influences, rest
+equal to bind to 1e-15, and every animated frame life-size.
 
 Skin weights carry across by nearest-neighbour remapping from the source
 vertices, and every output was re-read with USD afterwards: 24 joints, every
@@ -144,10 +190,10 @@ rigs and on the whole Anubis family by re-skinning the written files in numpy.
 The balance was 1,186 credits before Sekhmet, 1,133 after her and 1,080 after
 Zeus: roughly twenty more characters at this rate.
 
-**What is still closed.** `assets.meshy.ai`, where the finished files are
-served from, is refused by the environment's network policy, so `download`
-could not run. The tasks are done and waiting; nothing is lost. Adding the host
-is step 1 below.
+**Nothing is closed any more.** `assets.meshy.ai` and `cdn.meshy.ai` are on the
+allow-list; `download` fetched all fourteen files (seven per family, 7 MB
+each) in under a minute, and the untouched exports are committed in
+`Art/Models/` beside the manifests, the same way the Anubis sources are.
 
 ---
 
@@ -165,16 +211,17 @@ is step 1 below.
   screen rather than stretched over it
 - [x] Portraits, the summon stage, the island, an app icon; the gacha only
   produces characters whose art has shipped
-- [ ] **Confirm on device.** Needs the `[ModelLibrary] 'anubis':` console line.
-  The bundle now holds 8 model files (the `_lod` is new); Sekhmet shows a
-  grey dot and letter plates until her files land, which is correct.
+- [ ] **Confirm on device.** Needs the `[ModelLibrary]` console block. The
+  bundle now holds 24 model files, eight per family; nothing in it has been
+  seen on a phone since the canonical rewrite, and Sekhmet and Zeus have
+  never been seen at all.
 
 ### Phase 1 — the model pipeline *(done)*
 
 Run in anger and measured above. The pipeline is `Art/Models` → `mesh.py` →
 `Pantheon/Resources/Models`, one command per family.
 
-### Phase 2 — a second and third character family *(Sekhmet and Zeus: code and models done, art pending)*
+### Phase 2 — a second and third character family *(Sekhmet and Zeus: done, unseen on device)*
 
 Per family: a kit, a balance pass, five portraits, one mesh through Meshy, and
 the pipeline above.
@@ -186,9 +233,8 @@ the pipeline above.
   - [x] Kit, five variants, in `UnitDatabase.swift`; in the summon pool
   - [x] Balance model updated; the duel against Anubis sits at 81–88% for her
   - [x] Model, rig and six clips generated (task ids in the manifest)
-  - [ ] Download, convert, decimate — needs `assets.meshy.ai` (step 1)
-  - [ ] Five portraits — needs `GEMINI_API_KEY` in the environment (step 2);
-    the prompt is in `Docs/ART_2D.md`
+  - [x] Downloaded, converted, decimated, verified: 3.5 MB in the bundle
+  - [x] Five portraits, one generation and four reference edits; in the gacha
 - **Zeus** — Greek, the roster's control archetype and the first unit outside
   Egypt. Every variant's Thunderclap hits the enemy line and takes its turn
   away (stun, freeze, sleep, attack-bar knockback, provoke); the Keraunos
@@ -201,9 +247,9 @@ the pipeline above.
   - [x] Model, rig and six clips generated (task ids in `Art/Models/zeus.meshy.json`)
   - [x] Forked-lightning effects for all three skills (`VFXLibrary`), the sky
     flashes with them, and a synthesised thunder crack (`thunder.wav`)
-  - [ ] Download, convert, decimate — needs `assets.meshy.ai` (step 1)
-  - [ ] Five portraits — needs `GEMINI_API_KEY` in the environment (step 2);
-    the prompt is in `Docs/ART_2D.md`
+  - [x] Downloaded, converted, decimated, verified: 3.8 MB in the bundle
+  - [x] Five portraits and the "Olympus Stirs" banner, which the game now
+    offers; all fifteen characters are in the summon pool
 - **Thoth** — Radiance support, a cleanse and an attack-bar push, so the
   Egyptians have a second support. Next.
 
@@ -219,9 +265,14 @@ is: the app now opens on it.
   anything actionable (energy, scrolls, arena attacks), a count badge, a tier
   mark, locked state with a shake
 - [x] A 1536 × 2048 backdrop — painted procedurally by `tools/island.py` so
-  the screen has a horizon today
-- [ ] The real painting: one Gemini prompt, in `Docs/ART_2D.md` §6, once the
-  key is in the environment
+  the screen had a horizon while the key was missing
+- [x] The real painting. Two Gemini calls, not one: a 3:4 generation spread
+  the island across a width a phone crops to 62%, so the arena would have
+  been cut in half. It was generated at 9:16 instead and the sea extended to
+  3:4 with a reference edit that left the island in place (measured: the
+  centre differs by 7/255 with its best alignment at zero shift). The five
+  anchors in `IslandDatabase` were then measured off the painting; the
+  numbers are in `Docs/ART_2D.md` §6.
 - [ ] Upgrade states of the buildings: a second and third painting per tier
 
 ### Phase 4 — sound and feel
@@ -242,20 +293,19 @@ Arena rating curve, a second campaign chapter, daily energy, then TestFlight.
 
 ## What to do next
 
-1. **Open the download host.** claude.ai/code → cloud icon above the message
-   box → hover the environment → gear → **Network access: Custom** → add
-   `assets.meshy.ai` (and `cdn.meshy.ai`, for animation previews) beside
-   `api.meshy.ai` → keep **"Also include default list of common package
-   managers"** ticked → save. New sessions only.
-2. **Add the Gemini key** in the same dialog under **API credentials** as
-   `GEMINI_API_KEY`. That opens the host and keeps the key out of the session.
-3. **Pull, build, run** and send two things: the `[ModelLibrary]` block from
-   the console (`Docs/PLAYTEST.md` §1 says what each line means) and a
-   screenshot of Reed Fields. That paste is what decides whether the canonical
-   file is enough or SceneKit's importer needs a further workaround.
-4. **In a new session**, ask for Sekhmet and Zeus downloaded and built, the
-   ten portraits, and the island painting — `Docs/ART_2D.md` §1 and §6 have the
-   prompts; about half an hour together.
+1. **Pull, build, run** and send the `[ModelLibrary]` block from the console
+   (`Docs/PLAYTEST.md` §1 says what each line means) with screenshots of the
+   island, the collection, an Olympus Stirs reveal and a battle with Sekhmet
+   or Zeus on the team. Three families of canonical files are in the bundle
+   and none has been seen since the rewrite; that paste decides whether the
+   canonical file is enough or SceneKit's importer needs a further workaround.
+2. **If Sekhmet or Zeus look wrong** on the phone, the first thing to check is
+   the console's bbox line against the numbers in `Docs/PLAYTEST.md` §1: the
+   file says 2.00 and 2.15 m with feet at zero, so a wrong figure on screen is
+   the importer's doing and the paste will show where.
+3. **Then Thoth**, the second Egyptian support, by the same four commands and
+   the same two Gemini calls — an hour of wall clock, 53 credits, no new
+   tooling — and a Greek campaign chapter so Zeus has somewhere to fight.
 
 ---
 
@@ -267,11 +317,13 @@ Arena rating curve, a second campaign chapter, daily energy, then TestFlight.
 | Sound effects | ✅ synthesised, in the repo |
 | Read, normalise, decimate, re-export 3D | ✅ proven on the whole Anubis family |
 | **Generate, rig and animate a 3D character** | ✅ **proven twice: Sekhmet and Zeus, 53 credits and ~12 minutes each** |
-| Convert Meshy's rigged GLB to USDZ | ✅ written and verified on sample rigs; not yet on a Meshy file |
-| Fetch the finished files | ❌ until `assets.meshy.ai` is on the allow-list |
+| Convert Meshy's rigged GLB to USDZ | ✅ proven on both families, after one real bug the verify step caught |
+| Fetch the finished files | ✅ fourteen files in under a minute |
+| Paint a family and an island | ✅ eleven portraits, a banner and the island in ~6 minutes of Gemini time |
 | All code, logic, balance, integration | ✅ |
 | Compile or see the running app | ❌ — the reason bugs still reach your phone |
 
-The 3D bottleneck is gone in principle: one command per character, a quarter
-of an hour, two dollars of credits. What remains is one network setting and one
-key, both a minute each in the environment dialog.
+The 3D bottleneck is gone in practice, not just in principle: a character is
+four commands and two Gemini calls, about an hour end to end including the
+waiting, and it arrives verified. The one thing this environment still cannot
+do is look at the result, which is why the next step is yours.

@@ -1,8 +1,9 @@
 # Pantheon
 
 A Summoners War-style gacha RPG for iOS, in SwiftUI and SceneKit, with real 3D
-characters. Egypt first — the Anubis family is fully built, in all five elements,
-the Sekhmet family and the first Greek family, Zeus, are in the code with their models generated — with the roster designed from the ground up to span Greek, Roman, Norse,
+characters. Three families are fully built — Anubis, Sekhmet and the first
+Greek, Zeus: fifteen characters, each with a painted portrait and a rigged,
+animated model — with the roster designed from the ground up to span Greek, Roman, Norse,
 Chinese, Japanese, Hindu, Mesopotamian, Aztec, Celtic, Slavic, Yoruba and
 Polynesian myth, and to cover gods, demigods, heroes, titans, monsters, spirits
 and primordials.
@@ -184,8 +185,8 @@ for arena defence scoring, and unit-tested.
 ## What comes next
 
 - Build it once and clear the first round of compile errors
-- Art for Sekhmet and Zeus: ten portraits and two model downloads, each
-  blocked on one environment setting noted in `Docs/PLAN.md`
+- See Sekhmet and Zeus on a phone: their files verify, the importer has the
+  last word (`Docs/PLAYTEST.md`)
 - A Greek campaign chapter. Zeus is live and leader skills already scope by
   pantheon; Olympus has no stages yet
 - Arena tuning: nothing has checked whether its rating curve is sane

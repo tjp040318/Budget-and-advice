@@ -253,8 +253,22 @@ Leave the **lower third quiet** — the rate text and the pull buttons sit there
 ## 6. The island
 
 One file, `island_bg.png`, 1536×2048 (3:4, so it fills a phone screen with the
-sides cropped a little). `tools/island.py` paints a stand-in; this replaces it
-with the same name and size and nothing else changes.
+sides cropped a little). `tools/island.py` paints a stand-in; the real painting
+replaced it with the same name and size and nothing else changed.
+
+**Paint it in two steps, not one.** A phone shows only the central 62% of a
+3:4 painting's width (`IslandView.fill` crops the sides), and a 3:4 generation
+spreads the island across the whole width, so the arena landed at x = 0.79 and
+would have been cut in half on a phone. What worked: generate at **9:16**
+(`--size 1152x2048`, the prompt below plus "tall narrow portrait format for a
+phone screen, the island fills the frame from near the top to near the bottom
+with only thin margins of sea at the left and right"), then a second call with
+that image as `--ref` and `--size 1536x2048` asking for "more calm evening
+sea on the left and the right; the island, all five structures and the sun
+stay exactly where they are, at the same size". Gemini extended the sea
+without moving the island — the centre of the result differs from the 9:16
+source by a mean of 7/255, with its best alignment at a zero shift — so the
+composition a phone sees is the one that was generated.
 
 > Painted game hub, an island at dusk seen from above at a three-quarter angle,
 > mobile gacha RPG style, painterly and saturated. A low sun on the horizon at
@@ -272,11 +286,15 @@ numbers until they agree:
 
 | Landmark | x | y |
 |---|---|---|
-| Summoning circle | 0.50 | 0.60 |
-| Gate of the Duat | 0.24 | 0.72 |
-| Arena of Souls | 0.77 | 0.68 |
-| Hall of Ka | 0.30 | 0.52 |
-| Obelisk | 0.70 | 0.49 |
+| Summoning circle | 0.52 | 0.50 |
+| Gate of the Duat | 0.28 | 0.71 |
+| Arena of Souls | 0.68 | 0.70 |
+| Hall of Ka | 0.345 | 0.32 |
+| Obelisk | 0.665 | 0.45 |
+
+These are the painting that shipped, measured off it. The anchor is the
+building's footprint; the plaque floats 0.055 above it. The obelisk's anchor
+is its base, so the plaque sits under the shaft rather than across it.
 
 Buildings that upgrade with the player's level are a second and third state of
 this same painting later; the plaques already show the tier.
