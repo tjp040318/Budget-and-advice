@@ -249,15 +249,18 @@ final class BattleSceneController: NSObject {
         let sideSign: Float = combatant.side == .player ? 1 : -1
         // Two ranks of two, so a four-unit team reads clearly from the camera.
         // A landscape frame has the width to spare, so columns sit 2.6 m apart
-        // and ranks 1.5 m deep. Both sides' back ranks stand FURTHER from the
-        // camera than their front ranks — smaller and higher on screen, seen
-        // between the front pair. The first landscape frames had the player's
-        // back rank nearer the camera than the front, so its feet ran off the
-        // bottom edge.
+        // and ranks 1.6 m deep. Both sides' back ranks stand FURTHER from the
+        // camera than their front ranks — smaller and higher on screen — and
+        // are staggered by HALF a column, so the third unit stands in the gap
+        // between the front pair rather than behind one of them. The first
+        // landscape frames had the player's back rank nearer the camera than
+        // the front, so its feet ran off the bottom edge; the next had it
+        // half a metre off the front unit's shoulder, which from a camera 24°
+        // above the floor put Zeus behind Anubis with only his robe showing.
         let column = Float(combatant.slot % 2)
         let rank = Float(combatant.slot / 2)
-        let x = (column - 0.5) * 2.6 + (rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : 0.5)
-        let depth = combatant.side == .player ? (2.2 - rank * 1.5) : (2.2 + rank * 1.5)
+        let x = (column - 0.5) * 2.6 + (rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : 1.3)
+        let depth = combatant.side == .player ? (2.2 - rank * 1.6) : (2.2 + rank * 1.6)
         let z = sideSign * depth
         return SCNVector3(x, 0, z)
     }

@@ -413,23 +413,65 @@ final class ModelLibrary {
 /// A generator's export arrives as photoreal PBR with one flat texture, and
 /// on a phone that reads as clay. The genre's characters read as *drawn*:
 /// lifted shadows, a painted highlight, an edge of light in the element's
-/// colour, and a costume in the element's palette. Three things do that here
-/// and none of them touches the art files:
+/// colour, and a costume in the element's palette. Three shader modifiers do
+/// that here, all on the GPU, and none of them touches the art files:
 ///
-/// 1. A **lighting-model shader modifier**: half-Lambert diffuse (shadows
+/// 1. A **surface shader modifier** recolours the costume per element: every
+///    pixel of the base texture that is clearly coloured and is not skin or
+///    fur takes the element's hue as it is sampled, so the water variant wears
+///    water, not a faintly bluer red. Skin, fur, white linen and black stay as
+///    painted. It runs per fragment, so it costs no memory and no load time.
+///    (The first version did this on the CPU, once per texture and element.
+///    It stalled the main thread for the whole recolour — the summon reveal
+///    stayed dark through a CI tour — and would have kept five copies of every
+///    texture alive.)
+/// 2. A **lighting-model shader modifier**: half-Lambert diffuse (shadows
 ///    lift instead of going black) through a soft two-band ramp, plus a tight
 ///    specular pop, so form reads at a glance the way a painted texture does.
-/// 2. A **fragment shader modifier**: a Fresnel rim in the element's colour,
+/// 3. A **fragment shader modifier**: a Fresnel rim in the element's colour,
 ///    the edge light every gacha character has.
-/// 3. A **per-element recolour of the base texture**: every saturated pixel
-///    that is not skin or fur takes the element's hue, so the water variant
-///    wears water, not a faintly bluer red. Computed once per model and
-///    element and cached; skin, fur, white linen and black stay as painted.
 ///
 /// The PBR clamps stay as they were: roughness in a sane band and metalness
 /// capped, because a fully metallic surface under a flat environment is a
 /// mirror of nothing.
 enum MaterialTuner {
+
+    /// Metal. `_surface.diffuse` is the sampled base colour in linear space,
+    /// so it is taken to sRGB for the hue test (the thresholds were tuned on
+    /// the PNG's own values) and back afterwards. Skin and fur are a warm hue
+    /// between 11° and 38° at moderate saturation; everything else that is
+    /// clearly coloured is rebuilt with the element's hue, its own brightness
+    /// and no less saturation than the element colour carries. `costumeMix`
+    /// is 0 until `applyElementTint` sets it, so an untinted model renders as
+    /// painted.
+    static let surfaceModifier = """
+    #pragma arguments
+    float costumeHue;
+    float costumeSaturation;
+    float costumeMix;
+    #pragma body
+    float3 c = pow(max(_surface.diffuse.rgb, float3(0.0)), float3(1.0 / 2.2));
+    float maxC = max(c.r, max(c.g, c.b));
+    float minC = min(c.r, min(c.g, c.b));
+    float delta = maxC - minC;
+    if (costumeMix > 0.0 && maxC > 0.12 && delta > 0.001 && delta / maxC > 0.28) {
+        float h;
+        if (maxC == c.r) { h = (c.g - c.b) / delta; if (h < 0.0) { h += 6.0; } }
+        else if (maxC == c.g) { h = (c.b - c.r) / delta + 2.0; }
+        else { h = (c.r - c.g) / delta + 4.0; }
+        h /= 6.0;
+        float s = delta / maxC;
+        bool skinOrFur = (h > 0.03 && h < 0.105 && s < 0.62);
+        if (!skinOrFur) {
+            float ns = max(s, costumeSaturation * 0.8);
+            float3 k = fract(float3(costumeHue) + float3(1.0, 2.0 / 3.0, 1.0 / 3.0));
+            float3 p = abs(k * 6.0 - 3.0);
+            float3 recoloured = maxC * mix(float3(1.0), saturate(p - 1.0), ns);
+            float3 blended = mix(c, recoloured, costumeMix);
+            _surface.diffuse.rgb = pow(blended, float3(2.2));
+        }
+    }
+    """
 
     /// Metal. `_surface.normal` and `_surface.view` are in view space;
     /// `_light.direction` points at the light.
@@ -484,9 +526,13 @@ enum MaterialTuner {
                 material.diffuse.mipFilter = .linear
 
                 material.shaderModifiers = [
+                    .surface: surfaceModifier,
                     .lightingModel: lightingModifier,
                     .fragment: fragmentModifier,
                 ]
+                material.setValue(NSNumber(value: 0.0), forKey: "costumeHue")
+                material.setValue(NSNumber(value: 0.0), forKey: "costumeSaturation")
+                material.setValue(NSNumber(value: 0.0), forKey: "costumeMix")
                 material.setValue(NSValue(scnVector3: SCNVector3(1, 1, 1)), forKey: "rimColor")
                 material.setValue(NSNumber(value: 2.6), forKey: "rimPower")
                 material.setValue(NSNumber(value: 0.55), forKey: "rimStrength")
@@ -494,49 +540,46 @@ enum MaterialTuner {
         }
     }
 
-    /// Recoloured textures, once per source image and element.
-    private static var recolourCache: [String: UIImage] = [:]
-    private static var reportedDiffuse: Set<String> = []
+    private static var reportedTints: Set<String> = []
 
     /// Turns one export into five characters.
     ///
-    /// The base texture's costume pixels take the element's hue (see
-    /// `recoloured`), the rim light takes the element's colour, and a small
-    /// additive lift in the element colour tints the near-black parts that no
-    /// recolour can reach. `SCNNode.clone()` shares geometry and materials
-    /// with the original, so each instance gets its own copies first;
-    /// otherwise tinting one Anubis would repaint every Anubis on the board.
+    /// The costume takes the element's hue in the surface shader (see
+    /// `surfaceModifier`), the rim light takes the element's colour, and a
+    /// small additive lift in the element colour tints the near-black parts
+    /// that no recolour can reach. `SCNNode.clone()` shares geometry and
+    /// materials with the original, so each instance gets its own copies
+    /// first; otherwise tinting one Anubis would repaint every Anubis on the
+    /// board.
     static func applyElementTint(
         _ node: SCNNode,
         hex: String,
         strength: CGFloat = 0.12,
-        glow: CGFloat = 0.10
+        glow: CGFloat = 0.10,
+        costume: CGFloat = 1.0
     ) {
         guard let tint = UIColor(hex: hex) else { return }
         let wash = UIColor.white.mixed(with: tint, amount: strength)
         let lift = UIColor.black.mixed(with: tint, amount: glow)
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
         tint.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0
+        tint.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
 
+        var textured = 0
         node.enumerateHierarchy { child, _ in
             guard let geometry = child.geometry,
                   let unique = geometry.copy() as? SCNGeometry else { return }
             unique.materials = geometry.materials.map { source in
                 guard let material = source.copy() as? SCNMaterial else { return source }
-                if let image = diffuseImage(of: material) {
-                    let key = "\(ObjectIdentifier(image).hashValue)|\(hex)"
-                    if let cached = recolourCache[key] {
-                        material.diffuse.contents = cached
-                    } else if let painted = recoloured(image, toward: tint) {
-                        recolourCache[key] = painted
-                        material.diffuse.contents = painted
-                    }
-                    report(node, "diffuse is an image \(Int(image.size.width))×\(Int(image.size.height)); costume recoloured for \(hex)")
-                } else {
-                    report(node, "diffuse is \(type(of: material.diffuse.contents as Any)); recolour skipped, tint only")
+                if material.diffuse.contents != nil && !(material.diffuse.contents is UIColor) {
+                    textured += 1
                 }
-                material.multiply.contents = wash
+                material.setValue(NSNumber(value: Float(hue)), forKey: "costumeHue")
+                material.setValue(NSNumber(value: Float(saturation)), forKey: "costumeSaturation")
+                material.setValue(NSNumber(value: Float(costume)), forKey: "costumeMix")
                 material.setValue(NSValue(scnVector3: SCNVector3(Float(red), Float(green), Float(blue))), forKey: "rimColor")
+                material.multiply.contents = wash
                 // Never overwrite a real emissive map the export shipped with —
                 // glowing eyes and runes are authored, not incidental.
                 if material.emission.contents == nil {
@@ -546,111 +589,16 @@ enum MaterialTuner {
             }
             child.geometry = unique
         }
+        report(node, "\(textured) textured material(s); costume hue \(Int(hue * 360))° for \(hex), recoloured in the surface shader")
     }
 
     private static func report(_ node: SCNNode, _ message: String) {
         #if DEBUG
         let key = (node.name ?? "?") + message
-        guard !reportedDiffuse.contains(key) else { return }
-        reportedDiffuse.insert(key)
+        guard !reportedTints.contains(key) else { return }
+        reportedTints.insert(key)
         print("[ModelLibrary] \(node.name ?? "model"): \(message)")
         DiagnosticsLog.shared.record("[ModelLibrary] \(node.name ?? "model"): \(message)")
         #endif
-    }
-
-    /// The base texture as an image, however the importer stored it.
-    private static func diffuseImage(of material: SCNMaterial) -> UIImage? {
-        switch material.diffuse.contents {
-        case let image as UIImage:
-            return image
-        case let url as URL:
-            return UIImage(contentsOfFile: url.path)
-        case let path as String:
-            return UIImage(contentsOfFile: path)
-        default:
-            return nil
-        }
-    }
-
-    /// The costume in the element's colour.
-    ///
-    /// Every pixel that is clearly coloured (saturation above 0.28, not near
-    /// black) and is not skin or fur (a warm hue between 11° and 38° at
-    /// moderate saturation) is rebuilt with the element's hue, its own
-    /// brightness, and no less saturation than the element colour carries.
-    /// Gold, red cloth and lapis all recolour; tawny fur, tan skin, white
-    /// linen and black stay. About a fifth of a second for a 1024² texture in
-    /// a debug build, once per element.
-    static func recoloured(_ image: UIImage, toward tint: UIColor) -> UIImage? {
-        guard let source = image.cgImage else { return nil }
-        let width = source.width, height = source.height
-        guard width > 0, height > 0, width * height <= 4096 * 4096 else { return nil }
-        var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
-        tint.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha)
-        let targetHue = Double(hue), targetSaturation = Double(saturation)
-
-        let bytesPerRow = width * 4
-        var pixels = [UInt8](repeating: 0, count: bytesPerRow * height)
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        let info = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
-        let drawn: Bool = pixels.withUnsafeMutableBytes { raw in
-            guard let context = CGContext(
-                data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: info
-            ) else { return false }
-            context.draw(source, in: CGRect(x: 0, y: 0, width: width, height: height))
-            return true
-        }
-        guard drawn else { return nil }
-
-        pixels.withUnsafeMutableBufferPointer { buffer in
-            var index = 0
-            let count = buffer.count
-            while index + 3 < count {
-                let r = Double(buffer[index]) / 255, g = Double(buffer[index + 1]) / 255, b = Double(buffer[index + 2]) / 255
-                let maxC = max(r, max(g, b)), minC = min(r, min(g, b))
-                let delta = maxC - minC
-                if maxC > 0.12, delta > 0, delta / maxC > 0.28 {
-                    var h: Double
-                    if maxC == r { h = (g - b) / delta; if h < 0 { h += 6 } }
-                    else if maxC == g { h = (b - r) / delta + 2 }
-                    else { h = (r - g) / delta + 4 }
-                    h /= 6
-                    let s = delta / maxC
-                    let skinOrFur = h > 0.03 && h < 0.105 && s < 0.62
-                    if !skinOrFur {
-                        let (nr, ng, nb) = hsvToRGB(targetHue, max(s, targetSaturation * 0.8), maxC)
-                        buffer[index] = UInt8(max(0, min(255, nr * 255)))
-                        buffer[index + 1] = UInt8(max(0, min(255, ng * 255)))
-                        buffer[index + 2] = UInt8(max(0, min(255, nb * 255)))
-                    }
-                }
-                index += 4
-            }
-        }
-
-        let result: CGImage? = pixels.withUnsafeMutableBytes { raw in
-            guard let context = CGContext(
-                data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8,
-                bytesPerRow: bytesPerRow, space: colorSpace, bitmapInfo: info
-            ) else { return nil }
-            return context.makeImage()
-        }
-        guard let output = result else { return nil }
-        return UIImage(cgImage: output, scale: image.scale, orientation: image.imageOrientation)
-    }
-
-    private static func hsvToRGB(_ h: Double, _ s: Double, _ v: Double) -> (Double, Double, Double) {
-        let i = Int(floor(h * 6)) % 6
-        let f = h * 6 - floor(h * 6)
-        let p = v * (1 - s), q = v * (1 - f * s), t = v * (1 - (1 - f) * s)
-        switch i {
-        case 0: return (v, t, p)
-        case 1: return (q, v, p)
-        case 2: return (p, v, t)
-        case 3: return (p, q, v)
-        case 4: return (t, p, v)
-        default: return (v, p, q)
-        }
     }
 }

@@ -99,8 +99,16 @@ jobs:
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
           names=(island collection detail training summon reveal battle arena more)
+          # Each launch also writes what the app prints — the [ModelLibrary]
+          # block, SceneKit's own errors — to shots/<step>-console.txt, so a
+          # frame that came out wrong can be read as well as looked at.
+          # OS_ACTIVITY_DT_MODE mirrors the frameworks' os_log lines to stderr
+          # the way Xcode's console does.
           for step in 0 1 2 3 4 5 6 7 8; do
-            xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step >/dev/null
+            SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
+              --stdout="$PWD/shots/$step-${names[$step]}-out.txt" \
+              --stderr="$PWD/shots/$step-${names[$step]}-err.txt" \
+              "$UDID" com.pantheon.game -tour -tour-step $step >/dev/null
             case ${names[$step]} in
               reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 4; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
@@ -111,6 +119,19 @@ jobs:
           rm -f shots/warmup.png
           echo "$(date -u +%T) $(ls shots | wc -l | tr -d ' ') frames"
           xcrun simctl terminate "$UDID" com.pantheon.game || true
+          # The unified log for the process, in case something never reached
+          # stderr (a crash report's first lines, a Metal compiler message).
+          xcrun simctl spawn "$UDID" log show --last 12m --style compact \
+            --predicate 'process == "Pantheon" OR (eventMessage CONTAINS "Pantheon" AND messageType == error)' \
+            2>/dev/null | grep -v -E 'CoreAnalytics|Bluetooth|RunningBoard|LaunchServices|activity' \
+            | tail -n 600 > shots/system-log.txt || true
+          for step in 0 1 2 3 4 5 6 7 8; do
+            base="shots/$step-${names[$step]}"
+            { echo "== stdout"; cat "$base-out.txt" 2>/dev/null; echo; echo "== stderr"; cat "$base-err.txt" 2>/dev/null; } \
+              | head -c 120000 > "$base-console.txt"
+            rm -f "$base-out.txt" "$base-err.txt"
+          done
+          echo "console lines: $(cat shots/*-console.txt | wc -l | tr -d ' ')"
           # Small copies for the ci/screens branch, made with the built-in
           # sips (the runner's Python refuses pip installs). The full-size
           # PNGs go to the artifact.
@@ -139,6 +160,7 @@ jobs:
           test -d shots && ls shots/*.png >/dev/null 2>&1 || { echo "no frames to publish"; exit 0; }
           rm -rf /tmp/screens && mkdir -p /tmp/screens
           cp small/*.jpg /tmp/screens/ 2>/dev/null || cp shots/*.png /tmp/screens/
+          cp shots/*.txt /tmp/screens/ 2>/dev/null || true
           printf '%s\n' "commit ${GITHUB_SHA}" "branch ${GITHUB_REF_NAME}" "run ${GITHUB_RUN_ID}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/screens/SOURCE.txt
           cd /tmp/screens
           git init -q

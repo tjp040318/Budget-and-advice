@@ -386,9 +386,12 @@ and a third is under way:
   half-Lambert two-band lighting ramp with a specular pop (form reads as
   painted, shadows lift instead of going black), a Fresnel rim in the
   element's colour, and a **real recolour**: every saturated pixel of the
-  base texture that is not skin or fur takes the element's hue, computed
-  once per model and element and cached, so the water variant wears water.
-  None of it touches the art files.
+  base texture that is not skin or fur takes the element's hue, so the water
+  variant wears water. The recolour runs in a surface shader modifier, per
+  fragment on the GPU: the first version did it on the CPU once per texture
+  and element, which stalled the main thread for the whole loop (the fourth
+  tour's reveal never got past its dark charge) and would have kept five
+  copies of every texture in memory. None of it touches the art files.
 - **Concept first.** `tools/genart.py --ref <portrait>` paints a designed
   full-body figure from the card — ornate armour, a big silhouette, a strict
   three-colour palette, an A-pose on a plain ground — and
@@ -458,7 +461,16 @@ turns "vibe coded" into "engineered".
    the combat idle, so the idle it asked for at birth was refused as a
    restart, and units stood in their bind pose until their first attack.
    Nothing on the pipeline side was wrong; the console block would never
-   have shown it. The frames did, in one look.
+   have shown it. The frames did, in one look. The fourth tour showed the
+   idle playing and Zeus's feet in frame, and a reveal that stayed dark for
+   twelve seconds — the CPU recolour of the base texture, running inside the
+   stage view's construction on the main thread, in a debug build. It moved
+   to the GPU. That tour also showed the limit of frames alone, so the job
+   now publishes each step's console beside them (`<step>-console.txt`: the
+   app's stdout and stderr with the frameworks' os_log lines mirrored in,
+   plus `system-log.txt` for the process) and `tools/ciframes.py` prints the
+   lines that matter — the `[ModelLibrary]` block, anything that says error
+   or shader.
 4. On the phone, **More → Diagnostics** holds everything the app printed,
    with Copy and Share; and the **Playtest Log** artifact takes issue
    reports the session reads back from its database on request.

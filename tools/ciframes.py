@@ -5,6 +5,13 @@ sheet, so a session that cannot run the simulator can look at the game.
 
     python3 tools/ciframes.py                 # -> /tmp/ci_frames/ and ci_sheet.jpg beside it
     python3 tools/ciframes.py --out my.jpg
+    python3 tools/ciframes.py --log-lines 200 # more of each step's console
+
+The job also publishes each step's console (<step>-console.txt: the app's
+stdout and stderr, with the frameworks' os_log lines mirrored in) and the
+simulator's log for the process (system-log.txt). This prints the lines that
+matter from each — the [ModelLibrary] block and anything that says error or
+shader — and leaves the files in frames/.
 
 The job (.github/workflows/build.yml) launches the app in a simulator once per
 screen with `-tour -tour-step N`, photographs it, and force-pushes small JPEGs
@@ -27,6 +34,7 @@ def main():
     ap.add_argument("--out", default="/tmp/ci_frames/ci_sheet.jpg")
     ap.add_argument("--width", type=int, default=640, help="width of one frame on the sheet")
     ap.add_argument("--cols", type=int, default=3)
+    ap.add_argument("--log-lines", type=int, default=40, help="console lines of interest to print per step")
     a = ap.parse_args()
 
     out_dir = os.path.dirname(os.path.abspath(a.out))
@@ -45,6 +53,19 @@ def main():
     source = os.path.join(frames_dir, "SOURCE.txt")
     if os.path.exists(source):
         print(open(source).read().strip())
+
+    # The job also publishes what the app printed during each step. The lines
+    # that decide anything are the loader's and the frameworks' complaints;
+    # the rest is there in the file for when they are not enough.
+    for log in sorted(glob.glob(os.path.join(frames_dir, "*-console.txt"))):
+        lines = open(log, errors="replace").read().splitlines()
+        wanted = [l for l in lines if "[ModelLibrary]" in l or "[Diagnostics]" in l
+                  or any(k in l for k in ("rror", "SCNMetal", "shader", "Shader", "compile", "fatal", "Fatal"))]
+        print(f"-- {os.path.basename(log)}: {len(lines)} lines, {len(wanted)} of interest")
+        for l in wanted[:a.log_lines]:
+            print("   " + l[:220])
+        if len(wanted) > a.log_lines:
+            print(f"   … {len(wanted) - a.log_lines} more in {log}")
 
     files = sorted(f for f in glob.glob(os.path.join(frames_dir, "*")) if f.lower().endswith((".jpg", ".png")))
     if not files:

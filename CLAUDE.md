@@ -50,8 +50,12 @@ debug only) and photographs the simulator. Read the run with the GitHub
 tools (`actions_list`, `get_job_logs`), and look at the frames with
 `python3 tools/ciframes.py`, which fetches the `ci/screens` branch the job
 force-pushes them to (the artifact store is on a host the network policy
-refuses). Never push without reading the run that follows; a push while a
-run is in progress cancels it, so wait for the frames first.
+refuses) and prints the lines that matter from each step's console, which
+the job publishes beside the frames (`<step>-console.txt`, the app's stdout
+and stderr with the frameworks' os_log lines mirrored in). A frame that came
+out wrong can be read as well as looked at. Never push without reading the
+run that follows; a push while a run is in progress cancels it, so wait for
+the frames first.
 
 ## Where things stand
 
