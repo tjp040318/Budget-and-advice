@@ -416,7 +416,11 @@ turns "vibe coded" into "engineered".
    broken screen is seen before the phone ever pulls the commit. The first
    tour taught two things the hard way: the simulator's first screenshot
    takes most of a minute, so the tour cannot be timed from inside the app,
-   and a stage the account has not unlocked is a black screen.
+   and a stage the account has not unlocked is a black screen. The second
+   tour paid for itself at once: the summoning disc under a revealed figure
+   was tumbling on its edge (a spin added to a tilted node's Euler angles),
+   and a levelled team won the first gate before the first battle frame, so
+   the tour's battle now waits for a command instead of fighting on auto.
 4. On the phone, **More → Diagnostics** holds everything the app printed,
    with Copy and Share; and the **Playtest Log** artifact takes issue
    reports the session reads back from its database on request.
