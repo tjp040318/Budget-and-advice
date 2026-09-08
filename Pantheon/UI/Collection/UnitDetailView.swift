@@ -144,16 +144,20 @@ struct UnitDetailView: View {
     }
 
     private func statsPanel(_ unit: ResolvedUnit) -> some View {
-        VStack(spacing: 8) {
+        // Base is grade, level and awakening; the difference to the final
+        // number is the relics, shown beside it the way the genre does, so
+        // equipping a relic is visible on the sheet and not only in battle.
+        let base = ProgressionService.baseStats(for: unit.unit, blueprint: unit.blueprint)
+        return VStack(spacing: 8) {
             SectionHeader(title: "Stats")
-            statRow("HP", "\(Int(unit.stats.hp))")
-            statRow("ATK", "\(Int(unit.stats.atk))")
-            statRow("DEF", "\(Int(unit.stats.def))")
-            statRow("SPD", "\(Int(unit.stats.spd))")
-            statRow("CRIT Rate", "\(Int(unit.stats.critRate * 100))%")
-            statRow("CRIT DMG", "\(Int(unit.stats.critDamage * 100))%")
-            statRow("Accuracy", "\(Int(unit.stats.accuracy * 100))%")
-            statRow("Resistance", "\(Int(unit.stats.resistance * 100))%")
+            statRow("HP", base: base.hp, total: unit.stats.hp)
+            statRow("ATK", base: base.atk, total: unit.stats.atk)
+            statRow("DEF", base: base.def, total: unit.stats.def)
+            statRow("SPD", base: base.spd, total: unit.stats.spd)
+            statRow("CRIT Rate", base: base.critRate, total: unit.stats.critRate, percent: true)
+            statRow("CRIT DMG", base: base.critDamage, total: unit.stats.critDamage, percent: true)
+            statRow("Accuracy", base: base.accuracy, total: unit.stats.accuracy, percent: true)
+            statRow("Resistance", base: base.resistance, total: unit.stats.resistance, percent: true)
 
             if !unit.activeRelicSets.isEmpty {
                 Divider().overlay(Theme.stroke)
@@ -175,12 +179,25 @@ struct UnitDetailView: View {
         .panelBackground()
     }
 
-    private func statRow(_ label: String, _ value: String) -> some View {
-        HStack {
+    private func statRow(_ label: String, base: Double, total: Double, percent: Bool = false) -> some View {
+        let bonus = total - base
+        let shown = abs(bonus) >= (percent ? 0.005 : 0.5)
+        return HStack(spacing: 6) {
             Text(label).font(Theme.body(13)).foregroundStyle(Theme.textSecondary)
             Spacer()
-            Text(value).font(Theme.numeric(14)).foregroundStyle(Theme.textPrimary)
+            Text(Self.statText(base, percent: percent))
+                .font(Theme.numeric(14))
+                .foregroundStyle(Theme.textPrimary)
+            if shown {
+                Text((bonus > 0 ? "+" : "−") + Self.statText(abs(bonus), percent: percent))
+                    .font(Theme.numeric(13))
+                    .foregroundStyle(bonus > 0 ? Theme.success : Theme.danger)
+            }
         }
+    }
+
+    private static func statText(_ value: Double, percent: Bool) -> String {
+        percent ? "\(Int((value * 100).rounded()))%" : "\(Int(value.rounded()))"
     }
 
     @ViewBuilder

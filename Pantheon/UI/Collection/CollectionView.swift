@@ -6,6 +6,7 @@ struct CollectionView: View {
     @State private var elementFilter: Element?
     @State private var sort: SortOrder = .power
     @State private var selected: ResolvedUnit?
+    @State private var showTraining = false
 
     enum SortOrder: String, CaseIterable, Identifiable {
         case power, level, stars, recent, name
@@ -66,6 +67,15 @@ struct CollectionView: View {
             }
             .screen("Collection")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showTraining = true
+                    } label: {
+                        Label("Train", systemImage: "arrow.up.circle.fill")
+                            .font(Theme.body(13).weight(.semibold))
+                            .foregroundStyle(Theme.gold)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Text("\(store.player.units.count) units")
                         .font(Theme.numeric(12))
@@ -74,6 +84,10 @@ struct CollectionView: View {
             }
             .sheet(item: $selected) { unit in
                 UnitDetailView(unitID: unit.id)
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showTraining) {
+                TrainingView()
                     .environmentObject(store)
             }
         }

@@ -7,6 +7,8 @@ enum IslandDestination: String, CaseIterable, Sendable {
     case summon
     case collection
     case settings
+    /// The Hall of Ka: power-up, evolution and awakening (`TrainingView`).
+    case training
 }
 
 /// A tappable place on the island.
@@ -74,9 +76,9 @@ enum IslandDatabase {
         Landmark(
             id: "hall",
             title: "Hall of Ka",
-            subtitle: "Everyone you have summoned",
+            subtitle: "Power up, evolve, awaken",
             systemImage: "person.3.fill",
-            destination: .collection,
+            destination: .training,
             anchor: CGPoint(x: 0.345, y: 0.32),
             unlockLevel: 1,
             upgradeLevels: [6, 15],

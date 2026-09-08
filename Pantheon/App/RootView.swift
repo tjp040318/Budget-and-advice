@@ -4,6 +4,7 @@ import SwiftUI
 struct RootView: View {
     @EnvironmentObject private var store: GameStore
     @State private var tab: Tab = .island
+    @State private var showTraining = false
     @Environment(\.scenePhase) private var scenePhase
 
     enum Tab: Hashable {
@@ -14,7 +15,7 @@ struct RootView: View {
             case .campaign: self = .campaign
             case .arena: self = .arena
             case .summon: self = .summon
-            case .collection: self = .collection
+            case .collection, .training: self = .collection
             case .settings: self = .settings
             }
         }
@@ -22,10 +23,15 @@ struct RootView: View {
 
     var body: some View {
         TabView(selection: $tab) {
-            // The hub. Every landmark on it is a tab below, so the island is a
+            // The hub. Every landmark on it is a tab below — except the Hall
+            // of Ka, which opens over whatever is showing — so the island is a
             // way in rather than a fifth place things live.
             IslandView { destination in
-                withAnimation { tab = Tab(destination) }
+                if destination == .training {
+                    showTraining = true
+                } else {
+                    withAnimation { tab = Tab(destination) }
+                }
             }
             .tabItem { Label("Island", systemImage: "sun.haze.fill") }
             .tag(Tab.island)
@@ -52,6 +58,10 @@ struct RootView: View {
         }
         .tint(Theme.gold)
         .preferredColorScheme(.dark)
+        .fullScreenCover(isPresented: $showTraining) {
+            TrainingView()
+                .environmentObject(store)
+        }
         .onAppear { AudioLibrary.shared.playMusic(.island) }
         .alert(
             "Something went wrong",
@@ -91,6 +101,7 @@ struct SettingsView: View {
                 VStack(spacing: 16) {
                     accountPanel
                     soundPanel
+                    diagnosticsPanel
                     assetStatusPanel
                     dangerPanel
                 }
@@ -170,6 +181,38 @@ struct SettingsView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
+        }
+        .padding(14)
+        .panelBackground()
+    }
+
+    /// The console, for a phone with no Xcode attached: the `[ModelLibrary]`
+    /// block and everything else the app printed, with Copy and Share.
+    private var diagnosticsPanel: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            SectionHeader(title: "Diagnostics")
+            NavigationLink {
+                DiagnosticsView()
+            } label: {
+                HStack {
+                    Image(systemName: "terminal.fill")
+                        .foregroundStyle(Theme.gold)
+                    Text("Console log")
+                        .font(Theme.body(13))
+                        .foregroundStyle(Theme.textPrimary)
+                    Spacer()
+                    Text("\(DiagnosticsLog.shared.count) lines")
+                        .font(Theme.numeric(12))
+                        .foregroundStyle(Theme.textSecondary)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            Text("What the app printed since launch, ready to copy or share into a chat.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
         .panelBackground()

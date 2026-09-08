@@ -224,7 +224,7 @@ struct IslandView: View {
             return scrolls > 0 ? "\(scrolls)" : nil
         case .arena:
             return "\(player.arena.attacksRemaining)"
-        case .collection:
+        case .collection, .training:
             return "\(player.units.count)"
         case .settings:
             return nil
@@ -238,6 +238,8 @@ struct IslandView: View {
         case .campaign: return player.wallet.energy >= 5
         case .summon: return ScrollType.allCases.contains { player.wallet.count(of: $0) > 0 }
         case .arena: return player.arena.attacksRemaining > 0
+        // Training glows when there is someone to feed and someone to feed to.
+        case .training: return player.units.count > 1 && player.units.contains { !$0.isMaxLevel }
         case .collection, .settings: return false
         }
     }

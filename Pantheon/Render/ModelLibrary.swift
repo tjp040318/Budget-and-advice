@@ -57,8 +57,11 @@ final class ModelLibrary {
         var suffix: String { self == .low ? "_lod" : "" }
     }
 
-    /// Below this many combatants, everything renders at full detail.
-    static let crowdedStageThreshold = 4
+    /// Below this many combatants, everything renders at full detail. The
+    /// shipped models are 5,000 triangles with a 1,024 texture, so a 4v4 at
+    /// full detail is 40,000 triangles — nothing to a phone. The `_lod` file
+    /// (2,500 triangles, a 512 texture) is for the ten-character stage.
+    static let crowdedStageThreshold = 8
 
     static func detail(forCombatantCount count: Int) -> DetailLevel {
         count > crowdedStageThreshold ? .low : .high
@@ -309,14 +312,21 @@ final class ModelLibrary {
             }
         }
         log("'\(label)' built \(lines.count) node(s) of interest:")
-        for line in lines.prefix(16) { print(line) }
-        if lines.count > 16 { print("      … \(lines.count - 16) more") }
+        for line in lines.prefix(16) { print(line); DiagnosticsLog.shared.record(line) }
+        if lines.count > 16 {
+            print("      … \(lines.count - 16) more")
+            DiagnosticsLog.shared.record("      … \(lines.count - 16) more")
+        }
         #endif
     }
 
+    /// Every line goes to the console and to `DiagnosticsLog`, which is what
+    /// More → Diagnostics shows and shares, so a phone without Xcode attached
+    /// can still hand over the block.
     private func log(_ message: String) {
         #if DEBUG
         print("[ModelLibrary] \(message)")
+        DiagnosticsLog.shared.record("[ModelLibrary] \(message)")
         #endif
     }
 
@@ -335,6 +345,7 @@ final class ModelLibrary {
         log("bundle: \(root.path)")
         log("3D files actually inside the app: \(found.isEmpty ? "NONE" : "\(found.count)")")
         for path in found { log("    \(path)") }
+        DiagnosticsLog.shared.recordDeviceHeader()
 
         for name in assetNames.sorted() {
             if let url = bundleURL(for: name) {
@@ -353,22 +364,46 @@ final class ModelLibrary {
     private func firstAnimation(in node: SCNNode) -> CAAnimation? {
         var best: CAAnimation?
         var origin = ""
+        var tracks: [(node: String, animation: CAAnimation)] = []
         node.enumerateHierarchy { child, _ in
             for key in child.animationKeys {
                 // `SCNAnimationPlayer.animation` is an `SCNAnimation`, not a
                 // `CAAnimation`; the bridging initialiser is the way across.
                 guard let player = child.animationPlayer(forKey: key) else { continue }
                 let animation = CAAnimation(scnAnimation: player.animation)
+                tracks.append((child.name ?? "", animation))
                 if best == nil || animation.duration > (best?.duration ?? 0) {
                     best = animation
                     origin = "\(child.name ?? "(unnamed)") / \(key)"
                 }
             }
         }
-        if let best {
-            log(String(format: "clip animation taken from %@, %.2f s, %@",
-                       origin, best.duration, best is CAAnimationGroup ? "a group" : "a single track"))
+        guard let best else { return nil }
+        // The importer may hang a clip on the skeleton root as one group,
+        // which is the whole clip, or as one track per joint. The longest
+        // single track is one joint's motion, and playing it alone leaves
+        // the rest of the body in its bind pose — the A-pose seen in battle.
+        // Per-joint tracks are gathered into one group whose key paths name
+        // their joints, which is how SceneKit addresses a child node.
+        if !(best is CAAnimationGroup), tracks.count > 1 {
+            let group = CAAnimationGroup()
+            var duration: TimeInterval = 0
+            group.animations = tracks.compactMap { track in
+                guard let copy = track.animation.copy() as? CAAnimation else { return nil }
+                if let property = copy as? CAPropertyAnimation, let keyPath = property.keyPath,
+                   !keyPath.hasPrefix("/"), !track.node.isEmpty {
+                    property.keyPath = "/\(track.node).\(keyPath)"
+                }
+                duration = max(duration, copy.duration)
+                return copy
+            }
+            group.duration = duration
+            log(String(format: "clip animation assembled from %d joint tracks, %.2f s (longest single track was %@)",
+                       tracks.count, duration, origin))
+            return group
         }
+        log(String(format: "clip animation taken from %@, %.2f s, %@",
+                   origin, best.duration, best is CAAnimationGroup ? "a group" : "a single track"))
         return best
     }
 }

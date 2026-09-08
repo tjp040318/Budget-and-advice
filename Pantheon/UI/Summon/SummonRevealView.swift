@@ -440,8 +440,13 @@ struct SummonStageView: UIViewRepresentable {
         let camera = SCNCamera()
         camera.fieldOfView = 38
         camera.wantsHDR = true
-        camera.bloomIntensity = 0.9
-        camera.bloomThreshold = 0.65
+        // No exposure adaptation: on a black stage it meters the dark and
+        // pushes the exposure up, and a gold character (Sekhmet) went white.
+        // These lights were tuned on a black jackal; a bright figure needs
+        // less rim and a higher bloom threshold to keep its texture.
+        camera.wantsExposureAdaptation = false
+        camera.bloomIntensity = 0.6
+        camera.bloomThreshold = 0.82
         let cameraNode = SCNNode()
         cameraNode.camera = camera
         cameraNode.position = SCNVector3(0, height * 0.52, height * 2.05)
@@ -451,7 +456,7 @@ struct SummonStageView: UIViewRepresentable {
         // Key from the front-left in the element's colour.
         let key = SCNLight()
         key.type = .directional
-        key.intensity = 1_400
+        key.intensity = 1_050
         key.color = tint.mixed(with: .white, amount: 0.5)
         let keyNode = SCNNode()
         keyNode.light = key
@@ -462,7 +467,7 @@ struct SummonStageView: UIViewRepresentable {
         // Rim from behind, strongly tinted, for a lit silhouette edge.
         let rim = SCNLight()
         rim.type = .directional
-        rim.intensity = 2_200
+        rim.intensity = 1_300
         rim.color = tint
         let rimNode = SCNNode()
         rimNode.light = rim
@@ -472,7 +477,7 @@ struct SummonStageView: UIViewRepresentable {
 
         let ambient = SCNLight()
         ambient.type = .ambient
-        ambient.intensity = 280
+        ambient.intensity = 240
         let ambientNode = SCNNode()
         ambientNode.light = ambient
         scene.rootNode.addChildNode(ambientNode)

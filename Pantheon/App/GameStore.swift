@@ -207,14 +207,21 @@ final class GameStore: ObservableObject {
     }
 
     func levelUp(_ unitID: UUID, feeding fodderIDs: [UUID]) {
+        var rng = makeRandom()
         update { player in
             guard let index = player.units.firstIndex(where: { $0.id == unitID }) else { return }
-            let fodder = player.units.filter { fodderIDs.contains($0.id) && !$0.isLocked }
+            let fodder = player.units.filter { fodderIDs.contains($0.id) && !$0.isLocked && $0.id != unitID }
             let experience = fodder.reduce(0) { $0 + ProgressionService.feedValue(of: $1) }
             let cost = fodder.count * 500
             guard player.wallet.drachma >= cost else { return }
             player.wallet.drachma -= cost
             ProgressionService.grantExperience(experience, to: &player.units[index])
+            // Feeding a duplicate of the same character is a skill-up on top
+            // of its experience, the way the genre does it.
+            let duplicates = fodder.filter { $0.blueprintID == player.units[index].blueprintID }.count
+            for _ in 0..<duplicates {
+                _ = ProgressionService.applySkillUp(to: &player.units[index], using: &rng)
+            }
             // Unequip the fodder before it disappears, so relics come back.
             for id in fodderIDs {
                 guard let fodderIndex = player.units.firstIndex(where: { $0.id == id }) else { continue }

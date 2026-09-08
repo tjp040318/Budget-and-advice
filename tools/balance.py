@@ -212,6 +212,11 @@ ANUBIS = Blueprint("anubis_umbra", "Anubis (Dark)", "umbra", 4, hp=480, atk=27, 
 
 SHABTI    = Blueprint("shabti",    "Shabti",            "umbra",    2, 250, 25, 15,  96,
     skills=[("Grasp", 1.60, 1, 0, 0, 0, False)])
+# The summonable Shabti family: the gacha's 3* tier and the training hall's
+# fodder. A two-skill servant a grade under Anubis; the Umbra one is the
+# archetype and the other four are within ten percent of it.
+SHABTI3   = Blueprint("shabti_umbra", "Shabti (Dark)",   "umbra",    3, 300, 25, 20,  98,
+    skills=[("Clay Grasp", 1.60, 1, 0, 0, 0, False), ("Answer the Call", 2.30, 1, 3, 0, 0, False)])
 SERPOPARD = Blueprint("serpopard", "Serpopard",         "gale",     3, 300, 31, 17, 118,
     skills=[("Rake", 0.95, 2, 0, 0, 0, False), ("Pounce", 3.10, 1, 3, 0, 0, False)])
 SCARAB    = Blueprint("scarab",    "Sun-Scarab Swarm",  "radiance", 3, 285, 30, 16, 112,
@@ -307,7 +312,7 @@ def report_duel(trials=300):
     the controller should sit between them, and beat the attacker only when the
     stun lands often enough to matter."""
     print("\nDUEL — 1v1, same grade and level, %d seeded fights" % trials)
-    for a, b in ((SEKHMET, ANUBIS), (ZEUS, ANUBIS), (ZEUS, SEKHMET)):
+    for a, b in ((SEKHMET, ANUBIS), (ZEUS, ANUBIS), (ZEUS, SEKHMET), (ANUBIS, SHABTI3)):
         an, bn = a.name.split()[0], b.name.split()[0]
         for stars, lvl in [(5, 1), (5, 30), (6, 55)]:
             wins = sum(1 for s in range(trials)

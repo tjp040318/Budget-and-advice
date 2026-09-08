@@ -176,10 +176,12 @@ enum SummonService {
         }
         player.units.append(unit)
 
+        // The stars shown are the unit's own, not the grade that was rolled:
+        // a common roll that fell up to a 4★ Anubis is a 4★ Anubis.
         return SummonResult(
             unit: unit,
             blueprint: blueprint,
-            stars: stars,
+            stars: unit.stars,
             isNew: isNew,
             isFeatured: banner.featured.contains(blueprint.id),
             fromPity: fromPity
@@ -202,15 +204,22 @@ enum SummonService {
     ) -> UnitBlueprint {
         let candidates = eligible(for: banner).filter { $0.naturalStars == stars }
         guard !candidates.isEmpty else {
-            // Fall back down the grades rather than failing a summon.
-            // Prefer the closest grade below; if the banner has nothing at or
-            // under this grade, take the lowest it does have rather than
-            // failing a summon the player has already paid for.
+            // Nothing of this grade on the banner. Fall to the nearest grade
+            // below it — or the lowest grade above when there is nothing
+            // below — and roll WITHIN that grade with the featured weighting,
+            // rather than failing a summon the player has already paid for.
+            // The old fallback returned the first unit in list order, which
+            // on a roster with no 3★ units made every common pull the same
+            // fire Anubis.
             let pool = eligible(for: banner)
-            let below = pool.filter { $0.naturalStars <= stars }
-            return below.max(by: { $0.naturalStars < $1.naturalStars })
-                ?? pool.min(by: { $0.naturalStars < $1.naturalStars })
-                ?? UnitDatabase.starter
+            let grade = pool.filter { $0.naturalStars <= stars }.map(\.naturalStars).max()
+                ?? pool.map(\.naturalStars).min()
+            guard let grade else { return UnitDatabase.starter }
+            let fallback = pool.filter { $0.naturalStars == grade }
+            let weighted = fallback.map { blueprint -> (value: UnitBlueprint, weight: Double) in
+                (blueprint, banner.featured.contains(blueprint.id) ? 2.0 : 1.0)
+            }
+            return rng.pickWeighted(weighted) ?? fallback[0]
         }
 
         let featuredHere = candidates.filter { banner.featured.contains($0.id) }

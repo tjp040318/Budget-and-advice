@@ -239,14 +239,40 @@ def _triangulate(counts, indices):
     return np.array(tris, dtype=np.int64), np.array(slots, dtype=np.int64)
 
 
-def _facevarying_to_point(values, tris, slots, n, width):
-    out = np.zeros((n, width), dtype=np.float32)
-    seen = np.zeros(n, dtype=bool)
-    for p, s in zip(tris.reshape(-1), slots.reshape(-1)):
-        if not seen[p]:
-            out[p] = values[s]
-            seen[p] = True
-    return out
+def split_seams(faces, corner_uvs):
+    """Per-corner (faceVarying / wedge) UVs -> per-vertex UVs, exactly: a point
+    that carries N distinct UVs across the corners that use it becomes N
+    vertices. Returns (orig, faces, uvs): which input point each new vertex
+    came from - index every other per-point array by it - the faces
+    re-indexed, and one UV per new vertex. Equality is on the float bits, so
+    a seam is wherever the exporter wrote two different values; nothing is
+    merged that the file kept apart."""
+    corner_points = np.asarray(faces).reshape(-1).astype(np.int64)
+    uv = np.ascontiguousarray(corner_uvs, dtype=np.float32).reshape(-1, 2)
+    key = np.c_[corner_points, uv.view(np.int32).astype(np.int64)]
+    _, first, inverse = np.unique(key, axis=0, return_index=True, return_inverse=True)
+    inverse = np.asarray(inverse).reshape(-1)
+    return corner_points[first], inverse.reshape(-1, 3), uv[first]
+
+
+def weld(points, faces, decimals=6):
+    """The opposite: vertices at the same position (to a micron) become one, so
+    a mesh split at its UV seams is a closed surface again. Returns (welded
+    points, index of the welded vertex for each input vertex, faces
+    re-indexed)."""
+    key = np.round(np.asarray(points, dtype=np.float64), decimals)
+    _, first, inverse = np.unique(key, axis=0, return_index=True, return_inverse=True)
+    inverse = np.asarray(inverse).reshape(-1)
+    return np.asarray(points)[first], inverse, inverse[np.asarray(faces)]
+
+
+def uv_smear(uvs, faces, span=0.25):
+    """How many triangles cover more than `span` of the atlas in u or v. A real
+    piece of surface never does; a seam vertex with the wrong UV always does."""
+    if uvs is None or len(faces) == 0:
+        return 0
+    tri = uvs[faces]
+    return int(((tri.max(axis=1) - tri.min(axis=1)).max(axis=1) > span).sum())
 
 
 def _zip_member(path, asset_path):
@@ -320,15 +346,25 @@ def read_usdz(path):
     indices = np.array(mesh.GetFaceVertexIndicesAttr().Get(t0))
     tris, slots = _triangulate(counts, indices)
 
-    uvs = None
+    uvs, orig = None, None
     pv_api = UsdGeom.PrimvarsAPI(mesh_prim)
     st = pv_api.GetPrimvar("st")
     if st and st.HasValue():
-        flat = np.array(st.ComputeFlattened(t0), dtype=np.float32)
+        flat = np.array(st.ComputeFlattened(t0), dtype=np.float32).reshape(-1, 2)
         if st.GetInterpolation() == UsdGeom.Tokens.faceVarying:
-            uvs = _facevarying_to_point(flat, tris, slots, len(points), 2)
+            # Blender writes one UV per face corner. A point on a UV seam has
+            # several, and a mesh with one UV per point can keep only one of
+            # them: the first one seen used to be kept, and every triangle
+            # touching a seam then stretched across the atlas. So the point
+            # is split instead - one vertex per distinct UV, faces re-indexed,
+            # skin weights duplicated with it below - and nothing is lost.
+            n_before = len(points)
+            orig, tris, uvs = split_seams(tris, flat[slots.reshape(-1)])
+            on_seam = int((np.bincount(orig, minlength=n_before) > 1).sum())
+            print(f"    st is per face corner: {on_seam:,} of {n_before:,} points sit on UV seams; "
+                  f"split into {len(orig):,} vertices so every corner keeps its own UV")
         elif len(flat) == len(points):
-            uvs = flat.reshape(len(points), 2)
+            uvs = flat
 
     joints, parents, bind, rest_local, ji, jw, anim = [], np.zeros(0, int), np.zeros((0, 4, 4)), np.zeros((0, 4, 4)), None, None, None
     world = np.eye(4)
@@ -389,6 +425,11 @@ def read_usdz(path):
                 anim = {"T": T, "R": R, "S": S, "fps": float(tcps / dt)}
     else:
         world = gf_to_np(UsdGeom.Xformable(mesh_prim).ComputeLocalToWorldTransform(t0))
+
+    if orig is not None:
+        points = points[orig]
+        if ji is not None:
+            ji, jw = ji[orig], jw[orig]
 
     char = Character(
         name=path.stem.split("_")[0], points=points.astype(np.float32), faces=tris.astype(np.int32), uvs=uvs,
@@ -969,20 +1010,133 @@ def limit_influences(char, k=4):
 # Reduction
 # ---------------------------------------------------------------------------
 
-def decimate(char, target_tris, texture_size=1024):
+def _meshlab_available():
+    try:
+        import pymeshlab
+    except ImportError:
+        return "pymeshlab is not installed (pip install pymeshlab)"
+    if not hasattr(pymeshlab.MeshSet(), "meshing_decimation_quadric_edge_collapse_with_texture"):
+        return ("pymeshlab loaded without its meshing plugin - it needs libOpenGL.so.0 "
+                "(apt-get install libopengl0)")
+    return None
+
+
+def _decimate_meshlab(char, target_tris):
+    """MeshLab's quadric edge collapse with texture. It wants the closed
+    surface with one UV per face corner (wedge), so the seam-split vertices
+    are welded back by position, the corner UVs written beside them to an OBJ
+    with a stand-in material (the filter refuses faces that carry no texture
+    index), and the result is split at its seams again on the way out."""
+    import pymeshlab
+    from scipy.spatial import cKDTree
+    wpts, _welded, wfaces = weld(char.points, char.faces)
+    good = (wfaces[:, 0] != wfaces[:, 1]) & (wfaces[:, 1] != wfaces[:, 2]) & (wfaces[:, 0] != wfaces[:, 2])
+    corner_uv = char.uvs[char.faces][good].reshape(-1, 2) if char.uvs is not None else None
+    wfaces = wfaces[good]
+    work = Path(tempfile.mkdtemp())
+    try:
+        buf = io.StringIO()
+        buf.write("mtllib mesh.mtl\n")
+        np.savetxt(buf, wpts, fmt="v %.7f %.7f %.7f")
+        if corner_uv is not None:
+            np.savetxt(buf, corner_uv, fmt="vt %.7f %.7f")
+            corners = np.arange(len(wfaces) * 3).reshape(-1, 3) + 1
+            rows = np.c_[wfaces[:, 0] + 1, corners[:, 0], wfaces[:, 1] + 1, corners[:, 1], wfaces[:, 2] + 1, corners[:, 2]]
+            buf.write("usemtl atlas\n")
+            np.savetxt(buf, rows, fmt="f %d/%d %d/%d %d/%d")
+        else:
+            np.savetxt(buf, wfaces + 1, fmt="f %d %d %d")
+        (work / "mesh.obj").write_text(buf.getvalue())
+        (work / "mesh.mtl").write_text("newmtl atlas\nKd 1 1 1\nmap_Kd atlas.png\n")
+        Image.new("RGB", (4, 4), (128, 128, 128)).save(work / "atlas.png")
+        ms = pymeshlab.MeshSet()
+        ms.load_new_mesh(str(work / "mesh.obj"))
+        if corner_uv is not None:
+            ms.meshing_decimation_quadric_edge_collapse_with_texture(
+                targetfacenum=int(target_tris), qualitythr=0.3, extratcoordw=1.0, preserveboundary=True,
+                boundaryweight=1.0, optimalplacement=True, preservenormal=True, planarquadric=False)
+        else:
+            ms.meshing_decimation_quadric_edge_collapse(
+                targetfacenum=int(target_tris), qualitythr=0.3, preserveboundary=True, boundaryweight=1.0,
+                optimalplacement=True, preservenormal=True, planarquadric=False)
+        m = ms.current_mesh()
+        pts = np.asarray(m.vertex_matrix(), dtype=np.float64)
+        faces = np.asarray(m.face_matrix(), dtype=np.int64)
+        if corner_uv is not None:
+            orig, faces, uvs = split_seams(faces, np.asarray(m.wedge_tex_coord_matrix(), dtype=np.float32))
+        else:
+            orig = np.unique(faces.reshape(-1))
+            remap = np.full(len(pts), -1, dtype=np.int64)
+            remap[orig] = np.arange(len(orig))
+            faces, uvs = remap[faces], None
+        pts = pts[orig]
+    finally:
+        shutil.rmtree(work, ignore_errors=True)
+    nearest = cKDTree(char.points.astype(np.float64)).query(pts, k=1)[1]
+    if char.joint_indices is not None:
+        char.joint_indices, char.joint_weights = char.joint_indices[nearest], char.joint_weights[nearest]
+    char.points, char.faces, char.uvs = pts.astype(np.float32), faces.astype(np.int32), uvs
+
+
+def _decimate_fast(char, target_tris):
+    """fast_simplification, with the UV seams frozen: the mesh is already split
+    at its seams, so they are borders, and `preserve_border` keeps every
+    border vertex where it is. Each surviving vertex keeps its own UV and
+    weights (the collapses are replayed to learn which original vertex each
+    new one is). Seams frozen means a mesh with many islands cannot reach a
+    low target; the count printed afterwards says how close it got."""
     import fast_simplification
     from scipy.spatial import cKDTree
+    pts32, faces32 = np.ascontiguousarray(char.points, dtype=np.float32), np.ascontiguousarray(char.faces, dtype=np.int32)
+    _, _, collapses = fast_simplification.simplify(pts32, faces32, target_count=int(target_tris),
+                                                   preserve_border=True, return_collapses=True)
+    collapses = np.asarray(collapses, dtype=np.int64).reshape(-1, 2)
+    pts, faces, mapping = fast_simplification.replay_simplification(pts32, faces32, collapses)
+    pts, faces, mapping = np.asarray(pts, dtype=np.float64), np.asarray(faces, dtype=np.int64), np.asarray(mapping).reshape(-1)
+    alive = np.ones(len(pts32), dtype=bool)
+    alive[collapses[:, 1]] = False
+    survivor = np.full(len(pts), -1, dtype=np.int64)
+    idx = np.where(alive)[0]
+    survivor[mapping[idx]] = idx
+    missing = survivor < 0
+    if missing.any():
+        survivor[missing] = cKDTree(pts32).query(pts[missing], k=1)[1]
+    if char.uvs is not None:
+        char.uvs = char.uvs[survivor]
+    if char.joint_indices is not None:
+        char.joint_indices, char.joint_weights = char.joint_indices[survivor], char.joint_weights[survivor]
+    char.points, char.faces = pts.astype(np.float32), faces.astype(np.int32)
+
+
+def decimate(char, target_tris, texture_size=1024, method=None):
+    """Reduces the mesh to about `target_tris` triangles and the textures to
+    `texture_size` on their long edge. The UVs go through the reduction, not
+    around it: MeshLab's quadric edge collapse with texture carries the corner
+    UVs through every collapse and treats each seam as a crease, so a reduced
+    triangle still maps to the piece of atlas its surface came from. (Copying
+    the UV of the nearest original vertex, as before, crossed islands at every
+    seam; with an atlas of hundreds of islands most triangles touched one.)
+    Skin weights do follow by nearest original vertex - they are smooth over
+    the surface, so nearest is right for them. `method` is None (MeshLab,
+    falling back to fast_simplification when pymeshlab is unusable) or "fast"
+    to force the fallback."""
     if target_tris and target_tris < char.tris:
-        reduction = 1.0 - target_tris / char.tris
-        pts, tris = fast_simplification.simplify(char.points.astype(np.float32), char.faces.astype(np.int32), reduction)
-        pts, tris = np.asarray(pts, dtype=np.float32), np.asarray(tris, dtype=np.int32)
-        nearest = cKDTree(char.points).query(pts, k=1)[1]
-        if char.uvs is not None:
-            char.uvs = char.uvs[nearest]
-        if char.joint_indices is not None:
-            char.joint_indices = char.joint_indices[nearest]
-            char.joint_weights = char.joint_weights[nearest]
-        char.points, char.faces = pts, tris
+        tris0, pts0 = char.tris, len(char.points)
+        how = method or "meshlab"
+        if how == "meshlab":
+            why_not = _meshlab_available()
+            if why_not:
+                print(f"    {why_not}; falling back to fast_simplification with the seams frozen")
+                how = "fast"
+        if how == "meshlab":
+            _decimate_meshlab(char, target_tris)
+            how = "MeshLab quadric edge collapse with texture"
+        else:
+            _decimate_fast(char, target_tris)
+            how = "fast_simplification, seams frozen"
+        smeared = uv_smear(char.uvs, char.faces)
+        print(f"    decimated {tris0:,} -> {char.tris:,} tris, {pts0:,} -> {len(char.points):,} vertices ({how}); "
+              f"{smeared:,} triangles ({100.0 * smeared / max(1, char.tris):.1f}%) span more than a quarter of the atlas")
     if texture_size:
         for tex in char.textures:
             img = Image.open(io.BytesIO(tex.data))
@@ -999,11 +1153,17 @@ def decimate(char, target_tris, texture_size=1024):
 # ---------------------------------------------------------------------------
 
 def vertex_normals(points, faces):
-    p = points.astype(np.float64)
+    """Area-weighted, and shared across UV seams: the vertices a seam split a
+    point into get one normal between them, so a seam is not a crease in the
+    shading."""
+    p = np.asarray(points, dtype=np.float64)
+    faces = np.asarray(faces)
+    _, welded, wfaces = weld(p, faces)
     fn = np.cross(p[faces[:, 1]] - p[faces[:, 0]], p[faces[:, 2]] - p[faces[:, 0]])
-    n = np.zeros_like(p)
+    n = np.zeros((int(welded.max()) + 1 if len(welded) else 0, 3))
     for k in range(3):
-        np.add.at(n, faces[:, k], fn)
+        np.add.at(n, wfaces[:, k], fn)
+    n = n[welded]
     n /= np.maximum(np.linalg.norm(n, axis=1, keepdims=True), 1e-12)
     return n.astype(np.float32)
 

@@ -36,6 +36,9 @@ final class ProgressionTests: XCTestCase {
     func testEvolutionRequiresMaxLevelAndFodder() {
         var unit = Unit(blueprint: UnitDatabase.starter, level: 1, stars: 5)
         var wallet = Wallet()
+        // A 5★ → 6★ evolution costs 150,000 drachma, more than a fresh
+        // wallet holds; the test is about level and fodder, so fund it.
+        wallet.drachma = 500_000
         XCTAssertThrowsError(try ProgressionService.evolve(&unit, fodder: [], wallet: &wallet))
 
         unit.level = ProgressionService.maxLevel(stars: 5)

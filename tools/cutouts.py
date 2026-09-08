@@ -20,7 +20,11 @@ SRC = os.path.join(os.path.dirname(__file__), "..", "Pantheon", "Resources", "Po
 # Enemies only: the five Anubis are drawn as cards in the UI, never in world
 # space, and Anubis himself has a real mesh.
 NAMES = ["portrait_shabti", "portrait_serpopard", "portrait_sun_scarab",
-         "portrait_sandstone_sentinel", "portrait_ammit", "portrait_apep"]
+         "portrait_sandstone_sentinel", "portrait_ammit", "portrait_apep",
+         # The summonable Shabti family has no mesh either; it stands in the
+         # world as a cut-out until one exists.
+         "portrait_shabti_ember", "portrait_shabti_tide", "portrait_shabti_gale",
+         "portrait_shabti_radiance", "portrait_shabti_umbra"]
 
 LOW, HIGH = 52, 132          # luminance: fully transparent below, fully opaque above
 

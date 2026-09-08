@@ -17,7 +17,7 @@ enum UnitDatabase {
 
     // MARK: - Registry
 
-    static let all: [UnitBlueprint] = anubisFamily + sekhmetFamily + zeusFamily + [
+    static let all: [UnitBlueprint] = anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + [
         shabti,
         serpopard,
         sunScarab,
@@ -34,14 +34,70 @@ enum UnitDatabase {
 
     /// Unit ids the gacha is allowed to produce. Enemies are deliberately
     /// absent, and so is any family whose portraits have not shipped yet —
-    /// Sekhmet and Zeus join the pool the moment their five files are in the
-    /// bundle, with no code change.
-    static let summonPool: [String] = (anubisFamily + sekhmetFamily + zeusFamily)
+    /// Sekhmet and Zeus joined the pool the moment their five files were in the
+    /// bundle, with no code change. The Shabti family is the 3★ tier: what a
+    /// common roll gives, and what the Hall of Ka feeds to the gods.
+    static let summonPool: [String] = (anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily)
         .filter { $0.hasShippedArt }
         .map { $0.id }
 
     static func summonable(stars: Int) -> [UnitBlueprint] {
         summonPool.compactMap { blueprint($0) }.filter { $0.naturalStars == stars }
+    }
+
+    // MARK: - THE SHABTI FAMILY
+    //
+    // The gacha's common tier and the Hall of Ka's fodder: tomb servants,
+    // figurines made to answer for their master, in five elements. Summoners
+    // War's low-star monsters do this job — most pulls are food, and food is
+    // what raises the gods — so each is a real two-skill unit that is usable
+    // on day one and worth feeding on day two. Natural 3★, a grade below the
+    // roster's weakest god, so evolving them is the road to 4★ and 5★ fodder.
+
+    static var shabtiFamily: [UnitBlueprint] { Element.allCases.map(shabtiVariant) }
+
+    private static func shabtiVariant(_ element: Element) -> UnitBlueprint {
+        let epithet: String
+        let stats: (hp: Double, atk: Double, def: Double, spd: Double)
+        let status: StatusSpec
+        switch element {
+        case .ember:
+            epithet = "Kiln Servant"
+            stats = (290, 26, 19, 97)
+            status = StatusSpec(.burn, chance: 0.40, turns: 2, target: .singleEnemy)
+        case .tide:
+            epithet = "Nile Servant"
+            stats = (320, 23, 21, 96)
+            status = StatusSpec(.speedDown, chance: 0.45, turns: 2, target: .singleEnemy)
+        case .gale:
+            epithet = "Dune Servant"
+            stats = (285, 24, 18, 106)
+            status = StatusSpec(.glancing, chance: 0.45, turns: 2, target: .singleEnemy)
+        case .radiance:
+            epithet = "Sun Servant"
+            stats = (305, 24, 22, 98)
+            status = StatusSpec(.attackDown, chance: 0.45, turns: 2, target: .singleEnemy)
+        case .umbra:
+            epithet = "Tomb Servant"
+            stats = (300, 25, 20, 98)
+            status = StatusSpec(.defenseDown, chance: 0.40, turns: 2, target: .singleEnemy)
+        }
+        return enemy(
+            id: "shabti_\(element.rawValue)",
+            name: "Shabti",
+            epithet: epithet,
+            element: element,
+            archetype: .spirit,
+            role: .attacker,
+            stars: 3,
+            hp: stats.hp, atk: stats.atk, def: stats.def, spd: stats.spd,
+            basicName: "Clay Grasp",
+            basicMultiplier: 1.60,
+            specialName: "Answer the Call",
+            specialMultiplier: 2.30,
+            specialStatus: status,
+            auraHex: element.accentHex
+        )
     }
 
     // MARK: - THE ANUBIS FAMILY
