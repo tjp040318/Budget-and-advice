@@ -1,0 +1,57 @@
+# Compiles the app on every push, on a macOS runner with Xcode, because the
+# environment the code is written in has no Swift toolchain. A red run here is
+# read from the session that pushed (the GitHub Actions job log) and fixed
+# before the phone ever sees the commit.
+#
+# Cost: macOS minutes bill at 10x Linux. A build is 5-10 minutes, so about
+# 50-100 of the plan's minutes per push. To stop it: delete this file, or
+# Settings -> Actions -> Disable actions on the repository.
+name: build
+
+on:
+  push:
+  workflow_dispatch:
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  simulator:
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Xcode version
+        run: xcodebuild -version
+
+      - name: Build for the simulator
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project Pantheon.xcodeproj \
+            -scheme Pantheon \
+            -configuration Debug \
+            -sdk iphonesimulator \
+            -destination 'generic/platform=iOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO \
+            build 2>&1 | tee build.log | grep -E "error:|warning: (unused|never|will never|immutable)|BUILD (SUCCEEDED|FAILED)|\*\* " || true
+          echo "---- errors, if any ----"
+          grep -n "error:" build.log || echo "no compiler errors"
+          grep -q "BUILD SUCCEEDED" build.log
+
+      - name: Unit tests
+        if: success()
+        run: |
+          set -o pipefail
+          DEST=$(xcrun simctl list devices available | grep -E "iPhone (16|15)" | head -1 | sed -E 's/^ *([^(]+) \(.*/\1/' | sed 's/ *$//')
+          echo "simulator: $DEST"
+          xcodebuild \
+            -project Pantheon.xcodeproj \
+            -scheme Pantheon \
+            -configuration Debug \
+            -destination "platform=iOS Simulator,name=$DEST" \
+            CODE_SIGNING_ALLOWED=NO \
+            test 2>&1 | tee test.log | grep -E "error:|failed|passed|Executed|\*\* " || true
+          grep -q "TEST SUCCEEDED\|\*\* TEST SUCCEEDED" test.log
