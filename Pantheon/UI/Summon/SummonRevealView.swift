@@ -120,13 +120,14 @@ struct SummonRevealView: View {
 
     // MARK: - One at a time
 
+    /// Landscape: the stage fills the left half and the words the right, so
+    /// a short screen gives the figure its full height.
     private func single(_ result: SummonResult) -> some View {
-        VStack(spacing: 18) {
-            Spacer()
-
+        VStack(spacing: 0) {
+            HStack(spacing: 12) {
             SummonStageView(result: result)
                 .id(result.id)
-                .frame(height: 340)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .opacity(revealed ? 1 : 0)
                 .scaleEffect(revealed ? 1 : 0.7)
                 .animation(.spring(response: 0.5, dampingFraction: 0.68), value: revealed)
@@ -199,14 +200,14 @@ struct SummonRevealView: View {
                 .offset(y: detailsShown ? 0 : 10)
                 .animation(.easeOut(duration: 0.3), value: detailsShown)
             }
-
-            Spacer()
+            .frame(maxWidth: .infinity)
+            }
 
             Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
                 .font(Theme.body(12))
                 .foregroundStyle(Theme.textSecondary)
                 .opacity(isFullyRevealed ? 1 : 0)
-                .padding(.bottom, 30)
+                .padding(.bottom, 12)
         }
         .contentShape(Rectangle())
         .onTapGesture { advance() }

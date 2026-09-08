@@ -92,13 +92,47 @@ before the phone did. The cause was a convention, not a corruption:
    rocks 10 cm, feet stay planted, the pose recovers — so it ships as
    exported. Anubis's remains the synthesised one.
 
+## What the fourth look found: the seams
+
+The first screenshot of a canonical file on a phone showed Anubis at the
+right size, on the ground, facing the enemies — and wrapped in marbled tan
+bands with no black head, no gold collar and no white kilt. A software
+renderer written for the purpose (`tools/preview.py`: a numpy rasteriser
+that samples the file's own texture through its own UVs) showed the same
+bands, so the fault was in the file, and the file said why:
+
+- **The reader collapsed seams.** Blender writes texture coordinates per
+  face-corner; the reader kept the first coordinate it met for each point.
+  17,024 of Anubis's 98,947 points sit on a UV seam, so every triangle that
+  touched one interpolated across the whole atlas. Harmless-looking at
+  198,000 triangles — a speckle along the seams — and fatal once each
+  triangle is forty times larger.
+- **The decimator copied UVs from the nearest vertex.** Meshy's atlases are
+  hundreds of tiny islands, and the nearest source vertex is on another one
+  more often than not. 48.5% of the shipped Anubis's triangles spanned more
+  than a quarter of the texture; 68.7% of the low-detail file's; Sekhmet and
+  Zeus were 46% and 44% — their GLBs already carry seam-split vertices, and
+  the nearest-vertex lookup picked between the copies at random.
+
+The fix is in `tools/character.py`: the reader now splits vertices at seams
+(one vertex per distinct point-and-UV, weights duplicated with them), the
+decimator is MeshLab's quadric collapse **with texture** (via an OBJ round
+trip, because the in-memory route refuses per-corner coordinates), with
+seams preserved as boundaries and skin weights transferred afterwards from
+the nearest source vertex, which is fine for weights because weights are
+smooth. Normals are welded across seam copies so a seam is not a crease.
+All three families were rebuilt and re-rendered: **zero smeared triangles**
+in all 24 files, and the renders show the characters that were painted.
+`pymeshlab` is a 106 MB wheel that also needs `libopengl0`; the tool says so
+and falls back to a seam-frozen fast decimation when it is missing.
+
 ## Polygons: the actual comparison
 
 | | triangles |
 |---|---|
 | Summoners War monster (2014, mobile) | ~2,000–5,000 |
 | The raw Anubis export | 197,879 |
-| **What ships now** | **4,999**, plus a 1,499 `_lod` for crowded stages |
+| **What ships now** | **4,999**, plus a 2,499 `_lod` for the ten-character stage |
 
 Decimation, run for real over the whole family with `python3 tools/mesh.py anubis`:
 
@@ -125,7 +159,10 @@ zeus_<clip>.usdz × 6      55,839 → 1,980 tris    7.3 → 0.2–0.3 MB each, 1
 
 Sekhmet verifies at 2.001 m, Zeus at 2.146 m against 2.15 (the decimator
 shaves the crown), both with feet at y = 0, facing +Z, four influences, rest
-equal to bind to 1e-15, and every animated frame life-size.
+equal to bind to 1e-15, and every animated frame life-size. After the seam
+fix the families are 3.4, 3.8 and 4.0 MB with more vertices (a seam vertex is
+two), and the `_lod` is 2,499 triangles; a battle uses the full model unless
+there are eight or more combatants.
 
 Skin weights carry across by nearest-neighbour remapping from the source
 vertices, and every output was re-read with USD afterwards: 24 joints, every
@@ -211,10 +248,12 @@ each) in under a minute, and the untouched exports are committed in
   screen rather than stretched over it
 - [x] Portraits, the summon stage, the island, an app icon; the gacha only
   produces characters whose art has shipped
-- [ ] **Confirm on device.** Needs the `[ModelLibrary]` console block. The
-  bundle now holds 24 model files, eight per family; nothing in it has been
-  seen on a phone since the canonical rewrite, and Sekhmet and Zeus have
-  never been seen at all.
+- [x] **Seen on device**, twice: Anubis in a battle (right size, grounded,
+  facing the enemies; marbled texture and an A-pose, both traced and fixed)
+  and Sekhmet on the summon stage (upright, animated, over-exposed; the
+  lights were retuned). The bundle holds 24 model files, eight per family.
+- [ ] **Confirm the fixes on device** with More → Diagnostics: textures,
+  the idle, the exposure, and the landscape framing.
 
 ### Phase 1 — the model pipeline *(done)*
 
@@ -253,7 +292,19 @@ the pipeline above.
 - **Thoth** — Radiance support, a cleanse and an attack-bar push, so the
   Egyptians have a second support. Next.
 
-### Phase 3 — the island *(built; the painting is a stand-in)*
+### Phase 2b — the common tier and the training hall *(done)*
+
+- **Shabti** — the 3★ tier: five elements of one tomb-servant figurine, a
+  two-skill attacker a grade under Anubis. Portraits are recolours of the
+  enemy's, with cut-outs; no mesh, so they stand in the world as sprites.
+  Exists because a gacha with no common tier gave every common roll to the
+  first 4★ in the list.
+- **The Hall of Ka** (`TrainingView`) — power-up by feeding (a duplicate
+  is a skill-up on top), evolution with same-grade fodder at max level,
+  awakening with essences; the island's fourth landmark and a button on the
+  collection.
+
+### Phase 3 — the island *(built; painted; now landscape)*
 
 Summoners War's town is not a 3D scene the player navigates. It is a painted
 backdrop with a fixed camera and tappable hotspots. That is what `IslandView`
@@ -273,7 +324,11 @@ is: the app now opens on it.
   centre differs by 7/255 with its best alignment at zero shift). The five
   anchors in `IslandDatabase` were then measured off the painting; the
   numbers are in `Docs/ART_2D.md` §6.
+- [x] Landscape: a 2048 × 1152 painting for a phone held sideways, which
+  shows its whole width and crops 9% top and bottom; anchors re-measured.
 - [ ] Upgrade states of the buildings: a second and third painting per tier
+- [ ] Phase A of the living island (units idling on it, particles, day and
+  night); see *The road to Summoners War*
 
 ### Phase 4 — sound and feel
 
@@ -291,21 +346,92 @@ Arena rating curve, a second campaign chapter, daily energy, then TestFlight.
 
 ---
 
+## The road to Summoners War
+
+Asked directly — "can this reach Summoners War, or will it always look vibe
+coded?" — the honest answer is a list, because the game is a list of systems
+and each one is either there, half there, or missing.
+
+| Summoners War has | Pantheon today | What it takes |
+|---|---|---|
+| Gacha with a common tier, rare tier, legendary tier, pity | ✅ three tiers; the 3★ tier is the Shabti family, 4★ Anubis, 5★ Sekhmet and Zeus; soft and hard pity | more families |
+| Power-up by feeding, skill-ups from duplicates | ✅ the Hall of Ka | — |
+| Evolution with same-grade fodder at max level | ✅ | — |
+| Awakening with essences | ✅ | essence drops are in the campaign; a dungeon per element is the genre's source |
+| Runes (relics): six slots, sets, sub-stats, upgrades | ✅ | a rune-removal cost, a reappraisal, the "Legend" grade |
+| Turn-based combat: attack bar, elements, buffs, debuffs, leader skills | ✅ | more status kinds as families need them |
+| Campaign chapters, arena, energy | ✅ one chapter, arena, energy | a Greek chapter; Giant's Keep-style dungeons that drop relics |
+| Hundreds of monsters | 20 characters in four families | one family is ~1 hour, 53 Meshy credits and two Gemini calls; the pipeline is proven |
+| Stylised, chunky, readable 3D characters | realistic-leaning text-to-3D; textures being fixed | concept art first, then Meshy image-to-3D from it; a rim-light and outline shader; see below |
+| A living island: monsters wander, buildings animate, day and night | a painting with plaques | two phases below |
+| Landscape only | portrait | one build setting, a re-solved battle camera, a compact HUD, a wide island painting |
+| Server, accounts, live events, guilds, real-time arena | none, all local | a backend; out of scope for the build in this repository |
+| Sound with voice lines, real music | synthesised effects and two synthesised loops | Suno/Udio for music, ElevenLabs for lines |
+
+Two of those rows are what "looks vibe coded" actually points at, and both
+have a concrete fix:
+
+**Characters.** Text-to-3D from one sentence gives a plausible figure, not a
+designed one. The pro pipeline is concept art first: paint the character
+(the portraits already exist and are strong), then generate a full-body
+turnaround in the same style from the portrait with a `--ref` edit, then
+Meshy **image-to-3D** from that sheet, which is far more faithful than
+text-to-3D and gives a model that matches its own card. Then two shader
+modifiers in `MaterialTuner`: a rim light in the element colour and a
+back-face outline pass, which is most of what separates "a game character"
+from "a scan" on a phone screen. And the fixes already in hand: the texture
+seams that made Anubis marble, and the idle clip that left him in an A-pose.
+
+**The island.** Phase A, one session: the painting stays and comes alive —
+the player's own units stand on it in their idle clips (real 3D over the
+painting, positioned at the plaques), the pool glows and the obelisk beacon
+pulses with particles, the sky tints through a day-night cycle keyed to the
+clock, the camera drifts a little with a drag. Phase B, two or three
+sessions and ~200 Meshy credits: a real 3D island — terrain, five buildings
+as static meshes from Meshy's sculpture style, water, units wandering with a
+walk clip, pinch-zoom and pan, tap-to-enter by hit-testing the building.
+Phase A first, because it is most of the feeling for a tenth of the cost.
+
+**On agents.** More agents help where work is independent and verifiable:
+this session ran the model pipeline in one while the Swift changed in
+another. They do not help with the one thing that made the earlier work
+risky, which was writing Swift nobody compiled. That is fixed differently:
+the repository now compiles and tests itself on GitHub's macOS runner on
+every push, and the app photographs its own screens there, so a session
+here sees the result within ten minutes. That loop, not headcount, is what
+turns "vibe coded" into "engineered".
+
+### How a session sees the app now
+
+1. `git push` → `.github/workflows/build.yml` builds the simulator app and
+   runs the 40 unit tests on `macos-15` (about six minutes).
+2. The job then launches the app with `-tour`. `TourView` (debug only) walks
+   island → collection → detail → Hall of Ka → summon → a 5★ reveal → a
+   battle on auto → arena → More, four seconds a step, while the runner
+   screenshots the simulator; the frames are uploaded as an artifact and
+   printed into the log as one base64 contact sheet.
+3. The session reads the job log through the GitHub tools and decodes the
+   sheet. A red build, a failing test or a broken screen is seen before the
+   phone ever pulls the commit.
+4. On the phone, **More → Diagnostics** holds everything the app printed,
+   with Copy and Share; and the **Playtest Log** artifact takes issue
+   reports the session reads back from its database on request.
+
+Cost: macOS minutes bill at ten times Linux, roughly 80–100 plan-minutes per
+push. Settings → Actions on the repository turns it off.
+
 ## What to do next
 
-1. **Pull, build, run** and send the `[ModelLibrary]` block from the console
-   (`Docs/PLAYTEST.md` §1 says what each line means) with screenshots of the
-   island, the collection, an Olympus Stirs reveal and a battle with Sekhmet
-   or Zeus on the team. Three families of canonical files are in the bundle
-   and none has been seen since the rewrite; that paste decides whether the
-   canonical file is enough or SceneKit's importer needs a further workaround.
-2. **If Sekhmet or Zeus look wrong** on the phone, the first thing to check is
-   the console's bbox line against the numbers in `Docs/PLAYTEST.md` §1: the
-   file says 2.00 and 2.15 m with feet at zero, so a wrong figure on screen is
-   the importer's doing and the paste will show where.
-3. **Then Thoth**, the second Egyptian support, by the same four commands and
-   the same two Gemini calls — an hour of wall clock, 53 credits, no new
-   tooling — and a Greek campaign chapter so Zeus has somewhere to fight.
+1. **Pull, build, run in landscape** and walk `Docs/PLAYTEST.md`: the island's
+   plaques, the retextured models in a battle, the idle, the Hall of Ka, a
+   ten-pull, the Overview's green relic numbers. Log what is wrong in the
+   Playtest Log and paste the block from More → Diagnostics.
+2. **Read the log of the CI run** for the same commit — the contact sheet at
+   the end of it is what the simulator saw — so a phone-only fault (GPU,
+   sound, feel) can be told from a build fault.
+3. **The living island, phase A**, then **Thoth** by the same four commands
+   and two Gemini calls, then a Greek chapter so Zeus has somewhere to fight.
+   Each is a session; none needs new tooling.
 
 ---
 
@@ -321,9 +447,11 @@ Arena rating curve, a second campaign chapter, daily energy, then TestFlight.
 | Fetch the finished files | ✅ fourteen files in under a minute |
 | Paint a family and an island | ✅ eleven portraits, a banner and the island in ~6 minutes of Gemini time |
 | All code, logic, balance, integration | ✅ |
-| Compile or see the running app | ❌ — the reason bugs still reach your phone |
+| Compile and test the app | ✅ on every push, on GitHub's macOS runner, ~6 minutes |
+| See the app | ✅ the CI screenshot tour; `tools/preview.py` for a model file |
+| Touch the app | ❌ — taps, feel, sound and the real phone are yours |
 
 The 3D bottleneck is gone in practice, not just in principle: a character is
 four commands and two Gemini calls, about an hour end to end including the
-waiting, and it arrives verified. The one thing this environment still cannot
-do is look at the result, which is why the next step is yours.
+waiting, and it arrives verified and rendered. The compile gap is closed by
+the runner. What this environment still cannot do is hold the phone.

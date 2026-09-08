@@ -18,8 +18,10 @@ struct IslandView: View {
     @State private var pulse = false
     @State private var shaking: String?
 
-    /// The painting's pixel size; the anchors are normalised against it.
-    static let paintingSize = CGSize(width: 1536, height: 2048)
+    /// The painting's pixel size; the anchors are normalised against it. A
+    /// 16:9 painting for a landscape phone, which shows its full width and
+    /// crops 9% off the top and the bottom.
+    static let paintingSize = CGSize(width: 2048, height: 1152)
 
     var body: some View {
         GeometryReader { geometry in

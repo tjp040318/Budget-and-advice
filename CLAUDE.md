@@ -34,8 +34,21 @@ The 3D tools need packages that are not preinstalled. PyPI is reachable, so at
 the start of a session that will touch models:
 
 ```bash
-pip install -q usd-core numpy pillow scipy fast-simplification
+pip install -q usd-core numpy pillow scipy fast-simplification pymeshlab
+apt-get install -y libopengl0      # pymeshlab's textured decimation needs it
 ```
+
+Then `python3 tools/preview.py Pantheon/Resources/Models/<file>.usdz --out x.png`
+renders a shipped model with its own texture, and `--sheet <family>` renders
+every file of a family. Look before shipping: the marbled Anubis on the phone
+was visible in that render.
+
+**The repository compiles itself.** `.github/workflows/build.yml` builds the
+simulator app and runs the unit tests on a macOS runner on every push, then
+launches the app with `-tour` and screenshots it (`TourView`, debug only).
+Read the run with the GitHub tools (`actions_list`, `get_job_logs`); the log
+ends with one base64 contact sheet between `SHEET_BASE64_BEGIN/END`. Never
+push without reading the run that follows.
 
 ## Where things stand
 
@@ -43,14 +56,20 @@ Read `Docs/PLAN.md` first. It has the measurements that decisions were based
 on, the phase list, the pipeline costs, and an honest account of what this
 environment can and cannot do. The short version:
 
-- The game builds and runs on an iPhone. Battle, summon, collection, arena and
-  campaign all work.
-- Three families are in the code, and all three are complete: model, six
-  clips and five portraits each, fifteen characters in the gacha. Anubis:
-  natural 4★. Sekhmet: natural 5★, the first damage archetype. Zeus: natural
-  5★, Greek, the control archetype (a Thunderclap that stuns, freezes, sleeps,
-  knocks back or provokes the whole enemy line), with the "Olympus Stirs"
-  banner live.
+- The game builds and runs on an iPhone, **landscape only** since this
+  session: the battle camera is re-solved for a wide frame (35°, 5.5 m up,
+  24° down; the player line a third of the screen tall), the battle HUD is
+  one top row and an open-middled bottom bar, the summon reveal is stage
+  left and words right, and the island painting is 16:9.
+- Battle, summon, collection, arena, campaign and the Hall of Ka (training:
+  power-up, skill-ups from duplicates, evolution, awakening) all work.
+- Four families are in the code. Anubis: natural 4★. Sekhmet: natural 5★,
+  the first damage archetype. Zeus: natural 5★, Greek, the control archetype,
+  with the "Olympus Stirs" banner live. Shabti: natural 3★, the gacha's
+  common tier and the training fodder, portraits only (sprites in the
+  world). Twenty characters in the gacha; a common roll that finds no unit
+  of its grade rolls at random within the nearest grade and shows the unit's
+  real stars — the "every summon is a fire Anubis" bug.
 - Models ship **canonical and decimated**: `tools/mesh.py <family>` reads the
   untouched export in `Art/Models/` (Blender USDZ or Meshy GLB) and writes
   Y-up, metre, feet-on-origin, rest-equals-bind, four-influence files into
@@ -61,7 +80,12 @@ environment can and cannot do. The short version:
   it off the joints). **Nothing has been confirmed on device** since the
   canonical rewrite, and Sekhmet and Zeus have never been seen; the first
   thing worth asking for is the `[ModelLibrary]` console block — the loader
-  prints the bounding box and skinner it built.
+  prints the bounding box and skinner it built, and **More → Diagnostics**
+  on the phone holds every line with Copy and Share. Two on-device facts so
+  far: a 3v2 battle used the `_lod` files, whose texture was smeared by the
+  decimation (fixed; the threshold is now eight combatants and the LOD is
+  2,499 triangles), and the units stood in the bind pose, which the loader
+  now treats by gathering per-joint tracks into one animation.
 - The app opens on the island (`IslandView`): five landmarks over the real
   painting. It was generated at 9:16 and its sea extended to 3:4, because a
   phone shows only the central 62% of the painting's width; the anchors were
@@ -84,7 +108,12 @@ environment can and cannot do. The short version:
   vertex frame is recovered from the joints, and an emissive map that is the
   base colour is dropped (the game keeps real emissive maps, so shipping it
   would have made both characters self-lit).
-- Art is done for all three families: 21 painted portraits, 5 stage backdrops,
+- The **Playtest Log** is an artifact the user logs issues into
+  (https://claude.ai/code/artifact/a978f66a-cdde-4c34-841c-0299fc97d553);
+  read new entries with the Artifact tool's `read_db` on collection
+  `issues` (status `open`), reply and set `working`/`fixed` with `write_db`.
+  "Check the issues log" means exactly that.
+- Art is done for all four families: 26 painted portraits, 5 stage backdrops,
   3 summon banners, the island painting, a particle sprite and a 10-texture UI
   kit. `tools/genart.py` makes more via Gemini; the key is provided as a
   credential, so it is in the environment and must never be printed or

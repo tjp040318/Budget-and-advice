@@ -341,7 +341,7 @@ struct TrainingView: View {
     // MARK: - Pieces
 
     private func fodderGrid(_ candidates: [ResolvedUnit], limit: Int) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 10) {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 74, maximum: 92), spacing: 8)], spacing: 10) {
             ForEach(candidates) { candidate in
                 Button {
                     if fodder.contains(candidate.id) {

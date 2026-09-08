@@ -451,7 +451,7 @@ struct FodderPickerView: View {
                             : "Every other unit you own is locked."
                     )
                 } else {
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96, maximum: 120), spacing: 10)], spacing: 12) {
                         ForEach(candidates) { candidate in
                             Button {
                                 toggle(candidate.id)

@@ -252,9 +252,16 @@ Leave the **lower third quiet** — the rate text and the pull buttons sit there
 
 ## 6. The island
 
-One file, `island_bg.png`, 1536×2048 (3:4, so it fills a phone screen with the
-sides cropped a little). `tools/island.py` paints a stand-in; the real painting
-replaced it with the same name and size and nothing else changed.
+One file, `island_bg.png`, **2048×1152** (16:9) since the game went landscape:
+a phone held sideways shows the painting's whole width and crops 9% off the
+top and the bottom, so the five structures sit between y = 0.22 and 0.79, under
+the header and above the tab bar. `tools/island.py` paints a stand-in; the real
+painting replaced it with the same name and nothing else changed except
+`IslandView.paintingSize`.
+
+The portrait-era notes below are kept because the method still applies: paint
+for the frame the phone actually shows, then measure the anchors off the
+painting that shipped.
 
 **Paint it in two steps, not one.** A phone shows only the central 62% of a
 3:4 painting's width (`IslandView.fill` crops the sides), and a 3:4 generation
@@ -286,11 +293,11 @@ numbers until they agree:
 
 | Landmark | x | y |
 |---|---|---|
-| Summoning circle | 0.52 | 0.50 |
-| Gate of the Duat | 0.28 | 0.71 |
-| Arena of Souls | 0.68 | 0.70 |
-| Hall of Ka | 0.345 | 0.32 |
-| Obelisk | 0.665 | 0.45 |
+| Summoning circle | 0.44 | 0.48 |
+| Gate of the Duat | 0.26 | 0.64 |
+| Arena of Souls | 0.74 | 0.63 |
+| Hall of Ka | 0.16 | 0.36 |
+| Obelisk | 0.89 | 0.47 |
 
 These are the painting that shipped, measured off it. The anchor is the
 building's footprint; the plaque floats 0.055 above it. The obelisk's anchor

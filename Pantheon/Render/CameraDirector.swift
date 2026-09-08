@@ -14,13 +14,16 @@ final class CameraDirector {
     private let homeEuler: SCNVector3
     private var isBusy = false
 
-    /// Field of view at rest. Shots narrow it to compress the frame.
-    private let homeFOV: CGFloat = 44
+    /// Field of view at rest, read off the camera it was handed so the home
+    /// framing and the scene's solve cannot disagree. Shots narrow it to
+    /// compress the frame.
+    private let homeFOV: CGFloat
 
     init(cameraNode: SCNNode) {
         self.cameraNode = cameraNode
         self.homePosition = cameraNode.position
         self.homeEuler = cameraNode.eulerAngles
+        self.homeFOV = cameraNode.camera?.fieldOfView ?? 35
     }
 
     /// Frames the whole battlefield. The default state between actions.

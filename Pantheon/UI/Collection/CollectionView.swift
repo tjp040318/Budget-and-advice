@@ -37,7 +37,9 @@ struct CollectionView: View {
         return list
     }
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 3)
+    /// As many 100-point cards as the width holds: six across a landscape
+    /// phone, more on an iPad, rather than three stretched columns.
+    private let columns = [GridItem(.adaptive(minimum: 100, maximum: 124), spacing: 10)]
 
     var body: some View {
         NavigationStack {

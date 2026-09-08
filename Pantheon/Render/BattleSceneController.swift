@@ -192,13 +192,15 @@ final class BattleSceneController: NSObject {
 
     private func buildCamera() {
         let camera = SCNCamera()
-        // Solved numerically for a 9:19.5 portrait screen with the HUD's top
-        // strip and bottom panel taken off: the player line's feet land at 63%
-        // of the screen height, the enemy line's at 38%, enemy heads at 23%, a
-        // second rank still inside the frame, and the far edge of the stage at
-        // 27% so the painting shows behind the enemies. The old framing put the
-        // player's feet at 83%, behind the command panel.
-        camera.fieldOfView = 44
+        // Solved numerically for a landscape phone (852 × 393 points) with the
+        // HUD's single top row and the bottom bar's two ends taken off: the
+        // near player rank's feet land at 84% of the screen height and its
+        // heads at 50%, so a figure is a third of the screen tall the way the
+        // genre frames them; the near enemy rank's feet at 52% and heads at
+        // 27%, the far rank's heads at 22%, all below the top row; the far
+        // player column at 64% of the width. The previous portrait solve
+        // (44°, 8.75 m up, 39° down) put the enemy heads under the strip.
+        camera.fieldOfView = 35
         camera.zNear = 0.1
         camera.zFar = 120
         camera.wantsHDR = true
@@ -215,9 +217,10 @@ final class BattleSceneController: NSObject {
 
         cameraNode = SCNNode()
         cameraNode.camera = camera
-        // High and steep, the way a portrait phone has to look at a stage.
-        cameraNode.position = SCNVector3(0, 8.75, 11.0)
-        cameraNode.eulerAngles = SCNVector3(-0.681, 0, 0)
+        // Lower and shallower than the portrait camera was: a wide frame looks
+        // across the stage rather than down at it.
+        cameraNode.position = SCNVector3(0, 5.5, 9.75)
+        cameraNode.eulerAngles = SCNVector3(-0.419, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
 
         director = CameraDirector(cameraNode: cameraNode)
@@ -245,11 +248,11 @@ final class BattleSceneController: NSObject {
     private func position(for combatant: Combatant) -> SCNVector3 {
         let sideSign: Float = combatant.side == .player ? 1 : -1
         // Two ranks of two, so a four-unit team reads clearly from the camera.
-        // Columns two metres apart and ranks 1.5 m deep keep a full team inside
-        // a portrait frame; the old 2.4 m columns put a unit off the edge.
+        // A landscape frame has the width to spare, so columns sit 2.6 m apart
+        // and ranks 1.5 m deep; the far column lands at 64% of the screen.
         let column = Float(combatant.slot % 2)
         let rank = Float(combatant.slot / 2)
-        let x = (column - 0.5) * 2.0 + (rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : 0.5)
+        let x = (column - 0.5) * 2.6 + (rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : 0.5)
         let z = sideSign * (2.2 + rank * 1.5)
         return SCNVector3(x, 0, z)
     }

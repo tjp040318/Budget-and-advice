@@ -19,9 +19,11 @@ struct BattleView: View {
             }
             .ignoresSafeArea()
 
+            // A landscape HUD: one row across the top with the turn order in
+            // it, and a bottom bar whose middle is open, so a short screen
+            // keeps its centre for the stage.
             VStack(spacing: 0) {
                 topBar
-                turnOrderStrip
                 Spacer()
                 if let actor = model.awaitingActor {
                     commandPanel(actor: actor)
@@ -30,7 +32,7 @@ struct BattleView: View {
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.bottom, 10)
+            .padding(.bottom, 8)
 
             if showLog { logOverlay }
 
@@ -86,6 +88,8 @@ struct BattleView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 7)
                 .background(Capsule().fill(Theme.surface.opacity(0.85)))
+
+            turnOrderStrip
 
             Spacer()
 
@@ -151,54 +155,24 @@ struct BattleView: View {
                 .frame(width: index == 0 ? 32 : 26, height: index == 0 ? 32 : 26)
                 .shadow(color: index == 0 ? combatant.element.color.opacity(0.8) : .clear, radius: 5)
             }
-            Spacer()
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
         .background(Capsule().fill(Theme.ink.opacity(0.55)))
-        .padding(.top, 8)
     }
 
     // MARK: - Command panel
 
+    /// The actor at the left, the skills at the right, nothing in between:
+    /// the player line stands in the open middle of a landscape screen.
     private func commandPanel(actor: Combatant) -> some View {
-        VStack(spacing: 8) {
-            if model.selectedSkillSlot != nil {
-                targetingBar
-            }
-
-            HStack(spacing: 10) {
-                // Actor plate
-                VStack(spacing: 3) {
-                    if BundleImage.exists(actor.model.portraitName) {
-                        BundleImage(name: actor.model.portraitName)
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 48, height: 48)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                    .strokeBorder(actor.element.color, lineWidth: 1.5)
-                            )
-                            .shadow(color: actor.element.color.opacity(0.6), radius: 5)
-                    }
-                    Text(actor.name)
-                        .font(Theme.body(12).weight(.bold))
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(1)
-                    ElementBadge(element: actor.element, compact: true)
-                    StatBar(
-                        value: actor.currentHealth,
-                        maximum: actor.maxHealth,
-                        tint: Theme.success,
-                        height: 4
-                    )
-                    .frame(width: 74)
+        HStack(alignment: .bottom, spacing: 10) {
+            actorPlate(actor)
+            Spacer(minLength: 0)
+            VStack(alignment: .trailing, spacing: 8) {
+                if model.selectedSkillSlot != nil {
+                    targetingBar
                 }
-                .frame(width: 86)
-                .padding(8)
-                .background(Theme.panel(Theme.tightCorner))
-
-                // Skills
                 HStack(spacing: 8) {
                     ForEach(model.availableSkills) { option in
                         SkillButton(
@@ -210,14 +184,45 @@ struct BattleView: View {
                         }
                     }
                 }
-                Spacer(minLength: 0)
+            }
+            .padding(8)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                    .fill(Theme.ink.opacity(0.82))
+            )
+        }
+    }
+
+    private func actorPlate(_ actor: Combatant) -> some View {
+        HStack(spacing: 8) {
+            if BundleImage.exists(actor.model.portraitName) {
+                BundleImage(name: actor.model.portraitName)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8, style: .continuous)
+                            .strokeBorder(actor.element.color, lineWidth: 1.5)
+                    )
+                    .shadow(color: actor.element.color.opacity(0.6), radius: 5)
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                Text(actor.name)
+                    .font(Theme.body(12).weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                ElementBadge(element: actor.element, compact: true)
+                StatBar(
+                    value: actor.currentHealth,
+                    maximum: actor.maxHealth,
+                    tint: Theme.success,
+                    height: 4
+                )
+                .frame(width: 90)
             }
         }
-        .padding(10)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-                .fill(Theme.ink.opacity(0.82))
-        )
+        .padding(8)
+        .background(Theme.panel(Theme.tightCorner))
     }
 
     private var targetingBar: some View {
@@ -279,14 +284,14 @@ struct BattleView: View {
                     }
                     .padding(10)
                 }
-                .frame(maxHeight: 220)
+                .frame(maxHeight: 150)
                 .background(Theme.panel())
                 .onChange(of: model.log.count) { _, count in
                     withAnimation { proxy.scrollTo(count - 1, anchor: .bottom) }
                 }
             }
             .padding(.horizontal, 12)
-            .padding(.bottom, 150)
+            .padding(.bottom, 96)
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
     }
