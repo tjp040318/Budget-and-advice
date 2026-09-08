@@ -260,7 +260,13 @@ each) in under a minute, and the untouched exports are committed in
 Run in anger and measured above. The pipeline is `Art/Models` → `mesh.py` →
 `Pantheon/Resources/Models`, one command per family.
 
-### Phase 2 — a second and third character family *(Sekhmet and Zeus: done, unseen on device)*
+### Phase 2 — a second and third character family *(done; all three remade concept-first)*
+
+All three families were remade in this session from designed concepts —
+see *The road to Summoners War* below for how and what it costs. The
+bullets under each family describe the first, text-to-3D build; the
+remakes replaced their files under the same names, so nothing in the code
+or the checklist below changed.
 
 Per family: a kit, a balance pass, five portraits, one mesh through Meshy, and
 the pipeline above.
