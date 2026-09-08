@@ -372,15 +372,29 @@ Two of those rows are what "looks vibe coded" actually points at, and both
 have a concrete fix:
 
 **Characters.** Text-to-3D from one sentence gives a plausible figure, not a
-designed one. The pro pipeline is concept art first: paint the character
-(the portraits already exist and are strong), then generate a full-body
-turnaround in the same style from the portrait with a `--ref` edit, then
-Meshy **image-to-3D** from that sheet, which is far more faithful than
-text-to-3D and gives a model that matches its own card. Then two shader
-modifiers in `MaterialTuner`: a rim light in the element colour and a
-back-face outline pass, which is most of what separates "a game character"
-from "a scan" on a phone screen. And the fixes already in hand: the texture
-seams that made Anubis marble, and the idle clip that left him in an A-pose.
+designed one — Sekhmet on the reveal stage was a tan figure in a red dress,
+and her five variants differed by a wash. Two things changed in this session
+and a third is under way:
+
+- **The shading.** `MaterialTuner` now gives every imported material a
+  half-Lambert two-band lighting ramp with a specular pop (form reads as
+  painted, shadows lift instead of going black), a Fresnel rim in the
+  element's colour, and a **real recolour**: every saturated pixel of the
+  base texture that is not skin or fur takes the element's hue, computed
+  once per model and element and cached, so the water variant wears water.
+  None of it touches the art files.
+- **Concept first.** `tools/genart.py --ref <portrait>` paints a designed
+  full-body figure from the card — ornate armour, a big silhouette, a strict
+  three-colour palette, an A-pose on a plain ground — and
+  `tools/meshy.py generate <asset> --image <that png>` runs Meshy's
+  image-to-3D on it instead of text-to-3D, then rigs and animates as before.
+  The three concepts are in `Art/Concepts/`; the image-to-3D tasks for
+  `sekhmet_v2`, `anubis_v2` and `zeus_v2` are in their manifests. When a
+  result beats the text-to-3D model in `tools/preview.py`, it ships under
+  the family's name.
+- **Still to do:** an outline pass (a back-face expansion or an
+  `SCNTechnique` edge pass), and per-element costume *variants* rather than
+  recolours, which is how the genre makes five characters of one.
 
 **The island.** Phase A, one session: the painting stays and comes alive —
 the player's own units stand on it in their idle clips (real 3D over the
@@ -421,6 +435,13 @@ turns "vibe coded" into "engineered".
    was tumbling on its edge (a spin added to a tilted node's Euler angles),
    and a levelled team won the first gate before the first battle frame, so
    the tour's battle now waits for a command instead of fighting on auto.
+   The third tour found the A-pose: four battle frames eight seconds apart
+   with every unit in the same pose, while the same clip played on the
+   summon stage. `UnitNode` started with its current clip already set to
+   the combat idle, so the idle it asked for at birth was refused as a
+   restart, and units stood in their bind pose until their first attack.
+   Nothing on the pipeline side was wrong; the console block would never
+   have shown it. The frames did, in one look.
 4. On the phone, **More → Diagnostics** holds everything the app printed,
    with Copy and Share; and the **Playtest Log** artifact takes issue
    reports the session reads back from its database on request.

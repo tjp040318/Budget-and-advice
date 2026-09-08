@@ -120,9 +120,15 @@ Send: a screenshot of the Result panel before you tap Power up.
   painting shows above.
 - **Textures**: Anubis has a black jackal head, a gold and lapis collar and a
   white kilt. Marbled tan bands mean the old file is still in the build.
-- **Idle**: the units breathe in a combat stance. Arms straight out and legs
-  straight is the A-pose; if you see it, paste the console block — the line
-  about the clip animation says why.
+- **Look**: every model has a thin edge of light in its element's colour,
+  lifted shadows with a painted two-tone feel, and its costume in the
+  element's colour — a tide Anubis wears blue where the ember one wears
+  orange, with the fur and skin unchanged. Say if anything looks flat, or
+  if a colour landed on skin.
+- **Idle**: the units breathe in a combat stance from the first second.
+  Arms straight out and legs straight is the A-pose; it was a one-line bug
+  in the battle unit and should be gone. If you see it, paste the console
+  block.
 - Sekhmet and Zeus stand the same way, a little taller than Anubis. Zeus's
   Thunderclap puts forked lightning across the enemy line and cracks.
 - Attack. On the hit: freeze, shake, tap, an oversized number, a thud.

@@ -31,14 +31,14 @@
         "texture_prompt": "hand-painted stylised mobile game character textures, white and burnished gold and storm blue palette, white hair and beard, white himation with gold meander, gold scale armour, crisp baked highlights, no photo realism"
       },
       "cost": 60,
-      "progress": 45,
+      "progress": 67,
       "urls": {},
       "created_at": 1788895150012,
       "started_at": 1788895150017,
       "finished_at": 0,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-08T19:20:11Z"
+      "polled": "2026-09-08T19:21:11Z"
     }
   },
   "history": []

@@ -104,6 +104,14 @@ environment can and cannot do. The short version:
   a prompt to a rigged model with six clips for 53 credits each, and
   `download` fetched the files once the host was opened; the task ids are in
   `Art/Models/*.meshy.json` and the untouched GLBs sit beside them.
+- **Concept-first models.** `python3 tools/genart.py --ref <portrait> ...`
+  paints a designed full-body A-pose figure (prompts in `Docs/PLAN.md`, *The
+  road to Summoners War*), and `python3 tools/meshy.py generate <asset>
+  --image Art/Concepts/<file>.png --height H` runs Meshy image-to-3D on it,
+  then rigs and animates. `--until preview` stops after the mesh so the
+  thumbnail can be judged before the rig and clips are paid for. Three are
+  under way as `*_v2`; judge them with `tools/preview.py` and ship the
+  winner under the family's name.
 - `tools/character.py` is the one place a rigged character is read (Blender
   USDZ or Meshy GLB), canonicalised, decimated, written and verified;
   `tools/mesh.py` runs a family through it, `tools/glb2usd.py` converts one
