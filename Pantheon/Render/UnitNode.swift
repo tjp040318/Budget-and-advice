@@ -21,7 +21,11 @@ final class UnitNode: SCNNode {
     private let selectionRing: SCNNode
     private let elementTint: UIColor
 
-    private var currentClip: AnimationClip = .idleCombat
+    /// Nil until the first clip plays. It used to start as `.idleCombat`, so
+    /// the `play(.idleCombat)` in `init` was refused as "already running" and
+    /// every unit stood in its bind pose — the A-pose in the first battle
+    /// screenshots — until its first attack.
+    private var currentClip: AnimationClip?
     private var barWidth: CGFloat { CGFloat(spec.height) * 0.5 }
 
     init(combatant: Combatant, detail: ModelLibrary.DetailLevel = .high) {

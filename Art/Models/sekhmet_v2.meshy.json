@@ -31,14 +31,14 @@
         "texture_prompt": "hand-painted stylised mobile game character textures, crimson and burnished gold and near-black palette, black lioness fur, gold sun-disc crown, lapis and carnelian inlays, crisp baked highlights, no photo realism"
       },
       "cost": 30,
-      "progress": 45,
+      "progress": 85,
       "urls": {},
       "created_at": 1788895061521,
       "started_at": 1788895061525,
       "finished_at": 0,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-08T19:19:02Z"
+      "polled": "2026-09-08T19:20:13Z"
     }
   },
   "history": []
