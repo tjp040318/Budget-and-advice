@@ -15,3 +15,6 @@ build.log
 
 # API keys for tools/genart.py live outside the repo
 *.key
+
+# Python bytecode from the tools
+__pycache__/
