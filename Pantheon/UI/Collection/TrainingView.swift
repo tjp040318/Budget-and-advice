@@ -8,6 +8,14 @@ import SwiftUI
 /// same-grade fodder at max level, awakening takes essences. The rules all
 /// live in `ProgressionService` and `GameStore`; this screen only shows their
 /// consequences before the player commits, and what changed after.
+///
+/// The chrome is `GameScreen`, and the shape is the genre's rather than the
+/// platform's: the mode switch that used to be a full-width segmented picker
+/// under a navigation bar is three segments in the 34-point strip, and the
+/// screen is three columns instead of one long scroll — the roster you pick
+/// from is a rail down the left, the fodder grid takes the middle, and what it
+/// costs stands in a column at the right with its button always on screen.
+/// Nothing scrolls but the two lists that can outgrow the frame.
 struct TrainingView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
@@ -20,15 +28,19 @@ struct TrainingView: View {
     /// form in on the beam under its new name.
     @State private var awakenedReveal: SummonResult?
 
-    enum Mode: String, CaseIterable, Identifiable {
+    enum Mode: String, CaseIterable {
         case powerUp = "Power up"
         case evolve = "Evolve"
         case awaken = "Awaken"
-        var id: String { rawValue }
+    }
+
+    /// The mode switch as the strip's segments, in the order it always had.
+    private var modes: [(value: Mode, title: String)] {
+        Mode.allCases.map { (value: $0, title: $0.rawValue) }
     }
 
     /// Everything owned, strongest first, so the unit worth training is near
-    /// the front of the strip.
+    /// the top of the rail.
     private var units: [ResolvedUnit] {
         store.resolvedUnits.sorted { $0.power > $1.power }
     }
@@ -38,51 +50,31 @@ struct TrainingView: View {
         return units.first { $0.id == targetID }
     }
 
+    private var subtitle: String {
+        guard let target else { return "\(units.count) units" }
+        return "\(target.name) · Lv.\(target.level)"
+    }
+
+    /// The rail is two cards wide; the cost column is fixed so the fodder grid
+    /// takes every point the two of them leave.
+    private let railWidth: CGFloat = 156
+    private let costWidth: CGFloat = 214
+    private let cardColumns = [GridItem(.adaptive(minimum: 68, maximum: 78), spacing: 6)]
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    targetStrip
-
-                    if let target {
-                        Picker("", selection: $mode) {
-                            ForEach(Mode.allCases) { mode in
-                                Text(mode.rawValue).tag(mode)
-                            }
-                        }
-                        .pickerStyle(.segmented)
-
-                        if let outcome {
-                            Text(outcome)
-                                .font(Theme.title(15))
-                                .foregroundStyle(Theme.gold)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12)
-                                .panelBackground()
-                        }
-
-                        targetPanel(target)
-
-                        switch mode {
-                        case .powerUp: powerUp(target)
-                        case .evolve: evolve(target)
-                        case .awaken: awaken(target)
-                        }
-                    } else {
-                        EmptyState(
-                            icon: "person.crop.circle.badge.questionmark",
-                            title: "Choose a unit",
-                            message: "Tap a unit above to train it."
-                        )
-                    }
+            GameScreen("Hall of Ka", subtitle: subtitle, dismiss: { dismiss() }) {
+                if target != nil {
+                    BarSegments(options: modes, selection: $mode)
                 }
-                .padding(12)
-            }
-            .screen("Hall of Ka")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
+                BarWallet(wallet: store.player.wallet, shows: [.drachma])
+            } content: {
+                HStack(alignment: .top, spacing: 8) {
+                    rosterRail
+                    detail
                 }
+                .padding(.horizontal, ScreenChrome.contentPadding)
+                .padding(.vertical, 8)
             }
             .onAppear {
                 if targetID == nil { targetID = units.first?.id }
@@ -100,50 +92,86 @@ struct TrainingView: View {
 
     // MARK: - Target
 
-    private var targetStrip: some View {
-        VStack(alignment: .leading, spacing: 8) {
+    /// The roster as a rail down the left rather than a strip across the top:
+    /// in landscape the height is the scarce dimension, and two columns of
+    /// cards keep eight units in reach where the strip kept four.
+    private var rosterRail: some View {
+        VStack(alignment: .leading, spacing: 6) {
             SectionHeader(title: "Who trains")
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
+            ScrollView(showsIndicators: false) {
+                LazyVGrid(columns: cardColumns, spacing: 8) {
                     ForEach(units) { unit in
                         Button {
                             targetID = unit.id
                         } label: {
-                            UnitCard(unit: unit, isSelected: unit.id == targetID, size: 84)
+                            UnitCard(unit: unit, isSelected: unit.id == targetID, size: 68)
                         }
                         .buttonStyle(.plain)
                     }
                 }
+                .padding(.bottom, 4)
             }
+        }
+        .frame(width: railWidth)
+    }
+
+    @ViewBuilder
+    private var detail: some View {
+        if let target {
+            VStack(spacing: 8) {
+                targetPanel(target)
+                switch mode {
+                case .powerUp: powerUp(target)
+                case .evolve: evolve(target)
+                case .awaken: awaken(target)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        } else {
+            EmptyState(
+                icon: "person.crop.circle.badge.questionmark",
+                title: "Choose a unit",
+                message: "Tap a unit in the rail to train it."
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     private func targetPanel(_ unit: ResolvedUnit) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(unit.name)
-                    .font(Theme.title(18))
-                    .foregroundStyle(Theme.textPrimary)
-                Spacer()
-                Text(String(repeating: "★", count: unit.stars))
-                    .font(Theme.numeric(13))
-                    .foregroundStyle(Theme.gold)
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(unit.name)
+                        .font(Theme.title(16))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    Text(String(repeating: "★", count: unit.stars))
+                        .font(Theme.numeric(12))
+                        .foregroundStyle(Theme.gold)
+                }
+                StatBar(
+                    value: Double(unit.unit.experience),
+                    maximum: Double(ProgressionService.experienceForNextLevel(level: unit.level, stars: unit.stars)),
+                    tint: Theme.info,
+                    height: 6,
+                    label: unit.unit.isMaxLevel ? "Lv.\(unit.level) — max for \(unit.stars)★" : "Lv.\(unit.level) / \(unit.unit.maxLevel)"
+                )
             }
-            StatBar(
-                value: Double(unit.unit.experience),
-                maximum: Double(ProgressionService.experienceForNextLevel(level: unit.level, stars: unit.stars)),
-                tint: Theme.info,
-                height: 6,
-                label: unit.unit.isMaxLevel ? "Lv.\(unit.level) — max for \(unit.stars)★" : "Lv.\(unit.level) / \(unit.unit.maxLevel)"
-            )
-            HStack {
-                Text("Power \(unit.power)")
-                    .font(Theme.numeric(13))
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("Power \(unit.power)")
+                .font(Theme.numeric(13))
+                .foregroundStyle(Theme.gold)
+
+            // What the last commit did, beside the unit it was done to, rather
+            // than in a panel of its own that pushed everything down.
+            if let outcome {
+                Text(outcome)
+                    .font(Theme.body(12).weight(.bold))
                     .foregroundStyle(Theme.gold)
-                Spacer()
-                Text("\(store.player.wallet.drachma) drachma")
-                    .font(Theme.numeric(13))
-                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 170, alignment: .trailing)
             }
         }
         .padding(10)
@@ -162,11 +190,11 @@ struct TrainingView: View {
         let gained = ProgressionService.grantExperience(experience, to: &preview)
         let affordable = store.player.wallet.drachma >= cost
 
-        return VStack(spacing: 12) {
+        return HStack(alignment: .top, spacing: 8) {
             VStack(alignment: .leading, spacing: 6) {
-                SectionHeader(title: "Feed")
+                SectionHeader(title: "Feed", accessory: "\(chosen.count) / 12")
                 Text("Every unit you pick is consumed. A duplicate of \(target.name) is a skill-up as well as experience.")
-                    .font(Theme.body(12))
+                    .font(Theme.body(11))
                     .foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 if candidates.isEmpty {
@@ -176,9 +204,13 @@ struct TrainingView: View {
                         message: "Summon more units, or unlock one. Locked units are never consumed."
                     )
                 } else {
-                    fodderGrid(candidates, limit: 12)
+                    ScrollView(showsIndicators: false) {
+                        fodderGrid(candidates, limit: 12)
+                            .padding(.bottom, 4)
+                    }
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(10)
             .panelBackground()
 
@@ -192,9 +224,11 @@ struct TrainingView: View {
                 resultRow("Cost", "\(cost) drachma", tint: affordable ? Theme.textPrimary : Theme.danger)
                 if target.unit.isMaxLevel {
                     Text("\(target.name) is at the level cap for \(target.stars)★. Evolve to keep going.")
-                        .font(Theme.body(12))
+                        .font(Theme.body(11))
                         .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                Spacer(minLength: 6)
                 PrimaryButton(
                     title: chosen.isEmpty ? "Pick units to feed" : "Power up",
                     systemImage: "arrow.up.circle.fill",
@@ -203,6 +237,7 @@ struct TrainingView: View {
                     commitPowerUp(target, feeding: chosen)
                 }
             }
+            .frame(maxWidth: costWidth, maxHeight: .infinity, alignment: .topLeading)
             .padding(10)
             .panelBackground()
         }
@@ -235,11 +270,35 @@ struct TrainingView: View {
         let chosen = candidates.filter { fodder.contains($0.id) }
         let affordable = store.player.wallet.drachma >= cost
         let ready = target.unit.canEvolve && chosen.count == required && affordable
+        let maxed = target.stars >= 6
+        // A 6★ has no fodder column, so its one panel takes the whole frame.
+        let panelWidth: CGFloat = maxed ? .infinity : costWidth
 
-        return VStack(spacing: 12) {
+        return HStack(alignment: .top, spacing: 8) {
+            if !maxed {
+                VStack(alignment: .leading, spacing: 6) {
+                    SectionHeader(title: "Fodder", accessory: "\(chosen.count) / \(required)")
+                    if candidates.isEmpty {
+                        EmptyState(
+                            icon: "tray",
+                            title: "No \(target.stars)★ fodder",
+                            message: "Evolution takes unlocked units at exactly \(target.stars)★. Raise some fodder to that grade first."
+                        )
+                    } else {
+                        ScrollView(showsIndicators: false) {
+                            fodderGrid(candidates, limit: required)
+                                .padding(.bottom, 4)
+                        }
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(10)
+                .panelBackground()
+            }
+
             VStack(alignment: .leading, spacing: 8) {
-                SectionHeader(title: target.stars >= 6 ? "Fully evolved" : "Evolve to \(target.stars + 1)★")
-                if target.stars >= 6 {
+                SectionHeader(title: maxed ? "Fully evolved" : "Evolve to \(target.stars + 1)★")
+                if maxed {
                     Text("\(target.name) is 6★, the top of the ladder.")
                         .font(Theme.body(12))
                         .foregroundStyle(Theme.textSecondary)
@@ -251,26 +310,10 @@ struct TrainingView: View {
                     requirement("\(cost) drachma", met: affordable,
                                 detail: "you have \(store.player.wallet.drachma)")
                     Text("Evolving resets the level to 1 and raises every stat; the fodder is consumed.")
-                        .font(Theme.body(12))
+                        .font(Theme.body(11))
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .padding(10)
-            .panelBackground()
-
-            if target.stars < 6 {
-                VStack(alignment: .leading, spacing: 8) {
-                    SectionHeader(title: "Fodder")
-                    if candidates.isEmpty {
-                        EmptyState(
-                            icon: "tray",
-                            title: "No \(target.stars)★ fodder",
-                            message: "Evolution takes unlocked units at exactly \(target.stars)★. Raise some fodder to that grade first."
-                        )
-                    } else {
-                        fodderGrid(candidates, limit: required)
-                    }
+                    Spacer(minLength: 6)
                     PrimaryButton(
                         title: "Evolve",
                         systemImage: "star.circle.fill",
@@ -285,9 +328,10 @@ struct TrainingView: View {
                         }
                     }
                 }
-                .padding(10)
-                .panelBackground()
             }
+            .frame(maxWidth: panelWidth, maxHeight: .infinity, alignment: .topLeading)
+            .padding(10)
+            .panelBackground()
         }
     }
 
@@ -298,68 +342,80 @@ struct TrainingView: View {
         if let awakening = target.blueprint.awakening {
             let costs = awakening.essenceCost.sorted { $0.key < $1.key }
             let ready = costs.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
-            VStack(alignment: .leading, spacing: 9) {
-                SectionHeader(title: "Awakening")
-                Text(target.unit.isAwakened ? awakening.awakenedName : "Becomes \(awakening.awakenedName)")
-                    .font(Theme.title(16))
-                    .foregroundStyle(target.unit.isAwakened ? Theme.gold : Theme.textPrimary)
-                Text(awakening.bonusDescription)
-                    .font(Theme.body(13))
-                    .foregroundStyle(Theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-                // The two forms side by side — the card the unit has and the
-                // card it becomes — the way the genre sells an awakening.
-                HStack(spacing: 10) {
-                    formTile(target.blueprint.model.portraitName, caption: target.blueprint.name)
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Theme.gold)
-                    formTile(target.blueprint.model.portraitName(awakened: true), caption: awakening.awakenedName)
-                }
-                .frame(maxWidth: .infinity)
-                if target.unit.isAwakened {
-                    Text("Already awakened.")
-                        .font(Theme.body(12))
-                        .foregroundStyle(Theme.textSecondary)
-                } else {
-                    ForEach(costs.indices, id: \.self) { index in
-                        let id = costs[index].key
-                        let needed = costs[index].value
-                        let have = store.player.essences[id] ?? 0
-                        requirement(EssenceCatalog.name(for: id), met: have >= needed, detail: "\(have) / \(needed)")
-                    }
-                    Text("Essences drop in the campaign; the element's own essence from its stages, magic essence from any.")
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 8) {
+                    SectionHeader(title: "Awakening")
+                    Text(target.unit.isAwakened ? awakening.awakenedName : "Becomes \(awakening.awakenedName)")
+                        .font(Theme.title(15))
+                        .foregroundStyle(target.unit.isAwakened ? Theme.gold : Theme.textPrimary)
+                    Text(awakening.bonusDescription)
                         .font(Theme.body(12))
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    PrimaryButton(title: "Awaken", systemImage: "sun.max.fill", isEnabled: ready) {
-                        store.awaken(target.id)
-                        if let after = store.resolved(target.id), after.unit.isAwakened {
-                            outcome = "\(after.name) awakened"
-                            Juice.notify(.success)
-                            AudioLibrary.shared.play(.uiConfirm)
-                            awakenedReveal = SummonResult(
-                                unit: after.unit,
-                                blueprint: after.blueprint,
-                                stars: after.stars,
-                                isNew: false,
-                                isFeatured: false,
-                                fromPity: false,
-                                isAwakening: true
-                            )
+                    // The two forms side by side — the card the unit has and the
+                    // card it becomes — the way the genre sells an awakening.
+                    HStack(spacing: 10) {
+                        formTile(target.blueprint.model.portraitName, caption: target.blueprint.name)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Theme.gold)
+                        formTile(target.blueprint.model.portraitName(awakened: true), caption: awakening.awakenedName)
+                    }
+                    .frame(maxWidth: .infinity)
+                    Spacer(minLength: 0)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .padding(10)
+                .panelBackground()
+
+                VStack(alignment: .leading, spacing: 8) {
+                    SectionHeader(title: "Essences")
+                    if target.unit.isAwakened {
+                        Text("Already awakened.")
+                            .font(Theme.body(12))
+                            .foregroundStyle(Theme.textSecondary)
+                    } else {
+                        ForEach(costs.indices, id: \.self) { index in
+                            let id = costs[index].key
+                            let needed = costs[index].value
+                            let have = store.player.essences[id] ?? 0
+                            requirement(EssenceCatalog.name(for: id), met: have >= needed, detail: "\(have) / \(needed)")
+                        }
+                        Text("Essences drop in the campaign; the element's own essence from its stages, magic essence from any.")
+                            .font(Theme.body(11))
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer(minLength: 6)
+                        PrimaryButton(title: "Awaken", systemImage: "sun.max.fill", isEnabled: ready) {
+                            store.awaken(target.id)
+                            if let after = store.resolved(target.id), after.unit.isAwakened {
+                                outcome = "\(after.name) awakened"
+                                Juice.notify(.success)
+                                AudioLibrary.shared.play(.uiConfirm)
+                                awakenedReveal = SummonResult(
+                                    unit: after.unit,
+                                    blueprint: after.blueprint,
+                                    stars: after.stars,
+                                    isNew: false,
+                                    isFeatured: false,
+                                    fromPity: false,
+                                    isAwakening: true
+                                )
+                            }
                         }
                     }
                 }
+                .frame(maxWidth: costWidth, maxHeight: .infinity, alignment: .topLeading)
+                .padding(10)
+                .panelBackground()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .panelBackground()
         } else {
             EmptyState(
                 icon: "sun.max",
                 title: "No awakened form",
                 message: "\(target.name) has no awakening; power up and evolve instead."
             )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -378,18 +434,22 @@ struct TrainingView: View {
                         .fill(Theme.surface)
                 }
             }
-            .frame(width: 96, height: 96)
+            .frame(width: 92, height: 92)
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+            // A painting scaled to fill is wider than its frame and `clipShape`
+            // does not clip hit-testing, so it would swallow taps meant for the
+            // panel beside it.
+            .allowsHitTesting(false)
             Text(caption)
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)
-                .frame(width: 112)
+                .frame(width: 108)
         }
     }
 
     private func fodderGrid(_ candidates: [ResolvedUnit], limit: Int) -> some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 74, maximum: 92), spacing: 8)], spacing: 10) {
+        LazyVGrid(columns: cardColumns, spacing: 8) {
             ForEach(candidates) { candidate in
                 Button {
                     if fodder.contains(candidate.id) {
@@ -401,7 +461,7 @@ struct TrainingView: View {
                         Juice.notify(.warning)
                     }
                 } label: {
-                    UnitCard(unit: candidate, isSelected: fodder.contains(candidate.id), size: 74)
+                    UnitCard(unit: candidate, isSelected: fodder.contains(candidate.id), size: 68)
                 }
                 .buttonStyle(.plain)
             }
@@ -414,20 +474,21 @@ struct TrainingView: View {
                 .font(.system(size: 13))
                 .foregroundStyle(met ? Theme.success : Theme.stroke)
             Text(label)
-                .font(Theme.body(13))
+                .font(Theme.body(12))
                 .foregroundStyle(Theme.textPrimary)
-            Spacer()
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
             Text(detail)
-                .font(Theme.numeric(12))
+                .font(Theme.numeric(11))
                 .foregroundStyle(met ? Theme.success : Theme.textSecondary)
         }
     }
 
     private func resultRow(_ label: String, _ value: String, tint: Color = Theme.textPrimary) -> some View {
         HStack {
-            Text(label).font(Theme.body(13)).foregroundStyle(Theme.textSecondary)
-            Spacer()
-            Text(value).font(Theme.numeric(14)).foregroundStyle(tint)
+            Text(label).font(Theme.body(12)).foregroundStyle(Theme.textSecondary)
+            Spacer(minLength: 4)
+            Text(value).font(Theme.numeric(12)).foregroundStyle(tint)
         }
     }
 }

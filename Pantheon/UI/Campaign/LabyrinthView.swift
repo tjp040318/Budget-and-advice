@@ -128,6 +128,10 @@ struct LabyrinthView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(8)
+            // The painting is most of the card now and it declines hits, so
+            // the tap would otherwise fall through to whatever the panel
+            // background happens to be. The card's own bounds are the target.
+            .contentShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             .panelBackground(radius: Theme.tightCorner)
         }
         .buttonStyle(.plain)
@@ -201,6 +205,9 @@ struct LabyrinthView: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(8)
+            // Two `Spacer`s hold this tile open; a spacer takes no taps, so
+            // the whole tile is declared the target instead.
+            .contentShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             .background(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(

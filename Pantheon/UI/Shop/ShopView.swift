@@ -150,7 +150,9 @@ struct ShopView: View {
             }
 
             HStack(spacing: 6) {
-                ForEach(grantParts(item.grant), id: \.self) { part in
+                // Offsets, not the strings themselves: two identical grants in
+                // one bundle would collide on `id: \.self`.
+                ForEach(Array(grantParts(item.grant).enumerated()), id: \.offset) { _, part in
                     Text(part)
                         .font(Theme.body(10).weight(.bold))
                         .foregroundStyle(Theme.gold)

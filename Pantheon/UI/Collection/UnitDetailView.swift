@@ -36,12 +36,37 @@ struct UnitDetailView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            GameScreen(
+                unit?.name ?? "Unit",
+                subtitle: unit?.blueprint.epithet,
+                dismiss: { dismiss() }
+            ) {
+                BarButton(
+                    title: "Lore",
+                    systemImage: "book.fill",
+                    tint: Theme.textSecondary,
+                    showsTitle: false
+                ) {
+                    showLore = true
+                }
+                BarButton(title: "Auto-equip", systemImage: "wand.and.stars", tint: Theme.info) {
+                    store.autoEquip(unitID)
+                }
+                BarButton(
+                    title: isLocked ? "Locked" : "Unlocked",
+                    systemImage: isLocked ? "lock.fill" : "lock.open",
+                    tint: isLocked ? Theme.gold : Theme.textSecondary,
+                    showsTitle: false
+                ) {
+                    store.toggleLock(unitID)
+                }
+            } content: {
                 if let unit {
+                    // Three columns, sized so a landscape phone holds the lot
+                    // without a scroll: card and actions, the ring, then stats
+                    // over skills. The scroll view is the safety net for a
+                    // long leader skill or awakening line, not the plan.
                     ScrollView {
-                        // Three columns, sized so a landscape phone holds
-                        // the lot without a scroll: card and actions, the
-                        // ring, then stats over skills.
                         HStack(alignment: .top, spacing: 8) {
                             identity(unit)
                                 .frame(width: 158)
@@ -53,40 +78,11 @@ struct UnitDetailView: View {
                             }
                             .frame(maxWidth: .infinity)
                         }
-                        .padding(10)
+                        .padding(.horizontal, ScreenChrome.contentPadding)
+                        .padding(.vertical, 8)
                     }
                 } else {
                     EmptyState(icon: "questionmark", title: "Gone", message: "This unit is no longer in your collection.")
-                }
-            }
-            .screen(unit?.name ?? "Unit")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        Button {
-                            showLore = true
-                        } label: {
-                            Image(systemName: "book.fill")
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                        Button {
-                            Juice.haptic(.light)
-                            store.autoEquip(unitID)
-                        } label: {
-                            Label("Auto-equip", systemImage: "wand.and.stars")
-                                .font(Theme.body(12).weight(.semibold))
-                                .foregroundStyle(Theme.info)
-                        }
-                        Button {
-                            store.toggleLock(unitID)
-                        } label: {
-                            Image(systemName: isLocked ? "lock.fill" : "lock.open")
-                                .foregroundStyle(isLocked ? Theme.gold : Theme.textSecondary)
-                        }
-                    }
                 }
             }
             .sheet(isPresented: $showFodderPicker) {
@@ -512,62 +508,61 @@ struct AwakeningSheet: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                if let awakening = unit.blueprint.awakening {
-                    let costs = awakening.essenceCost.sorted { $0.key < $1.key }
-                    let affordable = awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
-                    HStack(alignment: .top, spacing: 14) {
-                        formTile(unit.blueprint.model.portraitName(awakened: false), caption: unit.blueprint.name)
-                        Image(systemName: "arrow.right")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(Theme.gold)
-                            .padding(.top, 56)
-                        formTile(unit.blueprint.model.portraitName(awakened: true), caption: awakening.awakenedName)
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text(awakening.awakenedName)
-                                .font(Theme.title(16))
+            GameScreen("Awakening", subtitle: unit.name, dismiss: { dismiss() }) {
+                EmptyView()
+            } content: {
+                ScrollView {
+                    if let awakening = unit.blueprint.awakening {
+                        let costs = awakening.essenceCost.sorted { $0.key < $1.key }
+                        let affordable = awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
+                        HStack(alignment: .top, spacing: 14) {
+                            formTile(unit.blueprint.model.portraitName(awakened: false), caption: unit.blueprint.name)
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(Theme.gold)
-                            Text(awakening.bonusDescription)
-                                .font(Theme.body(12))
-                                .foregroundStyle(Theme.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                            ForEach(costs.indices, id: \.self) { costIndex in
-                                let id = costs[costIndex].key
-                                let needed = costs[costIndex].value
-                                let have = store.player.essences[id] ?? 0
-                                HStack {
-                                    Text(EssenceCatalog.name(for: id))
-                                        .font(Theme.body(12))
-                                        .foregroundStyle(Theme.textSecondary)
-                                    Spacer()
-                                    Text("\(have) / \(needed)")
-                                        .font(Theme.numeric(12))
-                                        .foregroundStyle(have >= needed ? Theme.success : Theme.danger)
-                                }
-                            }
-                            if unit.unit.isAwakened {
-                                Text("Already awakened.")
-                                    .font(Theme.body(12))
+                                .padding(.top, 56)
+                            formTile(unit.blueprint.model.portraitName(awakened: true), caption: awakening.awakenedName)
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text(awakening.awakenedName)
+                                    .font(Theme.title(16))
                                     .foregroundStyle(Theme.gold)
-                            } else {
-                                PrimaryButton(title: "Awaken", systemImage: "sun.max.fill", isEnabled: affordable) {
-                                    store.awaken(unit.id)
-                                    dismiss()
-                                }
-                                Text("Essences drop in the Halls of Essence, in the Labyrinth on the island.")
-                                    .font(Theme.body(10))
+                                Text(awakening.bonusDescription)
+                                    .font(Theme.body(12))
                                     .foregroundStyle(Theme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                ForEach(costs.indices, id: \.self) { costIndex in
+                                    let id = costs[costIndex].key
+                                    let needed = costs[costIndex].value
+                                    let have = store.player.essences[id] ?? 0
+                                    HStack {
+                                        Text(EssenceCatalog.name(for: id))
+                                            .font(Theme.body(12))
+                                            .foregroundStyle(Theme.textSecondary)
+                                        Spacer()
+                                        Text("\(have) / \(needed)")
+                                            .font(Theme.numeric(12))
+                                            .foregroundStyle(have >= needed ? Theme.success : Theme.danger)
+                                    }
+                                }
+                                if unit.unit.isAwakened {
+                                    Text("Already awakened.")
+                                        .font(Theme.body(12))
+                                        .foregroundStyle(Theme.gold)
+                                } else {
+                                    PrimaryButton(title: "Awaken", systemImage: "sun.max.fill", isEnabled: affordable) {
+                                        store.awaken(unit.id)
+                                        dismiss()
+                                    }
+                                    Text("Essences drop in the Halls of Essence, in the Labyrinth on the island.")
+                                        .font(Theme.body(10))
+                                        .foregroundStyle(Theme.textSecondary)
+                                }
                             }
+                            .frame(maxWidth: .infinity, alignment: .leading)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, ScreenChrome.contentPadding)
+                        .padding(.vertical, 10)
                     }
-                    .padding(12)
-                }
-            }
-            .screen("Awakening")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
                 }
             }
         }
@@ -619,56 +614,59 @@ struct FodderPickerView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                if candidates.isEmpty {
-                    EmptyState(
-                        icon: "tray",
-                        title: "No fodder available",
-                        message: purpose == .evolve
-                            ? "Evolution needs \(required) unlocked units at exactly \(target.stars)★."
-                            : "Every other unit you own is locked."
-                    )
-                } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 76, maximum: 96), spacing: 8)], spacing: 10) {
-                        ForEach(candidates) { candidate in
-                            Button {
-                                toggle(candidate.id)
-                            } label: {
-                                UnitCard(unit: candidate, isSelected: selection.contains(candidate.id), size: 76)
+            GameScreen(
+                purpose == .evolve ? "Evolve" : "Power up",
+                subtitle: target.name,
+                dismiss: { dismiss() }
+            ) {
+                EmptyView()
+            } content: {
+                ScrollView {
+                    if candidates.isEmpty {
+                        EmptyState(
+                            icon: "tray",
+                            title: "No fodder available",
+                            message: purpose == .evolve
+                                ? "Evolution needs \(required) unlocked units at exactly \(target.stars)★."
+                                : "Every other unit you own is locked."
+                        )
+                    } else {
+                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 76, maximum: 96), spacing: 8)], spacing: 10) {
+                            ForEach(candidates) { candidate in
+                                Button {
+                                    toggle(candidate.id)
+                                } label: {
+                                    UnitCard(unit: candidate, isSelected: selection.contains(candidate.id), size: 76)
+                                }
                             }
                         }
-                    }
-                    .padding(12)
-                }
-            }
-            .screen(purpose == .evolve ? "Evolve" : "Power up")
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 6) {
-                    if purpose == .evolve {
-                        Text("\(selection.count) / \(required) selected · \(ProgressionService.drachmaCostToEvolve(currentStars: target.stars)) drachma")
-                            .font(Theme.body(12))
-                            .foregroundStyle(Theme.textSecondary)
-                    } else {
-                        let xp = candidates
-                            .filter { selection.contains($0.id) }
-                            .reduce(0) { $0 + ProgressionService.feedValue(of: $1.unit) }
-                        Text("+\(xp) EXP · \(selection.count * 500) drachma")
-                            .font(Theme.body(12))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    PrimaryButton(
-                        title: purpose == .evolve ? "Evolve" : "Consume",
-                        isEnabled: purpose == .evolve ? selection.count == required : !selection.isEmpty
-                    ) {
-                        commit()
+                        .padding(.horizontal, ScreenChrome.contentPadding)
+                        .padding(.vertical, 8)
                     }
                 }
-                .padding(10)
-                .background(Theme.ink)
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Cancel") { dismiss() }
+                .safeAreaInset(edge: .bottom) {
+                    VStack(spacing: 6) {
+                        if purpose == .evolve {
+                            Text("\(selection.count) / \(required) selected · \(ProgressionService.drachmaCostToEvolve(currentStars: target.stars)) drachma")
+                                .font(Theme.body(12))
+                                .foregroundStyle(Theme.textSecondary)
+                        } else {
+                            let xp = candidates
+                                .filter { selection.contains($0.id) }
+                                .reduce(0) { $0 + ProgressionService.feedValue(of: $1.unit) }
+                            Text("+\(xp) EXP · \(selection.count * 500) drachma")
+                                .font(Theme.body(12))
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                        PrimaryButton(
+                            title: purpose == .evolve ? "Evolve" : "Consume",
+                            isEnabled: purpose == .evolve ? selection.count == required : !selection.isEmpty
+                        ) {
+                            commit()
+                        }
+                    }
+                    .padding(10)
+                    .background(Theme.ink)
                 }
             }
         }
