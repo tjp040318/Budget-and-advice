@@ -165,29 +165,30 @@ struct RelicInventoryView: View {
     /// How many pieces of each set the account holds, against what a set
     /// needs; a chip is a filter as well.
     private var setSummary: some View {
-        let tally = Dictionary(grouping: store.player.relics, by: \.set).mapValues(\.count)
+        let tally = Dictionary(grouping: store.player.relics, by: { $0.set }).mapValues(\.count)
         return VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: "Sets", accessory: "\(store.player.relics.count) relics")
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 6) {
-                    ForEach(RelicSet.allCases) { set in
-                        let count = tally[set] ?? 0
-                        let complete = count >= set.piecesRequired
+                    ForEach(RelicSet.allCases) { relicSet in
+                        let count = tally[relicSet] ?? 0
+                        let complete = count >= relicSet.piecesRequired
+                        let selected = setFilter == relicSet
                         Button {
-                            setFilter = setFilter == set ? nil : set
+                            setFilter = selected ? nil : relicSet
                         } label: {
                             HStack(spacing: 4) {
-                                Text(set.displayName)
+                                Text(relicSet.displayName)
                                     .font(Theme.body(11).weight(.semibold))
-                                Text("\(count)/\(set.piecesRequired)")
+                                Text("\(count)/\(relicSet.piecesRequired)")
                                     .font(Theme.numeric(10))
                             }
                             .padding(.horizontal, 9)
                             .padding(.vertical, 6)
                             .background(
-                                Capsule().fill(setFilter == set ? Theme.gold : (complete ? Theme.surfaceHigh : Theme.surface))
+                                Capsule().fill(selected ? Theme.gold : (complete ? Theme.surfaceHigh : Theme.surface))
                             )
-                            .foregroundStyle(setFilter == set ? Theme.ink : (complete ? Theme.textPrimary : Theme.textSecondary))
+                            .foregroundStyle(selected ? Theme.ink : (complete ? Theme.textPrimary : Theme.textSecondary))
                         }
                     }
                 }

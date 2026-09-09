@@ -50,7 +50,7 @@
       "finished_at": 1788915877691,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T01:04:41Z"
+      "polled": "2026-09-09T01:09:20Z"
     },
     "rig": {
       "id": "01a083b2-16b0-7382-bade-ed0998d1dcf8",
@@ -77,7 +77,10 @@
       "started_at": 1788915898920,
       "finished_at": 1788916042705,
       "name": "",
-      "polled": "2026-09-09T01:07:30Z"
+      "polled": "2026-09-09T01:09:20Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_awakened.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a083b4-acb3-7769-9c42-e79a6c7e79a3",
@@ -100,7 +103,10 @@
       "started_at": 1788916052013,
       "finished_at": 1788916068207,
       "name": "",
-      "polled": "2026-09-09T01:07:57Z"
+      "polled": "2026-09-09T01:09:20Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_awakened_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a083b4-b16f-724e-af30-82c87590c827",
@@ -123,7 +129,10 @@
       "started_at": 1788916052665,
       "finished_at": 1788916080715,
       "name": "",
-      "polled": "2026-09-09T01:08:07Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_awakened_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a083b4-b406-7338-b1ff-b992941fdd7b",
@@ -146,7 +155,10 @@
       "started_at": 1788916053333,
       "finished_at": 1788916086747,
       "name": "",
-      "polled": "2026-09-09T01:08:07Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_awakened_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a083b4-b694-7738-a8b1-cd32ced2cbd3",
@@ -169,7 +181,10 @@
       "started_at": 1788916054371,
       "finished_at": 1788916075467,
       "name": "",
-      "polled": "2026-09-09T01:07:57Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_awakened_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a083b4-baa7-758a-a3df-ec185ac9a988",
@@ -192,7 +207,10 @@
       "started_at": 1788916054963,
       "finished_at": 1788916090092,
       "name": "",
-      "polled": "2026-09-09T01:08:18Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_awakened_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a083b4-bd08-7204-82f2-5f1ddd5133b5",
@@ -215,8 +233,12 @@
       "started_at": 1788916055629,
       "finished_at": 1788916080878,
       "name": "",
-      "polled": "2026-09-09T01:08:08Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_awakened_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:09:21Z"
 }

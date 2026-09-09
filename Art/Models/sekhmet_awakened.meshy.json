@@ -50,7 +50,7 @@
       "finished_at": 1788915846484,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T01:04:10Z"
+      "polled": "2026-09-09T01:09:20Z"
     },
     "rig": {
       "id": "01a083b1-9f15-7264-9d6a-59e5d738d0d6",
@@ -77,7 +77,10 @@
       "started_at": 1788915862473,
       "finished_at": 1788915932271,
       "name": "",
-      "polled": "2026-09-09T01:05:33Z"
+      "polled": "2026-09-09T01:09:20Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_awakened.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a083b2-e278-7543-8472-f165da6dacf3",
@@ -100,7 +103,10 @@
       "started_at": 1788915934261,
       "finished_at": 1788915946660,
       "name": "",
-      "polled": "2026-09-09T01:05:48Z"
+      "polled": "2026-09-09T01:09:20Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_awakened_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a083b2-e56a-776e-9860-ce488bdd5da3",
@@ -123,7 +129,10 @@
       "started_at": 1788915934934,
       "finished_at": 1788915959491,
       "name": "",
-      "polled": "2026-09-09T01:06:09Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_awakened_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a083b2-e816-7744-b572-365ef4b7938e",
@@ -146,7 +155,10 @@
       "started_at": 1788915935578,
       "finished_at": 1788915961013,
       "name": "",
-      "polled": "2026-09-09T01:06:09Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_awakened_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a083b2-ea98-7483-a06c-d51fa667af69",
@@ -169,7 +181,10 @@
       "started_at": 1788915936167,
       "finished_at": 1788915947586,
       "name": "",
-      "polled": "2026-09-09T01:05:48Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_awakened_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a083b2-ece1-71fc-b9eb-a3cd8b723fe1",
@@ -192,7 +207,10 @@
       "started_at": 1788915936812,
       "finished_at": 1788915962284,
       "name": "",
-      "polled": "2026-09-09T01:06:09Z"
+      "polled": "2026-09-09T01:09:21Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_awakened_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a083b2-ef67-7687-82d0-e44681ae3a90",
@@ -215,8 +233,12 @@
       "started_at": 1788915937524,
       "finished_at": 1788915956012,
       "name": "",
-      "polled": "2026-09-09T01:05:59Z"
+      "polled": "2026-09-09T01:09:26Z",
+      "downloaded": {
+        "glb": "Art/Models/sekhmet_awakened_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:09:26Z"
 }

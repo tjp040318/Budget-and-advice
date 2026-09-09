@@ -102,7 +102,7 @@ struct IslandSceneView: UIViewRepresentable {
                     let node = UnitNode(combatant: combatant, detail: .high)
                     node.hideBattleDecorations()
                     let point = screenPoint(stands[index], paintingFrame: paintingFrame, viewSize: viewSize)
-                    let scale = Float(viewSize.height * Self.figureHeight) / max(0.5, unit.blueprint.model.height)
+                    let scale = Float(viewSize.height * IslandSceneView.figureHeight) / max(0.5, unit.blueprint.model.height)
                     node.scale = SCNVector3(scale, scale, scale)
                     node.position = SCNVector3(Float(point.x), Float(point.y), Float(index) * -2)
                     figures.addChildNode(node)
