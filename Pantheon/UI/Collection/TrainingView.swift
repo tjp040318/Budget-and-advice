@@ -41,7 +41,7 @@ struct TrainingView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: 10) {
                     targetStrip
 
                     if let target {
@@ -76,7 +76,7 @@ struct TrainingView: View {
                         )
                     }
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Hall of Ka")
             .toolbar {
@@ -146,7 +146,7 @@ struct TrainingView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -179,7 +179,7 @@ struct TrainingView: View {
                     fodderGrid(candidates, limit: 12)
                 }
             }
-            .padding(14)
+            .padding(10)
             .panelBackground()
 
             VStack(alignment: .leading, spacing: 8) {
@@ -203,7 +203,7 @@ struct TrainingView: View {
                     commitPowerUp(target, feeding: chosen)
                 }
             }
-            .padding(14)
+            .padding(10)
             .panelBackground()
         }
     }
@@ -256,7 +256,7 @@ struct TrainingView: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .padding(14)
+            .padding(10)
             .panelBackground()
 
             if target.stars < 6 {
@@ -285,7 +285,7 @@ struct TrainingView: View {
                         }
                     }
                 }
-                .padding(14)
+                .padding(10)
                 .panelBackground()
             }
         }
@@ -309,7 +309,7 @@ struct TrainingView: View {
                     .fixedSize(horizontal: false, vertical: true)
                 // The two forms side by side — the card the unit has and the
                 // card it becomes — the way the genre sells an awakening.
-                HStack(spacing: 14) {
+                HStack(spacing: 10) {
                     formTile(target.blueprint.model.portraitName, caption: target.blueprint.name)
                     Image(systemName: "arrow.right")
                         .font(.system(size: 18, weight: .bold))
@@ -352,7 +352,7 @@ struct TrainingView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
+            .padding(10)
             .panelBackground()
         } else {
             EmptyState(

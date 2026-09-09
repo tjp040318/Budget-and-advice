@@ -1,13 +1,25 @@
 import Foundation
 import SceneKit
 
-/// Moves the battle camera.
+/// Moves the battle camera — which, by default, it does not.
 ///
-/// Every shot is an offset from a fixed "home" framing that shows both teams.
-/// Shots always return home, and a new shot cancels the previous one, so the
-/// camera can never end a turn somewhere unexpected — which is the failure mode
-/// that makes cinematic cameras in turn-based games feel broken.
+/// The genre keeps one fixed three-quarter view for the whole fight: a basic
+/// attack, a special, an enemy's turn, none of them touches the frame, and
+/// the eye never has to find the field again. Summoners War moves its camera
+/// only for a handful of ultimates and the odd cut-in, and shakes it on a
+/// heavy hit. So: every shot is an offset from a fixed "home" framing that
+/// shows both teams; with the camera **fixed** (the default) the only move
+/// is a short push toward an ultimate's caster and back, and the hit shake;
+/// with **cinematic** on (More → Sound & camera) the old cuts, leans and
+/// orbits play. Shots always return home, a new shot cancels the previous
+/// one and clears its look-at, so the camera can never end a turn somewhere
+/// unexpected — the failure mode that makes cinematic cameras in turn-based
+/// games feel broken, and the one the phone photographed.
 final class CameraDirector {
+
+    /// The player's choice, read at shot time. Off is the genre's fixed view.
+    static let cinematicKey = "cinematicCamera"
+    static var isCinematic: Bool { UserDefaults.standard.bool(forKey: cinematicKey) }
 
     private let cameraNode: SCNNode
     private let homePosition: SCNVector3
@@ -29,6 +41,11 @@ final class CameraDirector {
     /// Frames the whole battlefield. The default state between actions.
     func returnHome(duration: TimeInterval = 0.5) {
         cameraNode.removeAllActions()
+        // Cancelling a shot's action skips its completion, which is what
+        // cleared the look-at constraint: left in place, it turned the
+        // home framing into a stare at the last victim's chest from five
+        // metres up, which is the "camera in a weird spot" of the playtest.
+        cameraNode.constraints = []
         let move = SCNAction.move(to: homePosition, duration: duration)
         move.timingMode = .easeInEaseOut
         let rotate = SCNAction.rotateTo(
@@ -48,7 +65,19 @@ final class CameraDirector {
         target: UnitNode?,
         completion: (() -> Void)? = nil
     ) {
+        // The fixed camera: nothing moves for a basic, a special or an
+        // enemy's turn; an ultimate earns the one push.
+        guard Self.isCinematic else {
+            if shot == .cinematicOrbit {
+                push(toward: caster, completion: completion)
+            } else {
+                completion?()
+            }
+            return
+        }
+
         cameraNode.removeAllActions()
+        cameraNode.constraints = []
         isBusy = true
 
         let casterPosition = caster.chestWorldPosition
@@ -112,6 +141,30 @@ final class CameraDirector {
                 node.look(at: casterPosition)
             }
             run(.sequence([orbit, .wait(duration: duration * 0.2)]), lookAt: nil, fov: 42, completion: completion)
+        }
+    }
+
+    /// The fixed camera's one move: a dolly a fifth of the way toward an
+    /// ultimate's caster with a touch of zoom, a hold while the clip lands,
+    /// and back. No cut, no orbit, the same orientation throughout, so the
+    /// field never leaves the frame.
+    private func push(toward caster: UnitNode, completion: (() -> Void)?) {
+        cameraNode.removeAllActions()
+        cameraNode.constraints = []
+        isBusy = true
+        let toward = lerp(homePosition, caster.chestWorldPosition, 0.18)
+        let move = SCNAction.move(to: toward, duration: 0.45)
+        move.timingMode = .easeOut
+        let back = SCNAction.move(to: homePosition, duration: 0.5)
+        back.timingMode = .easeInEaseOut
+        animateFOV(to: homeFOV * 0.86, duration: 0.45)
+        cameraNode.runAction(.sequence([move, .wait(duration: 0.9), back])) { [weak self] in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.animateFOV(to: self.homeFOV, duration: 0.4)
+                self.isBusy = false
+                completion?()
+            }
         }
     }
 

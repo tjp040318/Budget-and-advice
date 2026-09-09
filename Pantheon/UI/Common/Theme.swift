@@ -71,28 +71,33 @@ enum Theme {
 
     /// Headline voice. Heavy and wide-tracked; the previous serif fought with
     /// the rounded titles and neither won.
+    /// One knob for the whole app's type. The genre runs small — a landscape
+    /// phone is 430 points tall and Summoners War fits a team, a grid and a
+    /// bar into it — and the first playtest asked for exactly that density.
+    static let fontScale: CGFloat = 0.9
+
     static func display(_ size: CGFloat) -> Font {
-        .system(size: size, weight: .black, design: .default)
+        .system(size: size * fontScale, weight: .black, design: .default)
     }
 
     static func title(_ size: CGFloat = 20) -> Font {
-        .system(size: size, weight: .heavy, design: .default)
+        .system(size: size * fontScale, weight: .heavy, design: .default)
     }
 
     static func body(_ size: CGFloat = 15) -> Font {
-        .system(size: size, weight: .medium, design: .default)
+        .system(size: size * fontScale, weight: .medium, design: .default)
     }
 
     /// Numbers are monospaced so columns of stats line up, which matters more
     /// here than in most apps — the whole game is comparing two stat blocks.
     static func numeric(_ size: CGFloat = 15) -> Font {
-        .system(size: size, weight: .bold, design: .monospaced)
+        .system(size: size * fontScale, weight: .bold, design: .monospaced)
     }
 
     // MARK: - Shapes
 
-    static let cornerRadius: CGFloat = 14
-    static let tightCorner: CGFloat = 10
+    static let cornerRadius: CGFloat = 12
+    static let tightCorner: CGFloat = 8
 
     /// The standard panel: gradient body, bevelled edge, and a drop shadow so
     /// it floats off the backdrop instead of being painted onto it.
@@ -165,9 +170,18 @@ enum Theme {
 enum Chrome {
     private static var cache: [String: UIImage?] = [:]
 
+    /// The kit is drawn at 1/1.4 of its painted size: the corner ornaments
+    /// and the button ends were sized for a portrait phone, and on a
+    /// landscape one they ate the screen (a 31-point ornament on every side
+    /// of every panel). The insets below are divided by the same number.
+    static let shrink: CGFloat = 1.4
+
     static func image(_ name: String) -> UIImage? {
         if let hit = cache[name] { return hit }
-        let loaded = UIImage(named: name)
+        var loaded = UIImage(named: name)
+        if let source = loaded, let cg = source.cgImage {
+            loaded = UIImage(cgImage: cg, scale: source.scale * shrink, orientation: source.imageOrientation)
+        }
         cache[name] = loaded
         return loaded
     }
@@ -175,16 +189,20 @@ enum Chrome {
     /// Smallest side a painted panel may be drawn at. Below this the corner
     /// ornament from opposite sides overlaps and the panel reads as a frame
     /// with no middle.
-    static let paintedPanelMinimum: CGFloat = 130
+    static let paintedPanelMinimum: CGFloat = 130 / shrink
 
-    /// ui_panel: 512² → 171pt. Corner ornament reaches ~18% in.
-    static let panelInsets = EdgeInsets(top: 31, leading: 31, bottom: 31, trailing: 31)
-    /// ui_button_gold: 640×192 → 213×64pt. Ornate ends are ~22% of the width.
-    static let goldButtonInsets = EdgeInsets(top: 8, leading: 47, bottom: 8, trailing: 47)
+    private static func scaled(_ top: CGFloat, _ leading: CGFloat, _ bottom: CGFloat, _ trailing: CGFloat) -> EdgeInsets {
+        EdgeInsets(top: top / shrink, leading: leading / shrink, bottom: bottom / shrink, trailing: trailing / shrink)
+    }
+
+    /// ui_panel: 512² → 171pt at full size. Corner ornament reaches ~18% in.
+    static let panelInsets = scaled(31, 31, 31, 31)
+    /// ui_button_gold: 640×192 → 213×64pt at full size. Ornate ends are ~22% of the width.
+    static let goldButtonInsets = scaled(8, 47, 8, 47)
     /// ui_button_dark: same size, plain ends.
-    static let darkButtonInsets = EdgeInsets(top: 10, leading: 17, bottom: 10, trailing: 17)
-    /// ui_ribbon: 640×128 → 213×43pt.
-    static let ribbonInsets = EdgeInsets(top: 9, leading: 17, bottom: 9, trailing: 17)
+    static let darkButtonInsets = scaled(10, 17, 10, 17)
+    /// ui_ribbon: 640×128 → 213×43pt at full size.
+    static let ribbonInsets = scaled(9, 17, 9, 17)
 
     static func slice(_ name: String, _ insets: EdgeInsets) -> Image? {
         guard let ui = image(name) else { return nil }

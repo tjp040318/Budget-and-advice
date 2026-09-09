@@ -42,8 +42,10 @@ final class UnitNode: SCNNode {
         // up immediately afterwards.
         let tint = UIColor(hex: combatant.element.accentHex) ?? .white
         let modelHeight = CGFloat(combatant.model.height)
-        let barHeight = modelHeight * 0.045
-        let width = modelHeight * 0.5
+        // Wide and thick enough to read from the fixed camera five metres
+        // up: the genre's bars are as wide as the figure.
+        let barHeight = modelHeight * 0.07
+        let width = modelHeight * 0.85
 
         let container = ModelLibrary.shared.node(
             for: combatant.model,
@@ -82,7 +84,7 @@ final class UnitNode: SCNNode {
         let billboard = SCNBillboardConstraint()
         billboard.freeAxes = [.X, .Y]
         barRoot.constraints = [billboard]
-        barRoot.position = SCNVector3(0, combatant.model.height * 1.16, 0)
+        barRoot.position = SCNVector3(0, combatant.model.height * 1.12, 0)
 
         // Ground ring under the unit — the readable "who is this" cue.
         let ringGeometry = SCNTorus(ringRadius: modelHeight * 0.22, pipeRadius: 0.012)

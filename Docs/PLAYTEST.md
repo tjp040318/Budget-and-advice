@@ -304,12 +304,33 @@ their element's scroll.
 
 Send: a summon from a Fire or a Light & Dark scroll, and the unit's element.
 
-## 16. The third skill
+## 16. The camera
 
-In a battle, use a unit's third skill (Anubis: Opening of the Mouth). The
-camera sweeps around the caster and lands facing them, then returns. It
-used to point at the empty side of the stage for the whole shot, which
-looked like a blank olive screen with the HUD over it.
+The battle camera is **fixed** now, the way Summoners War keeps it: one
+three-quarter view of the whole field from the first turn to the last. A
+basic attack, a special, an enemy's turn, your turn coming round — none of
+them moves it. Two things do: an ultimate (a third skill such as Anubis's
+Opening of the Mouth) pushes in toward the caster for a moment and comes
+back, and a heavy hit shakes. The view you saw after an enemy's attack —
+looking down at your own line from above — was the old close shot's
+look-at left switched on when the turn changed; it cannot happen now.
+
+If you want the old cuts and orbits back: Obelisk → More → **Sound &
+camera** → Cinematic battle camera.
+
+Send: whether the frame ever moves when it should not.
+
+## 17. The battle HUD
+
+Top centre is the **attack gauge**: one track, every living unit's
+portrait sliding along it as its bar fills — yours above the line with a
+blue ring, theirs below with a red one, gold on the unit whose turn it is.
+The health bars over the figures are wider and thicker. **Tap a skill** and
+its name and what it does appear above the skill row, with the target
+prompt; **hold a skill** (even one that is cooling down) and a card with
+its cooldown and description opens; tap anywhere to close it.
+
+Send: whether the gauge order matches who actually moved next.
 
 ## If it does not build
 

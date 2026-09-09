@@ -107,11 +107,12 @@ struct SettingsView: View {
     @State private var showMissions = false
     @State private var soundOn = !AudioLibrary.shared.isMuted
     @State private var musicOn = !AudioLibrary.shared.isMusicMuted
+    @AppStorage(CameraDirector.cinematicKey) private var cinematicCamera = false
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     accountPanel
                     missionsPanel
                     shopPanel
@@ -120,7 +121,7 @@ struct SettingsView: View {
                     assetStatusPanel
                     dangerPanel
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("More")
             .toolbar {
@@ -145,7 +146,7 @@ struct SettingsView: View {
             row("Total summons", "\(store.player.totalSummons)")
             row("Codex", "\(store.player.codex.count) / \(UnitDatabase.summonPool.count)")
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -160,7 +161,7 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -175,7 +176,7 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
         .sheet(isPresented: $showShop) {
             ShopView()
@@ -185,7 +186,7 @@ struct SettingsView: View {
 
     private var soundPanel: some View {
         VStack(spacing: 9) {
-            SectionHeader(title: "Sound")
+            SectionHeader(title: "Sound & camera")
             Toggle(isOn: $soundOn) {
                 Text("Sound effects")
                     .font(Theme.body(13))
@@ -209,8 +210,18 @@ struct SettingsView: View {
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
+            Toggle(isOn: $cinematicCamera) {
+                Text("Cinematic battle camera")
+                    .font(Theme.body(13))
+                    .foregroundStyle(Theme.textPrimary)
+            }
+            .tint(Theme.gold)
+            Text("Off keeps one fixed view of the whole field, the way the genre does it; only an ultimate pushes in for a moment, and hits shake. On lets the camera cut, lean and orbit on skills.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -240,7 +251,7 @@ struct SettingsView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -272,7 +283,7 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.textSecondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -283,7 +294,7 @@ struct SettingsView: View {
                 showResetConfirm = true
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
         .confirmationDialog(
             "Delete this account?",

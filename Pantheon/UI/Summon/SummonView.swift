@@ -11,14 +11,14 @@ struct SummonView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     bannerPicker
                     bannerArt
                     pityPanel
                     summonButtons
                     ratesLink
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Summon")
             .toolbar {
@@ -115,7 +115,7 @@ struct SummonView: View {
                     .foregroundStyle(Theme.textPrimary.opacity(0.85))
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .padding(16)
+            .padding(12)
         }
         .frame(height: 210)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
@@ -172,7 +172,7 @@ struct SummonView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -219,7 +219,7 @@ struct SummonView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -249,7 +249,7 @@ struct RateTableView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text(banner.scroll.description)
                         .font(Theme.body(13))
                         .foregroundStyle(Theme.textSecondary)
@@ -291,7 +291,7 @@ struct RateTableView: View {
                         .panelBackground()
                     }
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Rates")
             .toolbar {

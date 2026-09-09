@@ -40,12 +40,12 @@ struct CollectionView: View {
 
     /// As many 100-point cards as the width holds: six across a landscape
     /// phone, more on an iPad, rather than three stretched columns.
-    private let columns = [GridItem(.adaptive(minimum: 100, maximum: 124), spacing: 10)]
+    private let columns = [GridItem(.adaptive(minimum: 76, maximum: 90), spacing: 8)]
 
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: 10) {
                     filterBar
 
                     if units.isEmpty {
@@ -60,13 +60,13 @@ struct CollectionView: View {
                                 Button {
                                     selected = unit
                                 } label: {
-                                    UnitCard(unit: unit, size: 100)
+                                    UnitCard(unit: unit, size: 76)
                                 }
                             }
                         }
                     }
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Collection")
             .toolbar {

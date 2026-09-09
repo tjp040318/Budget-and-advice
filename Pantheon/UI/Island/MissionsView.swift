@@ -10,7 +10,7 @@ struct MissionsView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 16) {
+                VStack(spacing: 12) {
                     if let receipt {
                         HStack(spacing: 8) {
                             Image(systemName: "checkmark.seal.fill")
@@ -30,7 +30,7 @@ struct MissionsView: View {
                     missionsPanel
                     featsPanel
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Missions")
             .toolbar {

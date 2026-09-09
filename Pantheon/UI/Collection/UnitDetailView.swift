@@ -26,7 +26,7 @@ struct UnitDetailView: View {
             Group {
                 if let unit {
                     ScrollView {
-                        VStack(spacing: 16) {
+                        VStack(spacing: 12) {
                             header(unit)
                             Picker("", selection: $tab) {
                                 ForEach(Tab.allCases) { tab in
@@ -41,7 +41,7 @@ struct UnitDetailView: View {
                             case .relics: relics(unit)
                             }
                         }
-                        .padding(16)
+                        .padding(12)
                     }
                 } else {
                     EmptyState(icon: "questionmark", title: "Gone", message: "This unit is no longer in your collection.")
@@ -74,7 +74,7 @@ struct UnitDetailView: View {
 
     private func header(_ unit: ResolvedUnit) -> some View {
         VStack(spacing: 10) {
-            HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .top, spacing: 10) {
                 UnitCard(unit: unit, size: 108)
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -119,14 +119,14 @@ struct UnitDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
     // MARK: - Overview
 
     private func overview(_ unit: ResolvedUnit) -> some View {
-        VStack(spacing: 14) {
+        VStack(spacing: 10) {
             statsPanel(unit)
             if let leader = unit.blueprint.leaderSkill {
                 VStack(alignment: .leading, spacing: 6) {
@@ -136,7 +136,7 @@ struct UnitDetailView: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
+                .padding(10)
                 .panelBackground()
             }
             awakeningPanel(unit)
@@ -176,7 +176,7 @@ struct UnitDetailView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -240,7 +240,7 @@ struct UnitDetailView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
+            .padding(10)
             .panelBackground()
         }
     }
@@ -263,7 +263,7 @@ struct UnitDetailView: View {
                 showFodderPicker = true
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -330,7 +330,7 @@ struct UnitDetailView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(14)
+                .padding(10)
                 .panelBackground()
             }
         }
@@ -494,7 +494,7 @@ struct FodderPickerView: View {
                             }
                         }
                     }
-                    .padding(16)
+                    .padding(12)
                 }
             }
             .screen(purpose == .evolve ? "Evolve" : "Level Up")
@@ -519,7 +519,7 @@ struct FodderPickerView: View {
                         commit()
                     }
                 }
-                .padding(16)
+                .padding(12)
                 .background(Theme.ink)
             }
             .toolbar {

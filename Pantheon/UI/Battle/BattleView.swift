@@ -11,6 +11,8 @@ struct BattleView: View {
     @State private var showForfeitConfirm = false
     @State private var showLog = false
     @State private var summary: BattleSummary?
+    /// A skill held down: its card shows until a tap or four seconds.
+    @State private var heldSkill: Skill?
 
     var body: some View {
         ZStack {
@@ -35,6 +37,17 @@ struct BattleView: View {
             .padding(.bottom, 8)
 
             if showLog { logOverlay }
+
+            if let heldSkill {
+                skillCard(heldSkill)
+                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
+                    .onTapGesture { withAnimation { self.heldSkill = nil } }
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
+                            withAnimation { self.heldSkill = nil }
+                        }
+                    }
+            }
 
             if let banner = model.repeatBanner {
                 Text(banner)
@@ -108,7 +121,7 @@ struct BattleView: View {
                 .padding(.vertical, 7)
                 .background(Capsule().fill(Theme.surface.opacity(0.85)))
 
-            turnOrderStrip
+            turnGauge
 
             Spacer()
 
@@ -158,43 +171,59 @@ struct BattleView: View {
         .padding(.top, 6)
     }
 
-    // MARK: - Turn order
+    // MARK: - The attack gauge
 
-    private var turnOrderStrip: some View {
-        HStack(spacing: 6) {
-            Text("NEXT")
-                .font(Theme.body(9).weight(.bold))
-                .tracking(1.2)
-                .foregroundStyle(Theme.textSecondary)
-
-            let preview = Array(model.turnOrderPreview.prefix(6))
-            ForEach(preview.indices, id: \.self) { index in
-                let combatant = preview[index]
-                ZStack {
-                    Circle()
-                        .fill(combatant.side == .player ? Theme.info.opacity(0.3) : Theme.danger.opacity(0.3))
-                    if BundleImage.exists(combatant.model.portraitName(awakened: combatant.isAwakened)) {
-                        BundleImage(name: combatant.model.portraitName(awakened: combatant.isAwakened))
-                            .aspectRatio(contentMode: .fill)
-                            .clipShape(Circle())
-                    } else {
-                        Text(String(combatant.name.prefix(1)))
-                            .font(Theme.body(11).weight(.bold))
-                            .foregroundStyle(Theme.textPrimary)
-                    }
-                    Circle()
-                        .strokeBorder(
-                            combatant.element.color,
-                            lineWidth: index == 0 ? 2 : 1
-                        )
-                }
-                .frame(width: index == 0 ? 32 : 26, height: index == 0 ? 32 : 26)
-                .shadow(color: index == 0 ? combatant.element.color.opacity(0.8) : .clear, radius: 5)
+    /// The genre's clock: every living unit's portrait slides along one
+    /// track as its attack bar fills — yours above the line with a blue
+    /// ring, theirs below with a red one, gold where a unit stands ready.
+    /// Read left to right it is the turn order and the distance between
+    /// turns, and a speed buff or a bar knock is visible the moment it lands.
+    private var turnGauge: some View {
+        let units = model.displayedCombatants.filter(\.isAlive)
+        let width: CGFloat = 300
+        let dot: CGFloat = 26
+        return ZStack(alignment: .leading) {
+            Capsule()
+                .fill(Theme.ink.opacity(0.7))
+                .frame(width: width, height: 10)
+                .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+            ForEach(1..<4, id: \.self) { quarter in
+                Rectangle()
+                    .fill(Theme.stroke)
+                    .frame(width: 1, height: 10)
+                    .offset(x: width * CGFloat(quarter) / 4)
+            }
+            ForEach(units) { unit in
+                let ready = model.awaitingActor?.id == unit.id
+                let fraction = ready ? 1.0 : min(1, max(0, unit.attackBar))
+                gaugeDot(unit, ready: ready)
+                    .offset(x: CGFloat(fraction) * (width - dot), y: unit.side == .player ? -9 : 9)
+                    .animation(.easeOut(duration: 0.35), value: fraction)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(Capsule().fill(Theme.ink.opacity(0.55)))
+        .frame(width: width, height: 44)
+    }
+
+    private func gaugeDot(_ unit: Combatant, ready: Bool) -> some View {
+        let portrait = unit.model.portraitName(awakened: unit.isAwakened)
+        let ring = ready ? Theme.gold : (unit.side == .player ? Theme.info : Theme.danger)
+        return ZStack {
+            Circle()
+                .fill(unit.side == .player ? Theme.info.opacity(0.35) : Theme.danger.opacity(0.35))
+            if BundleImage.exists(portrait) {
+                BundleImage(name: portrait)
+                    .aspectRatio(contentMode: .fill)
+                    .clipShape(Circle())
+            } else {
+                Text(String(unit.name.prefix(1)))
+                    .font(Theme.body(10).weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+            }
+            Circle()
+                .strokeBorder(ring, lineWidth: ready ? 2 : 1.2)
+        }
+        .frame(width: 26, height: 26)
+        .shadow(color: ready ? Theme.gold.opacity(0.8) : .clear, radius: 5)
     }
 
     // MARK: - Command panel
@@ -214,7 +243,8 @@ struct BattleView: View {
                         SkillButton(
                             skill: option.skill,
                             cooldown: option.cooldown,
-                            isSelected: model.selectedSkillSlot == option.slot
+                            isSelected: model.selectedSkillSlot == option.slot,
+                            onHold: { withAnimation { heldSkill = option.skill } }
                         ) {
                             model.selectSkill(option.slot)
                         }
@@ -261,26 +291,67 @@ struct BattleView: View {
         .background(Theme.panel(Theme.tightCorner))
     }
 
+    /// The skill in hand, in words, and where to aim it: a player should be
+    /// able to see what they are about to do before they do it.
     private var targetingBar: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "scope")
-                .foregroundStyle(Theme.gold)
-            Text("Tap a target on the field")
-                .font(Theme.body(12))
-                .foregroundStyle(Theme.textPrimary)
-            Spacer()
-            if model.highlightedTarget != nil {
-                Button("Confirm") { model.confirmTarget() }
+        let skill = model.selectedSkillSlot.flatMap { slot in model.awaitingActor?.skill(at: slot) }
+        return VStack(alignment: .leading, spacing: 5) {
+            if let skill {
+                Text(skill.name)
                     .font(Theme.body(12).weight(.bold))
                     .foregroundStyle(Theme.gold)
+                Text(skill.description)
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Button("Cancel") { model.cancelTargeting() }
-                .font(Theme.body(12))
-                .foregroundStyle(Theme.textSecondary)
+            HStack(spacing: 8) {
+                Image(systemName: "scope")
+                    .foregroundStyle(Theme.gold)
+                Text("Tap a target on the field")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer()
+                if model.highlightedTarget != nil {
+                    Button("Confirm") { model.confirmTarget() }
+                        .font(Theme.body(12).weight(.bold))
+                        .foregroundStyle(Theme.gold)
+                }
+                Button("Cancel") { model.cancelTargeting() }
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.textSecondary)
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(Capsule().fill(Theme.surface))
+        .frame(maxWidth: 440)
+        .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
+    }
+
+    /// The card a held skill shows: name, cooldown, what it does.
+    private func skillCard(_ skill: Skill) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Text(skill.name)
+                    .font(Theme.title(15))
+                    .foregroundStyle(Theme.gold)
+                Spacer()
+                Text(skill.cooldown > 0 ? "Cooldown \(skill.cooldown) turns" : "No cooldown")
+                    .font(Theme.numeric(10))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            Text(skill.description)
+                .font(Theme.body(12))
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text("Tap to close")
+                .font(Theme.body(9))
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .padding(12)
+        .frame(maxWidth: 360)
+        .background(Theme.panel(Theme.tightCorner))
     }
 
     private var playbackHint: some View {
@@ -338,12 +409,21 @@ struct SkillButton: View {
     let skill: Skill
     let cooldown: Int
     let isSelected: Bool
+    /// Held down: show what the skill does.
+    var onHold: (() -> Void)? = nil
     let action: () -> Void
+
+    /// Set by a hold so the release that follows it is not read as a tap:
+    /// reading a skill must never cast it.
+    @State private var wasHeld = false
 
     private var isReady: Bool { cooldown <= 0 }
 
     var body: some View {
-        Button(action: action) {
+        Button {
+            if wasHeld { wasHeld = false; return }
+            if isReady { action() }
+        } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(isReady ? Theme.surfaceRaised : Theme.surface)
@@ -369,13 +449,23 @@ struct SkillButton: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
             }
-            .frame(width: 66, height: 66)
+            .frame(width: 62, height: 62)
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .strokeBorder(isSelected ? Theme.gold : Theme.stroke, lineWidth: isSelected ? 2 : 1)
             )
         }
-        .disabled(!isReady)
+        // A hold shows the card even on a skill that is cooling down.
+        .simultaneousGesture(
+            LongPressGesture(minimumDuration: 0.35).onEnded { _ in
+                wasHeld = true
+                onHold?()
+                // The button may or may not fire on the release after a hold
+                // (it varies by iOS); either way the flag is spent shortly.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { wasHeld = false }
+            }
+        )
+        .disabled(!isReady && onHold == nil)
     }
 
     /// A glyph per skill shape, so the bar is readable without art.
@@ -401,7 +491,7 @@ struct BattleResultView: View {
         ZStack {
             Color.black.opacity(0.78).ignoresSafeArea()
 
-            VStack(spacing: 18) {
+            VStack(spacing: 12) {
                 Text(headline)
                     .font(Theme.display(38))
                     .foregroundStyle(summary.outcome == .victory ? Theme.gold : Theme.danger)
@@ -437,7 +527,7 @@ struct BattleResultView: View {
                             }
                         }
                     }
-                    .padding(14)
+                    .padding(10)
                     .background(Theme.panel())
                 }
 

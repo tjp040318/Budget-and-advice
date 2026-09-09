@@ -21,11 +21,11 @@ struct TeamPickerView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: 12) {
                     lineup
                     leaderPanel
                     SectionHeader(title: "Your units", accessory: "\(roster.count)")
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96, maximum: 120), spacing: 10)], spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 70, maximum: 84), spacing: 8)], spacing: 8) {
                         ForEach(roster) { unit in
                             Button {
                                 toggle(unit.id)
@@ -33,13 +33,13 @@ struct TeamPickerView: View {
                                 UnitCard(
                                     unit: unit,
                                     isSelected: selected.contains(unit.id),
-                                    size: 96
+                                    size: 70
                                 )
                             }
                         }
                     }
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen(title)
             .safeAreaInset(edge: .bottom) {
@@ -49,7 +49,8 @@ struct TeamPickerView: View {
                     store.setTeam(preset, for: slot)
                     dismiss()
                 }
-                .padding(16)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
                 .background(Theme.ink)
             }
             .toolbar {
@@ -82,7 +83,7 @@ struct TeamPickerView: View {
                 ForEach(lineupUnits.indices, id: \.self) { index in
                     let unit = lineupUnits[index]
                     VStack(spacing: 3) {
-                        UnitCard(unit: unit, size: 72)
+                        UnitCard(unit: unit, size: 60)
                         if index == 0 {
                             Text("LEADER")
                                 .font(Theme.body(8).weight(.black))
@@ -93,7 +94,7 @@ struct TeamPickerView: View {
                     .onTapGesture { toggle(unit.id) }
                 }
                 if selected.count < maxSize {
-                    EmptyTeamSlot(size: 72)
+                    EmptyTeamSlot(size: 60)
                 }
                 Spacer()
             }
@@ -120,7 +121,7 @@ struct TeamPickerView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(14)
+            .padding(10)
             .panelBackground()
         }
     }

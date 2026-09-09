@@ -590,6 +590,22 @@ What the phone asked for, all built:
   `ChapterMapView` (the painting, a dotted road, medallions: gold tick,
   pulsing ring, lock, boss crown). The list rows remain under the map.
 - **Five tabs.** Settings opens from the Obelisk.
+- **The camera stays put.** After the first fights on the phone the camera
+  was found at a "weird spot" on the player's turn: the old close shot's
+  look-at constraint survived the turn change because cancelling the shot
+  skipped the completion that cleared it. Fixed, and then the genre's rule
+  adopted: one framing for the whole fight, a short push toward an
+  ultimate's caster, a shake on heavy hits, nothing else. The cinematic
+  cuts live behind More → Sound & camera.
+- **Density.** "Lots of blank space, make things smaller like Summoners
+  War": the painted chrome is drawn at 1/1.4, every font at 0.9, cards
+  92 → 76 (72 in the picker, 60 in the lineup), grids one column denser,
+  outer paddings 16 → 12, panel paddings 14 → 10, the primary button
+  slimmer and no wider than a hand, banners 118 → 88, the chapter map
+  first on its screen.
+- **The HUD.** An attack gauge at the top centre (portraits sliding on
+  one track), wider health bars over the figures, the selected skill's
+  name and description above the skill row, and a card on hold.
 
 ### Phase 4 — sound and feel
 

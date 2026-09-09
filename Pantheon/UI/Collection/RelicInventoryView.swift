@@ -57,7 +57,7 @@ struct RelicInventoryView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: 10) {
                     setSummary
                     filters
                     if relics.isEmpty {
@@ -82,7 +82,7 @@ struct RelicInventoryView: View {
                         }
                     }
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Relics")
             .toolbar {
@@ -354,12 +354,12 @@ struct RelicDetailView: View {
             Group {
                 if let relic {
                     ScrollView {
-                        VStack(spacing: 14) {
+                        VStack(spacing: 10) {
                             header(relic)
                             stats(relic)
                             actions(relic)
                         }
-                        .padding(16)
+                        .padding(12)
                     }
                     .screen("\(relic.set.displayName) Relic")
                 } else {
@@ -556,7 +556,7 @@ struct RelicPickerView: View {
                         }
                     }
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Slot \(slot)")
             .toolbar {

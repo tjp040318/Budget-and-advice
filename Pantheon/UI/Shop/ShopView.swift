@@ -13,7 +13,7 @@ struct ShopView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 14) {
+                VStack(spacing: 10) {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 6) {
                             ForEach(ShopService.Section.allCases) { candidate in
@@ -57,7 +57,7 @@ struct ShopView: View {
                         itemRow(item)
                     }
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Bazaar")
             .toolbar {

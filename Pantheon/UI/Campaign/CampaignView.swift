@@ -23,7 +23,7 @@ struct CampaignView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(spacing: 12) {
                     Picker("Mode", selection: $mode) {
                         ForEach(Mode.allCases) { candidate in
                             Text(candidate.rawValue).tag(candidate)
@@ -44,7 +44,7 @@ struct CampaignView: View {
                         }
                     }
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen(mode == .chapters ? "Campaign" : "Halls of Essence")
             .navigationDestination(for: String.self) { chapterID in
@@ -108,7 +108,7 @@ struct CampaignView: View {
             if BundleImage.exists("\(hall.environment.sceneName)_bg") {
                 BundleImage(name: "\(hall.environment.sceneName)_bg")
                     .aspectRatio(contentMode: .fill)
-                    .frame(height: 118)
+                    .frame(height: 88)
                     .frame(maxWidth: .infinity)
                     .clipped()
                     .allowsHitTesting(false)
@@ -162,7 +162,7 @@ struct CampaignView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -256,7 +256,7 @@ struct StageBriefingView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
+                VStack(alignment: .leading, spacing: 12) {
                     // The stage's own painting, so the briefing is a place before
                     // it is a list.
                     if BundleImage.exists("\(stage.environment.sceneName)_bg") {
@@ -301,7 +301,7 @@ struct StageBriefingView: View {
                     SectionHeader(title: "Repeat", accessory: runs > 1 ? "×\(runs) on auto" : "Once")
                     repeatRow
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen(stage.name)
             .safeAreaInset(edge: .bottom) {
@@ -321,7 +321,7 @@ struct StageBriefingView: View {
                         onStart(runs)
                     }
                 }
-                .padding(16)
+                .padding(12)
                 .background(Theme.ink)
             }
             .toolbar {

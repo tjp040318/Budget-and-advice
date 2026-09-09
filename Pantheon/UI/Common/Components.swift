@@ -234,7 +234,7 @@ struct UnitCard: View {
     let unit: ResolvedUnit
     var isSelected: Bool = false
     var showPower: Bool = true
-    var size: CGFloat = 92
+    var size: CGFloat = 76
 
     private var rarity: Rarity { Rarity(stars: unit.stars) }
 
@@ -283,26 +283,26 @@ struct UnitCard: View {
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             .overlay(paintedFrame)
 
-            VStack(spacing: 1) {
+            VStack(spacing: 0) {
                 Text(unit.name)
-                    .font(Theme.body(11).weight(.heavy))
+                    .font(Theme.body(10).weight(.heavy))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                HStack(spacing: 5) {
+                HStack(spacing: 4) {
                     Text("Lv.\(unit.level)")
-                        .font(Theme.numeric(10))
+                        .font(Theme.numeric(9))
                         .foregroundStyle(Theme.textSecondary)
                     if showPower {
                         Text("\(unit.power)")
-                            .font(Theme.numeric(10))
+                            .font(Theme.numeric(9))
                             .foregroundStyle(Theme.gold)
                     }
                 }
             }
-            .padding(.top, 4)
-            .padding(.horizontal, 4)
-            .padding(.bottom, 6)
+            .padding(.top, 3)
+            .padding(.horizontal, 3)
+            .padding(.bottom, 4)
             .frame(width: size)
         }
         .background(
@@ -364,7 +364,7 @@ struct UnitCard: View {
 
 /// An empty slot in a team lineup.
 struct EmptyTeamSlot: View {
-    var size: CGFloat = 92
+    var size: CGFloat = 76
     var label: String = "Empty"
 
     var body: some View {
@@ -412,17 +412,19 @@ struct PrimaryButton: View {
             AudioLibrary.shared.play(.uiConfirm, volume: 0.7)
             action()
         } label: {
-            HStack(spacing: 7) {
+            HStack(spacing: 6) {
                 if let systemImage {
                     Image(systemName: systemImage)
-                        .font(.system(size: 15, weight: .black))
+                        .font(.system(size: 13, weight: .black))
                 }
                 Text(title.uppercased())
-                    .font(Theme.title(14))
-                    .tracking(1.1)
+                    .font(Theme.title(13))
+                    .tracking(1.0)
             }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            // A bar, not a billboard: full width up to a hand's span, and
+            // centred, so a landscape screen keeps its edges.
+            .frame(maxWidth: 380)
+            .padding(.vertical, 10)
             .background(plate)
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
@@ -431,8 +433,9 @@ struct PrimaryButton: View {
             )
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             .foregroundStyle(labelColor)
-            .shadow(color: isEnabled ? tint.opacity(0.45) : .clear, radius: 10, y: 3)
+            .shadow(color: isEnabled ? tint.opacity(0.35) : .clear, radius: 6, y: 2)
             .shadow(color: .black.opacity(0.5), radius: 3, y: 2)
+            .frame(maxWidth: .infinity)
         }
         .buttonStyle(PlateButtonStyle())
         .disabled(!isEnabled)

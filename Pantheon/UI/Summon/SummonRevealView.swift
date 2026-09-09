@@ -68,7 +68,7 @@ struct SummonRevealView: View {
                     }
                     .font(Theme.body(14).weight(.semibold))
                     .foregroundStyle(Theme.textSecondary)
-                    .padding(16)
+                    .padding(12)
                 }
                 Spacer()
             }
@@ -319,7 +319,7 @@ struct SummonRevealView: View {
     // MARK: - Grid
 
     private var grid: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: 12) {
             Text("Summoned")
                 .font(Theme.display(30))
                 .foregroundStyle(Theme.textPrimary)

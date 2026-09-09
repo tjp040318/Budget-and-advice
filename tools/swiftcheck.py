@@ -150,17 +150,23 @@ def scan(files, verbose=False):
             funcs[fname] = labels
 
         lines = src.split("\n")
-        stack = []            # (kind, name, indent)
+        stack = []            # [kind, name, indent, member_indent]
         for ln in lines:
             if not ln.strip(): continue
             indent = len(ln) - len(ln.lstrip())
             while stack and indent <= stack[-1][2] and ln.strip().startswith(("struct","class","enum","extension","protocol")):
                 stack.pop()
 
+            # The first line inside a declaration sits at its member indent;
+            # anything deeper is a body (a local `let width: CGFloat = 300`
+            # inside a computed property is not a stored property).
+            if stack and stack[-1][3] is None and indent > stack[-1][2]:
+                stack[-1][3] = indent
+
             m = DECL.match(ln)
             if m:
                 kind, name = m.group(1), m.group(2)
-                stack.append((kind, name, indent))
+                stack.append([kind, name, indent, None])
                 if kind in ("struct", "class", "enum", "protocol"):
                     declared.add(name)
                     if name in structs and kind != "extension":
@@ -172,7 +178,7 @@ def scan(files, verbose=False):
                 continue
 
             if not stack: continue
-            kind, name, _ = stack[-1]
+            kind, name, _, member_indent = stack[-1]
 
             if kind == "enum":
                 cm = CASE.match(ln)
@@ -190,7 +196,7 @@ def scan(files, verbose=False):
             if kind == "struct" and name in structs:
                 if INIT.match(ln): structs[name]["hasInit"] = True
                 pm = STORED.match(ln)
-                if pm and not FUNC.match(ln):
+                if pm and not FUNC.match(ln) and indent == member_indent:
                     after = ln[pm.end():]
                     # A computed property has a brace on the same line and no '='
                     if "{" in after and "=" not in after.split("{")[0]:
@@ -366,7 +372,7 @@ def check_unknown_types(files, declared, errors):
         "Codable","Encodable","Decodable","Equatable","Hashable","Identifiable","Sendable",
         "CaseIterable","Comparable","RandomNumberGenerator","LocalizedError","ObservableObject",
         "View","Scene","App","Color","Font","Image","Text","VStack","HStack","ZStack","Button",
-        "ScrollView","LazyVGrid","GridItem","NavigationStack", "NavigationLink", "ShareLink", "ProcessInfo", "UIPasteboard", "UInt8", "UnicodeScalar", "Int8", "Mirror", "CAPropertyAnimation", "CGContext", "CGImage", "CGImageAlphaInfo", "CGBitmapInfo", "CGColorSpaceCreateDeviceRGB", "NSValue", "Calendar", "TimelineView", "NavigationPath", "Path", "StrokeStyle", "SCNPlane", "SCNParticleSystem", "SCNCamera", "SCNLight", "SCNMaterial", "SCNVector4", "SCNTransaction", "SCNMatrix4MakeScale", "SCNPyramid", "SCNSphere", "SCNBox","TabView","Picker","Toggle","Spacer",
+        "ScrollView","LazyVGrid","GridItem","NavigationStack", "NavigationLink", "ShareLink", "ProcessInfo", "UIPasteboard", "UInt8", "UnicodeScalar", "Int8", "Mirror", "CAPropertyAnimation", "CGContext", "CGImage", "CGImageAlphaInfo", "CGBitmapInfo", "CGColorSpaceCreateDeviceRGB", "NSValue", "Calendar", "TimelineView", "AppStorage", "UserDefaults", "LongPressGesture", "NavigationPath", "Path", "StrokeStyle", "SCNPlane", "SCNParticleSystem", "SCNCamera", "SCNLight", "SCNMaterial", "SCNVector4", "SCNTransaction", "SCNMatrix4MakeScale", "SCNPyramid", "SCNSphere", "SCNBox","TabView","Picker","Toggle","Spacer",
         "Divider","Circle","Capsule","Rectangle","RoundedRectangle","LinearGradient","GeometryReader",
         "ForEach","Binding","State","StateObject","EnvironmentObject","Published","MainActor",
         "SCNNode","SCNScene","SCNView","SCNVector3","SCNVector4","SCNMatrix4","SCNCamera","SCNLight",

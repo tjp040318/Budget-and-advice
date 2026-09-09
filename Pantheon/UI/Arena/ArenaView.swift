@@ -15,13 +15,13 @@ struct ArenaView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(spacing: 18) {
+                VStack(spacing: 12) {
                     standingPanel
                     defensePanel
                     offensePanel
                     opponentList
                 }
-                .padding(16)
+                .padding(12)
             }
             .screen("Arena")
             .toolbar {
@@ -115,7 +115,7 @@ struct ArenaView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -143,7 +143,7 @@ struct ArenaView: View {
                     .foregroundStyle(Theme.info)
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -160,7 +160,7 @@ struct ArenaView: View {
             )
             teamRow(store.team(store.player.arenaOffenseTeam)) { showOffensePicker = true }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 
@@ -205,7 +205,7 @@ struct ArenaView: View {
                 }
             }
         }
-        .padding(14)
+        .padding(10)
         .panelBackground()
     }
 

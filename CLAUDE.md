@@ -168,10 +168,22 @@ environment can and cannot do. The short version:
   for parallax. A missing prop gets a built stand-in. **Meshy text-to-3D
   props cost 30 credits each, not 15**; the balance is about 61.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
-  for an attack clip and back at the next turn, every hit flashes the victim
-  white, and the standard camera shot leans a tenth of the way into the
-  action and releases when the queue drains. The CI tour photographs an
-  arena battle (step 8) as well as the campaign one.
+  for an attack clip and back at the next turn, and every hit flashes the
+  victim white. **The camera is fixed by default** (`CameraDirector`): one
+  home framing for the whole fight, a short push toward an ultimate's
+  caster and back, a shake on heavy hits, nothing else — the genre's way,
+  and what the user asked for after the old close shot left its look-at
+  constraint on across a turn change. The cuts, leans and orbits survive
+  behind More → Sound & camera → Cinematic battle camera
+  (`UserDefaults` key `cinematicCamera`). `returnHome()` clears the
+  constraints, because cancelling a shot's action skips the completion that
+  used to. The HUD's top centre is the **attack gauge** (`BattleView.turnGauge`:
+  portraits on one track by `attackBar`, ready unit in gold); tapping a
+  skill shows its name and description above the skill row and holding one
+  opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
+  fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
+  pass. The CI tour photographs an arena battle (step 8) as well as the
+  campaign one.
 - Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
   drew nothing for loose bundle PNGs on device; never use it for one.
 - The gacha pool is gated on shipped art (`UnitBlueprint.hasShippedArt`, a

@@ -50,7 +50,7 @@ struct DiagnosticsView: View {
                     .padding(12)
                     .panelBackground()
             }
-            .padding(16)
+            .padding(12)
         }
         .screen("Diagnostics")
         .toolbar {

@@ -19,7 +19,7 @@ struct WorldMapView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             if BundleImage.exists("world_map") {
                 BundleImage(name: "world_map")
                     .aspectRatio(contentMode: .fill)
@@ -44,13 +44,13 @@ struct WorldMapView: View {
                 if BundleImage.exists("\(scene)_bg") {
                     BundleImage(name: "\(scene)_bg")
                         .aspectRatio(contentMode: .fill)
-                        .frame(height: 120)
+                        .frame(height: 88)
                         .frame(maxWidth: .infinity)
                         .clipped()
                 } else {
                     Rectangle()
                         .fill(realm.pantheon.color.opacity(0.3))
-                        .frame(height: 120)
+                        .frame(height: 88)
                 }
                 LinearGradient(colors: [.clear, Theme.ink.opacity(0.9)], startPoint: .center, endPoint: .bottom)
                 VStack(alignment: .leading, spacing: 2) {
@@ -155,15 +155,15 @@ struct ChapterMapView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 10) {
                 if let chapter {
-                    header(chapter)
                     map(chapter)
+                    header(chapter)
                     legend
                     stageRows(chapter)
                 }
             }
-            .padding(16)
+            .padding(12)
         }
         .screen(chapter?.name ?? "Chapter")
         .toolbar {
@@ -201,7 +201,7 @@ struct ChapterMapView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
             Text(chapter.summary)
-                .font(Theme.body(13))
+                .font(Theme.body(12))
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             StatBar(
@@ -284,7 +284,7 @@ struct ChapterMapView: View {
                 }
             }
         }
-        .frame(height: 230)
+        .frame(height: 210)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
@@ -365,7 +365,7 @@ struct ChapterMapView: View {
     }
 
     private var legend: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 10) {
             legendItem(color: Theme.gold, text: "cleared")
             legendItem(color: Theme.surfaceHigh, text: "next, tap to fight")
             legendItem(color: Theme.surface, text: "shut until the one before falls")
