@@ -19,6 +19,31 @@ enum BundleArt {
     }
 
     static func exists(_ name: String) -> Bool { url(name) != nil }
+
+    /// The painting itself.
+    ///
+    /// `UIImage(named:)` is the reason this exists. For an image inside an
+    /// asset catalogue it finds any format; for a **loose file in the bundle**
+    /// — which is what every painting here is — it appends `.png` and nothing
+    /// else. The moment the cards became JPEGs, `UIImage(named: "portrait_x")`
+    /// returned nil for all 154 of them and every unit in the collection fell
+    /// back to its letter placeholder. The CI tour photographed it.
+    ///
+    /// So: ask UIKit first (asset-catalogue images and any `.png` still work
+    /// exactly as before), then load the file `url(_:)` found. The result is
+    /// cached because a grid of sixty cards would otherwise decode sixty
+    /// 1024-pixel JPEGs on every layout pass.
+    private static var cache: [String: UIImage?] = [:]
+
+    static func image(_ name: String) -> UIImage? {
+        if let hit = cache[name] { return hit }
+        var loaded = UIImage(named: name)
+        if loaded == nil, let url = url(name) {
+            loaded = UIImage(contentsOfFile: url.path)
+        }
+        cache[name] = loaded
+        return loaded
+    }
 }
 
 /// Animation clips every character rig must export. `ModelLibrary` looks for a
@@ -235,7 +260,7 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
     /// dungeon never shows a grey banner while its own picture is on the way.
     var backdropName: String {
         let own = "\(rawValue)_bg"
-        if UIImage(named: own) != nil { return own }
+        if BundleArt.exists(own) { return own }
         return "\(paintingFallback.rawValue)_bg"
     }
 

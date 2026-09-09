@@ -21,10 +21,10 @@ enum PlaceholderRig {
         // glow. It reads as a deliberate style rather than as missing art, and
         // every enemy in the roster has a portrait today while none has a
         // model. The primitive rig below remains for the case with neither.
-        if let cut = UIImage(named: spec.portraitName + "_cut") {
+        if let cut = BundleArt.image(spec.portraitName + "_cut") {
             return sprite(portrait: cut, spec: spec, element: element, isCutout: true)
         }
-        if let portrait = UIImage(named: spec.portraitName) {
+        if let portrait = BundleArt.image(spec.portraitName) {
             return sprite(portrait: portrait, spec: spec, element: element, isCutout: false)
         }
 

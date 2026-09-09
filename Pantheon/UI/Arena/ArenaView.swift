@@ -19,9 +19,10 @@ struct ArenaView: View {
 
     private var record: ArenaRecord { store.player.arena }
 
-    /// Four of these and their gaps have to cross a quarter of a landscape
-    /// phone — half the screen, halved again for the two team panels — which
-    /// is what sets the number.
+    /// The challenger rows' cards. They cross half a landscape frame beside
+    /// the name block and the attack capsule, which is what sets the number.
+    /// Your own two team panels are a quarter of the frame each and size their
+    /// cards to fit — see `teamRow`.
     private let cardSize: CGFloat = 38
 
     var body: some View {
@@ -178,19 +179,37 @@ struct ArenaView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// Four cards have to cross a quarter of the frame: half the screen for
+    /// this column, halved again for the two team panels. What is left of that
+    /// inside the panel depends on the device's safe area — 162 points on the
+    /// iPhone 16 Pro the CI tour photographs, where four 38s and their gaps
+    /// come to 170 and spill over the panel edge — and there is no compiler
+    /// here to measure it, so the row offers four sizes and takes the widest
+    /// that fits rather than trusting one hand-computed number.
     private func teamRow(_ team: [ResolvedUnit], onTap: @escaping () -> Void) -> some View {
         Button(action: onTap) {
-            HStack(spacing: 6) {
-                ForEach(team) { unit in
-                    UnitCard(unit: unit, showPower: false, size: cardSize)
-                }
-                if team.count < ArenaService.teamSize {
-                    EmptyTeamSlot(size: cardSize, label: "Add")
-                }
-                Spacer(minLength: 0)
+            ViewThatFits(in: .horizontal) {
+                teamCards(team, size: 44)
+                teamCards(team, size: 40)
+                teamCards(team, size: 36)
+                teamCards(team, size: 30)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .buttonStyle(.plain)
+    }
+
+    /// One candidate width for `teamRow`. No `Spacer` in here: a greedy row
+    /// has no ideal width, and `ViewThatFits` chooses on the ideal width.
+    private func teamCards(_ team: [ResolvedUnit], size: CGFloat) -> some View {
+        HStack(spacing: 5) {
+            ForEach(team) { unit in
+                UnitCard(unit: unit, showPower: false, size: size)
+            }
+            if team.count < ArenaService.teamSize {
+                EmptyTeamSlot(size: size, label: "Add")
+            }
+        }
     }
 
     // MARK: - Opponents
@@ -233,6 +252,7 @@ struct ArenaView: View {
                 Text("\(opponent.points) pts")
                     .font(Theme.numeric(10))
                     .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
                 Text("Power \(opponent.power)")
                     .font(Theme.numeric(10))
                     .foregroundStyle(
@@ -240,7 +260,10 @@ struct ArenaView: View {
                     )
                     .lineLimit(1)
             }
-            .frame(width: 100, alignment: .leading)
+            // Flexible, not fixed at 100: the name block is the one thing in
+            // the row that can give, so a narrow column truncates a long name
+            // instead of pushing the attack capsule off the panel.
+            .frame(maxWidth: 104, alignment: .leading)
 
             HStack(spacing: 5) {
                 ForEach(opponent.team) { unit in

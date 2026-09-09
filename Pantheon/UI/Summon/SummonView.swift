@@ -295,49 +295,62 @@ struct RateTableView: View {
                             .foregroundStyle(Theme.textSecondary)
 
                         ForEach(table) { entry in
-                            VStack(alignment: .leading, spacing: 8) {
-                                HStack {
-                                    StarRow(stars: entry.stars, size: 13)
-                                    Spacer()
-                                    Text("\(String(format: "%.2f", entry.chance * 100))%")
-                                        .font(Theme.numeric(14))
-                                        .foregroundStyle(Theme.gold)
-                                }
-                                if entry.units.isEmpty {
-                                    Text("Nothing at this grade yet.")
-                                        .font(Theme.body(12))
-                                        .foregroundStyle(Theme.textSecondary)
-                                } else {
-                                    LazyVGrid(columns: unitColumns, alignment: .leading, spacing: 6) {
-                                        ForEach(entry.units) { unit in
-                                            HStack(spacing: 8) {
-                                                ElementBadge(element: unit.element, compact: true)
-                                                Text(unit.name)
-                                                    .font(Theme.body(13))
-                                                    .foregroundStyle(Theme.textPrimary)
-                                                    .lineLimit(1)
-                                                if banner.featured.contains(unit.id) {
-                                                    Text("FEATURED")
-                                                        .font(Theme.body(8).weight(.black))
-                                                        .padding(.horizontal, 4)
-                                                        .padding(.vertical, 1)
-                                                        .background(Capsule().fill(Theme.gold.opacity(0.25)))
-                                                        .foregroundStyle(Theme.gold)
-                                                }
-                                                Spacer(minLength: 0)
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            .padding(12)
-                            .panelBackground()
+                            oddsPanel(entry)
                         }
                     }
                     .padding(.horizontal, ScreenChrome.contentPadding)
                     .padding(.vertical, 8)
                 }
             }
+        }
+    }
+
+    /// One grade: the odds, and every unit that grade can hand you. Lifted out
+    /// of `body` because the screen had become a single expression six closures
+    /// deep, and the type checker is the one reviewer this project cannot run.
+    private func oddsPanel(_ entry: BannerOdds) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                StarRow(stars: entry.stars, size: 13)
+                Spacer()
+                Text("\(String(format: "%.2f", entry.chance * 100))%")
+                    .font(Theme.numeric(14))
+                    .foregroundStyle(Theme.gold)
+            }
+            if entry.units.isEmpty {
+                Text("Nothing at this grade yet.")
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.textSecondary)
+            } else {
+                LazyVGrid(columns: unitColumns, alignment: .leading, spacing: 6) {
+                    ForEach(entry.units) { unit in
+                        unitChip(unit)
+                    }
+                }
+            }
+        }
+        .padding(12)
+        .panelBackground()
+    }
+
+    /// A name in the pool: its element, its name, and a chip when the banner
+    /// rates it up.
+    private func unitChip(_ unit: UnitBlueprint) -> some View {
+        HStack(spacing: 8) {
+            ElementBadge(element: unit.element, compact: true)
+            Text(unit.name)
+                .font(Theme.body(13))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+            if banner.featured.contains(unit.id) {
+                Text("FEATURED")
+                    .font(Theme.body(8).weight(.black))
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(Theme.gold.opacity(0.25)))
+                    .foregroundStyle(Theme.gold)
+            }
+            Spacer(minLength: 0)
         }
     }
 }

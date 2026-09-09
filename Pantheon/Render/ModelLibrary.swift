@@ -117,8 +117,8 @@ final class ModelLibrary {
             }
         } else {
             isStandIn = true
-            isPortraitSprite = UIImage(named: spec.portraitName + "_cut") != nil
-                || UIImage(named: spec.portraitName) != nil
+            isPortraitSprite = BundleArt.exists(spec.portraitName + "_cut")
+                || BundleArt.exists(spec.portraitName)
             let key = spec.assetName + "|" + spec.auraHex
             let placeholder = placeholderCache[key]
                 ?? PlaceholderRig.make(spec: spec, archetype: archetype, element: element)

@@ -217,12 +217,12 @@ struct BundleImage: View {
     let name: String
 
     var body: some View {
-        if let image = UIImage(named: name) {
+        if let image = BundleArt.image(name) {
             Image(uiImage: image).resizable()
         }
     }
 
-    static func exists(_ name: String) -> Bool { UIImage(named: name) != nil }
+    static func exists(_ name: String) -> Bool { BundleArt.exists(name) }
 }
 /// The portrait tile used everywhere a unit appears in a list or a team slot.
 ///

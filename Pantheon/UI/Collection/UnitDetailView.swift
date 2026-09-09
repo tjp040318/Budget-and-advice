@@ -575,6 +575,11 @@ struct AwakeningSheet: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 104, height: 136)
                     .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+                    // A near-square portrait filled into a 104x136 frame hangs
+                    // ~30 points past each side, and clipShape does not clip
+                    // hit-testing: without this the art swallows taps meant for
+                    // the Awaken button beside it.
+                    .allowsHitTesting(false)
             } else {
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(Theme.surface)

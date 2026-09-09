@@ -104,7 +104,15 @@ struct TrainingView: View {
                         Button {
                             targetID = unit.id
                         } label: {
+                            // `UnitCard` fills its square with a portrait that
+                            // is taller than it is wide, and `clipShape` does
+                            // not clip hit-testing: the art overhangs the card
+                            // by about a third of its height. In a strip that
+                            // was harmless; in a grid the overhang reaches the
+                            // row above, and the later card wins the tap. The
+                            // hit area is the card's own rectangle.
                             UnitCard(unit: unit, isSelected: unit.id == targetID, size: 68)
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                     }
@@ -444,7 +452,11 @@ struct TrainingView: View {
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)
-                .frame(width: 108)
+                // `maxWidth`, not `width`: the two tiles and the arrow want
+                // 254 points and the awakening panel has about 288 on a
+                // notched phone but 241 on an SE, and a rigid width would
+                // draw over the essences column rather than give way.
+                .frame(maxWidth: 108)
         }
     }
 
@@ -461,7 +473,10 @@ struct TrainingView: View {
                         Juice.notify(.warning)
                     }
                 } label: {
+                    // As in the rail: the portrait overhangs the card, so the
+                    // tap belongs to the card's rectangle and not to the art.
                     UnitCard(unit: candidate, isSelected: fodder.contains(candidate.id), size: 68)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
             }

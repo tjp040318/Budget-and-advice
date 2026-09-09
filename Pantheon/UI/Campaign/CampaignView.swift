@@ -215,11 +215,19 @@ struct StageBriefingView: View {
     /// The enemy cards shrink as the waves multiply: a campaign stage is one
     /// wave of four big cards, a dungeon level three waves of small ones, and
     /// either way the whole briefing fits the frame without a scroll.
+    ///
+    /// A card is its size plus about 28 points of name and level. The tight
+    /// case is the three-wave dungeon level on the shortest landscape phone
+    /// (375 points, so 341 under the strip): three rows of 70, 8 of spacing
+    /// and 35 of panel is 253, and the launch bar, the spacing and the
+    /// padding are 79 more — 332, with nine points in hand. At 44 and a
+    /// 6-point gap that came to 342 and the cards met the launch bar, and
+    /// nothing in the CI tour photographs this screen to catch it.
     private var enemyCardSize: CGFloat {
         switch waveCount {
         case 1: return 70
         case 2: return 58
-        default: return 44
+        default: return 42
         }
     }
 
@@ -292,7 +300,7 @@ struct StageBriefingView: View {
             title: "Opposition",
             accessory: waveCount > 1 ? "\(waveCount) waves, the boss last" : "\(waves.first?.count ?? 0) units"
         ) {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 ForEach(waves.indices, id: \.self) { index in
                     HStack(spacing: 6) {
                         if waveCount > 1 {

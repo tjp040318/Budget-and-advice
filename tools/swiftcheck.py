@@ -445,6 +445,7 @@ def check_unknown_types(files, declared, errors):
         # noise that loud hides the one real finding it exists to surface.
         "AngularGradient","RadialGradient","EdgeInsets","StrokeStyle","Group","LazyVStack",
         "ScrollViewReader","ToolbarItem","WindowGroup","Label","ViewBuilder","ViewModifier",
+        "ViewThatFits",
         "ButtonStyle","Environment","Configuration","Content","Context","Self","Never",
         "SCNHitTestSearchMode","SCNMatrix4MakeTranslation","SCNVector3Zero","AnimationImportPolicy",
         "SIMD3","simd_quatf","simd_float3",

@@ -84,6 +84,7 @@ struct DiagnosticsView: View {
             .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
             .overlay(ScreenChrome.controlShape.strokeBorder(Theme.gold.opacity(0.4), lineWidth: 0.5))
         }
+        .buttonStyle(.plain)
         .accessibilityLabel("Share")
     }
 }

@@ -183,7 +183,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Missions",
-                    caption: "Dailies, feats, the gift",
+                    caption: "Dailies, feats, the gift · also on the island",
                     icon: "scroll.fill",
                     tint: Theme.gold,
                     badge: store.claimableRewards > 0 ? "\(store.claimableRewards)" : nil
@@ -198,7 +198,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Bazaar",
-                    caption: "Scrolls, energy, relics",
+                    caption: "Scrolls, energy, relics · also on the island",
                     icon: "bag.fill",
                     tint: Theme.info,
                     badge: nil

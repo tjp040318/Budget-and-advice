@@ -258,7 +258,7 @@ enum StageBuilder {
         stage.addChildNode(dust(tint: UIColor(hex: recipe.dustHex) ?? .white,
                                 volume: SCNVector3(18, 6, 16), at: SCNVector3(0, 3, -1)))
 
-        if let backdrop = recipe.backdrop, let image = UIImage(named: backdrop) {
+        if let backdrop = recipe.backdrop, let image = BundleArt.image(backdrop) {
             stage.addChildNode(farBackdrop(image))
         }
 

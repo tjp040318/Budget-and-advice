@@ -34,16 +34,19 @@ struct MissionsView: View {
         let isFeat: Bool
     }
 
+    /// The two lists, as the strip's segmented switch.
+    private let tabs: [(value: Tab, title: String)] = [
+        (value: .missions, title: "Daily"),
+        (value: .feats, title: "Feats"),
+    ]
+
     /// Two columns of rows on a landscape phone, one on anything narrower.
     private let columns = [GridItem(.adaptive(minimum: 300), spacing: 8)]
 
     var body: some View {
         NavigationStack {
             GameScreen("Missions", subtitle: subtitle, dismiss: { dismiss() }) {
-                BarSegments(
-                    options: [(value: Tab.missions, title: "Daily"), (value: Tab.feats, title: "Feats")],
-                    selection: $tab
-                )
+                BarSegments(options: tabs, selection: $tab)
                 BarCount(value: tally, systemImage: "checkmark.seal.fill", tint: Theme.gold)
                 BarWallet(wallet: store.player.wallet)
             } content: {
@@ -112,10 +115,14 @@ struct MissionsView: View {
                     .font(Theme.body(12).weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
-                Text("Come back every day; a missed day starts the seven over.")
+                    .minimumScaleFactor(0.8)
+                // Short enough to survive an SE-class landscape width beside
+                // seven tiles and the button; the long form truncated there.
+                Text("A missed day starts the seven over.")
                     .font(Theme.body(9))
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             claimButton(title: claimed ? "Claimed" : "Claim", enabled: !claimed) {
                 if let grants = store.claimLoginGift() { paid(grants) }
