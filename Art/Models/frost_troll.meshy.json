@@ -50,7 +50,7 @@
       "finished_at": 1788914093525,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T00:35:02Z"
+      "polled": "2026-09-09T01:06:50Z"
     },
     "rig": {
       "id": "01a08396-f345-77c4-9986-6a4d88ddacfb",
@@ -77,7 +77,10 @@
       "started_at": 1788914119994,
       "finished_at": 1788914215728,
       "name": "",
-      "polled": "2026-09-09T00:37:01Z"
+      "polled": "2026-09-09T01:06:50Z",
+      "downloaded": {
+        "glb": "Art/Models/frost_troll.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08399-ad10-72f9-b4c5-036be14b800c",
@@ -100,7 +103,10 @@
       "started_at": 1788914282196,
       "finished_at": 1788914293213,
       "name": "",
-      "polled": "2026-09-09T00:39:06Z"
+      "polled": "2026-09-09T01:06:50Z",
+      "downloaded": {
+        "glb": "Art/Models/frost_troll_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08399-b01e-7546-ae6c-391a979d2500",
@@ -123,7 +129,10 @@
       "started_at": 1788914282806,
       "finished_at": 1788914306105,
       "name": "",
-      "polled": "2026-09-09T00:39:05Z"
+      "polled": "2026-09-09T01:06:50Z",
+      "downloaded": {
+        "glb": "Art/Models/frost_troll_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08399-b27d-7408-afb9-e2c1035ffe34",
@@ -146,7 +155,10 @@
       "started_at": 1788914283438,
       "finished_at": 1788914307866,
       "name": "",
-      "polled": "2026-09-09T00:39:05Z"
+      "polled": "2026-09-09T01:06:51Z",
+      "downloaded": {
+        "glb": "Art/Models/frost_troll_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08399-b501-735a-ab8b-89fbca46a885",
@@ -169,7 +181,10 @@
       "started_at": 1788914284171,
       "finished_at": 1788914295614,
       "name": "",
-      "polled": "2026-09-09T00:39:06Z"
+      "polled": "2026-09-09T01:06:51Z",
+      "downloaded": {
+        "glb": "Art/Models/frost_troll_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0839a-a2a0-728a-9e4b-365ddfdaa486",
@@ -192,7 +207,10 @@
       "started_at": 1788914345068,
       "finished_at": 1788914389393,
       "name": "",
-      "polled": "2026-09-09T00:39:57Z"
+      "polled": "2026-09-09T01:06:51Z",
+      "downloaded": {
+        "glb": "Art/Models/frost_troll_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0839a-a5b8-70ee-9b58-437f5754c82b",
@@ -215,8 +233,12 @@
       "started_at": 1788914345647,
       "finished_at": 1788914359540,
       "name": "",
-      "polled": "2026-09-09T00:39:26Z"
+      "polled": "2026-09-09T01:06:51Z",
+      "downloaded": {
+        "glb": "Art/Models/frost_troll_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:06:51Z"
 }

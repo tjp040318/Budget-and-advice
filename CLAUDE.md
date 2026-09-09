@@ -69,27 +69,38 @@ environment can and cannot do. The short version:
   one top row and an open-middled bottom bar, the summon reveal is stage
   left and words right, and the island painting is 16:9.
 - Battle, summon, collection, arena, campaign and the Hall of Ka (training:
-  power-up, skill-ups from duplicates, evolution, awakening) all work.
-- **Eleven families, 55 characters, ten with models.** Egypt: Anubis (4★),
-  Sekhmet (5★ attacker), Thoth (5★ healer), Shabti (3★ fodder, portraits
-  only). Greece: Zeus (5★ control), Ares (5★ berserker), Heracles (4★
-  defender), Perseus (4★ attacker), Hoplite, Satyr and Harpy (3★). The
-  seven newest live in `UnitDatabase+Roster.swift`, built from three shared
-  per-element tables (`signature`, `control`, `blessing`); a new family is a
-  page of data there. **Banners give their own pantheon only**: The Duat
-  Opens is the Egyptian pool, Olympus Stirs the Greek, the Endless Scroll
-  everything. A common roll that finds no unit of its grade rolls at random
-  within the nearest grade and shows the unit's real stars.
-- **Every character is stylised, Summoners War proportions**, by the user's
-  choice: a Gemini concept (`Art/Concepts/<family>_sw.png`, prompt in
-  `Docs/ART_2D.md`) → `tools/meshy.py generate <asset> --image <concept>
-  --height H --texture-prompt "..."` → `tools/mesh.py <asset> --as <family>
-  --height H` → `tools/preview.py --sheet <family>`. The card is a `--ref`
-  edit of the concept, the other four elements `--ref` edits of the card
-  (`Docs/ART_2D.md`, *Cards from concepts*). Ten pipelines ran at once and
-  Meshy took it. The satyr's hooves need `--clip-tris 3000`. Clip GLBs are
-  gitignored; base exports and manifests are committed. Meshy balance after
-  this session: about 361 credits.
+  power-up, skill-ups from duplicates, evolution, awakening) all work. So do
+  the **Halls of Essence** (Campaign → second segment: one hall per
+  element, five floors, repeatable; `DungeonDatabase`), **auto-repeat**
+  (the briefing asks for 1/5/10/20 runs; `BattleViewModel.conclude()`
+  swaps engines and tots up the loot), the **relic inventory** (Collection
+  → Relics: sell, lock, reappraise, efficiency; `RelicInventoryView`), the
+  **bazaar** (tap the wallet on the island, or More; `ShopService`, game
+  currency only, a free daily offering) and the **living island** (the
+  campaign team stands on the painting; `IslandSceneView`).
+- **Forty-three families.** Eleven hand-written (`UnitDatabase.swift`,
+  `UnitDatabase+Roster.swift`: Anubis, Sekhmet, Thoth, Shabti, Zeus, Ares,
+  Heracles, Perseus, Hoplite, Satyr, Harpy) and thirty-two from one table
+  (`UnitDatabase+Families.swift`: a `FamilyRow` per family and eight
+  `Kit`s — Egypt 9, Greece 10, Norse 13). Egypt, Greece and Norse are live,
+  each with its banner (The Duat Opens, Olympus Stirs, The Ravens Gather;
+  the Endless Scroll is everyone). The gacha gates on cards
+  (`hasShippedArt`), so a family joins the pool the moment its five
+  `portrait_<id>.png` files are in the bundle; the third roster's cards are
+  still being painted (Gemini allows 250 images a day) and
+  `tools/batch/portraits_batch2.sh` paints what is missing. A common roll
+  that finds no unit of its grade rolls at random within the nearest grade
+  and shows the unit's real stars — the "every summon is a fire Anubis" bug.
+- Eight chapters: Duat 1–2, Olympus 1–3, Yggdrasil 1–3. The generated ones
+  take `enemyStars` and `difficulty` (later chapters field the same
+  creatures at a higher grade, not at absurd levels); the curve is measured
+  by `python3 tools/balance.py --chapters` and `--halls`, and a change to
+  a chapter's numbers goes into both files. Campaign enemies borrow the
+  roster's models and cards (`enemy(... assetName:portraitName:)`); the
+  Hydra and the Jötunn are unrigged meshes moved procedurally.
+- New save fields must be **Optional** (`Player.lastDailyPackClaim` is the
+  pattern): the synthesised decoder tolerates a missing optional key and
+  nothing else; a non-optional field would wipe every existing save.
 - Models ship **canonical and decimated**: `tools/mesh.py <family>` reads the
   untouched export in `Art/Models/` (Blender USDZ or Meshy GLB) and writes
   Y-up, metre, feet-on-origin, rest-equals-bind, four-influence files into
@@ -162,12 +173,27 @@ environment can and cannot do. The short version:
   read new entries with the Artifact tool's `read_db` on collection
   `issues` (status `open`), reply and set `working`/`fixed` with `write_db`.
   "Check the issues log" means exactly that.
-- Art: 55 cards (fifty stylised, from the concepts; the Shabti's five are
-  the stone figurine), 5 stage backdrops, 3 summon banners, the island
-  painting, a particle sprite and a 10-texture UI kit. `tools/genart.py` makes more via Gemini; the key is provided as a
-  credential, so it is in the environment and must never be printed or
-  written to a file. Every prompt is in `Docs/ART_2D.md`; a family's five
-  portraits are one generation plus four `--ref` edits, about two minutes.
+- Art: cards for the first eleven families (base and awakened), 11 stage
+  backdrops, 4 summon banners, the island painting, a particle sprite, a
+  10-texture UI kit, 9 stage textures, and stylised concepts for all 43
+  families. `tools/genart.py` makes more via Gemini; the key is provided as
+  a credential, so it is in the environment and must never be printed or
+  written to a file. **Gemini's key allows 250 image requests a day**; a
+  roster's cards are about 240, so a big batch spans two days and every
+  batch script skips what already exists. A named god can come back as a
+  photo of an actor (Loki did; the file was deleted) — describe, don't
+  name, and never ship a likeness. Every prompt is in `Docs/ART_2D.md` and
+  `tools/batch/`; a family's five portraits are one generation plus four
+  `--ref` edits, about two minutes.
+- Meshy: `tools/meshy.py` waits out the plan's queued-task cap (a wave of
+  twenty-three launched at once finished by itself) and retries proxy
+  drops. "Pose estimation failed" at the rig step is about the mesh's
+  pose: a gap between the arms and the body, both feet visible, no crossed
+  arms, no weapon held out; redraw, run as `<asset>_v2`, ship with
+  `mesh.py <asset>_v2 --as <asset>`. Text-to-3D props are charged by what
+  Meshy generates, 30–300 credits each, not a flat rate. The user's floor
+  is **500 credits**: check `python3 tools/meshy.py balance` before every
+  launch and never plan past it.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 

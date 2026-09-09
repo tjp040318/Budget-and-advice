@@ -50,7 +50,7 @@
       "finished_at": 1788913888931,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T00:31:30Z"
+      "polled": "2026-09-09T01:02:18Z"
     },
     "rig": {
       "id": "01a08397-ce96-7460-be9a-37120a8120d6",
@@ -77,7 +77,10 @@
       "started_at": 1788914162693,
       "finished_at": 1788914211444,
       "name": "",
-      "polled": "2026-09-09T00:36:53Z"
+      "polled": "2026-09-09T01:02:18Z",
+      "downloaded": {
+        "glb": "Art/Models/medusa.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08399-8e65-745e-9379-f165e13e1a86",
@@ -100,7 +103,10 @@
       "started_at": 1788914274384,
       "finished_at": 1788914285586,
       "name": "",
-      "polled": "2026-09-09T00:40:59Z"
+      "polled": "2026-09-09T01:02:18Z",
+      "downloaded": {
+        "glb": "Art/Models/medusa_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08399-91a3-71d8-b602-60b64bd84998",
@@ -123,7 +129,10 @@
       "started_at": 1788914275101,
       "finished_at": 1788914299443,
       "name": "",
-      "polled": "2026-09-09T00:40:58Z"
+      "polled": "2026-09-09T01:02:18Z",
+      "downloaded": {
+        "glb": "Art/Models/medusa_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0839a-7f43-773e-954c-3de562d19218",
@@ -146,7 +155,10 @@
       "started_at": 1788914335982,
       "finished_at": 1788914359797,
       "name": "",
-      "polled": "2026-09-09T00:40:58Z"
+      "polled": "2026-09-09T01:02:18Z",
+      "downloaded": {
+        "glb": "Art/Models/medusa_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0839b-6d31-7521-b093-936426353eb2",
@@ -169,7 +181,10 @@
       "started_at": 1788914396794,
       "finished_at": 1788914408364,
       "name": "",
-      "polled": "2026-09-09T00:40:58Z"
+      "polled": "2026-09-09T01:02:18Z",
+      "downloaded": {
+        "glb": "Art/Models/medusa_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0839b-6fe9-7213-a238-3d4c3f1a9928",
@@ -192,7 +207,10 @@
       "started_at": 1788914397461,
       "finished_at": 1788914421173,
       "name": "",
-      "polled": "2026-09-09T00:40:58Z"
+      "polled": "2026-09-09T01:02:19Z",
+      "downloaded": {
+        "glb": "Art/Models/medusa_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0839c-5d44-7036-a68a-0a2e0eb5033a",
@@ -215,8 +233,12 @@
       "started_at": 1788914458358,
       "finished_at": 1788914472637,
       "name": "",
-      "polled": "2026-09-09T00:41:19Z"
+      "polled": "2026-09-09T01:02:19Z",
+      "downloaded": {
+        "glb": "Art/Models/medusa_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:02:19Z"
 }

@@ -297,6 +297,10 @@ extension UnitDatabase {
         case (.support, .gale): return LeaderSkill(stat: .spd, amount: strong * 0.6, scope: .pantheon(row.pantheon))
         case (.support, .radiance): return LeaderSkill(stat: .resistance, amount: wide, scope: .allAllies)
         case (.support, .umbra): return LeaderSkill(stat: .accuracy, amount: wide, scope: .allAllies)
+        // No row is a controller or an HP tank yet; the compiler wants them
+        // covered all the same.
+        case (.controller, _): return LeaderSkill(stat: .accuracy, amount: wide, scope: .allAllies)
+        case (.hpTank, _): return LeaderSkill(stat: .hpPercent, amount: wide, scope: .allAllies)
         }
     }
 

@@ -50,7 +50,7 @@
       "finished_at": 1788914074423,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T00:34:42Z"
+      "polled": "2026-09-09T01:07:37Z"
     },
     "rig": {
       "id": "01a08396-a1a2-7153-8aa6-7c0ea83652e9",
@@ -77,7 +77,10 @@
       "started_at": 1788914085326,
       "finished_at": 1788914130864,
       "name": "",
-      "polled": "2026-09-09T00:35:36Z"
+      "polled": "2026-09-09T01:07:37Z",
+      "downloaded": {
+        "glb": "Art/Models/shabti.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08397-750c-7398-8893-b597bb008fa2",
@@ -100,7 +103,10 @@
       "started_at": 1788914136760,
       "finished_at": 1788914148338,
       "name": "",
-      "polled": "2026-09-09T00:40:41Z"
+      "polled": "2026-09-09T01:07:37Z",
+      "downloaded": {
+        "glb": "Art/Models/shabti_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08399-4d87-71f5-aee2-5813827a7e61",
@@ -123,7 +129,10 @@
       "started_at": 1788914257777,
       "finished_at": 1788914281747,
       "name": "",
-      "polled": "2026-09-09T00:40:41Z"
+      "polled": "2026-09-09T01:07:38Z",
+      "downloaded": {
+        "glb": "Art/Models/shabti_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0839a-3b83-7168-91e9-fb5ecfd2ec65",
@@ -146,7 +155,10 @@
       "started_at": 1788914318667,
       "finished_at": 1788914346761,
       "name": "",
-      "polled": "2026-09-09T00:40:41Z"
+      "polled": "2026-09-09T01:07:38Z",
+      "downloaded": {
+        "glb": "Art/Models/shabti_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0839b-2970-7554-8e29-cbc149cb01e0",
@@ -169,7 +181,10 @@
       "started_at": 1788914379539,
       "finished_at": 1788914390581,
       "name": "",
-      "polled": "2026-09-09T00:40:41Z"
+      "polled": "2026-09-09T01:07:38Z",
+      "downloaded": {
+        "glb": "Art/Models/shabti_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0839b-2c5e-7199-8b38-3f5f9c351b0d",
@@ -192,7 +207,10 @@
       "started_at": 1788914380269,
       "finished_at": 1788914404087,
       "name": "",
-      "polled": "2026-09-09T00:40:41Z"
+      "polled": "2026-09-09T01:07:38Z",
+      "downloaded": {
+        "glb": "Art/Models/shabti_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0839c-1a08-724c-b5af-aa0c06a275a8",
@@ -215,8 +233,12 @@
       "started_at": 1788914441190,
       "finished_at": 1788914455673,
       "name": "",
-      "polled": "2026-09-09T00:41:02Z"
+      "polled": "2026-09-09T01:07:38Z",
+      "downloaded": {
+        "glb": "Art/Models/shabti_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:07:38Z"
 }

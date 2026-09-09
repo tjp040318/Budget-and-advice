@@ -463,6 +463,99 @@ agreed, and the balance is 61. The estimate should have been checked on one
 prop before nine more were launched. Nothing else can be bought until the
 account is topped up; the next character or the awakened meshes wait on that.
 
+### Phase 2d — the third roster, two new realms and the Halls *(built; the art is landing)*
+
+Forty-three families are in the code: the eleven hand-written ones and
+thirty-two from one table (`UnitDatabase+Families.swift`). A row is the
+numbers, the names and the words that make a family itself; what varies
+by element is the shared tables; what varies by role is one of eight
+**kits** (striker, duelist, marksman, bruiser, warden, healer, oracle,
+trickster), so a player who has learned one striker knows every striker's
+shape. The Norse pantheon is live with the **Ravens Gather** banner.
+
+- Egypt +9: Horus, Isis (5★); Set, Bastet, Sobek, Hathor (4★); Scarab
+  Knight, Mummy, Jackal Warrior (3★)
+- Greece +10: Athena, Poseidon, Hades (5★); Apollo, Artemis, Hermes (4★);
+  Minotaur, Cyclops, Amazon, Medusa (3★)
+- Norse +13: Odin, Thor, Freya, Loki (5★); Tyr, Heimdall, Hel, Skadi (4★);
+  Valkyrie, Draugr, Berserker, Frost Troll, Dwarf Smith (3★)
+
+The art, in the order it lands: stylised concepts for all thirty-two
+(`Art/Concepts/*_sw.png`); Meshy models for every family (twenty-nine
+rigged in one session, four more from A-pose redraws after "pose estimation
+failed" on Bastet, Hathor, Hades and the text-to-3D Jötunn — the fix each
+time was a concept with a gap between the arms and the body and both feet
+showing); the five element cards per family and the awakened cards for the
+twenty 4★/5★ families (`tools/batch/portraits_batch2.sh`, ~240 Gemini
+calls, which is a day's quota, so it runs across two sessions and skips
+what exists). The gacha gates on cards, so a family joins the pool the
+morning its five cards are in the bundle.
+
+**Two new realms.** Six generated chapters — Olympus 1–3 (the Gate, the
+Aegean Cliffs, the Marsh of Lerna) and Yggdrasil 1–3 (the Midgard Fjord,
+the Roots, the Hall of Jötunheim) — on six new `BattleEnvironment`s with
+their own painted backdrops and `StageBuilder` recipes (the Greek set
+stands the Zeus statues and Doric columns on the Egyptian marks; the Norse
+set is rune stones, a longship prow, the world tree's roots and hall
+pillars on slate and ice). The creatures of each realm fight with the
+roster's own models and cards and a two-skill enemy kit (`enemy_minotaur`
+wears `minotaur.usdz`); the bosses — the Hydra and the Jötunn — are
+unrigged meshes the loader moves procedurally. **The curve is measured**:
+later chapters field the same creatures at a higher grade times a
+chapter-wide difficulty, not at absurd levels, and `tools/balance.py
+--chapters` prints the win rate of four ladder teams on the first, middle
+and boss stage of every chapter. Olympus 1 opens to a levelled 4★ team,
+Olympus 3's Hydra needs 5★s with relics, the Jötunn needs a maxed 6★ team.
+
+**The Halls of Essence** (`DungeonDatabase`): one hall per element, five
+floors, a boss on every floor, open every day and cleared as often as the
+energy holds. This is where the element essences come from and where the
+relics worth keeping start (the floor sets the grade, 3★ on B1 to 6★ on
+B5). A floor is a `Stage` whose chapter is the hall, so the campaign's
+plumbing runs it — progress, the briefing, the battle, auto-repeat — with
+no special case. `--halls` prints the curve: B1 for a 4★ team, B3 for 5★s
+with relics, B5 for a maxed 6★ team.
+
+**The grind conveniences.** The briefing asks for 1, 5, 10 or 20 runs;
+on a repeat the battle swaps in a fresh engine per run on auto, shows
+"Run 3 of 10" between them, and tots the loot up for one panel at the end,
+stopping on a defeat or an empty energy bar. The wallet bar counts down
+to the next point of energy. Speeds ×1/×2/×3 were already there.
+
+**Relic management** (`RelicInventoryView`, `RelicService`): an inventory
+with set tallies (7/2 Fury…), slot and set filters, a role picker and an
+**efficiency** dial — the relic's score against the best its grade, slot
+and level could have rolled for that role — bulk selling with locks
+honoured, and a detail sheet that upgrades, **reappraises** (from +9,
+every sub stat rerolled, main stat and level kept, two upgrade-costs'
+worth of drachma) and locks. The unit sheet gained a picker per slot and
+its active sets. `Relic.isLocked` finally does something.
+
+**The bazaar** (`ShopService`, `ShopView`): scrolls, energy, relic packs,
+essences and a laurel exchange, all for the game's own currencies, and a
+free daily offering (a scroll, 2,000 drachma, 10 energy). No real money
+anywhere. It opens from the wallet on the island and from More. The
+`Player` gained `lastDailyPackClaim` as an optional, which is the rule for
+every new save field: the synthesised decoder tolerates a missing optional
+and nothing else.
+
+**The living island, phase A** (`IslandSceneView`): the campaign team
+stands on the painting in its idle clips — an orthographic SceneKit layer
+between the painting and the plaques, one world unit per screen point, so
+a stand point is a point on the painting and a figure is a tenth of the
+screen tall — with a contact shadow under each, sparks over the pool, a
+flame at the obelisk's tip, and the hour's colour multiplied over the
+painting (nothing by day, warm at dusk, blue at night).
+
+What the session cost: 3,061 Meshy credits at the start, the floor the
+user set at 500. Wave 1 (Egypt) 9 × 53, waves 2–3 (Greece, Norse) 23 × 53
+including the Shabti, the props and beasts 30–300 each (text-to-3D previews
+are charged by what Meshy generates, not a flat rate), then four A-pose
+redos and two awakened meshes (Sekhmet, Zeus). Gemini's 250-a-day cap was
+hit with about 150 cards to go and one concept (Loki: the first draw was a
+photo of an actor, deleted; the second was refused; the third is
+tomorrow's).
+
 ### Phase 4 — sound and feel
 
 - **Music.** Two synthesised loops are in — an island loop of pads, a drone
@@ -631,13 +724,24 @@ push. Settings → Actions on the repository turns it off.
    the end of it is what the simulator saw, and `<step>-console.txt` beside
    it is what the app said — so a phone-only fault (GPU, sound, feel) can be
    told from a build fault.
-3. **The living island, phase A**, then a **Greek campaign chapter** so
-   Olympus has somewhere to fight, then **Rome** (a Legionary and a banner)
-   by the same recipe as Greece. Each is a session; none needs new tooling.
-4. **Tune Ares.** The balance sim cannot see a self-buff or an extra turn,
+3. **Finish the third roster's art** (the next day's Gemini quota): run
+   `tools/batch/portraits_batch2.sh` again for the cards it could not
+   paint, redraw Loki and Hades in the A-pose, run them through Meshy as
+   `loki` and `hades_v2`, ship with `mesh.py hades_v2 --as hades`. Then
+   the remaining awakened meshes (Thoth, Ares) if the credits allow
+   — 53 each, never below the 500 floor.
+4. **Play the new realms and the halls on the phone.** The curve was
+   measured in the simulator against Anubis teams; the sim cannot see a
+   heal, a shield, a strip or a provoke, so the healers and tricksters
+   are rated as floors, and a real team may find Olympus 2 easier or the
+   Jötunn harder than the table says. Move a chapter's `difficulty` and
+   `enemyStars` in `StageDatabase.swift` and `tools/balance.py` together.
+5. **Tune Ares.** The balance sim cannot see a self-buff or an extra turn,
    so it has him losing to Sekhmet; on the phone he may not. Decide from
    play, then move the numbers in `UnitDatabase+Roster.swift` and
    `tools/balance.py` together.
+6. **Rome** (a Legionary and a banner) by the same recipe as Greece; the
+   living island's phase B (painted upgrade states for the buildings).
 
 ---
 
@@ -645,10 +749,10 @@ push. Settings → Actions on the repository turns it off.
 
 | | |
 |---|---|
-| 2D art at volume | ✅ 29 assets in ~40 min, proven — when a Gemini key is present |
+| 2D art at volume | ✅ 29 assets in ~40 min, proven — when a Gemini key is present; **250 images a day** is the key's cap, and a roster's cards are about 240 |
 | Sound effects | ✅ synthesised, in the repo |
 | Read, normalise, decimate, re-export 3D | ✅ proven on the whole Anubis family |
-| **Generate, rig and animate a 3D character** | ✅ **proven thirteen times; ten at once in one session, 53 credits and ~15 minutes each** |
+| **Generate, rig and animate a 3D character** | ✅ **proven forty-six times; twenty-three at once in one session, 53 credits and ~15 minutes each; `meshy.py` waits out the plan's queue cap** |
 | Convert Meshy's rigged GLB to USDZ | ✅ proven on both families, after one real bug the verify step caught |
 | Fetch the finished files | ✅ fourteen files in under a minute |
 | Paint a family and an island | ✅ fifty cards from ten concepts in ~25 minutes of Gemini time, three families at a time |

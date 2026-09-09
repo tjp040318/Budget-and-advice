@@ -112,14 +112,29 @@ revives, passive skills with triggers, and an AI that scores every
 skill-ups, and a 3D summon reveal.
 
 **Relics.** Six slots, 16 sets, main and sub stats, upgrades to +15, auto-equip
-scored per combat role, set effects resolved inside the engine.
+scored per combat role, set effects resolved inside the engine. An inventory
+with set tallies, filters, an efficiency dial against the role's ceiling,
+bulk selling, locks, and reappraisal from +9; a picker per slot on the unit
+sheet.
 
 **The island.** The app opens on a painted hub with a landmark for every part
-of the game; the ones with something to do glow. The painting is a generated
-stand-in until a Gemini key is in the environment.
+of the game; the ones with something to do glow. The campaign team stands
+on the painting in its idle clips, sparks rise off the pool, a flame burns
+at the obelisk, and the hour colours the painting. Tap the wallet for the
+bazaar.
 
-**Campaign.** Two chapters of the Duat, hand-authored and generated, with energy,
-star ratings, first-clear rewards and gated progression.
+**Campaign.** Eight chapters — two of the Duat, three of Olympus, three of
+Yggdrasil — hand-authored and generated, with energy, star ratings,
+first-clear rewards and gated progression; later chapters field their
+creatures at a higher grade on a measured curve. Any stage runs 1, 5, 10 or
+20 times on auto with one loot panel at the end.
+
+**The Halls of Essence.** One hall per element, five floors, a boss on every
+floor, repeatable every day; the element essences and the relics worth
+keeping come from here.
+
+**The bazaar.** Scrolls, energy, relic packs, essences and a laurel exchange
+for the game's own currencies, and a free offering every day. No real money.
 
 **Arena.** Rank points with Elo-flavoured swings, six tiers with floors, attack
 regeneration, an AI-played defence team, and a defence simulator that reports how

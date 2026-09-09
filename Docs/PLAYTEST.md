@@ -197,6 +197,65 @@ Send: a screenshot before the first command.
 - **3D assets** → the ten modelled families green; the Shabti and the enemies
   grey, which is expected.
 
+## 8. The island's figures
+
+Back on the island: your campaign team stands on the sand — below the pool,
+in the middle of the island and on the front beach — in their combat idles,
+each on a soft shadow, about a tenth of the screen tall, facing you. Sparks
+rise off the pool; a flame flickers at the obelisk's tip. After dark the
+painting goes blue; at dusk, warm. Tapping the wallet in the header opens
+the bazaar.
+
+Send: a screenshot. If a figure floats, sinks or stands on a building, say
+which spot. If the island stutters for a second when it opens, say so (the
+models load on first sight).
+
+## 9. Campaign → Halls of Essence
+
+Campaign has two segments at the top. **Halls of Essence** lists five halls,
+one per element, each with five floors (B1–B5) and a BOSS tag on every
+floor. B1 is open; B2 opens when B1 falls. The briefing shows the floor's
+enemies (three creatures and the element's boss), the element essence in
+the rewards, and a **Repeat** row. Clear B1 twice: the second clear still
+pays drachma and a relic chance, but no first-clear divinity.
+
+Send: which floor you reached with which team, and whether B3 felt like a
+wall (the simulator says it wants 5★s with relics).
+
+## 10. Repeat runs
+
+In any briefing, pick **×5** and Begin. The fight runs on auto; between
+runs a "Run 2 of 5" line shows for a moment and the stage rebuilds; the
+HUD's ↻ 2/5 counts, and tapping it stops after the current run. At the end
+one panel lists the runs won, the drachma, the EXP, the relics by grade
+and the essences. It stops early on a loss or when the energy runs out,
+and says so on the panel. The wallet bar shows **m:ss** to the next point
+of energy whenever you are under the cap.
+
+Send: the final panel, and whether the countdown matched the energy tick.
+
+## 11. Relics
+
+Collection → **Relics** (top right). The set tallies at the top (7/2
+Fury…), slot chips, Unequipped, a sort and a role menu. Every row has an
+efficiency ring. **Select** → tap a few → **Sell for N**: equipped ones
+come off their units; a locked one refuses to be picked (a warning
+buzz). Tap a row: Upgrade, Reappraise (from +9), Lock, Sell, Unequip. On a
+unit's sheet each relic slot has **Choose**/**Change**, opening a picker
+sorted for the unit's role.
+
+Send: anything that sold that should not have, and whether the efficiency
+numbers agree with your eye (a 6★ with four good subs should be green).
+
+## 12. The bazaar
+
+From the island's wallet or More → Bazaar. Claim the **Daily offering**
+(a scroll, 2,000 drachma, 10 energy); the button then reads Claimed until
+tomorrow. Buy an energy pack and watch the wallet bar. A relic pack lands
+in the inventory at the grade on the label. Nothing here costs real money.
+
+Send: the receipt line after a purchase, and the wallet before and after.
+
 ## If it does not build
 
 ```bash

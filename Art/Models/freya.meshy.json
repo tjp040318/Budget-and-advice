@@ -50,7 +50,7 @@
       "finished_at": 1788913896615,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T00:31:40Z"
+      "polled": "2026-09-09T01:03:33Z"
     },
     "rig": {
       "id": "01a08394-d310-76e1-be9f-60b0eaa322d1",
@@ -77,7 +77,10 @@
       "started_at": 1788913966825,
       "finished_at": 1788914033416,
       "name": "",
-      "polled": "2026-09-09T00:33:57Z"
+      "polled": "2026-09-09T01:03:33Z",
+      "downloaded": {
+        "glb": "Art/Models/freya.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0839c-610f-7713-bca8-7b3ac3864de4",
@@ -100,7 +103,10 @@
       "started_at": 1788914459558,
       "finished_at": 1788914471270,
       "name": "",
-      "polled": "2026-09-09T00:43:04Z"
+      "polled": "2026-09-09T01:03:33Z",
+      "downloaded": {
+        "glb": "Art/Models/freya_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0839d-4fb4-7672-8b67-0aacecc1cf50",
@@ -123,7 +129,10 @@
       "started_at": 1788914520496,
       "finished_at": 1788914544993,
       "name": "",
-      "polled": "2026-09-09T00:43:03Z"
+      "polled": "2026-09-09T01:03:34Z",
+      "downloaded": {
+        "glb": "Art/Models/freya_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0839d-52fc-7493-b9ab-fb451cb3063b",
@@ -146,7 +155,10 @@
       "started_at": 1788914521191,
       "finished_at": 1788914545682,
       "name": "",
-      "polled": "2026-09-09T00:43:03Z"
+      "polled": "2026-09-09T01:03:34Z",
+      "downloaded": {
+        "glb": "Art/Models/freya_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0839d-55af-7343-8719-9c90c8a39de1",
@@ -169,7 +181,10 @@
       "started_at": 1788914521914,
       "finished_at": 1788914532883,
       "name": "",
-      "polled": "2026-09-09T00:43:03Z"
+      "polled": "2026-09-09T01:03:34Z",
+      "downloaded": {
+        "glb": "Art/Models/freya_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0839e-4354-75dc-82cb-1146198b160a",
@@ -192,7 +207,10 @@
       "started_at": 1788914582783,
       "finished_at": 1788914607209,
       "name": "",
-      "polled": "2026-09-09T00:43:34Z"
+      "polled": "2026-09-09T01:03:34Z",
+      "downloaded": {
+        "glb": "Art/Models/freya_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0839e-464b-723b-bafb-85622bf04ae5",
@@ -215,8 +233,12 @@
       "started_at": 1788914583365,
       "finished_at": 1788914598216,
       "name": "",
-      "polled": "2026-09-09T00:43:24Z"
+      "polled": "2026-09-09T01:03:34Z",
+      "downloaded": {
+        "glb": "Art/Models/freya_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:03:34Z"
 }

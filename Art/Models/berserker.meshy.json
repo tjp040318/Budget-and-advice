@@ -50,7 +50,7 @@
       "finished_at": 1788914086680,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T00:34:53Z"
+      "polled": "2026-09-09T01:06:27Z"
     },
     "rig": {
       "id": "01a08398-dd2b-76c8-a488-0d7e22ee5619",
@@ -77,7 +77,10 @@
       "started_at": 1788914231445,
       "finished_at": 1788914300528,
       "name": "",
-      "polled": "2026-09-09T00:38:22Z"
+      "polled": "2026-09-09T01:06:27Z",
+      "downloaded": {
+        "glb": "Art/Models/berserker.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08399-ff4f-728b-bffe-acf0c9738190",
@@ -100,7 +103,10 @@
       "started_at": 1788914303178,
       "finished_at": 1788914314230,
       "name": "",
-      "polled": "2026-09-09T00:38:37Z"
+      "polled": "2026-09-09T01:06:27Z",
+      "downloaded": {
+        "glb": "Art/Models/berserker_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0839a-022d-72d9-aaf8-b9a4aba26876",
@@ -123,7 +129,10 @@
       "started_at": 1788914303801,
       "finished_at": 1788914328305,
       "name": "",
-      "polled": "2026-09-09T00:38:58Z"
+      "polled": "2026-09-09T01:06:27Z",
+      "downloaded": {
+        "glb": "Art/Models/berserker_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0839a-0493-7686-8cef-5f02b2dbb45c",
@@ -146,7 +155,10 @@
       "started_at": 1788914304520,
       "finished_at": 1788914329018,
       "name": "",
-      "polled": "2026-09-09T00:38:58Z"
+      "polled": "2026-09-09T01:06:27Z",
+      "downloaded": {
+        "glb": "Art/Models/berserker_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0839a-0762-7137-9ca7-e160a3e89d4f",
@@ -169,7 +181,10 @@
       "started_at": 1788914305218,
       "finished_at": 1788914318239,
       "name": "",
-      "polled": "2026-09-09T00:38:48Z"
+      "polled": "2026-09-09T01:06:27Z",
+      "downloaded": {
+        "glb": "Art/Models/berserker_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0839a-0a17-73c1-952e-91b73db237a1",
@@ -192,7 +207,10 @@
       "started_at": 1788914305894,
       "finished_at": 1788914331294,
       "name": "",
-      "polled": "2026-09-09T00:38:59Z"
+      "polled": "2026-09-09T01:06:27Z",
+      "downloaded": {
+        "glb": "Art/Models/berserker_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0839a-0cce-7031-b68b-400a1af1b486",
@@ -215,8 +233,12 @@
       "started_at": 1788914306517,
       "finished_at": 1788914322774,
       "name": "",
-      "polled": "2026-09-09T00:38:48Z"
+      "polled": "2026-09-09T01:06:27Z",
+      "downloaded": {
+        "glb": "Art/Models/berserker_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:06:27Z"
 }

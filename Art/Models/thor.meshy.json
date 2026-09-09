@@ -50,7 +50,7 @@
       "finished_at": 1788913904869,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T00:31:50Z"
+      "polled": "2026-09-09T01:03:08Z"
     },
     "rig": {
       "id": "01a08397-67bf-7415-b1fb-bc6116849ddf",
@@ -77,7 +77,10 @@
       "started_at": 1788914136102,
       "finished_at": 1788914212279,
       "name": "",
-      "polled": "2026-09-09T00:36:57Z"
+      "polled": "2026-09-09T01:03:08Z",
+      "downloaded": {
+        "glb": "Art/Models/thor.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0839a-8801-7791-89ab-62b46442796d",
@@ -100,7 +103,10 @@
       "started_at": 1788914338285,
       "finished_at": 1788914349472,
       "name": "",
-      "polled": "2026-09-09T00:43:03Z"
+      "polled": "2026-09-09T01:03:08Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0839c-60e1-7329-8d9f-5f9e0842e41e",
@@ -123,7 +129,10 @@
       "started_at": 1788914459333,
       "finished_at": 1788914483107,
       "name": "",
-      "polled": "2026-09-09T00:43:02Z"
+      "polled": "2026-09-09T01:03:08Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0839d-4ee0-77b7-9b57-e9794138f099",
@@ -146,7 +155,10 @@
       "started_at": 1788914520360,
       "finished_at": 1788914567668,
       "name": "",
-      "polled": "2026-09-09T00:43:03Z"
+      "polled": "2026-09-09T01:03:08Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0839d-5269-7719-8a6f-a26fc52adc7e",
@@ -169,7 +181,10 @@
       "started_at": 1788914521038,
       "finished_at": 1788914532645,
       "name": "",
-      "polled": "2026-09-09T00:43:03Z"
+      "polled": "2026-09-09T01:03:08Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0839d-551a-76c2-9082-142b701d9b4c",
@@ -192,7 +207,10 @@
       "started_at": 1788914521796,
       "finished_at": 1788914546587,
       "name": "",
-      "polled": "2026-09-09T00:43:03Z"
+      "polled": "2026-09-09T01:03:08Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0839e-42de-7642-a8e4-2b0aba1250b2",
@@ -215,8 +233,12 @@
       "started_at": 1788914582655,
       "finished_at": 1788914598072,
       "name": "",
-      "polled": "2026-09-09T00:43:23Z"
+      "polled": "2026-09-09T01:03:08Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:03:08Z"
 }

@@ -50,7 +50,7 @@
       "finished_at": 1788913890645,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T00:31:35Z"
+      "polled": "2026-09-09T01:02:43Z"
     },
     "rig": {
       "id": "01a08395-f6c7-73e6-897f-ee365b51c723",
@@ -77,7 +77,10 @@
       "started_at": 1788914050210,
       "finished_at": 1788914119882,
       "name": "",
-      "polled": "2026-09-09T00:35:21Z"
+      "polled": "2026-09-09T01:02:43Z",
+      "downloaded": {
+        "glb": "Art/Models/odin.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08397-3b2d-7237-b3fc-e7e16641a24f",
@@ -100,7 +103,10 @@
       "started_at": 1788914121929,
       "finished_at": 1788914133507,
       "name": "",
-      "polled": "2026-09-09T00:37:26Z"
+      "polled": "2026-09-09T01:02:43Z",
+      "downloaded": {
+        "glb": "Art/Models/odin_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08397-3e1d-7379-8808-7b79216cfbc7",
@@ -123,7 +129,10 @@
       "started_at": 1788914122534,
       "finished_at": 1788914146303,
       "name": "",
-      "polled": "2026-09-09T00:37:25Z"
+      "polled": "2026-09-09T01:02:43Z",
+      "downloaded": {
+        "glb": "Art/Models/odin_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08398-2b4d-76b2-9369-21090751f1d8",
@@ -146,7 +155,10 @@
       "started_at": 1788914183445,
       "finished_at": 1788914217810,
       "name": "",
-      "polled": "2026-09-09T00:37:26Z"
+      "polled": "2026-09-09T01:02:43Z",
+      "downloaded": {
+        "glb": "Art/Models/odin_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08399-193f-74f9-814f-271ee6cebc80",
@@ -169,7 +181,10 @@
       "started_at": 1788914244375,
       "finished_at": 1788914256039,
       "name": "",
-      "polled": "2026-09-09T00:37:36Z"
+      "polled": "2026-09-09T01:02:43Z",
+      "downloaded": {
+        "glb": "Art/Models/odin_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08399-1c82-7700-bedd-aac33f5b93dc",
@@ -192,7 +207,10 @@
       "started_at": 1788914245006,
       "finished_at": 1788914269251,
       "name": "",
-      "polled": "2026-09-09T00:37:57Z"
+      "polled": "2026-09-09T01:02:43Z",
+      "downloaded": {
+        "glb": "Art/Models/odin_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08399-1ee0-7013-9bb9-c1e184a1f249",
@@ -215,8 +233,12 @@
       "started_at": 1788914245644,
       "finished_at": 1788914259993,
       "name": "",
-      "polled": "2026-09-09T00:37:47Z"
+      "polled": "2026-09-09T01:02:44Z",
+      "downloaded": {
+        "glb": "Art/Models/odin_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T01:02:44Z"
 }
