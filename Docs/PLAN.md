@@ -693,6 +693,31 @@ Colossus; a sarcophagus and a cluster of canopic jars for the Necropolis;
 a dead marsh tree and a bone pile for the Hydra. Estimate 200–400 credits.
 It waits for a top-up; the recipes have the marks ready.
 
+**"This is not how a boss battle should look."** The phone's third note
+came with the Vault's boss wave: a grey capsule under a wall of yellow.
+Three causes, all fixed in one pass. The boss had no mesh yet, and the
+loader's stand-in is a primitive — `ModelSpec.standInAsset` now names a
+shipped mesh to fight in a missing one's place at the spec's height, with
+the stand-in's clips, so the Colossus is a 4.5 m sentinel and the
+Unwrapped King a 3.2 m mummy until their own meshes land. The bloom
+(0.55 over a 0.85 threshold) turned a sunlit sandstone floor into a sheet
+of light — it is 0.3 over 0.94 now, and the vault's palette cooled. And
+the camera was too low and too close for a boss: the landscape solve
+moved from 5.5 m up / 24° down to 7.2 m up, 11 m back, 30° down at 34°,
+the genre's high three-quarter view, with both lines and the platform's
+far edge in frame and a figure a quarter of the screen tall.
+
+The same pass answered "the model is not right and the attack is not
+fluid": the shipped Sekhmet is the lioness from her concept (the sheet
+proves it) but from behind at the low camera her mane read as hair; the
+higher camera shows the head. The melee dash is a 0.3 s leap instead of a
+0.16 s slide, clips cross-fade over 0.22/0.30 s, one-shots are capped at
+2× speed with longer contracts, every hit lands in its element and a
+closing strike draws a slash. And "I have no idea what is happening to my
+characters": status tiles over the bars with glyphs and turn counts, named
+chips in the actor plate, a boss bar, an ultimate cut-in, a slimmer HUD
+that leaves the field clear, and lighter damage numbers.
+
 **Relic power-up, the rune way.** The user's second note: "the same
 upgrade system as the rune system for our relics". The rules the genre
 publishes (sure to +3, then a chance of failure that costs the mana and

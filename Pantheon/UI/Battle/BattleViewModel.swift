@@ -49,6 +49,17 @@ final class BattleViewModel: ObservableObject {
     @Published private(set) var outcome: BattleResult?
     /// The wave on the field, 1-based; a dungeon run has three.
     @Published private(set) var waveIndex = 1
+    /// An ultimate's cut-in: the caster's card and the skill's name sweep
+    /// across the screen for a second, the genre's announcement of a big
+    /// move. Cleared by the view.
+    @Published var cutIn: CutIn?
+
+    struct CutIn: Equatable {
+        var portrait: String
+        var unitName: String
+        var skillName: String
+        var accentHex: String
+    }
     @Published private(set) var log: [String] = []
     @Published var autoBattle = false {
         didSet {
@@ -464,6 +475,15 @@ extension BattleViewModel: BattleSceneDelegate {
         Task { @MainActor in
             self.record(event)
             self.applyToDisplay(event)
+            if case .skillCast(let actor, _, let skillName, _, _, let animation, _) = event, animation == .ultimate,
+               let caster = self.displayedCombatants.first(where: { $0.id == actor }) {
+                self.cutIn = CutIn(
+                    portrait: caster.model.portraitName(awakened: caster.isAwakened),
+                    unitName: caster.name,
+                    skillName: skillName,
+                    accentHex: caster.element.accentHex
+                )
+            }
         }
     }
 

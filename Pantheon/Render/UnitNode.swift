@@ -11,6 +11,7 @@ final class UnitNode: SCNNode {
 
     let combatantID: UUID
     let spec: ModelSpec
+    let element: Element
     let side: BattleSide
     private(set) var isDefeated = false
     /// The asset whose clips this unit plays: the awakened mesh's own when
@@ -95,10 +96,19 @@ final class UnitNode: SCNNode {
 
         self.combatantID = combatant.id
         self.spec = combatant.model
+        self.element = combatant.element
         self.side = combatant.side
-        self.clipAsset = combatant.isAwakened && ModelLibrary.shared.hasModel(combatant.model.awakenedAssetName)
-            ? combatant.model.awakenedAssetName
-            : combatant.model.assetName
+        // The clips come from the mesh on the stage: the awakened export when
+        // it shipped, the base one, or the stand-in's own when the base is
+        // still on the way.
+        let library = ModelLibrary.shared
+        if combatant.isAwakened && library.hasModel(combatant.model.awakenedAssetName) {
+            self.clipAsset = combatant.model.awakenedAssetName
+        } else if library.hasModel(combatant.model.assetName) {
+            self.clipAsset = combatant.model.assetName
+        } else {
+            self.clipAsset = combatant.model.standInAsset ?? combatant.model.assetName
+        }
         self.elementTint = tint
         self.modelContainer = container
         self.healthBarRoot = barRoot
@@ -147,12 +157,13 @@ final class UnitNode: SCNNode {
                 animation.isRemovedOnCompletion = false
                 animation.fillMode = .forwards
             }
-            // Library clips run long: a 2.5 s punch against a 1.0 s contract
+            // Library clips run long: a 2.5 s punch against a 1.3 s contract
             // leaves the caster still winding up when the hit lands. One-shots
-            // are played at the pace the engine times its hits to; loops and
-            // the death keep their own tempo.
-            if !clip.loops, clip != .death, animation.duration > clip.fallbackDuration * 1.15 {
-                animation.speed = Float(min(2.8, animation.duration / clip.fallbackDuration))
+            // are played at the pace the engine times its hits to, but never
+            // more than twice their authored speed — faster than that the
+            // swing was a flicker; the contracts were lengthened instead.
+            if !clip.loops, clip != .death, animation.duration > clip.fallbackDuration * 1.1 {
+                animation.speed = Float(min(2.0, animation.duration / clip.fallbackDuration))
             }
             modelContainer.addAnimation(animation, forKey: clip.rawValue)
             if !clip.loops {
@@ -269,10 +280,18 @@ final class UnitNode: SCNNode {
         let destination = SCNVector3(from.x + dx / distance * travel, from.y, from.z + dz / distance * travel)
         removeAction(forKey: "dash")
         let move = SCNAction.move(to: destination, duration: duration)
-        move.timingMode = .easeOut
+        move.timingMode = .easeInEaseOut
         // The model is authored facing +Z, so this yaw faces the victim.
         let turn = SCNAction.rotateTo(x: 0, y: CGFloat(atan2(dx, dz)), z: 0, duration: duration, usesShortestUnitArc: true)
         runAction(.group([move, turn]), forKey: "dash")
+        // A leap, not a slide: the figure lifts on the way and lands on the
+        // wind-up, which is what makes a closing strike read as one motion.
+        let lift = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.16, z: 0, duration: duration * 0.5)
+        lift.timingMode = .easeOut
+        let land = SCNAction.moveBy(x: 0, y: -CGFloat(spec.height) * 0.16, z: 0, duration: duration * 0.5)
+        land.timingMode = .easeIn
+        modelContainer.removeAction(forKey: "hop")
+        modelContainer.runAction(.sequence([lift, land]), forKey: "hop")
     }
 
     /// Back to the spot it stood on, facing the way it did. Nothing happens
@@ -344,27 +363,58 @@ final class UnitNode: SCNNode {
     }
 
     /// Rebuilds the little status pips above the health bar.
-    func setStatuses(_ statuses: [StatusKind]) {
+    /// What the unit is under right now, drawn as icons over its bar.
+    private var activeStatuses: [ActiveStatus] = []
+
+    /// The buffs and debuffs on a unit, as the genre shows them: a row of
+    /// icons over the health bar, a blue tile for a buff and a red one for a
+    /// debuff, the effect's glyph on it and the turns left in the corner.
+    /// The coloured dots of the first build told the player nothing.
+    func setStatuses(_ statuses: [ActiveStatus]) {
+        activeStatuses = statuses
         statusRow.childNodes.forEach { $0.removeFromParentNode() }
-        let unique = Array(Set(statuses)).sorted { $0.rawValue < $1.rawValue }.prefix(6)
-        guard !unique.isEmpty else { return }
+        // One tile per kind, the longest-lasting of each, six at most.
+        var byKind: [StatusKind: Int] = [:]
+        for status in statuses { byKind[status.kind] = max(byKind[status.kind] ?? 0, status.turnsRemaining) }
+        let shown = byKind.sorted { $0.key.rawValue < $1.key.rawValue }.prefix(6)
+        guard !shown.isEmpty else { return }
 
-        let pip = barWidth * 0.11
-        let spacing = pip * 1.25
-        let totalWidth = spacing * CGFloat(unique.count - 1)
+        let pip = CGFloat(spec.height) * 0.16
+        let spacing = pip * 1.12
+        let totalWidth = spacing * CGFloat(shown.count - 1)
 
-        for (index, kind) in unique.enumerated() {
+        for (index, entry) in shown.enumerated() {
             let plane = SCNPlane(width: pip, height: pip)
-            plane.cornerRadius = pip / 2
-            plane.firstMaterial = UnitNode.flatMaterial(
-                kind.isBuff ? UIColor(hex: "#6BD8F2")! : UIColor(hex: "#F2726B")!
-            )
+            plane.firstMaterial = UnitNode.imageMaterial(StatusIconRenderer.image(kind: entry.key, turns: entry.value))
             let node = SCNNode(geometry: plane)
             node.position = SCNVector3(
-                Float(-totalWidth / 2 + spacing * CGFloat(index)), 0, 0.002
+                Float(-totalWidth / 2 + spacing * CGFloat(index)), Float(pip * 0.55), 0.002
             )
             statusRow.addChildNode(node)
         }
+    }
+
+    /// A status the moment it lands, so the icon shows with the hit rather
+    /// than after the turn settles.
+    func applyStatus(_ kind: StatusKind, turns: Int) {
+        var statuses = activeStatuses.filter { $0.kind != kind }
+        statuses.append(ActiveStatus(kind: kind, turnsRemaining: turns))
+        setStatuses(statuses)
+    }
+
+    func removeStatus(_ kind: StatusKind) {
+        setStatuses(activeStatuses.filter { $0.kind != kind })
+    }
+
+    private static func imageMaterial(_ image: UIImage?) -> SCNMaterial {
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = image
+        material.isDoubleSided = true
+        material.blendMode = .alpha
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
+        return material
     }
 
     func markDefeated() {
@@ -413,5 +463,56 @@ final class UnitNode: SCNNode {
         material.writesToDepthBuffer = false
         material.readsFromDepthBuffer = false
         return material
+    }
+}
+
+/// Draws a status tile: a rounded square in the buff or debuff colour, the
+/// effect's glyph in white, the turns left in the corner. One texture per
+/// kind and count, cached.
+enum StatusIconRenderer {
+    private static var cache: [String: UIImage] = [:]
+
+    static func image(kind: StatusKind, turns: Int) -> UIImage? {
+        let key = "\(kind.rawValue)|\(turns)"
+        if let cached = cache[key] { return cached }
+
+        let side: CGFloat = 72
+        let size = CGSize(width: side, height: side)
+        let fill = kind.isBuff ? UIColor(hex: "#2E8FBF") ?? .systemBlue : UIColor(hex: "#B8403A") ?? .systemRed
+        let image = UIGraphicsImageRenderer(size: size).image { _ in
+            let rect = CGRect(origin: .zero, size: size).insetBy(dx: 3, dy: 3)
+            let path = UIBezierPath(roundedRect: rect, cornerRadius: 16)
+            fill.setFill()
+            path.fill()
+            UIColor.white.withAlphaComponent(0.9).setStroke()
+            path.lineWidth = 3
+            path.stroke()
+
+            let configuration = UIImage.SymbolConfiguration(pointSize: 32, weight: .bold)
+            if let symbol = UIImage(systemName: kind.glyph, withConfiguration: configuration)?
+                .withTintColor(.white, renderingMode: .alwaysOriginal) {
+                let box: CGFloat = 40
+                let scale = min(box / max(1, symbol.size.width), box / max(1, symbol.size.height))
+                let drawn = CGSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
+                symbol.draw(in: CGRect(
+                    x: (side - drawn.width) / 2, y: (side - drawn.height) / 2 - 3,
+                    width: drawn.width, height: drawn.height
+                ))
+            }
+
+            if turns > 0 {
+                let label = NSAttributedString(string: "\(turns)", attributes: [
+                    .font: UIFont.systemFont(ofSize: 20, weight: .heavy),
+                    .foregroundColor: UIColor.white,
+                    .strokeColor: UIColor.black.withAlphaComponent(0.9),
+                    .strokeWidth: -3.5,
+                ])
+                let textSize = label.size()
+                label.draw(at: CGPoint(x: side - textSize.width - 7, y: side - textSize.height - 4))
+            }
+        }
+        if cache.count > 200 { cache.removeAll() }
+        cache[key] = image
+        return image
     }
 }

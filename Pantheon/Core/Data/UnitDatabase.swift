@@ -1249,7 +1249,8 @@ enum UnitDatabase {
         auraHex: String,
         assetName: String? = nil,
         portraitName: String? = nil,
-        height: Float? = nil
+        height: Float? = nil,
+        standInAsset: String? = nil
     ) -> UnitBlueprint {
         UnitBlueprint(
             id: id,
@@ -1305,7 +1306,8 @@ enum UnitDatabase {
                 assetName: assetName ?? id,
                 height: height ?? (archetype == .primordial ? 3.6 : 1.9),
                 auraHex: auraHex,
-                portraitName: portraitName ?? "portrait_\(id)"
+                portraitName: portraitName ?? "portrait_\(id)",
+                standInAsset: standInAsset
             ),
             lore: epithet
         )
@@ -1448,7 +1450,8 @@ enum UnitDatabase {
         specialName: "Fall of the Colossus", specialMultiplier: 2.80, specialTarget: .allEnemies,
         specialStatus: StatusSpec(.stun, chance: 0.30, turns: 1, target: .allEnemies),
         specialCooldown: 4,
-        auraHex: "#F5D96B", portraitName: "portrait_boss_colossus", height: 4.5
+        auraHex: "#F5D96B", portraitName: "portrait_boss_colossus", height: 4.5,
+        standInAsset: "sandstone_sentinel"
     )
 
     /// The Necropolis's king: unwrapped, quick for a dead man, and his
@@ -1461,6 +1464,7 @@ enum UnitDatabase {
         specialName: "Weight of the Ledger", specialMultiplier: 2.60, specialTarget: .allEnemies,
         specialStatus: StatusSpec(.speedDown, chance: 0.50, turns: 2, target: .allEnemies),
         specialCooldown: 4,
-        auraHex: "#B08CFF", portraitName: "portrait_boss_unwrapped_king", height: 3.2
+        auraHex: "#B08CFF", portraitName: "portrait_boss_unwrapped_king", height: 3.2,
+        standInAsset: "mummy"
     )
 }

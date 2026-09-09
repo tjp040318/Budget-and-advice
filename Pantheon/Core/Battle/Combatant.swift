@@ -48,6 +48,9 @@ struct Combatant: Identifiable, Sendable {
     var firedPassives: Set<String> = []
 
     var isAlive: Bool { currentHealth > 0 }
+    /// A boss gets the big bar across the top of the HUD: an enemy that is
+    /// a primordial, or simply enormous.
+    var isBoss: Bool { side == .opponent && (archetype == .primordial || model.height >= 3.0) }
     var maxHealth: Double { baseStats.hp }
     var healthFraction: Double { maxHealth > 0 ? max(0, currentHealth / maxHealth) : 0 }
     var missingHealthFraction: Double { 1 - healthFraction }

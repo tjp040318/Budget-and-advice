@@ -154,7 +154,7 @@ enum Juice {
     /// the caller's rise-and-fade takes over. A number that simply appears at
     /// full size reads as a label; one that pops reads as a consequence.
     static func popAction(scale: CGFloat) -> SCNAction {
-        let overshoot = SCNAction.scale(to: scale * 1.22, duration: 0.07)
+        let overshoot = SCNAction.scale(to: scale * 1.12, duration: 0.07)
         overshoot.timingMode = .easeOut
         let settle = SCNAction.scale(to: scale, duration: 0.06)
         settle.timingMode = .easeInEaseOut

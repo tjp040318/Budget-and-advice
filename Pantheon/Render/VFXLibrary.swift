@@ -25,6 +25,32 @@ enum VFXLibrary {
         scene.rootNode.addChildNode(host)
 
         switch identifier {
+        // A hit in each element, for every skill that has no effect of its
+        // own: fire bursts up, water breaks and falls, wind scatters, light
+        // flares, shadow smokes. The tint is the caster's aura, so a fire
+        // Anubis and a fire Zeus burn in their own oranges.
+        case "impact_ember":
+            host.addParticleSystem(sparks(tint: tint, count: 70, speed: 5, scale: scale))
+            host.addParticleSystem(rising(tint: tint, count: 40, scale: scale * 0.8))
+            flash(at: position, in: scene, color: tint, radius: 1.4 * scale, duration: 0.2)
+        case "impact_tide":
+            host.addParticleSystem(sparks(tint: tint, count: 50, speed: 4, scale: scale))
+            host.addParticleSystem(falling(tint: tint, count: 60, scale: scale))
+            flash(at: position, in: scene, color: tint, radius: 1.2 * scale, duration: 0.2)
+        case "impact_gale":
+            host.addParticleSystem(sparks(tint: tint, count: 90, speed: 8, scale: scale * 0.8))
+            flash(at: position, in: scene, color: tint, radius: 1.0 * scale, duration: 0.14)
+        case "impact_radiance":
+            host.addParticleSystem(rising(tint: tint, count: 70, scale: scale))
+            flash(at: position, in: scene, color: tint, radius: 2.0 * scale, duration: 0.26)
+        case "impact_umbra":
+            host.addParticleSystem(falling(tint: tint, count: 50, scale: scale * 1.2))
+            host.addParticleSystem(sparks(tint: tint, count: 30, speed: 3, scale: scale))
+            flash(at: position, in: scene, color: tint, radius: 1.2 * scale, duration: 0.22)
+        // The stroke of a closing strike: a bright arc across the victim that
+        // grows in and fades in a quarter of a second.
+        case "slash":
+            addSlash(to: host, tint: tint, scale: scale)
         case "scale_strike":
             host.addParticleSystem(sparks(tint: tint, count: 60, speed: 5, scale: scale))
             flash(at: position, in: scene, color: tint, radius: 1.2 * scale, duration: 0.18)
@@ -224,6 +250,69 @@ enum VFXLibrary {
     // MARK: - Geometry effects
 
     /// The vertical strike for Thunderbolt.
+    private static var slashCache: [String: UIImage] = [:]
+
+    /// A slash arc: a long thin plane carrying a white-to-tint streak, tilted
+    /// across the target, scaled up from nothing and faded. Billboarded, so
+    /// it reads from the fixed camera whichever way the strike came.
+    private static func addSlash(to host: SCNNode, tint: UIColor, scale: Float) {
+        let plane = SCNPlane(width: CGFloat(1.9 * scale), height: CGFloat(0.42 * scale))
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = slashImage(tint: tint)
+        material.blendMode = .add
+        material.isDoubleSided = true
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
+        plane.firstMaterial = material
+
+        let node = SCNNode(geometry: plane)
+        node.renderingOrder = 900
+        node.eulerAngles.z = Float.random(in: 0.5...0.9) * (Bool.random() ? 1 : -1)
+        node.scale = SCNVector3(0.2, 0.2, 0.2)
+        node.opacity = 0
+        let billboard = SCNBillboardConstraint()
+        billboard.freeAxes = [.X, .Y]
+        node.constraints = [billboard]
+        host.addChildNode(node)
+
+        let grow = SCNAction.scale(to: 1.0, duration: 0.1)
+        grow.timingMode = .easeOut
+        node.runAction(.sequence([
+            .group([grow, .fadeIn(duration: 0.05)]),
+            .wait(duration: 0.06),
+            .group([.fadeOut(duration: 0.16), .scale(to: 1.15, duration: 0.16)]),
+            .removeFromParentNode(),
+        ]))
+        host.runAction(.sequence([.wait(duration: 0.6), .removeFromParentNode()]))
+    }
+
+    private static func slashImage(tint: UIColor) -> UIImage {
+        let key = "\(tint.hashValue)"
+        if let cached = slashCache[key] { return cached }
+        let size = CGSize(width: 256, height: 56)
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            let cg = context.cgContext
+            // A streak that is white-hot in the middle and the tint at the
+            // ends, thinning to points, over a transparent ground.
+            let colors = [UIColor.clear.cgColor, tint.cgColor, UIColor.white.cgColor, tint.cgColor, UIColor.clear.cgColor] as CFArray
+            let locations: [CGFloat] = [0, 0.25, 0.5, 0.75, 1]
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: locations) else { return }
+            let path = UIBezierPath()
+            path.move(to: CGPoint(x: 0, y: size.height / 2))
+            path.addQuadCurve(to: CGPoint(x: size.width, y: size.height / 2), controlPoint: CGPoint(x: size.width / 2, y: 0))
+            path.addQuadCurve(to: CGPoint(x: 0, y: size.height / 2), controlPoint: CGPoint(x: size.width / 2, y: size.height))
+            path.close()
+            cg.saveGState()
+            path.addClip()
+            cg.drawLinearGradient(gradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: size.width, y: 0), options: [])
+            cg.restoreGState()
+        }
+        if slashCache.count > 32 { slashCache.removeAll() }
+        slashCache[key] = image
+        return image
+    }
+
     private static func addBoltColumn(to host: SCNNode, tint: UIColor, scale: Float) {
         let column = SCNCylinder(radius: CGFloat(0.09 * scale), height: CGFloat(9 * scale))
         let material = SCNMaterial()

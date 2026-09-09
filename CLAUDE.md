@@ -64,10 +64,13 @@ on, the phase list, the pipeline costs, and an honest account of what this
 environment can and cannot do. The short version:
 
 - The game builds and runs on an iPhone, **landscape only** since this
-  session: the battle camera is re-solved for a wide frame (35°, 5.5 m up,
-  24° down; the player line a third of the screen tall), the battle HUD is
-  one top row and an open-middled bottom bar, the summon reveal is stage
-  left and words right, and the island painting is 16:9.
+  session: the battle camera is solved for a wide frame from above, the
+  genre's way (34°, 7.2 m up and 11 m back, 30° down; the player line a
+  quarter of the screen tall, the platform's far edge in frame — the
+  earlier 35°/5.5 m/24° solve stood the figures a third tall and the
+  playtest called it cramped), the battle HUD is one top row and an
+  open-middled bottom bar, the summon reveal is stage left and words
+  right, and the island painting is 16:9.
 - Battle, summon, collection, arena, campaign and the Hall of Ka (training:
   power-up, skill-ups from duplicates, evolution, awakening) all work. So do
   the **Labyrinth** (a building on the island, `LabyrinthView`: three
@@ -232,6 +235,32 @@ environment can and cannot do. The short version:
   as the campaign one, the Labyrinth, a dungeon's levels, the relic
   picker, a Labyrinth run on auto (`dungeon_battle`, four frames, so the
   waves are seen walking on) and the power-up screen.
+- **The fight reads.** Status effects are tiles over the health bar
+  (`StatusIconRenderer`: blue for a buff, red for a debuff, the effect's
+  glyph, the turns left in the corner; `UnitNode.setStatuses` takes
+  `[ActiveStatus]` and the scene updates them on `.statusApplied` /
+  `.statusExpired`), and named chips in the actor plate and the boss bar.
+  The HUD keeps the field clear: the skill in hand is worded inside the
+  actor plate at bottom left, the target prompt is one slim line under the
+  top row, a boss (`Combatant.isBoss`: a primordial or anything 3 m tall)
+  gets a wide red bar across the top, and an ultimate plays a **cut-in**
+  (`BattleViewModel.cutIn`: the caster's card and the skill's name sweep
+  across a dark band for a second). Damage numbers are a rounded semibold
+  with a thin edge, not the heavy outlined figures of the first build.
+- **Motion.** A melee unit's dash is a 0.3 s leap (the model container
+  hops while the node moves), clips cross-fade over 0.22/0.30 s
+  (`ModelLibrary`), one-shot clips are never sped past 2× (the contracts in
+  `AnimationClip.fallbackDuration` were lengthened instead: basic 1.3 s,
+  heavy 1.7 s), every skill without an effect of its own lands in its
+  caster's element (`VFXLibrary` `impact_<element>`) and a closing strike
+  draws a slash arc across the victim (`slash`). Bloom is 0.3 over 0.94:
+  the old 0.55 over 0.85 turned a sunlit floor into a sheet of light.
+- **Stand-ins by name.** `ModelSpec.standInAsset` names a shipped mesh to
+  fight in a missing one's place, stood up and scaled to the spec's height
+  with the stand-in's own clips (`UnitNode.clipAsset`), so a boss whose
+  mesh is still on the way is a giant of its kind rather than the
+  loader's primitive: the Colossus stands in as a 4.5 m sentinel, the
+  Unwrapped King as a 3.2 m mummy.
 - Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
   drew nothing for loose bundle PNGs on device; never use it for one.
 - The gacha pool is gated on shipped art (`UnitBlueprint.hasShippedArt`, a

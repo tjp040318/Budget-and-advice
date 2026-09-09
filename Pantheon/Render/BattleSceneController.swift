@@ -161,24 +161,28 @@ final class BattleSceneController: NSObject {
 
     private func buildCamera() {
         let camera = SCNCamera()
-        // Solved numerically for a landscape phone (852 × 393 points) with the
-        // HUD's single top row and the bottom bar's two ends taken off: the
-        // near player rank's feet land at 84% of the screen height and its
-        // heads at 50%, so a figure is a third of the screen tall the way the
-        // genre frames them; the near enemy rank's feet at 52% and heads at
-        // 27%, the far rank's heads at 22%, all below the top row; the far
-        // player column at 64% of the width. The previous portrait solve
-        // (44°, 8.75 m up, 39° down) put the enemy heads under the strip.
-        camera.fieldOfView = 35
+        // Solved numerically for a landscape phone (852 × 393 points): the
+        // genre's view is higher and further back than the first landscape
+        // solve (35°, 5.5 m up, 24° down), which stood the player line a
+        // third of the screen tall and hid the far edge of the platform. From
+        // 7.2 m up, 11 m back and 30° down at 34°, the near player rank's
+        // feet land at 77% of the screen height and its heads at 53% (a
+        // figure a quarter of the screen tall), the near enemy rank's feet at
+        // 46% and heads at 27%, the far rank's heads at 20%, the platform's
+        // far edge at 22% with the painting above it — both lines in one
+        // frame with room round them, and a boss seen whole.
+        camera.fieldOfView = 34
         camera.zNear = 0.1
         camera.zFar = 120
         camera.wantsHDR = true
         camera.wantsExposureAdaptation = false
-        camera.bloomIntensity = 0.55
-        camera.bloomThreshold = 0.85
-        camera.bloomBlurRadius = 14
-        camera.colorFringeStrength = 0.6
-        camera.vignettingIntensity = 0.35
+        // Bloom only on real highlights: at 0.55 over 0.85 a sunlit sandstone
+        // floor became a sheet of light and a boss's glow a wall of yellow.
+        camera.bloomIntensity = 0.3
+        camera.bloomThreshold = 0.94
+        camera.bloomBlurRadius = 10
+        camera.colorFringeStrength = 0.35
+        camera.vignettingIntensity = 0.3
         camera.vignettingPower = 1.2
         camera.screenSpaceAmbientOcclusionIntensity = 0.6
         camera.screenSpaceAmbientOcclusionRadius = 0.6
@@ -186,10 +190,8 @@ final class BattleSceneController: NSObject {
 
         cameraNode = SCNNode()
         cameraNode.camera = camera
-        // Lower and shallower than the portrait camera was: a wide frame looks
-        // across the stage rather than down at it.
-        cameraNode.position = SCNVector3(0, 5.5, 9.75)
-        cameraNode.eulerAngles = SCNVector3(-0.419, 0, 0)
+        cameraNode.position = SCNVector3(0, 7.2, 11.0)
+        cameraNode.eulerAngles = SCNVector3(-0.524, 0, 0)
         scene.rootNode.addChildNode(cameraNode)
 
         director = CameraDirector(cameraNode: cameraNode)
@@ -267,7 +269,7 @@ final class BattleSceneController: NSObject {
         for combatant in combatants {
             guard let node = unitNodes[combatant.id] else { continue }
             node.setHealth(fraction: combatant.healthFraction, animated: false)
-            node.setStatuses(combatant.statuses.map(\.kind))
+            node.setStatuses(combatant.statuses)
             if !combatant.isAlive { node.markDefeated() }
         }
     }
@@ -326,13 +328,18 @@ final class BattleSceneController: NSObject {
             if let targetNode, casterNode.spec.melee, targets.count == 1,
                targetNode.side != casterNode.side,
                animation == .attackBasic || animation == .attackHeavy {
-                casterNode.dash(toward: targetNode, duration: 0.16 / max(0.25, speedMultiplier))
+                casterNode.dash(toward: targetNode, duration: 0.30 / max(0.25, speedMultiplier))
             }
             casterNode.play(animation)
             floatText(name, at: casterNode.headWorldPosition, color: .white, scale: 0.7)
 
             // The effect lands a beat after the cast begins, matching the swing.
+            // A skill with no effect of its own lands in its caster's element,
+            // and a closing strike draws its slash across the victim.
             let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
+            let effect = vfx == "impact_generic" ? "impact_\(casterNode.element.rawValue)" : vfx
+            let slashes = casterNode.spec.melee && targets.count == 1
+                && (animation == .attackBasic || animation == .attackHeavy)
             let delay = animation.fallbackDuration * 0.45 / max(0.25, speedMultiplier)
             DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
                 guard let self else { return }
@@ -344,9 +351,15 @@ final class BattleSceneController: NSObject {
                 for targetID in targets {
                     guard let node = self.unitNodes[targetID] else { continue }
                     VFXLibrary.spawn(
-                        vfx, at: node.chestWorldPosition, in: self.scene,
+                        effect, at: node.chestWorldPosition, in: self.scene,
                         tint: tint, scale: node.spec.height / 1.9
                     )
+                    if slashes {
+                        VFXLibrary.spawn(
+                            "slash", at: node.chestWorldPosition, in: self.scene,
+                            tint: tint, scale: node.spec.height / 1.9 * (animation == .attackHeavy ? 1.3 : 1.0)
+                        )
+                    }
                 }
             }
 
@@ -399,8 +412,9 @@ final class BattleSceneController: NSObject {
             guard let node = unitNodes[target] else { return 0 }
             floatText("\(Int(amount.rounded())) blocked", at: node.headWorldPosition, color: UIColor(hex: "#6BD8F2")!, scale: 0.8)
 
-        case .statusApplied(_, let target, let kind, _):
+        case .statusApplied(_, let target, let kind, let turns):
             guard let node = unitNodes[target] else { return 0 }
+            node.applyStatus(kind, turns: turns)
             VFXLibrary.spawn(kind.isBuff ? "buff" : "debuff", at: node.position, in: scene, tint: .white)
             floatText(kind.displayName, at: node.headWorldPosition,
                       color: kind.isBuff ? UIColor(hex: "#6BD8F2")! : UIColor(hex: "#F2726B")!, scale: 0.7)
@@ -409,7 +423,10 @@ final class BattleSceneController: NSObject {
             guard let node = unitNodes[target] else { return 0 }
             floatText("RESIST", at: node.headWorldPosition, color: UIColor(hex: "#C8C8C8")!, scale: 0.8)
 
-        case .statusExpired, .statusRemoved, .cooldownStarted, .attackBarChanged:
+        case .statusExpired(let target, let kind), .statusRemoved(let target, let kind, _):
+            unitNodes[target]?.removeStatus(kind)
+
+        case .cooldownStarted, .attackBarChanged:
             break
 
         case .counterattack(let actor, _):
@@ -477,7 +494,7 @@ final class BattleSceneController: NSObject {
     /// Every unit that dashed walks back to its mark. Called as a turn begins
     /// and when the queue drains, so nobody is left standing in the enemy line.
     private func returnEveryoneHome() {
-        for node in unitNodes.values { node.returnHome(duration: 0.24 / max(0.25, speedMultiplier)) }
+        for node in unitNodes.values { node.returnHome(duration: 0.30 / max(0.25, speedMultiplier)) }
     }
 
     // MARK: - Floating text
@@ -485,8 +502,8 @@ final class BattleSceneController: NSObject {
     private func floatText(_ text: String, at position: SCNVector3, color: UIColor, scale: CGFloat = 1.0, pop: Bool = false) {
         guard let image = FloatingTextRenderer.image(text: text, color: color) else { return }
 
-        let width = CGFloat(0.02) * image.size.width * scale
-        let height = CGFloat(0.02) * image.size.height * scale
+        let width = CGFloat(0.018) * image.size.width * scale
+        let height = CGFloat(0.018) * image.size.height * scale
         let plane = SCNPlane(width: width, height: height)
         let material = SCNMaterial()
         material.lightingModel = .constant
@@ -537,12 +554,21 @@ enum FloatingTextRenderer {
         let key = "\(text)|\(color.hashValue)"
         if let cached = cache[key] { return cached }
 
-        let font = UIFont.systemFont(ofSize: 44, weight: .heavy)
+        // A rounded semibold with a thin edge and a soft shadow: the heavy
+        // black-outlined figures of the first build were too big and too
+        // thick to sit over a painted stage.
+        let base = UIFont.systemFont(ofSize: 34, weight: .semibold)
+        let font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 34) } ?? base
+        let shadow = NSShadow()
+        shadow.shadowColor = UIColor.black.withAlphaComponent(0.85)
+        shadow.shadowBlurRadius = 3
+        shadow.shadowOffset = CGSize(width: 0, height: 1.5)
         let attributes: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: color,
-            .strokeColor: UIColor.black,
-            .strokeWidth: -4.0
+            .strokeColor: UIColor.black.withAlphaComponent(0.9),
+            .strokeWidth: -2.0,
+            .shadow: shadow
         ]
         let string = NSAttributedString(string: text, attributes: attributes)
         let size = string.size()

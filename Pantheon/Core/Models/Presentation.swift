@@ -31,9 +31,9 @@ enum AnimationClip: String, Codable, CaseIterable, Sendable {
     var fallbackDuration: TimeInterval {
         switch self {
         case .ultimate: return 2.4
-        case .attackHeavy, .castRelease: return 1.4
-        case .attackBasic: return 1.0
-        case .hitReact: return 0.45
+        case .attackHeavy, .castRelease: return 1.7
+        case .attackBasic: return 1.3
+        case .hitReact: return 0.5
         case .death: return 1.2
         case .victory: return 2.0
         case .summonReveal: return 3.0
@@ -105,6 +105,10 @@ struct ModelSpec: Codable, Equatable, Sendable {
     /// Hue, in degrees, of the design's primary costume accent — the colour the
     /// per-element recolour replaces. Gold on every character so far.
     var costumeHue: Float = 45
+    /// A shipped model to fight in this one's place, scaled to its height,
+    /// until its own mesh lands: a boss whose mesh is still on the way stands
+    /// in as a giant of its kind rather than as the loader's primitive.
+    var standInAsset: String? = nil
 
     init(
         assetName: String,
@@ -119,7 +123,8 @@ struct ModelSpec: Codable, Equatable, Sendable {
         auraHex: String = "#FFFFFF",
         portraitName: String? = nil,
         melee: Bool = true,
-        costumeHue: Float = 45
+        costumeHue: Float = 45,
+        standInAsset: String? = nil
     ) {
         self.assetName = assetName
         self.scale = scale
@@ -134,6 +139,7 @@ struct ModelSpec: Codable, Equatable, Sendable {
         self.portraitName = portraitName ?? "portrait_\(assetName)"
         self.melee = melee
         self.costumeHue = costumeHue
+        self.standInAsset = standInAsset
     }
 
     /// The card for a unit in a given state. An awakened unit shows its own
@@ -240,7 +246,7 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .midgardFjord: return "#D8E4F0"
         case .yggdrasilRoots: return "#B8E0B0"
         case .jotunheimHall: return "#C8E0FF"
-        case .colossusVault: return "#F2CF8C"
+        case .colossusVault: return "#E0C89C"
         case .hydraLair: return "#B8D090"
         case .necropolis: return "#D8C8A8"
         }
@@ -259,7 +265,7 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .midgardFjord: return "#3A4858"
         case .yggdrasilRoots: return "#243A2A"
         case .jotunheimHall: return "#2C3A50"
-        case .colossusVault: return "#3E2E1E"
+        case .colossusVault: return "#2C2218"
         case .hydraLair: return "#243424"
         case .necropolis: return "#2A2230"
         }

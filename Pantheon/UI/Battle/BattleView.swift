@@ -24,8 +24,14 @@ struct BattleView: View {
             // A landscape HUD: one row across the top with the turn order in
             // it, and a bottom bar whose middle is open, so a short screen
             // keeps its centre for the stage.
-            VStack(spacing: 0) {
+            VStack(spacing: 6) {
                 topBar
+                if let boss = model.displayedCombatants.first(where: { $0.isBoss && $0.isAlive }) {
+                    bossBar(boss)
+                }
+                if model.awaitingActor != nil, model.selectedSkillSlot != nil {
+                    targetPrompt
+                }
                 Spacer()
                 if let actor = model.awaitingActor {
                     commandPanel(actor: actor)
@@ -35,6 +41,19 @@ struct BattleView: View {
             }
             .padding(.horizontal, 12)
             .padding(.bottom, 8)
+
+            if let cutIn = model.cutIn {
+                cutInBanner(cutIn)
+                    .transition(.opacity)
+                    .allowsHitTesting(false)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.15) {
+                            withAnimation(.easeIn(duration: 0.2)) {
+                                if model.cutIn == cutIn { model.cutIn = nil }
+                            }
+                        }
+                    }
+            }
 
             if showLog { logOverlay }
 
@@ -243,99 +262,193 @@ struct BattleView: View {
         HStack(alignment: .bottom, spacing: 10) {
             actorPlate(actor)
             Spacer(minLength: 0)
-            VStack(alignment: .trailing, spacing: 8) {
-                if model.selectedSkillSlot != nil {
-                    targetingBar
-                }
-                HStack(spacing: 8) {
-                    ForEach(model.availableSkills) { option in
-                        SkillButton(
-                            skill: option.skill,
-                            cooldown: option.cooldown,
-                            isSelected: model.selectedSkillSlot == option.slot,
-                            onHold: { withAnimation { heldSkill = option.skill } }
-                        ) {
-                            model.selectSkill(option.slot)
-                        }
+            HStack(spacing: 6) {
+                ForEach(model.availableSkills) { option in
+                    SkillButton(
+                        skill: option.skill,
+                        cooldown: option.cooldown,
+                        isSelected: model.selectedSkillSlot == option.slot,
+                        onHold: { withAnimation { heldSkill = option.skill } }
+                    ) {
+                        model.selectSkill(option.slot)
                     }
                 }
             }
-            .padding(8)
+            .padding(6)
             .background(
                 RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-                    .fill(Theme.ink.opacity(0.82))
+                    .fill(Theme.ink.opacity(0.7))
             )
         }
     }
 
+    /// The unit whose turn it is: portrait, health, what it is under, and
+    /// the skill in hand in words — all in the corner, where the genre keeps
+    /// it, so the field stays clear.
     private func actorPlate(_ actor: Combatant) -> some View {
-        HStack(spacing: 8) {
-            if BundleImage.exists(actor.model.portraitName(awakened: actor.isAwakened)) {
-                BundleImage(name: actor.model.portraitName(awakened: actor.isAwakened))
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 44, height: 44)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(actor.element.color, lineWidth: 1.5)
+        let skill = model.selectedSkillSlot.flatMap { actor.skill(at: $0) }
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 8) {
+                if BundleImage.exists(actor.model.portraitName(awakened: actor.isAwakened)) {
+                    BundleImage(name: actor.model.portraitName(awakened: actor.isAwakened))
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(actor.element.color, lineWidth: 1.5)
+                        )
+                        .shadow(color: actor.element.color.opacity(0.6), radius: 5)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
+                        Text(actor.name)
+                            .font(Theme.body(12).weight(.bold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                        ElementBadge(element: actor.element, compact: true)
+                    }
+                    StatBar(
+                        value: actor.currentHealth,
+                        maximum: actor.maxHealth,
+                        tint: Theme.success,
+                        height: 4
                     )
-                    .shadow(color: actor.element.color.opacity(0.6), radius: 5)
+                    .frame(width: 110)
+                    if !actor.statuses.isEmpty {
+                        statusChips(actor.statuses)
+                    }
+                }
             }
-            VStack(alignment: .leading, spacing: 3) {
-                Text(actor.name)
-                    .font(Theme.body(12).weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                ElementBadge(element: actor.element, compact: true)
-                StatBar(
-                    value: actor.currentHealth,
-                    maximum: actor.maxHealth,
-                    tint: Theme.success,
-                    height: 4
-                )
-                .frame(width: 90)
+            if let skill {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(skill.name)
+                        .font(Theme.body(11).weight(.bold))
+                        .foregroundStyle(Theme.gold)
+                    Text(skill.description)
+                        .font(Theme.body(9))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(width: 230, alignment: .leading)
             }
         }
         .padding(8)
-        .background(Theme.panel(Theme.tightCorner))
+        .background(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .fill(Theme.ink.opacity(0.72))
+        )
     }
 
-    /// The skill in hand, in words, and where to aim it: a player should be
-    /// able to see what they are about to do before they do it.
-    private var targetingBar: some View {
-        let skill = model.selectedSkillSlot.flatMap { slot in model.awaitingActor?.skill(at: slot) }
-        return VStack(alignment: .leading, spacing: 5) {
-            if let skill {
-                Text(skill.name)
-                    .font(Theme.body(12).weight(.bold))
-                    .foregroundStyle(Theme.gold)
-                Text(skill.description)
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            HStack(spacing: 8) {
-                Image(systemName: "scope")
-                    .foregroundStyle(Theme.gold)
-                Text("Tap a target on the field")
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
-                Spacer()
-                if model.highlightedTarget != nil {
-                    Button("Confirm") { model.confirmTarget() }
-                        .font(Theme.body(12).weight(.bold))
-                        .foregroundStyle(Theme.gold)
+    /// Buffs and debuffs as named chips: blue for a buff, red for a debuff,
+    /// the turns left after the name.
+    private func statusChips(_ statuses: [ActiveStatus]) -> some View {
+        HStack(spacing: 3) {
+            ForEach(Array(statuses.prefix(4).enumerated()), id: \.offset) { _, status in
+                HStack(spacing: 2) {
+                    Image(systemName: status.kind.glyph)
+                        .font(.system(size: 7, weight: .bold))
+                    Text("\(status.kind.displayName) \(status.turnsRemaining)")
+                        .font(Theme.body(7).weight(.semibold))
+                        .lineLimit(1)
                 }
-                Button("Cancel") { model.cancelTargeting() }
-                    .font(Theme.body(12))
-                    .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(.white)
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(status.kind.isBuff ? Color(hex: "#2E8FBF") : Color(hex: "#B8403A")))
             }
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .frame(maxWidth: 440)
-        .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
+    }
+
+    /// Where to aim, in one slim line under the top row, so nothing sits
+    /// over the field while a target is chosen.
+    private var targetPrompt: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "scope")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Theme.gold)
+            Text(model.highlightedTarget == nil ? "Tap a target on the field" : "Target chosen")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textPrimary)
+            if model.highlightedTarget != nil {
+                Button("Confirm") { model.confirmTarget() }
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+            }
+            Button("Cancel") { model.cancelTargeting() }
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(Theme.ink.opacity(0.7)))
+    }
+
+    /// The boss's bar across the top: the fight that matters, on one line.
+    private func bossBar(_ boss: Combatant) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "crown.fill")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Theme.danger)
+            Text(boss.name.uppercased())
+                .font(Theme.body(10).weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(Theme.textPrimary)
+            StatBar(value: boss.currentHealth, maximum: boss.maxHealth, tint: Theme.danger, height: 6)
+                .frame(width: 260)
+            Text("\(Int(boss.currentHealth.rounded())) / \(Int(boss.maxHealth.rounded()))")
+                .font(Theme.numeric(9))
+                .foregroundStyle(Theme.textSecondary)
+            if !boss.statuses.isEmpty {
+                statusChips(boss.statuses)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(Theme.ink.opacity(0.7)))
+    }
+
+    /// An ultimate's announcement: a dark band across the field, the
+    /// caster's card sliding in from the left and the skill's name from the
+    /// right, gone in a second.
+    private func cutInBanner(_ cutIn: BattleViewModel.CutIn) -> some View {
+        let accent = Color(hex: cutIn.accentHex)
+        return VStack {
+            Spacer().frame(height: 90)
+            ZStack {
+                LinearGradient(
+                    colors: [.clear, Theme.ink.opacity(0.92), Theme.ink.opacity(0.92), .clear],
+                    startPoint: .leading, endPoint: .trailing
+                )
+                Rectangle().fill(accent.opacity(0.9)).frame(height: 2).frame(maxHeight: .infinity, alignment: .top)
+                Rectangle().fill(accent.opacity(0.9)).frame(height: 2).frame(maxHeight: .infinity, alignment: .bottom)
+                HStack(spacing: 16) {
+                    if BundleImage.exists(cutIn.portrait) {
+                        BundleImage(name: cutIn.portrait)
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(accent, lineWidth: 2))
+                            .shadow(color: accent.opacity(0.8), radius: 12)
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                    }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(cutIn.unitName.uppercased())
+                            .font(Theme.body(11).weight(.bold))
+                            .tracking(1.6)
+                            .foregroundStyle(accent)
+                        Text(cutIn.skillName)
+                            .font(Theme.display(26))
+                            .foregroundStyle(Theme.textPrimary)
+                            .shadow(color: accent.opacity(0.9), radius: 10)
+                    }
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+                }
+            }
+            .frame(height: 84)
+            Spacer()
+        }
     }
 
     /// The card a held skill shows: name, cooldown, what it does.
@@ -439,7 +552,7 @@ struct SkillButton: View {
 
                 VStack(spacing: 2) {
                     Image(systemName: glyph)
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(isReady ? Theme.gold : Theme.textSecondary)
                     Text(skill.name)
                         .font(Theme.body(8).weight(.semibold))
@@ -458,7 +571,7 @@ struct SkillButton: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
             }
-            .frame(width: 62, height: 62)
+            .frame(width: 54, height: 54)
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .strokeBorder(isSelected ? Theme.gold : Theme.stroke, lineWidth: isSelected ? 2 : 1)

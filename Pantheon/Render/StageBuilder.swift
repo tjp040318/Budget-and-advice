@@ -209,10 +209,10 @@ enum StageBuilder {
         // painting (or the painting of the place they were carved from,
         // until theirs lands — `backdropName`).
         case .colossusVault:
-            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#A08C6C", rock: "rock_cliff",
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#8A7A64", rock: "rock_cliff",
                           backdrop: environment.backdropName, props: colossi + columns + sphinxes,
-                          braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#FFC060",
-                          mistHex: "#D0C098", mistCount: 5, dustHex: "#FFE0A0")
+                          braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#FFB050",
+                          mistHex: "#B0A088", mistCount: 5, dustHex: "#E0C898")
         case .hydraLair:
             return Recipe(floor: "floor_moss", floorRepeats: 5, floorTint: "#7E9068", rock: "rock_cliff",
                           backdrop: environment.backdropName, props: broken + [doric[2], doric[3]],

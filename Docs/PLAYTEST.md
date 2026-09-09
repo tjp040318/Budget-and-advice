@@ -386,6 +386,26 @@ button; the padlock is at the top.
 Send: a screenshot after a success and after a failure, and whether the
 odds felt fair for the cost.
 
+## 21. The fight, upgraded
+
+Same battle, a different frame: the camera sits higher and further back,
+so both lines and the platform's edge are in view and a figure is about a
+quarter of the screen tall. A melee unit leaps to its victim, swings, and
+the strike draws a slash across the target in the caster's colour; every
+hit bursts in its element. Buffs and debuffs are tiles over the health bar
+(blue for good, red for bad, the glyph and the turns left) and named chips
+in the corner plate. The skill you picked is worded in that plate, the
+"tap a target" line is a slim strip under the top row, and nothing sits
+over the field. A boss gets a red bar across the top. An ultimate plays a
+cut-in: the caster's card and the skill's name sweep across a dark band.
+The damage numbers are smaller and lighter.
+
+The Colossus and the Unwrapped King fight as a giant sentinel and a giant
+mummy until their own meshes land overnight.
+
+Send: a screenshot mid-fight with a debuff on someone, one of a cut-in,
+and whether the leap-and-swing reads as one motion or two.
+
 ## If it does not build
 
 ```bash

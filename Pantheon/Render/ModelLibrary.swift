@@ -103,6 +103,18 @@ final class ModelLibrary {
             cache[assetName] = loaded
             model = loaded.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
+        } else if let standIn = spec.standInAsset,
+                  let loaded = cache[standIn] ?? loadFromBundle(standIn) {
+            // A named stand-in: a shipped mesh of the right kind, stood up
+            // and scaled to this spec's height like a real export, so a boss
+            // whose own mesh is still on the way fights as a giant of its
+            // kind rather than as the primitive rig.
+            cache[standIn] = loaded
+            model = loaded.clone()
+            MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
+            if !orientationLogged.contains(assetName) {
+                log("'\(assetName)': no mesh in the bundle; standing in with '\(standIn)' at \(spec.height) m")
+            }
         } else {
             isStandIn = true
             isPortraitSprite = UIImage(named: spec.portraitName + "_cut") != nil
@@ -191,8 +203,10 @@ final class ModelLibrary {
         if let found {
             found.repeatCount = clip.loops ? .greatestFiniteMagnitude : 1
             found.isRemovedOnCompletion = !clip.loops
-            found.fadeInDuration = 0.15
-            found.fadeOutDuration = 0.25
+            // A longer cross-fade between clips: the cut from idle to swing
+            // and back was where the motion looked stiff.
+            found.fadeInDuration = 0.22
+            found.fadeOutDuration = 0.30
             animationCache[assetName, default: [:]][clip] = found
         }
         return found
