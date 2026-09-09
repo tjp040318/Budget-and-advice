@@ -198,8 +198,8 @@ struct StageBriefingView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     // The stage's own painting, so the briefing is a place before
                     // it is a list.
-                    if BundleImage.exists("\(stage.environment.sceneName)_bg") {
-                        BundleImage(name: "\(stage.environment.sceneName)_bg")
+                    if BundleImage.exists(stage.environment.backdropName) {
+                        BundleImage(name: stage.environment.backdropName)
                             .aspectRatio(contentMode: .fill)
                             .frame(height: 120)
                             .frame(maxWidth: .infinity)

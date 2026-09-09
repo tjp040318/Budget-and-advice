@@ -297,17 +297,29 @@ final class GameStore: ObservableObject {
         }
     }
 
-    func upgradeRelic(_ relicID: UUID) {
+    /// One power-up attempt: the drachma is spent either way. Nil when the
+    /// attempt could not be made (max level, not enough drachma), with the
+    /// reason shown.
+    @discardableResult
+    func powerUpRelic(_ relicID: UUID) -> RelicService.PowerUpOutcome? {
         var rng = makeRandom()
-        attempt { player in
-            guard let index = player.relics.firstIndex(where: { $0.id == relicID }) else { return }
+        let result: RelicService.PowerUpOutcome?? = attempt { player in
+            guard let index = player.relics.firstIndex(where: { $0.id == relicID }) else { return nil }
             var relic = player.relics[index]
             var wallet = player.wallet
-            try RelicService.upgrade(&relic, wallet: &wallet, rng: &rng)
+            let outcome = try RelicService.upgrade(&relic, wallet: &wallet, rng: &rng)
             player.relics[index] = relic
             player.wallet = wallet
-            QuestService.record(.relicUpgraded(level: relic.level), player: &player)
+            if outcome.succeeded {
+                QuestService.record(.relicUpgraded(level: relic.level), player: &player)
+            }
+            return outcome
         }
+        return result ?? nil
+    }
+
+    func upgradeRelic(_ relicID: UUID) {
+        powerUpRelic(relicID)
     }
 
     /// Sells relics, taking any off their wearers first. Nil, and an error

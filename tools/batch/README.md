@@ -10,6 +10,7 @@ re-running one after a quota or a network failure picks up where it stopped.
 | `concepts_batch2.sh`, `concepts_redo.sh` | Gemini concepts for the third roster (the second file is the A-pose redraws for the families Meshy could not rig) |
 | `portraits_batch2.sh` | the five element cards per family and the awakened cards for the 4★ and 5★ families, from the concepts |
 | `backdrops_batch2.sh`, `stage_textures2.sh` | the Greek and Norse stage paintings, the Norse banner, the slate, moss and ice textures |
+| `labyrinth_art.sh` | the Labyrinth's own art: the two boss concepts (A-pose), their cards, and a painting per relic dungeon |
 | `wave_launch.sh "asset:concept:height:palette" …` | Meshy image-to-3D + rig + six clips per spec, in parallel; `meshy.py` waits out the queue cap |
 | `props_enemies_launch.sh` | Meshy text-to-3D for the Norse props, the beasts and the bosses |
 | `build_asset.sh asset family height` | download + `mesh.py --as` + preview sheet for one rigged character |

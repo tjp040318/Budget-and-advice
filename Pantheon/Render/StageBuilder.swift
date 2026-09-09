@@ -205,6 +205,24 @@ enum StageBuilder {
                           backdrop: "arena_of_souls_bg", props: colossi + obelisks + columns,
                           braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#FFB050",
                           mistHex: "#D8C8A0", mistCount: 5, dustHex: "#FFE0A0")
+        // The Labyrinth's dungeons: their pantheon's set under their own
+        // painting (or the painting of the place they were carved from,
+        // until theirs lands — `backdropName`).
+        case .colossusVault:
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#A08C6C", rock: "rock_cliff",
+                          backdrop: environment.backdropName, props: colossi + columns + sphinxes,
+                          braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#FFC060",
+                          mistHex: "#D0C098", mistCount: 5, dustHex: "#FFE0A0")
+        case .hydraLair:
+            return Recipe(floor: "floor_moss", floorRepeats: 5, floorTint: "#7E9068", rock: "rock_cliff",
+                          backdrop: environment.backdropName, props: broken + [doric[2], doric[3]],
+                          braziers: [braziers[0], braziers[1]], brazierAsset: "prop_tripod_brazier", flameHex: "#90FF90",
+                          mistHex: "#98B088", mistCount: 14, dustHex: "#B8E0A0")
+        case .necropolis:
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#8A7A80", rock: "rock_cliff",
+                          backdrop: environment.backdropName, props: obelisks + columns + sphinxes,
+                          braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#9C80FF",
+                          mistHex: "#9C8CB0", mistCount: 9, dustHex: "#C8B0FF")
         }
     }
 

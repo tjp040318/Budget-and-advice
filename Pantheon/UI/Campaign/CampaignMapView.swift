@@ -36,13 +36,13 @@ struct WorldMapView: View {
     }
 
     private func realmCard(_ realm: Realm) -> some View {
-        let scene = realm.chapters.first?.stages.first?.environment.sceneName ?? ""
+        let backdrop = realm.chapters.first?.stages.first?.environment.backdropName ?? ""
         let cleared = realm.chapters.reduce(0) { $0 + (store.player.campaignProgress[$1.id] ?? 0) }
         let total = realm.chapters.reduce(0) { $0 + $1.stages.count }
         return VStack(alignment: .leading, spacing: 10) {
             ZStack(alignment: .bottomLeading) {
-                if BundleImage.exists("\(scene)_bg") {
-                    BundleImage(name: "\(scene)_bg")
+                if BundleImage.exists(backdrop) {
+                    BundleImage(name: backdrop)
                         .aspectRatio(contentMode: .fill)
                         .frame(height: 88)
                         .frame(maxWidth: .infinity)
@@ -222,13 +222,13 @@ struct ChapterMapView: View {
 
     private func map(_ chapter: Chapter) -> some View {
         let player = store.player
-        let scene = chapter.stages.first?.environment.sceneName ?? ""
+        let backdrop = chapter.stages.first?.environment.backdropName ?? ""
         return GeometryReader { geometry in
             let size = geometry.size
             let points = Self.nodePoints(count: chapter.stages.count, in: size)
             ZStack(alignment: .topLeading) {
-                if BundleImage.exists("\(scene)_bg") {
-                    BundleImage(name: "\(scene)_bg")
+                if BundleImage.exists(backdrop) {
+                    BundleImage(name: backdrop)
                         .aspectRatio(contentMode: .fill)
                         .frame(width: size.width, height: size.height)
                         .clipped()

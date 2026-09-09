@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 /// Animation clips every character rig must export. `ModelLibrary` looks for a
 /// SceneKit animation player with exactly these keys inside the unit's `.usdz`
@@ -167,6 +168,10 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
     case midgardFjord = "midgard_fjord"
     case yggdrasilRoots = "yggdrasil_roots"
     case jotunheimHall = "jotunheim_hall"
+    // The Labyrinth's relic dungeons: their own paintings, their pantheon's set
+    case colossusVault = "colossus_vault"
+    case hydraLair = "hydra_lair"
+    case necropolis = "necropolis"
 
     var displayName: String {
         switch self {
@@ -181,20 +186,41 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .midgardFjord: return "The Midgard Fjord"
         case .yggdrasilRoots: return "The Roots of Yggdrasil"
         case .jotunheimHall: return "The Hall of Jötunheim"
+        case .colossusVault: return "The Vault of the Colossus"
+        case .hydraLair: return "The Lair of the Hydra"
+        case .necropolis: return "The Necropolis"
         }
     }
 
     /// The pantheon whose stages these are, for the music and the island.
     var pantheon: Pantheon {
         switch self {
-        case .duatGate, .reedFields, .hallOfTwoTruths, .serpentDeep, .arenaOfSouls: return .egyptian
-        case .olympusGate, .aegeanCliffs, .lernaMarsh: return .greek
+        case .duatGate, .reedFields, .hallOfTwoTruths, .serpentDeep, .arenaOfSouls, .colossusVault, .necropolis: return .egyptian
+        case .olympusGate, .aegeanCliffs, .lernaMarsh, .hydraLair: return .greek
         case .midgardFjord, .yggdrasilRoots, .jotunheimHall: return .norse
         }
     }
 
     /// Scene file to load from `Resources/Environments`, without extension.
     var sceneName: String { rawValue }
+
+    /// The painting to show for this place: its own once it is in the bundle,
+    /// and until then the painting of the place it was carved out of, so a
+    /// dungeon never shows a grey banner while its own picture is on the way.
+    var backdropName: String {
+        let own = "\(rawValue)_bg"
+        if UIImage(named: own) != nil { return own }
+        return "\(paintingFallback.rawValue)_bg"
+    }
+
+    private var paintingFallback: BattleEnvironment {
+        switch self {
+        case .colossusVault: return .duatGate
+        case .hydraLair: return .lernaMarsh
+        case .necropolis: return .hallOfTwoTruths
+        default: return self
+        }
+    }
 
     /// Image-based lighting file (`.hdr` or `.exr`) driving reflections.
     var environmentMap: String { "\(rawValue)_ibl" }
@@ -214,6 +240,9 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .midgardFjord: return "#D8E4F0"
         case .yggdrasilRoots: return "#B8E0B0"
         case .jotunheimHall: return "#C8E0FF"
+        case .colossusVault: return "#F2CF8C"
+        case .hydraLair: return "#B8D090"
+        case .necropolis: return "#D8C8A8"
         }
     }
 
@@ -230,6 +259,9 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .midgardFjord: return "#3A4858"
         case .yggdrasilRoots: return "#243A2A"
         case .jotunheimHall: return "#2C3A50"
+        case .colossusVault: return "#3E2E1E"
+        case .hydraLair: return "#243424"
+        case .necropolis: return "#2A2230"
         }
     }
 }

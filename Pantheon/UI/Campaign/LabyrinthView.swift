@@ -47,7 +47,7 @@ struct LabyrinthView: View {
 
     private func labyrinthCard(_ labyrinth: DungeonDatabase.Labyrinth) -> some View {
         let cleared = store.player.campaignProgress[labyrinth.id] ?? 0
-        let scene = labyrinth.environment.sceneName
+        let backdrop = labyrinth.environment.backdropName
         return Button {
             Juice.haptic(.light)
             AudioLibrary.shared.play(.uiTap)
@@ -55,8 +55,8 @@ struct LabyrinthView: View {
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 ZStack(alignment: .bottomLeading) {
-                    if BundleImage.exists("\(scene)_bg") {
-                        BundleImage(name: "\(scene)_bg")
+                    if BundleImage.exists(backdrop) {
+                        BundleImage(name: backdrop)
                             .aspectRatio(contentMode: .fill)
                             .frame(height: 96)
                             .frame(maxWidth: .infinity)
@@ -229,11 +229,11 @@ struct DungeonLevelsView: View {
     // MARK: - Banner
 
     private func banner(_ chapter: Chapter) -> some View {
-        let scene = environment?.sceneName ?? ""
+        let backdrop = environment?.backdropName ?? ""
         let cleared = store.player.campaignProgress[chapter.id] ?? 0
         return ZStack(alignment: .bottomLeading) {
-            if BundleImage.exists("\(scene)_bg") {
-                BundleImage(name: "\(scene)_bg")
+            if BundleImage.exists(backdrop) {
+                BundleImage(name: backdrop)
                     .aspectRatio(contentMode: .fill)
                     .frame(height: 92)
                     .frame(maxWidth: .infinity)

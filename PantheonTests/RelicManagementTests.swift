@@ -107,4 +107,78 @@ final class RelicManagementTests: XCTestCase {
             RelicService.efficiency(attackerRelic, for: .defender)
         )
     }
+
+    // MARK: - Power-up, the genre's way
+
+    func testPowerUpIsSureToPlusThreeThenFalls() {
+        XCTAssertEqual(RelicService.successChance(toLevel: 1), 1.0)
+        XCTAssertEqual(RelicService.successChance(toLevel: 3), 1.0)
+        XCTAssertLessThan(RelicService.successChance(toLevel: 4), 1.0)
+        for level in 4...15 {
+            XCTAssertLessThan(RelicService.successChance(toLevel: level), RelicService.successChance(toLevel: level - 1) + 0.0001, "+\(level)")
+        }
+        XCTAssertGreaterThanOrEqual(RelicService.successChance(toLevel: 15), 0.3, "the top must stay reachable")
+    }
+
+    func testAFailedAttemptSpendsTheDrachmaAndKeepsTheLevel() throws {
+        var rng = SeededRandom(seed: 21)
+        var relic = RelicService.generate(grade: 6, slot: 2, set: .fury, rng: &rng)
+        for _ in 0..<12 { RelicService.upgradeOnce(&relic, rng: &rng) }
+        XCTAssertEqual(relic.level, 12)
+
+        var failures = 0
+        var successes = 0
+        for seed in 0..<40 {
+            var trial = relic
+            var wallet = Wallet()
+            wallet.drachma = 1_000_000
+            var attemptRNG = SeededRandom(seed: UInt64(seed))
+            let outcome = try RelicService.upgrade(&trial, wallet: &wallet, rng: &attemptRNG)
+            XCTAssertEqual(outcome.cost, RelicService.upgradeCost(grade: 6, level: 12))
+            XCTAssertEqual(wallet.drachma, 1_000_000 - outcome.cost, "the drachma goes either way")
+            if outcome.succeeded {
+                successes += 1
+                XCTAssertEqual(trial.level, 13)
+                XCTAssertEqual(outcome.level, 13)
+            } else {
+                failures += 1
+                XCTAssertEqual(trial.level, 12)
+                XCTAssertEqual(outcome.level, 12)
+                XCTAssertNil(outcome.subStatChange)
+            }
+        }
+        XCTAssertGreaterThan(failures, 0, "+13 at 50% never failed in forty tries")
+        XCTAssertGreaterThan(successes, 0)
+    }
+
+    func testSubStatsRollAtThreeSixNineAndTwelveOnly() {
+        var rng = SeededRandom(seed: 5)
+        var relic = RelicService.generate(grade: 3, slot: 4, set: .thunder, rng: &rng)
+        relic.subStats = [relic.subStats[0]]
+        var rolledAt: [Int] = []
+        for _ in 0..<15 {
+            if let change = RelicService.upgradeOnce(&relic, rng: &rng) {
+                rolledAt.append(relic.level)
+                XCTAssertGreaterThan(change.after, change.before)
+            }
+        }
+        XCTAssertEqual(rolledAt, [3, 6, 9, 12])
+        XCTAssertEqual(relic.level, 15)
+        XCTAssertEqual(relic.subStats.count, 4, "three new subs, then the fourth roll grows one")
+        XCTAssertNil(RelicService.upgradeOnce(&relic, rng: &rng), "nothing past +15")
+    }
+
+    func testPlusFifteenLiftsTheMainStat() {
+        var rng = SeededRandom(seed: 8)
+        var relic = RelicService.generate(grade: 5, slot: 1, set: .aegis, rng: &rng)
+        let atZero = relic.effectiveMainStat.value
+        for _ in 0..<14 { RelicService.upgradeOnce(&relic, rng: &rng) }
+        let atFourteen = relic.effectiveMainStat.value
+        XCTAssertEqual(relic.nextMainStat?.kind, relic.mainStat.kind)
+        RelicService.upgradeOnce(&relic, rng: &rng)
+        let atFifteen = relic.effectiveMainStat.value
+        XCTAssertNil(relic.nextMainStat)
+        XCTAssertGreaterThan(atFifteen / atFourteen, 1.08, "the last level is a jump")
+        XCTAssertEqual(atFifteen / atZero, 3.0, accuracy: 0.01)
+    }
 }

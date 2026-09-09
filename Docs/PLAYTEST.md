@@ -338,8 +338,8 @@ Send: whether the gauge order matches who actually moved next.
 The new building on the island, right of the summoning circle. Inside:
 three **relic dungeons** on top (the Vault of the Colossus, the Lair of the
 Hydra, the Necropolis of the Devourer), the five **Halls of Essence** below.
-Tap a dungeon: the boss, the sets it drops, and ten level medallions, B1
-open. Tap B1 → the briefing shows three waves (W1, W2, BOSS) and "Relic
+Tap a dungeon: the boss (the Colossus, the Hydra, the Unwrapped King), the
+sets it drops, and ten level medallions, B1 open. Tap B1 → the briefing shows three waves (W1, W2, BOSS) and "Relic
 (3★) · always" with the set names → Begin. The fight is one battle: when a
 wave is down the next walks on from the back and the chip beside the stage
 name reads Wave 2/3, then 3/3; your health and cooldowns carry over. The
@@ -368,6 +368,23 @@ unit ("Take and equip"), or unequip what is there.
 
 Send: a screenshot of the sheet and one of the picker with a pick selected,
 and whether anything is cut off at the edges of your phone.
+
+## 20. Relic power-up
+
+Tap a **worn** slot on the unit sheet (or a relic in Collection → Relics).
+The power-up screen: the relic on the left with its main stat and the value
+the next level gives, its sub stats, and a track of fifteen pips with +3,
++6, +9 and +12 ringed — those are the levels that roll a sub stat — and a
+crown on +15. On the right: the success rate for the next level, the cost,
+and **Power up**. To +3 it always takes; from +4 the odds fall a step a
+level, to 40% for +15. A success glows gold and shows what changed ("New
+sub stat: SPD +4", "HP % +5% → +9%"); a failure shakes, the drachma is
+gone and the level stays, exactly as the genre does it. +15 lifts the main
+stat in one jump. Change, Unequip, Reappraise and Sell sit under the
+button; the padlock is at the top.
+
+Send: a screenshot after a success and after a failure, and whether the
+odds felt fair for the cost.
 
 ## If it does not build
 

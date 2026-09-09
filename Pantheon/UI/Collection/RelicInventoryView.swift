@@ -346,22 +346,29 @@ struct RelicDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var showSellConfirm = false
     @State private var showReappraiseConfirm = false
+    @State private var showPicker = false
+    /// The last attempt, for the result line and the highlighted sub stat.
+    @State private var lastOutcome: RelicService.PowerUpOutcome?
+    @State private var glow = false
+    @State private var shakeOffset: CGFloat = 0
 
     private var relic: Relic? { store.player.relic(relicID) }
+    private var wearer: ResolvedUnit? { relic?.equippedBy.flatMap { store.resolved($0) } }
 
     var body: some View {
         NavigationStack {
             Group {
                 if let relic {
                     ScrollView {
-                        VStack(spacing: 10) {
-                            header(relic)
-                            stats(relic)
-                            actions(relic)
+                        HStack(alignment: .top, spacing: 10) {
+                            sheet(relic)
+                                .frame(maxWidth: .infinity)
+                            powerUpPanel(relic)
+                                .frame(width: 300)
                         }
-                        .padding(12)
+                        .padding(10)
                     }
-                    .screen("\(relic.set.displayName) Relic")
+                    .screen("\(relic.set.displayName) · Slot \(relic.slot)")
                 } else {
                     EmptyState(icon: "shield.slash", title: "Sold", message: "This relic is gone.")
                         .onAppear { dismiss() }
@@ -370,6 +377,18 @@ struct RelicDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    HStack(spacing: 14) {
+                        WalletBar(wallet: store.player.wallet)
+                        Button {
+                            store.toggleRelicLock(relicID)
+                            AudioLibrary.shared.play(.uiTap)
+                        } label: {
+                            Image(systemName: relic?.isLocked == true ? "lock.fill" : "lock.open")
+                                .foregroundStyle(relic?.isLocked == true ? Theme.gold : Theme.textSecondary)
+                        }
+                    }
                 }
             }
             .confirmationDialog(
@@ -392,131 +411,326 @@ struct RelicDetailView: View {
             ) {
                 Button("Reroll the sub stats") {
                     store.reappraiseRelic(relicID)
+                    lastOutcome = nil
                     AudioLibrary.shared.play(.uiConfirm)
                 }
                 Button("Leave it", role: .cancel) {}
             } message: {
                 Text("Every sub stat is rolled again from scratch. The main stat, the level, the set and the slot stay. There is no undo.")
             }
+            .sheet(isPresented: $showPicker) {
+                if let wearer, let relic {
+                    RelicPickerView(unitID: wearer.id, slot: relic.slot)
+                        .environmentObject(store)
+                }
+            }
         }
     }
 
-    private func header(_ relic: Relic) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            VStack(alignment: .leading, spacing: 5) {
-                StarRow(stars: relic.grade, size: 12)
-                Text("\(relic.set.displayName) · Slot \(relic.slot) · +\(relic.level)")
-                    .font(Theme.title(17))
-                    .foregroundStyle(Theme.textPrimary)
-                Text(relic.set.effectDescription)
+    // MARK: - The relic
+
+    /// The relic as a sheet: what it is, its main stat and where the next
+    /// level takes it, its sub stats with the last roll marked, and the
+    /// level track with the sub-stat levels on it.
+    private func sheet(_ relic: Relic) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 10) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                        .fill(Theme.surfaceHigh)
+                        .frame(width: 64, height: 64)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                                .strokeBorder(glow ? Theme.gold : Theme.gold.opacity(0.5), lineWidth: glow ? 2.5 : 1)
+                        )
+                        .shadow(color: Theme.gold.opacity(glow ? 0.9 : 0), radius: glow ? 16 : 0)
+                    Image(systemName: relic.set.glyph)
+                        .font(.system(size: 26, weight: .bold))
+                        .foregroundStyle(Theme.gold)
+                }
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        StarRow(stars: relic.grade, size: 11)
+                        Text("+\(relic.level)")
+                            .font(Theme.numeric(15).weight(.bold))
+                            .foregroundStyle(Theme.gold)
+                    }
+                    Text("\(relic.set.displayName) · Slot \(relic.slot)")
+                        .font(Theme.title(15))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(relic.set.effectDescription)
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let wearer {
+                        Label("Worn by \(wearer.name)", systemImage: "person.fill")
+                            .font(Theme.body(10))
+                            .foregroundStyle(Theme.info)
+                    }
+                }
+                Spacer(minLength: 4)
+                VStack(spacing: 2) {
+                    EfficiencyDial(value: RelicService.efficiency(relic, for: role))
+                    Text("fit for a \(role.displayName.lowercased())")
+                        .font(Theme.body(8))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+
+            // The main stat, and where the next level takes it.
+            HStack(spacing: 6) {
+                Text(relic.effectiveMainStat.kind.displayName)
+                    .font(Theme.body(12).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+                Spacer()
+                Text("+\(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))")
+                    .font(Theme.numeric(14).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+                if let next = relic.nextMainStat {
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(Theme.stroke)
+                    Text("+\(next.kind.format(next.value))")
+                        .font(Theme.numeric(11))
+                        .foregroundStyle(relic.level + 1 == relic.maxLevel ? Theme.gold : Theme.textSecondary)
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
+
+            // The sub stats, the last roll marked, and the slot the next
+            // roll would fill.
+            VStack(spacing: 4) {
+                ForEach(relic.subStats.indices, id: \.self) { index in
+                    let sub = relic.subStats[index]
+                    let changed = lastOutcome?.subStatChange.map { $0.kind == sub.kind } ?? false
+                    HStack(spacing: 6) {
+                        Text(sub.kind.displayName)
+                            .font(Theme.body(11))
+                            .foregroundStyle(changed ? Theme.textPrimary : Theme.textSecondary)
+                        Spacer()
+                        if changed, let change = lastOutcome?.subStatChange {
+                            Text(change.isNew ? "new" : "+\(sub.kind.format(change.after - change.before))")
+                                .font(Theme.numeric(9).weight(.bold))
+                                .foregroundStyle(Theme.success)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 1)
+                                .background(Capsule().fill(Theme.success.opacity(0.15)))
+                        }
+                        Text("+\(sub.kind.format(sub.value))")
+                            .font(Theme.numeric(12))
+                            .foregroundStyle(changed ? Theme.success : Theme.textPrimary)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                            .fill(changed ? Theme.success.opacity(0.12) : Theme.surface)
+                    )
+                }
+                if relic.subStats.count < 4, let at = nextSubStatLevel(relic) {
+                    HStack {
+                        Text("A new sub stat at +\(at)")
+                            .font(Theme.body(10))
+                            .foregroundStyle(Theme.textSecondary)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                            .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                    )
+                }
+            }
+
+            levelTrack(relic)
+        }
+        .padding(10)
+        .panelBackground()
+    }
+
+    /// The next level that rolls a sub stat, if any is left.
+    private func nextSubStatLevel(_ relic: Relic) -> Int? {
+        guard relic.level < relic.maxLevel else { return nil }
+        return ((relic.level + 1)...relic.maxLevel).first(where: { RelicService.levelRollsSubStat($0) })
+    }
+
+    /// Fifteen pips: gold where reached, ringed at +3, +6, +9 and +12 where
+    /// the sub stats roll, a crown on +15.
+    private func levelTrack(_ relic: Relic) -> some View {
+        HStack(spacing: 3) {
+            ForEach(1...relic.maxLevel, id: \.self) { level in
+                let reached = level <= relic.level
+                let rolls = RelicService.levelRollsSubStat(level)
+                ZStack {
+                    Circle()
+                        .fill(reached ? Theme.gold : Theme.surface)
+                        .frame(width: rolls || level == relic.maxLevel ? 12 : 8, height: rolls || level == relic.maxLevel ? 12 : 8)
+                        .overlay(Circle().strokeBorder(rolls ? Theme.goldDim : Theme.stroke, lineWidth: 1))
+                    if level == relic.maxLevel {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 6, weight: .black))
+                            .foregroundStyle(reached ? Theme.ink : Theme.textSecondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    // MARK: - Power-up
+
+    private func powerUpPanel(_ relic: Relic) -> some View {
+        let cost = RelicService.upgradeCost(grade: relic.grade, level: relic.level)
+        let chance = RelicService.successChance(toLevel: relic.level + 1)
+        let affordable = store.player.wallet.drachma >= cost
+        let canReappraise = relic.level >= RelicService.reappraisalMinimumLevel
+            && store.player.wallet.drachma >= RelicService.reappraisalCost(relic)
+        return VStack(alignment: .leading, spacing: 8) {
+            SectionHeader(title: "Power-up", accessory: relic.isMaxLevel ? "+15, the top" : "+\(relic.level) → +\(relic.level + 1)")
+            if !relic.isMaxLevel {
+                HStack {
+                    Text("Success rate")
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    Text("\(Int((chance * 100).rounded()))%")
+                        .font(Theme.numeric(13).weight(.bold))
+                        .foregroundStyle(chance >= 1 ? Theme.success : (chance >= 0.6 ? Theme.gold : Theme.danger))
+                }
+                HStack {
+                    Text("Cost")
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    Text("\(cost) drachma")
+                        .font(Theme.numeric(12))
+                        .foregroundStyle(affordable ? Theme.textPrimary : Theme.danger)
+                }
+                if RelicService.levelRollsSubStat(relic.level + 1) {
+                    Label(relic.subStats.count < 4 ? "This level adds a sub stat" : "This level grows a sub stat", systemImage: "sparkles")
+                        .font(Theme.body(10).weight(.semibold))
+                        .foregroundStyle(Theme.gold)
+                } else if relic.level + 1 == relic.maxLevel {
+                    Label("+15 lifts the main stat", systemImage: "crown.fill")
+                        .font(Theme.body(10).weight(.semibold))
+                        .foregroundStyle(Theme.gold)
+                }
+                PrimaryButton(title: "Power up", systemImage: "arrow.up.circle.fill", isEnabled: affordable) {
+                    attempt()
+                }
+                .offset(x: shakeOffset)
+            } else {
+                Text("This relic is +15. Its main stat is at its top; the sub stats are what they rolled.")
                     .font(Theme.body(11))
                     .foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
-                if let wearer = relic.equippedBy.flatMap({ store.resolved($0)?.name }) {
-                    Label("Worn by \(wearer)", systemImage: "person.fill")
-                        .font(Theme.body(11))
-                        .foregroundStyle(Theme.info)
+            }
+            if let outcome = lastOutcome {
+                resultLine(outcome)
+            }
+            Text("A failed attempt keeps the drachma and the level stays. Sub stats roll at +3, +6, +9 and +12; the first four are added, after that one grows.")
+                .font(Theme.body(9))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Divider().overlay(Theme.stroke)
+
+            HStack(spacing: 8) {
+                if wearer != nil {
+                    smallButton("Change", "arrow.left.arrow.right", tint: Theme.info) { showPicker = true }
+                    smallButton("Unequip", "minus.circle", tint: Theme.textPrimary) {
+                        if let wearer { store.unequip(slot: relic.slot, from: wearer.id) }
+                        AudioLibrary.shared.play(.uiTap)
+                    }
+                }
+                smallButton(
+                    relic.level >= RelicService.reappraisalMinimumLevel ? "Reappraise" : "Reappraise +\(RelicService.reappraisalMinimumLevel)",
+                    "arrow.triangle.2.circlepath", tint: Theme.gold, enabled: canReappraise
+                ) { showReappraiseConfirm = true }
+                smallButton("Sell \(RelicService.sellValue(relic))", "circle.hexagongrid.fill", tint: Theme.danger, enabled: !relic.isLocked) {
+                    showSellConfirm = true
                 }
             }
-            Spacer()
-            VStack(spacing: 3) {
-                EfficiencyDial(value: RelicService.efficiency(relic, for: role))
-                Text(role.displayName)
-                    .font(Theme.body(9))
+        }
+        .padding(10)
+        .panelBackground()
+    }
+
+    private func resultLine(_ outcome: RelicService.PowerUpOutcome) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(outcome.succeeded ? "Success — +\(outcome.level)" : "Failed — still +\(outcome.level)")
+                .font(Theme.body(12).weight(.bold))
+                .foregroundStyle(outcome.succeeded ? Theme.success : Theme.danger)
+            if let change = outcome.subStatChange {
+                Text(change.isNew
+                     ? "New sub stat: \(change.kind.displayName) +\(change.kind.format(change.after))"
+                     : "\(change.kind.displayName) +\(change.kind.format(change.before)) → +\(change.kind.format(change.after))")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.gold)
+            } else if !outcome.succeeded {
+                Text("\(outcome.cost) drachma spent at \(Int((outcome.chance * 100).rounded()))%.")
+                    .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        .padding(12)
-        .panelBackground()
+        .padding(8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .fill((outcome.succeeded ? Theme.success : Theme.danger).opacity(0.12))
+        )
     }
 
-    private func stats(_ relic: Relic) -> some View {
-        let stats = relic.allStats
-        return VStack(spacing: 7) {
-            SectionHeader(title: "Stats", accessory: relic.isMaxLevel ? "Max" : "\(relic.maxLevel - relic.level) levels to go")
-            ForEach(stats.indices, id: \.self) { index in
-                let modifier = stats[index]
-                HStack {
-                    Text(modifier.kind.displayName)
-                        .font(Theme.body(12))
-                        .foregroundStyle(index == 0 ? Theme.gold : Theme.textSecondary)
-                    Spacer()
-                    Text("+\(modifier.kind.format(modifier.value))")
-                        .font(Theme.numeric(12))
-                        .foregroundStyle(index == 0 ? Theme.gold : Theme.textPrimary)
-                }
+    private func smallButton(
+        _ title: String, _ symbol: String, tint: Color, enabled: Bool = true, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            VStack(spacing: 2) {
+                Image(systemName: symbol)
+                    .font(.system(size: 12, weight: .bold))
+                Text(title)
+                    .font(Theme.body(8).weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
+            .foregroundStyle(enabled ? tint : Theme.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(Theme.panel(Theme.tightCorner))
         }
-        .padding(12)
-        .panelBackground()
+        .disabled(!enabled)
     }
 
-    private func actions(_ relic: Relic) -> some View {
-        let upgradeCost = RelicService.upgradeCost(grade: relic.grade, level: relic.level)
-        let canUpgrade = !relic.isMaxLevel && store.player.wallet.drachma >= upgradeCost
-        let canReappraise = relic.level >= RelicService.reappraisalMinimumLevel
-            && store.player.wallet.drachma >= RelicService.reappraisalCost(relic)
-        return VStack(spacing: 10) {
-            PrimaryButton(
-                title: relic.isMaxLevel ? "Upgrade — max" : "Upgrade — \(upgradeCost) drachma",
-                systemImage: "arrow.up.circle.fill",
-                isEnabled: canUpgrade
-            ) {
-                store.upgradeRelic(relicID)
-                AudioLibrary.shared.play(.uiTap)
+    /// One attempt: the flash and the sound on a success, a shake on a
+    /// failure, and the result line either way.
+    private func attempt() {
+        guard let outcome = store.powerUpRelic(relicID) else { return }
+        lastOutcome = outcome
+        if outcome.succeeded {
+            AudioLibrary.shared.play(.uiConfirm)
+            Juice.notify(.success)
+            withAnimation(.easeOut(duration: 0.15)) { glow = true }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+                withAnimation(.easeIn(duration: 0.5)) { glow = false }
             }
-            PrimaryButton(
-                title: relic.level >= RelicService.reappraisalMinimumLevel
-                    ? "Reappraise — \(RelicService.reappraisalCost(relic)) drachma"
-                    : "Reappraise — from +\(RelicService.reappraisalMinimumLevel)",
-                systemImage: "arrow.triangle.2.circlepath",
-                tint: Theme.info,
-                isEnabled: canReappraise
-            ) {
-                showReappraiseConfirm = true
+        } else {
+            AudioLibrary.shared.play(.uiTap)
+            Juice.notify(.error)
+            withAnimation(.default.speed(4)) { shakeOffset = 7 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                withAnimation(.default.speed(4)) { shakeOffset = -7 }
             }
-            HStack(spacing: 10) {
-                Button {
-                    store.toggleRelicLock(relicID)
-                    AudioLibrary.shared.play(.uiTap)
-                } label: {
-                    Label(relic.isLocked ? "Unlock" : "Lock", systemImage: relic.isLocked ? "lock.open.fill" : "lock.fill")
-                        .font(Theme.body(13).weight(.semibold))
-                        .foregroundStyle(Theme.gold)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Theme.panel(Theme.tightCorner))
-                }
-                if let wearer = relic.equippedBy {
-                    Button {
-                        store.unequip(slot: relic.slot, from: wearer)
-                    } label: {
-                        Label("Unequip", systemImage: "minus.circle")
-                            .font(Theme.body(13).weight(.semibold))
-                            .foregroundStyle(Theme.textPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 10)
-                            .background(Theme.panel(Theme.tightCorner))
-                    }
-                }
-                Button {
-                    showSellConfirm = true
-                } label: {
-                    Label("Sell \(RelicService.sellValue(relic))", systemImage: "circle.hexagongrid.fill")
-                        .font(Theme.body(13).weight(.semibold))
-                        .foregroundStyle(relic.isLocked ? Theme.textSecondary : Theme.danger)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 10)
-                        .background(Theme.panel(Theme.tightCorner))
-                }
-                .disabled(relic.isLocked)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
+                withAnimation(.default.speed(4)) { shakeOffset = 0 }
             }
         }
     }
 }
 
-/// Picks a relic for one of a unit's slots: everything that fits the slot,
-/// best for the unit's role first, with who is wearing it now.
 /// Choosing a relic for one slot, the way the genre's rune screen does it:
 /// the candidates on the left, best fit for the role first, and on the right
 /// what the pick would do — every stat before and after, the sets it

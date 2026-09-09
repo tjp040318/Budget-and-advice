@@ -12,6 +12,8 @@ struct UnitDetailView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
     @State private var pickingSlot: SlotPick?
+    /// A worn relic opened from its slot: the power-up screen.
+    @State private var openingRelic: RelicPick?
     @State private var showFodderPicker = false
     @State private var fodderPurpose: FodderPurpose = .levelUp
     @State private var showAwakening = false
@@ -21,6 +23,10 @@ struct UnitDetailView: View {
     /// A slot number that can drive a sheet.
     struct SlotPick: Identifiable {
         let id: Int
+    }
+
+    struct RelicPick: Identifiable {
+        let id: UUID
     }
 
     enum FodderPurpose { case levelUp, evolve }
@@ -91,6 +97,10 @@ struct UnitDetailView: View {
             }
             .sheet(item: $pickingSlot) { pick in
                 RelicPickerView(unitID: unitID, slot: pick.id)
+                    .environmentObject(store)
+            }
+            .sheet(item: $openingRelic) { pick in
+                RelicDetailView(relicID: pick.id, role: unit?.role ?? .attacker)
                     .environmentObject(store)
             }
             .sheet(isPresented: $showAwakening) {
@@ -222,7 +232,13 @@ struct UnitDetailView: View {
         let worn = relic != nil
         return Button {
             Juice.haptic(.light)
-            pickingSlot = SlotPick(id: slot)
+            // A worn relic opens its power-up screen (Change is on it);
+            // an empty slot opens the picker.
+            if let relic {
+                openingRelic = RelicPick(id: relic.id)
+            } else {
+                pickingSlot = SlotPick(id: slot)
+            }
         } label: {
             VStack(spacing: 2) {
                 if let relic {

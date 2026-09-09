@@ -369,6 +369,11 @@ E_TROLL     = Blueprint("enemy_frost_troll", "Frost Troll", "tide",  3,  430, 25
     skills=[("Ice Club", 1.60, 1, 0, 0, 0, False), ("Glacier Roar (Stun 30%)", 2.40, 1, 4, 0, 0, True)])
 JOTUNN      = Blueprint("boss_jotunn",     "Jotunn",     "gale",     5, 1150, 37, 34,  88,
     skills=[("Ice Axe", 1.90, 1, 0, 0, 0, False), ("Avalanche (Stun 35%)", 2.60, 1, 4, 0, 0, True)])
+# The Labyrinth's own bosses (UnitDatabase.swift, "The Labyrinth's bosses").
+COLOSSUS    = Blueprint("boss_colossus",   "Colossus",   "radiance", 5, 1250, 36, 40,  80,
+    skills=[("Stone Fist", 1.90, 1, 0, 0, 0, False), ("Fall of the Colossus (Stun 30%)", 2.80, 1, 4, 0, 0, True)])
+UNWRAPPED   = Blueprint("boss_unwrapped_king", "Unwrapped King", "umbra", 5, 1000, 42, 30, 96,
+    skills=[("Crook and Flail", 0.95, 2, 0, 0, 0, False), ("Weight of the Ledger", 2.60, 1, 4, 0, 0, True)])
 
 def mk(bp, level, stars, relic=1.0, boss=1.0):
     f = Fighter(bp, level, stars, relic)
@@ -574,9 +579,9 @@ def report_halls(trials=80):
 # The team carries its health and cooldowns from wave to wave, which is what
 # makes a run harder than its last wave alone.
 LABYRINTHS = [  # name, roster, boss
-    ("Vault of the Colossus",      [SHABTI, SCARAB, SERPOPARD], SENTINEL),
-    ("Lair of the Hydra",          [E_MEDUSA, SERPOPARD, E_AMAZON], HYDRA),
-    ("Necropolis of the Devourer", [E_DRAUGR, SHABTI, SCARAB], AMMIT),
+    ("Vault of the Colossus",          [SENTINEL, SHABTI, SCARAB], COLOSSUS),
+    ("Lair of the Hydra",              [E_MEDUSA, SERPOPARD, E_AMAZON], HYDRA),
+    ("Necropolis of the Unwrapped King", [SHABTI, AMMIT, SERPOPARD], UNWRAPPED),
 ]
 
 def labyrinth_grade(level):
@@ -611,11 +616,11 @@ LABYRINTH_LADDERS = [("4x 3* lv20", [(ANUBIS, 20, 3, 1.0)] * 4)] + CHAPTER_LADDE
 def report_labyrinths(trials=60):
     print("\nTHE LABYRINTH — win rate per level over %d seeded runs of three waves" % trials)
     print("target: B1 for a levelled 3* team out of chapter one, B4 for 4*s, B7 for 5*s with relics, B10 for maxed 6*s\n")
-    print(f"{'level':>30}{'lvl':>5}  " + "".join(f"{n:>22}" for n, _ in LABYRINTH_LADDERS))
+    print(f"{'level':>34}{'lvl':>5}  " + "".join(f"{n:>22}" for n, _ in LABYRINTH_LADDERS))
     for lab in LABYRINTHS:
         for level in (1, 4, 7, 10):
             waves = labyrinth_waves(lab, level)
-            row = f"{lab[0] + f' B{level}':>30}{waves[0][0][1]:>5}  "
+            row = f"{lab[0] + f' B{level}':>34}{waves[0][0][1]:>5}  "
             for _, team in LABYRINTH_LADDERS:
                 wr, med = winrate_waves(team, waves, trials=trials)
                 row += f"{wr*100:>16.0f}% {med:>3.0f}t"
@@ -665,7 +670,13 @@ def report_economy():
     print("\nECONOMY — first-clear income vs. upgrade costs")
     drachma = [700, 950, 1200, 1500, 3000]
     print(f"  chapter 1 full clear     {sum(drachma):,} drachma + 220 divinity")
-    print(f"  one relic upgrade to +15 {sum(100*36 + l*100*36//3 for l in range(15)):,} drachma (6*)")
+    # RelicService.powerUpChances: sure to +3, then a step down a level; a
+    # failed attempt keeps the drachma, so the expected bill is cost / chance.
+    chances = [1.0, 1.0, 1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50, 0.45, 0.40]
+    flat = sum(100*36 + l*100*36//3 for l in range(15))
+    expected = sum((100*36 + l*100*36//3) / chances[l] for l in range(15))
+    print(f"  one relic to +15, no fails {flat:,} drachma (6*)")
+    print(f"  one relic to +15, expected {expected:,.0f} drachma (6*) with the power-up odds")
     print(f"  6* evolution ladder      {3000+8000+20000+60000+150000:,} drachma")
     print("  → chapter 1 alone funds roughly one relic. Grinding is the game.")
 

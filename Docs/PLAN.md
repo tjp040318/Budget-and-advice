@@ -660,6 +660,52 @@ The tour grew to eighteen screens (the Labyrinth, a dungeon's levels, the
 picker), the halls step goes through the Labyrinth, and the chapter-map
 step photographs the campaign tab as it now opens.
 
+**The second pass — "can you do the relic dungeons?"** The first pass
+borrowed everything: the bosses were a chapter mob and two hall bosses,
+the stages were chapter stages. Now each dungeon is its own place:
+
+- **Bosses.** The Colossus (`boss_colossus`: a statue that stood up, 5★
+  radiance, 4.5 m, a stunning fall) and the Unwrapped King
+  (`boss_unwrapped_king`: 5★ umbra, quick, a ledger that slows the line);
+  the Hydra keeps the Lair. Their meshes are Meshy image-to-3D from A-pose
+  concepts (`tools/batch/labyrinth_art.sh`), 53 credits each, queued for
+  the night's run behind Loki, Hades and Bastet; until they land the
+  loader's stand-in fights in their place and the cards are placeholders.
+- **Stages.** Three `BattleEnvironment`s (`colossusVault`, `hydraLair`,
+  `necropolis`) with their own `StageBuilder` recipes — the vault's
+  colossi close in under gold-lit dust, the lair drowned in green mist,
+  the necropolis violet-lit among sphinxes — and their own paintings,
+  painted the same night; `backdropName` shows the parent painting until
+  then, so nothing is ever grey.
+- **Mobs.** The vault is guarded by the sentinels, the necropolis by
+  shabti with Ammit prowling the second wave, the lair by the marsh.
+- **The run is photographed.** A `dungeon_battle` tour step fights
+  Vault B1 on auto for four frames, so the second and third waves are seen
+  walking on and the Wave chip counting.
+
+**Meshy for the stages.** The user asked for the maps and stages to use
+Meshy props and not look sloppy. The credit rule is the constraint: 809
+credits, a floor of 500, and the night's five characters (three roster
+families, two bosses) spend 265 — 44 to spare, and a text-to-3D prop costs
+30–300. The prop set that would make the three dungeons their own places
+is six pieces: a sealed vault door and a fallen pharaoh head for the
+Colossus; a sarcophagus and a cluster of canopic jars for the Necropolis;
+a dead marsh tree and a bone pile for the Hydra. Estimate 200–400 credits.
+It waits for a top-up; the recipes have the marks ready.
+
+**Relic power-up, the rune way.** The user's second note: "the same
+upgrade system as the rune system for our relics". The rules the genre
+publishes (sure to +3, then a chance of failure that costs the mana and
+keeps the level; a sub stat at +3/+6/+9/+12, new while under four, then
+grown; a main-stat jump at +15) are all in: `RelicService.powerUpChances`
+runs 100/100/100/95/90 … 40, `upgrade` returns a `PowerUpOutcome`, the
+sub-stat rule stops at +12, `effectiveMainStat` is linear to +14 and jumps
+to 3× at +15. `RelicDetailView` is the screen: odds, cost, the next value,
+the level track, the last roll marked, a glow or a shake. The data sites
+with the exact per-level table are refused by the network policy, so the
+numbers are modelled, not copied; the expected drachma to +15 for a 6★
+comes out about 1.7× the no-fail bill (`balance.py`, the economy report).
+
 ### Phase 4 — sound and feel
 
 - **Music.** Two synthesised loops are in — an island loop of pads, a drone

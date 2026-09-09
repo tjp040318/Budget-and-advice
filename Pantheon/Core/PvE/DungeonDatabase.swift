@@ -91,27 +91,27 @@ enum DungeonDatabase {
     static let labyrinths: [Labyrinth] = [
         labyrinth(
             id: "lab_colossus", name: "Vault of the Colossus",
-            summary: "A statue the size of a temple, and it is awake. Everything it has ever crushed is still in here with it.",
-            environment: .duatGate,
+            summary: "A statue the size of a temple, and it is awake. The sentinels that guard the stairs are its children, and it does not spare them.",
+            environment: .colossusVault,
             sets: [.fury, .aegis, .bulwark, .zephyr, .fates, .vigil],
-            roster: ["shabti", "sun_scarab", "serpopard"],
-            bossID: "sandstone_sentinel"
+            roster: ["sandstone_sentinel", "shabti", "sun_scarab"],
+            bossID: "boss_colossus"
         ),
         labyrinth(
             id: "lab_hydra", name: "Lair of the Hydra",
             summary: "Nine heads, and every one of them remembers Heracles. The marsh water is warm, which is the wrong kind of sign.",
-            environment: .lernaMarsh,
+            environment: .hydraLair,
             sets: [.thunder, .ruin, .wrath, .ichor, .titanfall, .chains],
             roster: ["enemy_medusa", "serpopard", "enemy_amazon"],
             bossID: "boss_hydra"
         ),
         labyrinth(
-            id: "lab_necropolis", name: "Necropolis of the Devourer",
-            summary: "The dead are filed in here by the weight of their hearts. The devourer keeps the ledger and eats the errors.",
-            environment: .hallOfTwoTruths,
+            id: "lab_necropolis", name: "Necropolis of the Unwrapped King",
+            summary: "The dead are filed in here by the weight of their hearts. The king at the bottom was never weighed: he unwrapped himself, and the devourer prowls the halls on his behalf.",
+            environment: .necropolis,
             sets: [.oracle, .wards, .styx, .nemesis, .chains, .bulwark],
-            roster: ["enemy_draugr", "shabti", "sun_scarab"],
-            bossID: "ammit"
+            roster: ["shabti", "ammit", "serpopard"],
+            bossID: "boss_unwrapped_king"
         ),
     ]
 

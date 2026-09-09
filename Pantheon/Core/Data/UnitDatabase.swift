@@ -33,7 +33,9 @@ enum UnitDatabase {
         berserkerChieftain,
         valkyrieChooser,
         frostTroll,
-        jotunnKing
+        jotunnKing,
+        colossusOfTheVault,
+        unwrappedKing
     ]
 
     private static let index: [String: UnitBlueprint] = Dictionary(
@@ -1432,5 +1434,33 @@ enum UnitDatabase {
         specialStatus: StatusSpec(.freeze, chance: 0.35, turns: 1, target: .allEnemies),
         specialCooldown: 4,
         pantheon: .norse, auraHex: "#9CD8FF", height: 4.5
+    )
+
+    // MARK: - The Labyrinth's bosses
+
+    /// The Vault's colossus: a statue that stood up. Slow, enormous, and
+    /// its fall can stun the whole line.
+    static let colossusOfTheVault = enemy(
+        id: "boss_colossus", name: "Colossus", epithet: "Statue That Stood Up",
+        element: .radiance, archetype: .primordial, role: .defender, stars: 5,
+        hp: 1250, atk: 36, def: 40, spd: 80,
+        basicName: "Stone Fist", basicMultiplier: 1.90,
+        specialName: "Fall of the Colossus", specialMultiplier: 2.80, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.stun, chance: 0.30, turns: 1, target: .allEnemies),
+        specialCooldown: 4,
+        auraHex: "#F5D96B", portraitName: "portrait_boss_colossus", height: 4.5
+    )
+
+    /// The Necropolis's king: unwrapped, quick for a dead man, and his
+    /// ledger slows everyone it names.
+    static let unwrappedKing = enemy(
+        id: "boss_unwrapped_king", name: "Unwrapped King", epithet: "Who Was Never Weighed",
+        element: .umbra, archetype: .spirit, role: .controller, stars: 5,
+        hp: 1000, atk: 42, def: 30, spd: 96,
+        basicName: "Crook and Flail", basicMultiplier: 0.95, basicHits: 2,
+        specialName: "Weight of the Ledger", specialMultiplier: 2.60, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.speedDown, chance: 0.50, turns: 2, target: .allEnemies),
+        specialCooldown: 4,
+        auraHex: "#B08CFF", portraitName: "portrait_boss_unwrapped_king", height: 3.2
     )
 }

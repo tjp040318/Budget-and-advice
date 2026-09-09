@@ -124,11 +124,18 @@ environment can and cannot do. The short version:
   which boss shuts a chapter) is a sheet behind the Realms button;
   `world_map.png` shows above the realms once painted.
 - **The Labyrinth** (`DungeonDatabase.labyrinths`, `LabyrinthView`,
-  `DungeonLevelsView`): the Vault of the Colossus, the Lair of the Hydra
-  and the Necropolis of the Devourer, ten levels each, every level one
-  battle of three waves (two of mobs, then the boss with two more) and a
-  relic of the dungeon's own six sets every run, 3★ on B1–3 up to 6★ on
-  B10; the Halls of Essence live in the same building. Waves are
+  `DungeonLevelsView`): the Vault of the Colossus (boss `boss_colossus`),
+  the Lair of the Hydra (`boss_hydra`) and the Necropolis of the Unwrapped
+  King (`boss_unwrapped_king`), ten levels each, every level one battle of
+  three waves (two of mobs, then the boss with two more) and a relic of
+  the dungeon's own six sets every run, 3★ on B1–3 up to 6★ on B10; the
+  Halls of Essence live in the same building. Each dungeon is its own
+  `BattleEnvironment` (`colossusVault`, `hydraLair`, `necropolis`) with a
+  `StageBuilder` recipe of its pantheon's props and its own painting;
+  `BattleEnvironment.backdropName` shows the parent place's painting until
+  the dungeon's own lands (`tools/batch/labyrinth_art.sh` paints the two
+  boss concepts, their cards and the three backdrops; the boss meshes are
+  Meshy image-to-3D from those concepts, 53 credits each). Waves are
   `Stage.laterWaves`: `BattleEngine` brings the next one on when the
   field is clear (`.waveStarted`; `BattleSceneController` removes the
   fallen and walks the arrivals in from the back), the HUD shows "Wave
@@ -146,6 +153,20 @@ environment can and cannot do. The short version:
   slot opens `RelicPickerView`: candidates best-fit-first on the left,
   and on the right the relic now, the relic picked, every stat before →
   after with the delta, and the sets completed or broken, before Equip.
+- **Relic power-up is the genre's rune power-up** (`RelicService.upgrade`
+  → `PowerUpOutcome`; `RelicDetailView` is the screen, opened from a worn
+  slot on the unit sheet and from the inventory): an attempt costs drachma
+  either way and succeeds at `powerUpChances[level - 1]` — sure to +3,
+  then a step down a level to 40% at +15; +3, +6, +9 and +12 add a sub
+  stat while there are fewer than four, then grow one; +15 rolls nothing
+  and lifts the main stat to 3× (`Relic.effectiveMainStat` is linear to
+  +14). The screen shows the odds, the cost, the next main-stat value, the
+  level track with the sub-stat levels ringed, and the last roll marked;
+  a success glows, a failure shakes. The chance table is modelled on the
+  genre's published rules (the data sites are refused by the network
+  policy, so the per-level numbers are ours); `balance.py --economy`
+  prints the expected drachma to +15 with the odds. Change the table in
+  both files.
 - Two SwiftUI gotchas that cost a playtest: **`.clipped()` and
   `.clipShape` do not clip hit-testing**, so a painting scaled to fill a
   short frame swallows taps far above and below it — every decorative
@@ -207,9 +228,10 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is eighteen screens: an arena battle (step 8) as
-  well as the campaign one, the Labyrinth, a dungeon's levels and the
-  relic picker.
+  pass. The CI tour is twenty screens: an arena battle (step 8) as well
+  as the campaign one, the Labyrinth, a dungeon's levels, the relic
+  picker, a Labyrinth run on auto (`dungeon_battle`, four frames, so the
+  waves are seen walking on) and the power-up screen.
 - Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
   drew nothing for loose bundle PNGs on device; never use it for one.
 - The gacha pool is gated on shipped art (`UnitBlueprint.hasShippedArt`, a

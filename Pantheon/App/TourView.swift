@@ -18,6 +18,7 @@ struct TourView: View {
     @State private var ticksOnStep = 0
     @State private var battleModel: BattleViewModel?
     @State private var arenaModel: BattleViewModel?
+    @State private var dungeonModel: BattleViewModel?
     @State private var seeded = false
 
     /// `-tour-step N` pins the tour to one screen for the whole run. The CI
@@ -36,7 +37,7 @@ struct TourView: View {
         ("island", 2), ("collection", 2), ("detail", 2), ("training", 2),
         ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("arena_battle", 6), ("more", 2),
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
-        ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2),
+        ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -64,6 +65,7 @@ struct TourView: View {
             seedIfNeeded()
             if current == "battle" { startBattle() }
             if current == "arena_battle" { startArenaBattle() }
+            if current == "dungeon_battle" { startDungeonBattle() }
         }
         .onReceive(timer) { _ in
             if Self.pinnedStep == nil { tick() }
@@ -133,6 +135,22 @@ struct TourView: View {
             } else {
                 RelicInventoryView()
             }
+        case "relic_powerup":
+            // The power-up screen on the best relic the roster owns.
+            if let relic = store.player.relics.max(by: { $0.grade < $1.grade }) {
+                RelicDetailView(relicID: relic.id)
+            } else {
+                RelicInventoryView()
+            }
+        case "dungeon_battle":
+            // A Labyrinth run on auto, so the frames catch the second and
+            // third waves walking on and the Wave chip counting.
+            if let dungeonModel {
+                BattleView(model: dungeonModel)
+            } else {
+                Color.black.ignoresSafeArea()
+                    .onAppear { startDungeonBattle() }
+            }
         case "relics":
             RelicInventoryView()
         case "shop":
@@ -155,6 +173,7 @@ struct TourView: View {
             index += 1
             if current == "battle" { startBattle() }
             if current == "arena_battle" { startArenaBattle() }
+            if current == "dungeon_battle" { startDungeonBattle() }
         }
     }
 
@@ -181,6 +200,17 @@ struct TourView: View {
             battleModel = model
             return
         }
+    }
+
+    private func startDungeonBattle() {
+        guard dungeonModel == nil else { return }
+        guard let stage = StageDatabase.stage("lab_colossus_1"),
+              let engine = store.startCampaignBattle(stage: stage) else { return }
+        let model = BattleViewModel(engine: engine, context: .campaign(stage), store: store)
+        // On auto: the point of the step is the waves, and the tour roster
+        // clears the first in a few turns.
+        model.autoBattle = true
+        dungeonModel = model
     }
 
     private func startArenaBattle() {

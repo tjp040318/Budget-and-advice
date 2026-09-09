@@ -129,11 +129,20 @@ struct Relic: Codable, Equatable, Identifiable, Sendable {
     var maxLevel: Int { 15 }
     var isMaxLevel: Bool { level >= maxLevel }
 
-    /// Main stat value at the current level. Grows linearly to roughly 3x its
-    /// starting value at +15, which is what makes upgrading worth the currency.
+    /// Main stat value at the current level: linear to +14, then the last
+    /// level's jump to 3x the starting value — the genre's +15, which is
+    /// what makes the expensive last attempt worth the drachma.
     var effectiveMainStat: StatModifier {
-        let growth = 1.0 + (Double(level) / Double(maxLevel)) * 2.0
+        let growth = level >= maxLevel ? 3.0 : 1.0 + (Double(level) / Double(maxLevel)) * 1.8
         return StatModifier(mainStat.kind, mainStat.value * growth)
+    }
+
+    /// The main stat one level up, for the power-up screen's "→".
+    var nextMainStat: StatModifier? {
+        guard !isMaxLevel else { return nil }
+        var next = self
+        next.level += 1
+        return next.effectiveMainStat
     }
 
     var allStats: [StatModifier] { [effectiveMainStat] + subStats }

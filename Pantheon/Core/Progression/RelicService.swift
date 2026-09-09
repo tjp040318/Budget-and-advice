@@ -113,30 +113,75 @@ enum RelicService {
         return base + level * base / 3
     }
 
-    /// One +1. Every fourth level rolls a new sub stat or improves an existing
-    /// one, which is where the grind's variance lives.
-    static func upgradeOnce(_ relic: inout Relic, rng: inout SeededRandom) {
-        guard !relic.isMaxLevel else { return }
+    // MARK: - Power-up
+
+    /// The chance an attempt at reaching a level succeeds: sure to +3, then
+    /// falling a step a level to 40% at +15 — the genre's rune power-up,
+    /// where the last few levels are the expensive ones. A failed attempt
+    /// costs the drachma and keeps the level. (Indexed by level - 1.)
+    static let powerUpChances: [Double] = [
+        1.0, 1.0, 1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50, 0.45, 0.40,
+    ]
+
+    static func successChance(toLevel level: Int) -> Double {
+        guard level >= 1 else { return 1 }
+        return powerUpChances[min(level, powerUpChances.count) - 1]
+    }
+
+    /// Whether reaching a level rolls a sub stat: +3, +6, +9 and +12 do;
+    /// +15 only lifts the main stat.
+    static func levelRollsSubStat(_ level: Int) -> Bool {
+        level % 3 == 0 && level <= 12
+    }
+
+    /// What a +3/+6/+9/+12 did to the sub stats.
+    struct SubStatChange: Equatable, Sendable {
+        var kind: StatKind
+        /// Zero for a sub stat that was just added.
+        var before: Double
+        var after: Double
+        var isNew: Bool
+    }
+
+    /// One attempt, as the power-up screen shows it.
+    struct PowerUpOutcome: Equatable, Sendable {
+        var succeeded: Bool
+        /// The relic's level after the attempt.
+        var level: Int
+        var cost: Int
+        var chance: Double
+        var subStatChange: SubStatChange?
+    }
+
+    /// One guaranteed +1. At +3, +6, +9 and +12 a sub stat is added while
+    /// there are fewer than four, else an existing one grows — which is
+    /// where the grind's variance lives. +15 rolls nothing.
+    @discardableResult
+    static func upgradeOnce(_ relic: inout Relic, rng: inout SeededRandom) -> SubStatChange? {
+        guard !relic.isMaxLevel else { return nil }
         relic.level += 1
 
-        guard relic.level % 3 == 0 else { return }
+        guard levelRollsSubStat(relic.level) else { return nil }
 
         if relic.subStats.count < 4 {
             let available = subStatPool.filter { kind in
                 kind != relic.mainStat.kind && !relic.subStats.contains(where: { $0.kind == kind })
             }
             if let kind = rng.pickMutating(available) {
-                relic.subStats.append(
-                    StatModifier(kind, subStatRoll(kind: kind, grade: relic.grade, rng: &rng))
-                )
-                return
+                let value = subStatRoll(kind: kind, grade: relic.grade, rng: &rng)
+                relic.subStats.append(StatModifier(kind, value))
+                return SubStatChange(kind: kind, before: 0, after: value, isNew: true)
             }
         }
 
-        guard !relic.subStats.isEmpty else { return }
+        guard !relic.subStats.isEmpty else { return nil }
         let index = rng.int(in: 0...(relic.subStats.count - 1))
+        let before = relic.subStats[index].value
         let bump = subStatRoll(kind: relic.subStats[index].kind, grade: relic.grade, rng: &rng)
         relic.subStats[index].value += bump
+        return SubStatChange(
+            kind: relic.subStats[index].kind, before: before, after: relic.subStats[index].value, isNew: false
+        )
     }
 
     enum RelicError: Error, LocalizedError {
@@ -153,16 +198,24 @@ enum RelicService {
         }
     }
 
+    /// One paid attempt: the drachma goes either way, the level only on a
+    /// success.
+    @discardableResult
     static func upgrade(
         _ relic: inout Relic,
         wallet: inout Wallet,
         rng: inout SeededRandom
-    ) throws {
+    ) throws -> PowerUpOutcome {
         guard !relic.isMaxLevel else { throw RelicError.maxLevel }
         let cost = upgradeCost(grade: relic.grade, level: relic.level)
         guard wallet.drachma >= cost else { throw RelicError.notEnoughDrachma(needed: cost) }
         wallet.drachma -= cost
-        upgradeOnce(&relic, rng: &rng)
+        let chance = successChance(toLevel: relic.level + 1)
+        guard rng.chance(chance) else {
+            return PowerUpOutcome(succeeded: false, level: relic.level, cost: cost, chance: chance, subStatChange: nil)
+        }
+        let change = upgradeOnce(&relic, rng: &rng)
+        return PowerUpOutcome(succeeded: true, level: relic.level, cost: cost, chance: chance, subStatChange: change)
     }
 
     // MARK: - Selling, reappraisal, efficiency
