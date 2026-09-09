@@ -94,7 +94,12 @@ def split_top_level(argstr):
 # Declaration scanning
 # ---------------------------------------------------------------------------
 
-STORED = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+|fileprivate\s+)?"
+# A property wrapper is still a stored property, and it is still part of the
+# memberwise init: `@Binding var selection: T` takes a `selection:` argument.
+# Without the attribute prefix here, every SwiftUI view built with a binding
+# was reported as passing an unknown label — noise that hides real findings.
+STORED = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
+                    r"(?:public\s+|private\s+|internal\s+|fileprivate\s+)?"
                     r"(?:static\s+)?(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:")
 COMPUTED_HINT = re.compile(r"\{")
 FUNC = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|static\s+|mutating\s+)*func\s")
@@ -372,6 +377,51 @@ def check_static_members(files, members, errors):
             errors.append(f"{path}:{line}: {tname}.{member} — "
                           f"'{member}' is not declared on {tname}")
 
+# ---------------------------------------------------------------------------
+# Rule 12: a line that is the tail of the line above it
+# ---------------------------------------------------------------------------
+
+def check_spliced_lines(files, errors):
+    """A non-empty line that is a strict suffix of the line before it.
+
+    This is the fingerprint of a botched programmatic edit — a script that
+    rewrites a file by slicing on a substring and puts the tail back. It cost
+    a CI cycle on 2026-09-09, when splitting the sixty-eight-row family table
+    into four literals left
+
+        static let familyRowsEgypt: [FamilyRow] = [
+        FamilyRow] = [
+
+    behind. Every brace, bracket and parenthesis still balanced, so the
+    balance check and every other rule here passed it; the Swift compiler
+    said `cannot assign to immutable expression of type '[FamilyRow].Type'`
+    thirty minutes later.
+
+    A real Swift line is essentially never a suffix of the line above: the
+    shortest legitimate cases (`}` under `}`, `)` under `)`, a repeated
+    `case .foo:`) are excluded by requiring the suffix to be at least four
+    characters and the two lines to differ by a prefix that is not only
+    whitespace."""
+    for path in files:
+        lines = open(path).read().splitlines()
+        for i in range(1, len(lines)):
+            prev, cur = lines[i - 1].strip(), lines[i].strip()
+            if len(cur) < 4 or not prev.endswith(cur):
+                continue
+            if prev == cur:
+                continue
+            head = prev[: len(prev) - len(cur)]
+            if not head.strip():
+                continue
+            # A continuation line legitimately repeats an operator tail, so
+            # only flag a suffix that carries a bracket or an assignment: the
+            # shape a sliced declaration leaves behind.
+            if not any(t in cur for t in ("] = [", "= [", "] =", "){", ") {")):
+                continue
+            errors.append(f"{path}:{i + 1}: line is the tail of the line above it "
+                          f"({cur!r}) — a split or a paste landed twice")
+
+
 def check_unknown_types(files, declared, errors):
     """Types used but never declared anywhere in the module."""
     KNOWN = {
@@ -565,6 +615,7 @@ def main():
     check_accessor_keywords(files, errors)
     check_duplicate_funcs(files, errors)
     check_bundle_resources(errors)
+    check_spliced_lines(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 

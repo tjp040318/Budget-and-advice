@@ -1,10 +1,6 @@
 import Foundation
 import UIKit
 
-/// Animation clips every character rig must export. `ModelLibrary` looks for a
-/// SceneKit animation player with exactly these keys inside the unit's `.usdz`
-/// (or a sibling `<unit>_<clip>.usdz`), so the names here are a contract with
-/// the art pipeline. See `Docs/ART_PIPELINE.md`.
 /// Is a painting in the bundle?
 ///
 /// The paintings ship as JPEG (`tools/shrink_art.py`: a card is a 1024px
@@ -25,6 +21,10 @@ enum BundleArt {
     static func exists(_ name: String) -> Bool { url(name) != nil }
 }
 
+/// Animation clips every character rig must export. `ModelLibrary` looks for a
+/// SceneKit animation player with exactly these keys inside the unit's `.usdz`
+/// (or a sibling `<unit>_<clip>.usdz`), so the names here are a contract with
+/// the art pipeline. See `Docs/ART_PIPELINE.md`.
 enum AnimationClip: String, Codable, CaseIterable, Sendable {
     case idle
     case idleCombat = "idle_combat"

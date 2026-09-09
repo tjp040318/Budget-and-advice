@@ -80,7 +80,6 @@ extension UnitDatabase {
         familyRowsEgypt + familyRowsGreece + familyRowsNorse + familyRowsBatchThree
 
     static let familyRowsEgypt: [FamilyRow] = [
-FamilyRow] = [
         // ---- Egypt
         FamilyRow(key: "horus", name: "Horus", pantheon: .egyptian, stars: 5, archetype: .god, role: .attacker, kit: .duelist,
                   hp: 430, atk: 39, def: 24, spd: 108, height: 2.10, melee: true, costumeHue: 45, motif: "Sky",
