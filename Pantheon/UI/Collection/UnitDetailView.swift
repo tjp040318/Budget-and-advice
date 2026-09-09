@@ -33,16 +33,19 @@ struct UnitDetailView: View {
             Group {
                 if let unit {
                     ScrollView {
-                        VStack(spacing: 8) {
-                            HStack(alignment: .top, spacing: 8) {
-                                identity(unit)
-                                    .frame(width: 164)
-                                relicRing(unit)
-                                    .frame(width: 236)
+                        // Three columns, sized so a landscape phone holds
+                        // the lot without a scroll: card and actions, the
+                        // ring, then stats over skills.
+                        HStack(alignment: .top, spacing: 8) {
+                            identity(unit)
+                                .frame(width: 158)
+                            relicRing(unit)
+                                .frame(width: 212)
+                            VStack(spacing: 8) {
                                 stats(unit)
-                                    .frame(maxWidth: .infinity)
+                                skills(unit)
                             }
-                            skills(unit)
+                            .frame(maxWidth: .infinity)
                         }
                         .padding(10)
                     }
@@ -108,7 +111,7 @@ struct UnitDetailView: View {
 
     private func identity(_ unit: ResolvedUnit) -> some View {
         VStack(spacing: 6) {
-            UnitCard(unit: unit, showPower: false, size: 118)
+            UnitCard(unit: unit, size: 100)
             HStack(spacing: 4) {
                 ElementBadge(element: unit.element, compact: true)
                 Text(unit.blueprint.epithet)
@@ -124,32 +127,26 @@ struct UnitDetailView: View {
                 height: 5,
                 label: "Lv.\(unit.level) / \(unit.unit.maxLevel)"
             )
-            HStack {
-                Text("Power")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
-                Spacer()
-                Text("\(unit.power)")
-                    .font(Theme.numeric(13))
-                    .foregroundStyle(Theme.gold)
-            }
-            actionButton("Power up", "arrow.up.circle.fill", tint: Theme.info) {
-                fodderPurpose = .levelUp
-                showFodderPicker = true
-            }
-            actionButton(
-                unit.unit.canEvolve ? "Evolve to \(unit.stars + 1)★" : "Evolve at max level",
-                "star.circle.fill", tint: Theme.gold, enabled: unit.unit.canEvolve
-            ) {
-                fodderPurpose = .evolve
-                showFodderPicker = true
-            }
-            if unit.blueprint.awakening != nil {
+            // The three things to do with a unit, in one row.
+            HStack(spacing: 5) {
+                actionButton("Power up", "arrow.up.circle.fill", tint: Theme.info) {
+                    fodderPurpose = .levelUp
+                    showFodderPicker = true
+                }
                 actionButton(
-                    unit.unit.isAwakened ? "Awakened" : "Awaken",
-                    "sun.max.fill", tint: Theme.gold, enabled: !unit.unit.isAwakened
+                    unit.unit.canEvolve ? "Evolve" : "Evolve at max",
+                    "star.circle.fill", tint: Theme.gold, enabled: unit.unit.canEvolve
                 ) {
-                    showAwakening = true
+                    fodderPurpose = .evolve
+                    showFodderPicker = true
+                }
+                if unit.blueprint.awakening != nil {
+                    actionButton(
+                        unit.unit.isAwakened ? "Awakened" : "Awaken",
+                        "sun.max.fill", tint: Theme.gold, enabled: !unit.unit.isAwakened
+                    ) {
+                        showAwakening = true
+                    }
                 }
             }
         }
@@ -161,17 +158,17 @@ struct UnitDetailView: View {
         _ title: String, _ symbol: String, tint: Color, enabled: Bool = true, action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            HStack(spacing: 5) {
+            VStack(spacing: 2) {
                 Image(systemName: symbol)
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                 Text(title)
-                    .font(Theme.body(11).weight(.bold))
+                    .font(Theme.body(7).weight(.bold))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(enabled ? Theme.ink : Theme.textSecondary)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .background(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(enabled ? tint : Theme.surface)
@@ -186,8 +183,8 @@ struct UnitDetailView: View {
     /// Six slots around the element's emblem, slot 1 at the top and the
     /// rest clockwise — the arrangement every player of the genre knows.
     private func relicRing(_ unit: ResolvedUnit) -> some View {
-        let size: CGFloat = 220
-        let radius: CGFloat = 80
+        let size: CGFloat = 196
+        let radius: CGFloat = 70
         let centre = CGPoint(x: size / 2, y: size / 2)
         return VStack(spacing: 6) {
             ZStack {
@@ -198,9 +195,9 @@ struct UnitDetailView: View {
                 ZStack {
                     Circle()
                         .fill(unit.element.color.opacity(0.18))
-                        .frame(width: 54, height: 54)
+                        .frame(width: 48, height: 48)
                     Image(systemName: unit.element.glyph)
-                        .font(.system(size: 22, weight: .black))
+                        .font(.system(size: 20, weight: .black))
                         .foregroundStyle(unit.element.color)
                 }
                 .position(centre)
@@ -249,7 +246,7 @@ struct UnitDetailView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
             }
-            .frame(width: 58, height: 58)
+            .frame(width: 54, height: 54)
             .background(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(worn ? Theme.surfaceHigh : Theme.surface.opacity(0.7))
@@ -311,14 +308,20 @@ struct UnitDetailView: View {
                 tag(unit.role.displayName, color: Theme.textSecondary)
             }
             .padding(.bottom, 3)
-            statRow("HP", base.hp, unit.stats.hp)
-            statRow("ATK", base.atk, unit.stats.atk)
-            statRow("DEF", base.def, unit.stats.def)
-            statRow("SPD", base.spd, unit.stats.spd)
-            statRow("CRIT Rate", base.critRate, unit.stats.critRate, percent: true)
-            statRow("CRIT DMG", base.critDamage, unit.stats.critDamage, percent: true)
-            statRow("Accuracy", base.accuracy, unit.stats.accuracy, percent: true)
-            statRow("Resistance", base.resistance, unit.stats.resistance, percent: true)
+            HStack(alignment: .top, spacing: 12) {
+                VStack(spacing: 3) {
+                    statRow("HP", base.hp, unit.stats.hp)
+                    statRow("ATK", base.atk, unit.stats.atk)
+                    statRow("DEF", base.def, unit.stats.def)
+                    statRow("SPD", base.spd, unit.stats.spd)
+                }
+                VStack(spacing: 3) {
+                    statRow("CRIT Rate", base.critRate, unit.stats.critRate, percent: true)
+                    statRow("CRIT DMG", base.critDamage, unit.stats.critDamage, percent: true)
+                    statRow("Accuracy", base.accuracy, unit.stats.accuracy, percent: true)
+                    statRow("Resistance", base.resistance, unit.stats.resistance, percent: true)
+                }
+            }
             if let leader = unit.blueprint.leaderSkill {
                 Divider().overlay(Theme.stroke).padding(.vertical, 2)
                 HStack(alignment: .top, spacing: 5) {
@@ -362,18 +365,18 @@ struct UnitDetailView: View {
     private func statRow(_ label: String, _ base: Double, _ total: Double, percent: Bool = false) -> some View {
         let bonus = total - base
         let shown = abs(bonus) >= (percent ? 0.005 : 0.5)
-        return HStack(spacing: 6) {
+        return HStack(spacing: 4) {
             Text(label)
-                .font(Theme.body(11))
+                .font(Theme.body(10))
                 .foregroundStyle(Theme.textSecondary)
-                .frame(width: 68, alignment: .leading)
+                .frame(width: 60, alignment: .leading)
             Text(Self.statText(total, percent: percent))
-                .font(Theme.numeric(12))
+                .font(Theme.numeric(11))
                 .foregroundStyle(Theme.textPrimary)
-            Spacer()
-            Text(shown ? ((bonus > 0 ? "+" : "−") + Self.statText(abs(bonus), percent: percent)) : "·")
-                .font(Theme.numeric(10))
-                .foregroundStyle(shown ? (bonus > 0 ? Theme.success : Theme.danger) : Theme.stroke)
+            Spacer(minLength: 2)
+            Text(shown ? ((bonus > 0 ? "+" : "−") + Self.statText(abs(bonus), percent: percent)) : "")
+                .font(Theme.numeric(9))
+                .foregroundStyle(bonus > 0 ? Theme.success : Theme.danger)
         }
     }
 
@@ -385,7 +388,7 @@ struct UnitDetailView: View {
 
     private func skills(_ unit: ResolvedUnit) -> some View {
         let index = min(selectedSkill, max(0, unit.skills.count - 1))
-        return HStack(alignment: .center, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 ForEach(unit.skills.indices, id: \.self) { slot in
                     skillTile(unit.skills[slot], selected: slot == index)
@@ -394,6 +397,7 @@ struct UnitDetailView: View {
                             selectedSkill = slot
                         }
                 }
+                Spacer(minLength: 0)
             }
             if unit.skills.indices.contains(index) {
                 skillWords(unit.skills[index], index: index, unit: unit)
@@ -416,7 +420,7 @@ struct UnitDetailView: View {
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.8)
         }
-        .frame(width: 56, height: 50)
+        .frame(width: 58, height: 44)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                 .fill(selected ? Theme.surfaceHigh : Theme.surface)
@@ -467,12 +471,12 @@ struct UnitDetailView: View {
                 }
             }
             Text(skill.description)
-                .font(Theme.body(10))
+                .font(Theme.body(9))
                 .foregroundStyle(Theme.textSecondary)
                 .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
             if let next = skill.levelUpBonuses.indices.first(where: { level <= $0 + 1 }) {
-                Text("Next skill-up: \(skill.levelUpBonuses[next].label). Feed a duplicate in the Hall of Ka.")
+                Text("Next skill-up: \(skill.levelUpBonuses[next].label) — feed a duplicate in the Hall of Ka.")
                     .font(Theme.body(8))
                     .foregroundStyle(Theme.goldDim)
                     .lineLimit(1)

@@ -20,7 +20,7 @@ struct LabyrinthView: View {
                         }
                     }
                     SectionHeader(title: "Halls of Essence", accessory: "the awakening essences")
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 140, maximum: 200), spacing: 8)], spacing: 8) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 200, maximum: 280), spacing: 8)], spacing: 8) {
                         ForEach(DungeonDatabase.halls) { hall in
                             hallCard(hall)
                         }
