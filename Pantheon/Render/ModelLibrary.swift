@@ -165,7 +165,11 @@ final class ModelLibrary {
         // real export and a portrait sprite are both already authored at the
         // unit's true height, so scaling either again is simply wrong.
         let scale = spec.scale * (isStandIn && !isPortraitSprite ? archetype.modelScale : 1.0)
-        model.scale = SCNVector3(scale, scale, scale)
+        // Multiplied onto what `normalise` set, never assigned over it: a
+        // canonical export's factor is 1.0 either way, but a named stand-in
+        // is scaled to its host's height by normalise, and assigning here
+        // threw that away — the first Colossus fought at sentinel size.
+        model.scale = SCNVector3(model.scale.x * scale, model.scale.y * scale, model.scale.z * scale)
         return container
     }
 
