@@ -83,7 +83,7 @@
       "id": "01a08778-c011-76d6-9972-af571202bdd3",
       "kind": "clip",
       "created": "2026-09-09T18:40:33Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a08777-c958-7108-9928-eaefab8b4d91",
         "action_id": 89
@@ -91,19 +91,22 @@
       "cost": 3,
       "clip": "idle_combat",
       "action_id": 89,
-      "progress": 74,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-c011-76d6-9972-af571202bdd3/output/Animation_Combat_Stance_withSkin.glb?Expires=1789238469&Signature=I7-G63rV~vw~IGAQk9c6jh-H2s0N6mqueo0XsivXVlWa3P6MSa0DrXydNqbDWdCyMuI1S3zU5uZ8yHHWlilO~kgfmcsN0Bmmm-GMAzifENHWvrc~az4Zxj-~nWbOvXIzNV-JdmGTO0lyifx06PPIdrtKo4zWRARCvjDs6MWKXEL3kn0Q1mwEKQXG5N7di-xRrXr5Xn~KZGK8JY~DJuqKnbv0lISYW3P6nV7Ku9kABEm7SiRtZu-uFd9Dnjj7Ksmy-eqdlyCaYqS8yl~oCKPcW53fzQ3gfsWNQfPN3McmKM2DwXYuu0bsMarzYsoag40sDKN~zhteucysNkuUdh0I1w__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-c011-76d6-9972-af571202bdd3/output/Animation_Combat_Stance_withSkin.fbx?Expires=1789238469&Signature=UfRuPqUhgJkThpjBIfwS1LNoxto4xeZ8p~xetpuDvVz~8DV5fV3mLSbgzK2ZwbK-gpEigQcZ-DWMdWxUuhceMKoxRll3~WQtGK0Dhl9Pje1O5B1u0sNsMnLdXbd~pht~-4p-DqJQQ6rAFQBFmuhlGm2oZUbbMAd0W3dHH5ZbWOOiF5n8bla9AdLEbjM9TUUS1ACKkjlt-gI1AeLxNADPy6LoC46aFOh2reRe89ZbYAPfhoHZimP2fzf79IP6On0-8AXpBOZxpD5D62GnlEz2pyZgqvDincHLJFBHj9GLQ7K-j85FTHUYPmmZVqA1-D8IIK-m~Q91wF8-YrlgLyn6Zw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1788979233150,
       "started_at": 1788979233153,
-      "finished_at": 0,
+      "finished_at": 1788979269847,
       "name": "",
-      "polled": "2026-09-09T18:40:59Z"
+      "polled": "2026-09-09T18:41:20Z"
     },
     "clip:attack_basic": {
       "id": "01a08778-c300-7552-9850-49bba13342f7",
       "kind": "clip",
       "created": "2026-09-09T18:40:33Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a08777-c958-7108-9928-eaefab8b4d91",
         "action_id": 129
@@ -111,19 +114,22 @@
       "cost": 3,
       "clip": "attack_basic",
       "action_id": 129,
-      "progress": 74,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-c300-7552-9850-49bba13342f7/output/Animation_mage_soell_cast_withSkin.glb?Expires=1789238472&Signature=VBwfwaXklq41JSnCJP3UwZnlC-5rii8bEU8G6VvDMqAlHY9p2MlanCyEHLGGF3VoSERBfnkJxRiVqgv1XY-DcRAicv7xEr5W4s-xVHwjdWEnIUraF-ml5CsbcACFbfihW8Oa3177kJBbH1dQvsoulfD27ckCmzpf0b9UY~Mk-hGX42ZP3pSTBreWBNF-BjVxuAm-UpnRdfQUQCwvDkguEJun0jmJUPdWDtVuwMDKu~HkD0wupCjKqmIpZfLM6D~R5oPri~78p2K6K5VS-K-D1MAeTIR7MLwk-zGqOg9M92G9MOHPvIzz7p8mUEvB6CTIaV3cT7XbwKC~JvKsc~baFQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-c300-7552-9850-49bba13342f7/output/Animation_mage_soell_cast_withSkin.fbx?Expires=1789238472&Signature=nzTHDUORKRCrZkRN~X7h06SaHfSj-KwROMV1NmtPQ~vc1t0A468lX8uc19QRy-YBA-6M0FCP5dnW6CzEaDH~zaYF3avR~kVdr~Bhu9fHVkvSnvusMimn5FwbFbWuSR9g59-sSPYZQUtC5dAGL6lEJJUMN5L1cI7BBEJBVpwhv2iBksWL25KBhxDNWY1~k2jkbDwBE7oWmaeeFk8UjSH78jTK7vUBOvadVIC3t3qGbLsZSaMDNOo7fsRq~nYQ54nVLkhU8QnrgiveAsK2wP1atYCKeLKRsH2WwJVLH48N4RVG0aAALnpiOn66erS9LWr98Wu0KOHvDoJeJbCgtrQNwg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1788979233807,
       "started_at": 1788979233810,
-      "finished_at": 0,
+      "finished_at": 1788979272335,
       "name": "",
-      "polled": "2026-09-09T18:40:58Z"
+      "polled": "2026-09-09T18:41:20Z"
     },
     "clip:attack_heavy": {
       "id": "01a08778-c599-7580-9c18-981f7faaf19b",
       "kind": "clip",
       "created": "2026-09-09T18:40:34Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a08777-c958-7108-9928-eaefab8b4d91",
         "action_id": 125
@@ -131,19 +137,22 @@
       "cost": 3,
       "clip": "attack_heavy",
       "action_id": 125,
-      "progress": 68,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-c599-7580-9c18-981f7faaf19b/output/Animation_Charged_Spell_Cast_withSkin.glb?Expires=1789238477&Signature=SiqZ5q8WQeWCQL75eJlSXEIFWGAUnWfNP09uN5YMTkKI8ryNbmTO026BFNQSmNFaoCunWVQppnlqZZZ1QpEyPc8O6WIxEIE3hS9VxuSu5AxXsB3Xv~-i8f8i6L3O9~dk8trBvMQAzNRYrWTy0xfE-nKt6X05rCbNpZeNcFyuBRVzRt~85YAJoPBEH~ShKfqEp2WSpLaTCaRFAh5DeS-WMm~CFSDPUlMJde7iCXeyy7jcF6ibIprjgQ~MfMI47M5J9bQMPfJd4s~JBeEHQXT89AYrrxNhvly5jzfMWN1HyVujqoe0w~4FnWLremPQanSA8vdr80pcATf4DKjzvLqzPA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-c599-7580-9c18-981f7faaf19b/output/Animation_Charged_Spell_Cast_withSkin.fbx?Expires=1789238477&Signature=Qw8ITh~uJe8w0aYxXTNFzUK~KoPYaw-9W-O7PFoom7ANiHHKxkq4~w3FJAz7M0A~JP8osN9wPL2zZ8pEpdTQS8C-LqwHTjCLUSptsclSg3cXQevoU-MUcHiLjmQVMELPfcu8JgI-SpltfWZ84hJI-rwWwMUaCzAz5cNFKW4REJpL8C8jOKqM5vS~TV55YrCY-RQa7rljUKQC5PQVwC5wHyH7DY86lGWjEzd~IsUpLiOQpnSb~ABEXoFbByqFqwJNDiDLEBb387KzOeHk9D9EyG33lhZo38rjZDls8fVv5PA0gx0pDxXUTudko1m376ka9Hexx-UX71aKWb2W1cw3Ug__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1788979234567,
       "started_at": 1788979234570,
-      "finished_at": 0,
+      "finished_at": 1788979277894,
       "name": "",
-      "polled": "2026-09-09T18:40:58Z"
+      "polled": "2026-09-09T18:41:20Z"
     },
     "clip:hit_react": {
       "id": "01a08778-c886-7497-a85c-c388e3771b91",
       "kind": "clip",
       "created": "2026-09-09T18:40:35Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a08777-c958-7108-9928-eaefab8b4d91",
         "action_id": 178
@@ -151,19 +160,22 @@
       "cost": 3,
       "clip": "hit_react",
       "action_id": 178,
-      "progress": 68,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-c886-7497-a85c-c388e3771b91/output/Animation_Hit_Reaction_withSkin.glb?Expires=1789238476&Signature=clPt1OIr4A7YmrY1kEXhT6LGjhcih86d3yp6jpCJotO2GH85Rm2FVi6z16xNhFzR-g90aMjKIxJu~qJOlqCiriUF0yfwqneqXdzf9VWdGqblfQ92NlO3HhDGaxfrIjrT2z7zgMl34ze0IHbypNJRnTyZfMHt~wgaFbojMySC67oRpumqaL5~tIV2GuIBl-6JA6LfXwnokmyiS1~apP~KLNDi2Grh52SPWaZ9GNDPx1o1LDGNxlAZ3KUVEtnzUBdWlTj9EWY9X2xKQ5qq53b4CxVcnBkWSNPaQ9~xQcfaaT1uWIPuSGUigHc9FYqPrwOM87izFPZwFwOZMU3cuj7MSw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-c886-7497-a85c-c388e3771b91/output/Animation_Hit_Reaction_withSkin.fbx?Expires=1789238476&Signature=FuQFKZs19OE3ws5DzODYiT~oUH43wInRMjVuY3H28a-eFqOF9r3DYe45GNYVfQ3D28N0BYSnkMPoRySMKspYBo7FFxuwkQkDLzqnhxUy0papSbPUTtypdvvV32y094DEj69rUwI-hFnLjazWrohHa-Ht8Pfb01-BByH63akoFmSaW4xajviFa4ZO8DXpWjMeBdc6De1DUHeNnAWPPMRkLf1k1Qxg8iBqciSFIBlg5aY2BjtGU5yx4-0xouglS32FFBlAKw7f~f9R3co1ix-TSnfh0D1X6MGLp0wHrSexoJLwJbMCAjjmSIKV9z6kM1HbBESOBrsztlfMOcCU05HW5w__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1788979235350,
       "started_at": 1788979235353,
-      "finished_at": 0,
+      "finished_at": 1788979276733,
       "name": "",
-      "polled": "2026-09-09T18:40:58Z"
+      "polled": "2026-09-09T18:41:20Z"
     },
     "clip:death": {
       "id": "01a08778-cb8e-705d-bbec-805e71d40076",
       "kind": "clip",
       "created": "2026-09-09T18:40:36Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a08777-c958-7108-9928-eaefab8b4d91",
         "action_id": 8
@@ -171,19 +183,22 @@
       "cost": 3,
       "clip": "death",
       "action_id": 8,
-      "progress": 68,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-cb8e-705d-bbec-805e71d40076/output/Animation_Dead_withSkin.glb?Expires=1789238490&Signature=cg-sZFqKwfHuANbycZdJf7aU3RYvhTTTf-3CgBnKWT4AQcb5u3ySPHfXnNhUalO7z8zJUsTBSlkklS~aanD1YFqfyaC~uZ~uLXVrwqL0bVaJgRW6ShRm-e6f1IIaZrSzeH0mBI3omhkJxLItVyLBTKV6RzwizFtyIMl7k1Jfx8bih7esostnXVwrDEoyjRy5LJgfQTN6j1Yn2kJohpG9C1rpR~pqxUbY5fjpZ7VXx92jlYzHBgi0ToOdnqQpksyhm9TQsJ0JiBxxHAS0pnb1VDIjGXesVWyPfCSN4qgKWHpXUu1LJ2g-6CAnrrv~BKCqBtYhzHldKD7BXsk91BS~ZA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-cb8e-705d-bbec-805e71d40076/output/Animation_Dead_withSkin.fbx?Expires=1789238490&Signature=CgNh43q0GSnSN2Pov4DYCRPEpYHAKcrTBI4MDVvS53IzJOlaEtgmA3PjOoLzqqHkTE3A7CfhEUPO9G8eqA6wRTtmkhftP1owQXzKSBGynhnfLqWf6pShoTPabeVIeZKcqiYVn7AiLagV8LdamfKrWpcGPupGA7uQzg-l4JIAJRJQYanulvDID7LsQAnpHdaBiFjlaN-fUjSrbBHoxGaiVZlJairnkrhe104JR61VeQ7~CUyvUqypHIi0Z1~QtqBpjAG9fiKi3ArPq3ZRrkOJUAtfXEvmdyBfwKZjBJHQW58TO8oGf92NHKeuBB1kaAlpWf1PpUwnr8ORAg5uEzEZig__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1788979236083,
       "started_at": 1788979236086,
-      "finished_at": 0,
+      "finished_at": 1788979290626,
       "name": "",
-      "polled": "2026-09-09T18:40:58Z"
+      "polled": "2026-09-09T18:41:31Z"
     },
     "clip:ultimate": {
       "id": "01a08778-ce7e-74c4-9839-82a4f017a260",
       "kind": "clip",
       "created": "2026-09-09T18:40:36Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a08777-c958-7108-9928-eaefab8b4d91",
         "action_id": 126
@@ -191,13 +206,16 @@
       "cost": 3,
       "clip": "ultimate",
       "action_id": 126,
-      "progress": 68,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-ce7e-74c4-9839-82a4f017a260/output/Animation_Charged_Spell_Cast_1_withSkin.glb?Expires=1789238483&Signature=eP4ZP-P1RQnTbf0~ghv1NHuEjTOJ~PpgBFGeV147pi~bsJDzs~zr3GR4gxb3A4cbcwbxzIKgLNDBIOhWPKysuAs49Q0EGwegUMuBR0ASf27sIZaZlJTyXlx71a9euDEaaFarxKGWU~2auS54OsWafJBJURnrARKt-AYPXtsXP~Ps-MNdERN7RZWPk3Nd8lEvc2kUTRUT9uXbpfLwy2nR9YFqbYtR~avM6gnly08XgrnGHiSsI~FHQ92SMkDzK9z~j1syGd-TnKF1DgfC-tITP6PL1LQMXLFOuzQn7o3hGjvkBlI~-Rk~EIRqSJk4hhOSKvpMH1cxgU~ZwIReUNZSPA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08778-ce7e-74c4-9839-82a4f017a260/output/Animation_Charged_Spell_Cast_1_withSkin.fbx?Expires=1789238483&Signature=I78T4XglFk9gtKOyPc8uyvOuGQXaHxp6iubrRrg3s0u2MWnVLyWE12P2doXkRMZnHmQtgmkULGIYrG7Lqa38axBuBppFtDtbmYkkcOjfsZHPrcFtiVV9dS7MP42nzrZ7~uC2GTUNj05yaqgTQGSG1X7TH67Z6-QmGUQ6wqH2~4zETlzfeD1Tp1qzYaYE~NEgc9Iti8kMgeStTT~YTazDRyrDMuZmGLUPWO1BTj-NixnSLk9L974nmRCHwODUV8nkn6M7KGRTvRUOBb4PZaV-JqA3JHc42cnfDFYRycKMFxbJeCKUdP65WWEjeqT-4ExOszTCS6bnbmJY4BkEvBhzvQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1788979236753,
       "started_at": 1788979236755,
-      "finished_at": 0,
+      "finished_at": 1788979283727,
       "name": "",
-      "polled": "2026-09-09T18:40:59Z"
+      "polled": "2026-09-09T18:41:31Z"
     }
   },
   "history": []

@@ -77,7 +77,10 @@
       "started_at": 1788978676927,
       "finished_at": 1788978767970,
       "name": "",
-      "polled": "2026-09-09T18:40:50Z"
+      "polled": "2026-09-09T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_hd.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08771-cea2-7163-8c3d-ae439f8151ad",
@@ -100,7 +103,10 @@
       "started_at": 1788978778223,
       "finished_at": 1788978789898,
       "name": "",
-      "polled": "2026-09-09T18:40:50Z"
+      "polled": "2026-09-09T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_hd_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08771-d1f8-779b-a4ac-421a0200cc02",
@@ -123,7 +129,10 @@
       "started_at": 1788978778983,
       "finished_at": 1788978790726,
       "name": "",
-      "polled": "2026-09-09T18:40:50Z"
+      "polled": "2026-09-09T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_hd_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08771-d4d9-72ac-a202-9f6d751e3321",
@@ -146,7 +155,10 @@
       "started_at": 1788978779681,
       "finished_at": 1788978793210,
       "name": "",
-      "polled": "2026-09-09T18:40:50Z"
+      "polled": "2026-09-09T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_hd_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08771-d79d-764f-a167-3bc4caf43259",
@@ -169,7 +181,10 @@
       "started_at": 1788978780425,
       "finished_at": 1788978793069,
       "name": "",
-      "polled": "2026-09-09T18:40:50Z"
+      "polled": "2026-09-09T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_hd_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08771-da88-73c9-8c25-e4e9e665d27a",
@@ -192,7 +207,10 @@
       "started_at": 1788978781132,
       "finished_at": 1788978807435,
       "name": "",
-      "polled": "2026-09-09T18:40:51Z"
+      "polled": "2026-09-09T18:40:51Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_hd_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08771-dd4e-7172-a6d2-d4cb7f392c8c",
@@ -215,7 +233,10 @@
       "started_at": 1788978781853,
       "finished_at": 1788978798917,
       "name": "",
-      "polled": "2026-09-09T18:40:51Z"
+      "polled": "2026-09-09T18:40:51Z",
+      "downloaded": {
+        "glb": "Art/Models/thor_hd_ultimate.glb"
+      }
     }
   },
   "history": [],
