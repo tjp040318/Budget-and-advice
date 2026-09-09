@@ -17,8 +17,13 @@ struct ArenaView: View {
             ScrollView {
                 VStack(spacing: 12) {
                     standingPanel
-                    defensePanel
-                    offensePanel
+                    // Two teams of four fit side by side on a landscape
+                    // screen; stacked, each panel was a row of cards over a
+                    // field of nothing.
+                    HStack(alignment: .top, spacing: 12) {
+                        defensePanel
+                        offensePanel
+                    }
                     opponentList
                 }
                 .padding(12)
@@ -129,9 +134,10 @@ struct ArenaView: View {
         VStack(alignment: .leading, spacing: 10) {
             SectionHeader(title: "Defence", accessory: ratingText)
 
-            Text("This is the team other summoners fight when they attack you. It is played by the AI.")
-                .font(Theme.body(12))
+            Text("The team others fight when they attack you; the AI plays it.")
+                .font(Theme.body(11))
                 .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             teamRow(store.team(store.player.arenaDefenseTeam)) { showDefensePicker = true }
 
@@ -143,6 +149,7 @@ struct ArenaView: View {
                     .foregroundStyle(Theme.info)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .panelBackground()
     }
@@ -158,8 +165,12 @@ struct ArenaView: View {
                 title: "Offence",
                 accessory: "Power \(store.team(store.player.arenaOffenseTeam).reduce(0) { $0 + $1.power })"
             )
+            Text("The team you attack with.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
             teamRow(store.team(store.player.arenaOffenseTeam)) { showOffensePicker = true }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(10)
         .panelBackground()
     }
