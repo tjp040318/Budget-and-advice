@@ -50,7 +50,7 @@
       "finished_at": 1788978725785,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:32:12Z"
+      "polled": "2026-09-09T18:43:20Z"
     },
     "rig": {
       "id": "01a08771-1dc3-72c5-85b2-81b9bfee1590",
@@ -77,7 +77,10 @@
       "started_at": 1788978743974,
       "finished_at": 1788978812961,
       "name": "",
-      "polled": "2026-09-09T18:33:35Z"
+      "polled": "2026-09-09T18:43:20Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_hd.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08772-61be-7105-84c8-2a7d9872ef47",
@@ -100,7 +103,10 @@
       "started_at": 1788978815884,
       "finished_at": 1788978827626,
       "name": "",
-      "polled": "2026-09-09T18:33:50Z"
+      "polled": "2026-09-09T18:43:20Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_hd_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08772-6511-7169-adc5-974d96525de8",
@@ -123,7 +129,10 @@
       "started_at": 1788978816621,
       "finished_at": 1788978828203,
       "name": "",
-      "polled": "2026-09-09T18:33:50Z"
+      "polled": "2026-09-09T18:43:20Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_hd_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08772-67da-719d-9e26-e04de12725c2",
@@ -146,7 +155,10 @@
       "started_at": 1788978817252,
       "finished_at": 1788978832080,
       "name": "",
-      "polled": "2026-09-09T18:34:00Z"
+      "polled": "2026-09-09T18:43:20Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_hd_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08772-6a49-7038-ba11-68c23bbcfefc",
@@ -169,7 +181,10 @@
       "started_at": 1788978817923,
       "finished_at": 1788978831536,
       "name": "",
-      "polled": "2026-09-09T18:34:01Z"
+      "polled": "2026-09-09T18:43:21Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_hd_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08772-6cf1-74d4-a1a2-7221985706e0",
@@ -192,7 +207,10 @@
       "started_at": 1788978818616,
       "finished_at": 1788978844045,
       "name": "",
-      "polled": "2026-09-09T18:34:11Z"
+      "polled": "2026-09-09T18:43:21Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_hd_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08772-6fa0-7135-bc74-7572323db4ef",
@@ -215,8 +233,12 @@
       "started_at": 1788978819279,
       "finished_at": 1788978843555,
       "name": "",
-      "polled": "2026-09-09T18:34:11Z"
+      "polled": "2026-09-09T18:43:21Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_hd_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T18:43:21Z"
 }
