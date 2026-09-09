@@ -54,9 +54,10 @@ final class ScrollTests: XCTestCase {
         var subject = player()
         var rng = SeededRandom(seed: 8)
         let before = subject.wallet.count(of: .ember)
+        let mystical = subject.wallet.count(of: .mystical)
         _ = try SummonService.summon(banner: .emberScroll, count: 3, player: &subject, rng: &rng)
         XCTAssertEqual(subject.wallet.count(of: .ember), before - 3)
-        XCTAssertEqual(subject.wallet.count(of: .mystical), 60, "the mystical scrolls are untouched")
+        XCTAssertEqual(subject.wallet.count(of: .mystical), mystical, "the mystical scrolls are untouched")
     }
 
     func testTheBazaarSellsEveryScrollPackItPromises() throws {
