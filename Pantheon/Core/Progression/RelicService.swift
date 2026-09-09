@@ -27,18 +27,28 @@ enum RelicService {
 
     /// One roll of a sub stat at a given grade.
     static func subStatRoll(kind: StatKind, grade: Int, rng: inout SeededRandom) -> Double {
-        let gradeScale = 1.0 + Double(max(1, grade) - 1) * 0.22
-        let jitter = rng.double(in: 0.75...1.25)
+        let value = subStatBase(kind: kind, grade: grade) * rng.double(in: 0.75...1.25)
         switch kind {
-        case .hpFlat: return (95 * gradeScale * jitter).rounded()
-        case .atkFlat: return (7 * gradeScale * jitter).rounded()
-        case .defFlat: return (7 * gradeScale * jitter).rounded()
-        case .hpPercent, .atkPercent, .defPercent: return 0.03 * gradeScale * jitter
-        case .spd: return (3 * gradeScale * jitter).rounded()
-        case .critRate: return 0.025 * gradeScale * jitter
-        case .critDamage: return 0.035 * gradeScale * jitter
-        case .accuracy: return 0.03 * gradeScale * jitter
-        case .resistance: return 0.03 * gradeScale * jitter
+        case .hpFlat, .atkFlat, .defFlat, .spd: return value.rounded()
+        default: return value
+        }
+    }
+
+    /// The middle of a sub stat roll at a grade; a roll is this times
+    /// 0.75...1.25, and the top of that range is what `efficiency` measures
+    /// a relic against.
+    static func subStatBase(kind: StatKind, grade: Int) -> Double {
+        let gradeScale = 1.0 + Double(max(1, grade) - 1) * 0.22
+        switch kind {
+        case .hpFlat: return 95 * gradeScale
+        case .atkFlat: return 7 * gradeScale
+        case .defFlat: return 7 * gradeScale
+        case .hpPercent, .atkPercent, .defPercent: return 0.03 * gradeScale
+        case .spd: return 3 * gradeScale
+        case .critRate: return 0.025 * gradeScale
+        case .critDamage: return 0.035 * gradeScale
+        case .accuracy: return 0.03 * gradeScale
+        case .resistance: return 0.03 * gradeScale
         }
     }
 
@@ -153,6 +163,103 @@ enum RelicService {
         guard wallet.drachma >= cost else { throw RelicError.notEnoughDrachma(needed: cost) }
         wallet.drachma -= cost
         upgradeOnce(&relic, rng: &rng)
+    }
+
+    // MARK: - Selling, reappraisal, efficiency
+
+    enum ManageError: Error, LocalizedError {
+        case locked
+        case tooLowToReappraise
+        case notEnoughDrachma(needed: Int)
+
+        var errorDescription: String? {
+            switch self {
+            case .locked: return "That relic is locked. Unlock it first."
+            case .tooLowToReappraise: return "A relic can be reappraised from +\(RelicService.reappraisalMinimumLevel)."
+            case .notEnoughDrachma(let needed): return "That costs \(needed) drachma."
+            }
+        }
+    }
+
+    /// What a relic fetches: a floor set by its grade, plus a third of what
+    /// its upgrades cost, so selling a +12 is not throwing the drachma away.
+    static func sellValue(_ relic: Relic) -> Int {
+        let base = 300 * relic.grade * relic.grade
+        let invested = (0..<relic.level).reduce(0) { $0 + upgradeCost(grade: relic.grade, level: $1) }
+        return base + invested / 3
+    }
+
+    /// Sells relics, taking each off its wearer first. A locked relic stops
+    /// the whole sale rather than being skipped quietly.
+    @discardableResult
+    static func sell(relicIDs: [UUID], player: inout Player) throws -> Int {
+        for id in relicIDs {
+            if let relic = player.relics.first(where: { $0.id == id }), relic.isLocked {
+                throw ManageError.locked
+            }
+        }
+        var total = 0
+        for id in relicIDs {
+            guard let relic = player.relics.first(where: { $0.id == id }) else { continue }
+            if let wearer = relic.equippedBy {
+                unequip(slot: relic.slot, from: wearer, player: &player)
+            }
+            total += sellValue(relic)
+            player.relics.removeAll { $0.id == id }
+        }
+        player.wallet.drachma += total
+        return total
+    }
+
+    static let reappraisalMinimumLevel = 9
+
+    static func reappraisalCost(_ relic: Relic) -> Int {
+        2 * upgradeCost(grade: relic.grade, level: reappraisalMinimumLevel)
+    }
+
+    /// Rerolls every sub stat from scratch, keeping the main stat, the level,
+    /// the set and the slot: the genre's second chance for a well-upgraded
+    /// relic whose rolls went the wrong way. Every third level past the subs
+    /// the relic started with is rolled in again as a bump.
+    static func reappraise(_ relic: inout Relic, wallet: inout Wallet, rng: inout SeededRandom) throws {
+        guard relic.level >= reappraisalMinimumLevel else { throw ManageError.tooLowToReappraise }
+        let cost = reappraisalCost(relic)
+        guard wallet.drachma >= cost else { throw ManageError.notEnoughDrachma(needed: cost) }
+        wallet.drachma -= cost
+
+        let count = relic.subStats.count
+        var available = subStatPool.filter { $0 != relic.mainStat.kind }
+        var subs: [StatModifier] = []
+        for _ in 0..<count {
+            guard let kind = rng.pickMutating(available) else { break }
+            available.removeAll { $0 == kind }
+            subs.append(StatModifier(kind, subStatRoll(kind: kind, grade: relic.grade, rng: &rng)))
+        }
+        let startingSubs = max(1, min(4, relic.grade - 2))
+        let bumps = max(0, relic.level / 3 - max(0, count - startingSubs))
+        for _ in 0..<bumps where !subs.isEmpty {
+            let index = rng.int(in: 0...(subs.count - 1))
+            subs[index].value += subStatRoll(kind: subs[index].kind, grade: relic.grade, rng: &rng)
+        }
+        relic.subStats = subs
+    }
+
+    /// How close a relic is to the best its grade, slot and level could have
+    /// rolled for a role, 0...1: the main stat as it is, four sub stats of
+    /// the kinds the role wants most at the top of their range, and every
+    /// third level a bump on the best of them. The number the inventory
+    /// sorts by, and what a 100% means on the dial.
+    static func efficiency(_ relic: Relic, for role: CombatRole) -> Double {
+        let mainKind = relic.mainStat.kind
+        func best(_ kind: StatKind) -> Double {
+            weight(kind, for: role) * normalized(StatModifier(kind, subStatBase(kind: kind, grade: relic.grade) * 1.25))
+        }
+        let top = subStatPool.filter { $0 != mainKind }.sorted { best($0) > best($1) }.prefix(4)
+        var ceiling = weight(mainKind, for: role) * normalized(relic.effectiveMainStat)
+        for kind in top { ceiling += best(kind) }
+        if let first = top.first { ceiling += Double(relic.level / 3) * best(first) }
+        guard ceiling > 0 else { return 0 }
+        return max(0, min(1, score(relic, for: role) / ceiling))
     }
 
     // MARK: - Equipping

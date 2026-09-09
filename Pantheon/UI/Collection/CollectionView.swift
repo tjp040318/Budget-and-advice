@@ -7,6 +7,7 @@ struct CollectionView: View {
     @State private var sort: SortOrder = .power
     @State private var selected: ResolvedUnit?
     @State private var showTraining = false
+    @State private var showRelics = false
 
     enum SortOrder: String, CaseIterable, Identifiable {
         case power, level, stars, recent, name
@@ -79,13 +80,26 @@ struct CollectionView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Text("\(store.player.units.count) units")
-                        .font(Theme.numeric(12))
-                        .foregroundStyle(Theme.textSecondary)
+                    HStack(spacing: 12) {
+                        Text("\(store.player.units.count) units")
+                            .font(Theme.numeric(12))
+                            .foregroundStyle(Theme.textSecondary)
+                        Button {
+                            showRelics = true
+                        } label: {
+                            Label("Relics", systemImage: "shield.lefthalf.filled")
+                                .font(Theme.body(13).weight(.semibold))
+                                .foregroundStyle(Theme.gold)
+                        }
+                    }
                 }
             }
             .sheet(item: $selected) { unit in
                 UnitDetailView(unitID: unit.id)
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showRelics) {
+                RelicInventoryView()
                     .environmentObject(store)
             }
             .sheet(isPresented: $showTraining) {

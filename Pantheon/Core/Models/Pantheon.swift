@@ -86,5 +86,5 @@ enum Pantheon: String, Codable, CaseIterable, Identifiable, Sendable {
     /// with the Zeus family: a case here, five blueprints, and leader skills
     /// that already scoped by pantheon, so "Greek allies gain 33% ATK" was one
     /// line of data. Olympus does not have a campaign chapter yet.
-    static var live: [Pantheon] { [.egyptian, .greek] }
+    static var live: [Pantheon] { [.egyptian, .greek, .norse] }
 }

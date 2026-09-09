@@ -92,6 +92,7 @@ struct RootView: View {
 struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
     @State private var showResetConfirm = false
+    @State private var showShop = false
     @State private var soundOn = !AudioLibrary.shared.isMuted
     @State private var musicOn = !AudioLibrary.shared.isMusicMuted
 
@@ -100,6 +101,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     accountPanel
+                    shopPanel
                     soundPanel
                     diagnosticsPanel
                     assetStatusPanel
@@ -123,6 +125,25 @@ struct SettingsView: View {
         }
         .padding(14)
         .panelBackground()
+    }
+
+    private var shopPanel: some View {
+        VStack(spacing: 10) {
+            SectionHeader(title: "Bazaar")
+            PrimaryButton(title: "Open the bazaar", systemImage: "bag.fill") {
+                showShop = true
+            }
+            Text("Scrolls, energy, relic packs and essences for the game's own currencies, and a free offering every day. Also open from the wallet on the island.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(14)
+        .panelBackground()
+        .sheet(isPresented: $showShop) {
+            ShopView()
+                .environmentObject(store)
+        }
     }
 
     private var soundPanel: some View {

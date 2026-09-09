@@ -36,6 +36,21 @@ struct BattleView: View {
 
             if showLog { logOverlay }
 
+            if let banner = model.repeatBanner {
+                Text(banner)
+                    .font(Theme.title(16))
+                    .foregroundStyle(Theme.gold)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 10)
+                    .background(Capsule().fill(Theme.ink.opacity(0.8)))
+                    .transition(.opacity)
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
+                            withAnimation { model.repeatBanner = nil }
+                        }
+                    }
+            }
+
             if let summary {
                 BattleResultView(summary: summary) { dismiss() }
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
@@ -51,8 +66,12 @@ struct BattleView: View {
             guard newValue != nil else { return }
             // Let the last animation land before the result panel takes over.
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                withAnimation(.easeOut(duration: 0.35)) {
-                    summary = model.finish()
+                // On a repeat run this banks the loot and starts the next
+                // fight instead of returning a panel.
+                if let concluded = model.conclude() {
+                    withAnimation(.easeOut(duration: 0.35)) {
+                        summary = concluded
+                    }
                 }
             }
         }
@@ -107,6 +126,23 @@ struct BattleView: View {
                     .foregroundStyle(Theme.gold)
                     .frame(width: 40, height: 34)
                     .background(Capsule().fill(Theme.surface.opacity(0.85)))
+            }
+
+            if let session = model.repeatSession {
+                // Runs done of runs asked for; a tap stops after this one.
+                Button {
+                    model.stopRepeating()
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "repeat")
+                        Text("\(min(session.completed + 1, session.requested))/\(session.requested)")
+                    }
+                    .font(Theme.numeric(11).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+                    .padding(.horizontal, 10)
+                    .frame(height: 34)
+                    .background(Capsule().fill(Theme.surface.opacity(0.85)))
+                }
             }
 
             Button {

@@ -295,6 +295,45 @@ final class GameStore: ObservableObject {
         }
     }
 
+    /// Sells relics, taking any off their wearers first. Nil, and an error
+    /// shown, if one of them is locked.
+    @discardableResult
+    func sellRelics(_ relicIDs: [UUID]) -> Int? {
+        attempt { player in
+            try RelicService.sell(relicIDs: relicIDs, player: &player)
+        }
+    }
+
+    func reappraiseRelic(_ relicID: UUID) {
+        var rng = makeRandom()
+        attempt { player in
+            guard let index = player.relics.firstIndex(where: { $0.id == relicID }) else { return }
+            var relic = player.relics[index]
+            var wallet = player.wallet
+            try RelicService.reappraise(&relic, wallet: &wallet, rng: &rng)
+            player.relics[index] = relic
+            player.wallet = wallet
+        }
+    }
+
+    func toggleRelicLock(_ relicID: UUID) {
+        update { player in
+            guard let index = player.relics.firstIndex(where: { $0.id == relicID }) else { return }
+            player.relics[index].isLocked.toggle()
+        }
+    }
+
+    // MARK: - The bazaar
+
+    /// Buys an item, or claims the daily offering. Nil, and an error shown,
+    /// when it cannot be paid for or was already claimed today.
+    func buy(_ item: ShopService.Item) -> [ShopService.Grant]? {
+        var rng = makeRandom()
+        return attempt { player in
+            try ShopService.buy(item, player: &player, rng: &rng)
+        }
+    }
+
     // MARK: - Battle plumbing
 
     func startCampaignBattle(stage: Stage) -> BattleEngine? {
@@ -373,6 +412,16 @@ final class GameStore: ObservableObject {
             }
             player.wallet.drachma = max(player.wallet.drachma, 200_000)
             player.wallet.energy = max(player.wallet.energy, 40)
+            // A relic bag worth photographing: the inventory's sets, the
+            // efficiency dials and a few upgrades.
+            if player.relics.count < 12 {
+                var rng = SeededRandom(seed: 99)
+                for grade in [4, 5, 5, 6, 6, 6] {
+                    var relic = RelicService.generate(grade: grade, rng: &rng)
+                    for _ in 0..<(grade == 6 ? 9 : 3) { RelicService.upgradeOnce(&relic, rng: &rng) }
+                    player.relics.append(relic)
+                }
+            }
             player.wallet.add(.pantheonic, 10)
             for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {
                 player.essences[id, default: 0] += 12

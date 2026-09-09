@@ -17,6 +17,37 @@ struct IslandView: View {
 
     @State private var pulse = false
     @State private var shaking: String?
+    @State private var showShop = false
+
+    /// Where the team stands: open sand below the circle, the middle of the
+    /// island and the front beach, measured off the painting like the
+    /// landmarks' anchors.
+    static let stands: [CGPoint] = [
+        CGPoint(x: 0.43, y: 0.63), CGPoint(x: 0.50, y: 0.73),
+        CGPoint(x: 0.36, y: 0.80), CGPoint(x: 0.63, y: 0.84),
+    ]
+
+    /// The campaign team, made up to four from the strongest of the rest,
+    /// so the island is never empty and the team the player fights with is
+    /// the one standing about.
+    private var standingUnits: [ResolvedUnit] {
+        var units = store.team(store.player.campaignTeam)
+        for unit in store.resolvedUnits.sorted(by: { $0.power > $1.power }) where units.count < Self.stands.count {
+            if !units.contains(where: { $0.id == unit.id }) { units.append(unit) }
+        }
+        return Array(units.prefix(Self.stands.count))
+    }
+
+    /// The hour's light. The painting is a sunset, so the day is the painting
+    /// as it is; dawn is pale, dusk warmer, night blue and dark.
+    static func daylight(at date: Date = Date()) -> (overlay: Color, opacity: Double, lightHex: String) {
+        switch Calendar.current.component(.hour, from: date) {
+        case 5..<8: return (Color(hex: "#FFD9C0"), 0.12, "#FFE6D0")
+        case 8..<17: return (Color.clear, 0, "#FFF4E0")
+        case 17..<20: return (Color(hex: "#FF9A4A"), 0.14, "#FFC890")
+        default: return (Color(hex: "#24336A"), 0.45, "#9AB4FF")
+        }
+    }
 
     /// The painting's pixel size; the anchors are normalised against it. A
     /// 16:9 painting for a landscape phone, which shows its full width and
@@ -33,6 +64,19 @@ struct IslandView: View {
             let frame = Self.fill(Self.paintingSize, in: full)
 
             ZStack(alignment: .top) {
+                // The living layer sits over the painting and under the
+                // plaques, covering the whole screen like the painting does.
+                IslandSceneView(
+                    units: standingUnits,
+                    stands: Self.stands,
+                    paintingFrame: frame,
+                    viewSize: full,
+                    lightHex: Self.daylight().lightHex
+                )
+                .frame(width: full.width, height: full.height)
+                .position(x: full.width / 2 - insets.leading, y: full.height / 2 - insets.top)
+                .allowsHitTesting(false)
+
                 ForEach(IslandDatabase.landmarks) { landmark in
                     plaque(landmark)
                         .position(
@@ -53,6 +97,10 @@ struct IslandView: View {
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
                 pulse = true
             }
+        }
+        .sheet(isPresented: $showShop) {
+            ShopView()
+                .environmentObject(store)
         }
     }
 
@@ -79,6 +127,14 @@ struct IslandView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: full.width, height: full.height)
                 .clipped()
+                .overlay(
+                    // The hour's colour over the painting: nothing by day,
+                    // warm at dusk, blue at night.
+                    Rectangle()
+                        .fill(Self.daylight().overlay)
+                        .opacity(Self.daylight().opacity)
+                        .blendMode(.multiply)
+                )
                 .overlay(
                     // Dusk falls a little harder at the edges so the plaques
                     // and the header read against the painting.
@@ -123,7 +179,15 @@ struct IslandView: View {
                 }
             }
             Spacer()
-            WalletBar(wallet: player.wallet)
+            // The wallet is the way into the bazaar, as the genre has it.
+            Button {
+                Juice.haptic(.light)
+                AudioLibrary.shared.play(.uiTap)
+                showShop = true
+            } label: {
+                WalletBar(wallet: player.wallet)
+            }
+            .buttonStyle(.plain)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

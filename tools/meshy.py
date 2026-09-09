@@ -93,10 +93,35 @@ class Meshy:
 
     def call(self, method, path, body=None, attempts=6):
         delay = 5
-        for attempt in range(1, attempts + 1):
-            r = self.s.request(method, f"{API}{path}", json=body, timeout=60)
+        queue_waits = 0
+        attempt = 0
+        while attempt < attempts:
+            attempt += 1
+            try:
+                r = self.s.request(method, f"{API}{path}", json=body, timeout=60)
+            except requests.exceptions.RequestException as e:
+                # The proxy drops a connection now and then; a poll or a
+                # create is safe to repeat (a create that never answered
+                # never charged).
+                if attempt < attempts:
+                    print(f"  {type(e).__name__} - retrying in {delay}s", file=sys.stderr)
+                    time.sleep(delay)
+                    delay = min(delay * 2, 60)
+                    continue
+                raise
             if r.status_code < 300:
                 return r.json() if r.content else {}
+            # The plan caps the number of queued tasks. A wave of launches
+            # trips it, and the only cure is to wait for the queue to
+            # drain, so that particular 429 is waited out for up to two
+            # hours (and does not count against the retry budget).
+            if r.status_code == 429 and "NoMorePendingTasks" in r.text and queue_waits < 120:
+                queue_waits += 1
+                if queue_waits in (1, 10, 30, 60, 90):
+                    print(f"  Meshy queue is full - waiting for a slot ({queue_waits} min so far)", file=sys.stderr)
+                time.sleep(60)
+                attempt -= 1
+                continue
             # Rate limits and transient 5xx are worth waiting out. Anything
             # else is a real error and retrying it would only burn credits.
             if r.status_code in (429, 500, 502, 503, 504) and attempt < attempts:

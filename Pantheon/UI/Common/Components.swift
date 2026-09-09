@@ -137,7 +137,17 @@ struct WalletBar: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            resource(icon: "bolt.fill", value: "\(wallet.energy)/\(wallet.maxEnergy)", tint: Theme.info)
+            HStack(spacing: 5) {
+                resource(icon: "bolt.fill", value: "\(wallet.energy)/\(wallet.maxEnergy)", tint: Theme.info)
+                if wallet.energy < wallet.maxEnergy {
+                    // Minutes and seconds to the next point of energy.
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(countdown(at: context.date))
+                            .font(Theme.numeric(10))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+            }
             divider
             resource(icon: "sparkles", value: "\(wallet.divinity)", tint: Theme.gold)
             divider
@@ -174,6 +184,15 @@ struct WalletBar: View {
                 .font(Theme.numeric(12))
                 .foregroundStyle(Theme.textPrimary)
         }
+    }
+
+    /// Time to the next energy: the store restores one every five minutes
+    /// from `lastEnergyTick`, so the remainder of the current interval is it.
+    private func countdown(at now: Date) -> String {
+        let interval: TimeInterval = 5 * 60
+        let elapsed = max(0, now.timeIntervalSince(wallet.lastEnergyTick))
+        let remaining = interval - elapsed.truncatingRemainder(dividingBy: interval)
+        return String(format: "%d:%02d", Int(remaining) / 60, Int(remaining) % 60)
     }
 
     private func compact(_ value: Int) -> String {

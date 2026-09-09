@@ -1,0 +1,18 @@
+{
+  "asset": "enemy_sandstone_sentinel",
+  "created": "2026-09-09T00:15:47Z",
+  "prompt": "A sandstone sentinel: an animated Egyptian statue of a guardian warrior with a nemes headdress, cracked sandstone body with glowing blue cracks, a stone shield fused to its left forearm, a stone khopesh held against its right leg, standing in a relaxed A-pose facing the viewer, feet apart, arms lowered a little away from the body, stylised mobile game asset in the manner of Summoners War, chunky readable shapes, hand-painted textures with crisp highlights, clean silhouette, single object, no base scenery, no text",
+  "negative_prompt": "text, watermark, people, multiple objects, scene, ground plane, blurry, photo",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 9000,
+    "symmetry_mode": "on",
+    "height_meters": 2.6
+  },
+  "stages": {},
+  "history": []
+}

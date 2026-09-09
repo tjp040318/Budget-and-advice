@@ -117,6 +117,12 @@ final class UnitNode: SCNNode {
 
     required init?(coder: NSCoder) { fatalError("UnitNode is created in code") }
 
+    /// For the island: no health bar and no selection ring, just the figure.
+    func hideBattleDecorations() {
+        healthBarRoot.isHidden = true
+        selectionRing.isHidden = true
+    }
+
     // MARK: - Animation
 
     /// Plays a clip. Falls back to a procedural motion when the export has no

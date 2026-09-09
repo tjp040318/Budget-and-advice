@@ -274,6 +274,102 @@ SATYR = Blueprint("satyr_ember", "Satyr (Fire)", "ember", 3, hp=300, atk=22, dfn
 HARPY = Blueprint("harpy_ember", "Harpy (Fire)", "ember", 3, hp=270, atk=28, dfn=16, spd=112,
     skills=[("Talon Rake (Burn 25%)", 1.00, 2, 0, 0.0, 0.0, False), ("Screech Dive", 2.60, 1, 3, 0.0, 0.0, False)])
 
+
+# The third roster: Pantheon/Core/Data/UnitDatabase+Families.swift, one row per
+# family and one of eight kit shapes, mirrored here row for row. The sim sees
+# the fire variant (attack x1.05) and reads burn, stun and defence break off
+# the skill names; heals, shields, provokes and strips show up only as the
+# damage they do not do, so a healer's row is a floor, not a forecast.
+def kit_skills(kit, stars, hp, atk):
+    if kit == "striker":
+        s = [("Strike (Burn 30%)", 3.00, 1, 0, 0, 0, False), ("Two Blows (Def Break 40%)", 2.10, 2, 3, 0, 0, False),
+             ("Finisher", 2.70, 1, 5, 0, 0, True)]
+    elif kit == "duelist":
+        s = [("Two Cuts (Burn 30%)", 1.50, 2, 0, 0, 0, False), ("Piercing Blow", 4.60, 1, 4, 0.40, 0, False),
+             ("Sure Crit", 5.40, 1, 5, 0, 0, False)]
+    elif kit == "marksman":
+        s = [("Shot (Burn 30%)", 2.90, 1, 0, 0, 0, False), ("Spread", 1.70, 3, 3, 0, 0, False),
+             ("Volley (Stun 35%)", 2.40, 1, 5, 0, 0, True)]
+    elif kit == "bruiser":
+        s = [("Strike (Burn 30%)", 2.80, 1, 0, 0, 0, False), ("Roar", 1.50, 1, 4, 0, 0, True),
+             ("Body Blow", 0.28 * hp / atk, 1, 4, 0.30, 0, False)]
+    elif kit == "warden":
+        s = [("Strike (Burn 30%)", 2.70, 1, 0, 0, 0, False), ("Shield Wall", 0.0, 0, 4, 0, 0, False),
+             ("Counter Stance", 3.60, 1, 5, 0, 0, False)]
+    elif kit == "healer":
+        s = [("Strike (Burn 30%)", 2.50, 1, 0, 0, 0, False), ("Team Heal", 0.0, 0, 4, 0, 0, False),
+             ("Blessing", 0.0, 0, 5, 0, 0, False)]
+    elif kit == "oracle":
+        s = [("Strike (Burn 30%)", 2.60, 1, 0, 0, 0, False), ("Control (Stun 40%)", 1.60, 1, 4, 0, 0, True),
+             ("Surge", 0.0, 0, 5, 0, 0, False)]
+    else:  # trickster
+        s = [("Strike (Burn 40%)", 2.80, 1, 0, 0, 0, False), ("Strip", 3.40, 1, 3, 0, 0, False),
+             ("Break (Def Break 60%)", 2.00, 1, 5, 0, 0, True)]
+    return s[:2] if stars <= 3 else s
+
+FAMILY_ROWS = [  # key, name, stars, kit, hp, atk, def, spd — the row in the Swift table
+    ("horus", "Horus", 5, "duelist", 430, 39, 24, 108),
+    ("isis", "Isis", 5, "healer", 540, 25, 31, 106),
+    ("set", "Set", 4, "trickster", 470, 33, 23, 110),
+    ("bastet", "Bastet", 4, "striker", 455, 34, 22, 114),
+    ("sobek", "Sobek", 4, "bruiser", 600, 25, 31, 96),
+    ("hathor", "Hathor", 4, "oracle", 510, 24, 29, 108),
+    ("scarab_knight", "Scarab Knight", 3, "warden", 350, 21, 27, 95),
+    ("mummy", "Mummy", 3, "trickster", 320, 23, 21, 92),
+    ("jackal_warrior", "Jackal Warrior", 3, "striker", 300, 26, 19, 104),
+    ("athena", "Athena", 5, "warden", 560, 30, 34, 104),
+    ("poseidon", "Poseidon", 5, "bruiser", 580, 31, 30, 100),
+    ("hades", "Hades", 5, "trickster", 500, 34, 28, 103),
+    ("apollo", "Apollo", 4, "healer", 490, 28, 27, 110),
+    ("artemis", "Artemis", 4, "marksman", 450, 33, 22, 115),
+    ("hermes", "Hermes", 4, "oracle", 470, 29, 25, 122),
+    ("minotaur", "Minotaur", 3, "bruiser", 380, 25, 24, 90),
+    ("cyclops", "Cyclops", 3, "striker", 360, 28, 20, 88),
+    ("amazon", "Amazon", 3, "duelist", 310, 26, 20, 106),
+    ("medusa", "Medusa", 3, "oracle", 320, 24, 21, 100),
+    ("odin", "Odin", 5, "oracle", 520, 33, 28, 108),
+    ("thor", "Thor", 5, "striker", 470, 41, 26, 100),
+    ("freya", "Freya", 5, "healer", 530, 27, 30, 107),
+    ("loki", "Loki", 5, "trickster", 445, 37, 23, 112),
+    ("tyr", "Tyr", 4, "bruiser", 570, 26, 32, 97),
+    ("heimdall", "Heimdall", 4, "warden", 540, 27, 33, 102),
+    ("hel", "Hel", 4, "trickster", 500, 31, 27, 101),
+    ("skadi", "Skadi", 4, "marksman", 460, 32, 24, 112),
+    ("valkyrie", "Valkyrie", 3, "duelist", 310, 26, 21, 108),
+    ("draugr", "Draugr", 3, "warden", 360, 22, 26, 88),
+    ("berserker", "Berserker", 3, "striker", 320, 28, 17, 103),
+    ("frost_troll", "Frost Troll", 3, "bruiser", 400, 24, 25, 85),
+    ("dwarf_smith", "Dwarf Smith", 3, "oracle", 330, 21, 24, 94),
+]
+FAMILIES = {
+    key: Blueprint(f"{key}_ember", f"{name} (Fire)", "ember", stars, hp=hp, atk=atk * 1.05, dfn=dfn, spd=spd,
+                   skills=kit_skills(kit, stars, hp, atk * 1.05))
+    for key, name, stars, kit, hp, atk, dfn, spd in FAMILY_ROWS
+}
+
+# The Greek and Norse campaign enemies and bosses (UnitDatabase.swift, the
+# "Greek and Norse campaigns" block). Freeze is a stun to the sim.
+E_MINOTAUR  = Blueprint("enemy_minotaur",  "Minotaur",   "umbra",    3,  390, 27, 25,  92,
+    skills=[("Horn Toss", 1.60, 1, 0, 0, 0, False), ("Bull Rush", 3.00, 1, 3, 0, 0, False)])
+E_CYCLOPS   = Blueprint("enemy_cyclops",   "Cyclops",    "ember",    3,  370, 30, 20,  88,
+    skills=[("Club Smash", 1.70, 1, 0, 0, 0, False), ("Boulder Heave (Def Break 35%)", 2.40, 1, 3, 0, 0, True)])
+E_AMAZON    = Blueprint("enemy_amazon",    "Amazon",     "gale",     3,  310, 28, 20, 108,
+    skills=[("Labrys Cut", 1.70, 1, 0, 0, 0, False), ("Crescent Sweep (Def Break 40%)", 2.80, 1, 3, 0, 0, False)])
+E_MEDUSA    = Blueprint("enemy_medusa",    "Medusa",     "radiance", 3,  330, 26, 21, 100,
+    skills=[("Serpent Lash", 0.90, 2, 0, 0, 0, False), ("Petrifying Gaze (Stun 35%)", 2.00, 1, 4, 0, 0, False)])
+HYDRA       = Blueprint("boss_hydra",      "Hydra",      "tide",     5, 1050, 40, 30,  92,
+    skills=[("Three Bites", 0.80, 3, 0, 0, 0, False), ("Venom Breath (Def Break 50%)", 2.40, 1, 4, 0, 0, True)])
+E_DRAUGR    = Blueprint("enemy_draugr",    "Draugr",     "umbra",    3,  370, 23, 27,  88,
+    skills=[("Grave Axe", 1.60, 1, 0, 0, 0, False), ("Barrow Grip", 2.60, 1, 3, 0, 0, False)])
+E_BERSERKER = Blueprint("enemy_berserker", "Berserker",  "ember",    3,  330, 30, 17, 103,
+    skills=[("Twin Axes", 0.95, 2, 0, 0, 0, False), ("Bear Rage (Def Break 45%)", 3.20, 1, 3, 0, 0, False)])
+E_VALKYRIE  = Blueprint("enemy_valkyrie",  "Valkyrie",   "radiance", 3,  315, 27, 21, 108,
+    skills=[("Spear Thrust", 1.70, 1, 0, 0, 0, False), ("Chooser's Cut", 3.00, 1, 3, 0, 0, False)])
+E_TROLL     = Blueprint("enemy_frost_troll", "Frost Troll", "tide",  3,  430, 25, 26,  84,
+    skills=[("Ice Club", 1.60, 1, 0, 0, 0, False), ("Glacier Roar (Stun 30%)", 2.40, 1, 4, 0, 0, True)])
+JOTUNN      = Blueprint("boss_jotunn",     "Jotunn",     "gale",     5, 1150, 37, 34,  88,
+    skills=[("Ice Axe", 1.90, 1, 0, 0, 0, False), ("Avalanche (Stun 35%)", 2.60, 1, 4, 0, 0, True)])
+
 def mk(bp, level, stars, relic=1.0, boss=1.0):
     f = Fighter(bp, level, stars, relic)
     if boss != 1.0:
@@ -374,6 +470,104 @@ LADDERS = [
     ("3x A lv35 + Zeus",   [(ANUBIS, 35, 4, 1.15)] * 3 + [(ZEUS, 35, 5, 1.15)]),
 ]
 
+# The generated chapters, mirroring StageDatabase.generatedChapter: level =
+# start + (i-1)*step, count = 4 on the boss stage else min(4, 2 + i/3), the
+# roster rotated by stage, the boss in the last slot at x1.4, power =
+# 2500 * scale * 1.18^(i-1).
+# Every mob fights at the chapter's grade (`stars`, None = its own) times a
+# chapter-wide `difficulty`; the boss keeps its own grade when higher and
+# stands at x1.4 on top. Levels stay in the range the player's own units use.
+CHAPTERS = [  # name, start level, step, stages, power scale, roster, boss, stars, difficulty
+    ("Duat 2 Gates of the West",      30, 3, 10,  1.0, [SHABTI, SERPOPARD, SCARAB, SENTINEL, AMMIT], AMMIT, None, 1.0),
+    ("Olympus 1 Gate of Olympus",     30, 2, 10,  2.2, [E_AMAZON, E_CYCLOPS, E_MINOTAUR, E_MEDUSA], E_CYCLOPS, 4, 1.0),
+    ("Olympus 2 Aegean Cliffs",       34, 2, 10,  3.2, [E_MEDUSA, E_AMAZON, E_MINOTAUR, E_CYCLOPS], E_MEDUSA, 4, 1.25),
+    ("Olympus 3 Marsh of Lerna",      38, 2, 10,  4.4, [E_MINOTAUR, E_MEDUSA, E_CYCLOPS, E_AMAZON], HYDRA, 4, 1.5),
+    ("Yggdrasil 1 Midgard Fjord",     40, 2, 10,  6.0, [E_DRAUGR, E_BERSERKER, E_VALKYRIE, E_TROLL], E_BERSERKER, 5, 1.2),
+    ("Yggdrasil 2 Roots of the Tree", 44, 2, 10,  8.0, [E_VALKYRIE, E_TROLL, E_DRAUGR, E_BERSERKER], E_TROLL, 5, 1.45),
+    ("Yggdrasil 3 Hall of Jotunheim", 48, 2, 10, 10.5, [E_TROLL, E_DRAUGR, E_BERSERKER, E_VALKYRIE], JOTUNN, 5, 1.7),
+]
+
+def generated_stage(chapter, index):
+    _, start, step, stages, scale, roster, boss, stars, difficulty = chapter
+    is_boss = index == stages
+    level = start + (index - 1) * step
+    n = 4 if is_boss else min(4, 2 + index // 3)
+    spec = []
+    for slot in range(n):
+        last = is_boss and slot == n - 1
+        bp = boss if last else roster[(index + slot) % len(roster)]
+        grade = max(stars or bp.stars, bp.stars) if last else (stars or bp.stars)
+        spec.append((bp, level, grade, difficulty * (1.4 if last else 1.0)))
+    return spec, int(2500 * scale * 1.18 ** (index - 1))
+
+CHAPTER_LADDERS = [
+    ("4x 4* lv35",          [(ANUBIS, 35, 4, 1.15)] * 4),
+    ("4x 5* lv40 +relics",  [(ANUBIS, 40, 5, 1.25)] * 4),
+    ("4x 6* lv55 max",      [(ANUBIS, 55, 6, 1.60)] * 4),
+    ("gods 6* lv60 max",    [(THOR := FAMILIES["thor"], 60, 6, 1.60), (SEKHMET, 60, 6, 1.60),
+                             (FAMILIES["athena"], 60, 6, 1.60), (FAMILIES["isis"], 60, 6, 1.60)]),
+]
+
+def report_chapters(trials=100):
+    print("\nCHAPTERS — generated stages 1, 5 and the boss, win rate over %d seeded battles" % trials)
+    print("target: each chapter opens where one ladder step clears it and closes where the next is needed\n")
+    print(f"{'stage':>36}{'lvl':>5}{'rec.pwr':>9}  " + "".join(f"{n:>22}" for n, _ in CHAPTER_LADDERS))
+    for ch in CHAPTERS:
+        for index in (1, 5, ch[3]):
+            spec, power = generated_stage(ch, index)
+            label = ch[0] + (" BOSS" if index == ch[3] else f" -{index}")
+            row = f"{label:>36}{spec[0][1]:>5}{power:>9}  "
+            for _, team in CHAPTER_LADDERS:
+                wr, med = winrate(team, spec, trials=trials)
+                row += f"{wr*100:>16.0f}% {med:>3.0f}t"
+            print(row)
+
+def report_families(trials=120):
+    """Every family of the third roster, fire variant, 5* lv30 with relics, one
+    on one against Anubis (a support) and Sekhmet (an attacker) at the same
+    grade and level. Attackers should beat Anubis and split with Sekhmet;
+    tanks and healers lose to Sekhmet slowly; nothing wins everything."""
+    print("\nFAMILIES — 1v1 at 5* lv30 +relics, %d seeded fights each" % trials)
+    print(f"  {'family':<16}{'*':>2}{'kit':>11}{'power':>8}{'vs Anubis':>11}{'vs Sekhmet':>12}")
+    for key, name, stars, kit, *_ in FAMILY_ROWS:
+        bp = FAMILIES[key]
+        wa = sum(1 for s in range(trials) if simulate([mk(bp, 30, 5, 1.25)], [mk(ANUBIS, 30, 5, 1.25)], seed=s)[0] == "a") / trials
+        ws = sum(1 for s in range(trials) if simulate([mk(bp, 30, 5, 1.25)], [mk(SEKHMET, 30, 5, 1.25)], seed=s)[0] == "a") / trials
+        print(f"  {name:<16}{stars:>2}{kit:>11}{mk(bp, 30, 5, 1.25).power():>8,}{wa*100:>10.0f}%{ws*100:>11.0f}%")
+
+# The Halls of Essence, mirroring DungeonDatabase.hall: five floors, three
+# mobs of the element's roster at the floor's grade plus the boss at x1.4,
+# level 20 + 8f, grade min(6, 3 + f), difficulty 0.75 + 0.10f.
+HALLS = [  # name, roster, boss
+    ("Hall of Embers",   [E_CYCLOPS, E_BERSERKER, SENTINEL], APEP),
+    ("Hall of Tides",    [E_TROLL, E_TROLL, E_AMAZON], HYDRA),
+    ("Hall of Gales",    [SERPOPARD, E_AMAZON, E_VALKYRIE], JOTUNN),
+    ("Hall of Radiance", [SCARAB, E_MEDUSA, E_VALKYRIE], E_VALKYRIE),
+    ("Hall of Shadows",  [E_DRAUGR, E_MINOTAUR, SHABTI], AMMIT),
+]
+
+def hall_floor(hall, floor):
+    _, roster, boss = hall
+    level = 20 + floor * 8
+    stars = min(6, 3 + floor)
+    difficulty = 0.75 + floor * 0.10
+    spec = [(roster[(floor + slot) % len(roster)], level, stars, difficulty) for slot in range(3)]
+    spec.append((boss, level, max(stars, boss.stars), difficulty * 1.4))
+    return spec
+
+def report_halls(trials=80):
+    print("\nHALLS OF ESSENCE — win rate per floor over %d seeded battles" % trials)
+    print("target: B1 for a levelled 4* team, B3 for 5*s with relics, B5 for a maxed 6* team\n")
+    print(f"{'floor':>22}{'lvl':>5}  " + "".join(f"{n:>22}" for n, _ in CHAPTER_LADDERS))
+    for hall in HALLS:
+        for floor in (1, 3, 5):
+            spec = hall_floor(hall, floor)
+            row = f"{hall[0] + f' B{floor}':>22}{spec[0][1]:>5}  "
+            for _, team in CHAPTER_LADDERS:
+                wr, med = winrate(team, spec, trials=trials)
+                row += f"{wr*100:>16.0f}% {med:>3.0f}t"
+            print(row)
+
 def report_campaign(trials=200):
     print("\nCAMPAIGN — win rate over %d seeded battles" % trials)
     print("target: the intended team sits at 60-85%; the one below it should struggle\n")
@@ -459,6 +653,10 @@ if __name__ == "__main__":
     if "--tune" in a: report_tune()
     elif "--curve" in a: report_curve()
     elif "--gacha" in a: report_gacha()
+    elif "--families" in a: report_families()
+    elif "--chapters" in a: report_chapters()
+    elif "--halls" in a: report_halls()
     else:
-        report_curve(); report_elements(); report_duel(); report_campaign(); report_gacha(); report_economy()
+        report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
+        report_gacha(); report_economy()
         print()

@@ -63,19 +63,141 @@ final class BattleViewModel: ObservableObject {
     let context: BattleContext
     let sceneController = BattleSceneController()
 
-    private let engine: BattleEngine
+    private var engine: BattleEngine
     private var pendingEvents: [BattleEvent] = []
     private unowned let store: GameStore
 
     // MARK: - Init
 
-    init(engine: BattleEngine, context: BattleContext, store: GameStore) {
+    init(engine: BattleEngine, context: BattleContext, store: GameStore, repeatCount: Int = 1) {
         self.engine = engine
         self.context = context
         self.store = store
         self.displayedCombatants = engine.combatants
         sceneController.delegate = self
         sceneController.speedMultiplier = speed
+        // A repeat run is on auto from the first turn; a property observer
+        // does not fire in an initialiser, so the engine is told directly.
+        if repeatCount > 1, case .campaign = context {
+            repeatSession = RepeatSession(requested: repeatCount)
+            autoBattle = true
+            engine.autoBattle = true
+        }
+    }
+
+    // MARK: - Auto-repeat
+
+    /// The same stage several times over on auto, the grind the genre is
+    /// built on: what was asked for, what is done, and what it all paid.
+    /// Campaign stages and hall floors only; the arena spends an attack per
+    /// fight and is fought by hand.
+    struct RepeatSession {
+        var requested: Int
+        var completed = 0
+        var wins = 0
+        var drachma = 0
+        var unitExperience = 0
+        var divinity = 0
+        var relics: [Relic] = []
+        var essences: [String: Int] = [:]
+        var scrolls: [String: Int] = [:]
+        var stoppedBecause: String?
+
+        var isFinished: Bool { completed >= requested || stoppedBecause != nil }
+    }
+
+    @Published private(set) var repeatSession: RepeatSession?
+    /// A line for the HUD between runs ("Run 3 of 10"); the view clears it.
+    @Published var repeatBanner: String?
+
+    /// Asks the session to end after the run in progress.
+    func stopRepeating() {
+        guard var session = repeatSession else { return }
+        session.requested = min(session.requested, session.completed + 1)
+        repeatSession = session
+    }
+
+    /// Called by the view once the outcome has landed. On a repeat run with
+    /// runs still to go, banks the rewards, starts the next fight and returns
+    /// nil; otherwise returns the summary the result panel shows.
+    func conclude() -> BattleSummary? {
+        guard let result = outcome else { return nil }
+        guard case .campaign(let stage) = context, var session = repeatSession else {
+            return finish()
+        }
+        let stageOutcome = store.finishCampaignBattle(stage: stage, result: result)
+        session.completed += 1
+        if result.outcome == .victory { session.wins += 1 }
+        session.drachma += stageOutcome.drachma
+        session.unitExperience += stageOutcome.unitExperience
+        session.divinity += stageOutcome.divinityEarned
+        session.relics += stageOutcome.relicsEarned
+        for (id, count) in stageOutcome.essencesEarned { session.essences[id, default: 0] += count }
+        for (id, count) in stageOutcome.scrollsEarned { session.scrolls[id, default: 0] += count }
+
+        if result.outcome != .victory {
+            session.stoppedBecause = "Stopped after a defeat."
+        } else if session.completed < session.requested, store.player.wallet.energy < stage.energyCost {
+            session.stoppedBecause = "Out of energy."
+        }
+        repeatSession = session
+        guard !session.isFinished else { return repeatSummary(session) }
+
+        guard let next = store.startCampaignBattle(stage: stage) else {
+            session.stoppedBecause = "The next run could not start."
+            repeatSession = session
+            return repeatSummary(session)
+        }
+        repeatBanner = "Run \(session.completed + 1) of \(session.requested)"
+        restart(with: next)
+        return nil
+    }
+
+    /// Swaps in a fresh engine for the same stage and plays it from the top;
+    /// the scene is rebuilt, the HUD reset, the log kept.
+    private func restart(with next: BattleEngine) {
+        engine = next
+        engine.autoBattle = true
+        autoBattle = true
+        outcome = nil
+        awaitingActor = nil
+        selectedSkillSlot = nil
+        highlightedTarget = nil
+        pendingEvents = []
+        log.append("— Again")
+        displayedCombatants = engine.combatants
+        hasBegun = false
+        begin()
+    }
+
+    private func repeatSummary(_ session: RepeatSession) -> BattleSummary {
+        var lines: [BattleSummary.Line] = [
+            .init(icon: "repeat", label: "Runs", value: "\(session.wins) won of \(session.completed)")
+        ]
+        if session.drachma > 0 {
+            lines.append(.init(icon: "circle.hexagongrid.fill", label: "Drachma", value: "+\(session.drachma)"))
+        }
+        if session.unitExperience > 0 {
+            lines.append(.init(icon: "arrow.up.circle.fill", label: "Unit EXP", value: "+\(session.unitExperience)"))
+        }
+        if session.divinity > 0 {
+            lines.append(.init(icon: "sparkles", label: "Divinity", value: "+\(session.divinity)"))
+        }
+        if !session.relics.isEmpty {
+            let byGrade = Dictionary(grouping: session.relics, by: \.grade)
+            let text = byGrade.keys.sorted(by: >).map { "\($0)★ ×\(byGrade[$0]?.count ?? 0)" }.joined(separator: ", ")
+            lines.append(.init(icon: "shield.lefthalf.filled", label: "Relics", value: text))
+        }
+        for (id, count) in session.essences.sorted(by: { $0.key < $1.key }) {
+            lines.append(.init(icon: "drop.triangle.fill", label: EssenceCatalog.name(for: id), value: "+\(count)"))
+        }
+        for (id, count) in session.scrolls.sorted(by: { $0.key < $1.key }) {
+            lines.append(.init(icon: "scroll.fill", label: ScrollType(rawValue: id)?.displayName ?? id, value: "+\(count)"))
+        }
+        if let why = session.stoppedBecause {
+            lines.append(.init(icon: "exclamationmark.triangle.fill", label: why, value: ""))
+        }
+        return BattleSummary(outcome: session.wins > 0 ? .victory : .defeat, lines: lines, stars: 0)
     }
 
     /// `onAppear` can fire more than once for the same view; starting the

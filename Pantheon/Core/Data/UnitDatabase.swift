@@ -17,13 +17,23 @@ enum UnitDatabase {
 
     // MARK: - Registry
 
-    static let all: [UnitBlueprint] = anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster + [
+    static let all: [UnitBlueprint] = anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster + thirdRoster + [
         shabti,
         serpopard,
         sunScarab,
         sandstoneSentinel,
         ammit,
-        apep
+        apep,
+        labyrinthMinotaur,
+        cyclopsShepherd,
+        amazonRaider,
+        medusaOfTheCape,
+        lernaeanHydra,
+        barrowDraugr,
+        berserkerChieftain,
+        valkyrieChooser,
+        frostTroll,
+        jotunnKing
     ]
 
     private static let index: [String: UnitBlueprint] = Dictionary(
@@ -37,7 +47,7 @@ enum UnitDatabase {
     /// Sekhmet and Zeus joined the pool the moment their five files were in the
     /// bundle, with no code change. The Shabti family is the 3★ tier: what a
     /// common roll gives, and what the Hall of Ka feeds to the gods.
-    static let summonPool: [String] = (anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster)
+    static let summonPool: [String] = (anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster + thirdRoster)
         .filter { $0.hasShippedArt }
         .map { $0.id }
 
@@ -96,7 +106,9 @@ enum UnitDatabase {
             specialName: "Answer the Call",
             specialMultiplier: 2.30,
             specialStatus: status,
-            auraHex: element.accentHex
+            auraHex: element.accentHex,
+            // Every Shabti wears the one shabti model, tinted by element.
+            assetName: "shabti"
         )
     }
 
@@ -1232,7 +1244,10 @@ enum UnitDatabase {
         specialUtilities: [UtilityEffect] = [],
         specialCooldown: Int = 3,
         pantheon: Pantheon = .egyptian,
-        auraHex: String
+        auraHex: String,
+        assetName: String? = nil,
+        portraitName: String? = nil,
+        height: Float? = nil
     ) -> UnitBlueprint {
         UnitBlueprint(
             id: id,
@@ -1285,12 +1300,137 @@ enum UnitDatabase {
             leaderSkill: nil,
             awakening: nil,
             model: ModelSpec(
-                assetName: id,
-                height: archetype == .primordial ? 3.6 : 1.9,
+                assetName: assetName ?? id,
+                height: height ?? (archetype == .primordial ? 3.6 : 1.9),
                 auraHex: auraHex,
-                portraitName: "portrait_\(id)"
+                portraitName: portraitName ?? "portrait_\(id)"
             ),
             lore: epithet
         )
     }
+
+    // MARK: - The Greek and Norse campaigns
+    //
+    // The creatures of Olympus and Yggdrasil fight in their chapters with the
+    // roster's own models and cards (`assetName`, `portraitName`) and a
+    // two-skill enemy kit of their own, so a summoned Minotaur and the one in
+    // the labyrinth look the same and play differently. They are enemies:
+    // not in the pool, never summoned. The two bosses have models of their
+    // own, unrigged, moved by the loader's procedural motion.
+
+    static let labyrinthMinotaur = enemy(
+        id: "enemy_minotaur", name: "Minotaur", epithet: "Beast of the Labyrinth",
+        element: .umbra, archetype: .monster, role: .defender, stars: 3,
+        hp: 390, atk: 27, def: 25, spd: 92,
+        basicName: "Horn Toss", basicMultiplier: 1.60,
+        specialName: "Bull Rush", specialMultiplier: 3.00,
+        specialStatus: StatusSpec(.speedDown, chance: 0.50, turns: 2, target: .singleEnemy),
+        pantheon: .greek, auraHex: "#B0502C",
+        assetName: "minotaur", portraitName: "portrait_minotaur_umbra", height: 2.4
+    )
+
+    static let cyclopsShepherd = enemy(
+        id: "enemy_cyclops", name: "Cyclops", epithet: "Shepherd of the Isle",
+        element: .ember, archetype: .monster, role: .attacker, stars: 3,
+        hp: 370, atk: 30, def: 20, spd: 88,
+        basicName: "Club Smash", basicMultiplier: 1.70,
+        specialName: "Boulder Heave", specialMultiplier: 2.40, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.35, turns: 2, target: .allEnemies),
+        pantheon: .greek, auraHex: "#E07A3C",
+        assetName: "cyclops", portraitName: "portrait_cyclops_ember", height: 2.6
+    )
+
+    static let amazonRaider = enemy(
+        id: "enemy_amazon", name: "Amazon", epithet: "Raider of the Steppe",
+        element: .gale, archetype: .hero, role: .attacker, stars: 3,
+        hp: 310, atk: 28, def: 20, spd: 108,
+        basicName: "Labrys Cut", basicMultiplier: 1.70,
+        specialName: "Crescent Sweep", specialMultiplier: 2.80,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.40, turns: 2, target: .singleEnemy),
+        pantheon: .greek, auraHex: "#A8E0B8",
+        assetName: "amazon", portraitName: "portrait_amazon_gale"
+    )
+
+    static let medusaOfTheCape = enemy(
+        id: "enemy_medusa", name: "Medusa", epithet: "Gaze of the Cape",
+        element: .radiance, archetype: .monster, role: .support, stars: 3,
+        hp: 330, atk: 26, def: 21, spd: 100,
+        basicName: "Serpent Lash", basicMultiplier: 0.90, basicHits: 2,
+        specialName: "Petrifying Gaze", specialMultiplier: 2.00,
+        specialStatus: StatusSpec(.stun, chance: 0.35, turns: 1, target: .singleEnemy),
+        specialCooldown: 4,
+        pantheon: .greek, auraHex: "#F0E0A0",
+        assetName: "medusa", portraitName: "portrait_medusa_radiance"
+    )
+
+    /// The boss of the Marsh of Lerna: three bites a turn and a breath that
+    /// softens the whole line.
+    static let lernaeanHydra = enemy(
+        id: "boss_hydra", name: "Lernaean Hydra", epithet: "Nine Heads of the Marsh",
+        element: .tide, archetype: .primordial, role: .attacker, stars: 5,
+        hp: 1050, atk: 40, def: 30, spd: 92,
+        basicName: "Three Bites", basicMultiplier: 0.80, basicHits: 3,
+        specialName: "Venom Breath", specialMultiplier: 2.40, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.50, turns: 2, target: .allEnemies),
+        specialCooldown: 4,
+        pantheon: .greek, auraHex: "#5EC8A0", height: 4.2
+    )
+
+    static let barrowDraugr = enemy(
+        id: "enemy_draugr", name: "Draugr", epithet: "Guard of the Barrow",
+        element: .umbra, archetype: .spirit, role: .defender, stars: 3,
+        hp: 370, atk: 23, def: 27, spd: 88,
+        basicName: "Grave Axe", basicMultiplier: 1.60,
+        specialName: "Barrow Grip", specialMultiplier: 2.60,
+        specialStatus: StatusSpec(.speedDown, chance: 0.50, turns: 2, target: .singleEnemy),
+        pantheon: .norse, auraHex: "#6C8AA0",
+        assetName: "draugr", portraitName: "portrait_draugr_umbra"
+    )
+
+    static let berserkerChieftain = enemy(
+        id: "enemy_berserker", name: "Berserker", epithet: "Chieftain of the Bear-Shirts",
+        element: .ember, archetype: .hero, role: .attacker, stars: 3,
+        hp: 330, atk: 30, def: 17, spd: 103,
+        basicName: "Twin Axes", basicMultiplier: 0.95, basicHits: 2,
+        specialName: "Bear Rage", specialMultiplier: 3.20,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.45, turns: 2, target: .singleEnemy),
+        pantheon: .norse, auraHex: "#E06040",
+        assetName: "berserker", portraitName: "portrait_berserker_ember", height: 2.0
+    )
+
+    static let valkyrieChooser = enemy(
+        id: "enemy_valkyrie", name: "Valkyrie", epithet: "Chooser of the Slain",
+        element: .radiance, archetype: .spirit, role: .attacker, stars: 3,
+        hp: 315, atk: 27, def: 21, spd: 108,
+        basicName: "Spear Thrust", basicMultiplier: 1.70,
+        specialName: "Chooser's Cut", specialMultiplier: 3.00,
+        specialStatus: StatusSpec(.attackDown, chance: 0.45, turns: 2, target: .singleEnemy),
+        pantheon: .norse, auraHex: "#F0F0FF",
+        assetName: "valkyrie", portraitName: "portrait_valkyrie_radiance"
+    )
+
+    static let frostTroll = enemy(
+        id: "enemy_frost_troll", name: "Frost Troll", epithet: "Thing Under the Glacier",
+        element: .tide, archetype: .monster, role: .defender, stars: 3,
+        hp: 430, atk: 25, def: 26, spd: 84,
+        basicName: "Ice Club", basicMultiplier: 1.60,
+        specialName: "Glacier Roar", specialMultiplier: 2.40, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.freeze, chance: 0.30, turns: 1, target: .allEnemies),
+        specialCooldown: 4,
+        pantheon: .norse, auraHex: "#A0E0FF",
+        assetName: "frost_troll", portraitName: "portrait_frost_troll_tide", height: 2.5
+    )
+
+    /// The boss of the Hall of Jötunheim: slow, enormous, and his avalanche
+    /// can freeze the line.
+    static let jotunnKing = enemy(
+        id: "boss_jotunn", name: "Jötunn", epithet: "King Under the Ice",
+        element: .gale, archetype: .primordial, role: .defender, stars: 5,
+        hp: 1150, atk: 37, def: 34, spd: 88,
+        basicName: "Ice Axe", basicMultiplier: 1.90,
+        specialName: "Avalanche", specialMultiplier: 2.60, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.freeze, chance: 0.35, turns: 1, target: .allEnemies),
+        specialCooldown: 4,
+        pantheon: .norse, auraHex: "#9CD8FF", height: 4.5
+    )
 }

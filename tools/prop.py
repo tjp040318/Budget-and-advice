@@ -32,6 +32,7 @@ def main():
     ap.add_argument("--texture", type=int, default=1024)
     ap.add_argument("--yaw", type=float, default=0, help="degrees about Y after canonicalising")
     ap.add_argument("--source", help="a .glb to read instead of Art/Models/<asset>_refine.glb")
+    ap.add_argument("--as", dest="ship_as", help="bundle name to ship under, e.g. serpopard for enemy_serpopard")
     a = ap.parse_args()
 
     src = Path(a.source) if a.source else None
@@ -44,7 +45,8 @@ def main():
     if src is None or not src.exists():
         sys.exit(f"no export for {a.asset} in {ART.relative_to(REPO)} - `python3 tools/meshy.py download {a.asset} --include-unrigged`")
 
-    print(f"{a.asset}: {src.relative_to(REPO) if src.is_relative_to(REPO) else src}  ->  {BUNDLE.relative_to(REPO)}/{a.asset}.usdz   {a.height} m")
+    name = a.ship_as or a.asset
+    print(f"{a.asset}: {src.relative_to(REPO) if src.is_relative_to(REPO) else src}  ->  {BUNDLE.relative_to(REPO)}/{name}.usdz   {a.height} m")
     char = character.read(src)
     character.describe(char)
     print("  canonical:")
@@ -55,10 +57,10 @@ def main():
         character.apply_similarity(char, rot, 1.0, np.zeros(3))
         print(f"    turned {a.yaw:+.0f}° about Y")
     char.anim = None
-    char.name = a.asset
+    char.name = name
     character.decimate(char, a.tris, a.texture)
     BUNDLE.mkdir(parents=True, exist_ok=True)
-    out = BUNDLE / f"{a.asset}.usdz"
+    out = BUNDLE / f"{name}.usdz"
     size = character.write_usdz(char, out)
     print(f"  -> {out.relative_to(REPO)}   {char.tris:,} tris  {size / 1048576:.2f} MB")
     facts = character.verify(out, expect_height=a.height)

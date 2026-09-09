@@ -7,6 +7,7 @@ struct UnitDetailView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
     @State private var tab: Tab = .overview
+    @State private var pickingSlot: SlotPick?
     @State private var showFodderPicker = false
     @State private var fodderPurpose: FodderPurpose = .levelUp
 
@@ -344,15 +345,39 @@ struct UnitDetailView: View {
 
     // MARK: - Relics
 
+    /// A slot number that can drive a sheet.
+    struct SlotPick: Identifiable {
+        let id: Int
+    }
+
     private func relics(_ unit: ResolvedUnit) -> some View {
         VStack(spacing: 12) {
             PrimaryButton(title: "Auto-equip best available", systemImage: "wand.and.stars", tint: Theme.info) {
                 store.autoEquip(unitID)
             }
 
+            // The sets in play, the way the genre shows them on the sheet.
+            if !unit.activeRelicSets.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(unit.activeRelicSets) { entry in
+                        Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
+                            .font(Theme.body(11).weight(.semibold))
+                            .padding(.horizontal, 9)
+                            .padding(.vertical, 5)
+                            .background(Capsule().fill(Theme.surfaceHigh))
+                            .foregroundStyle(Theme.gold)
+                    }
+                    Spacer()
+                }
+            }
+
             ForEach(1...6, id: \.self) { slot in
                 relicSlot(slot: slot, unit: unit)
             }
+        }
+        .sheet(item: $pickingSlot) { pick in
+            RelicPickerView(unitID: unitID, slot: pick.id)
+                .environmentObject(store)
         }
     }
 
@@ -401,12 +426,21 @@ struct UnitDetailView: View {
                     Button("Unequip") { store.unequip(slot: slot, from: unitID) }
                         .font(Theme.body(11))
                         .foregroundStyle(Theme.textSecondary)
+                    Button("Change") { pickingSlot = SlotPick(id: slot) }
+                        .font(Theme.body(11).weight(.semibold))
+                        .foregroundStyle(Theme.info)
                     Spacer()
                 }
             } else {
-                Text("Empty")
-                    .font(Theme.body(12))
-                    .foregroundStyle(Theme.textSecondary)
+                HStack {
+                    Text("Empty")
+                        .font(Theme.body(12))
+                        .foregroundStyle(Theme.textSecondary)
+                    Spacer()
+                    Button("Choose") { pickingSlot = SlotPick(id: slot) }
+                        .font(Theme.body(11).weight(.semibold))
+                        .foregroundStyle(Theme.info)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

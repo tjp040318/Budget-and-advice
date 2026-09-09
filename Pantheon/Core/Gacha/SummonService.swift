@@ -72,7 +72,27 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
         pantheon: .greek
     )
 
-    static let all: [Banner] = [duatOpens] + (olympusStirs.pool.isEmpty ? [] : [olympusStirs]) + [standard]
+    /// The Norse banner: Yggdrasil only. Odin is featured in every element;
+    /// Thor, Freya and Loki share his grade, the Æsir and the giant's daughter
+    /// fill the one beneath, and the barrow-dead, the trolls, the valkyries
+    /// and the dwarves are its commons. Offered once a Norse unit has cards.
+    static let ravensGather = Banner(
+        id: "ravens_gather",
+        title: "The Ravens Gather",
+        subtitle: "Two ravens leave the tree at dawn. Yggdrasil answers the circle — Odin first, in every element.",
+        scroll: .pantheonic,
+        pool: pool(of: .norse),
+        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("odin_") },
+        legendaryPity: 90,
+        rarePity: 10,
+        artName: "banner_ravens_gather",
+        pantheon: .norse
+    )
+
+    static let all: [Banner] = [duatOpens]
+        + (olympusStirs.pool.isEmpty ? [] : [olympusStirs])
+        + (ravensGather.pool.isEmpty ? [] : [ravensGather])
+        + [standard]
 }
 
 /// The outcome of a single summon.

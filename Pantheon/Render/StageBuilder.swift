@@ -61,6 +61,8 @@ enum StageBuilder {
         "prop_brazier": 1.4, "prop_sphinx": 2.2, "prop_doric_column": 4.6,
         "prop_broken_column": 2.2, "prop_zeus_statue": 5.0, "prop_tripod_brazier": 1.3,
         "prop_temple_ruin": 6.0,
+        "prop_rune_stone": 3.2, "prop_longship_prow": 3.6, "prop_world_tree_root": 5.0,
+        "prop_norse_brazier": 1.3, "prop_hall_pillar": 4.8,
     ]
 
     /// A generator's idea of the front is not always the game's (+Z, toward
@@ -100,7 +102,78 @@ enum StageBuilder {
             SCNVector3(-6.2, 0, -4.4), SCNVector3(6.2, 0, -4.4),
             SCNVector3(-3.8, 0, -5.6), SCNVector3(3.8, 0, -5.6),
         ]
+        // The Greek set on the same marks: the Zeus statues where the colossi
+        // stood, Doric columns for the lotus ones and at the obelisks' marks,
+        // the temple ruin closing the back, broken columns in the wings and
+        // tripod braziers at the corners.
+        let statues = [
+            Placement(asset: "prop_zeus_statue", position: SCNVector3(-5.3, 0, -6.3), scale: 0.9, standIn: .block),
+            Placement(asset: "prop_zeus_statue", position: SCNVector3(5.3, 0, -6.3), scale: 0.9, standIn: .block),
+        ]
+        let doric = [
+            Placement(asset: "prop_doric_column", position: SCNVector3(-2.4, 0, -7.0)),
+            Placement(asset: "prop_doric_column", position: SCNVector3(2.4, 0, -7.0)),
+            Placement(asset: "prop_doric_column", position: SCNVector3(-6.9, 0, -2.4)),
+            Placement(asset: "prop_doric_column", position: SCNVector3(6.9, 0, -2.4)),
+        ]
+        let ruin = [
+            Placement(asset: "prop_temple_ruin", position: SCNVector3(0, 0, -7.6), scale: 0.8, standIn: .block),
+        ]
+        let broken = [
+            Placement(asset: "prop_broken_column", position: SCNVector3(-6.0, 0, -0.4), standIn: .block),
+            Placement(asset: "prop_broken_column", position: SCNVector3(6.0, 0, -0.4), standIn: .block),
+        ]
+        // The Norse set: rune stones at the sides, a longship prow and the
+        // world tree's roots at the back corners, hall pillars closing the
+        // back, braziers on dragon-headed posts.
+        let runeStones = [
+            Placement(asset: "prop_rune_stone", position: SCNVector3(-6.9, 0, -2.4), standIn: .obelisk),
+            Placement(asset: "prop_rune_stone", position: SCNVector3(6.9, 0, -2.4), standIn: .obelisk),
+        ]
+        let prow = [
+            Placement(asset: "prop_longship_prow", position: SCNVector3(-5.3, 0, -6.3), yaw: 30, standIn: .block),
+        ]
+        let roots = [
+            Placement(asset: "prop_world_tree_root", position: SCNVector3(-5.0, 0, -6.6), scale: 0.9, standIn: .block),
+            Placement(asset: "prop_world_tree_root", position: SCNVector3(5.0, 0, -6.6), yaw: 180, scale: 0.9, standIn: .block),
+        ]
+        let pillars = [
+            Placement(asset: "prop_hall_pillar", position: SCNVector3(-2.4, 0, -7.0)),
+            Placement(asset: "prop_hall_pillar", position: SCNVector3(2.4, 0, -7.0)),
+            Placement(asset: "prop_hall_pillar", position: SCNVector3(-5.6, 0, -5.2)),
+            Placement(asset: "prop_hall_pillar", position: SCNVector3(5.6, 0, -5.2)),
+        ]
         switch environment {
+        case .olympusGate:
+            return Recipe(floor: "floor_marble", floorRepeats: 5, floorTint: "#C8C0B4", rock: "rock_cliff",
+                          backdrop: "olympus_gate_bg", props: statues + doric + ruin,
+                          braziers: braziers, brazierAsset: "prop_tripod_brazier", flameHex: "#FFC870",
+                          mistHex: "#E0E8F8", mistCount: 7, dustHex: "#FFF0C0")
+        case .aegeanCliffs:
+            return Recipe(floor: "floor_marble", floorRepeats: 5, floorTint: "#B8B4A8", rock: "rock_cliff",
+                          backdrop: "aegean_cliffs_bg", props: [doric[0], doric[1], statues[1]] + broken,
+                          braziers: [braziers[2], braziers[3]], brazierAsset: "prop_tripod_brazier", flameHex: "#FFD080",
+                          mistHex: "#D8E8F0", mistCount: 8, dustHex: "#F0F8FF")
+        case .lernaMarsh:
+            return Recipe(floor: "floor_moss", floorRepeats: 5, floorTint: "#8A9A74", rock: "rock_cliff",
+                          backdrop: "lerna_marsh_bg", props: broken + [doric[2], doric[3]],
+                          braziers: [braziers[0], braziers[1]], brazierAsset: "prop_tripod_brazier", flameHex: "#A0FF90",
+                          mistHex: "#A8C090", mistCount: 12, dustHex: "#C0E0A0")
+        case .midgardFjord:
+            return Recipe(floor: "floor_slate", floorRepeats: 5, floorTint: "#8A9AA8", rock: "rock_ice",
+                          backdrop: "midgard_fjord_bg", props: prow + runeStones + [pillars[1]],
+                          braziers: braziers, brazierAsset: "prop_norse_brazier", flameHex: "#FFB060",
+                          mistHex: "#C8D8E8", mistCount: 8, dustHex: "#E8F0FF")
+        case .yggdrasilRoots:
+            return Recipe(floor: "floor_slate", floorRepeats: 5, floorTint: "#6E8A6A", rock: "rock_cliff",
+                          backdrop: "yggdrasil_roots_bg", props: roots + runeStones,
+                          braziers: [braziers[2], braziers[3]], brazierAsset: "prop_norse_brazier", flameHex: "#90FFB0",
+                          mistHex: "#B0D0A0", mistCount: 9, dustHex: "#C8FFC0")
+        case .jotunheimHall:
+            return Recipe(floor: "floor_slate", floorRepeats: 5, floorTint: "#9AB0C8", rock: "rock_ice",
+                          backdrop: "jotunheim_hall_bg", props: pillars + runeStones,
+                          braziers: braziers, brazierAsset: "prop_norse_brazier", flameHex: "#80C0FF",
+                          mistHex: "#D0E4FF", mistCount: 6, dustHex: "#E0F0FF")
         case .duatGate:
             return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#9C8468", rock: "rock_cliff",
                           backdrop: "duat_gate_bg", props: colossi + obelisks + columns + sphinxes,

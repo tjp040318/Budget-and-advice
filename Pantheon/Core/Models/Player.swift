@@ -74,6 +74,10 @@ struct Player: Codable, Equatable, Sendable {
     var createdAt: Date = Date()
     var lastSeenAt: Date = Date()
 
+    /// When the bazaar's daily offering was last claimed. Optional so a save
+    /// written before the shop existed still decodes; a missing key is nil.
+    var lastDailyPackClaim: Date? = nil
+
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }
 

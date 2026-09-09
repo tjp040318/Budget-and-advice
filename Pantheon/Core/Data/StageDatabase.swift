@@ -71,16 +71,111 @@ enum StageDatabase {
             environment: .hallOfTwoTruths,
             roster: ["shabti", "serpopard", "sun_scarab", "sandstone_sentinel", "ammit"],
             bossID: "ammit"
+        ),
+        // Greece: three chapters up the mountain, along the coast and into
+        // the marsh, each with its own creatures and a boss at the end.
+        generatedChapter(
+            id: "olympus_1",
+            pantheon: .greek,
+            name: "The Gate of Olympus",
+            summary: "The mountain's gate stands open and unguarded. What came down the steps was not sent by the gods.",
+            startingLevel: 30,
+            stageCount: 10,
+            environment: .olympusGate,
+            roster: ["enemy_amazon", "enemy_cyclops", "enemy_minotaur", "enemy_medusa"],
+            bossID: "enemy_cyclops",
+            levelStep: 2,
+            powerScale: 2.2,
+            enemyStars: 4,
+            difficulty: 1.0
+        ),
+        generatedChapter(
+            id: "olympus_2",
+            pantheon: .greek,
+            name: "The Aegean Cliffs",
+            summary: "Every ship that rounds the cape is found on the rocks by morning, and the crews are not.",
+            startingLevel: 34,
+            stageCount: 10,
+            environment: .aegeanCliffs,
+            roster: ["enemy_medusa", "enemy_amazon", "enemy_minotaur", "enemy_cyclops"],
+            bossID: "enemy_medusa",
+            levelStep: 2,
+            powerScale: 3.2,
+            enemyStars: 4,
+            difficulty: 1.25
+        ),
+        generatedChapter(
+            id: "olympus_3",
+            pantheon: .greek,
+            name: "The Marsh of Lerna",
+            summary: "Heracles cut the heads off once. The marsh has had a long time to grow them back.",
+            startingLevel: 38,
+            stageCount: 10,
+            environment: .lernaMarsh,
+            roster: ["enemy_minotaur", "enemy_medusa", "enemy_cyclops", "enemy_amazon"],
+            bossID: "boss_hydra",
+            levelStep: 2,
+            powerScale: 4.4,
+            enemyStars: 4,
+            difficulty: 1.5
+        ),
+        // The Norse realms: the fjord road, the roots of the tree and the
+        // giants' hall.
+        generatedChapter(
+            id: "yggdrasil_1",
+            pantheon: .norse,
+            name: "The Midgard Fjord",
+            summary: "The longships have stopped coming home. Something on the fjord road is choosing the slain before the valkyries can.",
+            startingLevel: 40,
+            stageCount: 10,
+            environment: .midgardFjord,
+            roster: ["enemy_draugr", "enemy_berserker", "enemy_valkyrie", "enemy_frost_troll"],
+            bossID: "enemy_berserker",
+            levelStep: 2,
+            powerScale: 6.0,
+            enemyStars: 5,
+            difficulty: 1.2
+        ),
+        generatedChapter(
+            id: "yggdrasil_2",
+            pantheon: .norse,
+            name: "The Roots of Yggdrasil",
+            summary: "Below the tree, where the serpent gnaws, the barrow-dead are climbing toward the light.",
+            startingLevel: 44,
+            stageCount: 10,
+            environment: .yggdrasilRoots,
+            roster: ["enemy_valkyrie", "enemy_frost_troll", "enemy_draugr", "enemy_berserker"],
+            bossID: "enemy_frost_troll",
+            levelStep: 2,
+            powerScale: 8.0,
+            enemyStars: 5,
+            difficulty: 1.45
+        ),
+        generatedChapter(
+            id: "yggdrasil_3",
+            pantheon: .norse,
+            name: "The Hall of Jötunheim",
+            summary: "The giants have crowned a king under the ice, and he has sent for the hammer.",
+            startingLevel: 48,
+            stageCount: 10,
+            environment: .jotunheimHall,
+            roster: ["enemy_frost_troll", "enemy_draugr", "enemy_berserker", "enemy_valkyrie"],
+            bossID: "boss_jotunn",
+            levelStep: 2,
+            powerScale: 10.5,
+            enemyStars: 5,
+            difficulty: 1.7
         )
     ]
 
     static func chapter(_ id: String) -> Chapter? { chapters.first(where: { $0.id == id }) }
 
     static func stage(_ id: String) -> Stage? {
-        chapters.lazy.flatMap(\.stages).first(where: { $0.id == id })
+        allStages.first(where: { $0.id == id })
     }
 
-    static var allStages: [Stage] { chapters.flatMap(\.stages) }
+    /// Every fightable stage: the chapters' and the Halls of Essence's floors.
+    static var allStages: [Stage] { chapters.flatMap(\.stages) + DungeonDatabase.allFloors }
 
     // MARK: - Chapter 1, hand-authored
     //
@@ -228,13 +323,18 @@ enum StageDatabase {
         stageCount: Int,
         environment: BattleEnvironment,
         roster: [String],
-        bossID: String
+        bossID: String,
+        levelStep: Int = 3,
+        powerScale: Double = 1.0,
+        essence: String = "essence_magic_mid",
+        enemyStars: Int? = nil,
+        difficulty: Double = 1.0
     ) -> Chapter {
         var stages: [Stage] = []
         for index in 1...stageCount {
             let isBoss = index == stageCount
-            let level = startingLevel + (index - 1) * 3
-            let power = Int(Double(2_500) * pow(1.18, Double(index - 1)))
+            let level = startingLevel + (index - 1) * levelStep
+            let power = Int(Double(2_500) * powerScale * pow(1.18, Double(index - 1)))
 
             var enemies: [EnemySpawn] = []
             let count = isBoss ? 4 : min(4, 2 + index / 3)
@@ -244,12 +344,17 @@ enum StageDatabase {
                 let blueprintID = (isBoss && slot == count - 1)
                     ? bossID
                     : roster[(index + slot) % roster.count]
-                let stars = UnitDatabase.blueprint(blueprintID)?.naturalStars ?? 3
+                // Later chapters field the same creatures at a higher grade,
+                // the way the genre does, rather than at absurd levels; the
+                // boss keeps its own grade when that is higher.
+                let natural = UnitDatabase.blueprint(blueprintID)?.naturalStars ?? 3
+                let isTheBoss = isBoss && slot == count - 1
+                let stars = isTheBoss ? max(enemyStars ?? natural, natural) : (enemyStars ?? natural)
                 enemies.append(EnemySpawn(
                     blueprintID: blueprintID,
                     level: level,
                     stars: stars,
-                    statMultiplier: isBoss && slot == count - 1 ? 1.4 : 1.0
+                    statMultiplier: difficulty * (isTheBoss ? 1.4 : 1.0)
                 ))
             }
 
@@ -267,7 +372,7 @@ enum StageDatabase {
                     unitExperience: 380 + index * 70,
                     relicChance: isBoss ? 1.0 : 0.45,
                     relicGrade: isBoss ? 4 : 3,
-                    essenceChances: ["essence_magic_mid": isBoss ? 0.6 : 0.2],
+                    essenceChances: [essence: isBoss ? 0.6 : 0.2],
                     scrollChances: isBoss ? [ScrollType.mystical.rawValue: 0.6] : [:],
                     firstClearDivinity: isBoss ? 60 : 20
                 ),

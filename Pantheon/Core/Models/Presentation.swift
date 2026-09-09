@@ -159,6 +159,14 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
     case hallOfTwoTruths = "hall_of_two_truths"
     case serpentDeep = "serpent_deep"
     case arenaOfSouls = "arena_of_souls"
+    // Greece
+    case olympusGate = "olympus_gate"
+    case aegeanCliffs = "aegean_cliffs"
+    case lernaMarsh = "lerna_marsh"
+    // The Norse realms
+    case midgardFjord = "midgard_fjord"
+    case yggdrasilRoots = "yggdrasil_roots"
+    case jotunheimHall = "jotunheim_hall"
 
     var displayName: String {
         switch self {
@@ -167,6 +175,21 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .hallOfTwoTruths: return "Hall of Two Truths"
         case .serpentDeep: return "The Serpent Deep"
         case .arenaOfSouls: return "Arena of Souls"
+        case .olympusGate: return "The Gate of Olympus"
+        case .aegeanCliffs: return "The Aegean Cliffs"
+        case .lernaMarsh: return "The Marsh of Lerna"
+        case .midgardFjord: return "The Midgard Fjord"
+        case .yggdrasilRoots: return "The Roots of Yggdrasil"
+        case .jotunheimHall: return "The Hall of Jötunheim"
+        }
+    }
+
+    /// The pantheon whose stages these are, for the music and the island.
+    var pantheon: Pantheon {
+        switch self {
+        case .duatGate, .reedFields, .hallOfTwoTruths, .serpentDeep, .arenaOfSouls: return .egyptian
+        case .olympusGate, .aegeanCliffs, .lernaMarsh: return .greek
+        case .midgardFjord, .yggdrasilRoots, .jotunheimHall: return .norse
         }
     }
 
@@ -185,6 +208,12 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .hallOfTwoTruths: return "#FFF0CC"
         case .serpentDeep: return "#C08CFF"
         case .arenaOfSouls: return "#FFE3B0"
+        case .olympusGate: return "#FFF4D6"
+        case .aegeanCliffs: return "#FFEFD0"
+        case .lernaMarsh: return "#C8D8A0"
+        case .midgardFjord: return "#D8E4F0"
+        case .yggdrasilRoots: return "#B8E0B0"
+        case .jotunheimHall: return "#C8E0FF"
         }
     }
 
@@ -195,6 +224,12 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .hallOfTwoTruths: return "#5A4C33"
         case .serpentDeep: return "#2A1A38"
         case .arenaOfSouls: return "#6E5A3C"
+        case .olympusGate: return "#6A7A9A"
+        case .aegeanCliffs: return "#5A7A94"
+        case .lernaMarsh: return "#2E3E2C"
+        case .midgardFjord: return "#3A4858"
+        case .yggdrasilRoots: return "#243A2A"
+        case .jotunheimHall: return "#2C3A50"
         }
     }
 }

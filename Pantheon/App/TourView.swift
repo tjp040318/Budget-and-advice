@@ -35,6 +35,7 @@ struct TourView: View {
     private static let schedule: [(name: String, ticks: Int)] = [
         ("island", 2), ("collection", 2), ("detail", 2), ("training", 2),
         ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("arena_battle", 6), ("more", 2),
+        ("halls", 2), ("relics", 2), ("shop", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -115,6 +116,12 @@ struct TourView: View {
                 Color.black.ignoresSafeArea()
                     .onAppear { startArenaBattle() }
             }
+        case "halls":
+            CampaignView(mode: .halls)
+        case "relics":
+            RelicInventoryView()
+        case "shop":
+            ShopView()
         default:
             SettingsView()
         }
