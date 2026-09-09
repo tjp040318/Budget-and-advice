@@ -517,53 +517,253 @@ struct RelicDetailView: View {
 
 /// Picks a relic for one of a unit's slots: everything that fits the slot,
 /// best for the unit's role first, with who is wearing it now.
+/// Choosing a relic for one slot, the way the genre's rune screen does it:
+/// the candidates on the left, best fit for the role first, and on the right
+/// what the pick would do — every stat before and after, the sets it
+/// completes or breaks — before anything is equipped.
 struct RelicPickerView: View {
     let unitID: UUID
     let slot: Int
 
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
+    @State private var selectedID: UUID?
+    @State private var freeOnly = false
 
-    private var role: CombatRole { store.resolved(unitID)?.role ?? .attacker }
+    private var unit: ResolvedUnit? { store.resolved(unitID) }
+    private var role: CombatRole { unit?.role ?? .attacker }
+    private var current: Relic? { unit?.unit.equippedRelics[slot].flatMap { store.player.relic($0) } }
 
     private var candidates: [Relic] {
         let role = self.role
         return store.player.relics
-            .filter { $0.slot == slot && $0.equippedBy != unitID }
+            .filter { $0.slot == slot && $0.equippedBy != unitID && (!freeOnly || $0.equippedBy == nil) }
             .sorted { RelicService.score($0, for: role) > RelicService.score($1, for: role) }
+    }
+
+    /// The tapped relic, or the best fit until one is tapped.
+    private var selected: Relic? {
+        if let selectedID, let relic = candidates.first(where: { $0.id == selectedID }) { return relic }
+        return candidates.first
     }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 8) {
-                    if candidates.isEmpty {
-                        EmptyState(
-                            icon: "shield.slash",
-                            title: "Nothing fits slot \(slot)",
-                            message: "Relics for this slot drop from the campaign and the halls."
-                        )
-                    }
-                    ForEach(candidates) { relic in
-                        RelicRow(
-                            relic: relic,
-                            role: role,
-                            ownerName: relic.equippedBy.flatMap { store.resolved($0)?.name }
-                        ) {
-                            store.equip(relicID: relic.id, on: unitID)
-                            AudioLibrary.shared.play(.uiConfirm)
-                            dismiss()
-                        }
-                    }
-                }
-                .padding(12)
+            HStack(alignment: .top, spacing: 10) {
+                list
+                    .frame(maxWidth: .infinity)
+                comparison
+                    .frame(width: 300)
             }
-            .screen("Slot \(slot)")
+            .padding(10)
+            .screen("Slot \(slot) · \(unit?.name ?? "")")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
                 }
             }
         }
+    }
+
+    // MARK: - The candidates
+
+    private var list: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Text(candidates.isEmpty ? "Nothing for this slot" : "\(candidates.count) for slot \(slot) · best fit for a \(role.displayName.lowercased()) first")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                Spacer()
+                Button {
+                    freeOnly.toggle()
+                } label: {
+                    Text(freeOnly ? "Free only" : "All")
+                        .font(Theme.body(10).weight(.semibold))
+                        .foregroundStyle(freeOnly ? Theme.ink : Theme.textSecondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Capsule().fill(freeOnly ? Theme.gold : Theme.surface))
+                }
+            }
+            ScrollView {
+                VStack(spacing: 6) {
+                    if candidates.isEmpty {
+                        EmptyState(
+                            icon: "shield.slash",
+                            title: "Nothing fits slot \(slot)",
+                            message: "Relics for this slot drop from the campaign and the Labyrinth on the island."
+                        )
+                    }
+                    ForEach(candidates) { relic in
+                        RelicRow(
+                            relic: relic,
+                            role: role,
+                            ownerName: relic.equippedBy.flatMap { store.resolved($0)?.name },
+                            isSelected: selected?.id == relic.id
+                        ) {
+                            Juice.haptic(.light)
+                            selectedID = relic.id
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // MARK: - Before and after
+
+    private var comparison: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 8) {
+                SectionHeader(title: "Now", accessory: current.map { "\($0.set.displayName) +\($0.level)" } ?? "Empty")
+                if let current {
+                    relicSummary(current)
+                } else {
+                    Text("Nothing in slot \(slot).")
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                if let selected {
+                    SectionHeader(title: "If equipped", accessory: "\(selected.set.displayName) +\(selected.level)")
+                    relicSummary(selected)
+                    deltaTable(selected)
+                    PrimaryButton(
+                        title: selected.equippedBy == nil ? "Equip" : "Take and equip",
+                        systemImage: "checkmark.circle.fill"
+                    ) {
+                        store.equip(relicID: selected.id, on: unitID)
+                        AudioLibrary.shared.play(.uiConfirm)
+                        dismiss()
+                    }
+                }
+                if current != nil {
+                    Button {
+                        store.unequip(slot: slot, from: unitID)
+                        AudioLibrary.shared.play(.uiTap)
+                        dismiss()
+                    } label: {
+                        Text("Unequip what is there")
+                            .font(Theme.body(11).weight(.semibold))
+                            .foregroundStyle(Theme.danger)
+                            .frame(maxWidth: .infinity)
+                    }
+                }
+            }
+            .padding(10)
+            .panelBackground(radius: Theme.tightCorner)
+        }
+    }
+
+    private func relicSummary(_ relic: Relic) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                StarRow(stars: relic.grade, size: 8)
+                Image(systemName: relic.set.glyph)
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Theme.gold)
+                Text(relic.effectiveMainStat.displayText)
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+                Spacer()
+                if let owner = relic.equippedBy.flatMap({ store.resolved($0)?.name }), relic.equippedBy != unitID {
+                    Text("worn by \(owner)")
+                        .font(Theme.body(9))
+                        .foregroundStyle(Theme.info)
+                }
+            }
+            Text(relic.subStats.map(\.displayText).joined(separator: "  ·  "))
+                .font(Theme.body(9))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    /// The unit's sheet with `relic` in the slot instead of what is there.
+    private func resolvedWith(_ relic: Relic) -> ResolvedUnit? {
+        guard let unit else { return nil }
+        var equipped = unit.relics.filter { $0.slot != slot }
+        equipped.append(relic)
+        return ProgressionService.resolve(unit.unit, blueprint: unit.blueprint, equipped: equipped)
+    }
+
+    private func deltaTable(_ relic: Relic) -> some View {
+        let before = unit?.stats ?? Stats.zero
+        let after = resolvedWith(relic)?.stats ?? before
+        let rows: [(label: String, before: Double, after: Double, percent: Bool)] = [
+            ("HP", before.hp, after.hp, false),
+            ("ATK", before.atk, after.atk, false),
+            ("DEF", before.def, after.def, false),
+            ("SPD", before.spd, after.spd, false),
+            ("CRIT Rate", before.critRate, after.critRate, true),
+            ("CRIT DMG", before.critDamage, after.critDamage, true),
+            ("Accuracy", before.accuracy, after.accuracy, true),
+            ("Resistance", before.resistance, after.resistance, true),
+        ]
+        return VStack(spacing: 3) {
+            ForEach(rows.indices, id: \.self) { index in
+                let row = rows[index]
+                let delta = row.after - row.before
+                let changed = abs(delta) >= (row.percent ? 0.005 : 0.5)
+                HStack(spacing: 5) {
+                    Text(row.label)
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 64, alignment: .leading)
+                    Text(UnitDetailView.statText(row.before, percent: row.percent))
+                        .font(Theme.numeric(10))
+                        .foregroundStyle(Theme.textSecondary)
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 7, weight: .bold))
+                        .foregroundStyle(Theme.stroke)
+                    Text(UnitDetailView.statText(row.after, percent: row.percent))
+                        .font(Theme.numeric(11))
+                        .foregroundStyle(changed ? Theme.textPrimary : Theme.textSecondary)
+                    Spacer()
+                    if changed {
+                        Text((delta > 0 ? "+" : "−") + UnitDetailView.statText(abs(delta), percent: row.percent))
+                            .font(Theme.numeric(10))
+                            .foregroundStyle(delta > 0 ? Theme.success : Theme.danger)
+                    }
+                }
+            }
+            setsDelta(relic)
+        }
+    }
+
+    /// The sets the pick completes, and the ones it breaks.
+    private func setsDelta(_ relic: Relic) -> some View {
+        let before = unit?.activeRelicSets ?? []
+        let after = resolvedWith(relic)?.activeRelicSets ?? []
+        let gained = after.filter { entry in
+            !before.contains(where: { $0.set == entry.set && $0.completions >= entry.completions })
+        }
+        let lost = before.filter { entry in
+            !after.contains(where: { $0.set == entry.set && $0.completions >= entry.completions })
+        }
+        return HStack(spacing: 4) {
+            if gained.isEmpty && lost.isEmpty {
+                Text("Sets unchanged")
+                    .font(Theme.body(9))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(gained) { entry in
+                Text("+ \(entry.set.displayName)")
+                    .font(Theme.body(9).weight(.bold))
+                    .foregroundStyle(Theme.success)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Capsule().fill(Theme.success.opacity(0.15)))
+            }
+            ForEach(lost) { entry in
+                Text("− \(entry.set.displayName)")
+                    .font(Theme.body(9).weight(.bold))
+                    .foregroundStyle(Theme.danger)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(Capsule().fill(Theme.danger.opacity(0.15)))
+            }
+            Spacer()
+        }
+        .padding(.top, 2)
     }
 }

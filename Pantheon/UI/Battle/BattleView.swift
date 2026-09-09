@@ -121,6 +121,15 @@ struct BattleView: View {
                 .padding(.vertical, 7)
                 .background(Capsule().fill(Theme.surface.opacity(0.85)))
 
+            if model.waveCount > 1 {
+                Text("Wave \(model.waveIndex)/\(model.waveCount)")
+                    .font(Theme.numeric(11))
+                    .foregroundStyle(Theme.gold)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Theme.surface.opacity(0.85)))
+            }
+
             turnGauge
 
             Spacer()
@@ -468,8 +477,11 @@ struct SkillButton: View {
         .disabled(!isReady && onHold == nil)
     }
 
-    /// A glyph per skill shape, so the bar is readable without art.
-    private var glyph: String {
+    private var glyph: String { Self.glyph(for: skill) }
+
+    /// A glyph per skill shape, so the bar is readable without art. The
+    /// unit sheet's skill tiles use the same one.
+    static func glyph(for skill: Skill) -> String {
         if skill.utilities.contains(where: {
             if case .healTargetMaxHealth = $0 { return true }
             if case .healFromAttack = $0 { return true }

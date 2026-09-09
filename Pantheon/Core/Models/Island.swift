@@ -9,6 +9,8 @@ enum IslandDestination: String, CaseIterable, Sendable {
     case settings
     /// The Hall of Ka: power-up, evolution and awakening (`TrainingView`).
     case training
+    /// The Labyrinth: the relic dungeons and the Halls of Essence (`LabyrinthView`).
+    case labyrinth
 }
 
 /// A tappable place on the island.
@@ -72,6 +74,17 @@ enum IslandDatabase {
             unlockLevel: 1,
             upgradeLevels: [12, 30],
             accentHex: "#FF5B57"
+        ),
+        Landmark(
+            id: "labyrinth",
+            title: "Labyrinth",
+            subtitle: "Relic dungeons and the Halls of Essence",
+            systemImage: "shield.lefthalf.filled",
+            destination: .labyrinth,
+            anchor: CGPoint(x: 0.62, y: 0.42),
+            unlockLevel: 1,
+            upgradeLevels: [10, 25],
+            accentHex: "#C97BFF"
         ),
         Landmark(
             id: "hall",

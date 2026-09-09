@@ -47,6 +47,8 @@ final class BattleViewModel: ObservableObject {
     @Published private(set) var selectedSkillSlot: Int?
     @Published private(set) var isPlayingBack = false
     @Published private(set) var outcome: BattleResult?
+    /// The wave on the field, 1-based; a dungeon run has three.
+    @Published private(set) var waveIndex = 1
     @Published private(set) var log: [String] = []
     @Published var autoBattle = false {
         didSet {
@@ -65,6 +67,8 @@ final class BattleViewModel: ObservableObject {
 
     private var engine: BattleEngine
     private var pendingEvents: [BattleEvent] = []
+
+    var waveCount: Int { engine.waveCount }
     private unowned let store: GameStore
 
     // MARK: - Init
@@ -164,6 +168,7 @@ final class BattleViewModel: ObservableObject {
         selectedSkillSlot = nil
         highlightedTarget = nil
         pendingEvents = []
+        waveIndex = 1
         log.append("— Again")
         displayedCombatants = engine.combatants
         hasBegun = false
@@ -501,6 +506,11 @@ extension BattleViewModel: BattleSceneDelegate {
             mutate(actor) {
                 if $0.cooldowns.indices.contains(slot) { $0.cooldowns[slot] = turns }
             }
+        case .waveStarted(let wave, _, let opponents):
+            waveIndex = wave
+            for arrival in opponents where !displayedCombatants.contains(where: { $0.id == arrival.id }) {
+                displayedCombatants.append(arrival)
+            }
         default:
             break
         }
@@ -541,6 +551,8 @@ extension BattleViewModel: BattleSceneDelegate {
             line = "\(name(target)) is revived."
         case .defeated(let target):
             line = "\(name(target)) is defeated."
+        case .waveStarted(let wave, let count, _):
+            line = "Wave \(wave) of \(count) takes the field."
         case .battleEnded(let result):
             line = result.outcome == .victory ? "Victory." : (result.outcome == .defeat ? "Defeat." : "Draw.")
         default:

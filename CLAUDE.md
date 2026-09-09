@@ -70,8 +70,9 @@ environment can and cannot do. The short version:
   left and words right, and the island painting is 16:9.
 - Battle, summon, collection, arena, campaign and the Hall of Ka (training:
   power-up, skill-ups from duplicates, evolution, awakening) all work. So do
-  the **Halls of Essence** (Campaign → second segment: one hall per
-  element, five floors, repeatable; `DungeonDatabase`), **auto-repeat**
+  the **Labyrinth** (a building on the island, `LabyrinthView`: three
+  relic dungeons and the five Halls of Essence; `DungeonDatabase`;
+  a dungeon level is one battle of three waves), **auto-repeat**
   (the briefing asks for 1/5/10/20 runs; `BattleViewModel.conclude()`
   swaps engines and tots up the loot), the **relic inventory** (Collection
   → Relics: sell, lock, reappraise, efficiency; `RelicInventoryView`), the
@@ -115,12 +116,36 @@ environment can and cannot do. The short version:
   `ScrollType` and drawing from `SummonService.pool(where:)`. The summon
   screen has two chip rows, pantheons and scrolls, with counts. The
   bazaar sells every one (Unknown for drachma).
-- **The campaign is a map** (`CampaignMapView`): `WorldMapView` lists the
-  realms and their chapters and says which boss shuts a chapter;
-  `ChapterMapView` draws the stage's painting, a dotted road and a
-  medallion per stage (gold, pulsing ring, lock, a crown for the boss).
-  `world_map.png` shows above the realms once painted. The Halls stay a
-  list.
+- **The campaign opens on the map** (`CampaignView`): a strip of chapter
+  chips along the top and the chapter the player is in below
+  (`ChapterMapView`: the stage's painting, a dotted road and a medallion
+  per stage — gold, pulsing ring, lock, a crown for the boss), so the
+  island's gate is one tap from a stage. `WorldMapView` (the realms and
+  which boss shuts a chapter) is a sheet behind the Realms button;
+  `world_map.png` shows above the realms once painted.
+- **The Labyrinth** (`DungeonDatabase.labyrinths`, `LabyrinthView`,
+  `DungeonLevelsView`): the Vault of the Colossus, the Lair of the Hydra
+  and the Necropolis of the Devourer, ten levels each, every level one
+  battle of three waves (two of mobs, then the boss with two more) and a
+  relic of the dungeon's own six sets every run, 3★ on B1–3 up to 6★ on
+  B10; the Halls of Essence live in the same building. Waves are
+  `Stage.laterWaves`: `BattleEngine` brings the next one on when the
+  field is clear (`.waveStarted`; `BattleSceneController` removes the
+  fallen and walks the arrivals in from the back), the HUD shows "Wave
+  2/3", and `StageRewards.relicSets` restricts the drop. The curve is
+  `python3 tools/balance.py --labyrinths` (a run carries wounds and
+  cooldowns across waves): B1 for a 3★ team, B4 for 4★s, B7 for 5★s with
+  relics, B10 for maxed 6★s; the Colossus is the soft one.
+- **The unit sheet is one landscape screen** (`UnitDetailView`): the card,
+  level bar, power and the Power up / Evolve / Awaken buttons on the left,
+  the six relic slots in a ring around the element in the middle (slot 1
+  at the top, clockwise), the stats with their relic bonuses on the right,
+  the skills along the bottom with the selected one's words, cooldown,
+  estimated damage and skill-up dots; the lore is behind the book, the
+  awakening panel is `AwakeningSheet`, auto-equip is in the toolbar. A
+  slot opens `RelicPickerView`: candidates best-fit-first on the left,
+  and on the right the relic now, the relic picked, every stat before →
+  after with the delta, and the sets completed or broken, before Equip.
 - Two SwiftUI gotchas that cost a playtest: **`.clipped()` and
   `.clipShape` do not clip hit-testing**, so a painting scaled to fill a
   short frame swallows taps far above and below it — every decorative
@@ -182,8 +207,9 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour photographs an arena battle (step 8) as well as the
-  campaign one.
+  pass. The CI tour is eighteen screens: an arena battle (step 8) as
+  well as the campaign one, the Labyrinth, a dungeon's levels and the
+  relic picker.
 - Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
   drew nothing for loose bundle PNGs on device; never use it for one.
 - The gacha pool is gated on shipped art (`UnitBlueprint.hasShippedArt`, a

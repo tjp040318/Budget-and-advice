@@ -85,7 +85,8 @@ enum CampaignService {
             playerTeam: team,
             opponentTeam: StageDatabase.buildEnemies(for: stage),
             mode: .campaign,
-            seed: seed
+            seed: seed,
+            laterWaves: stage.laterWaves.map { StageDatabase.buildEnemies(spawns: $0) }
         )
     }
 
@@ -143,7 +144,10 @@ enum CampaignService {
 
         var relics: [Relic] = []
         if rewards.relicChance > 0, rng.chance(rewards.relicChance) {
-            let relic = RelicService.generate(grade: rewards.relicGrade, rng: &rng)
+            // A dungeon drops its own sets; anywhere else, any set.
+            var set: RelicSet?
+            if let sets = rewards.relicSets, !sets.isEmpty { set = rng.pickMutating(sets) }
+            let relic = RelicService.generate(grade: rewards.relicGrade, set: set, rng: &rng)
             relics.append(relic)
             player.relics.append(relic)
         }

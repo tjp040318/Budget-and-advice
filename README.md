@@ -129,9 +129,13 @@ first-clear rewards and gated progression; later chapters field their
 creatures at a higher grade on a measured curve. Any stage runs 1, 5, 10 or
 20 times on auto with one loot panel at the end.
 
-**The Halls of Essence.** One hall per element, five floors, a boss on every
-floor, repeatable every day; the element essences and the relics worth
-keeping come from here.
+**The Labyrinth.** A building on the island with three relic dungeons — the
+Vault of the Colossus, the Lair of the Hydra, the Necropolis of the Devourer —
+ten levels each, every level one battle of three waves that ends at the boss
+and pays a relic of the dungeon's own sets, 3★ at the top of the stairs and
+6★ at the bottom. The Halls of Essence are in the same building: one hall per
+element, five floors, a boss on every floor; the awakening essences come from
+here.
 
 **The bazaar.** Scrolls, energy, relic packs, essences and a laurel exchange
 for the game's own currencies, and a free offering every day. No real money.

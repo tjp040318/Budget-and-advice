@@ -324,6 +324,10 @@ struct IslandView: View {
             return "\(player.arena.attacksRemaining)"
         case .collection, .training:
             return "\(player.units.count)"
+        case .labyrinth:
+            // The deepest level open across the relic dungeons.
+            let deepest = DungeonDatabase.labyrinths.map { player.campaignProgress[$0.id] ?? 0 }.max() ?? 0
+            return deepest > 0 ? "B\(deepest)" : nil
         case .settings:
             return nil
         }
@@ -338,6 +342,7 @@ struct IslandView: View {
         case .arena: return player.arena.attacksRemaining > 0
         // Training glows when there is someone to feed and someone to feed to.
         case .training: return player.units.count > 1 && player.units.contains { !$0.isMaxLevel }
+        case .labyrinth: return player.wallet.energy >= 6
         case .collection, .settings: return false
         }
     }

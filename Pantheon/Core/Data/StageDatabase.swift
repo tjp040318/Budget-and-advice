@@ -19,6 +19,8 @@ struct StageRewards: Codable, Equatable, Sendable {
     /// Chance of a relic drop and the grade it rolls at.
     var relicChance: Double = 0
     var relicGrade: Int = 3
+    /// When set, a dropped relic is one of these sets: a dungeon's own.
+    var relicSets: [RelicSet]? = nil
     /// Essence id to chance of dropping.
     var essenceChances: [String: Double] = [:]
     /// Scroll drops by type and chance.
@@ -39,6 +41,9 @@ struct Stage: Identifiable, Codable, Equatable, Sendable {
     var rewards: StageRewards
     var environment: BattleEnvironment
     var isBoss: Bool = false
+    /// Waves after the first, for a dungeon run that is one battle of
+    /// several; empty for a stage that is one fight.
+    var laterWaves: [[EnemySpawn]] = []
 }
 
 struct Chapter: Identifiable, Codable, Equatable, Sendable {
@@ -175,7 +180,9 @@ enum StageDatabase {
     }
 
     /// Every fightable stage: the chapters' and the Halls of Essence's floors.
-    static var allStages: [Stage] { chapters.flatMap(\.stages) + DungeonDatabase.allFloors }
+    static var allStages: [Stage] {
+        chapters.flatMap(\.stages) + DungeonDatabase.allFloors + DungeonDatabase.allLevels
+    }
 
     // MARK: - Chapter 1, hand-authored
     //
@@ -391,7 +398,12 @@ enum StageDatabase {
 
     /// Builds fightable units for a stage's enemy list.
     static func buildEnemies(for stage: Stage) -> [ResolvedUnit] {
-        stage.enemies.compactMap { spawn in
+        buildEnemies(spawns: stage.enemies)
+    }
+
+    /// One wave's spawns as fighting units.
+    static func buildEnemies(spawns: [EnemySpawn]) -> [ResolvedUnit] {
+        spawns.compactMap { spawn in
             guard let blueprint = UnitDatabase.blueprint(spawn.blueprintID) else { return nil }
             var unit = Unit(blueprint: blueprint, level: spawn.level, stars: spawn.stars, awakened: spawn.awakened)
             unit.skillLevels = blueprint.skills.map { _ in max(1, spawn.level / 6) }

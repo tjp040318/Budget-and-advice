@@ -1,61 +1,88 @@
 import SwiftUI
 
-/// PvE: chapters, stages and the run-in to a battle.
+/// PvE: the campaign as a map. The tab opens straight onto the chapter the
+/// player is in — a strip of chapters along the top, the chapter's road and
+/// medallions below — so a stage is one tap from the island, the way the
+/// genre lays it out. The realms overview opens as a sheet for the story of
+/// what is shut and why. The Halls of Essence and the relic dungeons live in
+/// the Labyrinth on the island.
 struct CampaignView: View {
     @EnvironmentObject private var store: GameStore
     @State private var selectedStage: Stage?
     @State private var battle: BattleContext?
-    @State private var mode: Mode
-    @State private var path = NavigationPath()
+    /// The chapter on the map; nil until the player picks one, which means
+    /// "the chapter I am in".
+    @State private var chapterID: String?
+    @State private var showRealms = false
 
-    /// The two kinds of PvE: the story chapters, and the Halls of Essence
-    /// that are run over and over for essences and relics.
-    enum Mode: String, CaseIterable, Identifiable {
-        case chapters = "Chapters"
-        case halls = "Halls of Essence"
-        var id: String { rawValue }
+    /// Engines are built before presentation so that a failure (no energy, stage
+    /// locked) surfaces as an error rather than as an empty battle screen.
+    @State private var pendingEngines: [String: BattleEngine] = [:]
+    /// How many times the briefing asked the stage to be run on auto.
+    @State private var pendingRuns: [String: Int] = [:]
+
+    private var currentChapterID: String {
+        chapterID ?? Self.currentChapter(for: store.player).id
     }
 
-    init(mode: Mode = .chapters) {
-        _mode = State(initialValue: mode)
+    /// The chapter the player is in: the first with a stage open and not
+    /// yet cleared, else the last one that is open at all.
+    static func currentChapter(for player: Player) -> Chapter {
+        let chapters = StageDatabase.chapters
+        if let inProgress = chapters.first(where: { chapter in
+            chapter.stages.contains {
+                CampaignService.isUnlocked($0, player: player) && !CampaignService.isCleared($0, player: player)
+            }
+        }) {
+            return inProgress
+        }
+        return chapters.last(where: { chapter in
+            chapter.stages.first.map { CampaignService.isUnlocked($0, player: player) } ?? false
+        }) ?? chapters[0]
     }
 
     var body: some View {
-        NavigationStack(path: $path) {
-            ScrollView {
-                VStack(spacing: 12) {
-                    Picker("Mode", selection: $mode) {
-                        ForEach(Mode.allCases) { candidate in
-                            Text(candidate.rawValue).tag(candidate)
-                        }
+        NavigationStack {
+            VStack(spacing: 0) {
+                chapterStrip
+                ScrollView {
+                    ChapterMapView(chapterID: currentChapterID) { stage in
+                        selectedStage = stage
                     }
-                    .pickerStyle(.segmented)
-
-                    switch mode {
-                    case .chapters:
-                        // The realms and their chapters; a chapter opens as
-                        // a map of its stages.
-                        WorldMapView { chapter in
-                            path.append(chapter.id)
-                        }
-                    case .halls:
-                        ForEach(DungeonDatabase.halls) { hall in
-                            hallSection(hall)
-                        }
-                    }
-                }
-                .padding(12)
-            }
-            .screen(mode == .chapters ? "Campaign" : "Halls of Essence")
-            .navigationDestination(for: String.self) { chapterID in
-                ChapterMapView(chapterID: chapterID) { stage in
-                    selectedStage = stage
+                    .padding(12)
                 }
             }
+            .screen("Campaign")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button {
+                        showRealms = true
+                    } label: {
+                        Label("Realms", systemImage: "globe.europe.africa.fill")
+                            .font(Theme.body(12).weight(.semibold))
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     WalletBar(wallet: store.player.wallet)
                 }
+            }
+            .sheet(isPresented: $showRealms) {
+                NavigationStack {
+                    ScrollView {
+                        WorldMapView { chapter in
+                            chapterID = chapter.id
+                            showRealms = false
+                        }
+                        .padding(12)
+                    }
+                    .screen("The Realms")
+                    .toolbar {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Close") { showRealms = false }
+                        }
+                    }
+                }
+                .environmentObject(store)
             }
             .sheet(item: $selectedStage) { stage in
                 StageBriefingView(stage: stage) { runs in
@@ -68,6 +95,59 @@ struct CampaignView: View {
             }
         }
     }
+
+    // MARK: - The chapter strip
+
+    /// Every chapter as a chip in story order: gold where the player is,
+    /// a check where it is finished, a lock where its gate is still shut.
+    private var chapterStrip: some View {
+        let player = store.player
+        let current = currentChapterID
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(StageDatabase.chapters) { chapter in
+                    let cleared = player.campaignProgress[chapter.id] ?? 0
+                    let finished = cleared >= chapter.stages.count
+                    let unlocked = chapter.stages.first.map { CampaignService.isUnlocked($0, player: player) } ?? false
+                    let selected = chapter.id == current
+                    Button {
+                        guard unlocked else {
+                            Juice.notify(.warning)
+                            return
+                        }
+                        Juice.haptic(.light)
+                        withAnimation { chapterID = chapter.id }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: unlocked ? (finished ? "checkmark" : "map.fill") : "lock.fill")
+                                .font(.system(size: 9, weight: .bold))
+                            Text(chapter.name)
+                                .font(Theme.body(11).weight(.semibold))
+                                .lineLimit(1)
+                            Text("\(cleared)/\(chapter.stages.count)")
+                                .font(Theme.numeric(9))
+                        }
+                        .foregroundStyle(selected ? Theme.ink : (unlocked ? Theme.textPrimary : Theme.textSecondary))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(Capsule().fill(selected ? Theme.gold : Theme.surface.opacity(unlocked ? 1 : 0.5)))
+                        .overlay(
+                            Capsule().strokeBorder(
+                                selected ? Theme.gold : chapter.pantheon.color.opacity(unlocked ? 0.7 : 0.3),
+                                lineWidth: 1
+                            )
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+        }
+        .background(Theme.ink.opacity(0.6))
+    }
+
+    // MARK: - Fighting
 
     @ViewBuilder
     private func battleScreen(for context: BattleContext) -> some View {
@@ -84,160 +164,16 @@ struct CampaignView: View {
         }
     }
 
-    /// Engines are built before presentation so that a failure (no energy, stage
-    /// locked) surfaces as an error rather than as an empty battle screen.
-    @State private var pendingEngines: [String: BattleEngine] = [:]
-    /// How many times the briefing asked the stage to be run on auto.
-    @State private var pendingRuns: [String: Int] = [:]
-
     private func launch(_ stage: Stage, runs: Int) {
         guard let engine = store.startCampaignBattle(stage: stage) else { return }
         pendingEngines[stage.id] = engine
         pendingRuns[stage.id] = runs
         battle = .campaign(stage)
     }
-
-    // MARK: - Halls
-
-    /// A hall reads like a chapter — its painting, its name, its floors —
-    /// with the element it pays out in and a note that every clear pays.
-    private func hallSection(_ hall: DungeonDatabase.Hall) -> some View {
-        let cleared = store.player.campaignProgress[hall.id] ?? 0
-        let essence = EssenceCatalog.name(for: "essence_\(hall.element.rawValue)_mid")
-        return VStack(alignment: .leading, spacing: 10) {
-            if BundleImage.exists("\(hall.environment.sceneName)_bg") {
-                BundleImage(name: "\(hall.environment.sceneName)_bg")
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 88)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    .allowsHitTesting(false)
-                    .overlay(
-                        LinearGradient(colors: [.clear, Theme.surface.opacity(0.15), Theme.surface],
-                                       startPoint: .top, endPoint: .bottom)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
-                    .padding(.bottom, -4)
-            }
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        ElementBadge(element: hall.element, compact: true)
-                        Text("HALL OF ESSENCE")
-                            .font(Theme.body(10).weight(.bold))
-                            .tracking(1.6)
-                            .foregroundStyle(hall.element.color)
-                    }
-                    Text(hall.name)
-                        .font(Theme.title(20))
-                        .foregroundStyle(Theme.textPrimary)
-                }
-                Spacer()
-                Text("B\(cleared)/\(hall.floors.count)")
-                    .font(Theme.numeric(13))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-
-            Text(hall.summary)
-                .font(Theme.body(13))
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Text("Drops \(essence) and relics up to \(hall.floors.last?.rewards.relicGrade ?? 6)★. Every clear pays; the next floor opens when this one falls.")
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            StatBar(
-                value: Double(cleared),
-                maximum: Double(hall.floors.count),
-                tint: hall.element.color,
-                height: 5
-            )
-
-            VStack(spacing: 8) {
-                ForEach(hall.floors) { floor in
-                    stageRow(floor)
-                }
-            }
-        }
-        .padding(10)
-        .panelBackground()
-    }
-
-    // MARK: - Stage rows
-
-    private func stageRow(_ stage: Stage) -> some View {
-        let unlocked = CampaignService.isUnlocked(stage, player: store.player)
-        let cleared = CampaignService.isCleared(stage, player: store.player)
-        let power = store.totalPower
-
-        return Button {
-            guard unlocked else { return }
-            selectedStage = stage
-        } label: {
-            HStack(spacing: 12) {
-                ZStack {
-                    Circle()
-                        .fill(cleared ? Theme.gold.opacity(0.2) : Theme.surface)
-                    if unlocked {
-                        Text("\(stage.index)")
-                            .font(Theme.numeric(14).weight(.bold))
-                            .foregroundStyle(cleared ? Theme.gold : Theme.textPrimary)
-                    } else {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 11))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                }
-                .frame(width: 34, height: 34)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 5) {
-                        Text(stage.name)
-                            .font(Theme.body(14).weight(.semibold))
-                            .foregroundStyle(unlocked ? Theme.textPrimary : Theme.textSecondary)
-                        if stage.isBoss {
-                            Text("BOSS")
-                                .font(Theme.body(8).weight(.black))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Capsule().fill(Theme.danger.opacity(0.25)))
-                                .foregroundStyle(Theme.danger)
-                        }
-                    }
-                    HStack(spacing: 8) {
-                        Label("\(stage.energyCost)", systemImage: "bolt.fill")
-                            .font(Theme.numeric(10))
-                            .foregroundStyle(Theme.info)
-                        Text("Power \(stage.recommendedPower)")
-                            .font(Theme.numeric(10))
-                            .foregroundStyle(power >= stage.recommendedPower ? Theme.success : Theme.danger)
-                    }
-                }
-
-                Spacer()
-
-                if cleared {
-                    Image(systemName: "checkmark.seal.fill")
-                        .foregroundStyle(Theme.gold)
-                } else if unlocked {
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(Theme.textSecondary)
-                }
-            }
-            .padding(10)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(Theme.surface.opacity(unlocked ? 1 : 0.4))
-            )
-        }
-        .disabled(!unlocked)
-    }
 }
 
-/// Pre-battle screen: what you are about to fight, and who you are taking.
+/// Pre-battle screen: what you are about to fight, wave by wave, and who
+/// you are taking.
 struct StageBriefingView: View {
     let stage: Stage
     /// Called with how many runs to fight on auto (1 is one fight by hand).
@@ -251,7 +187,10 @@ struct StageBriefingView: View {
     private static let runChoices = [1, 5, 10, 20]
 
     private var team: [ResolvedUnit] { store.team(store.player.campaignTeam) }
-    private var enemies: [ResolvedUnit] { StageDatabase.buildEnemies(for: stage) }
+    /// The first wave and every wave after it; a plain stage is one wave.
+    private var waves: [[ResolvedUnit]] {
+        ([stage.enemies] + stage.laterWaves).map { StageDatabase.buildEnemies(spawns: $0) }
+    }
 
     var body: some View {
         NavigationStack {
@@ -262,7 +201,7 @@ struct StageBriefingView: View {
                     if BundleImage.exists("\(stage.environment.sceneName)_bg") {
                         BundleImage(name: "\(stage.environment.sceneName)_bg")
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 150)
+                            .frame(height: 120)
                             .frame(maxWidth: .infinity)
                             .clipped()
                             .allowsHitTesting(false)
@@ -285,15 +224,35 @@ struct StageBriefingView: View {
                             .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
                     }
 
-                    SectionHeader(title: "Opposition", accessory: "\(enemies.count) units")
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
-                        ForEach(enemies) { enemy in
-                            UnitCard(unit: enemy, showPower: false, size: 66)
+                    HStack(alignment: .top, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionHeader(
+                                title: "Opposition",
+                                accessory: waves.count > 1 ? "\(waves.count) waves, the boss last" : "\(waves.first?.count ?? 0) units"
+                            )
+                            ForEach(waves.indices, id: \.self) { index in
+                                HStack(spacing: 6) {
+                                    if waves.count > 1 {
+                                        Text(index == waves.count - 1 ? "BOSS" : "W\(index + 1)")
+                                            .font(Theme.body(9).weight(.black))
+                                            .foregroundStyle(index == waves.count - 1 ? Theme.danger : Theme.textSecondary)
+                                            .frame(width: 32, alignment: .leading)
+                                    }
+                                    ForEach(waves[index]) { enemy in
+                                        UnitCard(unit: enemy, showPower: false, size: 58)
+                                    }
+                                    Spacer(minLength: 0)
+                                }
+                            }
                         }
-                    }
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
-                    SectionHeader(title: "Rewards")
-                    rewardsPanel
+                        VStack(alignment: .leading, spacing: 8) {
+                            SectionHeader(title: "Rewards")
+                            rewardsPanel
+                        }
+                        .frame(width: 280)
+                    }
 
                     SectionHeader(title: "Your team", accessory: "Power \(team.reduce(0) { $0 + $1.power })")
                     teamRow
@@ -305,7 +264,7 @@ struct StageBriefingView: View {
             }
             .screen(stage.name)
             .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 8) {
+                VStack(spacing: 6) {
                     if store.player.wallet.energy < stage.energyCost {
                         Text("Not enough energy — this stage costs \(stage.energyCost).")
                             .font(Theme.body(12))
@@ -321,7 +280,7 @@ struct StageBriefingView: View {
                         onStart(runs)
                     }
                 }
-                .padding(12)
+                .padding(10)
                 .background(Theme.ink)
             }
             .toolbar {
@@ -365,35 +324,47 @@ struct StageBriefingView: View {
     }
 
     private var rewardsPanel: some View {
-        VStack(spacing: 7) {
+        VStack(spacing: 6) {
             rewardRow("circle.hexagongrid.fill", "Drachma", "\(stage.rewards.drachma)")
             rewardRow("arrow.up.circle.fill", "Unit EXP", "\(stage.rewards.unitExperience)")
             if stage.rewards.relicChance > 0 {
                 rewardRow(
                     "shield.lefthalf.filled",
                     "Relic (\(stage.rewards.relicGrade)★)",
-                    "\(Int(stage.rewards.relicChance * 100))%"
+                    stage.rewards.relicChance >= 1 ? "always" : "\(Int(stage.rewards.relicChance * 100))%"
                 )
+                if let sets = stage.rewards.relicSets, !sets.isEmpty {
+                    Text(sets.map(\.displayName).joined(separator: " · "))
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.gold)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             ForEach(stage.rewards.essenceChances.keys.sorted(), id: \.self) { id in
                 if let chance = stage.rewards.essenceChances[id], chance > 0 {
                     rewardRow("drop.triangle.fill", EssenceCatalog.name(for: id), "\(Int(chance * 100))%")
                 }
             }
+            ForEach(stage.rewards.scrollChances.keys.sorted(), id: \.self) { id in
+                if let chance = stage.rewards.scrollChances[id], chance > 0, let scroll = ScrollType(rawValue: id) {
+                    rewardRow("scroll.fill", scroll.displayName, "\(Int(chance * 100))%")
+                }
+            }
             if !CampaignService.isCleared(stage, player: store.player), stage.rewards.firstClearDivinity > 0 {
                 rewardRow("sparkles", "First clear", "\(stage.rewards.firstClearDivinity) divinity")
             }
         }
-        .padding(12)
+        .padding(10)
         .panelBackground()
     }
 
     private func rewardRow(_ icon: String, _ label: String, _ value: String) -> some View {
         HStack {
             Image(systemName: icon).frame(width: 20).foregroundStyle(Theme.goldDim)
-            Text(label).font(Theme.body(13)).foregroundStyle(Theme.textPrimary)
+            Text(label).font(Theme.body(12)).foregroundStyle(Theme.textPrimary)
             Spacer()
-            Text(value).font(Theme.numeric(13)).foregroundStyle(Theme.textSecondary)
+            Text(value).font(Theme.numeric(12)).foregroundStyle(Theme.textSecondary)
         }
     }
 
@@ -403,10 +374,10 @@ struct StageBriefingView: View {
         } label: {
             HStack(spacing: 8) {
                 ForEach(team) { unit in
-                    UnitCard(unit: unit, size: 66)
+                    UnitCard(unit: unit, size: 62)
                 }
                 if team.count < 5 {
-                    EmptyTeamSlot(size: 66, label: "Add")
+                    EmptyTeamSlot(size: 62, label: "Add")
                 }
                 Spacer()
             }

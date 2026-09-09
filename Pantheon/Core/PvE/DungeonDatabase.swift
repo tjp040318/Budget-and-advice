@@ -67,6 +67,124 @@ enum DungeonDatabase {
 
     static func hall(_ id: String) -> Hall? { halls.first(where: { $0.id == id }) }
 
+    // MARK: - The Labyrinth: the relic dungeons
+
+    /// A relic dungeon: ten levels, each one battle of three waves that ends
+    /// at the boss, and a relic of the dungeon's own sets at the end of every
+    /// run. This is the genre's Cairos — the place the relic hunt lives — and
+    /// the reason to keep a team levelled after the story is done.
+    struct Labyrinth: Identifiable, Sendable {
+        var id: String
+        var name: String
+        var summary: String
+        var environment: BattleEnvironment
+        /// The sets this dungeon drops; the other dungeons drop the others.
+        var sets: [RelicSet]
+        var bossID: String
+        var chapter: Chapter
+
+        var levels: [Stage] { chapter.stages }
+    }
+
+    static let levelCount = 10
+
+    static let labyrinths: [Labyrinth] = [
+        labyrinth(
+            id: "lab_colossus", name: "Vault of the Colossus",
+            summary: "A statue the size of a temple, and it is awake. Everything it has ever crushed is still in here with it.",
+            environment: .duatGate,
+            sets: [.fury, .aegis, .bulwark, .zephyr, .fates, .vigil],
+            roster: ["shabti", "sun_scarab", "serpopard"],
+            bossID: "sandstone_sentinel"
+        ),
+        labyrinth(
+            id: "lab_hydra", name: "Lair of the Hydra",
+            summary: "Nine heads, and every one of them remembers Heracles. The marsh water is warm, which is the wrong kind of sign.",
+            environment: .lernaMarsh,
+            sets: [.thunder, .ruin, .wrath, .ichor, .titanfall, .chains],
+            roster: ["enemy_medusa", "serpopard", "enemy_amazon"],
+            bossID: "boss_hydra"
+        ),
+        labyrinth(
+            id: "lab_necropolis", name: "Necropolis of the Devourer",
+            summary: "The dead are filed in here by the weight of their hearts. The devourer keeps the ledger and eats the errors.",
+            environment: .hallOfTwoTruths,
+            sets: [.oracle, .wards, .styx, .nemesis, .chains, .bulwark],
+            roster: ["enemy_draugr", "shabti", "sun_scarab"],
+            bossID: "ammit"
+        ),
+    ]
+
+    static func labyrinth(_ id: String) -> Labyrinth? { labyrinths.first(where: { $0.id == id }) }
+
+    /// The dungeon a stage belongs to, if it is a level of one.
+    static func labyrinth(containing stage: Stage) -> Labyrinth? { labyrinth(stage.chapterID) }
+
+    static var allLevels: [Stage] { labyrinths.flatMap(\.levels) }
+
+    /// The grade of the relic a level drops, and of the mobs that guard it:
+    /// 3★ on B1–3, 4★ on B4–6, 5★ on B7–9 and 6★ on B10, the genre's ladder.
+    static func labyrinthGrade(level: Int) -> Int { min(6, 3 + (level - 1) / 3) }
+
+    /// Ten levels, each three waves: two of the roster's mobs and then the
+    /// boss with two more, at a grade that climbs with the level and a
+    /// multiplier that tightens the top. The numbers are in
+    /// `tools/balance.py` (`LABYRINTHS`): B1 for a levelled 3★ team fresh
+    /// from chapter one, B4 for 4★s with relics, B7 for 5★s, B10 for a
+    /// maxed 6★ team. A run always drops a relic of the dungeon's sets.
+    static func labyrinth(
+        id: String, name: String, summary: String, environment: BattleEnvironment,
+        sets: [RelicSet], roster: [String], bossID: String
+    ) -> Labyrinth {
+        var stages: [Stage] = []
+        for level in 1...levelCount {
+            let enemyLevel = 10 + level * 4
+            let stars = labyrinthGrade(level: level)
+            let difficulty = 0.70 + Double(level) * 0.08
+            let wave: (Int) -> [EnemySpawn] = { offset in
+                (0..<3).map { slot in
+                    EnemySpawn(
+                        blueprintID: roster[(level + offset + slot) % roster.count],
+                        level: enemyLevel, stars: stars, statMultiplier: difficulty
+                    )
+                }
+            }
+            let bossNatural = UnitDatabase.blueprint(bossID)?.naturalStars ?? stars
+            let boss = EnemySpawn(
+                blueprintID: bossID, level: enemyLevel, stars: max(stars, bossNatural),
+                statMultiplier: difficulty * 1.6
+            )
+            let bossWave = [boss] + Array(wave(2).prefix(2))
+            stages.append(Stage(
+                id: "\(id)_\(level)",
+                chapterID: id,
+                index: level,
+                name: "\(name) B\(level)",
+                energyCost: 6 + level / 4,
+                recommendedPower: Int(2_200 * pow(1.34, Double(level - 1))),
+                enemies: wave(0),
+                rewards: StageRewards(
+                    drachma: 500 + level * 250,
+                    playerExperience: 30 + level * 10,
+                    unitExperience: 200 + level * 100,
+                    relicChance: 1.0,
+                    relicGrade: stars,
+                    relicSets: sets,
+                    scrollChances: level >= 7 ? [ScrollType.mystical.rawValue: 0.08] : [:],
+                    firstClearDivinity: 20
+                ),
+                environment: environment,
+                isBoss: true,
+                laterWaves: [wave(1), bossWave]
+            ))
+        }
+        let chapter = Chapter(id: id, pantheon: environment.pantheon, name: name, summary: summary, stages: stages)
+        return Labyrinth(
+            id: id, name: name, summary: summary, environment: environment,
+            sets: sets, bossID: bossID, chapter: chapter
+        )
+    }
+
     /// The scroll a hall drops: its element's, or the light & dark scroll
     /// for the two that have no scroll of their own.
     static func scroll(for element: Element) -> ScrollType {

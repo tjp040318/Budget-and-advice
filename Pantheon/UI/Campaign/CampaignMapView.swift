@@ -154,21 +154,11 @@ struct ChapterMapView: View {
     private var chapter: Chapter? { StageDatabase.chapter(chapterID) }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
-                if let chapter {
-                    map(chapter)
-                    header(chapter)
-                    legend
-                    stageRows(chapter)
-                }
-            }
-            .padding(12)
-        }
-        .screen(chapter?.name ?? "Chapter")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                WalletBar(wallet: store.player.wallet)
+        VStack(alignment: .leading, spacing: 10) {
+            if let chapter {
+                map(chapter)
+                header(chapter)
+                stageRows(chapter)
             }
         }
         .onAppear {
@@ -184,31 +174,28 @@ struct ChapterMapView: View {
         let player = store.player
         let cleared = player.campaignProgress[chapter.id] ?? 0
         let next = chapter.stages.first(where: { CampaignService.isUnlocked($0, player: player) && !CampaignService.isCleared($0, player: player) })
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(chapter.realmName.uppercased())
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(chapter.realmName.uppercased()) · \(chapter.name.uppercased())")
                         .font(Theme.body(10).weight(.bold))
-                        .tracking(1.6)
+                        .tracking(1.4)
                         .foregroundStyle(chapter.pantheon.color)
-                    Text(chapter.name)
-                        .font(Theme.title(20))
-                        .foregroundStyle(Theme.textPrimary)
+                    Text(chapter.summary)
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Spacer()
                 Text("\(cleared)/\(chapter.stages.count)")
                     .font(Theme.numeric(13))
                     .foregroundStyle(Theme.textSecondary)
             }
-            Text(chapter.summary)
-                .font(Theme.body(12))
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
             StatBar(
                 value: Double(cleared),
                 maximum: Double(chapter.stages.count),
                 tint: chapter.pantheon.color,
-                height: 5
+                height: 4
             )
             if let next {
                 HStack(spacing: 6) {
@@ -227,7 +214,7 @@ struct ChapterMapView: View {
                     .foregroundStyle(Theme.gold)
             }
         }
-        .padding(12)
+        .padding(10)
         .panelBackground()
     }
 
@@ -284,7 +271,7 @@ struct ChapterMapView: View {
                 }
             }
         }
-        .frame(height: 210)
+        .frame(height: 190)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
@@ -362,25 +349,6 @@ struct ChapterMapView: View {
         }
         .buttonStyle(.plain)
         .disabled(!unlocked)
-    }
-
-    private var legend: some View {
-        HStack(spacing: 10) {
-            legendItem(color: Theme.gold, text: "cleared")
-            legendItem(color: Theme.surfaceHigh, text: "next, tap to fight")
-            legendItem(color: Theme.surface, text: "shut until the one before falls")
-            Spacer()
-        }
-    }
-
-    private func legendItem(color: Color, text: String) -> some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 10, height: 10)
-                .overlay(Circle().strokeBorder(Theme.stroke, lineWidth: 1))
-            Text(text)
-                .font(Theme.body(10))
-                .foregroundStyle(Theme.textSecondary)
-        }
     }
 
     // MARK: - The list under the map

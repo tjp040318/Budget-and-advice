@@ -607,6 +607,59 @@ What the phone asked for, all built:
   one track), wider health bars over the figures, the selected skill's
   name and description above the skill row, and a card on hold.
 
+### Phase 2f — the Labyrinth, waves, and the sheet in the genre's shape *(built)*
+
+The second playtest note was about shape, not bugs: "why click into a
+menu first — the building should be the map", "a dungeon building like
+the genre's, a couple of stages and a boss, relics at the end, levels",
+and "the character view and the relic selector are not it". Three
+answers:
+
+- **The gate is the map.** `CampaignView` no longer has a Chapters/Halls
+  switch and a realm list in front of the map; it opens on the chapter
+  the player is in (a strip of chapter chips, the chapter's road below),
+  and the realms overview is a sheet. One tap from the island to a stage.
+- **The Labyrinth.** A sixth landmark on the island (the palm grove right
+  of the circle, anchor 0.62/0.42). Inside: three relic dungeons
+  (`DungeonDatabase.labyrinths`) — the Vault of the Colossus (the sentinel;
+  Fury, Aegis, Bulwark, Zephyr, Fates, Vigil), the Lair of the Hydra
+  (Thunder, Ruin, Wrath, Ichor, Titanfall, Chains) and the Necropolis of
+  the Devourer (Ammit; Oracle, Wards, Styx, Nemesis, Chains, Bulwark) —
+  ten levels each, and the Halls of Essence under the same roof. A level
+  is **one battle of three waves**: two of the roster's mobs, then the boss
+  at ×1.6 with two more. That needed waves in the engine: `Stage.laterWaves`,
+  `BattleEngine.spawnWaveIfNeeded()` at the top of the turn loop
+  (`checkForEnding` no longer calls a clear field a win while waves
+  remain), a `.waveStarted` event carrying the arrivals so the scene can
+  remove the fallen and walk the new wave in from the back, the HUD's
+  "Wave 2/3" chip, and the briefing listing W1, W2, BOSS. The drop is
+  guaranteed and restricted to the dungeon's sets (`StageRewards.relicSets`),
+  3★ on B1–3, 4★ on B4–6, 5★ on B7–9, 6★ on B10. `tools/balance.py
+  --labyrinths` runs a team through all three waves with its wounds and
+  cooldowns kept: B1 falls to four 3★s at level 20, B4 to 4★s at 35, B7 to
+  5★s with relics (the Colossus even to 4★s, 72%), B10 to maxed 6★s — the
+  Hydra and the Necropolis hold against 5★s at B10, the Colossus does not
+  (98%), which is the soft entry the genre also has.
+- **The sheet.** `UnitDetailView` is one landscape screen: card, level
+  bar, power and Power up / Evolve / Awaken on the left; the six relic
+  slots in a ring around the element in the middle, slot 1 at the top and
+  clockwise from there, each tile showing set glyph, main stat, grade and
+  +level; the eight stats with their relic bonus on the right, with the
+  leader skill and the awakening line under them; the skills along the
+  bottom, the selected one's words, cooldown, estimated damage and
+  skill-up dots beside the tiles. The lore is behind a book in the
+  toolbar, auto-equip beside it, awakening in its own sheet with both
+  forms. `RelicPickerView` is the genre's rune screen: candidates best-fit
+  first on the left, and on the right the relic in the slot, the pick,
+  every stat before → after with the delta and the sets completed or
+  broken — computed by resolving the unit with the pick in the slot
+  (`ProgressionService.resolve(_:blueprint:equipped:)`) — and then Equip,
+  Take and equip, or Unequip.
+
+The tour grew to eighteen screens (the Labyrinth, a dungeon's levels, the
+picker), the halls step goes through the Labyrinth, and the chapter-map
+step photographs the campaign tab as it now opens.
+
 ### Phase 4 — sound and feel
 
 - **Music.** Two synthesised loops are in — an island loop of pads, a drone

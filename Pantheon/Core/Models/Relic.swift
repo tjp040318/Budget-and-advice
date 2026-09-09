@@ -71,6 +71,28 @@ enum RelicSet: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// A symbol per set, for the slot tiles and the dungeon cards.
+    var glyph: String {
+        switch self {
+        case .fury: return "flame.fill"
+        case .aegis: return "shield.fill"
+        case .bulwark: return "heart.fill"
+        case .zephyr: return "wind"
+        case .thunder: return "bolt.fill"
+        case .ruin: return "burst.fill"
+        case .oracle: return "eye.fill"
+        case .wards: return "circle.hexagongrid.fill"
+        case .ichor: return "drop.fill"
+        case .wrath: return "tornado"
+        case .styx: return "waveform.path"
+        case .chains: return "link"
+        case .fates: return "sparkles"
+        case .nemesis: return "arrow.up.heart.fill"
+        case .titanfall: return "mountain.2.fill"
+        case .vigil: return "arrow.uturn.backward"
+        }
+    }
+
     var effectDescription: String {
         switch self {
         case .ichor: return "Fills 25% of the attack bar at the start of each turn."

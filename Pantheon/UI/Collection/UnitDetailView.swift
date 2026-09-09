@@ -1,47 +1,50 @@
 import SwiftUI
 
-/// One unit: stats, skills, relics, and the progression actions.
+/// One unit on one screen, the way the genre lays it out: the card and its
+/// progress on the left, the six relic slots in a ring in the middle, the
+/// stats with their relic bonuses on the right, and the skills along the
+/// bottom with their words a tap away. Nothing to scroll for on a landscape
+/// phone; the lore sits behind the book, and the fodder pickers open as
+/// sheets. A relic slot opens the picker for that slot.
 struct UnitDetailView: View {
     let unitID: UUID
 
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
-    @State private var tab: Tab = .overview
     @State private var pickingSlot: SlotPick?
     @State private var showFodderPicker = false
     @State private var fodderPurpose: FodderPurpose = .levelUp
+    @State private var showAwakening = false
+    @State private var showLore = false
+    @State private var selectedSkill = 0
 
-    enum Tab: String, CaseIterable, Identifiable {
-        case overview, skills, relics
-        var id: String { rawValue }
-        var displayName: String { rawValue.capitalized }
+    /// A slot number that can drive a sheet.
+    struct SlotPick: Identifiable {
+        let id: Int
     }
 
     enum FodderPurpose { case levelUp, evolve }
 
     private var unit: ResolvedUnit? { store.resolved(unitID) }
+    private var isLocked: Bool { unit?.unit.isLocked == true }
 
     var body: some View {
         NavigationStack {
             Group {
                 if let unit {
                     ScrollView {
-                        VStack(spacing: 12) {
-                            header(unit)
-                            Picker("", selection: $tab) {
-                                ForEach(Tab.allCases) { tab in
-                                    Text(tab.displayName).tag(tab)
-                                }
+                        VStack(spacing: 8) {
+                            HStack(alignment: .top, spacing: 8) {
+                                identity(unit)
+                                    .frame(width: 164)
+                                relicRing(unit)
+                                    .frame(width: 236)
+                                stats(unit)
+                                    .frame(maxWidth: .infinity)
                             }
-                            .pickerStyle(.segmented)
-
-                            switch tab {
-                            case .overview: overview(unit)
-                            case .skills: skills(unit)
-                            case .relics: relics(unit)
-                            }
+                            skills(unit)
                         }
-                        .padding(12)
+                        .padding(10)
                     }
                 } else {
                     EmptyState(icon: "questionmark", title: "Gone", message: "This unit is no longer in your collection.")
@@ -53,11 +56,27 @@ struct UnitDetailView: View {
                     Button("Close") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        store.toggleLock(unitID)
-                    } label: {
-                        Image(systemName: unit?.unit.isLocked == true ? "lock.fill" : "lock.open")
-                            .foregroundStyle(unit?.unit.isLocked == true ? Theme.gold : Theme.textSecondary)
+                    HStack(spacing: 16) {
+                        Button {
+                            showLore = true
+                        } label: {
+                            Image(systemName: "book.fill")
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                        Button {
+                            Juice.haptic(.light)
+                            store.autoEquip(unitID)
+                        } label: {
+                            Label("Auto-equip", systemImage: "wand.and.stars")
+                                .font(Theme.body(12).weight(.semibold))
+                                .foregroundStyle(Theme.info)
+                        }
+                        Button {
+                            store.toggleLock(unitID)
+                        } label: {
+                            Image(systemName: isLocked ? "lock.fill" : "lock.open")
+                                .foregroundStyle(isLocked ? Theme.gold : Theme.textSecondary)
+                        }
                     }
                 }
             }
@@ -67,385 +86,490 @@ struct UnitDetailView: View {
                         .environmentObject(store)
                 }
             }
-        }
-    }
-
-    // MARK: - Header
-
-    private func header(_ unit: ResolvedUnit) -> some View {
-        VStack(spacing: 10) {
-            HStack(alignment: .top, spacing: 10) {
-                UnitCard(unit: unit, size: 108)
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(unit.blueprint.epithet)
-                        .font(Theme.body(13))
-                        .foregroundStyle(Theme.textSecondary)
-                    HStack(spacing: 6) {
-                        Text(unit.pantheon.displayName)
-                            .font(Theme.body(11).weight(.semibold))
-                            .padding(.horizontal, 7).padding(.vertical, 3)
-                            .background(Capsule().fill(unit.pantheon.color.opacity(0.18)))
-                            .foregroundStyle(unit.pantheon.color)
-                        Text(unit.archetype.displayName)
-                            .font(Theme.body(11).weight(.semibold))
-                            .padding(.horizontal, 7).padding(.vertical, 3)
-                            .background(Capsule().fill(Theme.stroke))
-                            .foregroundStyle(Theme.textSecondary)
-                        Text(unit.role.displayName)
-                            .font(Theme.body(11).weight(.semibold))
-                            .padding(.horizontal, 7).padding(.vertical, 3)
-                            .background(Capsule().fill(Theme.stroke))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    StatBar(
-                        value: Double(unit.unit.experience),
-                        maximum: Double(ProgressionService.experienceForNextLevel(
-                            level: unit.level, stars: unit.stars
-                        )),
-                        tint: Theme.info,
-                        height: 5,
-                        label: "Lv.\(unit.level) / \(unit.unit.maxLevel)"
-                    )
-                    Text("Power \(unit.power)")
-                        .font(Theme.numeric(13))
-                        .foregroundStyle(Theme.gold)
+            .sheet(item: $pickingSlot) { pick in
+                RelicPickerView(unitID: unitID, slot: pick.id)
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showAwakening) {
+                if let unit {
+                    AwakeningSheet(unit: unit)
+                        .environmentObject(store)
                 }
             }
-
-            Text(unit.blueprint.lore)
-                .font(Theme.body(13))
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-        }
-        .padding(10)
-        .panelBackground()
-    }
-
-    // MARK: - Overview
-
-    private func overview(_ unit: ResolvedUnit) -> some View {
-        VStack(spacing: 10) {
-            statsPanel(unit)
-            if let leader = unit.blueprint.leaderSkill {
-                VStack(alignment: .leading, spacing: 6) {
-                    SectionHeader(title: "Leader Skill")
-                    Text(leader.description)
-                        .font(Theme.body(13))
-                        .foregroundStyle(Theme.textPrimary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(10)
-                .panelBackground()
-            }
-            awakeningPanel(unit)
-            actionsPanel(unit)
-        }
-    }
-
-    private func statsPanel(_ unit: ResolvedUnit) -> some View {
-        // Base is grade, level and awakening; the difference to the final
-        // number is the relics, shown beside it the way the genre does, so
-        // equipping a relic is visible on the sheet and not only in battle.
-        let base = ProgressionService.baseStats(for: unit.unit, blueprint: unit.blueprint)
-        return VStack(spacing: 8) {
-            SectionHeader(title: "Stats")
-            statRow("HP", base: base.hp, total: unit.stats.hp)
-            statRow("ATK", base: base.atk, total: unit.stats.atk)
-            statRow("DEF", base: base.def, total: unit.stats.def)
-            statRow("SPD", base: base.spd, total: unit.stats.spd)
-            statRow("CRIT Rate", base: base.critRate, total: unit.stats.critRate, percent: true)
-            statRow("CRIT DMG", base: base.critDamage, total: unit.stats.critDamage, percent: true)
-            statRow("Accuracy", base: base.accuracy, total: unit.stats.accuracy, percent: true)
-            statRow("Resistance", base: base.resistance, total: unit.stats.resistance, percent: true)
-
-            if !unit.activeRelicSets.isEmpty {
-                Divider().overlay(Theme.stroke)
-                ForEach(unit.activeRelicSets) { entry in
-                    HStack {
-                        Text("\(entry.set.displayName) ×\(entry.completions)")
-                            .font(Theme.body(12).weight(.semibold))
-                            .foregroundStyle(Theme.gold)
-                        Spacer()
-                        Text(entry.set.effectDescription)
-                            .font(Theme.body(11))
-                            .foregroundStyle(Theme.textSecondary)
-                            .multilineTextAlignment(.trailing)
-                    }
-                }
-            }
-        }
-        .padding(10)
-        .panelBackground()
-    }
-
-    private func statRow(_ label: String, base: Double, total: Double, percent: Bool = false) -> some View {
-        let bonus = total - base
-        let shown = abs(bonus) >= (percent ? 0.005 : 0.5)
-        return HStack(spacing: 6) {
-            Text(label).font(Theme.body(13)).foregroundStyle(Theme.textSecondary)
-            Spacer()
-            Text(Self.statText(base, percent: percent))
-                .font(Theme.numeric(14))
-                .foregroundStyle(Theme.textPrimary)
-            if shown {
-                Text((bonus > 0 ? "+" : "−") + Self.statText(abs(bonus), percent: percent))
-                    .font(Theme.numeric(13))
-                    .foregroundStyle(bonus > 0 ? Theme.success : Theme.danger)
+            .alert(unit?.blueprint.epithet ?? "", isPresented: $showLore) {
+                Button("Close", role: .cancel) {}
+            } message: {
+                Text(unit?.blueprint.lore ?? "")
             }
         }
     }
 
-    private static func statText(_ value: Double, percent: Bool) -> String {
-        percent ? "\(Int((value * 100).rounded()))%" : "\(Int(value.rounded()))"
-    }
+    // MARK: - Left: the card and what to do with it
 
-    @ViewBuilder
-    private func awakeningPanel(_ unit: ResolvedUnit) -> some View {
-        if let awakening = unit.blueprint.awakening {
-            VStack(alignment: .leading, spacing: 9) {
-                SectionHeader(title: "Awakening")
-                Text(unit.unit.isAwakened ? awakening.awakenedName : "Not yet awakened")
-                    .font(Theme.title(16))
-                    .foregroundStyle(unit.unit.isAwakened ? Theme.gold : Theme.textPrimary)
-                Text(awakening.bonusDescription)
-                    .font(Theme.body(13))
+    private func identity(_ unit: ResolvedUnit) -> some View {
+        VStack(spacing: 6) {
+            UnitCard(unit: unit, showPower: false, size: 118)
+            HStack(spacing: 4) {
+                ElementBadge(element: unit.element, compact: true)
+                Text(unit.blueprint.epithet)
+                    .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                if !unit.unit.isAwakened {
-                    let costs = awakening.essenceCost.sorted { $0.key < $1.key }
-                    ForEach(costs.indices, id: \.self) { costIndex in
-                        let id = costs[costIndex].key
-                        let needed = costs[costIndex].value
-                        let have = store.player.essences[id] ?? 0
-                        HStack {
-                            Text(EssenceCatalog.name(for: id))
-                                .font(Theme.body(12))
-                                .foregroundStyle(Theme.textSecondary)
-                            Spacer()
-                            Text("\(have) / \(needed)")
-                                .font(Theme.numeric(12))
-                                .foregroundStyle(have >= needed ? Theme.success : Theme.danger)
-                        }
-                    }
-                    PrimaryButton(
-                        title: "Awaken",
-                        systemImage: "sun.max.fill",
-                        isEnabled: awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
-                    ) {
-                        store.awaken(unitID)
-                    }
-                }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .panelBackground()
-        }
-    }
-
-    private func actionsPanel(_ unit: ResolvedUnit) -> some View {
-        VStack(spacing: 10) {
-            SectionHeader(title: "Progression")
-            PrimaryButton(title: "Level up with fodder", systemImage: "arrow.up.circle.fill", tint: Theme.info) {
+            StatBar(
+                value: Double(unit.unit.experience),
+                maximum: Double(ProgressionService.experienceForNextLevel(level: unit.level, stars: unit.stars)),
+                tint: Theme.info,
+                height: 5,
+                label: "Lv.\(unit.level) / \(unit.unit.maxLevel)"
+            )
+            HStack {
+                Text("Power")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer()
+                Text("\(unit.power)")
+                    .font(Theme.numeric(13))
+                    .foregroundStyle(Theme.gold)
+            }
+            actionButton("Power up", "arrow.up.circle.fill", tint: Theme.info) {
                 fodderPurpose = .levelUp
                 showFodderPicker = true
             }
-            PrimaryButton(
-                title: unit.unit.canEvolve
-                    ? "Evolve to \(unit.stars + 1)★ — \(ProgressionService.evolutionFodderRequired(currentStars: unit.stars)) fodder"
-                    : "Evolve (needs max level)",
-                systemImage: "star.circle.fill",
-                isEnabled: unit.unit.canEvolve
+            actionButton(
+                unit.unit.canEvolve ? "Evolve to \(unit.stars + 1)★" : "Evolve at max level",
+                "star.circle.fill", tint: Theme.gold, enabled: unit.unit.canEvolve
             ) {
                 fodderPurpose = .evolve
                 showFodderPicker = true
             }
+            if unit.blueprint.awakening != nil {
+                actionButton(
+                    unit.unit.isAwakened ? "Awakened" : "Awaken",
+                    "sun.max.fill", tint: Theme.gold, enabled: !unit.unit.isAwakened
+                ) {
+                    showAwakening = true
+                }
+            }
         }
-        .padding(10)
-        .panelBackground()
+        .padding(8)
+        .panelBackground(radius: Theme.tightCorner)
     }
 
-    // MARK: - Skills
+    private func actionButton(
+        _ title: String, _ symbol: String, tint: Color, enabled: Bool = true, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 5) {
+                Image(systemName: symbol)
+                    .font(.system(size: 11, weight: .bold))
+                Text(title)
+                    .font(Theme.body(11).weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .foregroundStyle(enabled ? Theme.ink : Theme.textSecondary)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(enabled ? tint : Theme.surface)
+            )
+        }
+        .buttonStyle(PlateButtonStyle())
+        .disabled(!enabled)
+    }
 
-    private func skills(_ unit: ResolvedUnit) -> some View {
-        VStack(spacing: 12) {
-            ForEach(unit.skills.indices, id: \.self) { index in
-                let skill = unit.skills[index]
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack {
-                        Text(skill.name)
-                            .font(Theme.title(16))
-                            .foregroundStyle(Theme.textPrimary)
-                        if skill.isPassive {
-                            Text("PASSIVE")
-                                .font(Theme.body(8).weight(.black))
-                                .padding(.horizontal, 4).padding(.vertical, 1)
-                                .background(Capsule().fill(Theme.gold.opacity(0.25)))
-                                .foregroundStyle(Theme.gold)
-                        }
-                        Spacer()
-                        if skill.cooldown > 0 {
-                            Label("\(skill.cooldown)", systemImage: "clock.fill")
-                                .font(Theme.numeric(12))
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                    }
+    // MARK: - Middle: the relic ring
 
-                    Text(skill.description)
-                        .font(Theme.body(13))
+    /// Six slots around the element's emblem, slot 1 at the top and the
+    /// rest clockwise — the arrangement every player of the genre knows.
+    private func relicRing(_ unit: ResolvedUnit) -> some View {
+        let size: CGFloat = 220
+        let radius: CGFloat = 80
+        let centre = CGPoint(x: size / 2, y: size / 2)
+        return VStack(spacing: 6) {
+            ZStack {
+                Circle()
+                    .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1, dash: [3, 5]))
+                    .frame(width: radius * 2, height: radius * 2)
+                    .position(centre)
+                ZStack {
+                    Circle()
+                        .fill(unit.element.color.opacity(0.18))
+                        .frame(width: 54, height: 54)
+                    Image(systemName: unit.element.glyph)
+                        .font(.system(size: 22, weight: .black))
+                        .foregroundStyle(unit.element.color)
+                }
+                .position(centre)
+                ForEach(1...6, id: \.self) { slot in
+                    let angle = (Double(slot - 1) * 60 - 90) * Double.pi / 180
+                    slotTile(slot: slot, unit: unit)
+                        .position(
+                            x: centre.x + CGFloat(cos(angle)) * radius,
+                            y: centre.y + CGFloat(sin(angle)) * radius
+                        )
+                }
+            }
+            .frame(width: size, height: size)
+            setsRow(unit)
+        }
+        .padding(8)
+        .panelBackground(radius: Theme.tightCorner)
+    }
+
+    private func slotTile(slot: Int, unit: ResolvedUnit) -> some View {
+        let relic = unit.unit.equippedRelics[slot].flatMap { store.player.relic($0) }
+        let worn = relic != nil
+        return Button {
+            Juice.haptic(.light)
+            pickingSlot = SlotPick(id: slot)
+        } label: {
+            VStack(spacing: 2) {
+                if let relic {
+                    Image(systemName: relic.set.glyph)
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Theme.gold)
+                    Text(relic.effectiveMainStat.displayText)
+                        .font(Theme.numeric(8))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text("\(relic.grade)★ +\(relic.level)")
+                        .font(Theme.numeric(7))
+                        .foregroundStyle(Theme.textSecondary)
+                } else {
+                    Text("\(slot)")
+                        .font(Theme.numeric(15).weight(.bold))
+                        .foregroundStyle(Theme.textSecondary)
+                    Text("empty")
+                        .font(Theme.body(7))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .frame(width: 58, height: 58)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(worn ? Theme.surfaceHigh : Theme.surface.opacity(0.7))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .strokeBorder(
+                        worn ? Theme.gold.opacity(0.7) : Theme.stroke,
+                        style: StrokeStyle(lineWidth: 1, dash: worn ? [] : [3, 3])
+                    )
+            )
+            .overlay(alignment: .topLeading) {
+                Text("\(slot)")
+                    .font(Theme.numeric(7))
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(worn ? Theme.gold : Theme.textSecondary))
+                    .offset(x: -4, y: -4)
+            }
+        }
+        .buttonStyle(PlateButtonStyle())
+    }
+
+    private func setsRow(_ unit: ResolvedUnit) -> some View {
+        HStack(spacing: 4) {
+            if unit.activeRelicSets.isEmpty {
+                Text("No set bonus yet: two of a kind for a stat, four for an effect.")
+                    .font(Theme.body(9))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            } else {
+                ForEach(unit.activeRelicSets) { entry in
+                    Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
+                        .font(Theme.body(9).weight(.bold))
+                        .foregroundStyle(Theme.gold)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(Theme.surfaceHigh))
+                }
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    // MARK: - Right: the stats
+
+    private func stats(_ unit: ResolvedUnit) -> some View {
+        // Base is grade, level and awakening; the difference to the final
+        // number is the relics, shown beside it the way the genre does, so
+        // equipping a relic is visible on the sheet and not only in battle.
+        let base = ProgressionService.baseStats(for: unit.unit, blueprint: unit.blueprint)
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars, size: 10)
+                tag(unit.pantheon.displayName, color: unit.pantheon.color)
+                tag(unit.archetype.displayName, color: Theme.textSecondary)
+                tag(unit.role.displayName, color: Theme.textSecondary)
+            }
+            .padding(.bottom, 3)
+            statRow("HP", base.hp, unit.stats.hp)
+            statRow("ATK", base.atk, unit.stats.atk)
+            statRow("DEF", base.def, unit.stats.def)
+            statRow("SPD", base.spd, unit.stats.spd)
+            statRow("CRIT Rate", base.critRate, unit.stats.critRate, percent: true)
+            statRow("CRIT DMG", base.critDamage, unit.stats.critDamage, percent: true)
+            statRow("Accuracy", base.accuracy, unit.stats.accuracy, percent: true)
+            statRow("Resistance", base.resistance, unit.stats.resistance, percent: true)
+            if let leader = unit.blueprint.leaderSkill {
+                Divider().overlay(Theme.stroke).padding(.vertical, 2)
+                HStack(alignment: .top, spacing: 5) {
+                    Image(systemName: "crown.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Theme.gold)
+                    Text(leader.description)
+                        .font(Theme.body(9))
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-
-                    if let damage = skill.damage {
-                        HStack(spacing: 12) {
-                            metric("Multiplier", "\(String(format: "%.2f", damage.multiplier))×")
-                            if damage.hits > 1 { metric("Hits", "\(damage.hits)") }
-                            if damage.defenseIgnore > 0 {
-                                metric("DEF ignore", "\(Int(damage.defenseIgnore * 100))%")
-                            }
-                            metric(
-                                "Est. damage",
-                                "\(Int(DamageCalculator.previewDamage(attackStat: unit.stats.atk, spec: damage)))"
-                            )
-                        }
-                    }
-
-                    let level = unit.unit.skillLevels.indices.contains(index) ? unit.unit.skillLevels[index] : 1
-                    if !skill.levelUpBonuses.isEmpty {
-                        VStack(alignment: .leading, spacing: 3) {
-                            ForEach(skill.levelUpBonuses.indices, id: \.self) { bonusIndex in
-                                let bonus = skill.levelUpBonuses[bonusIndex]
-                                HStack(spacing: 6) {
-                                    Image(systemName: level > bonusIndex + 1 ? "checkmark.circle.fill" : "circle")
-                                        .font(.system(size: 10))
-                                        .foregroundStyle(level > bonusIndex + 1 ? Theme.success : Theme.stroke)
-                                    Text("Lv.\(bonusIndex + 2) — \(bonus.label)")
-                                        .font(Theme.body(11))
-                                        .foregroundStyle(Theme.textSecondary)
-                                }
-                            }
-                        }
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(10)
-                .panelBackground()
-            }
-        }
-    }
-
-    private func metric(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(label).font(Theme.body(9)).foregroundStyle(Theme.textSecondary)
-            Text(value).font(Theme.numeric(13)).foregroundStyle(Theme.textPrimary)
-        }
-    }
-
-    // MARK: - Relics
-
-    /// A slot number that can drive a sheet.
-    struct SlotPick: Identifiable {
-        let id: Int
-    }
-
-    private func relics(_ unit: ResolvedUnit) -> some View {
-        VStack(spacing: 12) {
-            PrimaryButton(title: "Auto-equip best available", systemImage: "wand.and.stars", tint: Theme.info) {
-                store.autoEquip(unitID)
-            }
-
-            // The sets in play, the way the genre shows them on the sheet.
-            if !unit.activeRelicSets.isEmpty {
-                HStack(spacing: 6) {
-                    ForEach(unit.activeRelicSets) { entry in
-                        Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
-                            .font(Theme.body(11).weight(.semibold))
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 5)
-                            .background(Capsule().fill(Theme.surfaceHigh))
-                            .foregroundStyle(Theme.gold)
-                    }
-                    Spacer()
                 }
             }
-
-            ForEach(1...6, id: \.self) { slot in
-                relicSlot(slot: slot, unit: unit)
-            }
-        }
-        .sheet(item: $pickingSlot) { pick in
-            RelicPickerView(unitID: unitID, slot: pick.id)
-                .environmentObject(store)
-        }
-    }
-
-    private func relicSlot(slot: Int, unit: ResolvedUnit) -> some View {
-        let equipped = unit.unit.equippedRelics[slot].flatMap { store.player.relic($0) }
-
-        return VStack(alignment: .leading, spacing: 7) {
-            HStack {
-                Text("Slot \(slot)")
-                    .font(Theme.body(11).weight(.bold))
-                    .foregroundStyle(Theme.goldDim)
-                Spacer()
-                if let equipped {
-                    Text("\(equipped.set.displayName) +\(equipped.level)")
-                        .font(Theme.body(12).weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                }
-            }
-
-            if let equipped {
-                let stats = equipped.allStats
-                ForEach(stats.indices, id: \.self) { index in
-                    let modifier = stats[index]
-                    HStack {
-                        Text(modifier.kind.displayName)
-                            .font(Theme.body(12))
-                            .foregroundStyle(index == 0 ? Theme.gold : Theme.textSecondary)
-                        Spacer()
-                        Text("+\(modifier.kind.format(modifier.value))")
-                            .font(Theme.numeric(12))
-                            .foregroundStyle(index == 0 ? Theme.gold : Theme.textPrimary)
-                    }
-                }
-                HStack(spacing: 10) {
-                    Button {
-                        store.upgradeRelic(equipped.id)
-                    } label: {
-                        Text(equipped.isMaxLevel
-                             ? "Max"
-                             : "Upgrade — \(RelicService.upgradeCost(grade: equipped.grade, level: equipped.level))")
-                            .font(Theme.body(11).weight(.semibold))
-                            .foregroundStyle(equipped.isMaxLevel ? Theme.textSecondary : Theme.gold)
-                    }
-                    .disabled(equipped.isMaxLevel)
-
-                    Button("Unequip") { store.unequip(slot: slot, from: unitID) }
-                        .font(Theme.body(11))
+            if let awakening = unit.blueprint.awakening {
+                HStack(alignment: .top, spacing: 5) {
+                    Image(systemName: "sun.max.fill")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(unit.unit.isAwakened ? Theme.gold : Theme.textSecondary)
+                    Text(unit.unit.isAwakened
+                         ? "Awakened: \(awakening.bonusDescription)"
+                         : "Awakens into \(awakening.awakenedName): \(awakening.bonusDescription)")
+                        .font(Theme.body(9))
                         .foregroundStyle(Theme.textSecondary)
-                    Button("Change") { pickingSlot = SlotPick(id: slot) }
-                        .font(Theme.body(11).weight(.semibold))
-                        .foregroundStyle(Theme.info)
-                    Spacer()
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-            } else {
-                HStack {
-                    Text("Empty")
-                        .font(Theme.body(12))
-                        .foregroundStyle(Theme.textSecondary)
-                    Spacer()
-                    Button("Choose") { pickingSlot = SlotPick(id: slot) }
-                        .font(Theme.body(11).weight(.semibold))
-                        .foregroundStyle(Theme.info)
+            }
+        }
+        .padding(8)
+        .panelBackground(radius: Theme.tightCorner)
+    }
+
+    private func tag(_ text: String, color: Color) -> some View {
+        Text(text)
+            .font(Theme.body(9).weight(.semibold))
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(Capsule().fill(color.opacity(0.18)))
+            .foregroundStyle(color)
+            .lineLimit(1)
+    }
+
+    private func statRow(_ label: String, _ base: Double, _ total: Double, percent: Bool = false) -> some View {
+        let bonus = total - base
+        let shown = abs(bonus) >= (percent ? 0.005 : 0.5)
+        return HStack(spacing: 6) {
+            Text(label)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(width: 68, alignment: .leading)
+            Text(Self.statText(total, percent: percent))
+                .font(Theme.numeric(12))
+                .foregroundStyle(Theme.textPrimary)
+            Spacer()
+            Text(shown ? ((bonus > 0 ? "+" : "−") + Self.statText(abs(bonus), percent: percent)) : "·")
+                .font(Theme.numeric(10))
+                .foregroundStyle(shown ? (bonus > 0 ? Theme.success : Theme.danger) : Theme.stroke)
+        }
+    }
+
+    static func statText(_ value: Double, percent: Bool) -> String {
+        percent ? "\(Int((value * 100).rounded()))%" : "\(Int(value.rounded()))"
+    }
+
+    // MARK: - Bottom: the skills
+
+    private func skills(_ unit: ResolvedUnit) -> some View {
+        let index = min(selectedSkill, max(0, unit.skills.count - 1))
+        return HStack(alignment: .center, spacing: 10) {
+            HStack(spacing: 6) {
+                ForEach(unit.skills.indices, id: \.self) { slot in
+                    skillTile(unit.skills[slot], selected: slot == index)
+                        .onTapGesture {
+                            Juice.haptic(.light)
+                            selectedSkill = slot
+                        }
                 }
+            }
+            if unit.skills.indices.contains(index) {
+                skillWords(unit.skills[index], index: index, unit: unit)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
+        .padding(8)
         .panelBackground(radius: Theme.tightCorner)
+    }
+
+    private func skillTile(_ skill: Skill, selected: Bool) -> some View {
+        VStack(spacing: 2) {
+            Image(systemName: SkillButton.glyph(for: skill))
+                .font(.system(size: 15, weight: .bold))
+                .foregroundStyle(selected ? Theme.gold : Theme.textSecondary)
+            Text(skill.name)
+                .font(Theme.body(7).weight(.semibold))
+                .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(width: 56, height: 50)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .fill(selected ? Theme.surfaceHigh : Theme.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .strokeBorder(selected ? Theme.gold : Theme.stroke, lineWidth: selected ? 1.5 : 1)
+        )
+        .contentShape(Rectangle())
+    }
+
+    private func skillWords(_ skill: Skill, index: Int, unit: ResolvedUnit) -> some View {
+        let level = unit.unit.skillLevels.indices.contains(index) ? unit.unit.skillLevels[index] : 1
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 6) {
+                Text(skill.name)
+                    .font(Theme.body(12).weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                if skill.isPassive {
+                    Text("PASSIVE")
+                        .font(Theme.body(7).weight(.black))
+                        .padding(.horizontal, 4).padding(.vertical, 1)
+                        .background(Capsule().fill(Theme.gold.opacity(0.25)))
+                        .foregroundStyle(Theme.gold)
+                }
+                if skill.cooldown > 0 {
+                    Label("\(skill.cooldown) turns", systemImage: "clock.fill")
+                        .font(Theme.numeric(9))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                if let damage = skill.damage {
+                    Text("≈ \(Int(DamageCalculator.previewDamage(attackStat: unit.stats.atk, spec: damage))) dmg" + (damage.hits > 1 ? " × \(damage.hits)" : ""))
+                        .font(Theme.numeric(9))
+                        .foregroundStyle(Theme.gold)
+                }
+                Spacer()
+                if !skill.levelUpBonuses.isEmpty {
+                    HStack(spacing: 3) {
+                        ForEach(skill.levelUpBonuses.indices, id: \.self) { bonusIndex in
+                            Circle()
+                                .fill(level > bonusIndex + 1 ? Theme.success : Theme.stroke)
+                                .frame(width: 6, height: 6)
+                        }
+                        Text("skill-ups")
+                            .font(Theme.body(8))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+            }
+            Text(skill.description)
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+            if let next = skill.levelUpBonuses.indices.first(where: { level <= $0 + 1 }) {
+                Text("Next skill-up: \(skill.levelUpBonuses[next].label). Feed a duplicate in the Hall of Ka.")
+                    .font(Theme.body(8))
+                    .foregroundStyle(Theme.goldDim)
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Awakening in one sheet: the form it has and the form it becomes, what the
+/// change is worth, and the essences it costs.
+struct AwakeningSheet: View {
+    let unit: ResolvedUnit
+
+    @EnvironmentObject private var store: GameStore
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                if let awakening = unit.blueprint.awakening {
+                    let costs = awakening.essenceCost.sorted { $0.key < $1.key }
+                    let affordable = awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
+                    HStack(alignment: .top, spacing: 14) {
+                        formTile(unit.blueprint.model.portraitName(awakened: false), caption: unit.blueprint.name)
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 18, weight: .bold))
+                            .foregroundStyle(Theme.gold)
+                            .padding(.top, 56)
+                        formTile(unit.blueprint.model.portraitName(awakened: true), caption: awakening.awakenedName)
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(awakening.awakenedName)
+                                .font(Theme.title(16))
+                                .foregroundStyle(Theme.gold)
+                            Text(awakening.bonusDescription)
+                                .font(Theme.body(12))
+                                .foregroundStyle(Theme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            ForEach(costs.indices, id: \.self) { costIndex in
+                                let id = costs[costIndex].key
+                                let needed = costs[costIndex].value
+                                let have = store.player.essences[id] ?? 0
+                                HStack {
+                                    Text(EssenceCatalog.name(for: id))
+                                        .font(Theme.body(12))
+                                        .foregroundStyle(Theme.textSecondary)
+                                    Spacer()
+                                    Text("\(have) / \(needed)")
+                                        .font(Theme.numeric(12))
+                                        .foregroundStyle(have >= needed ? Theme.success : Theme.danger)
+                                }
+                            }
+                            if unit.unit.isAwakened {
+                                Text("Already awakened.")
+                                    .font(Theme.body(12))
+                                    .foregroundStyle(Theme.gold)
+                            } else {
+                                PrimaryButton(title: "Awaken", systemImage: "sun.max.fill", isEnabled: affordable) {
+                                    store.awaken(unit.id)
+                                    dismiss()
+                                }
+                                Text("Essences drop in the Halls of Essence, in the Labyrinth on the island.")
+                                    .font(Theme.body(10))
+                                    .foregroundStyle(Theme.textSecondary)
+                            }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .padding(12)
+                }
+            }
+            .screen("Awakening")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func formTile(_ portrait: String, caption: String) -> some View {
+        VStack(spacing: 4) {
+            if BundleImage.exists(portrait) {
+                BundleImage(name: portrait)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: 104, height: 136)
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+            } else {
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(Theme.surface)
+                    .frame(width: 104, height: 136)
+            }
+            Text(caption)
+                .font(Theme.body(11).weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+        }
     }
 }
 
@@ -485,19 +609,19 @@ struct FodderPickerView: View {
                             : "Every other unit you own is locked."
                     )
                 } else {
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96, maximum: 120), spacing: 10)], spacing: 12) {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 76, maximum: 96), spacing: 8)], spacing: 10) {
                         ForEach(candidates) { candidate in
                             Button {
                                 toggle(candidate.id)
                             } label: {
-                                UnitCard(unit: candidate, isSelected: selection.contains(candidate.id), size: 96)
+                                UnitCard(unit: candidate, isSelected: selection.contains(candidate.id), size: 76)
                             }
                         }
                     }
                     .padding(12)
                 }
             }
-            .screen(purpose == .evolve ? "Evolve" : "Level Up")
+            .screen(purpose == .evolve ? "Evolve" : "Power up")
             .safeAreaInset(edge: .bottom) {
                 VStack(spacing: 6) {
                     if purpose == .evolve {
@@ -519,7 +643,7 @@ struct FodderPickerView: View {
                         commit()
                     }
                 }
-                .padding(12)
+                .padding(10)
                 .background(Theme.ink)
             }
             .toolbar {

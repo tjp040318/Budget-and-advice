@@ -6,6 +6,9 @@ import Foundation
 /// HUD; it never asks the engine what the state "is" mid-animation.
 enum BattleEvent: Identifiable, Sendable {
     case battleStart(playerTeam: [UUID], opponentTeam: [UUID])
+    /// A dungeon's next wave takes the field once the one before it is down;
+    /// the arrivals are carried so the stage can build their figures.
+    case waveStarted(wave: Int, count: Int, opponents: [Combatant])
     case turnBegan(actor: UUID, turnNumber: Int)
     /// The actor is stunned, frozen or asleep and loses the turn.
     case turnSkipped(actor: UUID, reason: StatusKind)
@@ -29,6 +32,7 @@ enum BattleEvent: Identifiable, Sendable {
     var id: String {
         switch self {
         case .battleStart: return "start"
+        case .waveStarted(let w, _, _): return "wave-\(w)"
         case .turnBegan(let a, let n): return "turn-\(a)-\(n)"
         case .turnSkipped(let a, let r): return "skip-\(a)-\(r.rawValue)"
         case .skillCast(let a, let s, _, _, _, _, _): return "cast-\(a)-\(s)"
@@ -55,6 +59,7 @@ enum BattleEvent: Identifiable, Sendable {
     var presentationDuration: TimeInterval {
         switch self {
         case .battleStart: return 1.2
+        case .waveStarted: return 1.4
         case .turnBegan: return 0.25
         case .turnSkipped: return 0.9
         case .skillCast(_, _, _, _, let shot, let animation, _):

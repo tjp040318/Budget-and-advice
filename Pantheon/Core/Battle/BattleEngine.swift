@@ -34,6 +34,12 @@ final class BattleEngine {
 
     let mode: BattleMode
     private(set) var combatants: [Combatant]
+    /// A dungeon run is one battle of several waves: when a wave is down the
+    /// next takes the field, and the fight is won when the last one falls.
+    private var pendingWaves: [[ResolvedUnit]]
+    /// 1-based; the HUD shows "Wave 2/3".
+    private(set) var waveIndex: Int = 1
+    let waveCount: Int
     private(set) var turnNumber: Int = 0
     private(set) var isFinished: Bool = false
     private(set) var result: BattleResult?
@@ -57,11 +63,14 @@ final class BattleEngine {
         playerTeam: [ResolvedUnit],
         opponentTeam: [ResolvedUnit],
         mode: BattleMode,
-        seed: UInt64
+        seed: UInt64,
+        laterWaves: [[ResolvedUnit]] = []
     ) {
         self.mode = mode
         self.seed = seed
         self.rng = SeededRandom(seed: seed)
+        self.pendingWaves = laterWaves
+        self.waveCount = 1 + laterWaves.count
 
         let playerCombatants = BattleEngine.buildSide(playerTeam, side: .player, mode: mode)
         let opponentCombatants = BattleEngine.buildSide(opponentTeam, side: .opponent, mode: mode)
@@ -239,6 +248,7 @@ final class BattleEngine {
         var events: [BattleEvent] = []
 
         while !isFinished {
+            events += spawnWaveIfNeeded()
             if let ending = checkForEnding() {
                 events.append(ending)
                 break
@@ -871,9 +881,22 @@ final class BattleEngine {
         guard !isFinished else { return nil }
         let playerAlive = !aliveIndices(.player).isEmpty
         let opponentAlive = !aliveIndices(.opponent).isEmpty
-        if !opponentAlive { return finishBattle(outcome: .victory) }
+        // A wave down with waves to come is not a win; `advance` brings the
+        // next one on before the next turn is dealt.
+        if !opponentAlive && pendingWaves.isEmpty { return finishBattle(outcome: .victory) }
         if !playerAlive { return finishBattle(outcome: .defeat) }
         return nil
+    }
+
+    /// The next wave walks on once the field is clear of the last. The
+    /// player's bars and health carry over, the way a dungeon run does.
+    private func spawnWaveIfNeeded() -> [BattleEvent] {
+        guard !isFinished, !pendingWaves.isEmpty, aliveIndices(.opponent).isEmpty else { return [] }
+        let wave = pendingWaves.removeFirst()
+        waveIndex += 1
+        let arrivals = BattleEngine.buildSide(wave, side: .opponent, mode: mode)
+        combatants.append(contentsOf: arrivals)
+        return [.waveStarted(wave: waveIndex, count: waveCount, opponents: arrivals)]
     }
 
     private func finishBattle(outcome: BattleOutcome) -> BattleEvent {
@@ -898,11 +921,12 @@ final class BattleEngine {
     static func simulate(
         playerTeam: [ResolvedUnit],
         opponentTeam: [ResolvedUnit],
-        seed: UInt64
+        seed: UInt64,
+        laterWaves: [[ResolvedUnit]] = []
     ) -> BattleResult {
         let engine = BattleEngine(
             playerTeam: playerTeam, opponentTeam: opponentTeam,
-            mode: .simulation, seed: seed
+            mode: .simulation, seed: seed, laterWaves: laterWaves
         )
         engine.autoBattle = true
         _ = engine.start()

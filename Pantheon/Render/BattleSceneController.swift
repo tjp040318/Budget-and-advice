@@ -200,15 +200,25 @@ final class BattleSceneController: NSObject {
     /// who face +Z — toward the player and the camera. A model's authored
     /// facing is +Z (Docs/ART_PIPELINE.md), hence the half-turn on the near
     /// side. Ranks are staggered so nobody is hidden behind anybody.
-    private func place(combatants: [Combatant]) {
+    private func place(combatants: [Combatant], entering: Bool = false) {
         // A 5v5 is ten characters plus a full post stack; a 1v1 can afford the
         // detailed mesh. The loader falls back to the full model when no reduced
         // export has been shipped.
-        let detail = ModelLibrary.detail(forCombatantCount: combatants.count)
+        let detail = ModelLibrary.detail(forCombatantCount: combatants.count + (entering ? unitNodes.count : 0))
         for combatant in combatants {
             let node = UnitNode(combatant: combatant, detail: detail)
-            node.position = position(for: combatant)
+            let home = position(for: combatant)
             node.eulerAngles.y = combatant.side == .player ? .pi : 0
+            if entering {
+                // A later wave walks on from the far side of the field.
+                node.position = SCNVector3(home.x, home.y, home.z - 3.0)
+                node.opacity = 0
+                let walk = SCNAction.move(to: home, duration: 0.7)
+                walk.timingMode = .easeOut
+                node.runAction(.group([walk, .fadeIn(duration: 0.45)]))
+            } else {
+                node.position = home
+            }
             scene.rootNode.addChildNode(node)
             unitNodes[combatant.id] = node
         }
@@ -421,6 +431,17 @@ final class BattleSceneController: NSObject {
 
         case .defeated(let target):
             unitNodes[target]?.markDefeated()
+
+        case .waveStarted(_, _, let opponents):
+            // The fallen wave leaves the field so the marks are free, and
+            // the next one comes on from the back.
+            for (id, node) in unitNodes where node.side == .opponent && node.isDefeated {
+                node.runAction(.sequence([.fadeOut(duration: 0.3), .removeFromParentNode()]))
+                unitNodes[id] = nil
+            }
+            registerMaxHealth(opponents)
+            place(combatants: opponents, entering: true)
+            Juice.haptic(.light)
 
         case .battleEnded(let result):
             director?.returnHome()

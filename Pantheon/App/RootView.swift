@@ -6,6 +6,7 @@ struct RootView: View {
     @State private var tab: Tab = .island
     @State private var showTraining = false
     @State private var showSettings = false
+    @State private var showLabyrinth = false
     @Environment(\.scenePhase) private var scenePhase
 
     /// Five tabs, which is all an iPhone shows before it folds the rest
@@ -21,7 +22,7 @@ struct RootView: View {
             case .arena: self = .arena
             case .summon: self = .summon
             case .collection: self = .collection
-            case .training, .settings: return nil
+            case .training, .settings, .labyrinth: return nil
             }
         }
     }
@@ -37,6 +38,8 @@ struct RootView: View {
                     showTraining = true
                 case .settings:
                     showSettings = true
+                case .labyrinth:
+                    showLabyrinth = true
                 default:
                     if let next = Tab(destination) {
                         withAnimation { tab = next }
@@ -66,6 +69,10 @@ struct RootView: View {
         .preferredColorScheme(.dark)
         .fullScreenCover(isPresented: $showTraining) {
             TrainingView()
+                .environmentObject(store)
+        }
+        .fullScreenCover(isPresented: $showLabyrinth) {
+            LabyrinthView()
                 .environmentObject(store)
         }
         .sheet(isPresented: $showSettings) {

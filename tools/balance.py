@@ -568,6 +568,59 @@ def report_halls(trials=80):
                 row += f"{wr*100:>16.0f}% {med:>3.0f}t"
             print(row)
 
+# The Labyrinth's relic dungeons, mirroring DungeonDatabase.labyrinth: ten
+# levels, each three waves — two of three mobs, then the boss at x1.6 with two
+# more — at level 10 + 4L, grade min(6, 3 + (L-1)//3), difficulty 0.70 + 0.08L.
+# The team carries its health and cooldowns from wave to wave, which is what
+# makes a run harder than its last wave alone.
+LABYRINTHS = [  # name, roster, boss
+    ("Vault of the Colossus",      [SHABTI, SCARAB, SERPOPARD], SENTINEL),
+    ("Lair of the Hydra",          [E_MEDUSA, SERPOPARD, E_AMAZON], HYDRA),
+    ("Necropolis of the Devourer", [E_DRAUGR, SHABTI, SCARAB], AMMIT),
+]
+
+def labyrinth_grade(level):
+    return min(6, 3 + (level - 1) // 3)
+
+def labyrinth_waves(lab, level):
+    _, roster, boss = lab
+    enemy_level = 10 + level * 4
+    stars = labyrinth_grade(level)
+    difficulty = 0.70 + level * 0.08
+    def wave(offset):
+        return [(roster[(level + offset + slot) % len(roster)], enemy_level, stars, difficulty) for slot in range(3)]
+    boss_wave = [(boss, enemy_level, max(stars, boss.stars), difficulty * 1.6)] + wave(2)[:2]
+    return [wave(0), wave(1), boss_wave]
+
+def winrate_waves(team_spec, waves, trials=60):
+    """A run: the same fighters through every wave, wounds and cooldowns kept."""
+    wins, lens = 0, []
+    for s in range(trials):
+        team = [mk(*t) for t in team_spec]
+        total, result = 0, "a"
+        for w, spec in enumerate(waves):
+            result, turns = simulate(team, build_stage(spec), seed=s * 7 + w)
+            total += turns
+            if result != "a": break
+        if result == "a": wins += 1
+        lens.append(total)
+    return wins / trials, statistics.median(lens)
+
+LABYRINTH_LADDERS = [("4x 3* lv20", [(ANUBIS, 20, 3, 1.0)] * 4)] + CHAPTER_LADDERS
+
+def report_labyrinths(trials=60):
+    print("\nTHE LABYRINTH — win rate per level over %d seeded runs of three waves" % trials)
+    print("target: B1 for a levelled 3* team out of chapter one, B4 for 4*s, B7 for 5*s with relics, B10 for maxed 6*s\n")
+    print(f"{'level':>30}{'lvl':>5}  " + "".join(f"{n:>22}" for n, _ in LABYRINTH_LADDERS))
+    for lab in LABYRINTHS:
+        for level in (1, 4, 7, 10):
+            waves = labyrinth_waves(lab, level)
+            row = f"{lab[0] + f' B{level}':>30}{waves[0][0][1]:>5}  "
+            for _, team in LABYRINTH_LADDERS:
+                wr, med = winrate_waves(team, waves, trials=trials)
+                row += f"{wr*100:>16.0f}% {med:>3.0f}t"
+            print(row)
+
 def report_campaign(trials=200):
     print("\nCAMPAIGN — win rate over %d seeded battles" % trials)
     print("target: the intended team sits at 60-85%; the one below it should struggle\n")
@@ -656,7 +709,9 @@ if __name__ == "__main__":
     elif "--families" in a: report_families()
     elif "--chapters" in a: report_chapters()
     elif "--halls" in a: report_halls()
+    elif "--labyrinths" in a: report_labyrinths()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
+        report_labyrinths()
         report_gacha(); report_economy()
         print()

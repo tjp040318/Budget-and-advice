@@ -36,6 +36,7 @@ struct TourView: View {
         ("island", 2), ("collection", 2), ("detail", 2), ("training", 2),
         ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("arena_battle", 6), ("more", 2),
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
+        ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -117,15 +118,28 @@ struct TourView: View {
                     .onAppear { startArenaBattle() }
             }
         case "halls":
-            CampaignView(mode: .halls)
+            NavigationStack {
+                DungeonLevelsView(chapterID: "hall_ember")
+            }
+        case "labyrinth":
+            LabyrinthView()
+        case "dungeon":
+            NavigationStack {
+                DungeonLevelsView(chapterID: "lab_colossus")
+            }
+        case "relic_picker":
+            if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
+                RelicPickerView(unitID: unit.id, slot: 2)
+            } else {
+                RelicInventoryView()
+            }
         case "relics":
             RelicInventoryView()
         case "shop":
             ShopView()
         case "chapter_map":
-            NavigationStack {
-                ChapterMapView(chapterID: "duat_1") { _ in }
-            }
+            // The campaign tab as it opens: the chapter strip and the map.
+            CampaignView()
         case "missions":
             MissionsView()
         default:

@@ -266,18 +266,19 @@ Send: the receipt line after a purchase, and the wallet before and after.
 
 ## 13. The campaign map
 
-Campaign → **Chapters** shows the world: a card per realm (the Duat,
-Olympus, Yggdrasil) with its chapters under it. A shut chapter says which
-chapter's boss shuts it. Tap an open chapter: its map is the stage's
-painting with a dotted road across it and a medallion per stage — gold with
-a tick where you have been, a pulsing ring where you stand, a lock beyond,
-a crown on the boss. Tap the ringed one and the briefing opens; the list
-under the map does the same. Every tap here should land: if a medallion or
-a row ignores you, say which.
+Tap the **Gate of the Duat** on the island and you are on the map: a strip
+of chapter chips along the top (gold where you are, a tick where a chapter
+is done, a lock where its gate is shut) and, below it, the chapter you are
+in — the stage's painting with a dotted road across it and a medallion per
+stage: gold with a tick where you have been, a pulsing ring where you
+stand, a lock beyond, a crown on the boss. Tap the ringed one and the
+briefing opens; the list under the map does the same. **Realms** (top left)
+opens the overview of the three realms and says which boss shuts what.
+Every tap here should land: if a medallion, a chip or a row ignores you,
+say which.
 
-Send: a screenshot of a chapter map, and whether the Chapters / Halls of
-Essence switch at the top now answers a tap (it did not before: the
-paintings were swallowing touches).
+Send: a screenshot of the map as it opens, and whether it opened on the
+chapter you are actually in.
 
 ## 14. Missions and the daily gift
 
@@ -331,6 +332,42 @@ prompt; **hold a skill** (even one that is cooling down) and a card with
 its cooldown and description opens; tap anywhere to close it.
 
 Send: whether the gauge order matches who actually moved next.
+
+## 18. The Labyrinth
+
+The new building on the island, right of the summoning circle. Inside:
+three **relic dungeons** on top (the Vault of the Colossus, the Lair of the
+Hydra, the Necropolis of the Devourer), the five **Halls of Essence** below.
+Tap a dungeon: the boss, the sets it drops, and ten level medallions, B1
+open. Tap B1 → the briefing shows three waves (W1, W2, BOSS) and "Relic
+(3★) · always" with the set names → Begin. The fight is one battle: when a
+wave is down the next walks on from the back and the chip beside the stage
+name reads Wave 2/3, then 3/3; your health and cooldowns carry over. The
+victory panel shows the relic. B2 opens when B1 falls. Levels climb hard:
+B4 wants a 4★ team, B7 5★s with relics, B10 a maxed 6★ team; the Colossus
+is the gentlest.
+
+Send: whether the second wave arrived (and looked like it arrived, not
+popped), what the relic was, and how B1 felt for your team.
+
+## 19. The unit sheet and the relic picker
+
+Collection → tap a unit. One screen, nothing to scroll: the card, level bar,
+power and three buttons (Power up, Evolve, Awaken) on the left; the six
+relic slots in a ring around the element in the middle, slot 1 at the top
+and the rest clockwise; the stats on the right, each with its relic bonus in
+green; the skills along the bottom — tap one and its words, cooldown,
+estimated damage and skill-up dots show beside it. The book (top right) has
+the lore; the wand auto-equips; the padlock locks.
+
+Tap a slot. The picker: candidates on the left, best fit for the unit's role
+first (tap one to select it, it does not equip yet); on the right what is in
+the slot now, the pick, and **every stat before → after** with the change,
+plus the sets it would complete or break. Equip, or take one off another
+unit ("Take and equip"), or unequip what is there.
+
+Send: a screenshot of the sheet and one of the picker with a pick selected,
+and whether anything is cut off at the edges of your phone.
 
 ## If it does not build
 
