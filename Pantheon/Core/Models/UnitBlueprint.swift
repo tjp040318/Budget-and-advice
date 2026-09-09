@@ -56,7 +56,7 @@ struct UnitBlueprint: Codable, Equatable, Identifiable, Sendable {
     /// rig is worse than no 5★ at all. The check is a file lookup, not UIKit,
     /// so Core stays free of UI frameworks.
     var hasShippedArt: Bool {
-        Bundle.main.url(forResource: model.portraitName, withExtension: "png") != nil
+        BundleArt.exists(model.portraitName)
     }
 
     var activeSkills: [Skill] { skills.filter { !$0.isPassive } }

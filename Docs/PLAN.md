@@ -1003,6 +1003,31 @@ this pass on only the base export and the manifest of a character are
 committed: the six per-clip GLBs (6–7 MB each, a copy of the mesh with one
 track) are ignored and refetched with `meshy.py download` when needed.
 
+**The bundle.** The bigger textures and three hundred new cards would have
+put the app past a gigabyte, so the paintings became JPEGs
+(`tools/shrink_art.py`, quality 92): the two resource folders went from
+248 MB to 51 MB, which is more than the meshes gained. Only files with an
+alpha channel and the tiling stage textures stay PNG. `UIImage(named:)` is
+indifferent to the extension; the two existence checks by name and extension
+now go through `BundleArt`.
+
+**What it will weigh.** A family at the new budget is about 7.5 MB (4.5 base,
+1.7 LOD, six clip carriers at 0.2), so seventy-nine families are about
+590 MB of meshes, and their cards about 155 MB as JPEG (they would have been
+858 as PNG). An app of roughly 800 MB installs from Xcode without complaint;
+if it ever needs to come down, the texture is the cheap knob (1536 px instead
+of 2048 takes a base file from 4.5 MB to about 2.8) and the LOD is the next
+one, not the triangle count, which is what fixed the silhouette.
+
+**What it costs CI.** The roster went from about 215 blueprints to 395, and
+the unit-test step went from 4.5 minutes to 10.4 (the tour is unchanged at
+about 13.5), so a run is now roughly half an hour: read it, do not push over
+it. The sixty-eight-row table is four literals rather than one
+(`familyRowsEgypt` + `Greece` + `Norse` + `BatchThree`), because one array
+literal of sixty-eight eighteen-argument rows is what Swift's type checker
+charges by the minute for; keep adding pantheon-sized pieces rather than
+lengthening one.
+
 **Batch 3's families.** Egypt: Ra, Osiris, Ptah, Khnum, Nephthys, Ma'at,
 Serqet, Taweret, Anhur, Bes, Medjay, Cobra Priestess. Greece: Hera,
 Hephaestus, Demeter, Dionysus, Aphrodite, Nike, Achilles, Atalanta, Siren,

@@ -5,6 +5,26 @@ import UIKit
 /// SceneKit animation player with exactly these keys inside the unit's `.usdz`
 /// (or a sibling `<unit>_<clip>.usdz`), so the names here are a contract with
 /// the art pipeline. See `Docs/ART_PIPELINE.md`.
+/// Is a painting in the bundle?
+///
+/// The paintings ship as JPEG (`tools/shrink_art.py`: a card is a 1024px
+/// painting with no transparency, and the PNG of one is five times the size),
+/// while the UI kit and the sprites that carry alpha stay PNG. `UIImage(named:)`
+/// does not care, but the two places that ask whether a file exists by name did,
+/// so they ask here instead and both extensions are tried.
+enum BundleArt {
+    static let extensions = ["jpg", "png"]
+
+    static func url(_ name: String) -> URL? {
+        for ext in extensions {
+            if let url = Bundle.main.url(forResource: name, withExtension: ext) { return url }
+        }
+        return nil
+    }
+
+    static func exists(_ name: String) -> Bool { url(name) != nil }
+}
+
 enum AnimationClip: String, Codable, CaseIterable, Sendable {
     case idle
     case idleCombat = "idle_combat"
@@ -148,7 +168,7 @@ struct ModelSpec: Codable, Equatable, Sendable {
     func portraitName(awakened: Bool) -> String {
         guard awakened else { return portraitName }
         let name = portraitName + "_awakened"
-        return Bundle.main.url(forResource: name, withExtension: "png") != nil ? name : portraitName
+        return BundleArt.exists(name) ? name : portraitName
     }
 
     /// The mesh an awakened unit loads when one has shipped: the base asset's

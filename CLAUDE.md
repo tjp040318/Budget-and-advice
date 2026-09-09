@@ -288,6 +288,17 @@ environment can and cannot do. The short version:
   Unwrapped King as a 3.2 m mummy.
 - Portraits go through `BundleImage` (UIKit lookup). SwiftUI `Image("name")`
   drew nothing for loose bundle PNGs on device; never use it for one.
+- **The paintings ship as JPEG.** A Gemini card is a 1024 px painting with no
+  transparency and its PNG was 1.3 MB, so 154 cards were 209 MB of the bundle
+  and batch 3's three hundred more would have added four hundred.
+  `python3 tools/shrink_art.py` converts every alpha-less painting in
+  `Pantheon/Resources` to JPEG at quality 92 (235 MB → 38 MB) and every card
+  script ends by calling it; the UI kit, the tiling stage textures and the
+  three sprites keep their alpha and stay PNG. `UIImage(named:)` finds a file
+  whatever its extension, but a lookup by name *and* extension does not, so
+  `hasShippedArt` and `ModelSpec.portraitName(awakened:)` go through
+  `BundleArt` (Presentation.swift), which tries jpg then png. The concepts in
+  `Art/Concepts` stay PNG: Meshy reads them.
 - The gacha pool is gated on shipped art (`UnitBlueprint.hasShippedArt`, a
   bundle lookup of `portrait_<id>.png`): a family joins the pool the moment
   its five cards are in the bundle. The battle camera is solved for a portrait phone

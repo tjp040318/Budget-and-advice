@@ -12,12 +12,15 @@ gen boss_colossus "A colossal animated statue of a pharaoh carved from cracked s
 gen boss_unwrapped_king "A mummified pharaoh standing tall, his linen wrappings hanging loose and unwound from his face and one arm, a gold death mask pushed up onto his brow above a withered grinning face, a black and gold pectoral over the bandaged chest, a golden crook held tight against the outside of one leg and a flail against the other, bandaged feet. Palette linen, gold, black."
 
 CARD="Edit this image into a mobile gacha RPG character portrait card of the SAME character in the SAME cel-shaded stylised look: upper body and head only, filling the square frame with the head in the upper two thirds, facing FACING, dramatic rim light from behind, a dark background with a soft radial glow behind the head, rich saturated colour, no text, no frame, no border, one character."
-card() { out="$OUT/portrait_$1.png"; [ -s "$out" ] && { echo "have card $1"; return; }; [ -s "Art/Concepts/$1_sw.png" ] || { echo "no concept for $1"; return; }; python3 tools/genart.py --prompt "${CARD/FACING/$2}" --ref "Art/Concepts/$1_sw.png" --out "$out" --size 1024x1024 >/dev/null 2>&1 && echo "ok card $1" || echo "FAILED card $1"; }
+card() { out="$OUT/portrait_$1.png"; { [ -s "$out" ] || [ -s "$OUT/portrait_$1.jpg" ]; } && { echo "have card $1"; return; }; [ -s "Art/Concepts/$1_sw.png" ] || { echo "no concept for $1"; return; }; python3 tools/genart.py --prompt "${CARD/FACING/$2}" --ref "Art/Concepts/$1_sw.png" --out "$out" --size 1024x1024 >/dev/null 2>&1 && echo "ok card $1" || echo "FAILED card $1"; }
 card boss_colossus "slightly left"
 card boss_unwrapped_king "slightly right"
 
-bg() { [ -s "$OUT/$1.png" ] && { echo "have $1"; return; }; python3 tools/genart.py --prompt "$2 environment background for a mobile RPG battle stage, $3, wide establishing view, no characters, no foreground objects, painterly game art, atmospheric depth, dramatic lighting, muted saturated palette, the centre and lower half uncluttered and darker, interest in the upper corners" --out "$OUT/$1.png" --size 2048x2048 >/dev/null 2>&1 && echo "ok $1" || echo "FAILED $1"; }
+bg() { { [ -s "$OUT/$1.png" ] || [ -s "$OUT/$1.jpg" ]; } && { echo "have $1"; return; }; python3 tools/genart.py --prompt "$2 environment background for a mobile RPG battle stage, $3, wide establishing view, no characters, no foreground objects, painterly game art, atmospheric depth, dramatic lighting, muted saturated palette, the centre and lower half uncluttered and darker, interest in the upper corners" --out "$OUT/$1.png" --size 2048x2048 >/dev/null 2>&1 && echo "ok $1" || echo "FAILED $1"; }
 bg colossus_vault_bg "Egyptian underground vault" "a vast sandstone vault under a pyramid, rows of colossal seated pharaoh statues receding into torchlit dark, gold seams in the stone, turquoise light from deep within, dust hanging in the air"
 bg hydra_lair_bg "Greek marsh cave" "the mouth of a flooded cave in a black marsh at night, dead trees, green witch-light on the water, bones along the shore, low mist"
 bg necropolis_bg "Egyptian necropolis" "an endless hall of tombs under the earth, rows of sarcophagi and canopic jars, violet ghost-light in the doorways, walls of hieroglyphs, dust and cobwebs, a cold shaft of light from above"
 echo labyrinth-art-done
+# The paintings ship as JPEG (tools/shrink_art.py); genart.py writes PNG, so
+# convert whatever this run added before it is committed.
+python3 tools/shrink_art.py

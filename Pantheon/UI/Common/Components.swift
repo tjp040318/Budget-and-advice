@@ -224,7 +224,6 @@ struct BundleImage: View {
 
     static func exists(_ name: String) -> Bool { UIImage(named: name) != nil }
 }
-
 /// The portrait tile used everywhere a unit appears in a list or a team slot.
 ///
 /// The frame carries the star grade. That is deliberate and it is the main

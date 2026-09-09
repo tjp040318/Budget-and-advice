@@ -70,7 +70,17 @@ extension UnitDatabase {
 
     // MARK: - The table
 
-    static let familyRows: [FamilyRow] = [
+    /// The table, in four pieces.
+    ///
+    /// One array literal of sixty-eight rows, each with eighteen labelled
+    /// arguments, is the kind of expression Swift's type checker charges by
+    /// the minute for. Four smaller literals concatenated cost nothing and
+    /// read better; `familyRows` is what the rest of the code uses.
+    static let familyRows: [FamilyRow] =
+        familyRowsEgypt + familyRowsGreece + familyRowsNorse + familyRowsBatchThree
+
+    static let familyRowsEgypt: [FamilyRow] = [
+FamilyRow] = [
         // ---- Egypt
         FamilyRow(key: "horus", name: "Horus", pantheon: .egyptian, stars: 5, archetype: .god, role: .attacker, kit: .duelist,
                   hp: 430, atk: 39, def: 24, spd: 108, height: 2.10, melee: true, costumeHue: 45, motif: "Sky",
@@ -117,7 +127,9 @@ extension UnitDatabase {
                   skills: ["Jackal Cut", "Duat Lunge", "", ""],
                   awakened: nil,
                   lore: "A soldier of Anubis's necropolis guard, masked as his master. Where the dead are, he stands."),
+    ]
 
+    static let familyRowsGreece: [FamilyRow] = [
         // ---- Greece
         FamilyRow(key: "athena", name: "Athena", pantheon: .greek, stars: 5, archetype: .god, role: .defender, kit: .warden,
                   hp: 560, atk: 30, def: 34, spd: 104, height: 2.05, melee: true, costumeHue: 35, motif: "Aegis",
@@ -169,7 +181,9 @@ extension UnitDatabase {
                   skills: ["Serpent Lash", "Petrifying Gaze", "", ""],
                   awakened: nil,
                   lore: "A priestess cursed with snakes for hair and a stare that turns flesh to stone. The hero who took her head still used it afterwards."),
+    ]
 
+    static let familyRowsNorse: [FamilyRow] = [
         // ---- Norse
         FamilyRow(key: "odin", name: "Odin", pantheon: .norse, stars: 5, archetype: .god, role: .support, kit: .oracle,
                   hp: 520, atk: 33, def: 28, spd: 108, height: 2.10, melee: false, costumeHue: 45, motif: "Ravens",
@@ -236,7 +250,10 @@ extension UnitDatabase {
                   skills: ["Hammer Blow", "Forge Blessing", "", ""],
                   awakened: nil,
                   lore: "One of the sons of Ivaldi, who made Odin's spear, Thor's hammer and Freya's necklace and were paid in tricks."),
+    ]
 
+    /// Batch 3: thirty-six more families, Egypt 12, Greece 10, Norse 14.
+    static let familyRowsBatchThree: [FamilyRow] = [
         // ---- Batch 3: thirty-six more, Egypt 12, Greece 10, Norse 14.
         // Every one of these is an original design described, never a named
         // likeness (a named god once came back from the painter as an actor's
@@ -428,6 +445,7 @@ extension UnitDatabase {
                   skills: ["Poisoned Knife", "Smith's Curse", "", ""],
                   awakened: nil,
                   lore: "The dark elves of Svartalfheim, blacker than pitch, who forge the gods' treasures and curse them as they hand them over."),
+    
     ]
 
     /// Every variant this file adds.

@@ -13,7 +13,7 @@ gen bastet "Bastet, Egyptian cat goddess, as an original cartoon character: a sl
 # The scroll banners and the world map, 1284x800 and 2048x1152 like the ones
 # they sit beside. Leave the lower third of a banner quiet: the pull buttons.
 BANNER="Mobile gacha summon banner splash, DESC, dramatic backlight, cinematic, ornate, hand-painted stylised mobile game art, the lower third of the image calm and uncluttered, no text, no logo, no UI"
-paint() { out="Pantheon/Resources/Portraits/$1.png"; [ -s "$out" ] && { echo "have $1"; return; }; python3 tools/genart.py --prompt "$2" --out "$out" --size "$3" >/dev/null 2>&1 && echo "ok $1" || echo "FAILED $1"; }
+paint() { out="Pantheon/Resources/Portraits/$1.png"; { [ -s "$out" ] || [ -s "Pantheon/Resources/Portraits/$1.jpg" ]; } && { echo "have $1"; return; }; python3 tools/genart.py --prompt "$2" --out "$out" --size "$3" >/dev/null 2>&1 && echo "ok $1" || echo "FAILED $1"; }
 paint banner_unknown "${BANNER/DESC/a plain clay tablet scroll glowing faintly on a stone altar among rows of sandstone shabti figurines, dusty amber and grey}" 1284x800
 paint banner_divine "${BANNER/DESC/a golden scroll bound in light floating above the silhouettes of gods on a mountaintop, blinding white-gold and violet}" 1284x800
 paint banner_light_dark "${BANNER/DESC/a scroll split down the middle, one half white-gold sunlight and one half violet-black night full of stars}" 1284x800
@@ -22,3 +22,6 @@ paint banner_water "${BANNER/DESC/a scroll of sea-green light drifting over dark
 paint banner_wind "${BANNER/DESC/a scroll caught in a jade-green whirlwind over a cliff top, leaves and feathers flying}" 1284x800
 paint world_map "A painted fantasy world map for a mobile game, seen from above like an old chart but in full colour: a desert land with pyramids and a river on the left, a Greek mountain with white temples in the middle, a Norse fjord with snowy peaks and a great tree on the right, dotted roads between them, sea all around with sea monsters at the edges, hand-painted stylised mobile game art, no text, no labels, no borders" 2048x1152
 echo concepts-day2-done
+# The paintings ship as JPEG (tools/shrink_art.py); genart.py writes PNG, so
+# convert whatever this run added before it is committed.
+python3 tools/shrink_art.py

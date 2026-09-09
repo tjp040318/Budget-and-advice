@@ -10,3 +10,6 @@ bg() { [ -s "$OUT/$1.png" ] && { echo "have $1"; return; }; python3 tools/genart
   bg jotunheim_hall_bg "Norse frost giant" "an enormous ice-and-stone hall of the frost giants, pillars of blue ice, torches burning green, snow blowing through, cold light" ) &
 ( [ -s "$OUT/banner_ravens_gather.png" ] || python3 tools/genart.py --prompt "Mobile gacha summon banner splash, Odin with his two ravens standing on the prow of a longship under the northern lights, Thor and Freya behind him, dramatic backlight, ice blue and gold, cinematic, ornate, the lower third quiet and dark, no text, no logo, no UI" --out "$OUT/banner_ravens_gather.png" --size 1284x800 >/dev/null 2>&1 && echo "ok banner_ravens_gather" || echo "FAILED banner" ) &
 wait; echo backdrops-done
+# The paintings ship as JPEG (tools/shrink_art.py); genart.py writes PNG, so
+# convert whatever this run added before it is committed.
+python3 tools/shrink_art.py
