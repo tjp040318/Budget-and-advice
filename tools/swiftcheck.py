@@ -169,6 +169,14 @@ def scan(files, verbose=False):
                 stack.append([kind, name, indent, None])
                 if kind in ("struct", "class", "enum", "protocol"):
                     declared.add(name)
+                    # `struct GameScreen<Bar: View, Content: View>` declares Bar
+                    # and Content as types for the length of the declaration.
+                    generics = re.match(r"[^<\n]*<([^>]*)>", ln[m.start(2):])
+                    if generics:
+                        for part in generics.group(1).split(","):
+                            param = part.split(":")[0].strip()
+                            if re.fullmatch(r"[A-Z][A-Za-z0-9_]*", param):
+                                declared.add(param)
                     if name in structs and kind != "extension":
                         pass
                     if kind == "struct" and name not in structs:
@@ -393,7 +401,8 @@ def check_unknown_types(files, declared, errors):
         "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
         "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64",
-        "ClosedRange","Key","DEBUG","NONE",
+        "ClosedRange","Key","DEBUG","NONE","Menu","AnyView","EmptyView","Namespace",
+        "MenuStyle","Alignment","Anchor","UnitPoint","Axis","Transaction","Animation",
         "XCTest","XCTestCase","XCTAssert","XCTAssertEqual","XCTAssertNotEqual","XCTAssertTrue",
         "XCTAssertFalse","XCTAssertNil","XCTAssertNotNil","XCTAssertGreaterThan",
         "XCTAssertGreaterThanOrEqual","XCTAssertLessThan","XCTAssertLessThanOrEqual",

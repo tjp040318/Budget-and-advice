@@ -50,7 +50,7 @@
       "finished_at": 1788979030621,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:37:13Z"
+      "polled": "2026-09-09T18:53:09Z"
     },
     "rig": {
       "id": "01a08775-b824-71a3-878d-bdfc225ec6e0",
@@ -77,7 +77,10 @@
       "started_at": 1788979037408,
       "finished_at": 1788979110833,
       "name": "",
-      "polled": "2026-09-09T18:38:38Z"
+      "polled": "2026-09-09T18:53:09Z",
+      "downloaded": {
+        "glb": "Art/Models/draugr_hd.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08777-03d4-70fe-a967-b729ced4d7e7",
@@ -100,7 +103,10 @@
       "started_at": 1788979120321,
       "finished_at": 1788979201424,
       "name": "",
-      "polled": "2026-09-09T18:40:10Z"
+      "polled": "2026-09-09T18:53:09Z",
+      "downloaded": {
+        "glb": "Art/Models/draugr_hd_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08777-0736-7374-97f5-2e6724c03588",
@@ -123,7 +129,10 @@
       "started_at": 1788979120367,
       "finished_at": 1788979199852,
       "name": "",
-      "polled": "2026-09-09T18:40:09Z"
+      "polled": "2026-09-09T18:53:09Z",
+      "downloaded": {
+        "glb": "Art/Models/draugr_hd_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08777-09f5-73bb-830b-56d001ba8496",
@@ -146,7 +155,10 @@
       "started_at": 1788979121038,
       "finished_at": 1788979204397,
       "name": "",
-      "polled": "2026-09-09T18:40:09Z"
+      "polled": "2026-09-09T18:53:10Z",
+      "downloaded": {
+        "glb": "Art/Models/draugr_hd_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08777-0cc7-74e2-97d3-2b6e79f07f79",
@@ -169,7 +181,10 @@
       "started_at": 1788979121749,
       "finished_at": 1788979206346,
       "name": "",
-      "polled": "2026-09-09T18:40:09Z"
+      "polled": "2026-09-09T18:53:10Z",
+      "downloaded": {
+        "glb": "Art/Models/draugr_hd_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08777-0f99-75fd-aa06-004019bf17ce",
@@ -192,7 +207,10 @@
       "started_at": 1788979122361,
       "finished_at": 1788979220482,
       "name": "",
-      "polled": "2026-09-09T18:40:30Z"
+      "polled": "2026-09-09T18:53:10Z",
+      "downloaded": {
+        "glb": "Art/Models/draugr_hd_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08777-1229-7548-ad91-cb7efb85e5e6",
@@ -215,8 +233,12 @@
       "started_at": 1788979123445,
       "finished_at": 1788979213787,
       "name": "",
-      "polled": "2026-09-09T18:40:20Z"
+      "polled": "2026-09-09T18:53:10Z",
+      "downloaded": {
+        "glb": "Art/Models/draugr_hd_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T18:53:10Z"
 }

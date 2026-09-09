@@ -50,7 +50,7 @@
       "finished_at": 1788978863859,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:34:27Z"
+      "polled": "2026-09-09T18:46:34Z"
     },
     "rig": {
       "id": "01a08773-2d9d-7121-8c6f-f5d17116f078",
@@ -77,7 +77,10 @@
       "started_at": 1788978875253,
       "finished_at": 1788978926617,
       "name": "",
-      "polled": "2026-09-09T18:35:36Z"
+      "polled": "2026-09-09T18:46:34Z",
+      "downloaded": {
+        "glb": "Art/Models/perseus_hd.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08774-3ab4-7632-82f2-b341c1297e57",
@@ -100,7 +103,10 @@
       "started_at": 1788978936963,
       "finished_at": 1788978953384,
       "name": "",
-      "polled": "2026-09-09T18:36:02Z"
+      "polled": "2026-09-09T18:46:35Z",
+      "downloaded": {
+        "glb": "Art/Models/perseus_hd_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08774-3de9-709f-8b6a-d02089b31202",
@@ -123,7 +129,10 @@
       "started_at": 1788978937666,
       "finished_at": 1788978984202,
       "name": "",
-      "polled": "2026-09-09T18:36:34Z"
+      "polled": "2026-09-09T18:46:35Z",
+      "downloaded": {
+        "glb": "Art/Models/perseus_hd_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08774-4104-708d-be9d-b4328fa21d1a",
@@ -146,7 +155,10 @@
       "started_at": 1788978938394,
       "finished_at": 1788978996385,
       "name": "",
-      "polled": "2026-09-09T18:36:44Z"
+      "polled": "2026-09-09T18:46:35Z",
+      "downloaded": {
+        "glb": "Art/Models/perseus_hd_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08774-437d-778a-99c0-092b1537bd60",
@@ -169,7 +181,10 @@
       "started_at": 1788978939050,
       "finished_at": 1788978999317,
       "name": "",
-      "polled": "2026-09-09T18:36:44Z"
+      "polled": "2026-09-09T18:46:35Z",
+      "downloaded": {
+        "glb": "Art/Models/perseus_hd_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08774-4606-73c2-8ec1-bfa4d3731ba3",
@@ -192,7 +207,10 @@
       "started_at": 1788978939767,
       "finished_at": 1788979021887,
       "name": "",
-      "polled": "2026-09-09T18:37:05Z"
+      "polled": "2026-09-09T18:46:35Z",
+      "downloaded": {
+        "glb": "Art/Models/perseus_hd_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08774-48dc-77ba-9f3f-988936d7e716",
@@ -215,8 +233,12 @@
       "started_at": 1788978940440,
       "finished_at": 1788979038393,
       "name": "",
-      "polled": "2026-09-09T18:37:25Z"
+      "polled": "2026-09-09T18:46:35Z",
+      "downloaded": {
+        "glb": "Art/Models/perseus_hd_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T18:46:35Z"
 }

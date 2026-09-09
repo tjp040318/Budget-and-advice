@@ -50,7 +50,7 @@
       "finished_at": 1788978902091,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:35:08Z"
+      "polled": "2026-09-09T18:48:12Z"
     },
     "rig": {
       "id": "01a08773-ce55-7289-9a2c-0494e936dae4",
@@ -77,7 +77,10 @@
       "started_at": 1788978915171,
       "finished_at": 1788978989954,
       "name": "",
-      "polled": "2026-09-09T18:36:36Z"
+      "polled": "2026-09-09T18:48:12Z",
+      "downloaded": {
+        "glb": "Art/Models/scarab_knight_hd.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08775-25f7-7075-9a76-4786ca31e90b",
@@ -100,7 +103,10 @@
       "started_at": 1788978997250,
       "finished_at": 1788979091029,
       "name": "",
-      "polled": "2026-09-09T18:38:18Z"
+      "polled": "2026-09-09T18:48:12Z",
+      "downloaded": {
+        "glb": "Art/Models/scarab_knight_hd_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08775-2985-74d3-8ae5-22100bbecb0a",
@@ -123,7 +129,10 @@
       "started_at": 1788978998033,
       "finished_at": 1788979090538,
       "name": "",
-      "polled": "2026-09-09T18:38:17Z"
+      "polled": "2026-09-09T18:48:13Z",
+      "downloaded": {
+        "glb": "Art/Models/scarab_knight_hd_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08775-2c8b-7220-817d-3f621e0e50da",
@@ -146,7 +155,10 @@
       "started_at": 1788978998730,
       "finished_at": 1788979097093,
       "name": "",
-      "polled": "2026-09-09T18:38:18Z"
+      "polled": "2026-09-09T18:48:13Z",
+      "downloaded": {
+        "glb": "Art/Models/scarab_knight_hd_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08775-2fa3-7680-8a77-433646e7189a",
@@ -169,7 +181,10 @@
       "started_at": 1788978999451,
       "finished_at": 1788979095191,
       "name": "",
-      "polled": "2026-09-09T18:38:18Z"
+      "polled": "2026-09-09T18:48:13Z",
+      "downloaded": {
+        "glb": "Art/Models/scarab_knight_hd_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08775-321b-72f3-ad6d-fb3c4d4de7f7",
@@ -192,7 +207,10 @@
       "started_at": 1788979000115,
       "finished_at": 1788979109872,
       "name": "",
-      "polled": "2026-09-09T18:38:38Z"
+      "polled": "2026-09-09T18:48:13Z",
+      "downloaded": {
+        "glb": "Art/Models/scarab_knight_hd_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08775-34b4-7278-808f-bb8bed827e34",
@@ -215,8 +233,12 @@
       "started_at": 1788979000780,
       "finished_at": 1788979106782,
       "name": "",
-      "polled": "2026-09-09T18:38:28Z"
+      "polled": "2026-09-09T18:48:13Z",
+      "downloaded": {
+        "glb": "Art/Models/scarab_knight_hd_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T18:48:13Z"
 }

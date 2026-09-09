@@ -1028,6 +1028,16 @@ literal of sixty-eight eighteen-argument rows is what Swift's type checker
 charges by the minute for; keep adding pantheon-sized pieces rather than
 lengthening one.
 
+**A thin-legged character needs a heavier clip carrier.** The satyr was the
+one remake of thirty-nine that failed verification: base and LOD measured
+1.60 m with the feet on the origin, but every one of its six clip carriers
+measured 1.485 m with the feet 8 cm up. The carriers are decimated to 1,500
+triangles at 128 px because the game reads only their tracks — and at that
+budget the satyr's digitigrade goat legs collapse, which moves the mesh the
+verifier measures. `--clip-tris 3000 --clip-texture 256` builds it clean at
+8.4 MB. Any future character whose legs, tail or wings are thin wants the
+same; the default stays 1,500 for the other thirty-eight.
+
 **Batch 3's families.** Egypt: Ra, Osiris, Ptah, Khnum, Nephthys, Ma'at,
 Serqet, Taweret, Anhur, Bes, Medjay, Cobra Priestess. Greece: Hera,
 Hephaestus, Demeter, Dionysus, Aphrodite, Nike, Achilles, Atalanta, Siren,

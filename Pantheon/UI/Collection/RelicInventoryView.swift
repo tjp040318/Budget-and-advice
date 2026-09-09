@@ -54,69 +54,80 @@ struct RelicInventoryView: View {
         selection.compactMap { store.player.relic($0) }.reduce(0) { $0 + RelicService.sellValue($1) }
     }
 
+    /// Two columns of rows on a landscape phone, three on an iPad: the list
+    /// fills the wide frame instead of spending it on one row's whitespace.
+    private let columns = [GridItem(.adaptive(minimum: 320), spacing: 6)]
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    setSummary
-                    filters
+            GameScreen(
+                "Relics",
+                subtitle: "\(relics.count) of \(store.player.relics.count)",
+                dismiss: { dismiss() }
+            ) {
+                BarMenu(label: "Slot", value: slotFilter.map { "\($0)" } ?? "All") {
+                    Button("All slots") { slotFilter = nil }
+                    ForEach(1...6, id: \.self) { slot in
+                        Button("Slot \(slot)") { slotFilter = slot }
+                    }
+                }
+                BarMenu(label: "Sort", value: sort.displayName) {
+                    ForEach(Sort.allCases) { order in
+                        Button(order.displayName) { sort = order }
+                    }
+                }
+                BarMenu(label: "Fit", value: role.displayName) {
+                    ForEach(roles, id: \.self) { entry in
+                        Button(entry.displayName) { role = entry }
+                    }
+                }
+                BarButton(
+                    title: "Unequipped",
+                    systemImage: hideEquipped ? "checkmark.square.fill" : "square",
+                    tint: hideEquipped ? Theme.gold : Theme.textSecondary
+                ) {
+                    hideEquipped.toggle()
+                }
+                BarButton(
+                    title: selecting ? "Done" : "Select",
+                    systemImage: selecting ? "checkmark.circle.fill" : "checklist",
+                    tint: selecting ? Theme.gold : Theme.textPrimary
+                ) {
+                    selecting.toggle()
+                    if !selecting { selection.removeAll() }
+                }
+            } content: {
+                VStack(spacing: 6) {
+                    setBar
                     if relics.isEmpty {
                         EmptyState(
                             icon: "shield.slash",
                             title: "No relics here",
                             message: "Clear a stage or a hall floor; relics drop from both."
                         )
+                        Spacer(minLength: 0)
                     } else {
-                        LazyVStack(spacing: 8) {
-                            ForEach(relics) { relic in
-                                RelicRow(
-                                    relic: relic,
-                                    role: role,
-                                    ownerName: ownerName(relic),
-                                    isSelected: selection.contains(relic.id),
-                                    selecting: selecting
-                                ) {
-                                    tap(relic)
+                        ScrollView {
+                            LazyVGrid(columns: columns, spacing: 6) {
+                                ForEach(relics) { relic in
+                                    RelicRow(
+                                        relic: relic,
+                                        role: role,
+                                        ownerName: ownerName(relic),
+                                        isSelected: selection.contains(relic.id),
+                                        selecting: selecting
+                                    ) {
+                                        tap(relic)
+                                    }
                                 }
                             }
+                            .padding(.bottom, 6)
                         }
                     }
                 }
-                .padding(12)
-            }
-            .screen("Relics")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button(selecting ? "Done" : "Select") {
-                        selecting.toggle()
-                        if !selecting { selection.removeAll() }
-                    }
-                    .font(Theme.body(13).weight(.semibold))
-                    .foregroundStyle(Theme.gold)
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                if selecting {
-                    HStack(spacing: 12) {
-                        Text("\(selection.count) selected")
-                            .font(Theme.body(13))
-                            .foregroundStyle(Theme.textSecondary)
-                        Spacer()
-                        PrimaryButton(
-                            title: "Sell for \(sellTotal)",
-                            systemImage: "circle.hexagongrid.fill",
-                            tint: Theme.danger,
-                            isEnabled: !selection.isEmpty
-                        ) {
-                            showSellConfirm = true
-                        }
-                    }
-                    .padding(12)
-                    .background(Theme.ink)
-                }
+                .padding(.horizontal, ScreenChrome.contentPadding)
+                .padding(.top, 6)
+                .safeAreaInset(edge: .bottom) { sellBar }
             }
             .confirmationDialog(
                 "Sell \(selection.count) relics for \(sellTotal) drachma?",
@@ -137,6 +148,29 @@ struct RelicInventoryView: View {
                 RelicDetailView(relicID: relic.id, role: role)
                     .environmentObject(store)
             }
+        }
+    }
+
+    /// The bulk-sell bar, along the bottom while selecting.
+    @ViewBuilder private var sellBar: some View {
+        if selecting {
+            HStack(spacing: 12) {
+                Text("\(selection.count) selected")
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer()
+                PrimaryButton(
+                    title: "Sell for \(sellTotal)",
+                    systemImage: "circle.hexagongrid.fill",
+                    tint: Theme.danger,
+                    isEnabled: !selection.isEmpty
+                ) {
+                    showSellConfirm = true
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(Theme.ink)
         }
     }
 
@@ -163,87 +197,45 @@ struct RelicInventoryView: View {
     // MARK: - Sets
 
     /// How many pieces of each set the account holds, against what a set
-    /// needs; a chip is a filter as well.
-    private var setSummary: some View {
+    /// needs; a chip is a filter as well. One 22-point rail now, where the
+    /// panel with its own header and border cost sixty.
+    private var setBar: some View {
         let tally = Dictionary(grouping: store.player.relics, by: { $0.set }).mapValues(\.count)
-        return VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(title: "Sets", accessory: "\(store.player.relics.count) relics")
+        return VStack(alignment: .leading, spacing: 3) {
             ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
+                HStack(spacing: 4) {
                     ForEach(RelicSet.allCases) { relicSet in
                         let count = tally[relicSet] ?? 0
                         let complete = count >= relicSet.piecesRequired
                         let selected = setFilter == relicSet
                         Button {
+                            Juice.haptic(.light)
                             setFilter = selected ? nil : relicSet
                         } label: {
                             HStack(spacing: 4) {
                                 Text(relicSet.displayName)
-                                    .font(Theme.body(11).weight(.semibold))
+                                    .font(Theme.body(10).weight(.semibold))
                                 Text("\(count)/\(relicSet.piecesRequired)")
-                                    .font(Theme.numeric(10))
+                                    .font(Theme.numeric(9))
                             }
-                            .padding(.horizontal, 9)
-                            .padding(.vertical, 6)
+                            .padding(.horizontal, 7)
+                            .frame(height: 22)
                             .background(
-                                Capsule().fill(selected ? Theme.gold : (complete ? Theme.surfaceHigh : Theme.surface))
+                                RoundedRectangle(cornerRadius: ScreenChrome.corner, style: .continuous)
+                                    .fill(selected ? Theme.gold : (complete ? Theme.surfaceHigh : Theme.surface))
                             )
                             .foregroundStyle(selected ? Theme.ink : (complete ? Theme.textPrimary : Theme.textSecondary))
                         }
+                        .buttonStyle(.plain)
                     }
                 }
             }
             if let setFilter {
                 Text(setFilter.effectDescription)
-                    .font(Theme.body(11))
+                    .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             }
-        }
-        .padding(12)
-        .panelBackground()
-    }
-
-    // MARK: - Filters
-
-    private var filters: some View {
-        VStack(spacing: 8) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    chip("All", on: slotFilter == nil) { slotFilter = nil }
-                    ForEach(1...6, id: \.self) { slot in
-                        chip("Slot \(slot)", on: slotFilter == slot) {
-                            slotFilter = slotFilter == slot ? nil : slot
-                        }
-                    }
-                    chip("Unequipped", on: hideEquipped) { hideEquipped.toggle() }
-                }
-            }
-            HStack(spacing: 10) {
-                Picker("Sort", selection: $sort) {
-                    ForEach(Sort.allCases) { order in
-                        Text(order.displayName).tag(order)
-                    }
-                }
-                .pickerStyle(.segmented)
-                Picker("Role", selection: $role) {
-                    ForEach(roles, id: \.self) { role in
-                        Text(role.displayName).tag(role)
-                    }
-                }
-                .pickerStyle(.menu)
-                .tint(Theme.gold)
-            }
-        }
-    }
-
-    private func chip(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(Theme.body(12).weight(.semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(on ? Theme.gold : Theme.surfaceRaised))
-                .foregroundStyle(on ? Theme.ink : Theme.textSecondary)
         }
     }
 }
@@ -357,38 +349,38 @@ struct RelicDetailView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
+            GameScreen(
+                relic.map { "\($0.set.displayName) · Slot \($0.slot)" } ?? "Relic",
+                subtitle: relic.map { "+\($0.level) · fit for a \(role.displayName.lowercased())" },
+                dismiss: { dismiss() }
+            ) {
+                BarButton(
+                    title: relic?.isLocked == true ? "Locked" : "Lock",
+                    systemImage: relic?.isLocked == true ? "lock.fill" : "lock.open",
+                    tint: relic?.isLocked == true ? Theme.gold : Theme.textSecondary
+                ) {
+                    store.toggleRelicLock(relicID)
+                }
+                BarWallet(wallet: store.player.wallet, shows: [.drachma])
+            } content: {
                 if let relic {
-                    ScrollView {
-                        HStack(alignment: .top, spacing: 10) {
+                    // Two columns that each scroll on their own, so a short
+                    // landscape frame never hides the power-up button.
+                    HStack(alignment: .top, spacing: 8) {
+                        ScrollView {
                             sheet(relic)
-                                .frame(maxWidth: .infinity)
-                            powerUpPanel(relic)
-                                .frame(width: 300)
                         }
-                        .padding(10)
+                        .frame(maxWidth: .infinity)
+                        ScrollView {
+                            powerUpPanel(relic)
+                        }
+                        .frame(width: 300)
                     }
-                    .screen("\(relic.set.displayName) · Slot \(relic.slot)")
+                    .padding(.horizontal, ScreenChrome.contentPadding)
+                    .padding(.top, 6)
                 } else {
                     EmptyState(icon: "shield.slash", title: "Sold", message: "This relic is gone.")
                         .onAppear { dismiss() }
-                }
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 14) {
-                        WalletBar(wallet: store.player.wallet)
-                        Button {
-                            store.toggleRelicLock(relicID)
-                            AudioLibrary.shared.play(.uiTap)
-                        } label: {
-                            Image(systemName: relic?.isLocked == true ? "lock.fill" : "lock.open")
-                                .foregroundStyle(relic?.isLocked == true ? Theme.gold : Theme.textSecondary)
-                        }
-                    }
                 }
             }
             .confirmationDialog(
@@ -763,18 +755,28 @@ struct RelicPickerView: View {
 
     var body: some View {
         NavigationStack {
-            HStack(alignment: .top, spacing: 10) {
-                list
-                    .frame(maxWidth: .infinity)
-                comparison
-                    .frame(width: 300)
-            }
-            .padding(10)
-            .screen("Slot \(slot) · \(unit?.name ?? "")")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
+            GameScreen(
+                "Slot \(slot)",
+                subtitle: unit.map { "\($0.name) · best fit for a \(role.displayName.lowercased()) first" },
+                dismiss: { dismiss() }
+            ) {
+                BarCount(value: "\(candidates.count)", systemImage: "shield.lefthalf.filled")
+                BarButton(
+                    title: "Free only",
+                    systemImage: freeOnly ? "checkmark.square.fill" : "square",
+                    tint: freeOnly ? Theme.gold : Theme.textSecondary
+                ) {
+                    freeOnly.toggle()
                 }
+            } content: {
+                HStack(alignment: .top, spacing: 8) {
+                    list
+                        .frame(maxWidth: .infinity)
+                    comparison
+                        .frame(width: 300)
+                }
+                .padding(.horizontal, ScreenChrome.contentPadding)
+                .padding(.top, 6)
             }
         }
     }
@@ -782,46 +784,28 @@ struct RelicPickerView: View {
     // MARK: - The candidates
 
     private var list: some View {
-        VStack(spacing: 6) {
-            HStack {
-                Text(candidates.isEmpty ? "Nothing for this slot" : "\(candidates.count) for slot \(slot) · best fit for a \(role.displayName.lowercased()) first")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-                Spacer()
-                Button {
-                    freeOnly.toggle()
-                } label: {
-                    Text(freeOnly ? "Free only" : "All")
-                        .font(Theme.body(10).weight(.semibold))
-                        .foregroundStyle(freeOnly ? Theme.ink : Theme.textSecondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(freeOnly ? Theme.gold : Theme.surface))
+        ScrollView {
+            LazyVStack(spacing: 6) {
+                if candidates.isEmpty {
+                    EmptyState(
+                        icon: "shield.slash",
+                        title: "Nothing fits slot \(slot)",
+                        message: "Relics for this slot drop from the campaign and the Labyrinth on the island."
+                    )
                 }
-            }
-            ScrollView {
-                VStack(spacing: 6) {
-                    if candidates.isEmpty {
-                        EmptyState(
-                            icon: "shield.slash",
-                            title: "Nothing fits slot \(slot)",
-                            message: "Relics for this slot drop from the campaign and the Labyrinth on the island."
-                        )
-                    }
-                    ForEach(candidates) { relic in
-                        RelicRow(
-                            relic: relic,
-                            role: role,
-                            ownerName: relic.equippedBy.flatMap { store.resolved($0)?.name },
-                            isSelected: selected?.id == relic.id
-                        ) {
-                            Juice.haptic(.light)
-                            selectedID = relic.id
-                        }
+                ForEach(candidates) { relic in
+                    RelicRow(
+                        relic: relic,
+                        role: role,
+                        ownerName: relic.equippedBy.flatMap { store.resolved($0)?.name },
+                        isSelected: selected?.id == relic.id
+                    ) {
+                        Juice.haptic(.light)
+                        selectedID = relic.id
                     }
                 }
             }
+            .padding(.bottom, 6)
         }
     }
 

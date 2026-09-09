@@ -4,41 +4,64 @@ import SwiftUI
 /// roof, the way the genre keeps its Cairos. It opens over the island from
 /// its own building; a dungeon opens as a page of level medallions, and a
 /// level is one battle of three waves that ends at the boss.
+///
+/// The chrome is `GameScreen`: one 34-point strip carrying the wing switch
+/// and the wallet, and the whole rest of the frame given to the cards. The
+/// two section headers the old layout spent rows on are the strip's subtitle
+/// now, and the three dungeons — or the five halls — fill the frame instead
+/// of stacking into a scroll under a navigation bar.
 struct LabyrinthView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
     @State private var path = NavigationPath()
+    @State private var wing: Wing = .dungeons
+
+    /// The building's two halves. A two-way choice, so it is `BarSegments`
+    /// in the strip rather than a row of capsules above the content.
+    enum Wing: Hashable {
+        case dungeons
+        case halls
+    }
+
+    private let wings: [(value: Wing, title: String)] = [
+        (value: .dungeons, title: "Dungeons"),
+        (value: .halls, title: "Halls"),
+    ]
+
+    private var subtitle: String {
+        switch wing {
+        case .dungeons: return "\(DungeonDatabase.labyrinths.count) dungeons · a relic every run"
+        case .halls: return "\(DungeonDatabase.halls.count) halls · the awakening essences"
+        }
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 10) {
-                    SectionHeader(title: "Relic dungeons", accessory: "a relic every run")
-                    HStack(alignment: .top, spacing: 10) {
-                        ForEach(DungeonDatabase.labyrinths) { labyrinth in
-                            labyrinthCard(labyrinth)
+            GameScreen("Labyrinth", subtitle: subtitle, dismiss: { dismiss() }) {
+                BarSegments(options: wings, selection: $wing)
+                BarWallet(wallet: store.player.wallet)
+            } content: {
+                Group {
+                    switch wing {
+                    case .dungeons:
+                        HStack(spacing: 8) {
+                            ForEach(DungeonDatabase.labyrinths) { labyrinth in
+                                labyrinthCard(labyrinth)
+                            }
                         }
-                    }
-                    SectionHeader(title: "Halls of Essence", accessory: "the awakening essences")
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 200, maximum: 280), spacing: 8)], spacing: 8) {
-                        ForEach(DungeonDatabase.halls) { hall in
-                            hallCard(hall)
+                    case .halls:
+                        HStack(spacing: 8) {
+                            ForEach(DungeonDatabase.halls) { hall in
+                                hallCard(hall)
+                            }
                         }
                     }
                 }
-                .padding(12)
+                .padding(.horizontal, ScreenChrome.contentPadding)
+                .padding(.vertical, 8)
             }
-            .screen("Labyrinth")
             .navigationDestination(for: String.self) { chapterID in
                 DungeonLevelsView(chapterID: chapterID)
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("Close") { dismiss() }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    WalletBar(wallet: store.player.wallet)
-                }
             }
         }
     }
@@ -58,13 +81,11 @@ struct LabyrinthView: View {
                     if BundleImage.exists(backdrop) {
                         BundleImage(name: backdrop)
                             .aspectRatio(contentMode: .fill)
-                            .frame(height: 96)
-                            .frame(maxWidth: .infinity)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .clipped()
                     } else {
                         Rectangle()
                             .fill(Theme.surfaceHigh)
-                            .frame(height: 96)
                     }
                     LinearGradient(colors: [.clear, Theme.ink.opacity(0.92)], startPoint: .center, endPoint: .bottom)
                     VStack(alignment: .leading, spacing: 1) {
@@ -80,6 +101,10 @@ struct LabyrinthView: View {
                     }
                     .padding(8)
                 }
+                // The painting takes whatever height the card has left, so
+                // three cards fill a landscape frame instead of leaving a
+                // third of it black under a 96-point strip of art.
+                .frame(maxWidth: .infinity, minHeight: 96, maxHeight: .infinity)
                 .allowsHitTesting(false)
                 .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
                 .overlay(alignment: .topTrailing) {
@@ -98,10 +123,10 @@ struct LabyrinthView: View {
                 Text(labyrinth.summary)
                     .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(2)
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(8)
             .panelBackground(radius: Theme.tightCorner)
         }
@@ -129,6 +154,8 @@ struct LabyrinthView: View {
 
     // MARK: - A hall
 
+    /// A hall as a tall tile in its element's colour: five of them across a
+    /// landscape frame, the way the genre draws its Hall of Magic.
     private func hallCard(_ hall: DungeonDatabase.Hall) -> some View {
         let cleared = store.player.campaignProgress[hall.id] ?? 0
         let essence = EssenceCatalog.name(for: "essence_\(hall.element.rawValue)_mid")
@@ -137,35 +164,56 @@ struct LabyrinthView: View {
             AudioLibrary.shared.play(.uiTap)
             path.append(hall.id)
         } label: {
-            HStack(spacing: 8) {
+            VStack(spacing: 8) {
+                Spacer(minLength: 0)
                 Image(systemName: hall.element.glyph)
-                    .font(.system(size: 16, weight: .black))
+                    .font(.system(size: 30, weight: .black))
                     .foregroundStyle(hall.element.color)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(hall.element.color.opacity(0.18)))
-                VStack(alignment: .leading, spacing: 2) {
+                    .frame(width: 64, height: 64)
+                    .background(Circle().fill(hall.element.color.opacity(0.16)))
+                    .overlay(Circle().strokeBorder(hall.element.color.opacity(0.5), lineWidth: 1))
+                    .shadow(color: hall.element.color.opacity(0.45), radius: 8)
+                VStack(spacing: 2) {
                     Text(hall.name)
-                        .font(Theme.body(12).weight(.bold))
+                        .font(Theme.title(14))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text(essence)
                         .font(Theme.body(10))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
-                Spacer(minLength: 4)
+                Text(hall.summary)
+                    .font(Theme.body(9))
+                    .foregroundStyle(Theme.textSecondary.opacity(0.85))
+                    .multilineTextAlignment(.center)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
                 Text("B\(cleared)/\(hall.floors.count)")
-                    .font(Theme.numeric(10))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Theme.numeric(11))
+                    .foregroundStyle(cleared > 0 ? Theme.gold : Theme.textSecondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Theme.surfaceHigh))
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .padding(8)
             .background(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(Theme.surface)
+                    .fill(
+                        LinearGradient(
+                            colors: [hall.element.color.opacity(0.20), Theme.surface],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    )
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .strokeBorder(Theme.stroke, lineWidth: 1)
+                    .strokeBorder(hall.element.color.opacity(0.45), lineWidth: 1)
             )
         }
         .buttonStyle(.plain)
@@ -176,10 +224,16 @@ struct LabyrinthView: View {
 /// of medallions: gold once cleared, ringed where the player stands, shut
 /// beyond. Tapping one opens the briefing; the fight runs on the campaign's
 /// plumbing, and its progress lives under the dungeon's id.
+///
+/// The chrome is `GameScreen` here too: the name, the kind and the progress
+/// the old 92-point banner carried are the strip's title, subtitle and count,
+/// and the dungeon's painting is the whole content's backdrop instead of a
+/// band across the top — so the two panels get the frame.
 struct DungeonLevelsView: View {
     let chapterID: String
 
     @EnvironmentObject private var store: GameStore
+    @Environment(\.dismiss) private var dismiss
     @State private var selectedStage: Stage?
     @State private var battle: BattleContext?
     @State private var pendingEngines: [String: BattleEngine] = [:]
@@ -191,23 +245,34 @@ struct DungeonLevelsView: View {
     private var chapter: Chapter? { labyrinth?.chapter ?? hall?.chapter }
     private var environment: BattleEnvironment? { labyrinth?.environment ?? hall?.environment }
 
+    private var kindLabel: String {
+        labyrinth != nil ? "Relic dungeon · three waves a level" : "Hall of Essence"
+    }
+
+    private var progressLabel: String {
+        let cleared = store.player.campaignProgress[chapter?.id ?? chapterID] ?? 0
+        return "B\(cleared)/\(chapter?.stages.count ?? 0)"
+    }
+
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 10) {
+        GameScreen(
+            chapter?.name ?? "Dungeon",
+            subtitle: kindLabel,
+            dismiss: { dismiss() }
+        ) {
+            BarCount(value: progressLabel, systemImage: "flag.checkered", tint: Theme.gold)
+            BarWallet(wallet: store.player.wallet)
+        } content: {
+            ZStack {
+                backdrop
                 if let chapter {
-                    banner(chapter)
-                    HStack(alignment: .top, spacing: 10) {
+                    HStack(spacing: 8) {
                         dropsPanel(chapter)
                         levelsPanel(chapter)
                     }
+                    .padding(.horizontal, ScreenChrome.contentPadding)
+                    .padding(.vertical, 8)
                 }
-            }
-            .padding(12)
-        }
-        .screen(chapter?.name ?? "Dungeon")
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                WalletBar(wallet: store.player.wallet)
             }
         }
         .onAppear {
@@ -226,41 +291,26 @@ struct DungeonLevelsView: View {
         }
     }
 
-    // MARK: - Banner
+    // MARK: - The place, behind everything
 
-    private func banner(_ chapter: Chapter) -> some View {
-        let backdrop = environment?.backdropName ?? ""
-        let cleared = store.player.campaignProgress[chapter.id] ?? 0
-        return ZStack(alignment: .bottomLeading) {
-            if BundleImage.exists(backdrop) {
-                BundleImage(name: backdrop)
+    private var backdrop: some View {
+        let painting = environment?.backdropName ?? ""
+        return ZStack {
+            if BundleImage.exists(painting) {
+                BundleImage(name: painting)
                     .aspectRatio(contentMode: .fill)
-                    .frame(height: 92)
-                    .frame(maxWidth: .infinity)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
-            } else {
-                Rectangle().fill(Theme.surfaceHigh).frame(height: 92)
+                LinearGradient(
+                    colors: [Theme.ink.opacity(0.62), Theme.ink.opacity(0.88)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
             }
-            LinearGradient(colors: [.clear, Theme.ink.opacity(0.9)], startPoint: .center, endPoint: .bottom)
-            HStack(alignment: .bottom) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(labyrinth != nil ? "RELIC DUNGEON" : "HALL OF ESSENCE")
-                        .font(Theme.body(9).weight(.bold))
-                        .tracking(1.4)
-                        .foregroundStyle(Theme.goldDim)
-                    Text(chapter.name)
-                        .font(Theme.title(18))
-                        .foregroundStyle(Theme.textPrimary)
-                }
-                Spacer()
-                Text("B\(cleared)/\(chapter.stages.count)")
-                    .font(Theme.numeric(12))
-                    .foregroundStyle(Theme.textPrimary)
-            }
-            .padding(10)
         }
+        // A painting scaled to fill swallows taps far outside its frame:
+        // `.clipped()` does not clip hit-testing.
         .allowsHitTesting(false)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
     }
 
     // MARK: - What it drops
@@ -307,8 +357,9 @@ struct DungeonLevelsView: View {
                     }
                 }
             }
+            Spacer(minLength: 0)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(10)
         .panelBackground()
     }
@@ -326,6 +377,7 @@ struct DungeonLevelsView: View {
                     medallion(stage, unlocked: unlocked, cleared: cleared, current: unlocked && !cleared)
                 }
             }
+            Spacer(minLength: 0)
             if let next = chapter.stages.first(where: { CampaignService.isUnlocked($0, player: player) && !CampaignService.isCleared($0, player: player) }) {
                 HStack(spacing: 6) {
                     Image(systemName: "location.fill")
@@ -340,7 +392,7 @@ struct DungeonLevelsView: View {
                     .foregroundStyle(Theme.gold)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(10)
         .panelBackground()
     }

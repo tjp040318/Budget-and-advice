@@ -50,7 +50,7 @@
       "finished_at": 1788979108908,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:38:37Z"
+      "polled": "2026-09-09T18:54:39Z"
     },
     "rig": {
       "id": "01a08776-fd25-7034-a76e-06f40a345fb4",
@@ -77,7 +77,10 @@
       "started_at": 1788979129747,
       "finished_at": 1788979188779,
       "name": "",
-      "polled": "2026-09-09T18:39:50Z"
+      "polled": "2026-09-09T18:54:39Z",
+      "downloaded": {
+        "glb": "Art/Models/dwarf_smith_hd.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08778-1c99-72e6-90ab-62463e76b693",
@@ -100,7 +103,10 @@
       "started_at": 1788979191281,
       "finished_at": 1788979241845,
       "name": "",
-      "polled": "2026-09-09T18:40:49Z"
+      "polled": "2026-09-09T18:54:39Z",
+      "downloaded": {
+        "glb": "Art/Models/dwarf_smith_hd_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08778-1f79-7591-83f4-04a70e5803d5",
@@ -123,7 +129,10 @@
       "started_at": 1788979191939,
       "finished_at": 1788979243485,
       "name": "",
-      "polled": "2026-09-09T18:40:49Z"
+      "polled": "2026-09-09T18:54:39Z",
+      "downloaded": {
+        "glb": "Art/Models/dwarf_smith_hd_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08778-220a-7491-9678-865954ed2f0a",
@@ -146,7 +155,10 @@
       "started_at": 1788979192655,
       "finished_at": 1788979247052,
       "name": "",
-      "polled": "2026-09-09T18:40:49Z"
+      "polled": "2026-09-09T18:54:39Z",
+      "downloaded": {
+        "glb": "Art/Models/dwarf_smith_hd_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08778-24fa-774c-b1f4-e10f2a52f69c",
@@ -169,7 +181,10 @@
       "started_at": 1788979193330,
       "finished_at": 1788979250255,
       "name": "",
-      "polled": "2026-09-09T18:40:59Z"
+      "polled": "2026-09-09T18:54:39Z",
+      "downloaded": {
+        "glb": "Art/Models/dwarf_smith_hd_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08778-2792-778f-a524-3fe436eddedc",
@@ -192,7 +207,10 @@
       "started_at": 1788979194030,
       "finished_at": 1788979265605,
       "name": "",
-      "polled": "2026-09-09T18:41:10Z"
+      "polled": "2026-09-09T18:54:39Z",
+      "downloaded": {
+        "glb": "Art/Models/dwarf_smith_hd_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08778-2a56-719a-8152-957fae7459f2",
@@ -215,8 +233,12 @@
       "started_at": 1788979194771,
       "finished_at": 1788979256790,
       "name": "",
-      "polled": "2026-09-09T18:41:00Z"
+      "polled": "2026-09-09T18:54:39Z",
+      "downloaded": {
+        "glb": "Art/Models/dwarf_smith_hd_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T18:54:39Z"
 }

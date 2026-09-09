@@ -40,57 +40,48 @@ struct CollectionView: View {
 
     /// As many 100-point cards as the width holds: six across a landscape
     /// phone, more on an iPad, rather than three stretched columns.
-    private let columns = [GridItem(.adaptive(minimum: 76, maximum: 90), spacing: 8)]
+    private let columns = [GridItem(.adaptive(minimum: 76, maximum: 88), spacing: 8)]
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 10) {
-                    filterBar
-
-                    if units.isEmpty {
-                        EmptyState(
-                            icon: "person.3",
-                            title: "Nothing here",
-                            message: "Summon at the circle, or clear a stage and come back."
-                        )
-                    } else {
-                        LazyVGrid(columns: columns, spacing: 12) {
+            GameScreen("Collection", subtitle: "\(store.player.units.count) units") {
+                ElementFilterTiles(selection: $elementFilter)
+                BarMenu(label: "Sort", value: sort.displayName) {
+                    ForEach(SortOrder.allCases) { order in
+                        Button(order.displayName) { sort = order }
+                    }
+                }
+                BarButton(title: "Train", systemImage: "arrow.up.circle.fill") {
+                    showTraining = true
+                }
+                BarButton(title: "Relics", systemImage: "shield.lefthalf.filled") {
+                    showRelics = true
+                }
+            } content: {
+                if units.isEmpty {
+                    EmptyState(
+                        icon: "person.3",
+                        title: "Nothing here",
+                        message: "Summon at the circle, or clear a stage and come back."
+                    )
+                } else {
+                    // The grid owns the whole frame now that the filters live
+                    // in the strip: three rows of ten on a landscape phone,
+                    // where the old layout showed one row of eight.
+                    ScrollView {
+                        LazyVGrid(columns: columns, spacing: 8) {
                             ForEach(units) { unit in
                                 Button {
+                                    Juice.haptic(.light)
                                     selected = unit
                                 } label: {
                                     UnitCard(unit: unit, size: 76)
                                 }
+                                .buttonStyle(.plain)
                             }
                         }
-                    }
-                }
-                .padding(12)
-            }
-            .screen("Collection")
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        showTraining = true
-                    } label: {
-                        Label("Train", systemImage: "arrow.up.circle.fill")
-                            .font(Theme.body(13).weight(.semibold))
-                            .foregroundStyle(Theme.gold)
-                    }
-                }
-                ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 12) {
-                        Text("\(store.player.units.count) units")
-                            .font(Theme.numeric(12))
-                            .foregroundStyle(Theme.textSecondary)
-                        Button {
-                            showRelics = true
-                        } label: {
-                            Label("Relics", systemImage: "shield.lefthalf.filled")
-                                .font(Theme.body(13).weight(.semibold))
-                                .foregroundStyle(Theme.gold)
-                        }
+                        .padding(.horizontal, ScreenChrome.contentPadding)
+                        .padding(.vertical, 8)
                     }
                 }
             }
@@ -109,47 +100,4 @@ struct CollectionView: View {
         }
     }
 
-    private var filterBar: some View {
-        VStack(spacing: 10) {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 7) {
-                    filterChip(title: "All", isOn: elementFilter == nil, tint: Theme.gold) {
-                        elementFilter = nil
-                    }
-                    ForEach(Element.allCases) { element in
-                        filterChip(
-                            title: element.displayName,
-                            isOn: elementFilter == element,
-                            tint: element.color
-                        ) {
-                            elementFilter = elementFilter == element ? nil : element
-                        }
-                    }
-                }
-            }
-
-            HStack {
-                Text("Sort")
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
-                Picker("Sort", selection: $sort) {
-                    ForEach(SortOrder.allCases) { order in
-                        Text(order.displayName).tag(order)
-                    }
-                }
-                .pickerStyle(.segmented)
-            }
-        }
-    }
-
-    private func filterChip(title: String, isOn: Bool, tint: Color, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(Theme.body(12).weight(.semibold))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(isOn ? tint : Theme.surfaceRaised))
-                .foregroundStyle(isOn ? Theme.ink : Theme.textSecondary)
-        }
-    }
 }

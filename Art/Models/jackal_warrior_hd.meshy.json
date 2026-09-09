@@ -50,7 +50,7 @@
       "finished_at": 1788978908272,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:35:12Z"
+      "polled": "2026-09-09T18:49:25Z"
     },
     "rig": {
       "id": "01a08773-dc80-747d-bd31-febde6125ded",
@@ -77,7 +77,10 @@
       "started_at": 1788978924227,
       "finished_at": 1788978974701,
       "name": "",
-      "polled": "2026-09-09T18:36:15Z"
+      "polled": "2026-09-09T18:49:26Z",
+      "downloaded": {
+        "glb": "Art/Models/jackal_warrior_hd.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08774-d2fa-7429-af29-fb7b4000a746",
@@ -100,7 +103,10 @@
       "started_at": 1788978975909,
       "finished_at": 1788979070219,
       "name": "",
-      "polled": "2026-09-09T18:37:57Z"
+      "polled": "2026-09-09T18:49:26Z",
+      "downloaded": {
+        "glb": "Art/Models/jackal_warrior_hd_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08774-d643-7393-8750-395575a807cd",
@@ -123,7 +129,10 @@
       "started_at": 1788978976633,
       "finished_at": 1788979072880,
       "name": "",
-      "polled": "2026-09-09T18:37:57Z"
+      "polled": "2026-09-09T18:49:26Z",
+      "downloaded": {
+        "glb": "Art/Models/jackal_warrior_hd_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08774-d91e-718b-ae57-41d75d4ca40b",
@@ -146,7 +155,10 @@
       "started_at": 1788978977424,
       "finished_at": 1788979078158,
       "name": "",
-      "polled": "2026-09-09T18:38:08Z"
+      "polled": "2026-09-09T18:49:26Z",
+      "downloaded": {
+        "glb": "Art/Models/jackal_warrior_hd_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08774-dc18-723b-a9eb-32e686e02461",
@@ -169,7 +181,10 @@
       "started_at": 1788978978144,
       "finished_at": 1788979078322,
       "name": "",
-      "polled": "2026-09-09T18:38:08Z"
+      "polled": "2026-09-09T18:49:26Z",
+      "downloaded": {
+        "glb": "Art/Models/jackal_warrior_hd_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08774-df04-7554-aa64-a3948e0edb19",
@@ -192,7 +207,10 @@
       "started_at": 1788978978956,
       "finished_at": 1788979091322,
       "name": "",
-      "polled": "2026-09-09T18:38:18Z"
+      "polled": "2026-09-09T18:49:26Z",
+      "downloaded": {
+        "glb": "Art/Models/jackal_warrior_hd_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08774-e216-751b-b0cd-b6e0ec378d66",
@@ -215,8 +233,12 @@
       "started_at": 1788978979644,
       "finished_at": 1788979083991,
       "name": "",
-      "polled": "2026-09-09T18:38:08Z"
+      "polled": "2026-09-09T18:49:26Z",
+      "downloaded": {
+        "glb": "Art/Models/jackal_warrior_hd_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T18:49:26Z"
 }

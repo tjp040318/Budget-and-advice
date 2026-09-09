@@ -50,7 +50,7 @@
       "finished_at": 1788979126317,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:38:47Z"
+      "polled": "2026-09-09T18:55:22Z"
     },
     "rig": {
       "id": "01a08777-256d-709c-9bb2-20efb3bb52af",
@@ -78,7 +78,10 @@
       "finished_at": 1788979185463,
       "preceding_tasks": 2,
       "name": "",
-      "polled": "2026-09-09T18:39:51Z"
+      "polled": "2026-09-09T18:55:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hoplite_hd.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08778-2150-704f-8327-0edb19d1e6d8",
@@ -101,7 +104,10 @@
       "started_at": 1788979192647,
       "finished_at": 1788979243572,
       "name": "",
-      "polled": "2026-09-09T18:40:50Z"
+      "polled": "2026-09-09T18:55:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hoplite_hd_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08778-249c-775a-90a4-6a2636073280",
@@ -124,7 +130,10 @@
       "started_at": 1788979193328,
       "finished_at": 1788979250149,
       "name": "",
-      "polled": "2026-09-09T18:41:00Z"
+      "polled": "2026-09-09T18:55:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hoplite_hd_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08778-2748-7030-b13a-821c27869943",
@@ -147,7 +156,10 @@
       "started_at": 1788979193948,
       "finished_at": 1788979251428,
       "name": "",
-      "polled": "2026-09-09T18:41:00Z"
+      "polled": "2026-09-09T18:55:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hoplite_hd_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08778-29c5-766e-b902-130f453e28d6",
@@ -170,7 +182,10 @@
       "started_at": 1788979194577,
       "finished_at": 1788979254462,
       "name": "",
-      "polled": "2026-09-09T18:41:00Z"
+      "polled": "2026-09-09T18:55:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hoplite_hd_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08778-2c3a-7247-bce2-234e1c231ee7",
@@ -193,7 +208,10 @@
       "started_at": 1788979195219,
       "finished_at": 1788979271315,
       "name": "",
-      "polled": "2026-09-09T18:41:21Z"
+      "polled": "2026-09-09T18:55:23Z",
+      "downloaded": {
+        "glb": "Art/Models/hoplite_hd_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08778-2eb3-75cd-898f-9ae4216e2861",
@@ -216,8 +234,12 @@
       "started_at": 1788979195901,
       "finished_at": 1788979267463,
       "name": "",
-      "polled": "2026-09-09T18:41:11Z"
+      "polled": "2026-09-09T18:55:23Z",
+      "downloaded": {
+        "glb": "Art/Models/hoplite_hd_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-09T18:55:23Z"
 }
