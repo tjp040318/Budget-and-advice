@@ -217,6 +217,7 @@ enum StageDatabase {
                 rewards: StageRewards(
                     drachma: 700, playerExperience: 30, unitExperience: 240,
                     relicChance: 0.35, relicGrade: 2,
+                    scrollChances: [ScrollType.unknown.rawValue: 0.2],
                     firstClearDivinity: 30
                 ),
                 environment: .duatGate
@@ -256,6 +257,7 @@ enum StageDatabase {
                     drachma: 1_200, playerExperience: 55, unitExperience: 430,
                     relicChance: 0.45, relicGrade: 3,
                     essenceChances: ["essence_magic_low": 0.35],
+                    scrollChances: [ScrollType.unknown.rawValue: 0.2],
                     firstClearDivinity: 30
                 ),
                 environment: .reedFields
@@ -277,6 +279,7 @@ enum StageDatabase {
                     drachma: 1_500, playerExperience: 70, unitExperience: 540,
                     relicChance: 0.50, relicGrade: 3,
                     essenceChances: ["essence_magic_low": 0.35, "essence_umbra_low": 0.20],
+                    scrollChances: [ScrollType.unknown.rawValue: 0.2],
                     firstClearDivinity: 30
                 ),
                 environment: .hallOfTwoTruths
@@ -373,7 +376,9 @@ enum StageDatabase {
                     relicChance: isBoss ? 1.0 : 0.45,
                     relicGrade: isBoss ? 4 : 3,
                     essenceChances: [essence: isBoss ? 0.6 : 0.2],
-                    scrollChances: isBoss ? [ScrollType.mystical.rawValue: 0.6] : [:],
+                    scrollChances: isBoss
+                        ? [ScrollType.mystical.rawValue: 0.6, ScrollType.pantheonic.rawValue: 0.15]
+                        : [ScrollType.unknown.rawValue: 0.15, ScrollType.mystical.rawValue: 0.05],
                     firstClearDivinity: isBoss ? 60 : 20
                 ),
                 environment: environment,

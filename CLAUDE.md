@@ -101,6 +101,38 @@ environment can and cannot do. The short version:
 - New save fields must be **Optional** (`Player.lastDailyPackClaim` is the
   pattern): the synthesised decoder tolerates a missing optional key and
   nothing else; a non-optional field would wipe every existing save.
+- **The earning loop** (`QuestService`): eight daily missions, sixteen
+  feats plus one per chapter, a seven-day login gift, and 25 divinity per
+  summoner level. `GameStore` calls `QuestService.record(...)` at every
+  mutation that counts (stage and hall clears, arena results, summons,
+  power-ups, evolutions, awakenings, relic upgrades, the daily offering,
+  energy spent); `refreshDay` runs with the energy tick. The Missions
+  screen opens from the scroll beside the wallet on the island and from
+  More. Scrolls also drop from stages (unknown, mystical) and halls (the
+  element's own).
+- **Scrolls are banners** (`Banner.scrollBanners`): Unknown (3★ commons),
+  Divine (4★+), Light & Dark, Fire, Water, Wind, each spending its own
+  `ScrollType` and drawing from `SummonService.pool(where:)`. The summon
+  screen has two chip rows, pantheons and scrolls, with counts. The
+  bazaar sells every one (Unknown for drachma).
+- **The campaign is a map** (`CampaignMapView`): `WorldMapView` lists the
+  realms and their chapters and says which boss shuts a chapter;
+  `ChapterMapView` draws the stage's painting, a dotted road and a
+  medallion per stage (gold, pulsing ring, lock, a crown for the boss).
+  `world_map.png` shows above the realms once painted. The Halls stay a
+  list.
+- Two SwiftUI gotchas that cost a playtest: **`.clipped()` and
+  `.clipShape` do not clip hit-testing**, so a painting scaled to fill a
+  short frame swallows taps far above and below it — every decorative
+  painting carries `.allowsHitTesting(false)` (the Chapters/Halls switch,
+  the banner chips and the first stage rows were all dead). And a camera
+  node looks along its own −Z: orient it with `SCNNode.look(at:)`, never
+  `atan2(dx, dz)` (that was half a turn off and the orbit shot showed the
+  empty side of the stage).
+- **Five tabs.** An iPhone folds a sixth tab into a system "More" list, so
+  Settings opens over the island from the Obelisk (and Missions, the
+  bazaar from the header); `RootView.Tab(destination)` is failable for the
+  two that open as sheets.
 - Models ship **canonical and decimated**: `tools/mesh.py <family>` reads the
   untouched export in `Art/Models/` (Blender USDZ or Meshy GLB) and writes
   Y-up, metre, feet-on-origin, rest-equals-bind, four-influence files into

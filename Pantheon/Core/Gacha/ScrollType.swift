@@ -8,6 +8,12 @@ enum ScrollType: String, Codable, CaseIterable, Identifiable, Sendable {
     case pantheonic
     /// Guaranteed 4★ or better.
     case divine
+    /// The commons only: the 3★ tier of every pantheon, the Hall of Ka's bread.
+    case unknown
+    /// Radiance and Umbra units only, of every pantheon.
+    case lightDark = "light_dark"
+    /// One element's units only.
+    case ember, tide, gale
 
     var id: String { rawValue }
 
@@ -16,6 +22,11 @@ enum ScrollType: String, Codable, CaseIterable, Identifiable, Sendable {
         case .mystical: return "Mystical Scroll"
         case .pantheonic: return "Pantheon Scroll"
         case .divine: return "Divine Scroll"
+        case .unknown: return "Unknown Scroll"
+        case .lightDark: return "Light & Dark Scroll"
+        case .ember: return "Fire Scroll"
+        case .tide: return "Water Scroll"
+        case .gale: return "Wind Scroll"
         }
     }
 
@@ -24,6 +35,11 @@ enum ScrollType: String, Codable, CaseIterable, Identifiable, Sendable {
         case .mystical: return "scroll.fill"
         case .pantheonic: return "sparkles"
         case .divine: return "crown.fill"
+        case .unknown: return "questionmark.circle.fill"
+        case .lightDark: return "circle.lefthalf.filled"
+        case .ember: return "flame.fill"
+        case .tide: return "drop.fill"
+        case .gale: return "wind"
         }
     }
 
@@ -33,15 +49,22 @@ enum ScrollType: String, Codable, CaseIterable, Identifiable, Sendable {
         case .mystical: return [3: 0.885, 4: 0.100, 5: 0.015]
         case .pantheonic: return [3: 0.790, 4: 0.180, 5: 0.030]
         case .divine: return [4: 0.880, 5: 0.120]
+        case .unknown: return [3: 1.0]
+        case .lightDark: return [3: 0.850, 4: 0.120, 5: 0.030]
+        case .ember, .tide, .gale: return [3: 0.820, 4: 0.150, 5: 0.030]
         }
     }
 
-    /// Divinity price when bought directly, or nil if it is not for sale.
+    /// Divinity price when bought directly, or nil when it is not sold that
+    /// way (the unknown scroll is drachma, in the bazaar).
     var divinityPrice: Int? {
         switch self {
         case .mystical: return 75
         case .pantheonic: return 100
-        case .divine: return nil
+        case .divine: return 600
+        case .unknown: return nil
+        case .lightDark: return 450
+        case .ember, .tide, .gale: return 200
         }
     }
 
@@ -52,7 +75,17 @@ enum ScrollType: String, Codable, CaseIterable, Identifiable, Sendable {
         case .pantheonic:
             return "Banner scroll. 3% chance of a 5★, with the featured unit at double weight and a guaranteed 5★ by the 90th summon."
         case .divine:
-            return "Guarantees a 4★ or better."
+            return "Never less than a 4★; 12% chance of a 5★."
+        case .unknown:
+            return "The commons of every pantheon, 3★ only. Cheap, plentiful, and what the Hall of Ka feeds on."
+        case .lightDark:
+            return "Only Radiance and Umbra units, of every pantheon. 3% chance of a 5★."
+        case .ember:
+            return "Only Fire units, of every pantheon. 3% chance of a 5★."
+        case .tide:
+            return "Only Water units, of every pantheon. 3% chance of a 5★."
+        case .gale:
+            return "Only Wind units, of every pantheon. 3% chance of a 5★."
         }
     }
 }

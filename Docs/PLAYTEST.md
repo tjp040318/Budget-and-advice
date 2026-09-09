@@ -197,6 +197,14 @@ Send: a screenshot before the first command.
 - **3D assets** → the ten modelled families green; the Shabti and the enemies
   grey, which is expected.
 
+## 7b. Five tabs and the Obelisk
+
+The tab bar shows Island, Campaign, Arena, Summon and Collection, all five
+at once. **More** (account, sound, the console, the bazaar, missions) opens
+from the island's **Obelisk** plaque and slides up as a sheet with a Close
+button. It is no longer a tab, because an iPhone folds a sixth tab into a
+"More" list of its own.
+
 ## 8. The island's figures
 
 Back on the island: your campaign team stands on the sand — below the pool,
@@ -255,6 +263,53 @@ tomorrow. Buy an energy pack and watch the wallet bar. A relic pack lands
 in the inventory at the grade on the label. Nothing here costs real money.
 
 Send: the receipt line after a purchase, and the wallet before and after.
+
+## 13. The campaign map
+
+Campaign → **Chapters** shows the world: a card per realm (the Duat,
+Olympus, Yggdrasil) with its chapters under it. A shut chapter says which
+chapter's boss shuts it. Tap an open chapter: its map is the stage's
+painting with a dotted road across it and a medallion per stage — gold with
+a tick where you have been, a pulsing ring where you stand, a lock beyond,
+a crown on the boss. Tap the ringed one and the briefing opens; the list
+under the map does the same. Every tap here should land: if a medallion or
+a row ignores you, say which.
+
+Send: a screenshot of a chapter map, and whether the Chapters / Halls of
+Essence switch at the top now answers a tap (it did not before: the
+paintings were swallowing touches).
+
+## 14. Missions and the daily gift
+
+On the island, the **scroll button beside the wallet** carries a number
+when something is waiting. It opens Missions: today's gift (day N of 7,
+Claim), the daily missions with progress bars and Claim buttons, and the
+feats. Clear a stage, summon once and claim the bazaar's daily offering,
+then come back: three missions should be claimable. Claim them all and the
+"Finish every mission" bonus pays a Pantheon scroll.
+
+Send: the missions screen after a claim, and the receipt line.
+
+## 15. Scrolls
+
+Summon has two rows of chips now: **Pantheons** (the three banners) and
+**Scrolls** (the Endless Scroll, then Unknown, Divine, Light & Dark, Fire,
+Water, Wind), each chip with how many of that scroll you hold. Every
+scroll draws only what its name says: a Fire Scroll gives Fire units of any
+pantheon, an Unknown Scroll gives 3★ commons, a Divine Scroll never gives
+less than a 4★. The bazaar's **Scrolls** section sells them — Unknown for
+drachma, the rest for divinity — and the **Laurel exchange** sells two for
+arena laurels. Stages drop Unknown and Mystical scrolls; the halls drop
+their element's scroll.
+
+Send: a summon from a Fire or a Light & Dark scroll, and the unit's element.
+
+## 16. The third skill
+
+In a battle, use a unit's third skill (Anubis: Opening of the Mouth). The
+camera sweeps around the caster and lands facing them, then returns. It
+used to point at the empty side of the stage for the whole shot, which
+looked like a blank olive screen with the HUD over it.
 
 ## If it does not build
 

@@ -5,18 +5,23 @@ struct RootView: View {
     @EnvironmentObject private var store: GameStore
     @State private var tab: Tab = .island
     @State private var showTraining = false
+    @State private var showSettings = false
     @Environment(\.scenePhase) private var scenePhase
 
+    /// Five tabs, which is all an iPhone shows before it folds the rest
+    /// into a "More" list of its own; the Hall of Ka and the settings open
+    /// over the island instead.
     enum Tab: Hashable {
-        case island, campaign, arena, summon, collection, settings
+        case island, campaign, arena, summon, collection
 
-        init(_ destination: IslandDestination) {
+        /// The tab a landmark leads to; nil for the two that open over the island.
+        init?(_ destination: IslandDestination) {
             switch destination {
             case .campaign: self = .campaign
             case .arena: self = .arena
             case .summon: self = .summon
-            case .collection, .training: self = .collection
-            case .settings: self = .settings
+            case .collection: self = .collection
+            case .training, .settings: return nil
             }
         }
     }
@@ -27,10 +32,15 @@ struct RootView: View {
             // of Ka, which opens over whatever is showing — so the island is a
             // way in rather than a fifth place things live.
             IslandView { destination in
-                if destination == .training {
+                switch destination {
+                case .training:
                     showTraining = true
-                } else {
-                    withAnimation { tab = Tab(destination) }
+                case .settings:
+                    showSettings = true
+                default:
+                    if let next = Tab(destination) {
+                        withAnimation { tab = next }
+                    }
                 }
             }
             .tabItem { Label("Island", systemImage: "sun.haze.fill") }
@@ -51,15 +61,15 @@ struct RootView: View {
             CollectionView()
                 .tabItem { Label("Collection", systemImage: "person.3.fill") }
                 .tag(Tab.collection)
-
-            SettingsView()
-                .tabItem { Label("More", systemImage: "gearshape.fill") }
-                .tag(Tab.settings)
         }
         .tint(Theme.gold)
         .preferredColorScheme(.dark)
         .fullScreenCover(isPresented: $showTraining) {
             TrainingView()
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showSettings) {
+            SettingsView()
                 .environmentObject(store)
         }
         .onAppear { AudioLibrary.shared.playMusic(.island) }
@@ -91,8 +101,10 @@ struct RootView: View {
 /// Account, diagnostics and the asset-pipeline status board.
 struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
+    @Environment(\.dismiss) private var dismiss
     @State private var showResetConfirm = false
     @State private var showShop = false
+    @State private var showMissions = false
     @State private var soundOn = !AudioLibrary.shared.isMuted
     @State private var musicOn = !AudioLibrary.shared.isMusicMuted
 
@@ -101,6 +113,7 @@ struct SettingsView: View {
             ScrollView {
                 VStack(spacing: 16) {
                     accountPanel
+                    missionsPanel
                     shopPanel
                     soundPanel
                     diagnosticsPanel
@@ -110,6 +123,15 @@ struct SettingsView: View {
                 .padding(16)
             }
             .screen("More")
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Close") { dismiss() }
+                }
+            }
+            .sheet(isPresented: $showMissions) {
+                MissionsView()
+                    .environmentObject(store)
+            }
         }
     }
 
@@ -122,6 +144,21 @@ struct SettingsView: View {
             row("Relics", "\(store.player.relics.count)")
             row("Total summons", "\(store.player.totalSummons)")
             row("Codex", "\(store.player.codex.count) / \(UnitDatabase.summonPool.count)")
+        }
+        .padding(14)
+        .panelBackground()
+    }
+
+    private var missionsPanel: some View {
+        VStack(spacing: 10) {
+            SectionHeader(title: "Missions", accessory: store.claimableRewards > 0 ? "\(store.claimableRewards) to claim" : nil)
+            PrimaryButton(title: "Missions, feats and the daily gift", systemImage: "scroll.fill") {
+                showMissions = true
+            }
+            Text("Daily missions pay scrolls, divinity and energy; feats pay once for milestones; the gift is one a day for a week. Also the scroll beside the wallet on the island.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
         .panelBackground()

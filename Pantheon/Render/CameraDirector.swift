@@ -98,8 +98,10 @@ final class CameraDirector {
             let radius: Float = 4.2
             let start = SCNVector3(casterPosition.x - radius, casterPosition.y + 1.6, casterPosition.z + radius)
             cameraNode.position = start
-            let orbit = SCNAction.customAction(duration: duration * 0.8) { [weak self] node, elapsed in
-                guard let self else { return }
+            // The camera looks along its own -Z, so `look(at:)` is the
+            // orientation; the hand-rolled yaw this replaced was a half turn
+            // off and showed the empty side of the stage for the whole shot.
+            let orbit = SCNAction.customAction(duration: duration * 0.8) { node, elapsed in
                 let t = Float(elapsed / (duration * 0.8))
                 let angle = Float.pi * 0.55 * t - Float.pi * 0.25
                 node.position = SCNVector3(
@@ -107,7 +109,7 @@ final class CameraDirector {
                     casterPosition.y + 1.6 - t * 0.5,
                     casterPosition.z + cos(angle) * radius
                 )
-                self.look(at: casterPosition, from: node)
+                node.look(at: casterPosition)
             }
             run(.sequence([orbit, .wait(duration: duration * 0.2)]), lookAt: nil, fov: 42, completion: completion)
         }
@@ -152,16 +154,6 @@ final class CameraDirector {
                 completion?()
             }
         }
-    }
-
-    private func look(at point: SCNVector3, from node: SCNNode) {
-        let direction = SCNVector3(point.x - node.position.x, point.y - node.position.y, point.z - node.position.z)
-        let horizontal = sqrt(direction.x * direction.x + direction.z * direction.z)
-        node.eulerAngles = SCNVector3(
-            atan2(direction.y, horizontal),
-            atan2(direction.x, direction.z),
-            0
-        )
     }
 
     private func animateFOV(to value: CGFloat, duration: TimeInterval) {

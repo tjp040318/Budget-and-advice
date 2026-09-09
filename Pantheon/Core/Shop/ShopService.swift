@@ -41,6 +41,7 @@ enum ShopService {
         /// Back to the cap, or no change if already over it.
         case energyRefill
         case drachma(Int)
+        case divinity(Int)
         case relic(grade: Int)
         case essences(String, Int)
         case bundle([Grant])
@@ -85,6 +86,27 @@ enum ShopService {
         Item(id: "scroll_pantheonic", title: "Pantheon Scroll", subtitle: "A summon from one pantheon's banner.",
              icon: "scroll.fill", price: Price(currency: .divinity, amount: 100),
              grant: .scrolls(.pantheonic, 1), section: .scrolls),
+        Item(id: "scroll_unknown", title: "Unknown Scroll", subtitle: "The commons of every pantheon, 3★ only. Drachma, not divinity.",
+             icon: "questionmark.circle.fill", price: Price(currency: .drachma, amount: 5_000),
+             grant: .scrolls(.unknown, 1), section: .scrolls),
+        Item(id: "scroll_unknown_10", title: "Ten Unknown Scrolls", subtitle: "Ten commons for the price of nine.",
+             icon: "questionmark.circle.fill", price: Price(currency: .drachma, amount: 45_000),
+             grant: .scrolls(.unknown, 10), section: .scrolls),
+        Item(id: "scroll_divine", title: "Divine Scroll", subtitle: "Never less than a 4★. 12% chance of a 5★.",
+             icon: "crown.fill", price: Price(currency: .divinity, amount: 600),
+             grant: .scrolls(.divine, 1), section: .scrolls),
+        Item(id: "scroll_light_dark", title: "Light & Dark Scroll", subtitle: "Only Radiance and Umbra units, of every pantheon.",
+             icon: "circle.lefthalf.filled", price: Price(currency: .divinity, amount: 450),
+             grant: .scrolls(.lightDark, 1), section: .scrolls),
+        Item(id: "scroll_fire", title: "Fire Scroll", subtitle: "Only Fire units, of every pantheon.",
+             icon: "flame.fill", price: Price(currency: .divinity, amount: 200),
+             grant: .scrolls(.ember, 1), section: .scrolls),
+        Item(id: "scroll_water", title: "Water Scroll", subtitle: "Only Water units, of every pantheon.",
+             icon: "drop.fill", price: Price(currency: .divinity, amount: 200),
+             grant: .scrolls(.tide, 1), section: .scrolls),
+        Item(id: "scroll_wind", title: "Wind Scroll", subtitle: "Only Wind units, of every pantheon.",
+             icon: "wind", price: Price(currency: .divinity, amount: 200),
+             grant: .scrolls(.gale, 1), section: .scrolls),
 
         Item(id: "energy_30", title: "Energy ×30", subtitle: "Thirty energy, over the cap if need be.",
              icon: "bolt.fill", price: Price(currency: .divinity, amount: 30),
@@ -110,6 +132,12 @@ enum ShopService {
         Item(id: "relic_laurels_6", title: "Champion's relic, 6★", subtitle: "One random 6★ relic, for arena laurels.",
              icon: "shield.lefthalf.filled", price: Price(currency: .laurels, amount: 300),
              grant: .relic(grade: 6), section: .laurels),
+        Item(id: "scroll_laurels_pantheonic", title: "Pantheon Scroll", subtitle: "A banner summon, for arena laurels.",
+             icon: "sparkles", price: Price(currency: .laurels, amount: 150),
+             grant: .scrolls(.pantheonic, 1), section: .laurels),
+        Item(id: "scroll_laurels_light_dark", title: "Light & Dark Scroll", subtitle: "The sun's and the night's, for arena laurels.",
+             icon: "circle.lefthalf.filled", price: Price(currency: .laurels, amount: 250),
+             grant: .scrolls(.lightDark, 1), section: .laurels),
     ]
 
     static func item(_ id: String) -> Item? { items.first(where: { $0.id == id }) }
@@ -172,6 +200,15 @@ enum ShopService {
         return granted
     }
 
+    /// Puts a grant in the account and returns it flattened: the receipts of
+    /// missions, feats and the login gift as well as purchases.
+    @discardableResult
+    static func grant(_ grant: Grant, to player: inout Player, rng: inout SeededRandom) -> [Grant] {
+        var granted: [Grant] = []
+        apply(grant, to: &player, rng: &rng, into: &granted)
+        return granted
+    }
+
     private static func apply(_ grant: Grant, to player: inout Player, rng: inout SeededRandom, into granted: inout [Grant]) {
         switch grant {
         case .scrolls(let scroll, let count):
@@ -185,6 +222,9 @@ enum ShopService {
             granted.append(grant)
         case .drachma(let amount):
             player.wallet.drachma += amount
+            granted.append(grant)
+        case .divinity(let amount):
+            player.wallet.divinity += amount
             granted.append(grant)
         case .relic(let grade):
             let relic = RelicService.generate(grade: grade, rng: &rng)
@@ -205,6 +245,7 @@ enum ShopService {
         case .energy(let amount): return "Energy +\(amount)"
         case .energyRefill: return "Energy refilled"
         case .drachma(let amount): return "Drachma +\(amount)"
+        case .divinity(let amount): return "Divinity +\(amount)"
         case .relic(let grade): return "\(grade)★ relic"
         case .essences(let id, let count): return "\(EssenceCatalog.name(for: id)) ×\(count)"
         case .bundle(let parts): return parts.map(describe).joined(separator: ", ")

@@ -67,6 +67,17 @@ enum DungeonDatabase {
 
     static func hall(_ id: String) -> Hall? { halls.first(where: { $0.id == id }) }
 
+    /// The scroll a hall drops: its element's, or the light & dark scroll
+    /// for the two that have no scroll of their own.
+    static func scroll(for element: Element) -> ScrollType {
+        switch element {
+        case .ember: return .ember
+        case .tide: return .tide
+        case .gale: return .gale
+        case .radiance, .umbra: return .lightDark
+        }
+    }
+
     /// The hall a stage belongs to, if it is a floor of one.
     static func hall(containing stage: Stage) -> Hall? { hall(stage.chapterID) }
 
@@ -118,6 +129,7 @@ enum DungeonDatabase {
                     relicChance: min(1.0, 0.5 + Double(floor) * 0.1),
                     relicGrade: min(6, 2 + floor),
                     essenceChances: [essence: min(1.0, 0.5 + Double(floor) * 0.1), high: Double(floor) * 0.1],
+                    scrollChances: [scroll(for: element).rawValue: 0.12],
                     firstClearDivinity: 30
                 ),
                 environment: environment,

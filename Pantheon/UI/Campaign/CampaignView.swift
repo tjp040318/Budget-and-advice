@@ -6,6 +6,7 @@ struct CampaignView: View {
     @State private var selectedStage: Stage?
     @State private var battle: BattleContext?
     @State private var mode: Mode
+    @State private var path = NavigationPath()
 
     /// The two kinds of PvE: the story chapters, and the Halls of Essence
     /// that are run over and over for essences and relics.
@@ -20,7 +21,7 @@ struct CampaignView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             ScrollView {
                 VStack(spacing: 18) {
                     Picker("Mode", selection: $mode) {
@@ -32,8 +33,10 @@ struct CampaignView: View {
 
                     switch mode {
                     case .chapters:
-                        ForEach(StageDatabase.chapters) { chapter in
-                            chapterSection(chapter)
+                        // The realms and their chapters; a chapter opens as
+                        // a map of its stages.
+                        WorldMapView { chapter in
+                            path.append(chapter.id)
                         }
                     case .halls:
                         ForEach(DungeonDatabase.halls) { hall in
@@ -44,6 +47,11 @@ struct CampaignView: View {
                 .padding(16)
             }
             .screen(mode == .chapters ? "Campaign" : "Halls of Essence")
+            .navigationDestination(for: String.self) { chapterID in
+                ChapterMapView(chapterID: chapterID) { stage in
+                    selectedStage = stage
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     WalletBar(wallet: store.player.wallet)
@@ -103,6 +111,7 @@ struct CampaignView: View {
                     .frame(height: 118)
                     .frame(maxWidth: .infinity)
                     .clipped()
+                    .allowsHitTesting(false)
                     .overlay(
                         LinearGradient(colors: [.clear, Theme.surface.opacity(0.15), Theme.surface],
                                        startPoint: .top, endPoint: .bottom)
@@ -157,64 +166,7 @@ struct CampaignView: View {
         .panelBackground()
     }
 
-    // MARK: - Chapter
-
-    private func chapterSection(_ chapter: Chapter) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            // The chapter's first stage painting as a banner, so the list reads
-            // as places rather than as rows of text.
-            if let scene = chapter.stages.first?.environment.sceneName, BundleImage.exists("\(scene)_bg") {
-                BundleImage(name: "\(scene)_bg")
-                    .aspectRatio(contentMode: .fill)
-                    .frame(height: 118)
-                    .frame(maxWidth: .infinity)
-                    .clipped()
-                    .overlay(
-                        LinearGradient(colors: [.clear, Theme.surface.opacity(0.15), Theme.surface],
-                                       startPoint: .top, endPoint: .bottom)
-                    )
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
-                    .padding(.bottom, -4)
-            }
-
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(chapter.realmName.uppercased())
-                        .font(Theme.body(10).weight(.bold))
-                        .tracking(1.6)
-                        .foregroundStyle(chapter.pantheon.color)
-                    Text(chapter.name)
-                        .font(Theme.title(20))
-                        .foregroundStyle(Theme.textPrimary)
-                }
-                Spacer()
-                let cleared = store.player.campaignProgress[chapter.id] ?? 0
-                Text("\(cleared)/\(chapter.stages.count)")
-                    .font(Theme.numeric(13))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-
-            Text(chapter.summary)
-                .font(Theme.body(13))
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-
-            StatBar(
-                value: Double(store.player.campaignProgress[chapter.id] ?? 0),
-                maximum: Double(chapter.stages.count),
-                tint: chapter.pantheon.color,
-                height: 5
-            )
-
-            VStack(spacing: 8) {
-                ForEach(chapter.stages) { stage in
-                    stageRow(stage)
-                }
-            }
-        }
-        .padding(14)
-        .panelBackground()
-    }
+    // MARK: - Stage rows
 
     private func stageRow(_ stage: Stage) -> some View {
         let unlocked = CampaignService.isUnlocked(stage, player: store.player)
@@ -313,6 +265,7 @@ struct StageBriefingView: View {
                             .frame(height: 150)
                             .frame(maxWidth: .infinity)
                             .clipped()
+                            .allowsHitTesting(false)
                             .overlay(
                                 LinearGradient(colors: [.clear, Theme.ink.opacity(0.85)],
                                                startPoint: .center, endPoint: .bottom)

@@ -89,10 +89,106 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
         pantheon: .norse
     )
 
-    static let all: [Banner] = [duatOpens]
-        + (olympusStirs.pool.isEmpty ? [] : [olympusStirs])
-        + (ravensGather.pool.isEmpty ? [] : [ravensGather])
-        + [standard]
+    /// The summon pool filtered by a rule: what the scroll banners are made of.
+    static func pool(where keep: (UnitBlueprint) -> Bool) -> [String] {
+        UnitDatabase.summonPool.filter { id in UnitDatabase.blueprint(id).map(keep) ?? false }
+    }
+
+    /// The scroll banners, the way the genre sells them: the scroll is the
+    /// rule. Each spends its own scroll and draws from the slice of the
+    /// roster its name promises, with pity counters of its own.
+    static let unknownScroll = Banner(
+        id: "unknown_scroll",
+        title: "Unknown Scroll",
+        subtitle: "The commons of every pantheon: the 3★ tier, cheap and plentiful, the Hall of Ka's bread.",
+        scroll: .unknown,
+        pool: pool(where: { $0.naturalStars == 3 }),
+        featured: [],
+        legendaryPity: nil,
+        rarePity: nil,
+        artName: "banner_unknown",
+        pantheon: nil
+    )
+
+    static let divineScroll = Banner(
+        id: "divine_scroll",
+        title: "Divine Scroll",
+        subtitle: "Never less than a 4★, from every pantheon. The rarest scroll there is.",
+        scroll: .divine,
+        pool: pool(where: { $0.naturalStars >= 4 }),
+        featured: [],
+        legendaryPity: 40,
+        rarePity: nil,
+        artName: "banner_divine",
+        pantheon: nil
+    )
+
+    static let lightAndDark = Banner(
+        id: "light_dark_scroll",
+        title: "Light & Dark",
+        subtitle: "Only the sun's and the night's: every Radiance and Umbra unit of every pantheon.",
+        scroll: .lightDark,
+        pool: pool(where: { $0.element == .radiance || $0.element == .umbra }),
+        featured: [],
+        legendaryPity: 120,
+        rarePity: 15,
+        artName: "banner_light_dark",
+        pantheon: nil
+    )
+
+    static let emberScroll = Banner(
+        id: "ember_scroll",
+        title: "Fire Scroll",
+        subtitle: "Every Fire unit of every pantheon, and nothing else.",
+        scroll: .ember,
+        pool: pool(where: { $0.element == .ember }),
+        featured: [],
+        legendaryPity: 120,
+        rarePity: 15,
+        artName: "banner_fire",
+        pantheon: nil
+    )
+
+    static let tideScroll = Banner(
+        id: "tide_scroll",
+        title: "Water Scroll",
+        subtitle: "Every Water unit of every pantheon, and nothing else.",
+        scroll: .tide,
+        pool: pool(where: { $0.element == .tide }),
+        featured: [],
+        legendaryPity: 120,
+        rarePity: 15,
+        artName: "banner_water",
+        pantheon: nil
+    )
+
+    static let galeScroll = Banner(
+        id: "gale_scroll",
+        title: "Wind Scroll",
+        subtitle: "Every Wind unit of every pantheon, and nothing else.",
+        scroll: .gale,
+        pool: pool(where: { $0.element == .gale }),
+        featured: [],
+        legendaryPity: 120,
+        rarePity: 15,
+        artName: "banner_wind",
+        pantheon: nil
+    )
+
+    /// The summon screen's first row: a banner per live pantheon.
+    static var pantheonBanners: [Banner] {
+        [duatOpens]
+            + (olympusStirs.pool.isEmpty ? [] : [olympusStirs])
+            + (ravensGather.pool.isEmpty ? [] : [ravensGather])
+    }
+
+    /// The second row: the scrolls, each its own slice of the roster. The
+    /// Endless Scroll is everyone and is always there.
+    static var scrollBanners: [Banner] {
+        [standard] + [unknownScroll, divineScroll, lightAndDark, emberScroll, tideScroll, galeScroll].filter { !$0.pool.isEmpty }
+    }
+
+    static var all: [Banner] { pantheonBanners + scrollBanners }
 }
 
 /// The outcome of a single summon.

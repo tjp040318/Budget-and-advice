@@ -9,4 +9,16 @@ gen() { out="Art/Concepts/$1_sw.png"; [ -s "$out" ] && { echo "have $1"; return;
 gen loki "A sly fox-faced Norse trickster: a lean grinning young man with sharp features, slicked-back black hair and a bronze helmet with two long curved horns, a green tunic with gold knotwork trim under a short dark leather coat that hangs straight down, a curved dagger held against the outside of his right leg. Palette green, gold, black."
 gen hades "Hades, Greek god of the underworld, as an original cartoon character: a pale bearded man with a dark iron crown, a black and violet chiton ending above the knees over dark greaves, both sandalled feet visible, a dull gold pectoral, a two-pronged bident held upright tight against the outside of his right leg. Palette black, violet, dull gold."
 gen bastet "Bastet, Egyptian cat goddess, as an original cartoon character: a slender dark-skinned woman with a human face, sharp cat-like eyes and cat ears rising from her black bobbed hair, gold hoop earrings, a fitted emerald green and gold dress ending above the knees, a wide gold collar, gold anklets, bare feet, empty open hands at her sides. Palette black, emerald green, gold."
+
+# The scroll banners and the world map, 1284x800 and 2048x1152 like the ones
+# they sit beside. Leave the lower third of a banner quiet: the pull buttons.
+BANNER="Mobile gacha summon banner splash, DESC, dramatic backlight, cinematic, ornate, hand-painted stylised mobile game art, the lower third of the image calm and uncluttered, no text, no logo, no UI"
+paint() { out="Pantheon/Resources/Portraits/$1.png"; [ -s "$out" ] && { echo "have $1"; return; }; python3 tools/genart.py --prompt "$2" --out "$out" --size "$3" >/dev/null 2>&1 && echo "ok $1" || echo "FAILED $1"; }
+paint banner_unknown "${BANNER/DESC/a plain clay tablet scroll glowing faintly on a stone altar among rows of sandstone shabti figurines, dusty amber and grey}" 1284x800
+paint banner_divine "${BANNER/DESC/a golden scroll bound in light floating above the silhouettes of gods on a mountaintop, blinding white-gold and violet}" 1284x800
+paint banner_light_dark "${BANNER/DESC/a scroll split down the middle, one half white-gold sunlight and one half violet-black night full of stars}" 1284x800
+paint banner_fire "${BANNER/DESC/a burning scroll held over a volcanic forge, red and orange fire, embers rising}" 1284x800
+paint banner_water "${BANNER/DESC/a scroll of sea-green light drifting over dark deep water with foam and bubbles}" 1284x800
+paint banner_wind "${BANNER/DESC/a scroll caught in a jade-green whirlwind over a cliff top, leaves and feathers flying}" 1284x800
+paint world_map "A painted fantasy world map for a mobile game, seen from above like an old chart but in full colour: a desert land with pyramids and a river on the left, a Greek mountain with white temples in the middle, a Norse fjord with snowy peaks and a great tree on the right, dotted roads between them, sea all around with sea monsters at the edges, hand-painted stylised mobile game art, no text, no labels, no borders" 2048x1152
 echo concepts-day2-done

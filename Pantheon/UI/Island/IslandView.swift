@@ -18,6 +18,7 @@ struct IslandView: View {
     @State private var pulse = false
     @State private var shaking: String?
     @State private var showShop = false
+    @State private var showMissions = false
 
     /// Where the team stands: open sand below the circle, the middle of the
     /// island and the front beach, measured off the painting like the
@@ -102,6 +103,10 @@ struct IslandView: View {
             ShopView()
                 .environmentObject(store)
         }
+        .sheet(isPresented: $showMissions) {
+            MissionsView()
+                .environmentObject(store)
+        }
     }
 
     /// Where an image of `image` size lands when drawn to fill `container`,
@@ -127,6 +132,7 @@ struct IslandView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: full.width, height: full.height)
                 .clipped()
+                .allowsHitTesting(false)
                 .overlay(
                     // The hour's colour over the painting: nothing by day,
                     // warm at dusk, blue at night.
@@ -179,6 +185,32 @@ struct IslandView: View {
                 }
             }
             Spacer()
+            // Missions: the scroll beside the wallet, with what is waiting.
+            Button {
+                Juice.haptic(.light)
+                AudioLibrary.shared.play(.uiTap)
+                showMissions = true
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: "scroll.fill")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Theme.gold)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(Theme.surface))
+                        .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 1))
+                    let waiting = store.claimableRewards
+                    if waiting > 0 {
+                        Text("\(waiting)")
+                            .font(Theme.numeric(9).weight(.bold))
+                            .foregroundStyle(Theme.ink)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Theme.gold))
+                            .offset(x: 6, y: -4)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
             // The wallet is the way into the bazaar, as the genre has it.
             Button {
                 Juice.haptic(.light)

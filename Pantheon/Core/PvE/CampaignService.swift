@@ -124,9 +124,11 @@ enum CampaignService {
 
         player.wallet.drachma += drachma
         player.experience += rewards.playerExperience
+        var levelsGained = 0
         while player.experience >= player.experienceToNextLevel {
             player.experience -= player.experienceToNextLevel
             player.level += 1
+            levelsGained += 1
             player.wallet.maxEnergy += 2
             player.wallet.energy = player.wallet.maxEnergy
         }
@@ -159,10 +161,13 @@ enum CampaignService {
             player.wallet.scrolls[id, default: 0] += 1
         }
 
-        var divinity = 0
+        // A summoner level is worth 25 divinity, the way the genre pays
+        // levelling, on top of the first clear's own.
+        var divinity = levelsGained * 25
+        player.wallet.divinity += divinity
         if isFirstClear {
-            divinity = rewards.firstClearDivinity
-            player.wallet.divinity += divinity
+            divinity += rewards.firstClearDivinity
+            player.wallet.divinity += rewards.firstClearDivinity
             player.campaignProgress[stage.chapterID] = max(
                 player.campaignProgress[stage.chapterID] ?? 0, stage.index
             )

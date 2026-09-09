@@ -556,6 +556,41 @@ hit with about 150 cards to go and one concept (Loki: the first draw was a
 photo of an actor, deleted; the second was refused; the third is
 tomorrow's).
 
+### Phase 2e — the first playtest of the big build, and what it asked for *(built)*
+
+The phone said four things about the previous commit, and three of them
+were one bug: the Chapters/Halls switch did nothing, the banner chips did
+nothing, and the stages after the first would not open. Every painting on
+those screens is scaled to fill a short strip and clipped — and SwiftUI's
+`.clipped()` clips drawing, not touch, so a 2048-square backdrop in a
+118-point band was swallowing taps 340 points above and below itself. One
+modifier per painting. The fourth was the third skill blanking the screen:
+the cinematic-orbit shot's hand-rolled look-at was half a turn off and
+showed the empty side of the stage.
+
+What the phone asked for, all built:
+
+- **A way to earn.** `QuestService`: daily missions (clear three stages,
+  a hall floor, an arena win, a summon, a power-up, a relic upgrade, the
+  daily offering, thirty energy; a Pantheon scroll for the set), feats
+  (first 5★, summon counts, arena wins, hall floors, a +15 relic, an
+  awakening, a 6★, unit counts, summoner levels, every chapter), a
+  seven-day login gift, and 25 divinity a summoner level. Scrolls drop
+  from every stage now (unknown, mystical; pantheon on bosses) and from
+  the halls (the element's own). The Missions screen sits beside the
+  wallet with a badge.
+- **Scroll packs like Summoners War.** Unknown (3★ commons), Divine
+  (4★+), Light & Dark, Fire, Water and Wind scrolls: each is a banner
+  whose pool is the slice of the roster its name promises and whose
+  scroll is its own currency, sold in the bazaar (Unknown for drachma,
+  the rest for divinity, two for laurels). The summon screen has two chip
+  rows with counts. Six banner paintings and a world map are in the
+  day-two Gemini script.
+- **A map.** `WorldMapView` (realms, chapters, why a chapter is shut) and
+  `ChapterMapView` (the painting, a dotted road, medallions: gold tick,
+  pulsing ring, lock, boss crown). The list rows remain under the map.
+- **Five tabs.** Settings opens from the Obelisk.
+
 ### Phase 4 — sound and feel
 
 - **Music.** Two synthesised loops are in — an island loop of pads, a drone

@@ -77,6 +77,12 @@ struct Player: Codable, Equatable, Sendable {
     /// When the bazaar's daily offering was last claimed. Optional so a save
     /// written before the shop existed still decodes; a missing key is nil.
     var lastDailyPackClaim: Date? = nil
+    /// Today's missions, the lifetime counters the feats read, the feats
+    /// claimed and the login streak. Optional for the same reason.
+    var quests: QuestProgress? = nil
+    var lifetimeCounters: [String: Int]? = nil
+    var featsClaimed: Set<String>? = nil
+    var loginStreak: LoginStreak? = nil
 
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }

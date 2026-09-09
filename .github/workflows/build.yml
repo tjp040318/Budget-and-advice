@@ -98,13 +98,13 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
-          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop)
+          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions)
           # Each launch also writes what the app prints — the [ModelLibrary]
           # block, SceneKit's own errors — to shots/<step>-console.txt, so a
           # frame that came out wrong can be read as well as looked at.
           # OS_ACTIVITY_DT_MODE mirrors the frameworks' os_log lines to stderr
           # the way Xcode's console does.
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14; do
             SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
               --stdout="$PWD/shots/$step-${names[$step]}-out.txt" \
               --stderr="$PWD/shots/$step-${names[$step]}-err.txt" \
@@ -126,7 +126,7 @@ jobs:
             --predicate 'process == "Pantheon" OR (eventMessage CONTAINS "Pantheon" AND messageType == error)' \
             2>/dev/null | grep -v -E 'CoreAnalytics|Bluetooth|RunningBoard|LaunchServices|activity' \
             | tail -n 600 > shots/system-log.txt || true
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14; do
             base="shots/$step-${names[$step]}"
             { echo "== stdout"; cat "$base-out.txt" 2>/dev/null; echo; echo "== stderr"; cat "$base-err.txt" 2>/dev/null; } \
               | head -c 120000 > "$base-console.txt"

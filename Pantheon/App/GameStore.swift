@@ -128,6 +128,12 @@ final class GameStore: ObservableObject {
         ArenaService.refreshAttacks(&copy.arena, now: now)
         if copy.arena.attacksRemaining != attacksBefore { changed = true }
 
+        // Missions roll over at midnight and the login streak advances.
+        let questsBefore = copy.quests
+        let streakBefore = copy.loginStreak
+        QuestService.refreshDay(player: &copy, now: now)
+        if copy.quests != questsBefore || copy.loginStreak != streakBefore { changed = true }
+
         if changed {
             player = copy
             markDirty()
@@ -158,6 +164,11 @@ final class GameStore: ObservableObject {
         var rng = makeRandom()
         let results = attempt { player in
             try SummonService.summon(banner: banner, count: count, player: &player, rng: &rng)
+        }
+        if let results, !results.isEmpty {
+            update { player in
+                QuestService.record(.summoned(count: results.count, bestStars: results.map(\.stars).max() ?? 3), player: &player)
+            }
         }
         return results ?? []
     }
@@ -222,6 +233,7 @@ final class GameStore: ObservableObject {
             for _ in 0..<duplicates {
                 _ = ProgressionService.applySkillUp(to: &player.units[index], using: &rng)
             }
+            QuestService.record(.unitPoweredUp, player: &player)
             // Unequip the fodder before it disappears, so relics come back.
             for id in fodderIDs {
                 guard let fodderIndex = player.units.firstIndex(where: { $0.id == id }) else { continue }
@@ -242,6 +254,7 @@ final class GameStore: ObservableObject {
             try ProgressionService.evolve(&unit, fodder: fodder, wallet: &wallet)
             player.units[index] = unit
             player.wallet = wallet
+            QuestService.record(.unitEvolved(stars: unit.stars), player: &player)
             for id in fodderIDs {
                 guard let fodderIndex = player.units.firstIndex(where: { $0.id == id }) else { continue }
                 for slot in player.units[fodderIndex].equippedRelics.keys {
@@ -260,6 +273,7 @@ final class GameStore: ObservableObject {
             try ProgressionService.awaken(&unit, essences: &essences)
             player.units[index] = unit
             player.essences = essences
+            QuestService.record(.unitAwakened, player: &player)
         }
     }
 
@@ -292,6 +306,7 @@ final class GameStore: ObservableObject {
             try RelicService.upgrade(&relic, wallet: &wallet, rng: &rng)
             player.relics[index] = relic
             player.wallet = wallet
+            QuestService.record(.relicUpgraded(level: relic.level), player: &player)
         }
     }
 
@@ -329,10 +344,40 @@ final class GameStore: ObservableObject {
     /// when it cannot be paid for or was already claimed today.
     func buy(_ item: ShopService.Item) -> [ShopService.Grant]? {
         var rng = makeRandom()
-        return attempt { player in
+        let grants = attempt { player in
             try ShopService.buy(item, player: &player, rng: &rng)
         }
+        if grants != nil, item.isDaily {
+            update { player in QuestService.record(.dailyOfferingClaimed, player: &player) }
+        }
+        return grants
     }
+
+    // MARK: - Missions
+
+    func claimMission(_ id: String) -> [ShopService.Grant]? {
+        var rng = makeRandom()
+        return attempt { player in
+            try QuestService.claimMission(id, player: &player, rng: &rng)
+        }
+    }
+
+    func claimFeat(_ id: String) -> [ShopService.Grant]? {
+        var rng = makeRandom()
+        return attempt { player in
+            try QuestService.claimFeat(id, player: &player, rng: &rng)
+        }
+    }
+
+    func claimLoginGift() -> [ShopService.Grant]? {
+        var rng = makeRandom()
+        return attempt { player in
+            try QuestService.claimLoginGift(player: &player, rng: &rng)
+        }
+    }
+
+    /// Rewards waiting to be claimed, for the badge beside the wallet.
+    var claimableRewards: Int { QuestService.claimableCount(player: player) }
 
     // MARK: - Battle plumbing
 
@@ -349,6 +394,13 @@ final class GameStore: ObservableObject {
             outcome = CampaignService.applyRewards(
                 stage: stage, result: result, player: &player, rng: &rng
             )
+            if result.outcome == .victory {
+                let event: QuestService.Event = DungeonDatabase.hall(containing: stage) != nil
+                    ? .hallFloorCleared(stage)
+                    : .stageCleared(stage)
+                QuestService.record(event, player: &player)
+            }
+            QuestService.record(.energySpent(stage.energyCost), player: &player)
         }
         return outcome ?? StageOutcome(
             result: result, stars: 0, drachma: 0, playerExperience: 0, unitExperience: 0,
@@ -367,6 +419,7 @@ final class GameStore: ObservableObject {
         var outcome: (Int, Int) = (0, 0)
         update { player in
             outcome = ArenaService.applyResult(result, against: opponent, player: &player)
+            QuestService.record(.arenaBattle(won: result.outcome == .victory), player: &player)
         }
         return outcome
     }

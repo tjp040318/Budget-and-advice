@@ -39,27 +39,48 @@ struct SummonView: View {
 
     // MARK: - Banner
 
+    /// Two rows: the pantheon banners, and the scrolls that are each their
+    /// own slice of the roster. Every chip carries how many of its scroll
+    /// the player holds.
     private var bannerPicker: some View {
-        HStack(spacing: 8) {
-            ForEach(Banner.all) { banner in
-                Button {
-                    selectedBanner = banner
-                } label: {
-                    Text(banner.title)
-                        .font(Theme.body(12).weight(.semibold))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
-                        .background(
-                            Capsule().fill(
-                                selectedBanner.id == banner.id ? Theme.gold : Theme.surfaceRaised
-                            )
-                        )
-                        .foregroundStyle(
-                            selectedBanner.id == banner.id ? Theme.ink : Theme.textSecondary
-                        )
+        VStack(alignment: .leading, spacing: 8) {
+            pickerRow(title: "Pantheons", banners: Banner.pantheonBanners)
+            pickerRow(title: "Scrolls", banners: Banner.scrollBanners)
+        }
+    }
+
+    private func pickerRow(title: String, banners: [Banner]) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            Text(title.uppercased())
+                .font(Theme.body(9).weight(.bold))
+                .tracking(1.4)
+                .foregroundStyle(Theme.textSecondary)
+                .frame(width: 66, alignment: .leading)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(banners) { banner in
+                        let owned = store.player.wallet.count(of: banner.scroll)
+                        let selected = selectedBanner.id == banner.id
+                        Button {
+                            selectedBanner = banner
+                        } label: {
+                            HStack(spacing: 5) {
+                                Image(systemName: banner.scroll.glyph)
+                                    .font(.system(size: 10, weight: .bold))
+                                Text(banner.title)
+                                    .font(Theme.body(12).weight(.semibold))
+                                Text("\(owned)")
+                                    .font(Theme.numeric(11))
+                                    .opacity(0.85)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 8)
+                            .background(Capsule().fill(selected ? Theme.gold : Theme.surfaceRaised))
+                            .foregroundStyle(selected ? Theme.ink : Theme.textSecondary)
+                        }
+                    }
                 }
             }
-            Spacer()
         }
     }
 
@@ -98,6 +119,9 @@ struct SummonView: View {
         }
         .frame(height: 210)
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+        // A painting scaled to fill is clipped on screen but not for touch:
+        // the art's unclipped extent covered the banner chips above it.
+        .allowsHitTesting(false)
     }
 
     // MARK: - Pity
