@@ -48,22 +48,45 @@ ART = REPO / "Art" / "Models"
 # clip in AnimationClip (Core/Models/Presentation.swift), chosen from the
 # catalogue for in-place motion of roughly the contracted length. `library`
 # prints the whole catalogue; --clips overrides any of them.
+#
+# The first roster was cut with 96 "Kung Fu Punch" and 237 "Charged Axe Chop":
+# a martial-arts strike that throws a leg out and an overhead chop with a wide
+# stance, which read as ugly on a robed god the moment the camera framed the
+# whole figure. The defaults are now sword cuts with the feet planted, and
+# CLIP_SETS below swaps the three attacks for the kits that do not swing a
+# blade: a caster casts, a hammer-bearer swings, an archer draws.
 DEFAULT_CLIPS = {
     "idle_combat":    89,   # "Combat Idel"  - fighting stance, loops
-    "attack_basic":   96,   # "Kung Fu Punch" - one-handed strike, ~1 s
-    "attack_heavy":  237,   # "Charged Axe Chop" - overhead two-handed strike
+    "attack_basic":  219,   # "Right-hand Sword Slash" - one clean one-handed cut, feet planted
+    "attack_heavy":  242,   # "Charged Slash" - a wind-up and one big two-handed cut
     "hit_react":     178,   # "Hit Reaction" - a flinch that stays in place
     "death":           8,   # "Dead" - collapse
-    "ultimate":      127,   # "Charged Ground Slam" - the rite
+    "ultimate":      102,   # "Sword Judgment" - the rite: the blade raised high and brought down
     "victory":       412,   # "Victory"
     "idle":            0,   # "Idle" - relaxed breathing
     "summon_reveal": 377,   # "Relax Arms, Then Strike Battle Pose"
+}
+# Per-kit overrides of the attack clips. `--clips <set>` (optionally followed
+# by ",name=id" overrides) picks one; wave_launch.sh passes the spec's fifth
+# field through. The kits map: striker, duelist, warden -> blade; bruiser ->
+# heavy; healer, oracle, trickster -> caster; marksman -> archer (only when the
+# concept actually holds a bow - a staff-bearer is a caster).
+CLIP_SETS = {
+    "blade":  {},
+    "heavy":  {"attack_heavy": 128,                        # "Heavy Hammer Swing"
+               "ultimate":     127},                       # "Charged Ground Slam"
+    "caster": {"attack_basic": 129,                        # "Mage Spell Cast" - a one-handed cast
+               "attack_heavy": 125,                        # "Charged Spell Cast" - both hands, a gather and release
+               "ultimate":     126},                       # "Charged Spell Cast 1" - the long gather
+    "archer": {"attack_basic": 224,                        # "Archery Shot"
+               "attack_heavy": 226,                        # "Archery Shot 2"
+               "ultimate":     222},                       # "Draw and Shoot from Back"
 }
 # The six that make a battle read as finished. The other three are polish.
 BATTLE_CLIPS = ["idle_combat", "attack_basic", "attack_heavy", "hit_react", "death", "ultimate"]
 
 POLL_SECONDS = 10
-TASK_TIMEOUT = 45 * 60
+TASK_TIMEOUT = 4 * 60 * 60   # a big wave queues behind itself for hours
 TERMINAL = {"SUCCEEDED", "FAILED", "CANCELED", "EXPIRED"}
 ENDPOINT = {
     "preview": "/v2/text-to-3d",
@@ -269,23 +292,27 @@ def wait(api, m, keys):
 
 
 def parse_clips(spec):
-    """'all' | 'battle' | 'idle_combat,attack_basic' | 'idle_combat=89,...'"""
+    """'all' | 'battle' | a CLIP_SETS name | 'idle_combat,attack_basic' |
+    'caster,ultimate=127' (a set, then name=id overrides on top)."""
     if not spec or spec == "battle":
         return {k: DEFAULT_CLIPS[k] for k in BATTLE_CLIPS}
     if spec == "all":
         return dict(DEFAULT_CLIPS)
+    items = [i.strip() for i in spec.split(",") if i.strip()]
     out = {}
-    for item in spec.split(","):
-        item = item.strip()
-        if not item:
-            continue
+    if items and items[0] in CLIP_SETS:
+        out = {k: DEFAULT_CLIPS[k] for k in BATTLE_CLIPS}
+        out.update(CLIP_SETS[items.pop(0)])
+    for item in items:
         if "=" in item:
             name, aid = item.split("=", 1)
             out[name.strip()] = int(aid)
+        elif item in CLIP_SETS:
+            out.update(CLIP_SETS[item])
         elif item in DEFAULT_CLIPS:
             out[item] = DEFAULT_CLIPS[item]
         else:
-            sys.exit(f"unknown clip '{item}' - name one of {', '.join(DEFAULT_CLIPS)} or give name=action_id")
+            sys.exit(f"unknown clip '{item}' - name one of {', '.join(DEFAULT_CLIPS)}, a set ({', '.join(CLIP_SETS)}) or name=action_id")
     return out
 
 
@@ -542,7 +569,8 @@ def main():
     p.add_argument("--polycount", type=int, default=30000, help="target polycount for the generator's remesh")
     p.add_argument("--symmetry", default="on", choices=["on", "off", "auto"])
     p.add_argument("--clips", default="battle",
-                   help="'battle' (the six that make a fight read), 'all' (nine), a comma list of clip names, or name=action_id pairs")
+                   help="'battle' (the six that make a fight read), 'all' (nine), a kit set (blade, heavy, caster, archer), "
+                        "a comma list of clip names, or name=action_id pairs; a set may be followed by overrides")
     p.add_argument("--until", choices=["preview", "refine", "rig", "clips"], default="clips",
                    help="stop after this stage")
 

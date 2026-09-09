@@ -1,0 +1,51 @@
+# The detail remakes: every family whose mesh was cut with the flat
+# cel-shaded texture prompt and the punch/chop clips, remade as <key>_hd
+# from the same concept with the painted-detail prompt, the higher mesh
+# budget and the kit's own clips, and shipped over the old files.
+#   asset:concept:height:palette:kit:family
+# `bash tools/batch/wave_run.sh tools/batch/remake_wave.txt 3000` for the
+# 4* and 5* block; the 3* block is the last thing to spend on, so run it as
+# `... 3300` (keeps room for the dungeon props). Ship with ship_wave.sh.
+#
+# ---- flagships (launched by hand on 2026-09-09)
+zeus_hd:Art/Concepts/zeus_sw.png:2.15:white and burnished gold and storm blue, white hair and beard, white himation with gold meander, gold scale armour:blade:zeus
+sekhmet_hd:Art/Concepts/sekhmet_sw.png:2.00:crimson and burnished gold and near-black, black lioness fur, gold sun-disc crown, lapis and carnelian inlays:blade:sekhmet
+anubis_hd:Art/Concepts/anubis_sw.png:2.05:black and burnished gold and lapis blue, black jackal fur, striped nemes, gold and lapis armour:blade:anubis
+# ---- 4* and 5* (hathor, bastet, hades and loki are fresh meshes in wave3.txt)
+horus_hd:Art/Concepts/horus_sw.png:2.10:gold, white, sky blue:blade:horus
+isis_hd:Art/Concepts/isis_sw.png:2.00:gold, white, lapis blue:caster:isis
+set_hd:Art/Concepts/set_sw.png:2.20:red-brown, gold, black:blade:set
+sobek_hd:Art/Concepts/sobek_sw.png:2.30:green, gold, bronze:heavy:sobek
+athena_hd:Art/Concepts/athena_sw.png:2.05:bronze, white, olive green:blade:athena
+poseidon_hd:Art/Concepts/poseidon_sw.png:2.15:sea green, bronze, white:heavy,attack_basic=240:poseidon
+apollo_hd:Art/Concepts/apollo_sw.png:2.00:gold, white, sun orange:caster:apollo
+artemis_hd:Art/Concepts/artemis_sw.png:1.95:silver, forest green, white:archer:artemis
+hermes_hd:Art/Concepts/hermes_sw.png:1.95:gold, white, sky blue:caster:hermes
+odin_hd:Art/Concepts/odin_sw.png:2.10:dark blue, grey, gold:caster:odin
+thor_hd:Art/Concepts/thor_sw.png:2.20:iron, red, gold:heavy:thor
+freya_hd:Art/Concepts/freya_sw.png:2.00:gold, amber, white:caster:freya
+tyr_hd:Art/Concepts/tyr_sw.png:2.05:steel blue, silver, white:blade:tyr
+heimdall_hd:Art/Concepts/heimdall_sw.png:2.10:gold, white, deep blue:blade:heimdall
+hel_hd:Art/Concepts/hel_sw.png:2.00:black, bone white, teal:caster:hel
+skadi_hd:Art/Concepts/skadi_sw.png:2.05:white, ice blue, silver:archer:skadi
+ares_hd:Art/Concepts/ares_sw.png:2.10:bronze, crimson, black:blade:ares
+heracles_hd:Art/Concepts/heracles_sw.png:2.05:tan, lion gold, bronze:heavy:heracles
+perseus_hd:Art/Concepts/perseus_sw.png:1.90:bronze, white, blue:blade:perseus
+thoth_hd:Art/Concepts/thoth_sw.png:2.05:white, gold, lapis blue:caster:thoth
+# ---- 3* (floor 3300)
+scarab_knight_hd:Art/Concepts/scarab_knight_sw.png:1.90:teal, bronze, black:blade:scarab_knight
+mummy_hd:Art/Concepts/mummy_sw.png:1.90:linen, gold, black:blade:mummy
+jackal_warrior_hd:Art/Concepts/jackal_warrior_sw.png:1.90:black, gold, tan:blade:jackal_warrior
+minotaur_hd:Art/Concepts/minotaur_sw.png:2.40:brown, bronze, black:heavy:minotaur
+cyclops_hd:Art/Concepts/cyclops_sw.png:2.60:tan, bronze, brown:heavy:cyclops
+amazon_hd:Art/Concepts/amazon_sw.png:1.90:bronze, red, tan:blade:amazon
+medusa_hd:Art/Concepts/medusa_sw.png:1.95:green, gold, bronze:caster:medusa
+valkyrie_hd:Art/Concepts/valkyrie_sw.png:1.95:silver, white, steel blue:blade:valkyrie
+draugr_hd:Art/Concepts/draugr_sw.png:1.95:blue-grey, rust, bone:blade:draugr
+berserker_hd:Art/Concepts/berserker_sw.png:2.00:fur brown, iron, red:heavy:berserker
+frost_troll_hd:Art/Concepts/frost_troll_sw.png:2.50:ice blue, grey, white:heavy:frost_troll
+dwarf_smith_hd:Art/Concepts/dwarf_smith_sw.png:1.40:iron, brown, gold:heavy:dwarf_smith
+hoplite_hd:Art/Concepts/hoplite_sw.png:1.85:bronze, red, white:blade,attack_basic=240:hoplite
+satyr_hd:Art/Concepts/satyr_sw.png:1.60:brown, green, tan:caster:satyr
+harpy_hd:Art/Concepts/harpy_sw.png:1.75:brown, bronze, cream:blade:harpy
+shabti_hd:Art/Concepts/shabti_sw.png:1.90:sandstone, turquoise, gold:blade:shabti

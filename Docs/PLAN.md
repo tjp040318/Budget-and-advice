@@ -465,7 +465,8 @@ account is topped up; the next character or the awakened meshes wait on that.
 
 ### Phase 2d — the third roster, two new realms and the Halls *(built; the art is landing)*
 
-Forty-three families are in the code: the eleven hand-written ones and
+Seventy-nine families are in the code (see *The detail pass and batch 3*
+below for the last thirty-six): the eleven hand-written ones and
 thirty-two from one table (`UnitDatabase+Families.swift`). A row is the
 numbers, the names and the words that make a family itself; what varies
 by element is the shared tables; what varies by role is one of eight
@@ -940,3 +941,72 @@ The 3D bottleneck is gone in practice, not just in principle: a character is
 four commands and two Gemini calls, about an hour end to end including the
 waiting, and it arrives verified and rendered. The compile gap is closed by
 the runner. What this environment still cannot do is hold the phone.
+
+## The detail pass and batch 3 (2026-09-09)
+
+The playtest's verdict on the characters: too cartoony, and an attack that
+"pulls the leg out". Measured causes, in order of weight:
+
+1. **The texture prompt.** Every mesh since the first wave was textured with
+   "cel-shaded with crisp baked highlights", which Meshy renders as three
+   flat tones per part. `tools/batch/wave_launch.sh` now asks for painted
+   detail: engraved and embossed metal with worn edges, cloth with a weave
+   and stitched trim, hair and fur in strands, leather with grain, soft
+   natural shading. The concept style for new families
+   (`concepts_batch3.sh`) says the same, since the model takes its texture
+   from the drawing.
+2. **The budget.** 5,000 triangles and a 1024 texture were chosen for a
+   portrait phone at 3v3. The landscape camera puts a figure a quarter of
+   the screen tall in battle and most of it in the summon reveal and the
+   unit sheet, where 1024 texels over a 2 m body is a texel a pixel.
+   `tools/mesh.py` ships 9,000 triangles at 2048 (LOD 3,500 at 1024; the
+   clip carriers stay 1,500 at 128, the game reads only their tracks). A
+   base file grows from about 1.9 MB to about 5 MB.
+3. **The ramp.** `ModelLibrary`'s two-band ramp (`smoothstep(0.28, 0.72)`)
+   turned a face into one tone and a cheek. It is `smoothstep(0.16, 0.86)`
+   over 0.30 + 0.70 now, with a 36-power specular at 0.42 so metal reads,
+   and the rim is 3.2 / 0.42 instead of 2.6 / 0.55, which had outlined every
+   figure in white.
+4. **The clips.** 96 "Kung Fu Punch" throws a leg; 237 "Charged Axe Chop"
+   plants a wide stance and swings overhead, which reads as a stumble on a
+   robed god. `tools/meshy.py` defaults to 219 Right-hand Sword Slash,
+   242 Charged Slash and 102 Sword Judgment, and `CLIP_SETS` gives the kits
+   that do not swing a blade their own: `heavy` (128 Heavy Hammer Swing,
+   127 Charged Ground Slam), `caster` (129 Mage Spell Cast, 125 / 126
+   Charged Spell Cast), `archer` (224 / 226 Archery Shot, 222 Draw and Shoot
+   from Back). A wave spec's fifth field names the set; a spear-bearer adds
+   `,attack_basic=240` (Thrust Slash).
+
+**Costs.** The manifests' per-stage `cost` is a balance delta read between
+polls, so it is noise whenever runs overlap (Odin's image stage shows 90,
+Harpy's rig 135). Sequential runs and the account itself agree: 30 for the
+image-to-3D, 5 for the rig, 3 a clip — **53 a character**, confirmed again
+today (7,809 → 7,650 for three). The plan is 8,000 credits with a floor of
+**3,000**; `wave_run.sh` reads the balance before every launch and counts
+what the launches of the same run still owe.
+
+**What the floor buys.** Remakes of every family cut with the old prompt
+(`remake_wave.txt`: 3 flagships done by hand, 21 more 4★ and 5★, 16 3★ as
+the last block at a 3,300 floor) and thirty-six new families
+(`wave3.txt`, with batch 2's five leftovers at the top): 60 characters,
+3,180 credits, leaving about 4,470 before the 3★ block and about 3,620
+after it. The gate is Gemini, not Meshy: 250 images a day, and batch 3
+needs 36 concepts plus 300 cards on top of the 150 the third roster still
+owed, so it spans three nights of routines (Sep 9, 10, 11 at 23:50 UTC).
+A family joins the gacha when its five cards land; its mesh can arrive
+later (the loader's stand-in covers the gap).
+
+**The repository.** The raw exports in `Art/Models` are tracked (539 MB,
+392 of it base meshes) and will double; the CI checkout is now sparse and
+skips `Art/` entirely, since the build needs only `Pantheon/Resources`. From
+this pass on only the base export and the manifest of a character are
+committed: the six per-clip GLBs (6–7 MB each, a copy of the mesh with one
+track) are ignored and refetched with `meshy.py download` when needed.
+
+**Batch 3's families.** Egypt: Ra, Osiris, Ptah, Khnum, Nephthys, Ma'at,
+Serqet, Taweret, Anhur, Bes, Medjay, Cobra Priestess. Greece: Hera,
+Hephaestus, Demeter, Dionysus, Aphrodite, Nike, Achilles, Atalanta, Siren,
+Nymph. Norse: Baldr, Frigg, Surtr, Njord, Idunn, Sif, Ullr, Vidar, Fenrir,
+Bragi, Einherjar, Shield Maiden, Light Elf, Dark Elf. Every design is
+described, never named as a likeness; every concept is an A-pose with the
+weapon against the leg and both feet showing, the rigger's two demands.

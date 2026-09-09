@@ -1,0 +1,53 @@
+# Meshy runs for batch 3 and the leftovers of batch 2, one per line:
+#   asset:concept:height:palette:kit:family
+# kit is a meshy.py clip set (blade, heavy, caster, archer, or a set followed
+# by ,name=id overrides); family is the roster name the mesh ships under.
+# Run with `bash tools/batch/wave_run.sh tools/batch/wave3.txt 3000` (launches
+# whatever has no manifest yet while the balance stays above the floor) and
+# ship with `bash tools/batch/ship_wave.sh tools/batch/wave3.txt`.
+#
+# ---- batch 2 leftovers (concepts from concepts_day2.sh and labyrinth_art.sh)
+loki:Art/Concepts/loki_sw.png:2.00:green, gold, black:blade:loki
+hades_v2:Art/Concepts/hades_sw.png:2.10:black, violet, dull gold:caster:hades
+bastet_v3:Art/Concepts/bastet_sw.png:1.95:black, emerald green, gold:blade:bastet
+boss_colossus:Art/Concepts/boss_colossus_sw.png:4.50:sandstone, gold, turquoise:heavy:boss_colossus
+boss_unwrapped_king:Art/Concepts/boss_unwrapped_king_sw.png:3.20:linen, gold, black:caster:boss_unwrapped_king
+# ---- Egypt, batch 3
+ra:Art/Concepts/ra_sw.png:2.15:gold, white, carnelian red:caster:ra
+osiris:Art/Concepts/osiris_sw.png:2.10:white, gold, green:caster:osiris
+ptah:Art/Concepts/ptah_sw.png:2.05:white, lapis blue, gold:caster:ptah
+khnum:Art/Concepts/khnum_sw.png:2.20:gold, white, river green:heavy:khnum
+nephthys:Art/Concepts/nephthys_sw.png:2.00:black, gold, dusk violet:caster:nephthys
+maat:Art/Concepts/maat_sw.png:1.95:white, gold, turquoise:caster:maat
+serqet:Art/Concepts/serqet_sw.png:1.95:black, gold, venom green:blade:serqet
+taweret:Art/Concepts/taweret_sw.png:2.30:river green, gold, red:heavy:taweret
+anhur:Art/Concepts/anhur_sw.png:2.10:red, gold, white:blade,attack_basic=240:anhur
+bes:Art/Concepts/bes_sw.png:1.40:gold, red, leopard tan:blade:bes
+medjay:Art/Concepts/medjay_sw.png:1.90:copper, white, red:archer:medjay
+cobra_priestess:Art/Concepts/cobra_priestess_sw.png:1.90:green, gold, black:caster:cobra_priestess
+# ---- Greece, batch 3
+hera:Art/Concepts/hera_sw.png:2.10:white, gold, peacock blue:caster:hera
+hephaestus:Art/Concepts/hephaestus_sw.png:2.05:bronze, leather brown, ember orange:heavy:hephaestus
+demeter:Art/Concepts/demeter_sw.png:2.00:wheat gold, green, cream:caster:demeter
+dionysus:Art/Concepts/dionysus_sw.png:2.00:purple, gold, ivy green:caster:dionysus
+aphrodite:Art/Concepts/aphrodite_sw.png:1.95:rose pink, white, gold:caster:aphrodite
+nike:Art/Concepts/nike_sw.png:1.95:white, gold, laurel green:blade:nike
+achilles:Art/Concepts/achilles_sw.png:2.05:bronze, red, gold:blade,attack_basic=240:achilles
+atalanta:Art/Concepts/atalanta_sw.png:1.90:forest green, leather brown, bronze:archer:atalanta
+siren:Art/Concepts/siren_sw.png:1.90:teal, silver, dark green:caster:siren
+nymph:Art/Concepts/nymph_sw.png:1.85:sea green, white, silver:caster:nymph
+# ---- Norse, batch 3
+baldr:Art/Concepts/baldr_sw.png:2.10:white, gold, sky blue:caster:baldr
+frigg:Art/Concepts/frigg_sw.png:2.05:blue, cream, gold:caster:frigg
+surtr:Art/Concepts/surtr_sw.png:2.60:black, ember orange, iron:blade:surtr
+njord:Art/Concepts/njord_sw.png:2.10:sea green, blue, gold:blade:njord
+idunn:Art/Concepts/idunn_sw.png:1.95:green, cream, gold:caster:idunn
+sif:Art/Concepts/sif_sw.png:2.00:gold, red, green:blade:sif
+ullr:Art/Concepts/ullr_sw.png:2.05:white, ice blue, silver:archer:ullr
+vidar:Art/Concepts/vidar_sw.png:2.20:iron, dark green, leather brown:heavy:vidar
+fenrir:Art/Concepts/fenrir_sw.png:2.30:grey, steel blue, black:blade:fenrir
+bragi:Art/Concepts/bragi_sw.png:2.05:dark red, gold, grey:caster:bragi
+einherjar:Art/Concepts/einherjar_sw.png:1.95:iron, blue, pale gold:blade:einherjar
+shield_maiden:Art/Concepts/shield_maiden_sw.png:1.90:steel, dark blue, red:blade:shield_maiden
+light_elf:Art/Concepts/light_elf_sw.png:1.85:white, pale gold, leaf green:caster:light_elf
+dark_elf:Art/Concepts/dark_elf_sw.png:1.85:black, violet, silver:blade:dark_elf

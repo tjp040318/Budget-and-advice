@@ -523,10 +523,15 @@ enum MaterialTuner {
     #pragma body
     float ndl = dot(_surface.normal, _light.direction);
     float wrap = ndl * 0.5 + 0.5;
-    float band = smoothstep(0.28, 0.72, wrap);
-    _lightingContribution.diffuse += _light.intensity.rgb * (0.34 + 0.66 * band);
+    // The band was 0.28-0.72 (two tones and a hard step between them), which
+    // is what made the figures read as cartoons: a face was one flat tone
+    // and a cheek. Wider, so the normal map's engraving and folds shade
+    // through the turn, and a tighter, brighter specular so metal reads as
+    // metal.
+    float band = smoothstep(0.16, 0.86, wrap);
+    _lightingContribution.diffuse += _light.intensity.rgb * (0.30 + 0.70 * band);
     float3 h = normalize(_light.direction + _surface.view);
-    float spec = pow(saturate(dot(_surface.normal, h)), 26.0) * 0.32;
+    float spec = pow(saturate(dot(_surface.normal, h)), 36.0) * 0.42;
     _lightingContribution.specular += _light.intensity.rgb * spec;
     """
 
@@ -584,8 +589,10 @@ enum MaterialTuner {
                 material.setValue(NSNumber(value: Float(32.0 / 360.0)), forKey: "costumeBand")
                 material.setValue(NSNumber(value: Float(0)), forKey: "costumeGlow")
                 material.setValue(NSValue(scnVector3: SCNVector3(1, 1, 1)), forKey: "rimColor")
-                material.setValue(NSNumber(value: Float(2.6)), forKey: "rimPower")
-                material.setValue(NSNumber(value: Float(0.55)), forKey: "rimStrength")
+                // A narrower, quieter rim than the first build's 2.6 / 0.55:
+                // that one drew a white outline round every figure.
+                material.setValue(NSNumber(value: Float(3.2)), forKey: "rimPower")
+                material.setValue(NSNumber(value: Float(0.42)), forKey: "rimStrength")
             }
         }
     }

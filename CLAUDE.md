@@ -82,11 +82,15 @@ environment can and cannot do. The short version:
   **bazaar** (tap the wallet on the island, or More; `ShopService`, game
   currency only, a free daily offering) and the **living island** (the
   campaign team stands on the painting; `IslandSceneView`).
-- **Forty-three families.** Eleven hand-written (`UnitDatabase.swift`,
+- **Seventy-nine families.** Eleven hand-written (`UnitDatabase.swift`,
   `UnitDatabase+Roster.swift`: Anubis, Sekhmet, Thoth, Shabti, Zeus, Ares,
-  Heracles, Perseus, Hoplite, Satyr, Harpy) and thirty-two from one table
+  Heracles, Perseus, Hoplite, Satyr, Harpy) and sixty-eight from one table
   (`UnitDatabase+Families.swift`: a `FamilyRow` per family and eight
-  `Kit`s — Egypt 9, Greece 10, Norse 13). Egypt, Greece and Norse are live,
+  `Kit`s — the third roster's thirty-two, Egypt 9, Greece 10, Norse 13, and
+  **batch 3**'s thirty-six, Egypt 12, Greece 10, Norse 14, whose concepts,
+  cards and meshes are `tools/batch/concepts_batch3.sh`,
+  `portraits_batch3.sh` and `wave3.txt`; a batch-3 family is in the pool the
+  moment its five cards land). Egypt, Greece and Norse are live,
   each with its banner (The Duat Opens, Olympus Stirs, The Ravens Gather;
   the Endless Scroll is everyone). The gacha gates on cards
   (`hasShippedArt`), so a family joins the pool the moment its five
@@ -170,6 +174,25 @@ environment can and cannot do. The short version:
   policy, so the per-level numbers are ours); `balance.py --economy`
   prints the expected drachma to +15 with the odds. Change the table in
   both files.
+- **The detail pass (2026-09-09).** The playtest called the characters too
+  cartoony and the attacks ugly (a leg thrown out). Four things changed, all
+  in one place each: the Meshy texture prompt in `tools/batch/wave_launch.sh`
+  asks for painted detail (engraved metal, woven cloth, hair in strands)
+  instead of "cel-shaded with crisp baked highlights"; `tools/mesh.py` ships
+  9,000 triangles at 2048 px (was 5,000 at 1024; the LOD is 3,500 at 1024);
+  `ModelLibrary`'s lighting ramp is `smoothstep(0.16, 0.86)` over
+  0.30 + 0.70 with a 36-power specular and a 3.2 / 0.42 rim (was a two-tone
+  0.28–0.72 band and a 2.6 / 0.55 rim that outlined every figure in white);
+  and `tools/meshy.py` cuts sword clips by default (219 Right-hand Sword
+  Slash, 242 Charged Slash, 102 Sword Judgment) with `CLIP_SETS` per kit —
+  `heavy` (128 Heavy Hammer Swing, 127 Charged Ground Slam), `caster`
+  (129 / 125 / 126 spell casts), `archer` (224 / 226 / 222) — chosen by the
+  fifth field of a wave spec. The remakes are `<key>_hd` from the same
+  concept, shipped over the old files (`tools/batch/remake_wave.txt`;
+  `wave_run.sh <list> <floor>` launches, `ship_wave.sh <list>` ships and
+  leaves an `Art/Models/<asset>.shipped` marker). Zeus, Sekhmet and Anubis
+  went first; judge a remake on its preview sheet before the routine spends
+  on the rest.
 - Two SwiftUI gotchas that cost a playtest: **`.clipped()` and
   `.clipShape` do not clip hit-testing**, so a painting scaled to fill a
   short frame swallows taps far above and below it — every decorative
@@ -215,7 +238,9 @@ environment can and cannot do. The short version:
   `tools/prop.py <asset> --height H` from `Art/Models/<asset>_refine.usdz`),
   braziers with fire, mist, dust, and the environment painting far behind
   for parallax. A missing prop gets a built stand-in. **Meshy text-to-3D
-  props cost 30 credits each, not 15**; the balance is about 61.
+  props cost 30 credits each, not 15**. The user bought the 8,000-credit plan on
+  2026-09-09; the floor is now **3,000**, and `tools/batch/wave_run.sh` keeps
+  every wave above it.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
   for an attack clip and back at the next turn, and every hit flashes the
   victim white. **The camera is fixed by default** (`CameraDirector`): one
@@ -313,8 +338,9 @@ environment can and cannot do. The short version:
   arms, no weapon held out; redraw, run as `<asset>_v2`, ship with
   `mesh.py <asset>_v2 --as <asset>`. Text-to-3D props are charged by what
   Meshy generates, 30–300 credits each, not a flat rate. The user's floor
-  is **500 credits**: check `python3 tools/meshy.py balance` before every
-  launch and never plan past it.
+  is **3,000 credits** (raised from 500 with the 8,000-credit plan on
+  2026-09-09): check `python3 tools/meshy.py balance` before every launch and
+  never plan past it. A character is 53: 30 image-to-3D, 5 rig, 3 a clip.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 

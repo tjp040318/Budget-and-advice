@@ -38,3 +38,17 @@ Art/Models/*_summon_reveal.glb
 # Meshy preview-stage exports: superseded by the refine stage beside them.
 Art/Models/*_preview.usdz
 Art/Models/*_preview.glb
+
+# Meshy's per-clip raw exports: each is a full copy of the mesh and texture
+# (6-7 MB) whose only unique content is one animation track. The base export
+# and the manifest are committed; `python3 tools/meshy.py download <asset>`
+# refetches the clip files when a family has to be reshipped.
+Art/Models/*_idle_combat.glb
+Art/Models/*_attack_basic.glb
+Art/Models/*_attack_heavy.glb
+Art/Models/*_hit_react.glb
+Art/Models/*_death.glb
+Art/Models/*_ultimate.glb
+Art/Models/*_victory.glb
+Art/Models/*_idle.glb
+Art/Models/*_summon_reveal.glb

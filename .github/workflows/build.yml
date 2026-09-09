@@ -29,6 +29,14 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          # Art/ holds the raw Meshy exports (half a gigabyte and growing with
+          # every remake); the build needs only the shipped files under
+          # Pantheon/Resources, so the runner does not fetch it.
+          sparse-checkout: |
+            /*
+            !/Art/
+          sparse-checkout-cone-mode: false
 
       - name: Xcode version
         run: xcodebuild -version
