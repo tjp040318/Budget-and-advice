@@ -22,6 +22,18 @@ struct PantheonApp: App {
         // not stutter. Off the main thread; a missing file is a silent event.
         AudioLibrary.shared.preload()
 
+        // Build the unit database and the bundle's resource index before a
+        // screen asks for them. `UnitDatabase.all` is three hundred and
+        // ninety-five blueprints and `summonPool` filters every one of them on
+        // whether its card shipped; whichever screen touched it first paid for
+        // all of it on the main thread, which is why the arena took seconds to
+        // open. Swift's lazy static initialisation is thread-safe, so warming
+        // it here is only a matter of who waits.
+        DispatchQueue.global(qos: .userInitiated).async {
+            _ = UnitDatabase.summonPool
+            _ = StageDatabase.allStages.count
+        }
+
         #if DEBUG
         // Reports, once, which models are really in the app and which are
         // standing in. A placeholder and a model that failed to load look

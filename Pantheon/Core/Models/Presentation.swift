@@ -18,7 +18,32 @@ enum BundleArt {
         return nil
     }
 
-    static func exists(_ name: String) -> Bool { url(name) != nil }
+    /// Every resource basename in the app, read once.
+    ///
+    /// `exists(_:)` is asked about all 395 blueprints the moment anything
+    /// touches `UnitDatabase.summonPool`, which filters on `hasShippedArt` —
+    /// and it used to answer with `Bundle.main.url(forResource:withExtension:)`
+    /// twice per name, jpg then png. That is up to 790 CFBundle lookups on the
+    /// main thread, paid by whichever screen happens to be first. The owner
+    /// felt it as "when I click things like arena, it takes a few seconds to
+    /// load" in a release build.
+    ///
+    /// One recursive listing of the bundle answers all of them. Loading still
+    /// goes through `url(_:)`, which does the real lookup — this set only says
+    /// whether it is worth asking.
+    private static let basenames: Set<String> = {
+        let root = Bundle.main.bundleURL.path
+        let paths = (try? FileManager.default.subpathsOfDirectory(atPath: root)) ?? []
+        var names = Set<String>()
+        names.reserveCapacity(paths.count)
+        for path in paths {
+            let file = (path as NSString).lastPathComponent
+            names.insert((file as NSString).deletingPathExtension)
+        }
+        return names
+    }()
+
+    static func exists(_ name: String) -> Bool { basenames.contains(name) }
 
     /// The painting itself.
     ///

@@ -448,9 +448,13 @@ extension UnitDatabase {
     ]
 
     /// Every variant this file adds.
-    static var thirdRoster: [UnitBlueprint] {
+    /// A `let`, not a `var`. As a computed property this rebuilt all sixty-eight
+    /// families — three hundred and forty blueprints with their skills, leader
+    /// skills and awakenings — on every read, and it is read by both
+    /// `UnitDatabase.all` and `UnitDatabase.summonPool`.
+    static let thirdRoster: [UnitBlueprint] = {
         familyRows.flatMap { row in Element.allCases.map { family(row, element: $0) } }
-    }
+    }()
 
     /// The families by key, for the tour and the stages.
     static func family(named key: String) -> [UnitBlueprint] {
