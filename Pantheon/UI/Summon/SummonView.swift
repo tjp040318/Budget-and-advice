@@ -15,6 +15,9 @@ struct SummonView: View {
     @State private var selectedBanner: Banner = Banner.all[0]
     @State private var revealResults: [SummonResult] = []
     @State private var showRates = false
+    /// True for the moment between the button and the reveal, so the circle
+    /// can wind up before the unit arrives.
+    @State private var isCharging = false
 
     var body: some View {
         NavigationStack {
@@ -39,17 +42,23 @@ struct SummonView: View {
                 }
                 BarWallet(wallet: store.player.wallet)
             } content: {
+                // The genre's summoning room: the scrolls you own down one
+                // side, the circle in the middle, and the summon under it.
                 HStack(alignment: .top, spacing: 10) {
-                    bannerArt
+                    scrollRail
+                    VStack(spacing: 8) {
+                        SummoningCircle(banner: selectedBanner, charging: isCharging)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        summonButtons
+                    }
                     VStack(spacing: 8) {
                         if showsPity {
                             pityPanel
                         }
                         ratesPanel
                         Spacer(minLength: 0)
-                        summonButtons
                     }
-                    .frame(width: 320)
+                    .frame(width: 210)
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
                 .padding(.vertical, 8)
@@ -348,10 +357,22 @@ struct SummonView: View {
         return "\(owned) held"
     }
 
+    /// The circle winds up, then the reveal takes over.
+    ///
+    /// The summon itself is resolved first and only the presentation waits:
+    /// if the wallet says no, nothing lights up and nothing is spent. The
+    /// 0.45 s is the charge — long enough to read as a wind-up, short enough
+    /// that a player pulling ten times in a row does not feel taxed for it.
     private func perform(count: Int) {
         let results = store.summon(banner: selectedBanner, count: count)
         guard !results.isEmpty else { return }
-        revealResults = results
+        AudioLibrary.shared.play(.summonCharge)
+        Juice.haptic(.medium)
+        withAnimation(.easeIn(duration: 0.2)) { isCharging = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            isCharging = false
+            revealResults = results
+        }
     }
 }
 
@@ -442,5 +463,179 @@ struct RateTableView: View {
             }
             Spacer(minLength: 0)
         }
+    }
+    // MARK: - The scroll rail
+
+    /// Every scroll the player can spend, down the left of the screen, the way
+    /// the genre lays out its summoning room: the thing you are spending is a
+    /// list you look at, not a value hidden inside a dropdown. A row shows the
+    /// scroll's glyph, what it summons and how many are left; the one in hand
+    /// is lit, and one with none left is dimmed but still selectable, because
+    /// wanting to read the odds for a scroll you have run out of is normal.
+    private var scrollRail: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 4) {
+                railSection("Pantheons", banners: Banner.pantheonBanners)
+                railSection("Scrolls", banners: Banner.scrollBanners)
+            }
+        }
+        .frame(width: 178)
+    }
+
+    private func railSection(_ title: String, banners: [Banner]) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(Theme.body(9).weight(.black))
+                .tracking(1.0)
+                .foregroundStyle(Theme.goldDim)
+                .padding(.top, 4)
+            ForEach(banners) { banner in
+                railRow(banner)
+            }
+        }
+    }
+
+    private func railRow(_ banner: Banner) -> some View {
+        let owned = store.player.wallet.count(of: banner.scroll)
+        let isOn = banner.id == selectedBanner.id
+        return Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            selectedBanner = banner
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: banner.scroll.glyph)
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundStyle(isOn ? Theme.ink : Theme.gold)
+                    .frame(width: 18)
+                Text(banner.name)
+                    .font(Theme.body(11).weight(.semibold))
+                    .foregroundStyle(isOn ? Theme.ink : Theme.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 2)
+                Text("\(owned)")
+                    .font(Theme.numeric(11))
+                    .foregroundStyle(isOn ? Theme.ink : (owned > 0 ? Theme.gold : Theme.textSecondary))
+            }
+            .padding(.horizontal, 7)
+            .frame(height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isOn ? Theme.gold : Theme.surfaceRaised)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(Theme.goldDim.opacity(isOn ? 0 : 0.35), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .opacity(owned > 0 || isOn ? 1 : 0.55)
+    }
+
+}
+
+// MARK: - The circle
+
+/// The summoning circle: the thing the player is actually looking at while he
+/// decides to spend a scroll.
+///
+/// The owner asked for the genre's summoning room — "a summon circle (we need
+/// to pick something else) and then you select scrolls on one side and an
+/// animation plays and the mon spawns". Ours is not a pentagram: it is the
+/// **Ring of Names**, the rune ring already painted for the 3D summoning stage
+/// (`rune_ring`, Pantheon/Resources/Stage), turning slowly over the banner's
+/// own art with the scroll's element burning in the middle of it.
+///
+/// It is drawn in SwiftUI rather than SceneKit on purpose. This screen is
+/// entered dozens of times a session and a live 3D view would cost a scene
+/// build every time; the reveal that follows is the 3D moment and it earns it.
+/// What this has to do is breathe, and wind up when a summon is coming.
+struct SummoningCircle: View {
+    let banner: Banner
+    /// Set for the moment between the button and the reveal.
+    var charging: Bool
+
+    @State private var spin: Double = 0
+    @State private var pulse: CGFloat = 1
+
+    private var tint: Color { banner.scroll.tint }
+
+    var body: some View {
+        ZStack {
+            // The banner's painting, behind everything, dimmed so the ring
+            // reads over it. It is decoration: it must never take a tap.
+            if BundleImage.exists(banner.artName) {
+                BundleImage(name: banner.artName)
+                    .aspectRatio(contentMode: .fill)
+                    .overlay(Color.black.opacity(0.35))
+                    .allowsHitTesting(false)
+            } else {
+                RadialGradient(
+                    colors: [tint.opacity(0.30), Theme.ink],
+                    center: .center, startRadius: 8, endRadius: 320
+                )
+                .allowsHitTesting(false)
+            }
+
+            // The floor glow the ring stands in.
+            RadialGradient(
+                colors: [tint.opacity(charging ? 0.75 : 0.45), .clear],
+                center: .center, startRadius: 2, endRadius: 190
+            )
+            .blendMode(.screen)
+            .allowsHitTesting(false)
+
+            // The ring itself, turning. Two copies at different speeds and
+            // opposite directions read as machinery rather than as a spinning
+            // picture.
+            ring(scale: 1.00, opacity: 0.85, angle: spin)
+            ring(scale: 0.74, opacity: 0.55, angle: -spin * 1.6)
+
+            // The scroll's own mark at the centre, breathing.
+            Image(systemName: banner.scroll.glyph)
+                .font(.system(size: charging ? 46 : 38, weight: .black))
+                .foregroundStyle(tint)
+                .shadow(color: tint.opacity(0.9), radius: charging ? 22 : 12)
+                .scaleEffect(pulse)
+                .allowsHitTesting(false)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                .strokeBorder(Theme.goldPlate, lineWidth: 1)
+        )
+        // .clipShape does not clip hit testing, and the painting inside is
+        // scaled to fill: without this the circle would swallow taps well
+        // outside its frame, including the summon buttons under it.
+        .allowsHitTesting(false)
+        .onAppear {
+            withAnimation(.linear(duration: 26).repeatForever(autoreverses: false)) {
+                spin = 360
+            }
+            withAnimation(.easeInOut(duration: 1.7).repeatForever(autoreverses: true)) {
+                pulse = 1.12
+            }
+        }
+        .animation(.easeOut(duration: 0.35), value: charging)
+    }
+
+    private func ring(scale: CGFloat, opacity: Double, angle: Double) -> some View {
+        Group {
+            if BundleImage.exists("rune_ring") {
+                BundleImage(name: "rune_ring")
+                    .aspectRatio(contentMode: .fit)
+                    .colorMultiply(tint)
+                    .blendMode(.screen)
+            } else {
+                // The texture has not shipped: draw the ring.
+                Circle()
+                    .strokeBorder(tint.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [6, 10]))
+            }
+        }
+        .opacity(opacity)
+        .scaleEffect(scale * (charging ? 1.06 : 1.0))
+        .rotationEffect(.degrees(angle))
+        .frame(maxWidth: 260, maxHeight: 260)
+        .allowsHitTesting(false)
     }
 }

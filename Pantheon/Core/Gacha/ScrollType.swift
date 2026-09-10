@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 /// The summoning currencies.
 enum ScrollType: String, Codable, CaseIterable, Identifiable, Sendable {
@@ -40,6 +41,23 @@ enum ScrollType: String, Codable, CaseIterable, Identifiable, Sendable {
         case .ember: return "flame.fill"
         case .tide: return "drop.fill"
         case .gale: return "wind"
+        }
+    }
+
+    /// The colour this scroll burns in: the summoning circle takes its glow
+    /// from here, so a fire scroll lights the room red and a light-and-dark
+    /// one lights it violet. An elemental scroll uses its element's own colour
+    /// so the ring and the unit that steps out of it agree.
+    var tint: Color {
+        switch self {
+        case .mystical: return Color(hex: "#8FB8FF")
+        case .pantheonic: return Theme.gold
+        case .divine: return Color(hex: "#FFE9A8")
+        case .unknown: return Color(hex: "#9E97C4")
+        case .lightDark: return Color(hex: "#C89BFF")
+        case .ember: return Element.ember.color
+        case .tide: return Element.tide.color
+        case .gale: return Element.gale.color
         }
     }
 

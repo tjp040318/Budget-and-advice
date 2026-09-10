@@ -36,7 +36,7 @@ struct ShopView: View {
         NavigationStack {
             GameScreen("Bazaar", subtitle: subtitle, dismiss: { dismiss() }) {
                 BarMenu(label: "Stall", value: section.rawValue) {
-                    ForEach(ShopService.Section.allCases) { candidate in
+                    ForEach(ShopService.visibleSections) { candidate in
                         Button {
                             section = candidate
                             receipt = nil

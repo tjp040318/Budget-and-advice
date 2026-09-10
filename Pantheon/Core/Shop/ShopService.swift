@@ -47,8 +47,20 @@ enum ShopService {
         case bundle([Grant])
     }
 
+    /// Free packs for testing, and the one switch that removes them.
+    ///
+    /// The owner asked for "packs for free for now to test": there is no way
+    /// to earn a hundred summons quickly, and a roster of seventy-nine
+    /// families cannot be judged on nine units. Every item in the `testing`
+    /// section costs nothing and can be taken as often as he likes.
+    ///
+    /// Set this to `false` and the section disappears along with its items —
+    /// that is the whole removal. Nothing else in the game refers to them.
+    static let testingPacksEnabled = true
+
     enum Section: String, CaseIterable, Identifiable, Sendable {
         case daily = "Daily"
+        case testing = "Testing"
         case scrolls = "Scrolls"
         case energy = "Energy"
         case relics = "Relics"
@@ -71,6 +83,35 @@ enum ShopService {
     }
 
     static let items: [Item] = [
+        // ---- Free, repeatable, and only while `testingPacksEnabled` is true.
+        Item(id: "test_scrolls", title: "A fistful of scrolls",
+             subtitle: "Twenty mystical, ten pantheonic and five divine. Free, as often as you like.",
+             icon: "scroll.fill", price: .free,
+             grant: .bundle([.scrolls(.mystical, 20), .scrolls(.pantheonic, 10), .scrolls(.divine, 5)]),
+             section: .testing),
+        Item(id: "test_elemental_scrolls", title: "Every elemental scroll",
+             subtitle: "Ten each of fire, water and wind, and five light and dark.",
+             icon: "sparkles", price: .free,
+             grant: .bundle([.scrolls(.ember, 10), .scrolls(.tide, 10), .scrolls(.gale, 10),
+                             .scrolls(.lightDark, 5), .scrolls(.unknown, 20)]),
+             section: .testing),
+        Item(id: "test_purse", title: "A full purse",
+             subtitle: "Half a million drachma and two thousand divinity.",
+             icon: "circle.hexagongrid.fill", price: .free,
+             grant: .bundle([.drachma(500_000), .divinity(2_000)]),
+             section: .testing),
+        Item(id: "test_energy", title: "Energy to burn",
+             subtitle: "A full refill, and enough to clear a chapter in one sitting.",
+             icon: "bolt.fill", price: .free,
+             grant: .bundle([.energyRefill, .energy(200)]),
+             section: .testing),
+        Item(id: "test_relics", title: "A crate of relics",
+             subtitle: "Six of the highest grade, to see what a built unit looks like.",
+             icon: "shield.lefthalf.filled", price: .free,
+             grant: .bundle([.relic(grade: 6), .relic(grade: 6), .relic(grade: 6),
+                             .relic(grade: 6), .relic(grade: 6), .relic(grade: 6)]),
+             section: .testing),
+
         Item(id: "daily_offering", title: "Daily offering",
              subtitle: "A mystical scroll, 2,000 drachma and 10 energy. Free, once a day.",
              icon: "gift.fill", price: .free,
@@ -142,7 +183,16 @@ enum ShopService {
 
     static func item(_ id: String) -> Item? { items.first(where: { $0.id == id }) }
 
-    static func items(in section: Section) -> [Item] { items.filter { $0.section == section } }
+    static func items(in section: Section) -> [Item] {
+        guard section != .testing || testingPacksEnabled else { return [] }
+        return items.filter { $0.section == section }
+    }
+
+    /// The sections a shop screen should show. Hides Testing in one place
+    /// rather than in every caller.
+    static var visibleSections: [Section] {
+        Section.allCases.filter { $0 != .testing || testingPacksEnabled }
+    }
 
     enum ShopError: Error, LocalizedError {
         case cannotAfford(Price)
