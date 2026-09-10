@@ -273,7 +273,25 @@ struct RelicInventoryView: View {
                             }
                             .buttonStyle(.plain)
                         }
+                        // Room at the end so the last chip can travel clear of
+                        // the fade below rather than resting under it.
+                        Spacer(minLength: 26)
                     }
+                }
+                // A SCRIM AT THE RIGHT EDGE, not a mask. The tour photographed
+                // this rail with "Styx" sliced down the middle at the screen
+                // edge and nothing to say the row went on, which reads as a
+                // layout that overflowed rather than a list that scrolls. A
+                // `.mask` would do the same job and take the chips' hit
+                // testing with it, which is the fault that has cost this
+                // project three screens.
+                .overlay(alignment: .trailing) {
+                    LinearGradient(
+                        colors: [Theme.surface.opacity(0), Theme.surface.opacity(0.92)],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .frame(width: 30)
+                    .allowsHitTesting(false)
                 }
             }
             Text(setFilter?.effectDescription ?? "Tap a set to filter; a completed set is lit.")
