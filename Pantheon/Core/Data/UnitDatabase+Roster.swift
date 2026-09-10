@@ -106,7 +106,7 @@ extension UnitDatabase {
     // health the target has lost and can grant another turn, and the awakened
     // passive rewards every kill with more attack and more bar.
 
-    static var aresFamily: [UnitBlueprint] { Element.allCases.map(aresVariant) }
+    static let aresFamily: [UnitBlueprint] = Element.allCases.map(aresVariant)
 
     private static func aresKit(_ element: Element) -> ElementKit {
         switch element {
@@ -256,7 +256,7 @@ extension UnitDatabase {
     // of his maximum health, and awakened, the Lion's Hide shields him the
     // first time he falls below half.
 
-    static var heraclesFamily: [UnitBlueprint] { Element.allCases.map(heraclesVariant) }
+    static let heraclesFamily: [UnitBlueprint] = Element.allCases.map(heraclesVariant)
 
     private static func heraclesKit(_ element: Element) -> ElementKit {
         switch element {
@@ -404,7 +404,7 @@ extension UnitDatabase {
     // enemy line, one roll each, the element's way of taking a turn away.
     // Awakened, the winged sandals put him ahead of the field at the start.
 
-    static var perseusFamily: [UnitBlueprint] { Element.allCases.map(perseusVariant) }
+    static let perseusFamily: [UnitBlueprint] = Element.allCases.map(perseusVariant)
 
     private static func perseusKit(_ element: Element) -> ElementKit {
         switch element {
@@ -556,7 +556,7 @@ extension UnitDatabase {
     // heals the weakest ally at the start of each of his turns. He casts from
     // where he stands.
 
-    static var thothFamily: [UnitBlueprint] { Element.allCases.map(thothVariant) }
+    static let thothFamily: [UnitBlueprint] = Element.allCases.map(thothVariant)
 
     private static func thothKit(_ element: Element) -> ElementKit {
         switch element {
@@ -707,9 +707,9 @@ extension UnitDatabase {
     // day one and fodder on day two. These three also carry small leader
     // skills, because a Greek team on the day the banner opens is mostly them.
 
-    static var hopliteFamily: [UnitBlueprint] { Element.allCases.map(hopliteVariant) }
-    static var satyrFamily: [UnitBlueprint] { Element.allCases.map(satyrVariant) }
-    static var harpyFamily: [UnitBlueprint] { Element.allCases.map(harpyVariant) }
+    static let hopliteFamily: [UnitBlueprint] = Element.allCases.map(hopliteVariant)
+    static let satyrFamily: [UnitBlueprint] = Element.allCases.map(satyrVariant)
+    static let harpyFamily: [UnitBlueprint] = Element.allCases.map(harpyVariant)
 
     private static func hopliteVariant(_ element: Element) -> UnitBlueprint {
         let epithets: [Element: String] = [
@@ -895,7 +895,6 @@ extension UnitDatabase {
     }
 
     /// Everything this file adds, for the registry.
-    static var secondRoster: [UnitBlueprint] {
+    static let secondRoster: [UnitBlueprint] =
         aresFamily + heraclesFamily + perseusFamily + thothFamily + hopliteFamily + satyrFamily + harpyFamily
-    }
 }

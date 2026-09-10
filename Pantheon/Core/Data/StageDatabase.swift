@@ -556,15 +556,15 @@ enum StageDatabase {
                 recommendedPower: 36_000,
                 enemies: [
                     EnemySpawn(
-                        blueprintID: "apep", level: 60, stars: 6, statMultiplier: 2.6,
+                        blueprintID: "apep", level: 60, stars: 6, statMultiplier: 2.0,
                         raid: RaidBossProfile(
                             // A seventh of its health in scale, back three
                             // boss turns after it goes. That is the fight's
                             // rhythm: burst it off in a few turns, take the
                             // stun window, hit the health underneath, do it
                             // again. Any thicker and the barrier IS the fight.
-                            barrierFraction: 0.15,
-                            barrierRegenTurns: 3,
+                            barrierFraction: 0.12,
+                            barrierRegenTurns: 5,
                             barrierStunTurns: 1,
                             barrierName: "Scales of Night",
                             // Two scarabs every third boss turn. Left alone
@@ -574,11 +574,11 @@ enum StageDatabase {
                             // guard has to be answered but a slow answer is
                             // not instantly fatal.
                             adds: [
-                                EnemySpawn(blueprintID: "sun_scarab", level: 55, stars: 5, statMultiplier: 1.2),
-                                EnemySpawn(blueprintID: "sun_scarab", level: 55, stars: 5, statMultiplier: 1.2)
+                                EnemySpawn(blueprintID: "sun_scarab", level: 55, stars: 5, statMultiplier: 1.1),
+                                EnemySpawn(blueprintID: "sun_scarab", level: 55, stars: 5, statMultiplier: 1.1)
                             ],
-                            addInterval: 3,
-                            addDrain: 0.035,
+                            addInterval: 4,
+                            addDrain: 0.022,
                             summonName: "Calls the Swarm",
                             drainName: "Swallows the Disc",
                             // A team of gods puts this fight down in 44-51
@@ -635,21 +635,21 @@ enum StageDatabase {
                 recommendedPower: 45_000,
                 enemies: [
                     EnemySpawn(
-                        blueprintID: "boss_jotunn", level: 60, stars: 6, statMultiplier: 2.4,
+                        blueprintID: "boss_jotunn", level: 60, stars: 6, statMultiplier: 1.85,
                         raid: RaidBossProfile(
                             // A thicker shell than the serpent's and slower to
                             // come back: this is the defensive raid, and the
                             // whole fight is fought in the windows.
-                            barrierFraction: 0.20,
-                            barrierRegenTurns: 4,
+                            barrierFraction: 0.14,
+                            barrierRegenTurns: 5,
                             barrierStunTurns: 1,
                             barrierName: "Rime Shell",
                             adds: [
-                                EnemySpawn(blueprintID: "enemy_frost_troll", level: 55, stars: 5, statMultiplier: 1.3),
-                                EnemySpawn(blueprintID: "enemy_frost_troll", level: 55, stars: 5, statMultiplier: 1.3)
+                                EnemySpawn(blueprintID: "enemy_frost_troll", level: 55, stars: 5, statMultiplier: 0.8),
+                                EnemySpawn(blueprintID: "enemy_frost_troll", level: 55, stars: 5, statMultiplier: 0.8)
                             ],
-                            addInterval: 4,
-                            addDrain: 0.04,
+                            addInterval: 6,
+                            addDrain: 0.035,
                             summonName: "Calls the Trolls",
                             drainName: "Drinks the Cold",
                             // Sooner and harder than the serpent's: nothing

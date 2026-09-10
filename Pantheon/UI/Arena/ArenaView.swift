@@ -16,6 +16,15 @@ struct ArenaView: View {
     @State private var showDefensePicker = false
     @State private var showOffensePicker = false
     @State private var defenseRating: Double?
+    /// True while the challengers are being built off the main thread, so a
+    /// second appearance does not start a second build over the top of the
+    /// first.
+    @State private var isRefreshing = false
+    /// True while the defence rating is being simulated. Five whole battles
+    /// run to a conclusion, so this one is emphatically not a main-thread job
+    /// either — the Simulate button used to freeze the screen for as long as
+    /// it took.
+    @State private var isRating = false
 
     private var record: ArenaRecord { store.player.arena }
 
@@ -33,8 +42,12 @@ struct ArenaView: View {
                     systemImage: "flame.fill",
                     tint: record.attacksRemaining > 0 ? Theme.gold : Theme.textSecondary
                 )
-                BarButton(title: "Simulate", systemImage: "waveform.path.ecg", tint: Theme.info) {
-                    defenseRating = ArenaService.rateDefense(player: store.player)
+                BarButton(
+                    title: isRating ? "Simulating" : "Simulate",
+                    systemImage: "waveform.path.ecg",
+                    tint: isRating ? Theme.textSecondary : Theme.info
+                ) {
+                    rateDefence()
                 }
                 BarButton(title: "Refresh", systemImage: "arrow.clockwise") {
                     refresh()
@@ -76,9 +89,56 @@ struct ArenaView: View {
         }
     }
 
+    /// Building the challengers is not free: five opponents, each a team of
+    /// five units rolled out of the summon pool with six generated relics
+    /// apiece and every one of them resolved through `ProgressionService`. It
+    /// ran on the main thread inside `onAppear`, so the Arena could not draw
+    /// its first frame until it finished — the owner felt it as "it did get
+    /// really laggy after I clicked on Arena" on 2026-09-10, and the CI tour
+    /// photographed the screen as pure black, with even the tour's own overlay
+    /// missing, which is what a view looks like before its first frame.
+    ///
+    /// It now runs off the main thread and lands when it lands. The screen
+    /// draws immediately with whatever it already had, which after the first
+    /// visit is the previous list, and the challengers appear a moment later.
+    /// The pool is deterministic in the day and the player's points, so the
+    /// list that arrives is the same one that would have blocked the frame.
     private func refresh() {
-        opponents = store.arenaPool
         store.refreshTimedResources()
+        guard !isRefreshing else { return }
+        isRefreshing = true
+        // The record and the day are read HERE, on the main actor, and handed
+        // to the task by value. `ArenaRecord` and `ArenaOpponent` are both
+        // Sendable and `ArenaService.pool` is a pure function of them, so the
+        // build genuinely happens off the main thread. Reaching back into the
+        // store from inside the task would have put the work straight back
+        // where it came from.
+        let record = store.player.arena
+        let day = Int(Date().timeIntervalSince1970 / 86_400)
+        Task.detached(priority: .userInitiated) {
+            let built = ArenaService.pool(for: record, day: day)
+                .filter { !record.defeatedOpponentIDs.contains($0.id) }
+            await MainActor.run {
+                opponents = built
+                isRefreshing = false
+            }
+        }
+    }
+
+    /// Rating the defence runs five complete battles. On the main thread that
+    /// is a freeze with no spinner and no explanation, so it runs off it and
+    /// the button says so while it works.
+    private func rateDefence() {
+        guard !isRating else { return }
+        isRating = true
+        let player = store.player
+        Task.detached(priority: .userInitiated) {
+            let rating = ArenaService.rateDefense(player: player)
+            await MainActor.run {
+                defenseRating = rating
+                isRating = false
+            }
+        }
     }
 
     @ViewBuilder

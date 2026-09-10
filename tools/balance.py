@@ -16,6 +16,7 @@ the engine; it is the spreadsheet a designer would keep, made executable.
     python3 tools/balance.py --curve    # stat curves only
     python3 tools/balance.py --gacha    # summon odds and pity only
     python3 tools/balance.py --tower    # the Endless Tower's hundred floors
+    python3 tools/balance.py --raids    # the two raid bosses and their mechanics
 
 If a constant changes in Swift, change it here and re-run.
 """
@@ -752,6 +753,208 @@ def report_tower(trials=60):
             row += f"{wr*100:>16.0f}% {med:>3.0f}t"
         print(row)
 
+# ---------------------------------------------------------------------------
+# Raids
+# ---------------------------------------------------------------------------
+#
+# The raid bosses were tuned against a throwaway probe and the numbers were
+# never mirrored here, which breaks the one rule this file exists for: a
+# tuning constant that lives in Swift lives here too. These are the values in
+# StageDatabase.swift's two `RaidBossProfile`s, and the simulation below is
+# the ordinary engine with four things bolted on, because a raid is exactly
+# the ordinary fight plus those four things.
+#
+# WHAT IS MODELLED, and what each one is FOR:
+#   barrier    a pool in front of the health that eats damage first and stuns
+#              the boss for a turn when it breaks, then comes back full after
+#              N of the boss's turns. It is the fight's rhythm: burst it off,
+#              take the free window, hit the health, do it again.
+#   guard      minions topped back up to their full number every N boss
+#              turns, each living one healing the boss a share of its max
+#              health at the start of every boss turn. This is the reason to
+#              kill them, and the reason a pure single-target team stalls.
+#   enrage     a damage multiplier that lands on a battle-turn clock and
+#              compounds. It is the timer: past it the fight is unwinnable,
+#              so it sets the length rather than the difficulty.
+#   weakness   the boss is open to one element at a time, rotating every N of
+#              its turns, and everything else is punished. This is what stops
+#              a raid being farmed by five copies of one god.
+#
+# WHAT IS NOT: the boss's own skill list is the generic kit the rest of this
+# file gives a 6-star, so absolute clear times are indicative. What the report
+# is for is the SHAPE — that an off-element team is punished, that ignoring
+# the guard stalls the fight, and that the enrage turn arrives after a real
+# team would have won and before a weak one could.
+RAIDS = [
+    # id, boss, level, stars, mult, adds(spawn, level, stars, mult, count),
+    # barrier(frac, regen, stun), guard(interval, drain),
+    # enrage(turn, mult, interval), weakness(elements, interval, on, off)
+    ("The Serpent That Swallows the Sun", APEP, 60, 6, 2.0,
+     (SCARAB, 55, 5, 1.1, 2), (0.12, 5, 1), (4, 0.022), (65, 1.8, 12),
+     (["tide", "gale", "umbra"], 3, 1.7, 0.75), 36_000),
+    ("The King Under the Ice", JOTUNN, 60, 6, 1.85,
+     (E_TROLL, 55, 5, 0.8, 2), (0.14, 5, 1), (6, 0.035), (60, 1.9, 10),
+     (["ember", "radiance"], 2, 1.7, 0.75), 45_000),
+]
+
+def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
+    """One raid. Returns ("a"|"b"|"draw", battle turns, boss turns).
+
+    `kill_adds=False` models a team that ignores the guard, which is the
+    comparison the drain number exists to lose.
+    """
+    (_, bossbp, blvl, bstars, bmult, add, barrier, guard, enrage, weak, _) = raid
+    addbp, addlvl, addstars, addmult, addcount = add
+    bfrac, bregen, bstun = barrier
+    ginterval, gdrain = guard
+    eturn, emult, einterval = enrage
+    welems, winterval, won, woff = weak
+
+    rng = random.Random(seed)
+    team = [mk(*t) for t in team_spec]
+    boss = mk(bossbp, blvl, bstars, 1.0, bmult)
+    adds = [mk(addbp, addlvl, addstars, 1.0, addmult) for _ in range(addcount)]
+
+    pool = boss.maxhp * bfrac
+    shield, regen_left = pool, 0
+    boss_turns, wi, stunned = 0, 0, 0
+    turns = 0
+    for f in team: f.side = "a"
+    for f in [boss] + adds: f.side = "b"
+
+    while turns < MAX_TURNS:
+        foes = [f for f in [boss] + adds if f.alive]
+        if not [f for f in team if f.alive]: return "b", turns, boss_turns
+        if not boss.alive: return "a", turns, boss_turns
+        alive = [f for f in team if f.alive] + foes
+        step = min((1.0 - f.atb) / max(1e-6, f.spd * ATB_RATE) for f in alive)
+        for f in alive: f.atb = min(1.0, f.atb + f.spd * ATB_RATE * step)
+        actor = max((f for f in alive if f.atb >= 1 - 1e-9),
+                    key=lambda f: (f.spd, -id(f)), default=None)
+        if actor is None: continue
+        actor.atb = 0.0
+        turns += 1
+        for i in range(len(actor.cds)):
+            actor.cds[i] = max(0, actor.cds[i] - 1)
+
+        if actor.side == "b":
+            if actor is boss:
+                boss_turns += 1
+                # The barrier's regeneration clock runs whether the boss acts
+                # or not — BattleEngine is explicit that letting the stun stop
+                # it would mean the window paid for itself twice.
+                if shield <= 0:
+                    regen_left -= 1
+                    if regen_left <= 0:
+                        shield = pool
+                # Everything else is something the boss DOES, so a turn lost
+                # to the stun costs it the drain, the summon and the rotation.
+                if stunned > 0:
+                    stunned -= 1
+                    continue
+                # The guard drains first and is topped back up after, so a
+                # minion summoned this turn does not also heal on it.
+                living = [a for a in adds if a.alive]
+                if living:
+                    boss.hp = min(boss.maxhp, boss.hp + boss.maxhp * gdrain * len(living))
+                if ginterval and boss_turns % ginterval == 0:
+                    for a in adds:
+                        if not a.alive:
+                            a.hp = a.maxhp
+                if winterval and boss_turns % winterval == 0:
+                    wi = (wi + 1) % max(1, len(welems))
+            # Enrage is a BATTLE-turn clock, not the boss's, so a fast team
+            # meets it sooner in its own turns and later in the boss's.
+            factor = 1.0
+            if eturn and turns >= eturn:
+                stacks = 1 + ((turns - eturn) // einterval if einterval else 0)
+                factor = emult ** stacks
+            live_team = [f for f in team if f.alive]
+            if not live_team: continue
+            target = min(live_team, key=lambda f: f.hp)
+            name, mult, hits, cd, defign, missbonus, aoe = actor.bp.skills[0]
+            for _ in range(hits):
+                target.hp -= resolve_hit(actor, target, mult * factor, defign, missbonus, rng)
+            continue
+
+        # A player turn. Adds first when the team is playing properly, because
+        # a living guard is healing the boss faster than most teams can hurt it.
+        live_adds = [a for a in adds if a.alive]
+        victim = live_adds[0] if (kill_adds and live_adds) else boss
+        ready = [i for i, s in enumerate(actor.bp.skills) if actor.cds[i] == 0
+                 and actor.bp.skills[i][1] > 0]
+        if not ready: continue
+        idx = max(ready, key=lambda i: actor.bp.skills[i][1] * actor.bp.skills[i][2])
+        name, mult, hits, cd, defign, missbonus, aoe = actor.bp.skills[idx]
+        actor.cds[idx] = cd
+        # The element that is up multiplies; everything else is punished. This
+        # is the raid's own wheel and it replaces the ordinary one.
+        up = welems[wi] if welems else None
+        ratio = won if (up and actor.bp.element == up) else woff
+        for _ in range(hits):
+            if not victim.alive:
+                live_adds = [a for a in adds if a.alive]
+                victim = live_adds[0] if (kill_adds and live_adds) else boss
+            dmg = resolve_hit(actor, victim, mult, defign, missbonus, rng) * ratio
+            if victim is boss and shield > 0:
+                shield -= dmg
+                if shield <= 0:
+                    # Breaking it stuns straight, not against resistance, and
+                    # the overflow is lost: the reward is the free window.
+                    shield, regen_left, stunned = 0, bregen, bstun
+                continue
+            victim.hp -= dmg
+    return "draw", turns, boss_turns
+
+def raid_result(team_spec, raid, trials=40, kill_adds=True):
+    wins, lens = 0, []
+    for s in range(trials):
+        r, turns, _ = simulate_raid(team_spec, raid, seed=s, kill_adds=kill_adds)
+        if r == "a": wins += 1
+        lens.append(turns)
+    return wins / trials, statistics.median(lens)
+
+def report_raids(trials=40):
+    print("\nRAIDS — the two boss encounters")
+    print("a raid is the ordinary fight plus four things: a barrier that stuns when it breaks, a\n"
+          "guard that heals the boss while it lives, an enrage on a battle-turn clock, and a\n"
+          "weakness that rotates. The shape is the point, not the absolute clear time.\n")
+    for raid in RAIDS:
+        (name, _, lvl, stars, mult, add, barrier, guard, enrage, weak, power) = raid
+        bfrac, bregen, bstun = barrier
+        ginterval, gdrain = guard
+        eturn, emult, einterval = enrage
+        welems, winterval, won, woff = weak
+        print(f"  {name}")
+        print(f"    boss lv{lvl} {stars}* x{mult}   recommended power {power:,}")
+        print(f"    barrier  {bfrac*100:.0f}% of its health, back after {bregen} boss turns, "
+              f"breaking stuns {bstun}")
+        print(f"    guard    {add[4]} x lv{add[1]} {add[2]}*, topped up every {ginterval} boss turns, "
+              f"each heals it {gdrain*100:.1f}%/turn")
+        print(f"    enrage   x{emult} from battle turn {eturn}, again every {einterval}")
+        print(f"    opens to {', '.join(welems)} every {winterval} boss turns "
+              f"(x{won} on element, x{woff} off)")
+        # The ladders here are built FOR the boss, one unit on each element it
+        # opens to, because that is what a player brings to a raid and because
+        # measuring a mono-element team against a rotating weakness measures
+        # the punishment rather than the fight. The wrong-element row is kept
+        # to show that the punishment is real.
+        onel = (welems * 4)[:4]
+        ladders = [
+            ("built for it, 6* max",    [(replace(ANUBIS, element=e), 60, 6, 1.55) for e in onel]),
+            ("built for it, 6* lv55",   [(replace(ANUBIS, element=e), 55, 6, 1.30) for e in onel]),
+            ("built for it, 5* +relic", [(replace(ANUBIS, element=e), 45, 5, 1.15) for e in onel]),
+            ("wrong element, 6* max",   [(replace(ANUBIS, element=(
+                "ember" if "ember" not in welems else "tide")), 60, 6, 1.55)] * 4),
+        ]
+        for label, team in ladders:
+            wr, med = raid_result(team, raid, trials=trials)
+            wrx, _ = raid_result(team, raid, trials=trials, kill_adds=False)
+            print(f"      {label:>24}  kill the guard {wr*100:>4.0f}% in {med:>4.0f}t   "
+                  f"ignore it {wrx*100:>4.0f}%")
+        print()
+
+
 def report_campaign(trials=200):
     print("\nCAMPAIGN — win rate over %d seeded battles" % trials)
     print("target: the intended team sits at 60-85%; the one below it should struggle\n")
@@ -848,8 +1051,9 @@ if __name__ == "__main__":
     elif "--halls" in a: report_halls()
     elif "--labyrinths" in a: report_labyrinths()
     elif "--tower" in a: report_tower()
+    elif "--raids" in a: report_raids()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
-        report_labyrinths(); report_tower()
+        report_labyrinths(); report_tower(); report_raids()
         report_gacha(); report_economy()
         print()

@@ -79,7 +79,17 @@ enum UnitDatabase {
     // on day one and worth feeding on day two. Natural 3★, a grade below the
     // roster's weakest god, so evolving them is the road to 4★ and 5★ fodder.
 
-    static var shabtiFamily: [UnitBlueprint] { Element.allCases.map(shabtiVariant) }
+    // Cached, not computed. These were `static var` bodies, so every reader
+    // rebuilt the whole family — five blueprints and their skill kits — from
+    // scratch. `all`, `summonPool` and `collectiblePool` each read them, and so
+    // does every screen that asks the database anything, so the roster was
+    // being constructed several times over on whichever thread asked first.
+    // With seventy-nine families that is 395 blueprints a rebuild, and it is
+    // what the owner felt as "it did get really laggy after I clicked on
+    // Arena" on 2026-09-10: the arena builds five opponents the moment it
+    // appears and was paying for the roster again to do it. A `static let` is
+    // built once, lazily, under a one-time lock.
+    static let shabtiFamily: [UnitBlueprint] = Element.allCases.map(shabtiVariant)
 
     private static func shabtiVariant(_ element: Element) -> UnitBlueprint {
         let epithet: String
@@ -158,9 +168,8 @@ enum UnitDatabase {
     static var starter: UnitBlueprint { anubisUmbra }
 
     /// Everything in the Anubis family, in wheel order.
-    static var anubisFamily: [UnitBlueprint] {
+    static let anubisFamily: [UnitBlueprint] =
         [anubisEmber, anubisTide, anubisGale, anubisRadiance, anubisUmbra]
-    }
 
     /// Per-element identity: name, stat lean, and the one thing each variant
     /// does that the others do not.
@@ -473,9 +482,8 @@ enum UnitDatabase {
     static let sekhmetUmbra    = sekhmetVariant(.umbra)
 
     /// Everything in the Sekhmet family, in wheel order.
-    static var sekhmetFamily: [UnitBlueprint] {
+    static let sekhmetFamily: [UnitBlueprint] =
         [sekhmetEmber, sekhmetTide, sekhmetGale, sekhmetRadiance, sekhmetUmbra]
-    }
 
     /// Per-element identity for Sekhmet: the stat lean, what the claws inflict,
     /// what the Eye does on top of breaking defence, and what the Wrath gives.
@@ -793,9 +801,8 @@ enum UnitDatabase {
     static let zeusUmbra    = zeusVariant(.umbra)
 
     /// Everything in the Zeus family, in wheel order.
-    static var zeusFamily: [UnitBlueprint] {
+    static let zeusFamily: [UnitBlueprint] =
         [zeusEmber, zeusTide, zeusGale, zeusRadiance, zeusUmbra]
-    }
 
     /// Per-element identity for Zeus: the stat lean, what the bolt leaves on
     /// its target, how the Thunderclap takes the enemy's turn away, and what
