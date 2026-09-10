@@ -20,33 +20,100 @@ enum Theme {
 
     // MARK: - Palette
 
-    /// Deep indigo rather than neutral charcoal. The warm gold and the element
-    /// colours have nothing to sit against on a grey, and the whole screen goes
-    /// muddy — which was the single biggest problem with the first pass.
-    static let ink = Color(hex: "#07060F")
-    static let surface = Color(hex: "#141328")
-    static let surfaceRaised = Color(hex: "#1F1D3D")
-    static let surfaceHigh = Color(hex: "#2A274F")
-    static let stroke = Color(hex: "#3B3766")
+    // MARBLE AND VERDIGRIS BRONZE, chosen by the owner on 2026-09-10 after
+    // "I hate the UI of the game. It just doesn't feel premium, the menu
+    // colours are awful looking."
+    //
+    // He was right, and the reason was measurable rather than a matter of
+    // taste. EVERY surface was one hue: ground #07060F, panel #141328, raised
+    // #1F1D3D, high #2A274F, the border #3B3766 and even the secondary text
+    // #9E97C4 were all violet around 250°, five lightnesses of one muddy
+    // colour. Three things followed from that and all three read as cheap.
+    //
+    // 1. NOTHING COULD BE A MATERIAL. Stone, metal, parchment and lacquer are
+    //    what a collection RPG builds a menu out of; tints of one colour give
+    //    you none of them. The palette below is deliberately TWO families in
+    //    tension — warm bronze and marble against cool slate — because a
+    //    single family is what made the old screens read as a dark theme
+    //    rather than as objects.
+    // 2. THE STEPS WERE TOO CLOSE. Six per cent of lightness apart, flat
+    //    filled. A panel did not look raised, it looked like a slightly
+    //    lighter rectangle. These are further apart and every panel now
+    //    carries a gradient with a lit top edge and a dark rim.
+    // 3. THE BORDER WAS A PURPLE LINE, not a metal. A hairline in a tint of
+    //    the fill reads as a wireframe. It is aged bronze over a dark outer
+    //    line now, which is what the genre actually does.
 
-    static let gold = Color(hex: "#F5D57A")
-    static let goldDim = Color(hex: "#9C8244")
-    static let goldDeep = Color(hex: "#6B5220")
+    /// Cold near-black with a blue cast: the back of the cabinet, behind
+    /// everything. Never a panel.
+    static let ink = Color(hex: "#0A0C10")
+    /// The screen's ground — dark slate, a shade up from ink.
+    static let surface = Color(hex: "#14181E")
+    /// A panel. This is the marble the whole interface is built from.
+    static let surfaceRaised = Color(hex: "#1C2027")
+    /// A panel on a panel: an inset well, a selected row, a sub-card.
+    static let surfaceHigh = Color(hex: "#262C35")
+    /// The cool line UNDER the metal. The bronze frame sits on it, and the
+    /// dark line is what stops the frame glowing into the background.
+    static let stroke = Color(hex: "#39424E")
 
-    static let textPrimary = Color(hex: "#F4F1FF")
-    static let textSecondary = Color(hex: "#9E97C4")
+    /// Bronze, not gold. `gold` keeps its name because two hundred call sites
+    /// use it and the meaning — "the metal, the heading, the important
+    /// number" — has not changed.
+    static let gold = Color(hex: "#C8A863")
+    static let goldDim = Color(hex: "#8A7340")
+    static let goldDeep = Color(hex: "#4A3C20")
 
-    static let danger = Color(hex: "#FF5B57")
-    static let success = Color(hex: "#4BE38F")
-    static let info = Color(hex: "#5FC8FF")
+    /// Warm off-white: marble, not paper. Against the cool slate panels this
+    /// is what carries the second colour family.
+    static let textPrimary = Color(hex: "#ECEAE3")
+    /// Cool slate grey. Deliberately NOT a tint of the bronze — the contrast
+    /// between a warm heading and a cool caption is half of what makes a
+    /// screen look designed rather than themed.
+    static let textSecondary = Color(hex: "#93A0AD")
+
+    /// Wine, laurel and verdigris: the three accents. Every one of them is a
+    /// real pigment from the same world as the bronze, which is why they sit
+    /// together instead of shouting.
+    static let danger = Color(hex: "#C8425A")
+    static let success = Color(hex: "#6B9F5E")
+    static let info = Color(hex: "#4E8A72")
+
+    /// Named for what they are, for the places that want the pigment rather
+    /// than the meaning: a laurel wreath, a wine seal, a verdigris edge, a
+    /// marble reading surface.
+    static let wine = Color(hex: "#8E2740")
+    static let laurel = Color(hex: "#6B8F4E")
+    static let verdigris = Color(hex: "#4E8A72")
+    static let marble = Color(hex: "#D9D4C8")
+    static let bronze = Color(hex: "#A8894F")
 
     // MARK: - Metal
 
-    /// Polished gold. Three stops, not two: the pale band across the upper
-    /// third is what reads as metal instead of as an orange rectangle.
+    /// Polished bronze. Four stops, because the pale band across the upper
+    /// third is what reads as METAL rather than as an orange rectangle, and
+    /// the dark foot is what gives it a thickness.
     static let goldPlate = LinearGradient(
-        colors: [Color(hex: "#8A6B28"), Color(hex: "#F7E39B"),
-                 Color(hex: "#D9AE4E"), Color(hex: "#7A5A20")],
+        colors: [Color(hex: "#6B5528"), Color(hex: "#E4CE93"),
+                 Color(hex: "#B0904F"), Color(hex: "#4A3A1C")],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
+    /// A bronze frame that has gone green where it has been handled. The
+    /// verdigris stop is the whole difference between "gold border" and
+    /// "an old bronze frame", and it costs one colour.
+    static let bronzeFrame = LinearGradient(
+        colors: [Color(hex: "#D6BE86"), Color(hex: "#A8894F"),
+                 Color(hex: "#4E8A72").opacity(0.55), Color(hex: "#3E3218")],
+        startPoint: .topLeading,
+        endPoint: .bottomTrailing
+    )
+
+    /// The reading surface: aged marble for anything that carries a lot of
+    /// words — lore, a rate table, a briefing.
+    static let marblePlate = LinearGradient(
+        colors: [Color(hex: "#E4E0D5"), Color(hex: "#CFC9BA")],
         startPoint: .top,
         endPoint: .bottom
     )
@@ -60,20 +127,32 @@ enum Theme {
         endPoint: .bottom
     )
 
+    /// Dark polished marble, with the cool blue cast that stone has in
+    /// shadow. Three stops so the top catches the light.
+    static let stonePlate = LinearGradient(
+        colors: [Color(hex: "#2A313B"), Color(hex: "#1C2027"), Color(hex: "#12161B")],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
     /// The body of a code-drawn panel: the painted panel's own centre, which
     /// samples at (22, 23, 28), with just enough gradient that it does not
     /// read as a flat fill. See `drawnPanel` for why it is not `panelPlate`.
     static let drawnPanelPlate = LinearGradient(
-        colors: [Color(hex: "#1E1D2A"), Color(hex: "#16151F")],
+        colors: [Color(hex: "#252B34"), Color(hex: "#191D23"), Color(hex: "#12161B")],
         startPoint: .top,
         endPoint: .bottom
     )
 
     /// A one-pixel highlight along the top edge and a dark rim along the
     /// bottom. Cheap, and it does most of the work of making a panel solid.
+    /// A lit top edge and a dark rim along the bottom. Warmed slightly and
+    /// deepened from the first pass: a colder, fainter bevel is exactly what
+    /// made the old panels read as rectangles instead of as objects with a
+    /// thickness. It is still only two colours and it does most of the work.
     static let bevel = LinearGradient(
-        colors: [Color.white.opacity(0.28), Color.white.opacity(0.04),
-                 Color.clear, Color.black.opacity(0.45)],
+        colors: [Color(hex: "#FFF6E2").opacity(0.34), Color.white.opacity(0.05),
+                 Color.clear, Color.black.opacity(0.58)],
         startPoint: .top,
         endPoint: .bottom
     )
@@ -242,29 +321,55 @@ enum Theme {
                     .strokeBorder(bevel, lineWidth: 1)
             )
             .overlay(
-                // The gold edge is what answers the painted panel's band. A
-                // full point rather than a hairline, or a small panel does not
-                // separate from a near-black backdrop.
+                // A DARK LINE OUTSIDE THE METAL. This is the half of a frame
+                // that is easy to leave out and impossible to unsee once it is
+                // there: without it the bronze bleeds into the background and
+                // the panel has no edge, which is most of why the old screens
+                // looked flat.
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(goldDim.opacity(0.55), lineWidth: 1)
+                    .strokeBorder(Color(hex: "#080A0D").opacity(0.9), lineWidth: 2)
             )
-            .shadow(color: .black.opacity(0.55), radius: 8, x: 0, y: 4)
+            .overlay(
+                // The metal itself, inside that line: aged bronze with a
+                // verdigris turn where it catches. A gradient rather than a
+                // flat colour, because a border of one colour is a wireframe.
+                RoundedRectangle(cornerRadius: radius - 1, style: .continuous)
+                    .strokeBorder(bronzeFrame, lineWidth: 1.5)
+                    .padding(1)
+            )
+            .shadow(color: .black.opacity(0.7), radius: 10, x: 0, y: 5)
     }
 
     /// The screen background. A radial lift behind the centre keeps the middle
     /// of the screen from going dead flat under a stack of panels.
     static var backdrop: some View {
         ZStack {
+            // Cold slate, top to bottom. The old ground was #100D22 into
+            // #0B0918 with a violet lift — the single largest patch of the
+            // colour the owner called awful, since it is behind every screen
+            // in the game.
             LinearGradient(
-                colors: [Color(hex: "#100D22"), ink, Color(hex: "#0B0918")],
+                colors: [Color(hex: "#161B22"), ink, Color(hex: "#070A0D")],
                 startPoint: .top,
                 endPoint: .bottom
             )
+            // A WARM lift, against a cold ground. The old one was violet on
+            // violet, which is a brightness change and not a colour: the eye
+            // reads it as a smudge. Warm on cold is the cheapest depth there
+            // is, and it is the same trick the stage lighting uses.
             RadialGradient(
-                colors: [Color(hex: "#2C2258").opacity(0.55), .clear],
+                colors: [Color(hex: "#4A3B22").opacity(0.42), .clear],
                 center: .top,
                 startRadius: 0,
-                endRadius: 520
+                endRadius: 560
+            )
+            // A verdigris pool at the foot, so the bottom of a long screen is
+            // not simply darker but somewhere else.
+            RadialGradient(
+                colors: [Color(hex: "#12332B").opacity(0.35), .clear],
+                center: .bottom,
+                startRadius: 0,
+                endRadius: 420
             )
         }
         .ignoresSafeArea()
@@ -331,7 +436,27 @@ enum Chrome {
     /// The dark plate's ends are plain, so this is air rather than clearance.
     static let darkButtonLabelInset: CGFloat = 18
 
+    /// The four painted MENU textures — the panel, the ribbon and the two
+    /// buttons — were painted for the indigo-and-gold palette the owner asked
+    /// to be replaced on 2026-09-10. Until they are repainted in marble and
+    /// bronze they are held back, so the whole game speaks one language rather
+    /// than showing violet on every panel wide enough to earn the painted one
+    /// and slate on every panel that is not.
+    ///
+    /// The SIX RARITY FRAMES are not in this list and keep their painted art.
+    /// Rarity is meant to be the loudest thing on the screen and its metals
+    /// are not part of the menu palette — a legendary frame should look like
+    /// treasure against any interface.
+    private static let awaitingRepaint: Set<String> = [
+        "ui_panel", "ui_ribbon", "ui_button_gold", "ui_button_dark",
+    ]
+
+    /// Flip to false the moment the marble kit lands, and delete this along
+    /// with the set above.
+    static let holdBackOldMenuArt = true
+
     static func slice(_ name: String, _ insets: EdgeInsets) -> Image? {
+        if holdBackOldMenuArt && awaitingRepaint.contains(name) { return nil }
         guard let ui = image(name) else { return nil }
         return Image(uiImage: ui).resizable(capInsets: insets, resizingMode: .stretch)
     }
