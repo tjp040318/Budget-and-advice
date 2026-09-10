@@ -50,7 +50,7 @@
       "finished_at": 1788999371809,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:16:15Z"
+      "polled": "2026-09-10T01:40:11Z"
     },
     "rig": {
       "id": "01a088ac-1b28-70bd-8ffd-c568e717d336",
@@ -77,7 +77,10 @@
       "started_at": 1788999388032,
       "finished_at": 1788999441140,
       "name": "",
-      "polled": "2026-09-10T00:17:28Z"
+      "polled": "2026-09-10T01:40:11Z",
+      "downloaded": {
+        "glb": "Art/Models/nike.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088ad-3a5f-7701-bb45-6483a3fb38ab",
@@ -100,7 +103,10 @@
       "started_at": 1788999449677,
       "finished_at": 1788999484390,
       "name": "",
-      "polled": "2026-09-10T00:18:05Z"
+      "polled": "2026-09-10T01:40:11Z",
+      "downloaded": {
+        "glb": "Art/Models/nike_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088ad-3d8b-7360-b5ab-23d0c4090a4d",
@@ -123,7 +129,10 @@
       "started_at": 1788999450406,
       "finished_at": 1788999485659,
       "name": "",
-      "polled": "2026-09-10T00:18:15Z"
+      "polled": "2026-09-10T01:40:11Z",
+      "downloaded": {
+        "glb": "Art/Models/nike_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088ad-4056-748e-a20c-f1b5b558af39",
@@ -146,7 +155,10 @@
       "started_at": 1788999450965,
       "finished_at": 1788999489626,
       "name": "",
-      "polled": "2026-09-10T00:18:15Z"
+      "polled": "2026-09-10T01:40:12Z",
+      "downloaded": {
+        "glb": "Art/Models/nike_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088ad-4284-7563-bfa5-07ea6681ed9f",
@@ -169,7 +181,10 @@
       "started_at": 1788999451563,
       "finished_at": 1788999490234,
       "name": "",
-      "polled": "2026-09-10T00:18:15Z"
+      "polled": "2026-09-10T01:40:12Z",
+      "downloaded": {
+        "glb": "Art/Models/nike_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088ad-45b9-765f-8edf-e8a35eeaccbb",
@@ -192,7 +207,10 @@
       "started_at": 1788999452360,
       "finished_at": 1788999503080,
       "name": "",
-      "polled": "2026-09-10T00:18:25Z"
+      "polled": "2026-09-10T01:40:12Z",
+      "downloaded": {
+        "glb": "Art/Models/nike_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088ad-47f4-75c4-a5b6-192e82bd35f5",
@@ -215,8 +233,12 @@
       "started_at": 1788999452948,
       "finished_at": 1788999499547,
       "name": "",
-      "polled": "2026-09-10T00:18:25Z"
+      "polled": "2026-09-10T01:40:12Z",
+      "downloaded": {
+        "glb": "Art/Models/nike_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:40:12Z"
 }

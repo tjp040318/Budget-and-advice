@@ -50,7 +50,7 @@
       "finished_at": 1788999375255,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:16:15Z"
+      "polled": "2026-09-10T01:40:39Z"
     },
     "rig": {
       "id": "01a088ac-1bd0-7255-8dc3-0d2f403cf72e",
@@ -77,7 +77,7 @@
       "started_at": 1788999379164,
       "finished_at": 1788999427670,
       "name": "",
-      "polled": "2026-09-10T00:17:09Z"
+      "polled": "2026-09-10T01:40:39Z"
     },
     "clip:idle_combat": {
       "id": "01a088ac-f023-76c5-aa7d-73fd3fb29c72",
@@ -100,7 +100,7 @@
       "started_at": 1788999430511,
       "finished_at": 1788999442027,
       "name": "",
-      "polled": "2026-09-10T00:17:25Z"
+      "polled": "2026-09-10T01:40:39Z"
     },
     "clip:attack_basic": {
       "id": "01a088ac-f2b7-7199-9e9d-4c921ec3b06c",
@@ -123,7 +123,10 @@
       "started_at": 1788999431127,
       "finished_at": 1788999451467,
       "name": "",
-      "polled": "2026-09-10T00:17:35Z"
+      "polled": "2026-09-10T01:40:39Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088ac-f520-740b-9ff9-2f05e12d7c2b",
@@ -146,7 +149,10 @@
       "started_at": 1788999431880,
       "finished_at": 1788999453497,
       "name": "",
-      "polled": "2026-09-10T00:17:35Z"
+      "polled": "2026-09-10T01:40:40Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088ac-f802-76a7-bea1-f9802ac434eb",
@@ -169,7 +175,10 @@
       "started_at": 1788999432581,
       "finished_at": 1788999494768,
       "name": "",
-      "polled": "2026-09-10T00:18:16Z"
+      "polled": "2026-09-10T01:40:40Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088ac-fac9-7134-840d-6c6562edb95c",
@@ -192,7 +201,10 @@
       "started_at": 1788999433290,
       "finished_at": 1788999480272,
       "name": "",
-      "polled": "2026-09-10T00:18:06Z"
+      "polled": "2026-09-10T01:40:40Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088ac-fd92-72a3-b230-ebf61017800b",
@@ -215,8 +227,12 @@
       "started_at": 1788999434034,
       "finished_at": 1788999473556,
       "name": "",
-      "polled": "2026-09-10T00:17:56Z"
+      "polled": "2026-09-10T01:40:40Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:40:40Z"
 }
