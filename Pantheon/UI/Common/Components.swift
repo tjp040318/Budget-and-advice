@@ -240,7 +240,15 @@ struct UnitCard: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
+                // Bounds the stack to the card whatever the art's aspect. An
+                // `.aspectRatio(.fill)` image reports the size it needs to
+                // cover the square, so a 3:4 portrait would make this ZStack
+                // 127 points tall inside a 76-point card and carry the element
+                // badge and the star row out of the clip with it. Every
+                // portrait_<id> in the bundle is 1024² today, so it changes
+                // nothing now; it is what keeps this component art-proof.
                 portrait
+                    .frame(width: size, height: size)
 
                 // Darkens the lower third so the star row and name always have
                 // something to sit on, whatever the art behind them is doing.
@@ -317,11 +325,12 @@ struct UnitCard: View {
         .shadow(color: isSelected ? Theme.gold.opacity(0.75) : .clear, radius: 10)
         .scaleEffect(isSelected ? 1.04 : 1)
         .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isSelected)
-        // The portrait is `.aspectRatio(.fill)` in a square frame, and a tall
-        // card art lays out well above and below that frame. `.clipShape` above
-        // hides the overhang but does not clip hit-testing, so in a grid the
-        // later-declared card swallowed taps meant for the one above it. Bound
-        // the hit region to the card itself.
+        // The other half of that guard. A `.fill` portrait that is not square
+        // draws past its frame, and `.clipShape` above hides an overhang
+        // without clipping its hit-testing (the project's own rule), so in a
+        // grid the later-declared card would swallow taps meant for its
+        // neighbour. Nothing overhangs while every card is 1024², but the
+        // hit region costs nothing to bound and the art is data, not code.
         .contentShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
     }
 

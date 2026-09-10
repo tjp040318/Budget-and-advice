@@ -13,6 +13,9 @@ struct CampaignView: View {
     /// The chapter on the map; nil until the player picks one, which means
     /// "the chapter I am in".
     @State private var chapterID: String?
+    /// The chapter whose road of stages is open. nil means the world map,
+    /// which is where the tab starts.
+    @State private var openChapterID: String?
     @State private var showRealms = false
 
     /// Engines are built before presentation so that a failure (no energy, stage
@@ -56,20 +59,39 @@ struct CampaignView: View {
 
     var body: some View {
         NavigationStack {
-            GameScreen("Campaign", subtitle: realmSubtitle) {
+            GameScreen(
+                openChapterID == nil ? "The World" : "Campaign",
+                subtitle: openChapterID == nil ? "Three realms, and the road between them" : realmSubtitle,
+                dismiss: openChapterID == nil ? nil : { openChapterID = nil }
+            ) {
+                if openChapterID != nil {
+                    BarButton(title: "World", systemImage: "map.fill") {
+                        openChapterID = nil
+                    }
+                }
                 BarButton(title: "Realms", systemImage: "globe.europe.africa.fill") {
                     showRealms = true
                 }
                 BarWallet(wallet: store.player.wallet)
             } content: {
-                VStack(spacing: 0) {
-                    chapterStrip
-                    ScrollView {
-                        ChapterMapView(chapterID: currentChapterID) { stage in
-                            selectedStage = stage
+                // The campaign opens on the world, not on a menu: one painted
+                // map of Egypt, Greece and the north with a city per chapter,
+                // and the chapter's own road of stages one tap in.
+                if let openChapterID {
+                    VStack(spacing: 0) {
+                        chapterStrip
+                        ScrollView {
+                            ChapterMapView(chapterID: openChapterID) { stage in
+                                selectedStage = stage
+                            }
+                            .padding(.horizontal, ScreenChrome.contentPadding)
+                            .padding(.vertical, 8)
                         }
-                        .padding(.horizontal, ScreenChrome.contentPadding)
-                        .padding(.vertical, 8)
+                    }
+                } else {
+                    WorldRoadMapView { chapter in
+                        chapterID = chapter.id
+                        openChapterID = chapter.id
                     }
                 }
             }

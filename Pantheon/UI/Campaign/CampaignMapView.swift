@@ -398,3 +398,229 @@ struct ChapterMapView: View {
         }
     }
 }
+
+// MARK: - The world road
+
+/// The campaign as one painted world you travel across, the way the genre
+/// does it: Egypt on the left, Greece in the middle, the Norse fjords and the
+/// world tree on the right, a road running through all three, and a city on
+/// the road for every chapter.
+///
+/// The owner asked for exactly this: "each country where the mythology took
+/// place, you can have the campaigns there, like cities, and have a big
+/// scrollable map that you have to progress through like Summoners War."
+///
+/// What was here before was a rail of eight chapter chips above one chapter's
+/// stage path. That is a menu. This is a place — and the difference matters,
+/// because the thing a player is meant to feel is that Yggdrasil is a long way
+/// from the Duat and he walked it.
+///
+/// **The anchors are measured, not guessed.** `world_map.png` is 2048×1152 and
+/// every city below sits on a landmark the painter actually drew: the pyramids,
+/// the oasis town, the three temples, the longship harbour, the world tree, the
+/// snowfield. They were checked by drawing rings at these coordinates over the
+/// painting and looking at the result, the same way `Docs/ART_2D.md` §6 fixed
+/// the island's landmarks. If the map is ever repainted, re-measure — do not
+/// assume they carry over.
+///
+/// The map is taller than the frame at the zoom that makes a city tappable, so
+/// it scrolls both ways, and it scrolls itself to the city the player is in
+/// when it opens. `.allowsHitTesting(false)` on the painting is not optional:
+/// a scaled image swallows taps far outside its visible frame, which has
+/// broken three screens in this project already.
+struct WorldRoadMapView: View {
+    @EnvironmentObject private var store: GameStore
+    /// Called with the chapter whose city was tapped.
+    var onSelect: (Chapter) -> Void
+
+    /// Where each chapter's city sits on the painting, in 0...1 of its width
+    /// and height, in story order.
+    static let cities: [(id: String, x: CGFloat, y: CGFloat)] = [
+        ("duat_1",      0.085, 0.400),   // the pyramids
+        ("duat_2",      0.205, 0.735),   // the oasis town on the delta
+        ("olympus_1",   0.505, 0.430),   // the great temple
+        ("olympus_2",   0.552, 0.475),   // the small temple above the olive groves
+        ("olympus_3",   0.523, 0.315),   // the mountain temple
+        ("yggdrasil_1", 0.733, 0.425),   // the longship harbour
+        ("yggdrasil_2", 0.883, 0.120),   // the world tree
+        ("yggdrasil_3", 0.845, 0.530),   // the snowfield below the peaks
+    ]
+
+    /// The painting's aspect, and how much bigger than the frame it is drawn.
+    /// At 1.0 the whole world fits and a city is 20 points across, which is
+    /// too small to hit; at 1.45 a city is a comfortable target and the map
+    /// is worth scrolling.
+    private static let aspect: CGFloat = 2048.0 / 1152.0
+    private static let zoom: CGFloat = 1.45
+
+    var body: some View {
+        GeometryReader { frame in
+            let mapHeight = frame.size.height * Self.zoom
+            let mapWidth = mapHeight * Self.aspect
+            ScrollViewReader { scroller in
+                ScrollView([.horizontal, .vertical], showsIndicators: false) {
+                    ZStack(alignment: .topLeading) {
+                        painting(width: mapWidth, height: mapHeight)
+                        road(width: mapWidth, height: mapHeight)
+                        ForEach(Array(Self.cities.enumerated()), id: \.offset) { index, city in
+                            if let chapter = StageDatabase.chapter(city.id) {
+                                CityMedallion(
+                                    chapter: chapter,
+                                    order: index + 1,
+                                    state: state(of: chapter),
+                                    action: { onSelect(chapter) }
+                                )
+                                .position(x: city.x * mapWidth, y: city.y * mapHeight)
+                                .id(city.id)
+                            }
+                        }
+                    }
+                    .frame(width: mapWidth, height: mapHeight)
+                }
+                .onAppear {
+                    // Open on the city the player is in, not on the top-left
+                    // corner of a map three screens wide.
+                    let here = CampaignView.currentChapter(for: store.player).id
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        withAnimation(.easeOut(duration: 0.45)) {
+                            scroller.scrollTo(here, anchor: .center)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func painting(width: CGFloat, height: CGFloat) -> some View {
+        Group {
+            if BundleImage.exists("world_map") {
+                BundleImage(name: "world_map")
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                // Until the painting ships: sea, so the cities still read.
+                LinearGradient(
+                    colors: [Color(hex: "#1B3A5C"), Color(hex: "#0E2036")],
+                    startPoint: .top, endPoint: .bottom
+                )
+            }
+        }
+        .frame(width: width, height: height)
+        .clipped()
+        .allowsHitTesting(false)
+    }
+
+    /// The road, drawn city to city in story order. Gold behind the player,
+    /// faint ahead of him, so the map itself shows how far he has come.
+    private func road(width: CGFloat, height: CGFloat) -> some View {
+        Canvas { context, _ in
+            let points = Self.cities.map { CGPoint(x: $0.x * width, y: $0.y * height) }
+            for index in 0..<max(0, points.count - 1) {
+                var path = Path()
+                path.move(to: points[index])
+                path.addLine(to: points[index + 1])
+                let travelled = StageDatabase.chapter(Self.cities[index].id).map {
+                    state(of: $0) == .cleared
+                } ?? false
+                context.stroke(
+                    path,
+                    with: .color(travelled ? Color(hex: "#F5D57A").opacity(0.85) : Color.white.opacity(0.25)),
+                    style: StrokeStyle(lineWidth: travelled ? 3 : 2, lineCap: .round, dash: [7, 9])
+                )
+            }
+        }
+        .frame(width: width, height: height)
+        .allowsHitTesting(false)
+    }
+
+    private func state(of chapter: Chapter) -> CityState {
+        let player = store.player
+        let unlocked = chapter.stages.first.map { CampaignService.isUnlocked($0, player: player) } ?? false
+        if !unlocked { return .locked }
+        let cleared = chapter.stages.allSatisfy { CampaignService.isCleared($0, player: player) }
+        return cleared ? .cleared : .open
+    }
+}
+
+enum CityState {
+    case locked, open, cleared
+}
+
+/// One city on the road: a medallion big enough to hit, carrying the chapter's
+/// number, its name, and how much of it is done.
+struct CityMedallion: View {
+    @EnvironmentObject private var store: GameStore
+    let chapter: Chapter
+    let order: Int
+    let state: CityState
+    let action: () -> Void
+
+    private var cleared: Int {
+        chapter.stages.filter { CampaignService.isCleared($0, player: store.player) }.count
+    }
+
+    var body: some View {
+        Button {
+            guard state != .locked else { return }
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiConfirm)
+            action()
+        } label: {
+            VStack(spacing: 3) {
+                ZStack {
+                    Circle()
+                        .fill(
+                            LinearGradient(
+                                colors: state == .locked
+                                    ? [Color(hex: "#2A2A38"), Color(hex: "#14141C")]
+                                    : [Color(hex: "#4A3A16"), Color(hex: "#1A1408")],
+                                startPoint: .top, endPoint: .bottom
+                            )
+                        )
+                        .frame(width: 42, height: 42)
+                    Circle()
+                        .strokeBorder(
+                            state == .locked ? LinearGradient(colors: [Theme.stroke, Theme.stroke],
+                                                              startPoint: .top, endPoint: .bottom)
+                                             : Theme.goldPlate,
+                            lineWidth: 2
+                        )
+                        .frame(width: 42, height: 42)
+                    switch state {
+                    case .locked:
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 15, weight: .black))
+                            .foregroundStyle(Theme.textSecondary)
+                    case .cleared:
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 17, weight: .black))
+                            .foregroundStyle(Theme.gold)
+                    case .open:
+                        Text("\(order)")
+                            .font(Theme.numeric(16))
+                            .foregroundStyle(Theme.gold)
+                    }
+                }
+                .shadow(color: state == .open ? Theme.gold.opacity(0.55) : .black.opacity(0.6),
+                        radius: state == .open ? 9 : 5)
+
+                VStack(spacing: 0) {
+                    Text(chapter.name)
+                        .font(Theme.body(9).weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                    if state != .locked {
+                        Text("\(cleared)/\(chapter.stages.count)")
+                            .font(Theme.numeric(8))
+                            .foregroundStyle(state == .cleared ? Theme.gold : Theme.textSecondary)
+                    }
+                }
+                .padding(.horizontal, 5)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Color.black.opacity(0.72)))
+                .fixedSize()
+            }
+        }
+        .buttonStyle(.plain)
+        .opacity(state == .locked ? 0.75 : 1)
+    }
+}

@@ -82,8 +82,12 @@ CLIP_SETS = {
                "attack_heavy": 226,                        # "Archery Shot 2"
                "ultimate":     222},                       # "Draw and Shoot from Back"
 }
-# The six that make a battle read as finished. The other three are polish.
-BATTLE_CLIPS = ["idle_combat", "attack_basic", "attack_heavy", "hit_react", "death", "ultimate"]
+# What a battle needs to read as finished. `victory` joined the set on
+# 2026-09-10: the scene controller has always played it when the player wins
+# (BattleSceneController, on `.battleEnded`), but no character shipped the
+# file, so a win ended with the team standing still. Seven clips is 21 credits
+# of the 53 a character costs.
+BATTLE_CLIPS = ["idle_combat", "attack_basic", "attack_heavy", "hit_react", "death", "ultimate", "victory"]
 
 POLL_SECONDS = 10
 TASK_TIMEOUT = 4 * 60 * 60   # a big wave queues behind itself for hours

@@ -166,13 +166,30 @@ enum Theme {
     /// against 62 on the campaign screen, and the row's height jumps as a
     /// unit is added or removed).
     ///
-    /// The 20pt floor is what two lines of text need; 0.36 is what the
-    /// caption measures once its fonts scale with the card. **Both
-    /// components must adopt this in one edit** — the figure assumes
-    /// `UnitCard`'s caption fonts scale with `size`; while they are fixed,
-    /// its caption is ~27pt whatever the card.
+    /// `EmptyTeamSlot` can adopt `cardHeight(for:)` on its own — at every size
+    /// the two are drawn together the figure is the card's real height, so the
+    /// row stops jumping without `UnitCard` changing at all.
+    ///
+    /// The 27pt floor is the caption `UnitCard` actually draws today, measured
+    /// rather than guessed: `Theme.body(10).weight(.heavy)` is 9pt after
+    /// `fontScale` and lays out at ~10.7, the `Theme.numeric(9)` level/power
+    /// row is 8.1pt and lays out at ~9.7, and the block carries 3pt of top and
+    /// 4pt of bottom padding — 27.4 in total, whatever `size` is, because
+    /// those two fonts are fixed. It is the figure the field measurements
+    /// above confirm: 38 → 65 and 46 → 73 are both `size + 27`.
+    ///
+    /// 0.36 is the same caption expressed as a fraction of the shipped 76pt
+    /// card, and it takes over above 75 so the helper keeps working the day
+    /// `UnitCard`'s caption fonts start scaling with `size`. Until then the
+    /// floor is what every real pairing hits: `EmptyTeamSlot` is only ever
+    /// drawn beside a card at 30, 36, 38, 40, 46 or 58.
+    ///
+    /// The floor is deliberately never *below* the drawn caption. Under-
+    /// reporting is the bug — a slot shorter than the card beside it is the
+    /// ragged row this replaces, and a card frame shorter than its own caption
+    /// would push text out of the plate. Over-reporting only adds air.
     static func cardCaptionHeight(for size: CGFloat) -> CGFloat {
-        max(20, size * 0.36)
+        max(27, size * 0.36)
     }
 
     /// The full height of a unit card of this size, caption included.

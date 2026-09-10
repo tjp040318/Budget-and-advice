@@ -453,6 +453,7 @@ def check_unknown_types(files, declared, errors):
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
         "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64",
         "ClosedRange","Key","DEBUG","NONE","Menu","AnyView","EmptyView","Namespace",
+        "Canvas","GraphicsContext","ScrollViewProxy","UnitCurve","CGVector",
         "MenuStyle","Alignment","Anchor","UnitPoint","Axis","Transaction","Animation",
         "XCTest","XCTestCase","XCTAssert","XCTAssertEqual","XCTAssertNotEqual","XCTAssertTrue",
         "XCTAssertFalse","XCTAssertNil","XCTAssertNotNil","XCTAssertGreaterThan",
