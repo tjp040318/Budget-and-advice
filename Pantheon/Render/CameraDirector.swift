@@ -23,12 +23,12 @@ import UIKit
 /// a 27 mm one that splayed the outer figures and stretched the props at the
 /// frame edges. The long lens is paid for by standing further back, which is
 /// what compresses the field and makes the figures read as solid rather than
-/// as a diorama. 55° of yaw puts the camera well round to the right of the
+/// as a diorama. 58° of yaw puts the camera well round to the right of the
 /// field, so the two lines-abreast the stage places read as the genre's two
 /// COLUMNS — the player's at the lower left stepping back and left, the
 /// enemy's on the right stepping back toward the top, an open middle
-/// between them — and 16° of pitch keeps the floor from filling the frame:
-/// the far rim sits about half way up and the painting takes the rest.
+/// between them — and 22° of pitch keeps the floor from filling the frame:
+/// the far rim sits a third of the way down and the painting takes the rest.
 ///
 /// Solved for a four-a-side, the camera stands about 20 m from the aim, the
 /// front figure a quarter of the frame tall and the farthest a sixth. A boss
@@ -73,16 +73,22 @@ final class CameraDirector {
     /// there is no row behind a row to separate, so the pitch can come down
     /// to where the floor stops filling the frame and the painting behind
     /// the far rim takes the top half instead.
-    private static let homePitch: Float = 16 * .pi / 180
+    ///
+    /// 22°, up from a first 16°: at 16° each step along a column rose only
+    /// half a metre up the frame, and the photographed three-a-side stood
+    /// as a row with shoulders overlapping. At 22° a step is 0.7 m up and
+    /// 1.2 m across — a clean diagonal — and the far rim still sits a third
+    /// of the way down the frame with the painting above it.
+    private static let homePitch: Float = 22 * .pi / 180
 
-    /// 55° of yaw, camera on the right, well round toward the side of the
+    /// 58° of yaw, camera on the right, well round toward the side of the
     /// field. This is the composition, and it is the third attempt at it.
     ///
     /// At 0° the two lines were rows parallel to the screen. At 27° they
     /// receded a little and the owner, with a screenshot, called the angle
     /// ugly: the floor's tiles ran diagonally across a small tilted disc, the
     /// figures were a sixth of the frame tall and half the picture was the
-    /// void beyond the rim. At 55° the world's two lines-abreast become what
+    /// void beyond the rim. At 58° the world's two lines-abreast become what
     /// the genre shows: the player's team a COLUMN at the lower left, its
     /// front unit nearest the camera at the bottom of the frame and the rest
     /// stepping back and left; the enemy column across from it on the right,
@@ -94,7 +100,7 @@ final class CameraDirector {
     /// Shared with `StageBuilder`, which turns the far painting to face the
     /// camera: at this much yaw a painting hung square to the world ended a
     /// third of the way across the frame.
-    static let homeYaw: Float = -55 * .pi / 180
+    static let homeYaw: Float = -58 * .pi / 180
 
     /// How much of the half-frame the outermost figure may reach, and the
     /// metres of air left beside it. A figure is about 0.9 m across, so 0.9 m

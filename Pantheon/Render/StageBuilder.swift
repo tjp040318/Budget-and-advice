@@ -91,9 +91,15 @@ enum StageBuilder {
             Placement(asset: "prop_lotus_column", position: SCNVector3(-2.4, 0, -7.0)),
             Placement(asset: "prop_lotus_column", position: SCNVector3(2.4, 0, -7.0)),
         ]
+        // Both sphinxes on the LEFT, an avenue. The camera stands 58° round
+        // to the right now (`CameraDirector.homeYaw`), which makes the +x
+        // wing the foreground: a sphinx at (6, −0.4) filled the lower right
+        // of the first frames and hid the enemy column's front mark behind
+        // its head. The left wing is the far side, where a prop adds depth
+        // behind the player's column and stands in front of nothing.
         let sphinxes = [
             Placement(asset: "prop_sphinx", position: SCNVector3(-6.0, 0, -0.4), yaw: 90, standIn: .block),
-            Placement(asset: "prop_sphinx", position: SCNVector3(6.0, 0, -0.4), yaw: -90, standIn: .block),
+            Placement(asset: "prop_sphinx", position: SCNVector3(-6.4, 0, -4.2), yaw: 90, standIn: .block),
         ]
         // All behind the enemy line: the two beside the player's line were
         // where the impact shot's camera lands, and one arena frame was the
@@ -121,7 +127,7 @@ enum StageBuilder {
         ]
         let broken = [
             Placement(asset: "prop_broken_column", position: SCNVector3(-6.0, 0, -0.4), standIn: .block),
-            Placement(asset: "prop_broken_column", position: SCNVector3(6.0, 0, -0.4), standIn: .block),
+            Placement(asset: "prop_broken_column", position: SCNVector3(-6.4, 0, -4.2), standIn: .block),
         ]
         // The Norse set: rune stones at the sides, a longship prow and the
         // world tree's roots at the back corners, hall pillars closing the

@@ -157,8 +157,10 @@ struct TourView: View {
         case "shop":
             ShopView()
         case "chapter_map":
-            // The campaign tab as it opens: the chapter strip and the map.
-            CampaignView()
+            // The first chapter's road, with the Normal / Hard / Hell chips
+            // above it; the world map is the `island` step's neighbour and
+            // is seen from there.
+            CampaignView(openingChapter: "duat_1")
         case "missions":
             MissionsView()
         case "victory":

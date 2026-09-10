@@ -66,13 +66,14 @@ environment can and cannot do. The short version:
 - The game builds and runs on an iPhone, **landscape only** since this
   session: the battle camera is SOLVED, not written down (`CameraDirector`
   measures the figures on their marks and frames them), and it stands the
-  genre's way — 55° round to the right of the field, 16° down, a 26° lens
+  genre's way — 58° round to the right of the field, 22° down, a 26° lens
   about 20 m out — so the two lines-abreast the stage places read as two
   COLUMNS: the player's at the lower left, its front unit nearest the
   camera, the enemy's on the right stepping back toward the top, an open
   middle between them, and the painting filling the top half behind the
   far rim (`StageBuilder.farBackdrop` is turned to face the camera). A
-  **boss** (`Combatant.isBoss`) stands over the far rim at z = −9.6, sunk
+  **boss** (`Combatant.isBoss`) stands over the far rim at (−3.5, −9.8),
+  between the two columns that close every set and facing the field, sunk
   42% of its height below the platform, 6–8 m tall in the data (Apep 7.2,
   Hydra 7.0, Jötunn 7.5, Colossus 8.0, the Unwrapped King 6.0), with no 3D
   bar or ring (the HUD's boss bar reads), never dashes, and is framed by

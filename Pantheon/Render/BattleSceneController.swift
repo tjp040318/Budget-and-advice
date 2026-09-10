@@ -292,7 +292,14 @@ final class BattleSceneController: NSObject {
             let node = UnitNode(combatant: combatant, detail: detail)
             node.playbackSpeed = speedMultiplier
             let home = position(for: combatant, teamSize: lineWidth[combatant.side] ?? 1)
-            node.eulerAngles.y = combatant.side == .player ? .pi : 0
+            // A model is authored facing +Z: the player's line turns its back
+            // on the camera's old side, the enemy line faces it, and a boss,
+            // standing off the centre line, turns to face the middle of the
+            // field (a character faces with `atan2(dx, dz)`; only a camera
+            // needs `look(at:)`).
+            node.eulerAngles.y = combatant.isBoss
+                ? atan2(-home.x, -home.z)
+                : (combatant.side == .player ? .pi : 0)
             if entering, combatant.isBoss {
                 // A boss RISES over the far rim from the dark under the
                 // platform, rather than walking on: there is no floor where
@@ -363,9 +370,16 @@ final class BattleSceneController: NSObject {
     /// legs and the rest of it towers over the field. The owner: "the boss
     /// towers over them and half of it is under a bridge or cliff and the
     /// top half is fighting and hitting." The platform's far edge is at
-    /// z = −8.4 (`StageBuilder`), so 9.6 puts it a stride beyond the edge,
+    /// z = −8.4 (`StageBuilder`), so 9.8 puts it a stride beyond the edge,
     /// which is what makes the rim read as a cliff it has climbed to.
-    private static let bossDepth: Float = 9.6
+    ///
+    /// 3.5 m to the LEFT of the centre line, not on it. From 58° round to
+    /// the right the centre line's far end lands at the frame's right edge,
+    /// where the first frames photographed the Colossus behind the seated
+    /// statue, a brazier and the wing sphinx. 3.5 m left puts it between
+    /// the two columns that close the back of every set, framed by them
+    /// like a gate, in the upper right of the picture with nothing in front.
+    private static let bossMark = SCNVector3(-3.5, 0, -9.8)
     private static let bossSink: Float = 0.42
 
     /// ONE RANK ABREAST, centred, both sides.
@@ -391,7 +405,7 @@ final class BattleSceneController: NSObject {
     private func position(for combatant: Combatant, teamSize: Int) -> SCNVector3 {
         let sideSign: Float = combatant.side == .player ? 1 : -1
         if combatant.isBoss {
-            return SCNVector3(0, -combatant.model.height * Self.bossSink, sideSign * Self.bossDepth)
+            return SCNVector3(Self.bossMark.x, -combatant.model.height * Self.bossSink, sideSign * Self.bossMark.z)
         }
         let perRank = 5
         let mark = markIndex(for: combatant)

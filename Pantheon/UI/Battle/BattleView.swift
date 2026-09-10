@@ -1769,13 +1769,15 @@ struct BattleResultView: View {
             .allowsHitTesting(false)
             .animation(.easeOut(duration: 0.6), value: lidOpen)
 
-            VStack(spacing: 0) {
-                // The shelf the spoils rise onto.
+            // One centred stack: the shelf the spoils rise onto, the chest,
+            // the line under it. The first cut pinned the shelf to the top
+            // and the chest to the bottom with a spacer between, and the
+            // tour photographed the Continue button sitting on the chest.
+            VStack(spacing: 14) {
+                Spacer(minLength: 0)
+
                 lootShelf
                     .frame(height: 122)
-                    .padding(.top, 14)
-
-                Spacer(minLength: 0)
 
                 GreekChest(open: lidOpen)
                     .frame(width: 236, height: 150)
@@ -1797,7 +1799,8 @@ struct BattleResultView: View {
                     }
                 }
                 .frame(height: 44)
-                .padding(.bottom, 8)
+
+                Spacer(minLength: 0)
             }
 
             // The flash on the lid coming up. White over gold, gone in under
@@ -2004,13 +2007,16 @@ struct GreekChest: View {
     var body: some View {
         ZStack(alignment: .bottom) {
             // The light standing up out of the open box.
+            // No taller than the chest's own frame: a 170-point beam in a
+            // 150-point frame made the stack overflow, and the body slid
+            // down under the button.
             LinearGradient(colors: [Theme.gold.opacity(0.55), Theme.gold.opacity(0.18), .clear],
                            startPoint: .bottom, endPoint: .top)
-                .frame(width: 150, height: 170)
+                .frame(width: 150, height: 150)
                 .blur(radius: 10)
                 .blendMode(.plusLighter)
                 .opacity(open ? 1 : 0)
-                .offset(y: -52)
+                .offset(y: -40)
                 .animation(.easeOut(duration: 0.6), value: open)
 
             // Shadow on the floor.

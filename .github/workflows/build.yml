@@ -12,6 +12,12 @@ on:
   push:
     branches-ignore:
       - ci/screens        # the job's own output branch; building it would loop
+      # main only ever receives a commit the branch has already built and
+      # photographed (it is fast-forwarded after the frames are read), so a
+      # run of main is the same run twice — and its frames land on ci/screens
+      # over the branch's, which on 2026-09-10 had a waiter for the camera
+      # commit's frames wake on the victory commit's instead.
+      - main
   workflow_dispatch:
 
 # The job writes its screenshots to the ci/screens branch (below), which

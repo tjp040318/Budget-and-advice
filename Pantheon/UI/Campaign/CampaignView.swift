@@ -20,6 +20,13 @@ struct CampaignView: View {
     /// The tier of the open chapter being shown: Normal, Hard or Hell.
     @State private var difficulty: CampaignDifficulty = .normal
 
+    /// The world by default; the tour asks for a chapter so the road and
+    /// the tier chips are photographed.
+    init(openingChapter: String? = nil) {
+        _openChapterID = State(initialValue: openingChapter)
+        _chapterID = State(initialValue: openingChapter)
+    }
+
     /// Engines are built before presentation so that a failure (no energy, stage
     /// locked) surfaces as an error rather than as an empty battle screen.
     @State private var pendingEngines: [String: BattleEngine] = [:]
