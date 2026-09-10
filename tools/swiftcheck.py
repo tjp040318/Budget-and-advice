@@ -638,11 +638,17 @@ def check_model_members(files, errors):
     resolved the same careful way rule 15 resolves a switch subject: from the
     signature of the function the line sits in, so a local named `player` of
     some other type is never mistaken for one."""
-    MODELS = {"Player", "Unit", "Relic"}
+    # A class is checked here as readily as a struct: `UnitNode` joined the
+    # list on 2026-09-10, when a line asking a UnitNode for a `combatant` it
+    # does not have (it carries `combatantID` and `side` instead) balanced,
+    # resolved every name, passed every other rule and cost a whole runner
+    # cycle to learn. The list is deliberately short — these are the types that
+    # everything else in the module reaches into.
+    MODELS = {"Player", "Unit", "Relic", "UnitNode", "Combatant"}
 
     members = {name: set() for name in MODELS}
     decl = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|final\s+)*"
-                      r"(?:struct|class|extension)\s+([A-Za-z_][A-Za-z0-9_]*)")
+                      r"(?:struct|class|extension|enum)\s+([A-Za-z_][A-Za-z0-9_]*)")
     prop = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
                       r"(?:public\s+|private\s+|internal\s+|fileprivate\s+)?"
                       r"(?:static\s+)?(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)\s*[:{=]")
@@ -672,6 +678,29 @@ def check_model_members(files, errors):
             if fm:
                 members[current].add(fm.group(1))
 
+    # A type that inherits from a framework class carries members this file
+    # cannot see: `UnitNode` is an `SCNNode`, so `node.position` is real and
+    # nothing in the source declares it. These are the inherited names this
+    # module actually uses; anything outside the list is still reported, which
+    # is the whole point of the rule.
+    INHERITED = {
+        # SCNNode
+        "position", "worldPosition", "simdPosition", "eulerAngles", "orientation",
+        "rotation", "scale", "transform", "worldTransform", "pivot", "opacity",
+        "isHidden", "name", "parent", "childNodes", "geometry", "light", "camera",
+        "constraints", "physicsBody", "categoryBitMask", "renderingOrder",
+        "morpher", "skinner", "filters", "addChildNode", "removeFromParentNode",
+        "insertChildNode", "childNode", "enumerateChildNodes",
+        "enumerateHierarchy", "runAction", "removeAction", "removeAllActions",
+        "hasActions", "action", "addAnimation", "removeAnimation",
+        "removeAllAnimations", "animationPlayer", "animationKeys", "clone",
+        "flattenedClone", "convertPosition", "convertVector", "convertTransform",
+        "look", "boundingBox", "boundingSphere", "presentation", "isPaused",
+        "castsShadow", "movabilityHint", "entity", "setValue", "value",
+        # NSObject, and the odd protocol requirement
+        "description", "hash", "isEqual", "copy", "encode", "id",
+    }
+
     # A model with no members found means the parse missed it; checking against
     # an empty set would report every access. Only check what was really read.
     live = {k: v for k, v in members.items() if len(v) >= 5}
@@ -680,6 +709,42 @@ def check_model_members(files, errors):
 
     param = re.compile(r"[(,]\s*(?:[A-Za-z_][A-Za-z0-9_]*\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*"
                        r"(?:inout\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\.)*([A-Za-z_][A-Za-z0-9_]*)")
+
+    # Properties whose ELEMENT is one of the models: `var unitNodes: [UUID:
+    # UnitNode]`, `let team: [Unit]`, `var relics: [Relic]?`. A closure run over
+    # one of those — `unitNodes.values.filter { $0.side == ... }` — gives `$0`
+    # that element type, and that is where the fault this rule was widened for
+    # actually lived: a UnitNode asked for a `combatant` inside a filter. A
+    # closure's `$0` is invisible to the parameter-list resolver, so without
+    # this the rule reads right past the one line it was written to catch.
+    collection = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
+                            r"(?:public\s+|private(?:\(set\))?\s+|internal\s+|fileprivate\s+)?"
+                            r"(?:static\s+)?(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:\s*"
+                            r"\[(?:[A-Za-z_][A-Za-z0-9_]*\s*:\s*)?([A-Za-z_][A-Za-z0-9_]*)\]")
+    # Scoped PER FILE, and a name declared twice in one file with different
+    # element types is dropped rather than guessed at. A global map was tried
+    # first and was hopeless: a `[ResolvedUnit]` called `units` in one screen
+    # made every `$0.unit` in every other screen look like a Unit that has no
+    # `unit`, which is three false reports out of five.
+    element_of_by_file = {}
+    for path_ in files:
+        found, clashed = {}, set()
+        for line in strip_noise(open(path_).read()).splitlines():
+            cm = collection.match(line)
+            if not cm:
+                continue
+            name, elem = cm.group(1), cm.group(2)
+            if name in found and found[name] != elem:
+                clashed.add(name)
+            found[name] = elem
+        element_of_by_file[path_] = {
+            k: v for k, v in found.items() if v in live and k not in clashed
+        }
+
+    # `<prop>.filter { $0.x }`, `<prop>.values.map { $0.x }`, `for n in <prop>`
+    closure_over = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*(?:\.(?:values|keys))?\s*"
+                              r"\.(?:filter|map|compactMap|flatMap|forEach|first|contains|"
+                              r"allSatisfy|sorted|min|max|reduce|partition|drop|prefix)\s*[({]")
     for path_ in files:
         lines = strip_noise(open(path_).read()).splitlines()
         typed = {}          # variable name -> model type, from the last signature seen
@@ -689,14 +754,32 @@ def check_model_members(files, errors):
                 for pm in param.finditer(line):
                     if pm.group(2) in live:
                         typed[pm.group(1)] = pm.group(2)
-            if not typed:
+            # `$0` is whatever the collection on THIS line holds. Scoped to the
+            # line so it cannot leak into the next statement, which is the
+            # cheapest way to stay honest about a closure's extent.
+            line_typed = dict(typed)
+            element_of = element_of_by_file.get(path_, {})
+            for om in closure_over.finditer(line):
+                owner = element_of.get(om.group(1))
+                if owner:
+                    line_typed["$0"] = owner
+            if not line_typed:
                 continue
+            for vm in re.finditer(r"\$0\.([A-Za-z_][A-Za-z0-9_]*)", line):
+                model = line_typed.get("$0")
+                if model is None:
+                    break
+                field = vm.group(1)
+                if field in live[model] or field in ("self", "init") or field in INHERITED:
+                    continue
+                errors.append(f"{path_}:{i + 1}: {model} has no member '{field}' "
+                              f"(read as $0.{field} in a closure over {model})")
             for vm in re.finditer(r"\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)", line):
                 model = typed.get(vm.group(1))
                 if model is None:
                     continue
                 field = vm.group(2)
-                if field in live[model] or field in ("self", "init"):
+                if field in live[model] or field in ("self", "init") or field in INHERITED:
                     continue
                 errors.append(f"{path_}:{i + 1}: {model} has no member '{field}' "
                               f"(read as {vm.group(1)}.{field})")

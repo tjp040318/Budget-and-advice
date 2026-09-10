@@ -310,7 +310,7 @@ final class BattleSceneController: NSObject {
     /// How many combatants a side is fielding, so the line can be centred on
     /// the count rather than on a fixed number of columns.
     private func sideCount(_ side: BattleSide, in combatants: [Combatant]) -> Int {
-        let placed = unitNodes.values.filter { $0.combatant.side == side }.count
+        let placed = unitNodes.values.filter { $0.side == side }.count
         return max(1, combatants.filter { $0.side == side }.count + placed)
     }
 
