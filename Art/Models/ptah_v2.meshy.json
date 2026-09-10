@@ -49,7 +49,7 @@
       "finished_at": 1789008149926,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T02:42:30Z"
+      "polled": "2026-09-10T03:14:28Z"
     },
     "rig": {
       "id": "01a08932-0152-769b-8a97-110757c78e3b",
@@ -76,7 +76,10 @@
       "started_at": 1789008162628,
       "finished_at": 1789008205502,
       "name": "",
-      "polled": "2026-09-10T02:43:33Z"
+      "polled": "2026-09-10T03:14:28Z",
+      "downloaded": {
+        "glb": "Art/Models/ptah_v2.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a08932-f70b-740d-81db-b2d46320b853",
@@ -99,7 +102,10 @@
       "started_at": 1789008214318,
       "finished_at": 1789008235359,
       "name": "",
-      "polled": "2026-09-10T02:44:00Z"
+      "polled": "2026-09-10T03:14:28Z",
+      "downloaded": {
+        "glb": "Art/Models/ptah_v2_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a08932-fa8f-7619-8e3f-52834767e641",
@@ -122,7 +128,10 @@
       "started_at": 1789008214940,
       "finished_at": 1789008249142,
       "name": "",
-      "polled": "2026-09-10T02:44:10Z"
+      "polled": "2026-09-10T03:14:28Z",
+      "downloaded": {
+        "glb": "Art/Models/ptah_v2_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a08932-fcf6-7518-92cb-408d8993fd4d",
@@ -145,7 +154,10 @@
       "started_at": 1789008215614,
       "finished_at": 1789008253433,
       "name": "",
-      "polled": "2026-09-10T02:44:21Z"
+      "polled": "2026-09-10T03:14:29Z",
+      "downloaded": {
+        "glb": "Art/Models/ptah_v2_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a08932-ffa5-77d4-8086-48417c1cc40f",
@@ -168,7 +180,10 @@
       "started_at": 1789008216283,
       "finished_at": 1789008247221,
       "name": "",
-      "polled": "2026-09-10T02:44:11Z"
+      "polled": "2026-09-10T03:14:29Z",
+      "downloaded": {
+        "glb": "Art/Models/ptah_v2_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a08933-023e-763a-a387-d82dc5cd2673",
@@ -191,7 +206,10 @@
       "started_at": 1789008216956,
       "finished_at": 1789008269372,
       "name": "",
-      "polled": "2026-09-10T02:44:31Z"
+      "polled": "2026-09-10T03:14:29Z",
+      "downloaded": {
+        "glb": "Art/Models/ptah_v2_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a08933-04dd-758a-9b1b-33ca70585fe7",
@@ -214,7 +232,10 @@
       "started_at": 1789008217647,
       "finished_at": 1789008255118,
       "name": "",
-      "polled": "2026-09-10T02:44:21Z"
+      "polled": "2026-09-10T03:14:29Z",
+      "downloaded": {
+        "glb": "Art/Models/ptah_v2_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a08933-07a4-75a5-adf6-3d9bb014d066",
@@ -237,8 +258,12 @@
       "started_at": 1789008218380,
       "finished_at": 1789008266573,
       "name": "",
-      "polled": "2026-09-10T02:44:32Z"
+      "polled": "2026-09-10T03:14:29Z",
+      "downloaded": {
+        "glb": "Art/Models/ptah_v2_victory.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T03:14:29Z"
 }

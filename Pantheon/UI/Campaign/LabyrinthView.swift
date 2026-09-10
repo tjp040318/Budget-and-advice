@@ -548,7 +548,6 @@ struct DungeonLevelsView: View {
             BarWallet(wallet: store.player.wallet)
         } content: {
             ZStack {
-                backdrop
                 if let chapter {
                     HStack(spacing: 8) {
                         dropsPanel(chapter)
@@ -556,13 +555,53 @@ struct DungeonLevelsView: View {
                     }
                     .padding(.horizontal, ScreenChrome.contentPadding)
                     .padding(.vertical, 8)
+                } else {
+                    // Never show an empty room. The CI tour photographed this
+                    // screen twice on 2026-09-10 — once for a Hall of Essence
+                    // and once for a relic dungeon — and both frames came back
+                    // as two panel frames with nothing inside them. If the id
+                    // does not resolve, say so on the screen rather than
+                    // drawing furniture around a hole.
+                    VStack(spacing: 6) {
+                        Image(systemName: "questionmark.square.dashed")
+                            .font(.system(size: 26, weight: .light))
+                            .foregroundStyle(Theme.goldDim)
+                        Text("This dungeon could not be opened")
+                            .font(Theme.title(13))
+                            .foregroundStyle(Theme.textPrimary)
+                        Text(chapterID)
+                            .font(Theme.numeric(10))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
             }
+            // The painting is a BACKGROUND, never a sibling in the stack.
+            // As a sibling it was a fill-aspect image under an unbounded
+            // `.frame(maxWidth: .infinity, maxHeight: .infinity)`, which is
+            // the oldest trap in SwiftUI: `.clipped()` clips the drawing and
+            // not the reported size, so the image grew the ZStack past the
+            // window, GameScreen's whole column with it. The CI tour caught
+            // it on 2026-09-10 — both frames of this screen came back as two
+            // tall panel frames with nothing inside, because the strip and
+            // the panels' top-aligned content had been pushed off the top of
+            // the screen. A background is measured by its parent and can
+            // never do that. The same pattern is safe inside the dungeon
+            // cards on the Labyrinth screen because a card bounds it.
+            .background(backdrop)
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
                 pulse = true
             }
+            #if DEBUG
+            // One line the CI tour's console will carry, because a photograph
+            // of an empty screen does not say whether the data was missing or
+            // the layout was.
+            print("[DungeonLevels] id=\(chapterID) hall=\(hall != nil) labyrinth=\(labyrinth != nil) "
+                  + "chapter=\(chapter?.id ?? "nil") stages=\(chapter?.stages.count ?? -1) "
+                  + "backdrop=\(environment?.backdropName ?? "nil")")
+            #endif
         }
         .sheet(item: $selectedStage) { stage in
             StageBriefingView(stage: stage) { runs in
