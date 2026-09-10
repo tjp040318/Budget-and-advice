@@ -61,13 +61,25 @@ enum BundleArt {
     /// 1024-pixel JPEGs on every layout pass.
     private static var cache: [String: UIImage?] = [:]
 
+    /// Both caches are read on the main thread while a list draws and, since
+    /// the Arena began warming its cards off the main thread, written from a
+    /// background one; a Swift dictionary is not safe under that without a
+    /// lock. Held only around the lookups, never around a decode.
+    private static let lock = NSLock()
+
     static func image(_ name: String) -> UIImage? {
-        if let hit = cache[name] { return hit }
+        lock.lock()
+        if let hit = cache[name] { lock.unlock(); return hit }
+        lock.unlock()
+        let started = Perf.begin()
         var loaded = UIImage(named: name)
         if loaded == nil, let url = url(name) {
             loaded = UIImage(contentsOfFile: url.path)
         }
+        Perf.end(started, "full-size load of \(name)", over: 25)
+        lock.lock()
         cache[name] = loaded
+        lock.unlock()
         return loaded
     }
 
@@ -103,7 +115,11 @@ enum BundleArt {
     static func thumbnail(_ name: String, maxPixel: Int) -> UIImage? {
         let bucket = buckets.first(where: { $0 >= maxPixel }) ?? buckets[buckets.count - 1]
         let key = "\(name)@\(bucket)"
-        if let hit = thumbnails[key] { return hit }
+        lock.lock()
+        if let hit = thumbnails[key] { lock.unlock(); return hit }
+        lock.unlock()
+        let started = Perf.begin()
+        defer { Perf.end(started, "thumbnail \(key)", over: 25) }
 
         var built: UIImage?
         if let url = url(name),
@@ -122,8 +138,19 @@ enum BundleArt {
         // refuses has no thumbnail; both fall back to the whole picture rather
         // than to nothing.
         if built == nil { built = image(name) }
+        lock.lock()
         thumbnails[key] = built
+        lock.unlock()
         return built
+    }
+
+    /// Decodes a set of thumbnails ahead of the list that will draw them, from
+    /// whatever thread the caller is on: a list of thirty cards that finds
+    /// every one already in the cache draws in one frame.
+    static func warmThumbnails(_ names: [String], maxPixel: Int) {
+        let started = Perf.begin()
+        for name in Set(names) { _ = thumbnail(name, maxPixel: maxPixel) }
+        Perf.end(started, "warming \(Set(names).count) thumbnails", over: 1)
     }
 }
 

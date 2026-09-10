@@ -813,7 +813,7 @@ def check_unknown_types(files, declared, errors):
         "SIMD3","simd_quatf","simd_float3",
         "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
-        "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64",
+        "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64","Thread","DateFormatter","CFAbsoluteTime","CFAbsoluteTimeGetCurrent",
         "ClosedRange","Key","DEBUG","NONE","Menu","AnyView","EmptyView","Namespace",
         "Canvas","GraphicsContext","ScrollViewProxy","UnitCurve","CGVector","Ellipse", "ImageIO", "CFURL", "CFDictionary", "CFString",
         "CGImageSourceCreateWithURL", "CGImageSourceCreateThumbnailAtIndex",

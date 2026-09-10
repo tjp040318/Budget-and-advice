@@ -13,6 +13,8 @@ import SwiftUI
 /// states will plug in.
 struct IslandView: View {
     @EnvironmentObject private var store: GameStore
+    /// False while another tab is up; the living layer stops rendering.
+    var isActive: Bool = true
     let onOpen: (IslandDestination) -> Void
 
     @State private var pulse = false
@@ -83,7 +85,8 @@ struct IslandView: View {
                     stands: Self.stands,
                     paintingFrame: frame,
                     viewSize: full,
-                    lightHex: Self.daylight().lightHex
+                    lightHex: Self.daylight().lightHex,
+                    isActive: isActive
                 )
                 .frame(width: full.width, height: full.height)
                 .position(x: full.width / 2 - insets.leading, y: full.height / 2 - insets.top)

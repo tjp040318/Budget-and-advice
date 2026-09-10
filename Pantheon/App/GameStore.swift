@@ -66,11 +66,13 @@ final class GameStore: ObservableObject {
         var snapshot = player
         snapshot.lastSeenAt = Date()
         player = snapshot
+        let started = Perf.begin()
         do {
             try SaveStore.save(SaveGame(player: snapshot, rngSeed: seedStream.next()))
         } catch {
             lastError = error.localizedDescription
         }
+        Perf.end(started, "save (\(snapshot.units.count) units, \(snapshot.relics.count) relics)", over: 30)
     }
 
     /// Mutates the player and schedules a save. The only mutation path.

@@ -22,6 +22,11 @@ struct IslandSceneView: UIViewRepresentable {
     let viewSize: CGSize
     /// The hour's light on the figures.
     let lightHex: String
+    /// False while another tab is up. `SCNView` renders continuously here so
+    /// the figures idle; a hidden one drawing four skinned characters thirty
+    /// times a second is a tax on whichever screen is showing, so it stops
+    /// playing the moment the island is not the screen.
+    var isActive: Bool = true
 
     /// A figure's height as a fraction of the screen's.
     static let figureHeight: CGFloat = 0.11
@@ -41,6 +46,10 @@ struct IslandSceneView: UIViewRepresentable {
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
+        if view.rendersContinuously != isActive {
+            view.rendersContinuously = isActive
+            view.isPlaying = isActive
+        }
         context.coordinator.update(
             units: units, stands: stands, paintingFrame: paintingFrame, viewSize: viewSize, lightHex: lightHex
         )
@@ -96,6 +105,8 @@ struct IslandSceneView: UIViewRepresentable {
             let unitKey = units.map { $0.id.uuidString + ($0.unit.isAwakened ? "a" : "") }.joined(separator: ",")
             if figuresKey != sizeKey + unitKey {
                 figuresKey = sizeKey + unitKey
+                let started = Perf.begin()
+                defer { Perf.end(started, "island: \(min(units.count, stands.count)) figures rebuilt", over: 30) }
                 figures.childNodes.forEach { $0.removeFromParentNode() }
                 for (index, unit) in units.prefix(stands.count).enumerated() {
                     let combatant = Combatant(resolved: unit, side: .player, slot: index, isLeader: index == 0)

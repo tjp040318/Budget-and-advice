@@ -104,7 +104,9 @@ struct ArenaView: View {
     /// The pool is deterministic in the day and the player's points, so the
     /// list that arrives is the same one that would have blocked the frame.
     private func refresh() {
+        let entered = Perf.begin()
         store.refreshTimedResources()
+        Perf.end(entered, "arena: refreshTimedResources", over: 8)
         guard !isRefreshing else { return }
         isRefreshing = true
         // The record and the day are read HERE, on the main actor, and handed
@@ -115,12 +117,26 @@ struct ArenaView: View {
         // where it came from.
         let record = store.player.arena
         let day = Int(Date().timeIntervalSince1970 / 86_400)
+        // The card size in pixels, read here because `UIScreen` is the main
+        // thread's; the task decodes every challenger's portrait at it before
+        // the list is handed over, so the list draws from the cache.
+        let cardPixels = Int((cardSize * UIScreen.main.scale).rounded(.up))
         Task.detached(priority: .userInitiated) {
+            let started = Perf.begin()
             let built = ArenaService.pool(for: record, day: day)
                 .filter { !record.defeatedOpponentIDs.contains($0.id) }
+            Perf.end(started, "arena: challenger pool", over: 1)
+            BundleArt.warmThumbnails(
+                built.flatMap { opponent in
+                    opponent.team.map { $0.blueprint.model.portraitName(awakened: $0.unit.isAwakened) }
+                },
+                maxPixel: cardPixels
+            )
             await MainActor.run {
+                let landed = Perf.begin()
                 opponents = built
                 isRefreshing = false
+                Perf.end(landed, "arena: challengers handed to the view", over: 1)
             }
         }
     }

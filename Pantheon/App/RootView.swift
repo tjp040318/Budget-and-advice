@@ -32,7 +32,7 @@ struct RootView: View {
             // The hub. Every landmark on it is a tab below — except the Hall
             // of Ka, which opens over whatever is showing — so the island is a
             // way in rather than a fifth place things live.
-            IslandView { destination in
+            IslandView(isActive: tab == .island) { destination in
                 switch destination {
                 case .training:
                     showTraining = true

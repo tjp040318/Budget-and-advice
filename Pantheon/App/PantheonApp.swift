@@ -22,6 +22,10 @@ struct PantheonApp: App {
         // not stutter. Off the main thread; a missing file is a silent event.
         AudioLibrary.shared.preload()
 
+        // The main-thread watchdog: any stall over a quarter second is
+        // written to More → Diagnostics with its length and the time.
+        Perf.startWatchdog()
+
         // Build the unit database and the bundle's resource index before a
         // screen asks for them. `UnitDatabase.all` is three hundred and
         // ninety-five blueprints and `summonPool` filters every one of them on
