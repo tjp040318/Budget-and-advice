@@ -281,6 +281,7 @@ struct ShopView: View {
     private func glyph(for candidate: ShopService.Section) -> String {
         switch candidate {
         case .daily: return "gift.fill"
+        case .testing: return "wrench.and.screwdriver.fill"
         case .scrolls: return "scroll.fill"
         case .energy: return "bolt.fill"
         case .relics: return "shield.lefthalf.filled"

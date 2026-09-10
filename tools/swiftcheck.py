@@ -523,6 +523,100 @@ def check_foreign_wrapped_properties(files, errors):
                         break
 
 
+# ---------------------------------------------------------------------------
+# Rule 15: a switch that has not kept up with its enum
+# ---------------------------------------------------------------------------
+
+def check_switch_exhaustive(files, errors):
+    """A switch over an enum PARAMETER that is missing one of its cases.
+
+    Adding a case to an enum is the cheapest change there is, and it breaks
+    every switch that lists cases without a `default`. It broke the build on
+    2026-09-10: a `testing` section was added to ShopService.Section for the
+    owner's free packs and `ShopView.glyph(for:)` still listed six.
+
+    Matching on case NAMES alone was tried first and was far too noisy — this
+    module has two enums called `Tab` and several that share case names, so a
+    subset match guessed wrong five times out of six. Instead the type is
+    resolved properly, from the signature of the function the switch sits in:
+    `func glyph(for candidate: ShopService.Section)` followed by `switch
+    candidate` is unambiguous. That is narrower, and it catches the real
+    thing without crying wolf, which is the whole bargain of this file."""
+    # Keyed by SIMPLE name, which is all a switch site gives us — so a name
+    # used by two enums (this module has two `Kind`s and two `Tab`s) is
+    # ambiguous and is dropped rather than guessed at.
+    enum_cases_all = {}
+    enum_seen = {}
+    enum_start = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)")
+    case_line = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)")
+    for path in files:
+        lines = strip_noise(open(path).read()).splitlines()
+        current, indent = None, 0
+        for line in lines:
+            m = enum_start.match(line)
+            if m:
+                current, indent = m.group(1), len(line) - len(line.lstrip())
+                enum_cases_all.setdefault(current, set())
+                enum_seen[current] = enum_seen.get(current, 0) + 1
+                continue
+            if current is None:
+                continue
+            stripped = line.strip()
+            if stripped and (len(line) - len(line.lstrip())) <= indent and not stripped.startswith("case"):
+                current = None
+                continue
+            cm = case_line.match(line)
+            if cm:
+                for name in cm.group(1).split(","):
+                    name = name.strip().split("(")[0]
+                    if name:
+                        enum_cases_all[current].add(name)
+
+    param = re.compile(r"[(,]\s*(?:[A-Za-z_][A-Za-z0-9_]*\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*"
+                       r"(?:[A-Za-z_][A-Za-z0-9_]*\.)*([A-Za-z_][A-Za-z0-9_]*)")
+    for path in files:
+        lines = strip_noise(open(path).read()).splitlines()
+        for i, line in enumerate(lines):
+            m = re.match(r"^\s*switch\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{?\s*$", line)
+            if not m:
+                continue
+            subject = m.group(1)
+            # The signature of the function this switch is inside.
+            declared_type = None
+            for back in range(i - 1, max(-1, i - 40), -1):
+                if "func " not in lines[back]:
+                    continue
+                for pm in param.finditer(lines[back]):
+                    if pm.group(1) == subject:
+                        declared_type = pm.group(2)
+                break
+            if declared_type is None or declared_type not in enum_cases_all:
+                continue
+            if enum_seen.get(declared_type, 0) != 1:
+                continue
+            depth, labels, has_default, j = 0, set(), False, i
+            while j < len(lines):
+                depth += lines[j].count("{") - lines[j].count("}")
+                if lines[j].strip().startswith("default"):
+                    has_default = True
+                # `case .radiance, .umbra:` lists two labels and only the
+                # first follows the word `case`, so take every dotted name on
+                # a line that starts a case. Over-collecting here is safe: it
+                # can only make the switch look MORE complete, never less.
+                if lines[j].strip().startswith("case "):
+                    for cm in re.finditer(r"\.([A-Za-z_][A-Za-z0-9_]*)", lines[j]):
+                        labels.add(cm.group(1))
+                j += 1
+                if depth <= 0 and j > i:
+                    break
+            if has_default:
+                continue
+            missing = sorted(enum_cases_all[declared_type] - labels)
+            if missing:
+                errors.append(f"{path}:{i + 1}: switch over {declared_type} does not handle "
+                              f"{', '.join('.' + x for x in missing)} and has no default")
+
+
 def check_unknown_types(files, declared, errors):
     """Types used but never declared anywhere in the module."""
     KNOWN = {
@@ -721,6 +815,7 @@ def main():
     check_spliced_lines(files, errors)
     check_orphan_attributes(files, errors)
     check_foreign_wrapped_properties(files, errors)
+    check_switch_exhaustive(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 
