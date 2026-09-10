@@ -435,7 +435,16 @@ struct LabyrinthView: View {
             Spacer(minLength: 0)
 
             if let stage {
-                if !hasEnergy {
+                // Both reasons the button can be dead say so. `TowerService`
+                // throws for either, but the throw never happens while the
+                // button is disabled, so the panel has to word them itself or
+                // an empty team is a Climb button that silently does nothing.
+                if team.isEmpty {
+                    Text("Pick at least one unit for your team.")
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.danger)
+                        .fixedSize(horizontal: false, vertical: true)
+                } else if !hasEnergy {
                     Text("Not enough energy — this floor costs \(stage.energyCost).")
                         .font(Theme.body(10))
                         .foregroundStyle(Theme.danger)

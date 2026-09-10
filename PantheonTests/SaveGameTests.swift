@@ -100,4 +100,51 @@ final class SaveGameTests: XCTestCase {
             XCTAssertEqual(StageDatabase.buildEnemies(for: stage).count, stage.enemies.count)
         }
     }
+
+    // MARK: - The Endless Tower's record
+
+    func testTowerProgressRoundTripsThroughJSON() throws {
+        var save = NewGame.create()
+        save.player.tower = TowerProgress(highestFloorCleared: 63, milestonesClaimed: [10, 25, 50])
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let restored = try decoder.decode(SaveGame.self, from: try encoder.encode(save))
+
+        XCTAssertEqual(restored.player.tower?.highestFloorCleared, 63)
+        XCTAssertEqual(restored.player.tower?.milestonesClaimed, [10, 25, 50])
+        XCTAssertEqual(TowerService.clearedFloor(player: restored.player), 63)
+        XCTAssertEqual(TowerService.nextFloor(player: restored.player), 64)
+        XCTAssertEqual(TowerService.nextMilestone(player: restored.player), 75)
+    }
+
+    /// The reason `Player.tower` is Optional. A save written before the tower
+    /// existed has no key at all — the synthesised encoder writes nothing for a
+    /// nil Optional, so a fresh save's JSON is byte-for-byte what the old build
+    /// wrote — and the synthesised decoder tolerates exactly that and nothing
+    /// else. A non-optional field here would wipe every existing save.
+    func testASaveWrittenBeforeTheTowerStillDecodes() throws {
+        let save = NewGame.create()
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let data = try encoder.encode(save)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        XCTAssertFalse(json.isEmpty)
+        XCTAssertFalse(
+            json.contains("\"tower\""),
+            "a save with no tower progress must not write a tower key"
+        )
+
+        let restored = try decoder.decode(SaveGame.self, from: data)
+        XCTAssertNil(restored.player.tower)
+        XCTAssertEqual(TowerService.clearedFloor(player: restored.player), 0)
+        XCTAssertEqual(TowerService.nextFloor(player: restored.player), 1)
+    }
 }
