@@ -529,7 +529,11 @@ struct IslandView: View {
             .allowsHitTesting(false)
 
         skipChip
-            .position(x: size.width - 52, y: 72)
+            // Clear of the header: that plate is 60pt tall under a 6pt top
+            // padding, and a chip centred at 72 put its top edge inside the
+            // wallet button. This one is drawn after the header, so an overlap
+            // is the header losing its taps, not a cosmetic one.
+            .position(x: size.width - 52, y: 84)
     }
 
     private func guideLine(_ step: FirstHourStep) -> some View {
@@ -764,7 +768,10 @@ struct ChapterIntroCard: View {
                 // Forty words on one landscape frame: past about 430pt the
                 // line is too long to come back from at this size.
                 .frame(maxWidth: 430, alignment: .leading)
-            Spacer(minLength: 8)
+            // No Spacer: the block hugs the bottom-left corner, which is where
+            // both washes over the painting are darkest. A Spacer here stretched
+            // the stack to the card's full height and stood the story up in the
+            // one corner the gradients leave bright.
             HStack(spacing: 10) {
                 PrimaryButton(title: "Enter", systemImage: "arrow.right") { onContinue() }
                     .frame(width: 170)
@@ -772,6 +779,7 @@ struct ChapterIntroCard: View {
                     .font(Theme.numeric(10))
                     .foregroundStyle(Theme.textSecondary)
             }
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -426,6 +426,62 @@ final class BattleEngineTests: XCTestCase {
         XCTAssertEqual(engine.result?.outcome, .victory)
     }
 
+    /// The guard comes back as the creature that actually fell.
+    ///
+    /// The engine used to keep a flat list of every minion ever called, which
+    /// can say HOW MANY are missing but not WHICH, so a guard of two different
+    /// creatures refilled the dead one's place from the end of the spawn table
+    /// and put two of the survivor on the field at once. The places are tracked
+    /// by index now. The assertion is on the invariant rather than on a kill
+    /// order: whatever dies first, no two of the same creature ever stand in a
+    /// guard whose table names two different ones.
+    func testAMixedGuardRefillsThePlaceThatFell() {
+        let profile = RaidBossProfile(
+            // The weak one first, so it is the one that dies and its place is
+            // the one that has to be refilled correctly.
+            adds: [
+                EnemySpawn(blueprintID: "shabti", level: 20, stars: 2),
+                EnemySpawn(blueprintID: "serpopard", level: 40, stars: 4)
+            ],
+            addInterval: 1,
+            addDrain: 0
+        )
+        let engine = BattleEngine(
+            playerTeam: [raidHero(level: 50)],
+            opponentTeam: [raidBoss(level: 60)],
+            mode: .simulation,
+            seed: 9,
+            raidBosses: [0: profile]
+        )
+        engine.autoBattle = true
+        let events = engine.start()
+
+        // Replay the stream: who is standing, and what each of them is.
+        var blueprintByID: [UUID: String] = [:]
+        var living: Set<UUID> = []
+        var sawBothCreatures = false
+        for event in events {
+            switch event {
+            case .waveStarted(_, _, let arrivals):
+                for arrival in arrivals {
+                    blueprintByID[arrival.id] = arrival.blueprintID
+                    living.insert(arrival.id)
+                }
+                let standing = living.compactMap { blueprintByID[$0] }
+                XCTAssertEqual(
+                    Set(standing).count, standing.count,
+                    "Two of the same creature stood in the guard at once: \(standing)"
+                )
+                if Set(standing).count == 2 { sawBothCreatures = true }
+            case .defeated(let target):
+                living.remove(target)
+            default:
+                break
+            }
+        }
+        XCTAssertTrue(sawBothCreatures, "The guard should have had both of its creatures on the field")
+    }
+
     func testEnrageStepsOnTheBattleClock() {
         let engine = raidEngine(
             RaidBossProfile(enrageTurn: 2, enrageMultiplier: 2.5),

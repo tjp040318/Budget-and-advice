@@ -974,8 +974,12 @@ final class BattleEngine {
         let barrierMaximum: Double
         /// Boss turns until a broken barrier comes back; 0 while it is up.
         var regenCountdown: Int = 0
-        /// Every minion this boss has ever called, living or not.
-        var guardIDs: [UUID] = []
+        /// One entry per spawn in `profile.adds`: whoever is standing in that
+        /// place of the guard now, or nil while it is empty. Indexed by the
+        /// spawn's own position rather than kept as a flat list, because a flat
+        /// list can only say HOW MANY are missing, not WHICH — a guard of two
+        /// different creatures would then bring back the wrong one.
+        var guardSlots: [UUID?] = []
         var turnsUntilSummon: Int
         var enrageStacks: Int = 0
         var weaknessIndex: Int = 0
@@ -986,6 +990,7 @@ final class BattleEngine {
             self.profile = profile
             self.barrier = pool
             self.barrierMaximum = pool
+            self.guardSlots = Array(repeating: nil, count: profile.adds.count)
             self.turnsUntilSummon = max(1, profile.addInterval)
             self.turnsUntilRotation = max(1, profile.weaknessInterval)
         }
@@ -1104,7 +1109,7 @@ final class BattleEngine {
             // boss on the turn it walks on. `applyHealing` refuses a boss under
             // Unrecoverable, which makes that debuff the answer to the guard
             // for a team that cannot kill two minions a turn.
-            let living = state.guardIDs.filter { combatant($0)?.isAlive == true }
+            let living = state.guardSlots.compactMap { $0 }.filter { combatant($0)?.isAlive == true }
             if !living.isEmpty, state.profile.addDrain > 0, combatants[actorIndex].canBeHealed {
                 events.append(.passiveTriggered(actor: bossID, name: state.profile.drainName))
                 let amount = combatants[actorIndex].maxHealth * state.profile.addDrain
@@ -1131,25 +1136,36 @@ final class BattleEngine {
     /// leaves them alive and drinking.
     private func summonGuard(bossIndex: Int, state: inout RaidState) -> [BattleEvent] {
         let bossID = combatants[bossIndex].id
-        let living = state.guardIDs.filter { combatant($0)?.isAlive == true }.count
-        let missing = state.profile.adds.count - living
-        guard missing > 0 else { return [] }
 
-        let resolved = StageDatabase.buildEnemies(spawns: Array(state.profile.adds.suffix(missing)))
-        guard !resolved.isEmpty else { return [] }
+        // Which places in the guard stand empty, in the spawn table's own
+        // order. `adds[i]` is the creature that belongs at `i`, so what comes
+        // back is what actually fell rather than a copy of the last spawn in
+        // the table.
+        let empty = state.profile.adds.indices.filter { place in
+            guard let standing = state.guardSlots[place] else { return true }
+            return combatant(standing)?.isAlive != true
+        }
+        guard !empty.isEmpty else { return [] }
 
         // The marks of the fallen are free — the scene clears defeated
         // opponents on this same event — so a second guard stands where the
         // first one died instead of a rank further back every time.
-        let slots = freeOpponentSlots(count: resolved.count)
+        let marks = freeOpponentSlots(count: empty.count)
         var arrivals: [Combatant] = []
-        for (offset, unit) in resolved.enumerated() where offset < slots.count {
-            arrivals.append(Combatant(resolved: unit, side: .opponent, slot: slots[offset], isLeader: false))
+        for (offset, place) in empty.enumerated() where offset < marks.count {
+            // Resolved one at a time: `buildEnemies` drops a spawn whose
+            // blueprint has gone missing, and a batch call would then hand
+            // back a shorter array and slide every creature into the wrong
+            // place of the guard.
+            guard let unit = StageDatabase.buildEnemies(spawns: [state.profile.adds[place]]).first
+            else { continue }
+            let arrival = Combatant(resolved: unit, side: .opponent, slot: marks[offset], isLeader: false)
+            state.guardSlots[place] = arrival.id
+            arrivals.append(arrival)
         }
         guard !arrivals.isEmpty else { return [] }
 
         combatants.append(contentsOf: arrivals)
-        state.guardIDs.append(contentsOf: arrivals.map(\.id))
 
         // `waveStarted` is how arrivals reach the scene, and it carries the
         // wave the fight is actually on so a raid does not lie to the HUD's
@@ -1213,10 +1229,12 @@ final class BattleEngine {
     /// A raid boss's summons are held up by it. When it falls they fall with
     /// it, so a won raid ends on the boss rather than on a mop-up.
     private func collapseGuard(of bossID: UUID) -> [BattleEvent] {
-        guard let state = raids[bossID], !state.guardIDs.isEmpty else { return [] }
+        guard let state = raids[bossID] else { return [] }
+        let guards = Set(state.guardSlots.compactMap { $0 })
+        guard !guards.isEmpty else { return [] }
         var events: [BattleEvent] = []
         let standing = combatants.indices.filter {
-            combatants[$0].isAlive && state.guardIDs.contains(combatants[$0].id)
+            combatants[$0].isAlive && guards.contains(combatants[$0].id)
         }
         for index in standing {
             combatants[index].currentHealth = 0
