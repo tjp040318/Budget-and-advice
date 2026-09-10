@@ -403,6 +403,46 @@ struct EmptyTeamSlot: View {
     }
 }
 
+/// An unfilled place in the collection grid.
+///
+/// The CI tour photographed the Collection on a new save as nine cards in the
+/// top row and four fifths of the screen bare black, which is the single least
+/// premium thing an interface can do — a screen that is mostly nothing reads
+/// as unfinished whatever colour it is. The genre never shows a void: it shows
+/// the shape of what you do not have yet, which is a goal rather than a gap.
+///
+/// Deliberately quieter than `EmptyTeamSlot`: no plus, no word, no dashes. A
+/// team slot is a thing to TAP and says so; this is scenery, and eighty of
+/// them shouting "Empty" would be worse than the void it replaces. A recessed
+/// well with a faint bronze rim and the ghost of a card's star row.
+struct EmptyCollectionSlot: View {
+    var size: CGFloat = 76
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+            .fill(Theme.ink.opacity(0.45))
+            .overlay(
+                // Inset shadow at the top: the well is BELOW the surface, the
+                // opposite of every panel, which is what tells the eye it is a
+                // hole and not an object.
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(colors: [Color.black.opacity(0.75), Color.clear,
+                                                Theme.goldDeep.opacity(0.30)],
+                                       startPoint: .top, endPoint: .bottom),
+                        lineWidth: 1.5
+                    )
+            )
+            .overlay(
+                Image(systemName: "star.fill")
+                    .font(.system(size: size * 0.16, weight: .bold))
+                    .foregroundStyle(Theme.goldDeep.opacity(0.5))
+                    .offset(y: size * 0.38)
+            )
+            .frame(width: size, height: size * 1.35)
+    }
+}
+
 /// Press feedback for anything built to look like a physical plate.
 struct PlateButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {

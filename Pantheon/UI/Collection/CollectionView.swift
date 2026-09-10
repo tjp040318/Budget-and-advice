@@ -161,6 +161,17 @@ struct CollectionView: View {
                         }
                         .buttonStyle(PlateButtonStyle())
                     }
+                    // The grid is filled out to whole rows, and to at least
+                    // the three the frame holds. A new save has nine units in
+                    // a grid sized for thirty, and the tour photographed the
+                    // result: one row of cards and four fifths of the screen
+                    // bare black. The genre never shows a void — it shows the
+                    // shape of what you have not got yet, which is a goal
+                    // rather than a gap, and it is what makes a young
+                    // collection look like a collection.
+                    ForEach(0..<emptySlots(for: list.count, columns: count), id: \.self) { _ in
+                        EmptyCollectionSlot(size: card)
+                    }
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
                 .padding(.vertical, gridPadding)
@@ -194,6 +205,16 @@ struct CollectionView: View {
         // proposed a zero size before the frame is known — would draw.
         let fits = max(1, Int((span + gap) / (minimumCard + gap)))
         return min(wanted, fits)
+    }
+
+    /// How many wells to draw after the last card: enough to finish the row,
+    /// and enough to reach three rows while the roster is small. It stops
+    /// entirely once the player has more than three rows of units, so a full
+    /// collection is cards and nothing else.
+    private func emptySlots(for owned: Int, columns: Int) -> Int {
+        guard columns > 0 else { return 0 }
+        let wholeRows = ((owned + columns - 1) / columns) * columns
+        return max(0, max(columns * 3, wholeRows) - owned)
     }
 
     private func cardWidth(in size: CGSize, columns: Int) -> CGFloat {
