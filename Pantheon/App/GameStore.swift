@@ -295,6 +295,12 @@ final class GameStore: ObservableObject {
             try FusionService.fuse(recipe, player: &player)
         }
         guard let created else { return nil }
+        // Recorded as its own event rather than folded into an evolution: a
+        // hexagram eats four raised units and up to 120,000 drachma for a god
+        // no banner carries, and the feats should say so.
+        update { player in
+            QuestService.record(.unitFused, player: &player)
+        }
         return resolved(created.id)
     }
 

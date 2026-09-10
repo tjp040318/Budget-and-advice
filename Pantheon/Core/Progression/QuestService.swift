@@ -18,6 +18,13 @@ enum QuestService {
         case unitPoweredUp
         case unitEvolved(stars: Int)
         case unitAwakened
+        /// A hexagram completed. Deliberately its own case rather than folded
+        /// into `unitEvolved`: a fusion consumes four raised units and up to
+        /// 120,000 drachma for a god no banner carries, which is the single
+        /// largest thing a player does outside a summon, and counting it as an
+        /// evolution would have credited the wrong feat and told the wrong
+        /// story back to him.
+        case unitFused
         case dailyOfferingClaimed
         case energySpent(Int)
     }
@@ -74,6 +81,11 @@ enum QuestService {
         Feat(id: "hall_floor_5", title: "Clear a hall's fifth floor", reward: .scrolls(.lightDark, 1), icon: "flame.fill", counter: "hall_floor_5", goal: 1),
         Feat(id: "relic_15", title: "Upgrade a relic to +15", reward: .divinity(100), icon: "shield.lefthalf.filled", counter: "relic_15", goal: 1),
         Feat(id: "awaken", title: "Awaken a unit", reward: .divinity(50), icon: "sun.max.fill", counter: "awakenings", goal: 1),
+        // The hexagram had no feat at all, so the largest thing a player
+        // does outside a summon paid nothing and was never mentioned back
+        // to him. Two: the first one, and a habit.
+        Feat(id: "fuse", title: "Complete a fusion", reward: .divinity(120), icon: "hexagon.fill", counter: "fusions", goal: 1),
+        Feat(id: "fuse_3", title: "Three fusions", reward: .scrolls(.divine, 1), icon: "hexagon.fill", counter: "fusions", goal: 3),
         Feat(id: "evolve_6", title: "Evolve a unit to 6★", reward: .scrolls(.divine, 1), icon: "star.circle.fill", counter: "six_stars", goal: 1),
         Feat(id: "units_20", title: "Own twenty units", reward: .scrolls(.mystical, 3), icon: "person.3.fill", counter: nil, goal: 20),
         Feat(id: "units_40", title: "Own forty units", reward: .scrolls(.divine, 1), icon: "person.3.fill", counter: nil, goal: 40),
@@ -164,6 +176,8 @@ enum QuestService {
             if stars >= 6 { life("six_stars") }
         case .unitAwakened:
             life("awakenings")
+        case .unitFused:
+            life("fusions")
         case .dailyOfferingClaimed:
             bump("daily_offering")
         case .energySpent(let amount):
