@@ -50,7 +50,7 @@
       "finished_at": 1788998881217,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T01:32:49Z"
+      "polled": "2026-09-10T02:34:59Z"
     },
     "rig": {
       "id": "01a088a4-b021-7097-97f7-a4fff288db7c",
@@ -77,7 +77,7 @@
       "started_at": 1788998892432,
       "finished_at": 1788998927747,
       "name": "",
-      "polled": "2026-09-10T01:32:49Z",
+      "polled": "2026-09-10T02:34:59Z",
       "downloaded": {
         "glb": "Art/Models/bastet_v3.glb"
       }
@@ -103,7 +103,7 @@
       "started_at": 1788998933989,
       "finished_at": 1788998944685,
       "name": "",
-      "polled": "2026-09-10T01:32:49Z",
+      "polled": "2026-09-10T02:34:59Z",
       "downloaded": {
         "glb": "Art/Models/bastet_v3_idle_combat.glb"
       }
@@ -129,7 +129,7 @@
       "started_at": 1788998934667,
       "finished_at": 1788998945663,
       "name": "",
-      "polled": "2026-09-10T01:32:49Z",
+      "polled": "2026-09-10T02:34:59Z",
       "downloaded": {
         "glb": "Art/Models/bastet_v3_attack_basic.glb"
       }
@@ -155,7 +155,7 @@
       "started_at": 1788998935325,
       "finished_at": 1788998947511,
       "name": "",
-      "polled": "2026-09-10T01:32:49Z",
+      "polled": "2026-09-10T02:34:59Z",
       "downloaded": {
         "glb": "Art/Models/bastet_v3_attack_heavy.glb"
       }
@@ -181,7 +181,7 @@
       "started_at": 1788998936058,
       "finished_at": 1788998946549,
       "name": "",
-      "polled": "2026-09-10T01:32:49Z",
+      "polled": "2026-09-10T02:34:59Z",
       "downloaded": {
         "glb": "Art/Models/bastet_v3_hit_react.glb"
       }
@@ -207,7 +207,7 @@
       "started_at": 1788998936813,
       "finished_at": 1788998960568,
       "name": "",
-      "polled": "2026-09-10T01:32:49Z",
+      "polled": "2026-09-10T02:35:00Z",
       "downloaded": {
         "glb": "Art/Models/bastet_v3_death.glb"
       }
@@ -233,12 +233,12 @@
       "started_at": 1788998937363,
       "finished_at": 1788998953572,
       "name": "",
-      "polled": "2026-09-10T01:32:50Z",
+      "polled": "2026-09-10T02:35:00Z",
       "downloaded": {
         "glb": "Art/Models/bastet_v3_ultimate.glb"
       }
     }
   },
   "history": [],
-  "refreshed": "2026-09-10T01:32:50Z"
+  "refreshed": "2026-09-10T02:35:00Z"
 }

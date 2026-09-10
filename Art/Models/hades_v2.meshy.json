@@ -50,7 +50,7 @@
       "finished_at": 1788998872483,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T01:32:22Z"
+      "polled": "2026-09-10T02:34:57Z"
     },
     "rig": {
       "id": "01a088a4-842c-746e-b44e-0a497fc6bd78",
@@ -77,7 +77,7 @@
       "started_at": 1788998882562,
       "finished_at": 1788998937799,
       "name": "",
-      "polled": "2026-09-10T01:32:22Z",
+      "polled": "2026-09-10T02:34:57Z",
       "downloaded": {
         "glb": "Art/Models/hades_v2.glb"
       }
@@ -103,7 +103,7 @@
       "started_at": 1788998944274,
       "finished_at": 1788998956717,
       "name": "",
-      "polled": "2026-09-10T01:32:22Z",
+      "polled": "2026-09-10T02:34:58Z",
       "downloaded": {
         "glb": "Art/Models/hades_v2_idle_combat.glb"
       }
@@ -129,7 +129,7 @@
       "started_at": 1788998944942,
       "finished_at": 1788998957967,
       "name": "",
-      "polled": "2026-09-10T01:32:22Z",
+      "polled": "2026-09-10T02:34:58Z",
       "downloaded": {
         "glb": "Art/Models/hades_v2_attack_basic.glb"
       }
@@ -155,7 +155,7 @@
       "started_at": 1788998945610,
       "finished_at": 1788998959311,
       "name": "",
-      "polled": "2026-09-10T01:32:22Z",
+      "polled": "2026-09-10T02:34:58Z",
       "downloaded": {
         "glb": "Art/Models/hades_v2_attack_heavy.glb"
       }
@@ -181,7 +181,7 @@
       "started_at": 1788998946191,
       "finished_at": 1788998957281,
       "name": "",
-      "polled": "2026-09-10T01:32:22Z",
+      "polled": "2026-09-10T02:34:58Z",
       "downloaded": {
         "glb": "Art/Models/hades_v2_hit_react.glb"
       }
@@ -207,7 +207,7 @@
       "started_at": 1788998946802,
       "finished_at": 1788998971315,
       "name": "",
-      "polled": "2026-09-10T01:32:23Z",
+      "polled": "2026-09-10T02:34:58Z",
       "downloaded": {
         "glb": "Art/Models/hades_v2_death.glb"
       }
@@ -233,12 +233,12 @@
       "started_at": 1788998947377,
       "finished_at": 1788998964293,
       "name": "",
-      "polled": "2026-09-10T01:32:23Z",
+      "polled": "2026-09-10T02:34:58Z",
       "downloaded": {
         "glb": "Art/Models/hades_v2_ultimate.glb"
       }
     }
   },
   "history": [],
-  "refreshed": "2026-09-10T01:32:23Z"
+  "refreshed": "2026-09-10T02:34:58Z"
 }
