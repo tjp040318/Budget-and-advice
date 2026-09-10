@@ -329,6 +329,9 @@ final class CameraDirector {
                 points.append(FramePoint(position: SCNVector3(x + dx, 0, z), topLine: Self.fieldTopLine))
             }
             points.append(FramePoint(position: SCNVector3(x, max(1.6, top), z), topLine: line, isBoss: unit.isBoss))
+            if unit.isBoss {
+                print("[Camera] measured boss \(unit.spec.assetName) at (\(unit.position.x), \(unit.position.y), \(unit.position.z)) head \(max(1.6, top)) actions \(unit.hasActions)")
+            }
         }
         guard found else { return nil }
         // With nobody standing still there is nothing new to frame, and the
@@ -426,6 +429,18 @@ final class CameraDirector {
             aim.y - forward.y * distance,
             aim.z - forward.z * distance
         )
+        if field.hasBoss {
+            // Where the boss's head lands, in half-frames from the centre,
+            // read off the tour's console: the first boss frames at 12° had
+            // it right of centre with no obvious reason in the numbers here.
+            var report = "no boss point"
+            if let boss = points.first(where: { $0.isBoss }) {
+                let offset = SCNVector3(boss.position.x - aim.x, boss.position.y - aim.y, boss.position.z - aim.z)
+                let d = dot(offset, forward) + distance
+                report = "head (\(boss.position.x), \(boss.position.y), \(boss.position.z)) across \(dot(offset, right) / (d * tanH)) up \(dot(offset, up) / (d * tanV))"
+            }
+            print("[Camera] boss solve: \(points.count) points, \(report), aim (\(aim.x), \(aim.y), \(aim.z)), distance \(distance), yaw \(yaw * 180 / .pi)")
+        }
         return (position, aim)
     }
 
