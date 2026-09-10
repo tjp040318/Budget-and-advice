@@ -50,7 +50,7 @@
       "finished_at": 1788978559731,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:37:17Z"
+      "polled": "2026-09-10T01:15:42Z"
     },
     "rig": {
       "id": "01a0876e-8dff-773d-b885-320c72330b6d",
@@ -77,7 +77,7 @@
       "started_at": 1788978567957,
       "finished_at": 1788978636304,
       "name": "",
-      "polled": "2026-09-09T18:37:17Z",
+      "polled": "2026-09-10T01:15:42Z",
       "downloaded": {
         "glb": "Art/Models/poseidon_hd.glb"
       }
@@ -237,6 +237,26 @@
       "downloaded": {
         "glb": "Art/Models/poseidon_hd_ultimate.glb"
       }
+    },
+    "clip:victory": {
+      "id": "01a088e2-8ae4-7452-bd2c-43e2e28bf8df",
+      "kind": "clip",
+      "created": "2026-09-10T01:15:43Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "rig_task_id": "01a0876e-8dff-773d-b885-320c72330b6d",
+        "action_id": 412
+      },
+      "cost": 3,
+      "clip": "victory",
+      "action_id": 412,
+      "progress": 63,
+      "urls": {},
+      "created_at": 1789002944093,
+      "started_at": 1789002944097,
+      "finished_at": 0,
+      "name": "",
+      "polled": "2026-09-10T01:16:04Z"
     }
   },
   "history": [],
