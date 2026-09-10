@@ -73,11 +73,15 @@ environment can and cannot do. The short version:
   middle between them, and the painting filling the top half behind the
   far rim (`StageBuilder.farBackdrop` is turned to face the camera). A
   boss fight is framed from BEHIND the team instead (`bossYaw` 12°,
-  `bossPitch` 19°, the head under `bossTopLine`, the aim centred on the
-  boss's head via `FramePoint.isBoss` — at 24° the Colossus was
-  photographed top-right with the team's column pulling the aim left), the
-  genre's boss-dungeon shot, and the painting is hung between the two
-  yaws. A
+  `bossPitch` 14°, the feet at `bossFeetLine` 0.75, the head allowed to
+  `bossTopLine` 0.75, the aim centred on the boss's head via
+  `FramePoint.isBoss`; the numbers come from a sweep of a Python port of
+  the solve — a top line of 0.55 pushed the camera to its 40 m limit and
+  the platform became a disc in a void), the genre's boss-dungeon shot,
+  and the painting is hung between the two yaws. The field is measured
+  when a wave is placed and at every turn's start, not only when the
+  queue drains: an auto fight never drains it, so a boss arriving with
+  the third wave was never measured for three runs of frames. A
   **boss** (`Combatant.isBoss`) stands over the far rim at (0, −9.8),
   between the two columns that close every set, on a `StageBuilder.breach`
   (boulders, a rent in the floor, thrown tiles), lit like an awakened unit
