@@ -463,6 +463,66 @@ def check_orphan_attributes(files, errors):
                 break
 
 
+# ---------------------------------------------------------------------------
+# Rule 14: a member that landed in the wrong type
+# ---------------------------------------------------------------------------
+
+def check_foreign_wrapped_properties(files, errors):
+    """A type using another type's @State / @EnvironmentObject property.
+
+    A property wrapper marks a property that belongs to exactly one view: no
+    other type can see it and it is never a global or a parameter. So a body
+    that reads `store` inside a view that does not declare it has almost
+    always been pasted into the wrong type — which is what happened twice on
+    2026-09-10, when a scroll rail written for SummonView was appended to the
+    end of the file and landed inside RateTableView instead. Braces balanced,
+    every name existed somewhere, and the runner replied "cannot find 'store'
+    in scope" half an hour later.
+
+    Only wrapped properties are checked, because they are the ones that cannot
+    legitimately be anything else. A bare identifier that matches one is
+    reported unless the type declares it too, or it appears after a dot."""
+    WRAPPED = re.compile(r"^\s*@(?:State|StateObject|Binding|EnvironmentObject|Environment|ObservedObject|"
+                         r"FocusState|AppStorage|SceneStorage|GestureState)\b[^\n]*?\b(?:var|let)\s+"
+                         r"([A-Za-z_][A-Za-z0-9_]*)")
+    TYPE = re.compile(r"^(?:public\s+|private\s+|internal\s+|final\s+)*(struct|class|enum)\s+([A-Za-z_][A-Za-z0-9_]*)")
+    for path in files:
+        text = strip_noise(open(path).read())
+        lines = text.splitlines()
+        # Split the file into top-level type bodies by column-0 declarations.
+        bounds = []
+        for i, line in enumerate(lines):
+            m = TYPE.match(line)
+            if m:
+                bounds.append((i, m.group(2)))
+        if len(bounds) < 2:
+            continue
+        bounds.append((len(lines), None))
+        bodies = {}
+        for (start, name), (end, _) in zip(bounds, bounds[1:]):
+            if name:
+                bodies[name] = (start, lines[start:end])
+        owners = {}
+        for name, (_, body) in bodies.items():
+            for line in body:
+                m = WRAPPED.match(line)
+                if m:
+                    owners.setdefault(m.group(1), set()).add(name)
+        for prop, holders in owners.items():
+            for name, (start, body) in bodies.items():
+                if name in holders:
+                    continue
+                pattern = re.compile(r"(?<![.$\w])" + re.escape(prop) + r"\b")
+                for offset, line in enumerate(body):
+                    if WRAPPED.match(line) or re.match(r"\s*(?:let|var)\s+" + re.escape(prop) + r"\b", line):
+                        break
+                    if pattern.search(line):
+                        errors.append(
+                            f"{path}:{start + offset + 1}: '{name}' uses '{prop}', which is a property wrapper "
+                            f"declared on {sorted(holders)[0]} — this member probably belongs to that type")
+                        break
+
+
 def check_unknown_types(files, declared, errors):
     """Types used but never declared anywhere in the module."""
     KNOWN = {
@@ -660,6 +720,7 @@ def main():
     check_bundle_resources(errors)
     check_spliced_lines(files, errors)
     check_orphan_attributes(files, errors)
+    check_foreign_wrapped_properties(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 

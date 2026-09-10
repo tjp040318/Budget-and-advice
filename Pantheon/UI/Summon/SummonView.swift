@@ -374,6 +374,73 @@ struct SummonView: View {
             revealResults = results
         }
     }
+    // MARK: - The scroll rail
+
+    /// Every scroll the player can spend, down the left of the screen, the way
+    /// the genre lays out its summoning room: the thing you are spending is a
+    /// list you look at, not a value hidden inside a dropdown. A row shows the
+    /// scroll's glyph, what it summons and how many are left; the one in hand
+    /// is lit, and one with none left is dimmed but still selectable, because
+    /// wanting to read the odds for a scroll you have run out of is normal.
+    private var scrollRail: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 4) {
+                railSection("Pantheons", banners: Banner.pantheonBanners)
+                railSection("Scrolls", banners: Banner.scrollBanners)
+            }
+        }
+        .frame(width: 178)
+    }
+
+    private func railSection(_ title: String, banners: [Banner]) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(title.uppercased())
+                .font(Theme.body(9).weight(.black))
+                .tracking(1.0)
+                .foregroundStyle(Theme.goldDim)
+                .padding(.top, 4)
+            ForEach(banners) { banner in
+                railRow(banner)
+            }
+        }
+    }
+
+    private func railRow(_ banner: Banner) -> some View {
+        let owned = store.player.wallet.count(of: banner.scroll)
+        let isOn = banner.id == selectedBanner.id
+        return Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            selectedBanner = banner
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: banner.scroll.glyph)
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundStyle(isOn ? Theme.ink : Theme.gold)
+                    .frame(width: 18)
+                Text(banner.title)
+                    .font(Theme.body(11).weight(.semibold))
+                    .foregroundStyle(isOn ? Theme.ink : Theme.textPrimary)
+                    .lineLimit(1)
+                Spacer(minLength: 2)
+                Text("\(owned)")
+                    .font(Theme.numeric(11))
+                    .foregroundStyle(isOn ? Theme.ink : (owned > 0 ? Theme.gold : Theme.textSecondary))
+            }
+            .padding(.horizontal, 7)
+            .frame(height: 26)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(isOn ? Theme.gold : Theme.surfaceRaised)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(Theme.goldDim.opacity(isOn ? 0 : 0.35), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .opacity(owned > 0 || isOn ? 1 : 0.55)
+    }
 }
 
 /// The published odds. Shown in full, because a rate table that hides the pool
@@ -464,73 +531,6 @@ struct RateTableView: View {
             Spacer(minLength: 0)
         }
     }
-    // MARK: - The scroll rail
-
-    /// Every scroll the player can spend, down the left of the screen, the way
-    /// the genre lays out its summoning room: the thing you are spending is a
-    /// list you look at, not a value hidden inside a dropdown. A row shows the
-    /// scroll's glyph, what it summons and how many are left; the one in hand
-    /// is lit, and one with none left is dimmed but still selectable, because
-    /// wanting to read the odds for a scroll you have run out of is normal.
-    private var scrollRail: some View {
-        ScrollView(showsIndicators: false) {
-            VStack(spacing: 4) {
-                railSection("Pantheons", banners: Banner.pantheonBanners)
-                railSection("Scrolls", banners: Banner.scrollBanners)
-            }
-        }
-        .frame(width: 178)
-    }
-
-    private func railSection(_ title: String, banners: [Banner]) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(title.uppercased())
-                .font(Theme.body(9).weight(.black))
-                .tracking(1.0)
-                .foregroundStyle(Theme.goldDim)
-                .padding(.top, 4)
-            ForEach(banners) { banner in
-                railRow(banner)
-            }
-        }
-    }
-
-    private func railRow(_ banner: Banner) -> some View {
-        let owned = store.player.wallet.count(of: banner.scroll)
-        let isOn = banner.id == selectedBanner.id
-        return Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
-            selectedBanner = banner
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: banner.scroll.glyph)
-                    .font(.system(size: 12, weight: .black))
-                    .foregroundStyle(isOn ? Theme.ink : Theme.gold)
-                    .frame(width: 18)
-                Text(banner.name)
-                    .font(Theme.body(11).weight(.semibold))
-                    .foregroundStyle(isOn ? Theme.ink : Theme.textPrimary)
-                    .lineLimit(1)
-                Spacer(minLength: 2)
-                Text("\(owned)")
-                    .font(Theme.numeric(11))
-                    .foregroundStyle(isOn ? Theme.ink : (owned > 0 ? Theme.gold : Theme.textSecondary))
-            }
-            .padding(.horizontal, 7)
-            .frame(height: 26)
-            .background(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .fill(isOn ? Theme.gold : Theme.surfaceRaised)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(Theme.goldDim.opacity(isOn ? 0 : 0.35), lineWidth: 0.5)
-            )
-        }
-        .buttonStyle(.plain)
-        .opacity(owned > 0 || isOn ? 1 : 0.55)
-    }
 
 }
 
@@ -611,7 +611,7 @@ struct SummoningCircle: View {
                     .position(x: centre.x, y: centre.y - ringSize * 0.42)
 
                 // Which banner is standing on the altar, on a marble plaque.
-                Text(banner.name.uppercased())
+                Text(banner.title.uppercased())
                     .font(Theme.body(10).weight(.black))
                     .tracking(1.4)
                     .foregroundStyle(Theme.textPrimary)
