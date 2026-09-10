@@ -1,4 +1,5 @@
 import Foundation
+import SceneKit
 import SwiftUI
 
 /// The battle screen: 3D stage underneath, HUD on top.
@@ -1526,6 +1527,8 @@ struct BattleResultView: View {
     @State private var shownStars = 0
     @State private var rowsShown = 0
     @State private var lidOpen = false
+    /// The chest has lifted and faded under the flash; the spoils remain.
+    @State private var chestGone = false
     @State private var flash: Double = 0
     @State private var raysShown = false
     @State private var rays: Double = 0
@@ -1779,8 +1782,9 @@ struct BattleResultView: View {
                 lootShelf
                     .frame(height: 122)
 
-                GreekChest(open: lidOpen)
-                    .frame(width: 236, height: 150)
+                RewardChestView(open: lidOpen, gone: chestGone)
+                    .frame(width: 300, height: 170)
+                    .contentShape(Rectangle())
                     .onTapGesture { openChest() }
 
                 Group {
@@ -1894,23 +1898,34 @@ struct BattleResultView: View {
         sequence += 1
         let mine = sequence
         phase = .opened
-        AudioLibrary.shared.play(.summonBurst, volume: 0.9)
-        Juice.haptic(.heavy)
-        withAnimation(.spring(response: 0.55, dampingFraction: 0.7)) { lidOpen = true }
-        flash = 1
-        withAnimation(.easeOut(duration: 0.45)) { flash = 0 }
-        raysShown = true
+        Juice.haptic(.medium)
+        // The chest shakes, the lid swings back and the light stands up out
+        // of it (`RewardChestView`, about a second); then the flash, under
+        // which the chest lifts away, and the spoils rise onto the shelf.
+        lidOpen = true
+        after(0.3) {
+            guard mine == sequence else { return }
+            AudioLibrary.shared.play(.summonBurst, volume: 0.9)
+        }
+        after(1.0) {
+            guard mine == sequence else { return }
+            Juice.haptic(.heavy)
+            flash = 1
+            withAnimation(.easeOut(duration: 0.5)) { flash = 0 }
+            raysShown = true
+            chestGone = true
+        }
 
         let count = min(7, summary.loot.count)
         for i in 0..<count {
-            after(0.38 + Double(i) * 0.14) {
+            after(1.2 + Double(i) * 0.14) {
                 guard mine == sequence else { return }
                 lootShown = i + 1
                 AudioLibrary.shared.play(.starTick, volume: 0.7)
                 Juice.haptic(.light)
             }
         }
-        after(0.38 + Double(count) * 0.14 + 0.35) {
+        after(1.2 + Double(count) * 0.14 + 0.35) {
             guard mine == sequence else { return }
             withAnimation(.easeOut(duration: 0.3)) { continueShown = true }
         }
@@ -1920,6 +1935,7 @@ struct BattleResultView: View {
     private func finishOpeningNow() {
         sequence += 1
         lidOpen = true
+        chestGone = true
         raysShown = true
         flash = 0
         lootShown = min(7, summary.loot.count)
@@ -1991,114 +2007,232 @@ struct LootTile: View {
     }
 }
 
-/// A marble strongbox bound in bronze, drawn rather than painted, with a lid
-/// that swings up and back on a hinge along its rear edge.
+/// The reward chest: the Meshy-made box and lid — `prop_reward_chest` and
+/// `prop_reward_chest_lid`, one 30-credit image-to-3D mesh from a Gemini
+/// concept, cut in two by `tools/prop.py --split-lid` — on a small stage of
+/// its own, transparent over the act's rays and glow.
 ///
-/// Built from the same plates as every panel — `stonePlate`, `goldPlate`,
-/// `bevel` — so it belongs to the interface it appears in. The lid rotates
-/// about the X axis anchored at its top edge with perspective, which is what
-/// makes it open AWAY from the viewer instead of flipping like a card. When
-/// open, the inside is lit: a gold pool at the mouth and a beam standing up
-/// out of it, both additive, both faint enough that the tiles above stay
-/// legible.
-struct GreekChest: View {
+/// Closed, it sits on its shadow, turns a few degrees either way so the gold
+/// catches the light, and gives a hop every second or so: the tap prompt's
+/// beat. Opened, it shakes, the lid swings back past open and settles on the
+/// hinge the split left at its back edge, a pillar of gold light stands up
+/// out of the box with sparks rising in it, and at the flash the chest lifts
+/// and fades and the spoils are what is left. The owner, with the drawn
+/// marble strongbox on his phone: "That chest SUCKS. Maybe get a 3D model?
+/// Where it opens and then flashes and goes away and shows the reward (like
+/// summoners war)."
+struct RewardChestView: UIViewRepresentable {
     var open: Bool
+    var gone: Bool
 
-    var body: some View {
-        ZStack(alignment: .bottom) {
-            // The light standing up out of the open box.
-            // No taller than the chest's own frame: a 170-point beam in a
-            // 150-point frame made the stack overflow, and the body slid
-            // down under the button.
-            LinearGradient(colors: [Theme.gold.opacity(0.55), Theme.gold.opacity(0.18), .clear],
-                           startPoint: .bottom, endPoint: .top)
-                .frame(width: 150, height: 150)
-                .blur(radius: 10)
-                .blendMode(.plusLighter)
-                .opacity(open ? 1 : 0)
-                .offset(y: -40)
-                .animation(.easeOut(duration: 0.6), value: open)
+    /// Where the split put the lid's origin: the middle of its back-bottom
+    /// edge, in metres of a 1 m chest. `prop.py` prints it as it ships; a
+    /// lid hinged anywhere else swings through the box or floats.
+    private static let hinge = SCNVector3(0, 0.617, -0.433)
 
-            // Shadow on the floor.
-            Ellipse()
-                .fill(Color.black.opacity(0.55))
-                .frame(width: 250, height: 30)
-                .blur(radius: 8)
-                .offset(y: 8)
-
-            // The body.
-            ZStack {
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
-                    .fill(Theme.stonePlate)
-                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.bevel, lineWidth: 1))
-                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.bronzeFrame, lineWidth: 2))
-                // Two bronze bands.
-                HStack {
-                    band; Spacer(); band
-                }
-                .padding(.horizontal, 40)
-                // The meander along the foot.
-                meander
-                    .frame(height: 8)
-                    .padding(.horizontal, 14)
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-                    .padding(.bottom, 9)
-                // The mouth, lit when open.
-                RadialGradient(colors: [Theme.gold.opacity(open ? 0.75 : 0), Theme.gold.opacity(open ? 0.2 : 0), .clear],
-                               center: .top, startRadius: 0, endRadius: 120)
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .blendMode(.plusLighter)
-                    .animation(.easeOut(duration: 0.5), value: open)
-            }
-            .frame(width: 220, height: 96)
-
-            // The lid, hinged along its back edge.
-            ZStack {
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Theme.marblePlate)
-                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.bronzeFrame, lineWidth: 2))
-                    .overlay(
-                        // Veining.
-                        LinearGradient(colors: [.clear, Color.black.opacity(0.08), .clear, Color.black.opacity(0.06), .clear],
-                                       startPoint: .topLeading, endPoint: .bottomTrailing)
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    )
-                HStack { band.frame(height: 40); Spacer(); band.frame(height: 40) }
-                    .padding(.horizontal, 40)
-                // The lock plate.
-                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                    .fill(Theme.goldPlate)
-                    .frame(width: 22, height: 18)
-                    .overlay(Circle().fill(Theme.ink.opacity(0.8)).frame(width: 6, height: 6).offset(y: -2))
-                    .overlay(Rectangle().fill(Theme.ink.opacity(0.8)).frame(width: 2, height: 6).offset(y: 3))
-                    .frame(maxHeight: .infinity, alignment: .bottom)
-                    .offset(y: 6)
-            }
-            .frame(width: 226, height: 46)
-            .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
-            .rotation3DEffect(.degrees(open ? -112 : 0), axis: (x: 1, y: 0, z: 0), anchor: .top, perspective: 0.55)
-            .offset(y: -96 + 6)
-            .animation(.spring(response: 0.55, dampingFraction: 0.7), value: open)
-        }
+    final class Coordinator {
+        var scene: SCNScene?
+        let chest = SCNNode()
+        var lid: SCNNode?
+        var opened = false
+        var vanished = false
     }
 
-    private var band: some View {
-        RoundedRectangle(cornerRadius: 2, style: .continuous)
-            .fill(Theme.goldPlate)
-            .frame(width: 14)
-            .overlay(RoundedRectangle(cornerRadius: 2, style: .continuous).strokeBorder(Color.black.opacity(0.45), lineWidth: 1))
+    func makeCoordinator() -> Coordinator { Coordinator() }
+
+    func makeUIView(context: Context) -> SCNView {
+        let view = SCNView()
+        let scene = SCNScene()
+        view.scene = scene
+        // Transparent, like the reveal's stage: the rays and the gold glow
+        // behind this view are the light the chest sits in. The beam and the
+        // sparks it spawns are the reveal's own and write no alpha.
+        view.backgroundColor = .clear
+        view.antialiasingMode = .multisampling2X
+        view.allowsCameraControl = false
+        view.rendersContinuously = true
+        // The tap belongs to SwiftUI.
+        view.isUserInteractionEnabled = false
+
+        let coordinator = context.coordinator
+        coordinator.scene = scene
+        let chest = coordinator.chest
+        chest.addChildNode(StageBuilder.loadProp("prop_reward_chest") ?? Self.standInBox())
+        let lid = SCNNode()
+        lid.position = Self.hinge
+        lid.addChildNode(StageBuilder.loadProp("prop_reward_chest_lid") ?? Self.standInLid())
+        chest.addChildNode(lid)
+        coordinator.lid = lid
+        scene.rootNode.addChildNode(chest)
+
+        // The shadow under it, the reveal's own image.
+        let shadow = SCNPlane(width: 2.1, height: 1.4)
+        let shadowMaterial = SCNMaterial()
+        shadowMaterial.lightingModel = .constant
+        shadowMaterial.diffuse.contents = SummonStageView.contactShadowImage
+        shadowMaterial.writesToDepthBuffer = false
+        shadow.firstMaterial = shadowMaterial
+        let shadowNode = SCNNode(geometry: shadow)
+        shadowNode.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        shadowNode.position = SCNVector3(0, 0.004, 0)
+        shadowNode.opacity = 0.7
+        scene.rootNode.addChildNode(shadowNode)
+
+        // A 28° lens from in front and a little above, aimed at the lock:
+        // the closed chest stands about two thirds of the frame's height,
+        // and the lid has room to swing up.
+        let camera = SCNCamera()
+        camera.fieldOfView = 28
+        camera.projectionDirection = .vertical
+        camera.zNear = 0.2
+        camera.zFar = 60
+        camera.wantsHDR = true
+        camera.wantsExposureAdaptation = false
+        camera.bloomIntensity = 0.42
+        camera.bloomThreshold = 0.9
+        camera.bloomBlurRadius = 14
+        let cameraNode = SCNNode()
+        cameraNode.camera = camera
+        cameraNode.position = SCNVector3(0, 1.45, 3.4)
+        cameraNode.look(at: SCNVector3(0, 0.6, 0))
+        scene.rootNode.addChildNode(cameraNode)
+
+        // Key from the front-left, warm; a cool fill from the right; a gold
+        // rim from behind for the edge of the lid; an ambient floor.
+        let key = SCNLight()
+        key.type = .directional
+        key.intensity = 900
+        key.color = UIColor(hex: "#FFF1D6") ?? .white
+        let keyNode = SCNNode()
+        keyNode.light = key
+        keyNode.eulerAngles = SCNVector3(-0.75, -0.55, 0)
+        scene.rootNode.addChildNode(keyNode)
+        let fill = SCNLight()
+        fill.type = .directional
+        fill.intensity = 320
+        fill.color = UIColor(hex: "#8FA3D9") ?? .white
+        let fillNode = SCNNode()
+        fillNode.light = fill
+        fillNode.eulerAngles = SCNVector3(-0.4, 0.8, 0)
+        scene.rootNode.addChildNode(fillNode)
+        let rim = SCNLight()
+        rim.type = .directional
+        rim.intensity = 560
+        rim.color = UIColor(hex: "#FFD36A") ?? .yellow
+        let rimNode = SCNNode()
+        rimNode.light = rim
+        rimNode.eulerAngles = SCNVector3(-0.5, 2.7, 0)
+        scene.rootNode.addChildNode(rimNode)
+        let ambient = SCNLight()
+        ambient.type = .ambient
+        ambient.intensity = 210
+        let ambientNode = SCNNode()
+        ambientNode.light = ambient
+        scene.rootNode.addChildNode(ambientNode)
+
+        // The idle: a hop on the prompt's beat, and a slow turn either way.
+        let hop = SCNAction.sequence([
+            .wait(duration: 1.1),
+            .moveBy(x: 0, y: 0.05, z: 0, duration: 0.09),
+            .moveBy(x: 0, y: -0.05, z: 0, duration: 0.14),
+        ])
+        chest.runAction(.repeatForever(hop), forKey: "hop")
+        let swayRight = SCNAction.rotateTo(x: 0, y: 0.2, z: 0, duration: 2.8, usesShortestUnitArc: true)
+        swayRight.timingMode = .easeInEaseOut
+        let swayLeft = SCNAction.rotateTo(x: 0, y: -0.2, z: 0, duration: 2.8, usesShortestUnitArc: true)
+        swayLeft.timingMode = .easeInEaseOut
+        chest.eulerAngles.y = -0.2
+        chest.runAction(.repeatForever(.sequence([swayRight, swayLeft])), forKey: "sway")
+
+        if open { openSequence(coordinator) }
+        if gone { vanish(coordinator) }
+        return view
     }
 
-    /// A Greek key strip: alternating bronze squares, which reads as meander
-    /// at this size without drawing the actual key.
-    private var meander: some View {
-        HStack(spacing: 3) {
-            ForEach(0..<22, id: \.self) { index in
-                Rectangle()
-                    .fill(index % 2 == 0 ? Theme.bronze : Theme.bronze.opacity(0.35))
-                    .frame(width: 5)
-            }
+    func updateUIView(_ view: SCNView, context: Context) {
+        let coordinator = context.coordinator
+        if open, !coordinator.opened { openSequence(coordinator) }
+        if gone, !coordinator.vanished { vanish(coordinator) }
+    }
+
+    /// The shake, the lid, the light. About a second; the flash follows.
+    private func openSequence(_ coordinator: Coordinator) {
+        guard !coordinator.opened, let lid = coordinator.lid, let scene = coordinator.scene else { return }
+        coordinator.opened = true
+        let chest = coordinator.chest
+        chest.removeAction(forKey: "hop")
+        chest.removeAction(forKey: "sway")
+        let square = SCNAction.rotateTo(x: 0, y: 0, z: 0, duration: 0.15, usesShortestUnitArc: true)
+        square.timingMode = .easeOut
+        chest.runAction(square)
+
+        // Four quick jolts, a third of a second.
+        var jolts: [SCNAction] = []
+        for index in 0..<4 {
+            let dx: CGFloat = index % 2 == 0 ? 0.06 : -0.06
+            jolts.append(.moveBy(x: dx, y: 0.02, z: 0, duration: 0.04))
+            jolts.append(.moveBy(x: -dx, y: -0.02, z: 0, duration: 0.04))
         }
-        .frame(maxWidth: .infinity)
+        chest.runAction(.sequence(jolts), forKey: "shake")
+
+        // The lid swings back past open and settles. Its origin is its back
+        // edge, so a negative turn about X is what lifts the front.
+        let swing = SCNAction.rotateTo(x: -2.05, y: 0, z: 0, duration: 0.32, usesShortestUnitArc: false)
+        swing.timingMode = .easeOut
+        let settle = SCNAction.rotateTo(x: -1.85, y: 0, z: 0, duration: 0.2, usesShortestUnitArc: false)
+        settle.timingMode = .easeInEaseOut
+        lid.runAction(.sequence([.wait(duration: 0.32), swing, settle]))
+
+        // The light standing up out of the box, and a flare at its mouth.
+        let gold = UIColor(hex: "#FFD36A") ?? .yellow
+        chest.runAction(.sequence([
+            .wait(duration: 0.5),
+            .run { _ in
+                VFXLibrary.summonBeam(at: SCNVector3(0, 0.3, 0), in: scene, tint: gold)
+                VFXLibrary.spawn("impact_radiance", at: SCNVector3(0, 0.8, 0), in: scene, tint: gold, scale: 1.3)
+            },
+        ]))
+    }
+
+    /// Lifts and fades under the flash; the spoils on the shelf are what stay.
+    private func vanish(_ coordinator: Coordinator) {
+        guard !coordinator.vanished else { return }
+        coordinator.vanished = true
+        let chest = coordinator.chest
+        let away = SCNAction.group([
+            .fadeOut(duration: 0.32),
+            .moveBy(x: 0, y: 0.5, z: 0, duration: 0.32),
+            .scale(to: 1.12, duration: 0.32),
+        ])
+        away.timingMode = .easeIn
+        chest.runAction(away)
+    }
+
+    /// A box of wood banded in gold for a bundle without the mesh, at the
+    /// mesh's own size, so the sequence plays either way.
+    private static func standInBox() -> SCNNode {
+        let node = SCNNode()
+        let box = SCNBox(width: 1.35, height: 0.62, length: 0.86, chamferRadius: 0.03)
+        box.firstMaterial?.diffuse.contents = UIColor(hex: "#5A3A22") ?? .brown
+        let boxNode = SCNNode(geometry: box)
+        boxNode.position = SCNVector3(0, 0.31, 0)
+        node.addChildNode(boxNode)
+        for x in [-0.42, 0.42] as [CGFloat] {
+            let band = SCNBox(width: 0.14, height: 0.64, length: 0.88, chamferRadius: 0.01)
+            band.firstMaterial?.diffuse.contents = UIColor(hex: "#D9A93C") ?? .yellow
+            let bandNode = SCNNode(geometry: band)
+            bandNode.position = SCNVector3(Float(x), 0.31, 0)
+            node.addChildNode(bandNode)
+        }
+        return node
+    }
+
+    private static func standInLid() -> SCNNode {
+        let lid = SCNBox(width: 1.35, height: 0.36, length: 0.86, chamferRadius: 0.1)
+        lid.firstMaterial?.diffuse.contents = UIColor(hex: "#D9A93C") ?? .yellow
+        let node = SCNNode(geometry: lid)
+        // Relative to the hinge at the back-bottom edge.
+        node.position = SCNVector3(0, 0.18, 0.43)
+        return node
     }
 }

@@ -803,7 +803,7 @@ struct SummonStageView: UIViewRepresentable {
 
     /// Black in the middle, transparent at the rim, with the alpha channel the
     /// stage's own sprites turned out not to have.
-    private static let contactShadowImage: UIImage = {
+    static let contactShadowImage: UIImage = {
         let side: CGFloat = 256
         return UIGraphicsImageRenderer(size: CGSize(width: side, height: side)).image { context in
             let colors = [UIColor.black.withAlphaComponent(0.85).cgColor,

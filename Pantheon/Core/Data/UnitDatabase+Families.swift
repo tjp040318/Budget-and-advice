@@ -521,207 +521,104 @@ extension UnitDatabase {
         let id = "\(row.key)_\(element.rawValue)"
         let s = lean(row, element)
         let sig = signature(element)
-        let ctrl = control(element)
-        let bless = blessing(element)
         let common = row.stars <= 3
         let awakenedName = row.awakened?[Element.allCases.firstIndex(of: element) ?? 0] ?? row.name
 
         // The basic attack is the same for every kit: the element's signature
-        // rides on it. What follows is the kit.
+        // rides on it, and the passive is the kit's. The second and third
+        // skills are the ELEMENT's own — `elementalSkill` shapes them by kit
+        // and element and `elementalSkillNames` names them per family — so
+        // the five forms of one character fight five different ways, the way
+        // the genre's do. The owner: "each units different elements need to
+        // have different 2nd and 3rd skills. We cant have all 5 of the
+        // elements of each character have the same attacks." A family the
+        // name table has not reached keeps the row's own two names.
         let strike = StatusSpec(sig, chance: common ? 0.25 : 0.30, turns: 2, target: .singleEnemy)
-        var skills: [Skill] = []
         let name = { (index: Int) -> String in
             index < row.skills.count && !row.skills[index].isEmpty ? row.skills[index] : "Skill \(index + 1)"
         }
+        let elementIndex = Element.allCases.firstIndex(of: element) ?? 0
+        let named = elementalSkillNames[row.key].flatMap { $0.count == 10 ? $0 : nil }
+        let secondName = named?[elementIndex] ?? name(1)
+        let thirdName = named?[5 + elementIndex] ?? name(2)
 
+        let basic: Skill
+        let awakenedPassive: Skill
         switch row.kit {
         case .striker:
-            skills = [
-                Skill(id: "\(id)_s1", name: name(0),
-                      description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
-                      slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 3.00), statuses: [strike],
-                      levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "lioness_rake"),
-                Skill(id: "\(id)_s2", name: name(1),
-                      description: "Two heavy blows on one enemy, each with a 40% chance to break its defence for \(turns(2)).",
-                      slot: 1, cooldown: 3, target: .singleEnemy, damage: DamageSpec(multiplier: 2.10, hits: 2),
-                      statuses: [StatusSpec(.defenseDown, chance: 0.40, turns: 2, target: .singleEnemy, rollsPerHit: true)],
-                      levelUpBonuses: strikeLadder, animation: .attackHeavy, cameraShot: .pushIn, vfx: "eye_of_ra"),
-            ]
-            if !common {
-                skills.append(Skill(id: "\(id)_s3", name: name(2),
-                      description: "Sweeps the whole enemy line with a \(percent(0.5)) chance to inflict \(sig.displayName) on each for \(turns(2)).",
-                      slot: 2, cooldown: 5, target: .allEnemies, damage: DamageSpec(multiplier: 2.70),
-                      statuses: [StatusSpec(sig, chance: 0.50, turns: 2, target: .allEnemies)],
-                      levelUpBonuses: strikeLadder, animation: .ultimate, cameraShot: .cinematicOrbit, vfx: "wrath_of_the_eye"))
-                skills.append(passive(id: id, name: name(3), trigger: .onKill, target: .caster,
-                      description: "[Awakened] Every kill grants Attack Up for 2 turns and fills the attack bar by 25%.",
-                      statuses: [StatusSpec(.attackUp, chance: 1.0, turns: 2, target: .caster)],
-                      utilities: [.attackBarChange(0.25, chance: 1.0, .caster)], vfx: "blood_thirst"))
-            }
+            basic = Skill(id: "\(id)_s1", name: name(0),
+                          description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
+                          slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 3.00), statuses: [strike],
+                          levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "lioness_rake")
+            awakenedPassive = passive(id: id, name: name(3), trigger: .onKill, target: .caster,
+                          description: "[Awakened] Every kill grants Attack Up for 2 turns and fills the attack bar by 25%.",
+                          statuses: [StatusSpec(.attackUp, chance: 1.0, turns: 2, target: .caster)],
+                          utilities: [.attackBarChange(0.25, chance: 1.0, .caster)], vfx: "blood_thirst")
         case .duelist:
-            skills = [
-                Skill(id: "\(id)_s1", name: name(0),
-                      description: "Two quick cuts. Each has a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
-                      slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 1.50, hits: 2), statuses: [strike],
-                      levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "scale_strike"),
-                Skill(id: "\(id)_s2", name: name(1),
-                      description: "A blow that ignores 40% of the target's defence.",
-                      slot: 1, cooldown: 4, target: .singleEnemy, damage: DamageSpec(multiplier: 4.60, defenseIgnore: 0.40),
-                      levelUpBonuses: strikeLadder, animation: .attackHeavy, cameraShot: .impactClose, vfx: "eye_of_ra"),
-            ]
-            if !common {
-                skills.append(Skill(id: "\(id)_s3", name: name(2),
-                      description: "A sure critical strike that deals more the more health the target has lost.",
-                      slot: 2, cooldown: 5, target: .singleEnemy, damage: DamageSpec(multiplier: 5.40, bonusPerMissingHealth: 0.006, alwaysCrits: true),
-                      levelUpBonuses: strikeLadder, animation: .ultimate, cameraShot: .impactClose, vfx: "keraunos"))
-                skills.append(passive(id: id, name: name(3), trigger: .onTurnStart, target: .caster,
-                      description: "[Awakened] Gains Focus at the start of each turn.",
-                      statuses: [StatusSpec(.critRateUp, chance: 1.0, turns: 1, target: .caster)], utilities: [], vfx: "buff"))
-            }
+            basic = Skill(id: "\(id)_s1", name: name(0),
+                          description: "Two quick cuts. Each has a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
+                          slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 1.50, hits: 2), statuses: [strike],
+                          levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "scale_strike")
+            awakenedPassive = passive(id: id, name: name(3), trigger: .onTurnStart, target: .caster,
+                          description: "[Awakened] Gains Focus at the start of each turn.",
+                          statuses: [StatusSpec(.critRateUp, chance: 1.0, turns: 1, target: .caster)], utilities: [], vfx: "buff")
         case .marksman:
-            skills = [
-                Skill(id: "\(id)_s1", name: name(0),
-                      description: "A shot at one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
-                      slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.90), statuses: [strike],
-                      levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "thunderbolt"),
-                Skill(id: "\(id)_s2", name: name(1),
-                      description: "Three shots at random enemies.",
-                      slot: 1, cooldown: 3, target: .randomEnemies(count: 3), damage: DamageSpec(multiplier: 1.70, hits: 3),
-                      levelUpBonuses: strikeLadder, animation: .attackHeavy, cameraShot: .pushIn, vfx: "scale_strike"),
-            ]
-            if !common {
-                skills.append(Skill(id: "\(id)_s3", name: name(2),
-                      description: "A volley over the whole enemy line with a \(percent(0.35)) chance to inflict \(ctrl.displayName) on each for \(turns(1)).",
-                      slot: 2, cooldown: 5, target: .allEnemies, damage: DamageSpec(multiplier: 2.40),
-                      statuses: [StatusSpec(ctrl, chance: 0.35, turns: 1, target: .allEnemies)],
-                      levelUpBonuses: strikeLadder, animation: .ultimate, cameraShot: .cinematicOrbit, vfx: "thunderclap"))
-                skills.append(passive(id: id, name: name(3), trigger: .onBattleStart, target: .caster,
-                      description: "[Awakened] When the battle begins, the attack bar fills by 30% and Haste lasts 2 turns.",
-                      statuses: [StatusSpec(.speedUp, chance: 1.0, turns: 2, target: .caster)],
-                      utilities: [.attackBarChange(0.30, chance: 1.0, .caster)], vfx: "buff"))
-            }
+            basic = Skill(id: "\(id)_s1", name: name(0),
+                          description: "A shot at one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
+                          slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.90), statuses: [strike],
+                          levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "thunderbolt")
+            awakenedPassive = passive(id: id, name: name(3), trigger: .onBattleStart, target: .caster,
+                          description: "[Awakened] When the battle begins, the attack bar fills by 30% and Haste lasts 2 turns.",
+                          statuses: [StatusSpec(.speedUp, chance: 1.0, turns: 2, target: .caster)],
+                          utilities: [.attackBarChange(0.30, chance: 1.0, .caster)], vfx: "buff")
         case .bruiser:
-            skills = [
-                Skill(id: "\(id)_s1", name: name(0),
-                      description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
-                      slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.80), statuses: [strike],
-                      levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "impact_generic"),
-                Skill(id: "\(id)_s2", name: name(1),
-                      description: "Roars at the whole enemy line for modest damage with a 45% chance to Provoke each for 1 turn, and takes Defense Up for \(turns(2)).",
-                      slot: 1, cooldown: 4, target: .allEnemies, damage: DamageSpec(multiplier: 1.50),
-                      statuses: [StatusSpec(.provoke, chance: 0.45, turns: 1, target: .allEnemies),
-                                 StatusSpec(.defenseUp, chance: 1.0, turns: 2, target: .caster)],
-                      levelUpBonuses: strikeLadder, animation: .attackHeavy, cameraShot: .pushIn, vfx: "wrath_of_the_eye"),
-            ]
-            if !common {
-                skills.append(Skill(id: "\(id)_s3", name: name(2),
-                      description: "A blow for damage equal to 28% of his maximum health, ignoring 30% of the target's defence.",
-                      slot: 2, cooldown: 4, target: .singleEnemy, damage: DamageSpec(multiplier: 0.28, scaling: .maxHealth, defenseIgnore: 0.30),
-                      levelUpBonuses: strikeLadder, animation: .ultimate, cameraShot: .impactClose, vfx: "heart_weigh"))
-                skills.append(passive(id: id, name: name(3), trigger: .onLowHealth, target: .caster,
-                      description: "[Awakened] The first time he falls below half health, a shield worth 30% of his maximum health and Defense Up for 2 turns.",
-                      statuses: [StatusSpec(.shield, chance: 1.0, turns: 2, target: .caster, magnitude: 0.30),
-                                 StatusSpec(.defenseUp, chance: 1.0, turns: 2, target: .caster)], utilities: [], vfx: "maat_shield"))
-            }
+            basic = Skill(id: "\(id)_s1", name: name(0),
+                          description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
+                          slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.80), statuses: [strike],
+                          levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "impact_generic")
+            awakenedPassive = passive(id: id, name: name(3), trigger: .onLowHealth, target: .caster,
+                          description: "[Awakened] The first time he falls below half health, a shield worth 30% of his maximum health and Defense Up for 2 turns.",
+                          statuses: [StatusSpec(.shield, chance: 1.0, turns: 2, target: .caster, magnitude: 0.30),
+                                     StatusSpec(.defenseUp, chance: 1.0, turns: 2, target: .caster)], utilities: [], vfx: "maat_shield")
         case .warden:
-            skills = [
-                Skill(id: "\(id)_s1", name: name(0),
-                      description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
-                      slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.70), statuses: [strike],
-                      levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "impact_generic"),
-                Skill(id: "\(id)_s2", name: name(1),
-                      description: "A wall for the team: every ally gains Defense Up and a shield worth 15% of their maximum health for \(turns(2)).",
-                      slot: 1, cooldown: 4, target: .allAllies, damage: nil,
-                      statuses: [StatusSpec(.defenseUp, chance: 1.0, turns: 2, target: .allAllies),
-                                 StatusSpec(.shield, chance: 1.0, turns: 2, target: .allAllies, magnitude: 0.15)],
-                      levelUpBonuses: [SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")],
-                      animation: .castRelease, cameraShot: .pushIn, vfx: "maat_shield"),
-            ]
-            if !common {
-                skills.append(Skill(id: "\(id)_s3", name: name(2),
-                      description: "A heavy strike that Provokes the target for 2 turns while a Counter stance covers the caster.",
-                      slot: 2, cooldown: 5, target: .singleEnemy, damage: DamageSpec(multiplier: 3.60),
-                      statuses: [StatusSpec(.provoke, chance: 0.85, turns: 2, target: .singleEnemy),
-                                 StatusSpec(.counterStance, chance: 1.0, turns: 2, target: .caster)],
-                      levelUpBonuses: strikeLadder, animation: .ultimate, cameraShot: .impactClose, vfx: "heart_weigh"))
-                skills.append(passive(id: id, name: name(3), trigger: .onBattleStart, target: .allAllies,
-                      description: "[Awakened] When the battle begins, every ally gains a shield worth 12% of their maximum health for 2 turns.",
-                      statuses: [StatusSpec(.shield, chance: 1.0, turns: 2, target: .allAllies, magnitude: 0.12)], utilities: [], vfx: "maat_shield"))
-            }
+            basic = Skill(id: "\(id)_s1", name: name(0),
+                          description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
+                          slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.70), statuses: [strike],
+                          levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "impact_generic")
+            awakenedPassive = passive(id: id, name: name(3), trigger: .onBattleStart, target: .allAllies,
+                          description: "[Awakened] When the battle begins, every ally gains a shield worth 12% of their maximum health for 2 turns.",
+                          statuses: [StatusSpec(.shield, chance: 1.0, turns: 2, target: .allAllies, magnitude: 0.12)], utilities: [], vfx: "maat_shield")
         case .healer:
-            skills = [
-                Skill(id: "\(id)_s1", name: name(0),
-                      description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
-                      slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.50), statuses: [strike],
-                      levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "impact_generic"),
-                Skill(id: "\(id)_s2", name: name(1),
-                      description: "Heals every ally for 25% of their maximum health and removes one harmful effect from each.",
-                      slot: 1, cooldown: 4, target: .allAllies, damage: nil,
-                      utilities: [.healTargetMaxHealth(0.25, .allAllies), .cleanse(count: 1, .allAllies)],
-                      levelUpBonuses: supportLadder, animation: .castRelease, cameraShot: .pushIn, vfx: "heal"),
-            ]
-            if !common {
-                skills.append(Skill(id: "\(id)_s3", name: name(2),
-                      description: "Immunity and \(bless.displayName) for every ally for 2 turns, and the team's attack bar fills by 20%.",
-                      slot: 2, cooldown: 5, target: .allAllies, damage: nil,
-                      statuses: [StatusSpec(.immunity, chance: 1.0, turns: 2, target: .allAllies),
-                                 StatusSpec(bless, chance: 1.0, turns: 2, target: .allAllies)],
-                      utilities: [.attackBarChange(0.20, chance: 1.0, .allAllies)],
-                      levelUpBonuses: [SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")],
-                      animation: .ultimate, cameraShot: .cinematicOrbit, vfx: "duat_rite"))
-                skills.append(passive(id: id, name: name(3), trigger: .onTurnStart, target: .lowestHealthAlly,
-                      description: "[Awakened] At the start of each turn, the ally with the least health is healed for 8% of their maximum health.",
-                      statuses: [], utilities: [.healTargetMaxHealth(0.08, .lowestHealthAlly)], vfx: "heal"))
-            }
+            basic = Skill(id: "\(id)_s1", name: name(0),
+                          description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
+                          slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.50), statuses: [strike],
+                          levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "impact_generic")
+            awakenedPassive = passive(id: id, name: name(3), trigger: .onTurnStart, target: .lowestHealthAlly,
+                          description: "[Awakened] At the start of each turn, the ally with the least health is healed for 8% of their maximum health.",
+                          statuses: [], utilities: [.healTargetMaxHealth(0.08, .lowestHealthAlly)], vfx: "heal")
         case .oracle:
-            skills = [
-                Skill(id: "\(id)_s1", name: name(0),
-                      description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
-                      slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.60), statuses: [strike],
-                      levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "impact_generic"),
-                Skill(id: "\(id)_s2", name: name(1),
-                      description: "Damages the whole enemy line with a \(percent(0.40)) chance to inflict \(ctrl.displayName) on each for \(turns(1)).",
-                      slot: 1, cooldown: 4, target: .allEnemies, damage: DamageSpec(multiplier: 1.60),
-                      statuses: [StatusSpec(ctrl, chance: 0.40, turns: 1, target: .allEnemies)],
-                      levelUpBonuses: strikeLadder, animation: .attackHeavy, cameraShot: .cinematicOrbit, vfx: "thunderclap"),
-            ]
-            if !common {
-                skills.append(Skill(id: "\(id)_s3", name: name(2),
-                      description: "Attack Up and Focus for every ally for 2 turns, and the team's attack bar fills by 25%.",
-                      slot: 2, cooldown: 5, target: .allAllies, damage: nil,
-                      statuses: [StatusSpec(.attackUp, chance: 1.0, turns: 2, target: .allAllies),
-                                 StatusSpec(.critRateUp, chance: 1.0, turns: 2, target: .allAllies)],
-                      utilities: [.attackBarChange(0.25, chance: 1.0, .allAllies)],
-                      levelUpBonuses: [SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")],
-                      animation: .ultimate, cameraShot: .heroLowAngle, vfx: "olympian_decree"))
-                skills.append(passive(id: id, name: name(3), trigger: .onBattleStart, target: .allAllies,
-                      description: "[Awakened] When the battle begins, the attack bar of every ally is raised by 20%.",
-                      statuses: [], utilities: [.attackBarChange(0.20, chance: 1.0, .allAllies)], vfx: "olympian_decree"))
-            }
+            basic = Skill(id: "\(id)_s1", name: name(0),
+                          description: "Strikes one enemy with a \(percent(strike.chance)) chance to inflict \(sig.displayName) for \(turns(2)).",
+                          slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.60), statuses: [strike],
+                          levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "impact_generic")
+            awakenedPassive = passive(id: id, name: name(3), trigger: .onBattleStart, target: .allAllies,
+                          description: "[Awakened] When the battle begins, the attack bar of every ally is raised by 20%.",
+                          statuses: [], utilities: [.attackBarChange(0.20, chance: 1.0, .allAllies)], vfx: "olympian_decree")
         case .trickster:
-            skills = [
-                Skill(id: "\(id)_s1", name: name(0),
-                      description: "Strikes one enemy with a \(percent(min(0.45, strike.chance + 0.10))) chance to inflict \(sig.displayName) for \(turns(2)).",
-                      slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.80),
-                      statuses: [StatusSpec(sig, chance: min(0.45, strike.chance + 0.10), turns: 2, target: .singleEnemy)],
-                      levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "debuff"),
-                Skill(id: "\(id)_s2", name: name(1),
-                      description: "A strike that removes up to 2 beneficial effects from the target and has a 60% chance to knock its attack bar back by 30%.",
-                      slot: 1, cooldown: 3, target: .singleEnemy, damage: DamageSpec(multiplier: 3.40),
-                      utilities: [.strip(count: 2, chance: 0.85, .singleEnemy), .attackBarChange(-0.30, chance: 0.60, .singleEnemy)],
-                      levelUpBonuses: strikeLadder, animation: .attackHeavy, cameraShot: .pushIn, vfx: "heart_weigh"),
-            ]
-            if !common {
-                skills.append(Skill(id: "\(id)_s3", name: name(2),
-                      description: "Damages the whole enemy line with a 60% chance to break each one's defence and a 40% chance to Brand it for \(turns(2)).",
-                      slot: 2, cooldown: 5, target: .allEnemies, damage: DamageSpec(multiplier: 2.00),
-                      statuses: [StatusSpec(.defenseDown, chance: 0.60, turns: 2, target: .allEnemies),
-                                 StatusSpec(.brand, chance: 0.40, turns: 2, target: .allEnemies)],
-                      levelUpBonuses: strikeLadder, animation: .ultimate, cameraShot: .cinematicOrbit, vfx: "wrath_of_the_eye"))
-                skills.append(passive(id: id, name: name(3), trigger: .onKill, target: .caster,
-                      description: "[Awakened] A kill grants another turn at once.",
-                      statuses: [], utilities: [.extraTurn(chance: 1.0)], vfx: "blood_thirst"))
-            }
+            basic = Skill(id: "\(id)_s1", name: name(0),
+                          description: "Strikes one enemy with a \(percent(min(0.45, strike.chance + 0.10))) chance to inflict \(sig.displayName) for \(turns(2)).",
+                          slot: 0, cooldown: 0, target: .singleEnemy, damage: DamageSpec(multiplier: 2.80),
+                          statuses: [StatusSpec(sig, chance: min(0.45, strike.chance + 0.10), turns: 2, target: .singleEnemy)],
+                          levelUpBonuses: basicLadder, animation: .attackBasic, cameraShot: .standard, vfx: "debuff")
+            awakenedPassive = passive(id: id, name: name(3), trigger: .onKill, target: .caster,
+                          description: "[Awakened] A kill grants another turn at once.",
+                          statuses: [], utilities: [.extraTurn(chance: 1.0)], vfx: "blood_thirst")
+        }
+
+        var skills: [Skill] = [basic, elementalSkill(slot: 1, kit: row.kit, element: element, id: id, name: secondName)]
+        if !common {
+            skills.append(elementalSkill(slot: 2, kit: row.kit, element: element, id: id, name: thirdName))
+            skills.append(awakenedPassive)
         }
 
         let awakening: Awakening? = common ? nil : Awakening(
@@ -769,6 +666,438 @@ extension UnitDatabase {
         )
     }
 
+    // MARK: - The elemental second and third skills
+
+    /// The element's own second (slot 1) and third (slot 2) skill for a kit.
+    ///
+    /// Eight kits by five elements is forty pairs, written out below, and
+    /// each pair is a different way to fight: a fire striker's two blows burn
+    /// and feed on the target's debuffs, a water striker's one blow freezes,
+    /// a wind striker's three cuts may earn another turn, a light striker's
+    /// blow sharpens its own aim, a dark striker's drinks. The element's
+    /// grammar holds across the kits — fire burns and grows, water freezes,
+    /// slows and drags the bar, wind repeats and hastens, light shields,
+    /// cleanses and reveals, dark drains, strips and brands — so a player who
+    /// has read one fire unit can guess the next. The numbers are mirrored in
+    /// `tools/balance.py` (`ELEMENT_SKILLS`); change them in both.
+    static func elementalSkill(slot: Int, kit: Kit, element: Element, id: String, name: String) -> Skill {
+        let third = slot == 2
+        let skillID = "\(id)_s\(slot + 1)"
+        let cooldownOnly = [SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")]
+
+        /// A damaging skill: one enemy unless `target` says the line.
+        func blow(_ description: String, cd: Int, _ damage: DamageSpec, statuses: [StatusSpec] = [],
+                  utilities: [UtilityEffect] = [], target: TargetSelector = .singleEnemy, vfx: String) -> Skill {
+            let sweep = target != .singleEnemy
+            return Skill(id: skillID, name: name, description: description, slot: slot, cooldown: cd, target: target,
+                         damage: damage, statuses: statuses, utilities: utilities, levelUpBonuses: strikeLadder,
+                         animation: third ? .ultimate : .attackHeavy,
+                         cameraShot: sweep ? .cinematicOrbit : (third ? .impactClose : .pushIn), vfx: vfx)
+        }
+        /// A skill with no damage: a rite for the team, or on the enemy line.
+        func rite(_ description: String, cd: Int, target: TargetSelector = .allAllies, statuses: [StatusSpec] = [],
+                  utilities: [UtilityEffect] = [], ladder: [SkillUpgrade]? = nil, vfx: String) -> Skill {
+            Skill(id: skillID, name: name, description: description, slot: slot, cooldown: cd, target: target,
+                  damage: nil, statuses: statuses, utilities: utilities, levelUpBonuses: ladder ?? cooldownOnly,
+                  animation: third ? .ultimate : .castRelease, cameraShot: third ? .heroLowAngle : .pushIn, vfx: vfx)
+        }
+        func status(_ kind: StatusKind, _ chance: Double, turns: Int = 2, on target: TargetSelector = .singleEnemy,
+                    magnitude: Double = 0, perHit: Bool = false) -> StatusSpec {
+            StatusSpec(kind, chance: chance, turns: turns, target: target, magnitude: magnitude, rollsPerHit: perHit)
+        }
+
+        switch kit {
+        case .striker:
+            switch element {
+            case .ember:
+                if !third {
+                    return blow("Two blows on one enemy, each with a 50% chance to Burn it for 2 turns, hitting 15% harder for every harmful effect on it.",
+                                cd: 3, DamageSpec(multiplier: 2.10, hits: 2, bonusPerTargetDebuff: 0.15),
+                                statuses: [status(.burn, 0.50, perHit: true)], vfx: "lioness_rake")
+                }
+                return blow("Sweeps the whole enemy line with a 60% chance to Burn each for 2 turns, and takes Attack Up for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.60),
+                            statuses: [status(.burn, 0.60, on: .allEnemies), status(.attackUp, 1.0, on: .caster)],
+                            target: .allEnemies, vfx: "wrath_of_the_eye")
+            case .tide:
+                if !third {
+                    return blow("A crushing blow on one enemy with a 70% chance to Freeze it for 1 turn.",
+                                cd: 4, DamageSpec(multiplier: 3.80), statuses: [status(.freeze, 0.70, turns: 1)], vfx: "impact_tide")
+                }
+                return blow("Sweeps the whole enemy line with a 50% chance to Slow each for 2 turns and a 60% chance to drag each attack bar back by 20%.",
+                            cd: 5, DamageSpec(multiplier: 2.40), statuses: [status(.speedDown, 0.50, on: .allEnemies)],
+                            utilities: [.attackBarChange(-0.20, chance: 0.60, .allEnemies)], target: .allEnemies, vfx: "duat_rite")
+            case .gale:
+                if !third {
+                    return blow("Three quick cuts on one enemy, each with a 30% chance to make its next hit Glancing for 2 turns, and a 30% chance to take another turn.",
+                                cd: 3, DamageSpec(multiplier: 1.45, hits: 3), statuses: [status(.glancing, 0.30, perHit: true)],
+                                utilities: [.extraTurn(chance: 0.30)], vfx: "scale_strike")
+                }
+                return blow("Sweeps the whole enemy line, then takes Haste for 2 turns and fills its own attack bar by 30%.",
+                            cd: 5, DamageSpec(multiplier: 2.30), statuses: [status(.speedUp, 1.0, on: .caster)],
+                            utilities: [.attackBarChange(0.30, chance: 1.0, .caster)], target: .allEnemies, vfx: "thunderclap")
+            case .radiance:
+                if !third {
+                    return blow("A blow on one enemy with a 60% chance to inflict Attack Down for 2 turns; the caster gains Focus for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 3.60),
+                                statuses: [status(.attackDown, 0.60), status(.critRateUp, 1.0, on: .caster)], vfx: "eye_of_ra")
+                }
+                return blow("Sweeps the whole enemy line with a strike that always crits and a 50% chance to inflict Attack Down on each for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.40, alwaysCrits: true), statuses: [status(.attackDown, 0.50, on: .allEnemies)],
+                            target: .allEnemies, vfx: "olympian_decree")
+            case .umbra:
+                if !third {
+                    return blow("A blow on one enemy that heals the caster for 40% of the damage, with a 60% chance to Break its defence for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 3.50), statuses: [status(.defenseDown, 0.60)],
+                                utilities: [.lifesteal(0.40)], vfx: "heart_weigh")
+                }
+                return blow("Sweeps the whole enemy line, hitting harder the more health each has lost, with a 50% chance to Brand each for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.30, bonusPerMissingHealth: 0.005), statuses: [status(.brand, 0.50, on: .allEnemies)],
+                            target: .allEnemies, vfx: "blood_thirst")
+            }
+        case .duelist:
+            switch element {
+            case .ember:
+                if !third {
+                    return blow("A blow that ignores 30% of the target's defence, with a 60% chance to Burn it for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 4.20, defenseIgnore: 0.30), statuses: [status(.burn, 0.60)], vfx: "lioness_rake")
+                }
+                return blow("A sure critical strike that hits 20% harder for every harmful effect on the target.",
+                            cd: 5, DamageSpec(multiplier: 5.20, bonusPerTargetDebuff: 0.20, alwaysCrits: true), vfx: "keraunos")
+            case .tide:
+                if !third {
+                    return blow("Two cuts on one enemy, each with a 40% chance to Freeze it for 1 turn.",
+                                cd: 4, DamageSpec(multiplier: 2.10, hits: 2), statuses: [status(.freeze, 0.40, turns: 1, perHit: true)], vfx: "impact_tide")
+                }
+                return blow("A blow that ignores half the target's defence, with an 80% chance to drag its attack bar back by half.",
+                            cd: 5, DamageSpec(multiplier: 4.80, defenseIgnore: 0.50),
+                            utilities: [.attackBarChange(-0.50, chance: 0.80, .singleEnemy)], vfx: "duat_rite")
+            case .gale:
+                if !third {
+                    return blow("Four cuts on one enemy, each with a 25% chance to make its next hit Glancing for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 1.10, hits: 4), statuses: [status(.glancing, 0.25, perHit: true)], vfx: "scale_strike")
+                }
+                return blow("A sure critical strike, after which the caster's attack bar fills by half.",
+                            cd: 5, DamageSpec(multiplier: 4.40, alwaysCrits: true),
+                            utilities: [.attackBarChange(0.50, chance: 1.0, .caster)], vfx: "thunderclap")
+            case .radiance:
+                if !third {
+                    return blow("A blow with a 60% chance to inflict Attack Down for 2 turns; the caster gains Focus for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 4.00),
+                                statuses: [status(.attackDown, 0.60), status(.critRateUp, 1.0, on: .caster)], vfx: "eye_of_ra")
+                }
+                return blow("A sure critical strike that ignores 40% of the target's defence.",
+                            cd: 5, DamageSpec(multiplier: 5.40, defenseIgnore: 0.40, alwaysCrits: true), vfx: "keraunos")
+            case .umbra:
+                if !third {
+                    return blow("A blow that heals the caster for half the damage, with a 50% chance to Brand the target for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 4.20), statuses: [status(.brand, 0.50)],
+                                utilities: [.lifesteal(0.50)], vfx: "heart_weigh")
+                }
+                return blow("An execution: a sure critical strike that hits 1% harder for every 1% of health the target has lost.",
+                            cd: 5, DamageSpec(multiplier: 4.60, bonusPerMissingHealth: 0.010, alwaysCrits: true), vfx: "blood_thirst")
+            }
+        case .marksman:
+            switch element {
+            case .ember:
+                if !third {
+                    return blow("Two shots at one enemy, each with a 50% chance to Burn it for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 2.20, hits: 2), statuses: [status(.burn, 0.50, perHit: true)], vfx: "thunderbolt")
+                }
+                return blow("A volley over the whole enemy line with a 60% chance to Burn each for 2 turns; the caster takes Attack Up for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.30),
+                            statuses: [status(.burn, 0.60, on: .allEnemies), status(.attackUp, 1.0, on: .caster)],
+                            target: .allEnemies, vfx: "wrath_of_the_eye")
+            case .tide:
+                if !third {
+                    return blow("Three shots at random enemies; each enemy has a 30% chance to be Slowed for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 1.60, hits: 3), statuses: [status(.speedDown, 0.30, on: .allEnemies)],
+                                target: .randomEnemies(count: 3), vfx: "impact_tide")
+                }
+                return blow("A volley over the whole enemy line with a 45% chance to Freeze each for 1 turn.",
+                            cd: 5, DamageSpec(multiplier: 2.20), statuses: [status(.freeze, 0.45, turns: 1, on: .allEnemies)],
+                            target: .allEnemies, vfx: "duat_rite")
+            case .gale:
+                if !third {
+                    return blow("Five quick shots at random enemies; each enemy has a 20% chance to have its next hit Glancing for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 1.05, hits: 5), statuses: [status(.glancing, 0.20, on: .allEnemies)],
+                                target: .randomEnemies(count: 5), vfx: "scale_strike")
+                }
+                return blow("A volley over the whole enemy line, and the whole team's attack bar fills by 20%.",
+                            cd: 5, DamageSpec(multiplier: 2.00),
+                            utilities: [.attackBarChange(0.20, chance: 1.0, .allAllies)], target: .allEnemies, vfx: "thunderclap")
+            case .radiance:
+                if !third {
+                    return blow("One shot that removes a beneficial effect from the target, with a 60% chance to inflict Attack Down for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 4.00), statuses: [status(.attackDown, 0.60)],
+                                utilities: [.strip(count: 1, chance: 0.85, .singleEnemy)], vfx: "eye_of_ra")
+                }
+                return blow("A volley over the whole enemy line that removes a beneficial effect from each; the caster gains Focus for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.20), statuses: [status(.critRateUp, 1.0, on: .caster)],
+                            utilities: [.strip(count: 1, chance: 0.70, .allEnemies)], target: .allEnemies, vfx: "olympian_decree")
+            case .umbra:
+                if !third {
+                    return blow("A shot that heals the caster for 40% of the damage, with a 60% chance to Break the target's defence for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 3.60), statuses: [status(.defenseDown, 0.60)],
+                                utilities: [.lifesteal(0.40)], vfx: "heart_weigh")
+                }
+                return blow("A volley over the whole enemy line with a 40% chance to put each to Sleep for 1 turn and a 40% chance to Brand each for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.10),
+                            statuses: [status(.sleep, 0.40, turns: 1, on: .allEnemies), status(.brand, 0.40, on: .allEnemies)],
+                            target: .allEnemies, vfx: "blood_thirst")
+            }
+        case .bruiser:
+            switch element {
+            case .ember:
+                if !third {
+                    return blow("A slam on one enemy with a 70% chance to Burn it for 2 turns; the caster takes Attack Up for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 2.40),
+                                statuses: [status(.burn, 0.70), status(.attackUp, 1.0, on: .caster)], vfx: "impact_ember")
+                }
+                return blow("A blow for damage equal to 28% of the caster's maximum health, ignoring 30% of the target's defence, with a 60% chance to Break its defence for 2 turns.",
+                            cd: 4, DamageSpec(multiplier: 0.28, scaling: .maxHealth, defenseIgnore: 0.30),
+                            statuses: [status(.defenseDown, 0.60)], vfx: "heart_weigh")
+            case .tide:
+                if !third {
+                    return blow("Roars at the whole enemy line for modest damage with a 45% chance to Provoke each for 1 turn, and takes Defense Up for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 1.50),
+                                statuses: [status(.provoke, 0.45, turns: 1, on: .allEnemies), status(.defenseUp, 1.0, on: .caster)],
+                                target: .allEnemies, vfx: "wrath_of_the_eye")
+                }
+                return blow("A blow for damage equal to 28% of the caster's maximum health, ignoring 30% of the target's defence, that heals the caster for 20% of its maximum health.",
+                            cd: 4, DamageSpec(multiplier: 0.28, scaling: .maxHealth, defenseIgnore: 0.30),
+                            utilities: [.healTargetMaxHealth(0.20, .caster)], vfx: "duat_rite")
+            case .gale:
+                if !third {
+                    return blow("A charge at one enemy with a 60% chance to Slow it for 2 turns; the caster takes Haste for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 2.60),
+                                statuses: [status(.speedDown, 0.60), status(.speedUp, 1.0, on: .caster)], vfx: "impact_gale")
+                }
+                return blow("A blow on the whole enemy line for damage equal to 24% of the caster's maximum health, with a 40% chance to make each one's next hit Glancing for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 0.24, scaling: .maxHealth), statuses: [status(.glancing, 0.40, on: .allEnemies)],
+                            target: .allEnemies, vfx: "thunderclap")
+            case .radiance:
+                if !third {
+                    return blow("A blow with a 60% chance to Provoke the target for 1 turn; the caster takes Defense Up and a shield worth 20% of its maximum health for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 2.00),
+                                statuses: [status(.provoke, 0.60, turns: 1), status(.defenseUp, 1.0, on: .caster),
+                                           status(.shield, 1.0, on: .caster, magnitude: 0.20)], vfx: "maat_shield")
+                }
+                return blow("A blow for damage equal to 26% of the caster's maximum health, with an 85% chance to Provoke the target for 2 turns; the caster gains Immunity for 2 turns.",
+                            cd: 4, DamageSpec(multiplier: 0.26, scaling: .maxHealth),
+                            statuses: [status(.provoke, 0.85), status(.immunity, 1.0, on: .caster)], vfx: "olympian_decree")
+            case .umbra:
+                if !third {
+                    return blow("A blow that heals the caster for half the damage, with a 60% chance to Break the target's defence for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 2.60), statuses: [status(.defenseDown, 0.60)],
+                                utilities: [.lifesteal(0.50)], vfx: "heart_weigh")
+                }
+                return blow("A blow for damage equal to 30% of the caster's maximum health that heals the caster for 30% of the damage, with a 50% chance to Brand the target for 2 turns.",
+                            cd: 4, DamageSpec(multiplier: 0.30, scaling: .maxHealth), statuses: [status(.brand, 0.50)],
+                            utilities: [.lifesteal(0.30)], vfx: "blood_thirst")
+            }
+        case .warden:
+            switch element {
+            case .ember:
+                if !third {
+                    return blow("A strike with a 70% chance to Burn the target for 2 turns; the caster takes a Counter stance for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 3.00),
+                                statuses: [status(.burn, 0.70), status(.counterStance, 1.0, on: .caster)], vfx: "impact_ember")
+                }
+                return rite("Attack Up and a shield worth 12% of their maximum health for every ally for 2 turns.",
+                            cd: 5, statuses: [status(.attackUp, 1.0, on: .allAllies), status(.shield, 1.0, on: .allAllies, magnitude: 0.12)],
+                            vfx: "buff")
+            case .tide:
+                if !third {
+                    return rite("A wall for the team: every ally gains Defense Up and a shield worth 15% of their maximum health for 2 turns.",
+                                cd: 4, statuses: [status(.defenseUp, 1.0, on: .allAllies), status(.shield, 1.0, on: .allAllies, magnitude: 0.15)],
+                                vfx: "maat_shield")
+                }
+                return blow("A strike with a 70% chance to Freeze the target for 1 turn; the caster takes a shield worth 20% of its maximum health for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 3.40),
+                            statuses: [status(.freeze, 0.70, turns: 1), status(.shield, 1.0, on: .caster, magnitude: 0.20)], vfx: "impact_tide")
+            case .gale:
+                if !third {
+                    return rite("Haste for every ally for 2 turns, and the team's attack bar fills by 15%.",
+                                cd: 4, statuses: [status(.speedUp, 1.0, on: .allAllies)],
+                                utilities: [.attackBarChange(0.15, chance: 1.0, .allAllies)], vfx: "buff")
+                }
+                return blow("A strike with an 85% chance to Provoke the target for 2 turns while a Counter stance covers the caster.",
+                            cd: 5, DamageSpec(multiplier: 3.20),
+                            statuses: [status(.provoke, 0.85), status(.counterStance, 1.0, on: .caster)], vfx: "heart_weigh")
+            case .radiance:
+                if !third {
+                    return rite("A shield worth 18% of their maximum health for every ally for 2 turns, and one harmful effect removed from each.",
+                                cd: 4, statuses: [status(.shield, 1.0, on: .allAllies, magnitude: 0.18)],
+                                utilities: [.cleanse(count: 1, .allAllies)], vfx: "maat_shield")
+                }
+                return blow("A strike with an 85% chance to Provoke the target for 2 turns; the caster gains Immunity and a Counter stance for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 3.20),
+                            statuses: [status(.provoke, 0.85), status(.immunity, 1.0, on: .caster), status(.counterStance, 1.0, on: .caster)],
+                            vfx: "olympian_decree")
+            case .umbra:
+                if !third {
+                    return blow("A strike with a 60% chance to Break the target's defence for 2 turns that heals the caster for 30% of the damage.",
+                                cd: 4, DamageSpec(multiplier: 3.20), statuses: [status(.defenseDown, 0.60)],
+                                utilities: [.lifesteal(0.30)], vfx: "heart_weigh")
+                }
+                return blow("A heavy strike with an 85% chance to Provoke the target and a 50% chance to Brand it for 2 turns, while a Counter stance covers the caster.",
+                            cd: 5, DamageSpec(multiplier: 3.60),
+                            statuses: [status(.provoke, 0.85), status(.brand, 0.50), status(.counterStance, 1.0, on: .caster)], vfx: "blood_thirst")
+            }
+        case .healer:
+            switch element {
+            case .ember:
+                if !third {
+                    return rite("Heals every ally for 20% of their maximum health and grants Attack Up for 2 turns.",
+                                cd: 4, statuses: [status(.attackUp, 1.0, on: .allAllies)],
+                                utilities: [.healTargetMaxHealth(0.20, .allAllies)], ladder: supportLadder, vfx: "heal")
+                }
+                return rite("Revives one fallen ally with 30% health, heals every ally for 15% of their maximum health, and grants Attack Up for 2 turns.",
+                            cd: 5, statuses: [status(.attackUp, 1.0, on: .allAllies)],
+                            utilities: [.revive(healthFraction: 0.30), .healTargetMaxHealth(0.15, .allAllies)], ladder: supportLadder, vfx: "duat_rite")
+            case .tide:
+                if !third {
+                    return rite("Heals every ally for 30% of their maximum health and removes one harmful effect from each.",
+                                cd: 4, utilities: [.healTargetMaxHealth(0.30, .allAllies), .cleanse(count: 1, .allAllies)],
+                                ladder: supportLadder, vfx: "heal")
+                }
+                return rite("Heals every ally for 20% of their maximum health, with Defense Up and Immunity for 2 turns.",
+                            cd: 5, statuses: [status(.defenseUp, 1.0, on: .allAllies), status(.immunity, 1.0, on: .allAllies)],
+                            utilities: [.healTargetMaxHealth(0.20, .allAllies)], ladder: supportLadder, vfx: "maat_shield")
+            case .gale:
+                if !third {
+                    return rite("Heals every ally for 18% of their maximum health, and the team's attack bar fills by 25%.",
+                                cd: 4, utilities: [.healTargetMaxHealth(0.18, .allAllies), .attackBarChange(0.25, chance: 1.0, .allAllies)],
+                                ladder: supportLadder, vfx: "heal")
+                }
+                return rite("Haste for every ally for 2 turns, the team's attack bar fills by 30%, and one harmful effect is removed from each.",
+                            cd: 5, statuses: [status(.speedUp, 1.0, on: .allAllies)],
+                            utilities: [.attackBarChange(0.30, chance: 1.0, .allAllies), .cleanse(count: 1, .allAllies)], vfx: "buff")
+            case .radiance:
+                if !third {
+                    return rite("Heals every ally for 25% of their maximum health and shields each for 12% of it for 2 turns.",
+                                cd: 4, statuses: [status(.shield, 1.0, on: .allAllies, magnitude: 0.12)],
+                                utilities: [.healTargetMaxHealth(0.25, .allAllies)], ladder: supportLadder, vfx: "maat_shield")
+                }
+                return rite("Heals every ally for 20% of their maximum health, with Immunity and Focus for 2 turns.",
+                            cd: 5, statuses: [status(.immunity, 1.0, on: .allAllies), status(.critRateUp, 1.0, on: .allAllies)],
+                            utilities: [.healTargetMaxHealth(0.20, .allAllies)], ladder: supportLadder, vfx: "olympian_decree")
+            case .umbra:
+                if !third {
+                    return blow("A strike on one enemy that heals every ally for 150% of the caster's attack.",
+                                cd: 3, DamageSpec(multiplier: 2.80), utilities: [.healFromAttack(1.5, .allAllies)], vfx: "heart_weigh")
+                }
+                return rite("Focus for every ally for 2 turns, the team's attack bar fills by 25%, and up to two beneficial effects are removed from every enemy.",
+                            cd: 5, statuses: [status(.critRateUp, 1.0, on: .allAllies)],
+                            utilities: [.attackBarChange(0.25, chance: 1.0, .allAllies), .strip(count: 2, chance: 0.70, .allEnemies)], vfx: "debuff")
+            }
+        case .oracle:
+            switch element {
+            case .ember:
+                if !third {
+                    return blow("Damages the whole enemy line with a 40% chance to Stun each for 1 turn.",
+                                cd: 4, DamageSpec(multiplier: 1.60), statuses: [status(.stun, 0.40, turns: 1, on: .allEnemies)],
+                                target: .allEnemies, vfx: "thunderclap")
+                }
+                return rite("Attack Up and Focus for every ally for 2 turns, and the team's attack bar fills by 25%.",
+                            cd: 5, statuses: [status(.attackUp, 1.0, on: .allAllies), status(.critRateUp, 1.0, on: .allAllies)],
+                            utilities: [.attackBarChange(0.25, chance: 1.0, .allAllies)], vfx: "olympian_decree")
+            case .tide:
+                if !third {
+                    return blow("Damages the whole enemy line with a 50% chance to Slow each for 2 turns and a 60% chance to drag each attack bar back by 25%.",
+                                cd: 4, DamageSpec(multiplier: 1.50), statuses: [status(.speedDown, 0.50, on: .allEnemies)],
+                                utilities: [.attackBarChange(-0.25, chance: 0.60, .allEnemies)], target: .allEnemies, vfx: "duat_rite")
+                }
+                return rite("Defense Up and a shield worth 15% of their maximum health for every ally for 2 turns, and heals each for 15%.",
+                            cd: 5, statuses: [status(.defenseUp, 1.0, on: .allAllies), status(.shield, 1.0, on: .allAllies, magnitude: 0.15)],
+                            utilities: [.healTargetMaxHealth(0.15, .allAllies)], ladder: supportLadder, vfx: "maat_shield")
+            case .gale:
+                if !third {
+                    return blow("Damages the whole enemy line with a 35% chance to Silence each for 2 turns, and the team's attack bar fills by 15%.",
+                                cd: 4, DamageSpec(multiplier: 1.40), statuses: [status(.silence, 0.35, on: .allEnemies)],
+                                utilities: [.attackBarChange(0.15, chance: 1.0, .allAllies)], target: .allEnemies, vfx: "thunderclap")
+                }
+                return rite("Haste for every ally for 2 turns, the team's attack bar fills by 40%, and one harmful effect is removed from each.",
+                            cd: 5, statuses: [status(.speedUp, 1.0, on: .allAllies)],
+                            utilities: [.attackBarChange(0.40, chance: 1.0, .allAllies), .cleanse(count: 1, .allAllies)], vfx: "buff")
+            case .radiance:
+                if !third {
+                    return blow("Damages the whole enemy line, removing a beneficial effect from each, with a 50% chance to inflict Attack Down for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 1.50), statuses: [status(.attackDown, 0.50, on: .allEnemies)],
+                                utilities: [.strip(count: 1, chance: 0.80, .allEnemies)], target: .allEnemies, vfx: "eye_of_ra")
+                }
+                return rite("Immunity and Focus for every ally for 2 turns, and the team's attack bar fills by 20%.",
+                            cd: 5, statuses: [status(.immunity, 1.0, on: .allAllies), status(.critRateUp, 1.0, on: .allAllies)],
+                            utilities: [.attackBarChange(0.20, chance: 1.0, .allAllies)], vfx: "olympian_decree")
+            case .umbra:
+                if !third {
+                    return blow("Damages the whole enemy line with a 40% chance to put each to Sleep for 1 turn and a 50% chance to Brand each for 2 turns.",
+                                cd: 4, DamageSpec(multiplier: 1.60),
+                                statuses: [status(.sleep, 0.40, turns: 1, on: .allEnemies), status(.brand, 0.50, on: .allEnemies)],
+                                target: .allEnemies, vfx: "debuff")
+                }
+                return rite("A 60% chance to Break the defence of each enemy and a 40% chance to Brand it, for 2 turns; the team's attack bar fills by 20%.",
+                            cd: 5, target: .allEnemies,
+                            statuses: [status(.defenseDown, 0.60, on: .allEnemies), status(.brand, 0.40, on: .allEnemies)],
+                            utilities: [.attackBarChange(0.20, chance: 1.0, .allAllies)], vfx: "wrath_of_the_eye")
+            }
+        case .trickster:
+            switch element {
+            case .ember:
+                if !third {
+                    return blow("A strike with an 80% chance to Burn the target for 2 turns that removes one beneficial effect from it.",
+                                cd: 3, DamageSpec(multiplier: 3.20), statuses: [status(.burn, 0.80)],
+                                utilities: [.strip(count: 1, chance: 0.85, .singleEnemy)], vfx: "lioness_rake")
+                }
+                return blow("Damages the whole enemy line with a 60% chance to Burn each and a 40% chance to inflict Attack Down on each for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.00),
+                            statuses: [status(.burn, 0.60, on: .allEnemies), status(.attackDown, 0.40, on: .allEnemies)],
+                            target: .allEnemies, vfx: "wrath_of_the_eye")
+            case .tide:
+                if !third {
+                    return blow("A strike with a 70% chance to Freeze the target for 1 turn and a 70% chance to drag its attack bar back by 30%.",
+                                cd: 3, DamageSpec(multiplier: 3.00), statuses: [status(.freeze, 0.70, turns: 1)],
+                                utilities: [.attackBarChange(-0.30, chance: 0.70, .singleEnemy)], vfx: "impact_tide")
+                }
+                return blow("Damages the whole enemy line with a 50% chance to Slow each for 2 turns and a 60% chance to drag each attack bar back by 30%.",
+                            cd: 5, DamageSpec(multiplier: 1.90), statuses: [status(.speedDown, 0.50, on: .allEnemies)],
+                            utilities: [.attackBarChange(-0.30, chance: 0.60, .allEnemies)], target: .allEnemies, vfx: "duat_rite")
+            case .gale:
+                if !third {
+                    return blow("A strike that removes up to two beneficial effects from the target, after which the caster's attack bar fills by 30%.",
+                                cd: 3, DamageSpec(multiplier: 3.20),
+                                utilities: [.strip(count: 2, chance: 0.85, .singleEnemy), .attackBarChange(0.30, chance: 1.0, .caster)],
+                                vfx: "scale_strike")
+                }
+                return blow("Damages the whole enemy line with a 50% chance to Silence each for 2 turns; the caster takes Haste for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 1.90),
+                            statuses: [status(.silence, 0.50, on: .allEnemies), status(.speedUp, 1.0, on: .caster)],
+                            target: .allEnemies, vfx: "thunderclap")
+            case .radiance:
+                if !third {
+                    return blow("A strike that removes up to two beneficial effects from the target, with a 60% chance to inflict Attack Down for 2 turns.",
+                                cd: 3, DamageSpec(multiplier: 3.20), statuses: [status(.attackDown, 0.60)],
+                                utilities: [.strip(count: 2, chance: 0.90, .singleEnemy)], vfx: "eye_of_ra")
+                }
+                return blow("Damages the whole enemy line, removing a beneficial effect from each, with a 50% chance to inflict Attack Down on each for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.00), statuses: [status(.attackDown, 0.50, on: .allEnemies)],
+                            utilities: [.strip(count: 1, chance: 0.70, .allEnemies)], target: .allEnemies, vfx: "olympian_decree")
+            case .umbra:
+                if !third {
+                    return blow("A strike that removes up to two beneficial effects from the target and has a 60% chance to drag its attack bar back by 30%.",
+                                cd: 3, DamageSpec(multiplier: 3.40),
+                                utilities: [.strip(count: 2, chance: 0.85, .singleEnemy), .attackBarChange(-0.30, chance: 0.60, .singleEnemy)],
+                                vfx: "heart_weigh")
+                }
+                return blow("Damages the whole enemy line with a 60% chance to Break each one's defence and a 40% chance to Brand it for 2 turns.",
+                            cd: 5, DamageSpec(multiplier: 2.00),
+                            statuses: [status(.defenseDown, 0.60, on: .allEnemies), status(.brand, 0.40, on: .allEnemies)],
+                            target: .allEnemies, vfx: "wrath_of_the_eye")
+            }
+        }
+    }
+
     private static func passive(
         id: String, name: String, trigger: PassiveTrigger, target: TargetSelector, description: String,
         statuses: [StatusSpec], utilities: [UtilityEffect], vfx: String
@@ -791,4 +1120,14 @@ extension UnitDatabase {
             vfx: vfx
         )
     }
+}
+
+// MARK: - The elemental skill names
+
+extension UnitDatabase {
+    /// Second and third skill names per family and element, in
+    /// `Element.allCases` order: five second-skill names, then five
+    /// third-skill names. A family missing here keeps its row's two names
+    /// for every element.
+    static let elementalSkillNames: [String: [String]] = [:]
 }

@@ -128,7 +128,7 @@ jobs:
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
               arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
-              victory) sleep 4; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b" ;;
+              victory) sleep 4; shoot "$step-${names[$step]}-a"; sleep 2; shoot "$step-${names[$step]}-b"; sleep 3; shoot "$step-${names[$step]}-c" ;;
               *)      sleep 5; shoot "$step-${names[$step]}" ;;
             esac
             echo "$(date -u +%T) ${names[$step]}"

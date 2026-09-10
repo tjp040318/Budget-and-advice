@@ -123,14 +123,18 @@ final class CameraDirector {
     private static let fieldTopLine: Float = 0.80
     private static let bossTopLine: Float = 0.90
 
-    /// A boss fight is framed from BEHIND the player's team: 24° of yaw
+    /// A boss fight is framed from BEHIND the player's team: 12° of yaw
     /// instead of 58°, 19° down, and further back, so the whole of a boss
     /// over the far rim — head included — is in the frame with the team's
-    /// backs across the bottom of it, the genre's boss-dungeon shot. The
-    /// owner, with the Coils of Apep on his phone: "zoom back and a little
-    /// more to behind the characters FOR BOSSES ONLY." From the side the
-    /// hood ran off the top of the frame.
-    static let bossYaw: Float = -24 * .pi / 180
+    /// backs in a row across the bottom of it, the genre's boss-dungeon
+    /// shot. The owner, with the Coils of Apep on his phone: "zoom back and
+    /// a little more to behind the characters FOR BOSSES ONLY." From the
+    /// side the hood ran off the top of the frame; at 24° the first frames
+    /// had the Colossus top-right, with the team's column pulling the aim
+    /// left — so the aim now centres on the boss's head (`FramePoint.isBoss`)
+    /// and the yaw is nearly straight up the field, where the team's row is
+    /// symmetrical about it and costs the boss no size.
+    static let bossYaw: Float = -12 * .pi / 180
     private static let bossPitch: Float = 19 * .pi / 180
     /// The near feet a little higher up the frame in a boss fight, so the
     /// boss has the frame and the team is the foreground.
@@ -164,6 +168,8 @@ final class CameraDirector {
     private struct FramePoint {
         var position: SCNVector3
         var topLine: Float
+        /// The boss's head: a boss fight is centred on it, not on the field.
+        var isBoss: Bool = false
     }
 
     /// What has to be in frame: the feet and heads of everyone standing on a
@@ -312,7 +318,7 @@ final class CameraDirector {
             for dx in [-Self.shoulderRoom, Self.shoulderRoom] {
                 points.append(FramePoint(position: SCNVector3(x + dx, 0, z), topLine: Self.fieldTopLine))
             }
-            points.append(FramePoint(position: SCNVector3(x, max(1.6, top), z), topLine: line))
+            points.append(FramePoint(position: SCNVector3(x, max(1.6, top), z), topLine: line, isBoss: unit.isBoss))
         }
         guard found else { return nil }
         // With nobody standing still there is nothing new to frame, and the
@@ -377,13 +383,16 @@ final class CameraDirector {
             // Where the field lands in the frame at this distance, in
             // half-frames from the centre.
             var leftmost: Float = 1, rightmost: Float = -1, lowest: Float = 1
+            var bossAcross: Float?
             for point in points {
                 let p = point.position
                 let offset = SCNVector3(p.x - aim.x, p.y - aim.y, p.z - aim.z)
                 let d = dot(offset, forward) + distance
-                leftmost = min(leftmost, dot(offset, right) / (d * tanH))
-                rightmost = max(rightmost, dot(offset, right) / (d * tanH))
+                let across = dot(offset, right) / (d * tanH)
+                leftmost = min(leftmost, across)
+                rightmost = max(rightmost, across)
                 lowest = min(lowest, dot(offset, up) / (d * tanV))
+                if point.isBoss { bossAcross = across }
             }
             // `distance * tanH` is a half-frame in metres at the aim, across;
             // `distance * tanV` the same up. Sliding the aim slides the whole
@@ -391,7 +400,9 @@ final class CameraDirector {
             // the middle of its extremes, and the near feet are rested on
             // their line by moving the aim down by however far they are
             // below it.
-            let acrossShift = (leftmost + rightmost) / 2 * distance * tanH
+            // A boss fight is centred on the boss; the distance step above
+            // has already backed off far enough to keep the team in frame.
+            let acrossShift = (bossAcross ?? (leftmost + rightmost) / 2) * distance * tanH
             let upShift = (lowest + feetLine) * distance * tanV
             aim = SCNVector3(
                 aim.x + right.x * acrossShift + up.x * upShift,

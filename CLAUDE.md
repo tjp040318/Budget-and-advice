@@ -72,9 +72,12 @@ environment can and cannot do. The short version:
   camera, the enemy's on the right stepping back toward the top, an open
   middle between them, and the painting filling the top half behind the
   far rim (`StageBuilder.farBackdrop` is turned to face the camera). A
-  A boss fight is framed from BEHIND the team instead (`bossYaw` 24°,
-  `bossPitch` 19°, the head under `bossTopLine`), the genre's boss-dungeon
-  shot, and the painting is hung between the two yaws. A
+  boss fight is framed from BEHIND the team instead (`bossYaw` 12°,
+  `bossPitch` 19°, the head under `bossTopLine`, the aim centred on the
+  boss's head via `FramePoint.isBoss` — at 24° the Colossus was
+  photographed top-right with the team's column pulling the aim left), the
+  genre's boss-dungeon shot, and the painting is hung between the two
+  yaws. A
   **boss** (`Combatant.isBoss`) stands over the far rim at (0, −9.8),
   between the two columns that close every set, on a `StageBuilder.breach`
   (boulders, a rent in the floor, thrown tiles), lit like an awakened unit
@@ -121,6 +124,19 @@ environment can and cannot do. The short version:
   `tools/batch/portraits_batch2.sh` paints what is missing. A common roll
   that finds no unit of its grade rolls at random within the nearest grade
   and shows the unit's real stars — the "every summon is a fire Anubis" bug.
+- **Every element fights its own way (2026-09-10).** A table family's
+  second and third skills are the element's, not the kit's:
+  `UnitDatabase.elementalSkill(slot:kit:element:id:name:)` holds the forty
+  (kit, element) pairs — fire burns and grows, water freezes, slows and
+  drags the bar, wind repeats and hastens, light shields, cleanses and
+  reveals, dark drains, strips and brands — and `elementalSkillNames`
+  (the end of `UnitDatabase+Families.swift`) names them per family, ten
+  names in `Element.allCases` order; a family missing from the table
+  keeps its row's two names. `tools/balance.py` mirrors the pairs as
+  `ELEMENT_SKILLS` and `--variants` prints the five forms of one family
+  per kit against Anubis (the sim reads Burn, Stun, Def Break and
+  "(Crit)" off a skill's name and nothing else, so a healer's or a
+  warden's spread is a floor). Change a number in both files.
 - Eight chapters: Duat 1–2, Olympus 1–3, Yggdrasil 1–3. The generated ones
   take `enemyStars` and `difficulty` (later chapters field the same
   creatures at a higher grade, not at absurd levels); the curve is measured
@@ -218,6 +234,20 @@ environment can and cannot do. The short version:
   slot opens `RelicPickerView`: candidates best-fit-first on the left,
   and on the right the relic now, the relic picked, every stat before →
   after with the delta, and the sets completed or broken, before Equip.
+- **The Hall of Ka is a place (2026-09-10).** `TrainingView` is the summon
+  screen's shape: the sanctuary painting `hall_of_ka_bg` (16:9, its
+  altar dais in the left third, centre 29% across and top 80% down) as
+  a `.background`, the chosen unit's real model standing on the painted
+  dais in a transparent SceneKit view the size of the frame
+  (`AltarStageView`: rune ring, contact shadow, the reveal's lens,
+  camera shifted not turned so the feet land on the dais), the roster
+  a rail of single cards down the left edge, and the mode's fodder,
+  requirements, cost and button a 424-pt panel over the right. A rite
+  plays on the altar (`AltarCeremony`, stamped so each plays once): fed
+  units fly in as orbs of the element and the figure flares under a
+  beam, an evolution or awakening swells it in a pillar of light, and
+  the words of the moment (`AltarStamp`: LEVEL UP!, EVOLVED) spring in
+  over it. The fusion board keeps its row of panels over the painting.
 - **Relic power-up is the genre's rune power-up** (`RelicService.upgrade`
   → `PowerUpOutcome`; `RelicDetailView` is the screen, opened from a worn
   slot on the unit sheet and from the inventory): an attempt costs drachma
@@ -315,7 +345,17 @@ environment can and cannot do. The short version:
   `tools/prop.py <asset> --height H` from `Art/Models/<asset>_refine.usdz`),
   braziers with fire, mist, dust, and the environment painting far behind
   for parallax. A missing prop gets a built stand-in. **Meshy text-to-3D
-  props cost 30 credits each, not 15**. The user bought the 8,000-credit plan on
+  props cost 110–300 credits each** (the manifests: obelisk 140 + 10, rune
+  stone 290 + 10), which the 3,000 floor cannot afford; **a prop goes
+  image-to-3D from a Gemini concept at a flat 30** — paint it on a plain
+  grey ground as `Art/Concepts/prop_<name>_sw.png`, then
+  `python3 tools/meshy.py generate prop_<name> --image <concept> --until
+  refine`, `download --include-unrigged` (the file is `_image.usdz`) and
+  `tools/prop.py`. The reward chest went that way on 2026-09-10
+  (`prop_reward_chest`), and `prop.py --split-lid 0.625` cut the one mesh
+  into the box and a lid whose origin is its back-bottom edge
+  (`RewardChestView` in `BattleView.swift` hinges it there: shake, lid,
+  beam, flash, gone, spoils). The user bought the 8,000-credit plan on
   2026-09-09; the floor is now **3,000**, and `tools/batch/wave_run.sh` keeps
   every wave above it.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim

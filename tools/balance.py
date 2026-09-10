@@ -121,7 +121,8 @@ def proc(name, keyword, default):
     m = re.search(keyword + r"\s*(\d+)%", name, re.IGNORECASE)
     return int(m.group(1)) / 100 if m else default
 
-def resolve_hit(att, dfn, mult, defign, missbonus, rng):
+def resolve_hit(att, dfn, mult, defign, missbonus, rng, sure=False):
+    """`sure` is a skill that always crits — "(Crit)" in its name."""
     base = att.atk * mult
     if missbonus:
         base *= 1 + missbonus * (1 - dfn.hp / dfn.maxhp)
@@ -130,7 +131,7 @@ def resolve_hit(att, dfn, mult, defign, missbonus, rng):
     m = matchup(att.bp.element, dfn.bp.element)
     base *= {"advantage": ADVANTAGE_MULT, "neutral": 1.0, "disadvantage": DISADVANTAGE_MULT}[m]
     glancing = m == "disadvantage" and rng.random() < 0.15
-    crit = (not glancing) and rng.random() < (att.crit + (ADVANTAGE_CRIT if m == "advantage" else 0))
+    crit = sure or ((not glancing) and rng.random() < (att.crit + (ADVANTAGE_CRIT if m == "advantage" else 0)))
     if crit:       base *= 1 + att.critdmg
     elif glancing: base *= GLANCING_MULT
     base *= rng.uniform(*VARIANCE)
@@ -198,7 +199,7 @@ def simulate(team_a, team_b, seed=0):
         for _ in range(hits):
             for t in targets:
                 if not t.alive: continue
-                t.hp -= resolve_hit(actor, t, mult, defign, missbonus, rng)
+                t.hp -= resolve_hit(actor, t, mult, defign, missbonus, rng, sure="(crit)" in name.lower())
                 if "break" in name.lower(): t.defbreak = 2
                 if "burn" in name.lower() and rng.random() < proc(name, "burn", 0.30): t.burn = 2
                 if "stun" in name.lower() and rng.random() < proc(name, "stun", 0.55): t.stun = 1
@@ -283,31 +284,71 @@ HARPY = Blueprint("harpy_ember", "Harpy (Fire)", "ember", 3, hp=270, atk=28, dfn
 # the fire variant (attack x1.05) and reads burn, stun and defence break off
 # the skill names; heals, shields, provokes and strips show up only as the
 # damage they do not do, so a healer's row is a floor, not a forecast.
-def kit_skills(kit, stars, hp, atk):
-    if kit == "striker":
-        s = [("Strike (Burn 30%)", 3.00, 1, 0, 0, 0, False), ("Two Blows (Def Break 40%)", 2.10, 2, 3, 0, 0, False),
-             ("Finisher", 2.70, 1, 5, 0, 0, True)]
-    elif kit == "duelist":
-        s = [("Two Cuts (Burn 30%)", 1.50, 2, 0, 0, 0, False), ("Piercing Blow", 4.60, 1, 4, 0.40, 0, False),
-             ("Sure Crit", 5.40, 1, 5, 0, 0, False)]
-    elif kit == "marksman":
-        s = [("Shot (Burn 30%)", 2.90, 1, 0, 0, 0, False), ("Spread", 1.70, 3, 3, 0, 0, False),
-             ("Volley (Stun 35%)", 2.40, 1, 5, 0, 0, True)]
-    elif kit == "bruiser":
-        s = [("Strike (Burn 30%)", 2.80, 1, 0, 0, 0, False), ("Roar", 1.50, 1, 4, 0, 0, True),
-             ("Body Blow", 0.28 * hp / atk, 1, 4, 0.30, 0, False)]
-    elif kit == "warden":
-        s = [("Strike (Burn 30%)", 2.70, 1, 0, 0, 0, False), ("Shield Wall", 0.0, 0, 4, 0, 0, False),
-             ("Counter Stance", 3.60, 1, 5, 0, 0, False)]
-    elif kit == "healer":
-        s = [("Strike (Burn 30%)", 2.50, 1, 0, 0, 0, False), ("Team Heal", 0.0, 0, 4, 0, 0, False),
-             ("Blessing", 0.0, 0, 5, 0, 0, False)]
-    elif kit == "oracle":
-        s = [("Strike (Burn 30%)", 2.60, 1, 0, 0, 0, False), ("Control (Stun 40%)", 1.60, 1, 4, 0, 0, True),
-             ("Surge", 0.0, 0, 5, 0, 0, False)]
-    else:  # trickster
-        s = [("Strike (Burn 40%)", 2.80, 1, 0, 0, 0, False), ("Strip", 3.40, 1, 3, 0, 0, False),
-             ("Break (Def Break 60%)", 2.00, 1, 5, 0, 0, True)]
+# The second and third skills are the element's own (UnitDatabase+Families.swift,
+# `elementalSkill`): eight kits by five elements, mirrored here pair for pair
+# in the sim's own terms. A max-health blow is written ("hp", fraction) and
+# resolved against the family's numbers; Freeze and Sleep are a stun to the
+# sim, and Slow, Silence, Provoke, Brand, Glancing, shields, heals and strips
+# show up only as the damage they do not do.
+ELEMENT_SKILLS = {
+    ("striker", "ember"):    [("Twin Blows (Burn 50%)", 2.10, 2, 3, 0, 0, False), ("Pyre Sweep (Burn 60%)", 2.60, 1, 5, 0, 0, True)],
+    ("striker", "tide"):     [("Crushing Blow (Stun 70%)", 3.80, 1, 4, 0, 0, False), ("Undertow Sweep", 2.40, 1, 5, 0, 0, True)],
+    ("striker", "gale"):     [("Three Cuts", 1.45, 3, 3, 0, 0, False), ("Storm Sweep", 2.30, 1, 5, 0, 0, True)],
+    ("striker", "radiance"): [("Shining Blow", 3.60, 1, 3, 0, 0, False), ("Judgement Sweep (Crit)", 2.40, 1, 5, 0, 0, True)],
+    ("striker", "umbra"):    [("Draining Blow (Def Break 60%)", 3.50, 1, 3, 0, 0, False), ("Black Sweep", 2.30, 1, 5, 0, 0.5, True)],
+    ("duelist", "ember"):    [("Piercing Blow (Burn 60%)", 4.20, 1, 4, 0.30, 0, False), ("Sure Crit (Crit)", 5.20, 1, 5, 0, 0, False)],
+    ("duelist", "tide"):     [("Two Cuts (Stun 40%)", 2.10, 2, 4, 0, 0, False), ("Half-Guard Blow", 4.80, 1, 5, 0.50, 0, False)],
+    ("duelist", "gale"):     [("Four Cuts", 1.10, 4, 3, 0, 0, False), ("Sure Crit (Crit)", 4.40, 1, 5, 0, 0, False)],
+    ("duelist", "radiance"): [("Focused Blow", 4.00, 1, 4, 0, 0, False), ("Judgement (Crit)", 5.40, 1, 5, 0.40, 0, False)],
+    ("duelist", "umbra"):    [("Draining Blow", 4.20, 1, 4, 0, 0, False), ("Execution (Crit)", 4.60, 1, 5, 0, 1.0, False)],
+    ("marksman", "ember"):   [("Two Shots (Burn 50%)", 2.20, 2, 3, 0, 0, False), ("Burning Volley (Burn 60%)", 2.30, 1, 5, 0, 0, True)],
+    ("marksman", "tide"):    [("Spread", 1.60, 3, 3, 0, 0, False), ("Freezing Volley (Stun 45%)", 2.20, 1, 5, 0, 0, True)],
+    ("marksman", "gale"):    [("Five Shots", 1.05, 5, 3, 0, 0, False), ("Carrying Volley", 2.00, 1, 5, 0, 0, True)],
+    ("marksman", "radiance"): [("Stripping Shot", 4.00, 1, 3, 0, 0, False), ("Revealing Volley", 2.20, 1, 5, 0, 0, True)],
+    ("marksman", "umbra"):   [("Draining Shot (Def Break 60%)", 3.60, 1, 3, 0, 0, False), ("Sleeping Volley (Stun 40%)", 2.10, 1, 5, 0, 0, True)],
+    ("bruiser", "ember"):    [("Burning Slam (Burn 70%)", 2.40, 1, 4, 0, 0, False), ("Body Blow (Def Break 60%)", ("hp", 0.28), 1, 4, 0.30, 0, False)],
+    ("bruiser", "tide"):     [("Roar", 1.50, 1, 4, 0, 0, True), ("Body Blow", ("hp", 0.28), 1, 4, 0.30, 0, False)],
+    ("bruiser", "gale"):     [("Charge", 2.60, 1, 4, 0, 0, False), ("Line Body Blow", ("hp", 0.24), 1, 5, 0, 0, True)],
+    ("bruiser", "radiance"): [("Shield Blow", 2.00, 1, 4, 0, 0, False), ("Body Blow", ("hp", 0.26), 1, 4, 0, 0, False)],
+    ("bruiser", "umbra"):    [("Draining Blow (Def Break 60%)", 2.60, 1, 4, 0, 0, False), ("Body Blow", ("hp", 0.30), 1, 4, 0, 0, False)],
+    ("warden", "ember"):     [("Burning Strike (Burn 70%)", 3.00, 1, 4, 0, 0, False), ("Team Attack Up", 0.0, 0, 5, 0, 0, False)],
+    ("warden", "tide"):      [("Shield Wall", 0.0, 0, 4, 0, 0, False), ("Freezing Strike (Stun 70%)", 3.40, 1, 5, 0, 0, False)],
+    ("warden", "gale"):      [("Team Haste", 0.0, 0, 4, 0, 0, False), ("Provoking Strike", 3.20, 1, 5, 0, 0, False)],
+    ("warden", "radiance"):  [("Shield Cleanse", 0.0, 0, 4, 0, 0, False), ("Provoking Strike", 3.20, 1, 5, 0, 0, False)],
+    ("warden", "umbra"):     [("Draining Strike (Def Break 60%)", 3.20, 1, 4, 0, 0, False), ("Branding Strike", 3.60, 1, 5, 0, 0, False)],
+    ("healer", "ember"):     [("Warm Heal", 0.0, 0, 4, 0, 0, False), ("Phoenix Rite", 0.0, 0, 5, 0, 0, False)],
+    ("healer", "tide"):      [("Team Heal", 0.0, 0, 4, 0, 0, False), ("Guarding Heal", 0.0, 0, 5, 0, 0, False)],
+    ("healer", "gale"):      [("Quick Heal", 0.0, 0, 4, 0, 0, False), ("Team Haste", 0.0, 0, 5, 0, 0, False)],
+    ("healer", "radiance"):  [("Shielding Heal", 0.0, 0, 4, 0, 0, False), ("Blessing", 0.0, 0, 5, 0, 0, False)],
+    ("healer", "umbra"):     [("Draining Strike", 2.80, 1, 3, 0, 0, False), ("Focus Rite", 0.0, 0, 5, 0, 0, False)],
+    ("oracle", "ember"):     [("Control (Stun 40%)", 1.60, 1, 4, 0, 0, True), ("Surge", 0.0, 0, 5, 0, 0, False)],
+    ("oracle", "tide"):      [("Slowing Line", 1.50, 1, 4, 0, 0, True), ("Guard Rite", 0.0, 0, 5, 0, 0, False)],
+    ("oracle", "gale"):      [("Silencing Line", 1.40, 1, 4, 0, 0, True), ("Team Haste", 0.0, 0, 5, 0, 0, False)],
+    ("oracle", "radiance"):  [("Revealing Line", 1.50, 1, 4, 0, 0, True), ("Immunity Rite", 0.0, 0, 5, 0, 0, False)],
+    ("oracle", "umbra"):     [("Sleeping Line (Stun 40%)", 1.60, 1, 4, 0, 0, True), ("Line Break (Def Break 60%)", 0.0, 0, 5, 0, 0, False)],
+    ("trickster", "ember"):  [("Burning Strip (Burn 80%)", 3.20, 1, 3, 0, 0, False), ("Burning Line (Burn 60%)", 2.00, 1, 5, 0, 0, True)],
+    ("trickster", "tide"):   [("Freezing Strike (Stun 70%)", 3.00, 1, 3, 0, 0, False), ("Slowing Line", 1.90, 1, 5, 0, 0, True)],
+    ("trickster", "gale"):   [("Strip", 3.20, 1, 3, 0, 0, False), ("Silencing Line", 1.90, 1, 5, 0, 0, True)],
+    ("trickster", "radiance"): [("Strip", 3.20, 1, 3, 0, 0, False), ("Revealing Line", 2.00, 1, 5, 0, 0, True)],
+    ("trickster", "umbra"):  [("Strip", 3.40, 1, 3, 0, 0, False), ("Break (Def Break 60%)", 2.00, 1, 5, 0, 0, True)],
+}
+ELEMENTS = ["ember", "tide", "gale", "radiance", "umbra"]
+
+def kit_skills(kit, stars, hp, atk, element="ember"):
+    """A family's kit as the sim sees it: the kit's basic attack, then the
+    element's second and third. The basic attack's burn stands for the
+    element's signature; the sim has no slow, glance, attack-down or break
+    to give the other four, so the fire variant reads a little strong."""
+    basic = {"striker": ("Strike (Burn 30%)", 3.00), "duelist": ("Two Cuts (Burn 30%)", 1.50),
+             "marksman": ("Shot (Burn 30%)", 2.90), "bruiser": ("Strike (Burn 30%)", 2.80),
+             "warden": ("Strike (Burn 30%)", 2.70), "healer": ("Strike (Burn 30%)", 2.50),
+             "oracle": ("Strike (Burn 30%)", 2.60), "trickster": ("Strike (Burn 40%)", 2.80)}[kit]
+    hits = 2 if kit == "duelist" else 1
+    s = [(basic[0], basic[1], hits, 0, 0, 0, False)]
+    for name, mult, n, cd, defign, missbonus, aoe in ELEMENT_SKILLS[(kit, element)]:
+        if isinstance(mult, tuple):
+            mult = mult[1] * hp / atk
+        s.append((name, mult, n, cd, defign, missbonus, aoe))
     return s[:2] if stars <= 3 else s
 
 FAMILY_ROWS = [  # key, name, stars, kit, hp, atk, def, spd — the row in the Swift table
@@ -603,6 +644,35 @@ def report_tiers(trials=100):
                 wr, med = winrate(team, tiered(spec, tier), trials=trials)
                 row += f"{wr*100:>16.0f}% {med:>3.0f}t"
             print(row)
+
+def report_variants(trials=120):
+    """The five elemental forms of one family per kit against the Anubis
+    benchmark. What it measures: whether the elemental second and third
+    skills keep a family's five forms within a band of each other, so no
+    element is the one to summon. The sim cannot see slows, shields, heals,
+    strips or the bar, so a healer's or a warden's spread is a floor."""
+    print("\nELEMENTAL VARIANTS — one family per kit, win rate vs. Anubis (Lv.30 5*, relics 1.25), 1v1")
+    firsts = {}
+    for key, name, stars, kit, hp, atk, dfn, spd in FAMILY_ROWS:
+        if kit not in firsts and stars >= 4:
+            firsts[kit] = (key, name, stars, hp, atk, dfn, spd)
+    print(f"  {'family':<14}{'kit':>10}" + "".join(f"{e[:4]:>8}" for e in ELEMENTS) + f"{'spread':>9}")
+    for kit, (key, name, stars, hp, atk, dfn, spd) in firsts.items():
+        rates = []
+        for element in ELEMENTS:
+            bp = Blueprint(f"{key}_{element}", name, element, stars, hp=hp, atk=atk, dfn=dfn, spd=spd,
+                           skills=kit_skills(kit, stars, hp, atk, element))
+            rates.append(winrate_bp(bp, ANUBIS, trials))
+        print(f"  {name:<14}{kit:>10}" + "".join(f"{r*100:>7.0f}%" for r in rates) + f"{(max(rates)-min(rates))*100:>8.0f}%")
+
+def winrate_bp(bp, foe, trials):
+    wins = 0
+    for t in range(trials):
+        a = [mk(bp, 30, 5, 1.25)]
+        b = [mk(foe, 30, 5, 1.25)]
+        result, _ = simulate(a, b, seed=t)
+        wins += result == "a"
+    return wins / trials
 
 def report_families(trials=120):
     """Every family of the third roster, fire variant, 5* lv30 with relics, one
@@ -1111,6 +1181,7 @@ if __name__ == "__main__":
     elif "--curve" in a: report_curve()
     elif "--gacha" in a: report_gacha()
     elif "--families" in a: report_families()
+    elif "--variants" in a: report_variants()
     elif "--chapters" in a: report_chapters()
     elif "--tiers" in a: report_tiers()
     elif "--halls" in a: report_halls()
