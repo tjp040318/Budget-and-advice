@@ -290,10 +290,18 @@ struct ArenaView: View {
         let offense = offensePower
         return SectionPanel(title: "Challengers", accessory: "\(opponents.count)") {
             if opponents.isEmpty {
+                // An empty list means two completely different things now that
+                // the pool is built off the main thread, and saying the wrong
+                // one is worse than saying nothing: the CI tour photographed
+                // this panel announcing "You have cleared the current pool" on
+                // a fresh account that had not fought anybody, because the
+                // challengers were still a few milliseconds away.
                 EmptyState(
-                    icon: "person.2.slash",
-                    title: "No challengers",
-                    message: "You have cleared the current pool. It refreshes as your rating moves."
+                    icon: isRefreshing ? "hourglass" : "person.2.slash",
+                    title: isRefreshing ? "Finding challengers" : "No challengers",
+                    message: isRefreshing
+                        ? "Building five defence teams to fight."
+                        : "You have cleared the current pool. It refreshes as your rating moves."
                 )
             } else {
                 // The one thing on this screen that scrolls, and it now has the

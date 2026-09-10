@@ -992,10 +992,18 @@ struct SectionPanel<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
+                // Both ends of this row take the width they need and the rule
+                // between them takes what is left. Without that the title
+                // wraps: the CI tour photographed the arena's Offence panel as
+                // "OFFENC / E" on 2026-09-10, because "Power 3812" beside it
+                // left the title less room than its own tracking needed, and
+                // the header is the one thing on a panel that must never wrap.
                 Text(title.uppercased())
                     .font(Theme.body(10).weight(.black))
                     .tracking(1.0)
                     .foregroundStyle(Theme.goldDim)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
                 Rectangle()
                     .fill(Theme.stroke.opacity(0.7))
                     .frame(height: 1)
@@ -1003,6 +1011,9 @@ struct SectionPanel<Content: View>: View {
                     Text(accessory)
                         .font(Theme.numeric(10))
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
             }
             content()
