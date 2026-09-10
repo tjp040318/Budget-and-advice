@@ -272,7 +272,7 @@ enum VFXLibrary {
         node.scale = SCNVector3(0.2, 0.2, 0.2)
         node.opacity = 0
         let billboard = SCNBillboardConstraint()
-        billboard.freeAxes = [.X, .Y]
+        billboard.freeAxes = .all
         node.constraints = [billboard]
         host.addChildNode(node)
 

@@ -151,7 +151,15 @@ final class UnitNode: SCNNode {
         barRoot.addChildNode(statuses)
 
         let billboard = SCNBillboardConstraint()
-        billboard.freeAxes = [.X, .Y]
+        // `.all`, not `[.X, .Y]`. Those two axes are enough to point a plane
+        // at a camera that sits square on the centre line, and that is what
+        // this was: the old camera had zero yaw. Giving it 13 degrees so the
+        // fight reads in three dimensions left every one of these planes
+        // unable to ROLL, so they came to rest tilted with the floor — the
+        // CI tour photographed a health bar lying at waist height across two
+        // figures like a plank. Freeing the roll costs nothing and is what
+        // keeps a bar level on screen from any camera.
+        billboard.freeAxes = .all
         barRoot.constraints = [billboard]
         // Clear of the head by a fixed margin rather than a fraction, so a
         // short unit's bar is not resting on its hair and a tall one's is not

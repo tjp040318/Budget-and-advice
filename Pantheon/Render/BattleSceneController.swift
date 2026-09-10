@@ -738,7 +738,7 @@ final class BattleSceneController: NSObject {
         node.position = SCNVector3(position.x + scatter, position.y + 0.25, position.z)
         node.renderingOrder = 1_000
         let billboard = SCNBillboardConstraint()
-        billboard.freeAxes = [.X, .Y]
+        billboard.freeAxes = .all
         node.constraints = [billboard]
         scene.rootNode.addChildNode(node)
 
