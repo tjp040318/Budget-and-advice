@@ -150,6 +150,31 @@ environment can and cannot do. The short version:
   `python3 tools/balance.py --labyrinths` (a run carries wounds and
   cooldowns across waves): B1 for a 3★ team, B4 for 4★s, B7 for 5★s with
   relics, B10 for maxed 6★s; the Colossus is the soft one.
+- **The six systems added 2026-09-10**, built by six agents against disjoint
+  files with a standing rule that none of them touch `GameStore`, then wired
+  by a single agent that made every `GameStore` change at once. **Fusion**
+  (`FusionService` in `ProgressionService.swift`, the screen in
+  `TrainingView`): four named ingredients at a required grade and level plus
+  drachma buy a unit in no banner; locked units and units already spoken for
+  by another slot are never eaten. **The Endless Tower**
+  (`DungeonDatabase.towerTiers`, the Tower wing of `LabyrinthView`): a
+  hundred floors of one battle, three mobs and a warden with two adds every
+  tenth, five themed tiers cycled twice, progress a high-water mark; the
+  curve is `balance.py --tower`. **The relic optimiser and named loadouts**
+  (`RelicService.OptimiserGoal`, `RelicInventoryView`): a loadout saves relic
+  IDs, never relics, so a relic sold since cannot leave a stale copy in a
+  save. **Raids** (`RaidBossProfile` on an `EnemySpawn`, `StageDatabase.raids`,
+  the Raids wing): a barrier that regenerates and stuns when broken, guard
+  adds that come back and drain the boss while they live, enrage stacks on a
+  clock, and a weakness that rotates; the raid stages are deliberately NOT in
+  `chapters` so they cannot appear on the campaign map. The boss bar draws
+  the barrier ON the health bar in the current weakness's colour, and reads
+  the three values straight off the engine rather than a published mirror —
+  they move on the boss's turn while `displayedCombatants` lags for the
+  animation. **The guided first hour** (`FirstHourStep`, `IslandView`): four
+  steps pointing at the landmark each wants, with a skip chip and a chapter
+  intro card shown once. Five new save fields, every one Optional with a nil
+  default.
 - **The unit sheet is one landscape screen** (`UnitDetailView`): the card,
   level bar, power and the Power up / Evolve / Awaken buttons on the left,
   the six relic slots in a ring around the element in the middle (slot 1
@@ -239,8 +264,17 @@ environment can and cannot do. The short version:
 - **Awakened forms.** Two cards per awakenable character (`portrait_<id>.png`
   and `portrait_<id>_awakened.png`); `ModelSpec.portraitName(awakened:)`
   picks. On the stage an awakened unit gets the awakened look (costume glow,
-  brighter rim, an aura) and would load `<asset>_awakened.usdz` with its own
-  clips if a family shipped one — none has; that is 53 credits a family. The
+  brighter rim, an aura), and loads `<asset>_awakened.usdz` with its own
+  clips when a family has shipped one. **Ares and Thoth have**, as of
+  2026-09-10 — the first two — at 53 credits a family; every other family
+  keeps the recolour until its mesh arrives. Thoth's first attempt was
+  refused by Meshy's rigger and the concept says why: the four faults the
+  rigger cannot read are an arm crossing the chest, a tall staff standing
+  beside the figure like a second object, legs wrapped into one sheath with
+  no gap at the hip, and anything floating detached from the body. Repaint in
+  a symmetrical A-pose with background visible either side of the torso and
+  everything held straight down against the outside of a thigh, and it rigs
+  first time. The
   Hall of Ka shows both forms before awakening and plays the reveal after.
 - **3D stages.** `StageBuilder` builds every battle set and the summoning
   circle from parts: a floating platform (tileable painted textures in

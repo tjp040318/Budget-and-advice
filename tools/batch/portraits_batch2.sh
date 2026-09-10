@@ -29,6 +29,13 @@ family() { # name facing awakened(0/1)
     have "$OUT/portrait_${name}_${el}" || { gen "${RECOLOUR[$el]}" "$base" "$out" && echo "ok $name $el" || echo "FAILED $name $el"; }
   done
   [ "$awakened" = 1 ] || return
+  # BASE_ONLY=1 paints every family's five element cards and stops. A family
+  # joins the summon pool on its five, and an awakened card is only ever seen
+  # after an awakening, so on a day with quota left over the five come first
+  # for everyone. This is the guard portraits_batch3.sh already had; without
+  # it a night spent the last of Gemini's 250 on awakened art for the eight
+  # families at the top of the list while twenty more had no cards at all.
+  [ "${BASE_ONLY:-0}" = 1 ] && return
   for el in ember tide gale radiance umbra; do
     src="$OUT/portrait_${name}_${el}.png"; [ -s "$src" ] || src="$OUT/portrait_${name}_${el}.jpg"
     out="$OUT/portrait_${name}_${el}_awakened.png"
