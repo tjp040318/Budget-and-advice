@@ -344,11 +344,14 @@ environment can and cannot do. The short version:
   `Pantheon/Resources/Stage/`), Meshy props (`prop_*.usdz`, shipped by
   `tools/prop.py <asset> --height H` from `Art/Models/<asset>_refine.usdz`),
   braziers with fire, mist, dust, and the environment painting far behind
-  for parallax. A missing prop gets a built stand-in. **Meshy text-to-3D
-  props cost 110–300 credits each** (the manifests: obelisk 140 + 10, rune
-  stone 290 + 10), which the 3,000 floor cannot afford; **a prop goes
-  image-to-3D from a Gemini concept at a flat 30** — paint it on a plain
-  grey ground as `Art/Concepts/prop_<name>_sw.png`, then
+  for parallax. A missing prop gets a built stand-in. **A Meshy prop is 30
+  credits either way** — text-to-3D (preview + refine) or image-to-3D — as
+  `Docs/PLAN.md` measured over ten props; the `cost` a manifest records per
+  task is the balance's drop while that task ran, which twenty parallel
+  tasks and Meshy's refunds turn into noise (a clip at −6, a preview at
+  290), so never read a price off a manifest. **A prop goes image-to-3D
+  from a Gemini concept** because the concept sets the look — paint it on
+  a plain grey ground as `Art/Concepts/prop_<name>_sw.png`, then
   `python3 tools/meshy.py generate prop_<name> --image <concept> --until
   refine`, `download --include-unrigged` (the file is `_image.usdz`) and
   `tools/prop.py`. The reward chest went that way on 2026-09-10
@@ -397,6 +400,24 @@ environment can and cannot do. The short version:
   caster's element (`VFXLibrary` `impact_<element>`) and a closing strike
   draws a slash arc across the victim (`slash`). Bloom is 0.3 over 0.94:
   the old 0.55 over 0.85 turned a sunlit floor into a sheet of light.
+- **Effects are painted sprites moved by code (2026-09-10).** Twelve
+  element sprites (fireball, flame, ember, bolt, splash, ice shard, wind
+  crescent, leaf, flare, ring, shadow wisp, smoke) are painted by Gemini
+  on black (`tools/batch/vfx_sprites.sh`, sources in `Art/VFX/`) and
+  shipped by `tools/vfx_ship.py` as `Portraits/vfx_<name>.png` at 256 px
+  with alpha from the brightest channel (a sprite Gemini paints on WHITE
+  ships as a white square — repaint it as a `--ref` edit of one that is
+  on black; the flame took three tries). `VFXLibrary.sprite(_:)` finds
+  them by name, `puff` throws them screen-facing, spinning, growing and
+  fading, each `impact_<element>` is built from its own two, and
+  `projectile` flies the element's sprite from a ranged caster's chest to
+  the victim's on an arc, launched by `BattleSceneController` to land on
+  the frame of contact. A missing sprite falls back to the spark. An
+  effect authored in Xcode's particle editor and dropped in the bundle as
+  `<identifier>.scnp` replaces the code-built one, so the owner can design
+  a hit by hand. The key also lists Veo 3.1 video models (a clip on black
+  cut into frames would be a real flipbook); it is billed per second and
+  is not to be used without the owner's word.
 - **Stand-ins by name.** `ModelSpec.standInAsset` names a shipped mesh to
   fight in a missing one's place, stood up and scaled to the spec's height
   with the stand-in's own clips (`UnitNode.clipAsset`), so a boss whose

@@ -125,6 +125,10 @@ struct TrainingView: View {
             }
             .onAppear {
                 if targetID == nil { targetID = units.first?.id }
+                // The altar loads a unit's model the moment it is picked; the
+                // top of the rail is warmed off the main thread so the first
+                // few taps do not stall on parsing.
+                ModelLibrary.shared.warm(units.prefix(6).map(\.blueprint.model), crowded: false, clips: false)
             }
             .onChange(of: mode) { _, _ in
                 fodder = []

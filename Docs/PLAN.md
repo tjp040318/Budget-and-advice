@@ -732,6 +732,46 @@ with the exact per-level table are refused by the network policy, so the
 numbers are modelled, not copied; the expected drachma to +15 for a 6★
 comes out about 1.7× the no-fail bill (`balance.py`, the economy report).
 
+### Phase 2g — the second playtest's four asks *(built 2026-09-10, evening)*
+
+The owner played the big build on his phone and asked for four things, each
+with a screenshot. All four are built; each is one screen or one file.
+
+- **The Hall of Ka as a place.** "Can we do something for the consuming
+  like with the summoning temple?" `TrainingView` is the summon screen's
+  shape: a painted sanctuary (`hall_of_ka_bg`, 16:9, its empty dais in the
+  left third), the chosen unit's real model standing on the painted dais in
+  a transparent SceneKit view the size of the frame (`AltarStageView`), a
+  rail of cards down the left, the mode's panel over the right, and a rite
+  on the altar for every commit: orbs of the fed units' element fly into the
+  figure and it flares under a beam, an evolution or awakening swells it in
+  a pillar of light, "LEVEL UP!" springs in over it.
+- **The reward chest as a model.** "That chest SUCKS." A Gemini concept →
+  Meshy image-to-3D (30 credits) → `prop.py --split-lid` cuts the one mesh
+  into the box and a lid hinged at its back edge → `RewardChestView`: hop,
+  shake, the lid swings back past open, a pillar of gold light, the flash,
+  the chest lifts away and the spoils stay. A lesson on price: the `cost`
+  a Meshy manifest records per task is a balance delta polluted by parallel
+  tasks; the plan's measured 30 a prop stands, by either route.
+- **Every element fights its own way.** "We cant have all 5 of the
+  elements of each character have the same attacks." The sixty-eight table
+  families' second and third skills are the element's (`elementalSkill`:
+  forty (kit, element) pairs in one grammar — fire burns and grows, water
+  freezes and drags the bar, wind repeats and hastens, light shields and
+  reveals, dark drains and brands), named per family by
+  `elementalSkillNames`; the eleven hand-written families get the same by
+  hand. `balance.py --variants` measures the five forms of one family per
+  kit; the sim now reads "(Crit)".
+- **Effects.** "It cant be your bullshit red circle." No AI emits a finished
+  effect, so: Gemini paints twelve element sprites on black
+  (`tools/batch/vfx_sprites.sh`), `tools/vfx_ship.py` gives them alpha,
+  `VFXLibrary.puff` throws them, each impact is built from its element's
+  two, `projectile` flies the element's sprite from a ranged caster to the
+  victim on an arc, and one Veo 3.1 clip (the owner's word: one now, about
+  ten dollars a month after) cut by `tools/veo.py` into a 32-frame flipbook
+  is the fireball's burst. An effect authored in Xcode's particle editor
+  and dropped in as `<identifier>.scnp` replaces the code-built one.
+
 ### Phase 4 — sound and feel
 
 - **Music.** Two synthesised loops are in — an island loop of pads, a drone

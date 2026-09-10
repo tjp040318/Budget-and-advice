@@ -602,6 +602,30 @@ final class BattleSceneController: NSObject {
             holdOverride = contact
             castRecovery = animation.fallbackDuration * (1 - Self.contactFraction(of: animation))
 
+            // A ranged strike flies: the element's painted sprite leaves the
+            // caster's chest and lands on the victim's on the frame of
+            // contact, where the burst below is waiting for it.
+            scene.rootNode.removeAction(forKey: "cast_projectile")
+            if let targetNode, !casterNode.spec.melee, !casterNode.isBoss, targets.count == 1,
+               targetNode.side != casterNode.side,
+               animation == .attackBasic || animation == .attackHeavy || animation == .castRelease {
+                let flight = min(0.45, max(0.22, beat(contact) * 0.6))
+                let victimID = targets[0]
+                let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
+                scene.rootNode.runAction(.sequence([
+                    .wait(duration: max(0, beat(contact) - flight)),
+                    SCNAction.run { [weak self] _ in
+                        DispatchQueue.main.async {
+                            guard let self, let victim = self.unitNodes[victimID] else { return }
+                            VFXLibrary.projectile(
+                                casterNode.element, from: casterNode.chestWorldPosition, to: victim.chestWorldPosition,
+                                in: self.scene, tint: tint, duration: flight, scale: casterNode.spec.height / 1.9
+                            )
+                        }
+                    }
+                ]), forKey: "cast_projectile")
+            }
+
             // A skill with no effect of its own lands in its caster's element,
             // and a closing strike draws its slash across the victim.
             let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white

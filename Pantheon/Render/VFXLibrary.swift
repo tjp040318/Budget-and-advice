@@ -24,28 +24,84 @@ enum VFXLibrary {
         host.position = position
         scene.rootNode.addChildNode(host)
 
+        // An effect authored in Xcode's particle editor (File → New → File →
+        // SceneKit Particle System) and dropped into the bundle as
+        // `<identifier>.scnp` replaces the code-built one below, colours and
+        // all: any hit can be designed by hand, with no code.
+        if let authored = authoredSystem(identifier) {
+            host.addParticleSystem(authored)
+            host.scale = SCNVector3(scale, scale, scale)
+            flash(at: position, in: scene, color: tint, radius: 1.4 * scale, duration: 0.2)
+            host.runAction(.sequence([.wait(duration: 3.0), .removeFromParentNode()]))
+            return
+        }
+
         switch identifier {
         // A hit in each element, for every skill that has no effect of its
         // own: fire bursts up, water breaks and falls, wind scatters, light
         // flares, shadow smokes. The tint is the caster's aura, so a fire
         // Anubis and a fire Zeus burn in their own oranges.
         case "impact_ember":
-            host.addParticleSystem(sparks(tint: tint, count: 70, speed: 5, scale: scale))
-            host.addParticleSystem(rising(tint: tint, count: 40, scale: scale * 0.8))
+            // The Veo explosion, when its sheet is in the bundle: 32 frames
+            // of a fireball rolling out and thinning to smoke.
+            if let burst = flipbook("fireburst", rows: 4, cols: 8, tint: tint.mixed(with: .white, amount: 0.5),
+                                    size: 2.4 * CGFloat(scale), life: 0.75) {
+                host.addParticleSystem(burst)
+            }
+            if let flameImage = sprite("flame"), let ember = sprite("ember") {
+                host.addParticleSystem(puff(flameImage, tint: tint.mixed(with: .white, amount: 0.25), count: 9, speed: 1.8,
+                                            size: 0.6 * CGFloat(scale), life: 0.5, spread: 45, lift: 2.4, spin: 0.8))
+                host.addParticleSystem(puff(ember, tint: tint, count: 40, speed: 5, size: 0.13 * CGFloat(scale),
+                                            life: 0.65, spread: 180, lift: -6, spin: 0))
+            } else {
+                host.addParticleSystem(sparks(tint: tint, count: 70, speed: 5, scale: scale))
+                host.addParticleSystem(rising(tint: tint, count: 40, scale: scale * 0.8))
+            }
             flash(at: position, in: scene, color: tint, radius: 1.4 * scale, duration: 0.2)
         case "impact_tide":
-            host.addParticleSystem(sparks(tint: tint, count: 50, speed: 4, scale: scale))
-            host.addParticleSystem(falling(tint: tint, count: 60, scale: scale))
+            if let splash = sprite("splash"), let shard = sprite("shard") {
+                host.addParticleSystem(puff(splash, tint: tint.mixed(with: .white, amount: 0.3), count: 3, speed: 0.3,
+                                            size: 1.3 * CGFloat(scale), life: 0.45, spread: 30, lift: 0.5, spin: 0.3, grow: 1.8))
+                host.addParticleSystem(puff(shard, tint: tint, count: 24, speed: 4.5, size: 0.22 * CGFloat(scale),
+                                            life: 0.6, spread: 180, lift: -9, spin: 4))
+            } else {
+                host.addParticleSystem(sparks(tint: tint, count: 50, speed: 4, scale: scale))
+                host.addParticleSystem(falling(tint: tint, count: 60, scale: scale))
+            }
             flash(at: position, in: scene, color: tint, radius: 1.2 * scale, duration: 0.2)
         case "impact_gale":
-            host.addParticleSystem(sparks(tint: tint, count: 90, speed: 8, scale: scale * 0.8))
+            if let slash = sprite("slash"), let leaf = sprite("leaf") {
+                host.addParticleSystem(puff(slash, tint: tint.mixed(with: .white, amount: 0.4), count: 6, speed: 3.5,
+                                            size: 0.8 * CGFloat(scale), life: 0.35, spread: 180, lift: 0, spin: 10, grow: 1.4))
+                host.addParticleSystem(puff(leaf, tint: tint, count: 16, speed: 4, size: 0.16 * CGFloat(scale),
+                                            life: 0.8, spread: 180, lift: -2, spin: 6))
+            } else {
+                host.addParticleSystem(sparks(tint: tint, count: 90, speed: 8, scale: scale * 0.8))
+            }
             flash(at: position, in: scene, color: tint, radius: 1.0 * scale, duration: 0.14)
         case "impact_radiance":
-            host.addParticleSystem(rising(tint: tint, count: 70, scale: scale))
+            if let flare = sprite("flare"), let ring = sprite("ring") {
+                host.addParticleSystem(puff(flare, tint: tint.mixed(with: .white, amount: 0.5), count: 1, speed: 0,
+                                            size: 1.6 * CGFloat(scale), life: 0.4, spread: 0, lift: 0, spin: 0.5, grow: 1.9))
+                host.addParticleSystem(puff(ring, tint: tint, count: 1, speed: 0, size: 0.6 * CGFloat(scale),
+                                            life: 0.45, spread: 0, lift: 0, spin: 0, grow: 4.5))
+                host.addParticleSystem(puff(flare, tint: tint, count: 14, speed: 4, size: 0.18 * CGFloat(scale),
+                                            life: 0.6, spread: 180, lift: 1, spin: 2))
+            } else {
+                host.addParticleSystem(rising(tint: tint, count: 70, scale: scale))
+            }
             flash(at: position, in: scene, color: tint, radius: 2.0 * scale, duration: 0.26)
         case "impact_umbra":
-            host.addParticleSystem(falling(tint: tint, count: 50, scale: scale * 1.2))
-            host.addParticleSystem(sparks(tint: tint, count: 30, speed: 3, scale: scale))
+            if let wisp = sprite("wisp"), let smoke = sprite("smoke") {
+                host.addParticleSystem(puff(smoke, tint: tint.mixed(with: .black, amount: 0.3), count: 5, speed: 0.8,
+                                            size: 0.9 * CGFloat(scale), life: 0.8, spread: 90, lift: 0.6, spin: 0.6,
+                                            blend: .alpha, grow: 2.0))
+                host.addParticleSystem(puff(wisp, tint: tint, count: 8, speed: 1.6, size: 0.5 * CGFloat(scale),
+                                            life: 0.7, spread: 60, lift: 1.8, spin: 1.5))
+            } else {
+                host.addParticleSystem(falling(tint: tint, count: 50, scale: scale * 1.2))
+                host.addParticleSystem(sparks(tint: tint, count: 30, speed: 3, scale: scale))
+            }
             flash(at: position, in: scene, color: tint, radius: 1.2 * scale, duration: 0.22)
         // The stroke of a closing strike: a bright arc across the victim that
         // grows in and fades in a quarter of a second.
@@ -118,6 +174,187 @@ enum VFXLibrary {
 
         // Particle hosts clean themselves up; nothing accumulates in the scene.
         host.runAction(.sequence([.wait(duration: 3.0), .removeFromParentNode()]))
+    }
+
+    // MARK: - Authored systems
+
+    /// `<identifier>.scnp` from the bundle, looked up once per name; the
+    /// file's own template is copied for every spawn.
+    private static var authoredCache: [String: SCNParticleSystem?] = [:]
+
+    private static func authoredSystem(_ identifier: String) -> SCNParticleSystem? {
+        if let cached = authoredCache[identifier] {
+            return cached?.copy() as? SCNParticleSystem
+        }
+        let system = SCNParticleSystem(named: "\(identifier).scnp", inDirectory: nil)
+        authoredCache[identifier] = system
+        return system?.copy() as? SCNParticleSystem
+    }
+
+    // MARK: - Painted sprites
+
+    /// The painted effect sprites — `tools/batch/vfx_sprites.sh` paints them
+    /// with Gemini on black, `tools/vfx_ship.py` ships them as `vfx_<name>`
+    /// with a real alpha channel — by name. Nil until one ships, and every
+    /// effect above keeps the spark it had. The owner: "the effects like the
+    /// fire or hits and stuff we need to really work on ... a fireball, it
+    /// cant be your bullshit red circle."
+    private static var spriteCache: [String: UIImage?] = [:]
+
+    static func sprite(_ name: String) -> UIImage? {
+        if let cached = spriteCache[name] { return cached }
+        let image = UIImage(named: "vfx_\(name)")
+        spriteCache[name] = image
+        return image
+    }
+
+    /// A curve for a particle property over its life.
+    private static func curve(_ values: [NSNumber], _ times: [NSNumber]) -> SCNParticlePropertyController {
+        let animation = CAKeyframeAnimation()
+        animation.values = values
+        animation.keyTimes = times
+        return SCNParticlePropertyController(animation: animation)
+    }
+
+    /// A burst of painted sprites: `count` copies thrown from a point,
+    /// screen-facing, spinning, growing by `grow` and fading out over `life`
+    /// seconds, lifted (or dropped, negative) by `lift`.
+    private static func puff(
+        _ image: UIImage, tint: UIColor, count: Int, speed: CGFloat, size: CGFloat, life: CGFloat,
+        spread: CGFloat, lift: Float, spin: CGFloat, blend: SCNParticleBlendMode = .additive, grow: CGFloat = 1.5
+    ) -> SCNParticleSystem {
+        let system = SCNParticleSystem()
+        system.loops = false
+        system.emissionDuration = 0.08
+        system.birthRate = CGFloat(count) / 0.08
+        system.birthLocation = .volume
+        system.emitterShape = SCNSphere(radius: 0.12)
+        system.particleImage = image
+        system.particleSize = size
+        system.particleSizeVariation = size * 0.3
+        system.particleLifeSpan = life
+        system.particleLifeSpanVariation = life * 0.3
+        system.particleVelocity = speed
+        system.particleVelocityVariation = speed * 0.5
+        system.spreadingAngle = spread
+        system.emittingDirection = SCNVector3(0, 1, 0)
+        system.particleColor = tint
+        system.particleAngleVariation = 180
+        system.particleAngularVelocity = spin * 60
+        system.particleAngularVelocityVariation = spin * 60
+        system.acceleration = SCNVector3(0, lift, 0)
+        system.isAffectedByGravity = false
+        system.blendMode = blend
+        system.isLightingEnabled = false
+        system.orientationMode = .billboardScreenAligned
+        system.sortingMode = .distance
+        system.propertyControllers = [
+            .size: curve([NSNumber(value: Double(size * 0.7)), NSNumber(value: Double(size * grow))], [0, 1]),
+            .opacity: curve([1, 1, 0], [0, 0.45, 1]),
+        ]
+        return system
+    }
+
+    /// A flipbook: one big screen-facing particle playing a sheet of frames
+    /// over its life — an explosion that rolls and dissipates, from a Veo
+    /// clip cut by `tools/veo.py sheet` (rows by cols of frames, first frame
+    /// top-left). Nil until the sheet ships.
+    private static func flipbook(_ name: String, rows: Int, cols: Int, tint: UIColor, size: CGFloat, life: CGFloat)
+        -> SCNParticleSystem? {
+        guard let image = sprite("\(name)_sheet") else { return nil }
+        let system = SCNParticleSystem()
+        system.loops = false
+        system.emissionDuration = 0.01
+        system.birthRate = 100
+        system.particleImage = image
+        system.imageSequenceRowCount = rows
+        system.imageSequenceColumnCount = cols
+        system.imageSequenceFrameRate = CGFloat(rows * cols) / life
+        system.imageSequenceInitialFrame = 0
+        system.imageSequenceAnimationMode = .clamp
+        system.particleSize = size
+        system.particleLifeSpan = life
+        system.particleVelocity = 0
+        system.particleColor = tint
+        system.blendMode = .additive
+        system.isLightingEnabled = false
+        system.orientationMode = .billboardScreenAligned
+        system.isAffectedByGravity = false
+        // The sheet is the burst; the fade is the dissipating.
+        system.propertyControllers = [.opacity: curve([1, 1, 0], [0, 0.5, 1])]
+        return system
+    }
+
+    /// A painted sprite flying from the caster to the victim: the element's
+    /// fireball, water, wind blade, flare or shadow, screen-facing, trailing,
+    /// on a low arc for the thrown ones and nearly straight for the rest;
+    /// gone on arrival, which is the frame the impact bursts on. Without the
+    /// sprite nothing flies and the impact still lands.
+    static func projectile(
+        _ element: Element, from start: SCNVector3, to end: SCNVector3, in scene: SCNScene,
+        tint: UIColor, duration: TimeInterval, scale: Float
+    ) {
+        let name: String
+        let size: CGFloat
+        let arc: Float
+        let spin: CGFloat
+        let trail: String
+        switch element {
+        case .ember: (name, size, arc, spin, trail) = ("fireball", 0.9, 1.1, 0, "ember")
+        case .tide: (name, size, arc, spin, trail) = ("splash", 0.7, 0.7, 2, "shard")
+        case .gale: (name, size, arc, spin, trail) = ("slash", 0.9, 0.15, 12, "leaf")
+        case .radiance: (name, size, arc, spin, trail) = ("flare", 0.8, 0.3, 1.5, "flare")
+        case .umbra: (name, size, arc, spin, trail) = ("wisp", 0.8, 0.6, 2, "wisp")
+        }
+        guard let image = sprite(name) else { return }
+
+        let host = SCNNode()
+        host.position = start
+        host.constraints = [SCNBillboardConstraint()]
+        scene.rootNode.addChildNode(host)
+
+        let plane = SCNPlane(width: size * CGFloat(scale), height: size * CGFloat(scale))
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = image
+        material.emission.contents = image
+        material.blendMode = .add
+        material.writesToDepthBuffer = false
+        material.isDoubleSided = true
+        plane.firstMaterial = material
+        let spriteNode = SCNNode(geometry: plane)
+        // The fireball's tail is painted to the left; when the shot flies
+        // toward the camera's left the sprite is mirrored so the tail trails.
+        let screenRight = SCNVector3(cos(CameraDirector.homeYaw), 0, sin(CameraDirector.homeYaw))
+        let flight = SCNVector3(end.x - start.x, end.y - start.y, end.z - start.z)
+        if flight.x * screenRight.x + flight.z * screenRight.z < 0 {
+            spriteNode.scale = SCNVector3(-1, 1, 1)
+        }
+        if spin > 0 {
+            spriteNode.runAction(.repeatForever(.rotateBy(x: 0, y: 0, z: spin, duration: 1)))
+        }
+        host.addChildNode(spriteNode)
+
+        if let trailImage = sprite(trail) {
+            let system = puff(trailImage, tint: tint, count: 1, speed: 0.6, size: 0.16 * CGFloat(scale), life: 0.35,
+                              spread: 180, lift: element == .ember ? 1.5 : 0, spin: 3)
+            system.loops = true
+            system.emissionDuration = 1
+            system.birthRate = 70
+            host.addParticleSystem(system)
+        }
+        flash(at: start, in: scene, color: tint, radius: 0.8 * scale, duration: 0.12)
+
+        let rise = arc * scale
+        let fly = SCNAction.customAction(duration: duration) { node, elapsed in
+            let t = Float(elapsed / CGFloat(duration))
+            node.position = SCNVector3(
+                start.x + flight.x * t,
+                start.y + flight.y * t + rise * sin(t * .pi),
+                start.z + flight.z * t
+            )
+        }
+        host.runAction(.sequence([fly, .removeFromParentNode()]))
     }
 
     // MARK: - Particle systems
@@ -434,6 +671,30 @@ enum VFXLibrary {
 
     /// The expanding shockwave for the ultimate.
     private static func addStormRing(to host: SCNNode, tint: UIColor, scale: Float) {
+        // The painted ring, flat on the floor, racing out under the line:
+        // the shockwave a line-wide skill reads by.
+        if let image = sprite("ring") {
+            let plane = SCNPlane(width: CGFloat(1.2 * scale), height: CGFloat(1.2 * scale))
+            let material = SCNMaterial()
+            material.lightingModel = .constant
+            material.diffuse.contents = image
+            material.emission.contents = image
+            material.multiply.contents = tint
+            material.blendMode = .add
+            material.writesToDepthBuffer = false
+            material.isDoubleSided = true
+            plane.firstMaterial = material
+            let wave = SCNNode(geometry: plane)
+            wave.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+            // On the floor under the chest the host sits at; a hand above it
+            // so it does not fight the stone for depth.
+            wave.position = SCNVector3(0, -Float(0.9 * scale) + 0.06, 0)
+            host.addChildNode(wave)
+            wave.runAction(.sequence([
+                .group([.scale(to: CGFloat(9 * scale), duration: 0.5), .fadeOut(duration: 0.5)]),
+                .removeFromParentNode(),
+            ]))
+        }
         let ring = SCNTorus(ringRadius: CGFloat(0.4 * scale), pipeRadius: CGFloat(0.05 * scale))
         let material = SCNMaterial()
         material.lightingModel = .constant
