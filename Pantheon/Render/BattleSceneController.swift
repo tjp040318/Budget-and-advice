@@ -551,6 +551,8 @@ final class BattleSceneController: NSObject {
             returnEveryoneHome()
             highlight(actor)
             showMatchups(for: actor)
+            // The walk-ons of the last wave are on their marks by now.
+            director?.frameField()
 
         case .turnSkipped(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
@@ -790,6 +792,12 @@ final class BattleSceneController: NSObject {
             }
             registerMaxHealth(opponents)
             place(combatants: opponents, entering: true)
+            // Measure the field with the new wave on it now, not at the next
+            // drain: in an auto fight the queue never drains between turns,
+            // so a boss arriving with the third wave was never measured and
+            // the boss framing never came — three runs of frames had the
+            // Colossus at the far end of the ordinary 58° shot.
+            director?.frameField()
             Juice.haptic(.light)
 
         case .battleEnded(let result):

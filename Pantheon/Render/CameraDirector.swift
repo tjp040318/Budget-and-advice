@@ -270,6 +270,9 @@ final class CameraDirector {
     func frameField() {
         guard let measured = measureField() else { return }
         let merged = (field ?? FieldBounds.standard).union(measured)
+        if merged.hasBoss, !(field?.hasBoss ?? false) {
+            print("[Camera] a boss is on the field: \(merged.points.count) points, re-framing from behind the team")
+        }
         field = merged
         let solved = solve(for: merged)
         homePosition = solved.position
