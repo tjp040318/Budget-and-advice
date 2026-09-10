@@ -942,8 +942,21 @@ struct BattleView: View {
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
+            // How to commit, once a skill is in hand. A skill that aims itself
+            // gives the player nothing to tap on the field, so without this
+            // line an armed skill looks like a skill that did nothing.
+            if let armed = model.selectedSkillSlot,
+               previewSlot == nil,
+               let skill = model.awaitingActor?.skill(at: armed) {
+                Text(BattleViewModel.needsTarget(skill)
+                     ? "Tap a target, or tap the skill again."
+                     : "Tap the skill again to use it.")
+                    .font(Theme.body(9).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+                    .lineLimit(1)
+            }
         }
-        .frame(width: 282, height: 58, alignment: .topLeading)
+        .frame(width: 282, height: 70, alignment: .topLeading)
     }
 
     /// The target the next tap would hit, if one is aimed.

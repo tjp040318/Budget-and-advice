@@ -79,7 +79,21 @@ final class CameraDirector {
     /// yaw is a frontal elevation: every rank is a row exactly parallel to the
     /// screen and the only depth cue left is scale. This is the three-quarter
     /// the doc comment always claimed and the code never had.
-    private static let homeYaw: Float = 13 * .pi / 180
+    ///
+    /// NEGATIVE, and nearly twice what it was. The first pass put the camera
+    /// 13° to the LEFT of the centre line, which was enough to stop the fight
+    /// reading as a flat elevation but not enough to be a look. The owner,
+    /// with a screenshot from his phone: "I dont like the angle, and it from
+    /// the other side and more of an angle. As if the camera is on the right."
+    /// So it is on the right, at 27°.
+    ///
+    /// The two are worth separating. The SIDE is taste and his to pick. The
+    /// AMOUNT is not free: yaw is what turns two lines of figures from rows
+    /// parallel to the screen into rows that recede, and it is also what stops
+    /// an enemy sitting exactly behind one of yours. Past about 35° the far
+    /// line starts to run off the frame's edge and the near line eats the
+    /// middle, so 27° is near the top of what the framing solve can hold.
+    private static let homeYaw: Float = -27 * .pi / 180
 
     /// How much of the half-frame the outermost figure may reach, and the
     /// metres of air left beside it. A figure is about 0.9 m across, so 0.9 m

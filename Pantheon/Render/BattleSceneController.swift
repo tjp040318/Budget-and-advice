@@ -287,10 +287,11 @@ final class BattleSceneController: NSObject {
         // detailed mesh. The loader falls back to the full model when no reduced
         // export has been shipped.
         let detail = ModelLibrary.detail(forCombatantCount: combatants.count + (entering ? unitNodes.count : 0))
+        noteLineWidth(combatants)
         for combatant in combatants {
             let node = UnitNode(combatant: combatant, detail: detail)
             node.playbackSpeed = speedMultiplier
-            let home = position(for: combatant, teamSize: sideCount(combatant.side, in: combatants))
+            let home = position(for: combatant, teamSize: lineWidth[combatant.side] ?? 1)
             node.eulerAngles.y = combatant.side == .player ? .pi : 0
             if entering {
                 // A later wave walks on from the far side of the field.
@@ -307,11 +308,26 @@ final class BattleSceneController: NSObject {
         }
     }
 
-    /// How many combatants a side is fielding, so the line can be centred on
-    /// the count rather than on a fixed number of columns.
-    private func sideCount(_ side: BattleSide, in combatants: [Combatant]) -> Int {
-        let placed = unitNodes.values.filter { $0.side == side }.count
-        return max(1, combatants.filter { $0.side == side }.count + placed)
+    /// The width of each side's line, in marks, fixed when the fight opens.
+    ///
+    /// Centring on who is ALIVE was wrong and the owner saw it: in a dungeon a
+    /// wave arrives beside survivors, and a line centred on the current count
+    /// slides sideways every time somebody dies or walks on, so the enemies
+    /// never look like they are standing anywhere in particular. A mark is a
+    /// place on the floor. It belongs to a slot, it does not move, and
+    /// `BattleEngine.freeOpponentSlots` already hands an arrival the lowest
+    /// mark nobody is standing on — so an arrival now fills the gap its
+    /// predecessor left instead of shoving the line over.
+    private var lineWidth: [BattleSide: Int] = [:]
+
+    /// Records the width once per side, from the opening line-up, and never
+    /// narrows it: a stage that opens with three and calls in two more is five
+    /// marks wide from the first frame, so nothing shifts when they arrive.
+    private func noteLineWidth(_ combatants: [Combatant]) {
+        for side in [BattleSide.player, .opponent] {
+            let wanted = combatants.filter { $0.side == side }.map { $0.slot + 1 }.max() ?? 0
+            lineWidth[side] = max(lineWidth[side] ?? 0, max(wanted, 1))
+        }
     }
 
     /// ONE RANK ABREAST, centred, both sides.

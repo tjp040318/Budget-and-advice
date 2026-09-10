@@ -302,25 +302,45 @@ final class BattleViewModel: ObservableObject {
         }
     }
 
+    /// Whether the player has to aim this one, or it picks its own targets.
+    static func needsTarget(_ skill: Skill) -> Bool {
+        switch skill.target {
+        case .singleEnemy, .lowestHealthEnemy, .singleAlly, .deadAlly: return true
+        default: return false
+        }
+    }
+
+    /// The first tap ARMS a skill. The second uses it.
+    ///
+    /// It used to be that a skill picking its own targets fired on the first
+    /// tap, and only a single-target one waited. The owner met that on
+    /// 2026-09-10: "when I click skill 3 for Anubis, it just immediately uses
+    /// it instead of showing me what it is first." He is right, and the
+    /// inconsistency was the worst part of it — two of a unit's skills paused
+    /// to be read and the third went off, so the one skill a player is least
+    /// likely to know is the one he could not look at without spending a turn.
+    ///
+    /// Now every skill arms first and shows its words in the actor plate. A
+    /// second tap on the SAME skill commits it, which is also what tapping a
+    /// target does for the ones that need one, so the rhythm is the same
+    /// either way: choose, read, commit.
     func selectSkill(_ slot: Int) {
         guard let actor = awaitingActor, actor.isSkillReady(slot) else { return }
         guard let skill = actor.skill(at: slot) else { return }
 
-        // Skills that pick their own targets fire immediately; single-target
-        // skills wait for a tap so the player can aim.
-        let needsTarget: Bool
-        switch skill.target {
-        case .singleEnemy, .lowestHealthEnemy, .singleAlly, .deadAlly: needsTarget = true
-        default: needsTarget = false
+        if selectedSkillSlot == slot {
+            if Self.needsTarget(skill) {
+                if let target = highlightedTarget { submit(slot: slot, target: target) }
+            } else {
+                submit(slot: slot, target: nil)
+            }
+            return
         }
 
-        if needsTarget {
-            selectedSkillSlot = slot
-            // Pre-aim at the most obvious target so a single tap works.
-            highlightedTarget = defaultTarget(for: skill, actor: actor)
-        } else {
-            submit(slot: slot, target: nil)
-        }
+        selectedSkillSlot = slot
+        // Pre-aim at the most obvious target so the second tap works without
+        // choosing one; a skill that needs no target simply has none.
+        highlightedTarget = Self.needsTarget(skill) ? defaultTarget(for: skill, actor: actor) : nil
     }
 
     func tapUnit(_ combatantID: UUID) {

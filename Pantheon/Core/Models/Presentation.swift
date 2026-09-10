@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import ImageIO
 
 /// Is a painting in the bundle?
 ///
@@ -68,6 +69,61 @@ enum BundleArt {
         }
         cache[name] = loaded
         return loaded
+    }
+
+    // MARK: - Thumbnails
+    //
+    // THE ARENA'S LAG. Every portrait in this game is a 1024-pixel painting,
+    // and `image(_:)` above decodes all of it however small it is drawn: a
+    // 1024x1024 bitmap is four megabytes of memory whether it fills the screen
+    // or sits in a 38-point card. The Arena draws about thirty-five cards at
+    // once — five challengers of five units each, plus both of your own teams
+    // — so opening it decoded something like a hundred and forty megabytes on
+    // the main thread, and cached every byte. That is what the owner has felt
+    // twice as "super super laggy when I click on arena", and it survived the
+    // first fix because that one moved the challenger POOL off the main
+    // thread and left the pictures exactly where they were.
+    //
+    // ImageIO decodes straight to the size asked for and never materialises
+    // the full bitmap, so a 38-point card on a 3x screen costs a 128-pixel
+    // thumbnail: sixty-five kilobytes instead of four megabytes, sixty-four
+    // times less, and the same again in decode time.
+    private static var thumbnails: [String: UIImage?] = [:]
+
+    /// Decode buckets. A handful of sizes rather than one per call site, so
+    /// two cards a few points apart share a decode instead of each keeping a
+    /// bitmap of its own.
+    private static let buckets: [Int] = [128, 256, 512, 1024]
+
+    /// The painting at no more than `maxPixel` on its long side.
+    ///
+    /// Falls back to the full-size loader for anything an asset catalogue owns
+    /// or that ImageIO cannot open, so a caller can always ask for a thumbnail
+    /// and get a picture.
+    static func thumbnail(_ name: String, maxPixel: Int) -> UIImage? {
+        let bucket = buckets.first(where: { $0 >= maxPixel }) ?? buckets[buckets.count - 1]
+        let key = "\(name)@\(bucket)"
+        if let hit = thumbnails[key] { return hit }
+
+        var built: UIImage?
+        if let url = url(name),
+           let source = CGImageSourceCreateWithURL(url as CFURL, nil) {
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceThumbnailMaxPixelSize: bucket,
+            ]
+            if let cg = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) {
+                built = UIImage(cgImage: cg)
+            }
+        }
+        // An asset-catalogue image has no file URL, and a format ImageIO
+        // refuses has no thumbnail; both fall back to the whole picture rather
+        // than to nothing.
+        if built == nil { built = image(name) }
+        thumbnails[key] = built
+        return built
     }
 }
 

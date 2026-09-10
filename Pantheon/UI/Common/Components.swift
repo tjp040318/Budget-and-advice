@@ -215,9 +215,30 @@ struct WalletBar: View {
 /// frame at the call site.
 struct BundleImage: View {
     let name: String
+    /// How large this is actually drawn, in POINTS. Given one, the painting is
+    /// decoded at that size instead of at its full 1024 pixels.
+    ///
+    /// This is the Arena's lag. A portrait is a 1024-pixel painting and a
+    /// full decode is a four-megabyte bitmap however small it is drawn; the
+    /// Arena puts about thirty-five cards on screen at 38 points, which came
+    /// to something like a hundred and forty megabytes decoded on the main
+    /// thread. Passing the drawn size turns each of those into a 128-pixel
+    /// thumbnail — sixty-five kilobytes, sixty-four times less.
+    ///
+    /// Nil means the whole picture, which is right for a banner, a backdrop
+    /// or the summon reveal's card and wrong for anything in a list.
+    var renderedAt: CGFloat? = nil
+
+    private var image: UIImage? {
+        guard let renderedAt else { return BundleArt.image(name) }
+        // Points to pixels on the densest screen the app runs on. Asking for
+        // more than the file holds is harmless — the bucket is capped.
+        let pixels = Int((renderedAt * UIScreen.main.scale).rounded(.up))
+        return BundleArt.thumbnail(name, maxPixel: max(1, pixels))
+    }
 
     var body: some View {
-        if let image = BundleArt.image(name) {
+        if let image {
             Image(uiImage: image).resizable()
         }
     }
@@ -352,7 +373,12 @@ struct UnitCard: View {
     @ViewBuilder
     private var portrait: some View {
         if BundleImage.exists(unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened)) {
-            BundleImage(name: unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened))
+            // Decoded at the card's own size. This one line is most of the
+            // Arena's lag: `UnitCard` is what a challenger row, a team slot,
+            // a grid cell and a picker candidate are all made of, so every
+            // list in the game was decoding full 1024-pixel paintings.
+            BundleImage(name: unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened),
+                        renderedAt: size)
                 .aspectRatio(contentMode: .fill)
         } else {
             ZStack {
