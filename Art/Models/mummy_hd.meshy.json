@@ -50,7 +50,7 @@
       "finished_at": 1788978900281,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:48:48Z"
+      "polled": "2026-09-10T01:24:34Z"
     },
     "rig": {
       "id": "01a08773-d221-7523-b849-44b2b30d87e2",
@@ -77,7 +77,7 @@
       "started_at": 1788978921714,
       "finished_at": 1788978975158,
       "name": "",
-      "polled": "2026-09-09T18:48:48Z",
+      "polled": "2026-09-10T01:24:34Z",
       "downloaded": {
         "glb": "Art/Models/mummy_hd.glb"
       }
