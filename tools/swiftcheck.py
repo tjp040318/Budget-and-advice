@@ -617,6 +617,90 @@ def check_switch_exhaustive(files, errors):
                               f"{', '.join('.' + x for x in missing)} and has no default")
 
 
+
+# ---------------------------------------------------------------------------
+# Rule 16: a property read off a core model that the model does not have
+# ---------------------------------------------------------------------------
+
+def check_model_members(files, errors):
+    """`player.tower` when Player has no `tower`.
+
+    A save field is added in one file and read in another, and Swift answers
+    "value of type 'Player' has no member 'tower'" — but only on the runner,
+    thirty minutes later. It happened on 2026-09-10: the Endless Tower kept its
+    progress in `player.tower` and the field was never added to Player.
+
+    Only the handful of model types listed below are checked, and only the
+    FIRST member after the variable, so `player.units.filter { ... }` tests
+    `units` on Player and leaves `filter` to Array. Members are gathered from
+    every declaration of the type anywhere in the module — the struct itself,
+    its extensions, stored and computed alike — and the variable's type is
+    resolved the same careful way rule 15 resolves a switch subject: from the
+    signature of the function the line sits in, so a local named `player` of
+    some other type is never mistaken for one."""
+    MODELS = {"Player", "Unit", "Relic"}
+
+    members = {name: set() for name in MODELS}
+    decl = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|final\s+)*"
+                      r"(?:struct|class|extension)\s+([A-Za-z_][A-Za-z0-9_]*)")
+    prop = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
+                      r"(?:public\s+|private\s+|internal\s+|fileprivate\s+)?"
+                      r"(?:static\s+)?(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)\s*[:{=]")
+    fn = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|fileprivate\s+|"
+                    r"static\s+|mutating\s+|final\s+|@discardableResult\s+)*func\s+"
+                    r"([A-Za-z_][A-Za-z0-9_]*)")
+    for path_ in files:
+        lines = strip_noise(open(path_).read()).splitlines()
+        current, indent = None, 0
+        for line in lines:
+            m = decl.match(line)
+            if m:
+                current = m.group(1) if m.group(1) in MODELS else None
+                indent = len(line) - len(line.lstrip())
+                continue
+            if current is None:
+                continue
+            stripped = line.strip()
+            if stripped and (len(line) - len(line.lstrip())) <= indent:
+                current = None
+                continue
+            pm = prop.match(line)
+            if pm:
+                members[current].add(pm.group(1))
+                continue
+            fm = fn.match(line)
+            if fm:
+                members[current].add(fm.group(1))
+
+    # A model with no members found means the parse missed it; checking against
+    # an empty set would report every access. Only check what was really read.
+    live = {k: v for k, v in members.items() if len(v) >= 5}
+    if not live:
+        return
+
+    param = re.compile(r"[(,]\s*(?:[A-Za-z_][A-Za-z0-9_]*\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*"
+                       r"(?:inout\s+)?(?:[A-Za-z_][A-Za-z0-9_]*\.)*([A-Za-z_][A-Za-z0-9_]*)")
+    for path_ in files:
+        lines = strip_noise(open(path_).read()).splitlines()
+        typed = {}          # variable name -> model type, from the last signature seen
+        for i, line in enumerate(lines):
+            if "func " in line:
+                typed = {}
+                for pm in param.finditer(line):
+                    if pm.group(2) in live:
+                        typed[pm.group(1)] = pm.group(2)
+            if not typed:
+                continue
+            for vm in re.finditer(r"\b([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)", line):
+                model = typed.get(vm.group(1))
+                if model is None:
+                    continue
+                field = vm.group(2)
+                if field in live[model] or field in ("self", "init"):
+                    continue
+                errors.append(f"{path_}:{i + 1}: {model} has no member '{field}' "
+                              f"(read as {vm.group(1)}.{field})")
+
 def check_unknown_types(files, declared, errors):
     """Types used but never declared anywhere in the module."""
     KNOWN = {
@@ -816,6 +900,7 @@ def main():
     check_orphan_attributes(files, errors)
     check_foreign_wrapped_properties(files, errors)
     check_switch_exhaustive(files, errors)
+    check_model_members(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 
