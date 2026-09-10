@@ -18,16 +18,29 @@ struct StageOutcome: Sendable {
 /// PvE progression: which stages are open, and what a clear pays.
 enum CampaignService {
 
-    /// A stage is available once the previous one in its chapter is cleared, and
-    /// a chapter opens once the previous chapter's boss falls.
+    /// A stage is available once the previous one in its chapter is cleared, a
+    /// chapter opens once the previous chapter's boss falls, and a harder
+    /// tier of a chapter opens once the tier before it is cleared to its
+    /// boss: Hard behind Normal, Hell behind Hard.
     static func isUnlocked(_ stage: Stage, player: Player) -> Bool {
+        let (baseChapter, tier) = CampaignDifficulty.split(stage.chapterID)
         if stage.index == 1 {
-            guard let chapterIndex = StageDatabase.chapters.firstIndex(where: { $0.id == stage.chapterID }),
+            if let easier = tier.easier {
+                guard let chapter = StageDatabase.chapters.first(where: { $0.id == baseChapter }) else { return false }
+                return (player.campaignProgress[baseChapter + easier.suffix] ?? 0) >= chapter.stages.count
+            }
+            guard let chapterIndex = StageDatabase.chapters.firstIndex(where: { $0.id == baseChapter }),
                   chapterIndex > 0 else { return true }
             let previous = StageDatabase.chapters[chapterIndex - 1]
             return (player.campaignProgress[previous.id] ?? 0) >= previous.stages.count
         }
         return (player.campaignProgress[stage.chapterID] ?? 0) >= stage.index - 1
+    }
+
+    /// Whether a tier of a chapter can be entered at all.
+    static func isOpen(_ tier: CampaignDifficulty, of chapter: Chapter, player: Player) -> Bool {
+        guard let first = chapter.at(tier).stages.first else { return false }
+        return isUnlocked(first, player: player)
     }
 
     static func isCleared(_ stage: Stage, player: Player) -> Bool {

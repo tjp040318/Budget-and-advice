@@ -16,6 +16,7 @@ the engine; it is the spreadsheet a designer would keep, made executable.
     python3 tools/balance.py --curve    # stat curves only
     python3 tools/balance.py --gacha    # summon odds and pity only
     python3 tools/balance.py --tower    # the Endless Tower's hundred floors
+    python3 tools/balance.py --tiers    # the campaign's Hard and Hell against the ladders
     python3 tools/balance.py --raids    # the two raid bosses and their mechanics
 
 If a constant changes in Swift, change it here and re-run.
@@ -566,6 +567,43 @@ def report_chapters(trials=100):
                 row += f"{wr*100:>16.0f}% {med:>3.0f}t"
             print(row)
 
+# The campaign's tiers, mirroring CampaignDifficulty in StageDatabase.swift:
+# grade +1 / +2 (capped at 6), level x1.15 / x1.25 (capped at 60), stats
+# x1.2 / x1.5 on top of whatever the spawn already carried (a boss keeps its
+# x1.4). Measured 2026-09-10: Hard's bosses fall to the third ladder step
+# (Olympus 3 at 97% in 138 turns) and Hell's to the fourth (Yggdrasil 3 at
+# 98% in 126 turns); at x1.3 / x1.7 Hell stalled even the gods at the cap.
+DIFFICULTIES = [  # name, grade bonus, level scale, stat scale
+    ("Normal", 0, 1.00, 1.0),
+    ("Hard",   1, 1.15, 1.2),
+    ("Hell",   2, 1.25, 1.5),
+]
+
+def tiered(spec, tier):
+    _, bonus, lvl_scale, stat_scale = tier
+    out = []
+    for e in spec:
+        bp, level, grade = e[0], e[1], e[2]
+        mult = e[3] if len(e) > 3 else 1.0
+        out.append((bp, min(60, round(level * lvl_scale)), min(6, grade + bonus), mult * stat_scale))
+    return out
+
+def report_tiers(trials=100):
+    print("\nTIERS — boss stages at Normal, Hard and Hell, win rate over %d seeded battles" % trials)
+    print("target: Hard clears at the third ladder step, Hell at the fourth, and Normal is untouched\n")
+    print(f"{'stage':>36}{'tier':>7}  " + "".join(f"{n:>22}" for n, _ in CHAPTER_LADDERS))
+    probes = [("Duat 1 Coils of Apep BOSS", STAGES[-1][2])]
+    for ch in (CHAPTERS[0], CHAPTERS[3], CHAPTERS[6]):
+        spec, _ = generated_stage(ch, ch[3])
+        probes.append((ch[0] + " BOSS", spec))
+    for name, spec in probes:
+        for tier in DIFFICULTIES:
+            row = f"{name:>36}{tier[0]:>7}  "
+            for _, team in CHAPTER_LADDERS:
+                wr, med = winrate(team, tiered(spec, tier), trials=trials)
+                row += f"{wr*100:>16.0f}% {med:>3.0f}t"
+            print(row)
+
 def report_families(trials=120):
     """Every family of the third roster, fire variant, 5* lv30 with relics, one
     on one against Anubis (a support) and Sekhmet (an attacker) at the same
@@ -1074,6 +1112,7 @@ if __name__ == "__main__":
     elif "--gacha" in a: report_gacha()
     elif "--families" in a: report_families()
     elif "--chapters" in a: report_chapters()
+    elif "--tiers" in a: report_tiers()
     elif "--halls" in a: report_halls()
     elif "--labyrinths" in a: report_labyrinths()
     elif "--tower" in a: report_tower()

@@ -142,6 +142,17 @@ environment can and cannot do. The short version:
   island's gate is one tap from a stage. `WorldMapView` (the realms and
   which boss shuts a chapter) is a sheet behind the Realms button;
   `world_map.png` shows above the realms once painted.
+- **Campaign tiers** (`CampaignDifficulty` in `StageDatabase.swift`): every
+  chapter plays at Normal, Hard and Hell, chosen by three chips above the
+  chapter map. A tier is DERIVED from the Normal chapter — `Stage.at(_:)`,
+  `Chapter.at(_:)` suffix every id (`duat_1_5@hard`) — so each tier keeps
+  its own high-water mark under its own key in `campaignProgress` with no
+  new save field, and `StageDatabase.stage/chapter` and
+  `CampaignService.isUnlocked` read the tier back off the id. Hard is a
+  grade up, level ×1.15, stats ×1.2, every stage dropping a 5★+ relic,
+  ×1.7 drachma/EXP; Hell two grades up, ×1.25, ×1.5, 6★ relics, ×2.6. Hard
+  opens when Normal's boss falls, Hell when Hard's. `balance.py --tiers`
+  measures it; change the numbers in both files.
 - **The Labyrinth** (`DungeonDatabase.labyrinths`, `LabyrinthView`,
   `DungeonLevelsView`): the Vault of the Colossus (boss `boss_colossus`),
   the Lair of the Hydra (`boss_hydra`) and the Necropolis of the Unwrapped

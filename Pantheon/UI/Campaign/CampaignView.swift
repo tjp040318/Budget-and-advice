@@ -17,6 +17,8 @@ struct CampaignView: View {
     /// which is where the tab starts.
     @State private var openChapterID: String?
     @State private var showRealms = false
+    /// The tier of the open chapter being shown: Normal, Hard or Hell.
+    @State private var difficulty: CampaignDifficulty = .normal
 
     /// Engines are built before presentation so that a failure (no energy, stage
     /// locked) surfaces as an error rather than as an empty battle screen.
@@ -81,7 +83,7 @@ struct CampaignView: View {
                     VStack(spacing: 0) {
                         chapterStrip
                         ScrollView {
-                            ChapterMapView(chapterID: openChapterID) { stage in
+                            ChapterMapView(chapterID: openChapterID, difficulty: $difficulty) { stage in
                                 selectedStage = stage
                             }
                             .padding(.horizontal, ScreenChrome.contentPadding)

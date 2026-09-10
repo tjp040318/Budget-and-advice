@@ -74,6 +74,216 @@ struct Chapter: Identifiable, Codable, Equatable, Sendable {
     var realmName: String { pantheon.realmName }
 }
 
+/// The campaign's three tiers of every chapter, the genre's way: Normal is
+/// the authored chapter; Hard and Hell are the same stages a grade higher, a
+/// few levels higher and under a flat stat multiplier, paying more and
+/// dropping better relics. The owner: "normal --> hard --> god level (each
+/// one gives you better quality relics/prizes) but gets harder."
+///
+/// A tier is DERIVED, never authored: `Stage.at(_:)` and `Chapter.at(_:)`
+/// copy the Normal chapter and suffix every id (`duat_1_5@hard`,
+/// `duat_1@hell`). Progress is a dictionary keyed by chapter id, so each
+/// tier keeps its own high-water mark in the save with no new field, and
+/// every lookup that starts from an id (`StageDatabase.stage`, `chapter`,
+/// `CampaignService.isUnlocked`) reads the suffix back off it with
+/// `split(_:)`. Hard opens when Normal's boss falls, Hell when Hard's does.
+/// The curve is mirrored in `tools/balance.py` (`DIFFICULTIES`, `--tiers`);
+/// change it in both.
+enum CampaignDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
+    case normal, hard, hell
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .normal: return "Normal"
+        case .hard: return "Hard"
+        case .hell: return "Hell"
+        }
+    }
+
+    /// The id suffix a tier's chapters and stages carry; Normal carries none.
+    var suffix: String { self == .normal ? "" : "@\(rawValue)" }
+
+    /// The tier that has to be cleared to its boss before this one opens.
+    var easier: CampaignDifficulty? {
+        switch self {
+        case .normal: return nil
+        case .hard: return .normal
+        case .hell: return .hard
+        }
+    }
+
+    /// Grades added to every spawn, capped at 6★.
+    var starBonus: Int {
+        switch self {
+        case .normal: return 0
+        case .hard: return 1
+        case .hell: return 2
+        }
+    }
+
+    /// On every spawn's level, capped at 60 so the numbers on screen stay in
+    /// the range the player's own units use; the grade and the multiplier
+    /// carry the rest of the difficulty.
+    var levelScale: Double {
+        switch self {
+        case .normal: return 1.0
+        case .hard: return 1.15
+        case .hell: return 1.25
+        }
+    }
+
+    /// Flat, on top of the level and the grade, multiplied into the spawn's
+    /// own `statMultiplier` (a boss keeps its ×1.4 on top of this).
+    var statScale: Double {
+        switch self {
+        case .normal: return 1.0
+        case .hard: return 1.2
+        case .hell: return 1.5
+        }
+    }
+
+    /// Drachma, experience and the first clear's divinity.
+    var rewardScale: Double {
+        switch self {
+        case .normal: return 1.0
+        case .hard: return 1.7
+        case .hell: return 2.6
+        }
+    }
+
+    /// A relic from a Hard stage is at least 5★, from Hell 6★ — the whole
+    /// reason to come back.
+    var relicGradeFloor: Int {
+        switch self {
+        case .normal: return 0
+        case .hard: return 5
+        case .hell: return 6
+        }
+    }
+
+    /// Every Hard stage drops a relic at least this often, every Hell stage
+    /// more; a stage that already drops more often keeps its own chance,
+    /// scaled.
+    var relicChanceFloor: Double {
+        switch self {
+        case .normal: return 0
+        case .hard: return 0.30
+        case .hell: return 0.45
+        }
+    }
+
+    /// On relic, essence and scroll chances.
+    var dropScale: Double {
+        switch self {
+        case .normal: return 1.0
+        case .hard: return 1.4
+        case .hell: return 1.8
+        }
+    }
+
+    var energyExtra: Int {
+        switch self {
+        case .normal: return 0
+        case .hard: return 2
+        case .hell: return 4
+        }
+    }
+
+    /// On the recommended power the briefing shows.
+    var powerScale: Double {
+        switch self {
+        case .normal: return 1.0
+        case .hard: return 1.9
+        case .hell: return 3.2
+        }
+    }
+
+    var accentHex: String {
+        switch self {
+        case .normal: return "#4E8A72"
+        case .hard: return "#C8425A"
+        case .hell: return "#9B6BFF"
+        }
+    }
+
+    var glyph: String {
+        switch self {
+        case .normal: return "leaf.fill"
+        case .hard: return "flame.fill"
+        case .hell: return "bolt.fill"
+        }
+    }
+
+    /// The Normal id and the tier an id carries.
+    static func split(_ id: String) -> (base: String, difficulty: CampaignDifficulty) {
+        for tier in allCases where tier != .normal && id.hasSuffix(tier.suffix) {
+            return (String(id.dropLast(tier.suffix.count)), tier)
+        }
+        return (id, .normal)
+    }
+
+    func scale(_ spawn: EnemySpawn) -> EnemySpawn {
+        guard self != .normal else { return spawn }
+        var copy = spawn
+        copy.stars = min(6, spawn.stars + starBonus)
+        copy.level = min(60, Int((Double(spawn.level) * levelScale).rounded()))
+        copy.statMultiplier = spawn.statMultiplier * statScale
+        return copy
+    }
+
+    func scale(_ rewards: StageRewards) -> StageRewards {
+        guard self != .normal else { return rewards }
+        var copy = rewards
+        copy.drachma = Int(Double(rewards.drachma) * rewardScale)
+        copy.playerExperience = Int(Double(rewards.playerExperience) * rewardScale)
+        copy.unitExperience = Int(Double(rewards.unitExperience) * rewardScale)
+        copy.relicChance = min(1, max(relicChanceFloor, rewards.relicChance * dropScale))
+        copy.relicGrade = max(rewards.relicGrade, relicGradeFloor)
+        copy.essenceChances = rewards.essenceChances.mapValues { min(1, $0 * dropScale) }
+        copy.scrollChances = rewards.scrollChances.mapValues { min(1, $0 * dropScale) }
+        copy.firstClearDivinity = Int(Double(rewards.firstClearDivinity) * rewardScale)
+        return copy
+    }
+}
+
+extension Stage {
+    /// The tier this stage is, read off its id.
+    var difficulty: CampaignDifficulty { CampaignDifficulty.split(id).difficulty }
+
+    /// This stage at a tier. Only a Normal stage is scaled; a stage already
+    /// at a tier is handed back as it is, so nothing can be scaled twice.
+    func at(_ tier: CampaignDifficulty) -> Stage {
+        guard tier != .normal, difficulty == .normal else { return self }
+        var copy = self
+        copy.id = id + tier.suffix
+        copy.chapterID = chapterID + tier.suffix
+        copy.name = "\(name) · \(tier.displayName)"
+        copy.energyCost = energyCost + tier.energyExtra
+        copy.recommendedPower = Int(Double(recommendedPower) * tier.powerScale)
+        copy.enemies = enemies.map { tier.scale($0) }
+        copy.laterWaves = laterWaves.map { wave in wave.map { tier.scale($0) } }
+        copy.rewards = tier.scale(rewards)
+        return copy
+    }
+}
+
+extension Chapter {
+    var difficulty: CampaignDifficulty { CampaignDifficulty.split(id).difficulty }
+
+    /// This chapter at a tier: the same road, every stage scaled, no intro
+    /// card (the story was told at Normal).
+    func at(_ tier: CampaignDifficulty) -> Chapter {
+        guard tier != .normal, difficulty == .normal else { return self }
+        var copy = self
+        copy.id = id + tier.suffix
+        copy.intro = ""
+        copy.stages = stages.map { $0.at(tier) }
+        return copy
+    }
+}
+
 /// The PvE content.
 ///
 /// Chapter 1 is authored by hand because it is the tutorial and the difficulty
@@ -240,10 +450,15 @@ enum StageDatabase {
         )
     ]
 
-    static func chapter(_ id: String) -> Chapter? { chapters.first(where: { $0.id == id }) }
+    /// By id, at whichever tier the id carries.
+    static func chapter(_ id: String) -> Chapter? {
+        let (base, tier) = CampaignDifficulty.split(id)
+        return chapters.first(where: { $0.id == base })?.at(tier)
+    }
 
     static func stage(_ id: String) -> Stage? {
-        allStages.first(where: { $0.id == id })
+        let (base, tier) = CampaignDifficulty.split(id)
+        return allStages.first(where: { $0.id == base })?.at(tier)
     }
 
     /// Every fightable stage: the chapters', the Halls of Essence's floors,

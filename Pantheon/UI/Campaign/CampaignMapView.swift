@@ -147,14 +147,20 @@ struct WorldMapView: View {
 struct ChapterMapView: View {
     @EnvironmentObject private var store: GameStore
     let chapterID: String
+    /// Which tier of the chapter the road shows. Owned by the campaign
+    /// screen so it survives a change of chapter.
+    @Binding var difficulty: CampaignDifficulty
     let onSelect: (Stage) -> Void
 
     @State private var pulse = false
 
-    private var chapter: Chapter? { StageDatabase.chapter(chapterID) }
+    private var chapter: Chapter? { StageDatabase.chapter(chapterID)?.at(difficulty) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
+            if let base = StageDatabase.chapter(chapterID) {
+                tierChips(base)
+            }
             if let chapter {
                 map(chapter)
                 header(chapter)
@@ -165,6 +171,69 @@ struct ChapterMapView: View {
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
                 pulse = true
             }
+        }
+    }
+
+    // MARK: - The tiers
+
+    /// Normal, Hard, Hell as three chips, the genre's way: the tier being
+    /// shown is filled in its own colour, a shut tier wears a lock and says
+    /// what opens it, and a tier cleared to its boss wears a check.
+    private func tierChips(_ base: Chapter) -> some View {
+        let player = store.player
+        return HStack(spacing: 8) {
+            ForEach(CampaignDifficulty.allCases) { tier in
+                let open = CampaignService.isOpen(tier, of: base, player: player)
+                let cleared = (player.campaignProgress[base.id + tier.suffix] ?? 0) >= base.stages.count
+                let selected = tier == difficulty
+                let tint = Color(hex: tier.accentHex)
+                Button {
+                    guard open else { return }
+                    withAnimation(.easeOut(duration: 0.2)) { difficulty = tier }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: open ? (cleared ? "checkmark.seal.fill" : tier.glyph) : "lock.fill")
+                            .font(.system(size: 10, weight: .bold))
+                        Text(tier.displayName.uppercased())
+                            .font(Theme.body(10).weight(.black))
+                            .tracking(1.2)
+                    }
+                    .foregroundStyle(selected ? Theme.ink : (open ? tint : Theme.textSecondary))
+                    .padding(.horizontal, 12)
+                    .frame(height: 28)
+                    .background(
+                        Capsule().fill(selected ? tint : Theme.ink.opacity(open ? 0.55 : 0.35))
+                    )
+                    .overlay(
+                        Capsule().strokeBorder(open ? tint.opacity(selected ? 0 : 0.7) : Theme.stroke, lineWidth: 1)
+                    )
+                    .opacity(open ? 1 : 0.7)
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer(minLength: 0)
+            // What the tier pays, in one line, so the reason to come back is
+            // on the map and not buried in a briefing.
+            Text(tierNote(difficulty, open: CampaignService.isOpen(difficulty, of: base, player: player), base: base))
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+
+    private func tierNote(_ tier: CampaignDifficulty, open: Bool, base: Chapter) -> String {
+        switch tier {
+        case .normal:
+            return "The story. Relics as the stage gives them."
+        case .hard:
+            return open
+                ? "Enemies a grade up and ×1.2. Every stage drops a 5★ relic or better; ×1.7 drachma and EXP."
+                : "Opens when \(base.name)'s boss falls on Normal."
+        case .hell:
+            return open
+                ? "Enemies two grades up and ×1.5. Every stage drops a 6★ relic; ×2.6 drachma and EXP."
+                : "Opens when \(base.name)'s boss falls on Hard."
         }
     }
 
