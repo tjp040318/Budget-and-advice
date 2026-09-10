@@ -9,6 +9,11 @@ import SwiftUI
 /// live in `ProgressionService` and `GameStore`; this screen only shows their
 /// consequences before the player commits, and what changed after.
 ///
+/// The fourth mode is the fusion hexagram (`FusionService`), which is the odd
+/// one out: it trains nobody, so it needs no unit selected and takes the whole
+/// frame — a row of recipe panels rather than the rail, the fodder grid and the
+/// cost column the other three share.
+///
 /// The chrome is `GameScreen`, and the shape is the genre's rather than the
 /// platform's: the mode switch that used to be a full-width segmented picker
 /// under a navigation bar is three segments in the 34-point strip, and the
@@ -24,14 +29,23 @@ struct TrainingView: View {
     @State private var mode: Mode = .powerUp
     @State private var fodder: Set<UUID> = []
     @State private var outcome: String?
-    /// Set when an awakening succeeds: the summon reveal plays the awakened
-    /// form in on the beam under its new name.
-    @State private var awakenedReveal: SummonResult?
+    /// Set when an awakening or a fusion succeeds: the summon reveal plays the
+    /// new form in on the beam under its name. Both events are rarer than a
+    /// summon, so both get the beam.
+    @State private var reveal: SummonResult?
 
     enum Mode: String, CaseIterable {
         case powerUp = "Power up"
         case evolve = "Evolve"
         case awaken = "Awaken"
+        case fuse = "Fuse"
+    }
+
+    /// Which tab the screen opens on. Every caller wants the default; the CI
+    /// tour wants a way to photograph the fusion board without a tap, and
+    /// `@State` cannot read another property without an initialiser.
+    init(initialMode: Mode = .powerUp) {
+        _mode = State(initialValue: initialMode)
     }
 
     /// The mode switch as the strip's segments, in the order it always had.
@@ -51,8 +65,19 @@ struct TrainingView: View {
     }
 
     private var subtitle: String {
+        if mode == .fuse {
+            let ready = plans.filter { $0.canFuse }.count
+            return "\(FusionService.recipes.count) hexagrams · \(ready) ready"
+        }
         guard let target else { return "\(units.count) units" }
         return "\(target.name) · Lv.\(target.level)"
+    }
+
+    /// Every recipe measured against the save. Six recipes of four corners
+    /// against a roster of a hundred is a few hundred comparisons, which is
+    /// cheaper than a cache that goes stale the moment a fusion eats something.
+    private var plans: [FusionService.Plan] {
+        FusionService.recipes.map { FusionService.plan(for: $0, player: store.player) }
     }
 
     /// The rail is two cards wide; the cost column is fixed so the fodder grid
@@ -64,14 +89,21 @@ struct TrainingView: View {
     var body: some View {
         NavigationStack {
             GameScreen("Hall of Ka", subtitle: subtitle, dismiss: { dismiss() }) {
-                if target != nil {
-                    BarSegments(options: modes, selection: $mode)
-                }
+                // Always shown: fusion needs no unit picked, so hiding the
+                // switch with an empty roster would hide the one mode that
+                // still works.
+                BarSegments(options: modes, selection: $mode)
                 BarWallet(wallet: store.player.wallet, shows: [.drachma])
             } content: {
-                HStack(alignment: .top, spacing: 8) {
-                    rosterRail
-                    detail
+                Group {
+                    if mode == .fuse {
+                        fusionBoard
+                    } else {
+                        HStack(alignment: .top, spacing: 8) {
+                            rosterRail
+                            detail
+                        }
+                    }
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
                 .padding(.vertical, 8)
@@ -84,8 +116,8 @@ struct TrainingView: View {
                 fodder = []
                 outcome = nil
             }
-            .fullScreenCover(item: $awakenedReveal) { result in
-                SummonRevealView(results: [result]) { awakenedReveal = nil }
+            .fullScreenCover(item: $reveal) { result in
+                SummonRevealView(results: [result]) { reveal = nil }
             }
         }
     }
@@ -132,6 +164,9 @@ struct TrainingView: View {
                 case .powerUp: powerUp(target)
                 case .evolve: evolve(target)
                 case .awaken: awaken(target)
+                // Fusion never reaches here: the content builder sends `.fuse`
+                // to the board before the target is looked at.
+                case .fuse: EmptyView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -400,7 +435,7 @@ struct TrainingView: View {
                                 outcome = "\(after.name) awakened"
                                 Juice.notify(.success)
                                 AudioLibrary.shared.play(.uiConfirm)
-                                awakenedReveal = SummonResult(
+                                reveal = SummonResult(
                                     unit: after.unit,
                                     blueprint: after.blueprint,
                                     stars: after.stars,
@@ -505,5 +540,210 @@ struct TrainingView: View {
             Spacer(minLength: 4)
             Text(value).font(Theme.numeric(12)).foregroundStyle(tint)
         }
+    }
+
+    // MARK: - Fusion
+
+    /// The hexagrams, one panel each, in a row that scrolls sideways.
+    ///
+    /// Six panels are about 1,700 points wide and a landscape frame is about
+    /// 800, so this row is the one thing on the screen that scrolls. Every
+    /// panel is the full height of the frame, which is what keeps the four
+    /// corners and the Fuse button on the same line across all six.
+    private var fusionBoard: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(alignment: .top, spacing: 8) {
+                ForEach(plans) { plan in
+                    recipePanel(plan)
+                }
+            }
+            .frame(maxHeight: .infinity)
+        }
+    }
+
+    /// One recipe: what it makes, what it is, what it takes, what it costs.
+    private func recipePanel(_ plan: FusionService.Plan) -> some View {
+        let recipe = plan.recipe
+        let result = recipe.result
+
+        return VStack(alignment: .leading, spacing: 6) {
+            // The accessory is the compact figure — "40K" — because the
+            // painted ribbon has about 248 points and a twenty-character
+            // hexagram name spends most of them. The exact bill is in the line
+            // above the button, where it is read just before it is paid.
+            SectionHeader(title: recipe.name, accessory: BarWallet.compact(recipe.drachmaCost))
+
+            HStack(alignment: .top, spacing: 8) {
+                resultCard(result)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(result?.name ?? recipe.resultID)
+                        .font(Theme.title(15))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    if let result {
+                        Text(result.epithet)
+                            .font(Theme.body(10))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 5) {
+                            StarRow(stars: result.naturalStars, size: 9)
+                            ElementBadge(element: result.element, compact: true)
+                        }
+                    }
+                    // The whole reason to do this rather than pull for it —
+                    // and a red line instead if the pool filter ever comes off
+                    // and the gacha starts handing the prize out again.
+                    Text(recipe.isExclusive ? "No banner has this one." : "Still in the summon pool.")
+                        .font(Theme.body(9).weight(.bold))
+                        .foregroundStyle(recipe.isExclusive ? Theme.gold : Theme.danger)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            Text(recipe.lore)
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(3)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack(alignment: .top, spacing: 4) {
+                ForEach(plan.slots) { slot in
+                    ingredientTile(slot)
+                }
+            }
+
+            Spacer(minLength: 4)
+
+            // Fixed height so the six buttons line up whether the reason under
+            // them runs to one line or two.
+            Text(plan.blocker ?? "Four corners ready — \(recipe.drachmaCost) drachma.")
+                .font(Theme.body(10))
+                .foregroundStyle(plan.canFuse ? Theme.success : Theme.danger)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(height: 26, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // `store.fuse(_:)` is the wiring: it calls
+            // `FusionService.fuse(_:player:)` and hands back the new unit.
+            PrimaryButton(
+                title: plan.canFuse ? "Fuse" : "Not ready",
+                systemImage: plan.canFuse ? "hexagon.fill" : "lock.fill",
+                isEnabled: plan.canFuse
+            ) {
+                commitFusion(plan)
+            }
+        }
+        .frame(width: 268, alignment: .topLeading)
+        .padding(10)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .panelBackground()
+    }
+
+    /// The prize's card, framed in its grade's metal.
+    private func resultCard(_ blueprint: UnitBlueprint?) -> some View {
+        ZStack {
+            if let blueprint, BundleImage.exists(blueprint.model.portraitName) {
+                BundleImage(name: blueprint.model.portraitName)
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(Theme.surface)
+            }
+        }
+        .frame(width: 64, height: 64)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+        .rarityFrame(Rarity(stars: blueprint?.naturalStars ?? 5))
+        // The painting fills a square it is taller than, and `clipShape` does
+        // not clip hit-testing: without this it swallows taps meant for the
+        // panel beside it.
+        .allowsHitTesting(false)
+    }
+
+    /// One corner: the character wanted, the grade and level it must be at, and
+    /// either a tick or the one thing that is short.
+    ///
+    /// A corner the player cannot fill is drawn grey and half faded, so the
+    /// panel reads at a glance — colour means owned — before any of the words
+    /// under it are read.
+    private func ingredientTile(_ slot: FusionService.Slot) -> some View {
+        let blueprint = slot.ingredient.blueprint
+        let met = slot.isMet
+
+        return VStack(spacing: 2) {
+            ZStack {
+                if let blueprint, BundleImage.exists(blueprint.model.portraitName) {
+                    BundleImage(name: blueprint.model.portraitName)
+                        .aspectRatio(contentMode: .fill)
+                } else {
+                    RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                        .fill(Theme.surface)
+                }
+            }
+            .frame(width: 52, height: 52)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+            .saturation(met ? 1 : 0.1)
+            .opacity(met ? 1 : 0.5)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .strokeBorder(met ? Theme.success : Theme.stroke, lineWidth: 1)
+            )
+            .overlay(alignment: .topTrailing) {
+                Image(systemName: met ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
+                    .font(.system(size: 11, weight: .black))
+                    .foregroundStyle(met ? Theme.success : Theme.danger)
+                    .shadow(color: .black.opacity(0.85), radius: 1)
+                    .padding(2)
+            }
+            .overlay(alignment: .bottomLeading) {
+                if let blueprint {
+                    // Which of the five is wanted. Two Shabti of different
+                    // elements are two different corners and one of them will
+                    // not do for the other.
+                    ElementBadge(element: blueprint.element, compact: true)
+                        .padding(2)
+                }
+            }
+            .allowsHitTesting(false)
+
+            Text(blueprint?.name ?? slot.ingredient.blueprintID)
+                .font(Theme.body(9).weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(slot.ingredient.requirement)
+                .font(Theme.numeric(9))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Text(met ? "ready" : (slot.shortfall?.short ?? "not ready"))
+                .font(Theme.body(9))
+                .foregroundStyle(met ? Theme.success : Theme.danger)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(width: 62)
+    }
+
+    private func commitFusion(_ plan: FusionService.Plan) {
+        // Read before the fusion runs: the codex has the id in it the moment
+        // the unit exists, and the reveal wants to know it was the first.
+        let isNew = !store.player.codex.contains(plan.recipe.resultID)
+        guard let created = store.fuse(plan.recipe) else { return }
+        outcome = "\(created.name) fused"
+        Juice.notify(.success)
+        AudioLibrary.shared.play(.uiConfirm)
+        reveal = SummonResult(
+            unit: created.unit,
+            blueprint: created.blueprint,
+            stars: created.stars,
+            isNew: isNew,
+            isFeatured: false,
+            fromPity: false
+        )
     }
 }

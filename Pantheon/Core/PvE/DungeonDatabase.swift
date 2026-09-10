@@ -258,3 +258,330 @@ enum DungeonDatabase {
         return Hall(id: id, element: element, name: name, summary: summary, environment: environment, chapter: chapter)
     }
 }
+
+// MARK: - The Endless Tower
+//
+// What there is to do once the campaign is finished: a hundred floors of one
+// battle each, climbed once. Progress is a high-water mark — the tower resumes
+// at the floor above the highest cleared, it never starts over — so a floor is
+// fought exactly once and every floor has to be a gate rather than a grind.
+// That is the difference from the Labyrinth, which is farmed: there the level
+// is a difficulty dial the player picks, here it is a ladder the player is
+// pushed up, and the reward for a floor is paid on the clear that opens the
+// next one.
+//
+// The curve is `python3 tools/balance.py --tower`, and the measurements it
+// prints are the reason for every constant below. Change one here and change
+// it there.
+extension DungeonDatabase {
+
+    /// Ten floors that share a place, a roster and the warden who holds the
+    /// tenth. Five of them, cycled twice up the hundred floors: the second lap
+    /// fields the same five wardens fifty floors of difficulty later, which is
+    /// the genre's way of making a hundred floors out of five sets of art.
+    struct TowerTier: Sendable {
+        var name: String
+        var environment: BattleEnvironment
+        /// Three families, cycled into the floor's three slots.
+        var roster: [String]
+        var wardenID: String
+    }
+
+    /// The tower's floors live in `campaignProgress` under this id, the way a
+    /// hall's and a dungeon's do, so the campaign's reward path treats a floor
+    /// as a stage with no special case. It is deliberately not a `Chapter`:
+    /// nothing should be able to walk a hundred floors out of the campaign map.
+    static let towerChapterID = "tower"
+    static let towerFloors = 100
+    /// The floors that pay something worth climbing for.
+    static let towerMilestones = [10, 25, 50, 75, 100]
+
+    /// The five tiers, in the order they are climbed. Their rosters were
+    /// levelled against one another — about 1,200 points of base health each —
+    /// so that a floor's difficulty comes from the curve and not from which
+    /// tier it happens to land in; the Coil is a little the hardest of the
+    /// five, which is why it holds floors 41-50 and 91-100, the two walls.
+    ///
+    /// The floor shows its opposition before the energy is spent, so sixteen
+    /// of the twenty ids below are ones the bundle already has a card for.
+    /// The four that are not — the frost troll, the valkyrie and the Hydra
+    /// and Jötunn wardens — are the Norse tier, and they are the same four
+    /// the Yggdrasil chapters and the Halls already field; until their cards
+    /// are painted `UnitCard` draws its element-coloured monogram, which is
+    /// the same thing that screen shows today.
+    static let towerTiers: [TowerTier] = [
+        TowerTier(
+            name: "The Sand Stair", environment: .colossusVault,
+            roster: ["sandstone_sentinel", "horus_radiance", "sun_scarab"],
+            wardenID: "boss_colossus"
+        ),
+        TowerTier(
+            name: "The Marsh Landing", environment: .hydraLair,
+            roster: ["heracles_tide", "hoplite_radiance", "harpy_tide"],
+            wardenID: "boss_hydra"
+        ),
+        TowerTier(
+            name: "The Frozen Gallery", environment: .jotunheimHall,
+            roster: ["heimdall_tide", "enemy_frost_troll", "enemy_valkyrie"],
+            wardenID: "boss_jotunn"
+        ),
+        TowerTier(
+            name: "The Weighing Floor", environment: .necropolis,
+            roster: ["ammit", "sekhmet_umbra", "shabti_umbra"],
+            wardenID: "boss_unwrapped_king"
+        ),
+        TowerTier(
+            name: "The Coil", environment: .serpentDeep,
+            roster: ["anubis_umbra", "ares_ember", "zeus_ember"],
+            wardenID: "apep"
+        ),
+    ]
+
+    static func towerTier(floor: Int) -> TowerTier {
+        towerTiers[((max(1, floor) - 1) / 10) % towerTiers.count]
+    }
+
+    /// Level 20 at the door and 70 at the top: half a level a floor. A 6★ maxes
+    /// at 65, so the last ten floors field levels no summoner can reach — which
+    /// is the only place in the game that happens, and it is the top of the
+    /// tower.
+    static func towerLevel(floor: Int) -> Int { 20 + floor / 2 }
+
+    /// The grade climbs a star every twenty floors, the way the later chapters
+    /// field the same creatures at a higher grade rather than at absurd levels.
+    static func towerGrade(floor: Int) -> Int { min(6, 3 + (floor - 1) / 20) }
+
+    /// The flat multiplier on top: 0.81 on the first floor, 1.90 on the
+    /// hundredth. The grade steps are cliffs and this is the slope between
+    /// them.
+    static func towerDifficulty(floor: Int) -> Double { 0.80 + Double(floor) * 0.011 }
+
+    /// Every tenth floor is the tier's warden with two adds.
+    static func isTowerBossFloor(_ floor: Int) -> Bool { floor % 10 == 0 }
+
+    static func isTowerFloor(_ stage: Stage) -> Bool { stage.chapterID == towerChapterID }
+
+    /// The scroll a warden drops: mystical to floor 39, the pantheon scroll to
+    /// 79, divine above that. Ten scrolls for the whole climb.
+    static func towerScroll(floor: Int) -> ScrollType? {
+        guard isTowerBossFloor(floor) else { return nil }
+        if floor >= 80 { return .divine }
+        if floor >= 40 { return .pantheonic }
+        return .mystical
+    }
+
+    /// One floor as a `Stage`, so `CampaignService` runs it, `BattleView`
+    /// fights it and `StageBriefingView`'s plumbing shows it with no special
+    /// case. Three mobs on an ordinary floor; on a boss floor the warden at
+    /// x1.8 with two of them — x1.8 rather than the Labyrinth's x1.6 because
+    /// the warden stands with two adds instead of three and the multiplier
+    /// has to carry the missing body.
+    ///
+    /// Measured (`--tower`): floor 1 falls to the team that just cleared the
+    /// campaign, floor 10 to four 4★s at level 35, floor 50 to a maxed 6★
+    /// team (a 5★ team with relics takes it a third of the time), floor 75 to
+    /// maxed 6★s and floor 100 to a maxed team of gods about two runs in three.
+    static func towerFloor(_ floor: Int) -> Stage {
+        let floor = min(max(1, floor), towerFloors)
+        let tier = towerTier(floor: floor)
+        let level = towerLevel(floor: floor)
+        let stars = towerGrade(floor: floor)
+        let difficulty = towerDifficulty(floor: floor)
+        let mobs: [EnemySpawn] = (0..<3).map { slot in
+            EnemySpawn(
+                blueprintID: tier.roster[(floor + slot) % tier.roster.count],
+                level: level, stars: stars, statMultiplier: difficulty
+            )
+        }
+        var enemies = mobs
+        if isTowerBossFloor(floor) {
+            // The warden keeps its own grade when that is higher, so a 5★
+            // primordial does not arrive as a 3★ on floor 10.
+            let natural = UnitDatabase.blueprint(tier.wardenID)?.naturalStars ?? stars
+            let warden = EnemySpawn(
+                blueprintID: tier.wardenID, level: level, stars: max(stars, natural),
+                statMultiplier: difficulty * 1.8
+            )
+            enemies = [warden] + Array(mobs.prefix(2))
+        }
+        var scrolls: [String: Double] = [:]
+        if let scroll = towerScroll(floor: floor) { scrolls[scroll.rawValue] = 1.0 }
+        return Stage(
+            id: "\(towerChapterID)_\(floor)",
+            chapterID: towerChapterID,
+            index: floor,
+            name: "Floor \(floor) · \(tier.name)",
+            energyCost: 6 + floor / 20,
+            recommendedPower: 2_800 + floor * 550,
+            enemies: enemies,
+            rewards: StageRewards(
+                drachma: 800 + floor * 200,
+                playerExperience: 30 + floor * 3,
+                unitExperience: 250 + floor * 50,
+                // A relic every fifth floor, at the floor's own grade, and no
+                // set restriction: the tower is not a relic dungeon, it is
+                // where a relic dungeon's rewards are spent.
+                relicChance: floor % 5 == 0 ? 1.0 : 0.0,
+                relicGrade: stars,
+                scrollChances: scrolls,
+                // Paid on the clear that opens the next floor, which for a
+                // tower floor is the only clear there will ever be.
+                firstClearDivinity: isTowerBossFloor(floor) ? 40 : 10
+            ),
+            environment: tier.environment,
+            isBoss: isTowerBossFloor(floor)
+        )
+    }
+
+    /// The next floor worth stopping at, given how far the player has climbed.
+    static func towerMilestone(after clearedFloor: Int) -> Int? {
+        towerMilestones.first(where: { $0 > clearedFloor })
+    }
+
+    /// What a milestone pays. These are the reason to keep climbing after the
+    /// floors themselves stop being a challenge: the hundredth floor alone is
+    /// worth two and a half divine summons and a pair of 6★ relics.
+    static func towerMilestoneReward(floor: Int) -> ShopService.Grant? {
+        switch floor {
+        case 10:
+            return .bundle([.divinity(150), .scrolls(.mystical, 2), .drachma(20_000)])
+        case 25:
+            return .bundle([.divinity(300), .scrolls(.pantheonic, 2), .relic(grade: 4)])
+        case 50:
+            return .bundle([.divinity(600), .scrolls(.divine, 1), .relic(grade: 5), .drachma(100_000)])
+        case 75:
+            return .bundle([.divinity(900), .scrolls(.divine, 2), .relic(grade: 6)])
+        case 100:
+            return .bundle([.divinity(1_500), .scrolls(.divine, 3), .relic(grade: 6), .relic(grade: 6)])
+        default:
+            return nil
+        }
+    }
+}
+
+// MARK: - The tower's record in the save
+
+/// How far up the tower the player has been, and which milestones have been
+/// paid. Optional in `Player` (`Player.tower`), like `lastDailyPackClaim`: the
+/// synthesised decoder tolerates a missing optional key and nothing else, so a
+/// save written before the tower existed still loads.
+///
+/// `highestFloorCleared` is a high-water mark and only ever goes up. The
+/// campaign's reward path also stamps `campaignProgress["tower"]` on a first
+/// clear, in the same transaction, and that stamp is what makes a floor's
+/// divinity pay once; this is what the tower itself reads.
+struct TowerProgress: Codable, Equatable, Sendable {
+    var highestFloorCleared: Int = 0
+    /// Milestone floors already paid, so a milestone cannot be collected twice
+    /// however the high-water mark is later touched.
+    var milestonesClaimed: [Int] = []
+}
+
+// MARK: - Climbing the tower
+
+/// The tower's rules: which floor is next, what a climb costs, and what a
+/// clear is worth. The floor itself pays through `CampaignService.applyRewards`
+/// like any other stage — `recordClear` only moves the mark and settles the
+/// milestone, which is the part no stage can express.
+enum TowerService {
+
+    enum ClimbError: Error, LocalizedError {
+        case notEnoughEnergy(needed: Int)
+        case emptyTeam
+        case summited
+
+        var errorDescription: String? {
+            switch self {
+            case .notEnoughEnergy(let needed): return "This floor costs \(needed) energy."
+            case .emptyTeam: return "Pick at least one unit for your team."
+            case .summited: return "The tower is climbed. There is nothing above the hundredth floor."
+            }
+        }
+    }
+
+    static func clearedFloor(player: Player) -> Int {
+        player.tower?.highestFloorCleared ?? 0
+    }
+
+    /// The floor the player would fight next, or nil once the tower is
+    /// climbed. This is the whole of "a run resumes from the highest floor
+    /// reached": there is no run state to keep, only the mark.
+    static func nextFloor(player: Player) -> Int? {
+        let cleared = clearedFloor(player: player)
+        return cleared >= DungeonDatabase.towerFloors ? nil : cleared + 1
+    }
+
+    static func nextStage(player: Player) -> Stage? {
+        nextFloor(player: player).map { DungeonDatabase.towerFloor($0) }
+    }
+
+    static func nextMilestone(player: Player) -> Int? {
+        DungeonDatabase.towerMilestone(after: clearedFloor(player: player))
+    }
+
+    /// Spends the energy and builds the engine for the next floor. The caller
+    /// drives it and hands the result back through `recordClear`, exactly as
+    /// the campaign does — a tower floor is a campaign battle everywhere
+    /// except here.
+    static func startBattle(player: inout Player, seed: UInt64) throws -> BattleEngine {
+        guard let stage = nextStage(player: player) else { throw ClimbError.summited }
+        guard player.wallet.energy >= stage.energyCost else {
+            throw ClimbError.notEnoughEnergy(needed: stage.energyCost)
+        }
+        let team = CampaignService.resolveTeam(player.campaignTeam, player: player)
+        guard !team.isEmpty else { throw ClimbError.emptyTeam }
+
+        player.wallet.energy -= stage.energyCost
+        return BattleEngine(
+            playerTeam: team,
+            opponentTeam: StageDatabase.buildEnemies(for: stage),
+            mode: .campaign,
+            seed: seed
+        )
+    }
+
+    /// Moves the high-water mark and pays the milestone, if the clear crossed
+    /// one. Called after `CampaignService.applyRewards` has paid the floor
+    /// itself, with that call's outcome: the milestone is folded into it, so
+    /// the result screen shows the floor and the milestone on one receipt
+    /// instead of the milestone arriving silently in the wallet. A defeat, a
+    /// floor already below the mark, or a stage that is not a tower floor all
+    /// do nothing.
+    @discardableResult
+    static func recordClear(
+        stage: Stage,
+        result: BattleResult,
+        outcome: inout StageOutcome,
+        player: inout Player,
+        rng: inout SeededRandom
+    ) -> [ShopService.Grant] {
+        guard DungeonDatabase.isTowerFloor(stage), result.outcome == .victory else { return [] }
+        var progress = player.tower ?? TowerProgress()
+        guard stage.index > progress.highestFloorCleared else { return [] }
+        progress.highestFloorCleared = stage.index
+        defer { player.tower = progress }
+
+        guard let reward = DungeonDatabase.towerMilestoneReward(floor: stage.index),
+              !progress.milestonesClaimed.contains(stage.index) else { return [] }
+        progress.milestonesClaimed.append(stage.index)
+
+        // A relic grant makes the relic inside `ShopService.grant` and hands
+        // back only its grade, so the ones it appended are taken off the end
+        // of the bag to name them on the receipt.
+        let relicsBefore = player.relics.count
+        let granted = ShopService.grant(reward, to: &player, rng: &rng)
+        outcome.relicsEarned.append(contentsOf: player.relics[relicsBefore...])
+        for grant in granted {
+            switch grant {
+            case .drachma(let amount): outcome.drachma += amount
+            case .divinity(let amount): outcome.divinityEarned += amount
+            case .scrolls(let scroll, let count): outcome.scrollsEarned[scroll.rawValue, default: 0] += count
+            case .essences(let id, let count): outcome.essencesEarned[id, default: 0] += count
+            // The relics are already on the receipt, and the tower pays no
+            // energy; `.bundle` cannot appear because `grant` flattens it.
+            case .relic, .energy, .energyRefill, .bundle: break
+            }
+        }
+        return granted
+    }
+}

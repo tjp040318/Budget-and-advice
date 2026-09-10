@@ -15,12 +15,13 @@ the engine; it is the spreadsheet a designer would keep, made executable.
     python3 tools/balance.py            # full report
     python3 tools/balance.py --curve    # stat curves only
     python3 tools/balance.py --gacha    # summon odds and pity only
+    python3 tools/balance.py --tower    # the Endless Tower's hundred floors
 
 If a constant changes in Swift, change it here and re-run.
 """
 
 import math, random, re, statistics, sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 # ---------------------------------------------------------------------------
 # Constants — these must match Core/Progression/ProgressionService.swift and
@@ -663,6 +664,94 @@ def report_labyrinths(trials=60):
                 row += f"{wr*100:>16.0f}% {med:>3.0f}t"
             print(row)
 
+# The Endless Tower, mirroring DungeonDatabase's tower section: a hundred
+# floors of ONE battle each, three mobs on an ordinary floor and a warden with
+# two adds on every tenth. Progress is a high-water mark, so a floor is fought
+# once and the curve has to be a ladder rather than a grind — that is why the
+# level, the grade and the multiplier all climb at once and why the report
+# below reads the milestone floors rather than a sample of the hundred.
+#
+# The five tiers are cycled twice, ten floors each: the same five wardens
+# again at fifty floors' more difficulty. The rosters were levelled against
+# each other (about 1,200 points of base health per tier) so that the climb
+# rises with the curve and not with which tier a floor happens to land in;
+# the Coil is a little the hardest of the five, which is why it holds floors
+# 41-50 and 91-100, the two milestone walls.
+TOWER_FLOORS = 100
+TOWER_MILESTONES = (10, 25, 50, 75, 100)
+TOWER_TIERS = [  # name, roster, warden
+    ("Sand Stair",     [SENTINEL, replace(FAMILIES["horus"], element="radiance"), SCARAB], COLOSSUS),
+    ("Marsh Landing",  [replace(HERACLES, element="tide"), replace(HOPLITE, element="radiance"),
+                        replace(HARPY, element="tide")], HYDRA),
+    ("Frozen Gallery", [replace(FAMILIES["heimdall"], element="tide"), E_TROLL, E_VALKYRIE], JOTUNN),
+    ("Weighing Floor", [AMMIT, replace(SEKHMET, element="umbra"), SHABTI3], UNWRAPPED),
+    ("The Coil",       [ANUBIS, ARES, ZEUS], APEP),
+]
+
+def tower_level(floor):      return 20 + floor // 2          # 20 at the door, 70 at the top
+def tower_grade(floor):      return min(6, 3 + (floor - 1) // 20)
+def tower_difficulty(floor): return 0.80 + floor * 0.011     # 0.81 -> 1.90
+def tower_is_boss(floor):    return floor % 10 == 0
+def tower_tier(floor):       return TOWER_TIERS[((floor - 1) // 10) % len(TOWER_TIERS)]
+
+def tower_floor(floor):
+    _, roster, warden = tower_tier(floor)
+    level, stars, diff = tower_level(floor), tower_grade(floor), tower_difficulty(floor)
+    mobs = [(roster[(floor + s) % len(roster)], level, stars, diff) for s in range(3)]
+    if tower_is_boss(floor):
+        # x1.8 rather than the Labyrinth's x1.6: a warden stands with two adds
+        # instead of three, so the multiplier has to carry the missing body.
+        return [(warden, level, max(stars, warden.stars), diff * 1.8)] + mobs[:2]
+    return mobs
+
+def tower_scroll(floor):
+    if not tower_is_boss(floor): return None
+    return "divine" if floor >= 80 else "pantheon" if floor >= 40 else "mystical"
+
+def tower_rewards(floor):
+    """Drachma, divinity, the relic grade on every fifth floor and the scroll
+    on every tenth — DungeonDatabase.towerFloor's StageRewards."""
+    return (800 + floor * 200,
+            40 if tower_is_boss(floor) else 10,
+            tower_grade(floor) if floor % 5 == 0 else None,
+            tower_scroll(floor))
+
+TOWER_MILESTONE_REWARDS = {   # DungeonDatabase.towerMilestoneReward
+    10:  "150 divinity, 2 mystical, 20k drachma",
+    25:  "300 divinity, 2 pantheon, a 4* relic",
+    50:  "600 divinity, 1 divine, a 5* relic, 100k drachma",
+    75:  "900 divinity, 2 divine, a 6* relic",
+    100: "1500 divinity, 3 divine, two 6* relics",
+}
+
+def report_tower(trials=60):
+    print("\nTHE ENDLESS TOWER — the floor curve")
+    print("a floor is fought once: the high-water mark is the progress, so every floor is a gate\n")
+    print(f"{'floor':>6}{'tier':>17}{'lvl':>5}{'grade':>7}{'x':>6}{'foes':>6}{'nrg':>5}"
+          f"{'drachma':>10}{'div':>5}{'relic':>7}{'scroll':>10}   milestone")
+    for floor in (1, 5, 10, 20, 25, 40, 50, 60, 75, 80, 90, 100):
+        spec = tower_floor(floor)
+        drachma, divinity, relic, scroll = tower_rewards(floor)
+        name = tower_tier(floor)[0]
+        foes = f"{len(spec)}{'+W' if tower_is_boss(floor) else ''}"
+        print(f"{floor:>6}{name:>17}{tower_level(floor):>5}{tower_grade(floor):>6}*"
+              f"{tower_difficulty(floor):>6.2f}{foes:>6}{6 + floor // 20:>5}"
+              f"{drachma:>10,}{divinity:>5}{(str(relic) + '*') if relic else '-':>7}"
+              f"{scroll or '-':>10}   {TOWER_MILESTONE_REWARDS.get(floor, '')}")
+
+    print("\nTHE ENDLESS TOWER — win rate at the milestone floors over %d seeded battles" % trials)
+    print("target: F1 for the team that just cleared the campaign, F10 for 4*s, F25 for 4*s with a\n"
+          "grade in hand, F50 for 5*s with relics, F75 for maxed 6*s, F100 for a maxed god team —\n"
+          "and F100 is meant to be a coin flip, not a certainty\n")
+    print(f"{'floor':>22}{'lvl':>5}  " + "".join(f"{n:>22}" for n, _ in LABYRINTH_LADDERS))
+    for floor in (1,) + TOWER_MILESTONES:
+        spec = tower_floor(floor)
+        row = f"{f'F{floor} ' + tower_tier(floor)[0]:>22}{tower_level(floor):>5}  "
+        for _, team in LABYRINTH_LADDERS:
+            wr, med = winrate(team, spec, trials=trials)
+            row += f"{wr*100:>16.0f}% {med:>3.0f}t"
+        print(row)
+
 def report_campaign(trials=200):
     print("\nCAMPAIGN — win rate over %d seeded battles" % trials)
     print("target: the intended team sits at 60-85%; the one below it should struggle\n")
@@ -758,8 +847,9 @@ if __name__ == "__main__":
     elif "--chapters" in a: report_chapters()
     elif "--halls" in a: report_halls()
     elif "--labyrinths" in a: report_labyrinths()
+    elif "--tower" in a: report_tower()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
-        report_labyrinths()
+        report_labyrinths(); report_tower()
         report_gacha(); report_economy()
         print()

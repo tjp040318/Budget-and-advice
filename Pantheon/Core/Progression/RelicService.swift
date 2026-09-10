@@ -422,4 +422,531 @@ enum RelicService {
             }
         }
     }
+
+    // MARK: - Loadouts
+
+    /// How many named loadouts one unit may keep.
+    ///
+    /// Four, because the optimiser solves for four goals and a loadout is
+    /// named after the goal that built it — there is no fifth thing to save.
+    /// It also keeps the save honest: a loadout is a name and six ids, and a
+    /// collection reaches a few hundred units.
+    static let loadoutsPerUnit = 4
+
+    /// What a unit is wearing now, as a loadout under `name`.
+    static func captureLoadout(named name: String, for unitID: UUID, player: Player) -> RelicLoadout? {
+        guard let unit = player.unit(unitID) else { return nil }
+        return RelicLoadout(unitID: unitID, name: name, relicIDs: unit.equippedRelics)
+    }
+
+    /// Every loadout saved against one unit, in the order they were saved.
+    static func loadouts(for unitID: UUID, in all: [RelicLoadout]) -> [RelicLoadout] {
+        all.filter { $0.unitID == unitID }
+    }
+
+    /// Saves a loadout, replacing the unit's loadout of the same name if it
+    /// has one. False when the unit already keeps `loadoutsPerUnit` under
+    /// other names: the caller says so, rather than the save quietly dropping
+    /// the oldest, which is how a player loses the set they spent an evening
+    /// building.
+    @discardableResult
+    static func saveLoadout(_ loadout: RelicLoadout, into all: inout [RelicLoadout]) -> Bool {
+        if let index = all.firstIndex(where: { $0.unitID == loadout.unitID && $0.name == loadout.name }) {
+            var replacement = loadout
+            // Keep the old id: the chips in the loadout bar are identified by
+            // it, so replacing a loadout in place should not animate as a
+            // delete and an insert.
+            replacement.id = all[index].id
+            all[index] = replacement
+            return true
+        }
+        guard loadouts(for: loadout.unitID, in: all).count < loadoutsPerUnit else { return false }
+        all.append(loadout)
+        return true
+    }
+
+    static func removeLoadout(_ loadoutID: UUID, from all: inout [RelicLoadout]) {
+        all.removeAll { $0.id == loadoutID }
+    }
+
+    /// Puts a loadout on, and returns how many slots it filled.
+    ///
+    /// A slot the loadout names is equipped, taking the relic off whoever
+    /// wears it — exactly what the picker's "Take and equip" does. A slot it
+    /// does not name is emptied, because a loadout is a whole set of six and
+    /// not a patch over what is already there: applying the tank set has to
+    /// take the damage set's sixth relic off, or the two sets bleed into one
+    /// another and the loadout stops meaning anything. A relic that has been
+    /// sold since simply leaves its slot empty.
+    @discardableResult
+    static func applyLoadout(relicIDs: [Int: UUID], to unitID: UUID, player: inout Player) -> Int {
+        var equipped = 0
+        for slot in 1...6 {
+            guard let relicID = relicIDs[slot],
+                  player.relics.contains(where: { $0.id == relicID && $0.slot == slot }) else {
+                unequip(slot: slot, from: unitID, player: &player)
+                continue
+            }
+            try? equip(relicID: relicID, on: unitID, player: &player)
+            equipped += 1
+        }
+        return equipped
+    }
+
+    // MARK: - The optimiser
+
+    /// What a solve is aiming at.
+    ///
+    /// Four goals rather than a weighting the player tunes: a slider per stat
+    /// is a spreadsheet, and each of these is a sentence the game already
+    /// says somewhere — the card's power, how much punishment a unit takes,
+    /// what it hits for, and who moves first.
+    enum OptimiserGoal: String, CaseIterable, Identifiable, Sendable {
+        case power, effectiveHealth, damage, speed
+
+        var id: String { rawValue }
+
+        var displayName: String {
+            switch self {
+            case .power: return "Power"
+            case .effectiveHealth: return "Health"
+            case .damage: return "Damage"
+            case .speed: return "Speed"
+            }
+        }
+
+        /// The line under the title, so four words are not a riddle.
+        var summary: String {
+            switch self {
+            case .power: return "the card's own number — offence, bulk and tempo together"
+            case .effectiveHealth: return "how much damage it takes to kill, HP through the defence curve"
+            case .damage: return "what one hit lands for, crits included"
+            case .speed: return "who moves first, with power as the tie-break"
+            }
+        }
+
+        var glyph: String {
+            switch self {
+            case .power: return "bolt.fill"
+            case .effectiveHealth: return "heart.fill"
+            case .damage: return "flame.fill"
+            case .speed: return "hare.fill"
+            }
+        }
+
+        /// One row of `effectSetValue`'s table, so that table can read as a
+        /// table instead of as four nested switches.
+        func weigh(power: Double, health: Double, damage: Double, speed: Double) -> Double {
+            switch self {
+            case .power: return power
+            case .effectiveHealth: return health
+            case .damage: return damage
+            case .speed: return speed
+            }
+        }
+    }
+
+    /// The relic half of `ProgressionService.resolve`, as twelve running
+    /// totals.
+    ///
+    /// The second stage scores tens of thousands of complete loadouts, and
+    /// resolving one properly rebuilds the unit's skills as well — most of
+    /// the cost of `resolve`, and nothing the optimiser reads. So a relic is
+    /// reduced to this once and a whole loadout is twelve additions.
+    ///
+    /// It mirrors `resolve`'s accumulate step exactly: flats stay flat,
+    /// percentages apply to the base and never to relic flats, and a relic's
+    /// SPD is flat where Zephyr's is a percentage. The two are kept in step
+    /// by hand — if the resolution rules move, move them here.
+    struct StatBundle: Equatable, Sendable {
+        var hpFlat: Double = 0
+        var atkFlat: Double = 0
+        var defFlat: Double = 0
+        var spdFlat: Double = 0
+        var critRate: Double = 0
+        var critDamage: Double = 0
+        var accuracy: Double = 0
+        var resistance: Double = 0
+        var hpPercent: Double = 0
+        var atkPercent: Double = 0
+        var defPercent: Double = 0
+        var spdPercent: Double = 0
+
+        static func + (lhs: StatBundle, rhs: StatBundle) -> StatBundle {
+            var sum = lhs
+            sum.hpFlat += rhs.hpFlat
+            sum.atkFlat += rhs.atkFlat
+            sum.defFlat += rhs.defFlat
+            sum.spdFlat += rhs.spdFlat
+            sum.critRate += rhs.critRate
+            sum.critDamage += rhs.critDamage
+            sum.accuracy += rhs.accuracy
+            sum.resistance += rhs.resistance
+            sum.hpPercent += rhs.hpPercent
+            sum.atkPercent += rhs.atkPercent
+            sum.defPercent += rhs.defPercent
+            sum.spdPercent += rhs.spdPercent
+            return sum
+        }
+    }
+
+    /// A solved loadout: the relics, what they scored, and what the search
+    /// cost. The last two are what the screen's footer prints, and what a
+    /// regression test would assert on.
+    struct OptimisedLoadout: Sendable {
+        var goal: OptimiserGoal
+        var relics: [Relic]
+        var score: Double
+        var candidatesConsidered: Int
+        var loadoutsSearched: Int
+
+        /// The shape `applyLoadout` and `RelicLoadout` want.
+        var relicIDs: [Int: UUID] {
+            var ids: [Int: UUID] = [:]
+            for relic in relics { ids[relic.slot] = relic.id }
+            return ids
+        }
+    }
+
+    /// How many relics per slot reach the second stage.
+    ///
+    /// The second stage is the cross product of the six shortlists, so it
+    /// scores K^6 loadouts: 4^6 is 4,096, 6^6 is 46,656, 8^6 is 262,144. Six,
+    /// because a leaf is twelve additions, a sixteen-entry set tally and one
+    /// score — so a solve is a few hundredths of a second even in the debug
+    /// build the CI tour runs, on the two hundred relics a mid account holds.
+    /// Eight would be five times the work for a gain the scoring cannot see:
+    /// below the sixth-best relic in a slot the sub stats are noise. What
+    /// actually decides a build is the sets, and those are served by
+    /// promoting a best-of-set relic into every shortlist rather than by
+    /// making the shortlists longer.
+    static let shortlistPerSlot = 6
+
+    /// How many sets get a guaranteed place in every slot's shortlist.
+    ///
+    /// A shortlist ranked on stats alone would never offer four pieces of one
+    /// four-piece set, so a solver built on it answers with six mismatched
+    /// relics every time. Three covers the shapes a build takes — one
+    /// four-piece and one two-piece, or three two-pieces — and each promotion
+    /// costs a place that would have gone to a better-rolled relic.
+    static let promotedSetCount = 3
+
+    /// What a solve may draw on: the relics the unit already wears, plus the
+    /// relics nobody wears.
+    ///
+    /// A relic on another unit is never proposed. The optimiser would
+    /// otherwise strip the second team to dress the first, which is a thing
+    /// the player has to choose to do, one relic at a time, in the picker.
+    /// `isLocked` guards against selling and not against equipping, so a
+    /// locked free relic is fair game.
+    static func optimiserCandidates(for unitID: UUID, in relics: [Relic]) -> [Relic] {
+        relics.filter { $0.equippedBy == nil || $0.equippedBy == unitID }
+    }
+
+    /// Adds one modifier to a bundle, by `ProgressionService.resolve`'s rules.
+    static func fold(_ modifier: StatModifier, into bundle: inout StatBundle, speedIsPercent: Bool) {
+        switch modifier.kind {
+        case .hpFlat: bundle.hpFlat += modifier.value
+        case .atkFlat: bundle.atkFlat += modifier.value
+        case .defFlat: bundle.defFlat += modifier.value
+        case .hpPercent: bundle.hpPercent += modifier.value
+        case .atkPercent: bundle.atkPercent += modifier.value
+        case .defPercent: bundle.defPercent += modifier.value
+        case .spd:
+            if speedIsPercent {
+                bundle.spdPercent += modifier.value
+            } else {
+                bundle.spdFlat += modifier.value
+            }
+        case .critRate: bundle.critRate += modifier.value
+        case .critDamage: bundle.critDamage += modifier.value
+        case .accuracy: bundle.accuracy += modifier.value
+        case .resistance: bundle.resistance += modifier.value
+        }
+    }
+
+    /// One relic reduced to its twelve numbers, main stat at its level plus
+    /// every sub stat.
+    static func statBundle(of relic: Relic) -> StatBundle {
+        var bundle = StatBundle()
+        for modifier in relic.allStats {
+            fold(modifier, into: &bundle, speedIsPercent: false)
+        }
+        return bundle
+    }
+
+    /// Base stats plus a bundle, by `resolve`'s step three: percentages apply
+    /// to the base, never to the flats a relic added.
+    static func finalStats(base: Stats, bundle: StatBundle) -> Stats {
+        var final = base
+        final.hp += bundle.hpFlat + base.hp * bundle.hpPercent
+        final.atk += bundle.atkFlat + base.atk * bundle.atkPercent
+        final.def += bundle.defFlat + base.def * bundle.defPercent
+        final.spd += bundle.spdFlat + base.spd * bundle.spdPercent
+        final.critRate += bundle.critRate
+        final.critDamage += bundle.critDamage
+        final.accuracy += bundle.accuracy
+        final.resistance += bundle.resistance
+        return final.clamped()
+    }
+
+    /// `ResolvedUnit.power`'s formula, on bare stats and without the rounding.
+    ///
+    /// Unit.swift computes it on a resolved unit and returns an Int; the
+    /// solver needs it on a `Stats` it never resolved, and needs the
+    /// fraction, because the speed goal uses it as a tie-break. The two are
+    /// the same three lines and are kept in step by hand: change
+    /// `ResolvedUnit.power` and change this.
+    static func powerScore(_ stats: Stats) -> Double {
+        let offense = stats.atk * (1 + stats.critRate * stats.critDamage)
+        let survivability = stats.hp * (1 + stats.def / 1000)
+        let tempo = stats.spd / 100
+        return (offense * 1.6 + survivability * 0.22) * tempo
+    }
+
+    /// What a set of final stats is worth to a goal. Higher is better; the
+    /// units differ per goal, so nothing ever compares two goals' scores.
+    static func goalScore(_ stats: Stats, for goal: OptimiserGoal) -> Double {
+        switch goal {
+        case .power:
+            return powerScore(stats)
+        case .effectiveHealth:
+            // HP through the same defence curve the battle uses, so the number
+            // means "damage taken to die" rather than "HP, and some DEF".
+            // `mitigation` is the fraction of a hit that gets through.
+            return stats.hp / max(0.000_001, DamageCalculator.mitigation(defense: stats.def, ignore: 0))
+        case .damage:
+            // One hit, crits included. The skill multiplier, the element
+            // matchup and the target's defence are the same for every loadout
+            // being compared, so none of them can change the ranking.
+            return stats.atk * (1 + stats.critRate * stats.critDamage)
+        case .speed:
+            // SPD is a whole number after `clamped()`, so the integer part is
+            // the goal and the fraction is a tie-break: between two loadouts
+            // that both reach 180 SPD, take the stronger one. The tie-break is
+            // capped so it can never carry into the next point of speed.
+            return stats.spd + min(powerScore(stats), 9_999_999) / 10_000_000
+        }
+    }
+
+    /// What one completed four-piece effect set is worth, as a multiplier on
+    /// a goal's score.
+    ///
+    /// The two-piece stat sets need nothing here: their bonus is a
+    /// `StatModifier` and goes through the same arithmetic as a sub stat. The
+    /// effect sets move no stat at all, so a solver that only reads `Stats`
+    /// values them at zero and would never build Titanfall or Wrath on an
+    /// attacker — which is the wrong answer, and the reason this table
+    /// exists. The numbers are the solver's own judgement and deliberately
+    /// modest: the largest is Titanfall's, the one effect whose own words are
+    /// a damage multiplier. They are not battle numbers, nothing else reads
+    /// them, and a set effect can never outweigh a large stat gap.
+    static func effectSetValue(_ relicSet: RelicSet, for goal: OptimiserGoal) -> Double {
+        switch relicSet {
+        // "+30% damage but cannot be healed": the damage is literal, and the
+        // clause is a real cost to a build that means to stay standing.
+        case .titanfall: return goal.weigh(power: 1.12, health: 0.90, damage: 1.30, speed: 1.00)
+        // A 22% chance of another turn is close to a fifth more attacks.
+        case .wrath: return goal.weigh(power: 1.10, health: 1.00, damage: 1.18, speed: 1.06)
+        // A quarter of the attack bar every turn is tempo, not damage.
+        case .ichor: return goal.weigh(power: 1.06, health: 1.00, damage: 1.06, speed: 1.10)
+        case .nemesis: return goal.weigh(power: 1.04, health: 1.02, damage: 1.02, speed: 1.06)
+        // Both of these buy survival rather than stats, and only Styx needs
+        // the unit to be dealing damage in the first place.
+        case .styx: return goal.weigh(power: 1.05, health: 1.12, damage: 1.00, speed: 1.00)
+        case .fates: return goal.weigh(power: 1.04, health: 1.10, damage: 1.00, speed: 1.00)
+        case .vigil: return goal.weigh(power: 1.05, health: 1.04, damage: 1.06, speed: 1.00)
+        case .chains: return goal.weigh(power: 1.02, health: 1.02, damage: 1.00, speed: 1.02)
+        default: return 1.0
+        }
+    }
+
+    /// One candidate as the search needs it: no `Relic`, because the inner
+    /// loop touches these tens of thousands of times and a `Relic` carries an
+    /// array of sub stats that would be retained and released at every step.
+    private struct SolveCandidate {
+        var bundle: StatBundle
+        var setIndex: Int
+        var isWorn: Bool
+        var relicID: UUID
+        var score: Double
+    }
+
+    /// The best six relics the player owns for one unit under one goal.
+    ///
+    /// Two stages, because brute force is out of the question: two hundred
+    /// relics is about thirty-three a slot, and 33^6 is 1.3 billion loadouts.
+    /// Stage one scores every candidate on its own and keeps
+    /// `shortlistPerSlot` of them per slot, plus the best piece of each
+    /// promoted set. Stage two walks the cross product of the six shortlists
+    /// and scores complete loadouts with the set bonuses in — which is the
+    /// only place a set can be scored, since it is a property of the six and
+    /// of no one relic.
+    ///
+    /// Deterministic: candidates rank by score and then by id, so the same
+    /// inventory and the same goal give the same six every time. A tie is
+    /// broken towards what the unit already wears, so the screen does not
+    /// propose shuffling four relics for nothing.
+    static func optimise(unitID: UUID, goal: OptimiserGoal, player: Player) -> OptimisedLoadout? {
+        guard let unit = player.unit(unitID),
+              let blueprint = UnitDatabase.blueprint(unit.blueprintID) else { return nil }
+
+        let base = ProgressionService.baseStats(for: unit, blueprint: blueprint)
+        let candidates = optimiserCandidates(for: unitID, in: player.relics)
+        guard !candidates.isEmpty else { return nil }
+
+        let allSets = RelicSet.allCases
+        var indexOfSet: [RelicSet: Int] = [:]
+        for (index, relicSet) in allSets.enumerated() { indexOfSet[relicSet] = index }
+
+        // Stage one, part one: which sets are worth building around. A set is
+        // measured on the unit's bare stats, which is enough to rank them —
+        // 35% ATK is worth more to an attacker than 20% resistance whatever
+        // else it ends up wearing.
+        let bare = goalScore(finalStats(base: base, bundle: StatBundle()), for: goal)
+        let promoted = allSets
+            .filter { relicSet in
+                // Only a set the inventory can actually finish: four pieces of
+                // Ichor spread over three slots is three pieces.
+                var slots: Set<Int> = []
+                for relic in candidates where relic.set == relicSet { slots.insert(relic.slot) }
+                return slots.count >= relicSet.piecesRequired
+            }
+            .map { relicSet -> (relicSet: RelicSet, value: Double) in
+                guard let bonus = relicSet.statBonus else {
+                    return (relicSet: relicSet, value: bare * (effectSetValue(relicSet, for: goal) - 1))
+                }
+                var bundle = StatBundle()
+                fold(bonus, into: &bundle, speedIsPercent: true)
+                return (relicSet: relicSet,
+                        value: goalScore(finalStats(base: base, bundle: bundle), for: goal) - bare)
+            }
+            .sorted { first, second in
+                if first.value != second.value { return first.value > second.value }
+                return first.relicSet.rawValue < second.relicSet.rawValue
+            }
+            .prefix(promotedSetCount)
+            .map { $0.relicSet }
+
+        // Stage one, part two: the shortlists.
+        var shortlists: [[SolveCandidate]] = []
+        for slot in 1...6 {
+            let ranked = candidates
+                .filter { $0.slot == slot }
+                .map { relic -> SolveCandidate in
+                    let bundle = statBundle(of: relic)
+                    return SolveCandidate(
+                        bundle: bundle,
+                        setIndex: indexOfSet[relic.set] ?? 0,
+                        isWorn: relic.equippedBy == unitID,
+                        relicID: relic.id,
+                        score: goalScore(finalStats(base: base, bundle: bundle), for: goal)
+                    )
+                }
+                .sorted { first, second in
+                    if first.score != second.score { return first.score > second.score }
+                    // The id is the tie-break, and it is what makes the whole
+                    // solve repeatable: two identical relics must always sort
+                    // the same way round.
+                    return first.relicID.uuidString < second.relicID.uuidString
+                }
+            guard !ranked.isEmpty else { continue }
+
+            var chosen: [SolveCandidate] = []
+            var taken: Set<UUID> = []
+            for relicSet in promoted {
+                guard let index = indexOfSet[relicSet],
+                      let best = ranked.first(where: { $0.setIndex == index }),
+                      !taken.contains(best.relicID) else { continue }
+                chosen.append(best)
+                taken.insert(best.relicID)
+            }
+            for candidate in ranked where chosen.count < shortlistPerSlot {
+                guard !taken.contains(candidate.relicID) else { continue }
+                chosen.append(candidate)
+                taken.insert(candidate.relicID)
+            }
+            shortlists.append(chosen)
+        }
+        guard !shortlists.isEmpty else { return nil }
+
+        // Stage two: the cross product, scored whole. The set tally and the
+        // running totals are carried down the recursion and undone on the way
+        // back up, so a leaf costs one score rather than a rebuild.
+        var setCounts = [Int](repeating: 0, count: allSets.count)
+        var picks = [Int](repeating: 0, count: shortlists.count)
+        var bestPicks: [Int]?
+        var bestScore = -Double.greatestFiniteMagnitude
+        var bestWorn = -1
+        var searched = 0
+
+        func search(_ index: Int, _ bundle: StatBundle, _ worn: Int) {
+            guard index < shortlists.count else {
+                searched += 1
+                var loadout = bundle
+                var multiplier = 1.0
+                for (setIndex, count) in setCounts.enumerated() where count > 0 {
+                    let relicSet = allSets[setIndex]
+                    let completions = count / relicSet.piecesRequired
+                    guard completions > 0 else { continue }
+                    for _ in 0..<completions {
+                        if let bonus = relicSet.statBonus {
+                            fold(bonus, into: &loadout, speedIsPercent: true)
+                        } else {
+                            multiplier *= effectSetValue(relicSet, for: goal)
+                        }
+                    }
+                }
+                let score = goalScore(finalStats(base: base, bundle: loadout), for: goal) * multiplier
+                let epsilon = max(abs(bestScore), 1) * 1e-9
+                if score > bestScore + epsilon || (score > bestScore - epsilon && worn > bestWorn) {
+                    bestScore = score
+                    bestWorn = worn
+                    bestPicks = picks
+                }
+                return
+            }
+            for candidateIndex in shortlists[index].indices {
+                picks[index] = candidateIndex
+                setCounts[shortlists[index][candidateIndex].setIndex] += 1
+                search(
+                    index + 1,
+                    bundle + shortlists[index][candidateIndex].bundle,
+                    worn + (shortlists[index][candidateIndex].isWorn ? 1 : 0)
+                )
+                setCounts[shortlists[index][candidateIndex].setIndex] -= 1
+            }
+        }
+        search(0, StatBundle(), 0)
+
+        guard let bestPicks else { return nil }
+        var relics: [Relic] = []
+        for (index, pick) in bestPicks.enumerated() {
+            if let relic = player.relic(shortlists[index][pick].relicID) { relics.append(relic) }
+        }
+        return OptimisedLoadout(
+            goal: goal,
+            relics: relics.sorted { $0.slot < $1.slot },
+            score: bestScore,
+            candidatesConsidered: candidates.count,
+            loadoutsSearched: searched
+        )
+    }
+}
+
+/// A named set of six relics saved against one unit.
+///
+/// Ids, not relics: a loadout is a bookmark into the inventory, so selling a
+/// relic cannot leave a stale copy of it in the save, and applying a loadout
+/// whose relic has been sold since simply leaves that slot empty.
+struct RelicLoadout: Codable, Equatable, Identifiable, Sendable {
+    var id: UUID = UUID()
+    var unitID: UUID
+    /// The goal that built it — "Power", "Damage" — which is also what the
+    /// chip says. There is no keyboard anywhere in this game, so a loadout
+    /// takes the name of the goal rather than one the player types.
+    var name: String
+    /// Relic ids by slot (1...6), the same shape as `Unit.equippedRelics`. A
+    /// slot with no entry is a slot this loadout leaves empty.
+    var relicIDs: [Int: UUID]
 }

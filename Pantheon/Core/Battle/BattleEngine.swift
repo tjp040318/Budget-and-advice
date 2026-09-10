@@ -56,6 +56,13 @@ final class BattleEngine {
     private var damageTaken: Double = 0
     /// Set when a passive or a relic set hands the current actor another turn.
     private var pendingExtraTurnFor: UUID?
+    /// Raid mechanics by boss combatant id. Empty for every ordinary fight,
+    /// which is what keeps this whole feature off the existing code paths.
+    private var raids: [UUID: RaidState] = [:]
+    /// Whose turn is being resolved right now. Only the raid barrier needs it,
+    /// and only to tell a break landing on the boss's own turn from one landing
+    /// on somebody else's — see `absorbBarrier`.
+    private var actingCombatantID: UUID?
 
     // MARK: - Setup
 
@@ -64,7 +71,8 @@ final class BattleEngine {
         opponentTeam: [ResolvedUnit],
         mode: BattleMode,
         seed: UInt64,
-        laterWaves: [[ResolvedUnit]] = []
+        laterWaves: [[ResolvedUnit]] = [],
+        raidBosses: [Int: RaidBossProfile] = [:]
     ) {
         self.mode = mode
         self.seed = seed
@@ -75,6 +83,15 @@ final class BattleEngine {
         let playerCombatants = BattleEngine.buildSide(playerTeam, side: .player, mode: mode)
         let opponentCombatants = BattleEngine.buildSide(opponentTeam, side: .opponent, mode: mode)
         self.combatants = playerCombatants + opponentCombatants
+
+        // The content keys a profile to the boss's place in the opponent team,
+        // because that is all a table of spawns knows. From here on it is keyed
+        // by combatant id: a raid summons minions, so an index into the team
+        // stops meaning anything the moment the first one walks on.
+        for (index, profile) in raidBosses where opponentCombatants.indices.contains(index) {
+            let boss = opponentCombatants[index]
+            raids[boss.id] = RaidState(profile: profile, maxHealth: boss.maxHealth)
+        }
     }
 
     /// Builds one side, applying the leader's skill to everyone who qualifies.
@@ -190,6 +207,7 @@ final class BattleEngine {
         for idx in combatants.indices {
             events += firePassive(.onBattleStart, actorIndex: idx)
         }
+        events += raidOpening()
         return events
     }
 
@@ -265,7 +283,12 @@ final class BattleEngine {
                 break
             }
 
+            // The enrage belongs to the battle's clock, not to whoever happens
+            // to be acting, so it is checked as the turn number moves.
+            events += raidEnrageCheck()
+
             let actorID = combatants[actorIndex].id
+            actingCombatantID = actorID
             combatants[actorIndex].attackBar = 0
             events.append(.turnBegan(actor: actorID, turnNumber: turnNumber))
             events += applyTurnStartEffects(actorIndex: actorIndex)
@@ -404,6 +427,7 @@ final class BattleEngine {
         }
 
         events += firePassive(.onTurnStart, actorIndex: actorIndex)
+        events += raidTurnStart(actorIndex: actorIndex)
 
         return events
     }
@@ -412,6 +436,9 @@ final class BattleEngine {
     private func finishTurn(actorIndex: Int) -> [BattleEvent] {
         var events: [BattleEvent] = []
         let actorID = combatants[actorIndex].id
+        // The turn's own resolution — counterattacks included — is over by the
+        // time this runs, so nothing after this point is "during" anyone's turn.
+        actingCombatantID = nil
 
         for slot in combatants[actorIndex].cooldowns.indices where combatants[actorIndex].cooldowns[slot] > 0 {
             combatants[actorIndex].cooldowns[slot] -= 1
@@ -517,11 +544,11 @@ final class BattleEngine {
                     let before = combatants[targetIndex].currentHealth
                     events += applyDamage(
                         targetIndex: targetIndex,
-                        amount: hit.rawDamage,
+                        amount: hit.rawDamage * raidDamageMultiplier(attackerIndex: actorIndex, targetIndex: targetIndex),
                         sourceID: actorID,
                         isCritical: hit.isCritical,
                         isGlancing: hit.isGlancing,
-                        matchup: hit.matchup,
+                        matchup: raidMatchup(hit.matchup, attackerIndex: actorIndex, targetIndex: targetIndex),
                         hitIndex: hitIndex,
                         hitCount: hits,
                         allowCounter: counterDepth < BattleEngine.maxCounterDepth
@@ -782,6 +809,11 @@ final class BattleEngine {
 
         var remaining = amount
 
+        // A raid boss's barrier soaks before anything else. It is the plate on
+        // the outside and the bar the player is aiming at, so the numbers he
+        // watches go into it first.
+        events += absorbBarrier(targetIndex: targetIndex, sourceID: sourceID, incoming: &remaining)
+
         // Shields soak first, oldest shield first.
         while remaining > 0,
               let shieldIndex = combatants[targetIndex].statuses.firstIndex(where: { $0.kind == .shield && $0.magnitude > 0 }) {
@@ -831,6 +863,7 @@ final class BattleEngine {
             combatants[targetIndex].statuses.removeAll()
             combatants[targetIndex].attackBar = 0
             events.append(.defeated(target: targetID))
+            events += collapseGuard(of: targetID)
             if let killerIndex = index(of: sourceID), combatants[killerIndex].side != combatants[targetIndex].side {
                 events += firePassive(.onKill, actorIndex: killerIndex)
             }
@@ -914,6 +947,318 @@ final class BattleEngine {
         )
         self.result = result
         return .battleEnded(result: result)
+    }
+
+    // MARK: - Raid bosses
+    //
+    // Four mechanics, all of them optional and all of them driven off the
+    // boss's `RaidBossProfile`: a barrier that has to be broken and buys a stun
+    // when it goes, a guard the boss calls and drinks from, an enrage clock
+    // that turns a war of attrition into a race, and a weakness that rotates so
+    // a team of one element is punished for it.
+    //
+    // Nothing here invents an event. Every moment goes out through the stream
+    // the scene and the HUD already read — `shieldAbsorbed` for the barrier,
+    // `passiveTriggered` for the announcements, a real `stun` status for the
+    // window, `waveStarted` for the arrivals and `healed` for the drain —
+    // because `BattleSceneController.present(_:)` switches over every case
+    // without a default, and a new case there is a compile error in a file this
+    // work is not allowed to touch. It also means a raid needs no HUD work to
+    // be legible: the break floats its name, the stun shows as a chip on the
+    // boss bar, the drain shows as green numbers on the boss.
+
+    /// The live state of one raid boss. Keyed by combatant id in `raids`.
+    private struct RaidState {
+        let profile: RaidBossProfile
+        var barrier: Double
+        let barrierMaximum: Double
+        /// Boss turns until a broken barrier comes back; 0 while it is up.
+        var regenCountdown: Int = 0
+        /// Every minion this boss has ever called, living or not.
+        var guardIDs: [UUID] = []
+        var turnsUntilSummon: Int
+        var enrageStacks: Int = 0
+        var weaknessIndex: Int = 0
+        var turnsUntilRotation: Int
+
+        init(profile: RaidBossProfile, maxHealth: Double) {
+            let pool = maxHealth * max(0, profile.barrierFraction)
+            self.profile = profile
+            self.barrier = pool
+            self.barrierMaximum = pool
+            self.turnsUntilSummon = max(1, profile.addInterval)
+            self.turnsUntilRotation = max(1, profile.weaknessInterval)
+        }
+
+        var weakness: Element? {
+            profile.weaknesses.isEmpty ? nil : profile.weaknesses[weaknessIndex % profile.weaknesses.count]
+        }
+
+        /// Compounding, so a fight that runs long gets worse and worse.
+        var enrageFactor: Double {
+            enrageStacks > 0 ? pow(profile.enrageMultiplier, Double(enrageStacks)) : 1.0
+        }
+    }
+
+    // MARK: Reading a raid from outside
+
+    /// Ids of the raid bosses on the field, in combatant order.
+    var raidBossIDs: [UUID] {
+        combatants.map(\.id).filter { raids[$0] != nil }
+    }
+
+    /// The barrier on a raid boss: what is left of it and what it holds when
+    /// full. Nil for anything that is not a raid boss carrying one.
+    func raidBarrier(for id: UUID) -> (remaining: Double, maximum: Double)? {
+        guard let state = raids[id], state.barrierMaximum > 0 else { return nil }
+        return (state.barrier, state.barrierMaximum)
+    }
+
+    /// The element the boss is open to at this moment.
+    func raidWeakness(for id: UUID) -> Element? { raids[id]?.weakness }
+
+    /// What the boss's enrage is currently multiplying its damage by; 1 until
+    /// the clock runs out.
+    func raidEnrage(for id: UUID) -> Double { raids[id]?.enrageFactor ?? 1.0 }
+
+    // MARK: The clock
+
+    /// Announces each boss's barrier and opening weakness so the first thing
+    /// the player sees is what he is up against.
+    private func raidOpening() -> [BattleEvent] {
+        var events: [BattleEvent] = []
+        for index in combatants.indices {
+            let id = combatants[index].id
+            guard let state = raids[id] else { continue }
+            if state.barrierMaximum > 0 {
+                events.append(.passiveTriggered(actor: id, name: "\(state.profile.barrierName) Raised"))
+            }
+            if let weakness = state.weakness {
+                events.append(.passiveTriggered(actor: id, name: "Weak to \(weakness.displayName)"))
+            }
+        }
+        return events
+    }
+
+    /// Enrage steps as the battle's turn counter passes the threshold, whoever
+    /// is acting. Walked in combatant order rather than dictionary order: the
+    /// event stream for a given seed has to be identical every time.
+    private func raidEnrageCheck() -> [BattleEvent] {
+        var events: [BattleEvent] = []
+        for index in combatants.indices {
+            let id = combatants[index].id
+            guard var state = raids[id], combatants[index].isAlive else { continue }
+            let profile = state.profile
+            guard profile.enrageTurn > 0, profile.enrageMultiplier > 1, turnNumber >= profile.enrageTurn else { continue }
+
+            // One step at the threshold, then one more per interval. An
+            // interval of 0 means it steps once and stays there.
+            let extra = profile.enrageInterval > 0
+                ? (turnNumber - profile.enrageTurn) / profile.enrageInterval
+                : 0
+            let stacks = 1 + extra
+            guard stacks > state.enrageStacks else { continue }
+            state.enrageStacks = stacks
+            raids[id] = state
+            events.append(.passiveTriggered(
+                actor: id,
+                name: "Enraged ×\(String(format: "%.1f", state.enrageFactor))"
+            ))
+        }
+        return events
+    }
+
+    /// The boss's own turn: the barrier's regeneration clock, the weakness
+    /// rotation, the guard's drain and the next summon.
+    private func raidTurnStart(actorIndex: Int) -> [BattleEvent] {
+        let bossID = combatants[actorIndex].id
+        guard var state = raids[bossID], combatants[actorIndex].isAlive else { return [] }
+        var events: [BattleEvent] = []
+
+        // The regeneration clock runs on the boss's turns whether it acts or
+        // not: the stun the break bought is the window, and letting it stop the
+        // clock would mean the window paid for itself twice.
+        if state.regenCountdown > 0 {
+            state.regenCountdown -= 1
+            if state.regenCountdown == 0 {
+                state.barrier = state.barrierMaximum
+                events.append(.passiveTriggered(actor: bossID, name: "\(state.profile.barrierName) Restored"))
+            }
+        }
+
+        // Everything else is something the boss does, so a turn it loses to the
+        // stun costs it the rotation, the drain and the summon as well.
+        if !combatants[actorIndex].isIncapacitated {
+            if state.profile.weaknesses.count > 1 {
+                state.turnsUntilRotation -= 1
+                if state.turnsUntilRotation <= 0 {
+                    state.weaknessIndex = (state.weaknessIndex + 1) % state.profile.weaknesses.count
+                    state.turnsUntilRotation = max(1, state.profile.weaknessInterval)
+                    if let weakness = state.weakness {
+                        events.append(.passiveTriggered(actor: bossID, name: "Weak to \(weakness.displayName)"))
+                    }
+                }
+            }
+
+            // The drain runs before the summon, so a minion never feeds the
+            // boss on the turn it walks on. `applyHealing` refuses a boss under
+            // Unrecoverable, which makes that debuff the answer to the guard
+            // for a team that cannot kill two minions a turn.
+            let living = state.guardIDs.filter { combatant($0)?.isAlive == true }
+            if !living.isEmpty, state.profile.addDrain > 0, combatants[actorIndex].canBeHealed {
+                events.append(.passiveTriggered(actor: bossID, name: state.profile.drainName))
+                let amount = combatants[actorIndex].maxHealth * state.profile.addDrain
+                for minionID in living {
+                    events += applyHealing(targetIndex: actorIndex, amount: amount, sourceID: minionID)
+                }
+            }
+
+            if !state.profile.adds.isEmpty {
+                state.turnsUntilSummon -= 1
+                if state.turnsUntilSummon <= 0 {
+                    state.turnsUntilSummon = max(1, state.profile.addInterval)
+                    events += summonGuard(bossIndex: actorIndex, state: &state)
+                }
+            }
+        }
+
+        raids[bossID] = state
+        return events
+    }
+
+    /// Tops the guard back up to its full number. Only the missing ones are
+    /// called, so ignoring the minions cannot bury the field in them — it just
+    /// leaves them alive and drinking.
+    private func summonGuard(bossIndex: Int, state: inout RaidState) -> [BattleEvent] {
+        let bossID = combatants[bossIndex].id
+        let living = state.guardIDs.filter { combatant($0)?.isAlive == true }.count
+        let missing = state.profile.adds.count - living
+        guard missing > 0 else { return [] }
+
+        let resolved = StageDatabase.buildEnemies(spawns: Array(state.profile.adds.suffix(missing)))
+        guard !resolved.isEmpty else { return [] }
+
+        // The marks of the fallen are free — the scene clears defeated
+        // opponents on this same event — so a second guard stands where the
+        // first one died instead of a rank further back every time.
+        let slots = freeOpponentSlots(count: resolved.count)
+        var arrivals: [Combatant] = []
+        for (offset, unit) in resolved.enumerated() where offset < slots.count {
+            arrivals.append(Combatant(resolved: unit, side: .opponent, slot: slots[offset], isLeader: false))
+        }
+        guard !arrivals.isEmpty else { return [] }
+
+        combatants.append(contentsOf: arrivals)
+        state.guardIDs.append(contentsOf: arrivals.map(\.id))
+
+        // `waveStarted` is how arrivals reach the scene, and it carries the
+        // wave the fight is actually on so a raid does not lie to the HUD's
+        // wave counter.
+        return [
+            .passiveTriggered(actor: bossID, name: state.profile.summonName),
+            .waveStarted(wave: waveIndex, count: waveCount, opponents: arrivals)
+        ]
+    }
+
+    /// The lowest marks no living opponent is standing on.
+    private func freeOpponentSlots(count: Int) -> [Int] {
+        let taken = Set(combatants.filter { $0.side == .opponent && $0.isAlive }.map(\.slot))
+        var slots: [Int] = []
+        var candidate = 0
+        while slots.count < count, candidate < 16 {
+            if !taken.contains(candidate) { slots.append(candidate) }
+            candidate += 1
+        }
+        return slots
+    }
+
+    // MARK: The barrier
+
+    /// Soaks damage into the boss's barrier and breaks it if the damage runs
+    /// out the other side. Whatever is left over carries on into health in the
+    /// same hit, so the strike that breaks it still lands.
+    private func absorbBarrier(targetIndex: Int, sourceID: UUID, incoming: inout Double) -> [BattleEvent] {
+        let targetID = combatants[targetIndex].id
+        guard var state = raids[targetID], state.barrier > 0, incoming > 0 else { return [] }
+        var events: [BattleEvent] = []
+
+        let absorbed = min(incoming, state.barrier)
+        state.barrier -= absorbed
+        incoming -= absorbed
+        events.append(.shieldAbsorbed(target: targetID, amount: absorbed, shieldRemaining: state.barrier))
+
+        if state.barrier <= 0 {
+            state.regenCountdown = max(1, state.profile.barrierRegenTurns)
+            events.append(.passiveTriggered(actor: targetID, name: "\(state.profile.barrierName) Shattered"))
+
+            // Applied straight rather than rolled: this is a window the player
+            // earned by breaking the barrier, and losing it to the boss's
+            // resistance stat would make the whole mechanic a coin flip.
+            //
+            // Statuses only tick on their owner's own turn, so a barrier broken
+            // during the boss's turn — by a counterattack, a bomb, a reflect —
+            // would tick this away before it ever cost a turn. Hence the extra
+            // turn while the boss is the one acting.
+            let turns = max(1, state.profile.barrierStunTurns) + (actingCombatantID == targetID ? 1 : 0)
+            combatants[targetIndex].statuses.append(
+                ActiveStatus(kind: .stun, turnsRemaining: turns, sourceID: sourceID)
+            )
+            events.append(.statusApplied(source: sourceID, target: targetID, kind: .stun, turns: turns))
+        }
+
+        raids[targetID] = state
+        return events
+    }
+
+    /// A raid boss's summons are held up by it. When it falls they fall with
+    /// it, so a won raid ends on the boss rather than on a mop-up.
+    private func collapseGuard(of bossID: UUID) -> [BattleEvent] {
+        guard let state = raids[bossID], !state.guardIDs.isEmpty else { return [] }
+        var events: [BattleEvent] = []
+        let standing = combatants.indices.filter {
+            combatants[$0].isAlive && state.guardIDs.contains(combatants[$0].id)
+        }
+        for index in standing {
+            combatants[index].currentHealth = 0
+            combatants[index].statuses.removeAll()
+            combatants[index].attackBar = 0
+            events.append(.defeated(target: combatants[index].id))
+        }
+        return events
+    }
+
+    // MARK: The weakness, and what enrage does to a number
+
+    /// Enrage on the way out of a raid boss, the rotating weakness on the way
+    /// in. 1 for every fight that has no raid in it.
+    private func raidDamageMultiplier(attackerIndex: Int, targetIndex: Int) -> Double {
+        var multiplier = 1.0
+        if let attacker = raids[combatants[attackerIndex].id] {
+            multiplier *= attacker.enrageFactor
+        }
+        if let defender = raids[combatants[targetIndex].id], let weakness = defender.weakness {
+            multiplier *= combatants[attackerIndex].element == weakness
+                ? defender.profile.weaknessMultiplier
+                : defender.profile.offElementMultiplier
+        }
+        return multiplier
+    }
+
+    /// The matchup the damage event reports. A hit into the boss's open
+    /// element is called an advantage even when the element wheel says
+    /// otherwise: the number is already bigger, and the green number and the
+    /// "(advantage)" in the log are how the player is told which of his units
+    /// is the one to be using right now. It changes nothing but the reporting —
+    /// `DamageCalculator` has already applied the real wheel to the number.
+    private func raidMatchup(
+        _ matchup: Element.Matchup,
+        attackerIndex: Int,
+        targetIndex: Int
+    ) -> Element.Matchup {
+        guard let defender = raids[combatants[targetIndex].id],
+              let weakness = defender.weakness,
+              combatants[attackerIndex].element == weakness else { return matchup }
+        return .advantage
     }
 
     /// Runs the whole battle with no player input. Used by arena scoring, the

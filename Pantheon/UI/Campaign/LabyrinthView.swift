@@ -1,9 +1,11 @@
 import SwiftUI
 
-/// The Labyrinth: the relic dungeons and the Halls of Essence under one
-/// roof, the way the genre keeps its Cairos. It opens over the island from
-/// its own building; a dungeon opens as a page of level medallions, and a
-/// level is one battle of three waves that ends at the boss.
+/// The Labyrinth: the relic dungeons, the Halls of Essence and the Endless
+/// Tower under one roof, the way the genre keeps its Cairos. It opens over the
+/// island from its own building; a dungeon opens as a page of level medallions,
+/// and a level is one battle of three waves that ends at the boss. The tower
+/// is the third room and has no page of its own — a hundred floors with one
+/// way up is a button, not a list.
 ///
 /// The chrome is `GameScreen`: one 34-point strip carrying the wing switch
 /// and the wallet, and the whole rest of the frame given to the cards. The
@@ -15,23 +17,33 @@ struct LabyrinthView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var path = NavigationPath()
     @State private var wing: Wing = .dungeons
+    /// The tower fights from this screen rather than pushing a page: there is
+    /// only ever one floor to fight, so there is nothing to navigate to.
+    @State private var towerEngine: BattleEngine?
+    @State private var towerBattle: BattleContext?
+    @State private var showTeamPicker = false
 
-    /// The building's two halves. A two-way choice, so it is `BarSegments`
+    /// The building's three rooms. A three-way choice, so it is `BarSegments`
     /// in the strip rather than a row of capsules above the content.
     enum Wing: Hashable {
         case dungeons
         case halls
+        case tower
     }
 
     private let wings: [(value: Wing, title: String)] = [
         (value: .dungeons, title: "Dungeons"),
         (value: .halls, title: "Halls"),
+        (value: .tower, title: "Tower"),
     ]
 
     private var subtitle: String {
         switch wing {
         case .dungeons: return "\(DungeonDatabase.labyrinths.count) dungeons · a relic every run"
         case .halls: return "\(DungeonDatabase.halls.count) halls · the awakening essences"
+        case .tower:
+            let cleared = TowerService.clearedFloor(player: store.player)
+            return "\(cleared)/\(DungeonDatabase.towerFloors) floors · one battle each"
         }
     }
 
@@ -55,6 +67,8 @@ struct LabyrinthView: View {
                                 hallCard(hall)
                             }
                         }
+                    case .tower:
+                        towerWing
                     }
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
@@ -63,6 +77,13 @@ struct LabyrinthView: View {
             .navigationDestination(for: String.self) { chapterID in
                 DungeonLevelsView(chapterID: chapterID)
             }
+        }
+        .sheet(isPresented: $showTeamPicker) {
+            TeamPickerView(slot: .campaign, maxSize: 5)
+                .environmentObject(store)
+        }
+        .fullScreenCover(item: $towerBattle, onDismiss: { towerEngine = nil }) { context in
+            towerBattleScreen(context)
         }
     }
 
@@ -224,6 +245,262 @@ struct LabyrinthView: View {
             )
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - The Endless Tower
+
+    /// The tower as the building's third room. There is no page of medallions
+    /// because there is nothing to choose: the climb resumes at the floor above
+    /// the highest cleared and never starts over, so the screen is the next
+    /// floor — what it fields, what it pays, and one button.
+    private var towerWing: some View {
+        let stage = TowerService.nextStage(player: store.player)
+        return HStack(alignment: .top, spacing: 8) {
+            if let stage {
+                towerFloorPanel(stage)
+            } else {
+                summitPanel
+            }
+            towerClimbPanel(stage: stage)
+                .frame(width: 290)
+        }
+        .background(alignment: .center) { towerBackdrop(stage) }
+    }
+
+    /// The painting of the place the next floor stands in, behind the panels.
+    /// Decorative, and `.clipped()` does not clip hit-testing, so it declines
+    /// taps or it would swallow the Climb button's half of the screen.
+    @ViewBuilder
+    private func towerBackdrop(_ stage: Stage?) -> some View {
+        if let stage, BundleImage.exists(stage.environment.backdropName) {
+            BundleImage(name: stage.environment.backdropName)
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+                .overlay(
+                    LinearGradient(
+                        colors: [Theme.ink.opacity(0.74), Theme.ink.opacity(0.93)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                )
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// What the floor fields and what it pays, shown before the energy is
+    /// spent, the way the stage briefing shows a stage. A tower floor is
+    /// fought once, so this is the only chance to look at it.
+    private func towerFloorPanel(_ stage: Stage) -> some View {
+        let floor = stage.index
+        let foes = StageDatabase.buildEnemies(for: stage)
+        return VStack(alignment: .leading, spacing: 8) {
+            // `stage.name` is already "Floor 37 · The Weighing Floor": the
+            // floor and the tier it belongs to, which is the whole heading.
+            SectionHeader(
+                title: stage.name,
+                accessory: DungeonDatabase.isTowerBossFloor(floor)
+                    ? "the warden and two" : "\(foes.count) foes"
+            )
+            HStack(spacing: 6) {
+                ForEach(foes) { foe in
+                    UnitCard(unit: foe, showPower: false, size: 92)
+                }
+                Spacer(minLength: 0)
+            }
+            Text("Level \(DungeonDatabase.towerLevel(floor: floor)) · \(DungeonDatabase.towerGrade(floor: floor))★ · ×\(String(format: "%.2f", DungeonDatabase.towerDifficulty(floor: floor))) · \(stage.environment.displayName)")
+                .font(Theme.numeric(10))
+                .foregroundStyle(Theme.gold)
+            VStack(spacing: 3) {
+                towerRewardRow("circle.hexagongrid.fill", "Drachma", "\(stage.rewards.drachma)")
+                towerRewardRow("arrow.up.circle.fill", "Unit EXP", "\(stage.rewards.unitExperience)")
+                towerRewardRow("sparkles", "Divinity", "\(stage.rewards.firstClearDivinity)")
+                if stage.rewards.relicChance > 0 {
+                    towerRewardRow("shield.lefthalf.filled", "Relic (\(stage.rewards.relicGrade)★)", "always")
+                }
+                if let scroll = DungeonDatabase.towerScroll(floor: floor) {
+                    towerRewardRow("scroll.fill", scroll.displayName, "always")
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(10)
+        .panelBackground()
+    }
+
+    private func towerRewardRow(_ icon: String, _ label: String, _ value: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 10))
+                .frame(width: 16)
+                .foregroundStyle(Theme.goldDim)
+            Text(label).font(Theme.body(11)).foregroundStyle(Theme.textPrimary)
+            Spacer(minLength: 4)
+            Text(value).font(Theme.numeric(11)).foregroundStyle(Theme.textSecondary)
+        }
+    }
+
+    /// Where the player is, what is worth reaching, who is going, and the one
+    /// button. The milestone track is the whole ladder in five numbers: at
+    /// floor 60 the next thing to aim at is 75, and it says what 75 pays.
+    private func towerClimbPanel(stage: Stage?) -> some View {
+        let cleared = TowerService.clearedFloor(player: store.player)
+        let team = store.team(store.player.campaignTeam)
+        let power = team.reduce(0) { $0 + $1.power }
+        let hasEnergy = stage.map { store.player.wallet.energy >= $0.energyCost } ?? false
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(stage.map { "F\($0.index)" } ?? "DONE")
+                    .font(Theme.title(26))
+                    .foregroundStyle(Theme.gold)
+                Text("of \(DungeonDatabase.towerFloors)")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer(minLength: 4)
+                Text("\(cleared) cleared")
+                    .font(Theme.numeric(11))
+                    .foregroundStyle(Theme.textPrimary)
+            }
+
+            milestoneTrack(cleared: cleared)
+
+            if let next = TowerService.nextMilestone(player: store.player) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("NEXT MILESTONE · FLOOR \(next)")
+                        .font(Theme.body(9).weight(.black))
+                        .tracking(1.0)
+                        .foregroundStyle(Theme.goldDim)
+                    if let reward = DungeonDatabase.towerMilestoneReward(floor: next) {
+                        Text(ShopService.describe(reward))
+                            .font(Theme.body(11))
+                            .foregroundStyle(Theme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(6)
+                .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
+            }
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text("YOUR TEAM")
+                        .font(Theme.body(9).weight(.black))
+                        .tracking(1.0)
+                        .foregroundStyle(Theme.goldDim)
+                    Spacer(minLength: 4)
+                    if let stage {
+                        Text("\(power) / \(stage.recommendedPower)")
+                            .font(Theme.numeric(10))
+                            .foregroundStyle(power >= stage.recommendedPower ? Theme.success : Theme.danger)
+                    }
+                }
+                Button {
+                    Juice.haptic(.light)
+                    showTeamPicker = true
+                } label: {
+                    HStack(spacing: 5) {
+                        ForEach(team) { unit in
+                            UnitCard(unit: unit, size: 42)
+                        }
+                        if team.count < 5 {
+                            EmptyTeamSlot(size: 42, label: "Add")
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer(minLength: 0)
+
+            if let stage {
+                if !hasEnergy {
+                    Text("Not enough energy — this floor costs \(stage.energyCost).")
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.danger)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                PrimaryButton(
+                    title: "Climb — \(stage.energyCost) energy",
+                    systemImage: "arrow.up.to.line",
+                    isEnabled: hasEnergy && !team.isEmpty
+                ) {
+                    climbTower()
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(10)
+        .panelBackground()
+    }
+
+    /// The five milestones as a track. A pip is gold once its floor is behind
+    /// the player, so the panel says how far up the hundred they are without a
+    /// progress bar's worth of height.
+    private func milestoneTrack(cleared: Int) -> some View {
+        HStack(spacing: 4) {
+            ForEach(DungeonDatabase.towerMilestones, id: \.self) { floor in
+                let reached = cleared >= floor
+                Text("\(floor)")
+                    .font(Theme.numeric(11).weight(.bold))
+                    .foregroundStyle(reached ? Theme.ink : Theme.textSecondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule().fill(reached ? Theme.gold : Theme.surfaceHigh)
+                    )
+                    .overlay(
+                        Capsule().strokeBorder(
+                            reached ? Color.clear : Theme.stroke,
+                            lineWidth: 0.5
+                        )
+                    )
+            }
+        }
+    }
+
+    /// The hundredth floor is cleared. Nothing more to fight, so the panel
+    /// says so rather than offering a floor that does not exist.
+    private var summitPanel: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionHeader(title: "The tower is climbed")
+            Text("A hundred floors, and the last of them is behind you. Nothing above the Coil answers to a summoner.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(10)
+        .panelBackground()
+    }
+
+    // MARK: - Climbing
+
+    private func climbTower() {
+        guard let stage = TowerService.nextStage(player: store.player) else { return }
+        guard let engine = store.startTowerBattle() else { return }
+        Juice.haptic(.light)
+        towerEngine = engine
+        towerBattle = .campaign(stage)
+    }
+
+    /// A floor is a campaign battle: the same view model, the same result
+    /// panel, and `GameStore.finishCampaignBattle` pays it and moves the mark.
+    /// Never a repeat run — a floor is fought once, so there is nothing to
+    /// repeat.
+    @ViewBuilder
+    private func towerBattleScreen(_ context: BattleContext) -> some View {
+        if let engine = towerEngine {
+            BattleView(model: BattleViewModel(engine: engine, context: context, store: store))
+                .environmentObject(store)
+        } else {
+            Color.black
+                .ignoresSafeArea()
+                .onAppear { towerBattle = nil }
+        }
     }
 }
 
