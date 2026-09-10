@@ -45,7 +45,9 @@ struct BattleView: View {
                     .transition(.opacity)
                     .allowsHitTesting(false)
                     .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.15) {
+                        // A skill's name is read at a glance; a sentence is
+                        // not, so a boss's line is held nearly twice as long.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + (cutIn.isSpeech ? 2.4 : 1.15)) {
                             withAnimation(.easeIn(duration: 0.2)) {
                                 if model.cutIn == cutIn { model.cutIn = nil }
                             }
@@ -90,6 +92,9 @@ struct BattleView: View {
         .preferredColorScheme(.dark)
         .onAppear {
             model.begin()
+            // A chapter boss or a raid says its one line as the fight opens;
+            // every other stage returns from this without doing anything.
+            model.announceBoss()
             AudioLibrary.shared.playMusic(.battle)
         }
         .onDisappear { AudioLibrary.shared.playMusic(.island) }
@@ -545,6 +550,11 @@ struct BattleView: View {
     /// right, gone in a second.
     private func cutInBanner(_ cutIn: BattleViewModel.CutIn) -> some View {
         let accent = Color(hex: cutIn.accentHex)
+        // Annotated rather than inferred inside the modifier: nil is the
+        // "leave it alone" value for both, and a bare ternary against nil is
+        // the sort of thing that needs a compiler to settle.
+        let speechLines: Int? = cutIn.isSpeech ? 3 : nil
+        let speechWidth: CGFloat? = cutIn.isSpeech ? 420 : nil
         return VStack {
             Spacer().frame(height: 90)
             ZStack {
@@ -569,9 +579,21 @@ struct BattleView: View {
                             .font(Theme.body(11).weight(.bold))
                             .tracking(1.6)
                             .foregroundStyle(accent)
+                        // A skill's name is two or three words and wears the
+                        // display face; a boss's line is a sentence, and at 26pt
+                        // an eighty-character one runs straight out of the 84pt
+                        // band. It is set smaller, allowed three lines and given
+                        // a width to wrap inside.
                         Text(cutIn.skillName)
-                            .font(Theme.display(26))
+                            .font(cutIn.isSpeech ? Theme.title(15) : Theme.display(26))
                             .foregroundStyle(Theme.textPrimary)
+                            // Every one of these is written so that it is the
+                            // no-op it used to be when this is not speech: the
+                            // ultimate's announcement must look exactly as it did.
+                            .lineLimit(speechLines)
+                            .minimumScaleFactor(cutIn.isSpeech ? 0.8 : 1)
+                            .fixedSize(horizontal: false, vertical: cutIn.isSpeech)
+                            .frame(maxWidth: speechWidth, alignment: .leading)
                             .shadow(color: accent.opacity(0.9), radius: 10)
                     }
                     .transition(.move(edge: .trailing).combined(with: .opacity))

@@ -59,6 +59,10 @@ final class BattleViewModel: ObservableObject {
         var unitName: String
         var skillName: String
         var accentHex: String
+        /// A boss's opening line rather than a skill's name. The band is the
+        /// same; the words are a sentence, so the view sets them smaller, lets
+        /// them wrap and holds them longer.
+        var isSpeech: Bool = false
     }
     @Published private(set) var log: [String] = []
     @Published var autoBattle = false {
@@ -225,6 +229,32 @@ final class BattleViewModel: ObservableObject {
         hasBegun = true
         sceneController.build(combatants: engine.combatants, environment: context.environment)
         consume(engine.start())
+    }
+
+    /// Set the first time a boss speaks, for the reason `hasBegun` exists.
+    private var hasSpoken = false
+
+    /// The boss's line, once, into the band the ultimates use.
+    ///
+    /// Only a chapter's boss stage and a raid have one (`StageDatabase.bossLine`);
+    /// everything else returns without touching `cutIn`, so an ordinary fight is
+    /// exactly as it was. Guarded on `hasSpoken` for the same reason `begin()`
+    /// is guarded: `onAppear` fires more than once, and an auto-repeat run keeps
+    /// this view alive across fights — the line belongs to walking in, not to
+    /// every lap.
+    func announceBoss() {
+        guard !hasSpoken else { return }
+        hasSpoken = true
+        guard case .campaign(let stage) = context,
+              let boss = StageDatabase.bossLine(for: stage),
+              let blueprint = UnitDatabase.blueprint(boss.blueprintID) else { return }
+        cutIn = CutIn(
+            portrait: blueprint.model.portraitName(awakened: false),
+            unitName: blueprint.name,
+            skillName: boss.line,
+            accentHex: blueprint.element.accentHex,
+            isSpeech: true
+        )
     }
 
     // MARK: - Player input
