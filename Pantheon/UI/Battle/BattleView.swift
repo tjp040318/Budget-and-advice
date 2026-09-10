@@ -1,6 +1,23 @@
+import Foundation
 import SwiftUI
 
 /// The battle screen: 3D stage underneath, HUD on top.
+///
+/// The HUD answers four questions, and every piece below exists to answer
+/// exactly one of them without the player stopping to look:
+///
+///   *Whose turn is it?* — the gold dot on the attack gauge, the gold ring on
+///   that unit's team plate, and the actor plate in the bottom-left corner,
+///   which is filled during an enemy turn as well as the player's so the
+///   corner never goes blank and never means two different things.
+///   *Who is next?* — the gauge, read left to right.
+///   *What just happened to whom?* — the combat feed on the right: one line
+///   per health change and per status landing, named, on its own dark plate.
+///   The 3D damage numbers land on a sunlit floor and were measured at 1.05:1
+///   against it; these are 14:1 whatever the stage.
+///   *What will this button do?* — every skill tile carries its own forecast
+///   line (estimated damage, hit count, or HEAL/BUFF), and the plate spells
+///   out the skill in hand before it is committed rather than after.
 struct BattleView: View {
 
     @StateObject var model: BattleViewModel
@@ -12,6 +29,33 @@ struct BattleView: View {
     /// A skill held down: its card shows until a tap or four seconds.
     @State private var heldSkill: Skill?
 
+    /// The skill under the player's finger, before the tap has committed to
+    /// anything. A press on a tile sets it and a lift clears it, so the plate
+    /// describes a skill *while it is being considered* — the old plate only
+    /// ever described a skill that had already been chosen, and skills that
+    /// pick their own targets fire on the tap, so those were never described
+    /// at all.
+    @State private var previewSlot: Int?
+
+    /// The combat feed, and the snapshots it is diffed against. The model
+    /// publishes `displayedCombatants` one battle event at a time, so a
+    /// health delta between two publishes is exactly one hit.
+    @State private var feed: [BattleFeedEntry] = []
+    @State private var lastHealth: [UUID: Double] = [:]
+    @State private var lastStatuses: [UUID: Set<StatusKind>] = [:]
+    /// Drives the halo on the ready dot. Started once, in `onAppear`.
+    @State private var readyPulse = false
+
+    /// One line of the combat feed.
+    struct BattleFeedEntry: Identifiable {
+        let id = UUID()
+        var glyph: String
+        var name: String
+        var value: String
+        var tint: Color
+        var isPlayer: Bool
+    }
+
     var body: some View {
         ZStack {
             BattleSceneView(controller: model.sceneController) { id in
@@ -20,25 +64,36 @@ struct BattleView: View {
             .ignoresSafeArea()
 
             // A landscape HUD: one row across the top with the turn order in
-            // it, and a bottom bar whose middle is open, so a short screen
-            // keeps its centre for the stage.
-            VStack(spacing: 6) {
-                topBar
-                if let boss = model.displayedCombatants.first(where: { $0.isBoss && $0.isAlive }) {
-                    bossBar(boss)
+            // it, the two teams' readouts down the sides, and a bottom bar
+            // whose middle is open, so a short screen keeps its centre for
+            // the stage.
+            //
+            // It is measured against the height it is actually handed and not
+            // against a full-size phone's, because every band of it but the
+            // team column has a fixed height that cannot give, and a VStack
+            // that runs out of room does not shrink or clip — it draws past
+            // its frame, which here means the skill buttons slide under the
+            // home indicator. The HUD gets 381 points on a 16 Pro and 354 on
+            // a 13 mini, which iOS 17 still runs: 375 on its side with 21 of
+            // them under the indicator.
+            GeometryReader { geo in
+                let boss = model.displayedCombatants.first { $0.isBoss && $0.isAlive }
+                VStack(spacing: 6) {
+                    topBar
+                    if let boss {
+                        bossBar(boss)
+                    }
+                    HStack(alignment: .top, spacing: 8) {
+                        teamColumn(plate: teamPlateHeight(hudHeight: geo.size.height, boss: boss != nil))
+                        Spacer(minLength: 0)
+                        combatFeed
+                    }
+                    Spacer(minLength: 0)
+                    commandBar
                 }
-                if model.awaitingActor != nil, model.selectedSkillSlot != nil {
-                    targetPrompt
-                }
-                Spacer()
-                if let actor = model.awaitingActor {
-                    commandPanel(actor: actor)
-                } else if model.isPlayingBack {
-                    playbackHint
-                }
+                .padding(.horizontal, 6)
+                .padding(.bottom, 8)
             }
-            .padding(.horizontal, 6)
-            .padding(.bottom, 8)
 
             if let cutIn = model.cutIn {
                 cutInBanner(cutIn)
@@ -74,7 +129,7 @@ struct BattleView: View {
                     .foregroundStyle(Theme.gold)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
-                    .background(Capsule().fill(Theme.ink.opacity(0.82)))
+                    .background(Capsule().fill(Theme.ink.opacity(0.88)))
                     .allowsHitTesting(false)
                     .transition(.opacity)
                     .onAppear {
@@ -96,8 +151,18 @@ struct BattleView: View {
             // every other stage returns from this without doing anything.
             model.announceBoss()
             AudioLibrary.shared.playMusic(.battle)
+            withAnimation(.easeInOut(duration: 0.75).repeatForever(autoreverses: true)) {
+                readyPulse = true
+            }
         }
         .onDisappear { AudioLibrary.shared.playMusic(.island) }
+        // Any health or status change anywhere on the field, hashed into one
+        // Int. `log.count` cannot be the trigger: the log is trimmed at 200
+        // lines, so in a long fight the count stops rising and `onChange`
+        // stops firing while the fight carries on.
+        .onChange(of: battlePulse) { _, _ in ingestFeed() }
+        // A new actor means the old one's skill preview is meaningless.
+        .onChange(of: model.awaitingActor?.id) { _, _ in previewSlot = nil }
         .onChange(of: model.outcome?.outcome) { _, newValue in
             guard newValue != nil else { return }
             // Let the last animation land before the result panel takes over.
@@ -146,7 +211,7 @@ struct BattleView: View {
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                    .frame(maxWidth: 170, alignment: .leading)
+                    .frame(maxWidth: 150, alignment: .leading)
             }
 
             if model.waveCount > 1 {
@@ -221,7 +286,7 @@ struct BattleView: View {
         content()
             .frame(height: 30)
             .padding(.horizontal, 10)
-            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.9) : Theme.ink.opacity(0.82)))
+            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.92) : Theme.ink.opacity(0.88)))
             .overlay(Capsule().strokeBorder(active ? Theme.gold : Theme.stroke, lineWidth: 1))
     }
 
@@ -232,6 +297,11 @@ struct BattleView: View {
     /// ring, theirs below with a red one, gold where a unit stands ready.
     /// Read left to right it is the turn order and the distance between
     /// turns, and a speed buff or a bar knock is visible the moment it lands.
+    ///
+    /// Each portrait also wears its own health as an arc around it. That is
+    /// the only readout in the frame that covers the *enemy* line, and it
+    /// means "who is nearly dead" and "who moves next" are one glance rather
+    /// than two.
     private var turnGauge: some View {
         let units = model.displayedCombatants.filter(\.isAlive)
         let dot: CGFloat = 26
@@ -240,7 +310,7 @@ struct BattleView: View {
             let placed = gaugePositions(units, width: width, dot: dot)
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Theme.ink.opacity(0.82))
+                    .fill(Theme.ink.opacity(0.88))
                     .frame(width: width, height: 10)
                     .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
                 ForEach(1..<4, id: \.self) { quarter in
@@ -249,6 +319,14 @@ struct BattleView: View {
                         .frame(width: 1, height: 10)
                         .offset(x: width * CGFloat(quarter) / 4)
                 }
+                // The far end of the track is where a turn happens. Painting
+                // it gold gives the gold dot somewhere to have arrived at,
+                // instead of leaving it as one more coloured circle in a row.
+                Capsule()
+                    .fill(Theme.gold.opacity(0.30))
+                    .frame(width: 18, height: 10)
+                    .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.7), lineWidth: 1))
+                    .offset(x: max(0, width - 18))
                 ForEach(units) { unit in
                     let x = placed[unit.id] ?? 0
                     gaugeDot(unit, ready: model.awaitingActor?.id == unit.id)
@@ -263,7 +341,7 @@ struct BattleView: View {
         // Two calls, not one: `frame` has a fixed overload and a flexible
         // one and no overload mixes their labels.
         .frame(minWidth: 150, maxWidth: 260)
-        .frame(height: 44)
+        .frame(height: 48)
     }
 
     /// Where each portrait sits on the track. Two units with level bars land
@@ -294,6 +372,16 @@ struct BattleView: View {
         let portrait = unit.model.portraitName(awakened: unit.isAwakened)
         let ring = ready ? Theme.gold : (unit.side == .player ? Theme.info : Theme.danger)
         return ZStack {
+            // A halo that is only ever worn by the unit whose turn it is, and
+            // that breathes, so the gold dot is found by movement before it is
+            // found by colour.
+            if ready {
+                Circle()
+                    .fill(Theme.gold.opacity(0.35))
+                    .frame(width: 34, height: 34)
+                    .scaleEffect(readyPulse ? 1.22 : 0.96)
+                    .blur(radius: 3)
+            }
             Circle()
                 .fill(unit.side == .player ? Theme.info.opacity(0.35) : Theme.danger.opacity(0.35))
             if BundleImage.exists(portrait) {
@@ -305,65 +393,422 @@ struct BattleView: View {
                     .font(Theme.body(10).weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
             }
+            // The health arc, on a black channel of its own so it never has to
+            // be read against the portrait behind it.
             Circle()
-                .strokeBorder(ring, lineWidth: ready ? 2 : 1.2)
+                .strokeBorder(Color.black.opacity(0.7), lineWidth: 3)
+            Circle()
+                .trim(from: 0, to: CGFloat(max(0.02, unit.healthFraction)))
+                .stroke(healthTint(unit.healthFraction), style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+                .padding(1.5)
+                .animation(.easeOut(duration: 0.25), value: unit.healthFraction)
+            Circle()
+                .strokeBorder(ring, lineWidth: ready ? 2 : 1)
         }
         .frame(width: 26, height: 26)
-        .shadow(color: ready ? Theme.gold.opacity(0.8) : .clear, radius: 5)
+        .scaleEffect(ready ? 1.2 : 1)
+        .shadow(color: ready ? Theme.gold.opacity(0.9) : .clear, radius: 6)
+        .overlay(alignment: unit.side == .player ? .top : .bottom) {
+            // A chevron pointing at the ready unit, outside the dot, on the
+            // side the dot's own line sits on. Colour alone was not enough:
+            // a fire unit's element accent and the gold ring are the same
+            // family on a sunlit stage.
+            if ready {
+                Image(systemName: unit.side == .player ? "arrowtriangle.down.fill" : "arrowtriangle.up.fill")
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundStyle(Theme.gold)
+                    .shadow(color: .black.opacity(0.8), radius: 1.5)
+                    .offset(y: unit.side == .player ? -3 : 3)
+            }
+        }
     }
 
-    // MARK: - Command panel
+    // MARK: - The player's team
+
+    /// Five plates down the left edge: portrait, name, health as a bar *and*
+    /// as a number, and the statuses on that unit.
+    ///
+    /// Before this the only per-unit health readout in the HUD was the acting
+    /// unit's, so a five-unit team had four members whose health lived only in
+    /// a world-space bar measured at 3.3pt tall and 1.21:1 against the floor.
+    /// The enemy boss had a wide bar with exact figures; the player's own team
+    /// had nothing. Every bar here is the same length whatever the unit's
+    /// height or its distance from the camera, which the world bars can never
+    /// be, so the team can actually be ranked by health.
+    private func teamColumn(plate: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(model.playerTeam) { unit in
+                teamPlate(unit, height: plate)
+            }
+        }
+        .frame(width: 154, alignment: .leading)
+        // A readout, never a control. A plate's filled background is
+        // hit-testable whatever is drawn on it, and this column stands over
+        // the back of the stage, which in a camera solved from above and
+        // behind is exactly where the enemy line is: without this, a tap meant
+        // for a target lands on the HUD and the turn does not happen.
+        .allowsHitTesting(false)
+    }
+
+    /// How tall one team plate may be.
+    ///
+    /// Every other band of the HUD has a measured height and none of them can
+    /// give: the top row is 54 (a 48pt gauge with 6 of padding over it), a boss
+    /// bar is 26 and its gap 6, the command bar is 117 (a 38pt portrait and a
+    /// 58pt skill readout inside 16 of padding on the left; a 36pt target strip
+    /// over a 74pt skill row on the right), the four gaps between the bands are
+    /// 6 apiece and the bottom padding is 8. What is left over is the column's.
+    /// On a 16 Pro a boss fight leaves it 146 and the plates come out at 27; on
+    /// a 13 mini it leaves 119 and they come out at their 23pt floor. They stop
+    /// growing at 30 — past that they are only fatter, and the field behind
+    /// them is worth more than the chrome.
+    private func teamPlateHeight(hudHeight: CGFloat, boss: Bool) -> CGFloat {
+        let count = CGFloat(max(1, model.playerTeam.count))
+        let fixed: CGFloat = 54 + 24 + 117 + 8 + (boss ? 32 : 0)
+        let budget = max(96, hudHeight - fixed)
+        return min(30, max(23, (budget - (count - 1) * 2) / count))
+    }
+
+    private func teamPlate(_ unit: Combatant, height: CGFloat) -> some View {
+        let acting = model.awaitingActor?.id == unit.id
+        let aimed = model.selectedSkillSlot != nil && model.highlightedTarget == unit.id
+        let alive = unit.isAlive
+        let edge: Color = acting ? Theme.gold : (aimed ? Theme.info : Theme.stroke)
+        // The portrait is the piece that gives when the column is squeezed:
+        // the name and the health line beside it lay out at 21 points together
+        // at `Theme.fontScale`, and shrinking those drops them below what the
+        // phone resolves, which is what the density pass had to undo.
+        let portrait = max(14, height - 6)
+        let inset: CGFloat = height >= 26 ? 2 : 1
+        return HStack(spacing: 5) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(unit.element.color.opacity(0.25))
+                if BundleImage.exists(unit.model.portraitName(awakened: unit.isAwakened)) {
+                    // Framed before it is clipped, never after: an
+                    // `.aspectRatio(.fill)` image reports the size it needs to
+                    // cover the proposal, so the day a portrait ships that is
+                    // not square it would carry its own clip shape out of this
+                    // cell and draw over the plates above and below it. This is
+                    // the rule `UnitCard` is built on.
+                    BundleImage(name: unit.model.portraitName(awakened: unit.isAwakened))
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: portrait, height: portrait)
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                }
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .strokeBorder(alive ? unit.element.color : Theme.stroke, lineWidth: 1)
+                if !alive {
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
+                        .fill(Color.black.opacity(0.6))
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .black))
+                        .foregroundStyle(Theme.danger)
+                }
+            }
+            .frame(width: portrait, height: portrait)
+
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 4) {
+                    Text(unit.name)
+                        .font(Theme.body(10).weight(.bold))
+                        .foregroundStyle(alive ? Theme.textPrimary : Theme.textSecondary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Spacer(minLength: 0)
+                    statusPips(unit.statuses)
+                }
+                HStack(spacing: 3) {
+                    StatBar(
+                        value: unit.currentHealth,
+                        maximum: unit.maxHealth,
+                        tint: healthTint(unit.healthFraction),
+                        height: 6
+                    )
+                    .frame(width: 68)
+                    // The figure as well as the bar: a bar answers "how hurt",
+                    // a number answers "can this unit survive the next hit",
+                    // and only one of those is a decision.
+                    Text("\(Int(unit.currentHealth.rounded()))")
+                        .font(Theme.numeric(8))
+                        .foregroundStyle(alive ? Theme.textSecondary : Theme.danger)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(width: 30, alignment: .leading)
+                }
+            }
+        }
+        .padding(.horizontal, 4)
+        .padding(.vertical, inset)
+        .frame(height: height)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .fill(acting ? Theme.goldDeep.opacity(0.55) : Theme.ink.opacity(0.88))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 7, style: .continuous)
+                .strokeBorder(edge, lineWidth: acting ? 1.8 : 1)
+        )
+        .shadow(color: acting ? Theme.gold.opacity(0.5) : .black.opacity(0.45), radius: acting ? 6 : 3, y: 1)
+        .opacity(alive ? 1 : 0.55)
+        .animation(.easeOut(duration: 0.2), value: acting)
+    }
+
+    /// Statuses at team-plate size: the glyph on a coloured disc, three of
+    /// them and a count. The named chips are for the actor plate and the boss
+    /// bar, where there is room for words.
+    private func statusPips(_ statuses: [ActiveStatus]) -> some View {
+        HStack(spacing: 2) {
+            ForEach(Array(statuses.prefix(3).enumerated()), id: \.offset) { _, status in
+                Image(systemName: status.kind.glyph)
+                    .font(.system(size: 6.5, weight: .black))
+                    .foregroundStyle(.white)
+                    .frame(width: 11, height: 11)
+                    .background(
+                        Circle().fill(status.kind.isBuff ? Color(hex: "#2E8FBF") : Color(hex: "#B8403A"))
+                    )
+                    .overlay(Circle().strokeBorder(Color.white.opacity(0.4), lineWidth: 0.5))
+            }
+            if statuses.count > 3 {
+                Text("+\(statuses.count - 3)")
+                    .font(Theme.numeric(7))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+    }
+
+    // MARK: - The combat feed
+
+    /// What just happened, in words, on the right-hand side.
+    ///
+    /// The 3D damage numbers are drawn onto whatever floor they land on, and
+    /// three of them from a three-hit skill overlap almost completely. These
+    /// do not overlap, they name their victim, and they sit on their own dark
+    /// plate, so the answer to "what just happened to whom" survives a bright
+    /// stage and a ×3 fast-forward.
+    private var combatFeed: some View {
+        VStack(alignment: .trailing, spacing: 3) {
+            ForEach(feed) { entry in
+                HStack(spacing: 5) {
+                    Image(systemName: entry.glyph)
+                        .font(.system(size: 8, weight: .black))
+                        .foregroundStyle(entry.tint)
+                        .frame(width: 11)
+                    Text(entry.name)
+                        .font(Theme.body(10.5).weight(.semibold))
+                        .foregroundStyle(entry.isPlayer ? Theme.info : Theme.textPrimary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    Text(entry.value)
+                        .font(Theme.numeric(11))
+                        .foregroundStyle(entry.tint)
+                        .lineLimit(1)
+                }
+                .padding(.horizontal, 7)
+                .frame(height: 22)
+                .background(Capsule().fill(Theme.ink.opacity(0.9)))
+                .overlay(Capsule().strokeBorder(entry.tint.opacity(0.55), lineWidth: 1))
+                .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
+        }
+        .frame(maxWidth: 190, alignment: .trailing)
+        .allowsHitTesting(false)
+    }
+
+    /// Every health and status figure on the field, folded into one Int, so a
+    /// single `onChange` can drive the feed. Health is rounded to a whole
+    /// point because that is the resolution the feed prints at.
+    private var battlePulse: Int {
+        var value = model.displayedCombatants.count &* 7919
+        for unit in model.displayedCombatants {
+            value = value &* 31 &+ Int(unit.currentHealth.rounded())
+            for status in unit.statuses {
+                value = value &* 31 &+ status.kind.hashValue
+            }
+        }
+        return value
+    }
+
+    /// Diffs the model's displayed world against the last snapshot and turns
+    /// the difference into feed lines. A unit seen for the first time — the
+    /// opening of the battle, or a wave walking on — is recorded without
+    /// emitting anything, or every fight would open with five phantom hits.
+    private func ingestFeed() {
+        var arrivals: [BattleFeedEntry] = []
+        for unit in model.displayedCombatants {
+            let previousHealth = lastHealth[unit.id]
+            lastHealth[unit.id] = unit.currentHealth
+            if let previousHealth {
+                let delta = unit.currentHealth - previousHealth
+                if delta <= -1 {
+                    arrivals.append(BattleFeedEntry(
+                        glyph: "burst.fill",
+                        name: unit.name,
+                        value: "-\(Int((-delta).rounded()))",
+                        tint: Theme.danger,
+                        isPlayer: unit.side == .player
+                    ))
+                } else if delta >= 1 {
+                    arrivals.append(BattleFeedEntry(
+                        glyph: "cross.case.fill",
+                        name: unit.name,
+                        value: "+\(Int(delta.rounded()))",
+                        tint: Theme.success,
+                        isPlayer: unit.side == .player
+                    ))
+                }
+                if previousHealth > 0, unit.currentHealth <= 0 {
+                    arrivals.append(BattleFeedEntry(
+                        glyph: "xmark.seal.fill",
+                        name: unit.name,
+                        value: "DOWN",
+                        tint: Theme.danger,
+                        isPlayer: unit.side == .player
+                    ))
+                }
+            }
+
+            let now = Set(unit.statuses.map(\.kind))
+            let before = lastStatuses[unit.id] ?? now
+            lastStatuses[unit.id] = now
+            for kind in now.subtracting(before).sorted(by: { $0.rawValue < $1.rawValue }) {
+                arrivals.append(BattleFeedEntry(
+                    glyph: kind.glyph,
+                    name: unit.name,
+                    value: kind.displayName,
+                    tint: kind.isBuff ? Theme.info : Color(hex: "#E0803C"),
+                    isPlayer: unit.side == .player
+                ))
+            }
+        }
+        guard !arrivals.isEmpty else { return }
+
+        withAnimation(.easeOut(duration: 0.16)) {
+            feed.append(contentsOf: arrivals)
+            // Four lines is a three-hit skill plus its debuff. More than that
+            // and the newest line is scrolling away before it has been read.
+            if feed.count > 4 { feed.removeFirst(feed.count - 4) }
+        }
+        // The line lives as long as the turn it belongs to, so at ×3 it clears
+        // before the next skill starts rather than piling up.
+        let ids = Set(arrivals.map(\.id))
+        let life = 2.4 / max(0.5, model.speed)
+        DispatchQueue.main.asyncAfter(deadline: .now() + life) {
+            withAnimation(.easeIn(duration: 0.2)) {
+                feed.removeAll { ids.contains($0.id) }
+            }
+        }
+    }
+
+    // MARK: - Command bar
 
     /// The actor at the left, the skills at the right, nothing in between:
     /// the player line stands in the open middle of a landscape screen.
-    private func commandPanel(actor: Combatant) -> some View {
+    ///
+    /// The left plate is filled on an enemy turn too, by the unit named in the
+    /// last turn header, so the corner keeps one meaning — "this is who is
+    /// acting" — instead of appearing and vanishing with the player's turn.
+    private var commandBar: some View {
         HStack(alignment: .bottom, spacing: 10) {
-            actorPlate(actor)
+            if let actor = model.awaitingActor {
+                actorPlate(actor, waiting: true)
+            } else if let acting = playbackActor {
+                actorPlate(acting, waiting: false)
+            }
             Spacer(minLength: 0)
-            HStack(spacing: 6) {
-                ForEach(model.availableSkills) { option in
-                    SkillButton(
-                        skill: option.skill,
-                        cooldown: option.cooldown,
-                        isSelected: model.selectedSkillSlot == option.slot,
-                        onHold: { withAnimation { heldSkill = option.skill } }
-                    ) {
-                        model.selectSkill(option.slot)
+            VStack(alignment: .trailing, spacing: 6) {
+                if let actor = model.awaitingActor {
+                    if model.selectedSkillSlot != nil {
+                        targetStrip(actor)
                     }
+                    skillRow(actor)
+                } else if model.isPlayingBack {
+                    skipButton
                 }
             }
-            .padding(6)
-            // 14 around the buttons' 8 plus 6 of padding: concentric corners.
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Theme.ink.opacity(0.82))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Theme.stroke, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.45), radius: 4, y: 2)
+        }
+    }
+
+    /// Who is acting while the turn plays back. `awaitingActor` is nil for
+    /// every enemy turn and for every turn on auto, and the model does not
+    /// publish the unit the engine is resolving — but it does write a turn
+    /// header into the log, and the name in it is the answer.
+    private var playbackActor: Combatant? {
+        guard let line = model.log.last(where: { $0.hasPrefix("— Turn ") }),
+              let separator = line.range(of: ": ") else { return nil }
+        let name = String(line[separator.upperBound...])
+        return model.displayedCombatants.first { $0.name == name && $0.isAlive }
+            ?? model.displayedCombatants.first { $0.name == name }
+    }
+
+    private func skillRow(_ actor: Combatant) -> some View {
+        HStack(spacing: 6) {
+            ForEach(model.availableSkills) { option in
+                SkillButton(
+                    skill: option.skill,
+                    cooldown: option.cooldown,
+                    isSelected: model.selectedSkillSlot == option.slot,
+                    forecast: forecast(option.skill, actor: actor),
+                    onHold: { withAnimation { heldSkill = option.skill } },
+                    onPreview: { pressed in
+                        previewSlot = pressed ? option.slot : nil
+                    }
+                ) {
+                    model.selectSkill(option.slot)
+                }
+            }
+        }
+        .padding(6)
+        // 14 around the buttons' 8 plus 6 of padding: concentric corners.
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Theme.ink.opacity(0.88))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(Theme.stroke, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+    }
+
+    private var skipButton: some View {
+        Button {
+            model.skipAnimation()
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "forward.fill")
+                Text("Skip")
+            }
+            .font(Theme.body(12).weight(.semibold))
+            .foregroundStyle(Theme.textSecondary)
+            .padding(.horizontal, 14)
+            .frame(height: 30)
+            .background(Capsule().fill(Theme.ink.opacity(0.88)))
+            .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
         }
     }
 
     /// The unit whose turn it is: portrait, health, what it is under, and
-    /// the skill in hand in words — all in the corner, where the genre keeps
-    /// it, so the field stays clear.
-    private func actorPlate(_ actor: Combatant) -> some View {
-        let skill = model.selectedSkillSlot.flatMap { actor.skill(at: $0) }
-        return VStack(alignment: .leading, spacing: 5) {
+    /// what the skill in hand will do — all in the corner, where the genre
+    /// keeps it, so the field stays clear.
+    private func actorPlate(_ actor: Combatant, waiting: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
-                if BundleImage.exists(actor.model.portraitName(awakened: actor.isAwakened)) {
-                    BundleImage(name: actor.model.portraitName(awakened: actor.isAwakened))
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: 40, height: 40)
-                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 8, style: .continuous)
-                                .strokeBorder(actor.element.color, lineWidth: 1.5)
-                        )
-                        .shadow(color: actor.element.color.opacity(0.6), radius: 5)
+                ZStack {
+                    if BundleImage.exists(actor.model.portraitName(awakened: actor.isAwakened)) {
+                        BundleImage(name: actor.model.portraitName(awakened: actor.isAwakened))
+                            .aspectRatio(contentMode: .fill)
+                            .frame(width: 38, height: 38)
+                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    }
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(waiting ? Theme.gold : actor.element.color, lineWidth: 1.5)
+                        .frame(width: 38, height: 38)
                 }
+                .shadow(color: (waiting ? Theme.gold : actor.element.color).opacity(0.6), radius: 5)
+
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 5) {
                         Text(actor.name)
@@ -371,56 +816,327 @@ struct BattleView: View {
                             .foregroundStyle(Theme.textPrimary)
                             .lineLimit(1)
                         ElementBadge(element: actor.element, compact: true)
+                        // One word saying whose turn this is. On an enemy turn
+                        // it is the only thing on screen that says the fight is
+                        // not waiting for the player. It is tinted by side and
+                        // not by state, because red is the colour this HUD uses
+                        // for harm: a red badge over one of the player's own
+                        // units reads as something happening TO it rather than
+                        // as it taking its turn. Blue is the player's line
+                        // everywhere else on this screen — the gauge rings, the
+                        // feed's names — so it is the player's line here too.
+                        let ownTurn = waiting || actor.side == .player
+                        Text(waiting ? "YOUR TURN" : (actor.side == .player ? "ACTING" : "ENEMY TURN"))
+                            .font(Theme.body(8).weight(.black))
+                            .tracking(0.8)
+                            .foregroundStyle(ownTurn ? Theme.ink : Theme.textPrimary)
+                            .padding(.horizontal, 5)
+                            .frame(height: 13)
+                            .background(Capsule().fill(
+                                waiting ? Theme.gold
+                                    : (actor.side == .player ? Theme.info.opacity(0.9) : Theme.danger.opacity(0.8))
+                            ))
                     }
+                    // Health and statuses share one line: stacked, the plate
+                    // stood 129pt tall, and the vertical budget the team column
+                    // is measured against has no 12 points to give it. The cost
+                    // is horizontal — this row now carries the bar, the figures
+                    // and the chips — so the bar is 76 and the chips stop at
+                    // four, which holds the whole plate to 307 points. It is
+                    // the widest thing in the bottom row and the row has to sit
+                    // beside an open target strip.
                     HStack(spacing: 5) {
                         StatBar(
                             value: actor.currentHealth,
                             maximum: actor.maxHealth,
-                            tint: actor.healthFraction < 0.3 ? Theme.danger : Theme.success,
+                            tint: healthTint(actor.healthFraction),
                             height: 6
                         )
-                        .frame(width: 104)
-                        Text("\(Int(actor.currentHealth.rounded()))")
+                        .frame(width: 76)
+                        // "452" alone said nothing; the maximum is what turns
+                        // it into a fraction the player can act on.
+                        Text("\(Int(actor.currentHealth.rounded())) / \(Int(actor.maxHealth.rounded()))")
                             .font(Theme.numeric(9))
                             .foregroundStyle(Theme.textSecondary)
-                    }
-                    if !actor.statuses.isEmpty {
-                        statusChips(actor.statuses, compact: true)
+                            .lineLimit(1)
+                        if !actor.statuses.isEmpty {
+                            statusChips(actor.statuses, compact: true)
+                        }
                     }
                 }
             }
             // Always drawn, never conditional: the plate's height must not
             // jump the instant a skill is tapped.
-            VStack(alignment: .leading, spacing: 1) {
-                Text(skill?.name ?? "Choose a skill")
-                    .font(Theme.body(11).weight(.bold))
-                    .foregroundStyle(skill == nil ? Theme.textSecondary : Theme.gold)
-                    .lineLimit(1)
-                Text(skill?.description ?? "Hold a skill to read it in full.")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(width: 300, height: 50, alignment: .topLeading)
+            skillReadout(actor, waiting: waiting)
         }
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.ink.opacity(0.82))
+                .fill(Theme.ink.opacity(0.9))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .strokeBorder(Theme.stroke, lineWidth: 1)
+                .strokeBorder(waiting ? Theme.gold.opacity(0.65) : Theme.stroke, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.45), radius: 4, y: 2)
+        .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+    }
+
+    /// What the skill in hand does, spelled out before it is committed.
+    ///
+    /// The slot it describes is the one under the player's finger if there is
+    /// one, and the aimed slot otherwise. That ordering is the whole point:
+    /// a skill that picks its own targets fires on the tap, so waiting for
+    /// `selectedSkillSlot` meant those skills were only ever described in the
+    /// past tense, in the log.
+    private func skillReadout(_ actor: Combatant, waiting: Bool) -> some View {
+        let slot = previewSlot ?? model.selectedSkillSlot
+        let skill = slot.flatMap { actor.skill(at: $0) }
+        let cooling = slot.flatMap { index -> Int? in
+            actor.cooldowns.indices.contains(index) ? actor.cooldowns[index] : nil
+        } ?? 0
+        return VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(skill?.name ?? (waiting ? "Choose a skill" : "Resolving…"))
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(skill == nil ? Theme.textSecondary : Theme.gold)
+                    .lineLimit(1)
+                if let skill {
+                    if cooling > 0 {
+                        Chip(text: "COOLING \(cooling)", systemImage: "clock.fill", tint: Theme.textSecondary)
+                    } else if skill.cooldown > 0 {
+                        Chip(text: "CD \(skill.cooldown)", systemImage: "clock.fill", tint: Theme.textSecondary)
+                    }
+                    Chip(text: scopeWord(skill.target), systemImage: SkillButton.targetGlyph(for: skill), tint: Theme.info)
+                }
+                Spacer(minLength: 0)
+            }
+            if let skill {
+                let estimate = Int(estimatedDamage(skill, actor: actor))
+                HStack(spacing: 5) {
+                    if let damage = skill.damage {
+                        let hits = damage.hits > 1 ? " · \(damage.hits) hits" : ""
+                        Chip(
+                            text: "≈\(estimate)\(hits)",
+                            systemImage: "bolt.fill",
+                            tint: Theme.gold,
+                            filled: true
+                        )
+                    }
+                    if let status = skill.statuses.first {
+                        Chip(
+                            text: "\(status.kind.displayName) \(Int(status.chance * 100))%",
+                            systemImage: status.kind.glyph,
+                            tint: status.kind.isBuff ? Theme.info : Theme.danger
+                        )
+                    }
+                    if let aim = aimedTarget, skill.target.hitsEnemies {
+                        matchupChip(attacker: actor, defender: aim)
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            Text(skill?.description ?? (waiting
+                ? "Press a skill to see what it does; hold one to read it in full."
+                : (model.log.last ?? "")))
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(width: 282, height: 58, alignment: .topLeading)
+    }
+
+    /// The target the next tap would hit, if one is aimed.
+    private var aimedTarget: Combatant? {
+        model.displayedCombatants.first { $0.id == model.highlightedTarget }
+    }
+
+    /// Aiming lives beside the skills, not across the screen from them.
+    ///
+    /// It used to be a line under the top bar with Confirm in it: the button
+    /// that finishes the action was in the opposite corner from the buttons
+    /// that started it, which is a whole diagonal of thumb travel per turn.
+    private func targetStrip(_ actor: Combatant) -> some View {
+        let aim = aimedTarget
+        return HStack(spacing: 8) {
+            Image(systemName: "scope")
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Theme.gold)
+            if let aim {
+                if BundleImage.exists(aim.model.portraitName(awakened: aim.isAwakened)) {
+                    BundleImage(name: aim.model.portraitName(awakened: aim.isAwakened))
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 24, height: 24)
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .strokeBorder(aim.element.color, lineWidth: 1)
+                        )
+                }
+                // Capped and truncating, because it is the one piece of this
+                // strip that has no natural width: "the Unwrapped King" is
+                // 45 points wider than "Anubis", and the strip has to stand
+                // beside a 307pt actor plate inside a landscape frame that is
+                // 722 points wide once the safe area is off it.
+                Text(aim.name)
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 72, alignment: .leading)
+                StatBar(
+                    value: aim.currentHealth,
+                    maximum: aim.maxHealth,
+                    tint: healthTint(aim.healthFraction),
+                    height: 5
+                )
+                .frame(width: 48)
+                matchupChip(attacker: actor, defender: aim)
+            } else {
+                Text("Tap a target on the field")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+            }
+            if aim != nil {
+                Button {
+                    model.confirmTarget()
+                } label: {
+                    Text("Confirm")
+                        .font(Theme.body(11).weight(.bold))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 10)
+                        .frame(height: 26)
+                        .background(Capsule().fill(Theme.gold))
+                }
+            }
+            Button {
+                model.cancelTargeting()
+            } label: {
+                Text("Cancel")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.horizontal, 10)
+                    .frame(height: 26)
+                    .background(Capsule().fill(Theme.surface))
+                    .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 5)
+        .background(Capsule().fill(Theme.ink.opacity(0.9)))
+        .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.5), lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
+    }
+
+    // MARK: - Shared readouts
+
+    /// One health colour ramp for the whole HUD. Green until 60%, amber to
+    /// 30%, red under it — the old single break at 30% meant a unit on 35%
+    /// looked exactly like one on 100%, which is the difference between
+    /// healing it this turn and losing it next turn.
+    private func healthTint(_ fraction: Double) -> Color {
+        if fraction < 0.3 { return Theme.danger }
+        if fraction < 0.6 { return Color(hex: "#F2A03C") }
+        return Theme.success
+    }
+
+    /// How the element wheel reads for this particular attack, as a chip, so
+    /// "will this hurt" is answered before the skill is spent rather than by
+    /// the size of the number afterwards.
+    private func matchupChip(attacker: Combatant, defender: Combatant) -> some View {
+        let matchup = attacker.element.matchup(against: defender.element)
+        let text: String
+        let tint: Color
+        let glyph: String
+        switch matchup {
+        case .advantage:
+            text = "STRONG ×1.5"
+            tint = Theme.success
+            glyph = "arrow.up.right.circle.fill"
+        case .neutral:
+            text = "NEUTRAL"
+            tint = Theme.textSecondary
+            glyph = "equal.circle.fill"
+        case .disadvantage:
+            text = "WEAK ×0.7"
+            tint = Theme.danger
+            glyph = "arrow.down.right.circle.fill"
+        }
+        return Chip(text: text, systemImage: glyph, tint: tint, filled: matchup != .neutral)
+    }
+
+    /// What a skill will do, in one short string, for the face of its tile.
+    private func forecast(_ skill: Skill, actor: Combatant) -> String? {
+        if let damage = skill.damage {
+            let value = Int(estimatedDamage(skill, actor: actor))
+            return damage.hits > 1 ? "≈\(value) ×\(damage.hits)" : "≈\(value)"
+        }
+        if skill.utilities.contains(where: {
+            if case .healTargetMaxHealth = $0 { return true }
+            if case .healFromAttack = $0 { return true }
+            return false
+        }) { return "HEAL" }
+        if skill.utilities.contains(where: {
+            if case .revive = $0 { return true }
+            return false
+        }) { return "REVIVE" }
+        if skill.utilities.contains(where: {
+            if case .cleanse = $0 { return true }
+            return false
+        }) { return "CLEANSE" }
+        if skill.utilities.contains(where: {
+            if case .strip = $0 { return true }
+            return false
+        }) { return "STRIP" }
+        if let status = skill.statuses.first {
+            return status.kind.isBuff ? "BUFF" : "DEBUFF"
+        }
+        return nil
+    }
+
+    /// The damage the skill would do to the unit currently aimed at — its real
+    /// defence and the real element matchup, not the collection screen's
+    /// standing dummy. It is an estimate and it is labelled with a ≈: the crit
+    /// roll and the damage variance are still ahead of it.
+    private func estimatedDamage(_ skill: Skill, actor: Combatant) -> Double {
+        guard let damage = skill.damage else { return 0 }
+        let target = aimedTarget
+            ?? model.displayedCombatants.first { $0.side == actor.side.opposing && $0.isAlive }
+        var value = DamageCalculator.previewDamage(
+            attackStat: actor.scalingValue(for: damage.scaling),
+            spec: damage,
+            againstDefense: target?.currentStats.def ?? 800
+        )
+        if let target, target.side != actor.side {
+            value *= actor.element.matchup(against: target.element).damageMultiplier
+        }
+        return value.rounded()
+    }
+
+    /// Who a skill lands on, in one or two words.
+    private func scopeWord(_ target: TargetSelector) -> String {
+        switch target {
+        case .singleEnemy: return "1 enemy"
+        case .allEnemies: return "All enemies"
+        case .randomEnemies(let count): return "\(count) random"
+        case .lowestHealthEnemy: return "Weakest"
+        case .caster: return "Self"
+        case .singleAlly: return "1 ally"
+        case .allAllies: return "All allies"
+        case .lowestHealthAlly: return "Hurt ally"
+        case .deadAlly: return "Fallen ally"
+        case .otherAllies: return "Other allies"
+        }
     }
 
     /// Buffs and debuffs as chips: blue for a buff, red for a debuff, the
-    /// turns left last. `compact` drops the name and keeps the glyph, so the
-    /// actor plate can show six where it had room for four names.
+    /// turns left last. `compact` drops the name and keeps the glyph, and it
+    /// stops at four rather than six: compact or not, four chips are 105
+    /// points, and these now share the actor plate's health line rather than
+    /// having a line of their own. The rest are counted in a `+n`.
     private func statusChips(_ statuses: [ActiveStatus], compact: Bool = false) -> some View {
-        let limit = compact ? 6 : 4
+        let limit = 4
         return HStack(spacing: 3) {
             ForEach(Array(statuses.prefix(limit).enumerated()), id: \.offset) { _, status in
                 HStack(spacing: 2) {
@@ -446,50 +1162,6 @@ struct BattleView: View {
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-    }
-
-    /// Where to aim, in one slim line under the top row, so nothing sits
-    /// over the field while a target is chosen.
-    private var targetPrompt: some View {
-        // The skill pre-aims, so the common case is that a target is already
-        // chosen: say which one, not that one exists.
-        let aim = model.displayedCombatants.first { $0.id == model.highlightedTarget }
-        return HStack(spacing: 8) {
-            Image(systemName: "scope")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Theme.gold)
-            Text(aim.map { "Target: \($0.name)" } ?? "Tap a target on the field")
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(1)
-            if aim != nil {
-                Button {
-                    model.confirmTarget()
-                } label: {
-                    Text("Confirm")
-                        .font(Theme.body(11).weight(.bold))
-                        .foregroundStyle(Theme.ink)
-                        .padding(.horizontal, 12)
-                        .frame(height: 26)
-                        .background(Capsule().fill(Theme.gold))
-                }
-            }
-            Button {
-                model.cancelTargeting()
-            } label: {
-                Text("Cancel")
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .padding(.horizontal, 12)
-                    .frame(height: 26)
-                    .background(Capsule().fill(Theme.ink.opacity(0.82)))
-                    .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Capsule().fill(Theme.ink.opacity(0.82)))
-        .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
     }
 
     /// The boss's bar across the top: the fight that matters, on one line.
@@ -541,8 +1213,12 @@ struct BattleView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Theme.ink.opacity(0.82)))
+        .background(Capsule().fill(Theme.ink.opacity(0.9)))
         .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+        // The one thing a player taps a boss for is to aim at it, and a boss
+        // is by definition the tallest thing on the stage — its head reaches
+        // the band this bar lies across. A filled capsule takes the tap.
+        .allowsHitTesting(false)
     }
 
     /// An ultimate's announcement: a dark band across the field, the
@@ -629,43 +1305,6 @@ struct BattleView: View {
         .background(Theme.panel(Theme.tightCorner))
     }
 
-    /// Nothing asks for a tap while the turn plays, so the bottom band held
-    /// one Skip pill and nothing else. The commentary the log already writes
-    /// goes here instead: on an enemy turn, on auto, and through a whole
-    /// repeat run, this is the only line that says what is happening.
-    private var playbackHint: some View {
-        HStack(spacing: 10) {
-            if let line = model.log.last {
-                Text(line)
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-                    .padding(.horizontal, 10)
-                    .frame(height: 30)
-                    .background(Capsule().fill(Theme.ink.opacity(0.82)))
-                    .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
-                    .animation(nil, value: model.log.count)
-            }
-            Spacer(minLength: 0)
-            Button {
-                model.skipAnimation()
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "forward.fill")
-                    Text("Skip")
-                }
-                .font(Theme.body(12).weight(.semibold))
-                .foregroundStyle(Theme.textSecondary)
-                .padding(.horizontal, 14)
-                .frame(height: 30)
-                .background(Capsule().fill(Theme.ink.opacity(0.82)))
-                .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     // MARK: - Log
 
     private var logOverlay: some View {
@@ -705,8 +1344,15 @@ struct SkillButton: View {
     let skill: Skill
     let cooldown: Int
     let isSelected: Bool
+    /// One line under the name saying what the skill will do — "≈1240 ×3",
+    /// "HEAL", "DEBUFF". Worked out by the view that knows the caster's stats
+    /// and what is aimed at, because the tile does not.
+    var forecast: String? = nil
     /// Held down: show what the skill does.
     var onHold: (() -> Void)? = nil
+    /// True the moment a finger lands on the tile, false when it lifts, so the
+    /// actor plate can describe a skill that has not been cast yet.
+    var onPreview: ((Bool) -> Void)? = nil
     let action: () -> Void
 
     /// Set by a hold so the release that follows it is not read as a tap:
@@ -724,18 +1370,32 @@ struct SkillButton: View {
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(isReady ? Theme.surfaceRaised : Theme.surface)
 
-                VStack(spacing: 2) {
+                VStack(spacing: 1) {
                     Image(systemName: glyph)
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(isReady ? Theme.gold : Theme.textSecondary)
                     Text(skill.name)
-                        .font(Theme.body(9.5).weight(.semibold))
+                        .font(Theme.body(9).weight(.semibold))
                         .foregroundStyle(isReady ? Theme.textPrimary : Theme.textSecondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
-                        .minimumScaleFactor(0.85)
+                        .minimumScaleFactor(0.8)
+                    if let forecast {
+                        // The forecast is the answer to "what will this button
+                        // do" without spending a turn to find out. It sits on
+                        // its own dark strip so it reads at the same contrast
+                        // whether the tile is lit or dimmed by a cooldown.
+                        Text(forecast)
+                            .font(Theme.numeric(8))
+                            .foregroundStyle(isReady ? Theme.gold : Theme.textSecondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .padding(.horizontal, 3)
+                            .frame(height: 12)
+                            .background(Capsule().fill(Theme.ink.opacity(0.75)))
+                    }
                 }
-                .padding(4)
+                .padding(3)
 
                 if !isReady {
                     RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
@@ -745,12 +1405,27 @@ struct SkillButton: View {
                         .foregroundStyle(Theme.textPrimary)
                 }
             }
-            .frame(width: 56, height: 56)
+            .frame(width: 60, height: 62)
+            .overlay(alignment: .topTrailing) {
+                // Who it lands on, as a glyph in the corner: one figure, three
+                // figures, a heart. Reading the shape of a skill should not
+                // need the description panel.
+                Image(systemName: Self.targetGlyph(for: skill))
+                    .font(.system(size: 7, weight: .black))
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(2)
+                    .background(Circle().fill(Theme.ink.opacity(0.85)))
+                    .offset(x: 2, y: -2)
+            }
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .strokeBorder(isSelected ? Theme.gold : Theme.stroke, lineWidth: isSelected ? 2 : 1)
             )
         }
+        // A ButtonStyle rather than a gesture: `isPressed` is the one way to
+        // watch a finger land that cannot swallow the tap it is watching, and
+        // the scale it drives is most of what makes the bar feel alive.
+        .buttonStyle(PressStyle(onPress: { pressed in onPreview?(pressed) }))
         // A hold shows the card even on a skill that is cooling down.
         .simultaneousGesture(
             LongPressGesture(minimumDuration: 0.35).onEnded { _ in
@@ -762,6 +1437,18 @@ struct SkillButton: View {
             }
         )
         .disabled(!isReady && onHold == nil)
+    }
+
+    /// Reports the press to the caller and shrinks the tile while it is held.
+    struct PressStyle: ButtonStyle {
+        var onPress: (Bool) -> Void
+
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .scaleEffect(configuration.isPressed ? 0.93 : 1)
+                .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+                .onChange(of: configuration.isPressed) { _, pressed in onPress(pressed) }
+        }
     }
 
     private var glyph: String { Self.glyph(for: skill) }
@@ -778,6 +1465,19 @@ struct SkillButton: View {
         if skill.statuses.contains(where: { $0.kind.isHardCC }) { return "bolt.slash.fill" }
         if (skill.damage?.hits ?? 1) > 1 { return "square.stack.3d.down.right.fill" }
         return skill.cooldown > 0 ? "flame.fill" : "figure.fencing"
+    }
+
+    /// A glyph per target shape: how many, and which side.
+    static func targetGlyph(for skill: Skill) -> String {
+        switch skill.target {
+        case .allEnemies: return "person.3.fill"
+        case .randomEnemies: return "die.face.5.fill"
+        case .allAllies, .otherAllies: return "heart.circle.fill"
+        case .singleAlly, .lowestHealthAlly: return "heart.fill"
+        case .deadAlly: return "arrow.uturn.up.circle.fill"
+        case .caster: return "person.crop.circle.fill"
+        default: return "person.fill"
+        }
     }
 }
 

@@ -32,6 +32,64 @@ final class UnitNode: SCNNode {
     private var currentClip: AnimationClip?
     private var barWidth: CGFloat { CGFloat(spec.height) * 0.5 }
 
+    /// Where the model container rests, read before anything has had a chance
+    /// to animate it. The dash writes the container's height every frame to
+    /// arc the leap and a recoil writes its depth, so both need a rest value
+    /// to come back to that no bob, no interrupted leap and no accumulated
+    /// `moveBy` can have drifted.
+    private let containerRest: SCNVector3
+
+    /// Whether this unit has taken up its idle once already. The FIRST idle
+    /// starts on a random beat, because every unit is built in the same frame
+    /// from the same cached animation and a rank that rises and falls in
+    /// perfect unison reads as a screensaver rather than as a squad. Every
+    /// idle after an action starts at once: a pause after a swing reads as a
+    /// dropped frame.
+    private var hasIdled = false
+
+    /// Whether the dash arc is the thing writing the model container's pitch
+    /// at the moment.
+    ///
+    /// The arc drives that angle as an ABSOLUTE value every frame, and the
+    /// procedural clips below rotate it RELATIVELY, so the two must never
+    /// both hold it: the arc's last frame would become the rotation's zero
+    /// and the figure would finish every swing leaning a few degrees further
+    /// back than it began — once per attack, compounding, for the rest of the
+    /// fight. Ownership passes to the clip in `playProcedural` and is only
+    /// ever set and cleared on the main thread; the arc's own blocks, which
+    /// run on the render thread, do nothing but read it. A rigged family is
+    /// untouched by any of this: a real clip animates the skeleton INSIDE the
+    /// container and never touches the container's own angles, so it keeps
+    /// the lean through the whole landing.
+    private var dashOwnsPitch = false
+
+    /// 1.0 normally, 2.0 on the fast-forward toggle, 4.0 on skip.
+    ///
+    /// SceneKit has no per-node speed multiplier — that is SpriteKit's `speed`
+    /// — so the scale is applied by hand: to the CAAnimations in `play` and to
+    /// every action duration through `beat`. Until it was, the event queue ran
+    /// at x2 over clips that still played at x1, so each swing was about half
+    /// finished when the next event replaced it and the field twitched between
+    /// fragments of motion. The mode the player spends most of his time in had
+    /// the worst motion in the game.
+    var playbackSpeed: Double = 1.0 {
+        didSet {
+            guard abs(playbackSpeed - oldValue) > 0.01, let clip = currentClip, clip.loops else { return }
+            // `play` refuses to restart a loop that is already running, so the
+            // idle is re-seated by hand to pick up the new pace.
+            currentClip = nil
+            play(clip)
+        }
+    }
+
+    /// Authored seconds at the current playback speed. Every duration in this
+    /// file is written for x1 and divided here, so fast-forward shortens the
+    /// dash, the recoil and the procedural motion by exactly as much as it
+    /// shortens the clips.
+    private func beat(_ seconds: TimeInterval) -> TimeInterval {
+        seconds / max(0.25, playbackSpeed)
+    }
+
     /// Where the unit stands between actions, captured the first time it
     /// dashes, so `returnHome` can put it back. Nil until then.
     private var homePosition: SCNVector3?
@@ -111,6 +169,7 @@ final class UnitNode: SCNNode {
         }
         self.elementTint = tint
         self.modelContainer = container
+        self.containerRest = container.position
         self.healthBarRoot = barRoot
         self.healthFill = fill
         self.statusRow = statuses
@@ -145,6 +204,15 @@ final class UnitNode: SCNNode {
         // idle that is already running is left alone.
         guard clip != currentClip || !clip.loops else { completion?(); return }
         currentClip = clip
+        // A clip that has not started yet and the previous clip's own ending
+        // are both stale the moment a new clip begins. The ending used to be a
+        // wall-clock timer with no idea what was running when it fired, so on
+        // a multi-hit skill the first hit's timer landed part-way through the
+        // second hit's flinch and snapped the victim to a neutral stance while
+        // it was still being hit.
+        removeAction(forKey: "pending_clip")
+        modelContainer.removeAction(forKey: "clip_end")
+        modelContainer.removeAction(forKey: "clip")
 
         if let shared = ModelLibrary.shared.animation(clip, for: clipAsset) {
             // The library hands out one cached animation per clip, so the copy
@@ -157,25 +225,54 @@ final class UnitNode: SCNNode {
                 animation.isRemovedOnCompletion = false
                 animation.fillMode = .forwards
             }
-            // Library clips run long: a 2.5 s punch against a 1.3 s contract
-            // leaves the caster still winding up when the hit lands. One-shots
-            // are played at the pace the engine times its hits to, but never
-            // more than twice their authored speed — faster than that the
-            // swing was a flicker; the contracts were lengthened instead.
-            if !clip.loops, clip != .death, animation.duration > clip.fallbackDuration * 1.1 {
-                animation.speed = Float(min(2.0, animation.duration / clip.fallbackDuration))
+
+            // The library gives every clip the same long cross-fade, which was
+            // aimed at the stiff cut from idle to swing. On a LOOP that is
+            // right — a loop is a state, and blending both ways is how one
+            // state becomes another. On a ONE-SHOT it does the opposite of
+            // what was wanted: the first fifth of an attack is the wind-up,
+            // the pose furthest from idle and therefore the one a linear blend
+            // flattens hardest, so the swing oozed out of the idle with no
+            // readable start. A one-shot is an event: it must begin on its own
+            // first frame and only blend on the way out. The 0.5 s hit react
+            // was losing nearly half of itself to the two fades, which is why
+            // a flinch was barely visible at all.
+            animation.fadeInDuration = clip.loops ? 0.25 : 0.05
+            animation.fadeOutDuration = clip.loops ? 0.25 : 0.16
+
+            var rate = playbackSpeed
+            if !clip.loops, clip != .death, animation.duration > 0.05 {
+                // EVERY one-shot is retimed to its contract now, not only the
+                // ones that run long. The fight is timed to `fallbackDuration`
+                // — `BattleSceneController` presents the damage at a fraction
+                // of it, the frame the blade lands — so a 1.0 s Meshy sword
+                // slash left at its authored length put its contact frame
+                // 0.3 s before the damage, and the hit-stop then froze a frame
+                // with the attacker already relaxed back into its idle. The
+                // clamp is because past 2x a swing is a flicker and below
+                // 0.6x it is a mime.
+                rate *= max(0.6, min(2.0, animation.duration / clip.fallbackDuration))
             }
+            if clip.loops {
+                // One cached animation, copied for everybody, started in the
+                // same frame for everybody: the whole field breathed on the
+                // same frame at the same rate for ever. A random phase and a
+                // few per cent of drift in the rate is the cheapest way to
+                // make a line of figures look like separate creatures.
+                animation.timeOffset = Double.random(in: 0..<max(0.05, animation.duration))
+                rate *= Double.random(in: 0.94...1.06)
+            }
+            animation.speed = Float(max(0.05, rate))
+
             modelContainer.addAnimation(animation, forKey: clip.rawValue)
             if !clip.loops {
-                let played = animation.duration > 0 ? animation.duration / Double(max(0.1, animation.speed)) : clip.fallbackDuration
-                let duration = played
+                let played = animation.duration > 0
+                    ? animation.duration / Double(max(0.05, animation.speed))
+                    : beat(clip.fallbackDuration)
                 if clip == .death {
-                    modelContainer.runAction(.sequence([.wait(duration: duration), .fadeOpacity(to: 0.6, duration: 0.6)]))
+                    modelContainer.runAction(.sequence([.wait(duration: played), .fadeOpacity(to: 0.6, duration: 0.6)]))
                 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
-                    completion?()
-                    if self?.isDefeated == false { self?.play(.idleCombat) }
-                }
+                scheduleClipEnd(clip, after: played, completion: completion)
             } else {
                 completion?()
             }
@@ -185,64 +282,168 @@ final class UnitNode: SCNNode {
         playProcedural(clip, completion: completion)
     }
 
+    /// Hands a one-shot back to the idle when it finishes.
+    ///
+    /// This is a scene action rather than a `DispatchQueue.asyncAfter`, for two
+    /// reasons. A hit freezes the whole scene for up to 150 ms (`Juice.impact`)
+    /// and a wall-clock timer keeps counting through a freeze that the
+    /// animation it is timed against does not, so a five-hit ultimate lost
+    /// nearly half a second off the end of its clip and the caster was yanked
+    /// to idle before its follow-through. And an action is keyed, so the next
+    /// clip cancels it instead of leaving a stale ending to fire mid-swing.
+    private func scheduleClipEnd(_ clip: AnimationClip, after duration: TimeInterval, completion: (() -> Void)?) {
+        modelContainer.runAction(.sequence([
+            .wait(duration: duration),
+            SCNAction.run { [weak self] _ in
+                // SceneKit runs this on its rendering thread, part-way through
+                // the node's own action update, and everything below touches
+                // the scene graph. Hop to main first, exactly as
+                // `playProcedural` documents at the bottom of this file.
+                DispatchQueue.main.async {
+                    completion?()
+                    guard let self, !self.isDefeated, self.currentClip == clip else { return }
+                    self.play(.idleCombat)
+                }
+            }
+        ]), forKey: "clip_end")
+    }
+
+    /// Plays a clip once the feet are down.
+    ///
+    /// A closing melee attack used to start its swing on the same frame as its
+    /// dash, so the wind-up — the only part of an attack that carries
+    /// anticipation — happened four metres away in mid-air and the figure
+    /// arrived a quarter of the way through its own cut. The wait is a scene
+    /// action so that it, the leap and the clip all stop together on a
+    /// hit-stop.
+    func play(_ clip: AnimationClip, after delay: TimeInterval) {
+        guard delay > 0.01 else { play(clip); return }
+        removeAction(forKey: "pending_clip")
+        runAction(.sequence([
+            .wait(duration: delay),
+            SCNAction.run { [weak self] _ in
+                DispatchQueue.main.async { self?.play(clip) }
+            }
+        ]), forKey: "pending_clip")
+    }
+
+    /// Drops a swing that has been scheduled but has not begun.
+    ///
+    /// The skip button flushes the queue and snaps the field to the end
+    /// state, and a clip still waiting out its dash would otherwise land a
+    /// lone attack over a battle that has already been decided.
+    func cancelPendingClip() {
+        removeAction(forKey: "pending_clip")
+    }
+
     /// Stand-in motion built from SCNActions. Crude by design — it communicates
     /// timing and intent so combat pacing can be tuned before real animation.
     private func playProcedural(_ clip: AnimationClip, completion: (() -> Void)?) {
         modelContainer.removeAction(forKey: "clip")
-        // Toward the enemy line: the player's side stands at +Z and attacks
-        // into -Z, the opponents the reverse.
-        let facing: Float = side == .player ? -1 : 1
+        // This clip is about to rotate the container's pitch relatively, so it
+        // takes that channel off the dash arc first. See `dashOwnsPitch`.
+        if dashOwnsPitch {
+            dashOwnsPitch = false
+            modelContainer.eulerAngles.x = 0
+        }
+        // Forward, toward the enemy line. Every action below moves the model
+        // container, whose parent is the unit node, and the unit node has
+        // already been turned to face the enemy — `place` gives the near side
+        // a half-turn because a model is authored facing +Z — so forward is
+        // local +Z on BOTH sides. The `side == .player ? -1 : 1` this replaces
+        // reasoned in WORLD space and then applied the answer in local space,
+        // which sent every player unit's lunge and every player unit's gather
+        // the wrong way: the near line wound up by stepping toward its victim
+        // and then struck by retreating from it.
+        let facing: Float = 1
 
         let action: SCNAction
         switch clip {
         case .idle, .idleCombat:
-            let up = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.012, z: 0, duration: 1.1)
+            // A `moveBy` that is interrupted half way leaves the container
+            // where it stood, and over a battle of interruptions the bob
+            // drifts, so the rest height is restored before it starts again.
+            // The depth goes back too: the lunges below are relative and
+            // `recoil` writes the same axis as an absolute value, so a unit
+            // struck in the middle of its own swing ends it a few centimetres
+            // off its mark. Every one-shot comes back through here, which
+            // makes the idle the one place that residue can be swept up.
+            modelContainer.position.y = containerRest.y
+            modelContainer.position.z = containerRest.z
+            // Same lockstep problem as the skeletal idle above, and worse: a
+            // fixed 1.1 s bob started in the same frame for every unit on the
+            // field. The period is jittered and the first idle waits a random
+            // fraction of it, so nothing breathes in time with anything else.
+            let period = beat(Double.random(in: 0.95...1.25))
+            let up = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.012, z: 0, duration: period)
             up.timingMode = .easeInEaseOut
-            action = .repeatForever(.sequence([up, up.reversed()]))
+            let breathe = SCNAction.repeatForever(.sequence([up, up.reversed()]))
+            let lead = hasIdled ? 0 : Double.random(in: 0...period)
+            hasIdled = true
+            action = lead > 0.01 ? SCNAction.sequence([.wait(duration: lead), breathe]) : breathe
 
         case .attackBasic:
-            let lunge = SCNAction.moveBy(x: 0, y: 0, z: CGFloat(facing) * 0.45, duration: 0.16)
-            lunge.timingMode = .easeOut
-            action = .sequence([lunge, .wait(duration: 0.12), lunge.reversed()])
+            // Gather, strike, recover. The old version was a lunge and its
+            // reverse with a flat wait between them, which is a slide with a
+            // pause in it: there was nothing to anticipate the blow.
+            let gather = SCNAction.moveBy(x: 0, y: 0, z: CGFloat(-facing) * 0.12, duration: beat(0.14))
+            gather.timingMode = .easeOut
+            let lunge = SCNAction.moveBy(x: 0, y: 0, z: CGFloat(facing) * 0.57, duration: beat(0.12))
+            lunge.timingMode = .easeIn
+            let recover = SCNAction.moveBy(x: 0, y: 0, z: CGFloat(-facing) * 0.45, duration: beat(0.26))
+            recover.timingMode = .easeInEaseOut
+            action = .sequence([gather, lunge, .wait(duration: beat(0.10)), recover])
 
         case .attackHeavy, .castRelease:
-            let wind = SCNAction.rotateBy(x: -0.22, y: 0, z: 0, duration: 0.28)
-            let strike = SCNAction.rotateBy(x: 0.34, y: 0, z: 0, duration: 0.1)
-            let lunge = SCNAction.moveBy(x: 0, y: 0, z: CGFloat(facing) * 0.6, duration: 0.12)
+            let wind = SCNAction.rotateBy(x: -0.22, y: 0, z: 0, duration: beat(0.28))
+            wind.timingMode = .easeOut
+            let strike = SCNAction.rotateBy(x: 0.34, y: 0, z: 0, duration: beat(0.1))
+            strike.timingMode = .easeIn
+            let lunge = SCNAction.moveBy(x: 0, y: 0, z: CGFloat(facing) * 0.6, duration: beat(0.12))
+            lunge.timingMode = .easeIn
             action = .sequence([
-                wind, .group([strike, lunge]), .wait(duration: 0.2),
-                .group([.rotateBy(x: -0.12, y: 0, z: 0, duration: 0.2), lunge.reversed()])
+                wind, .group([strike, lunge]), .wait(duration: beat(0.2)),
+                .group([.rotateBy(x: -0.12, y: 0, z: 0, duration: beat(0.2)), lunge.reversed()])
             ])
 
         case .ultimate:
-            let rise = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.35, z: 0, duration: 0.6)
+            let rise = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.35, z: 0, duration: beat(0.6))
             rise.timingMode = .easeOut
-            let spin = SCNAction.rotateBy(x: 0, y: .pi * 2, z: 0, duration: 0.9)
-            let slam = SCNAction.moveBy(x: 0, y: CGFloat(-spec.height) * 0.35, z: 0, duration: 0.22)
+            let spin = SCNAction.rotateBy(x: 0, y: .pi * 2, z: 0, duration: beat(0.9))
+            let slam = SCNAction.moveBy(x: 0, y: CGFloat(-spec.height) * 0.35, z: 0, duration: beat(0.22))
             slam.timingMode = .easeIn
-            action = .sequence([rise, spin, slam, .wait(duration: 0.35)])
+            action = .sequence([rise, spin, slam, .wait(duration: beat(0.35))])
 
         case .castLoop:
-            action = .repeatForever(.rotateBy(x: 0, y: 0.6, z: 0, duration: 1.5))
+            action = .repeatForever(.rotateBy(x: 0, y: 0.6, z: 0, duration: beat(1.5)))
 
         case .hitReact:
-            let knock = SCNAction.moveBy(x: 0, y: 0, z: CGFloat(-facing) * 0.18, duration: 0.08)
-            action = .sequence([knock, .wait(duration: 0.08), knock.reversed()])
+            // The shove away from the blow is `recoil`, which every hit fires
+            // whether or not a real clip exists, so this is only the flinch on
+            // top of it — a twist, not a translation, so the two never fight
+            // over the same axis of the same node.
+            let twist = SCNAction.rotateBy(x: -0.15, y: CGFloat(facing) * 0.12, z: 0, duration: beat(0.07))
+            twist.timingMode = .easeOut
+            let settle = twist.reversed()
+            settle.timingMode = .easeInEaseOut
+            action = .sequence([twist, .wait(duration: beat(0.06)), settle])
 
         case .death:
-            let fall = SCNAction.rotateBy(x: -.pi / 2.2, y: 0, z: 0, duration: 0.55)
+            let fall = SCNAction.rotateBy(x: -.pi / 2.2, y: 0, z: 0, duration: beat(0.55))
             fall.timingMode = .easeIn
-            action = .group([fall, .fadeOpacity(to: 0.15, duration: 0.7)])
+            action = .group([fall, .fadeOpacity(to: 0.15, duration: beat(0.7))])
 
         case .victory:
-            let jump = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.18, z: 0, duration: 0.3)
+            let jump = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.18, z: 0, duration: beat(0.3))
             jump.timingMode = .easeOut
-            action = .repeat(.sequence([jump, jump.reversed()]), count: 3)
+            let land = jump.reversed()
+            land.timingMode = .easeIn
+            action = .repeat(.sequence([jump, land]), count: 3)
 
         case .summonReveal:
             action = .sequence([
-                .fadeOpacity(to: 1, duration: 0.6),
-                .rotateBy(x: 0, y: .pi * 2, z: 0, duration: 1.6)
+                .fadeOpacity(to: 1, duration: beat(0.6)),
+                .rotateBy(x: 0, y: .pi * 2, z: 0, duration: beat(1.6))
             ])
         }
 
@@ -278,31 +479,140 @@ final class UnitNode: SCNNode {
         let stride = spec.height * 0.7
         let travel = max(0, distance - stride)
         let destination = SCNVector3(from.x + dx / distance * travel, from.y, from.z + dz / distance * travel)
+
+        // Gather, fly, land — the three beats every convincing jump has, and
+        // the reason this one now reads as a figure moving itself rather than
+        // one being carried. The old dash was a single eased slide with a
+        // symmetric up-and-down hop laid over it: nothing coiled before it
+        // went and nothing absorbed the landing, which is exactly the pair of
+        // frames the eye reads as weight.
+        let gather = duration * Self.dashGather
+        let flight = duration * Self.dashFlight
+
         removeAction(forKey: "dash")
-        let move = SCNAction.move(to: destination, duration: duration)
-        move.timingMode = .easeInEaseOut
-        // The model is authored facing +Z, so this yaw faces the victim.
-        let turn = SCNAction.rotateTo(x: 0, y: CGFloat(atan2(dx, dz)), z: 0, duration: duration, usesShortestUnitArc: true)
-        runAction(.group([move, turn]), forKey: "dash")
-        // A leap, not a slide: the figure lifts on the way and lands on the
-        // wind-up, which is what makes a closing strike read as one motion.
-        let lift = SCNAction.moveBy(x: 0, y: CGFloat(spec.height) * 0.16, z: 0, duration: duration * 0.5)
-        lift.timingMode = .easeOut
-        let land = SCNAction.moveBy(x: 0, y: -CGFloat(spec.height) * 0.16, z: 0, duration: duration * 0.5)
-        land.timingMode = .easeIn
+        let move = SCNAction.move(to: destination, duration: flight)
+        // Out of the crouch hard and into the victim soft. An ease at both
+        // ends has no push-off, and a linear move reads as cheap at any speed.
+        move.timingMode = .easeOut
+        // The model is authored facing +Z, so this yaw faces the victim. (A
+        // CAMERA looks along its own -Z and must use `look(at:)`; a character
+        // does not.)
+        let turn = SCNAction.rotateTo(
+            x: 0, y: CGFloat(atan2(dx, dz)), z: 0,
+            duration: gather + flight * 0.5, usesShortestUnitArc: true
+        )
+        turn.timingMode = .easeInEaseOut
+        runAction(.group([.sequence([.wait(duration: gather), move]), turn]), forKey: "dash")
+
+        // Height and lean are driven by one curve over the whole dash rather
+        // than by a stack of `moveBy`s, so every frame is an absolute value:
+        // an interrupted dash can leave no residue, and the arc is a real
+        // parabola — fastest through the top — instead of up-then-down.
+        let rest = containerRest.y
+        let apex = spec.height * 0.18
+        // The coil is a token dip only. A unit's feet sit ON the platform, so
+        // a crouch built out of a downward translation drives the lower legs
+        // through an opaque floor: at the 0.06 of its height this started at,
+        // a 1.8 m figure sank eleven centimetres into the stage and a 3.2 m
+        // boss nearly twenty. What sells the anticipation is the backward
+        // lean below; a crouch that reads properly has to come out of the
+        // skeleton, which is not something this file can author.
+        let dip = spec.height * 0.02
+        let span = max(0.01, duration)
+        dashOwnsPitch = true
         modelContainer.removeAction(forKey: "hop")
-        modelContainer.runAction(.sequence([lift, land]), forKey: "hop")
+        let arc = SCNAction.customAction(duration: span) { [weak self] node, elapsed in
+            let t = Float(min(1, max(0, Double(elapsed) / span)))
+            var height: Float = 0
+            var lean: Float = 0
+            if t < Float(Self.dashGather) {
+                // Coil: down and back, the weight loading before the push.
+                let g = t / Float(Self.dashGather)
+                height = -dip * sin(g * .pi * 0.5)
+                lean = -0.10 * g
+            } else if t < Float(Self.dashGather + Self.dashFlight) {
+                let f = (t - Float(Self.dashGather)) / Float(Self.dashFlight)
+                height = -dip * (1 - f) + apex * 4 * f * (1 - f)
+                lean = -0.10 * (1 - f) + 0.16 * f
+            } else {
+                // Absorb: the knees give on landing and come back up.
+                let l = (t - Float(Self.dashGather + Self.dashFlight)) / Float(Self.dashLand)
+                height = -dip * 0.85 * sin(min(1, l) * .pi)
+                lean = 0.16 * (1 - min(1, l))
+            }
+            node.position.y = rest + height
+            // The height is the arc's alone; the pitch is only its while no
+            // procedural clip has taken it over. See `dashOwnsPitch`.
+            if self?.dashOwnsPitch == true { node.eulerAngles.x = lean }
+        }
+        modelContainer.runAction(.sequence([arc, SCNAction.run { [weak self] node in
+            node.position.y = rest
+            if self?.dashOwnsPitch == true { node.eulerAngles.x = 0 }
+        }]), forKey: "hop")
     }
+
+    /// Where the beats of a dash fall, as fractions of its duration. The clip
+    /// is held until `dashGather + dashFlight` of the way through (see
+    /// `BattleSceneController`), so the wind-up begins as the weight lands.
+    static let dashGather = 0.22
+    static let dashFlight = 0.70
+    static let dashLand = 0.08
 
     /// Back to the spot it stood on, facing the way it did. Nothing happens
     /// for a unit that never dashed.
     func returnHome(duration: TimeInterval) {
         guard let home = homePosition else { return }
         removeAction(forKey: "dash")
+        // The arc writes the container's height and lean every frame, so
+        // cancelling it in mid-flight would leave the figure hanging tilted in
+        // the air. Both are put back by hand.
+        modelContainer.removeAction(forKey: "hop")
+        modelContainer.position.y = containerRest.y
+        // Only the arc's own lean is undone. A procedural clip that has taken
+        // the pitch over is rotating it relatively toward its own zero, and
+        // forcing it flat underneath that would leave the figure tilted for
+        // the rest of the fight.
+        if dashOwnsPitch { modelContainer.eulerAngles.x = 0 }
         let move = SCNAction.move(to: home, duration: duration)
         move.timingMode = .easeInEaseOut
         let turn = SCNAction.rotateTo(x: 0, y: CGFloat(homeYaw), z: 0, duration: duration, usesShortestUnitArc: true)
         runAction(.group([move, turn]), forKey: "dash")
+    }
+
+    /// The shove a blow puts through a body: the whole figure is driven
+    /// backwards off its stance and springs back onto it.
+    ///
+    /// A hit used to be a white flash and a number over a figure that never
+    /// moved, which is most of why the fight read as "numbers changing" rather
+    /// than as something being struck. It is deliberately NOT part of the hit
+    /// react clip: most exports do not ship one, and a shove that only some
+    /// families have is worse than none. Backwards is the container's own -Z,
+    /// because a unit faces the line it is fighting, so this is away from the
+    /// blow for a defender at its mark and for an attacker caught by a
+    /// counter mid-dash alike.
+    func recoil(strength: Float) {
+        guard !isDefeated else { return }
+        let push = spec.height * 0.055 * min(2.4, max(0.4, strength))
+        let rest = containerRest.z
+        let span = beat(0.26)
+        modelContainer.removeAction(forKey: "recoil")
+        modelContainer.runAction(.sequence([
+            SCNAction.customAction(duration: span) { node, elapsed in
+                let t = Float(min(1, max(0, Double(elapsed) / span)))
+                // Driven out over the first quarter and returning over the
+                // rest: a symmetric there-and-back reads as a slide, a fast
+                // out and a decaying return reads as a body absorbing a blow.
+                let out: Float
+                if t < 0.25 {
+                    out = sin(t / 0.25 * .pi * 0.5)
+                } else {
+                    let u = (t - 0.25) / 0.75
+                    out = (1 - u) * (1 - u)
+                }
+                node.position.z = rest - push * out
+            },
+            SCNAction.run { node in node.position.z = rest }
+        ]), forKey: "recoil")
     }
 
     /// A white flash over the whole model on the frame a hit lands, fading
@@ -430,6 +740,11 @@ final class UnitNode: SCNNode {
         modelContainer.removeAllActions()
         modelContainer.removeAnimation(forKey: AnimationClip.death.rawValue)
         modelContainer.eulerAngles = SCNVector3Zero
+        // A death, an interrupted leap or a recoil can all leave the container
+        // off its rest transform, and a revived unit standing 20 cm to the
+        // rear of its mark is the kind of thing nobody can name but everybody
+        // sees.
+        modelContainer.position = containerRest
         modelContainer.opacity = 1
         healthBarRoot.runAction(.fadeIn(duration: 0.3))
         setHealth(fraction: healthFraction, animated: false)

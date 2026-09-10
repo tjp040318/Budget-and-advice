@@ -521,11 +521,30 @@ enum StageBuilder {
     static func runeRing(radius: CGFloat, tint: UIColor) -> SCNNode {
         let plane = SCNPlane(width: radius * 2, height: radius * 2)
         let material = SCNMaterial()
+        let runes = UIImage(named: "rune_ring")
         material.lightingModel = .constant
-        material.diffuse.contents = UIImage(named: "rune_ring") ?? tint
+        material.diffuse.contents = runes ?? tint
         material.multiply.contents = tint.mixed(with: .white, amount: 0.35)
-        material.emission.contents = UIImage(named: "rune_ring")
+        material.emission.contents = runes
         material.blendMode = .add
+        // rune_ring.png is a 1024 px RGB painting with no alpha channel, so every
+        // fragment of this square quad carries alpha 1 — including the black
+        // corners outside the ring. Additive blending hides that in colour, but
+        // not in alpha, so this 3.9 x 3.9 m square would print its own rectangle
+        // over anything transparent behind it, exactly as the mist planes did in
+        // the summon reveal (see mistPlanes below). It never showed only because
+        // the ring lies flat on an opaque dais, which is how that bug stayed
+        // hidden for a whole build. An additive quad adds light and has no
+        // business changing what is behind it, so it writes colour and no alpha
+        // at all; every additive material in this file should carry this line.
+        //
+        // Deriving the alpha from the painting instead is a trap worth naming,
+        // because it looks like the obvious fix: `transparencyMode = .rgbZero`
+        // takes transparency from luminance with 0.0 OPAQUE (Apple's wording),
+        // so on art painted bright-on-black it is exactly inverted — it would
+        // hold the black corners solid and dissolve the rune strokes, which are
+        // the only thing this quad exists to draw.
+        material.colorBufferWriteMask = [.red, .green, .blue]
         material.writesToDepthBuffer = false
         material.isDoubleSided = true
         plane.firstMaterial = material
@@ -551,11 +570,42 @@ enum StageBuilder {
             material.diffuse.contents = image
             material.multiply.contents = tint
             material.blendMode = .add
+            // mist.png is a 1024 px RGB painting with no alpha channel, so every
+            // fragment of this quad carries alpha 1 even where the painting is
+            // black. Additive blending hides that in colour — adding zero changes
+            // nothing — but SceneKit still wrote the node's opacity into the
+            // frame buffer's alpha across the whole 7 x 3.2 m rectangle, corners
+            // included. Behind the battle stage's opaque black view and its
+            // farBackdrop painting that alpha never composites against anything.
+            // The summon reveal is the one place it does: that view is clear on
+            // purpose so the SwiftUI rays and glow show between the pillars, so
+            // these corners laid a black rectangle over the backdrop with
+            // dead-straight edges — the translucent pane hanging behind Shabti's
+            // head in the playtest. Measured off that frame, the step across the
+            // edge is (38.9, 48.9, 82.3) -> (32.2, 41.0, 68.1): a ratio of
+            // 0.828/0.839/0.827, i.e. a pure multiply by 1 - 0.172, which is the
+            // top of the opacity range rolled below — the frame buffer's alpha
+            // composited source-over by UIKit, and not a colour add at all.
+            //
+            // So the cure is to write no alpha: this quad adds light and must
+            // leave what is behind it exactly as it found it. A real transparency
+            // map would be the other half of the answer if the art carried one,
+            // but do not reach for `transparencyMode = .rgbZero` to fake one out
+            // of the painting: that mode reads transparency from luminance with
+            // 0.0 OPAQUE, so on puffs painted bright on black it is inverted —
+            // it would hold the corners solid and dissolve the mist itself.
+            material.colorBufferWriteMask = [.red, .green, .blue]
             material.writesToDepthBuffer = false
             material.readsFromDepthBuffer = true
             material.isDoubleSided = true
             plane.firstMaterial = material
             let node = SCNNode(geometry: plane)
+            // Left at the value the haze was tuned to. Masking the alpha write
+            // above changes nothing about the light this quad adds — node
+            // opacity still scales the premultiplied colour — so there is no
+            // luminance loss here to compensate for, and raising it would only
+            // push the reveal further towards the blown-out upper left the
+            // playtest already complained about.
             node.opacity = 0.09 + CGFloat(rng.unit()) * 0.08
             let angle = Float(index) / Float(count) * 2 * .pi + Float(rng.unit()) * 0.5
             node.position = SCNVector3(sin(angle) * radius, 0.4 + Float(rng.unit()) * 0.6, cos(angle) * radius - 1.2)

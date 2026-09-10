@@ -22,7 +22,67 @@ final class BattleSceneController: NSObject {
     weak var delegate: BattleSceneDelegate?
 
     /// 1.0 is normal, 2.0 is the fast-forward toggle, 4.0 is "skip animation".
-    var speedMultiplier: Double = 1.0
+    ///
+    /// It used to divide the event queue's holds and nothing else: every
+    /// skeletal clip still played at its authored speed, so at the x2 the
+    /// auto-repeat actually runs at, each attack was about half finished when
+    /// the next event replaced it and the figures twitched between fragments
+    /// of swings. SceneKit has no per-node speed multiplier to lean on (that
+    /// is SpriteKit), so the units are told and scale their own clips and
+    /// actions by hand.
+    var speedMultiplier: Double = 1.0 {
+        didSet {
+            for node in unitNodes.values { node.playbackSpeed = speedMultiplier }
+        }
+    }
+
+    /// Authored seconds at the current playback speed. Every duration in this
+    /// file is written for x1 and passes through here on its way to a timer,
+    /// so fast-forward shortens the whole fight by one factor rather than by
+    /// several that drift apart.
+    private func beat(_ seconds: TimeInterval) -> TimeInterval {
+        seconds / max(0.25, speedMultiplier)
+    }
+
+    /// How long a melee unit takes to close on its victim.
+    private static let dashDuration: TimeInterval = 0.30
+
+    /// Where in a clip the blow actually lands, as a fraction of the clip's
+    /// contract duration.
+    ///
+    /// Nothing in the pipeline has ever known this: `AnimationClip` carries a
+    /// duration and no contact frame, so the impact was spawned on a detached
+    /// timer at a flat 45% of the clip while the damage event — the flash, the
+    /// number, the sound, the haptic and the freeze — waited for the WHOLE
+    /// clip to finish. Every basic attack therefore played as a slash arc, six
+    /// tenths of a second of nothing, and then a victim flinching at something
+    /// that had already happened; on an ultimate the gap was over a second.
+    /// Two half-hits are why the fight read as numbers changing rather than as
+    /// something being struck. This table is the one place the moment of
+    /// contact is written down, and `UnitNode.play` retimes every one-shot to
+    /// its contract so the fraction means the same thing whatever length Meshy
+    /// happened to author the clip at.
+    private static func contactFraction(of clip: AnimationClip) -> Double {
+        switch clip {
+        case .attackBasic: return 0.42
+        case .attackHeavy: return 0.55
+        case .castRelease: return 0.60
+        case .ultimate: return 0.62
+        default: return 0.50
+        }
+    }
+
+    /// How far a blow shoves its victim, by weight: a glance barely moves it,
+    /// a killing blow throws it off its stance.
+    private static func recoilStrength(for weight: HitWeight) -> Float {
+        switch weight {
+        case .light: return 0.45
+        case .normal: return 1.00
+        case .heavy: return 1.60
+        case .critical: return 1.90
+        case .lethal: return 2.40
+        }
+    }
 
     private(set) var unitNodes: [UUID: UnitNode] = [:]
     private var cameraNode = SCNNode()
@@ -41,13 +101,29 @@ final class BattleSceneController: NSObject {
     /// blade for a melee cut, a heavier body for a two-handed blow, and the
     /// caster's element for anything cast from a distance.
     private var lastCastColour: Juice.HitColour = .blade
+    /// How long the event being presented should hold, in authored seconds,
+    /// when the event's own declared duration is not what the picture needs:
+    /// a cast holds only as far as the contact frame, and a heavy hit dwells
+    /// on it. Set inside `present`, consumed by `playNext`, cleared before
+    /// every event — only the arm that presents one knows, for instance,
+    /// whether the caster had to close the distance first.
+    private var holdOverride: TimeInterval?
+    /// The rest of that clip — the follow-through after contact — repaid at
+    /// the next turn boundary. The cast no longer waits for it (the damage
+    /// lands on the contact frame and the swing finishes underneath), but the
+    /// NEXT unit must, or it begins its turn over the top of the last one's
+    /// swing and its walk back to its mark.
+    private var castRecovery: TimeInterval = 0
 
     // MARK: - Setup
 
     func build(combatants: [Combatant], environment: BattleEnvironment) {
         self.environment = environment
+        scene.rootNode.removeAction(forKey: "cast_impact")
         scene.rootNode.childNodes.forEach { $0.removeFromParentNode() }
         unitNodes.removeAll()
+        holdOverride = nil
+        castRecovery = 0
 
         buildStage()
         buildLighting()
@@ -213,15 +289,16 @@ final class BattleSceneController: NSObject {
         let detail = ModelLibrary.detail(forCombatantCount: combatants.count + (entering ? unitNodes.count : 0))
         for combatant in combatants {
             let node = UnitNode(combatant: combatant, detail: detail)
-            let home = position(for: combatant)
+            node.playbackSpeed = speedMultiplier
+            let home = position(for: combatant, teamSize: sideCount(combatant.side, in: combatants))
             node.eulerAngles.y = combatant.side == .player ? .pi : 0
             if entering {
                 // A later wave walks on from the far side of the field.
                 node.position = SCNVector3(home.x, home.y, home.z - 3.0)
                 node.opacity = 0
-                let walk = SCNAction.move(to: home, duration: 0.7)
+                let walk = SCNAction.move(to: home, duration: beat(0.7))
                 walk.timingMode = .easeOut
-                node.runAction(.group([walk, .fadeIn(duration: 0.45)]))
+                node.runAction(.group([walk, .fadeIn(duration: beat(0.45))]))
             } else {
                 node.position = home
             }
@@ -230,24 +307,55 @@ final class BattleSceneController: NSObject {
         }
     }
 
-    private func position(for combatant: Combatant) -> SCNVector3 {
+    /// How many combatants a side is fielding, so the line can be centred on
+    /// the count rather than on a fixed number of columns.
+    private func sideCount(_ side: BattleSide, in combatants: [Combatant]) -> Int {
+        let placed = unitNodes.values.filter { $0.combatant.side == side }.count
+        return max(1, combatants.filter { $0.side == side }.count + placed)
+    }
+
+    /// ONE RANK ABREAST, centred, both sides.
+    ///
+    /// It used to be two columns 2.6 m apart in ranks 1.6 m deep, which is a
+    /// PORTRAIT formation in a LANDSCAPE frame. Measured off the photographed
+    /// frames: a four-unit team spanned 3.9 m of a 14.9 m-wide view, so the
+    /// whole cast was a clump filling under a quarter of the width and the
+    /// other three quarters was bare floor. Worse, both sides used the same x
+    /// formula, so the enemy line was a shrunk copy of the player line centred
+    /// on the same point and every player unit sat within thirty pixels of an
+    /// enemy's column — in the dungeon frames an enemy is seventy per cent
+    /// hidden behind Zeus, which is arithmetic rather than bad luck.
+    ///
+    /// A line abreast spends the team's extent on WIDTH, which a landscape
+    /// frame has in surplus, instead of on DEPTH, which it is short of. It is
+    /// also what the genre does: Summoners War stands its five in a row.
+    ///
+    /// The enemy line is pushed half a step sideways so no enemy ever stands
+    /// directly behind a player whatever the camera's yaw, and a side of more
+    /// than five falls back to a second rank behind the first rather than
+    /// spreading wider than the camera will frame.
+    private func position(for combatant: Combatant, teamSize: Int) -> SCNVector3 {
         let sideSign: Float = combatant.side == .player ? 1 : -1
-        // Two ranks of two, so a four-unit team reads clearly from the camera.
-        // A landscape frame has the width to spare, so columns sit 2.6 m apart
-        // and ranks 1.6 m deep. Both sides' back ranks stand FURTHER from the
-        // camera than their front ranks — smaller and higher on screen — and
-        // are staggered by HALF a column, so the third unit stands in the gap
-        // between the front pair rather than behind one of them. The first
-        // landscape frames had the player's back rank nearer the camera than
-        // the front, so its feet ran off the bottom edge; the next had it
-        // half a metre off the front unit's shoulder, which from a camera 24°
-        // above the floor put Zeus behind Anubis with only his robe showing.
-        let column = Float(combatant.slot % 2)
-        let rank = Float(combatant.slot / 2)
-        let x = (column - 0.5) * 2.6 + (rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : 1.3)
-        let depth = combatant.side == .player ? (2.2 - rank * 1.6) : (2.2 + rank * 1.6)
-        let z = sideSign * depth
-        return SCNVector3(x, 0, z)
+        let perRank = 5
+        let rank = Float(combatant.slot / perRank)
+        let indexInRank = combatant.slot % perRank
+        let inThisRank = max(1, min(perRank, teamSize - Int(rank) * perRank))
+
+        // 2.0 m of shoulder room puts a five-wide line at a 4.0 m half-width,
+        // which is what `CameraDirector.minHalfWidth` is solved for: the camera
+        // will not zoom in past five metres, so a narrower line simply sits
+        // small in the middle of the frame however tight the framing gets.
+        let spacing: Float = 2.0
+        let centred = Float(indexInRank) - Float(inThisRank - 1) / 2
+        let stagger: Float = combatant.side == .player ? 0 : spacing / 2
+        let x = centred * spacing + stagger
+
+        // Both sides' second ranks stand FURTHER from the camera than their
+        // first — smaller and higher in the frame — and are offset by half a
+        // step so nobody hides behind the unit in front.
+        let halfStep: Float = rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : spacing / 2
+        let depth = 2.6 + rank * 1.7
+        return SCNVector3(x + halfStep, 0, sideSign * depth)
     }
 
     // MARK: - Playback
@@ -262,6 +370,16 @@ final class BattleSceneController: NSObject {
         playbackGeneration += 1
         queue.removeAll()
         isPlaying = false
+        holdOverride = nil
+        castRecovery = 0
+        // A cast's impact is a scene action waiting for its contact frame; a
+        // skip must take it with the rest of the queue rather than let it
+        // burst over a field that has already jumped to the end state.
+        scene.rootNode.removeAction(forKey: "cast_impact")
+        // And the same for a swing still waiting out its dash: the queue it
+        // belonged to is gone, so it would otherwise land a lone attack over
+        // a battle that has already been resolved.
+        for node in unitNodes.values { node.cancelPendingClip() }
         Juice.release(scene)
         sync(combatants: combatants)
         delegate?.battleSceneDidFinishPlayback(self)
@@ -290,11 +408,40 @@ final class BattleSceneController: NSObject {
         isPlaying = true
         let event = queue.removeFirst()
         delegate?.battleScene(self, willPresent: event)
+        holdOverride = nil
         let frozen = present(event)
+
+        // A cast holds only until the blade lands — `holdOverride` — so the damage
+        // event that carries the flash, the flinch, the shove, the number and
+        // the freeze is presented ON the contact frame with the rest of the
+        // swing still playing underneath it. Everything else keeps the
+        // duration the event itself declares.
+        var span = holdOverride ?? event.presentationDuration
+        switch event {
+        case .turnBegan, .waveStarted, .battleEnded:
+            // Repay whatever is left of the follow-through the cast did not
+            // wait for, so the last attacker finishes its swing and walks back
+            // to its mark before the next one moves. Two units moving at once
+            // for no reason on screen is most of what made the fight hard to
+            // read.
+            span += castRecovery
+            castRecovery = 0
+        case .skillCast:
+            // The cast's own hold IS the run-up to contact; its follow-through
+            // starts where that ends.
+            break
+        default:
+            // Everything that plays after the contact frame — the numbers, the
+            // statuses, the later hits of a multi-hit skill — is time the
+            // swing is finishing in, so it comes off what is still owed.
+            // Without this a five-hit skill would add three quarters of a
+            // second of nothing to the front of the next turn.
+            castRecovery = max(0, castRecovery - span)
+        }
 
         // A freeze-frame steals time from the event's hold; give it back so the
         // cadence between hits stays what the event durations say it is.
-        let hold = max(0.02, event.presentationDuration / max(0.25, speedMultiplier)) + frozen
+        let hold = max(0.02, beat(span)) + frozen
         let generation = playbackGeneration
         DispatchQueue.main.asyncAfter(deadline: .now() + hold) { [weak self] in
             guard let self, self.playbackGeneration == generation else { return }
@@ -337,49 +484,79 @@ final class BattleSceneController: NSObject {
             // A melee unit closes on its one victim before the swing and stays
             // there through the hits; casters, archers and line-wide skills
             // strike from where they stand.
+            var walkUp: TimeInterval = 0
             if let targetNode, casterNode.spec.melee, targets.count == 1,
                targetNode.side != casterNode.side,
                animation == .attackBasic || animation == .attackHeavy {
-                casterNode.dash(toward: targetNode, duration: 0.30 / max(0.25, speedMultiplier))
+                casterNode.dash(toward: targetNode, duration: beat(Self.dashDuration))
+                // The swing waits for the feet. These two lines used to be
+                // consecutive statements, so the clip and the leap started on
+                // the same frame and the wind-up — the only part of an attack
+                // that carries anticipation — played four metres away in
+                // mid-air; the figure arrived a quarter of the way through its
+                // own cut. The 80 ms overlap is deliberate: the wind-up begins
+                // as the weight comes down, which is what ties a leap and a
+                // swing into one motion.
+                walkUp = max(0, Self.dashDuration
+                    * (UnitNode.dashGather + UnitNode.dashFlight) - 0.08)
             }
-            casterNode.play(animation)
+            casterNode.play(animation, after: beat(walkUp))
             floatText(name, at: casterNode.headWorldPosition, color: .white, scale: 0.7)
 
-            // The effect lands a beat after the cast begins, matching the swing.
+            // The frame the blade lands, measured from the start of the CLIP
+            // rather than of the turn, and held by the queue so the damage
+            // event arrives on it. What is left of the clip is repaid to the
+            // next turn as recovery.
+            let contact = walkUp + animation.fallbackDuration * Self.contactFraction(of: animation)
+            holdOverride = contact
+            castRecovery = animation.fallbackDuration * (1 - Self.contactFraction(of: animation))
+
             // A skill with no effect of its own lands in its caster's element,
             // and a closing strike draws its slash across the victim.
             let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
             let effect = vfx == "impact_generic" ? "impact_\(casterNode.element.rawValue)" : vfx
             let slashes = casterNode.spec.melee && targets.count == 1
                 && (animation == .attackBasic || animation == .attackHeavy)
-            let delay = animation.fallbackDuration * 0.45 / max(0.25, speedMultiplier)
-            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
-                guard let self else { return }
-                // Lightning has its own sound; everything else lands on the
-                // hit sound `Juice` picks from the damage that follows.
-                if vfx == "thunderbolt" || vfx == "thunderclap" || vfx == "keraunos" {
-                    AudioLibrary.shared.play(.thunder, volume: vfx == "keraunos" ? 1.0 : 0.7)
-                }
-                for targetID in targets {
-                    guard let node = self.unitNodes[targetID] else { continue }
-                    VFXLibrary.spawn(
-                        effect, at: node.chestWorldPosition, in: self.scene,
-                        tint: tint, scale: node.spec.height / 1.9
-                    )
-                    if slashes {
-                        VFXLibrary.spawn(
-                            "slash", at: node.chestWorldPosition, in: self.scene,
-                            tint: tint, scale: node.spec.height / 1.9 * (animation == .attackHeavy ? 1.3 : 1.0)
-                        )
+            // The burst is a SCENE action, not a `DispatchQueue.asyncAfter`: a
+            // hit freezes the scene for up to 150 ms and a wall-clock timer
+            // keeps counting through a freeze that the animation it is timed
+            // against does not. The key means a second cast cancels the first
+            // one's pending burst instead of letting it fire into a field that
+            // has moved on, and the position is read when it fires, so an
+            // effect can no longer bloom where a victim used to stand.
+            scene.rootNode.removeAction(forKey: "cast_impact")
+            scene.rootNode.runAction(.sequence([
+                .wait(duration: beat(contact)),
+                SCNAction.run { [weak self] _ in
+                    // SceneKit runs this on its rendering thread; everything
+                    // below touches the scene graph, so it hops to main first.
+                    DispatchQueue.main.async {
+                        guard let self else { return }
+                        // Lightning has its own sound; everything else lands on
+                        // the hit sound `Juice` picks from the damage that
+                        // arrives on this same frame.
+                        if vfx == "thunderbolt" || vfx == "thunderclap" || vfx == "keraunos" {
+                            AudioLibrary.shared.play(.thunder, volume: vfx == "keraunos" ? 1.0 : 0.7)
+                        }
+                        for targetID in targets {
+                            guard let node = self.unitNodes[targetID] else { continue }
+                            VFXLibrary.spawn(
+                                effect, at: node.chestWorldPosition, in: self.scene,
+                                tint: tint, scale: node.spec.height / 1.9
+                            )
+                            if slashes {
+                                VFXLibrary.spawn(
+                                    "slash", at: node.chestWorldPosition, in: self.scene,
+                                    tint: tint, scale: node.spec.height / 1.9 * (animation == .attackHeavy ? 1.3 : 1.0)
+                                )
+                            }
+                        }
                     }
                 }
-            }
+            ]), forKey: "cast_impact")
 
         case .damage(_, let target, let amount, let isCritical, let isGlancing, let matchup, let remaining, _, _):
             guard let node = unitNodes[target] else { return 0 }
-            node.play(.hitReact)
-            node.flashHit()
-            node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
 
             // How hard did that land? Lethal beats critical beats the clip.
             let weight: HitWeight
@@ -396,6 +573,18 @@ final class BattleSceneController: NSObject {
             }
             let profile = Juice.profile(for: weight)
 
+            // Everything a blow does now happens on ONE frame: the burst and
+            // the slash arc (spawned by the cast, timed to this instant), the
+            // white flash, the flinch, the shove, the number, the sound, the
+            // haptic and the freeze. They used to be spread over more than a
+            // second, which is why a hit read as a light show followed by a
+            // bookkeeping update. The shove is the part that was missing
+            // altogether: a body that never moves is not being hit.
+            node.play(.hitReact)
+            node.flashHit()
+            node.recoil(strength: Self.recoilStrength(for: weight))
+            node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
+
             let color: UIColor
             var label = "\(Int(amount.rounded()))"
             if isCritical {
@@ -411,6 +600,18 @@ final class BattleSceneController: NSObject {
                 color = .white
             }
             floatText(label, at: node.headWorldPosition, color: color, scale: profile.numberScale, pop: true)
+
+            // A heavy blow is worth dwelling on. The freeze punctuates the
+            // frame of contact itself; this holds the frame just after it, so
+            // the shove and the shake are seen finishing before the next
+            // number starts. An ordinary hit keeps the fast cadence a
+            // multi-hit skill needs, and a glance is not worth a beat at all.
+            switch weight {
+            case .lethal: holdOverride = 0.55
+            case .critical: holdOverride = 0.48
+            case .heavy: holdOverride = 0.42
+            case .normal, .light: break
+            }
 
             return Juice.impact(weight, colour: lastCastColour, scene: scene, director: director, speed: speedMultiplier)
 
@@ -445,6 +646,10 @@ final class BattleSceneController: NSObject {
             guard let node = unitNodes[actor] else { return 0 }
             floatText("COUNTER", at: node.headWorldPosition, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
             node.play(.attackBasic)
+            // A counter interrupts whatever the caster was in the middle of,
+            // so the follow-through owed by that cast is void; leaving it
+            // would add a second of nothing to the next turn.
+            castRecovery = 0
 
         case .extraTurnGranted(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
@@ -506,7 +711,7 @@ final class BattleSceneController: NSObject {
     /// Every unit that dashed walks back to its mark. Called as a turn begins
     /// and when the queue drains, so nobody is left standing in the enemy line.
     private func returnEveryoneHome() {
-        for node in unitNodes.values { node.returnHome(duration: 0.30 / max(0.25, speedMultiplier)) }
+        for node in unitNodes.values { node.returnHome(duration: beat(0.30)) }
     }
 
     // MARK: - Floating text

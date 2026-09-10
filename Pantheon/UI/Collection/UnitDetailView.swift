@@ -6,6 +6,51 @@ import SwiftUI
 /// row and the picker's footer are one constant here rather than two literals.
 private let fodderDrachmaPerUnit = 500
 
+/// What a painted panel's LAST row has to clear at the bottom.
+///
+/// `Theme.panelInset` is the horizontal figure and `Theme.panelPadding` the
+/// vertical one, but they are measured against `ui_panel`'s flat gold band,
+/// which is 7.6 points thick. The bottom corner ornament is not flat: it
+/// reaches 16.9 points up and 18.6 in (71 and 78 px of the 512 px @3x texture
+/// at `Chrome.shrink`), so a panel whose last row is text or a full-width
+/// plate at the leading edge — which is every panel on this sheet — prints on
+/// the ornament at anything less. Photographed: the skill panel's "Next
+/// skill-up ..." line drawn across the bottom border on CI frame 2-detail.jpg.
+///
+/// It belongs beside `panelInset` in Theme as `panelBottomInset`; it lives
+/// here until the file that owns Theme takes it, so this sheet's four panels
+/// at least agree with each other.
+private let panelBottomInset: CGFloat = 18
+
+/// The middle column. `relicRing` draws its ring to the panel's inner width
+/// off this same figure, so the ring and the column cannot drift apart and
+/// leave a tile sitting on the painted band.
+private let ringColumnWidth: CGFloat = 212
+
+/// One relic slot in the ring. Named because the ring's height is derived
+/// from it: half a tile plus the radius plus the slot badge is what the
+/// frame has to hold.
+private let slotTileSize: CGFloat = 60
+
+/// The three figures at the foot of the relic ring, and the line under them.
+///
+/// A type rather than three loose values because the footer is offered to
+/// `ViewThatFits` in more than one size, and `ViewThatFits` builds every
+/// candidate it is given: computed inside the footer's own body, this
+/// arithmetic would resolve the unit and score its six relics once per
+/// candidate on every redraw of the sheet.
+private struct RelicFigures {
+    /// How many of the six slots are filled.
+    var worn: Int
+    /// What the six slots are worth: the unit's power less the power it would
+    /// have with them empty, so a completed set's bonus is counted.
+    var gained: Int
+    /// The mean of `RelicService.efficiency` over what is worn, 0...1.
+    var quality: Double
+    /// What to farm next, or nil when there is nothing left to say.
+    var note: String?
+}
+
 /// One unit on one screen, the way the genre lays it out: the card and its
 /// progress on the left, the six relic slots in a ring in the middle, the
 /// stats with their relic bonuses on the right, and the skills along the
@@ -77,7 +122,7 @@ struct UnitDetailView: View {
                         identity(unit)
                             .frame(width: 158)
                         relicRing(unit)
-                            .frame(width: 212)
+                            .frame(width: ringColumnWidth)
                         VStack(spacing: 8) {
                             stats(unit)
                             skills(unit)
@@ -184,7 +229,13 @@ struct UnitDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(8)
+        .padding(.horizontal, Theme.panelInset)
+        .padding(.top, Theme.panelPadding)
+        // The last row is the Awaken plate, full width and at the leading
+        // edge, so it needs the ornament's 17 points rather than the band's 8.
+        // It costs nothing: the `Spacer` above the action rows measures 46
+        // points on CI frame 2-detail.jpg and simply gives ten of them back.
+        .padding(.bottom, panelBottomInset)
         .panelBackground(radius: Theme.tightCorner)
     }
 
@@ -215,7 +266,12 @@ struct UnitDetailView: View {
                     Text(subtitle)
                         .font(Theme.body(8))
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                        // "Max level · feed duplicates to skill up" is the
+                        // longest of these and lays out at ~137 points against
+                        // the 100 the row has inside the panel's proper inset,
+                        // so at 0.8 it ellipsised. A subtitle shrinks rather
+                        // than truncating: the figure it names is the point.
+                        .minimumScaleFactor(0.7)
                 }
                 Spacer(minLength: 0)
             }
@@ -236,9 +292,21 @@ struct UnitDetailView: View {
     /// Six slots around the element's emblem, slot 1 at the top and the
     /// rest clockwise — the arrangement every player of the genre knows.
     private func relicRing(_ unit: ResolvedUnit) -> some View {
-        let size: CGFloat = 196
         let radius: CGFloat = 67
-        let centre = CGPoint(x: size / 2, y: size / 2)
+        // The ring is drawn to the panel's inner width rather than to a flat
+        // 196, so it and the sets row under it share a centre line and neither
+        // can reach the painted band: a tile's far corner is 88 points from
+        // the centre and its slot badge 92, against the 94 the box allows.
+        let width = ringColumnWidth - Theme.panelInset * 2
+        // Tall enough to hold a slot badge, which is drawn four points up and
+        // left of its tile's corner. The old square 196 held the tiles with a
+        // point to spare but not their badges, so the top slot's badge was
+        // drawn three points into the panel's painted top band — measured on
+        // CI frame 2-detail.jpg, badge top at 69 px against the band's inner
+        // edge at 74.
+        let height = (radius + slotTileSize / 2 + 5) * 2
+        let centre = CGPoint(x: width / 2, y: height / 2)
+        let figures = relicFigures(unit)
         return VStack(spacing: 6) {
             ZStack {
                 Circle()
@@ -280,11 +348,45 @@ struct UnitDetailView: View {
                         )
                 }
             }
-            .frame(width: size, height: size)
+            .frame(width: width, height: height)
             setsRow(unit)
+            // The footer takes what the ring and the sets row leave, and the
+            // frame around it pins it to the panel's bottom rail rather than
+            // letting it hang under the sets row with ninety-odd points of
+            // bare metal below.
+            //
+            // It is offered in three sizes because the room under the sets
+            // row swings by forty points and the panel cannot grow to cover
+            // the difference. Measured against the panel on CI frame
+            // 2-detail.jpg (322.4pt tall, so 296.4 inside the paddings, less
+            // the ring's 204 and the stack's 18 of spacing): a unit with no
+            // relics leaves 55 points, one completed set 58, two 38 — and six
+            // relics in three completed sets, which is the build this screen
+            // exists to admire, leaves 18.3. On a 375-point-tall phone in
+            // landscape that last case leaves 1.4. The full footer wants 25.5
+            // without its note and 38.1 with it, so a fixed block would have
+            // printed over the bottom ornament on exactly the unit most worth
+            // looking at — the fault the rest of this pass is fixing.
+            // `ViewThatFits` measures each candidate's ideal height against
+            // what is left and takes the first that fits, so the footer sheds
+            // its note, then its captions, then itself.
+            //
+            // No `Spacer` here and none inside a candidate: a greedy view has
+            // no ideal height and `ViewThatFits` chooses on the ideal, which
+            // is the same reason `ArenaView.teamCards` has none.
+            ViewThatFits(in: .vertical) {
+                relicSummary(figures)
+                compactRelicSummary(figures)
+                Color.clear.frame(height: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(8)
+        .padding(.horizontal, Theme.panelInset)
+        .padding(.top, Theme.panelPadding)
+        // The footer's captions are this panel's last row and sit at the
+        // leading edge, so they need the corner ornament's clearance.
+        .padding(.bottom, panelBottomInset)
         .panelBackground(radius: Theme.tightCorner)
     }
 
@@ -340,7 +442,7 @@ struct UnitDetailView: View {
                         .lineLimit(1)
                 }
             }
-            .frame(width: 60, height: 60)
+            .frame(width: slotTileSize, height: slotTileSize)
             .background(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(worn ? Theme.surfaceHigh : Theme.surface.opacity(0.7))
@@ -418,6 +520,170 @@ struct UnitDetailView: View {
         .frame(maxWidth: .infinity)
     }
 
+    /// The three figures the footer prints, worked out once for every
+    /// candidate `ViewThatFits` builds.
+    private func relicFigures(_ unit: ResolvedUnit) -> RelicFigures {
+        // The same unit with nothing equipped. `power` is a function of the
+        // stats alone, so resolving with an empty relic list gives the bare
+        // figure and the difference is what the six slots are worth — set
+        // bonuses included, which is why this resolves rather than adding up
+        // the relics' own modifiers.
+        let bare = ProgressionService.resolve(unit.unit, blueprint: unit.blueprint, equipped: [])
+        // The inventory's efficiency, averaged over what is worn: the same
+        // 0...1 score the dials there show, so a player who has learned to
+        // read one number has not been given a second.
+        let scored = unit.relics.reduce(0.0) { $0 + RelicService.efficiency($1, for: unit.role) }
+        return RelicFigures(
+            worn: unit.relics.count,
+            gained: unit.power - bare.power,
+            quality: unit.relics.isEmpty ? 0 : scored / Double(unit.relics.count),
+            note: setProgressNote(unit)
+        )
+    }
+
+    /// The bottom of the ring panel: what the six slots are actually worth.
+    ///
+    /// The ring is a fixed frame and the sets row is at most three lines, so
+    /// under them sat the largest dead area on the sheet — 97 points of bare
+    /// metal on CI frame 2-detail.jpg, more than a quarter of the panel. What
+    /// belongs there is the arithmetic the ring cannot show: how much of the
+    /// power in its centre the relics bought, how good the pieces on it are
+    /// for this unit's role, and which set is a piece short. None of the three
+    /// is anywhere else in the app — the inventory scores one relic at a time,
+    /// and the stats panel shows the bonus per stat but never the total.
+    private func relicSummary(_ figures: RelicFigures) -> some View {
+        VStack(spacing: 4) {
+            Divider().overlay(Theme.stroke)
+            HStack(alignment: .top, spacing: 4) {
+                summaryFigure(
+                    Text("\(figures.worn)/6"), "SLOTS",
+                    tint: figures.worn == 6 ? Theme.gold : Theme.textPrimary
+                )
+                summaryFigure(
+                    figures.gained > 0 ? Text("+\(figures.gained)") : Text("—"), "FROM RELICS",
+                    tint: figures.gained > 0 ? Theme.success : Theme.textSecondary
+                )
+                summaryFigure(
+                    figures.worn == 0 ? Text("—") : Text("\(Int((figures.quality * 100).rounded()))%"),
+                    "QUALITY",
+                    tint: figures.worn == 0 ? Theme.textSecondary : qualityTint(figures.quality)
+                )
+            }
+            if let note = figures.note {
+                Text(note)
+                    .font(Theme.body(8))
+                    .foregroundStyle(Theme.goldDim)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    /// The same three figures on one line, for the unit that leaves the footer
+    /// eighteen points instead of forty: six relics in three completed sets.
+    ///
+    /// The captions go, because in the panel that draws the ring "5/6", a
+    /// green "+1,240" and a percentage cannot be read as anything else, and
+    /// the note goes with them — which costs nothing, since a unit whose sets
+    /// are all complete and whose slots are all full has no note to print.
+    private func compactRelicSummary(_ figures: RelicFigures) -> some View {
+        // Bound to locals rather than written as parenthesised ternaries in
+        // the builder: a line that opens with a left parenthesis is parsed as
+        // an argument list for the expression on the line above it, so the
+        // separator before it would be asked to call itself.
+        let gained = figures.gained > 0 ? Text("+\(figures.gained)") : Text("—")
+        let quality = figures.worn == 0
+            ? Text("—")
+            : Text("\(Int((figures.quality * 100).rounded()))%")
+        return VStack(spacing: 3) {
+            Divider().overlay(Theme.stroke)
+            HStack(spacing: 5) {
+                Text("\(figures.worn)/6")
+                    .foregroundStyle(figures.worn == 6 ? Theme.gold : Theme.textPrimary)
+                Text("·").foregroundStyle(Theme.textSecondary)
+                gained
+                    .foregroundStyle(figures.gained > 0 ? Theme.success : Theme.textSecondary)
+                Text("·").foregroundStyle(Theme.textSecondary)
+                quality
+                    .foregroundStyle(figures.worn == 0 ? Theme.textSecondary : qualityTint(figures.quality))
+            }
+            .font(Theme.numeric(9))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// One figure over its name. `Text` rather than `String` so the number
+    /// keeps its thousands separator: SwiftUI groups an integer interpolated
+    /// into a `Text`, and a pre-built `String` would read "1240" beside the
+    /// ring's own "1,240".
+    private func summaryFigure(_ value: Text, _ caption: String, tint: Color) -> some View {
+        VStack(spacing: 0) {
+            value
+                .font(Theme.numeric(12))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+            Text(caption)
+                .font(Theme.body(7).weight(.black))
+                .tracking(0.6)
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// The efficiency dial's own thresholds (`EfficiencyDial.tint`), so a
+    /// relic that reads green in the inventory reads green here too.
+    private func qualityTint(_ value: Double) -> Color {
+        value >= 0.7 ? Theme.success : (value >= 0.45 ? Theme.gold : Theme.textSecondary)
+    }
+
+    /// What to farm next, in one line: the set with pieces on it but not
+    /// enough of them, then the slots that are simply empty.
+    ///
+    /// Nil when the ring is full and every piece on it belongs to a completed
+    /// set: there is nothing left to farm, and the sets row above is saying so
+    /// in three lines.
+    private func setProgressNote(_ unit: ResolvedUnit) -> String? {
+        var tally: [RelicSet: Int] = [:]
+        for relic in unit.relics { tally[relic.set, default: 0] += 1 }
+        let pending = tally
+            .filter { entry in
+                let spare = entry.value % entry.key.piecesRequired
+                guard spare > 0 else { return false }
+                // A set only counts as in progress if finishing it is possible
+                // at all. Five pieces of a four-piece set leaves a spare of
+                // one, and printing "Fury 1/4" there asks for three more Fury
+                // pieces when the eight slots that would take are two more
+                // than the ring has: the honest advice in that case is the
+                // empty-slot line below.
+                let target = (entry.value / entry.key.piecesRequired + 1) * entry.key.piecesRequired
+                return target <= 6
+            }
+            // Closest to done first, then by name. The name is not decoration:
+            // `tally` is a Dictionary, so without it two sets a piece short
+            // would be printed in whichever order the hash table happened to
+            // hold them — an order that is reseeded on every launch.
+            .sorted {
+                let left = $0.value % $0.key.piecesRequired
+                let right = $1.value % $1.key.piecesRequired
+                if left != right { return left > right }
+                return $0.key.displayName < $1.key.displayName
+            }
+            .prefix(2)
+            .map { "\($0.key.displayName) \($0.value % $0.key.piecesRequired)/\($0.key.piecesRequired)" }
+        if !pending.isEmpty {
+            return "In progress: " + pending.joined(separator: " · ")
+        }
+        let empty = 6 - unit.relics.count
+        guard empty > 0 else { return nil }
+        return "\(empty) slot\(empty == 1 ? "" : "s") empty · Auto-equip fills them"
+    }
+
     // MARK: - Right: the stats
 
     private func stats(_ unit: ResolvedUnit) -> some View {
@@ -478,7 +744,14 @@ struct UnitDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(8)
+        // The first row here is the star row and the three tags, drawn corner
+        // to corner: at the old flat 8 the leading star was inside the top-left
+        // ornament (18.6 x 16.9 points) and the Controller tag inside the
+        // top-right one. The panel has ~77 points of unused height under the
+        // awakening line, so the ornament's clearance at the bottom is free.
+        .padding(.horizontal, Theme.panelInset)
+        .padding(.top, Theme.panelPadding)
+        .padding(.bottom, panelBottomInset)
         .panelBackground(radius: Theme.tightCorner)
     }
 
@@ -574,7 +847,16 @@ struct UnitDetailView: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(8)
+        .padding(.horizontal, Theme.panelInset)
+        .padding(.top, Theme.panelPadding)
+        // The photographed overlap. The skill-up hint is this panel's last row
+        // and starts at its leading edge — the worst corner there is — so at
+        // the old flat 8 its first word was drawn on the bottom-left ornament
+        // and its baseline sat on the flat band: on CI frame 2-detail.jpg the
+        // panel's outer bottom edge is at 360.8pt, the text's bottom at 353.7,
+        // and the ornament's mass begins at 344.6. The stats panel above is in
+        // the same column with ~77 points spare and pays for the ten.
+        .padding(.bottom, panelBottomInset)
         .panelBackground(radius: Theme.tightCorner)
     }
 
@@ -616,6 +898,12 @@ struct UnitDetailView: View {
                 Text(skill.name)
                     .font(Theme.body(12).weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
+                    // Unbounded, a long name ("Judgement of the Nine Bows")
+                    // wrapped to two lines and took the whole panel a line
+                    // taller, which is the one direction this sheet cannot
+                    // afford to grow.
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 if skill.isPassive {
                     Text("PASSIVE")
                         .font(Theme.body(7).weight(.black))
@@ -662,6 +950,10 @@ struct UnitDetailView: View {
                     .font(Theme.body(8))
                     .foregroundStyle(Theme.goldDim)
                     .lineLimit(1)
+                    // A long bonus label ("Cooldown −1 turn", "Harm +10%")
+                    // pushed this past the panel on a 667-point phone and it
+                    // ellipsised mid-sentence. It shrinks a step instead.
+                    .minimumScaleFactor(0.8)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
