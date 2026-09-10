@@ -50,7 +50,7 @@
       "finished_at": 1788999652452,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:20:54Z"
+      "polled": "2026-09-10T01:45:43Z"
     },
     "rig": {
       "id": "01a088b0-5e61-7156-9c6e-f3247627e96b",
@@ -77,7 +77,10 @@
       "started_at": 1788999658223,
       "finished_at": 1788999738734,
       "name": "",
-      "polled": "2026-09-10T00:22:19Z"
+      "polled": "2026-09-10T01:45:43Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088b1-a8af-71b5-9a81-bf2f0613bd4d",
@@ -100,7 +103,10 @@
       "started_at": 1788999739929,
       "finished_at": 1788999752316,
       "name": "",
-      "polled": "2026-09-10T00:22:33Z"
+      "polled": "2026-09-10T01:45:43Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088b1-ab6c-76ca-b25a-7f6c2692acbb",
@@ -123,7 +129,10 @@
       "started_at": 1788999740486,
       "finished_at": 1788999751917,
       "name": "",
-      "polled": "2026-09-10T00:22:33Z"
+      "polled": "2026-09-10T01:45:43Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088b1-ad7d-7726-8c0d-11b173598da4",
@@ -146,7 +155,10 @@
       "started_at": 1788999741038,
       "finished_at": 1788999754502,
       "name": "",
-      "polled": "2026-09-10T00:22:44Z"
+      "polled": "2026-09-10T01:45:43Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088b1-afb0-7067-914d-204bfb34aae9",
@@ -169,7 +181,10 @@
       "started_at": 1788999741698,
       "finished_at": 1788999754065,
       "name": "",
-      "polled": "2026-09-10T00:22:44Z"
+      "polled": "2026-09-10T01:45:43Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088b1-b23a-73b2-945e-824138e9b5a1",
@@ -192,7 +207,10 @@
       "started_at": 1788999742238,
       "finished_at": 1788999768724,
       "name": "",
-      "polled": "2026-09-10T00:22:54Z"
+      "polled": "2026-09-10T01:45:43Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088b1-b451-760a-b0df-ab23461cb7fa",
@@ -215,8 +233,12 @@
       "started_at": 1788999742802,
       "finished_at": 1788999762156,
       "name": "",
-      "polled": "2026-09-10T00:22:44Z"
+      "polled": "2026-09-10T01:45:44Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:45:44Z"
 }

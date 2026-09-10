@@ -50,7 +50,7 @@
       "finished_at": 1788999405196,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:16:54Z"
+      "polled": "2026-09-10T01:42:00Z"
     },
     "rig": {
       "id": "01a088ac-b60a-7217-b640-f6b86acc004c",
@@ -77,7 +77,10 @@
       "started_at": 1788999418761,
       "finished_at": 1788999485047,
       "name": "",
-      "polled": "2026-09-10T00:18:09Z"
+      "polled": "2026-09-10T01:42:00Z",
+      "downloaded": {
+        "glb": "Art/Models/nymph.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088ad-da7d-7044-96b2-8a791a24a257",
@@ -100,7 +103,10 @@
       "started_at": 1788999490777,
       "finished_at": 1788999513888,
       "name": "",
-      "polled": "2026-09-10T00:18:36Z"
+      "polled": "2026-09-10T01:42:00Z",
+      "downloaded": {
+        "glb": "Art/Models/nymph_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088ad-de35-7232-bd7e-021a56781568",
@@ -123,7 +129,10 @@
       "started_at": 1788999491454,
       "finished_at": 1788999532912,
       "name": "",
-      "polled": "2026-09-10T00:18:56Z"
+      "polled": "2026-09-10T01:42:01Z",
+      "downloaded": {
+        "glb": "Art/Models/nymph_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088ad-e0d4-7728-8ac2-def870ec9bb5",
@@ -146,7 +155,10 @@
       "started_at": 1788999492134,
       "finished_at": 1788999516007,
       "name": "",
-      "polled": "2026-09-10T00:18:35Z"
+      "polled": "2026-09-10T01:42:01Z",
+      "downloaded": {
+        "glb": "Art/Models/nymph_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088ad-e380-70dd-a589-d7b2dda2d2c6",
@@ -169,7 +181,10 @@
       "started_at": 1788999492820,
       "finished_at": 1788999515860,
       "name": "",
-      "polled": "2026-09-10T00:18:35Z"
+      "polled": "2026-09-10T01:42:01Z",
+      "downloaded": {
+        "glb": "Art/Models/nymph_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088ad-e62a-74e9-a549-12450a8d09a0",
@@ -192,7 +207,10 @@
       "started_at": 1788999493454,
       "finished_at": 1788999536875,
       "name": "",
-      "polled": "2026-09-10T00:18:56Z"
+      "polled": "2026-09-10T01:42:01Z",
+      "downloaded": {
+        "glb": "Art/Models/nymph_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088ad-e8a8-70db-8887-fd8aa41d8fc1",
@@ -215,8 +233,12 @@
       "started_at": 1788999494172,
       "finished_at": 1788999525018,
       "name": "",
-      "polled": "2026-09-10T00:18:46Z"
+      "polled": "2026-09-10T01:42:01Z",
+      "downloaded": {
+        "glb": "Art/Models/nymph_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:42:01Z"
 }

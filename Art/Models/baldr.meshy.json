@@ -50,7 +50,7 @@
       "finished_at": 1788999404395,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:16:47Z"
+      "polled": "2026-09-10T01:42:28Z"
     },
     "rig": {
       "id": "01a088ac-9b58-717e-abe9-0bd413e018c6",
@@ -77,7 +77,10 @@
       "started_at": 1788999411604,
       "finished_at": 1788999469760,
       "name": "",
-      "polled": "2026-09-10T00:17:52Z"
+      "polled": "2026-09-10T01:42:29Z",
+      "downloaded": {
+        "glb": "Art/Models/baldr.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088ad-968f-7686-8534-f99716176bb5",
@@ -100,7 +103,10 @@
       "started_at": 1788999473186,
       "finished_at": 1788999500056,
       "name": "",
-      "polled": "2026-09-10T00:18:28Z"
+      "polled": "2026-09-10T01:42:29Z",
+      "downloaded": {
+        "glb": "Art/Models/baldr_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088ad-9968-70f9-becf-59a865436ac2",
@@ -123,7 +129,10 @@
       "started_at": 1788999473860,
       "finished_at": 1788999501888,
       "name": "",
-      "polled": "2026-09-10T00:18:28Z"
+      "polled": "2026-09-10T01:42:29Z",
+      "downloaded": {
+        "glb": "Art/Models/baldr_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088ad-9c0e-7465-9b6d-873f5e77d7da",
@@ -146,7 +155,10 @@
       "started_at": 1788999474511,
       "finished_at": 1788999511853,
       "name": "",
-      "polled": "2026-09-10T00:18:39Z"
+      "polled": "2026-09-10T01:42:29Z",
+      "downloaded": {
+        "glb": "Art/Models/baldr_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088ad-9ea8-7067-a86a-b84ede072bd6",
@@ -169,7 +181,10 @@
       "started_at": 1788999475226,
       "finished_at": 1788999503076,
       "name": "",
-      "polled": "2026-09-10T00:18:28Z"
+      "polled": "2026-09-10T01:42:29Z",
+      "downloaded": {
+        "glb": "Art/Models/baldr_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088ad-a19a-7696-86fe-85b8ca2aa513",
@@ -192,7 +207,10 @@
       "started_at": 1788999475875,
       "finished_at": 1788999530574,
       "name": "",
-      "polled": "2026-09-10T00:18:59Z"
+      "polled": "2026-09-10T01:42:29Z",
+      "downloaded": {
+        "glb": "Art/Models/baldr_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088ad-a3e8-70e5-8472-42aed7d30d31",
@@ -215,8 +233,12 @@
       "started_at": 1788999476528,
       "finished_at": 1788999509452,
       "name": "",
-      "polled": "2026-09-10T00:18:39Z"
+      "polled": "2026-09-10T01:42:29Z",
+      "downloaded": {
+        "glb": "Art/Models/baldr_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:42:29Z"
 }

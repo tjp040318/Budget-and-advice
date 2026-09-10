@@ -50,7 +50,7 @@
       "finished_at": 1788999534127,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:19:00Z"
+      "polled": "2026-09-10T01:43:38Z"
     },
     "rig": {
       "id": "01a088ae-a235-7065-a1cb-2d61cf211d01",
@@ -77,7 +77,10 @@
       "started_at": 1788999557393,
       "finished_at": 1788999639151,
       "name": "",
-      "polled": "2026-09-10T00:20:48Z"
+      "polled": "2026-09-10T01:43:38Z",
+      "downloaded": {
+        "glb": "Art/Models/njord.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088b0-4682-74bb-b476-4f4dead20970",
@@ -100,7 +103,10 @@
       "started_at": 1788999649547,
       "finished_at": 1788999661992,
       "name": "",
-      "polled": "2026-09-10T00:21:04Z"
+      "polled": "2026-09-10T01:43:38Z",
+      "downloaded": {
+        "glb": "Art/Models/njord_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088b0-4a4d-771e-849c-f12d825d0891",
@@ -123,7 +129,10 @@
       "started_at": 1788999650295,
       "finished_at": 1788999661489,
       "name": "",
-      "polled": "2026-09-10T00:21:03Z"
+      "polled": "2026-09-10T01:43:38Z",
+      "downloaded": {
+        "glb": "Art/Models/njord_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088b0-4d3b-7208-b3ce-202472057733",
@@ -146,7 +155,10 @@
       "started_at": 1788999651049,
       "finished_at": 1788999663752,
       "name": "",
-      "polled": "2026-09-10T00:21:03Z"
+      "polled": "2026-09-10T01:43:39Z",
+      "downloaded": {
+        "glb": "Art/Models/njord_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088b0-5027-7545-99e9-40e37f4da82f",
@@ -169,7 +181,10 @@
       "started_at": 1788999651669,
       "finished_at": 1788999663578,
       "name": "",
-      "polled": "2026-09-10T00:21:03Z"
+      "polled": "2026-09-10T01:43:39Z",
+      "downloaded": {
+        "glb": "Art/Models/njord_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088b0-5294-733b-a48d-b8a4b185ca66",
@@ -192,7 +207,10 @@
       "started_at": 1788999652345,
       "finished_at": 1788999676520,
       "name": "",
-      "polled": "2026-09-10T00:21:24Z"
+      "polled": "2026-09-10T01:43:39Z",
+      "downloaded": {
+        "glb": "Art/Models/njord_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088b0-554a-703c-9641-0d49d1d4377e",
@@ -215,8 +233,12 @@
       "started_at": 1788999653017,
       "finished_at": 1788999670431,
       "name": "",
-      "polled": "2026-09-10T00:21:14Z"
+      "polled": "2026-09-10T01:43:39Z",
+      "downloaded": {
+        "glb": "Art/Models/njord_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:43:39Z"
 }

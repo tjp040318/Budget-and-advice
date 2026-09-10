@@ -50,7 +50,7 @@
       "finished_at": 1788999607595,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:20:14Z"
+      "polled": "2026-09-10T01:45:18Z"
     },
     "rig": {
       "id": "01a088af-c1df-732c-9a0c-ef33312b68c8",
@@ -77,7 +77,7 @@
       "started_at": 1788999626584,
       "finished_at": 1788999703351,
       "name": "",
-      "polled": "2026-09-10T00:21:47Z"
+      "polled": "2026-09-10T01:45:18Z"
     },
     "clip:idle_combat": {
       "id": "01a088b1-2d69-7462-a8d2-c3230e5af805",
@@ -100,7 +100,10 @@
       "started_at": 1788999708448,
       "finished_at": 1788999723539,
       "name": "",
-      "polled": "2026-09-10T00:22:13Z"
+      "polled": "2026-09-10T01:45:18Z",
+      "downloaded": {
+        "glb": "Art/Models/vidar_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088b1-305d-73da-ba76-feb140d57fea",
@@ -123,7 +126,10 @@
       "started_at": 1788999709114,
       "finished_at": 1788999726708,
       "name": "",
-      "polled": "2026-09-10T00:22:12Z"
+      "polled": "2026-09-10T01:45:18Z",
+      "downloaded": {
+        "glb": "Art/Models/vidar_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088b1-330c-727f-ad3e-27983cb3c12f",
@@ -146,7 +152,10 @@
       "started_at": 1788999709758,
       "finished_at": 1788999728000,
       "name": "",
-      "polled": "2026-09-10T00:22:12Z"
+      "polled": "2026-09-10T01:45:18Z",
+      "downloaded": {
+        "glb": "Art/Models/vidar_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088b1-357b-75ac-94de-bf84fd99d085",
@@ -169,7 +178,10 @@
       "started_at": 1788999710321,
       "finished_at": 1788999728919,
       "name": "",
-      "polled": "2026-09-10T00:22:13Z"
+      "polled": "2026-09-10T01:45:18Z",
+      "downloaded": {
+        "glb": "Art/Models/vidar_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088b1-37b1-7746-aa1a-86267a6b09a4",
@@ -192,7 +204,10 @@
       "started_at": 1788999710912,
       "finished_at": 1788999742964,
       "name": "",
-      "polled": "2026-09-10T00:22:23Z"
+      "polled": "2026-09-10T01:45:18Z",
+      "downloaded": {
+        "glb": "Art/Models/vidar_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088b1-3a0c-71e3-bd4b-89aba1ea29da",
@@ -215,8 +230,12 @@
       "started_at": 1788999711490,
       "finished_at": 1788999734282,
       "name": "",
-      "polled": "2026-09-10T00:22:23Z"
+      "polled": "2026-09-10T01:45:19Z",
+      "downloaded": {
+        "glb": "Art/Models/vidar_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:45:19Z"
 }

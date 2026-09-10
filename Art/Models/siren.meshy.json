@@ -50,7 +50,7 @@
       "finished_at": 1788999398298,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:16:47Z"
+      "polled": "2026-09-10T01:41:32Z"
     },
     "rig": {
       "id": "01a088ac-9a42-70c2-981e-82502622ac8f",
@@ -77,7 +77,10 @@
       "started_at": 1788999411803,
       "finished_at": 1788999480860,
       "name": "",
-      "polled": "2026-09-10T00:18:02Z"
+      "polled": "2026-09-10T01:41:32Z",
+      "downloaded": {
+        "glb": "Art/Models/siren.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088ad-bebc-722a-98c4-44172f721fe9",
@@ -100,7 +103,10 @@
       "started_at": 1788999483581,
       "finished_at": 1788999504461,
       "name": "",
-      "polled": "2026-09-10T00:18:28Z"
+      "polled": "2026-09-10T01:41:33Z",
+      "downloaded": {
+        "glb": "Art/Models/siren_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088ad-c208-7022-adc0-e1740dfe49b6",
@@ -123,7 +129,10 @@
       "started_at": 1788999484218,
       "finished_at": 1788999526854,
       "name": "",
-      "polled": "2026-09-10T00:18:49Z"
+      "polled": "2026-09-10T01:41:33Z",
+      "downloaded": {
+        "glb": "Art/Models/siren_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088ad-c47b-74a0-b7ad-3b5289fa1c1f",
@@ -146,7 +155,10 @@
       "started_at": 1788999484878,
       "finished_at": 1788999507441,
       "name": "",
-      "polled": "2026-09-10T00:18:28Z"
+      "polled": "2026-09-10T01:41:33Z",
+      "downloaded": {
+        "glb": "Art/Models/siren_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088ad-c715-708d-be04-0aba57bd1a70",
@@ -169,7 +181,10 @@
       "started_at": 1788999485703,
       "finished_at": 1788999505179,
       "name": "",
-      "polled": "2026-09-10T00:18:28Z"
+      "polled": "2026-09-10T01:41:33Z",
+      "downloaded": {
+        "glb": "Art/Models/siren_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088ad-ca4c-77d9-a84b-ca6ceb454d32",
@@ -192,7 +207,10 @@
       "started_at": 1788999486269,
       "finished_at": 1788999522137,
       "name": "",
-      "polled": "2026-09-10T00:18:49Z"
+      "polled": "2026-09-10T01:41:33Z",
+      "downloaded": {
+        "glb": "Art/Models/siren_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088ad-cc7d-7012-895a-e0f1ddcb89a3",
@@ -215,8 +233,12 @@
       "started_at": 1788999486879,
       "finished_at": 1788999521148,
       "name": "",
-      "polled": "2026-09-10T00:18:49Z"
+      "polled": "2026-09-10T01:41:33Z",
+      "downloaded": {
+        "glb": "Art/Models/siren_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:41:33Z"
 }

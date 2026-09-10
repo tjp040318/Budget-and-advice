@@ -50,7 +50,7 @@
       "finished_at": 1788999606024,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:20:12Z"
+      "polled": "2026-09-10T01:44:24Z"
     },
     "rig": {
       "id": "01a088af-bb2f-77f6-9314-131e5dccb770",
@@ -77,7 +77,10 @@
       "started_at": 1788999616539,
       "finished_at": 1788999681959,
       "name": "",
-      "polled": "2026-09-10T00:21:27Z"
+      "polled": "2026-09-10T01:44:24Z",
+      "downloaded": {
+        "glb": "Art/Models/sif.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088b0-decc-70d0-aee4-8fe490502514",
@@ -100,7 +103,10 @@
       "started_at": 1788999688366,
       "finished_at": 1788999701922,
       "name": "",
-      "polled": "2026-09-10T00:21:42Z"
+      "polled": "2026-09-10T01:44:24Z",
+      "downloaded": {
+        "glb": "Art/Models/sif_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088b0-e21e-7435-99e9-d97ad984fad1",
@@ -123,7 +129,10 @@
       "started_at": 1788999689094,
       "finished_at": 1788999701670,
       "name": "",
-      "polled": "2026-09-10T00:21:42Z"
+      "polled": "2026-09-10T01:44:24Z",
+      "downloaded": {
+        "glb": "Art/Models/sif_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088b0-e4ef-7797-bc1b-8a2198e1872d",
@@ -146,7 +155,10 @@
       "started_at": 1788999689693,
       "finished_at": 1788999723314,
       "name": "",
-      "polled": "2026-09-10T00:22:03Z"
+      "polled": "2026-09-10T01:44:24Z",
+      "downloaded": {
+        "glb": "Art/Models/sif_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088b0-e748-7326-a451-f526952cf16c",
@@ -169,7 +181,10 @@
       "started_at": 1788999690309,
       "finished_at": 1788999712518,
       "name": "",
-      "polled": "2026-09-10T00:21:53Z"
+      "polled": "2026-09-10T01:44:24Z",
+      "downloaded": {
+        "glb": "Art/Models/sif_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088b0-e9b2-71b2-b365-3deeb8b80f60",
@@ -192,7 +207,10 @@
       "started_at": 1788999690979,
       "finished_at": 1788999725015,
       "name": "",
-      "polled": "2026-09-10T00:22:14Z"
+      "polled": "2026-09-10T01:44:24Z",
+      "downloaded": {
+        "glb": "Art/Models/sif_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088b0-ec4c-7654-a14b-63930bdfd714",
@@ -215,8 +233,12 @@
       "started_at": 1788999691734,
       "finished_at": 1788999721278,
       "name": "",
-      "polled": "2026-09-10T00:22:03Z"
+      "polled": "2026-09-10T01:44:24Z",
+      "downloaded": {
+        "glb": "Art/Models/sif_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:44:24Z"
 }

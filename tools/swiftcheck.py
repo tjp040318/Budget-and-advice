@@ -422,6 +422,47 @@ def check_spliced_lines(files, errors):
                           f"({cur!r}) — a split or a paste landed twice")
 
 
+# ---------------------------------------------------------------------------
+# Rule 13: an attribute that binds to the wrong declaration
+# ---------------------------------------------------------------------------
+
+def check_orphan_attributes(files, errors):
+    """`@discardableResult` (and friends) must sit on a function.
+
+    Swift skips comments when binding an attribute, so inserting a type
+    between an attribute and the function it was written for silently
+    reattaches it. That is what happened on 2026-09-10: a new `HitColour`
+    enum landed between `@discardableResult` and `Juice.impact`, and the
+    macOS runner answered thirty minutes later with "'@discardableResult'
+    attribute cannot be applied to this declaration". Every brace balanced
+    and every name resolved, so nothing here saw it.
+
+    The check: for each of these attributes, find the next line that starts a
+    declaration, skipping comments, blank lines and further attributes. If it
+    is not a function or an initialiser, the attribute has drifted."""
+    FUNCS = ("func ", "static func ", "init(", "init?", "init<", "mutating func ",
+             "private func ", "public func ", "internal func ", "fileprivate func ",
+             "private static func ", "public static func ", "@objc func ")
+    WANT_FUNC = ("@discardableResult", "@inlinable", "@inline(__always)")
+    for path in files:
+        lines = open(path).read().splitlines()
+        for i, raw in enumerate(lines):
+            line = raw.strip()
+            if line not in WANT_FUNC:
+                continue
+            for follower in lines[i + 1:]:
+                nxt = follower.strip()
+                if not nxt or nxt.startswith("//") or nxt.startswith("@"):
+                    continue
+                if any(nxt.startswith(f) or (" func " in nxt and nxt.endswith("(")) for f in FUNCS):
+                    break
+                if "func " in nxt.split("(")[0]:
+                    break
+                errors.append(f"{path}:{i + 1}: {line} binds to '{nxt[:48]}', which is not a function "
+                              f"— a declaration was inserted between the attribute and its function")
+                break
+
+
 def check_unknown_types(files, declared, errors):
     """Types used but never declared anywhere in the module."""
     KNOWN = {
@@ -618,6 +659,7 @@ def main():
     check_duplicate_funcs(files, errors)
     check_bundle_resources(errors)
     check_spliced_lines(files, errors)
+    check_orphan_attributes(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 

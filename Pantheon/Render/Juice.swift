@@ -62,9 +62,6 @@ enum Juice {
     /// would cut the second hit's freeze short.
     private static var pauseGeneration = 0
 
-    /// Plays the impact for a hit. Returns how long the world froze, so the
-    /// caller can extend its hold by that much and keep the event cadence.
-    @discardableResult
     /// The colour of a hit: what struck, as opposed to how hard.
     ///
     /// The tier alone made every blow the same event at five volumes. A cut,
@@ -91,6 +88,9 @@ enum Juice {
         }
     }
 
+    /// Plays the impact for a hit. Returns how long the world froze, so the
+    /// caller can extend its hold by that much and keep the event cadence.
+    @discardableResult
     static func impact(
         _ weight: HitWeight,
         colour: HitColour? = nil,
