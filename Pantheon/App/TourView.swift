@@ -38,6 +38,7 @@ struct TourView: View {
         ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("arena_battle", 6), ("more", 2),
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
+        ("victory", 4),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -160,6 +161,12 @@ struct TourView: View {
             CampaignView()
         case "missions":
             MissionsView()
+        case "victory":
+            // The two acts of a win without fighting one: the reckoning,
+            // then the chest opening on its spoils. `autoplay` taps through
+            // for the camera.
+            BattleResultView(summary: Self.demoVictory(), onDismiss: {}, autoplay: true)
+                .background(Color.black.ignoresSafeArea())
         default:
             SettingsView()
         }
@@ -236,6 +243,55 @@ struct TourView: View {
             isFeatured: true,
             fromPity: false
         )]
+    }
+
+    /// A won stage as the result screen reads it: three of the first
+    /// families, one of them the MVP, one fallen, and a chest with every
+    /// kind of spoil in it, so the tiles are all photographed at once.
+    private static func demoVictory() -> BattleSummary {
+        let cast: [(id: String, dealt: Double, taken: Double, healed: Double, kills: Int, survived: Bool)] = [
+            ("anubis_umbra", 14_820, 3_960, 0, 3, true),
+            ("sekhmet_ember", 9_140, 6_210, 0, 2, true),
+            ("thoth_radiance", 2_380, 1_100, 5_640, 0, true),
+            ("zeus_tide", 6_470, 8_900, 0, 1, false),
+        ]
+        var stats: [BattleSummary.UnitStat] = []
+        for member in cast {
+            guard let blueprint = UnitDatabase.blueprint(member.id) else { continue }
+            stats.append(BattleSummary.UnitStat(
+                id: UUID(),
+                name: blueprint.name,
+                portraitName: blueprint.model.portraitName(awakened: false),
+                element: blueprint.element,
+                stars: blueprint.naturalStars,
+                dealt: member.dealt,
+                taken: member.taken,
+                healed: member.healed,
+                kills: member.kills,
+                survived: member.survived
+            ))
+        }
+        let loot: [BattleSummary.Loot] = [
+            .init(glyph: "circle.hexagongrid.fill", title: "Drachma", amount: "+1,240", tint: .gold),
+            .init(glyph: "arrow.up.circle.fill", title: "Unit EXP", amount: "+860", tint: .verdigris),
+            .init(glyph: "sparkles", title: "Divinity", amount: "+15", tint: .marble),
+            .init(glyph: RelicSet.fury.glyph, title: "Fury Relic", amount: "Slot 4", tint: .gold, stars: 5),
+            .init(glyph: "drop.triangle.fill", title: "Ember Essence", amount: "+3", tint: .element(.ember)),
+            .init(glyph: ScrollType.unknown.glyph, title: ScrollType.unknown.displayName, amount: "+1", tint: .scroll(.unknown)),
+        ]
+        return BattleSummary(
+            outcome: .victory,
+            lines: [],
+            stars: 3,
+            title: "The Weighing of the Heart",
+            turns: 11,
+            damageDealt: stats.reduce(0) { $0 + $1.dealt },
+            damageTaken: stats.reduce(0) { $0 + $1.taken },
+            unitStats: stats,
+            mvpID: stats.first?.id,
+            loot: loot,
+            isFirstClear: true
+        )
     }
 }
 #endif

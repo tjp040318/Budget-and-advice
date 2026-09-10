@@ -815,7 +815,7 @@ def check_unknown_types(files, declared, errors):
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
         "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64",
         "ClosedRange","Key","DEBUG","NONE","Menu","AnyView","EmptyView","Namespace",
-        "Canvas","GraphicsContext","ScrollViewProxy","UnitCurve","CGVector", "ImageIO", "CFURL", "CFDictionary", "CFString",
+        "Canvas","GraphicsContext","ScrollViewProxy","UnitCurve","CGVector","Ellipse", "ImageIO", "CFURL", "CFDictionary", "CFString",
         "CGImageSourceCreateWithURL", "CGImageSourceCreateThumbnailAtIndex",
         "kCGImageSourceCreateThumbnailFromImageAlways", "kCGImageSourceCreateThumbnailWithTransform",
         "kCGImageSourceShouldCacheImmediately", "kCGImageSourceThumbnailMaxPixelSize",

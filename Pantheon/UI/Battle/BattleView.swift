@@ -1494,87 +1494,433 @@ struct SkillButton: View {
     }
 }
 
-/// The end-of-battle panel.
+/// The end of a battle, in two acts.
+///
+/// The owner: "when we win a battle, it should first show the stats of the
+/// battle, then you tap to show a chest that opens or like a greek chest, as
+/// it opens it shows your prize. Again, I want this to feel PREMIUM."
+///
+/// ACT ONE, THE RECKONING. The word, the stars ticking in one at a time, the
+/// three numbers of the fight, and a row per unit saying what each one did —
+/// damage dealt as a bar against the best, damage taken, healing, kills — with
+/// a laurel on the one that did the most. A defeat gets the same reckoning in
+/// wine instead of gold, and a Continue button, because there is no chest to
+/// open after losing.
+///
+/// ACT TWO, THE CHEST. One tap and the reckoning gives way to a marble
+/// strongbox bound in bronze, shut, waiting. A second tap lifts the lid: a
+/// flash, rays, the inside lit gold, and the spoils rise out of it one by one
+/// onto a shelf above, each with a tick and a pulse in the hand. Only then does
+/// Continue appear. Every timed step checks it still belongs to the current
+/// sequence, so a tap that skips ahead cannot be followed by a stale step.
+///
+/// Nothing here is a flat fill. The chest is stone plate and bronze plate over
+/// a bevel; the tiles are panels; the light is additive over the scrim. That
+/// is the whole difference between a receipt and a reward.
 struct BattleResultView: View {
     let summary: BattleSummary
     let onDismiss: () -> Void
+    /// The CI tour sets this so a five-second photograph catches the chest
+    /// open with the spoils out, rather than the reckoning waiting for a tap.
+    var autoplay: Bool = false
+
+    private enum Phase { case reckoning, chest, opened }
+
+    @State private var phase: Phase = .reckoning
+    @State private var shownStars = 0
+    @State private var rowsShown = 0
+    @State private var lidOpen = false
+    @State private var flash: Double = 0
+    @State private var raysShown = false
+    @State private var rays: Double = 0
+    @State private var lootShown = 0
+    @State private var continueShown = false
+    @State private var pulse = false
+    @State private var sequence = 0
+
+    private var won: Bool { summary.outcome == .victory }
+    private var hasSpoils: Bool { won && !summary.loot.isEmpty }
 
     var body: some View {
         ZStack {
-            Color.black.opacity(0.78).ignoresSafeArea()
+            // The scrim. Darker than the old 0.78 because the stage under it is
+            // sunlit now, and the two acts are read against it.
+            Color.black.opacity(0.84).ignoresSafeArea()
 
-            // Across the wide axis, not down a short one: a repeat run's
-            // summary is fifteen lines, and stacked they pushed Continue —
-            // the only way out of the battle — off the bottom of the screen.
-            HStack(alignment: .top, spacing: 22) {
-                VStack(spacing: 8) {
-                    Text(headline)
-                        .font(Theme.display(38))
-                        .foregroundStyle(summary.outcome == .victory ? Theme.gold : Theme.danger)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-
-                    if summary.outcome == .victory, summary.stars > 0 {
-                        HStack(spacing: 8) {
-                            ForEach(1...3, id: \.self) { index in
-                                Image(systemName: index <= summary.stars ? "star.fill" : "star")
-                                    .font(.system(size: 26))
-                                    .foregroundStyle(index <= summary.stars ? Theme.gold : Theme.stroke)
-                            }
-                        }
-                    }
-                }
-                .frame(width: 190)
-
-                VStack(spacing: 10) {
-                    if summary.lines.isEmpty {
-                        Text("No rewards this time.")
-                            .font(Theme.body(13))
-                            .foregroundStyle(Theme.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(10)
-                            .background(Theme.panel())
-                    } else if summary.lines.count > 7 {
-                        // A repeat run banks fifteen lines; those scroll.
-                        ScrollView {
-                            rewardRows
-                        }
-                        .frame(maxHeight: 190)
-                        .background(Theme.panel())
-                    } else {
-                        rewardRows
-                            .background(Theme.panel())
-                    }
-
-                    PrimaryButton(title: "Continue", action: onDismiss)
-                }
+            switch phase {
+            case .reckoning:
+                reckoning
+                    .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            case .chest, .opened:
+                chestAct
+                    .transition(.opacity)
             }
-            .padding(.horizontal, 24)
-            .padding(.vertical, 14)
-            .frame(maxWidth: 620)
+        }
+        .onAppear { beginReckoning() }
+    }
+
+    // MARK: - Act one
+
+    private var reckoning: some View {
+        VStack(spacing: 0) {
+            HStack(alignment: .top, spacing: 18) {
+                verdict
+                    .frame(width: 292)
+                unitRows
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.horizontal, 26)
+            .padding(.top, 12)
+
+            Spacer(minLength: 6)
+
+            if hasSpoils {
+                Text("TAP TO CLAIM YOUR SPOILS")
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(2.2)
+                    .foregroundStyle(Theme.gold)
+                    .opacity(pulse ? 1 : 0.45)
+                    .padding(.bottom, 14)
+            } else {
+                PrimaryButton(title: "Continue", action: onDismiss)
+                    .frame(width: 220)
+                    .padding(.bottom, 12)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard hasSpoils else { return }
+            advanceToChest()
         }
     }
 
-    private var rewardRows: some View {
-        VStack(spacing: 6) {
-            ForEach(summary.lines) { line in
-                HStack {
-                    Image(systemName: line.icon)
-                        .font(.system(size: 12))
-                        .frame(width: 22)
-                        .foregroundStyle(Theme.goldDim)
-                    Text(line.label)
-                        .font(Theme.body(13))
-                        .foregroundStyle(Theme.textPrimary)
+    /// The word, the stars and the three numbers.
+    private var verdict: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(headline)
+                .font(Theme.display(46))
+                .foregroundStyle(won ? Theme.gold : (summary.outcome == .draw ? Theme.marble : Theme.wine))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .shadow(color: (won ? Theme.gold : Theme.wine).opacity(0.45), radius: 18)
+            if !summary.title.isEmpty {
+                Text(summary.title)
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+            if won, summary.stars > 0 {
+                HStack(spacing: 6) {
+                    ForEach(1...3, id: \.self) { index in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 24))
+                            .foregroundStyle(index <= shownStars ? Theme.gold : Theme.stroke)
+                            .scaleEffect(index <= shownStars ? 1 : 0.7)
+                            .shadow(color: Theme.gold.opacity(index <= shownStars ? 0.7 : 0), radius: 8)
+                            .animation(.spring(response: 0.32, dampingFraction: 0.55), value: shownStars)
+                    }
+                    if summary.isFirstClear {
+                        Chip(text: "First clear", systemImage: "seal.fill", tint: Theme.verdigris, filled: true)
+                            .padding(.leading, 6)
+                    }
+                }
+                .padding(.top, 2)
+            }
+            HStack(spacing: 8) {
+                statTile("TURNS", value: "\(summary.turns)")
+                statTile("DEALT", value: Int(summary.damageDealt).formatted())
+                statTile("TAKEN", value: Int(summary.damageTaken).formatted())
+            }
+            .padding(.top, 8)
+        }
+    }
+
+    private func statTile(_ label: String, value: String) -> some View {
+        VStack(spacing: 2) {
+            Text(label)
+                .font(Theme.body(8).weight(.black))
+                .tracking(1.4)
+                .foregroundStyle(Theme.goldDim)
+            Text(value)
+                .font(Theme.numeric(15))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 7)
+        .background(Theme.panel(Theme.tightCorner))
+    }
+
+    /// One row per unit, damage as a bar against the best in the team, and the
+    /// laurel on whoever earned it.
+    private var unitRows: some View {
+        let best = max(1, summary.unitStats.map { $0.dealt + $0.healed }.max() ?? 1)
+        return VStack(spacing: 6) {
+            ForEach(Array(summary.unitStats.enumerated()), id: \.element.id) { index, unit in
+                unitRow(unit, share: (unit.dealt + unit.healed) / best)
+                    .opacity(index < rowsShown ? 1 : 0)
+                    .offset(x: index < rowsShown ? 0 : 28)
+                    .animation(.spring(response: 0.42, dampingFraction: 0.8), value: rowsShown)
+            }
+            if summary.unitStats.isEmpty {
+                Text("No reckoning for this one.")
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+    }
+
+    private func unitRow(_ unit: BattleSummary.UnitStat, share: Double) -> some View {
+        let isMVP = unit.id == summary.mvpID
+        return HStack(spacing: 10) {
+            ZStack(alignment: .topTrailing) {
+                Group {
+                    if BundleImage.exists(unit.portraitName) {
+                        BundleImage(name: unit.portraitName, renderedAt: 44)
+                            .aspectRatio(contentMode: .fill)
+                    } else {
+                        Rectangle().fill(unit.element.color.opacity(0.5))
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .rarityFrame(Rarity(stars: unit.stars), radius: 6)
+                .saturation(unit.survived ? 1 : 0.15)
+                .opacity(unit.survived ? 1 : 0.6)
+                if isMVP {
+                    Image(systemName: "laurel.leading")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(Theme.ink)
+                        .padding(3)
+                        .background(Circle().fill(Theme.gold))
+                        .offset(x: 6, y: -6)
+                }
+            }
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(unit.name)
+                        .font(Theme.title(12))
+                        .foregroundStyle(isMVP ? Theme.gold : Theme.textPrimary)
                         .lineLimit(1)
-                    Spacer()
-                    Text(line.value)
-                        .font(Theme.numeric(13))
-                        .foregroundStyle(Theme.success)
+                    if isMVP {
+                        Text("MVP")
+                            .font(Theme.body(8).weight(.black))
+                            .tracking(1)
+                            .foregroundStyle(Theme.ink)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Theme.gold))
+                    }
+                    if !unit.survived {
+                        Chip(text: "Fallen", systemImage: "xmark", tint: Theme.wine)
+                    }
+                    Spacer(minLength: 0)
+                    if unit.kills > 0 {
+                        Chip(text: "\(unit.kills) \(unit.kills == 1 ? "kill" : "kills")", systemImage: "bolt.fill", tint: Theme.gold)
+                    }
+                }
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule().fill(Theme.ink.opacity(0.6))
+                        Capsule()
+                            .fill(LinearGradient(colors: [Theme.goldDim, Theme.gold], startPoint: .leading, endPoint: .trailing))
+                            .frame(width: max(4, geo.size.width * share))
+                    }
+                }
+                .frame(height: 5)
+                HStack(spacing: 10) {
+                    Text("Dealt \(Int(unit.dealt).formatted())")
+                    if unit.healed > 0 { Text("Healed \(Int(unit.healed).formatted())") }
+                    Text("Taken \(Int(unit.taken).formatted())")
+                }
+                .font(Theme.numeric(9))
+                .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Theme.panel(Theme.tightCorner))
+    }
+
+    // MARK: - Act two
+
+    private var chestAct: some View {
+        ZStack {
+            // Rays behind the chest, additive, only once it is open. Half
+            // the reveal's strength: there is a shelf of tiles to read here.
+            AngularGradient(
+                colors: [Theme.gold.opacity(0), Theme.gold.opacity(0.16), Theme.gold.opacity(0),
+                         Theme.gold.opacity(0.16), Theme.gold.opacity(0), Theme.gold.opacity(0.16),
+                         Theme.gold.opacity(0), Theme.gold.opacity(0.16), Theme.gold.opacity(0)],
+                center: .center
+            )
+            .scaleEffect(2.2)
+            .opacity(raysShown ? 1 : 0)
+            .animation(.easeOut(duration: 0.8), value: raysShown)
+            .rotationEffect(.degrees(rays))
+            .blendMode(.plusLighter)
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
+            RadialGradient(
+                colors: [Theme.gold.opacity(lidOpen ? 0.34 : 0.08), Theme.gold.opacity(lidOpen ? 0.12 : 0.03), .clear],
+                center: .init(x: 0.5, y: 0.62),
+                startRadius: 0,
+                endRadius: lidOpen ? 330 : 160
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+            .animation(.easeOut(duration: 0.6), value: lidOpen)
+
+            VStack(spacing: 0) {
+                // The shelf the spoils rise onto.
+                lootShelf
+                    .frame(height: 122)
+                    .padding(.top, 14)
+
+                Spacer(minLength: 0)
+
+                GreekChest(open: lidOpen)
+                    .frame(width: 236, height: 150)
+                    .onTapGesture { openChest() }
+
+                Group {
+                    if phase == .chest {
+                        Text("TAP TO OPEN")
+                            .font(Theme.body(11).weight(.black))
+                            .tracking(2.2)
+                            .foregroundStyle(Theme.gold)
+                            .opacity(pulse ? 1 : 0.45)
+                    } else if continueShown {
+                        PrimaryButton(title: "Continue", action: onDismiss)
+                            .frame(width: 220)
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    } else {
+                        Color.clear.frame(height: 1)
+                    }
+                }
+                .frame(height: 44)
+                .padding(.bottom, 8)
+            }
+
+            // The flash on the lid coming up. White over gold, gone in under
+            // half a second.
+            Color(hex: "#FFF3D0")
+                .opacity(flash * 0.85)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .blendMode(.plusLighter)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if phase == .chest { openChest() } else if phase == .opened, !continueShown { finishOpeningNow() }
+        }
+    }
+
+    private var lootShelf: some View {
+        HStack(spacing: 10) {
+            ForEach(Array(summary.loot.prefix(7).enumerated()), id: \.element.id) { index, item in
+                LootTile(item: item)
+                    .opacity(index < lootShown ? 1 : 0)
+                    .scaleEffect(index < lootShown ? 1 : 0.5)
+                    .offset(y: index < lootShown ? 0 : 90)
+                    .animation(.spring(response: 0.45, dampingFraction: 0.66), value: lootShown)
+            }
+            if summary.loot.count > 7 {
+                Text("+\(summary.loot.count - 7) more")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .opacity(lootShown >= 7 ? 1 : 0)
+            }
+        }
+    }
+
+    // MARK: - Sequencing
+
+    private func after(_ seconds: TimeInterval, _ work: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: work)
+    }
+
+    private func beginReckoning() {
+        sequence += 1
+        let mine = sequence
+        withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+        AudioLibrary.shared.play(won ? .victory : .defeat, volume: 0.9)
+        Juice.haptic(won ? .heavy : .medium)
+
+        let stars = won ? summary.stars : 0
+        for i in 0..<stars {
+            after(0.45 + Double(i) * 0.18) {
+                guard mine == sequence else { return }
+                shownStars = i + 1
+                AudioLibrary.shared.play(.starTick, volume: 0.8)
+                Juice.haptic(i == stars - 1 ? .medium : .light)
+            }
+        }
+        let rowStart = 0.45 + Double(stars) * 0.18 + 0.1
+        for i in 0..<summary.unitStats.count {
+            after(rowStart + Double(i) * 0.09) {
+                guard mine == sequence else { return }
+                rowsShown = i + 1
+            }
+        }
+        if autoplay, hasSpoils {
+            after(rowStart + Double(summary.unitStats.count) * 0.09 + 5.0) {
+                guard mine == sequence else { return }
+                advanceToChest()
+                after(0.9) {
+                    guard mine == sequence else { return }
+                    openChest()
                 }
             }
         }
-        .padding(10)
+    }
+
+    private func advanceToChest() {
+        guard phase == .reckoning else { return }
+        sequence += 1
+        AudioLibrary.shared.play(.uiConfirm, volume: 0.6)
+        Juice.haptic(.light)
+        withAnimation(.easeInOut(duration: 0.4)) { phase = .chest }
+        withAnimation(.linear(duration: 22).repeatForever(autoreverses: false)) { rays = 360 }
+    }
+
+    private func openChest() {
+        guard phase == .chest else { return }
+        sequence += 1
+        let mine = sequence
+        phase = .opened
+        AudioLibrary.shared.play(.summonBurst, volume: 0.9)
+        Juice.haptic(.heavy)
+        withAnimation(.spring(response: 0.55, dampingFraction: 0.7)) { lidOpen = true }
+        flash = 1
+        withAnimation(.easeOut(duration: 0.45)) { flash = 0 }
+        raysShown = true
+
+        let count = min(7, summary.loot.count)
+        for i in 0..<count {
+            after(0.38 + Double(i) * 0.14) {
+                guard mine == sequence else { return }
+                lootShown = i + 1
+                AudioLibrary.shared.play(.starTick, volume: 0.7)
+                Juice.haptic(.light)
+            }
+        }
+        after(0.38 + Double(count) * 0.14 + 0.35) {
+            guard mine == sequence else { return }
+            withAnimation(.easeOut(duration: 0.3)) { continueShown = true }
+        }
+    }
+
+    /// A tap during the opening lands everything at once.
+    private func finishOpeningNow() {
+        sequence += 1
+        lidOpen = true
+        raysShown = true
+        flash = 0
+        lootShown = min(7, summary.loot.count)
+        withAnimation(.easeOut(duration: 0.2)) { continueShown = true }
     }
 
     private var headline: String {
@@ -1583,5 +1929,170 @@ struct BattleResultView: View {
         case .defeat: return "DEFEAT"
         case .draw: return "DRAW"
         }
+    }
+}
+
+/// One spoil on the shelf. A relic wears its rarity frame; everything else
+/// is its glyph on a bronze-rimmed plate.
+struct LootTile: View {
+    let item: BattleSummary.Loot
+
+    var body: some View {
+        VStack(spacing: 5) {
+            ZStack {
+                if let stars = item.stars {
+                    RoundedRectangle(cornerRadius: 7, style: .continuous)
+                        .fill(Theme.stonePlate)
+                        .frame(width: 42, height: 42)
+                        .rarityFrame(Rarity(stars: stars), radius: 7)
+                } else {
+                    Circle()
+                        .fill(Theme.stonePlate)
+                        .frame(width: 42, height: 42)
+                        .overlay(Circle().strokeBorder(Theme.bronzeFrame, lineWidth: 1.5))
+                }
+                Image(systemName: item.glyph)
+                    .font(.system(size: 17, weight: .bold))
+                    .foregroundStyle(paint)
+                    .shadow(color: paint.opacity(0.6), radius: 6)
+            }
+            if let stars = item.stars {
+                StarRow(stars: stars, size: 7)
+            }
+            Text(item.title)
+                .font(Theme.body(9).weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(height: 24)
+            Text(item.amount)
+                .font(Theme.numeric(12))
+                .foregroundStyle(Theme.gold)
+                .lineLimit(1)
+        }
+        .frame(width: 92)
+        .padding(.vertical, 8)
+        .background(Theme.panel(Theme.tightCorner))
+    }
+
+    private var paint: Color {
+        switch item.tint {
+        case .gold: return Theme.gold
+        case .verdigris: return Theme.verdigris
+        case .laurel: return Theme.laurel
+        case .wine: return Theme.wine
+        case .marble: return Theme.marble
+        case .element(let element): return element.color
+        case .scroll(let scroll): return scroll.tint
+        }
+    }
+}
+
+/// A marble strongbox bound in bronze, drawn rather than painted, with a lid
+/// that swings up and back on a hinge along its rear edge.
+///
+/// Built from the same plates as every panel — `stonePlate`, `goldPlate`,
+/// `bevel` — so it belongs to the interface it appears in. The lid rotates
+/// about the X axis anchored at its top edge with perspective, which is what
+/// makes it open AWAY from the viewer instead of flipping like a card. When
+/// open, the inside is lit: a gold pool at the mouth and a beam standing up
+/// out of it, both additive, both faint enough that the tiles above stay
+/// legible.
+struct GreekChest: View {
+    var open: Bool
+
+    var body: some View {
+        ZStack(alignment: .bottom) {
+            // The light standing up out of the open box.
+            LinearGradient(colors: [Theme.gold.opacity(0.55), Theme.gold.opacity(0.18), .clear],
+                           startPoint: .bottom, endPoint: .top)
+                .frame(width: 150, height: 170)
+                .blur(radius: 10)
+                .blendMode(.plusLighter)
+                .opacity(open ? 1 : 0)
+                .offset(y: -52)
+                .animation(.easeOut(duration: 0.6), value: open)
+
+            // Shadow on the floor.
+            Ellipse()
+                .fill(Color.black.opacity(0.55))
+                .frame(width: 250, height: 30)
+                .blur(radius: 8)
+                .offset(y: 8)
+
+            // The body.
+            ZStack {
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(Theme.stonePlate)
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.bevel, lineWidth: 1))
+                    .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).strokeBorder(Theme.bronzeFrame, lineWidth: 2))
+                // Two bronze bands.
+                HStack {
+                    band; Spacer(); band
+                }
+                .padding(.horizontal, 40)
+                // The meander along the foot.
+                meander
+                    .frame(height: 8)
+                    .padding(.horizontal, 14)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .padding(.bottom, 9)
+                // The mouth, lit when open.
+                RadialGradient(colors: [Theme.gold.opacity(open ? 0.75 : 0), Theme.gold.opacity(open ? 0.2 : 0), .clear],
+                               center: .top, startRadius: 0, endRadius: 120)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .blendMode(.plusLighter)
+                    .animation(.easeOut(duration: 0.5), value: open)
+            }
+            .frame(width: 220, height: 96)
+
+            // The lid, hinged along its back edge.
+            ZStack {
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(Theme.marblePlate)
+                    .overlay(RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.bronzeFrame, lineWidth: 2))
+                    .overlay(
+                        // Veining.
+                        LinearGradient(colors: [.clear, Color.black.opacity(0.08), .clear, Color.black.opacity(0.06), .clear],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    )
+                HStack { band.frame(height: 40); Spacer(); band.frame(height: 40) }
+                    .padding(.horizontal, 40)
+                // The lock plate.
+                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                    .fill(Theme.goldPlate)
+                    .frame(width: 22, height: 18)
+                    .overlay(Circle().fill(Theme.ink.opacity(0.8)).frame(width: 6, height: 6).offset(y: -2))
+                    .overlay(Rectangle().fill(Theme.ink.opacity(0.8)).frame(width: 2, height: 6).offset(y: 3))
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .offset(y: 6)
+            }
+            .frame(width: 226, height: 46)
+            .shadow(color: .black.opacity(0.5), radius: 6, x: 0, y: 3)
+            .rotation3DEffect(.degrees(open ? -112 : 0), axis: (x: 1, y: 0, z: 0), anchor: .top, perspective: 0.55)
+            .offset(y: -96 + 6)
+            .animation(.spring(response: 0.55, dampingFraction: 0.7), value: open)
+        }
+    }
+
+    private var band: some View {
+        RoundedRectangle(cornerRadius: 2, style: .continuous)
+            .fill(Theme.goldPlate)
+            .frame(width: 14)
+            .overlay(RoundedRectangle(cornerRadius: 2, style: .continuous).strokeBorder(Color.black.opacity(0.45), lineWidth: 1))
+    }
+
+    /// A Greek key strip: alternating bronze squares, which reads as meander
+    /// at this size without drawing the actual key.
+    private var meander: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<22, id: \.self) { index in
+                Rectangle()
+                    .fill(index % 2 == 0 ? Theme.bronze : Theme.bronze.opacity(0.35))
+                    .frame(width: 5)
+            }
+        }
+        .frame(maxWidth: .infinity)
     }
 }
