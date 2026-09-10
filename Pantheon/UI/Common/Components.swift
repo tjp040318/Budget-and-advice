@@ -317,6 +317,12 @@ struct UnitCard: View {
         .shadow(color: isSelected ? Theme.gold.opacity(0.75) : .clear, radius: 10)
         .scaleEffect(isSelected ? 1.04 : 1)
         .animation(.spring(response: 0.28, dampingFraction: 0.7), value: isSelected)
+        // The portrait is `.aspectRatio(.fill)` in a square frame, and a tall
+        // card art lays out well above and below that frame. `.clipShape` above
+        // hides the overhang but does not clip hit-testing, so in a grid the
+        // later-declared card swallowed taps meant for the one above it. Bound
+        // the hit region to the card itself.
+        .contentShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
     }
 
     /// The carved frame for this grade. Square, transparent centre, sits over

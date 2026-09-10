@@ -1,11 +1,9 @@
 import SwiftUI
-import UIKit
 
 /// The battle screen: 3D stage underneath, HUD on top.
 struct BattleView: View {
 
     @StateObject var model: BattleViewModel
-    @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
 
     @State private var showForfeitConfirm = false
@@ -257,7 +255,10 @@ struct BattleView: View {
         }
         // Flexible, because the row it sits in also carries a stage name, a
         // wave counter and a repeat chip; fixed at 300 it pushed them off.
-        .frame(minWidth: 150, maxWidth: 260, height: 44)
+        // Two calls, not one: `frame` has a fixed overload and a flexible
+        // one and no overload mixes their labels.
+        .frame(minWidth: 150, maxWidth: 260)
+        .frame(height: 44)
     }
 
     /// Where each portrait sits on the track. Two units with level bars land

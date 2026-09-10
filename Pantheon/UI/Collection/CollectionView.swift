@@ -128,6 +128,10 @@ struct CollectionView: View {
 
     private let gap: CGFloat = 6
     private let gridPadding: CGFloat = 6
+    /// The smallest card worth drawing: under this the name stops reading even
+    /// at `minimumScaleFactor`. Both the column count and the card width are
+    /// held to it.
+    private let minimumCard: CGFloat = 56
     /// What `UnitCard` draws under the tile: the name over the level line.
     /// Held here only to size the grid — if the card's footer changes height,
     /// change this with it.
@@ -164,21 +168,36 @@ struct CollectionView: View {
         }
     }
 
+    /// The width the cards have to share: the frame less the padding the strip
+    /// above already uses. A non-finite proposal is treated as nothing, because
+    /// the column count is an `Int(_:)` of this and `Int(nan)` traps rather
+    /// than returning zero.
+    private func gridSpan(in size: CGSize) -> CGFloat {
+        let width = size.width.isFinite ? size.width : 0
+        return max(80, width - ScreenChrome.contentPadding * 2)
+    }
+
     private func columnCount(in size: CGSize) -> Int {
-        let span = max(80, size.width - ScreenChrome.contentPadding * 2)
-        let usable = max(80, size.height - gridPadding * 2)
+        let span = gridSpan(in: size)
+        let height = size.height.isFinite ? size.height : 0
+        let usable = max(80, height - gridPadding * 2)
         // The widest card that still leaves three rows in the frame, the
         // card's own footer counted in.
         let byHeight = (usable - gap * 2) / 3 - cardFooter
-        let target = min(max(byHeight, 56), 96)
+        let target = min(max(byHeight, minimumCard), 96)
         // Rounded up, so the card the width divides into is no taller than
         // the height allows: too wide a card costs a whole row.
-        return max(4, Int(((span + gap) / (target + gap)).rounded(.up)))
+        let wanted = max(4, Int(((span + gap) / (target + gap)).rounded(.up)))
+        // ...but never more columns than the width holds at the smallest card.
+        // These are `.fixed` columns: one too many and the row lays out wider
+        // than the frame rather than wrapping, which is what the first pass —
+        // proposed a zero size before the frame is known — would draw.
+        let fits = max(1, Int((span + gap) / (minimumCard + gap)))
+        return min(wanted, fits)
     }
 
     private func cardWidth(in size: CGSize, columns: Int) -> CGFloat {
-        let span = max(80, size.width - ScreenChrome.contentPadding * 2)
-        let width = (span - gap * CGFloat(columns - 1)) / CGFloat(columns)
-        return max(40, width.rounded(.down))
+        let width = (gridSpan(in: size) - gap * CGFloat(columns - 1)) / CGFloat(columns)
+        return max(minimumCard, width.rounded(.down))
     }
 }
