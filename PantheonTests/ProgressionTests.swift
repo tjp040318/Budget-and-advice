@@ -98,4 +98,133 @@ final class ProgressionTests: XCTestCase {
         XCTAssertTrue(essences.values.allSatisfy { $0 == 0 })
         XCTAssertThrowsError(try ProgressionService.awaken(&unit, essences: &essences))
     }
+
+    // MARK: - Fusion
+    //
+    // The recipe table is thirty blueprint ids typed by hand, and a wrong one
+    // shows up in the game only as a corner that can never be filled — no
+    // crash, no log line, just a hexagram nobody can finish. These four tests
+    // are the only thing that reads that table mechanically.
+
+    func testEveryFusionRecipeNamesUnitsThatExist() {
+        XCTAssertEqual(
+            FusionService.brokenReferences, [],
+            "the fusion table names blueprint ids nothing answers to"
+        )
+    }
+
+    func testFusionPrizesAreNotSummonable() {
+        XCTAssertEqual(FusionService.fusionOnlyIDs.count, FusionService.recipes.count,
+                       "two recipes promise the same unit")
+        for recipe in FusionService.recipes {
+            // The whole bargain. A prize a scroll can also hand over turns
+            // four raised units and up to 120,000 drachma into a tax.
+            XCTAssertFalse(
+                UnitDatabase.summonPool.contains(recipe.resultID),
+                "\(recipe.name) promises \(recipe.resultID), which the gacha still gives out"
+            )
+            XCTAssertTrue(recipe.isExclusive, "\(recipe.name) says so on screen, too")
+        }
+    }
+
+    func testEveryFusionCornerIsAProjectAndNotAnImpossibility() throws {
+        for recipe in FusionService.recipes {
+            XCTAssertEqual(recipe.ingredients.count, 4, "\(recipe.name) is not a hexagram")
+            var named = Set<String>()
+            for ingredient in recipe.ingredients {
+                let blueprint = try XCTUnwrap(
+                    UnitDatabase.blueprint(ingredient.blueprintID), ingredient.blueprintID
+                )
+                // The panel keys its corner tiles by blueprint id, so a
+                // repeat would collapse two corners into one row.
+                XCTAssertTrue(
+                    named.insert(ingredient.blueprintID).inserted,
+                    "\(recipe.name) names \(ingredient.blueprintID) twice"
+                )
+                XCTAssertGreaterThanOrEqual(
+                    ingredient.stars, blueprint.naturalStars,
+                    "\(ingredient.blueprintID) is asked for below the grade it summons at"
+                )
+                XCTAssertLessThanOrEqual(
+                    ingredient.level, ProgressionService.maxLevel(stars: ingredient.stars),
+                    "\(ingredient.blueprintID) is asked for above the level cap of \(ingredient.stars)★"
+                )
+            }
+        }
+    }
+
+    func testFusionSpendsExactlyTheFourCornersAndTheDrachma() throws {
+        let recipe = FusionService.recipes[0]
+        var player = Player()
+        player.wallet.drachma = recipe.drachmaCost
+
+        for ingredient in recipe.ingredients {
+            let blueprint = try XCTUnwrap(UnitDatabase.blueprint(ingredient.blueprintID))
+            player.units.append(
+                Unit(blueprint: blueprint, level: ingredient.level, stars: ingredient.stars)
+            )
+        }
+        // Somebody the recipe never named, to prove fusion eats what it named
+        // and not what it found.
+        let corners = Set(recipe.ingredients.map { $0.blueprintID })
+        let other = try XCTUnwrap(UnitDatabase.all.first { !corners.contains($0.id) })
+        let bystander = Unit(blueprint: other, level: 1, stars: 6)
+        player.units.append(bystander)
+
+        let plan = FusionService.plan(for: recipe, player: player)
+        XCTAssertTrue(plan.canFuse, plan.blocker ?? "no reason given")
+
+        let created = try FusionService.fuse(recipe, player: &player)
+
+        XCTAssertEqual(created.blueprintID, recipe.resultID)
+        XCTAssertEqual(created.acquiredFrom, "fusion")
+        // The Hall of Ka still has something to sell afterwards.
+        XCTAssertFalse(created.isAwakened)
+        XCTAssertEqual(created.level, 1)
+        XCTAssertEqual(player.wallet.drachma, 0)
+        XCTAssertEqual(player.units.count, 2)
+        XCTAssertTrue(player.units.contains { $0.id == bystander.id })
+        XCTAssertTrue(player.codex.contains(recipe.resultID))
+    }
+
+    func testFusionNeverEatsALockedUnitOrOneStandingOnATeam() throws {
+        let recipe = FusionService.recipes[0]
+        var player = Player()
+        player.wallet.drachma = recipe.drachmaCost
+
+        for (index, ingredient) in recipe.ingredients.enumerated() {
+            let blueprint = try XCTUnwrap(UnitDatabase.blueprint(ingredient.blueprintID))
+            var unit = Unit(blueprint: blueprint, level: ingredient.level, stars: ingredient.stars)
+            if index == 0 { unit.isLocked = true }
+            player.units.append(unit)
+        }
+        player.campaignTeam.unitIDs = [player.units[1].id]
+
+        let plan = FusionService.plan(for: recipe, player: player)
+        XCTAssertFalse(plan.canFuse)
+        XCTAssertEqual(plan.missing.count, 2)
+        XCTAssertTrue(plan.missing.allSatisfy { $0.shortfall == FusionService.Shortfall.reserved })
+
+        XCTAssertThrowsError(try FusionService.fuse(recipe, player: &player))
+        XCTAssertEqual(player.units.count, 4, "a refused fusion consumed a unit anyway")
+        XCTAssertEqual(player.wallet.drachma, recipe.drachmaCost, "a refused fusion charged for it")
+    }
+
+    func testFusionTakesTheWeakestQualifyingCopy() throws {
+        let recipe = FusionService.recipes[0]
+        let ingredient = recipe.ingredients[0]
+        let blueprint = try XCTUnwrap(UnitDatabase.blueprint(ingredient.blueprintID))
+
+        var player = Player()
+        let raised = Unit(
+            blueprint: blueprint,
+            level: ProgressionService.maxLevel(stars: 6), stars: 6
+        )
+        let barely = Unit(blueprint: blueprint, level: ingredient.level, stars: ingredient.stars)
+        // Strongest first, so passing would mean order and not choice.
+        player.units = [raised, barely]
+
+        let slot = try XCTUnwrap(FusionService.plan(for: recipe, player: player).slots.first)
+        XCTAssertEqual(slot.unitID, barely.id, "fusion ate the copy the player raised")
+    }
 }

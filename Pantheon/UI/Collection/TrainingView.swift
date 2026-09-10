@@ -111,7 +111,13 @@ struct TrainingView: View {
             .onAppear {
                 if targetID == nil { targetID = units.first?.id }
             }
-            .onChange(of: mode) { _, _ in fodder = [] }
+            .onChange(of: mode) { _, _ in
+                fodder = []
+                // The label belongs to the mode that wrote it: "Ares fused"
+                // beside Zeus in the Power up column is a lie the next tap
+                // would have to explain.
+                outcome = nil
+            }
             .onChange(of: targetID) { _, _ in
                 fodder = []
                 outcome = nil
@@ -550,6 +556,21 @@ struct TrainingView: View {
     /// 800, so this row is the one thing on the screen that scrolls. Every
     /// panel is the full height of the frame, which is what keeps the four
     /// corners and the Fuse button on the same line across all six.
+    ///
+    /// Nothing scrolls vertically here, so the panel has a height budget and
+    /// it is written down rather than guessed at. An iPhone 16 Pro in
+    /// landscape is 402 points tall; the home indicator takes 21, the strip
+    /// 34 and the content's own padding 16, which leaves **331**. A panel
+    /// spends 27 on the ribbon, 62 on the prize row, 22 on two lines of lore,
+    /// 82 on the corner tiles, 22 on a two-line reason, 35 on the button,
+    /// 30 on six gaps and 20 on its padding: **about 300**. The thirty points
+    /// left are the margin, and the epithet, the lore and the reason are all
+    /// line-limited so no content can spend them.
+    ///
+    /// This matters more than it looks. A child taller than the frame is the
+    /// trap that emptied the dungeon screen's frames — an oversized view is
+    /// clipped where it is drawn and not where it is measured — and here the
+    /// thing that would go off the bottom is the only button on the screen.
     private var fusionBoard: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(alignment: .top, spacing: 8) {
@@ -566,7 +587,7 @@ struct TrainingView: View {
         let recipe = plan.recipe
         let result = recipe.result
 
-        return VStack(alignment: .leading, spacing: 6) {
+        return VStack(alignment: .leading, spacing: 5) {
             // The accessory is the compact figure — "40K" — because the
             // painted ribbon has about 248 points and a twenty-character
             // hexagram name spends most of them. The exact bill is in the line
@@ -585,8 +606,8 @@ struct TrainingView: View {
                         Text(result.epithet)
                             .font(Theme.body(10))
                             .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                         HStack(spacing: 5) {
                             StarRow(stars: result.naturalStars, size: 9)
                             ElementBadge(element: result.element, compact: true)
@@ -607,7 +628,7 @@ struct TrainingView: View {
             Text(recipe.lore)
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textSecondary)
-                .lineLimit(3)
+                .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
             HStack(alignment: .top, spacing: 4) {
@@ -616,16 +637,18 @@ struct TrainingView: View {
                 }
             }
 
-            Spacer(minLength: 4)
+            // The spacer is what lines the six buttons up: it eats the slack,
+            // so every button sits on its panel's bottom edge whether the
+            // reason above it runs to one line or two. It carries no minimum,
+            // because on a short frame the points it would have reserved are
+            // the ones the button needs to stay on screen.
+            Spacer(minLength: 0)
 
-            // Fixed height so the six buttons line up whether the reason under
-            // them runs to one line or two.
             Text(plan.blocker ?? "Four corners ready — \(recipe.drachmaCost) drachma.")
                 .font(Theme.body(10))
                 .foregroundStyle(plan.canFuse ? Theme.success : Theme.danger)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
-                .frame(height: 26, alignment: .topLeading)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // `store.fuse(_:)` is the wiring: it calls
@@ -655,7 +678,7 @@ struct TrainingView: View {
                     .fill(Theme.surface)
             }
         }
-        .frame(width: 64, height: 64)
+        .frame(width: 60, height: 60)
         .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
         .rarityFrame(Rarity(stars: blueprint?.naturalStars ?? 5))
         // The painting fills a square it is taller than, and `clipShape` does
@@ -684,7 +707,7 @@ struct TrainingView: View {
                         .fill(Theme.surface)
                 }
             }
-            .frame(width: 52, height: 52)
+            .frame(width: 46, height: 46)
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             .saturation(met ? 1 : 0.1)
             .opacity(met ? 1 : 0.5)
@@ -734,7 +757,6 @@ struct TrainingView: View {
         // the unit exists, and the reveal wants to know it was the first.
         let isNew = !store.player.codex.contains(plan.recipe.resultID)
         guard let created = store.fuse(plan.recipe) else { return }
-        outcome = "\(created.name) fused"
         Juice.notify(.success)
         AudioLibrary.shared.play(.uiConfirm)
         reveal = SummonResult(

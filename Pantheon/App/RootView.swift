@@ -127,7 +127,7 @@ struct SettingsView: View {
         NavigationStack {
             GameScreen("More", subtitle: subtitle, dismiss: { dismiss() }) {
                 BarCount(
-                    value: "\(store.player.codex.count)/\(UnitDatabase.summonPool.count)",
+                    value: "\(store.player.codex.count)/\(UnitDatabase.collectiblePool.count)",
                     systemImage: "book.closed.fill",
                     tint: Theme.gold
                 )
@@ -310,7 +310,7 @@ struct SettingsView: View {
                 row("Units", "\(store.player.units.count)")
                 row("Relics", "\(store.player.relics.count)")
                 row("Total summons", "\(store.player.totalSummons)")
-                row("Codex", "\(store.player.codex.count) / \(UnitDatabase.summonPool.count)")
+                row("Codex", "\(store.player.codex.count) / \(UnitDatabase.collectiblePool.count)")
                 Spacer(minLength: 0)
             }
         }

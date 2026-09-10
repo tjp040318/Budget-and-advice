@@ -49,9 +49,22 @@ enum UnitDatabase {
     /// Sekhmet and Zeus joined the pool the moment their five files were in the
     /// bundle, with no code change. The Shabti family is the 3★ tier: what a
     /// common roll gives, and what the Hall of Ka feeds to the gods.
+    ///
+    /// The six fusion prizes are absent too, and that filter is the whole
+    /// promise the Hall of Ka's hexagram makes: a recipe that costs four
+    /// raised units and 120,000 drachma for something a scroll might have
+    /// handed over anyway is not a reward, it is a tax. `FusionService`
+    /// derives `fusionOnlyIDs` from its own recipe table, so the exclusion
+    /// list cannot drift from the prizes — there is only one list. Reading it
+    /// here cannot re-enter this file, because that table is literals.
     static let summonPool: [String] = (anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster + thirdRoster)
-        .filter { $0.hasShippedArt }
+        .filter { $0.hasShippedArt && !FusionService.isFusionOnly($0.id) }
         .map { $0.id }
+
+    /// Everything a player can ever own: the gacha's pool plus what only the
+    /// hexagram gives. The codex counts against this, not against the pool,
+    /// or a fused god would push the readout past its own total.
+    static let collectiblePool: [String] = summonPool + FusionService.fusionOnlyIDs.sorted()
 
     static func summonable(stars: Int) -> [UnitBlueprint] {
         summonPool.compactMap { blueprint($0) }.filter { $0.naturalStars == stars }
