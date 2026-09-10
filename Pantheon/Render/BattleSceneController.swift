@@ -95,6 +95,8 @@ final class BattleSceneController: NSObject {
     /// would take a second turn.
     private var playbackGeneration = 0
     private(set) var environment: BattleEnvironment = .duatGate
+    /// The rock under the boss's mark, built once per fight.
+    private var ledge: SCNNode?
     /// The clip of the most recent cast, so its hits know how hard to land.
     private var lastCastClip: AnimationClip = .attackBasic
     /// What the last caster was, so a hit can sound like what struck it: a
@@ -121,6 +123,7 @@ final class BattleSceneController: NSObject {
         self.environment = environment
         scene.rootNode.removeAction(forKey: "cast_impact")
         scene.rootNode.childNodes.forEach { $0.removeFromParentNode() }
+        ledge = nil
         unitNodes.removeAll()
         holdOverride = nil
         castRecovery = 0
@@ -321,6 +324,11 @@ final class BattleSceneController: NSObject {
             }
             scene.rootNode.addChildNode(node)
             unitNodes[combatant.id] = node
+            if combatant.isBoss, ledge == nil {
+                let rock = StageBuilder.ledge(rock: StageBuilder.recipe(for: environment).rock, at: home)
+                scene.rootNode.addChildNode(rock)
+                ledge = rock
+            }
         }
     }
 

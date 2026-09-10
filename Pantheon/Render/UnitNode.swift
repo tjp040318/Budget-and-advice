@@ -120,14 +120,22 @@ final class UnitNode: SCNNode {
         let barHeight: CGFloat = 0.125
         let width: CGFloat = 1.15
 
+        // A boss wears the awakened LOOK — costume glow, the brighter rim —
+        // and the aura, whatever its form. The Colossus is a sandstone giant
+        // standing over the far rim in front of a painting of sandstone
+        // giants, and the tour photographed it unlit against them as a
+        // patch of wall: eight metres of boss, invisible. Light is what
+        // separates a figure from its backdrop, and the aura rising from
+        // below the rim is what says it climbed out of somewhere.
+        let lit = combatant.isAwakened || combatant.isBoss
         let container = ModelLibrary.shared.node(
             for: combatant.model,
             archetype: combatant.archetype,
             element: combatant.element,
             detail: detail,
-            awakened: combatant.isAwakened
+            awakened: lit
         )
-        if combatant.isAwakened {
+        if lit {
             // The awakened aura: a slow rise of light in the element colour
             // from the feet, for as long as the unit stands.
             container.addParticleSystem(VFXLibrary.aura(tint: tint, scale: Float(modelHeight) / 1.9))

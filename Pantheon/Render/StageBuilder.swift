@@ -404,6 +404,33 @@ enum StageBuilder {
         return chunks
     }
 
+    /// The cliff a boss climbs to: a knot of boulders under its mark, their
+    /// tops a hand above the platform, so the body it keeps below the rim is
+    /// hidden by stone. Without it the camera, ten metres up, looked over
+    /// the rim into the gap between the edge and where the boss stands and
+    /// saw the sunk half hanging in the air — the opposite of "half of it
+    /// under a cliff".
+    static func ledge(rock: String, at mark: SCNVector3) -> SCNNode {
+        let node = SCNNode()
+        node.name = "ledge"
+        let boulders: [(offset: SCNVector3, size: CGFloat, scale: SCNVector3)] = [
+            (SCNVector3(0.0, -1.2, 0.9), 2.6, SCNVector3(1.5, 0.6, 1.1)),
+            (SCNVector3(-2.1, -1.9, 0.3), 1.9, SCNVector3(1.3, 0.7, 1.2)),
+            (SCNVector3(2.0, -2.1, -0.2), 1.7, SCNVector3(1.4, 0.6, 1.0)),
+        ]
+        for boulder in boulders {
+            let geometry = SCNSphere(radius: boulder.size)
+            geometry.segmentCount = 9
+            geometry.firstMaterial = rockMaterial(rock, repeats: SCNVector3(3, 2, 1))
+            let chunk = SCNNode(geometry: geometry)
+            chunk.position = SCNVector3(mark.x + boulder.offset.x, boulder.offset.y, mark.z + boulder.offset.z)
+            chunk.scale = boulder.scale
+            chunk.eulerAngles = SCNVector3(0.2, Float(boulder.size), 0.1)
+            node.addChildNode(chunk)
+        }
+        return node
+    }
+
     /// A shipped prop, or its stand-in.
     static func prop(_ placement: Placement) -> SCNNode {
         let node: SCNNode

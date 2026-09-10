@@ -385,7 +385,11 @@ final class ModelLibrary {
 
         log("bundle: \(root.path)")
         log("3D files actually inside the app: \(found.isEmpty ? "NONE" : "\(found.count)")")
-        for path in found { log("    \(path)") }
+        // The first two dozen, not all seven hundred: the tour keeps 120 KB
+        // of console per step, and the full list filled it before a fight's
+        // own lines — the wave that brought the Colossus on was cut off.
+        for path in found.prefix(24) { log("    \(path)") }
+        if found.count > 24 { log("    … and \(found.count - 24) more") }
         DiagnosticsLog.shared.recordDeviceHeader()
 
         for name in assetNames.sorted() {
