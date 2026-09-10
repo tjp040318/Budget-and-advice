@@ -611,24 +611,34 @@ enum RelicService {
     /// How many relics per slot reach the second stage.
     ///
     /// The second stage is the cross product of the six shortlists, so it
-    /// scores K^6 loadouts: 4^6 is 4,096, 6^6 is 46,656, 8^6 is 262,144. Six,
-    /// because a leaf is twelve additions, a sixteen-entry set tally and one
-    /// score — so a solve is a few hundredths of a second even in the debug
-    /// build the CI tour runs, on the two hundred relics a mid account holds.
-    /// Eight would be five times the work for a gain the scoring cannot see:
-    /// below the sixth-best relic in a slot the sub stats are noise. What
-    /// actually decides a build is the sets, and those are served by
-    /// promoting a best-of-set relic into every shortlist rather than by
-    /// making the shortlists longer.
+    /// scores at most K^6 loadouts: 4^6 is 4,096, 6^6 is 46,656, 8^6 is
+    /// 262,144. Six, and the number is measured rather than guessed — the
+    /// solver was ported to Python and run over a synthetic 200-relic account
+    /// at K = 4, 6, 8 and 10, and every K from 4 up returned the identical six
+    /// relics for all four goals. Six leaves a margin over the point where the
+    /// answer stopped changing without paying 8's five times the work for it.
+    /// Below the sixth-best relic in a slot the sub stats are noise; what
+    /// actually decides a build is the sets, and those are served by promoting
+    /// a best-of-set relic into every shortlist rather than by making the
+    /// shortlists longer.
+    ///
+    /// The cost is bounded by that 46,656 whatever the inventory holds — 600
+    /// relics search no more loadouts than 200 do, only the shortlisting
+    /// widens — and a leaf is twelve additions, a sixteen-entry set tally and
+    /// one score. That is milliseconds in a release build and well inside a
+    /// frame even in the debug build the CI tour photographs.
     static let shortlistPerSlot = 6
 
     /// How many sets get a guaranteed place in every slot's shortlist.
     ///
     /// A shortlist ranked on stats alone would never offer four pieces of one
     /// four-piece set, so a solver built on it answers with six mismatched
-    /// relics every time. Three covers the shapes a build takes — one
-    /// four-piece and one two-piece, or three two-pieces — and each promotion
-    /// costs a place that would have gone to a better-rolled relic.
+    /// relics every time. In the Python run above, turning promotion off cost
+    /// 1% of the best score at the damage goal, 5% at power and 16% at speed —
+    /// a whole Zephyr — which is the difference between a solver worth opening
+    /// and a list of the six shiniest relics. Three covers the shapes a build
+    /// takes (one four-piece and one two-piece, or three two-pieces), and each
+    /// promotion costs a place that would have gone to a better-rolled relic.
     static let promotedSetCount = 3
 
     /// What a solve may draw on: the relics the unit already wears, plus the
@@ -804,53 +814,51 @@ enum RelicService {
         // 35% ATK is worth more to an attacker than 20% resistance whatever
         // else it ends up wearing.
         let bare = goalScore(finalStats(base: base, bundle: StatBundle()), for: goal)
-        let promoted = allSets
-            .filter { relicSet in
-                // Only a set the inventory can actually finish: four pieces of
-                // Ichor spread over three slots is three pieces.
-                var slots: Set<Int> = []
-                for relic in candidates where relic.set == relicSet { slots.insert(relic.slot) }
-                return slots.count >= relicSet.piecesRequired
-            }
-            .map { relicSet -> (relicSet: RelicSet, value: Double) in
-                guard let bonus = relicSet.statBonus else {
-                    return (relicSet: relicSet, value: bare * (effectSetValue(relicSet, for: goal) - 1))
-                }
+        var setValues: [(relicSet: RelicSet, value: Double)] = []
+        for relicSet in allSets {
+            // Only a set the inventory can actually finish: four pieces of
+            // Ichor spread over three slots is three pieces.
+            var slots: Set<Int> = []
+            for relic in candidates where relic.set == relicSet { slots.insert(relic.slot) }
+            guard slots.count >= relicSet.piecesRequired else { continue }
+
+            if let bonus = relicSet.statBonus {
                 var bundle = StatBundle()
                 fold(bonus, into: &bundle, speedIsPercent: true)
-                return (relicSet: relicSet,
-                        value: goalScore(finalStats(base: base, bundle: bundle), for: goal) - bare)
+                let value = goalScore(finalStats(base: base, bundle: bundle), for: goal) - bare
+                setValues.append((relicSet: relicSet, value: value))
+            } else {
+                setValues.append((relicSet: relicSet, value: bare * (effectSetValue(relicSet, for: goal) - 1)))
             }
-            .sorted { first, second in
-                if first.value != second.value { return first.value > second.value }
-                return first.relicSet.rawValue < second.relicSet.rawValue
-            }
-            .prefix(promotedSetCount)
-            .map { $0.relicSet }
+        }
+        setValues.sort { first, second in
+            if first.value != second.value { return first.value > second.value }
+            return first.relicSet.rawValue < second.relicSet.rawValue
+        }
+        let promoted = setValues.prefix(promotedSetCount).map { $0.relicSet }
 
         // Stage one, part two: the shortlists.
         var shortlists: [[SolveCandidate]] = []
         for slot in 1...6 {
-            let ranked = candidates
-                .filter { $0.slot == slot }
-                .map { relic -> SolveCandidate in
-                    let bundle = statBundle(of: relic)
-                    return SolveCandidate(
-                        bundle: bundle,
-                        setIndex: indexOfSet[relic.set] ?? 0,
-                        isWorn: relic.equippedBy == unitID,
-                        relicID: relic.id,
-                        score: goalScore(finalStats(base: base, bundle: bundle), for: goal)
-                    )
-                }
-                .sorted { first, second in
-                    if first.score != second.score { return first.score > second.score }
-                    // The id is the tie-break, and it is what makes the whole
-                    // solve repeatable: two identical relics must always sort
-                    // the same way round.
-                    return first.relicID.uuidString < second.relicID.uuidString
-                }
+            var ranked: [SolveCandidate] = []
+            for relic in candidates where relic.slot == slot {
+                let bundle = statBundle(of: relic)
+                ranked.append(SolveCandidate(
+                    bundle: bundle,
+                    setIndex: indexOfSet[relic.set] ?? 0,
+                    isWorn: relic.equippedBy == unitID,
+                    relicID: relic.id,
+                    score: goalScore(finalStats(base: base, bundle: bundle), for: goal)
+                ))
+            }
             guard !ranked.isEmpty else { continue }
+            ranked.sort { first, second in
+                if first.score != second.score { return first.score > second.score }
+                // The id is the tie-break, and it is what makes the whole solve
+                // repeatable: two equally good relics must always sort the same
+                // way round.
+                return first.relicID.uuidString < second.relicID.uuidString
+            }
 
             var chosen: [SolveCandidate] = []
             var taken: Set<UUID> = []

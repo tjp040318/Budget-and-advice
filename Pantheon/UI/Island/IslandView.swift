@@ -19,6 +19,15 @@ struct IslandView: View {
     @State private var shaking: String?
     @State private var showShop = false
     @State private var showMissions = false
+    /// The chapter whose story card is up, held here between the tap on the
+    /// gate and the campaign opening behind it.
+    @State private var pendingIntro: Chapter?
+
+    /// The guided opening's pointer: a fixed box, so the plate can be placed
+    /// against the thing it points at without measuring the text first. A
+    /// wrapped second line would otherwise push the caret off the building.
+    static let guideWidth: CGFloat = 240
+    static let guidePlate: CGFloat = 48
 
     /// Where the team stands: open sand below the circle and the beach band
     /// in front of it, measured off the painting like the landmarks' anchors.
@@ -92,14 +101,38 @@ struct IslandView: View {
                         )
                 }
                 header
+
+                // The guided opening: one pointer at whatever the player has
+                // not done yet. It is drawn last so it sits over the plaques,
+                // and it is inert, so tapping "through" it opens the building.
+                if let step = store.firstHourStep, pendingIntro == nil {
+                    guide(step, frame: frame, full: full, insets: insets, size: geometry.size)
+                }
+
+                if let chapter = pendingIntro {
+                    ChapterIntroCard(chapter: chapter) {
+                        store.markChapterIntroSeen(chapter.id)
+                        pendingIntro = nil
+                        onOpen(.campaign)
+                    }
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                }
             }
             .frame(width: geometry.size.width, height: geometry.size.height)
             .background(backdrop(full: full).ignoresSafeArea())
+            .animation(.easeInOut(duration: 0.25), value: pendingIntro)
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
                 pulse = true
             }
+            // The save carries the step so a relaunch opens on the same
+            // pointer; a player who is past all four writes the sentinel here
+            // and is never asked again.
+            store.recordFirstHourStep(store.firstHourStep)
+        }
+        .onChange(of: store.firstHourStep) { _, step in
+            store.recordFirstHourStep(step)
         }
         .sheet(isPresented: $showShop) {
             ShopView()
@@ -407,6 +440,339 @@ struct IslandView: View {
         }
         Juice.haptic(.light)
         AudioLibrary.shared.play(.uiTap)
+        // The chapter's story, once, on the way through the gate rather than
+        // on top of the map: the map is a screen the player is trying to use,
+        // and a card that lands after it has drawn reads as an interruption.
+        if landmark.destination == .campaign, let chapter = unseenIntroChapter {
+            pendingIntro = chapter
+            return
+        }
         onOpen(landmark.destination)
+    }
+
+    // MARK: - The guided opening
+
+    /// The chapter whose intro card has not been shown yet, or nil.
+    private var unseenIntroChapter: Chapter? {
+        let chapter = CampaignView.currentChapter(for: store.player)
+        guard !chapter.intro.isEmpty, !store.hasSeenChapterIntro(chapter.id) else { return nil }
+        return chapter
+    }
+
+    /// One step of the opening: a caret on the thing to press and a line under
+    /// it, plus the way out. There is no "next" — the caret moves when the
+    /// player does the thing, and nothing here is tappable except Skip.
+    @ViewBuilder
+    private func guide(
+        _ step: FirstHourStep,
+        frame: CGRect,
+        full: CGSize,
+        insets: EdgeInsets,
+        size: CGSize
+    ) -> some View {
+        let landmark = IslandDatabase.landmarks.first { $0.id == step.landmarkID }
+        // What the caret has to touch. A plaque is drawn from its anchor less
+        // 0.055 of the painting's height and stands 56pt of disc plus a name
+        // chip tall, so its edge is about 60pt from that centre.
+        let target: CGPoint = landmark.map { mark in
+            CGPoint(
+                x: frame.minX + mark.anchor.x * frame.width - insets.leading,
+                y: frame.minY + (mark.anchor.y - 0.055) * frame.height - insets.top
+            )
+        } ?? CGPoint(
+            // No building for this one: it is the Collection tab. An iPhone
+            // lays a landscape tab bar out as one centred row rather than five
+            // equal columns, so the fifth item sits a little right of centre
+            // instead of at 0.9 of the width. The caret is aimed at 0.78 and
+            // the line names the tab, which is what actually finds it.
+            x: 0.78 * full.width - insets.leading,
+            y: size.height
+        )
+        let reach: CGFloat = landmark == nil ? 0 : 60
+        let gap: CGFloat = 6
+        let caret: CGFloat = 13
+        // Under the plaque when the whole box fits under it, over it when it
+        // does not: the Gate sits low enough on the painting that its pointer
+        // would otherwise hang behind the tab bar.
+        let below = landmark != nil
+            && target.y + reach + gap + caret + 2 + Self.guidePlate <= size.height - 6
+        let caretY = below
+            ? target.y + reach + gap + caret / 2
+            : target.y - reach - gap - caret / 2
+        let plateY = below
+            ? target.y + reach + gap + caret + 2 + Self.guidePlate / 2
+            : target.y - reach - gap - caret - 2 - Self.guidePlate / 2
+        // The plate is 240 wide and the Hall of Ka stands close to the left
+        // edge, so the plate is kept on screen while the caret stays on the
+        // building.
+        let plateX = min(
+            max(target.x, Self.guideWidth / 2 + 8),
+            max(size.width - Self.guideWidth / 2 - 8, Self.guideWidth / 2 + 8)
+        )
+
+        Image(systemName: below ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
+            .font(.system(size: caret, weight: .black))
+            .foregroundStyle(Theme.gold)
+            .shadow(color: .black.opacity(0.7), radius: 2, y: 1)
+            // Bobs toward what it points at, on the same repeating animation
+            // the active plaques glow with.
+            .offset(y: pulse ? (below ? 3 : -3) : 0)
+            .position(x: target.x, y: caretY)
+            .allowsHitTesting(false)
+
+        guideLine(step)
+            .frame(width: Self.guideWidth, height: Self.guidePlate)
+            .position(x: plateX, y: plateY)
+            // Inert, like every other painted thing on this screen: the plate
+            // floats over a plaque and neither `.clipShape` nor a capsule
+            // clips hit-testing, so a tap on it has to reach the building.
+            .allowsHitTesting(false)
+
+        skipChip
+            .position(x: size.width - 52, y: 72)
+    }
+
+    private func guideLine(_ step: FirstHourStep) -> some View {
+        Text(step.line)
+            .font(Theme.body(11).weight(.semibold))
+            .foregroundStyle(Theme.textPrimary)
+            .multilineTextAlignment(.center)
+            .lineLimit(2)
+            .minimumScaleFactor(0.75)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(Theme.ink.opacity(0.88))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                            .strokeBorder(Theme.gold.opacity(0.7), lineWidth: 1)
+                    )
+                    .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
+            )
+    }
+
+    /// Skip, under the header rather than on the pointer, because the pointer
+    /// has to stay inert for the building underneath it.
+    private var skipChip: some View {
+        Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            store.skipFirstHour()
+        } label: {
+            Text("Skip guide")
+                .font(Theme.body(10).weight(.bold))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.horizontal, 9)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule().fill(Theme.ink.opacity(0.7))
+                        .overlay(Capsule().strokeBorder(Theme.stroke.opacity(0.8), lineWidth: 1))
+                )
+        }
+        .buttonStyle(PlateButtonStyle())
+    }
+}
+
+// MARK: - The guided opening
+
+/// The first hour, as four things to do in order: summon somebody, take them
+/// through the gate, put a relic on them, feed them.
+///
+/// There is no state machine and nothing to advance. `current(for:)` reads the
+/// save and answers what the player has not done yet, because a counter that
+/// has to be stepped from every screen in the game goes wrong the first time a
+/// call site forgets — and because a save made before any of this existed then
+/// lands on the right step instead of starting a veteran at the beginning.
+/// What `Player.firstHourStep` is for is the record and the ending: the island
+/// writes the step it is showing, and once the field holds `finished` the guide
+/// is over for good. That is what Skip writes.
+enum FirstHourStep: String, CaseIterable, Sendable {
+    case summon
+    case fight
+    case equip
+    case powerUp
+
+    /// Written into `Player.firstHourStep` when the guide is skipped or has
+    /// been seen out. A sentinel rather than a fifth case, because it is not a
+    /// step and nothing should be able to point at it.
+    static let finished = "done"
+
+    /// The line under the caret. Each one names the building and the verb: the
+    /// test of the opening is whether somebody who has never seen the game
+    /// knows what to press, not whether the prose is nice.
+    var line: String {
+        switch self {
+        case .summon:
+            return "Start here. Open a scroll at the Summoning Circle and meet your first god."
+        case .fight:
+            return "Now the Gate of the Duat. The first stage is two shabti — your team can take them."
+        case .equip:
+            return "Your new god is wearing nothing. Open Collection, tap them, tap a relic slot."
+        case .powerUp:
+            return "Hall of Ka: feed the units you don't want to the one you do."
+        }
+    }
+
+    /// The landmark the caret sits on, or nil when the step's destination is a
+    /// tab rather than a building on the island.
+    var landmarkID: String? {
+        switch self {
+        case .summon: return "circle"
+        case .fight: return "gate"
+        // Relics go on from the unit sheet, and the collection is a tab: there
+        // is no building on the painting to point at.
+        case .equip: return nil
+        case .powerUp: return "hall"
+        }
+    }
+
+    /// Whether the save says this has been done. Read off what the player
+    /// actually owns and has cleared, never off a flag written by the screen
+    /// that did it.
+    func isDone(for player: Player) -> Bool {
+        switch self {
+        case .summon:
+            return player.totalSummons > 0
+        case .fight:
+            return (player.campaignProgress["duat_1"] ?? 0) >= 1
+        case .equip:
+            // A new save already wears the starter loadout — `NewGame.create`
+            // auto-equips six relics on the starter — so "is anybody wearing a
+            // relic" is true before the player has done anything. What the step
+            // teaches is that the god they just summoned is bare, so it counts
+            // a SECOND unit in relics. It stands down when there is nobody to
+            // dress or nothing spare to dress them in: a pointer at a relic the
+            // player does not own is a pointer that lies.
+            let dressed = player.units.filter { !$0.equippedRelics.isEmpty }.count
+            let spare = player.relics.contains { $0.equippedBy == nil }
+            return player.units.count < 2 || dressed >= 2 || !spare
+        case .powerUp:
+            // `QuestService` counts every power-up for the feats, so the answer
+            // is already in the save. The level check is for the saves that
+            // predate the counters — nothing else raises a unit's level.
+            return (player.lifetimeCounters?["power_ups"] ?? 0) > 0
+                || player.units.contains { $0.level > 1 }
+        }
+    }
+
+    /// The step the player is on, or nil when there is nothing left to point
+    /// at. The first one not done, so a relic that drops after the guide has
+    /// moved on brings the equip step back rather than losing it.
+    static func current(for player: Player) -> FirstHourStep? {
+        allCases.first { !$0.isDone(for: player) }
+    }
+}
+
+// MARK: - Chapter intro card
+
+/// The few lines of story a chapter gets, once, on the way into it.
+///
+/// `Chapter.summary` is the line the map carries every time; `Chapter.intro` is
+/// the longer one, and this is the only screen it appears on. It is shown over
+/// the chapter's own painting on the way through the gate rather than on top of
+/// the campaign map, because the map is a screen the player is trying to use.
+/// One tap anywhere goes on, and `Player.seenChapterIntros` means it does not
+/// come back.
+struct ChapterIntroCard: View {
+    let chapter: Chapter
+    let onContinue: () -> Void
+
+    /// The chapter's own painting: the first stage's backdrop, which is the
+    /// picture the campaign map already shows for it.
+    private var painting: String {
+        chapter.stages.first?.environment.backdropName ?? ""
+    }
+
+    var body: some View {
+        ZStack {
+            Rectangle()
+                .fill(Theme.ink.opacity(0.82))
+            card
+                .padding(.horizontal, 22)
+                .padding(.vertical, 14)
+        }
+        // Tap anywhere: the Enter button says what happens, and everything
+        // behind this card is a place the player was already going.
+        .contentShape(Rectangle())
+        .onTapGesture { onContinue() }
+    }
+
+    private var card: some View {
+        ZStack(alignment: .bottomLeading) {
+            painted
+            words
+                .padding(16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                .strokeBorder(Theme.goldDim.opacity(0.8), lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.7), radius: 12, y: 6)
+    }
+
+    @ViewBuilder
+    private var painted: some View {
+        if BundleImage.exists(painting) {
+            BundleImage(name: painting)
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
+                .overlay(
+                    // The words sit on the left, so the dark runs that way and
+                    // the painting keeps its right-hand side.
+                    LinearGradient(
+                        colors: [Theme.ink.opacity(0.94), Theme.ink.opacity(0.55), .clear],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                )
+                .overlay(
+                    LinearGradient(
+                        colors: [.clear, Theme.ink.opacity(0.8)],
+                        startPoint: .center, endPoint: .bottom
+                    )
+                )
+                // `.clipped()` does not clip hit-testing, and this is scaled to
+                // fill: without this it would swallow taps outside the card.
+                .allowsHitTesting(false)
+        } else {
+            Theme.backdrop
+                .allowsHitTesting(false)
+        }
+    }
+
+    private var words: some View {
+        VStack(alignment: .leading, spacing: 7) {
+            Text(chapter.realmName.uppercased())
+                .font(Theme.body(10).weight(.black))
+                .tracking(1.6)
+                .foregroundStyle(Theme.gold)
+            Text(chapter.name)
+                .font(Theme.title(20))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.7)
+            Text(chapter.intro)
+                .font(Theme.body(12))
+                .foregroundStyle(Theme.textSecondary)
+                .lineSpacing(2)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+                // Forty words on one landscape frame: past about 430pt the
+                // line is too long to come back from at this size.
+                .frame(maxWidth: 430, alignment: .leading)
+            Spacer(minLength: 8)
+            HStack(spacing: 10) {
+                PrimaryButton(title: "Enter", systemImage: "arrow.right") { onContinue() }
+                    .frame(width: 170)
+                Text("\(chapter.stages.count) stages")
+                    .font(Theme.numeric(10))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

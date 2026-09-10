@@ -193,14 +193,24 @@ environment can and cannot do. The short version:
   leaves an `Art/Models/<asset>.shipped` marker). Zeus, Sekhmet and Anubis
   went first; judge a remake on its preview sheet before the routine spends
   on the rest.
-- Two SwiftUI gotchas that cost a playtest: **`.clipped()` and
+- Three SwiftUI gotchas that each cost a screen. **`.clipped()` and
   `.clipShape` do not clip hit-testing**, so a painting scaled to fill a
   short frame swallows taps far above and below it — every decorative
   painting carries `.allowsHitTesting(false)` (the Chapters/Halls switch,
-  the banner chips and the first stage rows were all dead). And a camera
-  node looks along its own −Z: orient it with `SCNNode.look(at:)`, never
-  `atan2(dx, dz)` (that was half a turn off and the orbit shot showed the
-  empty side of the stage).
+  the banner chips and the first stage rows were all dead). **`.clipped()`
+  does not clip the reported SIZE either**, so a fill-aspect painting under
+  an unbounded `.frame(maxWidth: .infinity, maxHeight: .infinity)` measures
+  larger than the window and grows every ancestor with it: as a sibling in
+  `DungeonLevelsView`'s content stack it pushed the strip and both panels'
+  top-aligned contents off the top of the phone, and the CI tour
+  photographed the Halls and a relic dungeon as two tall empty panel frames
+  (2026-09-10). **A full-screen painting is a `.background(...)`, never a
+  sibling** — a background is measured by its parent and can never do this;
+  the same pattern is safe inside a card, and safe with a fixed
+  `.frame(width:height:)` off a GeometryReader, which is what the island
+  does. And a camera node looks along its own −Z: orient it with
+  `SCNNode.look(at:)`, never `atan2(dx, dz)` (that was half a turn off and
+  the orbit shot showed the empty side of the stage).
 - **Five tabs.** An iPhone folds a sixth tab into a system "More" list, so
   Settings opens over the island from the Obelisk (and Missions, the
   bazaar from the header); `RootView.Tab(destination)` is failable for the

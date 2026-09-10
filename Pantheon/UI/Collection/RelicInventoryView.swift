@@ -16,6 +16,7 @@ struct RelicInventoryView: View {
     @State private var selection: Set<UUID> = []
     @State private var showSellConfirm = false
     @State private var opened: Relic?
+    @State private var showOptimiser = false
 
     enum Sort: String, CaseIterable, Identifiable {
         case efficiency, grade, level, newest
@@ -99,6 +100,18 @@ struct RelicInventoryView: View {
                     selecting.toggle()
                     if !selecting { selection.removeAll() }
                 }
+                // A glyph and no word. This strip already carries the slot
+                // filter, the sort, the fit, the unequipped checkbox and
+                // Select, and a sixth control with a word on it does not fit
+                // beside them on a 667-point landscape phone.
+                BarButton(
+                    title: "Optimise",
+                    systemImage: "wand.and.stars",
+                    tint: Theme.info,
+                    showsTitle: false
+                ) {
+                    showOptimiser = true
+                }
             } content: {
                 VStack(spacing: 6) {
                     setBar
@@ -149,6 +162,12 @@ struct RelicInventoryView: View {
             }
             .sheet(item: $opened) { relic in
                 RelicDetailView(relicID: relic.id, role: role)
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showOptimiser) {
+                // No unit: the inventory is not about one, so the optimiser
+                // opens on its roster grid.
+                RelicOptimiserView()
                     .environmentObject(store)
             }
         }
@@ -893,6 +912,7 @@ struct RelicPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selectedID: UUID?
     @State private var freeOnly = false
+    @State private var showOptimiser = false
 
     private var unit: ResolvedUnit? { store.resolved(unitID) }
     private var role: CombatRole { unit?.role ?? .attacker }
@@ -931,6 +951,12 @@ struct RelicPickerView: View {
                 ) {
                     freeOnly.toggle()
                 }
+                // The way to the optimiser from the unit sheet: every slot in
+                // the ring opens this screen, so the offer to solve all six
+                // belongs where the player is already choosing one.
+                BarButton(title: "All six", systemImage: "wand.and.stars", tint: Theme.info) {
+                    showOptimiser = true
+                }
             } content: {
                 HStack(alignment: .top, spacing: 8) {
                     list
@@ -940,6 +966,10 @@ struct RelicPickerView: View {
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
                 .padding(.top, 6)
+            }
+            .sheet(isPresented: $showOptimiser) {
+                RelicOptimiserView(initialUnitID: unitID)
+                    .environmentObject(store)
             }
         }
     }
@@ -1061,8 +1091,33 @@ struct RelicPickerView: View {
     }
 
     private func deltaTable(_ relic: Relic) -> some View {
-        let before = unit?.stats ?? Stats.zero
-        let after = resolvedWith(relic)?.stats ?? before
+        let after = resolvedWith(relic)
+        return StatDeltaTable(
+            before: unit?.stats ?? Stats.zero,
+            after: after?.stats ?? unit?.stats ?? Stats.zero,
+            beforeSets: unit?.activeRelicSets ?? [],
+            afterSets: after?.activeRelicSets ?? []
+        )
+    }
+}
+
+// MARK: - The optimiser
+
+/// Every stat before and after a change, with the sets it completes or breaks.
+///
+/// This was the relic picker's own table until the optimiser needed the same
+/// eight rows in the same order: two screens that answer "what would this do
+/// to my unit" must not answer it in two layouts. The widths are the ones the
+/// picker measured — fixed columns, because free-width values put the arrow at
+/// a different x on every row and the comparison read as a ragged block, and
+/// the longest cell is a five-digit HP.
+struct StatDeltaTable: View {
+    let before: Stats
+    let after: Stats
+    var beforeSets: [ActiveRelicSet] = []
+    var afterSets: [ActiveRelicSet] = []
+
+    var body: some View {
         let rows: [(label: String, before: Double, after: Double, percent: Bool)] = [
             ("HP", before.hp, after.hp, false),
             ("ATK", before.atk, after.atk, false),
@@ -1078,10 +1133,6 @@ struct RelicPickerView: View {
                 let row = rows[index]
                 let delta = row.after - row.before
                 let changed = abs(delta) >= (row.percent ? 0.005 : 0.5)
-                // Fixed columns. Free-width values put the arrow at a
-                // different x on every one of the eight rows and floated the
-                // delta on a Spacer, so the comparison the screen exists for
-                // read as a ragged block. The longest cell is a five-digit HP.
                 HStack(spacing: 5) {
                     Text(row.label)
                         .font(Theme.body(10))
@@ -1107,19 +1158,17 @@ struct RelicPickerView: View {
                     }
                 }
             }
-            setsDelta(relic)
+            sets
         }
     }
 
-    /// The sets the pick completes, and the ones it breaks.
-    private func setsDelta(_ relic: Relic) -> some View {
-        let before = unit?.activeRelicSets ?? []
-        let after = resolvedWith(relic)?.activeRelicSets ?? []
-        let gained = after.filter { entry in
-            !before.contains(where: { $0.set == entry.set && $0.completions >= entry.completions })
+    /// The sets the change completes, and the ones it breaks.
+    private var sets: some View {
+        let gained = afterSets.filter { entry in
+            !beforeSets.contains(where: { $0.set == entry.set && $0.completions >= entry.completions })
         }
-        let lost = before.filter { entry in
-            !after.contains(where: { $0.set == entry.set && $0.completions >= entry.completions })
+        let lost = beforeSets.filter { entry in
+            !afterSets.contains(where: { $0.set == entry.set && $0.completions >= entry.completions })
         }
         return HStack(spacing: 4) {
             if gained.isEmpty && lost.isEmpty {
@@ -1144,5 +1193,408 @@ struct RelicPickerView: View {
             Spacer()
         }
         .padding(.top, 2)
+    }
+}
+
+/// The optimiser: a unit, a goal, and the best six relics the account can
+/// field for it — every stat before and after, the sets it completes, and the
+/// loadouts it keeps.
+///
+/// It is the relic picker's screen on purpose, because a player who has used
+/// that one has used this one: what would go on down the left, what it would
+/// do on the right, and the button that does it under the table where it
+/// cannot scroll away. The roster grid stands in for the picker's candidate
+/// list until a unit is chosen — a rail beside the six slots and the stat
+/// table does not fit the 647 points a 667-point landscape phone leaves, so
+/// the screen does one job at a time.
+struct RelicOptimiserView: View {
+    /// The unit to open on: the wearer, when the screen is reached from a
+    /// relic slot on the unit sheet. Nil from the relic inventory, which is
+    /// not about any one unit, and where the roster grid chooses.
+    var initialUnitID: UUID? = nil
+
+    @EnvironmentObject private var store: GameStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var target: UUID?
+    @State private var goal: RelicService.OptimiserGoal = .power
+    @State private var solution: RelicService.OptimisedLoadout?
+    /// The last thing that happened, said in the loadout bar: equipping six
+    /// relics moves nothing on screen except the numbers, and a screen that
+    /// answers a tap with nothing reads as broken.
+    @State private var notice: String?
+
+    /// The four goals as the strip's segments.
+    private var goals: [(value: RelicService.OptimiserGoal, title: String)] {
+        RelicService.OptimiserGoal.allCases.map { (value: $0, title: $0.displayName) }
+    }
+
+    /// Everything owned, strongest first — the Hall of Ka's order, and the
+    /// unit worth re-gearing is usually near the top of it.
+    private var roster: [ResolvedUnit] {
+        store.resolvedUnits.sorted { $0.power > $1.power }
+    }
+
+    private var unit: ResolvedUnit? {
+        guard let target else { return nil }
+        return store.resolved(target)
+    }
+
+    /// How many of the six slots the solve would actually change. The Equip
+    /// button reads it: proposing what the unit already wears is worth
+    /// saying, not worth tapping.
+    private var changeCount: Int {
+        guard let unit, let solution else { return 0 }
+        return (1...6).filter { slot in
+            solution.relics.first(where: { $0.slot == slot })?.id
+                != unit.relics.first(where: { $0.slot == slot })?.id
+        }.count
+    }
+
+    private let cardColumns = [GridItem(.adaptive(minimum: 76, maximum: 92), spacing: 8)]
+
+    var body: some View {
+        NavigationStack {
+            GameScreen(
+                "Optimise",
+                subtitle: unit.map { "\($0.name) · \(goal.summary)" } ?? "which unit?",
+                dismiss: { dismiss() }
+            ) {
+                BarSegments(options: goals, selection: $goal)
+                if unit != nil {
+                    BarCount(
+                        value: "\(solution?.candidatesConsidered ?? 0)",
+                        systemImage: "shield.lefthalf.filled"
+                    )
+                    BarButton(
+                        title: "Change unit",
+                        systemImage: "person.2.fill",
+                        tint: Theme.textSecondary,
+                        showsTitle: false
+                    ) {
+                        target = nil
+                    }
+                }
+            } content: {
+                if let unit {
+                    HStack(alignment: .top, spacing: 8) {
+                        proposal(unit)
+                            .frame(maxWidth: .infinity)
+                        comparison(unit)
+                            .frame(width: 290)
+                    }
+                    .padding(.horizontal, ScreenChrome.contentPadding)
+                    .padding(.top, 6)
+                    .safeAreaInset(edge: .bottom) { loadoutBar(unit) }
+                } else {
+                    chooser
+                }
+            }
+            .onAppear {
+                target = target ?? initialUnitID
+                solve()
+            }
+            .onChange(of: goal) { _, _ in solve() }
+            .onChange(of: target) { _, _ in solve() }
+        }
+    }
+
+    // MARK: - Which unit
+
+    @ViewBuilder private var chooser: some View {
+        if roster.isEmpty {
+            EmptyState(
+                icon: "person.crop.circle.badge.questionmark",
+                title: "No one to gear",
+                message: "Summon a unit first; the optimiser dresses whoever you own."
+            )
+        } else {
+            ScrollView {
+                LazyVGrid(columns: cardColumns, spacing: 8) {
+                    ForEach(roster) { entry in
+                        Button {
+                            Juice.haptic(.light)
+                            target = entry.id
+                        } label: {
+                            // `clipShape` does not clip hit-testing and a
+                            // portrait is taller than its card, so the art
+                            // overhangs into the row above and the later card
+                            // wins the tap. The hit area is the card itself.
+                            UnitCard(unit: entry, isSelected: entry.id == target, size: 76)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, ScreenChrome.contentPadding)
+                .padding(.vertical, 8)
+            }
+        }
+    }
+
+    // MARK: - What it would wear
+
+    /// The six slots, and the footer that says what the answer cost. The
+    /// column scrolls on its own: six rows and a footer are taller than what
+    /// a landscape phone leaves under the strip.
+    @ViewBuilder private func proposal(_ unit: ResolvedUnit) -> some View {
+        if let solution {
+            VStack(alignment: .leading, spacing: 6) {
+                ScrollView {
+                    LazyVStack(spacing: 5) {
+                        ForEach(1...6, id: \.self) { slot in
+                            slotRow(
+                                unit: unit,
+                                slot: slot,
+                                proposed: solution.relics.first(where: { $0.slot == slot })
+                            )
+                        }
+                    }
+                    .padding(.bottom, 4)
+                }
+                Text("\(solution.loadoutsSearched) loadouts weighed, from \(solution.candidatesConsidered) relics no one else is wearing")
+                    .font(Theme.body(9))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } else {
+            EmptyState(
+                icon: "shield.slash",
+                title: "Nothing free to fit",
+                message: "Every relic you own is on another unit. Take one off, or clear a stage: relics drop from the campaign and from the Labyrinth."
+            )
+        }
+    }
+
+    /// One slot: what the solve puts in it, and what that displaces.
+    private func slotRow(unit: ResolvedUnit, slot: Int, proposed: Relic?) -> some View {
+        let current = unit.relics.first(where: { $0.slot == slot })
+        let changed = proposed?.id != current?.id
+        return HStack(spacing: 8) {
+            Text("\(slot)")
+                .font(Theme.numeric(11).weight(.black))
+                .foregroundStyle(changed ? Theme.gold : Theme.textSecondary)
+                .frame(width: 12)
+            ZStack {
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(Theme.surfaceHigh)
+                Image(systemName: proposed?.set.glyph ?? "questionmark")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(proposed == nil ? Theme.textSecondary : Theme.gold)
+            }
+            .frame(width: 28, height: 28)
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .strokeBorder(Rarity(stars: proposed?.grade ?? 1).frame, lineWidth: 1.5)
+            )
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    if let proposed {
+                        Text("\(proposed.set.displayName) +\(proposed.level)")
+                            .font(Theme.body(11).weight(.bold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        // The main stat is the load-bearing half of the row and
+                        // takes its width first: the set name shortens
+                        // readably, "+52%" does not.
+                        Text(proposed.effectiveMainStat.displayText)
+                            .font(Theme.body(10))
+                            .foregroundStyle(Theme.gold)
+                            .lineLimit(1)
+                            .layoutPriority(1)
+                    } else {
+                        Text("Nothing fits")
+                            .font(Theme.body(11).weight(.bold))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                    }
+                }
+                Text(displacement(current: current, changed: changed))
+                    .font(Theme.body(9))
+                    .foregroundStyle(changed ? Theme.info : Theme.textSecondary)
+                    .lineLimit(1)
+            }
+            if changed {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.system(size: 10, weight: .black))
+                    .foregroundStyle(Theme.gold)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 46)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .fill(changed ? Theme.surfaceHigh : Theme.surface)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .strokeBorder(changed ? Theme.goldDim : Theme.stroke, lineWidth: 1)
+        )
+    }
+
+    /// What a row's second line says. A solve that keeps a relic has to say so
+    /// as plainly as one that moves it, or six rows of set names read as six
+    /// changes.
+    private func displacement(current: Relic?, changed: Bool) -> String {
+        guard changed else { return "already worn" }
+        guard let current else { return "the slot is empty now" }
+        return "off comes \(current.set.displayName) +\(current.level)"
+    }
+
+    // MARK: - What it would do
+
+    /// Before and after, and the button that does it. The table scrolls; the
+    /// button does not — the picker learned that with Equip below the fold at
+    /// the end of a scroll.
+    private func comparison(_ unit: ResolvedUnit) -> some View {
+        let after = solution.map { solved(unit, relics: $0.relics) }
+        return VStack(spacing: 6) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 8) {
+                    SectionHeader(title: "Now", accessory: "\(unit.power) power")
+                    if let after {
+                        SectionHeader(title: "If equipped", accessory: "\(after.power) power")
+                        StatDeltaTable(
+                            before: unit.stats,
+                            after: after.stats,
+                            beforeSets: unit.activeRelicSets,
+                            afterSets: after.activeRelicSets
+                        )
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .frame(maxHeight: .infinity)
+            PrimaryButton(
+                title: changeCount == 0 ? "Nothing to change" : "Equip these six",
+                systemImage: "wand.and.stars",
+                isEnabled: changeCount > 0
+            ) {
+                equipSolution()
+            }
+        }
+        .padding(10)
+        .panelBackground(radius: Theme.tightCorner)
+    }
+
+    /// The unit as the solve would leave it. Through `ProgressionService` and
+    /// not the solver's own arithmetic: the numbers on this screen and the
+    /// numbers in battle come from one place.
+    private func solved(_ unit: ResolvedUnit, relics: [Relic]) -> ResolvedUnit {
+        ProgressionService.resolve(unit.unit, blueprint: unit.blueprint, equipped: relics)
+    }
+
+    // MARK: - Loadouts
+
+    /// The unit's saved loadouts, and the button that keeps what it wears
+    /// under the goal in the strip. Along the bottom, where the inventory
+    /// keeps its sell bar.
+    private func loadoutBar(_ unit: ResolvedUnit) -> some View {
+        let saved = store.relicLoadouts(for: unit.id)
+        return HStack(spacing: 6) {
+            Text("LOADOUTS")
+                .font(Theme.body(9).weight(.black))
+                .tracking(0.6)
+                .foregroundStyle(Theme.textSecondary)
+            ForEach(saved) { loadout in
+                HStack(spacing: 6) {
+                    Button {
+                        wear(loadout)
+                    } label: {
+                        Text(loadout.name)
+                            .font(Theme.body(10).weight(.bold))
+                            .foregroundStyle(Theme.gold)
+                    }
+                    .buttonStyle(.plain)
+                    // Its own button, not a corner of the chip: a loadout is
+                    // four taps to rebuild, but deleting the one you meant to
+                    // wear is the annoying half of that.
+                    Button {
+                        Juice.haptic(.light)
+                        store.deleteRelicLoadout(loadout.id)
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 8, weight: .black))
+                            .foregroundStyle(Theme.textSecondary)
+                            .frame(width: 16, height: 24)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.leading, 9)
+                .padding(.trailing, 3)
+                .frame(height: 24)
+                .background(Capsule().fill(Theme.surfaceHigh))
+            }
+            if saved.isEmpty {
+                Text("none kept yet — equip a set and keep it under a name")
+                    .font(Theme.body(9))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 6)
+            if let notice {
+                Text(notice)
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.success)
+                    .lineLimit(1)
+            }
+            BarButton(
+                title: "Keep as \(goal.displayName)",
+                systemImage: "square.and.arrow.down.fill",
+                tint: Theme.info
+            ) {
+                keep(unit)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 4)
+        .background(Theme.ink)
+    }
+
+    // MARK: - Doing it
+
+    /// Runs the solver for the unit and the goal in hand.
+    ///
+    /// Synchronous on purpose: a solve is tens of thousands of additions,
+    /// which is milliseconds, and an asynchronous one would have to be
+    /// cancelled and restarted every time a segment is tapped.
+    private func solve() {
+        notice = nil
+        guard let target else {
+            solution = nil
+            return
+        }
+        solution = store.optimisedLoadout(for: target, goal: goal)
+    }
+
+    private func equipSolution() {
+        guard let target, let solution else { return }
+        // Counted before the store moves anything: afterwards nothing has
+        // changed, by definition.
+        let moved = changeCount
+        store.applyRelicLoadout(solution.relicIDs, to: target)
+        Juice.notify(.success)
+        solve()
+        notice = moved == 1 ? "One slot changed." : "\(moved) slots changed."
+    }
+
+    private func keep(_ unit: ResolvedUnit) {
+        if store.saveRelicLoadout(named: goal.displayName, for: unit.id) {
+            AudioLibrary.shared.play(.uiConfirm)
+            notice = "Kept as \(goal.displayName)."
+        } else {
+            Juice.notify(.warning)
+            notice = "\(unit.name) already keeps \(RelicService.loadoutsPerUnit) loadouts."
+        }
+    }
+
+    private func wear(_ loadout: RelicLoadout) {
+        store.applySavedLoadout(loadout.id)
+        AudioLibrary.shared.play(.uiConfirm)
+        Juice.notify(.success)
+        solve()
+        notice = "Wearing \(loadout.name)."
     }
 }

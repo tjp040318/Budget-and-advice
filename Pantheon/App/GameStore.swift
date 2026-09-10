@@ -277,6 +277,27 @@ final class GameStore: ObservableObject {
         }
     }
 
+    // MARK: - Fusion
+
+    /// Runs a fusion hexagram: the four corners and the drachma are spent and
+    /// the prize joins the roster. Nil, with the reason shown, when it cannot
+    /// run — the board disables the button first, so this is the backstop and
+    /// not the check.
+    ///
+    /// Alone among the mutations here it records no quest event, because there
+    /// is no truthful one to record: `.summoned` would fill the summon mission
+    /// with something that was not a summon and `.unitEvolved` would fill the
+    /// evolution feat. A fusion counts for nothing until `QuestService.Event`
+    /// gains a case of its own.
+    @discardableResult
+    func fuse(_ recipe: FusionService.Recipe) -> ResolvedUnit? {
+        let created: Unit? = attempt { player in
+            try FusionService.fuse(recipe, player: &player)
+        }
+        guard let created else { return nil }
+        return resolved(created.id)
+    }
+
     // MARK: - Relics
 
     func equip(relicID: UUID, on unitID: UUID) {
@@ -350,6 +371,62 @@ final class GameStore: ObservableObject {
         }
     }
 
+    // MARK: - The optimiser and loadouts
+
+    /// The best six relics for a unit under one goal. A read, not a mutation:
+    /// nothing moves until the player taps Equip, so the screen can re-solve
+    /// on every tap of a goal segment without touching the save.
+    func optimisedLoadout(for unitID: UUID, goal: RelicService.OptimiserGoal) -> RelicService.OptimisedLoadout? {
+        RelicService.optimise(unitID: unitID, goal: goal, player: player)
+    }
+
+    /// Equips a whole six by slot, emptying any slot the plan does not name and
+    /// taking a relic off another unit if that is where it is.
+    func applyRelicLoadout(_ relicIDs: [Int: UUID], to unitID: UUID) {
+        update { player in
+            // `_ =` rather than a bare call: `applyLoadout` hands back how many
+            // slots it filled, and `update` wants a closure that returns Void.
+            _ = RelicService.applyLoadout(relicIDs: relicIDs, to: unitID, player: &player)
+        }
+    }
+
+    func relicLoadouts(for unitID: UUID) -> [RelicLoadout] {
+        RelicService.loadouts(for: unitID, in: player.relicLoadouts ?? [])
+    }
+
+    /// Keeps what the unit is wearing under `name`, replacing its loadout of
+    /// that name. False when it already keeps `RelicService.loadoutsPerUnit`
+    /// under other names, so the screen says so rather than the save quietly
+    /// dropping the oldest.
+    @discardableResult
+    func saveRelicLoadout(named name: String, for unitID: UUID) -> Bool {
+        var saved = false
+        update { player in
+            guard let loadout = RelicService.captureLoadout(named: name, for: unitID, player: player) else { return }
+            var all = player.relicLoadouts ?? []
+            saved = RelicService.saveLoadout(loadout, into: &all)
+            player.relicLoadouts = all
+        }
+        return saved
+    }
+
+    func deleteRelicLoadout(_ loadoutID: UUID) {
+        update { player in
+            var all = player.relicLoadouts ?? []
+            RelicService.removeLoadout(loadoutID, from: &all)
+            player.relicLoadouts = all
+        }
+    }
+
+    func applySavedLoadout(_ loadoutID: UUID) {
+        update { player in
+            guard let loadout = (player.relicLoadouts ?? []).first(where: { $0.id == loadoutID }) else { return }
+            _ = RelicService.applyLoadout(
+                relicIDs: loadout.relicIDs, to: loadout.unitID, player: &player
+            )
+        }
+    }
+
     // MARK: - The bazaar
 
     /// Buys an item, or claims the daily offering. Nil, and an error shown,
@@ -391,6 +468,49 @@ final class GameStore: ObservableObject {
     /// Rewards waiting to be claimed, for the badge beside the wallet.
     var claimableRewards: Int { QuestService.claimableCount(player: player) }
 
+    // MARK: - The first hour
+
+    /// The step of the guided opening the island points at, or nil when there
+    /// is nothing left to point at.
+    ///
+    /// Derived from what the player owns and has cleared rather than from a
+    /// counter, so no screen has to remember to advance it and a save written
+    /// before the guide existed lands on the right step instead of restarting a
+    /// veteran at the beginning. The stored field only ever ends the guide.
+    var firstHourStep: FirstHourStep? {
+        guard player.firstHourStep != FirstHourStep.finished else { return nil }
+        return FirstHourStep.current(for: player)
+    }
+
+    /// Keeps the save in step with the pointer on screen, and writes the
+    /// sentinel once the four are done so the guide cannot come back. The guard
+    /// is what stops the island's `onChange` from writing on every redraw.
+    func recordFirstHourStep(_ step: FirstHourStep?) {
+        let value = step?.rawValue ?? FirstHourStep.finished
+        guard player.firstHourStep != value else { return }
+        update { player in player.firstHourStep = value }
+    }
+
+    /// Skip: the guide stops now and does not return. `resetAccount` replaces
+    /// the whole player, so a fresh account still gets it.
+    func skipFirstHour() {
+        guard player.firstHourStep != FirstHourStep.finished else { return }
+        update { player in player.firstHourStep = FirstHourStep.finished }
+    }
+
+    func hasSeenChapterIntro(_ chapterID: String) -> Bool {
+        player.seenChapterIntros?.contains(chapterID) ?? false
+    }
+
+    func markChapterIntroSeen(_ chapterID: String) {
+        guard !hasSeenChapterIntro(chapterID) else { return }
+        update { player in
+            var seen = player.seenChapterIntros ?? []
+            seen.append(chapterID)
+            player.seenChapterIntros = seen
+        }
+    }
+
     // MARK: - Battle plumbing
 
     func startCampaignBattle(stage: Stage) -> BattleEngine? {
@@ -406,6 +526,18 @@ final class GameStore: ObservableObject {
             outcome = CampaignService.applyRewards(
                 stage: stage, result: result, player: &player, rng: &rng
             )
+            // A tower floor pays like any other stage. What a stage cannot
+            // express is the high-water mark and the milestone, so the tower
+            // settles those here, after the floor has been paid, and folds the
+            // milestone's grants into the same receipt rather than letting them
+            // arrive silently in the wallet.
+            if DungeonDatabase.isTowerFloor(stage), var settled = outcome {
+                TowerService.recordClear(
+                    stage: stage, result: result, outcome: &settled,
+                    player: &player, rng: &rng
+                )
+                outcome = settled
+            }
             if result.outcome == .victory {
                 let event: QuestService.Event = DungeonDatabase.hall(containing: stage) != nil
                     ? .hallFloorCleared(stage)
@@ -419,6 +551,57 @@ final class GameStore: ObservableObject {
             relicsEarned: [], essencesEarned: [:], scrollsEarned: [:], divinityEarned: 0,
             isFirstClear: false, leveledUnits: [:]
         )
+    }
+
+    // MARK: - The Endless Tower
+
+    /// Spends the energy for the next floor and builds its engine. Nil, with
+    /// the reason shown, when the tower is climbed, the energy is short or the
+    /// campaign team is empty.
+    ///
+    /// Deliberately not `startCampaignBattle`: `CampaignService.startBattle`
+    /// gates a stage on `campaignProgress`, and the tower gates on its own mark
+    /// in `player.tower` instead. The clear comes back through
+    /// `finishCampaignBattle`, which is where the mark moves.
+    func startTowerBattle() -> BattleEngine? {
+        attempt { player in
+            try TowerService.startBattle(player: &player, seed: self.nextSeed())
+        }
+    }
+
+    // MARK: - Raids
+
+    /// A raid is a `Stage` like any other, but it is not on the campaign map
+    /// and `CampaignService.startBattle` cannot hand the boss its mechanics — a
+    /// raid started that way fights as a plain statblock, with no barrier, no
+    /// adds and no rotating weakness. So it spends its energy here and builds
+    /// its engine through the raid factory, which is the one entry point that
+    /// passes the profiles to `BattleEngine`.
+    func startRaid(_ raid: RaidEncounter) -> BattleEngine? {
+        attempt { player -> BattleEngine in
+            guard player.wallet.energy >= raid.stage.energyCost else {
+                throw CampaignService.CampaignError.notEnoughEnergy(needed: raid.stage.energyCost)
+            }
+            let team = CampaignService.resolveTeam(player.campaignTeam, player: player)
+            guard !team.isEmpty else { throw CampaignService.CampaignError.emptyTeam }
+            player.wallet.energy -= raid.stage.energyCost
+            return StageDatabase.raidEngine(
+                for: raid.stage, playerTeam: team, seed: self.nextSeed()
+            )
+        }
+    }
+
+    /// The rewards path is the campaign's: `applyRewards` stamps
+    /// `campaignProgress[stage.chapterID]`, which for a raid stage is the
+    /// raid's own id, so a first clear pays exactly once.
+    @discardableResult
+    func finishRaid(_ raid: RaidEncounter, result: BattleResult) -> StageOutcome {
+        finishCampaignBattle(stage: raid.stage, result: result)
+    }
+
+    /// For a list screen: whether the raid has ever been beaten.
+    func hasCleared(_ raid: RaidEncounter) -> Bool {
+        (player.campaignProgress[raid.id] ?? 0) >= 1
     }
 
     func startArenaBattle(against opponent: ArenaOpponent) -> BattleEngine? {

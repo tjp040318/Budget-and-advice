@@ -55,6 +55,20 @@ struct Chapter: Identifiable, Codable, Equatable, Sendable {
     var pantheon: Pantheon
     var name: String
     var summary: String
+    /// The story, shown once over the chapter's own painting the first time the
+    /// player walks into it (`ChapterIntroCard` on the island). `summary` is the
+    /// line the map carries every time; this is the longer version, about forty
+    /// words, and it is the only place the campaign explains what is wrong.
+    /// Empty means no card, which is what the Labyrinth's chapters get.
+    var intro: String = ""
+    /// What the chapter's boss says as its stage opens, in the same cut-in band
+    /// an ultimate uses. One line — it plays over the fight starting, not
+    /// instead of it.
+    var bossLine: String = ""
+    /// Who says it: the blueprint whose card and element the cut-in wears. The
+    /// boss is not always the last spawn in the list (Apep is third of four in
+    /// `duat_1_5`), so it is named here rather than guessed at.
+    var bossBlueprintID: String = ""
     var stages: [Stage]
 
     var realmName: String { pantheon.realmName }
@@ -75,6 +89,13 @@ enum StageDatabase {
             pantheon: .egyptian,
             name: "The Gates of the West",
             summary: "Seven gates, and a name to be spoken at each one. Something has been eating the names.",
+            intro: """
+            Each gate opens to its own name and to nothing else, and the names \
+            are written down in one place only. Somebody has been at that scroll \
+            with their teeth. Four gates have gone quiet, and the guides have \
+            stopped walking the western road at all.
+            """,
+            bossLine: "Say your name. You cannot — I ate it at the fourth gate, and I am still hungry.",
             startingLevel: 30,
             stageCount: 10,
             environment: .hallOfTwoTruths,
@@ -88,6 +109,13 @@ enum StageDatabase {
             pantheon: .greek,
             name: "The Gate of Olympus",
             summary: "The mountain's gate stands open and unguarded. What came down the steps was not sent by the gods.",
+            intro: """
+            The gate on the mountain has stood open a whole season and nobody \
+            above has come down to shut it. What walks out of it at night comes \
+            from the cellars under the throne room, where the gods put the things \
+            they could not bring themselves to kill.
+            """,
+            bossLine: "I forged the bolt that put them on that mountain. They gave me a cellar for it.",
             startingLevel: 30,
             stageCount: 10,
             environment: .olympusGate,
@@ -103,6 +131,13 @@ enum StageDatabase {
             pantheon: .greek,
             name: "The Aegean Cliffs",
             summary: "Every ship that rounds the cape is found on the rocks by morning, and the crews are not.",
+            intro: """
+            Eleven ships this year, all on the same reef, all with the sail still \
+            set and the steering oar lashed straight. There are no bodies in the \
+            water and none on the sand. The wreckers who work this coast have \
+            moved inland and will not say why.
+            """,
+            bossLine: "Look at me. They all do, once.",
             startingLevel: 34,
             stageCount: 10,
             environment: .aegeanCliffs,
@@ -118,6 +153,13 @@ enum StageDatabase {
             pantheon: .greek,
             name: "The Marsh of Lerna",
             summary: "Heracles cut the heads off once. The marsh has had a long time to grow them back.",
+            intro: """
+            Heracles burned the stumps so the heads could not come back, and for \
+            a few hundred years that held. The marsh has been patient since. The \
+            cattle stopped going missing last spring, which the villages took for \
+            good news until they counted the cattle.
+            """,
+            bossLine: "He came with a torch and a nephew to carry it. What have you brought?",
             startingLevel: 38,
             stageCount: 10,
             environment: .lernaMarsh,
@@ -135,6 +177,13 @@ enum StageDatabase {
             pantheon: .norse,
             name: "The Midgard Fjord",
             summary: "The longships have stopped coming home. Something on the fjord road is choosing the slain before the valkyries can.",
+            intro: """
+            Six longships out and none back, and the fjord has given up nothing — \
+            no oars, no bodies, no wreck on the shingle. The valkyries still come \
+            down for the slain along this water. They are arriving to find the \
+            slain already taken.
+            """,
+            bossLine: "The choosers were slow. I have been picking the dead myself since midwinter.",
             startingLevel: 40,
             stageCount: 10,
             environment: .midgardFjord,
@@ -150,6 +199,13 @@ enum StageDatabase {
             pantheon: .norse,
             name: "The Roots of Yggdrasil",
             summary: "Below the tree, where the serpent gnaws, the barrow-dead are climbing toward the light.",
+            intro: """
+            The serpent has gnawed this root since before there were seasons and \
+            the wood has gone soft all the way through. What was buried under it \
+            finds the way up easy now, and climbs toward the light in a steady \
+            line, all night, without hurrying.
+            """,
+            bossLine: "No sun has come down here in a hundred winters. Do not bring one now.",
             startingLevel: 44,
             stageCount: 10,
             environment: .yggdrasilRoots,
@@ -165,6 +221,13 @@ enum StageDatabase {
             pantheon: .norse,
             name: "The Hall of Jötunheim",
             summary: "The giants have crowned a king under the ice, and he has sent for the hammer.",
+            intro: """
+            The giants went a long age without a king. They have dug the last one \
+            out from under the glacier and put the crown back on him, and his \
+            first order was a demand for the hammer that killed him. Nothing has \
+            come back from the hall that was asked.
+            """,
+            bossLine: "Send the hammer, or send the one who carries it. Both arrive in pieces.",
             startingLevel: 48,
             stageCount: 10,
             environment: .jotunheimHall,
@@ -214,6 +277,14 @@ enum StageDatabase {
         through the reed beds that was never weighed, and it is walking west \
         against the current of the dead.
         """,
+        intro: """
+        The scales in the Hall of Two Truths have stood untended for nine days. \
+        Nothing has been weighed, so nothing has been let through, and the dead \
+        are stacking up along the reed road like grain sacks at a shut gate. \
+        Someone has to go and see who is at the far end of it.
+        """,
+        bossLine: "The sun comes down this hole every night. It has never once climbed out alone.",
+        bossBlueprintID: "apep",
         stages: [
             Stage(
                 id: "duat_1_1",
@@ -334,6 +405,8 @@ enum StageDatabase {
         pantheon: Pantheon,
         name: String,
         summary: String,
+        intro: String = "",
+        bossLine: String = "",
         startingLevel: Int,
         stageCount: Int,
         environment: BattleEnvironment,
@@ -398,7 +471,12 @@ enum StageDatabase {
             ))
         }
 
-        return Chapter(id: id, pantheon: pantheon, name: name, summary: summary, stages: stages)
+        // The boss is the last slot of the last stage, so the cut-in's speaker
+        // is `bossID` and not a guess made later from the spawn list.
+        return Chapter(
+            id: id, pantheon: pantheon, name: name, summary: summary,
+            intro: intro, bossLine: bossLine, bossBlueprintID: bossID, stages: stages
+        )
     }
 
     /// Builds fightable units for a stage's enemy list.
@@ -437,23 +515,37 @@ enum StageDatabase {
     // NOT in `chapters`: it must not appear on the campaign map or count
     // towards a realm's completion.
     //
-    // The numbers are keyed to the Labyrinth's B10 (level 50, 6★, x2.4), which
-    // `tools/balance.py --labyrinths` measures as the wall for a maxed 6★ team.
-    // A raid stands above it: the same team, a barrier's worth of extra health
-    // to chew through, a guard that heals the boss if it is left alone, and an
-    // enrage that ends the fight if it runs long. See the note in the report —
-    // `balance.py` does not model raid mechanics yet, so these are a first pass
-    // measured only as "boss with barrier + two adds" against that ladder.
+    // WHERE THE NUMBERS COME FROM. `tools/balance.py` has no raid model yet —
+    // it cannot simulate a barrier, a drain, an enrage or a rotating weakness —
+    // so these were measured with a throwaway probe built on its engine, which
+    // stands the barrier in as extra health on the boss and puts both minions
+    // on the field from the first turn. Win rate and median turn count over 60
+    // seeded fights, against the ladders `balance.py` uses for chapters:
+    //
+    //                          4★ lv35   5★ lv40+r   6★ lv55 max   gods lv60
+    //   Apep, barrier once         0%         0%        100%/121t   100%/44t
+    //   Apep, barrier x3           0%         0%         32%/150t   100%/51t
+    //   Jötunn, barrier once       0%         0%         13%/150t   100%/51t
+    //   Jötunn, barrier x3         0%         0%          0%/150t   100%/57t
+    //
+    // Read: a raid needs a real team, not four levelled duplicates — the same
+    // team clears Labyrinth B10 at 100% in 121-145 turns. The probe leaves the
+    // drain out, so a real fight runs longer than those turn counts, which is
+    // why the enrage sits at 65 and 60 rather than at the medians. Anything
+    // changed here should be re-probed, and the probe belongs in balance.py the
+    // next time somebody touches it.
 
     static let raids: [RaidEncounter] = [
         RaidEncounter(
             id: "raid_apep",
             name: "The Serpent That Swallows the Sun",
             summary: """
-            It has swallowed the disc again and the scarabs are carrying it \
-            more. Break the night off its back before the coils close, because \
-            the longer this takes the less of the world there is to save.
+            It has swallowed the disc again, and the scarabs are carrying \
+            what is left of the daylight down its throat. Break the night off \
+            its back before the coils close, and be quick: every turn this \
+            takes, there is less of the world left to come back to.
             """,
+            bossLine: "I have swallowed the disc. Fight by whatever light you brought with you.",
             environment: .serpentDeep,
             stage: Stage(
                 id: "raid_apep_1",
@@ -466,30 +558,37 @@ enum StageDatabase {
                     EnemySpawn(
                         blueprintID: "apep", level: 60, stars: 6, statMultiplier: 2.6,
                         raid: RaidBossProfile(
-                            // A third of its health again in scale, back three
-                            // turns after it goes. Breaking it is the fight's
-                            // rhythm: the burst goes into the barrier, the
-                            // stun window pays for it.
-                            barrierFraction: 0.35,
+                            // A seventh of its health in scale, back three
+                            // boss turns after it goes. That is the fight's
+                            // rhythm: burst it off in a few turns, take the
+                            // stun window, hit the health underneath, do it
+                            // again. Any thicker and the barrier IS the fight.
+                            barrierFraction: 0.15,
                             barrierRegenTurns: 3,
                             barrierStunTurns: 1,
                             barrierName: "Scales of Night",
-                            // Two scarabs every third turn. Left alone they
-                            // carry 5% of the serpent's health back to it per
-                            // turn each — a tenth a turn, which outruns any
-                            // damage a team is doing while it ignores them.
+                            // Two scarabs every third boss turn. Left alone
+                            // they carry 3.5% of the serpent's health back to
+                            // it each, per boss turn: about half of what a
+                            // team that can clear this is dealing, so the
+                            // guard has to be answered but a slow answer is
+                            // not instantly fatal.
                             adds: [
                                 EnemySpawn(blueprintID: "sun_scarab", level: 55, stars: 5, statMultiplier: 1.2),
                                 EnemySpawn(blueprintID: "sun_scarab", level: 55, stars: 5, statMultiplier: 1.2)
                             ],
                             addInterval: 3,
-                            addDrain: 0.05,
+                            addDrain: 0.035,
                             summonName: "Calls the Swarm",
                             drainName: "Swallows the Disc",
-                            // Turn 30 is the Labyrinth's boss par doubled: a
-                            // team that is clearing this at all is inside it,
-                            // and a team that is grinding it down is not.
-                            enrageTurn: 30,
+                            // A team of gods puts this fight down in 44-51
+                            // turns and a team of levelled duplicates takes
+                            // 120 or more (measured with the probe in the
+                            // report — `balance.py` has no raid model yet).
+                            // Turn 65 is the line between them: the good team
+                            // never sees it, the slow one is killed by it
+                            // instead of drawing at the 150-turn cap.
+                            enrageTurn: 65,
                             enrageMultiplier: 1.8,
                             enrageInterval: 12,
                             // Ember, so Tide already has the wheel on it; the
@@ -525,6 +624,7 @@ enum StageDatabase {
             over him like a shell. What comes out of it when the shell cracks \
             has been waiting a very long time for someone to come down here.
             """,
+            bossLine: "The ice took a hundred winters to close over me. You have until it finishes cracking.",
             environment: .jotunheimHall,
             stage: Stage(
                 id: "raid_jotunn_1",
@@ -540,7 +640,7 @@ enum StageDatabase {
                             // A thicker shell than the serpent's and slower to
                             // come back: this is the defensive raid, and the
                             // whole fight is fought in the windows.
-                            barrierFraction: 0.45,
+                            barrierFraction: 0.20,
                             barrierRegenTurns: 4,
                             barrierStunTurns: 1,
                             barrierName: "Rime Shell",
@@ -549,14 +649,15 @@ enum StageDatabase {
                                 EnemySpawn(blueprintID: "enemy_frost_troll", level: 55, stars: 5, statMultiplier: 1.3)
                             ],
                             addInterval: 4,
-                            addDrain: 0.06,
+                            addDrain: 0.04,
                             summonName: "Calls the Trolls",
                             drainName: "Drinks the Cold",
-                            // Sooner and harder than the serpent's, because
-                            // his own damage starts lower: the race is the
-                            // point of this one.
-                            enrageTurn: 26,
-                            enrageMultiplier: 2.0,
+                            // Sooner and harder than the serpent's: nothing
+                            // short of a real team beats him at all, and the
+                            // probe puts that team at 51-57 turns. Turn 60
+                            // leaves it one step of room and no more.
+                            enrageTurn: 60,
+                            enrageMultiplier: 1.9,
                             enrageInterval: 10,
                             // Two elements, rotating twice as fast. Gale, so
                             // Ember has the wheel on him half the time and
@@ -600,7 +701,7 @@ enum StageDatabase {
         var index = 0
         for spawn in stage.enemies {
             guard UnitDatabase.blueprint(spawn.blueprintID) != nil else { continue }
-            if let raid = spawn.raid { profiles[index] = raid }
+            if let profile = spawn.raid { profiles[index] = profile }
             index += 1
         }
         return profiles
@@ -618,6 +719,45 @@ enum StageDatabase {
             raidBosses: raidProfiles(for: stage)
         )
     }
+
+    // MARK: - Boss lines
+
+    /// What the boss of this stage says as the fight opens, or nil when the
+    /// stage has nobody to say it.
+    ///
+    /// Only a chapter's boss stage and a raid have a line: the Labyrinth's
+    /// bosses are fought ten times over for relics and a line that plays on
+    /// every run is a line the player learns to skip. A chapter whose text has
+    /// not been written yet returns nil rather than an empty band.
+    static func bossLine(for stage: Stage) -> BossLine? {
+        guard stage.isBoss else { return nil }
+        // The locals are not called `chapter` and `raid`: both are also the
+        // names of the lookups on this enum, and a shadowed function is a trap
+        // for the next person to edit this.
+        if let owner = chapter(stage.chapterID),
+           !owner.bossLine.isEmpty, !owner.bossBlueprintID.isEmpty {
+            return BossLine(blueprintID: owner.bossBlueprintID, line: owner.bossLine)
+        }
+        if let encounter = raid(stage.chapterID), !encounter.bossLine.isEmpty,
+           // The speaker is the spawn carrying the mechanics, which is the one
+           // the health bar at the top of the screen belongs to.
+           let speaker = encounter.stage.enemies.first(where: { $0.raid != nil })?.blueprintID {
+            return BossLine(blueprintID: speaker, line: encounter.bossLine)
+        }
+        return nil
+    }
+}
+
+// MARK: - Boss lines
+
+/// One line of a boss's, and who says it.
+///
+/// The cut-in the ultimates use wants a card, a name, an accent colour and some
+/// words; everything but the words comes off the blueprint, so this carries the
+/// id rather than four resolved fields that would go stale with the roster.
+struct BossLine: Equatable, Sendable {
+    var blueprintID: String
+    var line: String
 }
 
 // MARK: - Raid mechanics
@@ -687,6 +827,10 @@ struct RaidEncounter: Identifiable, Sendable {
     var id: String
     var name: String
     var summary: String
+    /// What the boss says as the fight opens, like a chapter's. A raid is the
+    /// biggest fight in the game and it would be the only boss in it with
+    /// nothing to say.
+    var bossLine: String = ""
     var environment: BattleEnvironment
     var stage: Stage
 

@@ -84,6 +84,21 @@ struct Player: Codable, Equatable, Sendable {
     var featsClaimed: Set<String>? = nil
     var loginStreak: LoginStreak? = nil
 
+    /// How far up the Endless Tower the player has been, and which milestones
+    /// have been paid. Optional for the reason the four above are: a save
+    /// written before the tower existed has no key here, and the synthesised
+    /// decoder tolerates a missing optional key and nothing else.
+    var tower: TowerProgress? = nil
+    /// Named six-relic loadouts, saved against a unit. Ids rather than relics,
+    /// so a relic sold since cannot leave a stale copy of itself in the save.
+    var relicLoadouts: [RelicLoadout]? = nil
+    /// How far the guided opening got: a `FirstHourStep` raw value, or
+    /// `FirstHourStep.finished` once it has been skipped or seen out. Nil means
+    /// nothing has ended it, so the step is worked out from the save itself.
+    var firstHourStep: String? = nil
+    /// Chapter ids whose intro card has been shown, so it is shown once.
+    var seenChapterIntros: [String]? = nil
+
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }
 
