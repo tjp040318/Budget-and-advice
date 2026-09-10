@@ -166,12 +166,30 @@ enum Theme {
     /// bar into it — and the first playtest asked for exactly that density.
     static let fontScale: CGFloat = 0.9
 
+    /// A ROMAN SERIF for the two headline roles, against the system sans for
+    /// everything else.
+    ///
+    /// A serif was tried once before and removed, with the note that it "fought
+    /// with the rounded titles and neither won". That was true against the old
+    /// indigo palette, where the interface had no material of its own for a
+    /// serif to belong to. Against marble and bronze it is the opposite: a
+    /// heavy Roman capital is what carved lettering looks like, and it is the
+    /// single largest thing separating a premium collection RPG from an app
+    /// that happens to be dark. It costs nothing — no font file, no bundle
+    /// weight — because the system ships a serif design.
+    ///
+    /// Only `display` and `title` take it, thirty-three call sites between
+    /// them. Body text stays sans, because a serif at eleven points on a phone
+    /// is worse to read and this game asks people to read a lot of skill
+    /// descriptions; numbers stay monospaced so stat columns line up. Two
+    /// voices, each doing the job it is good at, which is the whole of
+    /// typography.
     static func display(_ size: CGFloat) -> Font {
-        .system(size: size * fontScale, weight: .black, design: .default)
+        .system(size: size * fontScale, weight: .black, design: .serif)
     }
 
     static func title(_ size: CGFloat = 20) -> Font {
-        .system(size: size * fontScale, weight: .heavy, design: .default)
+        .system(size: size * fontScale, weight: .heavy, design: .serif)
     }
 
     static func body(_ size: CGFloat = 15) -> Font {
