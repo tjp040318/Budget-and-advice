@@ -42,7 +42,10 @@ struct DamageSpec: Codable, Equatable, Sendable {
     var defenseIgnore: Double = 0
     /// Extra multiplier per debuff currently on the target (Nemesis-style scaling).
     var bonusPerTargetDebuff: Double = 0
-    /// Extra multiplier per 1% of the target's *missing* health.
+    /// Extra multiplier at ZERO health, scaled by the fraction of the
+    /// target's health that is missing (`1 + bonus × fraction`): 0.8 is up
+    /// to 80% more. It read "per 1%" for a season, and the kits that
+    /// believed it were handing out 0.8% at most.
     var bonusPerMissingHealth: Double = 0
     /// Skips the crit roll and always crits. Reserved for finishers.
     var alwaysCrits: Bool = false

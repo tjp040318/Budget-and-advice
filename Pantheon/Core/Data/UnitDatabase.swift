@@ -92,48 +92,97 @@ enum UnitDatabase {
     static let shabtiFamily: [UnitBlueprint] = Element.allCases.map(shabtiVariant)
 
     private static func shabtiVariant(_ element: Element) -> UnitBlueprint {
+        let id = "shabti_\(element.rawValue)"
         let epithet: String
         let stats: (hp: Double, atk: Double, def: Double, spd: Double)
-        let status: StatusSpec
         switch element {
         case .ember:
             epithet = "Kiln Servant"
             stats = (290, 26, 19, 97)
-            status = StatusSpec(.burn, chance: 0.40, turns: 2, target: .singleEnemy)
         case .tide:
             epithet = "Nile Servant"
             stats = (320, 23, 21, 96)
-            status = StatusSpec(.speedDown, chance: 0.45, turns: 2, target: .singleEnemy)
         case .gale:
             epithet = "Dune Servant"
             stats = (285, 24, 18, 106)
-            status = StatusSpec(.glancing, chance: 0.45, turns: 2, target: .singleEnemy)
         case .radiance:
             epithet = "Sun Servant"
             stats = (305, 24, 22, 98)
-            status = StatusSpec(.attackDown, chance: 0.45, turns: 2, target: .singleEnemy)
         case .umbra:
             epithet = "Tomb Servant"
             stats = (300, 25, 20, 98)
-            status = StatusSpec(.defenseDown, chance: 0.40, turns: 2, target: .singleEnemy)
         }
-        return enemy(
-            id: "shabti_\(element.rawValue)",
+
+        // A servant answers five ways. The family used to come out of the
+        // enemy factory with one special and an element rider on it; a real
+        // second skill per element is a real kit, so it is written out here
+        // the way the factory's own comment asks. Dark, the Tomb Servant, is
+        // the home: Answer the Call as first written.
+        let special: Skill
+        switch element {
+        case .ember:
+            special = smite(id, slot: 1, "Kiln Fire",
+                            "A blow with a 60% chance to Burn the target for 2 turns, hitting 10% harder for every harmful effect on it.",
+                            cd: 3, DamageSpec(multiplier: 2.20, bonusPerTargetDebuff: 0.10),
+                            statuses: [status(.burn, 0.60)], vfx: "impact_ember")
+        case .tide:
+            special = smite(id, slot: 1, "Nile Undertow",
+                            "A blow with a 50% chance to Freeze the target for 1 turn.",
+                            cd: 3, DamageSpec(multiplier: 2.30), statuses: [status(.freeze, 0.50, turns: 1)], vfx: "impact_tide")
+        case .gale:
+            special = smite(id, slot: 1, "Dust Devil",
+                            "Two quick blows on one enemy, each with a 30% chance to make its next hit Glancing for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 1.20, hits: 2), statuses: [status(.glancing, 0.30, perHit: true)],
+                            vfx: "impact_gale")
+        case .radiance:
+            special = smite(id, slot: 1, "Sunlit Ward",
+                            "A blow with a 60% chance to inflict Attack Down for 2 turns; the servant takes a shield worth 15% of its maximum health for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 2.10),
+                            statuses: [status(.attackDown, 0.60), status(.shield, 1.0, on: .caster, magnitude: 0.15)],
+                            vfx: "impact_radiance")
+        case .umbra:
+            special = smite(id, slot: 1, "Answer the Call",
+                            "Answers for its master with one blow, with a 40% chance to Break the target's defence for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 2.30), statuses: [status(.defenseDown, 0.40)], vfx: "heart_weigh")
+        }
+
+        return UnitBlueprint(
+            id: id,
             name: "Shabti",
             epithet: epithet,
+            pantheon: .egyptian,
             element: element,
             archetype: .spirit,
             role: .attacker,
-            stars: 3,
-            hp: stats.hp, atk: stats.atk, def: stats.def, spd: stats.spd,
-            basicName: "Clay Grasp",
-            basicMultiplier: 1.60,
-            specialName: "Answer the Call",
-            specialMultiplier: 2.30,
-            specialStatus: status,
-            auraHex: element.accentHex,
+            naturalStars: 3,
+            baseStats: Stats(
+                hp: stats.hp, atk: stats.atk, def: stats.def, spd: stats.spd,
+                critRate: 0.15, critDamage: 0.50, accuracy: 0.0, resistance: 0.15
+            ),
+            growthPerLevel: .zero,
+            skills: [
+                Skill(
+                    id: "\(id)_s1",
+                    name: "Clay Grasp",
+                    description: "Attacks the enemy.",
+                    slot: 0,
+                    cooldown: 0,
+                    target: .singleEnemy,
+                    damage: DamageSpec(multiplier: 1.60),
+                    animation: .attackBasic,
+                    cameraShot: .standard,
+                    vfx: "impact_generic"
+                ),
+                special
+            ],
+            leaderSkill: nil,
+            awakening: nil,
             // Every Shabti wears the one shabti model, tinted by element.
-            assetName: "shabti"
+            model: ModelSpec(assetName: "shabti", auraHex: element.accentHex, portraitName: "portrait_\(id)"),
+            lore: """
+            A figurine placed in the tomb to answer for its master when the dead are \
+            called to work the fields. Ask, and it says: here I am.
+            """
         )
     }
 
@@ -141,8 +190,8 @@ enum UnitDatabase {
     //
     // Five elemental variants of one character, the way the genre does it: the
     // same silhouette and the same kit *shape*, differentiated by stat lean, by
-    // one changed effect per skill, and by leader skill. They are five separate
-    // summonable units and five separate collection entries.
+    // leader skill, and by a second and third skill of the element's own. They
+    // are five separate summonable units and five separate collection entries.
     //
     // Crucially they are ONE 3D MODEL. Every variant points at `assetName:
     // "anubis"` and differs only by `auraHex`, which the renderer uses to tint
@@ -185,11 +234,6 @@ enum UnitDatabase {
         var spd: Double
         var auraHex: String
         var leader: LeaderSkill
-        var judgement: DamageSpec
-        var judgementExtras: [UtilityEffect]
-        var judgementStatus: [StatusSpec]
-        var riteStatus: StatusKind
-        var reviveFraction: Double
         var strikeStatus: StatusSpec
         var essence: String
     }
@@ -205,11 +249,6 @@ enum UnitDatabase {
                 hp: 422, atk: 32, def: 25, spd: 104,
                 auraHex: "#F2703C",
                 leader: LeaderSkill(stat: .atkPercent, amount: 0.33, scope: .pantheon(.egyptian)),
-                judgement: DamageSpec(multiplier: 4.30),
-                judgementExtras: [],
-                judgementStatus: [StatusSpec(.burn, chance: 0.75, turns: 2, target: .singleEnemy)],
-                riteStatus: .attackUp,
-                reviveFraction: 0.50,
                 strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
                 essence: "essence_ember_mid"
             )
@@ -222,11 +261,6 @@ enum UnitDatabase {
                 hp: 566, atk: 24, def: 32, spd: 101,
                 auraHex: "#3C9BF2",
                 leader: LeaderSkill(stat: .hpPercent, amount: 0.40, scope: .pantheon(.egyptian)),
-                judgement: DamageSpec(multiplier: 3.60),
-                judgementExtras: [.lifesteal(0.40)],
-                judgementStatus: [],
-                riteStatus: .recovery,
-                reviveFraction: 0.50,
                 strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
                 essence: "essence_tide_mid"
             )
@@ -239,11 +273,6 @@ enum UnitDatabase {
                 hp: 442, atk: 27, def: 26, spd: 116,
                 auraHex: "#4FC98A",
                 leader: LeaderSkill(stat: .spd, amount: 0.23, scope: .pantheon(.egyptian)),
-                judgement: DamageSpec(multiplier: 3.70),
-                judgementExtras: [.attackBarChange(-0.25, chance: 0.70, .singleEnemy)],
-                judgementStatus: [StatusSpec(.speedDown, chance: 0.70, turns: 2, target: .singleEnemy)],
-                riteStatus: .speedUp,
-                reviveFraction: 0.50,
                 strikeStatus: StatusSpec(.speedDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true),
                 essence: "essence_gale_mid"
             )
@@ -256,11 +285,6 @@ enum UnitDatabase {
                 hp: 504, atk: 26, def: 29, spd: 105,
                 auraHex: "#F5D96B",
                 leader: LeaderSkill(stat: .resistance, amount: 0.40, scope: .allAllies),
-                judgement: DamageSpec(multiplier: 3.50),
-                judgementExtras: [.strip(count: 2, chance: 0.75, .singleEnemy)],
-                judgementStatus: [],
-                riteStatus: .immunity,
-                reviveFraction: 0.70,
                 strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
                 essence: "essence_radiance_mid"
             )
@@ -273,11 +297,6 @@ enum UnitDatabase {
                 hp: 480, atk: 27, def: 28, spd: 107,
                 auraHex: "#7FE0C8",
                 leader: LeaderSkill(stat: .critRate, amount: 0.25, scope: .pantheon(.egyptian)),
-                judgement: DamageSpec(multiplier: 4.10, bonusPerMissingHealth: 1.10),
-                judgementExtras: [.strip(count: 1, chance: 0.70, .singleEnemy)],
-                judgementStatus: [],
-                riteStatus: .immunity,
-                reviveFraction: 0.50,
                 strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
                 essence: "essence_umbra_mid"
             )
@@ -288,7 +307,64 @@ enum UnitDatabase {
     /// everything that differs comes out of `anubisFlavour`.
     private static func anubisVariant(_ element: Element) -> UnitBlueprint {
         let f = anubisFlavour(element)
-        let riteName = f.riteStatus.displayName
+
+        // The judge's five ways. Every form weighs one heart and every form's
+        // rite brings a fallen ally back — that is what Anubis IS — and dark,
+        // the Guardian of the Scales, is the home: the weighing and the
+        // Opening of the Mouth as first written.
+        let second: Skill
+        let third: Skill
+        switch element {
+        case .ember:
+            second = smite(f.id, slot: 1, "Verdict of Ash",
+                           "Weighs one enemy against the feather and finds it wanting: a blow that ignores 30% of its defence, with a 70% chance to Burn it for 2 turns, hitting 15% harder for every harmful effect on it.",
+                           cd: 3, DamageSpec(multiplier: 3.70, defenseIgnore: 0.30, bonusPerTargetDebuff: 0.15),
+                           statuses: [status(.burn, 0.70)], vfx: "impact_ember")
+            third = ritual(f.id, slot: 2, "Rite of the Ash Road",
+                           "Revives one fallen ally with 40% health and grants every ally Attack Up for 2 turns; every enemy has a 50% chance to Burn for 2 turns.",
+                           cd: 5, statuses: [status(.attackUp, 1.0, on: .allAllies), status(.burn, 0.50, on: .allEnemies)],
+                           utilities: [.revive(healthFraction: 0.40)], vfx: "duat_rite")
+        case .tide:
+            second = smite(f.id, slot: 1, "Ferryman's Toll",
+                           "Weighs one enemy against the feather: a crushing blow with a 60% chance to Freeze it for 1 turn and a 70% chance to drag its attack bar back by 25%.",
+                           cd: 3, DamageSpec(multiplier: 3.50),
+                           statuses: [status(.freeze, 0.60, turns: 1)],
+                           utilities: [.attackBarChange(-0.25, chance: 0.70, .singleEnemy)], vfx: "impact_tide")
+            third = ritual(f.id, slot: 2, "Rite of the Reed Sea",
+                           "Revives one fallen ally with 50% health, heals every ally for 30% of their maximum health and grants Defense Up for 2 turns; every enemy has a 60% chance to have its attack bar dragged back by 20%.",
+                           cd: 5, statuses: [status(.defenseUp, 1.0, on: .allAllies)],
+                           utilities: [.revive(healthFraction: 0.50), .healTargetMaxHealth(0.30, .allAllies),
+                                       .attackBarChange(-0.20, chance: 0.60, .allEnemies)], vfx: "heal")
+        case .gale:
+            second = smite(f.id, slot: 1, "Khamsin Lash",
+                           "Three strikes of the balance-arm on one enemy, each with a 30% chance to make its next hit Glancing for 2 turns, and a 30% chance to take another turn.",
+                           cd: 3, DamageSpec(multiplier: 1.40, hits: 3),
+                           statuses: [status(.glancing, 0.30, perHit: true)], utilities: [.extraTurn(chance: 0.30)],
+                           vfx: "impact_gale")
+            third = ritual(f.id, slot: 2, "Breath of the Khamsin",
+                           "Revives one fallen ally with 40% health, grants every ally Haste for 2 turns, and fills the team's attack bar by 25%.",
+                           cd: 5, statuses: [status(.speedUp, 1.0, on: .allAllies)],
+                           utilities: [.revive(healthFraction: 0.40), .attackBarChange(0.25, chance: 1.0, .allAllies)], vfx: "buff")
+        case .radiance:
+            second = smite(f.id, slot: 1, "Solar Verdict",
+                           "Weighs one enemy in the light of the barque: a strike that always crits and removes up to two beneficial effects from it with a 75% chance, with a 60% chance to inflict Attack Down for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 3.20, alwaysCrits: true),
+                           statuses: [status(.attackDown, 0.60)], utilities: [.strip(count: 2, chance: 0.75, .singleEnemy)],
+                           vfx: "impact_radiance")
+            third = ritual(f.id, slot: 2, "Rite of the Night Sun",
+                           "Revives one fallen ally with 70% health, removes up to two harmful effects from every ally, and grants Immunity and a shield worth 15% of his maximum health for 2 turns.",
+                           cd: 5, statuses: [status(.immunity, 1.0, on: .allAllies), status(.shield, 1.0, on: .allAllies, magnitude: 0.15)],
+                           utilities: [.revive(healthFraction: 0.70), .cleanse(count: 2, .allAllies)], vfx: "maat_shield")
+        case .umbra:
+            second = smite(f.id, slot: 1, "Weighing of the Heart",
+                           "Weighs one enemy against the feather: a blow that deals up to 110% more damage the more health the target has lost, and strips one beneficial effect from it with a 70% chance.",
+                           cd: 3, DamageSpec(multiplier: 4.10, bonusPerMissingHealth: 1.10),
+                           utilities: [.strip(count: 1, chance: 0.70, .singleEnemy)], vfx: "heart_weigh")
+            third = ritual(f.id, slot: 2, "Opening of the Mouth",
+                           "Performs the rite. Revives one fallen ally at 50% health, heals every ally for 25% of their maximum health, and grants the team Immunity for 2 turns.",
+                           cd: 5, statuses: [status(.immunity, 1.0, on: .allAllies)],
+                           utilities: [.revive(healthFraction: 0.50), .healTargetMaxHealth(0.25, .allAllies)], vfx: "duat_rite")
+        }
 
         return UnitBlueprint(
             id: f.id,
@@ -328,57 +404,12 @@ enum UnitDatabase {
                     vfx: "scale_strike"
                 ),
 
-                // Slot 1 — the judgement. This is where the five variants stop
-                // resembling each other.
-                Skill(
-                    id: "\(f.id)_s2",
-                    name: "Weighing of the Heart",
-                    description: anubisJudgementText(f),
-                    slot: 1,
-                    cooldown: 3,
-                    target: .singleEnemy,
-                    damage: f.judgement,
-                    statuses: f.judgementStatus,
-                    utilities: f.judgementExtras,
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.05, label: "Damage +5%"),
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.10, label: "Damage +10%"),
-                        SkillUpgrade(kind: .effectChance, amount: 0.10, label: "Effect Rate +10%"),
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .attackHeavy,
-                    cameraShot: .pushIn,
-                    vfx: "heart_weigh"
-                ),
-
-                // Slot 2 — the rite. The revive quietly does nothing when nobody
-                // is dead, so the skill is always worth pressing: it either
-                // brings somebody back or it is a full-team heal and a buff.
-                Skill(
-                    id: "\(f.id)_s3",
-                    name: "Opening of the Mouth",
-                    description: "Performs the rite. Revives one fallen ally at \(Int(f.reviveFraction * 100))% health, heals every ally for 25% of their maximum health, and grants the team \(riteName) for 2 turns.",
-                    slot: 2,
-                    cooldown: 5,
-                    target: .allAllies,
-                    damage: nil,
-                    statuses: [
-                        StatusSpec(f.riteStatus, chance: 1.0, turns: 2, target: .allAllies)
-                    ],
-                    utilities: [
-                        .revive(healthFraction: f.reviveFraction),
-                        .healTargetMaxHealth(0.25, .allAllies)
-                    ],
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .healing, amount: 0.10, label: "Healing +10%"),
-                        SkillUpgrade(kind: .healing, amount: 0.10, label: "Healing +10%"),
-                        SkillUpgrade(kind: .healing, amount: 0.15, label: "Healing +15%"),
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .ultimate,
-                    cameraShot: .cinematicOrbit,
-                    vfx: "duat_rite"
-                ),
+                // Slot 1 — the judgement, and slot 2 — the rite, the element's
+                // own. The revive quietly does nothing when nobody is dead, so
+                // the rite is always worth pressing: it either brings somebody
+                // back or it is the team's buff and whatever else it carries.
+                second,
+                third,
 
                 // Slot 3 — passive, locked until awakening. Fires once per battle.
                 Skill(
@@ -437,37 +468,14 @@ enum UnitDatabase {
         )
     }
 
-    private static func anubisJudgementText(_ f: AnubisFlavour) -> String {
-        var parts = ["Weighs one enemy against the feather."]
-        if f.judgement.bonusPerMissingHealth > 0 {
-            parts.append("Deals heavily increased damage the more health the target has already lost.")
-        }
-        for status in f.judgementStatus {
-            parts.append("Inflicts \(status.kind.displayName) with a \(Int(status.chance * 100))% chance.")
-        }
-        for extra in f.judgementExtras {
-            switch extra {
-            case .strip(let count, let chance, _):
-                parts.append("Strips up to \(count) buff\(count == 1 ? "" : "s") with a \(Int(chance * 100))% chance.")
-            case .lifesteal(let fraction):
-                parts.append("Recovers health equal to \(Int(fraction * 100))% of the damage dealt.")
-            case .attackBarChange(let delta, let chance, _):
-                parts.append("Reduces the target's attack bar by \(Int(abs(delta) * 100))% with a \(Int(chance * 100))% chance.")
-            default:
-                break
-            }
-        }
-        return parts.joined(separator: " ")
-    }
-
     // MARK: - THE SEKHMET FAMILY
     //
     // The second family, and the roster's first real damage archetype. Where
     // Anubis heals, strips and revives, Sekhmet breaks defence and kills. Every
-    // variant's Eye of Ra carries Defense Break — that is the family's identity
-    // the way the revive is Anubis's — and the five differ by what the claws
-    // leave behind, what the Eye does besides breaking, what the Wrath grants
-    // the team, and the leader skill.
+    // variant breaks a defence somewhere in its kit — that is the family's
+    // identity the way the revive is Anubis's — and the five differ by what
+    // the claws leave behind, by the second and third skill, which are the
+    // element's own, and by the leader skill.
     //
     // Natural 5★, which also gives the gacha's 5★ tier its first occupants: until
     // now a 5★ result fell back down the grades and produced an Anubis.
@@ -485,8 +493,8 @@ enum UnitDatabase {
     static let sekhmetFamily: [UnitBlueprint] =
         [sekhmetEmber, sekhmetTide, sekhmetGale, sekhmetRadiance, sekhmetUmbra]
 
-    /// Per-element identity for Sekhmet: the stat lean, what the claws inflict,
-    /// what the Eye does on top of breaking defence, and what the Wrath gives.
+    /// Per-element identity for Sekhmet: the stat lean and what the claws
+    /// inflict. The Eye and the Wrath are the element's own, in `sekhmetVariant`.
     private struct SekhmetFlavour {
         var id: String
         var epithet: String
@@ -499,9 +507,6 @@ enum UnitDatabase {
         var auraHex: String
         var leader: LeaderSkill
         var rakeStatus: StatusSpec
-        var eye: DamageSpec
-        var eyeExtras: [UtilityEffect]
-        var wrathStatus: StatusSpec
         var essence: String
     }
 
@@ -520,9 +525,6 @@ enum UnitDatabase {
                 auraHex: "#F25A3C",
                 leader: LeaderSkill(stat: .atkPercent, amount: 0.38, scope: .element(.ember)),
                 rakeStatus: StatusSpec(.burn, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                eye: DamageSpec(multiplier: 4.80),
-                eyeExtras: [],
-                wrathStatus: StatusSpec(.attackUp, chance: 1.0, turns: 2, target: .allAllies),
                 essence: "essence_ember_mid"
             )
         case .tide:
@@ -535,9 +537,6 @@ enum UnitDatabase {
                 auraHex: "#3CA8F2",
                 leader: LeaderSkill(stat: .defPercent, amount: 0.38, scope: .pantheon(.egyptian)),
                 rakeStatus: StatusSpec(.attackDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                eye: DamageSpec(multiplier: 4.40),
-                eyeExtras: [.lifesteal(0.30)],
-                wrathStatus: StatusSpec(.defenseUp, chance: 1.0, turns: 2, target: .allAllies),
                 essence: "essence_tide_mid"
             )
         case .gale:
@@ -550,9 +549,6 @@ enum UnitDatabase {
                 auraHex: "#5FD98A",
                 leader: LeaderSkill(stat: .accuracy, amount: 0.40, scope: .allAllies),
                 rakeStatus: StatusSpec(.speedDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                eye: DamageSpec(multiplier: 4.40),
-                eyeExtras: [.attackBarChange(-0.30, chance: 0.75, .singleEnemy)],
-                wrathStatus: StatusSpec(.speedUp, chance: 1.0, turns: 2, target: .allAllies),
                 essence: "essence_gale_mid"
             )
         case .radiance:
@@ -567,14 +563,12 @@ enum UnitDatabase {
                 auraHex: "#FFD94F",
                 leader: LeaderSkill(stat: .critDamage, amount: 0.35, scope: .pantheon(.egyptian)),
                 rakeStatus: StatusSpec(.glancing, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                eye: DamageSpec(multiplier: 3.80, alwaysCrits: true),
-                eyeExtras: [],
-                wrathStatus: StatusSpec(.critRateUp, chance: 1.0, turns: 2, target: .allAllies),
                 essence: "essence_radiance_mid"
             )
         case .umbra:
-            // The plague-bringer. Her Wrath is a curse on the enemy rather than
-            // a gift to the team, and her Eye grows with every affliction.
+            // The plague-bringer. Her third skill is a plague on the enemy
+            // rather than a gift to the team, and her Seven Arrows grow with
+            // every affliction and drink from the wound.
             return SekhmetFlavour(
                 id: "sekhmet_umbra",
                 epithet: "Mistress of Plague",
@@ -584,9 +578,6 @@ enum UnitDatabase {
                 auraHex: "#9B5FD9",
                 leader: LeaderSkill(stat: .hpPercent, amount: 0.33, scope: .allAllies),
                 rakeStatus: StatusSpec(.unrecoverable, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                eye: DamageSpec(multiplier: 4.40, bonusPerTargetDebuff: 0.20),
-                eyeExtras: [],
-                wrathStatus: StatusSpec(.attackDown, chance: 0.60, turns: 2, target: .allEnemies),
                 essence: "essence_umbra_mid"
             )
         }
@@ -596,6 +587,64 @@ enum UnitDatabase {
     /// everything that differs comes out of `sekhmetFlavour`.
     private static func sekhmetVariant(_ element: Element) -> UnitBlueprint {
         let f = sekhmetFlavour(element)
+
+        // The lioness's five ways. Every form breaks a defence somewhere and
+        // every third skill is unleashed on the whole line; fire, the
+        // Scorching Noon, is the home: the Eye and the Wrath as first written.
+        let second: Skill
+        let third: Skill
+        switch element {
+        case .ember:
+            second = smite(f.id, slot: 1, "Eye of Ra",
+                           "Fixes one enemy with the Eye of Ra and breaks its defence for 2 turns with an 85% chance.",
+                           cd: 3, DamageSpec(multiplier: 4.80), statuses: [status(.defenseDown, 0.85)], vfx: "eye_of_ra")
+            third = smite(f.id, slot: 2, "Wrath of the Eye",
+                          "Unleashes the Eye on every enemy. Grants the team Attack Up for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 2.60), target: .allEnemies,
+                          statuses: [status(.attackUp, 1.0, on: .allAllies)], vfx: "wrath_of_the_eye")
+        case .tide:
+            second = smite(f.id, slot: 1, "Red Nile Draught",
+                           "Fixes one enemy with the Eye: a blow with a 70% chance to Freeze it for 1 turn and a 60% chance to Break its defence for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 4.00),
+                           statuses: [status(.freeze, 0.70, turns: 1), status(.defenseDown, 0.60)], vfx: "impact_tide")
+            third = smite(f.id, slot: 2, "Seven Thousand Jars",
+                          "Pours the red flood over the whole enemy line: each has a 50% chance to be Slowed for 2 turns and a 60% chance to have its attack bar dragged back by 25%; the team takes Defense Up for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 2.40), target: .allEnemies,
+                          statuses: [status(.speedDown, 0.50, on: .allEnemies), status(.defenseUp, 1.0, on: .allAllies)],
+                          utilities: [.attackBarChange(-0.25, chance: 0.60, .allEnemies)], vfx: "wrath_of_the_eye")
+        case .gale:
+            second = smite(f.id, slot: 1, "Khamsin Claws",
+                           "Three rakes on one enemy, each with a 35% chance to Break its defence for 2 turns, and a 30% chance to take another turn.",
+                           cd: 3, DamageSpec(multiplier: 1.50, hits: 3),
+                           statuses: [status(.defenseDown, 0.35, perHit: true)], utilities: [.extraTurn(chance: 0.30)],
+                           vfx: "lioness_rake")
+            third = smite(f.id, slot: 2, "Roar of the Burning Wind",
+                          "Roars over the whole enemy line with a 40% chance to make each one's next hit Glancing for 2 turns; the team takes Haste for 2 turns and its attack bar fills by 20%.",
+                          cd: 5, DamageSpec(multiplier: 2.30), target: .allEnemies,
+                          statuses: [status(.glancing, 0.40, on: .allEnemies), status(.speedUp, 1.0, on: .allAllies)],
+                          utilities: [.attackBarChange(0.20, chance: 1.0, .allAllies)], vfx: "wrath_of_the_eye")
+        case .radiance:
+            second = smite(f.id, slot: 1, "Eye of the Disc",
+                           "Fixes one enemy with the sun's own Eye: a strike that always crits, removes one beneficial effect from it with an 85% chance, and has a 75% chance to Break its defence for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 3.60, alwaysCrits: true),
+                           statuses: [status(.defenseDown, 0.75)], utilities: [.strip(count: 1, chance: 0.85, .singleEnemy)],
+                           vfx: "eye_of_ra")
+            third = smite(f.id, slot: 2, "Noon Without Shadow",
+                          "Unleashes the disc's light on the whole enemy line with a 50% chance to inflict Attack Down on each for 2 turns; the team takes Focus and a shield worth 12% of her maximum health for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 2.40), target: .allEnemies,
+                          statuses: [status(.attackDown, 0.50, on: .allEnemies), status(.critRateUp, 1.0, on: .allAllies),
+                                     status(.shield, 1.0, on: .allAllies, magnitude: 0.12)], vfx: "olympian_decree")
+        case .umbra:
+            second = smite(f.id, slot: 1, "Seven Arrows",
+                           "Looses the plague on one enemy: a blow that heals her for 40% of the damage and hits 20% harder for every harmful effect on it, with a 75% chance to Break its defence for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 4.00, bonusPerTargetDebuff: 0.20),
+                           statuses: [status(.defenseDown, 0.75)], utilities: [.lifesteal(0.40)], vfx: "heart_weigh")
+            third = smite(f.id, slot: 2, "Breath of Plague",
+                          "Breathes plague over the whole enemy line for damage that grows the more health each has lost, with a 50% chance to Brand each for 2 turns and a 40% chance to Break its defence.",
+                          cd: 5, DamageSpec(multiplier: 2.30, bonusPerMissingHealth: 0.50), target: .allEnemies,
+                          statuses: [status(.brand, 0.50, on: .allEnemies), status(.defenseDown, 0.40, on: .allEnemies)],
+                          vfx: "blood_thirst")
+        }
 
         return UnitBlueprint(
             id: f.id,
@@ -636,53 +685,10 @@ enum UnitDatabase {
                     vfx: "lioness_rake"
                 ),
 
-                // Slot 1 — the Eye. The Defense Break is on every variant; what
-                // rides along with it is not.
-                Skill(
-                    id: "\(f.id)_s2",
-                    name: "Eye of Ra",
-                    description: sekhmetEyeText(f),
-                    slot: 1,
-                    cooldown: 3,
-                    target: .singleEnemy,
-                    damage: f.eye,
-                    statuses: [
-                        StatusSpec(.defenseDown, chance: 0.85, turns: 2, target: .singleEnemy)
-                    ],
-                    utilities: f.eyeExtras,
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.05, label: "Damage +5%"),
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.10, label: "Damage +10%"),
-                        SkillUpgrade(kind: .effectChance, amount: 0.10, label: "Effect Rate +10%"),
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .attackHeavy,
-                    cameraShot: .pushIn,
-                    vfx: "eye_of_ra"
-                ),
-
-                // Slot 2 — the Wrath. Damage to the whole enemy line, then the
-                // variant's gift to the team — or, for Umbra, its curse on the
-                // enemy.
-                Skill(
-                    id: "\(f.id)_s3",
-                    name: "Wrath of the Eye",
-                    description: sekhmetWrathText(f),
-                    slot: 2,
-                    cooldown: 5,
-                    target: .allEnemies,
-                    damage: DamageSpec(multiplier: 2.60),
-                    statuses: [f.wrathStatus],
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.05, label: "Damage +5%"),
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.10, label: "Damage +10%"),
-                        SkillUpgrade(kind: .effectChance, amount: 0.10, label: "Effect Rate +10%"),
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .ultimate,
-                    cameraShot: .cinematicOrbit,
-                    vfx: "wrath_of_the_eye"
-                ),
+                // Slot 1 — the Eye, and slot 2 — the Wrath on the whole line,
+                // the element's own.
+                second,
+                third,
 
                 // Slot 3 — passive, locked until awakening. A kill feeds her.
                 Skill(
@@ -739,52 +745,17 @@ enum UnitDatabase {
         )
     }
 
-    private static func sekhmetEyeText(_ f: SekhmetFlavour) -> String {
-        var parts = ["Fixes one enemy with the Eye of Ra and breaks its defence for 2 turns with an 85% chance."]
-        if f.eye.alwaysCrits {
-            parts.append("The Eye always lands a critical hit.")
-        }
-        if f.eye.bonusPerTargetDebuff > 0 {
-            parts.append("Deals more damage for every harmful effect on the target.")
-        }
-        for extra in f.eyeExtras {
-            switch extra {
-            case .lifesteal(let fraction):
-                parts.append("Recovers health equal to \(Int(fraction * 100))% of the damage dealt.")
-            case .attackBarChange(let delta, let chance, _):
-                parts.append("Reduces the target's attack bar by \(Int(abs(delta) * 100))% with a \(Int(chance * 100))% chance.")
-            case .strip(let count, let chance, _):
-                parts.append("Strips up to \(count) buff\(count == 1 ? "" : "s") with a \(Int(chance * 100))% chance.")
-            default:
-                break
-            }
-        }
-        return parts.joined(separator: " ")
-    }
-
-    private static func sekhmetWrathText(_ f: SekhmetFlavour) -> String {
-        let status = f.wrathStatus
-        let effect: String
-        switch status.target {
-        case .allAllies:
-            effect = "Grants the team \(status.kind.displayName) for \(status.turns) turns."
-        default:
-            effect = "Inflicts \(status.kind.displayName) on every enemy for \(status.turns) turns with a \(Int(status.chance * 100))% chance."
-        }
-        return "Unleashes the Eye on every enemy. \(effect)"
-    }
-
-
     // MARK: - THE ZEUS FAMILY
     //
     // The third family, and the first from a second pantheon. Zeus is the
     // roster's control archetype: Anubis sustains, Sekhmet kills, Zeus decides
-    // who gets to act. Every variant's Thunderclap hits the whole enemy line
-    // and takes turns away from it — a stun, a freeze, a sleep, a knockback
-    // down the attack bar, or a provoke that drags every enemy onto him — and
-    // every Keraunos is one bolt that ignores 40% of defence and then hands the
-    // team something. The awakened passive pushes the whole team's attack bar
-    // at the start of battle, so a Zeus team moves first.
+    // who gets to act. Every variant hits the whole enemy line somewhere in
+    // its kit and takes turns away from it — a stun, a freeze, a sleep, a
+    // knockback down the attack bar, or a provoke that drags every enemy onto
+    // him — and fire's Keraunos is the one bolt that ignores 40% of defence
+    // and then hands the team something; the other four kits are the
+    // element's own (`zeusVariant`). The awakened passive pushes the whole
+    // team's attack bar at the start of battle, so a Zeus team moves first.
     //
     // Natural 5★ and Greek. Leader skills that buff a stat are scoped to Greek
     // allies, which is how the genre seeds a second pantheon before it has a
@@ -804,9 +775,9 @@ enum UnitDatabase {
     static let zeusFamily: [UnitBlueprint] =
         [zeusEmber, zeusTide, zeusGale, zeusRadiance, zeusUmbra]
 
-    /// Per-element identity for Zeus: the stat lean, what the bolt leaves on
-    /// its target, how the Thunderclap takes the enemy's turn away, and what
-    /// the Keraunos gives the team once it has landed.
+    /// Per-element identity for Zeus: the stat lean and what the bolt leaves
+    /// on its target. The second and third skills are the element's own, in
+    /// `zeusVariant`.
     private struct ZeusFlavour {
         var id: String
         var epithet: String
@@ -819,10 +790,6 @@ enum UnitDatabase {
         var auraHex: String
         var leader: LeaderSkill
         var boltStatus: StatusSpec
-        var clapStatus: StatusSpec
-        var clapExtras: [UtilityEffect]
-        var keraunosStatus: StatusSpec?
-        var keraunosExtras: [UtilityEffect]
         var essence: String
     }
 
@@ -840,15 +807,12 @@ enum UnitDatabase {
                 auraHex: "#FF9A3C",
                 leader: LeaderSkill(stat: .atkPercent, amount: 0.33, scope: .pantheon(.greek)),
                 boltStatus: StatusSpec(.burn, chance: 0.35, turns: 2, target: .singleEnemy),
-                clapStatus: StatusSpec(.stun, chance: 0.55, turns: 1, target: .allEnemies),
-                clapExtras: [],
-                keraunosStatus: StatusSpec(.attackUp, chance: 1.0, turns: 2, target: .allAllies),
-                keraunosExtras: [],
                 essence: "essence_ember_mid"
             )
         case .tide:
-            // The rain-bringer. The sturdiest Zeus, a freeze instead of a
-            // stun, and a shield on the whole team behind the Keraunos.
+            // The rain-bringer. The sturdiest Zeus: one freezing bolt that
+            // drags the bar and a deluge on the line with a shield on the
+            // whole team behind it.
             return ZeusFlavour(
                 id: "zeus_tide",
                 epithet: "of the Storm-Dark Sea",
@@ -858,15 +822,11 @@ enum UnitDatabase {
                 auraHex: "#4FC3F7",
                 leader: LeaderSkill(stat: .hpPercent, amount: 0.33, scope: .pantheon(.greek)),
                 boltStatus: StatusSpec(.speedDown, chance: 0.35, turns: 2, target: .singleEnemy),
-                clapStatus: StatusSpec(.freeze, chance: 0.55, turns: 1, target: .allEnemies),
-                clapExtras: [],
-                keraunosStatus: StatusSpec(.shield, chance: 1.0, turns: 2, target: .allAllies, magnitude: 0.20),
-                keraunosExtras: [],
                 essence: "essence_tide_mid"
             )
         case .gale:
-            // The turn-thief. No hard control at all: the Thunderclap knocks
-            // every enemy down the attack bar and slows them, and the Keraunos
+            // The turn-thief. No hard control at all: four scattered bolts
+            // that may earn him another turn, and a storm on the line that
             // carries the team forward instead of buffing a stat.
             return ZeusFlavour(
                 id: "zeus_gale",
@@ -877,16 +837,13 @@ enum UnitDatabase {
                 auraHex: "#8AE68A",
                 leader: LeaderSkill(stat: .spd, amount: 0.24, scope: .pantheon(.greek)),
                 boltStatus: StatusSpec(.glancing, chance: 0.35, turns: 2, target: .singleEnemy),
-                clapStatus: StatusSpec(.speedDown, chance: 0.70, turns: 2, target: .allEnemies),
-                clapExtras: [.attackBarChange(-0.30, chance: 1.0, .allEnemies)],
-                keraunosStatus: nil,
-                keraunosExtras: [.attackBarChange(0.25, chance: 1.0, .allAllies)],
                 essence: "essence_gale_mid"
             )
         case .radiance:
-            // All eyes on the king. The Thunderclap provokes the enemy line
-            // onto Zeus himself, which is why this variant is the one built to
-            // take the hits, and the Keraunos grants the team Immunity.
+            // All eyes on the king. The Eye of Panoptes provokes the enemy
+            // line onto Zeus himself and shields him for it, which is why this
+            // variant is the one built to take the hits, and the Aegis grants
+            // the team Immunity.
             return ZeusFlavour(
                 id: "zeus_radiance",
                 epithet: "Bringer of Day",
@@ -896,16 +853,12 @@ enum UnitDatabase {
                 auraHex: "#FFE680",
                 leader: LeaderSkill(stat: .accuracy, amount: 0.35, scope: .pantheon(.greek)),
                 boltStatus: StatusSpec(.brand, chance: 0.35, turns: 2, target: .singleEnemy),
-                clapStatus: StatusSpec(.provoke, chance: 0.60, turns: 1, target: .allEnemies),
-                clapExtras: [],
-                keraunosStatus: StatusSpec(.immunity, chance: 1.0, turns: 2, target: .allAllies),
-                keraunosExtras: [],
                 essence: "essence_radiance_mid"
             )
         case .umbra:
-            // The Zeus beneath the earth. Sleep instead of a stun, and the
-            // Keraunos brands every enemy rather than gifting the team — the
-            // one variant whose rite points outward.
+            // The Zeus beneath the earth. The black cloud puts the line to
+            // sleep and brands it, and the bolt from below drinks and breaks
+            // — the one variant whose kit gives the team nothing at all.
             return ZeusFlavour(
                 id: "zeus_umbra",
                 epithet: "of the Black Cloud",
@@ -915,10 +868,6 @@ enum UnitDatabase {
                 auraHex: "#A07CFF",
                 leader: LeaderSkill(stat: .critRate, amount: 0.24, scope: .allAllies),
                 boltStatus: StatusSpec(.attackDown, chance: 0.35, turns: 2, target: .singleEnemy),
-                clapStatus: StatusSpec(.sleep, chance: 0.55, turns: 1, target: .allEnemies),
-                clapExtras: [],
-                keraunosStatus: StatusSpec(.brand, chance: 0.75, turns: 2, target: .allEnemies),
-                keraunosExtras: [],
                 essence: "essence_umbra_mid"
             )
         }
@@ -928,6 +877,65 @@ enum UnitDatabase {
     /// everything that differs comes out of `zeusFlavour`.
     private static func zeusVariant(_ element: Element) -> UnitBlueprint {
         let f = zeusFlavour(element)
+
+        // The stormlord's five ways. Every form hits the whole line somewhere
+        // and every form decides who gets to act; fire, the Scorching Sky, is
+        // the home: the Thunderclap and the Keraunos as first written.
+        let second: Skill
+        let third: Skill
+        switch element {
+        case .ember:
+            second = smite(f.id, slot: 1, "Thunderclap",
+                           "Splits the sky over every enemy. Each has a 55% chance to be stunned for 1 turn.",
+                           cd: 4, DamageSpec(multiplier: 2.00), target: .allEnemies,
+                           statuses: [status(.stun, 0.55, turns: 1, on: .allEnemies)], vfx: "thunderclap")
+            third = smite(f.id, slot: 2, "Keraunos",
+                          "Brings the Keraunos down on one enemy, ignoring 40% of its defence. Grants the team Attack Up for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 5.00, defenseIgnore: 0.40),
+                          statuses: [status(.attackUp, 1.0, on: .allAllies)], vfx: "keraunos")
+        case .tide:
+            second = smite(f.id, slot: 1, "Hail of Ombrios",
+                           "A crushing bolt on one enemy with a 70% chance to Freeze it for 1 turn and a 70% chance to drag its attack bar back by 30%; Zeus takes Defense Up for 2 turns.",
+                           cd: 4, DamageSpec(multiplier: 3.60),
+                           statuses: [status(.freeze, 0.70, turns: 1), status(.defenseUp, 1.0, on: .caster)],
+                           utilities: [.attackBarChange(-0.30, chance: 0.70, .singleEnemy)], vfx: "thunderbolt")
+            third = smite(f.id, slot: 2, "Deluge of Deucalion",
+                          "Opens the sky over the whole enemy line: a bolt that ignores 30% of each one's defence, with a 50% chance to Slow each for 2 turns; every ally takes a shield worth 20% of his maximum health for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 2.50, defenseIgnore: 0.30), target: .allEnemies,
+                          statuses: [status(.speedDown, 0.50, on: .allEnemies), status(.shield, 1.0, on: .allAllies, magnitude: 0.20)],
+                          vfx: "thunderclap")
+        case .gale:
+            second = smite(f.id, slot: 1, "Ourios Gusts",
+                           "Four bolts at random enemies, each with a 25% chance to make its victim's next hit Glancing for 2 turns, and a 30% chance to take another turn.",
+                           cd: 4, DamageSpec(multiplier: 1.15, hits: 4), target: .randomEnemies(count: 4),
+                           statuses: [status(.glancing, 0.25, perHit: true)], utilities: [.extraTurn(chance: 0.30)],
+                           vfx: "thunderbolt")
+            third = smite(f.id, slot: 2, "Crown of Storms",
+                          "Splits the sky over the whole enemy line, then takes Haste for 2 turns and fills the whole team's attack bar by 30%.",
+                          cd: 5, DamageSpec(multiplier: 2.40), target: .allEnemies,
+                          statuses: [status(.speedUp, 1.0, on: .allAllies)],
+                          utilities: [.attackBarChange(0.30, chance: 1.0, .allAllies)], vfx: "thunderclap")
+        case .radiance:
+            second = smite(f.id, slot: 1, "Eye of Panoptes",
+                           "Sees the whole enemy line at once: damage with a 60% chance to Provoke each onto Zeus for 1 turn, removing one beneficial effect from each with a 70% chance; Zeus takes a shield worth 20% of his maximum health for 2 turns.",
+                           cd: 4, DamageSpec(multiplier: 1.80), target: .allEnemies,
+                           statuses: [status(.provoke, 0.60, turns: 1, on: .allEnemies), status(.shield, 1.0, on: .caster, magnitude: 0.20)],
+                           utilities: [.strip(count: 1, chance: 0.70, .allEnemies)], vfx: "eye_of_ra")
+            third = smite(f.id, slot: 2, "Aegis of Day",
+                          "Brings the Aegis down on one enemy: a sure critical bolt that ignores 40% of its defence, with an 80% chance to inflict Attack Down for 2 turns; every ally gains Immunity for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 4.60, defenseIgnore: 0.40, alwaysCrits: true),
+                          statuses: [status(.attackDown, 0.80), status(.immunity, 1.0, on: .allAllies)], vfx: "keraunos")
+        case .umbra:
+            second = smite(f.id, slot: 1, "Black Cloud",
+                           "Draws the black cloud over the whole enemy line: each has a 45% chance to be put to Sleep for 1 turn and a 50% chance to be Branded for 2 turns.",
+                           cd: 4, DamageSpec(multiplier: 1.90), target: .allEnemies,
+                           statuses: [status(.sleep, 0.45, turns: 1, on: .allEnemies), status(.brand, 0.50, on: .allEnemies)],
+                           vfx: "thunderclap")
+            third = smite(f.id, slot: 2, "Chthonic Bolt",
+                          "Brings the Keraunos up from beneath the earth on one enemy: a bolt that ignores 40% of its defence and grows the more health it has lost, healing Zeus for 30% of the damage, with a 75% chance to Break its defence for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 4.60, defenseIgnore: 0.40, bonusPerMissingHealth: 0.50),
+                          statuses: [status(.defenseDown, 0.75)], utilities: [.lifesteal(0.30)], vfx: "keraunos")
+        }
 
         return UnitBlueprint(
             id: f.id,
@@ -968,53 +976,11 @@ enum UnitDatabase {
                     vfx: "thunderbolt"
                 ),
 
-                // Slot 1 — the Thunderclap. The whole enemy line, modest damage,
-                // and the family's reason to exist: the turn it takes away. One
-                // roll per target, never per hit.
-                Skill(
-                    id: "\(f.id)_s2",
-                    name: "Thunderclap",
-                    description: zeusClapText(f),
-                    slot: 1,
-                    cooldown: 4,
-                    target: .allEnemies,
-                    damage: DamageSpec(multiplier: 2.00),
-                    statuses: [f.clapStatus],
-                    utilities: f.clapExtras,
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.05, label: "Damage +5%"),
-                        SkillUpgrade(kind: .effectChance, amount: 0.10, label: "Effect Rate +10%"),
-                        SkillUpgrade(kind: .effectChance, amount: 0.10, label: "Effect Rate +10%"),
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .attackHeavy,
-                    cameraShot: .cinematicOrbit,
-                    vfx: "thunderclap"
-                ),
-
-                // Slot 2 — the Keraunos. One bolt that ignores 40% of the
-                // target's defence, then the variant's gift to the team — or,
-                // for Umbra, its brand on the enemy.
-                Skill(
-                    id: "\(f.id)_s3",
-                    name: "Keraunos",
-                    description: zeusKeraunosText(f),
-                    slot: 2,
-                    cooldown: 5,
-                    target: .singleEnemy,
-                    damage: DamageSpec(multiplier: 5.00, defenseIgnore: 0.40),
-                    statuses: f.keraunosStatus.map { [$0] } ?? [],
-                    utilities: f.keraunosExtras,
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.05, label: "Damage +5%"),
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.10, label: "Damage +10%"),
-                        SkillUpgrade(kind: .damageMultiplier, amount: 0.10, label: "Damage +10%"),
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .ultimate,
-                    cameraShot: .impactClose,
-                    vfx: "keraunos"
-                ),
+                // Slots 1 and 2 — the element's own: the turn it takes away
+                // from the line, one roll per target, and the bolt or the
+                // storm that follows.
+                second,
+                third,
 
                 // Slot 3 — passive, locked until awakening. The king's team
                 // moves first: the whole attack bar is raised when the battle
@@ -1076,48 +1042,6 @@ enum UnitDatabase {
     private static func zeusBoltText(_ f: ZeusFlavour) -> String {
         let s = f.boltStatus
         return "Hurls a bolt at one enemy with a \(Int(s.chance * 100))% chance to inflict \(s.kind.displayName) for \(turnsText(s.turns))."
-    }
-
-    private static func zeusClapText(_ f: ZeusFlavour) -> String {
-        let s = f.clapStatus
-        var parts = ["Splits the sky over every enemy."]
-        switch s.kind {
-        case .stun:
-            parts.append("Each has a \(Int(s.chance * 100))% chance to be stunned for \(turnsText(s.turns)).")
-        case .freeze:
-            parts.append("Each has a \(Int(s.chance * 100))% chance to be frozen for \(turnsText(s.turns)).")
-        case .sleep:
-            parts.append("Each has a \(Int(s.chance * 100))% chance to be put to sleep for \(turnsText(s.turns)).")
-        case .provoke:
-            parts.append("Each has a \(Int(s.chance * 100))% chance to be provoked into attacking Zeus for \(turnsText(s.turns)).")
-        default:
-            parts.append("Each has a \(Int(s.chance * 100))% chance to suffer \(s.kind.displayName) for \(turnsText(s.turns)).")
-        }
-        for extra in f.clapExtras {
-            if case .attackBarChange(let delta, let chance, _) = extra, delta < 0 {
-                let odds = chance >= 1.0 ? "" : " with a \(Int(chance * 100))% chance"
-                parts.append("Knocks every enemy's attack bar back by \(Int(abs(delta) * 100))%\(odds).")
-            }
-        }
-        return parts.joined(separator: " ")
-    }
-
-    private static func zeusKeraunosText(_ f: ZeusFlavour) -> String {
-        var parts = ["Brings the Keraunos down on one enemy, ignoring 40% of its defence."]
-        if let s = f.keraunosStatus {
-            switch s.target {
-            case .allAllies:
-                parts.append("Grants the team \(s.kind.displayName) for \(turnsText(s.turns)).")
-            default:
-                parts.append("Inflicts \(s.kind.displayName) on every enemy for \(turnsText(s.turns)) with a \(Int(s.chance * 100))% chance.")
-            }
-        }
-        for extra in f.keraunosExtras {
-            if case .attackBarChange(let delta, _, _) = extra, delta > 0 {
-                parts.append("Raises the whole team's attack bar by \(Int(delta * 100))%.")
-            }
-        }
-        return parts.joined(separator: " ")
     }
 
     private static func turnsText(_ turns: Int) -> String {

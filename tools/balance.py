@@ -245,8 +245,8 @@ SEKHMET = Blueprint("sekhmet_ember", "Sekhmet (Fire)", "ember", 5, hp=410, atk=3
 # an AoE Thunderclap whose stun the sim keys off the word "stun" (one turn,
 # per target, at the chance in the name), and a single-target Keraunos that
 # ignores 40% of defence. The Ember variant is the archetype; the other four
-# trade a little attack for health and swap the stun for a freeze, a sleep, an
-# attack-bar knockback or a provoke, none of which the sim models yet.
+# trade a little attack for health and fight with second and third skills of
+# their own (HANDWRITTEN_VARIANTS, below).
 ZEUS = Blueprint("zeus_ember", "Zeus (Fire)", "ember", 5, hp=445, atk=36, dfn=25, spd=105, acc=0.10,
     skills=[("Thunderbolt (Burn 35%)", 3.10, 1, 0, 0.0, 0.0, False),
             ("Thunderclap (Stun 55%)", 2.00, 1, 4, 0.0, 0.0, True),
@@ -255,6 +255,9 @@ ZEUS = Blueprint("zeus_ember", "Zeus (Fire)", "ember", 5, hp=445, atk=36, dfn=25
 # The second roster. Kits as in Pantheon/Core/Data/UnitDatabase+Roster.swift;
 # the sim reads burn and stun off the skill names and nothing else, so a
 # provoke, a heal or a shield shows up here only as the damage it does not do.
+# Each is the FIRE form; the second and third skills are the element's own
+# now, so the fire form's are what these carry, and the other four forms are
+# in HANDWRITTEN_VARIANTS below.
 ARES = Blueprint("ares_ember", "Ares (Fire)", "ember", 5, hp=420, atk=40, dfn=22, spd=104, crit=0.20,
     skills=[("Sword of War (Burn 30%)", 3.00, 1, 0, 0.0, 0.0, False),
             ("War Frenzy", 0.0, 0, 3, 0.0, 0.0, False),
@@ -265,18 +268,131 @@ HERACLES = Blueprint("heracles_ember", "Heracles (Fire)", "ember", 4, hp=560, at
             ("Twelve Labours", 0.30 * 560 / 26, 1, 4, 0.30, 0.0, False)])   # 30% of max HP, as attack multiples
 PERSEUS = Blueprint("perseus_ember", "Perseus (Fire)", "ember", 4, hp=470, atk=31, dfn=24, spd=110, acc=0.10,
     skills=[("Harpe Cuts (Burn 25%)", 1.45, 2, 0, 0.0, 0.0, False),
-            ("Mirror Shield", 0.0, 0, 4, 0.0, 0.0, False),
-            ("Gorgon's Gaze (Stun 45%)", 2.20, 1, 5, 0.0, 0.0, True)])
+            ("Bronze Blade (Burn 50%)", 1.80, 2, 3, 0.25, 0.0, False),
+            ("Gorgon's Blood (Burn 60%)", 2.20, 1, 5, 0.0, 0.0, True)])
 THOTH = Blueprint("thoth_ember", "Thoth (Fire)", "ember", 5, hp=520, atk=26, dfn=30, spd=108, acc=0.15, res=0.20,
     skills=[("Reed Stroke (Burn 35%)", 2.60, 1, 0, 0.0, 0.0, False),
-            ("Words of Healing", 0.0, 0, 4, 0.0, 0.0, False),
-            ("Book of the Dead", 0.0, 0, 5, 0.0, 0.0, False)])
+            ("Words of Fire", 0.0, 0, 4, 0.0, 0.0, False),
+            ("Decree of Djehuty", 0.0, 0, 5, 0.0, 0.0, False)])
 HOPLITE = Blueprint("hoplite_ember", "Hoplite (Fire)", "ember", 3, hp=340, atk=22, dfn=26, spd=96,
-    skills=[("Spear Jab (Burn 25%)", 1.70, 1, 0, 0.0, 0.0, False), ("Phalanx", 0.0, 0, 4, 0.0, 0.0, False)])
+    skills=[("Spear Jab (Burn 25%)", 1.70, 1, 0, 0.0, 0.0, False), ("Spartan Thrust (Burn 60%)", 2.40, 1, 3, 0.0, 0.0, False)])
 SATYR = Blueprint("satyr_ember", "Satyr (Fire)", "ember", 3, hp=300, atk=22, dfn=20, spd=104,
-    skills=[("Hoof Kick (Burn 25%)", 1.70, 1, 0, 0.0, 0.0, False), ("Wild Piping", 0.0, 0, 4, 0.0, 0.0, False)])
+    skills=[("Hoof Kick (Burn 25%)", 1.70, 1, 0, 0.0, 0.0, False), ("Bonfire Reel", 0.0, 0, 4, 0.0, 0.0, False)])
 HARPY = Blueprint("harpy_ember", "Harpy (Fire)", "ember", 3, hp=270, atk=28, dfn=16, spd=112,
-    skills=[("Talon Rake (Burn 25%)", 1.00, 2, 0, 0.0, 0.0, False), ("Screech Dive", 2.60, 1, 3, 0.0, 0.0, False)])
+    skills=[("Talon Rake (Burn 25%)", 1.00, 2, 0, 0.0, 0.0, False), ("Cinder Dive (Burn 60%)", 2.50, 1, 3, 0.0, 0.0, False)])
+
+# The hand-written families' second and third skills, one pair per element:
+# the `switch element` in each variant builder of UnitDatabase.swift and
+# UnitDatabase+Roster.swift, mirrored here in the sim's own terms exactly as
+# ELEMENT_SKILLS mirrors the table families. Freeze and Sleep are a stun, a
+# max-health blow is ("hp", fraction) and is resolved against the family's
+# numbers, a rite with no damage is a 0.0 (the sim heals on it), and a 3*
+# family has one skill per element. One element per family is its home and
+# keeps the skills as first written: dark for Anubis and the Shabti, fire for
+# Sekhmet, Zeus, Ares and Heracles, light for Perseus, water for Thoth, the
+# Hoplite and the Harpy, wind for the Satyr. The reference blueprint of each
+# family above is ONE of these forms and must agree with its row here; the
+# check under the table refuses to run the file when they drift.
+HANDWRITTEN_VARIANTS = {
+    "anubis": {
+        "ember":    [("Verdict of Ash (Burn 70%)", 3.70, 1, 3, 0.30, 0, False), ("Rite of the Ash Road", 0.0, 0, 5, 0, 0, False)],
+        "tide":     [("Ferryman's Toll (Stun 60%)", 3.50, 1, 3, 0, 0, False), ("Rite of the Reed Sea", 0.0, 0, 5, 0, 0, False)],
+        "gale":     [("Khamsin Lash", 1.40, 3, 3, 0, 0, False), ("Breath of the Khamsin", 0.0, 0, 5, 0, 0, False)],
+        "radiance": [("Solar Verdict (Crit)", 3.20, 1, 3, 0, 0, False), ("Rite of the Night Sun", 0.0, 0, 5, 0, 0, False)],
+        "umbra":    [("Weighing of the Heart", 4.10, 1, 3, 0.0, 1.10, False), ("Opening of the Mouth", 0.0, 0, 5, 0.0, 0.0, False)],
+    },
+    "shabti": {
+        "ember":    [("Kiln Fire (Burn 60%)", 2.20, 1, 3, 0, 0, False)],
+        "tide":     [("Nile Undertow (Stun 50%)", 2.30, 1, 3, 0, 0, False)],
+        "gale":     [("Dust Devil", 1.20, 2, 3, 0, 0, False)],
+        "radiance": [("Sunlit Ward", 2.10, 1, 3, 0, 0, False)],
+        "umbra":    [("Answer the Call", 2.30, 1, 3, 0, 0, False)],
+    },
+    "sekhmet": {
+        "ember":    [("Eye of Ra (Def Break)", 4.80, 1, 3, 0.0, 0.0, False), ("Wrath of the Eye", 2.60, 1, 5, 0.0, 0.0, True)],
+        "tide":     [("Red Nile Draught (Stun 70%) (Def Break 60%)", 4.00, 1, 3, 0, 0, False), ("Seven Thousand Jars", 2.40, 1, 5, 0, 0, True)],
+        "gale":     [("Khamsin Claws (Def Break 35%)", 1.50, 3, 3, 0, 0, False), ("Roar of the Burning Wind", 2.30, 1, 5, 0, 0, True)],
+        "radiance": [("Eye of the Disc (Crit) (Def Break 75%)", 3.60, 1, 3, 0, 0, False), ("Noon Without Shadow", 2.40, 1, 5, 0, 0, True)],
+        "umbra":    [("Seven Arrows (Def Break 75%)", 4.00, 1, 3, 0, 0, False), ("Breath of Plague (Def Break 40%)", 2.30, 1, 5, 0, 0.50, True)],
+    },
+    "zeus": {
+        "ember":    [("Thunderclap (Stun 55%)", 2.00, 1, 4, 0.0, 0.0, True), ("Keraunos", 5.00, 1, 5, 0.40, 0.0, False)],
+        "tide":     [("Hail of Ombrios (Stun 70%)", 3.60, 1, 4, 0, 0, False), ("Deluge of Deucalion", 2.50, 1, 5, 0.30, 0, True)],
+        "gale":     [("Ourios Gusts", 1.15, 4, 4, 0, 0, False), ("Crown of Storms", 2.40, 1, 5, 0, 0, True)],
+        "radiance": [("Eye of Panoptes", 1.80, 1, 4, 0, 0, True), ("Aegis of Day (Crit)", 4.60, 1, 5, 0.40, 0, False)],
+        "umbra":    [("Black Cloud (Stun 45%)", 1.90, 1, 4, 0, 0, True), ("Chthonic Bolt (Def Break 75%)", 4.60, 1, 5, 0.40, 0.50, False)],
+    },
+    "ares": {
+        "ember":    [("War Frenzy", 0.0, 0, 3, 0.0, 0.0, False), ("Slaughter", 4.60, 1, 4, 0.0, 0.80, False)],
+        "tide":     [("Bronze Tide (Stun 60%)", 3.40, 1, 3, 0, 0, False), ("Enyalios' Charge", 4.40, 1, 4, 0, 0.60, False)],
+        "gale":     [("Screaming Charge", 1.35, 3, 3, 0, 0, False), ("Stormlance", 4.20, 1, 4, 0, 0.60, False)],
+        "radiance": [("Aureate Strike (Crit)", 3.40, 1, 3, 0, 0, False), ("Spoils of War (Crit)", 4.40, 1, 4, 0, 0, False)],
+        "umbra":    [("Black Standard (Def Break 60%)", 3.60, 1, 3, 0, 0, False), ("Brotoloigos", 4.00, 1, 4, 0, 1.00, False)],
+    },
+    "heracles": {
+        "ember":    [("Nemean Roar", 1.60, 1, 4, 0.0, 0.0, True), ("Twelve Labours", ("hp", 0.30), 1, 4, 0.30, 0.0, False)],
+        "tide":     [("Augean Flood", 1.50, 1, 4, 0, 0, True), ("Bull of Crete (Stun 70%)", ("hp", 0.26), 1, 4, 0, 0, False)],
+        "gale":     [("Chase of the Hind", 2.60, 1, 4, 0, 0, False), ("Stymphalian Storm", ("hp", 0.24), 1, 5, 0, 0, True)],
+        "radiance": [("Hold the Sky", 0.0, 0, 4, 0, 0, False), ("Golden Apples (Crit)", ("hp", 0.28), 1, 4, 0, 0, False)],
+        "umbra":    [("Leash of Cerberus (Def Break 60%)", 2.80, 1, 4, 0, 0, False), ("Gate of Erebos", ("hp", 0.30), 1, 4, 0, 0, False)],
+    },
+    "perseus": {
+        "ember":    [("Bronze Blade (Burn 50%)", 1.80, 2, 3, 0.25, 0.0, False), ("Gorgon's Blood (Burn 60%)", 2.20, 1, 5, 0.0, 0.0, True)],
+        "tide":     [("Cetus Cut (Stun 65%)", 3.40, 1, 3, 0, 0, False), ("Stone Tide (Stun 40%)", 2.20, 1, 5, 0, 0, True)],
+        "gale":     [("Winged Cuts", 1.00, 4, 3, 0, 0, False), ("Sky-Walker's Dive", 2.10, 1, 5, 0, 0, True)],
+        "radiance": [("Mirror Shield", 0.0, 0, 4, 0, 0, False), ("Gorgon's Gaze", 2.20, 1, 5, 0, 0, True)],
+        "umbra":    [("Unseen Cut (Def Break 50%)", 3.40, 1, 3, 0, 0, False), ("Eye of the Unseen (Stun 40%)", 2.10, 1, 5, 0, 0.50, True)],
+    },
+    "thoth": {
+        "ember":    [("Words of Fire", 0.0, 0, 4, 0.0, 0.0, False), ("Decree of Djehuty", 0.0, 0, 5, 0.0, 0.0, False)],
+        "tide":     [("Words of Healing", 0.0, 0, 4, 0, 0, False), ("Book of the Dead", 0.0, 0, 5, 0, 0, False)],
+        "gale":     [("Reading of the Winds", 0.0, 0, 4, 0, 0, False), ("Measured Year", 0.0, 0, 5, 0, 0, False)],
+        "radiance": [("Silver Disc", 0.0, 0, 4, 0, 0, False), ("Word of Khemenu", 0.0, 0, 5, 0, 0, False)],
+        "umbra":    [("Sealed Curse (Def Break 60%)", 2.60, 1, 3, 0, 0, False), ("Book of Secrets", 0.0, 0, 5, 0, 0, False)],
+    },
+    "hoplite": {
+        "ember":    [("Spartan Thrust (Burn 60%)", 2.40, 1, 3, 0.0, 0.0, False)],
+        "tide":     [("Phalanx", 0.0, 0, 4, 0, 0, False)],
+        "gale":     [("Marathon Pace", 0.0, 0, 4, 0, 0, False)],
+        "radiance": [("Delphic Ward", 0.0, 0, 4, 0, 0, False)],
+        "umbra":    [("Theban Spear (Def Break 50%)", 2.40, 1, 3, 0, 0, False)],
+    },
+    "satyr": {
+        "ember":    [("Bonfire Reel", 0.0, 0, 4, 0.0, 0.0, False)],
+        "tide":     [("River Lullaby", 0.0, 0, 4, 0, 0, False)],
+        "gale":     [("Wild Piping", 0.0, 0, 4, 0, 0, False)],
+        "radiance": [("Noon Song", 0.0, 0, 4, 0, 0, False)],
+        "umbra":    [("Night Dirge (Def Break 50%)", 2.20, 1, 3, 0, 0, False)],
+    },
+    "harpy": {
+        "ember":    [("Cinder Dive (Burn 60%)", 2.50, 1, 3, 0.0, 0.0, False)],
+        "tide":     [("Screech Dive", 2.60, 1, 3, 0, 0, False)],
+        "gale":     [("Talon Flurry", 0.95, 3, 3, 0, 0, False)],
+        "radiance": [("Snatching Dive", 2.40, 1, 3, 0, 0, False)],
+        "umbra":    [("Carrion Dive (Def Break 50%)", 2.50, 1, 3, 0, 0, False)],
+    },
+}
+HANDWRITTEN = [  # key, the reference blueprint: its stats stand for all five forms
+    ("anubis", ANUBIS), ("shabti", SHABTI3), ("sekhmet", SEKHMET), ("zeus", ZEUS), ("ares", ARES),
+    ("heracles", HERACLES), ("perseus", PERSEUS), ("thoth", THOTH), ("hoplite", HOPLITE),
+    ("satyr", SATYR), ("harpy", HARPY),
+]
+
+def handwritten_skills(key, element, bp):
+    """A hand-written family's kit for one element: the reference blueprint's
+    basic attack, then the element's own second and third, a max-health blow
+    resolved against the family's numbers."""
+    skills = [bp.skills[0]]
+    for name, mult, hits, cd, defign, missbonus, aoe in HANDWRITTEN_VARIANTS[key][element]:
+        if isinstance(mult, tuple):
+            mult = mult[1] * bp.hp / bp.atk
+        skills.append((name, mult, hits, cd, defign, missbonus, aoe))
+    return skills
+
+for _key, _bp in HANDWRITTEN:
+    assert handwritten_skills(_key, _bp.element, _bp) == _bp.skills, (
+        f"{_bp.id}: the reference blueprint and HANDWRITTEN_VARIANTS[{_key!r}][{_bp.element!r}] disagree; "
+        "change a kit in both, and in the Swift")
 
 
 # The third roster: Pantheon/Core/Data/UnitDatabase+Families.swift, one row per
@@ -647,10 +763,13 @@ def report_tiers(trials=100):
 
 def report_variants(trials=120):
     """The five elemental forms of one family per kit against the Anubis
-    benchmark. What it measures: whether the elemental second and third
-    skills keep a family's five forms within a band of each other, so no
-    element is the one to summon. The sim cannot see slows, shields, heals,
-    strips or the bar, so a healer's or a warden's spread is a floor."""
+    benchmark, then the five forms of every hand-written family. What it
+    measures: whether the elemental second and third skills keep a family's
+    five forms within a band of each other, so no element is the one to
+    summon. The sim cannot see slows, shields, heals, strips or the bar, so a
+    healer's or a warden's spread is a floor; and the benchmark is dark, so a
+    light form fights it at the wheel's mutual advantage and a dark one at
+    neutral, which the light column carries."""
     print("\nELEMENTAL VARIANTS — one family per kit, win rate vs. Anubis (Lv.30 5*, relics 1.25), 1v1")
     firsts = {}
     for key, name, stars, kit, hp, atk, dfn, spd in FAMILY_ROWS:
@@ -664,6 +783,21 @@ def report_variants(trials=120):
                            skills=kit_skills(kit, stars, hp, atk, element))
             rates.append(winrate_bp(bp, ANUBIS, trials))
         print(f"  {name:<14}{kit:>10}" + "".join(f"{r*100:>7.0f}%" for r in rates) + f"{(max(rates)-min(rates))*100:>8.0f}%")
+
+    # A 3* family is measured against the dark Shabti, the 3* benchmark the
+    # duel report uses, because a 3* never beats a 4* on the same grade and
+    # level and a row of zeros measures nothing.
+    print("\n  the hand-written families, five forms each on the family's own numbers (HANDWRITTEN_VARIANTS);")
+    print("  a 4*+ family vs. Anubis, a 3* family vs. the dark Shabti")
+    print(f"  {'family':<14}{'grade':>10}" + "".join(f"{e[:4]:>8}" for e in ELEMENTS) + f"{'spread':>9}")
+    for key, bp in HANDWRITTEN:
+        foe = ANUBIS if bp.stars >= 4 else SHABTI3
+        rates = []
+        for element in ELEMENTS:
+            form = replace(bp, id=f"{key}_{element}", element=element, skills=handwritten_skills(key, element, bp))
+            rates.append(winrate_bp(form, foe, trials))
+        name = bp.name.split(" (")[0]
+        print(f"  {name:<14}{bp.stars:>9}*" + "".join(f"{r*100:>7.0f}%" for r in rates) + f"{(max(rates)-min(rates))*100:>8.0f}%")
 
 def winrate_bp(bp, foe, trials):
     wins = 0

@@ -136,7 +136,18 @@ environment can and cannot do. The short version:
   `ELEMENT_SKILLS` and `--variants` prints the five forms of one family
   per kit against Anubis (the sim reads Burn, Stun, Def Break and
   "(Crit)" off a skill's name and nothing else, so a healer's or a
-  warden's spread is a floor). Change a number in both files.
+  warden's spread is a floor). Change a number in both files. The eleven
+  hand-written families got the same by hand (2026-09-10, evening): each
+  variant builder holds `let second: Skill; let third: Skill; switch
+  element {...}` built with the `smite`/`ritual`/`status` helpers in
+  `UnitDatabase+Roster.swift`, one element per family keeping the skill
+  as first written (Anubis and Shabti dark, Sekhmet, Zeus, Ares and
+  Heracles fire, Perseus light, Thoth, Hoplite and Harpy water, Satyr
+  wind); `balance.py`'s `HANDWRITTEN_VARIANTS` mirrors all fifty-five and
+  an import-time assert refuses to run if a reference blueprint drifts
+  from its row. `DamageSpec.bonusPerMissingHealth` is the bonus at ZERO
+  health, scaled by the fraction missing (`1 + bonus × fraction`): 0.8
+  means up to 80% more, and 0.008 meant nothing.
 - Eight chapters: Duat 1–2, Olympus 1–3, Yggdrasil 1–3. The generated ones
   take `enemyStars` and `difficulty` (later chapters field the same
   creatures at a higher grade, not at absurd levels); the curve is measured

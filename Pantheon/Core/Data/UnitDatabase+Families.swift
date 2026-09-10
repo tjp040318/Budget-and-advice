@@ -752,7 +752,7 @@ extension UnitDatabase {
                                 utilities: [.lifesteal(0.40)], vfx: "heart_weigh")
                 }
                 return blow("Sweeps the whole enemy line, hitting harder the more health each has lost, with a 50% chance to Brand each for 2 turns.",
-                            cd: 5, DamageSpec(multiplier: 2.30, bonusPerMissingHealth: 0.005), statuses: [status(.brand, 0.50, on: .allEnemies)],
+                            cd: 5, DamageSpec(multiplier: 2.30, bonusPerMissingHealth: 0.50), statuses: [status(.brand, 0.50, on: .allEnemies)],
                             target: .allEnemies, vfx: "blood_thirst")
             }
         case .duelist:
@@ -795,7 +795,7 @@ extension UnitDatabase {
                                 utilities: [.lifesteal(0.50)], vfx: "heart_weigh")
                 }
                 return blow("An execution: a sure critical strike that hits 1% harder for every 1% of health the target has lost.",
-                            cd: 5, DamageSpec(multiplier: 4.60, bonusPerMissingHealth: 0.010, alwaysCrits: true), vfx: "blood_thirst")
+                            cd: 5, DamageSpec(multiplier: 4.60, bonusPerMissingHealth: 1.0, alwaysCrits: true), vfx: "blood_thirst")
             }
         case .marksman:
             switch element {

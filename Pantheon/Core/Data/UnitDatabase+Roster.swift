@@ -85,6 +85,71 @@ extension UnitDatabase {
 
     static func percent(_ value: Double) -> String { "\(Int((value * 100).rounded()))%" }
 
+    /// A rite with nothing to grow but its cooldown.
+    static let cooldownLadder: [SkillUpgrade] = [
+        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
+    ]
+
+    // MARK: - The elemental second and third skills
+    //
+    // The owner: "each units different elements need to have different 2nd
+    // and 3rd skills. We cant have all 5 of the elements of each character
+    // have the same attacks." The sixty-eight table families got that first
+    // (`elementalSkill` in UnitDatabase+Families.swift); the eleven
+    // hand-written families build theirs from the three helpers below, in a
+    // `switch element` inside each variant builder, so that the five forms of
+    // one character fight five different ways while the family's identity
+    // holds — Ares still feeds on the kill, Heracles still hits for a share
+    // of his own health, Thoth still heals. The grammar is the roster's: fire
+    // burns and grows, water freezes, slows and drags the bar, wind repeats
+    // and hastens, light shields, cleanses and reveals, dark drains, strips
+    // and brands. One element per family, its home, keeps the two skills as
+    // first written. The numbers are mirrored in tools/balance.py
+    // (`HANDWRITTEN_VARIANTS`); change them in both.
+
+    /// A damaging second (slot 1) or third (slot 2) skill: one enemy unless
+    /// `target` says the line. A second skill is a heavy blow with a push-in;
+    /// a third is the ultimate, framed on the impact, or orbited when it
+    /// sweeps the line.
+    static func smite(_ id: String, slot: Int, _ name: String, _ description: String, cd: Int, _ damage: DamageSpec,
+                      target: TargetSelector = .singleEnemy, statuses: [StatusSpec] = [],
+                      utilities: [UtilityEffect] = [], vfx: String) -> Skill {
+        let third = slot == 2
+        let sweep = target != .singleEnemy
+        return Skill(id: "\(id)_s\(slot + 1)", name: name, description: description, slot: slot, cooldown: cd,
+                     target: target, damage: damage, statuses: statuses, utilities: utilities,
+                     levelUpBonuses: strikeLadder, animation: third ? .ultimate : .attackHeavy,
+                     cameraShot: sweep ? .cinematicOrbit : (third ? .impactClose : .pushIn), vfx: vfx)
+    }
+
+    /// A second or third skill with no damage: a rite for the team, a stance
+    /// on the caster, or a curse laid on the enemy line. One that heals takes
+    /// the support ladder; any other grows only its cooldown.
+    static func ritual(_ id: String, slot: Int, _ name: String, _ description: String, cd: Int,
+                       target: TargetSelector = .allAllies, statuses: [StatusSpec] = [],
+                       utilities: [UtilityEffect] = [], vfx: String) -> Skill {
+        let third = slot == 2
+        let heals = utilities.contains { utility in
+            switch utility {
+            case .healTargetMaxHealth, .healFromAttack: return true
+            default: return false
+            }
+        }
+        return Skill(id: "\(id)_s\(slot + 1)", name: name, description: description, slot: slot, cooldown: cd,
+                     target: target, damage: nil, statuses: statuses, utilities: utilities,
+                     levelUpBonuses: heals ? supportLadder : cooldownLadder,
+                     animation: third ? .ultimate : .castRelease,
+                     cameraShot: third ? .heroLowAngle : .pushIn, vfx: vfx)
+    }
+
+    /// A status on a skill, in the short form the switches read best in. A
+    /// per-hit status rolls on every strike of a multi-hit blow and lands on
+    /// that strike's victim, so it is only ever an affliction.
+    static func status(_ kind: StatusKind, _ chance: Double, turns: Int = 2, on target: TargetSelector = .singleEnemy,
+                       magnitude: Double = 0, perHit: Bool = false) -> StatusSpec {
+        StatusSpec(kind, chance: chance, turns: turns, target: target, magnitude: magnitude, rollsPerHit: perHit)
+    }
+
     // MARK: - Per-element identity
 
     /// What changes between the five variants of one character.
@@ -139,6 +204,69 @@ extension UnitDatabase {
         let sig = signature(element)
         let strike = StatusSpec(sig, chance: 0.30, turns: 2, target: .singleEnemy)
 
+        // The berserker's five ways. Every form's finisher can hand him
+        // another turn, because feeding on the kill is what Ares IS; what the
+        // road to it looks like is the element's. Fire, the Red Field, is the
+        // home: the frenzy and the slaughter as first written.
+        let second: Skill
+        let third: Skill
+        switch element {
+        case .ember:
+            second = ritual(id, slot: 1, "War Frenzy",
+                            "Roars for blood: Attack Up and Focus on himself for 2 turns, and his attack bar fills by 30%.",
+                            cd: 3, target: .caster,
+                            statuses: [status(.attackUp, 1.0, on: .caster), status(.critRateUp, 1.0, on: .caster)],
+                            utilities: [.attackBarChange(0.30, chance: 1.0, .caster)], vfx: "blood_thirst")
+            third = smite(id, slot: 2, "Slaughter",
+                          "A killing blow that deals up to 80% more damage the more health the target has lost, with a 35% chance to take another turn.",
+                          cd: 4, DamageSpec(multiplier: 4.60, bonusPerMissingHealth: 0.80),
+                          utilities: [.extraTurn(chance: 0.35)], vfx: "eye_of_ra")
+        case .tide:
+            second = smite(id, slot: 1, "Bronze Tide",
+                           "Wades in behind the shield: a blow with a 60% chance to Freeze the target for 1 turn; he takes Defense Up for 2 turns and heals for 10% of his maximum health.",
+                           cd: 3, DamageSpec(multiplier: 3.40),
+                           statuses: [status(.freeze, 0.60, turns: 1), status(.defenseUp, 1.0, on: .caster)],
+                           utilities: [.healTargetMaxHealth(0.10, .caster)], vfx: "impact_tide")
+            third = smite(id, slot: 2, "Enyalios' Charge",
+                          "A crushing blow that deals up to 60% more damage the more health the target has lost, with a 70% chance to drag its attack bar back by half and a 25% chance to take another turn.",
+                          cd: 4, DamageSpec(multiplier: 4.40, bonusPerMissingHealth: 0.60),
+                          utilities: [.attackBarChange(-0.50, chance: 0.70, .singleEnemy), .extraTurn(chance: 0.25)],
+                          vfx: "impact_tide")
+        case .gale:
+            second = smite(id, slot: 1, "Screaming Charge",
+                           "Three cuts on one enemy, each with a 30% chance to make its next hit Glancing for 2 turns; he takes Haste for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 1.35, hits: 3),
+                           statuses: [status(.glancing, 0.30, perHit: true), status(.speedUp, 1.0, on: .caster)],
+                           vfx: "impact_gale")
+            third = smite(id, slot: 2, "Stormlance",
+                          "Drives the lance through one enemy for up to 60% more damage the more health it has lost, fills his own attack bar by 40%, and has a 40% chance to take another turn.",
+                          cd: 4, DamageSpec(multiplier: 4.20, bonusPerMissingHealth: 0.60),
+                          utilities: [.attackBarChange(0.40, chance: 1.0, .caster), .extraTurn(chance: 0.40)],
+                          vfx: "impact_gale")
+        case .radiance:
+            second = smite(id, slot: 1, "Aureate Strike",
+                           "A blow that always crits, with a 60% chance to inflict Attack Down for 2 turns; he takes a shield worth 20% of his maximum health for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 3.40, alwaysCrits: true),
+                           statuses: [status(.attackDown, 0.60), status(.shield, 1.0, on: .caster, magnitude: 0.20)],
+                           vfx: "impact_radiance")
+            third = smite(id, slot: 2, "Spoils of War",
+                          "A sure critical strike that removes up to two beneficial effects from the target with an 85% chance; he gains Immunity for 2 turns, with a 30% chance to take another turn.",
+                          cd: 4, DamageSpec(multiplier: 4.40, alwaysCrits: true),
+                          statuses: [status(.immunity, 1.0, on: .caster)],
+                          utilities: [.strip(count: 2, chance: 0.85, .singleEnemy), .extraTurn(chance: 0.30)],
+                          vfx: "impact_radiance")
+        case .umbra:
+            second = smite(id, slot: 1, "Black Standard",
+                           "Raises the black standard over one enemy: a blow that heals him for half the damage, with a 60% chance to Break its defence for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 3.60),
+                           statuses: [status(.defenseDown, 0.60)], utilities: [.lifesteal(0.50)], vfx: "heart_weigh")
+            third = smite(id, slot: 2, "Brotoloigos",
+                          "An execution: a blow that deals up to 100% more damage the more health the target has lost and heals him for 30% of it, with a 60% chance to Brand the target for 2 turns and a 30% chance to take another turn.",
+                          cd: 4, DamageSpec(multiplier: 4.00, bonusPerMissingHealth: 1.00),
+                          statuses: [status(.brand, 0.60)], utilities: [.lifesteal(0.30), .extraTurn(chance: 0.30)],
+                          vfx: "blood_thirst")
+        }
+
         return UnitBlueprint(
             id: id,
             name: "Ares",
@@ -169,40 +297,8 @@ extension UnitDatabase {
                     cameraShot: .standard,
                     vfx: "lioness_rake"
                 ),
-                Skill(
-                    id: "\(id)_s2",
-                    name: "War Frenzy",
-                    description: "Roars for blood: Attack Up and Focus on himself for 2 turns, and his attack bar fills by 30%.",
-                    slot: 1,
-                    cooldown: 3,
-                    target: .caster,
-                    damage: nil,
-                    statuses: [
-                        StatusSpec(.attackUp, chance: 1.0, turns: 2, target: .caster),
-                        StatusSpec(.critRateUp, chance: 1.0, turns: 2, target: .caster)
-                    ],
-                    utilities: [.attackBarChange(0.30, chance: 1.0, .caster)],
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .castRelease,
-                    cameraShot: .heroLowAngle,
-                    vfx: "blood_thirst"
-                ),
-                Skill(
-                    id: "\(id)_s3",
-                    name: "Slaughter",
-                    description: "A killing blow that deals up to 80% more damage the more health the target has lost, with a 35% chance to take another turn.",
-                    slot: 2,
-                    cooldown: 4,
-                    target: .singleEnemy,
-                    damage: DamageSpec(multiplier: 4.60, bonusPerMissingHealth: 0.008),
-                    utilities: [.extraTurn(chance: 0.35)],
-                    levelUpBonuses: strikeLadder,
-                    animation: .ultimate,
-                    cameraShot: .impactClose,
-                    vfx: "eye_of_ra"
-                ),
+                second,
+                third,
                 Skill(
                     id: "\(id)_passive",
                     name: "Blood of War",
@@ -288,7 +384,64 @@ extension UnitDatabase {
         let id = "heracles_\(element.rawValue)"
         let sig = signature(element)
         let strike = StatusSpec(sig, chance: 0.30, turns: 2, target: .singleEnemy)
-        let roar = StatusSpec(.provoke, chance: 0.50, turns: 1, target: .allEnemies)
+
+        // The labours, five ways. Every form's big hit is a share of his own
+        // maximum health, so building him sturdy still builds him dangerous;
+        // fire, the Lion-Slayer, is the home: the roar and the labours as
+        // first written.
+        let second: Skill
+        let third: Skill
+        switch element {
+        case .ember:
+            second = smite(id, slot: 1, "Nemean Roar",
+                           "Roars at the whole enemy line for modest damage with a 50% chance to Provoke each of them for 1 turn, and takes Defense Up for 2 turns.",
+                           cd: 4, DamageSpec(multiplier: 1.60), target: .allEnemies,
+                           statuses: [status(.provoke, 0.50, turns: 1, on: .allEnemies), status(.defenseUp, 1.0, on: .caster)],
+                           vfx: "wrath_of_the_eye")
+            third = smite(id, slot: 2, "Twelve Labours",
+                          "Brings the club down for damage equal to 30% of his maximum health, ignoring 30% of the target's defence.",
+                          cd: 4, DamageSpec(multiplier: 0.30, scaling: .maxHealth, defenseIgnore: 0.30), vfx: "heart_weigh")
+        case .tide:
+            second = smite(id, slot: 1, "Augean Flood",
+                           "Turns the rivers through the whole enemy line for modest damage with a 50% chance to Slow each for 2 turns and a 50% chance to drag each attack bar back by 20%; he takes Defense Up for 2 turns.",
+                           cd: 4, DamageSpec(multiplier: 1.50), target: .allEnemies,
+                           statuses: [status(.speedDown, 0.50, on: .allEnemies), status(.defenseUp, 1.0, on: .caster)],
+                           utilities: [.attackBarChange(-0.20, chance: 0.50, .allEnemies)], vfx: "duat_rite")
+            third = smite(id, slot: 2, "Bull of Crete",
+                          "Wrestles one enemy down for damage equal to 26% of his maximum health, with a 70% chance to Freeze it for 1 turn, and heals himself for 15% of his maximum health.",
+                          cd: 4, DamageSpec(multiplier: 0.26, scaling: .maxHealth),
+                          statuses: [status(.freeze, 0.70, turns: 1)], utilities: [.healTargetMaxHealth(0.15, .caster)],
+                          vfx: "impact_tide")
+        case .gale:
+            second = smite(id, slot: 1, "Chase of the Hind",
+                           "Runs one enemy down: a blow with a 60% chance to make its next hit Glancing for 2 turns; he takes Haste for 2 turns and his attack bar fills by 20%.",
+                           cd: 4, DamageSpec(multiplier: 2.60),
+                           statuses: [status(.glancing, 0.60), status(.speedUp, 1.0, on: .caster)],
+                           utilities: [.attackBarChange(0.20, chance: 1.0, .caster)], vfx: "impact_gale")
+            third = smite(id, slot: 2, "Stymphalian Storm",
+                          "Beats the club through the whole enemy line for damage equal to 24% of his maximum health, with a 40% chance to make each one's next hit Glancing for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 0.24, scaling: .maxHealth), target: .allEnemies,
+                          statuses: [status(.glancing, 0.40, on: .allEnemies)], vfx: "thunderclap")
+        case .radiance:
+            second = ritual(id, slot: 1, "Hold the Sky",
+                            "Takes the sky on his shoulders: a shield worth 25% of his maximum health and Immunity for 2 turns, and every enemy has a 60% chance to be Provoked onto him for 1 turn.",
+                            cd: 4, target: .caster,
+                            statuses: [status(.shield, 1.0, on: .caster, magnitude: 0.25), status(.immunity, 1.0, on: .caster),
+                                       status(.provoke, 0.60, turns: 1, on: .allEnemies)], vfx: "maat_shield")
+            third = smite(id, slot: 2, "Golden Apples",
+                          "Brings the club down for damage equal to 28% of his maximum health with a sure critical hit, and removes one harmful effect from every ally.",
+                          cd: 4, DamageSpec(multiplier: 0.28, scaling: .maxHealth, alwaysCrits: true),
+                          utilities: [.cleanse(count: 1, .allAllies)], vfx: "impact_radiance")
+        case .umbra:
+            second = smite(id, slot: 1, "Leash of Cerberus",
+                           "Drags the hound up: a blow that heals him for 40% of the damage, with a 60% chance to Break the target's defence for 2 turns.",
+                           cd: 4, DamageSpec(multiplier: 2.80),
+                           statuses: [status(.defenseDown, 0.60)], utilities: [.lifesteal(0.40)], vfx: "heart_weigh")
+            third = smite(id, slot: 2, "Gate of Erebos",
+                          "Brings the club down for damage equal to 30% of his maximum health that heals him for 30% of it, with a 60% chance to Brand the target for 2 turns.",
+                          cd: 4, DamageSpec(multiplier: 0.30, scaling: .maxHealth),
+                          statuses: [status(.brand, 0.60)], utilities: [.lifesteal(0.30)], vfx: "blood_thirst")
+        }
 
         return UnitBlueprint(
             id: id,
@@ -320,36 +473,8 @@ extension UnitDatabase {
                     cameraShot: .standard,
                     vfx: "impact_generic"
                 ),
-                Skill(
-                    id: "\(id)_s2",
-                    name: "Nemean Roar",
-                    description: "Roars at the whole enemy line for modest damage with a 50% chance to Provoke each of them for 1 turn, and takes Defense Up for 2 turns.",
-                    slot: 1,
-                    cooldown: 4,
-                    target: .allEnemies,
-                    damage: DamageSpec(multiplier: 1.60),
-                    statuses: [
-                        roar,
-                        StatusSpec(.defenseUp, chance: 1.0, turns: 2, target: .caster)
-                    ],
-                    levelUpBonuses: strikeLadder,
-                    animation: .attackHeavy,
-                    cameraShot: .pushIn,
-                    vfx: "wrath_of_the_eye"
-                ),
-                Skill(
-                    id: "\(id)_s3",
-                    name: "Twelve Labours",
-                    description: "Brings the club down for damage equal to 30% of his maximum health, ignoring 30% of the target's defence.",
-                    slot: 2,
-                    cooldown: 4,
-                    target: .singleEnemy,
-                    damage: DamageSpec(multiplier: 0.30, scaling: .maxHealth, defenseIgnore: 0.30),
-                    levelUpBonuses: strikeLadder,
-                    animation: .ultimate,
-                    cameraShot: .impactClose,
-                    vfx: "heart_weigh"
-                ),
+                second,
+                third,
                 Skill(
                     id: "\(id)_passive",
                     name: "Lion's Hide",
@@ -399,10 +524,11 @@ extension UnitDatabase {
 
     // MARK: - THE PERSEUS FAMILY (4★, Greek, attacker)
     //
-    // Speed and control. Two quick cuts, a shield that turns the team's
-    // defence up and his own into a counter, and the Gorgon's Gaze: the whole
-    // enemy line, one roll each, the element's way of taking a turn away.
-    // Awakened, the winged sandals put him ahead of the field at the start.
+    // Speed and precision. Two quick cuts, then the element's own pair: the
+    // light hero's is the Mirror Shield, which turns the team's defence up
+    // and his own into a counter, and the Gorgon's Gaze, the whole enemy line
+    // provoked onto him, one roll each. Awakened, the winged sandals put him
+    // ahead of the field at the start.
 
     static let perseusFamily: [UnitBlueprint] = Element.allCases.map(perseusVariant)
 
@@ -435,9 +561,66 @@ extension UnitDatabase {
         let k = perseusKit(element)
         let id = "perseus_\(element.rawValue)"
         let sig = signature(element)
-        let ctrl = control(element)
         let cut = StatusSpec(sig, chance: 0.25, turns: 2, target: .singleEnemy)
-        let gaze = StatusSpec(ctrl, chance: 0.45, turns: 1, target: .allEnemies)
+
+        // Five ways to be precise. Light, the Mirror Shield, is the home: the
+        // polished shield and the Gorgon's Gaze as first written, the gaze
+        // provoking the line onto a hero standing in a Counter stance.
+        let second: Skill
+        let third: Skill
+        switch element {
+        case .ember:
+            second = smite(id, slot: 1, "Bronze Blade",
+                           "Two cuts of the bronze blade, each ignoring 25% of the target's defence, with a 50% chance to Burn it for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 1.80, hits: 2, defenseIgnore: 0.25),
+                           statuses: [status(.burn, 0.50, perHit: true)], vfx: "impact_ember")
+            third = smite(id, slot: 2, "Gorgon's Blood",
+                          "Spatters the Gorgon's blood over the whole enemy line for damage with a 60% chance to Burn each for 2 turns, hitting 15% harder for every harmful effect on each.",
+                          cd: 5, DamageSpec(multiplier: 2.20, bonusPerTargetDebuff: 0.15), target: .allEnemies,
+                          statuses: [status(.burn, 0.60, on: .allEnemies)], vfx: "wrath_of_the_eye")
+        case .tide:
+            second = smite(id, slot: 1, "Cetus Cut",
+                           "A cut with a 65% chance to Freeze the target for 1 turn and a 70% chance to drag its attack bar back by 30%.",
+                           cd: 3, DamageSpec(multiplier: 3.40),
+                           statuses: [status(.freeze, 0.65, turns: 1)],
+                           utilities: [.attackBarChange(-0.30, chance: 0.70, .singleEnemy)], vfx: "impact_tide")
+            third = smite(id, slot: 2, "Stone Tide",
+                          "Uncovers the head of Medusa before the whole enemy line for damage with a 40% chance to Freeze each for 1 turn and a 60% chance to Slow each for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 2.20), target: .allEnemies,
+                          statuses: [status(.freeze, 0.40, turns: 1, on: .allEnemies), status(.speedDown, 0.60, on: .allEnemies)],
+                          vfx: "duat_rite")
+        case .gale:
+            second = smite(id, slot: 1, "Winged Cuts",
+                           "Four cuts from the air on one enemy, each with a 25% chance to make its next hit Glancing for 2 turns, and a 30% chance to take another turn.",
+                           cd: 3, DamageSpec(multiplier: 1.00, hits: 4),
+                           statuses: [status(.glancing, 0.25, perHit: true)], utilities: [.extraTurn(chance: 0.30)],
+                           vfx: "scale_strike")
+            third = smite(id, slot: 2, "Sky-Walker's Dive",
+                          "Drops on the whole enemy line from the sky for damage with a 50% chance to make each one's next hit Glancing for 2 turns, then takes Haste for 2 turns and fills his attack bar by 30%.",
+                          cd: 5, DamageSpec(multiplier: 2.10), target: .allEnemies,
+                          statuses: [status(.glancing, 0.50, on: .allEnemies), status(.speedUp, 1.0, on: .caster)],
+                          utilities: [.attackBarChange(0.30, chance: 1.0, .caster)], vfx: "thunderclap")
+        case .radiance:
+            second = ritual(id, slot: 1, "Mirror Shield",
+                            "Raises the polished shield: Defense Up for every ally for 2 turns, and he takes a Counter stance for 2 turns.",
+                            cd: 4, statuses: [status(.defenseUp, 1.0, on: .allAllies), status(.counterStance, 1.0, on: .caster)],
+                            vfx: "maat_shield")
+            third = smite(id, slot: 2, "Gorgon's Gaze",
+                          "Uncovers the head of Medusa before the whole enemy line for damage and a 45% chance to Provoke each onto him for 1 turn.",
+                          cd: 5, DamageSpec(multiplier: 2.20), target: .allEnemies,
+                          statuses: [status(.provoke, 0.45, turns: 1, on: .allEnemies)], vfx: "wrath_of_the_eye")
+        case .umbra:
+            second = smite(id, slot: 1, "Unseen Cut",
+                           "Strikes from under the helm of darkness: a cut that heals him for 40% of the damage and removes one beneficial effect from the target with an 80% chance, with a 50% chance to Break its defence for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 3.40),
+                           statuses: [status(.defenseDown, 0.50)],
+                           utilities: [.lifesteal(0.40), .strip(count: 1, chance: 0.80, .singleEnemy)], vfx: "heart_weigh")
+            third = smite(id, slot: 2, "Eye of the Unseen",
+                          "Uncovers the head of Medusa before the whole enemy line for damage that grows the more health each has lost, with a 40% chance to put each to Sleep for 1 turn and a 40% chance to Brand each for 2 turns.",
+                          cd: 5, DamageSpec(multiplier: 2.10, bonusPerMissingHealth: 0.50), target: .allEnemies,
+                          statuses: [status(.sleep, 0.40, turns: 1, on: .allEnemies), status(.brand, 0.40, on: .allEnemies)],
+                          vfx: "blood_thirst")
+        }
 
         return UnitBlueprint(
             id: id,
@@ -469,39 +652,8 @@ extension UnitDatabase {
                     cameraShot: .standard,
                     vfx: "scale_strike"
                 ),
-                Skill(
-                    id: "\(id)_s2",
-                    name: "Mirror Shield",
-                    description: "Raises the polished shield: Defense Up for every ally for 2 turns, and he takes a Counter stance for 2 turns.",
-                    slot: 1,
-                    cooldown: 4,
-                    target: .allAllies,
-                    damage: nil,
-                    statuses: [
-                        StatusSpec(.defenseUp, chance: 1.0, turns: 2, target: .allAllies),
-                        StatusSpec(.counterStance, chance: 1.0, turns: 2, target: .caster)
-                    ],
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .castRelease,
-                    cameraShot: .pushIn,
-                    vfx: "maat_shield"
-                ),
-                Skill(
-                    id: "\(id)_s3",
-                    name: "Gorgon's Gaze",
-                    description: "Uncovers the head of Medusa before the whole enemy line for damage and a \(percent(gaze.chance)) chance to inflict \(ctrl.displayName) on each for \(turns(gaze.turns)).",
-                    slot: 2,
-                    cooldown: 5,
-                    target: .allEnemies,
-                    damage: DamageSpec(multiplier: 2.20),
-                    statuses: [gaze],
-                    levelUpBonuses: strikeLadder,
-                    animation: .ultimate,
-                    cameraShot: .cinematicOrbit,
-                    vfx: "wrath_of_the_eye"
-                ),
+                second,
+                third,
                 Skill(
                     id: "\(id)_passive",
                     name: "Winged Sandals",
@@ -550,11 +702,11 @@ extension UnitDatabase {
 
     // MARK: - THE THOTH FAMILY (5★, Egyptian, support)
     //
-    // The roster's first healer. Words of Healing restores the team and
-    // cleanses it; the Book of the Dead grants Immunity and the element's
-    // blessing and pushes the whole team's attack bar; awakened, the Scribe
-    // heals the weakest ally at the start of each of his turns. He casts from
-    // where he stands.
+    // The roster's first healer. Every form heals; the water scribe's Words
+    // of Healing restore the team and cleanse it, and his Book of the Dead
+    // grants Immunity and Defense Up and pushes the whole team's attack bar;
+    // awakened, the Scribe heals the weakest ally at the start of each of his
+    // turns. He casts from where he stands.
 
     static let thothFamily: [UnitBlueprint] = Element.allCases.map(thothVariant)
 
@@ -587,8 +739,62 @@ extension UnitDatabase {
         let k = thothKit(element)
         let id = "thoth_\(element.rawValue)"
         let sig = signature(element)
-        let bless = blessing(element)
         let stroke = StatusSpec(sig, chance: 0.35, turns: 2, target: .singleEnemy)
+
+        // The scribe's five ways. Every form heals — that is what Thoth is
+        // for — and water, the Inundation, is the home: the words of healing
+        // and the Book of the Dead as first written.
+        let second: Skill
+        let third: Skill
+        switch element {
+        case .ember:
+            second = ritual(id, slot: 1, "Words of Fire",
+                            "Writes in fire: heals every ally for 20% of their maximum health and grants Attack Up for 2 turns, and every enemy has a 40% chance to Burn for 2 turns.",
+                            cd: 4, statuses: [status(.attackUp, 1.0, on: .allAllies), status(.burn, 0.40, on: .allEnemies)],
+                            utilities: [.healTargetMaxHealth(0.20, .allAllies)], vfx: "heal")
+            third = ritual(id, slot: 2, "Decree of Djehuty",
+                           "Reads the decree: Attack Up and Focus for every ally for 2 turns, and the team's attack bar fills by 25%.",
+                           cd: 5, statuses: [status(.attackUp, 1.0, on: .allAllies), status(.critRateUp, 1.0, on: .allAllies)],
+                           utilities: [.attackBarChange(0.25, chance: 1.0, .allAllies)], vfx: "olympian_decree")
+        case .tide:
+            second = ritual(id, slot: 1, "Words of Healing",
+                            "Heals every ally for 30% of their maximum health and removes up to 2 harmful effects from each.",
+                            cd: 4, utilities: [.healTargetMaxHealth(0.30, .allAllies), .cleanse(count: 2, .allAllies)], vfx: "heal")
+            third = ritual(id, slot: 2, "Book of the Dead",
+                           "Reads from the book: Immunity and Defense Up for every ally for 2 turns, and the team's attack bar fills by 25%.",
+                           cd: 5, statuses: [status(.immunity, 1.0, on: .allAllies), status(.defenseUp, 1.0, on: .allAllies)],
+                           utilities: [.attackBarChange(0.25, chance: 1.0, .allAllies)], vfx: "duat_rite")
+        case .gale:
+            second = ritual(id, slot: 1, "Reading of the Winds",
+                            "Heals every ally for 18% of their maximum health, and the team's attack bar fills by 25%.",
+                            cd: 4, utilities: [.healTargetMaxHealth(0.18, .allAllies), .attackBarChange(0.25, chance: 1.0, .allAllies)],
+                            vfx: "heal")
+            third = ritual(id, slot: 2, "Measured Year",
+                           "Measures the year out for the team: Haste for every ally for 2 turns, the team's attack bar fills by 30%, and one harmful effect is removed from each.",
+                           cd: 5, statuses: [status(.speedUp, 1.0, on: .allAllies)],
+                           utilities: [.attackBarChange(0.30, chance: 1.0, .allAllies), .cleanse(count: 1, .allAllies)], vfx: "buff")
+        case .radiance:
+            second = ritual(id, slot: 1, "Silver Disc",
+                            "Raises the silver disc: heals every ally for 25% of their maximum health and shields each for 12% of his own for 2 turns.",
+                            cd: 4, statuses: [status(.shield, 1.0, on: .allAllies, magnitude: 0.12)],
+                            utilities: [.healTargetMaxHealth(0.25, .allAllies)], vfx: "maat_shield")
+            third = ritual(id, slot: 2, "Word of Khemenu",
+                           "Immunity and Focus for every ally for 2 turns, up to two harmful effects removed from each, and one beneficial effect removed from every enemy with a 70% chance.",
+                           cd: 5, statuses: [status(.immunity, 1.0, on: .allAllies), status(.critRateUp, 1.0, on: .allAllies)],
+                           utilities: [.cleanse(count: 2, .allAllies), .strip(count: 1, chance: 0.70, .allEnemies)],
+                           vfx: "olympian_decree")
+        case .umbra:
+            second = smite(id, slot: 1, "Sealed Curse",
+                           "Writes a curse on one enemy that heals every ally for 150% of his attack, with a 60% chance to Break its defence for 2 turns.",
+                           cd: 3, DamageSpec(multiplier: 2.60),
+                           statuses: [status(.defenseDown, 0.60)], utilities: [.healFromAttack(1.5, .allAllies)], vfx: "heart_weigh")
+            third = ritual(id, slot: 2, "Book of Secrets",
+                           "Opens the sealed book over the whole enemy line: up to two beneficial effects removed from each with a 70% chance and a 50% chance to Brand each for 2 turns; Focus for every ally for 2 turns, and the team's attack bar fills by 20%.",
+                           cd: 5, target: .allEnemies,
+                           statuses: [status(.brand, 0.50, on: .allEnemies), status(.critRateUp, 1.0, on: .allAllies)],
+                           utilities: [.strip(count: 2, chance: 0.70, .allEnemies), .attackBarChange(0.20, chance: 1.0, .allAllies)],
+                           vfx: "debuff")
+        }
 
         return UnitBlueprint(
             id: id,
@@ -620,43 +826,8 @@ extension UnitDatabase {
                     cameraShot: .standard,
                     vfx: "impact_generic"
                 ),
-                Skill(
-                    id: "\(id)_s2",
-                    name: "Words of Healing",
-                    description: "Heals every ally for 30% of their maximum health and removes up to 2 harmful effects from each.",
-                    slot: 1,
-                    cooldown: 4,
-                    target: .allAllies,
-                    damage: nil,
-                    utilities: [
-                        .healTargetMaxHealth(0.30, .allAllies),
-                        .cleanse(count: 2, .allAllies)
-                    ],
-                    levelUpBonuses: supportLadder,
-                    animation: .castRelease,
-                    cameraShot: .pushIn,
-                    vfx: "heal"
-                ),
-                Skill(
-                    id: "\(id)_s3",
-                    name: "Book of the Dead",
-                    description: "Reads from the book: Immunity and \(bless.displayName) for every ally for 2 turns, and the team's attack bar fills by 25%.",
-                    slot: 2,
-                    cooldown: 5,
-                    target: .allAllies,
-                    damage: nil,
-                    statuses: [
-                        StatusSpec(.immunity, chance: 1.0, turns: 2, target: .allAllies),
-                        StatusSpec(bless, chance: 1.0, turns: 2, target: .allAllies)
-                    ],
-                    utilities: [.attackBarChange(0.25, chance: 1.0, .allAllies)],
-                    levelUpBonuses: [
-                        SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")
-                    ],
-                    animation: .ultimate,
-                    cameraShot: .cinematicOrbit,
-                    vfx: "duat_rite"
-                ),
+                second,
+                third,
                 Skill(
                     id: "\(id)_passive",
                     name: "Scribe of Ma'at",
@@ -715,6 +886,37 @@ extension UnitDatabase {
         let epithets: [Element: String] = [
             .ember: "of Sparta", .tide: "of Corinth", .gale: "of Athens", .radiance: "of Delphi", .umbra: "of Thebes"
         ]
+        let id = "hoplite_\(element.rawValue)"
+        // The line's five ways; water, Corinth's, is the home: the phalanx as
+        // first written.
+        let special: Skill
+        switch element {
+        case .ember:
+            special = smite(id, slot: 1, "Spartan Thrust",
+                            "A spear thrust with a 60% chance to Burn the target for 2 turns; he takes Attack Up for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 2.40),
+                            statuses: [status(.burn, 0.60), status(.attackUp, 1.0, on: .caster)], vfx: "impact_ember")
+        case .tide:
+            special = ritual(id, slot: 1, "Phalanx",
+                             "Locks shields: Defense Up for every ally for 2 turns and a shield worth 20% of his maximum health on himself.",
+                             cd: 4, statuses: [status(.defenseUp, 1.0, on: .allAllies), status(.shield, 1.0, on: .caster, magnitude: 0.20)],
+                             vfx: "maat_shield")
+        case .gale:
+            special = ritual(id, slot: 1, "Marathon Pace",
+                             "Sets the line running: Haste for every ally for 2 turns, and the team's attack bar fills by 10%.",
+                             cd: 4, statuses: [status(.speedUp, 1.0, on: .allAllies)],
+                             utilities: [.attackBarChange(0.10, chance: 1.0, .allAllies)], vfx: "buff")
+        case .radiance:
+            special = ritual(id, slot: 1, "Delphic Ward",
+                             "Shields every ally for 15% of his maximum health for 2 turns and removes one harmful effect from each.",
+                             cd: 4, statuses: [status(.shield, 1.0, on: .allAllies, magnitude: 0.15)],
+                             utilities: [.cleanse(count: 1, .allAllies)], vfx: "maat_shield")
+        case .umbra:
+            special = smite(id, slot: 1, "Theban Spear",
+                            "A spear thrust that heals him for 40% of the damage, with a 50% chance to Break the target's defence for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 2.40),
+                            statuses: [status(.defenseDown, 0.50)], utilities: [.lifesteal(0.40)], vfx: "heart_weigh")
+        }
         return common(
             family: "hoplite",
             name: "Hoplite",
@@ -725,23 +927,7 @@ extension UnitDatabase {
             hp: 340, atk: 22, def: 26, spd: 96,
             basicName: "Spear Jab",
             basicMultiplier: 1.70,
-            special: Skill(
-                id: "hoplite_\(element.rawValue)_s2",
-                name: "Phalanx",
-                description: "Locks shields: Defense Up for every ally for 2 turns and a shield worth 20% of his maximum health on himself.",
-                slot: 1,
-                cooldown: 4,
-                target: .allAllies,
-                damage: nil,
-                statuses: [
-                    StatusSpec(.defenseUp, chance: 1.0, turns: 2, target: .allAllies),
-                    StatusSpec(.shield, chance: 1.0, turns: 2, target: .caster, magnitude: 0.20)
-                ],
-                levelUpBonuses: [SkillUpgrade(kind: .cooldown, amount: 1, label: "Cooldown -1")],
-                animation: .castRelease,
-                cameraShot: .pushIn,
-                vfx: "maat_shield"
-            ),
+            special: special,
             leader: LeaderSkill(stat: .defPercent, amount: 0.15, scope: .pantheon(.greek)),
             height: 1.85,
             melee: true,
@@ -754,6 +940,36 @@ extension UnitDatabase {
         let epithets: [Element: String] = [
             .ember: "Ember Piper", .tide: "River Piper", .gale: "Hill Piper", .radiance: "Noon Piper", .umbra: "Night Piper"
         ]
+        let id = "satyr_\(element.rawValue)"
+        // The piper's five tunes; wind, the Hill Piper's, is the home: the
+        // wild piping as first written.
+        let special: Skill
+        switch element {
+        case .ember:
+            special = ritual(id, slot: 1, "Bonfire Reel",
+                             "Pipes a reel round the fire: every ally is healed for 12% of their maximum health and gains Attack Up for 2 turns.",
+                             cd: 4, statuses: [status(.attackUp, 1.0, on: .allAllies)],
+                             utilities: [.healTargetMaxHealth(0.12, .allAllies)], vfx: "heal")
+        case .tide:
+            special = ritual(id, slot: 1, "River Lullaby",
+                             "Plays the river slow: every ally is healed for 20% of their maximum health, and every enemy has a 50% chance to be Slowed for 2 turns.",
+                             cd: 4, statuses: [status(.speedDown, 0.50, on: .allEnemies)],
+                             utilities: [.healTargetMaxHealth(0.20, .allAllies)], vfx: "heal")
+        case .gale:
+            special = ritual(id, slot: 1, "Wild Piping",
+                             "Plays the pipes: every ally is healed for 15% of their maximum health and gains Haste for 2 turns.",
+                             cd: 4, statuses: [status(.speedUp, 1.0, on: .allAllies)],
+                             utilities: [.healTargetMaxHealth(0.15, .allAllies)], vfx: "heal")
+        case .radiance:
+            special = ritual(id, slot: 1, "Noon Song",
+                             "A song for the noon: every ally is healed for 12% of their maximum health and has one harmful effect removed.",
+                             cd: 4, utilities: [.healTargetMaxHealth(0.12, .allAllies), .cleanse(count: 1, .allAllies)], vfx: "heal")
+        case .umbra:
+            special = smite(id, slot: 1, "Night Dirge",
+                            "A kick timed to a dirge: damage to one enemy that heals every ally for 100% of his attack, with a 50% chance to Break the target's defence for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 2.20),
+                            statuses: [status(.defenseDown, 0.50)], utilities: [.healFromAttack(1.0, .allAllies)], vfx: "heart_weigh")
+        }
         return common(
             family: "satyr",
             name: "Satyr",
@@ -764,21 +980,7 @@ extension UnitDatabase {
             hp: 300, atk: 22, def: 20, spd: 104,
             basicName: "Hoof Kick",
             basicMultiplier: 1.70,
-            special: Skill(
-                id: "satyr_\(element.rawValue)_s2",
-                name: "Wild Piping",
-                description: "Plays the pipes: every ally is healed for 15% of their maximum health and gains Haste for 2 turns.",
-                slot: 1,
-                cooldown: 4,
-                target: .allAllies,
-                damage: nil,
-                statuses: [StatusSpec(.speedUp, chance: 1.0, turns: 2, target: .allAllies)],
-                utilities: [.healTargetMaxHealth(0.15, .allAllies)],
-                levelUpBonuses: supportLadder,
-                animation: .castRelease,
-                cameraShot: .pushIn,
-                vfx: "heal"
-            ),
+            special: special,
             leader: LeaderSkill(stat: .hpPercent, amount: 0.15, scope: .pantheon(.greek)),
             height: 1.60,
             melee: true,
@@ -791,6 +993,38 @@ extension UnitDatabase {
         let epithets: [Element: String] = [
             .ember: "Cinder Wing", .tide: "Storm Wing", .gale: "Gale Wing", .radiance: "Sun Wing", .umbra: "Night Wing"
         ]
+        let id = "harpy_\(element.rawValue)"
+        // The snatcher's five dives; water, the Storm Wing's, is the home: the
+        // screech dive as first written.
+        let special: Skill
+        switch element {
+        case .ember:
+            special = smite(id, slot: 1, "Cinder Dive",
+                            "Dives on one enemy with a 60% chance to Burn it for 2 turns, hitting 10% harder for every harmful effect on it.",
+                            cd: 3, DamageSpec(multiplier: 2.50, bonusPerTargetDebuff: 0.10),
+                            statuses: [status(.burn, 0.60)], vfx: "impact_ember")
+        case .tide:
+            special = smite(id, slot: 1, "Screech Dive",
+                            "Dives on one enemy for heavy damage with a 60% chance to knock its attack bar back by 30%.",
+                            cd: 3, DamageSpec(multiplier: 2.60),
+                            utilities: [.attackBarChange(-0.30, chance: 0.60, .singleEnemy)], vfx: "lioness_rake")
+        case .gale:
+            special = smite(id, slot: 1, "Talon Flurry",
+                            "Three rakes on one enemy, each with a 25% chance to make its next hit Glancing for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 0.95, hits: 3),
+                            statuses: [status(.glancing, 0.25, perHit: true)], vfx: "impact_gale")
+        case .radiance:
+            special = smite(id, slot: 1, "Snatching Dive",
+                            "Snatches one beneficial effect from the target with an 80% chance and dives for damage with a 60% chance to inflict Attack Down for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 2.40),
+                            statuses: [status(.attackDown, 0.60)], utilities: [.strip(count: 1, chance: 0.80, .singleEnemy)],
+                            vfx: "impact_radiance")
+        case .umbra:
+            special = smite(id, slot: 1, "Carrion Dive",
+                            "Dives on one enemy for a blow that heals her for 40% of the damage, with a 50% chance to Break its defence for 2 turns.",
+                            cd: 3, DamageSpec(multiplier: 2.50),
+                            statuses: [status(.defenseDown, 0.50)], utilities: [.lifesteal(0.40)], vfx: "heart_weigh")
+        }
         return common(
             family: "harpy",
             name: "Harpy",
@@ -802,20 +1036,7 @@ extension UnitDatabase {
             basicName: "Talon Rake",
             basicMultiplier: 1.00,
             basicHits: 2,
-            special: Skill(
-                id: "harpy_\(element.rawValue)_s2",
-                name: "Screech Dive",
-                description: "Dives on one enemy for heavy damage with a 60% chance to knock its attack bar back by 30%.",
-                slot: 1,
-                cooldown: 3,
-                target: .singleEnemy,
-                damage: DamageSpec(multiplier: 2.60),
-                utilities: [.attackBarChange(-0.30, chance: 0.60, .singleEnemy)],
-                levelUpBonuses: strikeLadder,
-                animation: .attackHeavy,
-                cameraShot: .pushIn,
-                vfx: "lioness_rake"
-            ),
+            special: special,
             leader: LeaderSkill(stat: .spd, amount: 0.10, scope: .pantheon(.greek)),
             height: 1.75,
             melee: true,
