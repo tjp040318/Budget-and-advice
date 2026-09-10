@@ -26,6 +26,14 @@ struct PantheonApp: App {
         // written to More → Diagnostics with its length and the time.
         Perf.startWatchdog()
 
+        #if DEBUG
+        // Line-buffered stdout. The CI tour writes the app's stdout to a
+        // file and kills the app at the end of each step; a block-buffered
+        // stdout took the last kilobytes with it — every run's wave-three
+        // loads and the watchdog's lines were in the buffer, not the file.
+        setvbuf(stdout, nil, _IOLBF, 0)
+        #endif
+
         // Build the unit database and the bundle's resource index before a
         // screen asks for them. `UnitDatabase.all` is three hundred and
         // ninety-five blueprints and `summonPool` filters every one of them on

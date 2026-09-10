@@ -413,7 +413,13 @@ final class BattleSceneController: NSObject {
     private func position(for combatant: Combatant, teamSize: Int) -> SCNVector3 {
         let sideSign: Float = combatant.side == .player ? 1 : -1
         if combatant.isBoss {
-            return SCNVector3(Self.bossMark.x, -combatant.model.height * Self.bossSink, sideSign * Self.bossMark.z)
+            // The mark is written on the far side already (a boss is only
+            // ever an opponent); multiplying its z by the side's sign, as
+            // the line marks below do, put the Colossus at +9.8 — behind
+            // the player's own column, over the NEAR rim, in the bottom
+            // left corner of two runs' frames, where it was taken for a
+            // hanging rock.
+            return SCNVector3(Self.bossMark.x, -combatant.model.height * Self.bossSink, Self.bossMark.z)
         }
         let perRank = 5
         let mark = markIndex(for: combatant)
