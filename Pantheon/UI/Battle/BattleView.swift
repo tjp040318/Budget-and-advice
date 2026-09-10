@@ -500,11 +500,36 @@ struct BattleView: View {
                 .lineLimit(1)
             // maxWidth, not width: with four named chips beside it the row
             // would otherwise be wider than the screen.
-            StatBar(value: boss.currentHealth, maximum: boss.maxHealth, tint: Theme.danger, height: 6)
-                .frame(maxWidth: 260)
+            VStack(alignment: .leading, spacing: 2) {
+                // A raid boss's barrier sits ON the health bar, because it is
+                // the bar the player is actually hitting: damage goes into it
+                // first, and the health underneath does not move until it
+                // breaks. Drawn in the boss's current weakness colour so the
+                // two pieces of information a raid turn needs — what is
+                // soaking the damage, and what it is soft to — are one glance.
+                if let barrier = model.raidBarrierFraction(boss.id) {
+                    let tint = model.raidWeakness(boss.id)?.color ?? Theme.gold
+                    StatBar(value: barrier, maximum: 1, tint: tint, height: 4)
+                        .frame(maxWidth: 260)
+                }
+                StatBar(value: boss.currentHealth, maximum: boss.maxHealth, tint: Theme.danger, height: 6)
+                    .frame(maxWidth: 260)
+            }
             Text("\(Int(boss.currentHealth.rounded())) / \(Int(boss.maxHealth.rounded()))")
                 .font(Theme.numeric(9))
                 .foregroundStyle(Theme.textSecondary)
+            if let weakness = model.raidWeakness(boss.id) {
+                Chip(text: "Open to \(weakness.displayName)", systemImage: weakness.glyph, tint: weakness.color)
+            }
+            // Only above 1: an enrage that has not started yet is not news.
+            if model.raidEnrage(boss.id) > 1.001 {
+                Chip(
+                    text: String(format: "Enraged ×%.1f", model.raidEnrage(boss.id)),
+                    systemImage: "flame.fill",
+                    tint: Theme.danger,
+                    filled: true
+                )
+            }
             if !boss.statuses.isEmpty {
                 statusChips(boss.statuses)
             }

@@ -232,6 +232,32 @@ final class BattleViewModel: ObservableObject {
     var playerTeam: [Combatant] { displayedCombatants.filter { $0.side == .player } }
     var opponentTeam: [Combatant] { displayedCombatants.filter { $0.side == .opponent } }
 
+    // MARK: - What a raid boss is doing
+    //
+    // Read straight off the engine rather than mirrored into a @Published
+    // field. A raid's barrier, weakness and enrage change on the BOSS's turn,
+    // and `displayedCombatants` deliberately lags the engine so health bars
+    // drain with the animation; mirroring these would have made the barrier
+    // and the health disagree with each other on screen. The HUD reads them
+    // during a render that `displayedCombatants` has already invalidated, so
+    // they refresh with everything else.
+
+    /// The barrier on a raid boss, 0...1 of its full size, or nil for a boss
+    /// that carries none. The size in points is the boss's own, so a barrier
+    /// at full always reads full whatever the boss's health is.
+    func raidBarrierFraction(_ id: UUID) -> Double? {
+        guard let bar = engine.raidBarrier(for: id), bar.maximum > 0 else { return nil }
+        return min(1, max(0, bar.remaining / bar.maximum))
+    }
+
+    /// The element the boss is open to at this moment, or nil if it is not a
+    /// raid boss or its weakness has not rotated in yet.
+    func raidWeakness(_ id: UUID) -> Element? { engine.raidWeakness(for: id) }
+
+    /// What the boss's enrage multiplies its damage by. 1 until its clock runs
+    /// out, and worth showing only above 1.
+    func raidEnrage(_ id: UUID) -> Double { engine.raidEnrage(for: id) }
+
     /// Skills the waiting actor can use, with their cooldown state.
     var availableSkills: [SkillOption] {
         guard let actor = awaitingActor else { return [] }

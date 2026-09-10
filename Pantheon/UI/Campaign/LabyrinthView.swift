@@ -21,6 +21,12 @@ struct LabyrinthView: View {
     /// only ever one floor to fight, so there is nothing to navigate to.
     @State private var towerEngine: BattleEngine?
     @State private var towerBattle: BattleContext?
+    /// A raid fights from this screen for the same reason the tower does:
+    /// there is one encounter behind the card, so there is nothing to
+    /// navigate to.
+    @State private var raidEngine: BattleEngine?
+    @State private var raidBattle: BattleContext?
+    @State private var openRaid: RaidEncounter?
     @State private var showTeamPicker = false
 
     /// The building's three rooms. A three-way choice, so it is `BarSegments`
@@ -29,12 +35,14 @@ struct LabyrinthView: View {
         case dungeons
         case halls
         case tower
+        case raids
     }
 
     private let wings: [(value: Wing, title: String)] = [
         (value: .dungeons, title: "Dungeons"),
         (value: .halls, title: "Halls"),
         (value: .tower, title: "Tower"),
+        (value: .raids, title: "Raids"),
     ]
 
     private var subtitle: String {
@@ -44,6 +52,8 @@ struct LabyrinthView: View {
         case .tower:
             let cleared = TowerService.clearedFloor(player: store.player)
             return "\(cleared)/\(DungeonDatabase.towerFloors) floors · one battle each"
+        case .raids:
+            return "\(StageDatabase.raids.count) bosses · barriers, guards and enrage"
         }
     }
 
@@ -69,6 +79,12 @@ struct LabyrinthView: View {
                         }
                     case .tower:
                         towerWing
+                    case .raids:
+                        HStack(spacing: 8) {
+                            ForEach(StageDatabase.raids) { raid in
+                                raidCard(raid)
+                            }
+                        }
                     }
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
@@ -84,6 +100,9 @@ struct LabyrinthView: View {
         }
         .fullScreenCover(item: $towerBattle, onDismiss: { towerEngine = nil }) { context in
             towerBattleScreen(context)
+        }
+        .fullScreenCover(item: $raidBattle, onDismiss: { raidEngine = nil; openRaid = nil }) { context in
+            raidBattleScreen(context)
         }
     }
 
@@ -478,6 +497,136 @@ struct LabyrinthView: View {
     }
 
     // MARK: - Climbing
+
+    // MARK: - A raid
+
+    /// One raid as a card: the painting of the place, the boss's own words,
+    /// and what its mechanics actually are, because a barrier that regenerates
+    /// and a weakness that rotates are the fight, and meeting either of them
+    /// for the first time inside the battle is meeting them too late.
+    private func raidCard(_ raid: RaidEncounter) -> some View {
+        let cleared = (store.player.campaignProgress[raid.stage.chapterID] ?? 0) > 0
+        let team = store.team(store.player.campaignTeam)
+        let power = team.reduce(0) { $0 + $1.power }
+        let hasEnergy = store.player.wallet.energy >= raid.stage.energyCost
+        return VStack(alignment: .leading, spacing: 6) {
+            ZStack(alignment: .bottomLeading) {
+                if BundleImage.exists(raid.environment.backdropName) {
+                    BundleImage(name: raid.environment.backdropName)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .clipped()
+                }
+                LinearGradient(colors: [.clear, Theme.ink.opacity(0.92)], startPoint: .center, endPoint: .bottom)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("RAID")
+                        .font(Theme.body(9).weight(.bold))
+                        .tracking(1.4)
+                        .foregroundStyle(Theme.danger)
+                    Text(raid.name)
+                        .font(Theme.title(15))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                }
+                .padding(8)
+            }
+            .frame(height: 104)
+            .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+            // The painting fills, and a fill declines nothing on its own.
+            .allowsHitTesting(false)
+
+            Text(raid.summary)
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let profile = raid.profile {
+                VStack(alignment: .leading, spacing: 3) {
+                    raidMechanic("shield.lefthalf.filled", profile.barrierName,
+                                 "\(Int((profile.barrierFraction * 100).rounded()))% of its health, back after \(profile.barrierRegenTurns) of its turns; breaking it stuns for \(profile.barrierStunTurns).")
+                    if !profile.adds.isEmpty {
+                        raidMechanic("person.3.fill", profile.summonName,
+                                     "\(profile.adds.count) every \(profile.addInterval) of its turns, and each one alive feeds it \(Int((profile.addDrain * 100).rounded()))% a turn.")
+                    }
+                }
+            }
+
+            if !raid.weaknesses.isEmpty {
+                HStack(spacing: 4) {
+                    Text("OPENS TO")
+                        .font(Theme.body(9).weight(.black))
+                        .tracking(1.0)
+                        .foregroundStyle(Theme.goldDim)
+                    ForEach(raid.weaknesses, id: \.self) { element in
+                        Chip(text: element.displayName, systemImage: element.glyph, tint: element.color)
+                    }
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            HStack(spacing: 6) {
+                Text("\(power) / \(raid.stage.recommendedPower)")
+                    .font(Theme.numeric(10))
+                    .foregroundStyle(power >= raid.stage.recommendedPower ? Theme.success : Theme.danger)
+                if cleared {
+                    Chip(text: "Cleared", systemImage: "checkmark.seal.fill", tint: Theme.gold)
+                }
+            }
+            PrimaryButton(
+                title: "Enter — \(raid.stage.energyCost) energy",
+                systemImage: "bolt.horizontal.fill",
+                isEnabled: hasEnergy && !team.isEmpty
+            ) {
+                enterRaid(raid)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(10)
+        .panelBackground()
+    }
+
+    private func raidMechanic(_ symbol: String, _ name: String, _ detail: String) -> some View {
+        HStack(alignment: .top, spacing: 5) {
+            Image(systemName: symbol)
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(Theme.gold)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(name)
+                    .font(Theme.body(10).weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                Text(detail)
+                    .font(Theme.body(9))
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func enterRaid(_ raid: RaidEncounter) {
+        guard let engine = store.startRaid(raid) else { return }
+        Juice.haptic(.light)
+        raidEngine = engine
+        openRaid = raid
+        raidBattle = .campaign(raid.stage)
+    }
+
+    /// A raid is a campaign battle as far as the plumbing is concerned — the
+    /// same view model, the same result panel — and `GameStore.finishRaid`
+    /// hands it to `finishCampaignBattle`, which stamps the raid's own id in
+    /// `campaignProgress` so a first clear pays exactly once.
+    @ViewBuilder
+    private func raidBattleScreen(_ context: BattleContext) -> some View {
+        if let engine = raidEngine {
+            BattleView(model: BattleViewModel(engine: engine, context: context, store: store))
+                .environmentObject(store)
+        } else {
+            Color.black
+                .ignoresSafeArea()
+                .onAppear { raidBattle = nil }
+        }
+    }
 
     private func climbTower() {
         guard let stage = TowerService.nextStage(player: store.player) else { return }
