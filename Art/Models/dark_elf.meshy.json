@@ -31,14 +31,14 @@
         "texture_prompt": "hand-painted stylised mobile game character textures with fine detail: engraved and embossed metal with worn bright edges, layered cloth with a woven weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth, clear contrast between metal, cloth, leather and skin, soft natural shading with painted highlights, rich saturated colour, stylised rather than photoreal, black, violet, silver palette"
       },
       "cost": 30,
-      "progress": 1,
+      "progress": 45,
       "urls": {},
       "created_at": 1789008356252,
       "started_at": 1789008356254,
       "finished_at": 0,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T02:45:56Z"
+      "polled": "2026-09-10T02:47:27Z"
     }
   },
   "history": []
