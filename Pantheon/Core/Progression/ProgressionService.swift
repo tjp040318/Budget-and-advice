@@ -307,12 +307,13 @@ enum EssenceCatalog {
 /// something the gacha is quietly still handing out. The two cannot drift
 /// because there is only one list.
 ///
-/// Five of the six prizes are the light or the dark variant of a family whose
-/// other elements stay summonable, which is the genre's convention: the light
-/// and dark of a family are the ones you cannot pull. The sixth is Hades in
-/// wind, because only three of the five Hades cards have been painted and a
-/// prize whose card is a letter on a gradient is not a prize. Six ids out of
-/// the seventy-eight in the pool: a banner still has plenty to give.
+/// Every prize is the light or the dark variant of a family whose other three
+/// elements stay summonable, which is the genre's convention: the light and
+/// the dark of a family are the ones you cannot pull. Hades was the wind form
+/// while only three of his five cards had been painted — a prize whose card is
+/// a letter on a gradient is not a prize — and moved to the dark one the day
+/// the batch finished him, which is also the form the helm belongs to. Six ids
+/// out of the seventy-eight in the pool: a banner still has plenty to give.
 enum FusionService {
 
     // MARK: Table types
@@ -540,7 +541,7 @@ enum FusionService {
         Recipe(
             id: "unseen_helm",
             name: "The Unseen Helm",
-            resultID: "hades_gale",
+            resultID: "hades_umbra",
             drachmaCost: 120_000,
             lore: "The cyclopes made him a helm that takes its wearer out of sight, and he lends it out: to the hero who wanted the gorgon's head, to the gods when they fought the giants. It always comes back. What comes back wearing it is not always what borrowed it.",
             ingredients: [

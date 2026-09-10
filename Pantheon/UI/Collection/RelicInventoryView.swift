@@ -1211,7 +1211,7 @@ struct RelicOptimiserView: View {
     /// The unit to open on: the wearer, when the screen is reached from a
     /// relic slot on the unit sheet. Nil from the relic inventory, which is
     /// not about any one unit, and where the roster grid chooses.
-    var initialUnitID: UUID? = nil
+    let initialUnitID: UUID?
 
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
@@ -1222,6 +1222,20 @@ struct RelicOptimiserView: View {
     /// relics moves nothing on screen except the numbers, and a screen that
     /// answers a tap with nothing reads as broken.
     @State private var notice: String?
+    /// Whether that last thing was a refusal. One of the three notices is a
+    /// no — the loadout cap — and a no painted in the success colour reads as
+    /// a yes at a glance.
+    @State private var noticeIsWarning = false
+
+    /// The target is seeded here rather than in `onAppear`, so the screen
+    /// solves once. Assigning it in `onAppear` changes `target` after the
+    /// first render, `onChange(of: target)` then fires, and the search runs a
+    /// second time — 46,656 loadouts weighed twice before the first frame,
+    /// on the main thread, in the debug build the CI tour photographs.
+    init(initialUnitID: UUID? = nil) {
+        self.initialUnitID = initialUnitID
+        _target = State(initialValue: initialUnitID)
+    }
 
     /// The four goals as the strip's segments.
     private var goals: [(value: RelicService.OptimiserGoal, title: String)] {
@@ -1289,10 +1303,7 @@ struct RelicOptimiserView: View {
                     chooser
                 }
             }
-            .onAppear {
-                target = target ?? initialUnitID
-                solve()
-            }
+            .onAppear { solve() }
             .onChange(of: goal) { _, _ in solve() }
             .onChange(of: target) { _, _ in solve() }
         }
@@ -1537,7 +1548,7 @@ struct RelicOptimiserView: View {
             if let notice {
                 Text(notice)
                     .font(Theme.body(10))
-                    .foregroundStyle(Theme.success)
+                    .foregroundStyle(noticeIsWarning ? Theme.danger : Theme.success)
                     .lineLimit(1)
             }
             BarButton(
@@ -1562,6 +1573,7 @@ struct RelicOptimiserView: View {
     /// cancelled and restarted every time a segment is tapped.
     private func solve() {
         notice = nil
+        noticeIsWarning = false
         guard let target else {
             solution = nil
             return
@@ -1578,15 +1590,26 @@ struct RelicOptimiserView: View {
         Juice.notify(.success)
         solve()
         notice = moved == 1 ? "One slot changed." : "\(moved) slots changed."
+        noticeIsWarning = false
     }
 
+    /// Keeps **what the unit is wearing**, not the proposal on screen — so
+    /// the order is Equip, then Keep, which is what the bar's empty hint says.
+    /// The notice says "what it wears" rather than repeating the goal's name
+    /// because the chip that appears beside it already carries the name, and
+    /// a player who tapped Keep before Equip has to be able to see that the
+    /// old six are what got kept.
     private func keep(_ unit: ResolvedUnit) {
         if store.saveRelicLoadout(named: goal.displayName, for: unit.id) {
             AudioLibrary.shared.play(.uiConfirm)
-            notice = "Kept as \(goal.displayName)."
+            notice = "Kept what it wears."
+            noticeIsWarning = false
         } else {
             Juice.notify(.warning)
-            notice = "\(unit.name) already keeps \(RelicService.loadoutsPerUnit) loadouts."
+            // Short on purpose: this fires only when four chips are already in
+            // the bar, which is when there is least room left for a sentence.
+            notice = "\(RelicService.loadoutsPerUnit) kept already; delete one."
+            noticeIsWarning = true
         }
     }
 
@@ -1596,5 +1619,6 @@ struct RelicOptimiserView: View {
         Juice.notify(.success)
         solve()
         notice = "Wearing \(loadout.name)."
+        noticeIsWarning = false
     }
 }

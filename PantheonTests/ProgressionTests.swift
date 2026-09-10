@@ -103,8 +103,9 @@ final class ProgressionTests: XCTestCase {
     //
     // The recipe table is thirty blueprint ids typed by hand, and a wrong one
     // shows up in the game only as a corner that can never be filled — no
-    // crash, no log line, just a hexagram nobody can finish. These four tests
-    // are the only thing that reads that table mechanically.
+    // crash, no log line, just a hexagram nobody can finish. Nothing else in
+    // the project reads that table mechanically, and there is no compiler in
+    // the environment it was written in.
 
     func testEveryFusionRecipeNamesUnitsThatExist() {
         XCTAssertEqual(

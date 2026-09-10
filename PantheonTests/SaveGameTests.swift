@@ -147,4 +147,67 @@ final class SaveGameTests: XCTestCase {
         XCTAssertEqual(TowerService.clearedFloor(player: restored.player), 0)
         XCTAssertEqual(TowerService.nextFloor(player: restored.player), 1)
     }
+
+    // MARK: - Relic loadouts
+
+    /// `[Int: UUID]` is the one shape in the save whose keys are not strings.
+    /// `Unit.equippedRelics` already proves it round-trips, but a loadout is
+    /// the same dictionary one level deeper — inside an element of an optional
+    /// array — so the six ids are checked back out the other side rather than
+    /// assumed.
+    func testRelicLoadoutsRoundTripThroughJSON() throws {
+        var save = NewGame.create()
+        let starter = save.player.units[0]
+        let kept = try XCTUnwrap(
+            RelicService.captureLoadout(named: "Power", for: starter.id, player: save.player)
+        )
+        save.player.relicLoadouts = [kept]
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let restored = try decoder.decode(SaveGame.self, from: try encoder.encode(save))
+        let loadout = try XCTUnwrap(restored.player.relicLoadouts?.first)
+
+        XCTAssertEqual(loadout.id, kept.id)
+        XCTAssertEqual(loadout.name, "Power")
+        XCTAssertEqual(loadout.unitID, starter.id)
+        XCTAssertEqual(loadout.relicIDs.count, 6)
+        XCTAssertEqual(loadout.relicIDs, starter.equippedRelics)
+        XCTAssertEqual(
+            RelicService.loadouts(for: starter.id, in: restored.player.relicLoadouts ?? []).count,
+            1
+        )
+    }
+
+    /// The reason `Player.relicLoadouts` is Optional, and the counterpart of
+    /// the tower's test above: a save written before the optimiser shipped has
+    /// no key at all, and the synthesised decoder tolerates exactly that.
+    func testASaveWrittenBeforeLoadoutsStillDecodes() throws {
+        let save = NewGame.create()
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let data = try encoder.encode(save)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        XCTAssertFalse(json.isEmpty)
+        XCTAssertFalse(
+            json.contains("\"relicLoadouts\""),
+            "a save with no kept loadouts must not write a relicLoadouts key"
+        )
+
+        let restored = try decoder.decode(SaveGame.self, from: data)
+        XCTAssertNil(restored.player.relicLoadouts)
+        XCTAssertTrue(
+            RelicService.loadouts(
+                for: restored.player.units[0].id,
+                in: restored.player.relicLoadouts ?? []
+            ).isEmpty
+        )
+    }
 }
