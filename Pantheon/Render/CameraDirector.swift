@@ -18,24 +18,22 @@ import UIKit
 /// the height of a man each get a frame that fits, and a change to the
 /// formation on the other side of `BattleSceneController` needs no change here.
 ///
-/// **The lens is long, and the camera is off the axis.** 26° vertical on a
-/// 2.17 frame is 53° horizontal — a 36 mm lens where the old 34°/67° was a
-/// 27 mm one that splayed the outer figures and stretched the props at the
+/// **The lens is long, and the camera is round to the side.** 26° vertical
+/// on a 2.17 frame is 53° horizontal — a 36 mm lens where the old 34°/67° was
+/// a 27 mm one that splayed the outer figures and stretched the props at the
 /// frame edges. The long lens is paid for by standing further back, which is
-/// what compresses the two lines together and makes the figures read as solid
-/// rather than as a diorama. 13° of yaw takes the camera off the centre line,
-/// so the two lines recede diagonally instead of ruling two horizontal stripes
-/// across the screen; 21° of pitch is the shallowest that still separates the
-/// near line's heads from the far line's feet, and leaves the top third of the
-/// frame to the environment painting rather than to bare floor.
+/// what compresses the field and makes the figures read as solid rather than
+/// as a diorama. 55° of yaw puts the camera well round to the right of the
+/// field, so the two lines-abreast the stage places read as the genre's two
+/// COLUMNS — the player's at the lower left stepping back and left, the
+/// enemy's on the right stepping back toward the top, an open middle
+/// between them — and 16° of pitch keeps the floor from filling the frame:
+/// the far rim sits about half way up and the painting takes the rest.
 ///
-/// Solved for a four-a-side line thirteen metres across, the camera lands at
-/// (−4.7, 9.0, 20.4) aiming at (0, 0.95, 0): the player line runs 49%–83% of
-/// the frame height, the enemy line 28%–51%, the top 28% is environment, and
-/// no figure overlaps another — checked pairwise, every near box against every
-/// far box, for four-a-side, five-a-side and a boss. Given instead the tight
-/// two-rank block the stage used to place, the same solve comes in to
-/// (−3.9, 7.5, 15.9) and stands the figures a quarter of the screen tall.
+/// Solved for a four-a-side, the camera stands about 20 m from the aim, the
+/// front figure a quarter of the frame tall and the farthest a sixth. A boss
+/// standing over the far rim is framed by its head (`bossTopLine`), not by
+/// its box, so a giant does not step the camera back for everyone else.
 /// That is the whole argument for solving rather than writing a camera down:
 /// one set of rules, and the frame follows the fight it is given.
 ///
@@ -68,32 +66,35 @@ final class CameraDirector {
     /// a distance the stage can afford.
     private static let lensFieldOfView: CGFloat = 26
 
-    /// 21° down. Steeper is a diorama seen from above and fills the bottom of
-    /// the frame with floor; shallower stops separating the near line's heads
-    /// from the far line's feet (the separation needs a camera height of about
-    /// `figureHeight × farDistance / lineGap`, which at 21° and the solved
-    /// distance is 9.0 m against the 7.0 m needed).
-    private static let homePitch: Float = 21 * .pi / 180
+    /// 16° down. The genre's battle camera is LOW: you look across the
+    /// field at the figures, not down onto a table of them. The old 21° was
+    /// chosen to separate a near ROW's heads from a far ROW's feet, and with
+    /// the two sides standing as columns beside each other (see `homeYaw`)
+    /// there is no row behind a row to separate, so the pitch can come down
+    /// to where the floor stops filling the frame and the painting behind
+    /// the far rim takes the top half instead.
+    private static let homePitch: Float = 16 * .pi / 180
 
-    /// 13° of yaw, camera to the left of the centre line looking right. Zero
-    /// yaw is a frontal elevation: every rank is a row exactly parallel to the
-    /// screen and the only depth cue left is scale. This is the three-quarter
-    /// the doc comment always claimed and the code never had.
+    /// 55° of yaw, camera on the right, well round toward the side of the
+    /// field. This is the composition, and it is the third attempt at it.
     ///
-    /// NEGATIVE, and nearly twice what it was. The first pass put the camera
-    /// 13° to the LEFT of the centre line, which was enough to stop the fight
-    /// reading as a flat elevation but not enough to be a look. The owner,
-    /// with a screenshot from his phone: "I dont like the angle, and it from
-    /// the other side and more of an angle. As if the camera is on the right."
-    /// So it is on the right, at 27°.
+    /// At 0° the two lines were rows parallel to the screen. At 27° they
+    /// receded a little and the owner, with a screenshot, called the angle
+    /// ugly: the floor's tiles ran diagonally across a small tilted disc, the
+    /// figures were a sixth of the frame tall and half the picture was the
+    /// void beyond the rim. At 55° the world's two lines-abreast become what
+    /// the genre shows: the player's team a COLUMN at the lower left, its
+    /// front unit nearest the camera at the bottom of the frame and the rest
+    /// stepping back and left; the enemy column across from it on the right,
+    /// stepping back toward the top; an open middle between them where the
+    /// attacks cross; and a boss standing over the far rim at the upper
+    /// right. Nobody hides behind anybody, because each step along a line is
+    /// 1.3 m across the screen as well as back into it.
     ///
-    /// The two are worth separating. The SIDE is taste and his to pick. The
-    /// AMOUNT is not free: yaw is what turns two lines of figures from rows
-    /// parallel to the screen into rows that recede, and it is also what stops
-    /// an enemy sitting exactly behind one of yours. Past about 35° the far
-    /// line starts to run off the frame's edge and the near line eats the
-    /// middle, so 27° is near the top of what the framing solve can hold.
-    private static let homeYaw: Float = -27 * .pi / 180
+    /// Shared with `StageBuilder`, which turns the far painting to face the
+    /// camera: at this much yaw a painting hung square to the world ended a
+    /// third of the way across the frame.
+    static let homeYaw: Float = -55 * .pi / 180
 
     /// How much of the half-frame the outermost figure may reach, and the
     /// metres of air left beside it. A figure is about 0.9 m across, so 0.9 m
@@ -101,56 +102,87 @@ final class CameraDirector {
     private static let widthMargin: Float = 0.98
     private static let shoulderRoom: Float = 0.9
 
-    /// Where the near line's feet sit, as a fraction of the half-frame below
-    /// centre: 0.68 is 84% of the frame height, which clears the command
-    /// panel's 50 pt actor plate along the bottom edge. The genre puts the
-    /// lines across the lower-middle third and gives the top of the frame to
-    /// the environment; the old solve centred the cast and spent 23% of the
-    /// frame on bare floor in front of them.
+    /// Where the near column's front feet sit, as a fraction of the half-frame
+    /// below centre: 0.68 is 84% of the frame height, which clears the actor
+    /// plate along the bottom edge. The genre puts the cast across the lower
+    /// two thirds and gives the top of the frame to the environment.
     private static let nearFeetLine: Float = 0.68
 
-    /// And the ceiling: nothing in the fight may go above 10% of the frame
-    /// height. This is what steps the camera back for a giant — `boss_colossus`
-    /// is 4.5 m, the Jötunn 4.5, the Hydra 4.2, and all three were beheaded by
-    /// the old fixed framing, which could show nothing above 4.15 m.
+    /// The ceiling for an ordinary unit: nothing goes above 10% of the frame
+    /// height. A BOSS gets a ceiling of its own, `bossTopLine`: its head may
+    /// run right up to the frame's edge, because a boss that has to fit under
+    /// the ordinary ceiling steps the whole camera back and shrinks the cast
+    /// — which is what the old solve did for the Colossus, and why every boss
+    /// fight was photographed from twice as far away as every other fight.
     private static let fieldTopLine: Float = 0.80
-
-    /// A 1v1 is not framed as a close-up: the stage is still a stage, so the
-    /// solve always frames at least this much width.
-    private static let minHalfWidth: Float = 5.0
+    private static let bossTopLine: Float = 0.98
 
     /// Distance bounds. The far end is generous because a 4.5 m boss on a
     /// narrow iPad frame needs it; the scene's fog does not begin until 55 m,
     /// so nothing in the fight hazes over at any distance in this range.
     private static let minDistance: Float = 12
-    private static let maxDistance: Float = 32
+    private static let maxDistance: Float = 40
 
     /// Two cuts in quick succession read as a mistake rather than as cutting,
     /// so a shot may not start within this of the last one. One turn casts one
     /// skill, so in practice this only catches auto-battle at speed.
     private static let cutCooldown: TimeInterval = 0.8
 
-    /// The extent of what has to be in frame. Held as a high-water mark for
-    /// the length of a battle: a wave arriving with a giant in it widens the
-    /// framing, and nothing narrows it, so the camera cannot creep inward as
-    /// units fall.
+    /// One point the frame has to hold, and how far up the frame it may sit
+    /// (a fraction of the half-frame above centre).
+    private struct FramePoint {
+        var position: SCNVector3
+        var topLine: Float
+    }
+
+    /// What has to be in frame: the feet and heads of everyone standing on a
+    /// mark, with shoulder room. Held as a high-water mark for the length of
+    /// a battle — a wave arriving with a giant in it widens the framing, and
+    /// nothing narrows it, so the camera cannot creep inward as units fall.
+    ///
+    /// POINTS, not a box. The first solve framed a box (half-width, near and
+    /// far z, top), which is exact for a camera near the axis and wrong for
+    /// one 55° round to the side: the box's near-right corner is then five
+    /// metres nearer the lens than any figure and, being empty, cost half
+    /// the frame to keep in it. Framing the figures themselves costs
+    /// nothing that is not on the stage.
     private struct FieldBounds {
-        var halfWidth: Float
-        var nearZ: Float
-        var farZ: Float
-        var topY: Float
+        var points: [FramePoint]
 
-        /// The four-a-side line, used for the one frame between building the
-        /// camera and the units being placed.
-        static let standard = FieldBounds(halfWidth: 6.5, nearZ: 3.4, farZ: -3.4, topY: 2.0)
+        /// The four-a-side line-up, used for the one frame between building
+        /// the camera and the units being placed, and always folded in so a
+        /// 1v1 is framed as a stage rather than as a close-up.
+        static let standard: FieldBounds = {
+            var points: [FramePoint] = []
+            for x in [Float(-4.2), 4.2] {
+                for z in [Float(-3.4), 3.4] {
+                    points.append(FramePoint(position: SCNVector3(x, 0, z), topLine: CameraDirector.fieldTopLine))
+                    points.append(FramePoint(position: SCNVector3(x, 1.9, z), topLine: CameraDirector.fieldTopLine))
+                }
+            }
+            return FieldBounds(points: points)
+        }()
 
+        /// The union keeps every point either side has, less exact repeats:
+        /// the field is re-measured every time playback drains, and a
+        /// hundred-turn fight would otherwise carry a hundred copies of each
+        /// figure's feet into every solve.
         func union(_ other: FieldBounds) -> FieldBounds {
-            FieldBounds(
-                halfWidth: max(halfWidth, other.halfWidth),
-                nearZ: max(nearZ, other.nearZ),
-                farZ: min(farZ, other.farZ),
-                topY: max(topY, other.topY)
-            )
+            var seen = Set(points.map(Self.key))
+            var merged = points
+            for point in other.points where !seen.contains(Self.key(point)) {
+                seen.insert(Self.key(point))
+                merged.append(point)
+            }
+            return FieldBounds(points: merged)
+        }
+
+        /// The nearest mark anyone stands on: what the cut shots dolly clear of.
+        var nearZ: Float { points.map { $0.position.z }.max() ?? 3.4 }
+
+        private static func key(_ point: FramePoint) -> String {
+            let p = point.position
+            return "\(Int((p.x * 10).rounded())),\(Int((p.y * 10).rounded())),\(Int((p.z * 10).rounded())),\(Int(point.topLine * 100))"
         }
     }
 
@@ -195,7 +227,7 @@ final class CameraDirector {
     /// later wave's giant widens the frame.
     func frameField() {
         guard let measured = measureField() else { return }
-        let merged = field.map { $0.union(measured) } ?? measured
+        let merged = (field ?? FieldBounds.standard).union(measured)
         field = merged
         let solved = solve(for: merged)
         homePosition = solved.position
@@ -227,48 +259,45 @@ final class CameraDirector {
     /// a unit at rest has no action here to read.
     private func measureField() -> FieldBounds? {
         guard let stage = cameraNode.parent else { return nil }
-        var halfWidth: Float = 0
-        var nearZ: Float?
-        var farZ: Float?
-        var topY: Float = 1.6
+        var points: [FramePoint] = []
         var found = false
         for node in stage.childNodes {
             guard let unit = node as? UnitNode else { continue }
             found = true
-            topY = max(topY, unit.spec.height)
             guard !unit.hasActions else { continue }
-            let x = min(8, abs(unit.position.x))
-            let z = min(6.5, max(-6.5, unit.position.z))
-            halfWidth = max(halfWidth, x + Self.shoulderRoom)
-            nearZ = max(nearZ ?? z, z)
-            farZ = min(farZ ?? z, z)
+            let x = max(-9, min(9, unit.position.x))
+            let z = max(-11, min(7, unit.position.z))
+            // A boss stands sunk below the platform's rim, so what has to be
+            // framed is the rim at its feet and the head above it — its
+            // full box would be half hidden rock. Its head may go to the
+            // frame's edge (`bossTopLine`) rather than stepping the camera
+            // back for everyone else.
+            let top = unit.isBoss ? unit.spec.height + unit.position.y : unit.spec.height
+            let line = unit.isBoss ? Self.bossTopLine : Self.fieldTopLine
+            for dx in [-Self.shoulderRoom, Self.shoulderRoom] {
+                points.append(FramePoint(position: SCNVector3(x + dx, 0, z), topLine: Self.fieldTopLine))
+            }
+            points.append(FramePoint(position: SCNVector3(x, max(1.6, top), z), topLine: line))
         }
         guard found else { return nil }
-        // With nobody standing still the heights still count and the depth of
-        // the field is handed back unchanged, which the union in
-        // `frameField()` then leaves exactly as it was.
-        let held = field ?? FieldBounds.standard
-        return FieldBounds(
-            halfWidth: halfWidth,
-            nearZ: nearZ ?? held.nearZ,
-            farZ: farZ ?? held.farZ,
-            topY: topY
-        )
+        // With nobody standing still there is nothing new to frame, and the
+        // union in `frameField()` leaves the field exactly as it was.
+        return FieldBounds(points: points)
     }
 
     /// Solves the camera position and aim that frame `field`.
     ///
     /// The direction is fixed (pitch and yaw are the look of the game), so the
-    /// only unknowns are how far back the camera stands and how high it aims.
-    /// Written in the camera's own basis, both are cheap: a point's offsets
-    /// across and up the frame do not depend on the distance at all, and its
-    /// depth is `distance + a constant`. So the distance each corner of the
-    /// field demands is exact arithmetic, and the largest of them is the
-    /// answer. The aim height is then nudged until the near line's feet land
-    /// on `nearFeetLine`, which changes the corners' offsets, so the two steps
-    /// alternate. Three passes converge; six are run because they are free.
+    /// unknowns are where the camera stands: how far back, and where the
+    /// frame's centre — the aim — sits across and up. Written in the camera's
+    /// own basis, all of it is cheap: a point's offsets across and up the
+    /// frame do not depend on the distance at all, and its depth is
+    /// `distance + a constant`. So the distance each point demands is exact
+    /// arithmetic and the largest of them is the answer; then the aim is slid
+    /// across the frame until the field is centred and up it until the near
+    /// feet rest on `nearFeetLine`, which changes the offsets, so the steps
+    /// alternate. Three passes converge; eight are run because they are free.
     private func solve(for field: FieldBounds) -> (position: SCNVector3, aim: SCNVector3) {
-        let halfWidth = max(field.halfWidth, Self.minHalfWidth)
         let pitch = Self.homePitch
         let yaw = Self.homeYaw
         // The camera looks along its own −Z; this is that direction written
@@ -284,50 +313,57 @@ final class CameraDirector {
         )
         let tanV = tan(Float(Self.lensFieldOfView) * .pi / 360)
         let tanH = tanV * Self.aspect
-        let midZ = (field.nearZ + field.farZ) / 2
+        let points = field.points.isEmpty ? FieldBounds.standard.points : field.points
 
-        var corners: [SCNVector3] = []
-        for x in [-halfWidth, halfWidth] {
-            for z in [field.nearZ, field.farZ] {
-                corners.append(SCNVector3(x, 0, z))
-                corners.append(SCNVector3(x, field.topY, z))
-            }
+        // Start on the field's centre, a metre up.
+        var aim = SCNVector3(0, 1, 0)
+        for point in points {
+            aim.x += point.position.x / Float(points.count)
+            aim.z += point.position.z / Float(points.count)
         }
-
-        var aimY = field.topY * 0.5
         var distance = Float(16)
-        for _ in 0..<6 {
-            let aim = SCNVector3(0, aimY, midZ)
+        for _ in 0..<8 {
             var required = Self.minDistance
-            for corner in corners {
-                let offset = SCNVector3(corner.x - aim.x, corner.y - aim.y, corner.z - aim.z)
+            for point in points {
+                let p = point.position
+                let offset = SCNVector3(p.x - aim.x, p.y - aim.y, p.z - aim.z)
                 let across = dot(offset, right)
                 let vertical = dot(offset, up)
                 let depth = dot(offset, forward)
                 required = max(required, abs(across) / (Self.widthMargin * tanH) - depth)
                 if vertical > 0 {
-                    required = max(required, vertical / (Self.fieldTopLine * tanV) - depth)
+                    required = max(required, vertical / (point.topLine * tanV) - depth)
                 } else {
                     required = max(required, -vertical / (Self.nearFeetLine * tanV) - depth)
                 }
             }
             distance = min(Self.maxDistance, required)
-            // Where the lowest corner of the field actually lands, as a
-            // fraction of the half-frame.
-            var lowest: Float = 1
-            for corner in corners {
-                let offset = SCNVector3(corner.x - aim.x, corner.y - aim.y, corner.z - aim.z)
-                lowest = min(lowest, dot(offset, up) / ((dot(offset, forward) + distance) * tanV))
+            // Where the field lands in the frame at this distance, in
+            // half-frames from the centre.
+            var leftmost: Float = 1, rightmost: Float = -1, lowest: Float = 1
+            for point in points {
+                let p = point.position
+                let offset = SCNVector3(p.x - aim.x, p.y - aim.y, p.z - aim.z)
+                let d = dot(offset, forward) + distance
+                leftmost = min(leftmost, dot(offset, right) / (d * tanH))
+                rightmost = max(rightmost, dot(offset, right) / (d * tanH))
+                lowest = min(lowest, dot(offset, up) / (d * tanV))
             }
-            // Raising the aim raises the camera with it and slides the whole
-            // frame down; `distance * tanV` is a half-frame in metres at the
-            // aim, and dividing by cos(pitch) turns a vertical metre into a
-            // metre measured up the frame.
-            aimY += (lowest + Self.nearFeetLine) * distance * tanV / cos(pitch)
-            aimY = max(0.2, min(field.topY * 1.8, aimY))
+            // `distance * tanH` is a half-frame in metres at the aim, across;
+            // `distance * tanV` the same up. Sliding the aim slides the whole
+            // frame with it, so the field is centred by moving the aim to
+            // the middle of its extremes, and the near feet are rested on
+            // their line by moving the aim down by however far they are
+            // below it.
+            let acrossShift = (leftmost + rightmost) / 2 * distance * tanH
+            let upShift = (lowest + Self.nearFeetLine) * distance * tanV
+            aim = SCNVector3(
+                aim.x + right.x * acrossShift + up.x * upShift,
+                aim.y + right.y * acrossShift + up.y * upShift,
+                aim.z + right.z * acrossShift + up.z * upShift
+            )
         }
 
-        let aim = SCNVector3(0, aimY, midZ)
         let position = SCNVector3(
             aim.x - forward.x * distance,
             aim.y - forward.y * distance,

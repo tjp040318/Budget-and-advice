@@ -1324,7 +1324,7 @@ enum UnitDatabase {
             awakening: nil,
             model: ModelSpec(
                 assetName: assetName ?? id,
-                height: height ?? (archetype == .primordial ? 3.6 : 1.9),
+                height: height ?? (archetype == .primordial ? 7.2 : 1.9),
                 auraHex: auraHex,
                 portraitName: portraitName ?? "portrait_\(id)",
                 standInAsset: standInAsset
@@ -1397,7 +1397,7 @@ enum UnitDatabase {
         specialName: "Venom Breath", specialMultiplier: 2.40, specialTarget: .allEnemies,
         specialStatus: StatusSpec(.defenseDown, chance: 0.50, turns: 2, target: .allEnemies),
         specialCooldown: 4,
-        pantheon: .greek, auraHex: "#5EC8A0", height: 4.2
+        pantheon: .greek, auraHex: "#5EC8A0", height: 7.0
     )
 
     static let barrowDraugr = enemy(
@@ -1455,7 +1455,7 @@ enum UnitDatabase {
         specialName: "Avalanche", specialMultiplier: 2.60, specialTarget: .allEnemies,
         specialStatus: StatusSpec(.freeze, chance: 0.35, turns: 1, target: .allEnemies),
         specialCooldown: 4,
-        pantheon: .norse, auraHex: "#9CD8FF", height: 4.5
+        pantheon: .norse, auraHex: "#9CD8FF", height: 7.5
     )
 
     // MARK: - The Labyrinth's bosses
@@ -1470,7 +1470,7 @@ enum UnitDatabase {
         specialName: "Fall of the Colossus", specialMultiplier: 2.80, specialTarget: .allEnemies,
         specialStatus: StatusSpec(.stun, chance: 0.30, turns: 1, target: .allEnemies),
         specialCooldown: 4,
-        auraHex: "#F5D96B", portraitName: "portrait_boss_colossus", height: 4.5,
+        auraHex: "#F5D96B", portraitName: "portrait_boss_colossus", height: 8.0,
         standInAsset: "sandstone_sentinel"
     )
 
@@ -1484,7 +1484,7 @@ enum UnitDatabase {
         specialName: "Weight of the Ledger", specialMultiplier: 2.60, specialTarget: .allEnemies,
         specialStatus: StatusSpec(.speedDown, chance: 0.50, turns: 2, target: .allEnemies),
         specialCooldown: 4,
-        auraHex: "#B08CFF", portraitName: "portrait_boss_unwrapped_king", height: 3.2,
+        auraHex: "#B08CFF", portraitName: "portrait_boss_unwrapped_king", height: 6.0,
         standInAsset: "mummy"
     )
 }

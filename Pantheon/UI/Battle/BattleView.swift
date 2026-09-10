@@ -129,7 +129,7 @@ struct BattleView: View {
                     .foregroundStyle(Theme.gold)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
-                    .background(Capsule().fill(Theme.ink.opacity(0.88)))
+                    .background(Capsule().fill(Theme.ink.opacity(0.6)))
                     .allowsHitTesting(false)
                     .transition(.opacity)
                     .onAppear {
@@ -286,7 +286,7 @@ struct BattleView: View {
         content()
             .frame(height: 30)
             .padding(.horizontal, 10)
-            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.92) : Theme.ink.opacity(0.88)))
+            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.92) : Theme.ink.opacity(0.6)))
             .overlay(Capsule().strokeBorder(active ? Theme.gold : Theme.stroke, lineWidth: 1))
     }
 
@@ -310,7 +310,7 @@ struct BattleView: View {
             let placed = gaugePositions(units, width: width, dot: dot)
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Theme.ink.opacity(0.88))
+                    .fill(Theme.ink.opacity(0.6))
                     .frame(width: width, height: 10)
                     .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
                 ForEach(1..<4, id: \.self) { quarter in
@@ -545,7 +545,7 @@ struct BattleView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(acting ? Theme.goldDeep.opacity(0.55) : Theme.ink.opacity(0.88))
+                .fill(acting ? Theme.goldDeep.opacity(0.5) : Theme.ink.opacity(0.5))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -608,7 +608,7 @@ struct BattleView: View {
                 }
                 .padding(.horizontal, 7)
                 .frame(height: 22)
-                .background(Capsule().fill(Theme.ink.opacity(0.9)))
+                .background(Capsule().fill(Theme.ink.opacity(0.6)))
                 .overlay(Capsule().strokeBorder(entry.tint.opacity(0.55), lineWidth: 1))
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
@@ -764,7 +764,7 @@ struct BattleView: View {
         // 14 around the buttons' 8 plus 6 of padding: concentric corners.
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Theme.ink.opacity(0.88))
+                .fill(Theme.ink.opacity(0.6))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -785,7 +785,7 @@ struct BattleView: View {
             .foregroundStyle(Theme.textSecondary)
             .padding(.horizontal, 14)
             .frame(height: 30)
-            .background(Capsule().fill(Theme.ink.opacity(0.88)))
+            .background(Capsule().fill(Theme.ink.opacity(0.6)))
             .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
         }
     }
@@ -794,133 +794,129 @@ struct BattleView: View {
     /// what the skill in hand will do — all in the corner, where the genre
     /// keeps it, so the field stays clear.
     private func actorPlate(_ actor: Combatant, waiting: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 8) {
-                ZStack {
-                    if BundleImage.exists(actor.model.portraitName(awakened: actor.isAwakened)) {
-                        BundleImage(name: actor.model.portraitName(awakened: actor.isAwakened))
-                            .aspectRatio(contentMode: .fill)
-                            .frame(width: 38, height: 38)
-                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    }
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(waiting ? Theme.gold : actor.element.color, lineWidth: 1.5)
-                        .frame(width: 38, height: 38)
+        // ONE ROW, 54 points, and see-through. The owner: "that HUD at the
+        // bottom left is too big and covers too much. Maybe dont make it dark
+        // like that." It stood 129 points tall — a third of the phone — as a
+        // solid plate, with the skill's words stacked under the unit. The
+        // words now sit BESIDE the unit, the two-line hint is gone, and the
+        // plate is a half-strength scrim the stage shows through.
+        let tint = waiting ? Theme.gold : actor.element.color
+        return HStack(alignment: .center, spacing: 9) {
+            ZStack {
+                if BundleImage.exists(actor.model.portraitName(awakened: actor.isAwakened)) {
+                    BundleImage(name: actor.model.portraitName(awakened: actor.isAwakened), renderedAt: 40)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: 40, height: 40)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                 }
-                .shadow(color: (waiting ? Theme.gold : actor.element.color).opacity(0.6), radius: 5)
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(tint, lineWidth: 1.5)
+                    .frame(width: 40, height: 40)
+            }
+            .shadow(color: tint.opacity(0.6), radius: 5)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 5) {
-                        Text(actor.name)
-                            .font(Theme.body(12).weight(.bold))
-                            .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
-                        ElementBadge(element: actor.element, compact: true)
-                        // One word saying whose turn this is. On an enemy turn
-                        // it is the only thing on screen that says the fight is
-                        // not waiting for the player. It is tinted by side and
-                        // not by state, because red is the colour this HUD uses
-                        // for harm: a red badge over one of the player's own
-                        // units reads as something happening TO it rather than
-                        // as it taking its turn. Blue is the player's line
-                        // everywhere else on this screen — the gauge rings, the
-                        // feed's names — so it is the player's line here too.
-                        let ownTurn = waiting || actor.side == .player
-                        Text(waiting ? "YOUR TURN" : (actor.side == .player ? "ACTING" : "ENEMY TURN"))
-                            .font(Theme.body(8).weight(.black))
-                            .tracking(0.8)
-                            .foregroundStyle(ownTurn ? Theme.ink : Theme.textPrimary)
-                            .padding(.horizontal, 5)
-                            .frame(height: 13)
-                            .background(Capsule().fill(
-                                waiting ? Theme.gold
-                                    : (actor.side == .player ? Theme.info.opacity(0.9) : Theme.danger.opacity(0.8))
-                            ))
-                    }
-                    // Health and statuses share one line: stacked, the plate
-                    // stood 129pt tall, and the vertical budget the team column
-                    // is measured against has no 12 points to give it. The cost
-                    // is horizontal — this row now carries the bar, the figures
-                    // and the chips — so the bar is 76 and the chips stop at
-                    // four, which holds the whole plate to 307 points. It is
-                    // the widest thing in the bottom row and the row has to sit
-                    // beside an open target strip.
-                    HStack(spacing: 5) {
-                        StatBar(
-                            value: actor.currentHealth,
-                            maximum: actor.maxHealth,
-                            tint: healthTint(actor.healthFraction),
-                            height: 6
-                        )
-                        .frame(width: 76)
-                        // "452" alone said nothing; the maximum is what turns
-                        // it into a fraction the player can act on.
-                        Text("\(Int(actor.currentHealth.rounded())) / \(Int(actor.maxHealth.rounded()))")
-                            .font(Theme.numeric(9))
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
-                        if !actor.statuses.isEmpty {
-                            statusChips(actor.statuses, compact: true)
-                        }
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 5) {
+                    Text(actor.name)
+                        .font(Theme.body(12).weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    ElementBadge(element: actor.element, compact: true)
+                    // One word saying whose turn this is. On an enemy turn
+                    // it is the only thing on screen that says the fight is
+                    // not waiting for the player. It is tinted by side and
+                    // not by state, because red is the colour this HUD uses
+                    // for harm: a red badge over one of the player's own
+                    // units reads as something happening TO it rather than
+                    // as it taking its turn.
+                    let ownTurn = waiting || actor.side == .player
+                    Text(waiting ? "YOUR TURN" : (actor.side == .player ? "ACTING" : "ENEMY TURN"))
+                        .font(Theme.body(8).weight(.black))
+                        .tracking(0.8)
+                        .foregroundStyle(ownTurn ? Theme.ink : Theme.textPrimary)
+                        .padding(.horizontal, 5)
+                        .frame(height: 13)
+                        .background(Capsule().fill(
+                            waiting ? Theme.gold
+                                : (actor.side == .player ? Theme.info.opacity(0.9) : Theme.danger.opacity(0.8))
+                        ))
+                        .fixedSize()
+                }
+                HStack(spacing: 5) {
+                    StatBar(
+                        value: actor.currentHealth,
+                        maximum: actor.maxHealth,
+                        tint: healthTint(actor.healthFraction),
+                        height: 5
+                    )
+                    .frame(width: 66)
+                    Text("\(Int(actor.currentHealth.rounded())) / \(Int(actor.maxHealth.rounded()))")
+                        .font(Theme.numeric(9))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                    if !actor.statuses.isEmpty {
+                        statusChips(actor.statuses, compact: true)
                     }
                 }
             }
-            // Always drawn, never conditional: the plate's height must not
-            // jump the instant a skill is tapped.
+            .frame(width: 148, alignment: .leading)
+            .clipped()
+
+            Rectangle()
+                .fill(Theme.stroke.opacity(0.8))
+                .frame(width: 1, height: 34)
+
             skillReadout(actor, waiting: waiting)
         }
-        .padding(8)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.ink.opacity(0.9))
+                .fill(Theme.ink.opacity(0.46))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .strokeBorder(waiting ? Theme.gold.opacity(0.65) : Theme.stroke, lineWidth: 1)
+                .strokeBorder(waiting ? Theme.gold.opacity(0.5) : Theme.stroke.opacity(0.6), lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
     }
 
-    /// What the skill in hand does, spelled out before it is committed.
+    /// What the skill in hand does, spelled out before it is committed: its
+    /// name and the numbers on one line, its words on the two under them.
     ///
     /// The slot it describes is the one under the player's finger if there is
     /// one, and the aimed slot otherwise. That ordering is the whole point:
-    /// a skill that picks its own targets fires on the tap, so waiting for
-    /// `selectedSkillSlot` meant those skills were only ever described in the
-    /// past tense, in the log.
+    /// a skill that picks its own targets used to fire on the tap, so waiting
+    /// for `selectedSkillSlot` meant those skills were only ever described
+    /// in the past tense, in the log. Once a skill is armed the gold tag at
+    /// the end says how to commit, because an armed skill that aims itself
+    /// gives the player nothing on the field to tap.
     private func skillReadout(_ actor: Combatant, waiting: Bool) -> some View {
         let slot = previewSlot ?? model.selectedSkillSlot
         let skill = slot.flatMap { actor.skill(at: $0) }
         let cooling = slot.flatMap { index -> Int? in
             actor.cooldowns.indices.contains(index) ? actor.cooldowns[index] : nil
         } ?? 0
-        return VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
+        let armed = model.selectedSkillSlot != nil && previewSlot == nil
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
                 Text(skill?.name ?? (waiting ? "Choose a skill" : "Resolving…"))
                     .font(Theme.body(11).weight(.bold))
                     .foregroundStyle(skill == nil ? Theme.textSecondary : Theme.gold)
                     .lineLimit(1)
                 if let skill {
-                    if cooling > 0 {
-                        Chip(text: "COOLING \(cooling)", systemImage: "clock.fill", tint: Theme.textSecondary)
-                    } else if skill.cooldown > 0 {
-                        Chip(text: "CD \(skill.cooldown)", systemImage: "clock.fill", tint: Theme.textSecondary)
-                    }
-                    Chip(text: scopeWord(skill.target), systemImage: SkillButton.targetGlyph(for: skill), tint: Theme.info)
-                }
-                Spacer(minLength: 0)
-            }
-            if let skill {
-                let estimate = Int(estimatedDamage(skill, actor: actor))
-                HStack(spacing: 5) {
                     if let damage = skill.damage {
-                        let hits = damage.hits > 1 ? " · \(damage.hits) hits" : ""
+                        let hits = damage.hits > 1 ? " ×\(damage.hits)" : ""
                         Chip(
-                            text: "≈\(estimate)\(hits)",
+                            text: "≈\(Int(estimatedDamage(skill, actor: actor)))\(hits)",
                             systemImage: "bolt.fill",
                             tint: Theme.gold,
                             filled: true
                         )
+                    }
+                    if cooling > 0 {
+                        Chip(text: "COOLING \(cooling)", systemImage: "clock.fill", tint: Theme.textSecondary)
+                    } else if skill.cooldown > 0 {
+                        Chip(text: "CD \(skill.cooldown)", systemImage: "clock.fill", tint: Theme.textSecondary)
                     }
                     if let status = skill.statuses.first {
                         Chip(
@@ -932,31 +928,31 @@ struct BattleView: View {
                     if let aim = aimedTarget, skill.target.hitsEnemies {
                         matchupChip(attacker: actor, defender: aim)
                     }
-                    Spacer(minLength: 0)
+                }
+                Spacer(minLength: 0)
+            }
+            HStack(alignment: .top, spacing: 6) {
+                Text(skill?.description ?? (waiting
+                    ? "Tap a skill to read it; hold it for the full card."
+                    : (model.log.last ?? "")))
+                    .font(Theme.body(9))
+                    .foregroundStyle(skill == nil ? Theme.textSecondary : Theme.textPrimary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                if armed, waiting, let skill {
+                    Text(BattleViewModel.needsTarget(skill) ? "TAP A TARGET" : "TAP AGAIN")
+                        .font(Theme.body(8).weight(.black))
+                        .tracking(0.8)
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 6)
+                        .frame(height: 14)
+                        .background(Capsule().fill(Theme.gold))
+                        .fixedSize()
                 }
             }
-            Text(skill?.description ?? (waiting
-                ? "Press a skill to see what it does; hold one to read it in full."
-                : (model.log.last ?? "")))
-                .font(Theme.body(10))
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-            // How to commit, once a skill is in hand. A skill that aims itself
-            // gives the player nothing to tap on the field, so without this
-            // line an armed skill looks like a skill that did nothing.
-            if let armed = model.selectedSkillSlot,
-               previewSlot == nil,
-               let skill = model.awaitingActor?.skill(at: armed) {
-                Text(BattleViewModel.needsTarget(skill)
-                     ? "Tap a target, or tap the skill again."
-                     : "Tap the skill again to use it.")
-                    .font(Theme.body(9).weight(.bold))
-                    .foregroundStyle(Theme.gold)
-                    .lineLimit(1)
-            }
         }
-        .frame(width: 282, height: 70, alignment: .topLeading)
+        .frame(width: 214, height: 40, alignment: .topLeading)
+        .clipped()
     }
 
     /// The target the next tap would hit, if one is aimed.
@@ -1037,7 +1033,7 @@ struct BattleView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Theme.ink.opacity(0.9)))
+        .background(Capsule().fill(Theme.ink.opacity(0.6)))
         .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.5), lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
     }
@@ -1226,7 +1222,7 @@ struct BattleView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Theme.ink.opacity(0.9)))
+        .background(Capsule().fill(Theme.ink.opacity(0.6)))
         .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
         // The one thing a player taps a boss for is to aim at it, and a boss
         // is by definition the tallest thing on the stage — its head reaches
@@ -1866,11 +1862,15 @@ struct BattleResultView: View {
             }
         }
         if autoplay, hasSpoils {
-            after(rowStart + Double(summary.unitStats.count) * 0.09 + 5.0) {
+            after(rowStart + Double(summary.unitStats.count) * 0.09 + 3.2) {
                 guard mine == sequence else { return }
                 advanceToChest()
+                // `advanceToChest()` has just bumped the sequence, so the
+                // second step must guard on the NEW number: guarding on
+                // `mine` here is what left the tour's chest shut.
+                let chestSequence = sequence
                 after(0.9) {
-                    guard mine == sequence else { return }
+                    guard chestSequence == sequence else { return }
                     openChest()
                 }
             }

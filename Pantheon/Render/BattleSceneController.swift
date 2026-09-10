@@ -293,7 +293,16 @@ final class BattleSceneController: NSObject {
             node.playbackSpeed = speedMultiplier
             let home = position(for: combatant, teamSize: lineWidth[combatant.side] ?? 1)
             node.eulerAngles.y = combatant.side == .player ? .pi : 0
-            if entering {
+            if entering, combatant.isBoss {
+                // A boss RISES over the far rim from the dark under the
+                // platform, rather than walking on: there is no floor where
+                // it stands.
+                node.position = SCNVector3(home.x, home.y - 4.5, home.z)
+                node.opacity = 0
+                let rise = SCNAction.move(to: home, duration: beat(1.2))
+                rise.timingMode = .easeOut
+                node.runAction(.group([rise, .fadeIn(duration: beat(0.6))]))
+            } else if entering {
                 // A later wave walks on from the far side of the field.
                 node.position = SCNVector3(home.x, home.y, home.z - 3.0)
                 node.opacity = 0
@@ -320,15 +329,44 @@ final class BattleSceneController: NSObject {
     /// predecessor left instead of shoving the line over.
     private var lineWidth: [BattleSide: Int] = [:]
 
+    /// The slots a boss holds, per side. A boss stands off the line — over
+    /// the far rim — so its slot is not a mark, and the units whose slots
+    /// come after it close up over the gap it would otherwise leave: the
+    /// Coils of Apep lists the serpent third of four, and without this its
+    /// two adds and Ammit stood on marks 1, 2 and 4 of a four-wide line.
+    private var bossSlots: [BattleSide: Set<Int>] = [:]
+
     /// Records the width once per side, from the opening line-up, and never
     /// narrows it: a stage that opens with three and calls in two more is five
     /// marks wide from the first frame, so nothing shifts when they arrive.
     private func noteLineWidth(_ combatants: [Combatant]) {
         for side in [BattleSide.player, .opponent] {
-            let wanted = combatants.filter { $0.side == side }.map { $0.slot + 1 }.max() ?? 0
+            let mine = combatants.filter { $0.side == side }
+            for boss in mine where boss.isBoss {
+                bossSlots[side, default: []].insert(boss.slot)
+            }
+            let wanted = mine.filter { !$0.isBoss }.map { markIndex(for: $0) + 1 }.max() ?? 0
             lineWidth[side] = max(lineWidth[side] ?? 0, max(wanted, 1))
         }
     }
+
+    /// A unit's mark along its line: its slot, less the bosses holding lower
+    /// slots, who stand off the line. A boss's slot never changes once it is
+    /// on the field, so a unit's mark never changes either.
+    private func markIndex(for combatant: Combatant) -> Int {
+        let bosses = bossSlots[combatant.side] ?? []
+        return combatant.slot - bosses.filter { $0 < combatant.slot }.count
+    }
+
+    /// Where a boss stands: over the far rim, behind the enemy line, sunk
+    /// `bossSink` of its height below the platform so the rock hides its
+    /// legs and the rest of it towers over the field. The owner: "the boss
+    /// towers over them and half of it is under a bridge or cliff and the
+    /// top half is fighting and hitting." The platform's far edge is at
+    /// z = −8.4 (`StageBuilder`), so 9.6 puts it a stride beyond the edge,
+    /// which is what makes the rim read as a cliff it has climbed to.
+    private static let bossDepth: Float = 9.6
+    private static let bossSink: Float = 0.42
 
     /// ONE RANK ABREAST, centred, both sides.
     ///
@@ -352,16 +390,20 @@ final class BattleSceneController: NSObject {
     /// spreading wider than the camera will frame.
     private func position(for combatant: Combatant, teamSize: Int) -> SCNVector3 {
         let sideSign: Float = combatant.side == .player ? 1 : -1
+        if combatant.isBoss {
+            return SCNVector3(0, -combatant.model.height * Self.bossSink, sideSign * Self.bossDepth)
+        }
         let perRank = 5
-        let rank = Float(combatant.slot / perRank)
-        let indexInRank = combatant.slot % perRank
+        let mark = markIndex(for: combatant)
+        let rank = Float(mark / perRank)
+        let indexInRank = mark % perRank
         let inThisRank = max(1, min(perRank, teamSize - Int(rank) * perRank))
 
-        // 2.0 m of shoulder room puts a five-wide line at a 4.0 m half-width,
-        // which is what `CameraDirector.minHalfWidth` is solved for: the camera
-        // will not zoom in past five metres, so a narrower line simply sits
-        // small in the middle of the frame however tight the framing gets.
-        let spacing: Float = 2.0
+        // 2.2 m from mark to mark. Seen from 55° round to the side
+        // (`CameraDirector.homeYaw`) each step along the line is 1.3 m across
+        // the screen and 1.8 m back into it, which is what keeps every figure
+        // of a column clear of the one in front.
+        let spacing: Float = 2.2
         let centred = Float(indexInRank) - Float(inThisRank - 1) / 2
         let stagger: Float = combatant.side == .player ? 0 : spacing / 2
         let x = centred * spacing + stagger
@@ -370,7 +412,10 @@ final class BattleSceneController: NSObject {
         // first — smaller and higher in the frame — and are offset by half a
         // step so nobody hides behind the unit in front.
         let halfStep: Float = rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : spacing / 2
-        let depth = 2.6 + rank * 1.7
+        // 3.4 m either side of the centre line. From the side the two lines
+        // are the two columns, and this is the open middle between them
+        // where the attacks cross.
+        let depth = 3.4 + rank * 1.7
         return SCNVector3(x + halfStep, 0, sideSign * depth)
     }
 
@@ -501,7 +546,8 @@ final class BattleSceneController: NSObject {
             // there through the hits; casters, archers and line-wide skills
             // strike from where they stand.
             var walkUp: TimeInterval = 0
-            if let targetNode, casterNode.spec.melee, targets.count == 1,
+            // A boss has no floor to cross: it strikes from where it towers.
+            if let targetNode, casterNode.spec.melee, !casterNode.isBoss, targets.count == 1,
                targetNode.side != casterNode.side,
                animation == .attackBasic || animation == .attackHeavy {
                 casterNode.dash(toward: targetNode, duration: beat(Self.dashDuration))

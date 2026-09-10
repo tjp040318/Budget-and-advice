@@ -11,6 +11,10 @@ final class UnitNode: SCNNode {
 
     let combatantID: UUID
     let spec: ModelSpec
+    /// A boss stands sunk over the far rim with the HUD's wide bar for its
+    /// health, so it wears no bar of its own and no ring at its feet (which
+    /// would be a metre inside the rock).
+    let isBoss: Bool
     let element: Element
     let side: BattleSide
     private(set) var isDefeated = false
@@ -175,6 +179,7 @@ final class UnitNode: SCNNode {
 
         self.combatantID = combatant.id
         self.spec = combatant.model
+        self.isBoss = combatant.isBoss
         self.element = combatant.element
         self.side = combatant.side
         // The clips come from the mesh on the stage: the awakened export when
@@ -202,6 +207,10 @@ final class UnitNode: SCNNode {
         addChildNode(container)
         addChildNode(barRoot)
         addChildNode(ring)
+        if isBoss {
+            barRoot.isHidden = true
+            ring.isHidden = true
+        }
 
         play(.idleCombat)
         setHealth(fraction: combatant.healthFraction, animated: false)

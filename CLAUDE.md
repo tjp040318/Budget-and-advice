@@ -64,13 +64,25 @@ on, the phase list, the pipeline costs, and an honest account of what this
 environment can and cannot do. The short version:
 
 - The game builds and runs on an iPhone, **landscape only** since this
-  session: the battle camera is solved for a wide frame from above, the
-  genre's way (34°, 7.2 m up and 11 m back, 30° down; the player line a
-  quarter of the screen tall, the platform's far edge in frame — the
-  earlier 35°/5.5 m/24° solve stood the figures a third tall and the
-  playtest called it cramped), the battle HUD is one top row and an
-  open-middled bottom bar, the summon reveal is stage left and words
-  right, and the island painting is 16:9.
+  session: the battle camera is SOLVED, not written down (`CameraDirector`
+  measures the figures on their marks and frames them), and it stands the
+  genre's way — 55° round to the right of the field, 16° down, a 26° lens
+  about 20 m out — so the two lines-abreast the stage places read as two
+  COLUMNS: the player's at the lower left, its front unit nearest the
+  camera, the enemy's on the right stepping back toward the top, an open
+  middle between them, and the painting filling the top half behind the
+  far rim (`StageBuilder.farBackdrop` is turned to face the camera). A
+  **boss** (`Combatant.isBoss`) stands over the far rim at z = −9.6, sunk
+  42% of its height below the platform, 6–8 m tall in the data (Apep 7.2,
+  Hydra 7.0, Jötunn 7.5, Colossus 8.0, the Unwrapped King 6.0), with no 3D
+  bar or ring (the HUD's boss bar reads), never dashes, and is framed by
+  its head (`bossTopLine`) rather than its box; its adds stand on the marks
+  in front, closing over the boss's slot (`markIndex`). The earlier
+  27°/21° solve with rows abreast was photographed from the owner's phone
+  as "a small tilted disc in a void" and called ugly. The battle HUD is one
+  top row and an open-middled bottom bar whose actor plate is one 54-pt
+  translucent row (it was 129 pt and solid), the summon reveal is stage
+  left and words right, and the island painting is 16:9.
 - Battle, summon, collection, arena, campaign and the Hall of Ka (training:
   power-up, skill-ups from duplicates, evolution, awakening) all work. So do
   the **Labyrinth** (a building on the island, `LabyrinthView`: three

@@ -259,7 +259,7 @@ enum StageBuilder {
                                 volume: SCNVector3(18, 6, 16), at: SCNVector3(0, 3, -1)))
 
         if let backdrop = recipe.backdrop, let image = BundleArt.image(backdrop) {
-            stage.addChildNode(farBackdrop(image))
+            stage.addChildNode(farBackdrop(image, yaw: CameraDirector.homeYaw))
         }
 
         // The sky beyond the painting, and a light haze on the distance.
@@ -633,7 +633,14 @@ enum StageBuilder {
     /// frame below the platform's far edge as well as above it: the land in
     /// the painting reads as a world far below, which is what makes the
     /// platform float.
-    static func farBackdrop(_ image: UIImage) -> SCNNode {
+    ///
+    /// `yaw` is the battle camera's (`CameraDirector.homeYaw`): the painting
+    /// is hung 70 m out along the camera's own line of sight and turned to
+    /// face it, so it fills the frame whichever way the camera looks. Hung
+    /// square to the world, as it was, a camera 55° round to the side saw
+    /// its edge a third of the way across the frame and the bare sky colour
+    /// beyond.
+    static func farBackdrop(_ image: UIImage, yaw: Float = 0) -> SCNNode {
         let plane = SCNPlane(width: 170, height: 170)
         let material = SCNMaterial()
         material.lightingModel = .constant
@@ -643,8 +650,11 @@ enum StageBuilder {
         let node = SCNNode(geometry: plane)
         // Centred well below the platform, so the painting's horizon sits a
         // little under the platform's far edge on screen: sky above the edge,
-        // the painted land far below it.
-        node.position = SCNVector3(0, -16, -70)
+        // the painted land far below it. The camera's horizontal forward is
+        // (sin yaw, −cos yaw); a plane faces +Z, so turning it by −yaw points
+        // it back up that line.
+        node.position = SCNVector3(sin(yaw) * 70, -16, -cos(yaw) * 70)
+        node.eulerAngles.y = -yaw
         node.name = "backdrop"
         return node
     }
