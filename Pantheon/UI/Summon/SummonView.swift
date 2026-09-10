@@ -1,5 +1,4 @@
 import SwiftUI
-import UIKit
 
 /// The gacha screen.
 ///
@@ -215,31 +214,52 @@ struct SummonView: View {
     /// The published odds, on the screen rather than behind the strip's Rates
     /// button. The column between the pity counters and the summon plates was
     /// black — and on the Unknown Scroll, which has no counters at all, the
-    /// whole column above the buttons was. Three short rows fill it with the
+    /// whole column above the buttons was. A row per grade fills it with the
     /// one thing a player wants before spending: the chance, and how many
-    /// souls each grade can hand them. The full pool is still one tap away.
+    /// souls each grade can hand them — and, on the one banner whose single
+    /// row leaves the column empty, what the scroll is. The full pool is still
+    /// one tap away behind the strip's Rates button.
     private var ratesPanel: some View {
         SectionPanel(title: "Rates", accessory: selectedBanner.scroll.displayName) {
-            VStack(spacing: 4) {
-                ForEach(SummonService.oddsTable(for: selectedBanner)) { entry in
-                    HStack(spacing: 6) {
-                        StarRow(stars: entry.stars, size: 9)
-                        Spacer(minLength: 4)
-                        Text(String(format: "%.1f%%", entry.chance * 100))
-                            .font(Theme.numeric(11))
-                            .foregroundStyle(entry.stars >= 5 ? Theme.gold : Theme.textSecondary)
-                            .frame(width: 44, alignment: .trailing)
-                        HStack(spacing: 2) {
-                            Image(systemName: "person.2.fill")
-                                .font(.system(size: 8, weight: .black))
-                            Text("\(entry.units.count)")
-                                .font(Theme.numeric(10))
-                        }
-                        .foregroundStyle(Theme.textSecondary)
-                        .frame(width: 34, alignment: .trailing)
+            VStack(alignment: .leading, spacing: 6) {
+                VStack(spacing: 4) {
+                    ForEach(SummonService.oddsTable(for: selectedBanner)) { entry in
+                        rateRow(entry)
                     }
                 }
+                // The Unknown Scroll is the one banner with no pity counters
+                // and a single 3★ row, so its column was black from the strip
+                // to the plates. It is also the one with room for the sentence
+                // that says what the scroll is; every other banner shows its
+                // counters there instead.
+                if !showsPity {
+                    Text(selectedBanner.scroll.description)
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
+        }
+    }
+
+    /// One grade: the stars, the published chance, and how many souls of that
+    /// grade the banner can actually hand you.
+    private func rateRow(_ entry: BannerOdds) -> some View {
+        HStack(spacing: 6) {
+            StarRow(stars: entry.stars, size: 9)
+            Spacer(minLength: 4)
+            Text(String(format: "%.1f%%", entry.chance * 100))
+                .font(Theme.numeric(11))
+                .foregroundStyle(entry.stars >= 5 ? Theme.gold : Theme.textSecondary)
+                .frame(width: 44, alignment: .trailing)
+            HStack(spacing: 2) {
+                Image(systemName: "person.2.fill")
+                    .font(.system(size: 8, weight: .black))
+                Text("\(entry.units.count)")
+                    .font(Theme.numeric(10))
+            }
+            .foregroundStyle(Theme.textSecondary)
+            .frame(width: 34, alignment: .trailing)
         }
     }
 
@@ -255,11 +275,8 @@ struct SummonView: View {
             HStack {
                 // The count was printed three times in one frame — the strip
                 // carries it, so does every dropdown row. This line spends
-                // itself on the thing nothing else says: why the ×10 plate is
-                // grey.
-                Text(owned >= 10
-                     ? "\(owned) held"
-                     : "\(owned) held — ×10 needs \(10 - owned) more")
+                // itself on the thing nothing else says: why a plate is grey.
+                Text(countLine(owned: owned, price: price))
                     .font(Theme.body(12).weight(.semibold))
                     .foregroundStyle(owned >= 10 ? Theme.textSecondary : Theme.gold)
                     .lineLimit(1)
@@ -277,11 +294,14 @@ struct SummonView: View {
                             .foregroundStyle(affordable ? Theme.gold : Theme.textSecondary)
                             .lineLimit(1)
                             .padding(.horizontal, 8)
-                            .frame(height: 24)
+                            .frame(height: Theme.controlHeight)
                             .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
                             .overlay(
                                 ScreenChrome.controlShape
-                                    .strokeBorder(Theme.goldDim.opacity(0.5), lineWidth: 0.5)
+                                    .strokeBorder(
+                                        (affordable ? Theme.goldDim : Theme.stroke).opacity(0.6),
+                                        lineWidth: 0.5
+                                    )
                             )
                     }
                     .buttonStyle(.plain)
@@ -314,6 +334,18 @@ struct SummonView: View {
         }
         .padding(10)
         .panelBackground()
+    }
+
+    /// The one line under the plates, and the only thing on screen that says
+    /// why a plate is grey. At zero *both* plates are grey, so "×10 needs 10
+    /// more" would read as though ×1 still worked; and the unknown scroll has
+    /// no divinity price, so it has no Buy control beside this line to answer.
+    private func countLine(owned: Int, price: Int?) -> String {
+        if owned == 0 {
+            return price == nil ? "None held — the bazaar sells them for drachma" : "None held"
+        }
+        if owned < 10 { return "\(owned) held — ×10 needs \(10 - owned) more" }
+        return "\(owned) held"
     }
 
     private func perform(count: Int) {

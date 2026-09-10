@@ -1,5 +1,11 @@
 import SwiftUI
 
+/// What one fodder unit costs to feed. `GameStore.levelUp` charges the same
+/// figure (`let cost = fodder.count * 500`, GameStore.swift); the two are kept
+/// in step by hand, so change both together — the subtitle on the Power up
+/// row and the picker's footer are one constant here rather than two literals.
+private let fodderDrachmaPerUnit = 500
+
 /// One unit on one screen, the way the genre lays it out: the card and its
 /// progress on the left, the six relic slots in a ring in the middle, the
 /// stats with their relic bonuses on the right, and the skills along the
@@ -125,12 +131,20 @@ struct UnitDetailView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
+            // `grantExperience` zeroes the stored experience at the cap, so a
+            // maxed unit's bar read "0 / 1400" under a full level — the same
+            // lie the fodder footer was fixed for. Fill it and say MAX.
+            let toNextLevel = Double(ProgressionService.experienceForNextLevel(
+                level: unit.level, stars: unit.stars
+            ))
             StatBar(
-                value: Double(unit.unit.experience),
-                maximum: Double(ProgressionService.experienceForNextLevel(level: unit.level, stars: unit.stars)),
-                tint: Theme.info,
+                value: unit.unit.isMaxLevel ? toNextLevel : Double(unit.unit.experience),
+                maximum: toNextLevel,
+                tint: unit.unit.isMaxLevel ? Theme.gold : Theme.info,
                 height: 5,
-                label: "Lv.\(unit.level) / \(unit.unit.maxLevel)"
+                label: unit.unit.isMaxLevel
+                    ? "Lv.\(unit.level) · MAX"
+                    : "Lv.\(unit.level) / \(unit.unit.maxLevel)"
             )
             Spacer(minLength: 0)
             // The three things to do with a unit, one wide row each: a 4pt
@@ -142,17 +156,14 @@ struct UnitDetailView: View {
                     "Power up",
                     unit.unit.isMaxLevel
                         ? "Max level · feed duplicates to skill up"
-                        : "500 drachma per unit",
+                        : "\(fodderDrachmaPerUnit) drachma per unit",
                     "arrow.up.circle.fill", tint: Theme.info
                 ) {
                     fodderPurpose = .levelUp
                     showFodderPicker = true
                 }
                 actionButton(
-                    "Evolve",
-                    unit.unit.canEvolve
-                        ? "\(ProgressionService.evolutionFodderRequired(currentStars: unit.stars)) × \(unit.stars)★ · \(ProgressionService.drachmaCostToEvolve(currentStars: unit.stars)) drachma"
-                        : "Reach Lv.\(unit.unit.maxLevel) first",
+                    "Evolve", evolveSubtitle(unit),
                     "star.circle.fill", tint: Theme.gold, enabled: unit.unit.canEvolve
                 ) {
                     fodderPurpose = .evolve
@@ -175,6 +186,18 @@ struct UnitDetailView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(8)
         .panelBackground(radius: Theme.tightCorner)
+    }
+
+    /// Why the Evolve row is lit or dark. `canEvolve` is false for two
+    /// different reasons — short of the level cap, and already 6★ — and the
+    /// one line of copy told a maxed 6★ to "Reach Lv.65 first" while it stood
+    /// at Lv.65.
+    private func evolveSubtitle(_ unit: ResolvedUnit) -> String {
+        if unit.stars >= 6 { return "Fully evolved · 6★" }
+        guard unit.unit.canEvolve else { return "Reach Lv.\(unit.unit.maxLevel) first" }
+        let fodder = ProgressionService.evolutionFodderRequired(currentStars: unit.stars)
+        let cost = ProgressionService.drachmaCostToEvolve(currentStars: unit.stars)
+        return "\(fodder) × \(unit.stars)★ · \(cost) drachma"
     }
 
     private func actionButton(
@@ -236,6 +259,12 @@ struct UnitDetailView: View {
                     Text("\(unit.power)")
                         .font(Theme.numeric(16))
                         .foregroundStyle(Theme.gold)
+                        // The clear disc inside the ring is 74pt across; five
+                        // monospaced digits at 16 are 43 of them and six would
+                        // touch the tiles at 2 and 6 o'clock.
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .frame(maxWidth: 74)
                     Text("POWER")
                         .font(Theme.body(8).weight(.black))
                         .tracking(1)
@@ -356,16 +385,33 @@ struct UnitDetailView: View {
                         Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
                             .font(Theme.body(9).weight(.bold))
                             .foregroundStyle(Theme.gold)
-                        Spacer(minLength: 4)
-                        Text(entry.set.statBonus?.displayText ?? "4-piece effect")
-                            .font(Theme.numeric(8))
+                            .lineLimit(1)
+                            .fixedSize()
+                        // `effectDescription` is the stat bonus for the eight
+                        // 2-piece sets and the real sentence for the eight
+                        // 4-piece ones, where "4-piece effect" named nothing.
+                        // Only one 4-piece set can be complete on six slots, so
+                        // at most one row of the three is ever two lines tall.
+                        Text(entry.set.effectDescription)
+                            .font(Theme.body(8))
                             .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.trailing)
+                            .fixedSize(horizontal: false, vertical: true)
+                            // Not a `Spacer` before it: an HStack serves the
+                            // less flexible child first, so a Spacer and a
+                            // wrapping Text split the leftover and the sentence
+                            // truncates beside a gap. This takes all of it.
+                            .frame(maxWidth: .infinity, alignment: .trailing)
                     }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
                     .padding(.horizontal, 7)
                     .padding(.vertical, 3)
-                    .background(Capsule().fill(Theme.surfaceHigh))
+                    // A capsule on a two-line row curves in over the text; the
+                    // rows are the same shape as every other tile instead.
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.tileCorner, style: .continuous)
+                            .fill(Theme.surfaceHigh)
+                    )
                 }
             }
         }
@@ -394,12 +440,14 @@ struct UnitDetailView: View {
                     statRow("DEF", base.def, unit.stats.def, strong: true)
                     statRow("SPD", base.spd, unit.stats.spd, strong: true)
                 }
+                .frame(maxWidth: .infinity)
                 VStack(spacing: 3) {
                     statRow("CRIT Rate", base.critRate, unit.stats.critRate, percent: true)
                     statRow("CRIT DMG", base.critDamage, unit.stats.critDamage, percent: true)
                     statRow("Accuracy", base.accuracy, unit.stats.accuracy, percent: true)
                     statRow("Resistance", base.resistance, unit.stats.resistance, percent: true)
                 }
+                .frame(maxWidth: .infinity)
             }
             if let leader = unit.blueprint.leaderSkill {
                 Divider().overlay(Theme.stroke).padding(.vertical, 2)
@@ -437,16 +485,27 @@ struct UnitDetailView: View {
     private func tag(_ text: String, color: Color) -> some View {
         Text(text)
             .font(Theme.body(9).weight(.semibold))
+            .lineLimit(1)
+            // "Mesopotamian" + "Primordial" + "Controller" beside a 6★ star row
+            // is 256 points against the 245 the panel has on a 667-point
+            // landscape phone; without this the row runs off the panel.
+            .minimumScaleFactor(0.75)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(Capsule().fill(color.opacity(0.18)))
             .foregroundStyle(color)
-            .lineLimit(1)
     }
 
-    /// Three fixed columns — label, total, relic bonus — so the numbers line
-    /// up down the group instead of landing on a ragged edge that moves per
-    /// row. `strong` weights the four combat stats over the four percentages.
+    /// Three columns — label, total, relic bonus — so the numbers line up down
+    /// the group instead of landing on a ragged edge that moves per row.
+    /// `strong` weights the four combat stats over the four percentages.
+    ///
+    /// The two number columns are fixed and the label takes what is left. All
+    /// three were fixed at 54/44/36, which is 142 a group and 292 for the pair:
+    /// the stats panel is 245 points wide inside its padding on a 667-point
+    /// landscape phone, and a fixed frame does not shrink — the relic-bonus
+    /// column was drawn 47 points past the panel and off the screen. A flexible
+    /// label costs nothing on a wide phone, where it simply gets more room.
     private func statRow(
         _ label: String, _ base: Double, _ total: Double,
         percent: Bool = false, strong: Bool = false
@@ -458,8 +517,8 @@ struct UnitDetailView: View {
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                .frame(width: 54, alignment: .leading)
+                .minimumScaleFactor(0.7)
+                .frame(maxWidth: .infinity, alignment: .leading)
             Text(Self.statText(total, percent: percent))
                 .font(strong ? Theme.numeric(13) : Theme.numeric(11))
                 .foregroundStyle(Theme.textPrimary)
@@ -471,7 +530,7 @@ struct UnitDetailView: View {
                 .foregroundStyle(bonus > 0 ? Theme.success : Theme.danger)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
-                .frame(width: 36, alignment: .trailing)
+                .frame(width: 32, alignment: .trailing)
         }
     }
 
@@ -764,7 +823,7 @@ struct FodderPickerView: View {
                     VStack(spacing: 6) {
                         let cost = purpose == .evolve
                             ? ProgressionService.drachmaCostToEvolve(currentStars: target.stars)
-                            : selection.count * 500
+                            : selection.count * fodderDrachmaPerUnit
                         if purpose == .evolve {
                             Text("\(selection.count) / \(required) selected · \(cost) drachma")
                                 .font(Theme.body(12))
