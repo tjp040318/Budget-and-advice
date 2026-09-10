@@ -50,7 +50,7 @@
       "finished_at": 1788999322651,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:15:23Z"
+      "polled": "2026-09-10T01:39:45Z"
     },
     "rig": {
       "id": "01a088ab-5287-768f-9c03-dd2a83b5c5a6",
@@ -77,7 +77,10 @@
       "started_at": 1788999337608,
       "finished_at": 1788999398160,
       "name": "",
-      "polled": "2026-09-10T00:16:38Z"
+      "polled": "2026-09-10T01:39:45Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088ac-75e0-7262-b291-bf83aef9241a",
@@ -100,7 +103,10 @@
       "started_at": 1788999399191,
       "finished_at": 1788999410438,
       "name": "",
-      "polled": "2026-09-10T00:16:53Z"
+      "polled": "2026-09-10T01:39:46Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088ac-7888-7323-b4a7-270208e2bdec",
@@ -123,7 +129,10 @@
       "started_at": 1788999399848,
       "finished_at": 1788999413307,
       "name": "",
-      "polled": "2026-09-10T00:16:53Z"
+      "polled": "2026-09-10T01:39:46Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088ac-7b18-70c0-809d-082035d2498c",
@@ -146,7 +155,10 @@
       "started_at": 1788999400486,
       "finished_at": 1788999414387,
       "name": "",
-      "polled": "2026-09-10T00:17:04Z"
+      "polled": "2026-09-10T01:39:46Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088ac-7da0-752c-92c9-4318a79f85a8",
@@ -169,7 +181,10 @@
       "started_at": 1788999401143,
       "finished_at": 1788999412857,
       "name": "",
-      "polled": "2026-09-10T00:16:53Z"
+      "polled": "2026-09-10T01:39:46Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088ac-802d-76a0-a74c-6597da0db132",
@@ -192,7 +207,10 @@
       "started_at": 1788999401832,
       "finished_at": 1788999426275,
       "name": "",
-      "polled": "2026-09-10T00:17:14Z"
+      "polled": "2026-09-10T01:39:46Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088ac-82fc-76b4-b9a2-95b2fa418e92",
@@ -215,8 +233,12 @@
       "started_at": 1788999402534,
       "finished_at": 1788999420343,
       "name": "",
-      "polled": "2026-09-10T00:17:04Z"
+      "polled": "2026-09-10T01:39:46Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:39:46Z"
 }

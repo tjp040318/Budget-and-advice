@@ -50,7 +50,7 @@
       "finished_at": 1788999018661,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:10:23Z"
+      "polled": "2026-09-10T01:34:48Z"
     },
     "rig": {
       "id": "01a088a6-bd97-721e-af70-7617b9d23b06",
@@ -77,7 +77,7 @@
       "started_at": 1788999027161,
       "finished_at": 1788999094283,
       "name": "",
-      "polled": "2026-09-10T00:11:37Z"
+      "polled": "2026-09-10T01:34:48Z"
     },
     "clip:idle_combat": {
       "id": "01a088a7-e026-7761-a0fe-f73c89fd5585",
@@ -100,7 +100,7 @@
       "started_at": 1788999098840,
       "finished_at": 1788999110082,
       "name": "",
-      "polled": "2026-09-10T00:11:53Z"
+      "polled": "2026-09-10T01:34:48Z"
     },
     "clip:attack_basic": {
       "id": "01a088a7-e325-735d-a529-f18612aaeddb",
@@ -123,7 +123,7 @@
       "started_at": 1788999099535,
       "finished_at": 1788999110578,
       "name": "",
-      "polled": "2026-09-10T00:11:52Z"
+      "polled": "2026-09-10T01:34:48Z"
     },
     "clip:attack_heavy": {
       "id": "01a088a7-e5d0-7530-ad10-870a4a5e93af",
@@ -146,7 +146,7 @@
       "started_at": 1788999100146,
       "finished_at": 1788999113309,
       "name": "",
-      "polled": "2026-09-10T00:12:03Z"
+      "polled": "2026-09-10T01:34:48Z"
     },
     "clip:hit_react": {
       "id": "01a088a7-e83d-7051-b83f-2a939b438581",
@@ -169,7 +169,7 @@
       "started_at": 1788999100725,
       "finished_at": 1788999111759,
       "name": "",
-      "polled": "2026-09-10T00:11:52Z"
+      "polled": "2026-09-10T01:34:48Z"
     },
     "clip:death": {
       "id": "01a088a7-ea85-73ba-b732-ef528d9512a3",
@@ -192,7 +192,7 @@
       "started_at": 1788999101407,
       "finished_at": 1788999125557,
       "name": "",
-      "polled": "2026-09-10T00:12:13Z"
+      "polled": "2026-09-10T01:34:48Z"
     },
     "clip:ultimate": {
       "id": "01a088a7-ed2d-750a-8c6f-f489f94aa71a",
@@ -215,8 +215,9 @@
       "started_at": 1788999102053,
       "finished_at": 1788999115831,
       "name": "",
-      "polled": "2026-09-10T00:12:03Z"
+      "polled": "2026-09-10T01:34:49Z"
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:34:49Z"
 }

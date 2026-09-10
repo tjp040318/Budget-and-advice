@@ -50,7 +50,7 @@
       "finished_at": 1788999239285,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:14:01Z"
+      "polled": "2026-09-10T01:39:00Z"
     },
     "rig": {
       "id": "01a088aa-1167-74d7-82ad-539205ccd4f5",
@@ -77,7 +77,10 @@
       "started_at": 1788999245538,
       "finished_at": 1788999318927,
       "name": "",
-      "polled": "2026-09-10T00:15:26Z"
+      "polled": "2026-09-10T01:39:00Z",
+      "downloaded": {
+        "glb": "Art/Models/hephaestus.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088ab-5d3f-7708-8c4a-df3b1e000b01",
@@ -100,7 +103,10 @@
       "started_at": 1788999327488,
       "finished_at": 1788999339197,
       "name": "",
-      "polled": "2026-09-10T00:15:42Z"
+      "polled": "2026-09-10T01:39:00Z",
+      "downloaded": {
+        "glb": "Art/Models/hephaestus_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088ab-605b-7480-b8ce-c7923ead05cf",
@@ -123,7 +129,10 @@
       "started_at": 1788999328213,
       "finished_at": 1788999339255,
       "name": "",
-      "polled": "2026-09-10T00:15:41Z"
+      "polled": "2026-09-10T01:39:00Z",
+      "downloaded": {
+        "glb": "Art/Models/hephaestus_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088ab-632d-74ff-8e82-17ffea4bab94",
@@ -146,7 +155,10 @@
       "started_at": 1788999328900,
       "finished_at": 1788999340630,
       "name": "",
-      "polled": "2026-09-10T00:15:42Z"
+      "polled": "2026-09-10T01:39:00Z",
+      "downloaded": {
+        "glb": "Art/Models/hephaestus_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088ab-65d9-76d5-b435-487375b279e4",
@@ -169,7 +181,10 @@
       "started_at": 1788999329499,
       "finished_at": 1788999341022,
       "name": "",
-      "polled": "2026-09-10T00:15:42Z"
+      "polled": "2026-09-10T01:39:00Z",
+      "downloaded": {
+        "glb": "Art/Models/hephaestus_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088ab-682f-7778-b59d-088873108db7",
@@ -192,7 +207,10 @@
       "started_at": 1788999330097,
       "finished_at": 1788999355728,
       "name": "",
-      "polled": "2026-09-10T00:16:02Z"
+      "polled": "2026-09-10T01:39:00Z",
+      "downloaded": {
+        "glb": "Art/Models/hephaestus_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088ab-6a8a-7107-bb5a-a5a5ee1939a4",
@@ -215,8 +233,12 @@
       "started_at": 1788999330808,
       "finished_at": 1788999345339,
       "name": "",
-      "polled": "2026-09-10T00:15:52Z"
+      "polled": "2026-09-10T01:39:01Z",
+      "downloaded": {
+        "glb": "Art/Models/hephaestus_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:39:01Z"
 }

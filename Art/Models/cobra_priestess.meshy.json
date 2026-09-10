@@ -50,7 +50,7 @@
       "finished_at": 1788999177724,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:12:59Z"
+      "polled": "2026-09-10T01:38:14Z"
     },
     "rig": {
       "id": "01a088a9-1f5f-72c3-8d24-65a62851f7b9",
@@ -77,7 +77,10 @@
       "started_at": 1788999192100,
       "finished_at": 1788999237670,
       "name": "",
-      "polled": "2026-09-10T00:14:02Z"
+      "polled": "2026-09-10T01:38:15Z",
+      "downloaded": {
+        "glb": "Art/Models/cobra_priestess.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088aa-155b-70d5-bcea-cf65eddb50cf",
@@ -100,7 +103,10 @@
       "started_at": 1788999243587,
       "finished_at": 1788999266955,
       "name": "",
-      "polled": "2026-09-10T00:14:28Z"
+      "polled": "2026-09-10T01:38:15Z",
+      "downloaded": {
+        "glb": "Art/Models/cobra_priestess_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088aa-1880-7150-8bd1-693e03c4e8a1",
@@ -123,7 +129,10 @@
       "started_at": 1788999244210,
       "finished_at": 1788999269968,
       "name": "",
-      "polled": "2026-09-10T00:14:38Z"
+      "polled": "2026-09-10T01:38:15Z",
+      "downloaded": {
+        "glb": "Art/Models/cobra_priestess_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088aa-1afc-719d-9f41-8bd53954be64",
@@ -146,7 +155,10 @@
       "started_at": 1788999244835,
       "finished_at": 1788999273379,
       "name": "",
-      "polled": "2026-09-10T00:14:38Z"
+      "polled": "2026-09-10T01:38:15Z",
+      "downloaded": {
+        "glb": "Art/Models/cobra_priestess_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088aa-1d6f-778a-b975-aafe7eadfed8",
@@ -169,7 +181,10 @@
       "started_at": 1788999245433,
       "finished_at": 1788999273625,
       "name": "",
-      "polled": "2026-09-10T00:14:38Z"
+      "polled": "2026-09-10T01:38:15Z",
+      "downloaded": {
+        "glb": "Art/Models/cobra_priestess_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088aa-1fb4-7542-8b57-d6addb049ce3",
@@ -192,7 +207,10 @@
       "started_at": 1788999246017,
       "finished_at": 1788999297493,
       "name": "",
-      "polled": "2026-09-10T00:14:59Z"
+      "polled": "2026-09-10T01:38:15Z",
+      "downloaded": {
+        "glb": "Art/Models/cobra_priestess_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088aa-2200-7045-9d25-e2c44ebf4c96",
@@ -215,8 +233,12 @@
       "started_at": 1788999246671,
       "finished_at": 1788999291381,
       "name": "",
-      "polled": "2026-09-10T00:14:59Z"
+      "polled": "2026-09-10T01:38:15Z",
+      "downloaded": {
+        "glb": "Art/Models/cobra_priestess_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:38:15Z"
 }

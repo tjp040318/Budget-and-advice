@@ -560,53 +560,75 @@ struct SummoningCircle: View {
 
     private var tint: Color { banner.scroll.tint }
 
+    /// Where the painted floor ring sits in `summon_hall_bg`, in fractions of
+    /// the painting. Measured off the art, like every other anchor here.
+    private static let floorCentre = CGPoint(x: 0.50, y: 0.82)
+    private static let floorRadius: CGFloat = 0.21
+
     var body: some View {
-        ZStack {
-            // The banner's painting, behind everything, dimmed so the ring
-            // reads over it. It is decoration: it must never take a tap.
-            if BundleImage.exists(banner.artName) {
-                BundleImage(name: banner.artName)
-                    .aspectRatio(contentMode: .fill)
-                    .overlay(Color.black.opacity(0.35))
-                    .allowsHitTesting(false)
-            } else {
-                RadialGradient(
-                    colors: [tint.opacity(0.30), Theme.ink],
-                    center: .center, startRadius: 8, endRadius: 320
-                )
-                .allowsHitTesting(false)
-            }
-
-            // The floor glow the ring stands in.
-            RadialGradient(
-                colors: [tint.opacity(charging ? 0.75 : 0.45), .clear],
-                center: .center, startRadius: 2, endRadius: 190
+        GeometryReader { frame in
+            // The hall is drawn to FIT, not to fill: the floor ring has to land
+            // where the painter put it, and a fill crop moves it.
+            let scale = min(frame.size.width / 16.0, frame.size.height / 9.0)
+            let artWidth = scale * 16
+            let artHeight = scale * 9
+            let originX = (frame.size.width - artWidth) / 2
+            let originY = (frame.size.height - artHeight) / 2
+            let centre = CGPoint(
+                x: originX + Self.floorCentre.x * artWidth,
+                y: originY + Self.floorCentre.y * artHeight
             )
-            .blendMode(.screen)
-            .allowsHitTesting(false)
+            let ringSize = Self.floorRadius * 2 * artWidth
 
-            // The ring itself, turning. Two copies at different speeds and
-            // opposite directions read as machinery rather than as a spinning
-            // picture.
-            ring(scale: 1.00, opacity: 0.85, angle: spin)
-            ring(scale: 0.74, opacity: 0.55, angle: -spin * 1.6)
+            ZStack {
+                Theme.ink
+                hall(width: artWidth, height: artHeight)
+                    .position(x: frame.size.width / 2, y: frame.size.height / 2)
 
-            // The scroll's own mark at the centre, breathing.
-            Image(systemName: banner.scroll.glyph)
-                .font(.system(size: charging ? 46 : 38, weight: .black))
-                .foregroundStyle(tint)
-                .shadow(color: tint.opacity(0.9), radius: charging ? 22 : 12)
-                .scaleEffect(pulse)
-                .allowsHitTesting(false)
+                // The light standing in the floor ring.
+                RadialGradient(
+                    colors: [tint.opacity(charging ? 0.85 : 0.5), tint.opacity(0.12), .clear],
+                    center: .center, startRadius: 2, endRadius: ringSize * 0.62
+                )
+                .frame(width: ringSize * 1.5, height: ringSize * 1.5)
+                .blendMode(.screen)
+                .position(centre)
+
+                // Two rings of runes over the painted meander, turning opposite
+                // ways so it reads as machinery rather than a spinning picture.
+                ring(size: ringSize * 0.94, opacity: 0.85, angle: spin)
+                    .position(centre)
+                ring(size: ringSize * 0.62, opacity: 0.55, angle: -spin * 1.6)
+                    .position(centre)
+
+                // The scroll's mark, hanging over the ring where the unit will
+                // step out of it.
+                Image(systemName: banner.scroll.glyph)
+                    .font(.system(size: charging ? 44 : 34, weight: .black))
+                    .foregroundStyle(tint)
+                    .shadow(color: tint.opacity(0.9), radius: charging ? 24 : 12)
+                    .scaleEffect(pulse)
+                    .position(x: centre.x, y: centre.y - ringSize * 0.42)
+
+                // Which banner is standing on the altar, on a marble plaque.
+                Text(banner.name.uppercased())
+                    .font(Theme.body(10).weight(.black))
+                    .tracking(1.4)
+                    .foregroundStyle(Theme.textPrimary)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.black.opacity(0.55)))
+                    .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.6), lineWidth: 0.5))
+                    .position(x: frame.size.width / 2, y: originY + artHeight * 0.10)
+            }
         }
         .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
                 .strokeBorder(Theme.goldPlate, lineWidth: 1)
         )
-        // .clipShape does not clip hit testing, and the painting inside is
-        // scaled to fill: without this the circle would swallow taps well
-        // outside its frame, including the summon buttons under it.
+        // .clipShape does not clip hit testing and the hall is a scaled
+        // painting: without this it would swallow the summon buttons below it.
         .allowsHitTesting(false)
         .onAppear {
             withAnimation(.linear(duration: 26).repeatForever(autoreverses: false)) {
@@ -619,7 +641,34 @@ struct SummoningCircle: View {
         .animation(.easeOut(duration: 0.35), value: charging)
     }
 
-    private func ring(scale: CGFloat, opacity: Double, angle: Double) -> some View {
+    /// The hall itself: a Greek temple with the light falling through the
+    /// oculus onto the altar, which is what the owner asked for — "can the
+    /// summoning room be like a Greek temple, like the temple of Hephaestus or
+    /// the temple of Poseidon". The floor carries a meander band and a laurel
+    /// ring with bare marble in the middle, deliberately not a star or a
+    /// pentagram.
+    private func hall(width: CGFloat, height: CGFloat) -> some View {
+        Group {
+            if BundleImage.exists("summon_hall_bg") {
+                BundleImage(name: "summon_hall_bg")
+                    .aspectRatio(contentMode: .fill)
+            } else if BundleImage.exists(banner.artName) {
+                BundleImage(name: banner.artName)
+                    .aspectRatio(contentMode: .fill)
+                    .overlay(Color.black.opacity(0.35))
+            } else {
+                RadialGradient(
+                    colors: [tint.opacity(0.30), Theme.ink],
+                    center: .center, startRadius: 8, endRadius: 320
+                )
+            }
+        }
+        .frame(width: width, height: height)
+        .clipped()
+        .allowsHitTesting(false)
+    }
+
+    private func ring(size: CGFloat, opacity: Double, angle: Double) -> some View {
         Group {
             if BundleImage.exists("rune_ring") {
                 BundleImage(name: "rune_ring")
@@ -627,15 +676,14 @@ struct SummoningCircle: View {
                     .colorMultiply(tint)
                     .blendMode(.screen)
             } else {
-                // The texture has not shipped: draw the ring.
                 Circle()
                     .strokeBorder(tint.opacity(0.8), style: StrokeStyle(lineWidth: 2, dash: [6, 10]))
             }
         }
         .opacity(opacity)
-        .scaleEffect(scale * (charging ? 1.06 : 1.0))
+        .frame(width: size, height: size)
+        .scaleEffect(charging ? 1.06 : 1.0)
         .rotationEffect(.degrees(angle))
-        .frame(maxWidth: 260, maxHeight: 260)
         .allowsHitTesting(false)
     }
 }

@@ -50,7 +50,7 @@
       "finished_at": 1788999110163,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:11:57Z"
+      "polled": "2026-09-10T01:36:26Z"
     },
     "rig": {
       "id": "01a088a8-2cec-733e-a5d8-1a68a5626671",
@@ -77,7 +77,10 @@
       "started_at": 1788999130017,
       "finished_at": 1788999216054,
       "name": "",
-      "polled": "2026-09-10T00:13:41Z"
+      "polled": "2026-09-10T01:36:26Z",
+      "downloaded": {
+        "glb": "Art/Models/taweret.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088a9-c1d4-7633-8211-9a77c7135709",
@@ -100,7 +103,10 @@
       "started_at": 1788999222185,
       "finished_at": 1788999247444,
       "name": "",
-      "polled": "2026-09-10T00:14:07Z"
+      "polled": "2026-09-10T01:36:26Z",
+      "downloaded": {
+        "glb": "Art/Models/taweret_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088a9-c50e-704c-93a1-e69e669d8664",
@@ -123,7 +129,10 @@
       "started_at": 1788999222846,
       "finished_at": 1788999247421,
       "name": "",
-      "polled": "2026-09-10T00:14:17Z"
+      "polled": "2026-09-10T01:36:27Z",
+      "downloaded": {
+        "glb": "Art/Models/taweret_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088a9-c79d-76ef-a7e3-bfc45d6f6f1e",
@@ -146,7 +155,10 @@
       "started_at": 1788999223578,
       "finished_at": 1788999250050,
       "name": "",
-      "polled": "2026-09-10T00:14:17Z"
+      "polled": "2026-09-10T01:36:27Z",
+      "downloaded": {
+        "glb": "Art/Models/taweret_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088a9-cadf-73e0-9aa8-ec0d03f0ebe2",
@@ -169,7 +181,10 @@
       "started_at": 1788999224403,
       "finished_at": 1788999250645,
       "name": "",
-      "polled": "2026-09-10T00:14:18Z"
+      "polled": "2026-09-10T01:36:27Z",
+      "downloaded": {
+        "glb": "Art/Models/taweret_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088a9-cdb7-7606-95bc-2bbcd7220200",
@@ -192,7 +207,10 @@
       "started_at": 1788999225044,
       "finished_at": 1788999263660,
       "name": "",
-      "polled": "2026-09-10T00:14:28Z"
+      "polled": "2026-09-10T01:36:27Z",
+      "downloaded": {
+        "glb": "Art/Models/taweret_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088a9-d03b-75bc-9ff5-7d742a869f97",
@@ -215,8 +233,12 @@
       "started_at": 1788999225694,
       "finished_at": 1788999256826,
       "name": "",
-      "polled": "2026-09-10T00:14:18Z"
+      "polled": "2026-09-10T01:36:27Z",
+      "downloaded": {
+        "glb": "Art/Models/taweret_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:36:27Z"
 }

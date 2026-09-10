@@ -50,7 +50,7 @@
       "finished_at": 1788999090475,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:11:37Z"
+      "polled": "2026-09-10T01:36:00Z"
     },
     "rig": {
       "id": "01a088a7-ddf8-76c8-b0dd-6a52e2db1559",
@@ -77,7 +77,10 @@
       "started_at": 1788999110000,
       "finished_at": 1788999154822,
       "name": "",
-      "polled": "2026-09-10T00:12:40Z"
+      "polled": "2026-09-10T01:36:00Z",
+      "downloaded": {
+        "glb": "Art/Models/serqet.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088a8-d525-745f-8681-503a5201310f",
@@ -100,7 +103,10 @@
       "started_at": 1788999161509,
       "finished_at": 1788999173342,
       "name": "",
-      "polled": "2026-09-10T00:12:56Z"
+      "polled": "2026-09-10T01:36:00Z",
+      "downloaded": {
+        "glb": "Art/Models/serqet_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088a8-d814-74e1-b195-264fce9984a7",
@@ -123,7 +129,10 @@
       "started_at": 1788999162186,
       "finished_at": 1788999172886,
       "name": "",
-      "polled": "2026-09-10T00:12:55Z"
+      "polled": "2026-09-10T01:36:00Z",
+      "downloaded": {
+        "glb": "Art/Models/serqet_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088a8-dac3-7631-827d-44d447155c16",
@@ -146,7 +155,10 @@
       "started_at": 1788999162841,
       "finished_at": 1788999175617,
       "name": "",
-      "polled": "2026-09-10T00:12:55Z"
+      "polled": "2026-09-10T01:36:00Z",
+      "downloaded": {
+        "glb": "Art/Models/serqet_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088a8-dd45-7137-b2a8-7887f45b9f28",
@@ -169,7 +181,10 @@
       "started_at": 1788999163501,
       "finished_at": 1788999174594,
       "name": "",
-      "polled": "2026-09-10T00:12:55Z"
+      "polled": "2026-09-10T01:36:00Z",
+      "downloaded": {
+        "glb": "Art/Models/serqet_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088a8-dfc9-73db-8d62-3156e3287316",
@@ -192,7 +207,10 @@
       "started_at": 1788999164136,
       "finished_at": 1788999195106,
       "name": "",
-      "polled": "2026-09-10T00:13:16Z"
+      "polled": "2026-09-10T01:36:01Z",
+      "downloaded": {
+        "glb": "Art/Models/serqet_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088a8-e24a-73ad-9e98-55ff639976fb",
@@ -215,8 +233,12 @@
       "started_at": 1788999164892,
       "finished_at": 1788999189258,
       "name": "",
-      "polled": "2026-09-10T00:13:16Z"
+      "polled": "2026-09-10T01:36:01Z",
+      "downloaded": {
+        "glb": "Art/Models/serqet_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:36:01Z"
 }

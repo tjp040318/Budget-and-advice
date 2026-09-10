@@ -50,7 +50,7 @@
       "finished_at": 1788999153852,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:12:39Z"
+      "polled": "2026-09-10T01:37:47Z"
     },
     "rig": {
       "id": "01a088a8-d062-71db-a43b-6b20f5547435",
@@ -77,7 +77,10 @@
       "started_at": 1788999163038,
       "finished_at": 1788999213155,
       "name": "",
-      "polled": "2026-09-10T00:13:33Z"
+      "polled": "2026-09-10T01:37:47Z",
+      "downloaded": {
+        "glb": "Art/Models/medjay.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088a9-a460-71db-ac7a-51ed61833c24",
@@ -100,7 +103,10 @@
       "started_at": 1788999214489,
       "finished_at": 1788999237498,
       "name": "",
-      "polled": "2026-09-10T00:13:59Z"
+      "polled": "2026-09-10T01:37:47Z",
+      "downloaded": {
+        "glb": "Art/Models/medjay_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088a9-a70b-7237-a3d1-0ff76a1a9006",
@@ -123,7 +129,10 @@
       "started_at": 1788999215263,
       "finished_at": 1788999243978,
       "name": "",
-      "polled": "2026-09-10T00:14:10Z"
+      "polled": "2026-09-10T01:37:47Z",
+      "downloaded": {
+        "glb": "Art/Models/medjay_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088a9-aa18-71b3-8678-a5c14dcabf59",
@@ -146,7 +155,10 @@
       "started_at": 1788999215941,
       "finished_at": 1788999241079,
       "name": "",
-      "polled": "2026-09-10T00:14:10Z"
+      "polled": "2026-09-10T01:37:47Z",
+      "downloaded": {
+        "glb": "Art/Models/medjay_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088a9-acb1-7461-8301-8a1ad56872a1",
@@ -169,7 +181,10 @@
       "started_at": 1788999216633,
       "finished_at": 1788999240592,
       "name": "",
-      "polled": "2026-09-10T00:14:10Z"
+      "polled": "2026-09-10T01:37:47Z",
+      "downloaded": {
+        "glb": "Art/Models/medjay_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088a9-af66-75d8-913b-8950e0468cad",
@@ -192,7 +207,10 @@
       "started_at": 1788999217266,
       "finished_at": 1788999277345,
       "name": "",
-      "polled": "2026-09-10T00:14:41Z"
+      "polled": "2026-09-10T01:37:47Z",
+      "downloaded": {
+        "glb": "Art/Models/medjay_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088a9-b1e3-7799-a27d-86351e5fec7b",
@@ -215,8 +233,12 @@
       "started_at": 1788999217945,
       "finished_at": 1788999260412,
       "name": "",
-      "polled": "2026-09-10T00:14:20Z"
+      "polled": "2026-09-10T01:37:48Z",
+      "downloaded": {
+        "glb": "Art/Models/medjay_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:37:48Z"
 }

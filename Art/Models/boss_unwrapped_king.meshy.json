@@ -50,7 +50,7 @@
       "finished_at": 1788998923348,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:08:49Z"
+      "polled": "2026-09-10T01:33:39Z"
     },
     "rig": {
       "id": "01a088a5-4e56-7599-b682-8a3dff65d643",
@@ -77,7 +77,10 @@
       "started_at": 1788998941693,
       "finished_at": 1788999012594,
       "name": "",
-      "polled": "2026-09-10T00:10:12Z"
+      "polled": "2026-09-10T01:33:40Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_unwrapped_king.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088a6-93d7-73bb-a66e-5ecf89ec6358",
@@ -100,7 +103,10 @@
       "started_at": 1788999013681,
       "finished_at": 1788999024204,
       "name": "",
-      "polled": "2026-09-10T00:10:28Z"
+      "polled": "2026-09-10T01:33:40Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_unwrapped_king_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088a6-96a1-76d3-9918-0d73dbabc01a",
@@ -123,7 +129,10 @@
       "started_at": 1788999014381,
       "finished_at": 1788999026697,
       "name": "",
-      "polled": "2026-09-10T00:10:27Z"
+      "polled": "2026-09-10T01:33:40Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_unwrapped_king_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088a6-9956-7048-a022-f8931810aef2",
@@ -146,7 +155,10 @@
       "started_at": 1788999015137,
       "finished_at": 1788999028927,
       "name": "",
-      "polled": "2026-09-10T00:10:38Z"
+      "polled": "2026-09-10T01:33:40Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_unwrapped_king_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088a6-9c50-761b-8977-503ceeb637a5",
@@ -169,7 +181,10 @@
       "started_at": 1788999015782,
       "finished_at": 1788999026560,
       "name": "",
-      "polled": "2026-09-10T00:10:28Z"
+      "polled": "2026-09-10T01:33:40Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_unwrapped_king_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088a6-9edc-728d-a5c7-879ed3315ab8",
@@ -192,7 +207,10 @@
       "started_at": 1788999016419,
       "finished_at": 1788999039822,
       "name": "",
-      "polled": "2026-09-10T00:10:48Z"
+      "polled": "2026-09-10T01:33:40Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_unwrapped_king_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088a6-a148-71a0-831f-a4bd813088af",
@@ -215,8 +233,12 @@
       "started_at": 1788999017069,
       "finished_at": 1788999033844,
       "name": "",
-      "polled": "2026-09-10T00:10:38Z"
+      "polled": "2026-09-10T01:33:40Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_unwrapped_king_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:33:40Z"
 }
