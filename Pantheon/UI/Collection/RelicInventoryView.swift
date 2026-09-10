@@ -406,10 +406,16 @@ struct RelicRow: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
                 Spacer(minLength: 2)
+                // The number is the load-bearing half of the cell and takes
+                // its width first: a cell is ~63 points at three columns and
+                // ~50 while the 26-point checkbox is in the row, and at equal
+                // priority a squeeze clipped "+52%" as readily as the name.
+                // A shortened name is still readable; a clipped value is not.
                 Text("+\(sub.kind.format(sub.value))")
                     .font(Theme.numeric(9))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
+                    .layoutPriority(1)
             }
             .frame(maxWidth: .infinity)
         } else {
@@ -840,6 +846,7 @@ struct RelicDetailView: View {
                 Text(title)
                     .font(Theme.body(11).weight(.semibold))
                     .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .foregroundStyle(enabled ? tint : Theme.textSecondary)
             .frame(maxWidth: .infinity, minHeight: 32)

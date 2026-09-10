@@ -57,14 +57,24 @@ final class ModelLibrary {
         var suffix: String { self == .low ? "_lod" : "" }
     }
 
-    /// Below this many combatants, everything renders at full detail. The
-    /// shipped models are 5,000 triangles with a 1,024 texture, so a 4v4 at
-    /// full detail is 40,000 triangles — nothing to a phone. The `_lod` file
-    /// (2,500 triangles, a 512 texture) is for the ten-character stage.
-    static let crowdedStageThreshold = 8
-
+    /// A battle always renders the `_lod` file. A screen showing ONE character
+    /// — the summon reveal, the unit sheet — asks for `.high` by name.
+    ///
+    /// This was "full detail below eight combatants", written when a shipped
+    /// model was 5,000 triangles with a 1,024 texture. The detail pass made it
+    /// 9,000 triangles with a **2,048** texture, and a 2,048-square RGBA
+    /// texture is 16 MB decompressed: a 3v3 was decoding and uploading six of
+    /// them, about 100 MB, on the main thread while the stage built. That is
+    /// the multi-second hitch the owner hit entering a campaign fight in a
+    /// release build.
+    ///
+    /// The LOD costs nothing visible here. The battle camera stands a figure a
+    /// quarter of the screen tall — roughly 330 pixels on a 3× phone — and the
+    /// LOD carries 3,500 triangles with a 1,024 texture, which is more texels
+    /// than those pixels can show. The full model exists for the screens where
+    /// one character fills the frame, and there it is worth every byte.
     static func detail(forCombatantCount count: Int) -> DetailLevel {
-        count > crowdedStageThreshold ? .low : .high
+        count > 1 ? .low : .high
     }
 
     /// Returns a fresh copy of the model for a spec, ready to be added to a scene.

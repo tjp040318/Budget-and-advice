@@ -159,7 +159,10 @@ struct ArenaView: View {
     /// sum of the player's best *five* units, and an arena team is four, so
     /// comparing a challenger against it biased every row toward green — an
     /// offence team that is not your top four was reported as an easy fight.
-    /// Computed once per body pass rather than once per challenger row.
+    ///
+    /// Reading it resolves four units out of their relics, so it is read once
+    /// in `opponentList` and handed down to the rows: a computed property has
+    /// no cache, and five challengers asking one each would resolve twenty.
     private var offensePower: Int {
         store.team(store.player.arenaOffenseTeam).reduce(0) { $0 + $1.power }
     }
@@ -224,7 +227,8 @@ struct ArenaView: View {
     // MARK: - Opponents
 
     private var opponentList: some View {
-        SectionPanel(title: "Challengers", accessory: "\(opponents.count)") {
+        let offense = offensePower
+        return SectionPanel(title: "Challengers", accessory: "\(opponents.count)") {
             if opponents.isEmpty {
                 EmptyState(
                     icon: "person.2.slash",
@@ -237,7 +241,7 @@ struct ArenaView: View {
                 ScrollView {
                     VStack(spacing: 8) {
                         ForEach(opponents) { opponent in
-                            opponentRow(opponent)
+                            opponentRow(opponent, offense: offense)
                         }
                     }
                 }
@@ -248,7 +252,9 @@ struct ArenaView: View {
     /// One challenger, laid out across rather than down: who they are, the team
     /// you would meet, what the fight costs if you lose and what it pays if you
     /// win, and the plate that starts it.
-    private func opponentRow(_ opponent: ArenaOpponent) -> some View {
+    ///
+    /// `offense` is `offensePower`, resolved once by the list.
+    private func opponentRow(_ opponent: ArenaOpponent, offense: Int) -> some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(opponent.name)
@@ -266,7 +272,7 @@ struct ArenaView: View {
                 Text("Power \(opponent.power)")
                     .font(Theme.numeric(10))
                     .foregroundStyle(
-                        opponent.power > offensePower ? Theme.danger : Theme.success
+                        opponent.power > offense ? Theme.danger : Theme.success
                     )
                     .lineLimit(1)
                 // What the attack costs and pays: the points a loss takes off

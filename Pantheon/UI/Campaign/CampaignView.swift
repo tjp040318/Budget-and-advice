@@ -164,7 +164,13 @@ struct CampaignView: View {
                 .padding(.vertical, 4)
             }
             .background(Theme.ink.opacity(0.6))
-            .onAppear { proxy.scrollTo(current, anchor: .center) }
+            // A `scrollTo` issued from `onAppear` runs before the rail has been
+            // laid out, so the proxy has no chip to scroll to yet and it does
+            // nothing at all — silently, which is how it would have shipped.
+            // One turn of the run loop later the chips exist and it lands.
+            .onAppear {
+                DispatchQueue.main.async { proxy.scrollTo(current, anchor: .center) }
+            }
             .onChange(of: current) { _, id in
                 withAnimation { proxy.scrollTo(id, anchor: .center) }
             }
@@ -249,17 +255,35 @@ struct StageBriefingView: View {
         )
     }
 
+    /// The gap between two cards in a wave row, in one place because
+    /// `enemyCardSize` has to do arithmetic with it.
+    private static let enemyCardGap: CGFloat = 6
+
+    /// What the opposition panel has inside it on the narrowest landscape
+    /// iPhone the deployment target still allows — an SE at 667 points, which
+    /// has no landscape safe-area inset: 667 less 20 of content padding, 8
+    /// between the two columns, the right column's fixed 280 and the panel's
+    /// own 16. A row that fits this fits every wider phone.
+    private static let narrowOppositionWidth: CGFloat = 343
+
     /// The enemy cards shrink as the waves multiply: a campaign stage is one
     /// wave of big cards, a dungeon level three waves of small ones, and
     /// either way the whole briefing fits the frame without a scroll.
     ///
     /// A card is its size plus about 32 points of name and level. The
     /// opposition is the subject of the screen and it holds the wide half of
-    /// the frame — about 500 points of it against the right column's 280 — so
-    /// a single wave is drawn as large as its own height allows: four cards at
-    /// 92 use 386 of the width and 154 of the roughly 270 points a panel gets,
-    /// and a stage that fields two use 106. At 70 they were thumbnails in the
-    /// corner of the biggest panel.
+    /// the frame — about 500 points of it on a modern phone against the right
+    /// column's 280 — so a single wave is drawn as large as it can be, 106 for
+    /// the two-enemy stages that open a chapter and 92 for the rest. At 70
+    /// they were thumbnails in the corner of the biggest panel.
+    ///
+    /// Those two are ceilings, not the answer: the width is the binding
+    /// constraint, not the height, and it is the *narrow* phone that binds it.
+    /// Four cards at 92 want 386 points and an SE's panel has 343, and a
+    /// `UnitCard` is a fixed frame, so the fourth would have drawn outside the
+    /// panel rather than shrinking. Dividing the narrow width instead lands
+    /// four at 81 and three at 92, and 81 + 32 of name is 113 against the
+    /// roughly 265 points a panel band gets there.
     ///
     /// The tight case is the other end: the three-wave dungeon level on the
     /// shortest landscape phone (375 points, so 341 under the strip). Three
@@ -270,7 +294,14 @@ struct StageBriefingView: View {
     /// catch it.
     private var enemyCardSize: CGFloat {
         switch waveCount {
-        case 1: return stage.enemies.count <= 2 ? 106 : 92
+        case 1:
+            // `stage.enemies` is the stored array, not `waves.first`: reading
+            // `waves` here would re-run `buildEnemies` once per card.
+            let count = max(1, stage.enemies.count)
+            let ideal: CGFloat = count <= 2 ? 106 : 92
+            let widest = (Self.narrowOppositionWidth - CGFloat(count - 1) * Self.enemyCardGap)
+                / CGFloat(count)
+            return min(ideal, widest)
         case 2: return 68
         default: return 42
         }
@@ -342,20 +373,24 @@ struct StageBriefingView: View {
     }
 
     private var oppositionPanel: some View {
-        SectionPanel(
+        // One pass of `buildEnemies` per render: `waves` resolves every spawn
+        // in every wave each time it is read, and the accessory below read it
+        // a second time.
+        let rows = waves
+        return SectionPanel(
             title: "Opposition",
-            accessory: waveCount > 1 ? "\(waveCount) waves, the boss last" : "\(waves.first?.count ?? 0) units"
+            accessory: waveCount > 1 ? "\(waveCount) waves, the boss last" : "\(rows.first?.count ?? 0) units"
         ) {
             VStack(alignment: .leading, spacing: 4) {
-                ForEach(waves.indices, id: \.self) { index in
-                    HStack(spacing: 6) {
+                ForEach(rows.indices, id: \.self) { index in
+                    HStack(spacing: Self.enemyCardGap) {
                         if waveCount > 1 {
                             Text(index == waveCount - 1 ? "BOSS" : "W\(index + 1)")
                                 .font(Theme.body(9).weight(.black))
                                 .foregroundStyle(index == waveCount - 1 ? Theme.danger : Theme.textSecondary)
                                 .frame(width: 30, alignment: .leading)
                         }
-                        ForEach(waves[index]) { enemy in
+                        ForEach(rows[index]) { enemy in
                             UnitCard(unit: enemy, showPower: false, size: enemyCardSize)
                         }
                         Spacer(minLength: 0)

@@ -652,6 +652,7 @@ struct GameScreen<Bar: View, Content: View>: View {
                         .frame(width: ScreenChrome.control + 2, height: ScreenChrome.control)
                         .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
                         .overlay(ScreenChrome.controlShape.strokeBorder(Theme.goldDim.opacity(0.55), lineWidth: 0.5))
+                        .stripHitTarget()
                 }
                 .buttonStyle(.plain)
             }
@@ -716,6 +717,21 @@ enum ScreenChrome {
     }
 }
 
+extension View {
+    /// The tap area of a control in the strip.
+    ///
+    /// A strip control draws at `ScreenChrome.control` — 26 points — inside a
+    /// 34-point strip, so the 4 points above and below its plate belonged to
+    /// nothing: a thumb that clipped the top of a glyph tile hit the screen
+    /// behind it. The plate keeps its size and the strip keeps its height;
+    /// only the hit region grows, so no layout moves. It is still short of the
+    /// 44 points the HIG asks for, which is what a 34-point strip costs.
+    func stripHitTarget() -> some View {
+        frame(height: ScreenChrome.height)
+            .contentShape(Rectangle())
+    }
+}
+
 // MARK: - Strip controls
 
 /// An action in the strip: a glyph, and a word when there is room for one.
@@ -748,6 +764,7 @@ struct BarButton: View {
             .frame(minWidth: ScreenChrome.control, minHeight: ScreenChrome.control)
             .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
             .overlay(ScreenChrome.controlShape.strokeBorder(tint.opacity(0.4), lineWidth: 0.5))
+            .stripHitTarget()
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
@@ -794,6 +811,7 @@ struct ElementFilterTiles: View {
                     .strokeBorder(tint.opacity(isOn ? 0.0 : 0.35), lineWidth: 0.5)
             )
             .shadow(color: isOn ? tint.opacity(0.6) : .clear, radius: 4)
+            .stripHitTarget()
         }
         .buttonStyle(.plain)
         .accessibilityLabel(element?.displayName ?? "All elements")

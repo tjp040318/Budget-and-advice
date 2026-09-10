@@ -134,7 +134,6 @@ struct IslandView: View {
                 .aspectRatio(contentMode: .fill)
                 .frame(width: full.width, height: full.height)
                 .clipped()
-                .allowsHitTesting(false)
                 .overlay(
                     // The hour's colour over the painting: nothing by day,
                     // warm at dusk, blue at night.
@@ -151,6 +150,11 @@ struct IslandView: View {
                         startPoint: .top, endPoint: .bottom
                     )
                 )
+                // Last in the chain, so the two washes over the painting are as
+                // inert as the painting: a filled Rectangle in an overlay is
+                // hit-testable even when it is clear, and `.clipped()` does not
+                // clip hit-testing.
+                .allowsHitTesting(false)
         } else {
             ZStack {
                 Theme.backdrop
@@ -178,6 +182,7 @@ struct IslandView: View {
                     Text("Lv.\(player.level)")
                         .font(Theme.numeric(12))
                         .foregroundStyle(Theme.gold)
+                        .lineLimit(1)
                     StatBar(
                         value: Double(player.experience),
                         maximum: Double(player.experienceToNextLevel),
@@ -185,9 +190,13 @@ struct IslandView: View {
                         height: 5
                     )
                     .frame(width: 140)
+                    // One line, always: "1240/2050" offers a break after the
+                    // slash, and a wrap here would add a second line to the
+                    // header on a narrow frame rather than truncate.
                     Text("\(player.experience)/\(player.experienceToNextLevel)")
                         .font(Theme.numeric(10))
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
                 }
             }
             Spacer()
