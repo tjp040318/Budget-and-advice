@@ -50,7 +50,7 @@
       "finished_at": 1788998920806,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:08:43Z"
+      "polled": "2026-09-10T01:33:23Z"
     },
     "rig": {
       "id": "01a088a5-3685-77f9-89a2-f08a5826f9d7",
@@ -77,7 +77,10 @@
       "started_at": 1788998935977,
       "finished_at": 1788999227656,
       "name": "",
-      "polled": "2026-09-10T00:13:49Z"
+      "polled": "2026-09-10T01:33:23Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_colossus.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088a9-e2c7-71da-9645-0e5f78b03524",
@@ -100,7 +103,10 @@
       "started_at": 1788999230734,
       "finished_at": 1788999254022,
       "name": "",
-      "polled": "2026-09-10T00:14:16Z"
+      "polled": "2026-09-10T01:33:23Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_colossus_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088a9-e66d-7657-9977-a4c06febbedf",
@@ -123,7 +129,10 @@
       "started_at": 1788999231464,
       "finished_at": 1788999256631,
       "name": "",
-      "polled": "2026-09-10T00:14:26Z"
+      "polled": "2026-09-10T01:33:23Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_colossus_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088a9-e940-711f-b0d2-3e81cc3bd9a8",
@@ -146,7 +155,10 @@
       "started_at": 1788999232122,
       "finished_at": 1788999257882,
       "name": "",
-      "polled": "2026-09-10T00:14:26Z"
+      "polled": "2026-09-10T01:33:23Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_colossus_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088a9-ebd5-7277-bbb9-77cafc2b7573",
@@ -169,7 +181,10 @@
       "started_at": 1788999232850,
       "finished_at": 1788999259603,
       "name": "",
-      "polled": "2026-09-10T00:14:26Z"
+      "polled": "2026-09-10T01:33:23Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_colossus_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088a9-eeb5-7384-9890-4ef1115e49cd",
@@ -192,7 +207,10 @@
       "started_at": 1788999233561,
       "finished_at": 1788999276196,
       "name": "",
-      "polled": "2026-09-10T00:14:36Z"
+      "polled": "2026-09-10T01:33:23Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_colossus_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088a9-f178-730a-b609-029e0ff90786",
@@ -215,8 +233,12 @@
       "started_at": 1788999234283,
       "finished_at": 1788999269064,
       "name": "",
-      "polled": "2026-09-10T00:14:37Z"
+      "polled": "2026-09-10T01:33:24Z",
+      "downloaded": {
+        "glb": "Art/Models/boss_colossus_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:33:24Z"
 }

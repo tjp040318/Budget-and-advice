@@ -50,7 +50,7 @@
       "finished_at": 1788998872483,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T00:07:57Z"
+      "polled": "2026-09-10T01:32:22Z"
     },
     "rig": {
       "id": "01a088a4-842c-746e-b44e-0a497fc6bd78",
@@ -77,7 +77,10 @@
       "started_at": 1788998882562,
       "finished_at": 1788998937799,
       "name": "",
-      "polled": "2026-09-10T00:09:03Z"
+      "polled": "2026-09-10T01:32:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hades_v2.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a088a5-83d6-71ef-ade6-2afa2b0e41e0",
@@ -100,7 +103,10 @@
       "started_at": 1788998944274,
       "finished_at": 1788998956717,
       "name": "",
-      "polled": "2026-09-10T00:09:18Z"
+      "polled": "2026-09-10T01:32:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hades_v2_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a088a5-8759-711c-b5b3-5bf37009b55c",
@@ -123,7 +129,10 @@
       "started_at": 1788998944942,
       "finished_at": 1788998957967,
       "name": "",
-      "polled": "2026-09-10T00:09:17Z"
+      "polled": "2026-09-10T01:32:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hades_v2_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a088a5-89ee-71a0-bd21-b7201752838c",
@@ -146,7 +155,10 @@
       "started_at": 1788998945610,
       "finished_at": 1788998959311,
       "name": "",
-      "polled": "2026-09-10T00:09:28Z"
+      "polled": "2026-09-10T01:32:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hades_v2_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a088a5-8c91-7491-ae06-d399fdc3ea7a",
@@ -169,7 +181,10 @@
       "started_at": 1788998946191,
       "finished_at": 1788998957281,
       "name": "",
-      "polled": "2026-09-10T00:09:18Z"
+      "polled": "2026-09-10T01:32:22Z",
+      "downloaded": {
+        "glb": "Art/Models/hades_v2_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a088a5-8ed3-72d5-a31a-e6ca207357d1",
@@ -192,7 +207,10 @@
       "started_at": 1788998946802,
       "finished_at": 1788998971315,
       "name": "",
-      "polled": "2026-09-10T00:09:39Z"
+      "polled": "2026-09-10T01:32:23Z",
+      "downloaded": {
+        "glb": "Art/Models/hades_v2_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a088a5-9134-7478-84ae-72ff3d22005d",
@@ -215,8 +233,12 @@
       "started_at": 1788998947377,
       "finished_at": 1788998964293,
       "name": "",
-      "polled": "2026-09-10T00:09:28Z"
+      "polled": "2026-09-10T01:32:23Z",
+      "downloaded": {
+        "glb": "Art/Models/hades_v2_ultimate.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-10T01:32:23Z"
 }
