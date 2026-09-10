@@ -64,23 +64,22 @@ struct UnitDetailView: View {
                 if let unit {
                     // Three columns, sized so a landscape phone holds the lot
                     // without a scroll: card and actions, the ring, then stats
-                    // over skills. The scroll view is the safety net for a
-                    // long leader skill or awakening line, not the plan.
-                    ScrollView {
-                        HStack(alignment: .top, spacing: 8) {
-                            identity(unit)
-                                .frame(width: 158)
-                            relicRing(unit)
-                                .frame(width: 212)
-                            VStack(spacing: 8) {
-                                stats(unit)
-                                skills(unit)
-                            }
-                            .frame(maxWidth: .infinity)
+                    // over skills. No ScrollView — the sheet is one frame, and
+                    // each panel stretches to a common bottom rail so no band
+                    // of bare backdrop is left under a short column.
+                    HStack(alignment: .top, spacing: 8) {
+                        identity(unit)
+                            .frame(width: 158)
+                        relicRing(unit)
+                            .frame(width: 212)
+                        VStack(spacing: 8) {
+                            stats(unit)
+                            skills(unit)
                         }
-                        .padding(.horizontal, ScreenChrome.contentPadding)
-                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity)
                     }
+                    .padding(.horizontal, ScreenChrome.contentPadding)
+                    .padding(.vertical, 8)
                 } else {
                     EmptyState(icon: "questionmark", title: "Gone", message: "This unit is no longer in your collection.")
                 }
@@ -133,22 +132,39 @@ struct UnitDetailView: View {
                 height: 5,
                 label: "Lv.\(unit.level) / \(unit.unit.maxLevel)"
             )
-            // The three things to do with a unit, in one row.
-            HStack(spacing: 5) {
-                actionButton("Power up", "arrow.up.circle.fill", tint: Theme.info) {
+            Spacer(minLength: 0)
+            // The three things to do with a unit, one wide row each: a 4pt
+            // label in a square tile was the least legible thing on the most
+            // important control, so each row now says what it costs and
+            // whether it is ready.
+            VStack(spacing: 4) {
+                actionButton(
+                    "Power up",
+                    unit.unit.isMaxLevel
+                        ? "Max level · feed duplicates to skill up"
+                        : "500 drachma per unit",
+                    "arrow.up.circle.fill", tint: Theme.info
+                ) {
                     fodderPurpose = .levelUp
                     showFodderPicker = true
                 }
                 actionButton(
-                    unit.unit.canEvolve ? "Evolve" : "Evolve at max",
+                    "Evolve",
+                    unit.unit.canEvolve
+                        ? "\(ProgressionService.evolutionFodderRequired(currentStars: unit.stars)) × \(unit.stars)★ · \(ProgressionService.drachmaCostToEvolve(currentStars: unit.stars)) drachma"
+                        : "Reach Lv.\(unit.unit.maxLevel) first",
                     "star.circle.fill", tint: Theme.gold, enabled: unit.unit.canEvolve
                 ) {
                     fodderPurpose = .evolve
                     showFodderPicker = true
                 }
-                if unit.blueprint.awakening != nil {
+                if let awakening = unit.blueprint.awakening {
+                    let ready = awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
                     actionButton(
                         unit.unit.isAwakened ? "Awakened" : "Awaken",
+                        unit.unit.isAwakened
+                            ? "Form unlocked"
+                            : (ready ? "Essences ready" : "Essences short"),
                         "sun.max.fill", tint: Theme.gold, enabled: !unit.unit.isAwakened
                     ) {
                         showAwakening = true
@@ -156,25 +172,33 @@ struct UnitDetailView: View {
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(8)
         .panelBackground(radius: Theme.tightCorner)
     }
 
     private func actionButton(
-        _ title: String, _ symbol: String, tint: Color, enabled: Bool = true, action: @escaping () -> Void
+        _ title: String, _ subtitle: String, _ symbol: String, tint: Color,
+        enabled: Bool = true, action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
-            VStack(spacing: 2) {
+            HStack(spacing: 6) {
                 Image(systemName: symbol)
-                    .font(.system(size: 13, weight: .bold))
-                Text(title)
-                    .font(Theme.body(7).weight(.bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .font(.system(size: 14, weight: .bold))
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(title)
+                        .font(Theme.body(10).weight(.bold))
+                        .lineLimit(1)
+                    Text(subtitle)
+                        .font(Theme.body(8))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                Spacer(minLength: 0)
             }
             .foregroundStyle(enabled ? Theme.ink : Theme.textSecondary)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 5)
+            .padding(.horizontal, 7)
+            .frame(height: 32)
             .background(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(enabled ? tint : Theme.surface)
@@ -190,7 +214,7 @@ struct UnitDetailView: View {
     /// rest clockwise — the arrangement every player of the genre knows.
     private func relicRing(_ unit: ResolvedUnit) -> some View {
         let size: CGFloat = 196
-        let radius: CGFloat = 70
+        let radius: CGFloat = 67
         let centre = CGPoint(x: size / 2, y: size / 2)
         return VStack(spacing: 6) {
             ZStack {
@@ -198,13 +222,24 @@ struct UnitDetailView: View {
                     .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1, dash: [3, 5]))
                     .frame(width: radius * 2, height: radius * 2)
                     .position(centre)
-                ZStack {
-                    Circle()
-                        .fill(unit.element.color.opacity(0.18))
-                        .frame(width: 48, height: 48)
-                    Image(systemName: unit.element.glyph)
-                        .font(.system(size: 20, weight: .black))
-                        .foregroundStyle(unit.element.color)
+                // The largest clear space on the sheet carries the number the
+                // whole sheet exists to raise, not a second copy of the element.
+                VStack(spacing: 2) {
+                    ZStack {
+                        Circle()
+                            .fill(unit.element.color.opacity(0.18))
+                            .frame(width: 34, height: 34)
+                        Image(systemName: unit.element.glyph)
+                            .font(.system(size: 15, weight: .black))
+                            .foregroundStyle(unit.element.color)
+                    }
+                    Text("\(unit.power)")
+                        .font(Theme.numeric(16))
+                        .foregroundStyle(Theme.gold)
+                    Text("POWER")
+                        .font(Theme.body(8).weight(.black))
+                        .tracking(1)
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 .position(centre)
                 ForEach(1...6, id: \.self) { slot in
@@ -219,6 +254,7 @@ struct UnitDetailView: View {
             .frame(width: size, height: size)
             setsRow(unit)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .padding(8)
         .panelBackground(radius: Theme.tightCorner)
     }
@@ -239,26 +275,43 @@ struct UnitDetailView: View {
             VStack(spacing: 2) {
                 if let relic {
                     Image(systemName: relic.set.glyph)
-                        .font(.system(size: 13, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                         .foregroundStyle(Theme.gold)
-                    Text(relic.effectiveMainStat.displayText)
-                        .font(Theme.numeric(8))
+                    // The number over its kind: "CRIT Rate +32%" as one 5pt
+                    // sentence was the one figure a player checks, unreadable.
+                    Text(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))
+                        .font(Theme.numeric(12))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
+                    Text(relic.effectiveMainStat.kind.displayName.uppercased())
+                        .font(Theme.body(7))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                     Text("\(relic.grade)★ +\(relic.level)")
                         .font(Theme.numeric(7))
                         .foregroundStyle(Theme.textSecondary)
+                    HStack(spacing: 2) {
+                        ForEach(relic.subStats.indices, id: \.self) { _ in
+                            Circle()
+                                .fill(Theme.info)
+                                .frame(width: 3, height: 3)
+                        }
+                    }
                 } else {
-                    Text("\(slot)")
-                        .font(Theme.numeric(15).weight(.bold))
+                    // An empty slot states the rule the relic system runs on:
+                    // odd slots carry a fixed main stat, even ones are free.
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .black))
+                        .foregroundStyle(Theme.goldDim)
+                    Text(Relic.fixedMainStat(forSlot: slot)?.displayName.uppercased() ?? "FREE")
+                        .font(Theme.body(7).weight(.bold))
                         .foregroundStyle(Theme.textSecondary)
-                    Text("empty")
-                        .font(Theme.body(7))
-                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
                 }
             }
-            .frame(width: 54, height: 54)
+            .frame(width: 60, height: 60)
             .background(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .fill(worn ? Theme.surfaceHigh : Theme.surface.opacity(0.7))
@@ -284,21 +337,35 @@ struct UnitDetailView: View {
     }
 
     private func setsRow(_ unit: ResolvedUnit) -> some View {
-        HStack(spacing: 4) {
+        // One row per completed set, saying what it granted: a capsule
+        // reading only "Fury" told the player nothing they gained.
+        VStack(alignment: .leading, spacing: 3) {
             if unit.activeRelicSets.isEmpty {
-                Text("No set bonus yet: two of a kind for a stat, four for an effect.")
+                Text("No set bonus · 2 pieces for a stat, 4 for an effect")
                     .font(Theme.body(9))
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
             } else {
                 ForEach(unit.activeRelicSets) { entry in
-                    Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
-                        .font(Theme.body(9).weight(.bold))
-                        .foregroundStyle(Theme.gold)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(Theme.surfaceHigh))
+                    HStack(spacing: 5) {
+                        Image(systemName: entry.set.glyph)
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Theme.gold)
+                        Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
+                            .font(Theme.body(9).weight(.bold))
+                            .foregroundStyle(Theme.gold)
+                        Spacer(minLength: 4)
+                        Text(entry.set.statBonus?.displayText ?? "4-piece effect")
+                            .font(Theme.numeric(8))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Capsule().fill(Theme.surfaceHigh))
                 }
             }
         }
@@ -320,12 +387,12 @@ struct UnitDetailView: View {
                 tag(unit.role.displayName, color: Theme.textSecondary)
             }
             .padding(.bottom, 3)
-            HStack(alignment: .top, spacing: 12) {
+            HStack(alignment: .top, spacing: 8) {
                 VStack(spacing: 3) {
-                    statRow("HP", base.hp, unit.stats.hp)
-                    statRow("ATK", base.atk, unit.stats.atk)
-                    statRow("DEF", base.def, unit.stats.def)
-                    statRow("SPD", base.spd, unit.stats.spd)
+                    statRow("HP", base.hp, unit.stats.hp, strong: true)
+                    statRow("ATK", base.atk, unit.stats.atk, strong: true)
+                    statRow("DEF", base.def, unit.stats.def, strong: true)
+                    statRow("SPD", base.spd, unit.stats.spd, strong: true)
                 }
                 VStack(spacing: 3) {
                     statRow("CRIT Rate", base.critRate, unit.stats.critRate, percent: true)
@@ -343,6 +410,7 @@ struct UnitDetailView: View {
                     Text(leader.description)
                         .font(Theme.body(9))
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -356,10 +424,12 @@ struct UnitDetailView: View {
                          : "Awakens into \(awakening.awakenedName): \(awakening.bonusDescription)")
                         .font(Theme.body(9))
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(8)
         .panelBackground(radius: Theme.tightCorner)
     }
@@ -374,26 +444,50 @@ struct UnitDetailView: View {
             .lineLimit(1)
     }
 
-    private func statRow(_ label: String, _ base: Double, _ total: Double, percent: Bool = false) -> some View {
+    /// Three fixed columns — label, total, relic bonus — so the numbers line
+    /// up down the group instead of landing on a ragged edge that moves per
+    /// row. `strong` weights the four combat stats over the four percentages.
+    private func statRow(
+        _ label: String, _ base: Double, _ total: Double,
+        percent: Bool = false, strong: Bool = false
+    ) -> some View {
         let bonus = total - base
         let shown = abs(bonus) >= (percent ? 0.005 : 0.5)
         return HStack(spacing: 4) {
             Text(label)
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textSecondary)
-                .frame(width: 60, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 54, alignment: .leading)
             Text(Self.statText(total, percent: percent))
-                .font(Theme.numeric(11))
+                .font(strong ? Theme.numeric(13) : Theme.numeric(11))
                 .foregroundStyle(Theme.textPrimary)
-            Spacer(minLength: 2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 44, alignment: .trailing)
             Text(shown ? ((bonus > 0 ? "+" : "−") + Self.statText(abs(bonus), percent: percent)) : "")
                 .font(Theme.numeric(9))
                 .foregroundStyle(bonus > 0 ? Theme.success : Theme.danger)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .frame(width: 36, alignment: .trailing)
         }
     }
 
     static func statText(_ value: Double, percent: Bool) -> String {
         percent ? "\(Int((value * 100).rounded()))%" : "\(Int(value.rounded()))"
+    }
+
+    /// The stat a skill's damage is multiplied by, so a max-health or defence
+    /// skill no longer advertises the figure it would hit for off ATK.
+    static func scalingStat(_ scaling: DamageScaling, _ stats: Stats) -> Double {
+        switch scaling {
+        case .attack: return stats.atk
+        case .maxHealth: return stats.hp
+        case .defense: return stats.def
+        case .speed: return stats.spd
+        }
     }
 
     // MARK: - Bottom: the skills
@@ -403,13 +497,18 @@ struct UnitDetailView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 ForEach(unit.skills.indices, id: \.self) { slot in
-                    skillTile(unit.skills[slot], selected: slot == index)
-                        .onTapGesture {
-                            Juice.haptic(.light)
-                            selectedSkill = slot
-                        }
+                    Button {
+                        Juice.haptic(.light)
+                        selectedSkill = slot
+                    } label: {
+                        skillTile(
+                            unit.skills[slot],
+                            selected: slot == index,
+                            level: unit.unit.skillLevels.indices.contains(slot) ? unit.unit.skillLevels[slot] : 1
+                        )
+                    }
+                    .buttonStyle(PlateButtonStyle())
                 }
-                Spacer(minLength: 0)
             }
             if unit.skills.indices.contains(index) {
                 skillWords(unit.skills[index], index: index, unit: unit)
@@ -420,19 +519,26 @@ struct UnitDetailView: View {
         .panelBackground(radius: Theme.tightCorner)
     }
 
-    private func skillTile(_ skill: Skill, selected: Bool) -> some View {
+    private func skillTile(_ skill: Skill, selected: Bool, level: Int) -> some View {
         VStack(spacing: 2) {
             Image(systemName: SkillButton.glyph(for: skill))
                 .font(.system(size: 15, weight: .bold))
                 .foregroundStyle(selected ? Theme.gold : Theme.textSecondary)
             Text(skill.name)
-                .font(Theme.body(7).weight(.semibold))
+                .font(Theme.body(9).weight(.semibold))
                 .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.8)
+            Text("Lv.\(level)/\(skill.maxSkillLevel)")
+                .font(Theme.numeric(7))
+                .foregroundStyle(level >= skill.maxSkillLevel ? Theme.gold : Theme.textSecondary)
         }
-        .frame(width: 58, height: 44)
+        .padding(.horizontal, 3)
+        // The tiles divide the row rather than sitting at a fixed 58 with a
+        // Spacer holding the rest of it open — which also overflowed on a
+        // narrower phone.
+        .frame(maxWidth: .infinity, minHeight: 52)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                 .fill(selected ? Theme.surfaceHigh : Theme.surface)
@@ -464,7 +570,12 @@ struct UnitDetailView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
                 if let damage = skill.damage {
-                    Text("≈ \(Int(DamageCalculator.previewDamage(attackStat: unit.stats.atk, spec: damage))) dmg" + (damage.hits > 1 ? " × \(damage.hits)" : ""))
+                    // previewDamage already multiplies by the hit count, so the
+                    // old " × 3" read as an instruction to triple the figure.
+                    let estimate = DamageCalculator.previewDamage(
+                        attackStat: Self.scalingStat(damage.scaling, unit.stats), spec: damage
+                    )
+                    Text("≈ \(Int(estimate)) dmg" + (damage.hits > 1 ? " · \(damage.hits) hits" : ""))
                         .font(Theme.numeric(9))
                         .foregroundStyle(Theme.gold)
                 }
@@ -520,7 +631,7 @@ struct AwakeningSheet: View {
                             Image(systemName: "arrow.right")
                                 .font(.system(size: 18, weight: .bold))
                                 .foregroundStyle(Theme.gold)
-                                .padding(.top, 56)
+                                .frame(height: 136)
                             formTile(unit.blueprint.model.portraitName(awakened: true), caption: awakening.awakenedName)
                             VStack(alignment: .leading, spacing: 8) {
                                 Text(awakening.awakenedName)
@@ -651,21 +762,38 @@ struct FodderPickerView: View {
                 }
                 .safeAreaInset(edge: .bottom) {
                     VStack(spacing: 6) {
+                        let cost = purpose == .evolve
+                            ? ProgressionService.drachmaCostToEvolve(currentStars: target.stars)
+                            : selection.count * 500
                         if purpose == .evolve {
-                            Text("\(selection.count) / \(required) selected · \(ProgressionService.drachmaCostToEvolve(currentStars: target.stars)) drachma")
+                            Text("\(selection.count) / \(required) selected · \(cost) drachma")
                                 .font(Theme.body(12))
                                 .foregroundStyle(Theme.textSecondary)
                         } else {
                             let xp = candidates
                                 .filter { selection.contains($0.id) }
                                 .reduce(0) { $0 + ProgressionService.feedValue(of: $1.unit) }
-                            Text("+\(xp) EXP · \(selection.count * 500) drachma")
+                            let duplicates = candidates.filter {
+                                selection.contains($0.id) && $0.unit.blueprintID == target.unit.blueprintID
+                            }.count
+                            // A unit at its cap gains no experience — the old
+                            // "+18,400 EXP" was a lie and the fodder vanished
+                            // for nothing unless it was a duplicate.
+                            Text(target.unit.isMaxLevel
+                                 ? "Max level · no EXP · \(duplicates) duplicate\(duplicates == 1 ? "" : "s") will skill up"
+                                 : "+\(xp) EXP · \(cost) drachma")
                                 .font(Theme.body(12))
                                 .foregroundStyle(Theme.textSecondary)
                         }
+                        // GameStore bails silently when the drachma is short,
+                        // so the button says so rather than closing on nothing.
+                        Text("You have \(store.player.wallet.drachma) drachma")
+                            .font(Theme.numeric(10))
+                            .foregroundStyle(store.player.wallet.drachma >= cost ? Theme.textSecondary : Theme.danger)
                         PrimaryButton(
                             title: purpose == .evolve ? "Evolve" : "Consume",
-                            isEnabled: purpose == .evolve ? selection.count == required : !selection.isEmpty
+                            isEnabled: (purpose == .evolve ? selection.count == required : !selection.isEmpty)
+                                && store.player.wallet.drachma >= cost
                         ) {
                             commit()
                         }

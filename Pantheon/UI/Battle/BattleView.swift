@@ -39,7 +39,7 @@ struct BattleView: View {
                     playbackHint
                 }
             }
-            .padding(.horizontal, 12)
+            .padding(.horizontal, 6)
             .padding(.bottom, 8)
 
             if let cutIn = model.cutIn {
@@ -74,7 +74,8 @@ struct BattleView: View {
                     .foregroundStyle(Theme.gold)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
-                    .background(Capsule().fill(Theme.ink.opacity(0.8)))
+                    .background(Capsule().fill(Theme.ink.opacity(0.82)))
+                    .allowsHitTesting(false)
                     .transition(.opacity)
                     .onAppear {
                         DispatchQueue.main.asyncAfter(deadline: .now() + 2.2) {
@@ -122,51 +123,62 @@ struct BattleView: View {
     // MARK: - Top bar
 
     private var topBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Button {
                 showForfeitConfirm = true
             } label: {
-                Image(systemName: "flag.fill")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(Theme.surface.opacity(0.85)))
+                hudChip {
+                    Image(systemName: "flag.fill")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 14)
+                }
             }
 
-            Text(model.context.title)
-                .font(Theme.title(14))
-                .foregroundStyle(Theme.textPrimary)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 7)
-                .background(Capsule().fill(Theme.surface.opacity(0.85)))
+            hudChip {
+                // One line, always: a boss stage is named "<place> — Confrontation",
+                // long enough to wrap and shove the whole HUD down over the field.
+                Text(model.context.title)
+                    .font(Theme.title(14))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .frame(maxWidth: 170, alignment: .leading)
+            }
 
             if model.waveCount > 1 {
-                Text("Wave \(model.waveIndex)/\(model.waveCount)")
-                    .font(Theme.numeric(11))
-                    .foregroundStyle(Theme.gold)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 6)
-                    .background(Capsule().fill(Theme.surface.opacity(0.85)))
+                hudChip {
+                    Text("Wave \(model.waveIndex)/\(model.waveCount)")
+                        .font(Theme.numeric(11))
+                        .foregroundStyle(Theme.gold)
+                        .lineLimit(1)
+                }
             }
 
             turnGauge
 
-            Spacer()
+            Spacer(minLength: 0)
 
-            Toggle(isOn: $model.autoBattle) {
-                Text("AUTO").font(Theme.body(11).weight(.bold))
+            Button {
+                model.autoBattle.toggle()
+            } label: {
+                hudChip(active: model.autoBattle) {
+                    Text("AUTO")
+                        .font(Theme.body(11).weight(.bold))
+                        .foregroundStyle(model.autoBattle ? Theme.gold : Theme.textSecondary)
+                }
             }
-            .toggleStyle(.button)
-            .tint(Theme.gold)
+            .accessibilityAddTraits(model.autoBattle ? .isSelected : [])
 
             Button {
                 model.speed = model.speed >= 3 ? 1 : model.speed * 2
             } label: {
-                Text("×\(Int(model.speed))")
-                    .font(Theme.numeric(12).weight(.bold))
-                    .foregroundStyle(Theme.gold)
-                    .frame(width: 40, height: 34)
-                    .background(Capsule().fill(Theme.surface.opacity(0.85)))
+                hudChip(active: model.speed > 1) {
+                    Text("×\(Int(model.speed))")
+                        .font(Theme.numeric(12).weight(.bold))
+                        .foregroundStyle(model.speed > 1 ? Theme.gold : Theme.textSecondary)
+                        .frame(minWidth: 20)
+                }
             }
 
             if let session = model.repeatSession {
@@ -174,29 +186,40 @@ struct BattleView: View {
                 Button {
                     model.stopRepeating()
                 } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "repeat")
-                        Text("\(min(session.completed + 1, session.requested))/\(session.requested)")
+                    hudChip(active: true) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "repeat")
+                            Text("\(min(session.completed + 1, session.requested))/\(session.requested)")
+                        }
+                        .font(Theme.numeric(11).weight(.bold))
+                        .foregroundStyle(Theme.gold)
                     }
-                    .font(Theme.numeric(11).weight(.bold))
-                    .foregroundStyle(Theme.gold)
-                    .padding(.horizontal, 10)
-                    .frame(height: 34)
-                    .background(Capsule().fill(Theme.surface.opacity(0.85)))
                 }
             }
 
             Button {
                 withAnimation { showLog.toggle() }
             } label: {
-                Image(systemName: "list.bullet.rectangle")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Theme.textSecondary)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(Theme.surface.opacity(0.85)))
+                hudChip(active: showLog) {
+                    Image(systemName: "list.bullet.rectangle")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(showLog ? Theme.gold : Theme.textSecondary)
+                        .frame(width: 16)
+                }
             }
         }
         .padding(.top, 6)
+    }
+
+    /// One height and one shape for every control in the top row, and one way
+    /// for a stateful control — AUTO, fast-forward, the log — to say it is
+    /// on: a gold plate under a gold hairline.
+    private func hudChip<C: View>(active: Bool = false, @ViewBuilder _ content: () -> C) -> some View {
+        content()
+            .frame(height: 30)
+            .padding(.horizontal, 10)
+            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.9) : Theme.ink.opacity(0.82)))
+            .overlay(Capsule().strokeBorder(active ? Theme.gold : Theme.stroke, lineWidth: 1))
     }
 
     // MARK: - The attack gauge
@@ -208,28 +231,57 @@ struct BattleView: View {
     /// turns, and a speed buff or a bar knock is visible the moment it lands.
     private var turnGauge: some View {
         let units = model.displayedCombatants.filter(\.isAlive)
-        let width: CGFloat = 300
         let dot: CGFloat = 26
-        return ZStack(alignment: .leading) {
-            Capsule()
-                .fill(Theme.ink.opacity(0.7))
-                .frame(width: width, height: 10)
-                .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
-            ForEach(1..<4, id: \.self) { quarter in
-                Rectangle()
-                    .fill(Theme.stroke)
-                    .frame(width: 1, height: 10)
-                    .offset(x: width * CGFloat(quarter) / 4)
+        return GeometryReader { geo in
+            let width = geo.size.width
+            let placed = gaugePositions(units, width: width, dot: dot)
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Theme.ink.opacity(0.82))
+                    .frame(width: width, height: 10)
+                    .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+                ForEach(1..<4, id: \.self) { quarter in
+                    Rectangle()
+                        .fill(Theme.stroke)
+                        .frame(width: 1, height: 10)
+                        .offset(x: width * CGFloat(quarter) / 4)
+                }
+                ForEach(units) { unit in
+                    let x = placed[unit.id] ?? 0
+                    gaugeDot(unit, ready: model.awaitingActor?.id == unit.id)
+                        .offset(x: x, y: unit.side == .player ? -9 : 9)
+                        .animation(.easeOut(duration: 0.35), value: x)
+                }
             }
-            ForEach(units) { unit in
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        }
+        // Flexible, because the row it sits in also carries a stage name, a
+        // wave counter and a repeat chip; fixed at 300 it pushed them off.
+        .frame(minWidth: 150, maxWidth: 260, height: 44)
+    }
+
+    /// Where each portrait sits on the track. Two units with level bars land
+    /// on the same pixel — and a fresh wave arrives with every enemy at zero,
+    /// so three enemies read as one dot. Walk each side in bar order and hold
+    /// each portrait a little clear of the one before it; the order, which is
+    /// what the gauge is for, is unchanged.
+    private func gaugePositions(_ units: [Combatant], width: CGFloat, dot: CGFloat) -> [UUID: CGFloat] {
+        let span = max(0, width - dot)
+        var placed: [UUID: CGFloat] = [:]
+        for side in [BattleSide.player, BattleSide.opponent] {
+            var lastX = -CGFloat.greatestFiniteMagnitude
+            let line = units
+                .filter { $0.side == side }
+                .sorted { $0.attackBar < $1.attackBar }
+            for unit in line {
                 let ready = model.awaitingActor?.id == unit.id
                 let fraction = ready ? 1.0 : min(1, max(0, unit.attackBar))
-                gaugeDot(unit, ready: ready)
-                    .offset(x: CGFloat(fraction) * (width - dot), y: unit.side == .player ? -9 : 9)
-                    .animation(.easeOut(duration: 0.35), value: fraction)
+                let x = min(max(CGFloat(fraction) * span, lastX + dot * 0.62), span)
+                placed[unit.id] = x
+                lastX = x
             }
         }
-        .frame(width: width, height: 44)
+        return placed
     }
 
     private func gaugeDot(_ unit: Combatant, ready: Bool) -> some View {
@@ -275,10 +327,16 @@ struct BattleView: View {
                 }
             }
             .padding(6)
+            // 14 around the buttons' 8 plus 6 of padding: concentric corners.
             .background(
-                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-                    .fill(Theme.ink.opacity(0.7))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Theme.ink.opacity(0.82))
             )
+            .overlay(
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(Theme.stroke, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.45), radius: 4, y: 2)
         }
     }
 
@@ -308,55 +366,78 @@ struct BattleView: View {
                             .lineLimit(1)
                         ElementBadge(element: actor.element, compact: true)
                     }
-                    StatBar(
-                        value: actor.currentHealth,
-                        maximum: actor.maxHealth,
-                        tint: Theme.success,
-                        height: 4
-                    )
-                    .frame(width: 110)
+                    HStack(spacing: 5) {
+                        StatBar(
+                            value: actor.currentHealth,
+                            maximum: actor.maxHealth,
+                            tint: actor.healthFraction < 0.3 ? Theme.danger : Theme.success,
+                            height: 6
+                        )
+                        .frame(width: 104)
+                        Text("\(Int(actor.currentHealth.rounded()))")
+                            .font(Theme.numeric(9))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                     if !actor.statuses.isEmpty {
-                        statusChips(actor.statuses)
+                        statusChips(actor.statuses, compact: true)
                     }
                 }
             }
-            if let skill {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(skill.name)
-                        .font(Theme.body(11).weight(.bold))
-                        .foregroundStyle(Theme.gold)
-                    Text(skill.description)
-                        .font(Theme.body(9))
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(width: 230, alignment: .leading)
+            // Always drawn, never conditional: the plate's height must not
+            // jump the instant a skill is tapped.
+            VStack(alignment: .leading, spacing: 1) {
+                Text(skill?.name ?? "Choose a skill")
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(skill == nil ? Theme.textSecondary : Theme.gold)
+                    .lineLimit(1)
+                Text(skill?.description ?? "Hold a skill to read it in full.")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(width: 300, height: 50, alignment: .topLeading)
         }
         .padding(8)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.ink.opacity(0.72))
+                .fill(Theme.ink.opacity(0.82))
         )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .strokeBorder(Theme.stroke, lineWidth: 1)
+        )
+        .shadow(color: .black.opacity(0.45), radius: 4, y: 2)
     }
 
-    /// Buffs and debuffs as named chips: blue for a buff, red for a debuff,
-    /// the turns left after the name.
-    private func statusChips(_ statuses: [ActiveStatus]) -> some View {
-        HStack(spacing: 3) {
-            ForEach(Array(statuses.prefix(4).enumerated()), id: \.offset) { _, status in
+    /// Buffs and debuffs as chips: blue for a buff, red for a debuff, the
+    /// turns left last. `compact` drops the name and keeps the glyph, so the
+    /// actor plate can show six where it had room for four names.
+    private func statusChips(_ statuses: [ActiveStatus], compact: Bool = false) -> some View {
+        let limit = compact ? 6 : 4
+        return HStack(spacing: 3) {
+            ForEach(Array(statuses.prefix(limit).enumerated()), id: \.offset) { _, status in
                 HStack(spacing: 2) {
                     Image(systemName: status.kind.glyph)
-                        .font(.system(size: 7, weight: .bold))
-                    Text("\(status.kind.displayName) \(status.turnsRemaining)")
-                        .font(Theme.body(7).weight(.semibold))
-                        .lineLimit(1)
+                        .font(.system(size: 9, weight: .bold))
+                    if !compact {
+                        Text(status.kind.displayName)
+                            .font(Theme.body(9).weight(.semibold))
+                            .lineLimit(1)
+                    }
+                    Text("\(status.turnsRemaining)")
+                        .font(Theme.numeric(9))
                 }
                 .foregroundStyle(.white)
                 .padding(.horizontal, 4)
                 .padding(.vertical, 2)
                 .background(Capsule().fill(status.kind.isBuff ? Color(hex: "#2E8FBF") : Color(hex: "#B8403A")))
+                .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
+            }
+            if statuses.count > limit {
+                Text("+\(statuses.count - limit)")
+                    .font(Theme.numeric(9))
+                    .foregroundStyle(Theme.textSecondary)
             }
         }
     }
@@ -364,25 +445,45 @@ struct BattleView: View {
     /// Where to aim, in one slim line under the top row, so nothing sits
     /// over the field while a target is chosen.
     private var targetPrompt: some View {
-        HStack(spacing: 8) {
+        // The skill pre-aims, so the common case is that a target is already
+        // chosen: say which one, not that one exists.
+        let aim = model.displayedCombatants.first { $0.id == model.highlightedTarget }
+        return HStack(spacing: 8) {
             Image(systemName: "scope")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(Theme.gold)
-            Text(model.highlightedTarget == nil ? "Tap a target on the field" : "Target chosen")
+            Text(aim.map { "Target: \($0.name)" } ?? "Tap a target on the field")
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.textPrimary)
-            if model.highlightedTarget != nil {
-                Button("Confirm") { model.confirmTarget() }
-                    .font(Theme.body(11).weight(.bold))
-                    .foregroundStyle(Theme.gold)
+                .lineLimit(1)
+            if aim != nil {
+                Button {
+                    model.confirmTarget()
+                } label: {
+                    Text("Confirm")
+                        .font(Theme.body(11).weight(.bold))
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 12)
+                        .frame(height: 26)
+                        .background(Capsule().fill(Theme.gold))
+                }
             }
-            Button("Cancel") { model.cancelTargeting() }
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textSecondary)
+            Button {
+                model.cancelTargeting()
+            } label: {
+                Text("Cancel")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.horizontal, 12)
+                    .frame(height: 26)
+                    .background(Capsule().fill(Theme.ink.opacity(0.82)))
+                    .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+            }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 5)
-        .background(Capsule().fill(Theme.ink.opacity(0.7)))
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Theme.ink.opacity(0.82)))
+        .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
     }
 
     /// The boss's bar across the top: the fight that matters, on one line.
@@ -395,8 +496,11 @@ struct BattleView: View {
                 .font(Theme.body(10).weight(.black))
                 .tracking(1.2)
                 .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+            // maxWidth, not width: with four named chips beside it the row
+            // would otherwise be wider than the screen.
             StatBar(value: boss.currentHealth, maximum: boss.maxHealth, tint: Theme.danger, height: 6)
-                .frame(width: 260)
+                .frame(maxWidth: 260)
             Text("\(Int(boss.currentHealth.rounded())) / \(Int(boss.maxHealth.rounded()))")
                 .font(Theme.numeric(9))
                 .foregroundStyle(Theme.textSecondary)
@@ -406,7 +510,8 @@ struct BattleView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Theme.ink.opacity(0.7)))
+        .background(Capsule().fill(Theme.ink.opacity(0.82)))
+        .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
     }
 
     /// An ultimate's announcement: a dark band across the field, the
@@ -476,20 +581,41 @@ struct BattleView: View {
         .background(Theme.panel(Theme.tightCorner))
     }
 
+    /// Nothing asks for a tap while the turn plays, so the bottom band held
+    /// one Skip pill and nothing else. The commentary the log already writes
+    /// goes here instead: on an enemy turn, on auto, and through a whole
+    /// repeat run, this is the only line that says what is happening.
     private var playbackHint: some View {
-        Button {
-            model.skipAnimation()
-        } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "forward.fill")
-                Text("Skip")
+        HStack(spacing: 10) {
+            if let line = model.log.last {
+                Text(line)
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                    .padding(.horizontal, 10)
+                    .frame(height: 30)
+                    .background(Capsule().fill(Theme.ink.opacity(0.82)))
+                    .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+                    .animation(nil, value: model.log.count)
             }
-            .font(Theme.body(12).weight(.semibold))
-            .foregroundStyle(Theme.textSecondary)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .background(Capsule().fill(Theme.ink.opacity(0.7)))
+            Spacer(minLength: 0)
+            Button {
+                model.skipAnimation()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "forward.fill")
+                    Text("Skip")
+                }
+                .font(Theme.body(12).weight(.semibold))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.horizontal, 14)
+                .frame(height: 30)
+                .background(Capsule().fill(Theme.ink.opacity(0.82)))
+                .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+            }
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: - Log
@@ -555,23 +681,23 @@ struct SkillButton: View {
                         .font(.system(size: 15, weight: .bold))
                         .foregroundStyle(isReady ? Theme.gold : Theme.textSecondary)
                     Text(skill.name)
-                        .font(Theme.body(8).weight(.semibold))
+                        .font(Theme.body(9.5).weight(.semibold))
                         .foregroundStyle(isReady ? Theme.textPrimary : Theme.textSecondary)
                         .lineLimit(2)
                         .multilineTextAlignment(.center)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.85)
                 }
                 .padding(4)
 
                 if !isReady {
                     RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                        .fill(Color.black.opacity(0.55))
+                        .fill(Color.black.opacity(0.62))
                     Text("\(cooldown)")
                         .font(Theme.display(24))
                         .foregroundStyle(Theme.textPrimary)
                 }
             }
-            .frame(width: 54, height: 54)
+            .frame(width: 56, height: 56)
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                     .strokeBorder(isSelected ? Theme.gold : Theme.stroke, lineWidth: isSelected ? 2 : 1)
@@ -616,51 +742,78 @@ struct BattleResultView: View {
         ZStack {
             Color.black.opacity(0.78).ignoresSafeArea()
 
-            VStack(spacing: 12) {
-                Text(headline)
-                    .font(Theme.display(38))
-                    .foregroundStyle(summary.outcome == .victory ? Theme.gold : Theme.danger)
+            // Across the wide axis, not down a short one: a repeat run's
+            // summary is fifteen lines, and stacked they pushed Continue —
+            // the only way out of the battle — off the bottom of the screen.
+            HStack(alignment: .top, spacing: 22) {
+                VStack(spacing: 8) {
+                    Text(headline)
+                        .font(Theme.display(38))
+                        .foregroundStyle(summary.outcome == .victory ? Theme.gold : Theme.danger)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
 
-                if summary.outcome == .victory, summary.stars > 0 {
-                    HStack(spacing: 8) {
-                        ForEach(1...3, id: \.self) { index in
-                            Image(systemName: index <= summary.stars ? "star.fill" : "star")
-                                .font(.system(size: 26))
-                                .foregroundStyle(index <= summary.stars ? Theme.gold : Theme.stroke)
-                        }
-                    }
-                }
-
-                if summary.lines.isEmpty {
-                    Text("No rewards this time.")
-                        .font(Theme.body(13))
-                        .foregroundStyle(Theme.textSecondary)
-                } else {
-                    VStack(spacing: 9) {
-                        ForEach(summary.lines) { line in
-                            HStack {
-                                Image(systemName: line.icon)
-                                    .frame(width: 22)
-                                    .foregroundStyle(Theme.goldDim)
-                                Text(line.label)
-                                    .font(Theme.body(13))
-                                    .foregroundStyle(Theme.textPrimary)
-                                Spacer()
-                                Text(line.value)
-                                    .font(Theme.numeric(13))
-                                    .foregroundStyle(Theme.success)
+                    if summary.outcome == .victory, summary.stars > 0 {
+                        HStack(spacing: 8) {
+                            ForEach(1...3, id: \.self) { index in
+                                Image(systemName: index <= summary.stars ? "star.fill" : "star")
+                                    .font(.system(size: 26))
+                                    .foregroundStyle(index <= summary.stars ? Theme.gold : Theme.stroke)
                             }
                         }
                     }
-                    .padding(10)
-                    .background(Theme.panel())
                 }
+                .frame(width: 190)
 
-                PrimaryButton(title: "Continue", action: onDismiss)
+                VStack(spacing: 10) {
+                    if summary.lines.isEmpty {
+                        Text("No rewards this time.")
+                            .font(Theme.body(13))
+                            .foregroundStyle(Theme.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(10)
+                            .background(Theme.panel())
+                    } else if summary.lines.count > 7 {
+                        // A repeat run banks fifteen lines; those scroll.
+                        ScrollView {
+                            rewardRows
+                        }
+                        .frame(maxHeight: 190)
+                        .background(Theme.panel())
+                    } else {
+                        rewardRows
+                            .background(Theme.panel())
+                    }
+
+                    PrimaryButton(title: "Continue", action: onDismiss)
+                }
             }
-            .padding(24)
-            .frame(maxWidth: 380)
+            .padding(.horizontal, 24)
+            .padding(.vertical, 14)
+            .frame(maxWidth: 620)
         }
+    }
+
+    private var rewardRows: some View {
+        VStack(spacing: 6) {
+            ForEach(summary.lines) { line in
+                HStack {
+                    Image(systemName: line.icon)
+                        .font(.system(size: 12))
+                        .frame(width: 22)
+                        .foregroundStyle(Theme.goldDim)
+                    Text(line.label)
+                        .font(Theme.body(13))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    Spacer()
+                    Text(line.value)
+                        .font(Theme.numeric(13))
+                        .foregroundStyle(Theme.success)
+                }
+            }
+        }
+        .padding(10)
     }
 
     private var headline: String {

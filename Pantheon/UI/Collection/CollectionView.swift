@@ -4,6 +4,7 @@ import SwiftUI
 struct CollectionView: View {
     @EnvironmentObject private var store: GameStore
     @State private var elementFilter: Element?
+    @State private var gradeFilter: Int?
     @State private var sort: SortOrder = .power
     @State private var selected: ResolvedUnit?
     @State private var showTraining = false
@@ -28,6 +29,9 @@ struct CollectionView: View {
         if let elementFilter {
             list = list.filter { $0.element == elementFilter }
         }
+        if let gradeFilter {
+            list = list.filter { $0.stars >= gradeFilter }
+        }
         switch sort {
         case .power: list.sort { $0.power > $1.power }
         case .level: list.sort { $0.level > $1.level }
@@ -38,17 +42,43 @@ struct CollectionView: View {
         return list
     }
 
-    /// As many 100-point cards as the width holds: six across a landscape
-    /// phone, more on an iPad, rather than three stretched columns.
-    private let columns = [GridItem(.adaptive(minimum: 76, maximum: 88), spacing: 8)]
+    /// Names whatever the strip is filtering by, so the "no matches" copy can
+    /// say which filter emptied the grid rather than "you own nothing".
+    private var filterDescription: String {
+        var parts: [String] = []
+        if let gradeFilter { parts.append("\(gradeFilter)★+") }
+        if let elementFilter { parts.append(elementFilter.displayName) }
+        return parts.isEmpty ? "matching" : parts.joined(separator: " ")
+    }
 
     var body: some View {
+        // Resolving and sorting sixty units is not free, and the strip, the
+        // empty check and the grid all want the same answer: work it out once
+        // per pass rather than three times.
+        let list = units
+
         NavigationStack {
-            GameScreen("Collection", subtitle: "\(store.player.units.count) units") {
+            GameScreen("Collection", subtitle: subtitle(showing: list.count)) {
                 ElementFilterTiles(selection: $elementFilter)
+                BarMenu(label: "Grade", value: gradeFilter.map { "\($0)★+" } ?? "All") {
+                    Button("All grades") { gradeFilter = nil }
+                    ForEach([3, 4, 5, 6], id: \.self) { stars in
+                        Button("\(stars)★ and up") { gradeFilter = stars }
+                    }
+                }
                 BarMenu(label: "Sort", value: sort.displayName) {
                     ForEach(SortOrder.allCases) { order in
-                        Button(order.displayName) { sort = order }
+                        Button {
+                            sort = order
+                        } label: {
+                            // An open menu covers the value in the strip, so
+                            // the live sort has to be marked in the menu too.
+                            if sort == order {
+                                Label(order.displayName, systemImage: "checkmark")
+                            } else {
+                                Text(order.displayName)
+                            }
+                        }
                     }
                 }
                 BarButton(title: "Train", systemImage: "arrow.up.circle.fill") {
@@ -58,31 +88,20 @@ struct CollectionView: View {
                     showRelics = true
                 }
             } content: {
-                if units.isEmpty {
+                if store.player.units.isEmpty {
                     EmptyState(
                         icon: "person.3",
                         title: "Nothing here",
                         message: "Summon at the circle, or clear a stage and come back."
                     )
+                } else if list.isEmpty {
+                    EmptyState(
+                        icon: "line.3.horizontal.decrease.circle",
+                        title: "No matches",
+                        message: "No \(filterDescription) units in the roster. Clear the filters in the bar to see the rest."
+                    )
                 } else {
-                    // The grid owns the whole frame now that the filters live
-                    // in the strip: three rows of ten on a landscape phone,
-                    // where the old layout showed one row of eight.
-                    ScrollView {
-                        LazyVGrid(columns: columns, spacing: 8) {
-                            ForEach(units) { unit in
-                                Button {
-                                    Juice.haptic(.light)
-                                    selected = unit
-                                } label: {
-                                    UnitCard(unit: unit, size: 76)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                        .padding(.horizontal, ScreenChrome.contentPadding)
-                        .padding(.vertical, 8)
-                    }
+                    grid(list)
                 }
             }
             .sheet(item: $selected) { unit in
@@ -100,4 +119,66 @@ struct CollectionView: View {
         }
     }
 
+    private func subtitle(showing count: Int) -> String {
+        let total = store.player.units.count
+        return count == total ? "\(count) units" : "\(count) of \(total)"
+    }
+
+    // MARK: - The grid
+
+    private let gap: CGFloat = 6
+    private let gridPadding: CGFloat = 6
+    /// What `UnitCard` draws under the tile: the name over the level line.
+    /// Held here only to size the grid — if the card's footer changes height,
+    /// change this with it.
+    private let cardFooter: CGFloat = 28
+
+    /// The grid owns the whole frame now that the filters live in the strip,
+    /// and the cards are cut to the column rather than floating in it: what
+    /// the width does not spend on a card is spent on another card, not left
+    /// as gutter. The column count is read off the height so three rows of
+    /// them stand in a landscape frame — thirty units at a glance, where the
+    /// old adaptive grid showed sixteen with a dead band down each side.
+    private func grid(_ list: [ResolvedUnit]) -> some View {
+        GeometryReader { geo in
+            let count = columnCount(in: geo.size)
+            let card = cardWidth(in: geo.size, columns: count)
+            ScrollView {
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.fixed(card), spacing: gap), count: count),
+                    spacing: gap
+                ) {
+                    ForEach(list) { unit in
+                        Button {
+                            Juice.haptic(.light)
+                            selected = unit
+                        } label: {
+                            UnitCard(unit: unit, size: card)
+                        }
+                        .buttonStyle(PlateButtonStyle())
+                    }
+                }
+                .padding(.horizontal, ScreenChrome.contentPadding)
+                .padding(.vertical, gridPadding)
+            }
+        }
+    }
+
+    private func columnCount(in size: CGSize) -> Int {
+        let span = max(80, size.width - ScreenChrome.contentPadding * 2)
+        let usable = max(80, size.height - gridPadding * 2)
+        // The widest card that still leaves three rows in the frame, the
+        // card's own footer counted in.
+        let byHeight = (usable - gap * 2) / 3 - cardFooter
+        let target = min(max(byHeight, 56), 96)
+        // Rounded up, so the card the width divides into is no taller than
+        // the height allows: too wide a card costs a whole row.
+        return max(4, Int(((span + gap) / (target + gap)).rounded(.up)))
+    }
+
+    private func cardWidth(in size: CGSize, columns: Int) -> CGFloat {
+        let span = max(80, size.width - ScreenChrome.contentPadding * 2)
+        let width = (span - gap * CGFloat(columns - 1)) / CGFloat(columns)
+        return max(40, width.rounded(.down))
+    }
 }
