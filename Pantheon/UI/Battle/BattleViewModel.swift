@@ -631,6 +631,22 @@ final class BattleViewModel: ObservableObject {
             )
         }
     }
+
+    // MARK: - The reckoning's tallies
+    //
+    // Kept on the class, not in the scene-delegate extension that fills
+    // them: an extension may declare methods and computed properties only.
+    /// What each combatant did, kept as the display advances so the reckoning
+    /// at the end can name a most valuable unit. Kills go to whoever landed
+    /// the last hit, which is the only definition a player will agree with.
+    struct Tally {
+        var dealt: Double = 0
+        var taken: Double = 0
+        var healed: Double = 0
+        var kills: Int = 0
+    }
+    private var tallies: [UUID: Tally] = [:]
+    private var lastHitter: [UUID: UUID] = [:]
 }
 
 /// One entry in the battle command bar.
@@ -726,18 +742,6 @@ extension BattleViewModel: BattleSceneDelegate {
             self.settleAfterPlayback()
         }
     }
-
-    /// What each combatant did, kept as the display advances so the reckoning
-    /// at the end can name a most valuable unit. Kills go to whoever landed
-    /// the last hit, which is the only definition a player will agree with.
-    struct Tally {
-        var dealt: Double = 0
-        var taken: Double = 0
-        var healed: Double = 0
-        var kills: Int = 0
-    }
-    private var tallies: [UUID: Tally] = [:]
-    private var lastHitter: [UUID: UUID] = [:]
 
     /// Advances the HUD's copy of the world one event at a time so the numbers
     /// on screen always match the animation that is playing.

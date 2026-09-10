@@ -966,6 +966,48 @@ def check_duplicate_funcs(files, errors):
                 seen[key] = idx + 1
 
 
+# ---------------------------------------------------------------------------
+# Rule 17: stored properties in extensions
+# ---------------------------------------------------------------------------
+# "extensions must not contain stored properties." Found the day the battle
+# reckoning's tallies were declared beside the delegate methods that fill
+# them, in `extension BattleViewModel: BattleSceneDelegate`, and read as a
+# perfectly natural place for them. A property at one indent inside a
+# top-level `extension` block with no accessor body on its line is stored:
+# `var x: T = v`, `let x = v`, `var x: T`. Static members are allowed there
+# and so are computed ones (a `{` on the line, or opening the next).
+
+EXTENSION_OPEN = re.compile(r"^extension\b[^{]*\{\s*$")
+STORED_IN_EXTENSION = re.compile(
+    r"^    (?:(?:private|fileprivate|internal|public|open)(?:\(set\))?\s+)*"
+    r"(?:lazy\s+|weak\s+|unowned\s+)*(var|let)\s+(\w+)\s*(?::\s*[^{=]+?)?\s*(?:=.*)?$")
+
+def check_extension_stored_properties(files, errors):
+    for path in files:
+        src = strip_noise(open(path, encoding="utf-8", errors="replace").read())
+        lines = src.split("\n")
+        i = 0
+        while i < len(lines):
+            if not EXTENSION_OPEN.match(lines[i]):
+                i += 1
+                continue
+            depth, j = 1, i + 1
+            while j < len(lines) and depth > 0:
+                line = lines[j]
+                if depth == 1 and "{" not in line:
+                    m = STORED_IN_EXTENSION.match(line)
+                    if m:
+                        following = lines[j + 1].strip() if j + 1 < len(lines) else ""
+                        if not following.startswith("{"):
+                            errors.append(
+                                f"{path}:{j + 1}: `{m.group(1)} {m.group(2)}` is a stored property "
+                                f"inside an extension — Swift refuses it; declare it in the "
+                                f"type's own body (the extension can still use it)")
+                depth += line.count("{") - line.count("}")
+                j += 1
+            i = j
+
+
 def main():
     files = []
     for r in ROOTS:
@@ -987,6 +1029,7 @@ def main():
     check_foreign_wrapped_properties(files, errors)
     check_switch_exhaustive(files, errors)
     check_model_members(files, errors)
+    check_extension_stored_properties(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 
