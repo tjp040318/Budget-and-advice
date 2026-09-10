@@ -35,6 +35,21 @@ final class ModelLibrary {
     private var placeholderCache: [String: SCNNode] = [:]
     private var animationCache: [String: [AnimationClip: CAAnimation]] = [:]
     private let queue = DispatchQueue(label: "com.pantheon.modellibrary", attributes: .concurrent)
+    /// The caches' lock. `node(for:)` and `animation(_:for:)` run on the main
+    /// thread as a stage is built; `warm(_:)` fills the same caches from a
+    /// background queue while the briefing is up. Held around the dictionary
+    /// reads and writes only, never around a load, so a mesh parsing in the
+    /// background never blocks the stage being built in front.
+    private let cacheLock = NSLock()
+
+    private func cachedNode(_ name: String) -> SCNNode? {
+        cacheLock.lock(); defer { cacheLock.unlock() }
+        return cache[name]
+    }
+
+    private func store(_ node: SCNNode, as name: String) {
+        cacheLock.lock(); cache[name] = node; cacheLock.unlock()
+    }
 
     private init() {}
 
@@ -106,20 +121,20 @@ final class ModelLibrary {
         var isStandIn = false
         /// A stand-in that is a portrait sprite rather than the primitive rig.
         var isPortraitSprite = false
-        if let cached = cache[assetName] {
+        if let cached = cachedNode(assetName) {
             model = cached.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
         } else if let loaded = loadFromBundle(assetName) {
-            cache[assetName] = loaded
+            store(loaded, as: assetName)
             model = loaded.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
         } else if let standIn = spec.standInAsset,
-                  let loaded = cache[standIn] ?? loadFromBundle(standIn) {
+                  let loaded = cachedNode(standIn) ?? loadFromBundle(standIn) {
             // A named stand-in: a shipped mesh of the right kind, stood up
             // and scaled to this spec's height like a real export, so a boss
             // whose own mesh is still on the way fights as a giant of its
             // kind rather than as the primitive rig.
-            cache[standIn] = loaded
+            store(loaded, as: standIn)
             model = loaded.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
             if !orientationLogged.contains(assetName) {
@@ -194,7 +209,10 @@ final class ModelLibrary {
     /// Two layouts are supported: all clips inside one file (animation players
     /// keyed by clip name), or one file per clip named `<unit>_<clip>.usdz`.
     func animation(_ clip: AnimationClip, for assetName: String) -> CAAnimation? {
-        if let cached = animationCache[assetName]?[clip] { return cached }
+        cacheLock.lock()
+        let hit = animationCache[assetName]?[clip]
+        cacheLock.unlock()
+        if let hit { return hit }
 
         var found: CAAnimation?
 
@@ -221,7 +239,9 @@ final class ModelLibrary {
             // and back was where the motion looked stiff.
             found.fadeInDuration = 0.22
             found.fadeOutDuration = 0.30
+            cacheLock.lock()
             animationCache[assetName, default: [:]][clip] = found
+            cacheLock.unlock()
         }
         return found
     }
@@ -230,13 +250,46 @@ final class ModelLibrary {
     /// so an awakened mesh, when one has shipped, plays its own clips.
     func hasModel(_ name: String) -> Bool { bundleURL(for: name) != nil }
 
-    /// Warms the cache off the main thread before a battle starts.
-    func preload(_ specs: [ModelSpec], completion: @escaping () -> Void) {
-        DispatchQueue.global(qos: .userInitiated).async {
-            for spec in specs {
-                _ = self.bundleURL(for: spec.assetName)
+    /// Loads a set of specs' meshes and their clips into the caches on a
+    /// background queue, so a stage built afterwards clones from the cache
+    /// instead of parsing USDZ on the main thread.
+    ///
+    /// The tour's watchdog timed that parse at 1.5 s for six figures on the
+    /// simulator's Mac; on the phone it is the freeze between Begin and the
+    /// first frame of a fight, and the same freeze again when a wave walks
+    /// on. The briefing is up for seconds before Begin, which is the time to
+    /// spend it in. `crowded` asks for the reduced meshes the stage will ask
+    /// for (`detail(forCombatantCount:)`); the clips are keyed by the base
+    /// name whatever the mesh, as `UnitNode.clipAsset` keys them.
+    func warm(_ specs: [ModelSpec], crowded: Bool = false, clips: Bool = true) {
+        var meshes: Set<String> = []
+        var clipAssets: Set<String> = []
+        for spec in specs {
+            let shipped = bundleURL(for: spec.assetName) != nil
+            let base = shipped ? spec.assetName : (spec.standInAsset ?? spec.assetName)
+            let reduced = base + DetailLevel.low.suffix
+            meshes.insert(crowded && bundleURL(for: reduced) != nil ? reduced : base)
+            clipAssets.insert(base)
+            if bundleURL(for: spec.awakenedAssetName) != nil {
+                meshes.insert(spec.awakenedAssetName)
+                clipAssets.insert(spec.awakenedAssetName)
             }
-            DispatchQueue.main.async(execute: completion)
+        }
+        DispatchQueue.global(qos: .userInitiated).async { [self] in
+            let started = Perf.begin()
+            var loaded = 0
+            for name in meshes where cachedNode(name) == nil {
+                if let node = loadFromBundle(name) {
+                    store(node, as: name)
+                    loaded += 1
+                }
+            }
+            if clips {
+                for name in clipAssets {
+                    for clip in AnimationClip.allCases { _ = animation(clip, for: name) }
+                }
+            }
+            Perf.end(started, "warmed \(loaded) meshes, \(clips ? "clips of \(clipAssets.count)" : "no clips")", over: 1)
         }
     }
 

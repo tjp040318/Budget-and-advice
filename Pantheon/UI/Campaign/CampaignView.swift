@@ -338,6 +338,17 @@ struct StageBriefingView: View {
         }
     }
 
+    /// Every model this fight will put on the stage: the team, the first
+    /// wave and every later one, loaded into the model cache while the
+    /// briefing is read so Begin is not followed by a second of parsing.
+    private func warmModels() {
+        let team = store.team(store.player.campaignTeam).map { $0.blueprint.model }
+        let spawns = stage.enemies + stage.laterWaves.flatMap { $0 }
+        let enemies = spawns.compactMap { UnitDatabase.blueprint($0.blueprintID)?.model }
+        let crowded = ModelLibrary.detail(forCombatantCount: team.count + stage.enemies.count) == .low
+        ModelLibrary.shared.warm(team + enemies, crowded: crowded)
+    }
+
     var body: some View {
         NavigationStack {
             GameScreen(
@@ -360,6 +371,7 @@ struct StageBriefingView: View {
                     .environmentObject(store)
             }
         }
+        .onAppear(perform: warmModels)
     }
 
     // MARK: - The one screen
