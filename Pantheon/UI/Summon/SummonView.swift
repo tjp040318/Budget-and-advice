@@ -46,6 +46,7 @@ struct SummonView: View {
                         if showsPity {
                             pityPanel
                         }
+                        ratesPanel
                         Spacer(minLength: 0)
                         summonButtons
                     }
@@ -82,12 +83,12 @@ struct SummonView: View {
     }
 
     private var pantheonValue: String {
-        guard Banner.pantheonBanners.contains(where: { $0.id == selectedBanner.id }) else { return "—" }
+        guard Banner.pantheonBanners.contains(where: { $0.id == selectedBanner.id }) else { return "Choose" }
         return selectedBanner.pantheon?.displayName ?? shortName(selectedBanner)
     }
 
     private var scrollValue: String {
-        guard Banner.scrollBanners.contains(where: { $0.id == selectedBanner.id }) else { return "—" }
+        guard Banner.scrollBanners.contains(where: { $0.id == selectedBanner.id }) else { return "Choose" }
         return shortName(selectedBanner)
     }
 
@@ -209,45 +210,102 @@ struct SummonView: View {
         .panelBackground()
     }
 
+    // MARK: - Rates
+
+    /// The published odds, on the screen rather than behind the strip's Rates
+    /// button. The column between the pity counters and the summon plates was
+    /// black — and on the Unknown Scroll, which has no counters at all, the
+    /// whole column above the buttons was. Three short rows fill it with the
+    /// one thing a player wants before spending: the chance, and how many
+    /// souls each grade can hand them. The full pool is still one tap away.
+    private var ratesPanel: some View {
+        SectionPanel(title: "Rates", accessory: selectedBanner.scroll.displayName) {
+            VStack(spacing: 4) {
+                ForEach(SummonService.oddsTable(for: selectedBanner)) { entry in
+                    HStack(spacing: 6) {
+                        StarRow(stars: entry.stars, size: 9)
+                        Spacer(minLength: 4)
+                        Text(String(format: "%.1f%%", entry.chance * 100))
+                            .font(Theme.numeric(11))
+                            .foregroundStyle(entry.stars >= 5 ? Theme.gold : Theme.textSecondary)
+                            .frame(width: 44, alignment: .trailing)
+                        HStack(spacing: 2) {
+                            Image(systemName: "person.2.fill")
+                                .font(.system(size: 8, weight: .black))
+                            Text("\(entry.units.count)")
+                                .font(Theme.numeric(10))
+                        }
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 34, alignment: .trailing)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Buttons
 
     private var summonButtons: some View {
         let scroll = selectedBanner.scroll
         let owned = store.player.wallet.count(of: scroll)
+        let price = scroll.divinityPrice
+        let affordable = price.map { store.player.wallet.divinity >= $0 } ?? false
 
         return VStack(spacing: 10) {
             HStack {
-                Label("\(owned) \(scroll.displayName)\(owned == 1 ? "" : "s")", systemImage: scroll.glyph)
-                    .font(Theme.body(13).weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
+                // The count was printed three times in one frame — the strip
+                // carries it, so does every dropdown row. This line spends
+                // itself on the thing nothing else says: why the ×10 plate is
+                // grey.
+                Text(owned >= 10
+                     ? "\(owned) held"
+                     : "\(owned) held — ×10 needs \(10 - owned) more")
+                    .font(Theme.body(12).weight(.semibold))
+                    .foregroundStyle(owned >= 10 ? Theme.textSecondary : Theme.gold)
                     .lineLimit(1)
                 Spacer(minLength: 6)
-                if let price = scroll.divinityPrice {
+                if let price {
                     Button {
                         store.buyScroll(scroll)
                     } label: {
+                        // A control is a rounded rectangle of surfaceRaised
+                        // with a hairline in its own tint, everywhere in this
+                        // app. This one was a bare gold caption with a 13-point
+                        // tap target that stayed lit when it could not be paid.
                         Label("Buy — \(price)", systemImage: "sparkles")
                             .font(Theme.body(12).weight(.semibold))
-                            .foregroundStyle(Theme.gold)
+                            .foregroundStyle(affordable ? Theme.gold : Theme.textSecondary)
                             .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .frame(height: 24)
+                            .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
+                            .overlay(
+                                ScreenChrome.controlShape
+                                    .strokeBorder(Theme.goldDim.opacity(0.5), lineWidth: 0.5)
+                            )
                     }
+                    .buttonStyle(.plain)
+                    .disabled(!affordable)
                 }
             }
 
             HStack(spacing: 10) {
+                // `tint` is the label colour on the dark painted plate, not the
+                // plate's colour (Components.swift, `labelColor`): surfaceRaised
+                // drew SUMMON ×1 in #1F1D3D on a #1F1D3D plate. Both plates wear
+                // the glyph of the scroll they spend.
                 PrimaryButton(
                     title: "Summon ×1",
-                    systemImage: "sparkle",
-                    tint: Theme.surfaceRaised,
+                    systemImage: scroll.glyph,
+                    tint: Theme.textPrimary,
                     isEnabled: owned >= 1
                 ) {
                     perform(count: 1)
                 }
-                .foregroundStyle(Theme.textPrimary)
 
                 PrimaryButton(
                     title: "Summon ×10",
-                    systemImage: "sparkles",
+                    systemImage: scroll.glyph,
                     isEnabled: owned >= 10
                 ) {
                     perform(count: 10)

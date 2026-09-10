@@ -155,6 +155,15 @@ struct ArenaView: View {
         ArenaTier.allCases.first { $0.threshold > record.points }
     }
 
+    /// The power of the team that actually attacks. `store.totalPower` is the
+    /// sum of the player's best *five* units, and an arena team is four, so
+    /// comparing a challenger against it biased every row toward green — an
+    /// offence team that is not your top four was reported as an easy fight.
+    /// Computed once per body pass rather than once per challenger row.
+    private var offensePower: Int {
+        store.team(store.player.arenaOffenseTeam).reduce(0) { $0 + $1.power }
+    }
+
     // MARK: - Teams
 
     private var defensePanel: some View {
@@ -172,7 +181,7 @@ struct ArenaView: View {
     private var offensePanel: some View {
         SectionPanel(
             title: "Offence",
-            accessory: "Power \(store.team(store.player.arenaOffenseTeam).reduce(0) { $0 + $1.power })"
+            accessory: "Power \(offensePower)"
         ) {
             teamRow(store.team(store.player.arenaOffenseTeam)) { showOffensePicker = true }
         }
@@ -237,7 +246,8 @@ struct ArenaView: View {
     }
 
     /// One challenger, laid out across rather than down: who they are, the team
-    /// you would meet, and what beating them is worth.
+    /// you would meet, what the fight costs if you lose and what it pays if you
+    /// win, and the plate that starts it.
     private func opponentRow(_ opponent: ArenaOpponent) -> some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
@@ -256,9 +266,23 @@ struct ArenaView: View {
                 Text("Power \(opponent.power)")
                     .font(Theme.numeric(10))
                     .foregroundStyle(
-                        opponent.power > store.totalPower ? Theme.danger : Theme.success
+                        opponent.power > offensePower ? Theme.danger : Theme.success
                     )
                     .lineLimit(1)
+                // What the attack costs and pays: the points a loss takes off
+                // your rating, and the laurels a win is worth at your tier.
+                // Kept to one short line so it lives inside the name column
+                // rather than widening the row.
+                HStack(spacing: 3) {
+                    Text("−\(ArenaService.pointsForLoss(playerPoints: record.points, opponentPoints: opponent.points))")
+                        .foregroundStyle(Theme.danger.opacity(0.9))
+                    Text("·")
+                        .foregroundStyle(Theme.textSecondary)
+                    Label("\(ArenaService.laurelsForWin(tier: record.tier))", systemImage: "laurel.leading")
+                        .foregroundStyle(Theme.success)
+                }
+                .font(Theme.numeric(10))
+                .lineLimit(1)
             }
             // Flexible, not fixed at 100: the name block is the one thing in
             // the row that can give, so a narrow column truncates a long name
@@ -273,16 +297,33 @@ struct ArenaView: View {
 
             Spacer(minLength: 4)
 
+            // The verb goes above the number: a bare "+27" in a gold capsule
+            // did not read as the button that starts the fight, and the number
+            // could have been laurels, power or points. Two lines rather than
+            // two words, because the row has no width to spare.
             Button {
                 attack(opponent)
             } label: {
-                Text("+\(ArenaService.pointsForWin(playerPoints: record.points, opponentPoints: opponent.points))")
-                    .font(Theme.numeric(13).weight(.bold))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(record.attacksRemaining > 0 ? Theme.gold : Theme.stroke))
+                VStack(spacing: 0) {
+                    Text("FIGHT")
+                        .font(Theme.body(9).weight(.black))
+                        .tracking(0.8)
+                    Text("+\(ArenaService.pointsForWin(playerPoints: record.points, opponentPoints: opponent.points))")
+                        .font(Theme.numeric(12).weight(.bold))
+                }
+                .foregroundStyle(record.attacksRemaining > 0 ? Theme.ink : Theme.textSecondary)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(
+                    Capsule().fill(
+                        record.attacksRemaining > 0
+                            ? Theme.goldPlate
+                            : LinearGradient(colors: [Theme.stroke, Theme.stroke],
+                                             startPoint: .top, endPoint: .bottom)
+                    )
+                )
             }
+            .buttonStyle(.plain)
             .disabled(record.attacksRemaining == 0)
         }
         .padding(8)

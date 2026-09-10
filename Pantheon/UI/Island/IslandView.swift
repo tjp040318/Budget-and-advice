@@ -20,12 +20,14 @@ struct IslandView: View {
     @State private var showShop = false
     @State private var showMissions = false
 
-    /// Where the team stands: open sand below the circle, the middle of the
-    /// island and the front beach, measured off the painting like the
-    /// landmarks' anchors.
+    /// Where the team stands: open sand below the circle and the beach band
+    /// in front of it, measured off the painting like the landmarks' anchors.
+    /// Nothing goes below y 0.75. The painting is filled into the frame, so on
+    /// a landscape phone y 0.80 puts a figure's feet on the surf line with its
+    /// shadow behind the tab bar, and y 0.84 puts them in the sea.
     static let stands: [CGPoint] = [
         CGPoint(x: 0.43, y: 0.63), CGPoint(x: 0.50, y: 0.73),
-        CGPoint(x: 0.36, y: 0.80), CGPoint(x: 0.63, y: 0.84),
+        CGPoint(x: 0.36, y: 0.72), CGPoint(x: 0.63, y: 0.745),
     ]
 
     /// The campaign team, made up to four from the strongest of the rest,
@@ -170,6 +172,7 @@ struct IslandView: View {
                 Text(player.displayName)
                     .font(Theme.title(18))
                     .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
                     .shadow(color: .black.opacity(0.8), radius: 3, y: 1)
                 HStack(spacing: 8) {
                     Text("Lv.\(player.level)")
@@ -181,7 +184,10 @@ struct IslandView: View {
                         tint: Theme.gold,
                         height: 5
                     )
-                    .frame(width: 110)
+                    .frame(width: 140)
+                    Text("\(player.experience)/\(player.experienceToNextLevel)")
+                        .font(Theme.numeric(10))
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
             Spacer()
@@ -200,29 +206,48 @@ struct IslandView: View {
                         .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 1))
                     let waiting = store.claimableRewards
                     if waiting > 0 {
+                        // Rewards waiting are the one thing on this screen that
+                        // must not be missed: red, not another gold pill beside
+                        // a gold glyph in a gold ring next to the gold wallet.
                         Text("\(waiting)")
-                            .font(Theme.numeric(9).weight(.bold))
-                            .foregroundStyle(Theme.ink)
+                            .font(Theme.numeric(10).weight(.bold))
+                            .foregroundStyle(.white)
                             .padding(.horizontal, 5)
                             .padding(.vertical, 1)
-                            .background(Capsule().fill(Theme.gold))
+                            .frame(minWidth: 16)
+                            .background(Capsule().fill(Theme.danger))
+                            .overlay(Capsule().strokeBorder(Theme.ink, lineWidth: 1))
                             .offset(x: 6, y: -4)
                     }
                 }
+                // The 36pt disc is the look; the target is 44.
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PlateButtonStyle())
             // The wallet is the way into the bazaar, as the genre has it.
             Button {
                 Juice.haptic(.light)
                 AudioLibrary.shared.play(.uiTap)
                 showShop = true
             } label: {
-                WalletBar(wallet: player.wallet)
+                HStack(spacing: 6) {
+                    WalletBar(wallet: player.wallet)
+                    Image(systemName: "plus")
+                        .font(.system(size: 12, weight: .black))
+                        .foregroundStyle(Theme.ink)
+                        .frame(width: 26, height: 26)
+                        .background(Circle().fill(Theme.gold))
+                        .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 1))
+                }
             }
-            .buttonStyle(.plain)
+            // The wallet keeps its full width on a notched landscape frame;
+            // a long summoner name gives way before a truncated number does.
+            .layoutPriority(1)
+            .buttonStyle(PlateButtonStyle())
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
+        .padding(.vertical, 8)
         .background(
             Capsule().fill(Theme.ink.opacity(0.62))
                 .overlay(Capsule().strokeBorder(Theme.stroke.opacity(0.7), lineWidth: 1))
@@ -267,14 +292,18 @@ struct IslandView: View {
                         .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
 
                     if unlocked, let badge = badge(for: landmark) {
-                        Text(badge)
-                            .font(Theme.numeric(10))
-                            .foregroundStyle(Theme.ink)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(Capsule().fill(active ? Theme.gold : Theme.textSecondary))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-                            .frame(width: 74, height: 64)
+                        HStack(spacing: 2) {
+                            Image(systemName: badge.glyph)
+                                .font(.system(size: 8, weight: .black))
+                            Text(badge.text)
+                                .font(Theme.numeric(10))
+                        }
+                        .foregroundStyle(Theme.ink)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(active ? Theme.gold : Theme.textSecondary))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .frame(width: 74, height: 64)
                     }
 
                     if tier > 1 {
@@ -291,12 +320,19 @@ struct IslandView: View {
                 }
 
                 Text(landmark.title)
-                    .font(Theme.body(11).weight(.heavy))
+                    .font(Theme.body(12).weight(.heavy))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                     .padding(.horizontal, 9)
                     .padding(.vertical, 3)
-                    .background(Capsule().fill(Theme.ink.opacity(0.7)))
+                    .background(
+                        // A plate, like every other chip in the app: a hairline
+                        // in the building's own accent and a shadow, so the
+                        // name reads off a sunset painting.
+                        Capsule().fill(Theme.ink.opacity(0.8))
+                            .overlay(Capsule().strokeBorder(accent.opacity(0.6), lineWidth: 1))
+                            .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
+                    )
 
                 if !unlocked {
                     Text("Level \(landmark.unlockLevel)")
@@ -305,29 +341,33 @@ struct IslandView: View {
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PlateButtonStyle())
         .opacity(unlocked ? 1 : 0.72)
         .offset(x: shaking == landmark.id ? 5 : 0)
         .animation(.default.speed(3), value: shaking)
     }
 
-    /// The number a landmark shows on its plaque: what you have to spend there.
-    private func badge(for landmark: Landmark) -> String? {
+    /// What a landmark shows on its plaque: the thing you have to spend there,
+    /// with the glyph that quantity wears everywhere else in the game, because
+    /// a bare gold pill of "5" on every plaque says nothing.
+    private func badge(for landmark: Landmark) -> (glyph: String, text: String)? {
         let player = store.player
         switch landmark.destination {
         case .campaign:
-            return "\(player.wallet.energy)"
+            return (glyph: "bolt.fill", text: "\(player.wallet.energy)")
         case .summon:
             let scrolls = ScrollType.allCases.reduce(0) { $0 + player.wallet.count(of: $1) }
-            return scrolls > 0 ? "\(scrolls)" : nil
+            guard scrolls > 0 else { return nil }
+            return (glyph: "scroll.fill", text: "\(scrolls)")
         case .arena:
-            return "\(player.arena.attacksRemaining)"
+            return (glyph: "flame.fill", text: "\(player.arena.attacksRemaining)")
         case .collection, .training:
-            return "\(player.units.count)"
+            return (glyph: "person.3.fill", text: "\(player.units.count)")
         case .labyrinth:
             // The deepest level open across the relic dungeons.
             let deepest = DungeonDatabase.labyrinths.map { player.campaignProgress[$0.id] ?? 0 }.max() ?? 0
-            return deepest > 0 ? "B\(deepest)" : nil
+            guard deepest > 0 else { return nil }
+            return (glyph: "flag.checkered", text: "B\(deepest)")
         case .settings:
             return nil
         }

@@ -112,51 +112,63 @@ struct CampaignView: View {
     /// a check where it is finished, a lock where its gate is still shut.
     /// It is a selector, not a filter, so it stays in the content — but at
     /// 28 points, a rail under the strip rather than a second bar.
+    ///
+    /// Eight chapters at full name are wider than the frame, so the rail
+    /// scrolls itself to the chapter the player is in: without that, a player
+    /// deep in Yggdrasil opened Campaign with no gold chip on screen and a map
+    /// below that belonged to a chapter he could not see.
     private var chapterStrip: some View {
         let player = store.player
         let current = currentChapterID
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 5) {
-                ForEach(StageDatabase.chapters) { chapter in
-                    let cleared = player.campaignProgress[chapter.id] ?? 0
-                    let finished = cleared >= chapter.stages.count
-                    let unlocked = chapter.stages.first.map { CampaignService.isUnlocked($0, player: player) } ?? false
-                    let selected = chapter.id == current
-                    Button {
-                        guard unlocked else {
-                            Juice.notify(.warning)
-                            return
-                        }
-                        Juice.haptic(.light)
-                        withAnimation { chapterID = chapter.id }
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: unlocked ? (finished ? "checkmark" : "map.fill") : "lock.fill")
-                                .font(.system(size: 8, weight: .black))
-                            Text(chapter.name)
-                                .font(Theme.body(10).weight(.semibold))
-                                .lineLimit(1)
-                            Text("\(cleared)/\(chapter.stages.count)")
-                                .font(Theme.numeric(8))
-                        }
-                        .foregroundStyle(selected ? Theme.ink : (unlocked ? Theme.textPrimary : Theme.textSecondary))
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Capsule().fill(selected ? Theme.gold : Theme.surface.opacity(unlocked ? 1 : 0.5)))
-                        .overlay(
-                            Capsule().strokeBorder(
-                                selected ? Theme.gold : chapter.pantheon.color.opacity(unlocked ? 0.7 : 0.3),
-                                lineWidth: 1
+        return ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 5) {
+                    ForEach(StageDatabase.chapters) { chapter in
+                        let cleared = player.campaignProgress[chapter.id] ?? 0
+                        let finished = cleared >= chapter.stages.count
+                        let unlocked = chapter.stages.first.map { CampaignService.isUnlocked($0, player: player) } ?? false
+                        let selected = chapter.id == current
+                        Button {
+                            guard unlocked else {
+                                Juice.notify(.warning)
+                                return
+                            }
+                            Juice.haptic(.light)
+                            withAnimation { chapterID = chapter.id }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: unlocked ? (finished ? "checkmark" : "map.fill") : "lock.fill")
+                                    .font(.system(size: 8, weight: .black))
+                                Text(chapter.name)
+                                    .font(Theme.body(10).weight(.semibold))
+                                    .lineLimit(1)
+                                Text("\(cleared)/\(chapter.stages.count)")
+                                    .font(Theme.numeric(8))
+                            }
+                            .foregroundStyle(selected ? Theme.ink : (unlocked ? Theme.textPrimary : Theme.textSecondary))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Capsule().fill(selected ? Theme.gold : Theme.surface.opacity(unlocked ? 1 : 0.5)))
+                            .overlay(
+                                Capsule().strokeBorder(
+                                    selected ? Theme.gold : chapter.pantheon.color.opacity(unlocked ? 0.7 : 0.3),
+                                    lineWidth: 1
+                                )
                             )
-                        )
+                        }
+                        .buttonStyle(.plain)
+                        .id(chapter.id)
                     }
-                    .buttonStyle(.plain)
                 }
+                .padding(.horizontal, ScreenChrome.contentPadding)
+                .padding(.vertical, 4)
             }
-            .padding(.horizontal, ScreenChrome.contentPadding)
-            .padding(.vertical, 4)
+            .background(Theme.ink.opacity(0.6))
+            .onAppear { proxy.scrollTo(current, anchor: .center) }
+            .onChange(of: current) { _, id in
+                withAnimation { proxy.scrollTo(id, anchor: .center) }
+            }
         }
-        .background(Theme.ink.opacity(0.6))
     }
 
     // MARK: - Fighting
@@ -211,22 +223,55 @@ struct StageBriefingView: View {
     private var waveCount: Int { 1 + stage.laterWaves.count }
     private var hasEnergy: Bool { store.player.wallet.energy >= stage.energyCost }
     private var teamPower: Int { team.reduce(0) { $0 + $1.power } }
+    private var meetsRecommended: Bool { teamPower >= stage.recommendedPower }
+
+    /// Your team's power against the stage's, in the strip. The map tints
+    /// exactly this comparison green or red and the briefing — the screen where
+    /// the energy is actually spent — had nothing to compare its "Power 1420"
+    /// against. The strip is the one place on the screen that can carry it
+    /// without taking a point of height from the panels below.
+    private var powerChip: some View {
+        HStack(spacing: 4) {
+            Image(systemName: meetsRecommended ? "checkmark.shield.fill" : "exclamationmark.triangle.fill")
+                .font(.system(size: 10, weight: .black))
+            Text("\(teamPower) / \(stage.recommendedPower)")
+                .font(Theme.numeric(11))
+        }
+        .foregroundStyle(meetsRecommended ? Theme.success : Theme.danger)
+        .padding(.horizontal, 8)
+        .frame(height: ScreenChrome.control)
+        .background(ScreenChrome.controlShape.fill(Theme.surface.opacity(0.8)))
+        .overlay(
+            ScreenChrome.controlShape.strokeBorder(
+                (meetsRecommended ? Theme.success : Theme.danger).opacity(0.55),
+                lineWidth: 0.5
+            )
+        )
+    }
 
     /// The enemy cards shrink as the waves multiply: a campaign stage is one
-    /// wave of four big cards, a dungeon level three waves of small ones, and
+    /// wave of big cards, a dungeon level three waves of small ones, and
     /// either way the whole briefing fits the frame without a scroll.
     ///
-    /// A card is its size plus about 28 points of name and level. The tight
-    /// case is the three-wave dungeon level on the shortest landscape phone
-    /// (375 points, so 341 under the strip): three rows of 70, 8 of spacing
-    /// and 35 of panel is 253, and the launch bar, the spacing and the
-    /// padding are 79 more — 332, with nine points in hand. At 44 and a
-    /// 6-point gap that came to 342 and the cards met the launch bar, and
-    /// nothing in the CI tour photographs this screen to catch it.
+    /// A card is its size plus about 32 points of name and level. The
+    /// opposition is the subject of the screen and it holds the wide half of
+    /// the frame — about 500 points of it against the right column's 280 — so
+    /// a single wave is drawn as large as its own height allows: four cards at
+    /// 92 use 386 of the width and 154 of the roughly 270 points a panel gets,
+    /// and a stage that fields two use 106. At 70 they were thumbnails in the
+    /// corner of the biggest panel.
+    ///
+    /// The tight case is the other end: the three-wave dungeon level on the
+    /// shortest landscape phone (375 points, so 341 under the strip). Three
+    /// rows of 42, 8 of spacing and 35 of panel is 253, and the launch bar,
+    /// the spacing and the padding are 79 more — 332, with nine points in
+    /// hand. At 44 and a 6-point gap that came to 342 and the cards met the
+    /// launch bar, and nothing in the CI tour photographs this screen to
+    /// catch it.
     private var enemyCardSize: CGFloat {
         switch waveCount {
-        case 1: return 70
-        case 2: return 58
+        case 1: return stage.enemies.count <= 2 ? 106 : 92
+        case 2: return 68
         default: return 42
         }
     }
@@ -243,6 +288,7 @@ struct StageBriefingView: View {
                     systemImage: "bolt.fill",
                     tint: hasEnergy ? Theme.info : Theme.danger
                 )
+                powerChip
                 BarWallet(wallet: store.player.wallet, shows: [.energy])
             } content: {
                 briefing
@@ -323,7 +369,7 @@ struct StageBriefingView: View {
 
     private var rewardsPanel: some View {
         SectionPanel(title: "Rewards", accessory: nil) {
-            VStack(spacing: 4) {
+            VStack(spacing: 3) {
                 rewardRow("circle.hexagongrid.fill", "Drachma", "\(stage.rewards.drachma)")
                 rewardRow("arrow.up.circle.fill", "Unit EXP", "\(stage.rewards.unitExperience)")
                 if stage.rewards.relicChance > 0 {
@@ -332,12 +378,31 @@ struct StageBriefingView: View {
                         "Relic (\(stage.rewards.relicGrade)★)",
                         stage.rewards.relicChance >= 1 ? "always" : "\(Int(stage.rewards.relicChance * 100))%"
                     )
+                    // The sets the run can drop, drawn the way the Labyrinth
+                    // draws them two taps away: a chip with the set's glyph
+                    // reads as a set, where six names joined by dots read as a
+                    // sentence and wrapped to two lines of run-on gold.
                     if let sets = stage.rewards.relicSets, !sets.isEmpty {
-                        Text(sets.map(\.displayName).joined(separator: " · "))
-                            .font(Theme.body(10))
-                            .foregroundStyle(Theme.gold)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 56, maximum: 90), spacing: 4)],
+                            spacing: 4
+                        ) {
+                            ForEach(sets) { relicSet in
+                                HStack(spacing: 3) {
+                                    Image(systemName: relicSet.glyph)
+                                        .font(.system(size: 8, weight: .bold))
+                                    Text(relicSet.displayName)
+                                        .font(Theme.body(9).weight(.semibold))
+                                        .lineLimit(1)
+                                        .minimumScaleFactor(0.75)
+                                }
+                                .foregroundStyle(Theme.gold)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .frame(maxWidth: .infinity)
+                                .background(Capsule().fill(Theme.surfaceHigh))
+                            }
+                        }
                     }
                 }
                 ForEach(stage.rewards.essenceChances.keys.sorted(), id: \.self) { id in
@@ -370,7 +435,7 @@ struct StageBriefingView: View {
     }
 
     private var teamPanel: some View {
-        SectionPanel(title: "Your team", accessory: "Power \(teamPower)") {
+        SectionPanel(title: "Your team", accessory: "Power \(teamPower) / \(stage.recommendedPower)") {
             Button {
                 showTeamPicker = true
             } label: {
