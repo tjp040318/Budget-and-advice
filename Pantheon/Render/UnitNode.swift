@@ -26,6 +26,9 @@ final class UnitNode: SCNNode {
     private let healthBarRoot: SCNNode
     private let healthFill: SCNNode
     private let statusRow: SCNNode
+    /// The advantage arrow: beside the health bar on an ordinary unit, at
+    /// the chest of a boss (whose bar is hidden).
+    private let matchupBadge: SCNNode
     private let selectionRing: SCNNode
     private let elementTint: UIColor
 
@@ -144,8 +147,16 @@ final class UnitNode: SCNNode {
         // Health bar: a dark plate with a coloured fill that scales from its
         // left edge, parented to a billboard so it always faces the camera.
         let barRoot = SCNNode()
+        // A light hairline round the plate, so an empty bar reads as an
+        // empty bar and not as a dark smudge over the figure; the owner
+        // photographed three enemies at the end of a long fight with bars
+        // he read as "not showing" — they were showing near nothing.
+        let edge = SCNNode(geometry: SCNPlane(width: width + 0.04, height: barHeight + 0.04))
+        edge.geometry?.firstMaterial = UnitNode.flatMaterial(UIColor(white: 0.92, alpha: 0.55))
+        edge.position = SCNVector3(0, 0, -0.001)
+        barRoot.addChildNode(edge)
         let backing = SCNNode(geometry: SCNPlane(width: width, height: barHeight))
-        backing.geometry?.firstMaterial = UnitNode.flatMaterial(UIColor.black.withAlphaComponent(0.65))
+        backing.geometry?.firstMaterial = UnitNode.flatMaterial(UIColor.black.withAlphaComponent(0.78))
         barRoot.addChildNode(backing)
 
         let fillGeometry = SCNPlane(width: width, height: barHeight * 0.78)
@@ -178,6 +189,21 @@ final class UnitNode: SCNNode {
         // adrift a metre above it.
         barRoot.position = SCNVector3(0, combatant.model.height + 0.34, 0)
 
+        // The matchup arrow, hidden until a player's turn puts one up.
+        let badgeSize: CGFloat = combatant.isBoss ? 1.1 : 0.5
+        let badge = SCNNode(geometry: SCNPlane(width: badgeSize, height: badgeSize))
+        badge.geometry?.firstMaterial = UnitNode.imageMaterial(nil)
+        badge.isHidden = true
+        if combatant.isBoss {
+            let facing = SCNBillboardConstraint()
+            facing.freeAxes = .all
+            badge.constraints = [facing]
+            badge.position = SCNVector3(0, combatant.model.height * 0.62, 0.6)
+        } else {
+            badge.position = SCNVector3(Float(width / 2) + 0.36, 0, 0.01)
+            barRoot.addChildNode(badge)
+        }
+
         // Ground ring under the unit — the readable "who is this" cue.
         let ringGeometry = SCNTorus(ringRadius: modelHeight * 0.22, pipeRadius: 0.012)
         ringGeometry.firstMaterial = UnitNode.flatMaterial(tint.withAlphaComponent(0.85))
@@ -208,6 +234,7 @@ final class UnitNode: SCNNode {
         self.healthFill = fill
         self.statusRow = statuses
         self.selectionRing = ring
+        self.matchupBadge = badge
 
         super.init()
 
@@ -218,6 +245,7 @@ final class UnitNode: SCNNode {
         if isBoss {
             barRoot.isHidden = true
             ring.isHidden = true
+            addChildNode(badge)
         }
 
         play(.idleCombat)
@@ -225,6 +253,18 @@ final class UnitNode: SCNNode {
     }
 
     required init?(coder: NSCoder) { fatalError("UnitNode is created in code") }
+
+    /// The genre's advantage arrow beside the health bar — green up, yellow
+    /// even, red down — for the unit whose turn it is against this one; nil
+    /// takes it off.
+    func setMatchup(_ matchup: Element.Matchup?) {
+        guard let matchup else {
+            matchupBadge.isHidden = true
+            return
+        }
+        matchupBadge.geometry?.firstMaterial?.diffuse.contents = MatchupIconRenderer.image(for: matchup)
+        matchupBadge.isHidden = false
+    }
 
     /// For the island: no health bar and no selection ring, just the figure.
     func hideBattleDecorations() {
@@ -677,12 +717,15 @@ final class UnitNode: SCNNode {
 
     func setHealth(fraction: Double, animated: Bool = true) {
         let clamped = Float(min(1, max(0, fraction)))
-        let scale = SCNVector3(max(0.0001, clamped), 1, 1)
+        // Never below a sliver while there is health at all: a unit on its
+        // last points still shows a mark of colour, not a bare plate.
+        let shown = fraction > 0 ? max(0.04, clamped) : 0.0001
+        let scale = SCNVector3(shown, 1, 1)
         if animated {
             let action = SCNAction.customAction(duration: 0.25) { node, elapsed in
                 let t = Float(elapsed / 0.25)
                 let current = node.scale.x
-                node.scale = SCNVector3(current + (clamped - current) * t, 1, 1)
+                node.scale = SCNVector3(current + (shown - current) * t, 1, 1)
             }
             healthFill.runAction(action)
         } else {
@@ -869,6 +912,50 @@ enum StatusIconRenderer {
             }
         }
         if cache.count > 200 { cache.removeAll() }
+        cache[key] = image
+        return image
+    }
+}
+
+/// The advantage arrow's pictures, one per matchup, drawn once: a green
+/// triangle pointing up, a yellow disc, a red triangle pointing down, each
+/// with a dark edge and a soft shadow so it reads over any floor.
+enum MatchupIconRenderer {
+    private static var cache: [String: UIImage] = [:]
+
+    static func image(for matchup: Element.Matchup) -> UIImage {
+        let key = "\(matchup)"
+        if let hit = cache[key] { return hit }
+        let size = CGSize(width: 96, height: 96)
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            let canvas = context.cgContext
+            let colour: UIColor
+            let path = UIBezierPath()
+            switch matchup {
+            case .advantage:
+                colour = UIColor(hex: "#4CD964") ?? .green
+                path.move(to: CGPoint(x: 48, y: 12))
+                path.addLine(to: CGPoint(x: 86, y: 72))
+                path.addLine(to: CGPoint(x: 10, y: 72))
+                path.close()
+            case .disadvantage:
+                colour = UIColor(hex: "#FF453A") ?? .red
+                path.move(to: CGPoint(x: 48, y: 84))
+                path.addLine(to: CGPoint(x: 86, y: 24))
+                path.addLine(to: CGPoint(x: 10, y: 24))
+                path.close()
+            case .neutral:
+                colour = UIColor(hex: "#F2C94C") ?? .yellow
+                path.append(UIBezierPath(ovalIn: CGRect(x: 24, y: 24, width: 48, height: 48)))
+            }
+            canvas.setShadow(offset: .zero, blur: 7, color: UIColor.black.withAlphaComponent(0.85).cgColor)
+            canvas.setFillColor(colour.cgColor)
+            path.fill()
+            canvas.setShadow(offset: .zero, blur: 0, color: nil)
+            canvas.setStrokeColor(UIColor.black.withAlphaComponent(0.85).cgColor)
+            path.lineWidth = 5
+            path.stroke()
+        }
         cache[key] = image
         return image
     }

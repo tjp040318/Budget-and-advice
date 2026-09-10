@@ -72,15 +72,24 @@ environment can and cannot do. The short version:
   camera, the enemy's on the right stepping back toward the top, an open
   middle between them, and the painting filling the top half behind the
   far rim (`StageBuilder.farBackdrop` is turned to face the camera). A
-  **boss** (`Combatant.isBoss`) stands over the far rim at (−3.5, −9.8),
-  between the two columns that close every set and facing the field, sunk
+  A boss fight is framed from BEHIND the team instead (`bossYaw` 24°,
+  `bossPitch` 19°, the head under `bossTopLine`), the genre's boss-dungeon
+  shot, and the painting is hung between the two yaws. A
+  **boss** (`Combatant.isBoss`) stands over the far rim at (0, −9.8),
+  between the two columns that close every set, on a `StageBuilder.breach`
+  (boulders, a rent in the floor, thrown tiles), lit like an awakened unit
+  with an aura rising from below the rim, sunk
   42% of its height below the platform, 6–8 m tall in the data (Apep 7.2,
   Hydra 7.0, Jötunn 7.5, Colossus 8.0, the Unwrapped King 6.0), with no 3D
   bar or ring (the HUD's boss bar reads), never dashes, and is framed by
   its head (`bossTopLine`) rather than its box; its adds stand on the marks
   in front, closing over the boss's slot (`markIndex`). The earlier
   27°/21° solve with rows abreast was photographed from the owner's phone
-  as "a small tilted disc in a void" and called ugly. The battle HUD is one
+  as "a small tilted disc in a void" and called ugly. Nothing tall stands in
+  the +x wing at z > −5: that is the camera's foreground now, and a sphinx
+  and a hall column there each blocked the enemy line in a screenshot.
+  On a player's turn every enemy wears a matchup arrow beside its bar
+  (`UnitNode.setMatchup`: green up, yellow even, red down). The battle HUD is one
   top row and an open-middled bottom bar whose actor plate is one 54-pt
   translucent row (it was 129 pt and solid), the summon reveal is stage
   left and words right, and the island painting is 16:9.

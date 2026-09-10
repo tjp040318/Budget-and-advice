@@ -325,7 +325,11 @@ final class BattleSceneController: NSObject {
             scene.rootNode.addChildNode(node)
             unitNodes[combatant.id] = node
             if combatant.isBoss, ledge == nil {
-                let rock = StageBuilder.ledge(rock: StageBuilder.recipe(for: environment).rock, at: home)
+                let recipe = StageBuilder.recipe(for: environment)
+                let rock = StageBuilder.breach(
+                    rock: recipe.rock, floor: recipe.floor, floorRepeats: recipe.floorRepeats,
+                    floorTint: recipe.floorTint, at: home
+                )
                 scene.rootNode.addChildNode(rock)
                 ledge = rock
             }
@@ -379,15 +383,11 @@ final class BattleSceneController: NSObject {
     /// towers over them and half of it is under a bridge or cliff and the
     /// top half is fighting and hitting." The platform's far edge is at
     /// z = −8.4 (`StageBuilder`), so 9.8 puts it a stride beyond the edge,
-    /// which is what makes the rim read as a cliff it has climbed to.
-    ///
-    /// 3.5 m to the LEFT of the centre line, not on it. From 58° round to
-    /// the right the centre line's far end lands at the frame's right edge,
-    /// where the first frames photographed the Colossus behind the seated
-    /// statue, a brazier and the wing sphinx. 3.5 m left puts it between
-    /// the two columns that close the back of every set, framed by them
-    /// like a gate, in the upper right of the picture with nothing in front.
-    private static let bossMark = SCNVector3(-3.5, 0, -9.8)
+    /// which is what makes the rim read as a cliff it has climbed to; on
+    /// the centre line, between the two columns that close the back of
+    /// every set, because a boss fight is framed from behind the team
+    /// (`CameraDirector.bossYaw`) and the gate is centred from there.
+    private static let bossMark = SCNVector3(0, 0, -9.8)
     private static let bossSink: Float = 0.42
 
     /// ONE RANK ABREAST, centred, both sides.
@@ -550,6 +550,7 @@ final class BattleSceneController: NSObject {
         case .turnBegan(let actor, _):
             returnEveryoneHome()
             highlight(actor)
+            showMatchups(for: actor)
 
         case .turnSkipped(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
@@ -796,6 +797,19 @@ final class BattleSceneController: NSObject {
 
     private func highlight(_ actorID: UUID) {
         for (id, node) in unitNodes { node.setHighlighted(id == actorID) }
+    }
+
+    /// The genre's arrows. With one of the player's units up, every enemy
+    /// wears the matchup of that unit's element against its own — green up
+    /// for advantage, yellow for even, red down for disadvantage — so who to
+    /// hit is read off the field rather than worked out; on an enemy's turn
+    /// they come off. The owner: "I like the way summoners war shows
+    /// element advantage using red, yellow, green arrows on who to attack."
+    private func showMatchups(for actorID: UUID) {
+        guard let actor = unitNodes[actorID] else { return }
+        for node in unitNodes.values where node.side == .opponent {
+            node.setMatchup(actor.side == .player ? actor.element.matchup(against: node.element) : nil)
+        }
     }
 
     /// Every unit that dashed walks back to its mark. Called as a turn begins

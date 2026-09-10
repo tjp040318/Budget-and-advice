@@ -272,27 +272,29 @@ struct ArenaView: View {
     }
 
     /// Four cards have to cross a quarter of the frame: half the screen for
-    /// this column, halved again for the two team panels. What is left of that
-    /// inside the panel depends on the device's safe area — 162 points on the
-    /// iPhone 16 Pro the CI tour photographs, where four 38s and their gaps
-    /// come to 170 and spill over the panel edge — and there is no compiler
-    /// here to measure it, so the row offers four sizes and takes the widest
-    /// that fits rather than trusting one hand-computed number.
+    /// this column, halved again for the two team panels, less whatever the
+    /// device's safe area takes. The row measures the width it is given and
+    /// sizes the cards to it — one layout.
+    ///
+    /// It used to offer four sizes to `ViewThatFits`, which lays out EVERY
+    /// candidate to pick one: eight rows of five cards measured on every
+    /// pass of a screen that renders three times on the way in. The phone's
+    /// watchdog put the Arena's entry at two seconds of main thread with the
+    /// challengers, the cards and the models all already off it; this row
+    /// is the one thing on the screen no other screen has.
     private func teamRow(_ team: [ResolvedUnit], onTap: @escaping () -> Void) -> some View {
-        Button(action: onTap) {
-            ViewThatFits(in: .horizontal) {
-                teamCards(team, size: 44)
-                teamCards(team, size: 40)
-                teamCards(team, size: 36)
-                teamCards(team, size: 30)
+        let slots = max(1, min(ArenaService.teamSize, team.count + (team.count < ArenaService.teamSize ? 1 : 0)))
+        return Button(action: onTap) {
+            GeometryReader { geo in
+                let size = max(30, min(44, floor((geo.size.width - CGFloat(slots - 1) * 5) / CGFloat(slots))))
+                teamCards(team, size: size)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: 44 * 1.62)
         }
         .buttonStyle(.plain)
     }
 
-    /// One candidate width for `teamRow`. No `Spacer` in here: a greedy row
-    /// has no ideal width, and `ViewThatFits` chooses on the ideal width.
     private func teamCards(_ team: [ResolvedUnit], size: CGFloat) -> some View {
         HStack(spacing: 5) {
             ForEach(team) { unit in

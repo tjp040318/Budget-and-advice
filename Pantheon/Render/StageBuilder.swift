@@ -83,9 +83,13 @@ enum StageBuilder {
             Placement(asset: "prop_anubis_colossus", position: SCNVector3(-5.3, 0, -6.3), scale: 0.85, standIn: .block),
             Placement(asset: "prop_anubis_colossus", position: SCNVector3(5.3, 0, -6.3), scale: 0.85, standIn: .block),
         ]
+        // The +x obelisk (and the Greek column and Norse stone on the same
+        // mark) stands at the back of its wing, not beside the line: from
+        // the camera's side of the field a wing prop at z = −2.4 is a
+        // foreground pillar.
         let obelisks = [
             Placement(asset: "prop_obelisk", position: SCNVector3(-6.9, 0, -2.4), standIn: .obelisk),
-            Placement(asset: "prop_obelisk", position: SCNVector3(6.9, 0, -2.4), standIn: .obelisk),
+            Placement(asset: "prop_obelisk", position: SCNVector3(7.0, 0, -5.0), standIn: .obelisk),
         ]
         let columns = [
             Placement(asset: "prop_lotus_column", position: SCNVector3(-2.4, 0, -7.0)),
@@ -120,7 +124,7 @@ enum StageBuilder {
             Placement(asset: "prop_doric_column", position: SCNVector3(-2.4, 0, -7.0)),
             Placement(asset: "prop_doric_column", position: SCNVector3(2.4, 0, -7.0)),
             Placement(asset: "prop_doric_column", position: SCNVector3(-6.9, 0, -2.4)),
-            Placement(asset: "prop_doric_column", position: SCNVector3(6.9, 0, -2.4)),
+            Placement(asset: "prop_doric_column", position: SCNVector3(7.0, 0, -5.0)),
         ]
         let ruin = [
             Placement(asset: "prop_temple_ruin", position: SCNVector3(0, 0, -7.6), scale: 0.8, standIn: .block),
@@ -134,7 +138,7 @@ enum StageBuilder {
         // back, braziers on dragon-headed posts.
         let runeStones = [
             Placement(asset: "prop_rune_stone", position: SCNVector3(-6.9, 0, -2.4), standIn: .obelisk),
-            Placement(asset: "prop_rune_stone", position: SCNVector3(6.9, 0, -2.4), standIn: .obelisk),
+            Placement(asset: "prop_rune_stone", position: SCNVector3(7.0, 0, -5.0), standIn: .obelisk),
         ]
         let prow = [
             Placement(asset: "prop_longship_prow", position: SCNVector3(-5.3, 0, -6.3), yaw: 30, standIn: .block),
@@ -191,11 +195,15 @@ enum StageBuilder {
                           braziers: [braziers[2], braziers[3]], brazierAsset: "prop_brazier", flameHex: "#FFD070",
                           mistHex: "#D8E6C8", mistCount: 9, dustHex: "#E8F0C0")
         case .hallOfTwoTruths:
+            // Three columns, not four: the one at (6.6, 0.8) stood between
+            // the camera and the enemy line once the camera moved to the
+            // +x side, and the owner photographed the Hall of Sentinels with
+            // a pillar down the middle of the fight. The +x wing is the
+            // foreground now; nothing tall stands in it.
             let hall = [
                 Placement(asset: "prop_lotus_column", position: SCNVector3(-5.6, 0, -5.2)),
                 Placement(asset: "prop_lotus_column", position: SCNVector3(5.6, 0, -5.2)),
                 Placement(asset: "prop_lotus_column", position: SCNVector3(-6.6, 0, 0.8)),
-                Placement(asset: "prop_lotus_column", position: SCNVector3(6.6, 0, 0.8)),
             ]
             return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#B8A088", rock: "rock_cliff",
                           backdrop: "hall_of_two_truths_bg", props: colossi + columns + hall,
@@ -265,7 +273,7 @@ enum StageBuilder {
                                 volume: SCNVector3(18, 6, 16), at: SCNVector3(0, 3, -1)))
 
         if let backdrop = recipe.backdrop, let image = BundleArt.image(backdrop) {
-            stage.addChildNode(farBackdrop(image, yaw: CameraDirector.homeYaw))
+            stage.addChildNode(farBackdrop(image, yaw: CameraDirector.backdropYaw))
         }
 
         // The sky beyond the painting, and a light haze on the distance.
@@ -404,15 +412,18 @@ enum StageBuilder {
         return chunks
     }
 
-    /// The cliff a boss climbs to: a knot of boulders under its mark, their
-    /// tops a hand above the platform, so the body it keeps below the rim is
-    /// hidden by stone. Without it the camera, ten metres up, looked over
-    /// the rim into the gap between the edge and where the boss stands and
-    /// saw the sunk half hanging in the air — the opposite of "half of it
-    /// under a cliff".
-    static func ledge(rock: String, at mark: SCNVector3) -> SCNNode {
+    /// The rim broken open where a boss climbed through. A knot of boulders
+    /// under its mark with their tops a hand above the platform — the cliff
+    /// the owner described, and what hides the body a boss keeps below the
+    /// rim (the camera, ten metres up, otherwise looked over the edge and
+    /// saw the sunk half hanging in the air) — then a dark rent in the floor
+    /// in front of it, and the floor's own tiles thrown round the rent,
+    /// tipped and turned. The owner: "fix the battle map to look more like
+    /// its been broken and opened where the boss is."
+    static func breach(rock: String, floor: String, floorRepeats: Float, floorTint: String?,
+                       at mark: SCNVector3) -> SCNNode {
         let node = SCNNode()
-        node.name = "ledge"
+        node.name = "breach"
         let boulders: [(offset: SCNVector3, size: CGFloat, scale: SCNVector3)] = [
             (SCNVector3(0.0, -1.2, 0.9), 2.6, SCNVector3(1.5, 0.6, 1.1)),
             (SCNVector3(-2.1, -1.9, 0.3), 1.9, SCNVector3(1.3, 0.7, 1.2)),
@@ -426,6 +437,37 @@ enum StageBuilder {
             chunk.position = SCNVector3(mark.x + boulder.offset.x, boulder.offset.y, mark.z + boulder.offset.z)
             chunk.scale = boulder.scale
             chunk.eulerAngles = SCNVector3(0.2, Float(boulder.size), 0.1)
+            node.addChildNode(chunk)
+        }
+
+        // The rent: a dark disc of the rock a hair above the floor, its far
+        // half over the rim, so the platform reads as torn open at the edge.
+        let rent = SCNCylinder(radius: 2.6, height: 0.06)
+        rent.firstMaterial = rockMaterial(rock, repeats: SCNVector3(2, 2, 1))
+        rent.firstMaterial?.multiply.contents = UIColor(white: 0.22, alpha: 1)
+        let rentNode = SCNNode(geometry: rent)
+        rentNode.position = SCNVector3(mark.x, 0.03, mark.z + 2.6)
+        rentNode.scale = SCNVector3(1.35, 1, 0.75)
+        node.addChildNode(rentNode)
+
+        // The tiles thrown out of it, on the platform's own floor texture.
+        var rng = SeededRandom(seed: 0xB0551)
+        for index in 0..<10 {
+            let angle = Float(index) / 10 * .pi * 2 + Float(rng.unit()) * 0.4
+            let radius = 2.2 + Float(rng.unit()) * 1.3
+            let tile = SCNBox(width: 0.55, height: 0.14, length: 0.55, chamferRadius: 0.02)
+            tile.firstMaterial = floorMaterial(floor, repeats: max(0.2, floorRepeats * 0.08), tint: floorTint)
+            let chunk = SCNNode(geometry: tile)
+            chunk.position = SCNVector3(
+                mark.x + sin(angle) * radius,
+                0.05 + Float(rng.unit()) * 0.14,
+                mark.z + 2.9 + cos(angle) * radius * 0.55
+            )
+            chunk.eulerAngles = SCNVector3(
+                Float(rng.unit()) * 0.7 - 0.35,
+                Float(rng.unit()) * 6.28,
+                Float(rng.unit()) * 0.7 - 0.35
+            )
             node.addChildNode(chunk)
         }
         return node

@@ -121,7 +121,32 @@ final class CameraDirector {
     /// — which is what the old solve did for the Colossus, and why every boss
     /// fight was photographed from twice as far away as every other fight.
     private static let fieldTopLine: Float = 0.80
-    private static let bossTopLine: Float = 0.98
+    private static let bossTopLine: Float = 0.90
+
+    /// A boss fight is framed from BEHIND the player's team: 24° of yaw
+    /// instead of 58°, 19° down, and further back, so the whole of a boss
+    /// over the far rim — head included — is in the frame with the team's
+    /// backs across the bottom of it, the genre's boss-dungeon shot. The
+    /// owner, with the Coils of Apep on his phone: "zoom back and a little
+    /// more to behind the characters FOR BOSSES ONLY." From the side the
+    /// hood ran off the top of the frame.
+    static let bossYaw: Float = -24 * .pi / 180
+    private static let bossPitch: Float = 19 * .pi / 180
+    /// The near feet a little higher up the frame in a boss fight, so the
+    /// boss has the frame and the team is the foreground.
+    private static let bossFeetLine: Float = 0.58
+
+    /// The painting is hung between the two yaws (`StageBuilder`), 17° off
+    /// either camera, which a painting seventy metres out does not show: a
+    /// boss can arrive with a later wave, after the set is built, and the
+    /// camera swings to meet it.
+    static var backdropYaw: Float { (homeYaw + bossYaw) / 2 }
+
+    /// The cut shots' offsets are written for a camera on the −x side of
+    /// the field, which is where the first solve stood; the home framing is
+    /// on the +x side now, and a cut must stay on the camera's side of the
+    /// 180° line or screen direction flips.
+    private static var cutSide: Float { homeYaw < 0 ? -1 : 1 }
 
     /// Distance bounds. The far end is generous because a 4.5 m boss on a
     /// narrow iPad frame needs it; the scene's fog does not begin until 55 m,
@@ -154,6 +179,8 @@ final class CameraDirector {
     /// nothing that is not on the stage.
     private struct FieldBounds {
         var points: [FramePoint]
+        /// A boss is on the field: the framing is the boss fight's.
+        var hasBoss = false
 
         /// The four-a-side line-up, used for the one frame between building
         /// the camera and the units being placed, and always folded in so a
@@ -180,7 +207,7 @@ final class CameraDirector {
                 seen.insert(Self.key(point))
                 merged.append(point)
             }
-            return FieldBounds(points: merged)
+            return FieldBounds(points: merged, hasBoss: hasBoss || other.hasBoss)
         }
 
         /// The nearest mark anyone stands on: what the cut shots dolly clear of.
@@ -267,9 +294,11 @@ final class CameraDirector {
         guard let stage = cameraNode.parent else { return nil }
         var points: [FramePoint] = []
         var found = false
+        var hasBoss = false
         for node in stage.childNodes {
             guard let unit = node as? UnitNode else { continue }
             found = true
+            if unit.isBoss { hasBoss = true }
             guard !unit.hasActions else { continue }
             let x = max(-9, min(9, unit.position.x))
             let z = max(-11, min(7, unit.position.z))
@@ -288,7 +317,7 @@ final class CameraDirector {
         guard found else { return nil }
         // With nobody standing still there is nothing new to frame, and the
         // union in `frameField()` leaves the field exactly as it was.
-        return FieldBounds(points: points)
+        return FieldBounds(points: points, hasBoss: hasBoss)
     }
 
     /// Solves the camera position and aim that frame `field`.
@@ -304,8 +333,9 @@ final class CameraDirector {
     /// feet rest on `nearFeetLine`, which changes the offsets, so the steps
     /// alternate. Three passes converge; eight are run because they are free.
     private func solve(for field: FieldBounds) -> (position: SCNVector3, aim: SCNVector3) {
-        let pitch = Self.homePitch
-        let yaw = Self.homeYaw
+        let pitch = field.hasBoss ? Self.bossPitch : Self.homePitch
+        let yaw = field.hasBoss ? Self.bossYaw : Self.homeYaw
+        let feetLine = field.hasBoss ? Self.bossFeetLine : Self.nearFeetLine
         // The camera looks along its own −Z; this is that direction written
         // out, with the right and up axes of the frame beside it. `look(at:)`
         // turns the node to match at the end, so no angle is ever handed to
@@ -340,7 +370,7 @@ final class CameraDirector {
                 if vertical > 0 {
                     required = max(required, vertical / (point.topLine * tanV) - depth)
                 } else {
-                    required = max(required, -vertical / (Self.nearFeetLine * tanV) - depth)
+                    required = max(required, -vertical / (feetLine * tanV) - depth)
                 }
             }
             distance = min(Self.maxDistance, required)
@@ -362,7 +392,7 @@ final class CameraDirector {
             // their line by moving the aim down by however far they are
             // below it.
             let acrossShift = (leftmost + rightmost) / 2 * distance * tanH
-            let upShift = (lowest + Self.nearFeetLine) * distance * tanV
+            let upShift = (lowest + feetLine) * distance * tanV
             aim = SCNVector3(
                 aim.x + right.x * acrossShift + up.x * upShift,
                 aim.y + right.y * acrossShift + up.y * upShift,
@@ -592,7 +622,7 @@ final class CameraDirector {
             // Above the figure rather than level with it, because the mist
             // planes that ring the platform stand up to 2.6 m and a camera
             // set down among them washes the shot with additive haze.
-            offset = SCNVector3(-2.6 * reach, height * 0.95 + 0.6, 3.8 * reach)
+            offset = SCNVector3(-2.6 * reach * Self.cutSide, height * 0.95 + 0.6, 3.8 * reach)
             aimHeight = height * 0.55
             fov = 30
             hold = 0.75
@@ -600,7 +630,7 @@ final class CameraDirector {
             // Tight on the victim as the blow lands: 4.8 m out at 27°, so the
             // figure stands 83% of the frame height and the attacker arrives
             // over the camera's shoulder as a foreground mass on the right.
-            offset = SCNVector3(-2.4 * reach, height * 0.85 + 0.5, 4.0 * reach)
+            offset = SCNVector3(-2.4 * reach * Self.cutSide, height * 0.85 + 0.5, 4.0 * reach)
             aimHeight = height * 0.60
             fov = 27
             hold = 0.55
@@ -608,14 +638,14 @@ final class CameraDirector {
             // Three-quarters of a metre off the floor, looking 20° up at the
             // head. A wide lens from below is what makes a god look like one,
             // and it is the one shot here worth the haze it stands in.
-            offset = SCNVector3(-2.0 * reach, 0.75, 3.2 * reach)
+            offset = SCNVector3(-2.0 * reach * Self.cutSide, 0.75, 3.2 * reach)
             aimHeight = height * 0.92
             fov = 36
             hold = 1.0
         default:
             // An ultimate: further out, higher and wider than the rest,
             // because the effect needs the room. The figure is half the frame.
-            offset = SCNVector3(-3.0 * reach, height * 1.15 + 0.8, 4.6 * reach)
+            offset = SCNVector3(-3.0 * reach * Self.cutSide, height * 1.15 + 0.8, 4.6 * reach)
             aimHeight = height * 0.62
             fov = 34
             hold = 1.2

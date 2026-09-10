@@ -298,12 +298,27 @@ struct UnitCard: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
 
+                // The grade, the way the genre shows it: a row of stars big
+                // enough to count, on a dark band, at the foot of the card.
+                // They were 8-point gold stars laid straight on the art over
+                // the gold frame, and the owner could not read a grade off
+                // his collection.
                 StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars,
-                        size: max(7, size * 0.105))
+                        size: max(9, size * 0.135))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Capsule().fill(Theme.ink.opacity(0.74)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                     .padding(.bottom, 4)
 
-                if rarity.hasSheen {
+                // The sheen is a repeating animation, and a repeating
+                // animation is a card that never stops re-rendering: the
+                // Arena draws thirty-five cards at 38 points, a dozen of
+                // them 5★, and the phone's watchdog measured two seconds
+                // of main thread on the way in. At that size the sheen is
+                // not visible anyway; it stays on the cards big enough to
+                // show it.
+                if rarity.hasSheen, size >= 60 {
                     Sheen(cornerRadius: Theme.tightCorner)
                 }
             }
