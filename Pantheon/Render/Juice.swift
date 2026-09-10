@@ -65,8 +65,35 @@ enum Juice {
     /// Plays the impact for a hit. Returns how long the world froze, so the
     /// caller can extend its hold by that much and keep the event cadence.
     @discardableResult
+    /// The colour of a hit: what struck, as opposed to how hard.
+    ///
+    /// The tier alone made every blow the same event at five volumes. A cut,
+    /// a mace and a spell are different sounds in any game that feels
+    /// expensive, and the files exist for all three plus one per element, so
+    /// a hit now plays its weight AND a quieter layer saying what it was.
+    enum HitColour {
+        case blade, blunt, magic, element(Element)
+
+        var sound: AudioLibrary.Sound {
+            switch self {
+            case .blade: return .hitBlade
+            case .blunt: return .hitBlunt
+            case .magic: return .hitMagic
+            case .element(let element):
+                switch element {
+                case .ember: return .impactEmber
+                case .tide: return .impactTide
+                case .gale: return .impactGale
+                case .radiance: return .impactRadiance
+                case .umbra: return .impactUmbra
+                }
+            }
+        }
+    }
+
     static func impact(
         _ weight: HitWeight,
+        colour: HitColour? = nil,
         scene: SCNScene,
         director: CameraDirector?,
         speed: Double
@@ -80,6 +107,11 @@ enum Juice {
         // world stop.
         if let style = p.haptic { haptic(style) }
         AudioLibrary.shared.play(sound(for: weight))
+        // The colour sits under the weight, quieter and a touch later, so the
+        // two read as one hit rather than two sounds.
+        if let colour {
+            AudioLibrary.shared.play(colour.sound, volume: 0.55, delay: 0.02)
+        }
 
         guard p.pause > 0 else {
             if p.shake > 0 { director?.shake(intensity: p.shake, duration: p.shakeDuration / divisor) }

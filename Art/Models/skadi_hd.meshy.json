@@ -50,7 +50,7 @@
       "finished_at": 1788978775609,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-09T18:44:37Z"
+      "polled": "2026-09-10T01:21:15Z"
     },
     "rig": {
       "id": "01a08771-e3b1-737f-ad00-809aaaa927df",
@@ -77,7 +77,7 @@
       "started_at": 1788978795125,
       "finished_at": 1788978867418,
       "name": "",
-      "polled": "2026-09-09T18:44:37Z",
+      "polled": "2026-09-10T01:21:15Z",
       "downloaded": {
         "glb": "Art/Models/skadi_hd.glb"
       }
@@ -237,6 +237,29 @@
       "downloaded": {
         "glb": "Art/Models/skadi_hd_ultimate.glb"
       }
+    },
+    "clip:victory": {
+      "id": "01a088e7-9f45-770b-bfcb-e290835df93b",
+      "kind": "clip",
+      "created": "2026-09-10T01:21:16Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a08771-e3b1-737f-ad00-809aaaa927df",
+        "action_id": 412
+      },
+      "cost": 3,
+      "clip": "victory",
+      "action_id": 412,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a088e7-9f45-770b-bfcb-e290835df93b/output/Animation_victory_withSkin.glb?Expires=1789262502&Signature=cMEGiylCXzA283Hi6NXs0SCib1Zzk36OfYYPO-Dji8RtRsNHvXWpzX28a-fKeYcgtwlgw1zB~lPHjnDJ0029kaww1MirrPWzj20NVTqyP-Gh-HNU66kJ6H4bI-rEWpIFfv3CMRBfXOjXJR4sUXyvdxUHryMa63Pwa15cB4a6qTnKHx2OcnPVvDV52DtgQTphCdUDWFQRlo-ZdCb1~iV6kLhril7awQYT9LGz5kkqfbz00oMLndIupyuiM7duOOhljX-pFXazQJM2wnH-q~Yq8dJJ-i1ZWpZzLZnxPKESH1HUjgiM48n9pyQ1eDPAn3ZTZE5RJJMgGXreORMvDCHxWA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a088e7-9f45-770b-bfcb-e290835df93b/output/Animation_victory_withSkin.fbx?Expires=1789262502&Signature=URwdGkBr7hTexgU24PTl1wQsFE1Qb8tFCzZHmiJQr9YDAYu3IxPipYbqUR8ioAuOKw6u58G73RhbhVG4XCLS4DU1disH8zFeHZrXRyz-1ROlIGP2qXxlxPP4yMbUUx~mjQ~IvKh~BRcFejRRO7DlkLOAaQ7xHWCIUv3BZ6sws7CQdkdw0tMcRYREIoFVdko6CYR~2Jmt8K2G8kQL0K0hRLcIc-LRMDGVZeWOuozO-R2Y88IhcaZOgV~zQ5K-ReoV4TcNYqRvYQNdmk1V6hAQrlzLZEtoVBtX8L0m7Oi~3QHu873VlEgi-x0ByF~-SthfxNULKPAq0ZIkumLky5DGew__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789003276662,
+      "started_at": 1789003276664,
+      "finished_at": 1789003302676,
+      "name": "",
+      "polled": "2026-09-10T01:21:47Z"
     }
   },
   "history": [],

@@ -22,6 +22,21 @@ final class AudioLibrary {
         case hitHeavy = "hit_heavy"
         case hitCrit = "hit_crit"
         case hitLethal = "hit_lethal"
+        // By kind, for a caller that knows what struck: steel, wood or a
+        // spell. Nothing picks these yet; the files exist so something can.
+        case hitBlade = "hit_blade"
+        case hitBlunt = "hit_blunt"
+        case hitMagic = "hit_magic"
+        // One per element, named to match `impact_<element>` in VFXLibrary, so
+        // a skill with no effect of its own can sound in its caster's element
+        // the way it already looks in it.
+        case impactEmber = "impact_ember"
+        case impactTide = "impact_tide"
+        case impactGale = "impact_gale"
+        case impactRadiance = "impact_radiance"
+        case impactUmbra = "impact_umbra"
+        case block
+        case dodge
         case whoosh
         case thunder
         case uiTap = "ui_tap"
@@ -123,8 +138,17 @@ final class AudioLibrary {
         }
     }
 
-    func play(_ sound: Sound, volume: Float = 1.0) {
+    /// `delay` exists for layering: a hit plays its weight now and the sound
+    /// of what struck a frame or two later, quieter, so the two arrive as one
+    /// event rather than as two sounds fired together.
+    func play(_ sound: Sound, volume: Float = 1.0, delay: TimeInterval = 0) {
         guard !isMuted else { return }
+        guard delay <= 0 else {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                self?.play(sound, volume: volume)
+            }
+            return
+        }
         guard let players = pool(for: sound), !players.isEmpty else { return }
 
         lock.lock()

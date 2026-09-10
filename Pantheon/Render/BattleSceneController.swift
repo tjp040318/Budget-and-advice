@@ -37,6 +37,10 @@ final class BattleSceneController: NSObject {
     private(set) var environment: BattleEnvironment = .duatGate
     /// The clip of the most recent cast, so its hits know how hard to land.
     private var lastCastClip: AnimationClip = .attackBasic
+    /// What the last caster was, so a hit can sound like what struck it: a
+    /// blade for a melee cut, a heavier body for a two-handed blow, and the
+    /// caster's element for anything cast from a distance.
+    private var lastCastColour: Juice.HitColour = .blade
 
     // MARK: - Setup
 
@@ -319,6 +323,14 @@ final class BattleSceneController: NSObject {
             guard let casterNode = unitNodes[actor] else { return 0 }
             let targetNode = targets.first.flatMap { unitNodes[$0] }
             lastCastClip = animation
+            // A melee unit swinging is steel or stone; anything else is its
+            // element. `castRelease` and the ultimate are always the element,
+            // because that is what the effect on screen already shows.
+            if animation == .castRelease || animation == .ultimate || !casterNode.spec.melee {
+                lastCastColour = .element(casterNode.element)
+            } else {
+                lastCastColour = animation == .attackHeavy ? .blunt : .blade
+            }
             Juice.prepareHaptics()
             AudioLibrary.shared.play(.whoosh, volume: animation == .ultimate ? 1.0 : 0.6)
             director?.perform(shot, on: casterNode, target: targetNode)
@@ -400,7 +412,7 @@ final class BattleSceneController: NSObject {
             }
             floatText(label, at: node.headWorldPosition, color: color, scale: profile.numberScale, pop: true)
 
-            return Juice.impact(weight, scene: scene, director: director, speed: speedMultiplier)
+            return Juice.impact(weight, colour: lastCastColour, scene: scene, director: director, speed: speedMultiplier)
 
         case .healed(_, let target, let amount, let remaining):
             guard let node = unitNodes[target] else { return 0 }
