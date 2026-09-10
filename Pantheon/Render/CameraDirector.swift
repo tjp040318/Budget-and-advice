@@ -121,7 +121,10 @@ final class CameraDirector {
     /// — which is what the old solve did for the Colossus, and why every boss
     /// fight was photographed from twice as far away as every other fight.
     private static let fieldTopLine: Float = 0.80
-    private static let bossTopLine: Float = 0.90
+    /// 0.55 of the half-frame above the aim: the head lands 22% down the
+    /// frame, under the boss bar rather than behind it (at 0.90 it was 5%
+    /// down, behind the wave chip).
+    private static let bossTopLine: Float = 0.55
 
     /// A boss fight is framed from BEHIND the player's team: 12° of yaw
     /// instead of 58°, 19° down, and further back, so the whole of a boss
@@ -305,15 +308,22 @@ final class CameraDirector {
             guard let unit = node as? UnitNode else { continue }
             found = true
             if unit.isBoss { hasBoss = true }
-            guard !unit.hasActions else { continue }
+            // A unit in motion is skipped — its mark is where it will stand
+            // — except a boss, which never leaves its mark: it rises onto it
+            // over a second when its wave arrives, and the first boss frames
+            // were solved in that second with no boss point at all, which
+            // put the Colossus wherever the team's column left the aim.
+            guard !unit.hasActions || unit.isBoss else { continue }
             let x = max(-9, min(9, unit.position.x))
             let z = max(-11, min(7, unit.position.z))
             // A boss stands sunk below the platform's rim, so what has to be
             // framed is the rim at its feet and the head above it — its
-            // full box would be half hidden rock. Its head may go to the
-            // frame's edge (`bossTopLine`) rather than stepping the camera
-            // back for everyone else.
-            let top = unit.isBoss ? unit.spec.height + unit.position.y : unit.spec.height
+            // full box would be half hidden rock — at its resting height,
+            // not wherever the rise has it this frame. Its head sits under
+            // the boss bar (`bossTopLine`).
+            let top = unit.isBoss
+                ? unit.spec.height * (1 - BattleSceneController.bossSink)
+                : unit.spec.height
             let line = unit.isBoss ? Self.bossTopLine : Self.fieldTopLine
             for dx in [-Self.shoulderRoom, Self.shoulderRoom] {
                 points.append(FramePoint(position: SCNVector3(x + dx, 0, z), topLine: Self.fieldTopLine))

@@ -388,7 +388,7 @@ final class BattleSceneController: NSObject {
     /// every set, because a boss fight is framed from behind the team
     /// (`CameraDirector.bossYaw`) and the gate is centred from there.
     private static let bossMark = SCNVector3(0, 0, -9.8)
-    private static let bossSink: Float = 0.42
+    static let bossSink: Float = 0.42
 
     /// ONE RANK ABREAST, centred, both sides.
     ///

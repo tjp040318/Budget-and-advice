@@ -1875,8 +1875,10 @@ struct BattleResultView: View {
                 // `advanceToChest()` has just bumped the sequence, so the
                 // second step must guard on the NEW number: guarding on
                 // `mine` here is what left the tour's chest shut.
+                // Two seconds closed, so the tour photographs the chest
+                // on its beat before the lid goes.
                 let chestSequence = sequence
-                after(0.9) {
+                after(2.2) {
                     guard chestSequence == sequence else { return }
                     openChest()
                 }
@@ -1907,7 +1909,7 @@ struct BattleResultView: View {
             guard mine == sequence else { return }
             AudioLibrary.shared.play(.summonBurst, volume: 0.9)
         }
-        after(1.0) {
+        after(1.4) {
             guard mine == sequence else { return }
             Juice.haptic(.heavy)
             flash = 1
@@ -1918,14 +1920,14 @@ struct BattleResultView: View {
 
         let count = min(7, summary.loot.count)
         for i in 0..<count {
-            after(1.2 + Double(i) * 0.14) {
+            after(1.6 + Double(i) * 0.14) {
                 guard mine == sequence else { return }
                 lootShown = i + 1
                 AudioLibrary.shared.play(.starTick, volume: 0.7)
                 Juice.haptic(.light)
             }
         }
-        after(1.2 + Double(count) * 0.14 + 0.35) {
+        after(1.6 + Double(count) * 0.14 + 0.35) {
             guard mine == sequence else { return }
             withAnimation(.easeOut(duration: 0.3)) { continueShown = true }
         }
@@ -2062,6 +2064,13 @@ struct RewardChestView: UIViewRepresentable {
         lid.position = Self.hinge
         lid.addChildNode(StageBuilder.loadProp("prop_reward_chest_lid") ?? Self.standInLid())
         chest.addChildNode(lid)
+        // The split leaves both halves open shells, and an open lid shows the
+        // camera its inside — back faces, culled, a ghost outline in the
+        // first frames. Both sides drawn: the lid has an inside, the box has
+        // a floor and walls to look into.
+        chest.enumerateHierarchy { node, _ in
+            for material in node.geometry?.materials ?? [] { material.isDoubleSided = true }
+        }
         coordinator.lid = lid
         scene.rootNode.addChildNode(chest)
 
