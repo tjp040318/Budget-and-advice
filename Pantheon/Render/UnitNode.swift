@@ -30,7 +30,6 @@ final class UnitNode: SCNNode {
     /// every unit stood in its bind pose — the A-pose in the first battle
     /// screenshots — until its first attack.
     private var currentClip: AnimationClip?
-    private var barWidth: CGFloat { CGFloat(spec.height) * 0.5 }
 
     /// Where the model container rests, read before anything has had a chance
     /// to animate it. The dash writes the container's height every frame to
@@ -101,10 +100,21 @@ final class UnitNode: SCNNode {
         // up immediately afterwards.
         let tint = UIColor(hex: combatant.element.accentHex) ?? .white
         let modelHeight = CGFloat(combatant.model.height)
-        // Wide and thick enough to read from the fixed camera five metres
-        // up: the genre's bars are as wide as the figure.
-        let barHeight = modelHeight * 0.07
-        let width = modelHeight * 0.85
+        // A CONSTANT world size, not a fraction of the model's height.
+        //
+        // Two things were wrong with scaling it. The readability study named
+        // the first: a bar whose full length is the unit's height means a
+        // 1.85 m unit at full health and a 2.20 m unit at 84% draw the same
+        // bar, so health is not comparable between two units even when you can
+        // see both. And the CI tour showed the second on 2026-09-10 — at
+        // `height * 0.85` a bar is 1.7 m wide for an ordinary unit and 3.8 m
+        // for the Colossus, and the line is 2.0 m apart, so every bar lay
+        // across its neighbours and one ran straight through two figures at
+        // chest height. 1.15 m is under that spacing by enough that they never
+        // touch, and every unit in the fight now draws the same bar, which is
+        // the whole point of a bar.
+        let barHeight: CGFloat = 0.125
+        let width: CGFloat = 1.15
 
         let container = ModelLibrary.shared.node(
             for: combatant.model,
@@ -143,7 +153,10 @@ final class UnitNode: SCNNode {
         let billboard = SCNBillboardConstraint()
         billboard.freeAxes = [.X, .Y]
         barRoot.constraints = [billboard]
-        barRoot.position = SCNVector3(0, combatant.model.height * 1.12, 0)
+        // Clear of the head by a fixed margin rather than a fraction, so a
+        // short unit's bar is not resting on its hair and a tall one's is not
+        // adrift a metre above it.
+        barRoot.position = SCNVector3(0, combatant.model.height + 0.34, 0)
 
         // Ground ring under the unit — the readable "who is this" cue.
         let ringGeometry = SCNTorus(ringRadius: modelHeight * 0.22, pipeRadius: 0.012)
@@ -689,7 +702,11 @@ final class UnitNode: SCNNode {
         let shown = byKind.sorted { $0.key.rawValue < $1.key.rawValue }.prefix(6)
         guard !shown.isEmpty else { return }
 
-        let pip = CGFloat(spec.height) * 0.16
+        // Constant, for the same reason the bar is: a status tile that
+        // scales with the model makes the Colossus's poison four times the
+        // size of a satyr's, and the player is reading them against each
+        // other. Sized to sit on a 1.15 m bar — five fit across it.
+        let pip: CGFloat = 0.22
         let spacing = pip * 1.12
         let totalWidth = spacing * CGFloat(shown.count - 1)
 
