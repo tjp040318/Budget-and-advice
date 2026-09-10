@@ -669,6 +669,15 @@ struct RateTableView: View {
                     .font(Theme.numeric(14))
                     .foregroundStyle(Theme.gold)
             }
+            // The Light and Dark discount, said out loud. It is the one rate
+            // on this screen a player cannot work out from the pool in front
+            // of him, because it is not a grade rate — it is a weighting
+            // inside the grade.
+            if let line = entry.lightDarkLine {
+                Text(line)
+                    .font(Theme.numeric(11))
+                    .foregroundStyle(ScrollType.lightDark.tint)
+            }
             if entry.units.isEmpty {
                 Text("Nothing at this grade yet.")
                     .font(Theme.body(12))

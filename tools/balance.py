@@ -995,6 +995,32 @@ def report_gacha():
     scroll_cost = 100
     print(f"  divinity per 5* (mean) {statistics.mean(gaps)*scroll_cost:,.0f}")
 
+    # LIGHT AND DARK. Mirrors SummonService.lightDarkWeight — change it in both
+    # files or they drift, which is the one rule this file exists for.
+    #
+    # Every unit of a grade used to be equally likely and there are five
+    # elements, so two pulls in five of any grade came out Radiance or Umbra.
+    # The owner wants those to be the trophy of the collection, so a Light or
+    # Dark unit of a gated grade is weighted down inside its grade rather than
+    # the grade's own rate being touched.
+    LIGHT_DARK_WEIGHT = {4: 0.25, 5: 0.12}
+    print("\n  Light & Dark, in a pool of all five elements")
+    effective_five = fives / pulls
+    for stars in (5, 4):
+        w = LIGHT_DARK_WEIGHT[stars]
+        # Two of the five elements are Light and Dark; the other three are not.
+        was = 2 / 5
+        now = (2 * w) / (2 * w + 3)
+        grade_rate = effective_five if stars == 5 else odds[4]
+        per_pull = now * grade_rate
+        one_in = 1 / per_pull if per_pull > 0 else float("inf")
+        print(f"    {stars}*  weight {w:.2f}   share of the grade "
+              f"{was*100:.0f}% -> {now*100:.1f}%   "
+              f"{per_pull*100:.3f}% a pull, about 1 in {one_in:,.0f}")
+    print("    the Light & Dark scroll is unchanged: every unit in it is "
+          "Radiance or Umbra, so a")
+    print("    factor applied to all of them alike cancels out")
+
 def report_economy():
     print("\nECONOMY — first-clear income vs. upgrade costs")
     drachma = [700, 950, 1200, 1500, 3000]

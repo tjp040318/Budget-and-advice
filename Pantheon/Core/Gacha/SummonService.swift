@@ -320,8 +320,46 @@ enum SummonService {
         return rng.pickWeighted(entries) ?? 3
     }
 
-    /// Picks a unit of the given grade, honouring the featured double-weight and
-    /// the 50/50-then-guaranteed rule on the featured slot.
+    /// How much rarer a Light or Dark unit is than the same grade in fire,
+    /// water or wind, inside a pool that holds all five.
+    ///
+    /// The owner: "Summon rates for LD 4 and 5 star need to be turned down. I
+    /// want those to be the strongest and coolest to collect." Every unit of a
+    /// grade used to be equally likely, and with five elements that made two
+    /// of every five pulls of a grade Light or Dark — forty per cent. Nothing
+    /// a player sees two-fifths of the time is a trophy.
+    ///
+    /// At 0.12, a five-star roll lands Light or Dark about seven per cent of
+    /// the time rather than forty, so on a pantheon scroll's 3% five-star rate
+    /// that is roughly one pull in four hundred and fifty. At 0.25 a four-star
+    /// is about fourteen per cent. Three-star commons are untouched: the Hall
+    /// of Ka needs its fodder in every element, and the owner asked for four
+    /// and five.
+    ///
+    /// The Light & Dark scroll is deliberately NOT special-cased. Its pool is
+    /// nothing but Radiance and Umbra, so a factor applied to every candidate
+    /// alike cancels out and the scroll keeps the rate it always had. That is
+    /// the point of it: it becomes the only reliable road to these units
+    /// rather than one road among five.
+    static let lightDarkWeight: [Int: Double] = [4: 0.25, 5: 0.12]
+
+    /// One weight, used everywhere a unit is drawn, so no path can quietly
+    /// ignore it. The featured family is doubled as before; a Light or Dark
+    /// unit of a gated grade is cut by the table above. Both apply at once:
+    /// the featured god's dark form is twice as likely as another dark unit
+    /// and still far rarer than his fire form, which is exactly the shape
+    /// wanted.
+    static func weight(of blueprint: UnitBlueprint, on banner: Banner) -> Double {
+        var weight = banner.featured.contains(blueprint.id) ? 2.0 : 1.0
+        if blueprint.element == .radiance || blueprint.element == .umbra {
+            weight *= lightDarkWeight[blueprint.naturalStars] ?? 1.0
+        }
+        return weight
+    }
+
+    /// Picks a unit of the given grade, honouring the featured double-weight,
+    /// the Light and Dark discount, and the 50/50-then-guaranteed rule on the
+    /// featured slot.
     private static func pick(
         stars: Int,
         banner: Banner,
@@ -342,21 +380,24 @@ enum SummonService {
                 ?? pool.map(\.naturalStars).min()
             guard let grade else { return UnitDatabase.starter }
             let fallback = pool.filter { $0.naturalStars == grade }
-            let weighted = fallback.map { blueprint -> (value: UnitBlueprint, weight: Double) in
-                (blueprint, banner.featured.contains(blueprint.id) ? 2.0 : 1.0)
-            }
+            let weighted = fallback.map { (value: $0, weight: weight(of: $0, on: banner)) }
             return rng.pickWeighted(weighted) ?? fallback[0]
         }
 
         let featuredHere = candidates.filter { banner.featured.contains($0.id) }
 
         if stars >= 5, !featuredHere.isEmpty {
+            // WEIGHTED, not uniform. A banner features a god in all five of
+            // his elements, so an even draw here handed out his Radiance and
+            // his Umbra two times in five — the featured slot was the widest
+            // hole in the discount, and the one a player uses most.
+            let featuredWeighted = featuredHere.map { (value: $0, weight: weight(of: $0, on: banner)) }
             if pity.featuredGuaranteed {
                 pity.featuredGuaranteed = false
-                return rng.pickMutating(featuredHere) ?? featuredHere[0]
+                return rng.pickWeighted(featuredWeighted) ?? featuredHere[0]
             }
             if rng.chance(0.5) {
-                return rng.pickMutating(featuredHere) ?? featuredHere[0]
+                return rng.pickWeighted(featuredWeighted) ?? featuredHere[0]
             }
             let others = candidates.filter { !banner.featured.contains($0.id) }
             if others.isEmpty {
@@ -364,12 +405,11 @@ enum SummonService {
                 return featuredHere[0]
             }
             pity.featuredGuaranteed = true
-            return rng.pickMutating(others) ?? others[0]
+            let otherWeighted = others.map { (value: $0, weight: weight(of: $0, on: banner)) }
+            return rng.pickWeighted(otherWeighted) ?? others[0]
         }
 
-        let weighted = candidates.map { blueprint -> (value: UnitBlueprint, weight: Double) in
-            (blueprint, banner.featured.contains(blueprint.id) ? 2.0 : 1.0)
-        }
+        let weighted = candidates.map { (value: $0, weight: weight(of: $0, on: banner)) }
         return rng.pickWeighted(weighted) ?? candidates[0]
     }
 
@@ -399,4 +439,40 @@ struct BannerOdds: Identifiable, Sendable {
     var units: [UnitBlueprint]
 
     var id: Int { stars }
+
+    /// What share of this grade's rolls comes out Radiance or Umbra, and what
+    /// that is of every pull. A discount the player cannot see is worse than a
+    /// generous rate: he would only ever learn it by pulling for a week and
+    /// feeling cheated. The table says the number.
+    ///
+    /// Computed from the same weights the roll uses, so the two cannot drift.
+    /// The featured double is left out of it — a banner doubles a god in all
+    /// five of his elements at once, so it very nearly cancels — which makes
+    /// this the honest shape of the rate rather than a figure to the last
+    /// decimal.
+    var lightDarkShare: Double {
+        let factor = SummonService.lightDarkWeight[stars] ?? 1.0
+        var lightDark = 0.0
+        var rest = 0.0
+        for unit in units {
+            if unit.element == .radiance || unit.element == .umbra {
+                lightDark += factor
+            } else {
+                rest += 1
+            }
+        }
+        let total = lightDark + rest
+        return total > 0 ? lightDark / total : 0
+    }
+
+    /// Nil when this grade is not discounted, or when the pool is all one
+    /// side of the line — the Light & Dark scroll, where every unit is
+    /// Radiance or Umbra and the share is a meaningless 100%.
+    var lightDarkLine: String? {
+        guard SummonService.lightDarkWeight[stars] != nil else { return nil }
+        let share = lightDarkShare
+        guard share > 0, share < 0.999 else { return nil }
+        return String(format: "Light & Dark %.0f%% of these · %.3f%% a pull",
+                      share * 100, share * chance * 100)
+    }
 }
