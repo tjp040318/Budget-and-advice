@@ -543,9 +543,9 @@ environment can and cannot do. The short version:
   `UnitPlate` per non-boss unit, placed every frame by
   `BattleSceneController.layoutPlates` from `projectPoint` of the node's
   feet (view points, origin top; the overlay's origin is bottom, so y is
-  flipped by the scene height). The plate is the genre's: a 76×8 pt green
+  flipped by the scene height). The plate is the genre's: a 64×5.5 pt green
   health bar (dark rounded track, gradient fill, amber under 30%, a cream
-  trail that drains 0.35 s after a hit), the 76×3.5 pt light-blue
+  trail that drains 0.35 s after a hit), the 64×2.5 pt light-blue
   **attack bar** under it (tweened to the engine's value when playback
   settles — `syncPlates` — and on `attackBarChanged`; gold and pulsing at
   100%), the element pip at the left, the status tiles above, the matchup

@@ -1282,9 +1282,9 @@ no new file, the project's synchronised group does not pick one up) holds a
 in `willRenderScene`, which projects each node's feet and stands the plate
 12 pt below them (`projectPoint` gives view points with the origin at the
 top on iOS; the overlay's origin is at the bottom, so y is flipped by the
-scene's height). The plate: a 76×8 pt health bar (a dark rounded track, a
+scene's height). The plate: a 64×5.5 pt health bar (76×8 in the first run, which the owner loved and called too big) (a dark rounded track, a
 green gradient fill with a light top edge, amber under 30%, a cream trail
-that waits 0.35 s and drains after a hit), a 76×3.5 pt attack bar under it
+that waits 0.35 s and drains after a hit), a 64×2.5 pt attack bar under it
 (light blue, tweened over 0.45 s to the engine's value after every turn,
 gold and pulsing at 100%), the element pip at the left end, the status
 tiles above (13 pt, six at most, the same `StatusIconRenderer` pictures)

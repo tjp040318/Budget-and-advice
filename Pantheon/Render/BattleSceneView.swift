@@ -144,12 +144,15 @@ final class UnitPlateOverlay: SKScene {
 /// across the field and the bars as crisp as the HUD.
 final class UnitPlate: SKNode {
 
-    static let barWidth: CGFloat = 76
-    static let hpHeight: CGFloat = 8
-    static let atbHeight: CGFloat = 3.5
+    /// 64 × 5.5 and 64 × 2.5 since the owner saw the first run: "I love it,
+    /// but can we make the health bars a little thinner? They are TOO big."
+    /// (They were 76 × 8 and 76 × 3.5.)
+    static let barWidth: CGFloat = 64
+    static let hpHeight: CGFloat = 5.5
+    static let atbHeight: CGFloat = 2.5
     /// The health bar's centre sits this far under the projected feet.
-    static let dropBelowFeet: CGFloat = 10
-    static let tile: CGFloat = 13
+    static let dropBelowFeet: CGFloat = 9
+    static let tile: CGFloat = 11
 
     private let hpFill: SKSpriteNode
     private let hpMask: SKSpriteNode
@@ -169,11 +172,11 @@ final class UnitPlate: SKNode {
         let w = UnitPlate.barWidth
         let h = UnitPlate.hpHeight
         let a = UnitPlate.atbHeight
-        let full = PlateArt.fill("hp", width: w, height: h, radius: 2.5, top: "#9CF2B0", bottom: "#3DB868")
-        let low = PlateArt.fill("hp_low", width: w, height: h, radius: 2.5, top: "#FFD27A", bottom: "#E0762E")
-        let trail = PlateArt.fill("hp_trail", width: w, height: h, radius: 2.5, top: "#FFF6E6", bottom: "#E8CBA8")
-        let atb = PlateArt.fill("atb", width: w, height: a, radius: 1.5, top: "#B4EEFF", bottom: "#3AA6DE")
-        let ready = PlateArt.fill("atb_ready", width: w, height: a, radius: 1.5, top: "#FFF3C4", bottom: "#E8B44A")
+        let full = PlateArt.fill("hp", width: w, height: h, radius: 2, top: "#9CF2B0", bottom: "#3DB868")
+        let low = PlateArt.fill("hp_low", width: w, height: h, radius: 2, top: "#FFD27A", bottom: "#E0762E")
+        let trail = PlateArt.fill("hp_trail", width: w, height: h, radius: 2, top: "#FFF6E6", bottom: "#E8CBA8")
+        let atb = PlateArt.fill("atb", width: w, height: a, radius: 1.25, top: "#B4EEFF", bottom: "#3AA6DE")
+        let ready = PlateArt.fill("atb_ready", width: w, height: a, radius: 1.25, top: "#FFF3C4", bottom: "#E8B44A")
         fullTexture = full
         lowTexture = low
         atbTexture = atb
@@ -185,10 +188,10 @@ final class UnitPlate: SKNode {
         trailFillNode.size = CGSize(width: w, height: h)
         let atbFillNode = SKSpriteNode(texture: atb)
         atbFillNode.size = CGSize(width: w, height: a)
-        let badgeNode = SKSpriteNode(color: .clear, size: CGSize(width: 14, height: 14))
+        let badgeNode = SKSpriteNode(color: .clear, size: CGSize(width: 12, height: 12))
         badgeNode.isHidden = true
-        let rimNode = SKSpriteNode(texture: PlateArt.rim("rim_acting", width: w + 12, height: h + a + 12, radius: 6, hex: "#F2C75C"))
-        rimNode.size = CGSize(width: w + 12, height: h + a + 12)
+        let rimNode = SKSpriteNode(texture: PlateArt.rim("rim_acting", width: w + 10, height: h + a + 10, radius: 5, hex: "#F2C75C"))
+        rimNode.size = CGSize(width: w + 10, height: h + a + 10)
         rimNode.isHidden = true
 
         hpFill = hpFillNode
@@ -201,13 +204,13 @@ final class UnitPlate: SKNode {
         super.init()
 
         let hpY: CGFloat = 0
-        let atbY: CGFloat = -(h / 2 + 2 + a / 2)
+        let atbY: CGFloat = -(h / 2 + 1.5 + a / 2)
 
         rim.position = CGPoint(x: 0, y: (hpY + atbY) / 2)
         rim.zPosition = 0
         addChild(rim)
 
-        let hpTrack = SKSpriteNode(texture: PlateArt.track("hp_track", width: w + 2, height: h + 2, radius: 3.5))
+        let hpTrack = SKSpriteNode(texture: PlateArt.track("hp_track", width: w + 2, height: h + 2, radius: 3))
         hpTrack.size = CGSize(width: w + 2, height: h + 2)
         hpTrack.position = CGPoint(x: 0, y: hpY)
         hpTrack.zPosition = 1
@@ -227,7 +230,7 @@ final class UnitPlate: SKNode {
         hpCrop.zPosition = 3
         addChild(hpCrop)
 
-        let atbTrack = SKSpriteNode(texture: PlateArt.track("atb_track", width: w + 2, height: a + 2, radius: 2.5))
+        let atbTrack = SKSpriteNode(texture: PlateArt.track("atb_track", width: w + 2, height: a + 2, radius: 2))
         atbTrack.size = CGSize(width: w + 2, height: a + 2)
         atbTrack.position = CGPoint(x: 0, y: atbY)
         atbTrack.zPosition = 1
@@ -241,16 +244,16 @@ final class UnitPlate: SKNode {
         addChild(atbCrop)
 
         let pip = SKSpriteNode(texture: PlateArt.pip(elementHex))
-        pip.size = CGSize(width: 10, height: 10)
-        pip.position = CGPoint(x: -w / 2 - 8, y: hpY)
+        pip.size = CGSize(width: 8, height: 8)
+        pip.position = CGPoint(x: -w / 2 - 7, y: hpY)
         pip.zPosition = 4
         addChild(pip)
 
-        statusRow.position = CGPoint(x: 0, y: hpY + h / 2 + 2 + UnitPlate.tile / 2)
+        statusRow.position = CGPoint(x: 0, y: hpY + h / 2 + 1.5 + UnitPlate.tile / 2)
         statusRow.zPosition = 4
         addChild(statusRow)
 
-        badge.position = CGPoint(x: w / 2 + 11, y: hpY)
+        badge.position = CGPoint(x: w / 2 + 9, y: hpY)
         badge.zPosition = 4
         addChild(badge)
     }
