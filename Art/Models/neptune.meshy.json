@@ -1,0 +1,45 @@
+{
+  "asset": "neptune",
+  "created": "2026-09-11T12:50:23Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a powerful bearded man with sea-green hair, a wreath of bronze seaweed, a bronze scale cuirass in the shape of fish scales over a teal tunic ending above the knees, a short blue cloak that hangs straight down his back, bronze greaves with horse heads embossed on them, bare feet apart, a bronze trident held upright tight against the outside of his right leg. Palette sea teal, bronze, deep blue. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 2.2
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09084-e822-70c7-aa5f-2f3fbe8a59a1",
+      "kind": "preview",
+      "created": "2026-09-11T12:50:27Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a powerful bearded man with sea-green hair, a wreath of bronze seaweed, a bronze scale cuirass in the shape of fish scales over a teal tunic ending above the knees, a short blue cloak that hangs straight down his back, bronze greaves with horse heads embossed on them, bare feet apart, a bronze trident held upright tight against the outside of his right leg. Palette sea teal, bronze, deep blue. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 20,
+      "progress": 67,
+      "urls": {},
+      "created_at": 1789131027194,
+      "started_at": 1789131027198,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:50:57Z"
+    }
+  },
+  "history": []
+}

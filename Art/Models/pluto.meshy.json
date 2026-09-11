@@ -1,0 +1,45 @@
+{
+  "asset": "pluto",
+  "created": "2026-09-11T12:50:44Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a grave, pale man with a dark beard and a crown of dark gold and black iron, a long black robe with a wide gold border ending above the ankles under a heavy gold pectoral set with silver coins, a black cloak that hangs straight down his back, gold rings on every finger, sandalled feet apart, a two-pronged bident of dark iron held upright tight against the outside of his right leg. Palette black, old gold. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 2.1
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09085-39ea-7731-af34-12ead72d5e48",
+      "kind": "preview",
+      "created": "2026-09-11T12:50:48Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a grave, pale man with a dark beard and a crown of dark gold and black iron, a long black robe with a wide gold border ending above the ankles under a heavy gold pectoral set with silver coins, a black cloak that hangs straight down his back, gold rings on every finger, sandalled feet apart, a two-pronged bident of dark iron held upright tight against the outside of his right leg. Palette black, old gold. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 20,
+      "progress": 6,
+      "urls": {},
+      "created_at": 1789131048528,
+      "started_at": 1789131048534,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:50:58Z"
+    }
+  },
+  "history": []
+}

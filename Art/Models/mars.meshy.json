@@ -1,0 +1,45 @@
+{
+  "asset": "mars",
+  "created": "2026-09-11T12:49:41Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a broad heavily built bearded man in a bronze muscled cuirass with an engraved eagle on the chest, a bronze helmet with a tall red horsehair crest pushed up on his head, a red military cloak that hangs straight down his back, a pleated leather strap skirt over a red tunic ending above the knees, bronze greaves, hobnailed sandals with both feet apart. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 2.25
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09084-4591-7476-8194-1c611a017fde",
+      "kind": "preview",
+      "created": "2026-09-11T12:49:46Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a broad heavily built bearded man in a bronze muscled cuirass with an engraved eagle on the chest, a bronze helmet with a tall red horsehair crest pushed up on his head, a red military cloak that hangs straight down his back, a pleated leather strap skirt over a red tunic ending above the knees, bronze greaves, hobnailed sandals with both feet apart. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 20,
+      "progress": 99,
+      "urls": {},
+      "created_at": 1789130986821,
+      "started_at": 1789130986831,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:50:57Z"
+    }
+  },
+  "history": []
+}
