@@ -48,6 +48,8 @@ L="three-quarter left"; R="three-quarter right"; F="the viewer directly"
 ( family isis "$R" 1; family sobek "$F" 1; family mummy "$L" 0; family poseidon "$R" 1; family artemis "$F" 1; family amazon "$L" 0; family thor "$R" 1 ) &
 ( family jackal_warrior "$F" 0; family hades "$L" 1; family hermes "$R" 1; family medusa "$F" 0; family freya "$L" 1; family tyr "$R" 1; family valkyrie "$F" 0 ) &
 ( family heimdall "$L" 1; family hel "$R" 1; family skadi "$F" 1; family draugr "$L" 0; family berserker "$R" 0; family frost_troll "$F" 0; family dwarf_smith "$L" 0; family minotaur "$R" 0 ) &
+# Three the first draft of this list missed (found 2026-09-11: the count said 75 of 79).
+( family bastet "$F" 1; family hathor "$L" 1; family loki "$R" 1 ) &
 wait
 echo portraits-batch2-done
 # The paintings ship as JPEG (tools/shrink_art.py); genart.py writes PNG, so
