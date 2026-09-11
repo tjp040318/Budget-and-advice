@@ -290,7 +290,6 @@ enum StageBuilder {
     // MARK: - The battle stage
 
     /// The battle platform's radius. 7.6 showed its near rim in every frame.
-    static let battlePlatformRadius: CGFloat = 10.0
 
     /// The whole set for a battle, added to `scene`. The camera is at +Z
     /// looking toward -Z; units stand between z = +2.2 and z = -5.4.
@@ -300,22 +299,25 @@ enum StageBuilder {
         stage.name = "stage"
         scene.rootNode.addChildNode(stage)
 
-        // The owner, with a fight on his phone: "the battle ground should look
-        // flat, not slanted." What slanted it was the near rim, rising through
-        // the bottom-right of the frame as a diagonal, and the tile grid
-        // running 58° off the screen. The platform is wider now and its
-        // centre is pulled toward the camera, so the near rim is below the
-        // bottom edge and the far rim stays where the boss stands over it
-        // (the circle through x = 0 crosses z = −9.3); the tiles run with the
-        // camera. `CameraDirector.homeYaw` puts the camera on the +x, +z side.
-        let toward = SCNVector3(-sin(CameraDirector.homeYaw), 0, cos(CameraDirector.homeYaw))
-        stage.addChildNode(platform(radius: Self.battlePlatformRadius, thickness: 1.8, floor: recipe.floor,
-                                    repeats: recipe.floorRepeats * 1.3, tint: recipe.floorTint, rock: recipe.rock,
-                                    centre: SCNVector3(toward.x * 2.5, 0, toward.z * 2.5 - 0.3),
-                                    floorYaw: Self.floorYaw(forCameraYaw: CameraDirector.homeYaw)))
-        for chunk in hangingRocks(rock: recipe.rock, seed: environment.rawValue.hashValue) {
-            stage.addChildNode(chunk)
-        }
+        // AN ARENA FLOOR, NOT A DISC (2026-09-11). The owner, twice, with a
+        // fight on his phone: "the battle ground should look flat, not
+        // slanted" and then "when the heck are you fixing the camera view?
+        // Take a look at Summoners War. DO THAT." What the genre shows is a
+        // floor: a wide flat ground whose side edges are outside the frame,
+        // whose one visible edge — the far one — runs STRAIGHT across the
+        // upper third under the painting, with the world's axes square to
+        // the screen so tiles, pillars and statues all stand upright. What
+        // we showed was a floating disc: its curved rim in three corners,
+        // a boulder ring, rocks hanging in a void, and the whole world
+        // turned 58° so the grid ran diagonally. So the ground is a 44 m
+        // square slab whose far face is at `battleFloorFarEdge`, where the
+        // boss stands a stride beyond it (`BattleSceneController.bossMark`),
+        // and the camera looks straight up the field (`CameraDirector.homeYaw`
+        // is 0). Nothing under or beside the slab is drawn; the painting is
+        // hung beyond the far edge.
+        stage.addChildNode(slab(size: Self.battleFloorSize, thickness: 1.8, farEdge: Self.battleFloorFarEdge,
+                                floor: recipe.floor, repeats: recipe.floorRepeats * 2.86,
+                                tint: recipe.floorTint, rock: recipe.rock))
 
         for placement in recipe.props {
             stage.addChildNode(prop(placement))
@@ -326,7 +328,11 @@ enum StageBuilder {
         }
 
         let mist = UIColor(hex: recipe.mistHex) ?? .white
-        for plane in mistPlanes(count: recipe.mistCount, radius: Float(Self.battlePlatformRadius) - 0.6, tint: mist, seed: environment.rawValue.hashValue) {
+        // Mist along the far edge only: a ring round the old disc put a
+        // plane a metre in front of the lens now that the near side of the
+        // ground is behind the camera.
+        for plane in mistPlanes(count: recipe.mistCount * 2, radius: -Self.battleFloorFarEdge + 1.2, tint: mist, seed: environment.rawValue.hashValue)
+        where plane.position.z < Self.battleFloorFarEdge * 0.45 {
             stage.addChildNode(plane)
         }
         stage.addChildNode(dust(tint: UIColor(hex: recipe.dustHex) ?? .white,
@@ -402,22 +408,53 @@ enum StageBuilder {
         stage.addChildNode(dust(tint: tint.mixed(with: .white, amount: 0.5), volume: SCNVector3(9, 5, 9), at: SCNVector3(0, 2.5, -1)))
     }
 
-    /// The yaw that stands the platform's tile rows across the frame of a
-    /// camera at `yaw`, so the floor reads as a floor rather than a grid seen
-    /// corner-on.
-    ///
-    /// Measured off the CI frames rather than assumed: with the platform
-    /// unturned the tile rows run along the platform's own Z, and a camera
-    /// at yaw y (`CameraDirector.homeYaw` is −58°, the camera on the +x, +z
-    /// side) has its right-hand vector along (cos y, 0, sin y) on the ground.
-    /// Turning the node by θ about Y carries local Z to (sin θ, 0, cos θ),
-    /// which lies along that right-hand vector at θ = −y − 90°: the rows are
-    /// then parallel to the bottom of the frame and the columns run away
-    /// from the camera. The boss shot (`CameraDirector.bossYaw`, −12°) is
-    /// 46° round from the home one, so `CameraDirector` turns the floor
-    /// again the moment it re-frames from behind the team.
-    static func floorYaw(forCameraYaw yaw: Float) -> Float {
-        -yaw - .pi / 2
+    /// The battle ground: a square slab this wide, its far face at
+    /// `battleFloorFarEdge`. 44 m puts the side faces well outside a frame
+    /// that is 13 m across at the figures, and the near face behind the
+    /// camera. The far edge is where the old disc's far rim was, so the boss
+    /// mark (0, −9.8) is still a stride beyond it and the breach still reads
+    /// as a cliff it has climbed to.
+    static let battleFloorSize: CGFloat = 44
+    static let battleFloorFarEdge: Float = -8.4
+
+    /// The ground as a slab: the painted floor on top, cliff rock on the
+    /// faces, a row of boulders along the far edge. Square, so the tiles
+    /// repeat the same in both directions whatever way the box's top face
+    /// runs its texture coordinates.
+    static func slab(size: CGFloat, thickness: CGFloat, farEdge: Float, floor: String, repeats: Float,
+                     tint: String?, rock: String) -> SCNNode {
+        let node = SCNNode()
+        node.name = "platform"
+        let body = SCNBox(width: size, height: thickness, length: size, chamferRadius: 0)
+        let top = floorMaterial(floor, repeats: repeats, tint: tint)
+        let side = rockMaterial(rock, repeats: SCNVector3(Float(size) * 0.35, 1, 1))
+        // SCNBox: front (+z), right (+x), back (−z), left (−x), top, bottom.
+        body.materials = [side, side, side, side, top, rockMaterial(rock, repeats: SCNVector3(4, 4, 1))]
+        let bodyNode = SCNNode(geometry: body)
+        bodyNode.name = "platform_floor"
+        bodyNode.position = SCNVector3(0, -Float(thickness) / 2, farEdge + Float(size) / 2)
+        node.addChildNode(bodyNode)
+
+        // Boulders along the far edge break its line into a cliff top, as
+        // the ring did round the disc. None across the middle six metres,
+        // where the boss's breach puts its own.
+        var rng = SeededRandom(seed: UInt64(size * 100) &+ 0x5EED)
+        let count = Int(size / 2.4)
+        for index in 0..<count {
+            let x = -Float(size) / 2 + (Float(index) + 0.5) * Float(size) / Float(count) + Float(rng.unit() - 0.5) * 1.2
+            if abs(x) < 3 { continue }
+            let boulderSize = CGFloat(0.5 + rng.unit() * 0.9) * thickness * 0.55
+            let boulder = SCNSphere(radius: boulderSize)
+            boulder.segmentCount = 10
+            boulder.firstMaterial = rockMaterial(rock, repeats: SCNVector3(2, 1, 1))
+            let boulderNode = SCNNode(geometry: boulder)
+            boulderNode.position = SCNVector3(x, -Float(boulderSize) * 0.55 - Float(rng.unit()) * 0.3,
+                                              farEdge - Float(rng.unit()) * 0.8 + 0.3)
+            boulderNode.scale = SCNVector3(1 + Float(rng.unit()) * 0.6, 0.7 + Float(rng.unit()) * 0.4, 1 + Float(rng.unit()) * 0.5)
+            boulderNode.eulerAngles = SCNVector3(Float(rng.unit()), Float(rng.unit()) * 6, Float(rng.unit()))
+            node.addChildNode(boulderNode)
+        }
+        return node
     }
 
     // MARK: - Parts
@@ -439,12 +476,6 @@ enum StageBuilder {
         let bodyNode = SCNNode(geometry: body)
         bodyNode.name = "platform_floor"
         bodyNode.position = SCNVector3(centre.x, centre.y - Float(thickness) / 2, centre.z)
-        // The tiles run with the camera, not with the world: a grid seen 58°
-        // off its axes reads as a floor tilted sideways. The cylinder is
-        // round, so turning the node turns nothing but its textures. (The
-        // first attempt rotated the cap's texture coordinates instead —
-        // `contentsTransform` — and the CI frames showed the grid exactly
-        // where it had always been; a node's yaw cannot be argued with.)
         bodyNode.eulerAngles.y = floorYaw
         node.addChildNode(bodyNode)
 

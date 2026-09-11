@@ -79,7 +79,13 @@ final class CameraDirector {
     /// as a row with shoulders overlapping. At 22° a step is 0.7 m up and
     /// 1.2 m across — a clean diagonal — and the far rim still sits a third
     /// of the way down the frame with the painting above it.
-    private static let homePitch: Float = 22 * .pi / 180
+    /// 20° since 2026-09-11, with the field re-laid as two wings (see
+    /// `BattleSceneController.position(for:teamSize:)`): each rank of a wing
+    /// steps 1.3 m outward as well as 1.9 m deeper, so the pitch no longer
+    /// has to separate ranks by itself, and the lower it is the more of the
+    /// painting stands above the far edge — about a third of the frame at
+    /// 20°, the genre's share.
+    private static let homePitch: Float = 20 * .pi / 180
 
     /// 58° of yaw, camera on the right, well round toward the side of the
     /// field. This is the composition, and it is the third attempt at it.
@@ -100,7 +106,21 @@ final class CameraDirector {
     /// Shared with `StageBuilder`, which turns the far painting to face the
     /// camera: at this much yaw a painting hung square to the world ended a
     /// third of the way across the frame.
-    static let homeYaw: Float = -58 * .pi / 180
+    ///
+    /// ZERO since 2026-09-11. The 58° was a trick — two lines-abreast in the
+    /// world made to read as columns by turning the whole world — and the
+    /// owner saw the trick, not the columns: the floor's grid ran diagonally,
+    /// the far rim crossed the frame as a slant, every pillar and statue
+    /// stood askew, and the ground looked "slanted". "Take a look at
+    /// Summoners War. DO THAT." The genre's camera looks straight up the
+    /// field: the world's axes are square to the screen, the far edge of
+    /// the ground runs level across the upper third, and the two teams are
+    /// two WINGS laid out on the floor itself — the player's on the left,
+    /// the enemy's on the right, each stepping outward and deeper from a
+    /// front unit near the centre — which is what puts them at the lower
+    /// left and the right with an open middle between them. The composition
+    /// is in the marks now, not in the yaw.
+    static let homeYaw: Float = 0
 
     /// How much of the half-frame the outermost figure may reach, and the
     /// metres of air left beside it. A figure is about 0.9 m across, so 0.9 m
@@ -204,8 +224,10 @@ final class CameraDirector {
         /// 1v1 is framed as a stage rather than as a close-up.
         static let standard: FieldBounds = {
             var points: [FramePoint] = []
-            for x in [Float(-4.2), 4.2] {
-                for z in [Float(-3.4), 3.4] {
+            // A three-a-side pair of wings: fronts at ±3 across and 2.2
+            // deep, backs at ±5.6 and −1.6.
+            for x in [Float(-5.6), 5.6] {
+                for z in [Float(-1.6), 2.2] {
                     points.append(FramePoint(position: SCNVector3(x, 0, z), topLine: CameraDirector.fieldTopLine))
                     points.append(FramePoint(position: SCNVector3(x, 1.9, z), topLine: CameraDirector.fieldTopLine))
                 }
@@ -280,7 +302,6 @@ final class CameraDirector {
         let merged = (field ?? FieldBounds.standard).union(measured)
         if merged.hasBoss, !(field?.hasBoss ?? false) {
             print("[Camera] a boss is on the field: \(merged.points.count) points, re-framing from behind the team")
-            turnFloor(toCameraYaw: Self.bossYaw)
         }
         field = merged
         let solved = solve(for: merged)
@@ -292,16 +313,6 @@ final class CameraDirector {
         // does, that is a wave walking on with something bigger in it: a
         // moment the fight has already announced, not a drift out of nowhere.
         if !isOffHome { applyHome() }
-    }
-
-    /// The platform's tile rows run across the frame of whichever camera has
-    /// the fight (`StageBuilder.floorYaw(forCameraYaw:)`), and the boss shot
-    /// is 46° round from the home one, so the floor turns with the
-    /// re-framing. Instantly, as the re-framing itself is a cut: it happens
-    /// in the frame the boss's wave is placed, with no shot running.
-    private func turnFloor(toCameraYaw yaw: Float) {
-        guard let floor = cameraNode.parent?.childNode(withName: "platform_floor", recursively: true) else { return }
-        floor.eulerAngles.y = StageBuilder.floorYaw(forCameraYaw: yaw)
     }
 
     /// The stage as it stands: how wide the lines are, how deep, how tall.

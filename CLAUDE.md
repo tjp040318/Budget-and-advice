@@ -63,52 +63,56 @@ Read `Docs/PLAN.md` first. It has the measurements that decisions were based
 on, the phase list, the pipeline costs, and an honest account of what this
 environment can and cannot do. The short version:
 
-- The game builds and runs on an iPhone, **landscape only** since this
-  session: the battle camera is SOLVED, not written down (`CameraDirector`
-  measures the figures on their marks and frames them), and it stands the
-  genre's way — 58° round to the right of the field, 22° down, a 26° lens
-  about 20 m out — so the two lines-abreast the stage places read as two
-  COLUMNS: the player's at the lower left, its front unit nearest the
-  camera, the enemy's on the right stepping back toward the top, an open
-  middle between them, and the painting filling the top half behind the
-  far rim (`StageBuilder.farBackdrop` is turned to face the camera). A
-  boss fight is framed from BEHIND the team instead (`bossYaw` 12°,
+- The game builds and runs on an iPhone, **landscape only**. **The battle
+  is laid out the genre's way (2026-09-11, the third camera).** The owner,
+  with a fight on his phone: "the battle ground should look flat, not
+  slanted", then "when the heck are you fixing the camera view? Take a
+  look at Summoners War. DO THAT." What the genre shows and what the
+  build shows now: the camera looks STRAIGHT up the field
+  (`CameraDirector.homeYaw` 0, `homePitch` 20°, a 26° lens, solved by
+  `CameraDirector` from the figures on their marks — 12 m out for a
+  three-a-side, the front figures 37% of the frame tall, 17.5 m for a
+  five-a-side), so the world's axes are square to the screen; the ground
+  is a 44 m square slab (`StageBuilder.slab`, `battleFloorSize`), its
+  side faces outside the frame and its near face behind the camera, so
+  the ONE edge in view is the far one, level across the frame 29–38%
+  down with the painting above it (`battleFloorFarEdge` −8.4, boulders
+  along it, mist on the far arc, no hanging rocks, no disc); and the two
+  teams are two WINGS on the floor (`BattleSceneController.position`):
+  the player's on the left, the enemy's on the right, mark i at
+  (±(3 + 1.3 i), 0, 2.2 − 1.9 i) — a front unit near the centre line and
+  the camera, each rank a step outward (more than a figure is wide, so
+  nobody is in front of anybody) and a step deeper (higher up the frame)
+  — facing each other turned 60° toward the camera, an open middle
+  between the fronts where the attacks cross, and the far centre beyond
+  the backs for the boss. The two earlier cameras are in the git history
+  and their lessons here: rows abreast at 27° photographed as "a small
+  tilted disc in a void"; lines abreast turned 58° round read as columns
+  but turned the whole world with them (diagonal grid, slanted rim,
+  askew pillars) and were called "slanted" twice; and rotating a
+  cylinder cap's texture with `contentsTransform` did nothing visible in
+  CI. A boss fight is framed from BEHIND the team (`bossYaw` −12°,
   `bossPitch` 20°, the team's feet allowed just below the bottom edge at
-  `bossFeetLine` 1.05 — their ankles behind the bottom bar — and the
-  head allowed to `bossTopLine` 0.90, the aim centred on the boss's head
-  via `FramePoint.isBoss`: about 25 m out, the head 22% down under the
-  bar. The numbers come from a sweep of a Python port of the solve — a
-  top line of 0.55 pushed the camera to its 40 m limit and the platform
-  became a disc in a void, and 14°/0.75/0.75 stood at 26.7 m until the
-  owner asked for "a little higher, angled down but physically up, and
-  nearer"), the genre's boss-dungeon shot, and the painting is hung
-  between the two yaws. **The floor reads flat (2026-09-11).** The owner
-  called the ordinary shot "slanted": the platform's near rim rose
-  through the bottom-right of the frame as a diagonal and the tile grid
-  ran 58° off the screen. `StageBuilder.battlePlatformRadius` is 10 m
-  (was 7.6), its centre is pulled 2.5 m toward the camera so the near
-  rim is below the frame and only the far rim shows, and the platform's
-  floor node is turned (`StageBuilder.floorYaw(forCameraYaw:)`, measured
-  off the frames: rows along local Z, right-hand vector (cos y, 0, sin y),
-  θ = −y − 90°) so the tile rows run across the frame; `CameraDirector`
-  turns it again when it re-frames for a boss. Turning the cap's texture
-  coordinates with `contentsTransform` did nothing visible in CI. The field is measured
-  when a wave is placed and at every turn's start, not only when the
-  queue drains: an auto fight never drains it, so a boss arriving with
-  the third wave was never measured for three runs of frames. A
-  **boss** (`Combatant.isBoss`) stands over the far rim at (0, −9.8),
-  between the two columns that close every set, on a `StageBuilder.breach`
-  (boulders, a rent in the floor, thrown tiles), lit like an awakened unit
-  with an aura rising from below the rim, sunk
-  42% of its height below the platform, 6–8 m tall in the data (Apep 7.2,
-  Hydra 7.0, Jötunn 7.5, Colossus 8.0, the Unwrapped King 6.0), with no 3D
-  bar or ring (the HUD's boss bar reads), never dashes, and is framed by
-  its head (`bossTopLine`) rather than its box; its adds stand on the marks
-  in front, closing over the boss's slot (`markIndex`). The earlier
-  27°/21° solve with rows abreast was photographed from the owner's phone
-  as "a small tilted disc in a void" and called ugly. Nothing tall stands in
-  the +x wing at z > −5: that is the camera's foreground now, and a sphinx
-  and a hall column there each blocked the enemy line in a screenshot.
+  `bossFeetLine` 1.05 — their ankles behind the bottom bar — and the head
+  allowed to `bossTopLine` 0.90, the aim centred on the boss's head via
+  `FramePoint.isBoss`: about 25 m out, the head 22% down under the bar;
+  the numbers come from a sweep of a Python port of the solve — a top
+  line of 0.55 pushed the camera to its 40 m limit), the genre's
+  boss-dungeon shot, and the painting is hung between the two yaws
+  (`StageBuilder.farBackdrop` turned to face `backdropYaw`). The field is
+  measured when a wave is placed and at every turn's start, not only when
+  the queue drains: an auto fight never drains it, so a boss arriving with
+  the third wave was never measured for three runs of frames. A **boss**
+  (`Combatant.isBoss`) stands a stride beyond the far edge at (0, −9.8),
+  on a `StageBuilder.breach` (boulders, a rent in the floor, thrown
+  tiles), lit like an awakened unit with an aura rising from below the
+  edge, sunk 42% of its height below the floor, 6–8 m tall in the data
+  (Apep 7.2, Hydra 7.0, Jötunn 7.5, Colossus 8.0, the Unwrapped King 6.0),
+  with no 3D bar or ring (the HUD's boss bar reads), never dashes, and is
+  framed by its head (`bossTopLine`) rather than its box; its adds stand
+  on the marks in front, closing over the boss's slot (`markIndex`).
+  Nothing tall stands in front of the fronts (z > 3): that is the
+  camera's foreground.
   On a player's turn every enemy wears a matchup arrow beside its bar
   (`UnitNode.setMatchup`: green up, yellow even, red down). The battle HUD is one
   top row and an open-middled bottom bar whose actor plate is one 54-pt

@@ -300,9 +300,13 @@ final class BattleSceneController: NSObject {
             // standing off the centre line, turns to face the middle of the
             // field (a character faces with `atan2(dx, dz)`; only a camera
             // needs `look(at:)`).
+            // The wings face each other across the middle, each turned a
+            // third of the way toward the camera so a figure shows its
+            // front as well as its weapon arm — the genre's three-quarter
+            // stance — rather than a pure profile.
             node.eulerAngles.y = combatant.isBoss
                 ? atan2(-home.x, -home.z)
-                : (combatant.side == .player ? .pi : 0)
+                : (combatant.side == .player ? .pi / 3 : -.pi / 3)
             if entering, combatant.isBoss {
                 // A boss RISES over the far rim from the dark under the
                 // platform, rather than walking on: there is no floor where
@@ -390,28 +394,26 @@ final class BattleSceneController: NSObject {
     private static let bossMark = SCNVector3(0, 0, -9.8)
     static let bossSink: Float = 0.42
 
-    /// ONE RANK ABREAST, centred, both sides.
+    /// TWO WINGS FACING EACH OTHER ACROSS THE MIDDLE (2026-09-11).
     ///
-    /// It used to be two columns 2.6 m apart in ranks 1.6 m deep, which is a
-    /// PORTRAIT formation in a LANDSCAPE frame. Measured off the photographed
-    /// frames: a four-unit team spanned 3.9 m of a 14.9 m-wide view, so the
-    /// whole cast was a clump filling under a quarter of the width and the
-    /// other three quarters was bare floor. Worse, both sides used the same x
-    /// formula, so the enemy line was a shrunk copy of the player line centred
-    /// on the same point and every player unit sat within thirty pixels of an
-    /// enemy's column — in the dungeon frames an enemy is seventy per cent
-    /// hidden behind Zeus, which is arithmetic rather than bad luck.
+    /// The genre's field, seen from a camera looking straight up it
+    /// (`CameraDirector.homeYaw` is 0): the player's team on the LEFT, the
+    /// enemy's on the RIGHT, each a diagonal from a front unit near the
+    /// centre line and the camera back to the outer corner — every rank a
+    /// step outward (1.3 m, more than a figure is wide, so nobody stands in
+    /// front of anybody on screen) and a step deeper (1.9 m, which at the
+    /// camera's pitch lifts it up the frame). The open middle between the
+    /// two fronts is where the attacks cross; the far centre, beyond the
+    /// backs, is the boss's.
     ///
-    /// A line abreast spends the team's extent on WIDTH, which a landscape
-    /// frame has in surplus, instead of on DEPTH, which it is short of. It is
-    /// also what the genre does: Summoners War stands its five in a row.
-    ///
-    /// The enemy line is pushed half a step sideways so no enemy ever stands
-    /// directly behind a player whatever the camera's yaw, and a side of more
-    /// than five falls back to a second rank behind the first rather than
-    /// spreading wider than the camera will frame.
+    /// Before this the two sides stood as lines ABREAST at z = ±3.4 and the
+    /// camera was turned 58° round the field to make the lines read as
+    /// columns. The composition was right and everything else was wrong:
+    /// the whole world turned with it, and the owner called the ground
+    /// "slanted" twice. The composition lives in the marks now and the
+    /// world stands square.
     private func position(for combatant: Combatant, teamSize: Int) -> SCNVector3 {
-        let sideSign: Float = combatant.side == .player ? 1 : -1
+        let sideSign: Float = combatant.side == .player ? -1 : 1
         if combatant.isBoss {
             // The mark is written on the far side already (a boss is only
             // ever an opponent); multiplying its z by the side's sign, as
@@ -421,30 +423,12 @@ final class BattleSceneController: NSObject {
             // hanging rock.
             return SCNVector3(Self.bossMark.x, -combatant.model.height * Self.bossSink, Self.bossMark.z)
         }
-        let perRank = 5
-        let mark = markIndex(for: combatant)
-        let rank = Float(mark / perRank)
-        let indexInRank = mark % perRank
-        let inThisRank = max(1, min(perRank, teamSize - Int(rank) * perRank))
-
-        // 2.2 m from mark to mark. Seen from 55° round to the side
-        // (`CameraDirector.homeYaw`) each step along the line is 1.3 m across
-        // the screen and 1.8 m back into it, which is what keeps every figure
-        // of a column clear of the one in front.
-        let spacing: Float = 2.2
-        let centred = Float(indexInRank) - Float(inThisRank - 1) / 2
-        let stagger: Float = combatant.side == .player ? 0 : spacing / 2
-        let x = centred * spacing + stagger
-
-        // Both sides' second ranks stand FURTHER from the camera than their
-        // first — smaller and higher in the frame — and are offset by half a
-        // step so nobody hides behind the unit in front.
-        let halfStep: Float = rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : spacing / 2
-        // 3.4 m either side of the centre line. From the side the two lines
-        // are the two columns, and this is the open middle between them
-        // where the attacks cross.
-        let depth = 3.4 + rank * 1.7
-        return SCNVector3(x + halfStep, 0, sideSign * depth)
+        // Mark 0 is the front of the wing: 3 m off the centre line and 2.2 m
+        // toward the camera. Each mark after it is 1.3 m further out and
+        // 1.9 m deeper, so a five stands from (±3, 2.2) back to (±8.2, −5.4),
+        // three metres short of the far edge (`StageBuilder.battleFloorFarEdge`).
+        let rank = Float(markIndex(for: combatant))
+        return SCNVector3(sideSign * (3.0 + 1.3 * rank), 0, 2.2 - 1.9 * rank)
     }
 
     // MARK: - Playback
