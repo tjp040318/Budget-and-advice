@@ -125,9 +125,10 @@ environment can and cannot do. The short version:
   look angled" (the 20° foreshortened it into a ramp). Rotating a cylinder
   cap's texture with `contentsTransform` did nothing visible in CI. A boss
   fight is framed the same way but wider (`bossYaw` −12°, `bossPitch`
-  20°, the team's feet at `bossFeetLine` 0.92 — they were allowed just
+  20°, the team's feet at `bossFeetLine` 0.82 — they were allowed just
   below the bottom edge at 1.05 until the unit plates went under the
-  feet, which put the team's bars below the frame in every boss fight —
+  feet, which put the team's bars below the frame in every boss fight;
+  0.92 still had them on the edge under the actor plate —
   and the head allowed to `bossTopLine` 0.90, the aim centred on the
   boss's head via `FramePoint.isBoss`: about 25 m out, the head 22% down
   under the bar; the numbers come from a sweep of a Python port of the

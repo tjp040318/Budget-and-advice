@@ -188,7 +188,12 @@ final class CameraDirector {
     /// behind the bottom bar the team's bars were below the frame, and a
     /// boss fight is where the attack bars matter most. The camera steps
     /// back a little for it and the boss loses a few percent of the frame.
-    private static let bossFeetLine: Float = 0.92
+    ///
+    /// 0.82 after the run that followed: at 0.92 the team's plates sat on
+    /// the frame's bottom edge and under the actor plate in every boss
+    /// fight. Nine percent of the frame under the feet is a plate and a
+    /// hairline of floor, the same room an ordinary fight has.
+    private static let bossFeetLine: Float = 0.82
 
     /// The painting is hung between the two yaws (`StageBuilder`), 17° off
     /// either camera, which a painting seventy metres out does not show: a
