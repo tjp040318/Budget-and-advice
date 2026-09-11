@@ -157,7 +157,7 @@ struct SummonRevealView: View {
                 // character. Centred on the figure, not on the screen, so the
                 // fall-off frames the character rather than the layout.
                 RadialGradient(
-                    colors: [.clear, Theme.ink.opacity(0.10), Theme.ink.opacity(0.42), Theme.ink.opacity(0.82)],
+                    colors: [.clear, Theme.plate.opacity(0.10), Theme.plate.opacity(0.42), Theme.ink.opacity(0.82)],
                     center: .init(x: 0.30, y: 0.52),
                     startRadius: 0,
                     endRadius: 560

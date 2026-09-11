@@ -182,7 +182,7 @@ struct IslandView: View {
                     // Dusk falls a little harder at the edges so the plaques
                     // and the header read against the painting.
                     LinearGradient(
-                        colors: [Theme.ink.opacity(0.55), .clear, .clear, Theme.ink.opacity(0.7)],
+                        colors: [Theme.plate.opacity(0.55), .clear, .clear, Theme.ink.opacity(0.7)],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
@@ -294,7 +294,7 @@ struct IslandView: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .background(
-            Capsule().fill(Theme.ink.opacity(0.62))
+            Capsule().fill(Theme.plate.opacity(0.62))
                 .overlay(Capsule().strokeBorder(Theme.stroke.opacity(0.7), lineWidth: 1))
         )
         .padding(.horizontal, 12)
@@ -732,7 +732,7 @@ struct ChapterIntroCard: View {
                     // The words sit on the left, so the dark runs that way and
                     // the painting keeps its right-hand side.
                     LinearGradient(
-                        colors: [Theme.ink.opacity(0.94), Theme.ink.opacity(0.55), .clear],
+                        colors: [Theme.ink.opacity(0.94), Theme.plate.opacity(0.55), .clear],
                         startPoint: .leading, endPoint: .trailing
                     )
                 )

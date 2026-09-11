@@ -242,6 +242,9 @@ enum StageBuilder {
 
     // MARK: - The battle stage
 
+    /// The battle platform's radius. 7.6 showed its near rim in every frame.
+    static let battlePlatformRadius: CGFloat = 10.0
+
     /// The whole set for a battle, added to `scene`. The camera is at +Z
     /// looking toward -Z; units stand between z = +2.2 and z = -5.4.
     static func buildBattleStage(_ environment: BattleEnvironment, into scene: SCNScene) {
@@ -250,9 +253,19 @@ enum StageBuilder {
         stage.name = "stage"
         scene.rootNode.addChildNode(stage)
 
-        stage.addChildNode(platform(radius: 7.6, thickness: 1.8, floor: recipe.floor,
-                                    repeats: recipe.floorRepeats, tint: recipe.floorTint, rock: recipe.rock,
-                                    centre: SCNVector3(0, 0, -0.8)))
+        // The owner, with a fight on his phone: "the battle ground should look
+        // flat, not slanted." What slanted it was the near rim, rising through
+        // the bottom-right of the frame as a diagonal, and the tile grid
+        // running 58° off the screen. The platform is wider now and its
+        // centre is pulled toward the camera, so the near rim is below the
+        // bottom edge and the far rim stays where the boss stands over it
+        // (the circle through x = 0 crosses z = −9.3); the tiles run with the
+        // camera. `CameraDirector.homeYaw` puts the camera on the +x, +z side.
+        let toward = SCNVector3(-sin(CameraDirector.homeYaw), 0, cos(CameraDirector.homeYaw))
+        stage.addChildNode(platform(radius: Self.battlePlatformRadius, thickness: 1.8, floor: recipe.floor,
+                                    repeats: recipe.floorRepeats * 1.3, tint: recipe.floorTint, rock: recipe.rock,
+                                    centre: SCNVector3(toward.x * 2.5, 0, toward.z * 2.5 - 0.3),
+                                    floorYaw: -CameraDirector.homeYaw))
         for chunk in hangingRocks(rock: recipe.rock, seed: environment.rawValue.hashValue) {
             stage.addChildNode(chunk)
         }
@@ -266,7 +279,7 @@ enum StageBuilder {
         }
 
         let mist = UIColor(hex: recipe.mistHex) ?? .white
-        for plane in mistPlanes(count: recipe.mistCount, radius: 7.0, tint: mist, seed: environment.rawValue.hashValue) {
+        for plane in mistPlanes(count: recipe.mistCount, radius: Float(Self.battlePlatformRadius) - 0.6, tint: mist, seed: environment.rawValue.hashValue) {
             stage.addChildNode(plane)
         }
         stage.addChildNode(dust(tint: UIColor(hex: recipe.dustHex) ?? .white,
@@ -347,14 +360,21 @@ enum StageBuilder {
     /// The stone the set stands on: a painted floor on top, a cliff face round
     /// the side, boulders at the rim.
     static func platform(radius: CGFloat, thickness: CGFloat, floor: String, repeats: Float,
-                         tint: String?, rock: String, centre: SCNVector3) -> SCNNode {
+                         tint: String?, rock: String, centre: SCNVector3, floorYaw: Float = 0) -> SCNNode {
         let node = SCNNode()
         node.name = "platform"
         let body = SCNCylinder(radius: radius, height: thickness)
         body.radialSegmentCount = 64
+        let top = floorMaterial(floor, repeats: repeats, tint: tint)
+        if floorYaw != 0 {
+            // The tiles run with the camera, not with the world: a grid seen
+            // 58° off its axes reads as a floor tilted sideways.
+            top.diffuse.contentsTransform = SCNMatrix4Mult(SCNMatrix4MakeRotation(floorYaw, 0, 0, 1),
+                                                           SCNMatrix4MakeScale(repeats, repeats, 1))
+        }
         body.materials = [
             rockMaterial(rock, repeats: SCNVector3(Float(radius) * 0.7, 1, 1)),
-            floorMaterial(floor, repeats: repeats, tint: tint),
+            top,
             rockMaterial(rock, repeats: SCNVector3(2, 2, 1)),
         ]
         let bodyNode = SCNNode(geometry: body)

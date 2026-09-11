@@ -46,38 +46,38 @@ enum Theme {
 
     /// Cold near-black with a blue cast: the back of the cabinet, behind
     /// everything. Never a panel.
-    static let ink = Color(hex: "#0A0C10")
+    static let ink = Color(hex: "#1F1912")
     /// The screen's ground — dark slate, a shade up from ink.
-    static let surface = Color(hex: "#14181E")
+    static let surface = Color(hex: "#EBE2CF")
     /// A panel. This is the marble the whole interface is built from.
-    static let surfaceRaised = Color(hex: "#1C2027")
+    static let surfaceRaised = Color(hex: "#F6F0E3")
     /// A panel on a panel: an inset well, a selected row, a sub-card.
-    static let surfaceHigh = Color(hex: "#262C35")
+    static let surfaceHigh = Color(hex: "#FDF9F0")
     /// The cool line UNDER the metal. The bronze frame sits on it, and the
     /// dark line is what stops the frame glowing into the background.
-    static let stroke = Color(hex: "#39424E")
+    static let stroke = Color(hex: "#CDBB98")
 
     /// Bronze, not gold. `gold` keeps its name because two hundred call sites
     /// use it and the meaning — "the metal, the heading, the important
     /// number" — has not changed.
-    static let gold = Color(hex: "#C8A863")
-    static let goldDim = Color(hex: "#8A7340")
-    static let goldDeep = Color(hex: "#4A3C20")
+    static let gold = Color(hex: "#B08A2E")
+    static let goldDim = Color(hex: "#8C6D22")
+    static let goldDeep = Color(hex: "#5C4611")
 
     /// Warm off-white: marble, not paper. Against the cool slate panels this
     /// is what carries the second colour family.
-    static let textPrimary = Color(hex: "#ECEAE3")
+    static let textPrimary = Color(hex: "#2A2116")
     /// Cool slate grey. Deliberately NOT a tint of the bronze — the contrast
     /// between a warm heading and a cool caption is half of what makes a
     /// screen look designed rather than themed.
-    static let textSecondary = Color(hex: "#93A0AD")
+    static let textSecondary = Color(hex: "#6D5F4B")
 
     /// Wine, laurel and verdigris: the three accents. Every one of them is a
     /// real pigment from the same world as the bronze, which is why they sit
     /// together instead of shouting.
-    static let danger = Color(hex: "#C8425A")
-    static let success = Color(hex: "#6B9F5E")
-    static let info = Color(hex: "#4E8A72")
+    static let danger = Color(hex: "#B4364C")
+    static let success = Color(hex: "#4E8A3E")
+    static let info = Color(hex: "#2F7F6E")
 
     /// Named for what they are, for the places that want the pigment rather
     /// than the meaning: a laurel wreath, a wine seal, a verdigris edge, a
@@ -87,6 +87,11 @@ enum Theme {
     static let verdigris = Color(hex: "#4E8A72")
     static let marble = Color(hex: "#D9D4C8")
     static let bronze = Color(hex: "#A8894F")
+    /// The translucent plate over a scene or a painting — the battle HUD,
+    /// the Hall of Ka's rail, the island's labels: cream, so its ink reads,
+    /// the way the panels do. It was `ink` at half opacity when the
+    /// interface was slate; a dark plate under dark text is unreadable.
+    static let plate = Color(hex: "#F4EDDD")
 
     // MARK: - Metal
 
@@ -130,7 +135,7 @@ enum Theme {
     /// Dark polished marble, with the cool blue cast that stone has in
     /// shadow. Three stops so the top catches the light.
     static let stonePlate = LinearGradient(
-        colors: [Color(hex: "#2A313B"), Color(hex: "#1C2027"), Color(hex: "#12161B")],
+        colors: [Color(hex: "#F7F2E7"), Color(hex: "#EBE3D0"), Color(hex: "#DED4BE")],
         startPoint: .top,
         endPoint: .bottom
     )
@@ -139,7 +144,7 @@ enum Theme {
     /// samples at (22, 23, 28), with just enough gradient that it does not
     /// read as a flat fill. See `drawnPanel` for why it is not `panelPlate`.
     static let drawnPanelPlate = LinearGradient(
-        colors: [Color(hex: "#252B34"), Color(hex: "#191D23"), Color(hex: "#12161B")],
+        colors: [Color(hex: "#FBF6EA"), Color(hex: "#F2EBDA"), Color(hex: "#E7DEC8")],
         startPoint: .top,
         endPoint: .bottom
     )
@@ -151,8 +156,8 @@ enum Theme {
     /// made the old panels read as rectangles instead of as objects with a
     /// thickness. It is still only two colours and it does most of the work.
     static let bevel = LinearGradient(
-        colors: [Color(hex: "#FFF6E2").opacity(0.34), Color.white.opacity(0.05),
-                 Color.clear, Color.black.opacity(0.58)],
+        colors: [Color.white.opacity(0.85), Color.white.opacity(0.25),
+                 Color.clear, Color(hex: "#5A4A2E").opacity(0.22)],
         startPoint: .top,
         endPoint: .bottom
     )
@@ -312,7 +317,7 @@ enum Theme {
                 && geometry.size.height >= Chrome.paintedPanelMinimum
             if fitsPainted, let painted = Chrome.slice("ui_panel", Chrome.panelInsets) {
                 painted
-                    .shadow(color: .black.opacity(0.55), radius: 8, x: 0, y: 4)
+                    .shadow(color: .black.opacity(0.22), radius: 8, x: 0, y: 4)
             } else {
                 drawnPanel(radius)
             }
@@ -345,7 +350,7 @@ enum Theme {
                 // the panel has no edge, which is most of why the old screens
                 // looked flat.
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Color(hex: "#080A0D").opacity(0.9), lineWidth: 2)
+                    .strokeBorder(Color(hex: "#6B5636").opacity(0.5), lineWidth: 2)
             )
             .overlay(
                 // The metal itself, inside that line: aged bronze with a
@@ -355,7 +360,7 @@ enum Theme {
                     .strokeBorder(bronzeFrame, lineWidth: 1.5)
                     .padding(1)
             )
-            .shadow(color: .black.opacity(0.7), radius: 10, x: 0, y: 5)
+            .shadow(color: .black.opacity(0.22), radius: 10, x: 0, y: 5)
     }
 
     /// The screen background. A radial lift behind the centre keeps the middle
@@ -367,7 +372,7 @@ enum Theme {
             // colour the owner called awful, since it is behind every screen
             // in the game.
             LinearGradient(
-                colors: [Color(hex: "#161B22"), ink, Color(hex: "#070A0D")],
+                colors: [Color(hex: "#F1E9D8"), Color(hex: "#E6DCC6"), Color(hex: "#D9CDB3")],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -376,7 +381,7 @@ enum Theme {
             // reads it as a smudge. Warm on cold is the cheapest depth there
             // is, and it is the same trick the stage lighting uses.
             RadialGradient(
-                colors: [Color(hex: "#4A3B22").opacity(0.42), .clear],
+                colors: [Color(hex: "#FFF8E6").opacity(0.7), .clear],
                 center: .top,
                 startRadius: 0,
                 endRadius: 560
@@ -384,7 +389,7 @@ enum Theme {
             // A verdigris pool at the foot, so the bottom of a long screen is
             // not simply darker but somewhere else.
             RadialGradient(
-                colors: [Color(hex: "#12332B").opacity(0.35), .clear],
+                colors: [Color(hex: "#B99C5A").opacity(0.22), .clear],
                 center: .bottom,
                 startRadius: 0,
                 endRadius: 420
@@ -463,7 +468,15 @@ enum Chrome {
     /// image). The indigo kit it replaces was held back here for a day so the
     /// game spoke one language while it waited.
 
+    /// The slate panel and the slate button of the marble kit are held back
+    /// until tonight's routine repaints them in cream marble with a gold
+    /// frame: the owner asked for "a cream color with gold accents (like a
+    /// greek temple)" on 2026-09-11, and a dark slate panel on a cream
+    /// ground is the one thing that would read as the old interface.
+    static let awaitingCreamRepaint: Set<String> = ["ui_panel", "ui_button_dark"]
+
     static func slice(_ name: String, _ insets: EdgeInsets) -> Image? {
+        if awaitingCreamRepaint.contains(name) { return nil }
         guard let ui = image(name) else { return nil }
         return Image(uiImage: ui).resizable(capInsets: insets, resizingMode: .stretch)
     }

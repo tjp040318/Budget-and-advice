@@ -130,7 +130,7 @@ struct BattleView: View {
                     .foregroundStyle(Theme.gold)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
-                    .background(Capsule().fill(Theme.ink.opacity(0.6)))
+                    .background(Capsule().fill(Theme.plate.opacity(0.6)))
                     .allowsHitTesting(false)
                     .transition(.opacity)
                     .onAppear {
@@ -287,7 +287,7 @@ struct BattleView: View {
         content()
             .frame(height: 30)
             .padding(.horizontal, 10)
-            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.92) : Theme.ink.opacity(0.6)))
+            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.92) : Theme.plate.opacity(0.6)))
             .overlay(Capsule().strokeBorder(active ? Theme.gold : Theme.stroke, lineWidth: 1))
     }
 
@@ -311,7 +311,7 @@ struct BattleView: View {
             let placed = gaugePositions(units, width: width, dot: dot)
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Theme.ink.opacity(0.6))
+                    .fill(Theme.plate.opacity(0.6))
                     .frame(width: width, height: 10)
                     .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
                 ForEach(1..<4, id: \.self) { quarter in
@@ -546,7 +546,7 @@ struct BattleView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
-                .fill(acting ? Theme.goldDeep.opacity(0.5) : Theme.ink.opacity(0.5))
+                .fill(acting ? Theme.goldDeep.opacity(0.5) : Theme.plate.opacity(0.5))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -609,7 +609,7 @@ struct BattleView: View {
                 }
                 .padding(.horizontal, 7)
                 .frame(height: 22)
-                .background(Capsule().fill(Theme.ink.opacity(0.6)))
+                .background(Capsule().fill(Theme.plate.opacity(0.6)))
                 .overlay(Capsule().strokeBorder(entry.tint.opacity(0.55), lineWidth: 1))
                 .transition(.move(edge: .trailing).combined(with: .opacity))
             }
@@ -765,7 +765,7 @@ struct BattleView: View {
         // 14 around the buttons' 8 plus 6 of padding: concentric corners.
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Theme.ink.opacity(0.6))
+                .fill(Theme.plate.opacity(0.6))
         )
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
@@ -786,7 +786,7 @@ struct BattleView: View {
             .foregroundStyle(Theme.textSecondary)
             .padding(.horizontal, 14)
             .frame(height: 30)
-            .background(Capsule().fill(Theme.ink.opacity(0.6)))
+            .background(Capsule().fill(Theme.plate.opacity(0.6)))
             .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
         }
     }
@@ -873,7 +873,7 @@ struct BattleView: View {
         .padding(.vertical, 7)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.ink.opacity(0.46))
+                .fill(Theme.plate.opacity(0.46))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
@@ -1034,7 +1034,7 @@ struct BattleView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Theme.ink.opacity(0.6)))
+        .background(Capsule().fill(Theme.plate.opacity(0.6)))
         .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.5), lineWidth: 1))
         .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
     }
@@ -1223,7 +1223,7 @@ struct BattleView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
-        .background(Capsule().fill(Theme.ink.opacity(0.6)))
+        .background(Capsule().fill(Theme.plate.opacity(0.6)))
         .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
         // The one thing a player taps a boss for is to aim at it, and a boss
         // is by definition the tallest thing on the stage — its head reaches
@@ -1721,7 +1721,7 @@ struct BattleResultView: View {
                 }
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Theme.ink.opacity(0.6))
+                        Capsule().fill(Theme.plate.opacity(0.6))
                         Capsule()
                             .fill(LinearGradient(colors: [Theme.goldDim, Theme.gold], startPoint: .leading, endPoint: .trailing))
                             .frame(width: max(4, geo.size.width * share))

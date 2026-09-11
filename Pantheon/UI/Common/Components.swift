@@ -435,7 +435,7 @@ struct EmptyTeamSlot: View {
         .frame(width: size, height: size * 1.35)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.ink.opacity(0.55))
+                .fill(Theme.plate.opacity(0.55))
         )
         .overlay(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
@@ -461,7 +461,7 @@ struct EmptyCollectionSlot: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-            .fill(Theme.ink.opacity(0.45))
+            .fill(Theme.plate.opacity(0.45))
             .overlay(
                 // Inset shadow at the top: the well is BELOW the surface, the
                 // opposite of every panel, which is what tells the eye it is a
@@ -725,7 +725,7 @@ struct GameScreen<Bar: View, Content: View>: View {
         }
         .background(Theme.backdrop)
         .toolbar(.hidden, for: .navigationBar)
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
     }
 
     private var strip: some View {

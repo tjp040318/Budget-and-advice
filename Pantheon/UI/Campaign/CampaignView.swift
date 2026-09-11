@@ -194,7 +194,7 @@ struct CampaignView: View {
                 .padding(.horizontal, ScreenChrome.contentPadding)
                 .padding(.vertical, 4)
             }
-            .background(Theme.ink.opacity(0.6))
+            .background(Theme.plate.opacity(0.6))
             // A `scrollTo` issued from `onAppear` runs before the rail has been
             // laid out, so the proxy has no chip to scroll to yet and it does
             // nothing at all — silently, which is how it would have shipped.

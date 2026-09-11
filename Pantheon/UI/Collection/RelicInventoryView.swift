@@ -741,7 +741,7 @@ struct RelicDetailView: View {
                         .frame(width: rolls || level == relic.maxLevel ? 12 : 8, height: rolls || level == relic.maxLevel ? 12 : 8)
                         .overlay(
                             Circle().strokeBorder(
-                                rolls ? (reached ? Theme.ink.opacity(0.5) : Theme.goldDim) : Theme.stroke,
+                                rolls ? (reached ? Theme.plate.opacity(0.5) : Theme.goldDim) : Theme.stroke,
                                 lineWidth: 1
                             )
                         )

@@ -308,7 +308,7 @@ struct ChapterMapView: View {
                         .frame(width: size.width, height: size.height)
                 }
                 Rectangle()
-                    .fill(Theme.ink.opacity(0.3))
+                    .fill(Theme.plate.opacity(0.3))
                     .frame(width: size.width, height: size.height)
                     .allowsHitTesting(false)
 

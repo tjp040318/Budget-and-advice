@@ -843,7 +843,7 @@ struct SummoningCircle: View {
             .frame(height: 92)
             Spacer(minLength: 0)
             LinearGradient(
-                colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.5)],
+                colors: [Theme.ink.opacity(0), Theme.plate.opacity(0.5)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -898,11 +898,11 @@ struct SummoningCircle: View {
                     .frame(width: 44)
             }
             VStack(spacing: 0) {
-                LinearGradient(colors: [Theme.ink.opacity(0.55), Theme.ink.opacity(0)],
+                LinearGradient(colors: [Theme.plate.opacity(0.55), Theme.ink.opacity(0)],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 30)
                 Spacer(minLength: 0)
-                LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.55)],
+                LinearGradient(colors: [Theme.ink.opacity(0), Theme.plate.opacity(0.55)],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 30)
             }

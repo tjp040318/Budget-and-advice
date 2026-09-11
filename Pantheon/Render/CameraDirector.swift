@@ -124,7 +124,7 @@ final class CameraDirector {
     /// 0.55 of the half-frame above the aim: the head lands 22% down the
     /// frame, under the boss bar rather than behind it (at 0.90 it was 5%
     /// down, behind the wave chip).
-    private static let bossTopLine: Float = 0.75
+    private static let bossTopLine: Float = 0.90
 
     /// A boss fight is framed from BEHIND the player's team: 12° of yaw
     /// instead of 58°, 19° down, and further back, so the whole of a boss
@@ -138,18 +138,18 @@ final class CameraDirector {
     /// and the yaw is nearly straight up the field, where the team's row is
     /// symmetrical about it and costs the boss no size.
     static let bossYaw: Float = -12 * .pi / 180
-    private static let bossPitch: Float = 14 * .pi / 180
+    private static let bossPitch: Float = 20 * .pi / 180
     /// The near feet a little higher up the frame in a boss fight, so the
     /// boss has the frame and the team is the foreground.
-    /// Solved, not dialled: `tools/…/bosssolve.py` (a port of `solve`) swept
-    /// pitch, feet line and top line over the real field. A top line of 0.55
-    /// — the head "under the boss bar" — and 19° of pitch pushed the camera
-    /// to its 40 m limit and the platform became a disc in a void; 14°, the
-    /// feet at 0.75 and the head allowed to 0.75 of the half-frame put the
-    /// camera 26 m out, the boss's head 23% down just under the bar, the
-    /// team's feet at 84% just above the bottom bar, a unit 18% of the frame
-    /// tall, and the far rim at mid-frame with the boss towering over it.
-    private static let bossFeetLine: Float = 0.75
+    /// Solved, not dialled: a Python port of `solve` swept pitch, feet line
+    /// and top line over the real field. The owner's second look: "a little
+    /// too far back and a little higher (angled downward but physically up
+    /// higher)". Twenty degrees, the near feet allowed just below the bottom
+    /// edge (1.05 — the team's ankles are behind the bottom bar, the genre's
+    /// boss-dungeon shot) and the head allowed to 0.90 put the camera about
+    /// 25 m out, the head 22% down just under the boss bar, a unit a fifth of
+    /// the frame tall, the far rim past mid-frame with the boss over it.
+    private static let bossFeetLine: Float = 1.05
 
     /// The painting is hung between the two yaws (`StageBuilder`), 17° off
     /// either camera, which a painting seventy metres out does not show: a

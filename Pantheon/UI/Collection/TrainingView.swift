@@ -167,7 +167,7 @@ struct TrainingView: View {
                 }
                 // A little darker under the panel, so its words read, and the
                 // painting's own vignette carried to the edges.
-                LinearGradient(colors: [.clear, .clear, Theme.ink.opacity(0.35)],
+                LinearGradient(colors: [.clear, .clear, Theme.plate.opacity(0.35)],
                                startPoint: .leading, endPoint: .trailing)
             }
         }
@@ -228,7 +228,7 @@ struct TrainingView: View {
             }
         }
         .padding(6)
-        .background(Theme.ink.opacity(0.42), in: RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+        .background(Theme.plate.opacity(0.42), in: RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
         .frame(width: railWidth)
     }
 
@@ -286,7 +286,7 @@ struct TrainingView: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
-        .background(Theme.ink.opacity(0.46), in: RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+        .background(Theme.plate.opacity(0.46), in: RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
     }
 
     /// "LEVEL UP!" and the line under it, sprung in and gone in a breath.

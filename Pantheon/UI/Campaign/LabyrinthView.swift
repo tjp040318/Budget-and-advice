@@ -783,7 +783,7 @@ struct DungeonLevelsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
                 LinearGradient(
-                    colors: [Theme.ink.opacity(0.62), Theme.ink.opacity(0.88)],
+                    colors: [Theme.plate.opacity(0.62), Theme.ink.opacity(0.88)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
