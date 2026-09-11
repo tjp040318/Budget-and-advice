@@ -237,6 +237,53 @@ enum StageBuilder {
                           backdrop: environment.backdropName, props: obelisks + columns + sphinxes,
                           braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#9C80FF",
                           mistHex: "#9C8CB0", mistCount: 9, dustHex: "#C8B0FF")
+        // Rome: the Greek marble and props under Roman paintings until Rome's
+        // own are made — the Forum by moonlight with its columns and the
+        // temple ruin, the arena in sun with the statues and the broken
+        // columns. `backdropName` borrows an older painting until
+        // tools/batch/realms_batch4.sh paints theirs.
+        case .forumRome:
+            return Recipe(floor: "floor_marble", floorRepeats: 5, floorTint: "#9C9CB0", rock: "rock_cliff",
+                          backdrop: environment.backdropName, props: doric + ruin + [broken[0]],
+                          braziers: braziers, brazierAsset: "prop_tripod_brazier", flameHex: "#FFC070",
+                          mistHex: "#B8B8D8", mistCount: 9, dustHex: "#D8D8F0")
+        case .colosseumSands:
+            return Recipe(floor: "floor_sandstone", floorRepeats: 6, floorTint: "#C8A878", rock: "rock_cliff",
+                          backdrop: environment.backdropName, props: statues + [doric[0], doric[1]] + broken,
+                          braziers: braziers, brazierAsset: "prop_tripod_brazier", flameHex: "#FFB050",
+                          mistHex: "#E8D8B0", mistCount: 4, dustHex: "#FFE0A0")
+        // The Jade Court: the sandstone floor under a red tint, lotus columns
+        // standing in for the palace's, and two props that do not exist yet
+        // — stone lions in the far wing, pagoda lanterns at the back corners
+        // — each placed with a stand-in so the set has no hole until they
+        // ship (`propHeights` has no entry for them: the stand-in is the 3 m
+        // default, scaled here). Nothing tall in the +x wing at z > -5.
+        case .peachGarden:
+            let lions = [
+                Placement(asset: "prop_stone_lion", position: SCNVector3(-6.0, 0, -0.4), yaw: 90, scale: 0.6, standIn: .block),
+                Placement(asset: "prop_stone_lion", position: SCNVector3(-6.4, 0, -4.2), yaw: 90, scale: 0.6, standIn: .block),
+            ]
+            let lanterns = [
+                Placement(asset: "prop_pagoda_lantern", position: SCNVector3(-5.3, 0, -6.3), scale: 0.8, standIn: .obelisk),
+                Placement(asset: "prop_pagoda_lantern", position: SCNVector3(5.3, 0, -6.3), scale: 0.8, standIn: .obelisk),
+            ]
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#B07860", rock: "rock_cliff",
+                          backdrop: environment.backdropName, props: columns + lanterns + lions,
+                          braziers: [braziers[2], braziers[3]], brazierAsset: "prop_brazier", flameHex: "#FF9060",
+                          mistHex: "#F0C8C8", mistCount: 8, dustHex: "#FFD0D8")
+        case .dragonGate:
+            let lions = [
+                Placement(asset: "prop_stone_lion", position: SCNVector3(-3.8, 0, -7.2), scale: 0.7, standIn: .block),
+                Placement(asset: "prop_stone_lion", position: SCNVector3(3.8, 0, -7.2), yaw: 180, scale: 0.7, standIn: .block),
+            ]
+            let lanterns = [
+                Placement(asset: "prop_pagoda_lantern", position: SCNVector3(-6.9, 0, -2.4), scale: 0.8, standIn: .obelisk),
+                Placement(asset: "prop_pagoda_lantern", position: SCNVector3(7.0, 0, -5.0), scale: 0.8, standIn: .obelisk),
+            ]
+            return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#9A5A58", rock: "rock_cliff",
+                          backdrop: environment.backdropName, props: columns + lions + lanterns,
+                          braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#60C0FF",
+                          mistHex: "#A0C8E0", mistCount: 11, dustHex: "#B8E0FF")
         }
     }
 

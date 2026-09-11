@@ -331,6 +331,12 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
     case colossusVault = "colossus_vault"
     case hydraLair = "hydra_lair"
     case necropolis = "necropolis"
+    // Rome
+    case forumRome = "forum_rome"
+    case colosseumSands = "colosseum_sands"
+    // The Jade Court
+    case peachGarden = "peach_garden"
+    case dragonGate = "dragon_gate"
 
     var displayName: String {
         switch self {
@@ -348,6 +354,10 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .colossusVault: return "The Vault of the Colossus"
         case .hydraLair: return "The Lair of the Hydra"
         case .necropolis: return "The Necropolis"
+        case .forumRome: return "The Forum at Midnight"
+        case .colosseumSands: return "The Sand of the Colosseum"
+        case .peachGarden: return "The Peach Garden"
+        case .dragonGate: return "The Dragon King's Gate"
         }
     }
 
@@ -357,6 +367,8 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .duatGate, .reedFields, .hallOfTwoTruths, .serpentDeep, .arenaOfSouls, .colossusVault, .necropolis: return .egyptian
         case .olympusGate, .aegeanCliffs, .lernaMarsh, .hydraLair: return .greek
         case .midgardFjord, .yggdrasilRoots, .jotunheimHall: return .norse
+        case .forumRome, .colosseumSands: return .roman
+        case .peachGarden, .dragonGate: return .chinese
         }
     }
 
@@ -366,6 +378,8 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
     /// The painting to show for this place: its own once it is in the bundle,
     /// and until then the painting of the place it was carved out of, so a
     /// dungeon never shows a grey banner while its own picture is on the way.
+    /// The Roman and Chinese chapters borrow the same way until
+    /// `tools/batch/realms_batch4.sh` paints theirs.
     var backdropName: String {
         let own = "\(rawValue)_bg"
         if BundleArt.exists(own) { return own }
@@ -377,6 +391,10 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .colossusVault: return .duatGate
         case .hydraLair: return .lernaMarsh
         case .necropolis: return .hallOfTwoTruths
+        case .forumRome: return .olympusGate
+        case .colosseumSands: return .arenaOfSouls
+        case .peachGarden: return .reedFields
+        case .dragonGate: return .aegeanCliffs
         default: return self
         }
     }
@@ -402,6 +420,10 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .colossusVault: return "#E0C89C"
         case .hydraLair: return "#B8D090"
         case .necropolis: return "#D8C8A8"
+        case .forumRome: return "#D8D0F0"
+        case .colosseumSands: return "#FFE0A8"
+        case .peachGarden: return "#FFD8E0"
+        case .dragonGate: return "#A8D8F0"
         }
     }
 
@@ -421,6 +443,10 @@ enum BattleEnvironment: String, Codable, CaseIterable, Sendable {
         case .colossusVault: return "#2C2218"
         case .hydraLair: return "#243424"
         case .necropolis: return "#2A2230"
+        case .forumRome: return "#2A2840"
+        case .colosseumSands: return "#6A4A30"
+        case .peachGarden: return "#3A4A38"
+        case .dragonGate: return "#1E3A50"
         }
     }
 }

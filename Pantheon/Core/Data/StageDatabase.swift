@@ -447,6 +447,109 @@ enum StageDatabase {
             powerScale: 10.5,
             enemyStars: 5,
             difficulty: 1.7
+        ),
+        // Rome: the Forum's dead and the arena's sand. The Seven Hills carry
+        // the curve on from Jötunheim — the Norse grade at a higher level,
+        // then a grade up, a level a stage so nothing stands above 68 — so
+        // the last two ladders in tools/balance.py are the ones that clear
+        // them (`--chapters`, measured 2026-09-11: the maxed 6★ team takes
+        // the Forum's boss in 96 turns and the Colosseum's in 130, the gods
+        // both in the sixties; the Peach Garden's fox needs the gods or a
+        // lucky 6★ run, and the dragon at the gate takes the gods 94 turns).
+        generatedChapter(
+            id: "rome_1",
+            pantheon: .roman,
+            name: "The Forum at Midnight",
+            summary: "The lost legion has marched back into the Forum with its eagles missing, and the hearth of the city went out the night it arrived.",
+            intro: """
+            Three eagles were lost in a German forest and the legion that lost \
+            them was struck from the rolls. It has come home anyway, at \
+            midnight, up the Sacred Way, and stands in the Forum in its ranks \
+            asking for its standards. The hearth of the city went out the night \
+            it arrived, and the Vestals cannot make it catch.
+            """,
+            bossLine: "Eighty men answer to me and every one of them is still here. Give back the eagles, or take a place in the ranks.",
+            startingLevel: 50,
+            stageCount: 10,
+            environment: .forumRome,
+            roster: ["enemy_centurion", "enemy_gladiator", "enemy_vestal", "enemy_praetorian"],
+            bossID: "enemy_centurion",
+            levelStep: 1,
+            powerScale: 13.5,
+            enemyStars: 5,
+            difficulty: 2.5
+        ),
+        generatedChapter(
+            id: "rome_2",
+            pantheon: .roman,
+            name: "The Sand of the Colosseum",
+            summary: "The games have run every day since the crowd stopped leaving, and the bronze giant outside the gate has come in to watch.",
+            intro: """
+            The last games were meant to run a hundred days. That was some \
+            time ago. The crowd never went home, the gladiators never stopped, \
+            and the sand is raked between bouts by hands nobody sees. Last \
+            night the bronze colossus by the gate stepped down off its plinth \
+            and took a seat in the emperor's box.
+            """,
+            bossLine: "A hundred days, they promised the crowd. I have counted every one, and the crowd is still here.",
+            startingLevel: 53,
+            stageCount: 10,
+            environment: .colosseumSands,
+            roster: ["enemy_gladiator", "enemy_praetorian", "enemy_centurion", "enemy_vestal"],
+            bossID: "boss_bronze_colossus",
+            levelStep: 1,
+            powerScale: 17.0,
+            enemyStars: 6,
+            difficulty: 1.45
+        ),
+        // The Jade Court: the Queen Mother's orchard and the gate under the
+        // East Sea, the top of the campaign's curve.
+        generatedChapter(
+            id: "jade_1",
+            pantheon: .chinese,
+            name: "The Peach Garden",
+            summary: "The peaches of immortality ripen once in three thousand years. Someone has been in the orchard early, and the guards stopped nobody.",
+            intro: """
+            The Queen Mother's peaches take three thousand years to ripen and \
+            the banquet is not for another two hundred. The trees are bare. \
+            The clay soldiers set to watch the orchard stand exactly where \
+            they were put, facing the wrong way, and the tombs under the \
+            terraces are open. Something with a lantern has walked the rows \
+            every night this month, and it is not the gardener.
+            """,
+            bossLine: "A thousand years a fox and one night a woman, and one orchard for the both of us. You are late for the banquet. So were the peaches.",
+            startingLevel: 56,
+            stageCount: 10,
+            environment: .peachGarden,
+            roster: ["enemy_jiangshi", "enemy_terracotta_soldier", "enemy_fox_spirit", "enemy_terracotta_general"],
+            bossID: "enemy_fox_spirit",
+            levelStep: 1,
+            powerScale: 21.0,
+            enemyStars: 6,
+            difficulty: 2.1
+        ),
+        generatedChapter(
+            id: "jade_2",
+            pantheon: .chinese,
+            name: "The Dragon King's Gate",
+            summary: "Every carp that leaps the falls at Longmen becomes a dragon. One of them outgrew the river and lies across the Dragon King's gate.",
+            intro: """
+            A carp that leaps the falls at Longmen becomes a dragon, and one \
+            did, a long time ago, and never stopped growing. It lies across \
+            the gate of the crystal palace now with the whole East Sea backed \
+            up behind it, and the Dragon King, who cannot get out, has sent \
+            his complaint to Heaven and his summons to you.
+            """,
+            bossLine: "I was a fish once and I remember the hook. Every one of you is on it.",
+            startingLevel: 59,
+            stageCount: 10,
+            environment: .dragonGate,
+            roster: ["enemy_terracotta_general", "enemy_fox_spirit", "enemy_jiangshi", "enemy_terracotta_soldier"],
+            bossID: "boss_longmen_dragon",
+            levelStep: 1,
+            powerScale: 26.0,
+            enemyStars: 6,
+            difficulty: 1.45
         )
     ]
 

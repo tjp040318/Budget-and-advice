@@ -12,6 +12,8 @@ re-running one after a quota or a network failure picks up where it stopped.
 | `backdrops_batch2.sh`, `stage_textures2.sh` | the Greek and Norse stage paintings, the Norse banner, the slate, moss and ice textures |
 | `labyrinth_art.sh` | the Labyrinth's own art: the two boss concepts (A-pose), their cards, and a painting per relic dungeon |
 | `concepts_batch3.sh`, `portraits_batch3.sh` | batch 3: thirty-six A-pose concepts in the painted-detail style, and their cards (`BASE_ONLY=1` paints every family's five before any awakened card) |
+| `concepts_batch4.sh`, `portraits_batch4.sh` | batch 4, Rome and the Jade Court (2026-09-11): twenty A-pose concepts in the painted-detail style — the two dragons on four claws with their own style line — and their cards (`BASE_ONLY=1` as above); a pantheon's banner appears on the summon screen the morning its first family's five cards land |
+| `realms_batch4.sh` | the two batch-4 banner paintings (The Eagle Rises, The Jade Court Opens) and the four chapter backdrops (the Forum, the Colosseum, the Peach Garden, the Dragon King's Gate) at 2048 px; until they land the environments borrow older paintings |
 | `wave_launch.sh "asset:concept:height:palette:kit:family" …` | Meshy image-to-3D + rig + six clips per spec, in parallel; `meshy.py` waits out the queue cap; `kit` is a `meshy.py` clip set (blade, heavy, caster, archer, or a set plus `,name=id` overrides) |
 | `wave3.txt`, `remake_wave.txt` | the wave lists: batch 3 (with batch 2's leftovers) and the `<key>_hd` detail remakes, one spec per line, priority order |
 | `wave_run.sh <list> [floor]` | launches every spec in a list that has no manifest yet while the balance minus what the wave still owes stays above the floor (3,000) |

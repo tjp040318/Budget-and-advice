@@ -537,6 +537,28 @@ FAMILY_ROWS = [  # key, name, stars, kit, hp, atk, def, spd — the row in the S
     ("shield_maiden", "Shield Maiden", 3, "duelist", 310, 26, 21, 108),
     ("light_elf", "Light Elf", 3, "healer", 320, 21, 22, 106),
     ("dark_elf", "Dark Elf", 3, "trickster", 310, 25, 20, 110),
+    # batch 4: Rome, then the Jade Court (UnitDatabase+Families.swift,
+    # `familyRowsRoman` and `familyRowsChinese`, the same order)
+    ("mars", "Mars", 5, "striker", 480, 40, 27, 102),
+    ("minerva", "Minerva", 5, "oracle", 525, 32, 30, 106),
+    ("neptune", "Neptune", 4, "warden", 575, 27, 33, 98),
+    ("pluto", "Pluto", 4, "trickster", 495, 32, 26, 104),
+    ("diana", "Diana", 4, "marksman", 445, 34, 22, 116),
+    ("mercury", "Mercury", 4, "duelist", 435, 35, 22, 120),
+    ("bellona", "Bellona", 4, "bruiser", 590, 28, 30, 98),
+    ("centurion", "Centurion", 3, "warden", 355, 22, 27, 94),
+    ("gladiator", "Gladiator", 3, "striker", 315, 27, 19, 102),
+    ("vestal", "Vestal", 3, "healer", 330, 21, 23, 101),
+    ("sun_wukong", "Sun Wukong", 5, "trickster", 450, 37, 24, 113),
+    ("azure_dragon", "Azure Dragon", 5, "marksman", 460, 38, 26, 104),
+    ("nezha", "Nezha", 4, "striker", 450, 36, 23, 116),
+    ("guan_yu", "Guan Yu", 4, "warden", 560, 29, 32, 100),
+    ("chang_e", "Chang'e", 4, "healer", 515, 24, 29, 110),
+    ("nuwa", "Nuwa", 4, "oracle", 510, 26, 30, 106),
+    ("dragon_king", "Dragon King", 4, "bruiser", 620, 25, 31, 94),
+    ("fox_spirit", "Fox Spirit", 3, "trickster", 315, 24, 21, 108),
+    ("jiangshi", "Jiangshi", 3, "duelist", 320, 26, 21, 100),
+    ("terracotta_soldier", "Terracotta Soldier", 3, "warden", 365, 21, 28, 90),
 ]
 FAMILIES = {
     key: Blueprint(f"{key}_ember", f"{name} (Fire)", "ember", stars, hp=hp, atk=atk * 1.05, dfn=dfn, spd=spd,
@@ -566,6 +588,28 @@ E_TROLL     = Blueprint("enemy_frost_troll", "Frost Troll", "tide",  3,  430, 25
     skills=[("Ice Club", 1.60, 1, 0, 0, 0, False), ("Glacier Roar (Stun 30%)", 2.40, 1, 4, 0, 0, True)])
 JOTUNN      = Blueprint("boss_jotunn",     "Jotunn",     "gale",     5, 1150, 37, 34,  88,
     skills=[("Ice Axe", 1.90, 1, 0, 0, 0, False), ("Avalanche (Stun 35%)", 2.60, 1, 4, 0, 0, True)])
+# The Roman and Chinese campaign enemies and bosses (UnitDatabase.swift, the
+# "Roman and Chinese campaigns" block).
+E_CENTURION = Blueprint("enemy_centurion", "Centurion", "umbra", 3, 380, 24, 27, 92,
+    skills=[("Gladius Thrust", 1.60, 1, 0, 0, 0, False), ("Pilum Cast (Def Break 40%)", 2.80, 1, 3, 0, 0, False)])
+E_GLADIATOR = Blueprint("enemy_gladiator", "Gladiator", "ember", 3, 330, 30, 18, 104,
+    skills=[("Arena Cut", 1.70, 1, 0, 0, 0, False), ("Crowd's Roar (Def Break 40%)", 3.10, 1, 3, 0, 0, False)])
+E_VESTAL    = Blueprint("enemy_vestal", "Vestal", "radiance", 3, 340, 25, 22, 102,
+    skills=[("Ember Cast", 0.90, 2, 0, 0, 0, False), ("Sacred Fire (Burn 40%)", 2.00, 1, 4, 0, 0, True)])
+E_PRAETORIAN = Blueprint("enemy_praetorian", "Praetorian", "tide", 3, 400, 25, 26, 90,
+    skills=[("Pilum Thrust", 1.60, 1, 0, 0, 0, False), ("Shield Bash (Stun 35%)", 2.60, 1, 4, 0, 0, False)])
+BRONZE      = Blueprint("boss_bronze_colossus", "Colossus of the Sun", "ember", 5, 1200, 38, 36, 84,
+    skills=[("Bronze Fist", 1.90, 1, 0, 0, 0, False), ("Sun-Crown Blaze (Burn 45%)", 2.70, 1, 4, 0, 0, True)])
+E_JIANGSHI  = Blueprint("enemy_jiangshi", "Jiangshi", "umbra", 3, 335, 28, 21, 96,
+    skills=[("Stiff Claws", 0.90, 2, 0, 0, 0, False), ("Hopping Lunge (Def Break 40%)", 3.00, 1, 3, 0, 0, False)])
+E_TERRACOTTA = Blueprint("enemy_terracotta_soldier", "Terracotta Soldier", "radiance", 3, 420, 24, 28, 86,
+    skills=[("Bronze Halberd", 1.60, 1, 0, 0, 0, False), ("Ranks of Clay (Def Break 35%)", 2.40, 1, 4, 0, 0, True)])
+E_FOX       = Blueprint("enemy_fox_spirit", "Fox Spirit", "gale", 3, 320, 27, 21, 110,
+    skills=[("Fox-Fire", 1.70, 1, 0, 0, 0, False), ("Beguiling Glance (Stun 35%)", 2.00, 1, 4, 0, 0, False)])
+E_GENERAL   = Blueprint("enemy_terracotta_general", "Terracotta General", "ember", 3, 440, 27, 27, 88,
+    skills=[("Halberd Sweep", 1.60, 1, 0, 0, 0, False), ("Kiln-Fired Charge (Def Break 45%)", 2.80, 1, 3, 0, 0, False)])
+LONGMEN     = Blueprint("boss_longmen_dragon", "Dragon of Longmen", "tide", 5, 1100, 41, 31, 90,
+    skills=[("Fang and Coil", 0.85, 3, 0, 0, 0, False), ("Flood of the Falls (Stun 35%)", 2.50, 1, 4, 0, 0, True)])
 # The Labyrinth's own bosses (UnitDatabase.swift, "The Labyrinth's bosses").
 COLOSSUS    = Blueprint("boss_colossus",   "Colossus",   "radiance", 5, 1250, 36, 40,  80,
     skills=[("Stone Fist", 1.90, 1, 0, 0, 0, False), ("Fall of the Colossus (Stun 30%)", 2.80, 1, 4, 0, 0, True)])
@@ -687,6 +731,18 @@ CHAPTERS = [  # name, start level, step, stages, power scale, roster, boss, star
     ("Yggdrasil 1 Midgard Fjord",     40, 2, 10,  6.0, [E_DRAUGR, E_BERSERKER, E_VALKYRIE, E_TROLL], E_BERSERKER, 5, 1.2),
     ("Yggdrasil 2 Roots of the Tree", 44, 2, 10,  8.0, [E_VALKYRIE, E_TROLL, E_DRAUGR, E_BERSERKER], E_TROLL, 5, 1.45),
     ("Yggdrasil 3 Hall of Jotunheim", 48, 2, 10, 10.5, [E_TROLL, E_DRAUGR, E_BERSERKER, E_VALKYRIE], JOTUNN, 5, 1.7),
+    # Rome and the Jade Court carry the curve past Jotunheim: the Norse grade
+    # at a higher level, then the roster a grade up (a 6* is x1.35 on every
+    # stat, so the difficulty dial drops when the grade rises), a level a
+    # stage so the top of the map is 68. Measured 2026-09-11 at 100 trials:
+    # the maxed 6* team takes Rome 1's boss at 96t and Rome 2's at 130t, the
+    # gods both in the sixties; Jade 1's boss is 96% for the 6*s at 139t and
+    # 63t for the gods; Jade 2's dragon is out of the 6*s' reach (31% at
+    # the cap) and 94t for the gods, which is the end of the map.
+    ("Rome 1 Forum at Midnight",       50, 1, 10, 13.5, [E_CENTURION, E_GLADIATOR, E_VESTAL, E_PRAETORIAN], E_CENTURION, 5, 2.5),
+    ("Rome 2 Sand of the Colosseum",   53, 1, 10, 17.0, [E_GLADIATOR, E_PRAETORIAN, E_CENTURION, E_VESTAL], BRONZE, 6, 1.45),
+    ("Jade 1 Peach Garden",            56, 1, 10, 21.0, [E_JIANGSHI, E_TERRACOTTA, E_FOX, E_GENERAL], E_FOX, 6, 2.1),
+    ("Jade 2 Dragon King's Gate",      59, 1, 10, 26.0, [E_GENERAL, E_FOX, E_JIANGSHI, E_TERRACOTTA], LONGMEN, 6, 1.45),
 ]
 
 def generated_stage(chapter, index):

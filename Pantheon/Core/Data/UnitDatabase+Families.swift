@@ -1,6 +1,6 @@
 import Foundation
 
-// The third roster and batch 3: sixty-eight families from one table.
+// The third roster, batch 3 and batch 4: eighty-eight families from one table.
 //
 // The first eleven families were each written out by hand. At thirty more
 // that stops being a virtue, so this file is a table — one row per family
@@ -70,14 +70,15 @@ extension UnitDatabase {
 
     // MARK: - The table
 
-    /// The table, in four pieces.
+    /// The table, in six pieces.
     ///
-    /// One array literal of sixty-eight rows, each with eighteen labelled
+    /// One array literal of eighty-eight rows, each with eighteen labelled
     /// arguments, is the kind of expression Swift's type checker charges by
-    /// the minute for. Four smaller literals concatenated cost nothing and
+    /// the minute for. Six smaller literals concatenated cost nothing and
     /// read better; `familyRows` is what the rest of the code uses.
     static let familyRows: [FamilyRow] =
         familyRowsEgypt + familyRowsGreece + familyRowsNorse + familyRowsBatchThree
+            + familyRowsRoman + familyRowsChinese
 
     static let familyRowsEgypt: [FamilyRow] = [
         // ---- Egypt
@@ -447,9 +448,123 @@ extension UnitDatabase {
     
     ]
 
+    /// Rome: ten families, the Seven Hills' own cults rather than Olympus
+    /// renamed. Two 5★, five 4★, three 3★; concepts in
+    /// tools/batch/concepts_batch4.sh, cards in portraits_batch4.sh, and the
+    /// meshes wait for credits (twenty characters at 53 each).
+    static let familyRowsRoman: [FamilyRow] = [
+        // ---- Rome
+        FamilyRow(key: "mars", name: "Mars", pantheon: .roman, stars: 5, archetype: .god, role: .attacker, kit: .striker,
+                  hp: 480, atk: 40, def: 27, spd: 102, height: 2.25, melee: true, costumeHue: 35, motif: "Legion",
+                  skills: ["Legion's Spear", "Ultor's Charge", "March of the Legions", "Father of Rome"],
+                  awakened: ["Mars of the Burning Field", "Mars of the Tiber Ford", "Mars Gradivus", "Mars Ultor", "Mars of the Wolf's Night"],
+                  lore: "Father of Romulus by a Vestal and so of Rome itself, the god the legions marched out to in March and home to in October. The Greeks had a war god they were embarrassed by; Rome had one it was proud of."),
+        FamilyRow(key: "minerva", name: "Minerva", pantheon: .roman, stars: 5, archetype: .god, role: .support, kit: .oracle,
+                  hp: 525, atk: 32, def: 30, spd: 106, height: 2.05, melee: false, costumeHue: 45, motif: "Owl",
+                  skills: ["Owl's Spear", "Counsel of the Capitol", "Quinquatria", "Sprung Full-Armed"],
+                  awakened: ["Minerva of the Guild Fires", "Minerva of the Aventine Spring", "Minerva of the Owl's Wing", "Minerva Capitolina", "Minerva of the Night Owl"],
+                  lore: "Wisdom, craft and the war that is won by thinking; one of the three on the Capitol with Jupiter and Juno. Every guild in Rome, from the flute-players to the doctors, kept her feast in March and closed the shop for it."),
+        FamilyRow(key: "neptune", name: "Neptune", pantheon: .roman, stars: 4, archetype: .god, role: .defender, kit: .warden,
+                  hp: 575, atk: 27, def: 33, spd: 98, height: 2.20, melee: true, costumeHue: 190, motif: "Seawall",
+                  skills: ["Trident Thrust", "Seawall", "Neptunalia", "Lord of Horses"],
+                  awakened: ["Neptune of the Boiling Strait", "Neptune of the Deep Harbour", "Neptune of the Sea-Wind", "Neptune of the Bright Shallows", "Neptune of the Drowned Fleet"],
+                  lore: "The god of fresh water first and the sea second, and of horses always; Rome built him a temple by the Circus and raced in his honour. His festival in July was kept in huts of branches, out of the heat, with a great deal of wine."),
+        FamilyRow(key: "pluto", name: "Pluto", pantheon: .roman, stars: 4, archetype: .god, role: .support, kit: .trickster,
+                  hp: 495, atk: 32, def: 26, spd: 104, height: 2.10, melee: false, costumeHue: 45, motif: "Vault",
+                  skills: ["Bident", "Gates of Dis", "Wealth of the Dead", "The Rich One"],
+                  awakened: ["Pluto of the Pyre", "Pluto of Lake Avernus", "Pluto of the Cold Draught", "Pluto of the Pale Gate", "Pluto Dis Pater"],
+                  lore: "Dis Pater, the Rich One, whose wealth is everything under the ground: the silver, the seed and the dead. Rome kept his altar buried and dug it up once a century for the Secular Games, which is as often as anyone wanted to see him."),
+        FamilyRow(key: "diana", name: "Diana", pantheon: .roman, stars: 4, archetype: .god, role: .attacker, kit: .marksman,
+                  hp: 445, atk: 34, def: 22, spd: 116, height: 1.95, melee: false, costumeHue: 45, motif: "Grove",
+                  skills: ["Silver Shaft", "Hunt of Nemi", "Rain of the Aventine", "Lady of the Grove"],
+                  awakened: ["Diana of the Hunting Fire", "Diana of the Mirror Lake", "Diana of the High Wood", "Diana Lucifera", "Diana Trivia"],
+                  lore: "The moon, the hunt and the wild wood; her grove at Nemi was ruled by a runaway slave who had killed the priest before him and waited for the one who would kill him. Slaves kept her feast in August with their hair washed and their dogs garlanded."),
+        FamilyRow(key: "mercury", name: "Mercury", pantheon: .roman, stars: 4, archetype: .god, role: .attacker, kit: .duelist,
+                  hp: 435, atk: 35, def: 22, spd: 120, height: 1.95, melee: true, costumeHue: 45, motif: "Crossroads",
+                  skills: ["Caduceus Cut", "Winged Sandals", "Merchant's Cut", "Quick Hands"],
+                  awakened: ["Mercury of the Hot Road", "Mercury of the Tiber Docks", "Mercury of the Winged Heel", "Mercury of the Bright Coin", "Mercury of the Thieves' Night"],
+                  lore: "Trade, profit, travel and theft, in a winged cap and winged sandals; the merchants sprinkled their goods with water from his well in May and prayed to be forgiven the lies they were about to tell. He is the fastest thing on the Seven Hills and knows it."),
+        FamilyRow(key: "bellona", name: "Bellona", pantheon: .roman, stars: 4, archetype: .god, role: .defender, kit: .bruiser,
+                  hp: 590, atk: 28, def: 30, spd: 98, height: 2.05, melee: true, costumeHue: 35, motif: "Triumph",
+                  skills: ["War Whip", "Battle-Cry of Bellona", "Column of War", "Blood of the Bellonarii"],
+                  awakened: ["Bellona of the Burning Camp", "Bellona of the Red Tiber", "Bellona of the Trumpet Wind", "Bellona of the Bright Spear", "Bellona of the Blood Rite"],
+                  lore: "Rome's own war goddess, at whose temple the Senate received foreign envoys and declared war by throwing a spear over her column. Her priests slashed their own arms and drank the blood; she asked no less of the legions."),
+        FamilyRow(key: "centurion", name: "Centurion", pantheon: .roman, stars: 3, archetype: .hero, role: .defender, kit: .warden,
+                  hp: 355, atk: 22, def: 27, spd: 94, height: 1.95, melee: true, costumeHue: 35, motif: "Eagle",
+                  skills: ["Gladius Thrust", "Shield Wall", "", ""],
+                  awakened: nil,
+                  lore: "Eighty men answer to him and he answers for them, vine-stick in hand. He has held the line in three provinces and would hold it in the Duat."),
+        FamilyRow(key: "gladiator", name: "Gladiator", pantheon: .roman, stars: 3, archetype: .hero, role: .attacker, kit: .striker,
+                  hp: 315, atk: 27, def: 19, spd: 102, height: 1.95, melee: true, costumeHue: 20, motif: "Arena",
+                  skills: ["Arena Cut", "Crowd's Roar", "", ""],
+                  awakened: nil,
+                  lore: "A slave, a prisoner or a volunteer, trained to die well in front of fifty thousand people and hoping to be paid instead. The wooden sword of freedom is three fights away, and always has been."),
+        FamilyRow(key: "vestal", name: "Vestal", pantheon: .roman, stars: 3, archetype: .hero, role: .support, kit: .healer,
+                  hp: 330, atk: 21, def: 23, spd: 101, height: 1.85, melee: false, costumeHue: 45, motif: "Vigil",
+                  skills: ["Ember Cast", "Undying Flame", "", ""],
+                  awakened: nil,
+                  lore: "One of the six who keep the hearth of the city and must not let it go out; thirty years of service, then freedom. If the flame dies the fault is hers, and the punishment is a room under the ground."),
+    ]
+
+    /// The Jade Court: ten families, two of them dragons. Two 5★, five 4★,
+    /// three 3★, from the same batch-4 scripts as Rome.
+    static let familyRowsChinese: [FamilyRow] = [
+        // ---- The Jade Court
+        FamilyRow(key: "sun_wukong", name: "Sun Wukong", pantheon: .chinese, stars: 5, archetype: .demigod, role: .attacker, kit: .trickster,
+                  hp: 450, atk: 37, def: 24, spd: 113, height: 1.90, melee: true, costumeHue: 45, motif: "Cloud",
+                  skills: ["Ruyi Staff", "Seventy-Two Changes", "Havoc in Heaven", "Great Sage Equal to Heaven"],
+                  awakened: ["Wukong of the Eight Trigrams Furnace", "Wukong of the Dragon's Pool", "Wukong of the Somersault Cloud", "Wukong of the Golden Eyes", "Wukong of the Five-Peak Prison"],
+                  lore: "Born from a stone egg on the Mountain of Flowers and Fruit, he learned immortality, took a staff from the Dragon King, ate the peaches of Heaven and beat every general sent for him. The Buddha put a mountain on him for five hundred years; it improved his manners slightly."),
+        FamilyRow(key: "azure_dragon", name: "Azure Dragon", pantheon: .chinese, stars: 5, archetype: .spirit, role: .attacker, kit: .marksman,
+                  hp: 460, atk: 38, def: 26, spd: 104, height: 2.60, melee: false, costumeHue: 190, motif: "Eastern Sky",
+                  skills: ["Azure Breath", "Seven Mansions", "Storm of the East", "Guardian of the East"],
+                  awakened: ["Qinglong of the Spring Thunder", "Qinglong of the Bringing Rain", "Qinglong of the East Wind", "Qinglong of the Morning Star", "Qinglong of the Moonless Sky"],
+                  lore: "The dragon of the east, of spring and the wood element, seven mansions of stars long; the emperor's armies carried it on the left banner. It brings the rain when asked properly, and floods when not."),
+        FamilyRow(key: "nezha", name: "Nezha", pantheon: .chinese, stars: 4, archetype: .god, role: .attacker, kit: .striker,
+                  hp: 450, atk: 36, def: 23, spd: 116, height: 1.80, melee: true, costumeHue: 45, motif: "Lotus",
+                  skills: ["Fire-Tipped Spear", "Universe Ring", "Wind-Fire Wheels", "Third Lotus Prince"],
+                  awakened: ["Nezha of the Fire-Tipped Spear", "Nezha of the East Sea Shore", "Nezha of the Wind-Fire Wheels", "Nezha Reborn in Lotus", "Nezha of the Bone Returned"],
+                  lore: "Born from a ball of flesh after three years in the womb, he killed a dragon prince at seven, gave his bones back to his parents to spare them, and was rebuilt from lotus roots by his teacher. Wind-fire wheels under his feet, and a ring that fits any neck."),
+        FamilyRow(key: "guan_yu", name: "Guan Yu", pantheon: .chinese, stars: 4, archetype: .demigod, role: .defender, kit: .warden,
+                  hp: 560, atk: 29, def: 32, spd: 100, height: 2.30, melee: true, costumeHue: 45, motif: "Crescent Blade",
+                  skills: ["Crescent Blade", "Green Dragon Guard", "Five Passes", "Lord Guan"],
+                  awakened: ["Guan Yu of the Red Hare", "Guan Yu of the Seven Armies Drowned", "Guan Yu of the Five Passes", "Guan Yu, Lord of Loyalty", "Guan Yu of the Night Reading"],
+                  lore: "The general who swore brotherhood in a peach orchard, crossed five passes cutting down six of their guards, and read the classics by candlelight while the enemy waited. Beheaded in the end and made a god afterwards; every shop in China keeps his statue by the till."),
+        FamilyRow(key: "chang_e", name: "Chang'e", pantheon: .chinese, stars: 4, archetype: .god, role: .support, kit: .healer,
+                  hp: 515, atk: 24, def: 29, spd: 110, height: 1.95, melee: false, costumeHue: 45, motif: "Moon",
+                  skills: ["Moonbeam", "Elixir of the Moon", "Jade Rabbit's Pestle", "Lady of the Moon"],
+                  awakened: ["Chang'e of the Lantern Night", "Chang'e of the Moon on the Water", "Chang'e of the Cold Palace Wind", "Chang'e of the Full Moon", "Chang'e of the Dark of the Moon"],
+                  lore: "Her husband shot down nine of the ten suns and was given the elixir of immortality; she drank it herself and floated up to the moon, where she lives in a cold palace with a rabbit that pounds the elixir. Every Mid-Autumn night the cakes on the table are for her."),
+        FamilyRow(key: "nuwa", name: "Nüwa", pantheon: .chinese, stars: 4, archetype: .god, role: .support, kit: .oracle,
+                  hp: 510, atk: 26, def: 30, spd: 106, height: 2.05, melee: false, costumeHue: 45, motif: "Mended Sky",
+                  skills: ["Clay Cast", "Five-Coloured Stones", "Mending the Sky", "Mother of Mankind"],
+                  awakened: ["Nüwa of the Smelted Stones", "Nüwa of the Yellow River Clay", "Nüwa of the Pillared Sky", "Nüwa of the Five Colours", "Nüwa of the Broken Pillar"],
+                  lore: "She shaped the first people from yellow river clay, the rich ones by hand and the rest flicked off a rope. When a fallen pillar tore the sky she smelted five-coloured stones to patch it and cut the legs off a great turtle to hold it up; the patch has held."),
+        FamilyRow(key: "dragon_king", name: "Dragon King", pantheon: .chinese, stars: 4, archetype: .god, role: .defender, kit: .bruiser,
+                  hp: 620, atk: 25, def: 31, spd: 94, height: 2.55, melee: true, costumeHue: 45, motif: "Crystal Palace",
+                  skills: ["Pearl Slam", "Tide of the East Sea", "Crystal Palace Roar", "King of the East Sea"],
+                  awakened: ["Ao Guang of the Boiling Sea", "Ao Guang of the Crystal Palace", "Ao Guang of the Typhoon", "Ao Guang of the Pearl", "Ao Guang of the Drowned Deep"],
+                  lore: "Ruler of the East Sea from a crystal palace under the waves, who lost his best staff to a monkey and his third son to a seven-year-old, and complained to Heaven both times. He brings the rain when asked and drowns a province when insulted."),
+        FamilyRow(key: "fox_spirit", name: "Fox Spirit", pantheon: .chinese, stars: 3, archetype: .spirit, role: .support, kit: .trickster,
+                  hp: 315, atk: 24, def: 21, spd: 108, height: 1.85, melee: false, costumeHue: 45, motif: "Nine Tails",
+                  skills: ["Fox-Fire", "Beguiling Glance", "", ""],
+                  awakened: nil,
+                  lore: "A fox that has lived a thousand years and learned to wear a woman's face; nine tails, a taste for scholars and a lamp of cold fire. Some are wicked and some are only lonely, and it is usually too late by the time you can tell which."),
+        FamilyRow(key: "jiangshi", name: "Jiangshi", pantheon: .chinese, stars: 3, archetype: .spirit, role: .attacker, kit: .duelist,
+                  hp: 320, atk: 26, def: 21, spd: 100, height: 1.90, melee: true, costumeHue: 45, motif: "Talisman",
+                  skills: ["Stiff Claws", "Hopping Lunge", "", ""],
+                  awakened: nil,
+                  lore: "A corpse too stiff to walk, so it hops, arms out, in the robes it was buried in, with a yellow paper spell on its brow that mostly works. It finds the living by their breath; hold yours."),
+        FamilyRow(key: "terracotta_soldier", name: "Terracotta Soldier", pantheon: .chinese, stars: 3, archetype: .spirit, role: .defender, kit: .warden,
+                  hp: 365, atk: 21, def: 28, spd: 90, height: 1.95, melee: true, costumeHue: 30, motif: "First Emperor",
+                  skills: ["Bronze Halberd", "Ranks of Clay", "", ""],
+                  awakened: nil,
+                  lore: "One of eight thousand fired in clay to guard the First Emperor under his mountain, each with his own face and a real bronze halberd. He has stood at attention for two thousand years and sees no reason to stop now."),
+    ]
+
     /// Every variant this file adds.
-    /// A `let`, not a `var`. As a computed property this rebuilt all sixty-eight
-    /// families — three hundred and forty blueprints with their skills, leader
+    /// A `let`, not a `var`. As a computed property this rebuilt all eighty-eight
+    /// families — four hundred and forty blueprints with their skills, leader
     /// skills and awakenings — on every read, and it is read by both
     /// `UnitDatabase.all` and `UnitDatabase.summonPool`.
     static let thirdRoster: [UnitBlueprint] = {
@@ -1198,5 +1313,27 @@ extension UnitDatabase {
         "shield_maiden": ["Torch-Lit Raid", "Fjord-Cold Cuts", "Lagertha's Flurry", "Hervor's Challenge", "Tyrfing Drawn", "Raider's Reckoning", "Shield Wall Break", "Beside the Men", "Saga-Told Blow", "Burial Rites Earned"],
         "light_elf": ["Sun-Fair Warmth", "Alfheim Dew", "Glimmer on the Breeze", "Glow of Alfheim", "Starlit Sting", "Freyr's Tooth-Gift", "Fairer Than the Sun", "Elf-Shot Quickening", "Chosen Touch", "Glamour Undone"],
         "dark_elf": ["Forge-Hot Knife", "Pitch-Cold Blade", "Svartalfheim Snatch", "Treasure Handed Over", "Smith's Curse", "Andvari's Gold", "Blacker Than Pitch", "Hammer-Ring Hush", "Gifts Cursed in Passing", "Dwarf-Made Doom"],
+        // ---- Rome (batch 4)
+        "mars": ["Twin Spears of March", "Tiber Ford Blow", "Gradivus' Three Strides", "Ultor's Blow", "Wolf-Fed Blow", "Camp Set Ablaze", "Field of Mars Flooded", "March of the Legions", "Avenger's Verdict", "Night of the She-Wolf"],
+        "minerva": ["Guild Fires Banked", "Aventine Spring Chill", "Owl-Wing Hush", "Capitoline Reckoning", "Owl at Midnight", "Quinquatria Kindled", "Counsel of the Spring", "Quick Counsel", "Capitoline Decree", "Owl's Verdict"],
+        "neptune": ["Scalding Strait Riposte", "Seawall Raised", "Fair Wind for the Fleet", "Bright Shallows Ward", "Undertow Riposte", "Neptunalia Bonfire", "Harbour Frozen Over", "Chariot Over the Waves", "Trident of the Circus", "Fleet Taken Down"],
+        "pluto": ["Pyre-Toll Snatch", "Avernus Chill", "Breath of the Vault", "Pale Gate Levy", "Dis Pater's Due", "Altar Dug Up Burning", "Avernus Overflowing", "Secular Games Silence", "Wealth Brought to Light", "Gates of Dis"],
+        "diana": ["Twin Hunting Shafts", "Three from the Mirror Lake", "Five from the High Wood", "Lucifera's Shaft", "Trivia's Shot", "Torches at Nemi", "Volley Over Nemi", "Hounds of the Aventine", "Moonlit Verdict", "King of the Wood Slain"],
+        "mercury": ["Hot-Road Cut", "Two Cuts at the Docks", "Four Quick Hands", "Bright Coin Cut", "Thief's Cut", "Merchant's Profit", "Well-Water Bargain", "Winged Heel Strike", "Coin Held to the Light", "Night of the Thieves"],
+        "bellona": ["Camp-Fire Slam", "Cry Over the Red Tiber", "Trumpet Charge", "Bright Spear Blow", "Blood-Rite Blow", "Spear Over the Column", "Envoys Refused", "Column of War", "War Declared", "Bellonarii's Blood"],
+        "centurion": ["Vine-Stick Riposte", "Shield Wall", "Quick March", "Eagle Held High", "Lost Legion's Riposte", "Century Rallied", "Line Held on the Rhine", "Double Time", "Eagles Recovered", "Teutoburg Remembered"],
+        "gladiator": ["Two for the Crowd", "Net and Trident", "Three Cuts for the Games", "Thumbs Up", "Blood on the Sand", "Arena Set Alight", "Flooded Arena", "Wooden Sword Won", "Crowd's Favour", "Thumbs Down"],
+        "vestal": ["Hearth Rekindled", "Egeria's Spring Water", "Breath on the Embers", "Undying Flame", "Vigil in the Dark", "Fire Never Out", "Mola Salsa", "Thirty Years' Service", "Vesta's Grace", "Room Under the Ground"],
+        // ---- The Jade Court (batch 4)
+        "sun_wukong": ["Furnace-Eyed Snatch", "Staff from the Sea Floor", "Somersault Snatch", "Golden Gaze", "Mountain's Weight", "Havoc in Heaven", "East Sea Palace Overturned", "Ten Thousand Li Somersault", "Great Sage's Verdict", "Five Hundred Years Under Stone"],
+        "azure_dragon": ["Twin Spring Thunders", "Three Rains", "Five from the East Wind", "Morning Star Shaft", "Moonless Breath", "Spring Thunder Over All", "Rain Over Seven Mansions", "East Wind Rising", "Left Banner Raised", "Sky Without Stars"],
+        "nezha": ["Twin Fire-Tipped Thrusts", "Blow on the East Sea Shore", "Three Turns of the Wheels", "Lotus-Bright Thrust", "Bone-Returning Thrust", "Wheels Set the Sea Alight", "Shore Swept Clean", "Wind-Fire Wheels", "Reborn in Lotus", "Tendons Pulled"],
+        "guan_yu": ["Red Hare Riposte", "Seven Armies Flooded", "Five Passes at a Gallop", "Loyal Guard", "Candlelight Riposte", "Crescent Blade Sweep", "Fan Castle Drowned", "Six Generals Cut Down", "Lord Guan's Stand", "Read Through the Night"],
+        "chang_e": ["Lantern-Night Balm", "Moon on the Water", "Cold Palace Breeze", "Full Moon Blessing", "Dark of the Moon", "Mooncakes Shared", "Elixir Drunk", "Rabbit's Pestle Quickened", "Moon Palace Grace", "Elixir Kept"],
+        "nuwa": ["Stones Smelted", "River Clay Hush", "Rope-Flicked Silence", "Five Colours Revealed", "Pillar Fallen", "Five-Coloured Patch", "Clay Made Whole", "Mended Sky's Breeze", "Mending the Sky", "Turtle's Legs Cut"],
+        "dragon_king": ["Sea Set Boiling", "Roar of the Crystal Palace", "Typhoon Charge", "Pearl Held Up", "Drowned Deep Blow", "Rain Refused", "Tide of the East Sea", "Typhoon Over the Coast", "Pearl of the East Sea", "Complaint to Heaven"],
+        "fox_spirit": ["Fox-Fire Snatch", "Cold Lamp Chill", "Nine Tails Snatch", "Borrowed Face", "Scholar's Ruin", "Fox-Fire Loosed", "Thousand-Year Chill", "Nine Tails Fanned", "Face Revealed", "Lonely Hour"],
+        "jiangshi": ["Talisman Burnt Off", "Two Stiff Claws", "Four Hops", "Talisman Torn", "Breath Stolen", "Grave-Robes Alight", "Cold Grave Lunge", "Hopping Lunge", "Spell on the Brow", "Held Breath Taken"],
+        "terracotta_soldier": ["Kiln-Fired Riposte", "Ranks of Clay", "Quick Step of the Ranks", "First Emperor's Guard", "Buried Riposte", "Kiln Relit", "Clay Rank Frozen", "Eight Thousand at a Run", "Own Face Kept", "Two Thousand Years' Watch"],
     ]
 }

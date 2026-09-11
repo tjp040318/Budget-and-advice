@@ -34,6 +34,16 @@ enum UnitDatabase {
         valkyrieChooser,
         frostTroll,
         jotunnKing,
+        lostLegionCenturion,
+        morningGladiator,
+        coldHearthVestal,
+        palatinePraetorian,
+        bronzeColossus,
+        tombJiangshi,
+        buriedArmySoldier,
+        coldLampFox,
+        buriedArmyGeneral,
+        longmenDragon,
         colossusOfTheVault,
         unwrappedKing
     ]
@@ -1380,6 +1390,149 @@ enum UnitDatabase {
         specialStatus: StatusSpec(.freeze, chance: 0.35, turns: 1, target: .allEnemies),
         specialCooldown: 4,
         pantheon: .norse, auraHex: "#9CD8FF", height: 7.5
+    )
+
+    // MARK: - The Roman and Chinese campaigns
+    //
+    // The Seven Hills and the Jade Court fight with their commons' models and
+    // cards, as Olympus and Yggdrasil do. Until those meshes ship (batch 4
+    // waits for credits) each stands in as a shipped figure of its kind
+    // (`standInAsset`), so the chapters play now rather than when the
+    // credits arrive; the family's own mesh takes over the moment it lands.
+
+    static let lostLegionCenturion = enemy(
+        id: "enemy_centurion", name: "Centurion", epithet: "Of the Lost Legion",
+        element: .umbra, archetype: .spirit, role: .defender, stars: 3,
+        hp: 380, atk: 24, def: 27, spd: 92,
+        basicName: "Gladius Thrust", basicMultiplier: 1.60,
+        specialName: "Pilum Cast", specialMultiplier: 2.80,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.40, turns: 2, target: .singleEnemy),
+        pantheon: .roman, auraHex: "#8C7A9C",
+        assetName: "centurion", portraitName: "portrait_centurion_umbra", height: 1.95,
+        standInAsset: "hoplite"
+    )
+
+    static let morningGladiator = enemy(
+        id: "enemy_gladiator", name: "Gladiator", epithet: "Of the Morning Games",
+        element: .ember, archetype: .hero, role: .attacker, stars: 3,
+        hp: 330, atk: 30, def: 18, spd: 104,
+        basicName: "Arena Cut", basicMultiplier: 1.70,
+        specialName: "Crowd's Roar", specialMultiplier: 3.10,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.40, turns: 2, target: .singleEnemy),
+        pantheon: .roman, auraHex: "#E07040",
+        assetName: "gladiator", portraitName: "portrait_gladiator_ember", height: 1.95,
+        standInAsset: "berserker"
+    )
+
+    static let coldHearthVestal = enemy(
+        id: "enemy_vestal", name: "Vestal", epithet: "Keeper of the Cold Hearth",
+        element: .radiance, archetype: .hero, role: .support, stars: 3,
+        hp: 340, atk: 25, def: 22, spd: 102,
+        basicName: "Ember Cast", basicMultiplier: 0.90, basicHits: 2,
+        specialName: "Sacred Fire", specialMultiplier: 2.00, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.burn, chance: 0.40, turns: 2, target: .allEnemies),
+        specialCooldown: 4,
+        pantheon: .roman, auraHex: "#FFE8B0",
+        assetName: "vestal", portraitName: "portrait_vestal_radiance", height: 1.85,
+        standInAsset: "cobra_priestess"
+    )
+
+    /// A second enemy on the centurion's mesh, as the five elements already
+    /// are: the palace guard in the sea's colour, with a shield that stuns.
+    static let palatinePraetorian = enemy(
+        id: "enemy_praetorian", name: "Praetorian", epithet: "Guard of the Palatine",
+        element: .tide, archetype: .hero, role: .defender, stars: 3,
+        hp: 400, atk: 25, def: 26, spd: 90,
+        basicName: "Pilum Thrust", basicMultiplier: 1.60,
+        specialName: "Shield Bash", specialMultiplier: 2.60,
+        specialStatus: StatusSpec(.stun, chance: 0.35, turns: 1, target: .singleEnemy),
+        specialCooldown: 4,
+        pantheon: .roman, auraHex: "#7CB0D0",
+        assetName: "centurion", portraitName: "portrait_centurion_tide", height: 1.95,
+        standInAsset: "hoplite"
+    )
+
+    /// The boss of the Sand of the Colosseum: the bronze giant of the Sun
+    /// that stood by the amphitheatre's gate and gave it its name, stepped
+    /// down off its plinth. Slow, enormous, and its crown sets the line alight.
+    static let bronzeColossus = enemy(
+        id: "boss_bronze_colossus", name: "Colossus of the Sun", epithet: "Bronze Giant of the Amphitheatre",
+        element: .ember, archetype: .primordial, role: .defender, stars: 5,
+        hp: 1200, atk: 38, def: 36, spd: 84,
+        basicName: "Bronze Fist", basicMultiplier: 1.90,
+        specialName: "Sun-Crown Blaze", specialMultiplier: 2.70, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.burn, chance: 0.45, turns: 2, target: .allEnemies),
+        specialCooldown: 4,
+        pantheon: .roman, auraHex: "#FFB347", height: 7.0,
+        standInAsset: "boss_colossus"
+    )
+
+    static let tombJiangshi = enemy(
+        id: "enemy_jiangshi", name: "Jiangshi", epithet: "Hopping Dead of the Tombs",
+        element: .umbra, archetype: .spirit, role: .attacker, stars: 3,
+        hp: 335, atk: 28, def: 21, spd: 96,
+        basicName: "Stiff Claws", basicMultiplier: 0.90, basicHits: 2,
+        specialName: "Hopping Lunge", specialMultiplier: 3.00,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.40, turns: 2, target: .singleEnemy),
+        pantheon: .chinese, auraHex: "#9C8CC0",
+        assetName: "jiangshi", portraitName: "portrait_jiangshi_umbra", height: 1.90,
+        standInAsset: "mummy"
+    )
+
+    static let buriedArmySoldier = enemy(
+        id: "enemy_terracotta_soldier", name: "Terracotta Soldier", epithet: "Of the Buried Army",
+        element: .radiance, archetype: .spirit, role: .defender, stars: 3,
+        hp: 420, atk: 24, def: 28, spd: 86,
+        basicName: "Bronze Halberd", basicMultiplier: 1.60,
+        specialName: "Ranks of Clay", specialMultiplier: 2.40, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.35, turns: 2, target: .allEnemies),
+        specialCooldown: 4,
+        pantheon: .chinese, auraHex: "#E8D0A0",
+        assetName: "terracotta_soldier", portraitName: "portrait_terracotta_soldier_radiance", height: 1.95,
+        standInAsset: "sandstone_sentinel"
+    )
+
+    static let coldLampFox = enemy(
+        id: "enemy_fox_spirit", name: "Fox Spirit", epithet: "Of the Cold Lamp",
+        element: .gale, archetype: .spirit, role: .support, stars: 3,
+        hp: 320, atk: 27, def: 21, spd: 110,
+        basicName: "Fox-Fire", basicMultiplier: 1.70,
+        specialName: "Beguiling Glance", specialMultiplier: 2.00,
+        specialStatus: StatusSpec(.stun, chance: 0.35, turns: 1, target: .singleEnemy),
+        specialCooldown: 4,
+        pantheon: .chinese, auraHex: "#B8E8C8",
+        assetName: "fox_spirit", portraitName: "portrait_fox_spirit_gale", height: 1.85,
+        standInAsset: "nymph"
+    )
+
+    /// A second enemy on the soldier's mesh: the van's general, a head
+    /// taller, kiln-hot.
+    static let buriedArmyGeneral = enemy(
+        id: "enemy_terracotta_general", name: "Terracotta General", epithet: "Of the First Emperor's Van",
+        element: .ember, archetype: .spirit, role: .defender, stars: 3,
+        hp: 440, atk: 27, def: 27, spd: 88,
+        basicName: "Halberd Sweep", basicMultiplier: 1.60,
+        specialName: "Kiln-Fired Charge", specialMultiplier: 2.80,
+        specialStatus: StatusSpec(.defenseDown, chance: 0.45, turns: 2, target: .singleEnemy),
+        pantheon: .chinese, auraHex: "#E89050",
+        assetName: "terracotta_soldier", portraitName: "portrait_terracotta_soldier_ember", height: 2.20,
+        standInAsset: "sandstone_sentinel"
+    )
+
+    /// The boss of the Dragon King's Gate: a carp that leapt the falls at
+    /// Longmen and became a dragon, and never stopped growing. Three coils a
+    /// turn, and the flood behind it can freeze the line. The serpent stands
+    /// in for it until its own mesh is made.
+    static let longmenDragon = enemy(
+        id: "boss_longmen_dragon", name: "Dragon of Longmen", epithet: "Carp That Leapt the Falls",
+        element: .tide, archetype: .primordial, role: .attacker, stars: 5,
+        hp: 1100, atk: 41, def: 31, spd: 90,
+        basicName: "Fang and Coil", basicMultiplier: 0.85, basicHits: 3,
+        specialName: "Flood of the Falls", specialMultiplier: 2.50, specialTarget: .allEnemies,
+        specialStatus: StatusSpec(.freeze, chance: 0.35, turns: 1, target: .allEnemies),
+        specialCooldown: 4,
+        pantheon: .chinese, auraHex: "#5FB8E8", height: 6.6,
+        standInAsset: "apep"
     )
 
     // MARK: - The Labyrinth's bosses

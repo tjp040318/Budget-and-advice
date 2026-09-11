@@ -239,6 +239,53 @@ environment can and cannot do. The short version:
   steps pointing at the landmark each wants, with a skip chip and a chapter
   intro card shown once. Five new save fields, every one Optional with a nil
   default.
+- **Rome and the Jade Court exist as data (2026-09-11).** Twenty families
+  in `UnitDatabase+Families.swift` (`familyRowsRoman`: Mars, Minerva 5★;
+  Neptune, Pluto, Diana, Mercury, Bellona 4★; Centurion, Gladiator, Vestal
+  3★ — `familyRowsChinese`: Sun Wukong and the Azure Dragon 5★; Nezha,
+  Guan Yu, Chang'e, Nüwa and the Dragon King 4★; Fox Spirit, Jiangshi,
+  Terracotta Soldier 3★), each with its ten elemental skill names; two
+  banners (`Banner.eagleRises`, `.jadeCourtOpens`, offered once a family
+  has cards); four chapters after Jötunheim (`rome_1` The Forum at
+  Midnight, `rome_2` The Sand of the Colosseum, `jade_1` The Peach Garden,
+  `jade_2` The Dragon King's Gate) whose enemies borrow the commons' models
+  and stand in as shipped meshes until then (`enemy_centurion` … 
+  `boss_bronze_colossus` on the Colossus, `boss_longmen_dragon` on Apep);
+  four `BattleEnvironment`s (`forumRome`, `colosseumSands`, `peachGarden`,
+  `dragonGate`) borrowing older paintings until theirs land, with sets in
+  `StageBuilder.recipe(for:)` (`prop_stone_lion` and `prop_pagoda_lantern`
+  are stand-ins until made). Both pantheons are in `Pantheon.live`. The
+  concepts, cards, banners and backdrops are `tools/batch/concepts_batch4.sh`,
+  `portraits_batch4.sh` and `realms_batch4.sh` for the night routine; the
+  rigged models are twenty characters at 53 credits each, 1,060, which the
+  3,000 floor cannot afford until the owner raises it (the two dragons stand
+  on four claws and will not go through Meshy's biped rigger — they are the
+  Hydra's route, an unrigged mesh moved procedurally, unless repainted).
+  `balance.py --chapters` and `--families` measure them; the rows and the
+  four chapter lines are mirrored there.
+- **The collection has two layouts (2026-09-11)**, switched in the strip and
+  remembered (`collectionLayout`): **Cards** — the grid at 55% of the width
+  and a plate on the right for the unit picked (portrait, grade, level,
+  power, the four stats with the relics' share, the six slots as a 3×2 of
+  `RelicSlotTile`s, the sets, Full sheet / Train); **Stage** — a rail of
+  small cards along the bottom, the unit's real model on a rune ring in
+  the right half of the summoning hall (`CollectionStageView`, the Hall
+  of Ka's altar without the rites; a drag across that half turns it) and
+  the same words and slots on a cream plate over the left. A tap on a
+  card PICKS; Full sheet opens the unit sheet, a slot opens the picker for
+  that slot. The tour's step 21 photographs the Stage.
+- **The UI is cream and gold (2026-09-11)** — "like a Greek temple", the
+  owner said of the black. Every token in `Theme.swift` turned: ink
+  #1F1912 is the text, the grounds are `surface` #EBE2CF, `surfaceRaised`
+  #F6F0E3, `surfaceHigh` #FDF9F0, the accents gold #B08A2E / #8C6D22 /
+  #5C4611, and a translucent plate over a stage or a painting is
+  `Theme.plate` (#F4EDDD) at 0.4–0.85, never `Theme.ink` — ink text on an
+  ink plate is the black UI back again. `GameScreen` forces
+  `.preferredColorScheme(.light)`. The marble menu kit's slate panel and
+  slate button (`ui_panel`, `ui_button_dark`) are held back by
+  `Chrome.awaitingCreamRepaint` until `tools/batch/ui_marble.sh` repaints
+  them cream with a gold frame; the marble ribbon and the bronze button
+  are live.
 - **The unit sheet is one landscape screen** (`UnitDetailView`): the card,
   level bar, power and the Power up / Evolve / Awaken buttons on the left,
   the six relic slots in a ring around the element in the middle (slot 1

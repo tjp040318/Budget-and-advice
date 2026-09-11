@@ -85,6 +85,10 @@ enum Pantheon: String, Codable, CaseIterable, Identifiable, Sendable {
     /// Egypt is first because the launch families are Egyptian. Greece went live
     /// with the Zeus family: a case here, five blueprints, and leader skills
     /// that already scoped by pantheon, so "Greek allies gain 33% ATK" was one
-    /// line of data. Olympus does not have a campaign chapter yet.
-    static var live: [Pantheon] { [.egyptian, .greek, .norse] }
+    /// line of data. Rome and the Jade Court (2026-09-11) are live as data:
+    /// their chapters are on the map and their realms in the world sheet,
+    /// while their banners wait for cards (`Banner.pantheonBanners` offers a
+    /// pantheon once its pool has a unit with art) and their meshes for
+    /// credits.
+    static var live: [Pantheon] { [.egyptian, .greek, .norse, .roman, .chinese] }
 }

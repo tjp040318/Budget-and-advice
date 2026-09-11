@@ -89,6 +89,40 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
         pantheon: .norse
     )
 
+    /// The Roman banner: the Seven Hills only. Mars is featured in every
+    /// element; Minerva shares his grade, the gods of the Forum fill the one
+    /// beneath, and the centurion, the gladiator and the Vestal are its
+    /// commons. Offered once a Roman unit has cards (batch 4).
+    static let eagleRises = Banner(
+        id: "eagle_rises",
+        title: "The Eagle Rises",
+        subtitle: "The standards go up on the Capitol. Rome answers the circle — Mars first, in every element.",
+        scroll: .pantheonic,
+        pool: pool(of: .roman),
+        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("mars_") },
+        legendaryPity: 90,
+        rarePity: 10,
+        artName: "banner_eagle_rises",
+        pantheon: .roman
+    )
+
+    /// The Chinese banner: the Jade Court only. The Monkey King is featured
+    /// in every element; the Azure Dragon shares his grade, the court fills
+    /// the one beneath, and the fox, the hopping dead and the clay soldier
+    /// are its commons. Offered once a Jade Court unit has cards.
+    static let jadeCourtOpens = Banner(
+        id: "jade_court_opens",
+        title: "The Jade Court Opens",
+        subtitle: "The gates of Heaven stand open and the Monkey King is first through them. The Jade Court answers the circle — Sun Wukong in every element.",
+        scroll: .pantheonic,
+        pool: pool(of: .chinese),
+        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("sun_wukong_") },
+        legendaryPity: 90,
+        rarePity: 10,
+        artName: "banner_jade_court",
+        pantheon: .chinese
+    )
+
     /// The summon pool filtered by a rule: what the scroll banners are made of.
     static func pool(where keep: (UnitBlueprint) -> Bool) -> [String] {
         UnitDatabase.summonPool.filter { id in UnitDatabase.blueprint(id).map(keep) ?? false }
@@ -175,11 +209,16 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
         pantheon: nil
     )
 
-    /// The summon screen's first row: a banner per live pantheon.
+    /// The summon screen's first row: a banner per live pantheon, each
+    /// offered once its pool has a unit with cards in the bundle
+    /// (`hasShippedArt`), so Rome and the Jade Court appear the morning
+    /// their first family's five cards land.
     static var pantheonBanners: [Banner] {
         [duatOpens]
             + (olympusStirs.pool.isEmpty ? [] : [olympusStirs])
             + (ravensGather.pool.isEmpty ? [] : [ravensGather])
+            + (eagleRises.pool.isEmpty ? [] : [eagleRises])
+            + (jadeCourtOpens.pool.isEmpty ? [] : [jadeCourtOpens])
     }
 
     /// The second row: the scrolls, each its own slice of the roster. The
