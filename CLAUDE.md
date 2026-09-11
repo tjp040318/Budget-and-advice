@@ -577,7 +577,18 @@ environment can and cannot do. The short version:
   10-texture UI kit, 9 stage textures, and stylised concepts for all 43
   families. `tools/genart.py` makes more via Gemini; the key is provided as
   a credential, so it is in the environment and must never be printed or
-  written to a file. **Gemini's key allows 250 image requests a day**; a
+  written to a file. **GEMINI IS PAUSED (2026-09-11).** The owner: "don't
+  use the Gemini API. You used $100 worth of it already! Stick to $10 per
+  month." Nothing here may call it — no batch script, no `genart.py`, no
+  night routine — without his word for that specific batch, and the cap is
+  $10 a month. The painter's default is `gemini-3-pro-image`, a pro-priced
+  model; the ~720 shipped images plus their retries came to the $100, so
+  a night's batch of 250 is roughly $30 at that price and $10 buys about
+  80 images — or about 250 on `--model gemini-2.5-flash-image`, whose
+  cards would have to be judged first. The night-3 routine
+  (`trig_01VJjUcbfKs8vRHiC1qHtAH7`) is disabled; the cream repaint of
+  `ui_panel`/`ui_button_dark`, batch 4's art and batch 3's awakened cards
+  wait on that word. Gemini's key allows 250 image requests a day; a
   roster's cards are about 240, so a big batch spans two days and every
   batch script skips what already exists. A named god can come back as a
   photo of an actor (Loki did; the file was deleted) — describe, don't
