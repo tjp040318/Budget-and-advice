@@ -1087,7 +1087,7 @@ struct FodderPickerView: View {
                         }
                     }
                     .padding(10)
-                    .background(Theme.ink)
+                    .background(Theme.surfaceRaised)
                 }
             }
         }

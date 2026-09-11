@@ -219,7 +219,7 @@ struct CampaignView: View {
             .environmentObject(store)
         } else {
             // Engine could not be created (energy, lock). Bail out cleanly.
-            Color.black
+            Theme.surface
                 .ignoresSafeArea()
                 .onAppear { battle = nil }
         }
@@ -395,8 +395,9 @@ struct StageBriefingView: View {
         .background(alignment: .center) { backdrop }
     }
 
-    /// The stage's painting, dimmed, behind the panels. Decorative only —
-    /// `.clipped()` does not clip hit testing, so it must never take a tap.
+    /// The stage's painting, washed toward cream, behind the panels.
+    /// Decorative only — `.clipped()` does not clip hit testing, so it must
+    /// never take a tap.
     @ViewBuilder
     private var backdrop: some View {
         if BundleImage.exists(stage.environment.backdropName) {
@@ -406,7 +407,7 @@ struct StageBriefingView: View {
                 .clipped()
                 .overlay(
                     LinearGradient(
-                        colors: [Theme.ink.opacity(0.72), Theme.ink.opacity(0.92)],
+                        colors: [Theme.plate.opacity(0.72), Theme.plate.opacity(0.92)],
                         startPoint: .top,
                         endPoint: .bottom
                     )

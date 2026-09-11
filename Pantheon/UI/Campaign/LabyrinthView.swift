@@ -127,7 +127,7 @@ struct LabyrinthView: View {
                         Rectangle()
                             .fill(Theme.surfaceHigh)
                     }
-                    LinearGradient(colors: [.clear, Theme.ink.opacity(0.92)], startPoint: .center, endPoint: .bottom)
+                    LinearGradient(colors: [.clear, Theme.plate.opacity(0.92)], startPoint: .center, endPoint: .bottom)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("RELIC DUNGEON")
                             .font(Theme.body(9).weight(.bold))
@@ -298,7 +298,7 @@ struct LabyrinthView: View {
                 .clipped()
                 .overlay(
                     LinearGradient(
-                        colors: [Theme.ink.opacity(0.74), Theme.ink.opacity(0.93)],
+                        colors: [Theme.plate.opacity(0.74), Theme.plate.opacity(0.93)],
                         startPoint: .top,
                         endPoint: .bottom
                     )
@@ -526,7 +526,7 @@ struct LabyrinthView: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                         .clipped()
                 }
-                LinearGradient(colors: [.clear, Theme.ink.opacity(0.92)], startPoint: .center, endPoint: .bottom)
+                LinearGradient(colors: [.clear, Theme.plate.opacity(0.92)], startPoint: .center, endPoint: .bottom)
                 VStack(alignment: .leading, spacing: 1) {
                     Text("RAID")
                         .font(Theme.body(9).weight(.bold))
@@ -631,7 +631,7 @@ struct LabyrinthView: View {
             BattleView(model: BattleViewModel(engine: engine, context: context, store: store))
                 .environmentObject(store)
         } else {
-            Color.black
+            Theme.surface
                 .ignoresSafeArea()
                 .onAppear { raidBattle = nil }
         }
@@ -655,7 +655,7 @@ struct LabyrinthView: View {
             BattleView(model: BattleViewModel(engine: engine, context: context, store: store))
                 .environmentObject(store)
         } else {
-            Color.black
+            Theme.surface
                 .ignoresSafeArea()
                 .onAppear { towerBattle = nil }
         }
@@ -783,7 +783,7 @@ struct DungeonLevelsView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .clipped()
                 LinearGradient(
-                    colors: [Theme.plate.opacity(0.62), Theme.ink.opacity(0.88)],
+                    colors: [Theme.plate.opacity(0.62), Theme.plate.opacity(0.88)],
                     startPoint: .top,
                     endPoint: .bottom
                 )
@@ -943,7 +943,7 @@ struct DungeonLevelsView: View {
             ))
             .environmentObject(store)
         } else {
-            Color.black
+            Theme.surface
                 .ignoresSafeArea()
                 .onAppear { battle = nil }
         }

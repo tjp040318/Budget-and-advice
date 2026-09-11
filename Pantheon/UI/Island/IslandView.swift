@@ -179,10 +179,11 @@ struct IslandView: View {
                         .blendMode(.multiply)
                 )
                 .overlay(
-                    // Dusk falls a little harder at the edges so the plaques
-                    // and the header read against the painting.
+                    // The painting pales toward its top and bottom edges so
+                    // the header and the plaques read against it: cream, like
+                    // the plates they sit on, never a dark wash under ink.
                     LinearGradient(
-                        colors: [Theme.plate.opacity(0.55), .clear, .clear, Theme.ink.opacity(0.7)],
+                        colors: [Theme.plate.opacity(0.55), .clear, .clear, Theme.plate.opacity(0.7)],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
@@ -261,7 +262,7 @@ struct IslandView: View {
                             .padding(.vertical, 1)
                             .frame(minWidth: 16)
                             .background(Capsule().fill(Theme.danger))
-                            .overlay(Capsule().strokeBorder(Theme.ink, lineWidth: 1))
+                            .overlay(Capsule().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
                             .offset(x: 6, y: -4)
                     }
                 }
@@ -346,7 +347,7 @@ struct IslandView: View {
                         .foregroundStyle(Theme.ink)
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Capsule().fill(active ? Theme.gold : Theme.textSecondary))
+                        .background(Capsule().fill(active ? Theme.gold : Theme.stroke))
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                         .frame(width: 74, height: 64)
                     }
@@ -371,12 +372,12 @@ struct IslandView: View {
                     .padding(.horizontal, 9)
                     .padding(.vertical, 3)
                     .background(
-                        // A plate, like every other chip in the app: a hairline
-                        // in the building's own accent and a shadow, so the
-                        // name reads off a sunset painting.
-                        Capsule().fill(Theme.ink.opacity(0.8))
-                            .overlay(Capsule().strokeBorder(accent.opacity(0.6), lineWidth: 1))
-                            .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
+                        // A cream plate, like every other chip in the app, with
+                        // a hairline and a shadow, so the name reads off a
+                        // sunset painting. It was an ink pill under ink text.
+                        Capsule().fill(Theme.plate.opacity(0.88))
+                            .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+                            .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
                     )
 
                 if !unlocked {
@@ -550,12 +551,12 @@ struct IslandView: View {
             .padding(.vertical, 7)
             .background(
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(Theme.ink.opacity(0.88))
+                    .fill(Theme.plate.opacity(0.88))
                     .overlay(
                         RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                             .strokeBorder(Theme.gold.opacity(0.7), lineWidth: 1)
                     )
-                    .shadow(color: .black.opacity(0.6), radius: 4, y: 2)
+                    .shadow(color: .black.opacity(0.35), radius: 4, y: 2)
             )
     }
 
@@ -573,8 +574,8 @@ struct IslandView: View {
                 .padding(.horizontal, 9)
                 .padding(.vertical, 5)
                 .background(
-                    Capsule().fill(Theme.ink.opacity(0.7))
-                        .overlay(Capsule().strokeBorder(Theme.stroke.opacity(0.8), lineWidth: 1))
+                    Capsule().fill(Theme.plate.opacity(0.88))
+                        .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
                 )
         }
         .buttonStyle(PlateButtonStyle())
@@ -693,8 +694,10 @@ struct ChapterIntroCard: View {
 
     var body: some View {
         ZStack {
+            // A cream veil over the island, not a blackout: the card is the
+            // one thing left in focus, in the palette the rest of it wears.
             Rectangle()
-                .fill(Theme.ink.opacity(0.82))
+                .fill(Theme.plate.opacity(0.82))
             card
                 .padding(.horizontal, 22)
                 .padding(.vertical, 14)
@@ -729,16 +732,18 @@ struct ChapterIntroCard: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .clipped()
                 .overlay(
-                    // The words sit on the left, so the dark runs that way and
-                    // the painting keeps its right-hand side.
+                    // The words sit on the left, so the cream runs that way
+                    // and the painting keeps its right-hand side. The words
+                    // are ink, so the wash under them LIGHTENS; the dark one
+                    // it replaces put ink on ink.
                     LinearGradient(
-                        colors: [Theme.ink.opacity(0.94), Theme.plate.opacity(0.55), .clear],
+                        colors: [Theme.plate.opacity(0.94), Theme.plate.opacity(0.55), .clear],
                         startPoint: .leading, endPoint: .trailing
                     )
                 )
                 .overlay(
                     LinearGradient(
-                        colors: [.clear, Theme.ink.opacity(0.8)],
+                        colors: [.clear, Theme.plate.opacity(0.8)],
                         startPoint: .center, endPoint: .bottom
                     )
                 )
@@ -772,9 +777,9 @@ struct ChapterIntroCard: View {
                 // line is too long to come back from at this size.
                 .frame(maxWidth: 430, alignment: .leading)
             // No Spacer: the block hugs the bottom-left corner, which is where
-            // both washes over the painting are darkest. A Spacer here stretched
+            // both washes over the painting are palest. A Spacer here stretched
             // the stack to the card's full height and stood the story up in the
-            // one corner the gradients leave bright.
+            // one corner the gradients leave unwashed.
             HStack(spacing: 10) {
                 PrimaryButton(title: "Enter", systemImage: "arrow.right") { onContinue() }
                     .frame(width: 170)

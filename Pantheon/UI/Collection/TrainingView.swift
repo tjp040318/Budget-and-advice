@@ -162,7 +162,7 @@ struct TrainingView: View {
     private var hallPainting: some View {
         GeometryReader { proxy in
             ZStack {
-                Theme.ink
+                Theme.surface
                 if BundleImage.exists("hall_of_ka_bg") {
                     BundleImage(name: "hall_of_ka_bg")
                         .aspectRatio(contentMode: .fill)

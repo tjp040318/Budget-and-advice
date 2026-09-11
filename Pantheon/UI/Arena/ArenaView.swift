@@ -168,7 +168,7 @@ struct ArenaView: View {
                 .environmentObject(store)
                 .onDisappear { refresh() }
         } else {
-            Color.black.ignoresSafeArea().onAppear { battle = nil }
+            Theme.surface.ignoresSafeArea().onAppear { battle = nil }
         }
     }
 

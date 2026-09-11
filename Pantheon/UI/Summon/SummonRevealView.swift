@@ -73,7 +73,7 @@ struct SummonRevealView: View {
                 Spacer()
             }
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear { revealNext() }
     }
 
@@ -150,14 +150,17 @@ struct SummonRevealView: View {
                 .animation(.easeOut(duration: 0.5), value: revealed)
                 .animation(.easeInOut(duration: 0.9), value: charging)
 
-                // The corners go back into the dark. A landscape frame is wide
-                // enough that the glow and the rays reach all four of them, and
-                // a lit corner is the cheapest-looking thing in a reveal: the
-                // eye is drawn to the brightest pixel, and it should be the
-                // character. Centred on the figure, not on the screen, so the
-                // fall-off frames the character rather than the layout.
+                // The corners go back to the plain ground. A landscape frame
+                // is wide enough that the glow and the rays reach all four of
+                // them, and a corner left to the rays is the cheapest-looking
+                // thing in a reveal, so the fall-off returns them to the cream
+                // the rest of the interface stands on. Centred on the figure,
+                // not on the screen, so it frames the character rather than
+                // the layout. Cream, not ink: the ground is `Theme.backdrop`
+                // and the words on the right are ink, and an ink corner stood
+                // the name and the epithet on the one dark patch of the frame.
                 RadialGradient(
-                    colors: [.clear, Theme.plate.opacity(0.10), Theme.plate.opacity(0.42), Theme.ink.opacity(0.82)],
+                    colors: [.clear, Theme.plate.opacity(0.10), Theme.plate.opacity(0.42), Theme.plate.opacity(0.82)],
                     center: .init(x: 0.30, y: 0.52),
                     startRadius: 0,
                     endRadius: 560

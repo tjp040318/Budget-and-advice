@@ -192,7 +192,7 @@ struct RelicInventoryView: View {
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Theme.ink)
+            .background(Theme.surfaceRaised)
         }
     }
 
@@ -1579,7 +1579,7 @@ struct RelicOptimiserView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 4)
-        .background(Theme.ink)
+        .background(Theme.surfaceRaised)
     }
 
     // MARK: - Doing it

@@ -113,12 +113,15 @@ struct SummonView: View {
         .overlay(alignment: .bottom) { menuFade }
     }
 
-    /// A dark wash with one gold hairline down its inner edge. Decorative, so
-    /// it is marked unhittable like every other painted thing in this app.
+    /// A cream column with one gold hairline down its inner edge — the same
+    /// marble the header strip is cut from, so the menu and the strip read as
+    /// one piece of chrome rather than an ink slab under a cream bar.
+    /// Decorative, so it is marked unhittable like every other painted thing
+    /// in this app.
     private var menuPlate: some View {
         ZStack(alignment: .trailing) {
             LinearGradient(
-                colors: [Theme.ink.opacity(0.93), Theme.ink.opacity(0.74)],
+                colors: [Theme.surface.opacity(0.96), Theme.surfaceRaised.opacity(0.86)],
                 startPoint: .leading,
                 endPoint: .trailing
             )
@@ -138,7 +141,7 @@ struct SummonView: View {
     /// with it and the row under the fade must still be tappable.
     private var menuFade: some View {
         LinearGradient(
-            colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.95)],
+            colors: [Theme.surface.opacity(0), Theme.surface.opacity(0.97)],
             startPoint: .top,
             endPoint: .bottom
         )
@@ -255,9 +258,21 @@ struct SummonView: View {
                 Text(selectedBanner.scroll.displayName.uppercased())
                     .font(Theme.body(9).weight(.black))
                     .tracking(1.2)
-                    .foregroundStyle(Theme.gold)
+                    .foregroundStyle(Theme.goldDim)
             }
-            .shadow(color: .black.opacity(0.85), radius: 5, x: 0, y: 1)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            // On a cream plate, like the two readings beside it: ink lettering
+            // over the temple's shadowed vault could not be read, and the dark
+            // halo it wore only made the smudge bigger.
+            .background(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(Theme.plate.opacity(0.8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                            .strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5)
+                    )
+            )
 
             Spacer(minLength: 6)
 
@@ -272,7 +287,7 @@ struct SummonView: View {
     /// temple carries on behind it.
     private var chipPlate: some View {
         Capsule()
-            .fill(Theme.ink.opacity(0.72))
+            .fill(Theme.plate.opacity(0.85))
             .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5))
     }
 
@@ -431,7 +446,8 @@ struct SummonView: View {
     /// room, the plates at its trailing end, which in landscape is under the
     /// right thumb and is also the corner the owner called dead space. The
     /// ×10 is the emphasised one — it wears the painted gold plate while ×1
-    /// takes the dark one — and it is given the wider frame of the two.
+    /// takes a cream plate with a gold edge — and it is given the wider frame
+    /// of the two.
     private var summonDeck: some View {
         let scroll = selectedBanner.scroll
         let owned = store.player.wallet.count(of: scroll)
@@ -448,9 +464,11 @@ struct SummonView: View {
             if !hint.isEmpty {
                 Text(hint)
                     .font(Theme.body(11).weight(.semibold))
-                    .foregroundStyle(Theme.gold)
+                    .foregroundStyle(Theme.goldDim)
                     .lineLimit(1)
-                    .shadow(color: .black.opacity(0.9), radius: 4, x: 0, y: 1)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(chipPlate)
             }
 
             // No `Spacer` at the head of this row on purpose: the bar is only
@@ -467,7 +485,7 @@ struct SummonView: View {
                 PrimaryButton(
                     title: "Summon ×1",
                     systemImage: scroll.glyph,
-                    tint: Theme.textPrimary,
+                    tint: Theme.surfaceHigh,
                     isEnabled: owned >= 1
                 ) {
                     perform(count: 1)
@@ -490,11 +508,11 @@ struct SummonView: View {
         .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
-    /// Translucent, because the floor circle burns directly behind this bar and
-    /// a solid plate would put the glow out.
+    /// Cream and translucent, because the floor circle burns directly behind
+    /// this bar and a solid plate would put the glow out.
     private var deckPlate: some View {
         RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-            .fill(Theme.ink.opacity(0.7))
+            .fill(Theme.plate.opacity(0.85))
             .overlay(
                 RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
                     .strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5)
@@ -772,7 +790,10 @@ struct SummoningCircle: View {
             let ringSize = Self.floorRadius * 2 * artWidth
 
             ZStack {
-                Theme.ink
+                // The letterbox beside the fitted painting is the screen's
+                // own cream, so the room's edge is the ground and not a black
+                // bar down the right of a cream screen.
+                Theme.surface
                 hall(width: artWidth, height: artHeight)
                     .position(x: originX + artWidth / 2, y: originY + artHeight / 2)
 
@@ -828,22 +849,24 @@ struct SummoningCircle: View {
         .animation(.easeOut(duration: 0.35), value: charging)
     }
 
-    /// Something for the overlaid controls to sit on. The temple is a sunlit
-    /// painting and 22-point white lettering on lit marble is unreadable, so
-    /// the top of the room is washed down for the banner's name and the foot
-    /// of it for the summon plates. The bottom wash is the lighter of the two
-    /// because the floor circle burns inside it.
+    /// Something for the overlaid controls to sit on. The lettering over the
+    /// room is ink on cream plates, so both washes LIGHTEN: the top of the
+    /// room under the banner's name and the foot of it under the summon
+    /// plates go toward cream, the way the island's edges do. The bottom wash
+    /// is the lighter of the two because the floor circle burns inside it.
+    /// The top one was an ink wash left from the days of white lettering, and
+    /// it stood the ink title on a black vault.
     private var scrims: some View {
         VStack(spacing: 0) {
             LinearGradient(
-                colors: [Theme.ink.opacity(0.8), Theme.ink.opacity(0)],
+                colors: [Theme.plate.opacity(0.7), Theme.plate.opacity(0)],
                 startPoint: .top,
                 endPoint: .bottom
             )
             .frame(height: 92)
             Spacer(minLength: 0)
             LinearGradient(
-                colors: [Theme.ink.opacity(0), Theme.plate.opacity(0.5)],
+                colors: [Theme.plate.opacity(0), Theme.plate.opacity(0.5)],
                 startPoint: .top,
                 endPoint: .bottom
             )
@@ -866,10 +889,10 @@ struct SummoningCircle: View {
             } else if BundleImage.exists(banner.artName) {
                 BundleImage(name: banner.artName)
                     .aspectRatio(contentMode: .fill)
-                    .overlay(Color.black.opacity(0.35))
+                    .overlay(Theme.plate.opacity(0.3))
             } else {
                 RadialGradient(
-                    colors: [tint.opacity(0.30), Theme.ink],
+                    colors: [tint.opacity(0.30), Theme.surface],
                     center: .center, startRadius: 8, endRadius: 320
                 )
             }
@@ -881,28 +904,30 @@ struct SummoningCircle: View {
     }
 
     /// The painting is 16:9 and a landscape phone's content area is about
-    /// 2.2:1, so fitting it leaves ink beside it. A hard vertical seam between
-    /// painted marble and flat ink is exactly the boxed-picture look this pass
-    /// exists to kill, so the art is feathered into the ink over 44 points at
-    /// its sides and 30 at its top and bottom, and the seam disappears whether
-    /// the letterbox is 20 points wide or the art runs off the screen.
+    /// 2.2:1, so fitting it leaves the cream ground beside it. A hard vertical
+    /// seam between painted marble and flat cream is exactly the boxed-picture
+    /// look this pass exists to kill, so the art is feathered into the ground
+    /// over 44 points at its sides and 30 at its top and bottom, and the seam
+    /// disappears whether the letterbox is 20 points wide or the art runs off
+    /// the screen. The transparent stops are the plate's own colour at zero:
+    /// a fade to transparent INK passes through a grey band on the way.
     private var edgeFade: some View {
         ZStack {
             HStack(spacing: 0) {
-                LinearGradient(colors: [Theme.ink, Theme.ink.opacity(0)],
+                LinearGradient(colors: [Theme.surface, Theme.surface.opacity(0)],
                                startPoint: .leading, endPoint: .trailing)
                     .frame(width: 44)
                 Spacer(minLength: 0)
-                LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink],
+                LinearGradient(colors: [Theme.surface.opacity(0), Theme.surface],
                                startPoint: .leading, endPoint: .trailing)
                     .frame(width: 44)
             }
             VStack(spacing: 0) {
-                LinearGradient(colors: [Theme.plate.opacity(0.55), Theme.ink.opacity(0)],
+                LinearGradient(colors: [Theme.plate.opacity(0.55), Theme.plate.opacity(0)],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 30)
                 Spacer(minLength: 0)
-                LinearGradient(colors: [Theme.ink.opacity(0), Theme.plate.opacity(0.55)],
+                LinearGradient(colors: [Theme.plate.opacity(0), Theme.plate.opacity(0.55)],
                                startPoint: .top, endPoint: .bottom)
                     .frame(height: 30)
             }

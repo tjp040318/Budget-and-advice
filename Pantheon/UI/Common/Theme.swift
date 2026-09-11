@@ -97,9 +97,16 @@ enum Theme {
     /// plates are the tint itself, and a tint can be anything from gold to
     /// ink.
     static func readableText(on color: Color) -> Color {
+        isLight(color) ? ink : surfaceHigh
+    }
+
+    /// Whether a colour is pale enough to carry ink: luma over 0.55. A colour
+    /// that cannot be read back (a pattern) counts as light, so its text is
+    /// ink like everything else on the cream interface.
+    static func isLight(_ color: Color) -> Bool {
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        guard UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a) else { return ink }
-        return (0.299 * r + 0.587 * g + 0.114 * b) > 0.55 ? ink : surfaceHigh
+        guard UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a) else { return true }
+        return (0.299 * r + 0.587 * g + 0.114 * b) > 0.55
     }
 
     // MARK: - Metal

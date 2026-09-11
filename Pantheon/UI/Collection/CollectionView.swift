@@ -415,7 +415,7 @@ struct CollectionView: View {
             } else {
                 // Pre-art: the element's tint and the initial, as `UnitCard`.
                 RadialGradient(
-                    colors: [unit.element.color.opacity(0.75), unit.element.color.opacity(0.25), Theme.ink],
+                    colors: [unit.element.color.opacity(0.75), unit.element.color.opacity(0.25), Theme.surface],
                     center: .init(x: 0.5, y: 0.38),
                     startRadius: 0,
                     endRadius: Self.portraitSize * 0.85
@@ -765,7 +765,7 @@ struct CollectionView: View {
     private var stagePainting: some View {
         GeometryReader { proxy in
             ZStack {
-                Theme.ink
+                Theme.surface
                 if BundleImage.exists("summon_hall_bg") {
                     BundleImage(name: "summon_hall_bg")
                         .aspectRatio(contentMode: .fill)

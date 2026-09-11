@@ -102,11 +102,13 @@ struct StatBar: View {
             }
             GeometryReader { geometry in
                 ZStack(alignment: .leading) {
-                    // A recessed track: dark fill, dark top edge. The bar has to
-                    // look like a channel cut into the panel, or the fill reads
-                    // as a floating coloured pill.
-                    Capsule().fill(Theme.ink.opacity(0.85))
-                    Capsule().strokeBorder(Color.black.opacity(0.6), lineWidth: 1)
+                    // A recessed track: a shade darker than the marble, with a
+                    // darker rim. The bar has to look like a channel cut into
+                    // the panel, or the fill reads as a floating coloured pill
+                    // — and an ink channel on a cream panel read as a black
+                    // stripe, the old interface showing through every bar.
+                    Capsule().fill(Theme.stroke.opacity(0.7))
+                    Capsule().strokeBorder(Theme.goldDeep.opacity(0.35), lineWidth: 1)
 
                     Capsule()
                         .fill(LinearGradient(
@@ -400,7 +402,7 @@ struct UnitCard: View {
                 RadialGradient(
                     colors: [unit.element.color.opacity(0.75),
                              unit.element.color.opacity(0.25),
-                             Theme.ink],
+                             Theme.surface],
                     center: .init(x: 0.5, y: 0.38),
                     startRadius: 0,
                     endRadius: size * 0.85
@@ -522,9 +524,15 @@ struct PrimaryButton: View {
             .padding(.vertical, 10)
             .background(plate)
             .overlay(
+                // A light plate — the summon screen's ×1 beside the painted
+                // gold ×10 — gets a gold edge, because a white highlight on
+                // cream is no edge at all; every other plate keeps its lit rim.
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .strokeBorder(Color.white.opacity(isEnabled ? 0.4 : 0.12), lineWidth: 1)
-                    .blendMode(.plusLighter)
+                    .strokeBorder(
+                        isLightPlate ? Theme.goldDim.opacity(0.8) : Color.white.opacity(isEnabled ? 0.4 : 0.12),
+                        lineWidth: 1
+                    )
+                    .blendMode(isLightPlate ? .normal : .plusLighter)
             )
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             .foregroundStyle(labelColor)
@@ -537,6 +545,15 @@ struct PrimaryButton: View {
     }
 
     private var usesGoldPlate: Bool { tint == Theme.gold }
+
+    /// A DRAWN plate pale enough that ink is its label — cream, marble, the
+    /// high surface. It wears a gold edge instead of the white highlight,
+    /// which is invisible on cream. Never true once the painted plate is back,
+    /// since that brings its own frame.
+    private var isLightPlate: Bool {
+        isEnabled && !usesGoldPlate && Theme.isLight(tint)
+            && Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) == nil
+    }
 
     private var labelColor: Color {
         guard isEnabled else { return Theme.textSecondary }

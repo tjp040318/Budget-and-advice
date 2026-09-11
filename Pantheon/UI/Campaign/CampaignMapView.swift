@@ -52,7 +52,7 @@ struct WorldMapView: View {
                         .fill(realm.pantheon.color.opacity(0.3))
                         .frame(height: 88)
                 }
-                LinearGradient(colors: [.clear, Theme.ink.opacity(0.9)], startPoint: .center, endPoint: .bottom)
+                LinearGradient(colors: [.clear, Theme.plate.opacity(0.9)], startPoint: .center, endPoint: .bottom)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(realm.pantheon.displayName.uppercased())
                         .font(Theme.body(10).weight(.bold))
@@ -202,7 +202,7 @@ struct ChapterMapView: View {
                     .padding(.horizontal, 12)
                     .frame(height: 28)
                     .background(
-                        Capsule().fill(selected ? tint : Theme.ink.opacity(open ? 0.55 : 0.35))
+                        Capsule().fill(selected ? tint : Theme.plate.opacity(open ? 0.85 : 0.6))
                     )
                     .overlay(
                         Capsule().strokeBorder(open ? tint.opacity(selected ? 0 : 0.7) : Theme.stroke, lineWidth: 1)
@@ -413,7 +413,7 @@ struct ChapterMapView: View {
                 .foregroundStyle(stage.isBoss ? Theme.danger : Theme.info)
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
-                .background(Capsule().fill(Theme.ink.opacity(0.75)))
+                .background(Capsule().fill(Theme.plate.opacity(0.85)))
             }
         }
         .buttonStyle(.plain)
@@ -675,7 +675,7 @@ struct CityMedallion: View {
                 VStack(spacing: 0) {
                     Text(chapter.name)
                         .font(Theme.body(9).weight(.bold))
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
                     if state != .locked {
                         Text("\(cleared)/\(chapter.stages.count)")
@@ -685,7 +685,7 @@ struct CityMedallion: View {
                 }
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
-                .background(Capsule().fill(Color.black.opacity(0.72)))
+                .background(Capsule().fill(Theme.plate.opacity(0.85)))
                 .fixedSize()
             }
         }

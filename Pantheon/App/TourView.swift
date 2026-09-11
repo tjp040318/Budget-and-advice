@@ -61,7 +61,7 @@ struct TourView: View {
                 .background(Color.black.opacity(0.7), in: Capsule())
                 .padding(10)
         }
-        .preferredColorScheme(.dark)
+        .preferredColorScheme(.light)
         .onAppear {
             seedIfNeeded()
             if current == "battle" { startBattle() }
@@ -111,7 +111,7 @@ struct TourView: View {
             if let battleModel {
                 BattleView(model: battleModel)
             } else {
-                Color.black.ignoresSafeArea()
+                Theme.surface.ignoresSafeArea()
                     .onAppear { startBattle() }
             }
         case "arena":
@@ -123,7 +123,7 @@ struct TourView: View {
             if let arenaModel {
                 BattleView(model: arenaModel)
             } else {
-                Color.black.ignoresSafeArea()
+                Theme.surface.ignoresSafeArea()
                     .onAppear { startArenaBattle() }
             }
         case "halls":
@@ -155,7 +155,7 @@ struct TourView: View {
             if let dungeonModel {
                 BattleView(model: dungeonModel)
             } else {
-                Color.black.ignoresSafeArea()
+                Theme.surface.ignoresSafeArea()
                     .onAppear { startDungeonBattle() }
             }
         case "relics":

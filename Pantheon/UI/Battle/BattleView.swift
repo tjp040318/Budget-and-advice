@@ -1405,23 +1405,26 @@ struct SkillButton: View {
                     if let forecast {
                         // The forecast is the answer to "what will this button
                         // do" without spending a turn to find out. It sits on
-                        // its own dark strip so it reads at the same contrast
-                        // whether the tile is lit or dimmed by a cooldown.
+                        // its own cream strip so it reads at the same contrast
+                        // whether the tile is lit or veiled by a cooldown.
                         Text(forecast)
                             .font(Theme.numeric(8))
-                            .foregroundStyle(isReady ? Theme.gold : Theme.textSecondary)
+                            .foregroundStyle(isReady ? Theme.goldDim : Theme.textSecondary)
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
                             .padding(.horizontal, 3)
                             .frame(height: 12)
-                            .background(Capsule().fill(Theme.ink.opacity(0.75)))
+                            .background(Capsule().fill(Theme.plate.opacity(0.85)))
                     }
                 }
                 .padding(3)
 
                 if !isReady {
+                    // A cream veil, not a blackout: the turns-left figure is
+                    // ink, and ink on black was the one number in the bar
+                    // that could not be read.
                     RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                        .fill(Color.black.opacity(0.62))
+                        .fill(Theme.plate.opacity(0.72))
                     Text("\(cooldown)")
                         .font(Theme.display(24))
                         .foregroundStyle(Theme.textPrimary)
@@ -1436,7 +1439,10 @@ struct SkillButton: View {
                     .font(.system(size: 7, weight: .black))
                     .foregroundStyle(Theme.textPrimary)
                     .padding(2)
-                    .background(Circle().fill(Theme.ink.opacity(0.85)))
+                    .background(
+                        Circle().fill(Theme.plate.opacity(0.9))
+                            .overlay(Circle().strokeBorder(Theme.stroke, lineWidth: 0.5))
+                    )
                     .offset(x: 2, y: -2)
             }
             .overlay(
@@ -1555,7 +1561,11 @@ struct BattleResultView: View {
     var body: some View {
         ZStack {
             // The scrim. Darker than the old 0.78 because the stage under it is
-            // sunlit now, and the two acts are read against it.
+            // sunlit now, and the two acts are read against it. It stays dark
+            // on a cream interface on purpose: the chest's beam, the flash and
+            // the rays are additive light and vanish on cream, and everything
+            // written straight on it is gold or marble, never ink — the panels
+            // carry the ink.
             Color.black.opacity(0.84).ignoresSafeArea()
 
             switch phase {
@@ -1615,9 +1625,11 @@ struct BattleResultView: View {
                 .minimumScaleFactor(0.6)
                 .shadow(color: (won ? Theme.gold : Theme.wine).opacity(0.45), radius: 18)
             if !summary.title.isEmpty {
+                // Marble, not the caption ink: this line stands straight on
+                // the dark scrim, with no panel under it.
                 Text(summary.title)
                     .font(Theme.body(12))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(Theme.marble)
                     .lineLimit(1)
             }
             if won, summary.stars > 0 {
@@ -1677,7 +1689,7 @@ struct BattleResultView: View {
             if summary.unitStats.isEmpty {
                 Text("No reckoning for this one.")
                     .font(Theme.body(12))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(Theme.marble)
             }
         }
     }
@@ -1845,7 +1857,7 @@ struct BattleResultView: View {
             if summary.loot.count > 7 {
                 Text("+\(summary.loot.count - 7) more")
                     .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(Theme.marble)
                     .opacity(lootShown >= 7 ? 1 : 0)
             }
         }

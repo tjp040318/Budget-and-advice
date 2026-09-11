@@ -65,8 +65,11 @@ struct RootView: View {
                 .tabItem { Label("Collection", systemImage: "person.3.fill") }
                 .tag(Tab.collection)
         }
-        .tint(Theme.gold)
-        .preferredColorScheme(.dark)
+        // Dim gold on the cream bar, and light everywhere: the shell was
+        // `.dark` over cream screens, which is what left the tab bar ink
+        // under a cream header.
+        .tint(Theme.goldDim)
+        .preferredColorScheme(.light)
         .fullScreenCover(isPresented: $showTraining) {
             TrainingView()
                 .environmentObject(store)

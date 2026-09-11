@@ -11,9 +11,14 @@ struct PantheonApp: App {
     init() {
         _store = StateObject(wrappedValue: GameStore.bootstrap())
 
-        // The whole app is dark; setting it here stops a light flash on launch
-        // before the first SwiftUI frame applies the preference.
-        UITabBar.appearance().backgroundColor = UIColor(Theme.ink)
+        // The whole app is cream and gold, the tab bar included; setting it
+        // here stops a dark flash on launch before the first SwiftUI frame
+        // applies the preference. The selected tab is the DIM gold — the
+        // bright one reads on ink, not on cream — and the rest are the
+        // caption colour, so the bar is the header strip's own material.
+        UITabBar.appearance().backgroundColor = UIColor(Theme.surfaceRaised)
+        UITabBar.appearance().tintColor = UIColor(Theme.goldDim)
+        UITabBar.appearance().unselectedItemTintColor = UIColor(Theme.textSecondary)
         UINavigationBar.appearance().largeTitleTextAttributes = [
             .foregroundColor: UIColor(Theme.textPrimary)
         ]
