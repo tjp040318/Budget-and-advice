@@ -319,12 +319,23 @@ enum StageBuilder {
                                 floor: recipe.floor, repeats: recipe.floorRepeats * 2.86,
                                 tint: recipe.floorTint, rock: recipe.rock))
 
+        // The sets were dressed for two lines abreast at z = ±3.4, with the
+        // statues, obelisks and braziers standing 5–7 m out to the sides at
+        // z −0.4 to −5. The wings stand THERE now — the first arena frames
+        // had Zeus inside a sphinx and three enemies behind a brazier — so
+        // every side piece in the wings' band is moved out to the edge of
+        // the frame, where the genre keeps its decoration: the arena is
+        // open in the middle and framed at the sides and the back. The back
+        // row (the two columns, the ruin, the statues at z −6.3, the
+        // braziers at ±3.8) is beyond the deepest mark and stays.
         for placement in recipe.props {
-            stage.addChildNode(prop(placement))
+            var placed = placement
+            placed.position = Self.clearOfTheWings(placement.position)
+            stage.addChildNode(prop(placed))
         }
         let flame = UIColor(hex: recipe.flameHex) ?? .orange
         for position in recipe.braziers {
-            stage.addChildNode(brazier(asset: recipe.brazierAsset, at: position, flame: flame))
+            stage.addChildNode(brazier(asset: recipe.brazierAsset, at: Self.clearOfTheWings(position), flame: flame))
         }
 
         let mist = UIColor(hex: recipe.mistHex) ?? .white
@@ -406,6 +417,17 @@ enum StageBuilder {
             stage.addChildNode(plane)
         }
         stage.addChildNode(dust(tint: tint.mixed(with: .white, amount: 0.5), volume: SCNVector3(9, 5, 9), at: SCNVector3(0, 2.5, -1)))
+    }
+
+    /// Where a set piece may stand once the wings are on the floor: anything
+    /// in the wings' band (z above −6, between 4.5 and 9.5 m out) goes to
+    /// 9.8 m out on its own side. A five-a-side's last mark is at ±8.2, −5.4
+    /// (`BattleSceneController.position(for:teamSize:)`); the back row of
+    /// every set is deeper than that and the centre pieces are inside 4.5 m.
+    static func clearOfTheWings(_ position: SCNVector3) -> SCNVector3 {
+        let out = abs(position.x)
+        guard position.z > -6.0, out > 4.5, out < 9.5 else { return position }
+        return SCNVector3(position.x < 0 ? -9.8 : 9.8, position.y, position.z)
     }
 
     /// The battle ground: a square slab this wide, its far face at
