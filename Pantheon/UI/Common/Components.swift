@@ -582,13 +582,13 @@ struct SectionHeader: View {
                 Text(title.uppercased())
                     .font(Theme.title(12))
                     .tracking(1.6)
-                    .foregroundStyle(Theme.gold)
+                    .foregroundStyle(Theme.ink)
                     .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
                 Spacer(minLength: 8)
                 if let accessory {
                     Text(accessory)
                         .font(Theme.numeric(11))
-                        .foregroundStyle(Theme.textPrimary)
+                        .foregroundStyle(Theme.ink.opacity(0.72))
                 }
             }
             .padding(.horizontal, 14)

@@ -435,10 +435,13 @@ enum Chrome {
         EdgeInsets(top: top / shrink, leading: leading / shrink, bottom: bottom / shrink, trailing: trailing / shrink)
     }
 
-    /// ui_panel: 512² → 171pt at full size. Corner ornament reaches ~18% in.
-    static let panelInsets = scaled(31, 31, 31, 31)
-    /// ui_button_gold: 640×192 → 213×64pt at full size. Ornate ends are ~22% of the width.
-    static let goldButtonInsets = scaled(8, 47, 8, 47)
+    /// ui_panel: 512² → 171pt at full size. The marble kit's acanthus corners
+    /// reach 76 px in (measured), so the caps are 78: everything an ornament
+    /// touches stays fixed and only flat slate is stretched.
+    static let panelInsets = scaled(78, 78, 78, 78)
+    /// ui_button_gold: 640×192 → 213×64pt at full size. The bronze bar's
+    /// scroll bands reach 68 px in (measured); the caps are 70.
+    static let goldButtonInsets = scaled(8, 70, 8, 70)
     /// ui_button_dark: same size, plain ends.
     static let darkButtonInsets = scaled(10, 17, 10, 17)
     /// ui_ribbon: 640×128 → 213×43pt at full size.
@@ -454,27 +457,13 @@ enum Chrome {
     /// The dark plate's ends are plain, so this is air rather than clearance.
     static let darkButtonLabelInset: CGFloat = 18
 
-    /// The four painted MENU textures — the panel, the ribbon and the two
-    /// buttons — were painted for the indigo-and-gold palette the owner asked
-    /// to be replaced on 2026-09-10. Until they are repainted in marble and
-    /// bronze they are held back, so the whole game speaks one language rather
-    /// than showing violet on every panel wide enough to earn the painted one
-    /// and slate on every panel that is not.
-    ///
-    /// The SIX RARITY FRAMES are not in this list and keep their painted art.
-    /// Rarity is meant to be the loudest thing on the screen and its metals
-    /// are not part of the menu palette — a legendary frame should look like
-    /// treasure against any interface.
-    private static let awaitingRepaint: Set<String> = [
-        "ui_panel", "ui_ribbon", "ui_button_gold", "ui_button_dark",
-    ]
-
-    /// Flip to false the moment the marble kit lands, and delete this along
-    /// with the set above.
-    static let holdBackOldMenuArt = true
+    /// The marble-and-verdigris kit landed on 2026-09-11 (`tools/batch/
+    /// ui_marble.sh`: three rolls for the buttons, which Gemini kept painting
+    /// as objects on a marble ground until the prompt said the bar IS the
+    /// image). The indigo kit it replaces was held back here for a day so the
+    /// game spoke one language while it waited.
 
     static func slice(_ name: String, _ insets: EdgeInsets) -> Image? {
-        if holdBackOldMenuArt && awaitingRepaint.contains(name) { return nil }
         guard let ui = image(name) else { return nil }
         return Image(uiImage: ui).resizable(capInsets: insets, resizingMode: .stretch)
     }
