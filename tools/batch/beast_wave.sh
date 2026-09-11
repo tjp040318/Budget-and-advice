@@ -4,10 +4,10 @@
 # no rig, no clips), then downloaded and shipped with prop.py under the
 # family name at the roster height. A shipped beast has no clips and the
 # game moves it procedurally, as it does the Hydra.
-# usage: beast_wave.sh <list> [floor]     (floor defaults to 1500)
+# usage: beast_wave.sh <list> [floor]     (floor defaults to 2000)
 cd /home/user/Budget-and-advice
 S=${S:-/tmp/pantheon-batch}; mkdir -p "$S"
-list=$1; floor=${2:-1500}; per=30; launched=0; shipped=0
+list=$1; floor=${2:-2000}; per=30; launched=0; shipped=0
 [ -s "$list" ] || { echo "no list $list"; exit 1; }
 TEXTURE="hand-painted stylised mobile game creature textures with fine detail: scales with worn bright edges, layered fins and whiskers, horn and claw with grain, soft natural shading with painted highlights, rich saturated colour, stylised rather than photoreal"
 while IFS= read -r line; do

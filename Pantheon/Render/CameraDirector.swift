@@ -64,7 +64,13 @@ final class CameraDirector {
     /// (a 36 mm lens): long enough that the outer figures of a line are not
     /// sheared outward, short enough that a four-a-side line still fits from
     /// a distance the stage can afford.
-    private static let lensFieldOfView: CGFloat = 26
+    ///
+    /// 30° since the rows came back (2026-09-11 evening): a row six metres
+    /// behind another needs height in the frame more than it needs reach,
+    /// and the wider lens brings the camera four metres closer for the
+    /// same rows, which is what makes the near figures a quarter of the
+    /// frame tall instead of a fifth.
+    private static let lensFieldOfView: CGFloat = 30
 
     /// 16° down. The genre's battle camera is LOW: you look across the
     /// field at the figures, not down onto a table of them. The old 21° was
@@ -79,13 +85,14 @@ final class CameraDirector {
     /// as a row with shoulders overlapping. At 22° a step is 0.7 m up and
     /// 1.2 m across — a clean diagonal — and the far rim still sits a third
     /// of the way down the frame with the painting above it.
-    /// 20° since 2026-09-11, with the field re-laid as two wings (see
-    /// `BattleSceneController.position(for:teamSize:)`): each rank of a wing
-    /// steps 1.3 m outward as well as 1.9 m deeper, so the pitch no longer
-    /// has to separate ranks by itself, and the lower it is the more of the
-    /// painting stands above the far edge — about a third of the frame at
-    /// 20°, the genre's share.
-    private static let homePitch: Float = 20 * .pi / 180
+    /// 26° since the rows came back (2026-09-11 evening). A far row has to
+    /// stand clear above a near row, and at this pitch six metres of depth
+    /// is a tenth of the frame between the team's heads and the enemies'
+    /// feet; the far edge of the ground lands about 27% down, with the
+    /// painting above it. Lower — the 20° the wings had — foreshortens the
+    /// floor into something the owner read as a ramp: "the ground continues
+    /// to look weird and angled".
+    private static let homePitch: Float = 26 * .pi / 180
 
     /// 58° of yaw, camera on the right, well round toward the side of the
     /// field. This is the composition, and it is the third attempt at it.
@@ -107,20 +114,17 @@ final class CameraDirector {
     /// camera: at this much yaw a painting hung square to the world ended a
     /// third of the way across the frame.
     ///
-    /// ZERO since 2026-09-11. The 58° was a trick — two lines-abreast in the
-    /// world made to read as columns by turning the whole world — and the
-    /// owner saw the trick, not the columns: the floor's grid ran diagonally,
-    /// the far rim crossed the frame as a slant, every pillar and statue
-    /// stood askew, and the ground looked "slanted". "Take a look at
-    /// Summoners War. DO THAT." The genre's camera looks straight up the
-    /// field: the world's axes are square to the screen, the far edge of
-    /// the ground runs level across the upper third, and the two teams are
-    /// two WINGS laid out on the floor itself — the player's on the left,
-    /// the enemy's on the right, each stepping outward and deeper from a
-    /// front unit near the centre — which is what puts them at the lower
-    /// left and the right with an open middle between them. The composition
-    /// is in the marks now, not in the yaw.
-    static let homeYaw: Float = 0
+    /// −15° since 2026-09-11 evening: BEHIND the team and a little to the
+    /// right, which is the genre's shot and the owner's words for it
+    /// ("Summoners War has it from the back but slightly off to the right").
+    /// The 58° before it turned the whole world to make two rows read as
+    /// columns and the owner called the ground slanted; the 0° after it
+    /// laid the teams out as wings at the sides and he could not find an
+    /// enemy to tap. From behind, the team's row runs across the bottom
+    /// with its backs to the camera, the enemy row runs across the middle
+    /// facing it, and the fifteen degrees to the right is what keeps an
+    /// enemy from standing straight behind the player in front of it.
+    static let homeYaw: Float = -15 * .pi / 180
 
     /// How much of the half-frame the outermost figure may reach, and the
     /// metres of air left beside it. A figure is about 0.9 m across, so 0.9 m
@@ -132,7 +136,7 @@ final class CameraDirector {
     /// below centre: 0.68 is 84% of the frame height, which clears the actor
     /// plate along the bottom edge. The genre puts the cast across the lower
     /// two thirds and gives the top of the frame to the environment.
-    private static let nearFeetLine: Float = 0.68
+    private static let nearFeetLine: Float = 0.74
 
     /// The ceiling for an ordinary unit: nothing goes above 10% of the frame
     /// height. A BOSS gets a ceiling of its own, `bossTopLine`: its head may
@@ -224,10 +228,10 @@ final class CameraDirector {
         /// 1v1 is framed as a stage rather than as a close-up.
         static let standard: FieldBounds = {
             var points: [FramePoint] = []
-            // A three-a-side pair of wings: fronts at ±3 across and 2.2
-            // deep, backs at ±5.6 and −1.6.
-            for x in [Float(-5.6), 5.6] {
-                for z in [Float(-1.6), 2.2] {
+            // A three-a-side pair of rows: 2.4 m apart across, six metres
+            // apart in depth, the enemy row a little to the right.
+            for x in [Float(-3.0), 3.0] {
+                for z in [Float(-3.0), 3.0] {
                     points.append(FramePoint(position: SCNVector3(x, 0, z), topLine: CameraDirector.fieldTopLine))
                     points.append(FramePoint(position: SCNVector3(x, 1.9, z), topLine: CameraDirector.fieldTopLine))
                 }

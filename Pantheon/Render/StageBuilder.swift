@@ -419,15 +419,16 @@ enum StageBuilder {
         stage.addChildNode(dust(tint: tint.mixed(with: .white, amount: 0.5), volume: SCNVector3(9, 5, 9), at: SCNVector3(0, 2.5, -1)))
     }
 
-    /// Where a set piece may stand once the wings are on the floor: anything
-    /// in the wings' band (z above −6, between 4.5 and 9.5 m out) goes to
-    /// 9.8 m out on its own side. A five-a-side's last mark is at ±8.2, −5.4
-    /// (`BattleSceneController.position(for:teamSize:)`); the back row of
-    /// every set is deeper than that and the centre pieces are inside 4.5 m.
+    /// Where a set piece may stand beside the rows: anything in the rows'
+    /// band (z above −6, between 4.5 and 8 m out) goes to 8.5 m out on its
+    /// own side, the edge of the frame. A five-a-side's outermost mark is
+    /// at ±5.4 (`BattleSceneController.position(for:teamSize:)`); the back
+    /// row of every set is deeper than the enemy row and the centre pieces
+    /// are inside 4.5 m.
     static func clearOfTheWings(_ position: SCNVector3) -> SCNVector3 {
         let out = abs(position.x)
-        guard position.z > -6.0, out > 4.5, out < 9.5 else { return position }
-        return SCNVector3(position.x < 0 ? -9.8 : 9.8, position.y, position.z)
+        guard position.z > -6.0, out > 4.5, out < 8.0 else { return position }
+        return SCNVector3(position.x < 0 ? -8.5 : 8.5, position.y, position.z)
     }
 
     /// The battle ground: a square slab this wide, its far face at
@@ -457,11 +458,20 @@ enum StageBuilder {
         bodyNode.position = SCNVector3(0, -Float(thickness) / 2, farEdge + Float(size) / 2)
         node.addChildNode(bodyNode)
 
-        // Boulders along the far edge break its line into a cliff top, as
-        // the ring did round the disc. None across the middle six metres,
-        // where the boss's breach puts its own.
+        // A low parapet along the far edge, so the ground ends at a wall the
+        // way an arena does rather than at a cliff: the owner read the bare
+        // edge, with the painting hung beyond it, as the floor tilting away.
+        // The boss's breach breaks through it in the middle.
+        let parapet = SCNBox(width: size, height: 0.9, length: 0.7, chamferRadius: 0.06)
+        parapet.materials = [rockMaterial(rock, repeats: SCNVector3(Float(size) * 0.5, 1, 1))]
+        let parapetNode = SCNNode(geometry: parapet)
+        parapetNode.position = SCNVector3(0, 0.45, farEdge - 0.35)
+        node.addChildNode(parapetNode)
+
+        // Boulders along it break its line. None across the middle six
+        // metres, where the boss's breach puts its own.
         var rng = SeededRandom(seed: UInt64(size * 100) &+ 0x5EED)
-        let count = Int(size / 2.4)
+        let count = Int(size / 3.2)
         for index in 0..<count {
             let x = -Float(size) / 2 + (Float(index) + 0.5) * Float(size) / Float(count) + Float(rng.unit() - 0.5) * 1.2
             if abs(x) < 3 { continue }

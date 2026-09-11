@@ -16,7 +16,7 @@ re-running one after a quota or a network failure picks up where it stopped.
 | `realms_batch4.sh` | the two batch-4 banner paintings (The Eagle Rises, The Jade Court Opens) and the four chapter backdrops (the Forum, the Colosseum, the Peach Garden, the Dragon King's Gate) at 2048 px; until they land the environments borrow older paintings |
 | `wave_launch.sh "asset:concept:height:palette:kit:family" …` | Meshy image-to-3D + rig + six clips per spec, in parallel; `meshy.py` waits out the queue cap; `kit` is a `meshy.py` clip set (blade, heavy, caster, archer, or a set plus `,name=id` overrides) |
 | `wave3.txt`, `remake_wave.txt` | the wave lists: batch 3 (with batch 2's leftovers) and the `<key>_hd` detail remakes, one spec per line, priority order |
-| `wave_run.sh <list> [floor]` | launches every spec in a list that has no manifest yet while the balance minus what the wave still owes stays above the floor (1,500 since 2026-09-11) |
+| `wave_run.sh <list> [floor]` | launches every spec in a list that has no manifest yet while the balance minus what the wave still owes stays above the floor (2,000 since 2026-09-11) |
 | `ship_wave.sh <list>` | `build_asset.sh` for every finished, unshipped run in a list; leaves `Art/Models/<asset>.shipped` |
 | `props_enemies_launch.sh` | Meshy text-to-3D for the Norse props, the beasts and the bosses |
 | `build_asset.sh asset family height` | download + `mesh.py --as` + preview sheet for one rigged character |

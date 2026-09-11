@@ -64,41 +64,38 @@ on, the phase list, the pipeline costs, and an honest account of what this
 environment can and cannot do. The short version:
 
 - The game builds and runs on an iPhone, **landscape only**. **The battle
-  is laid out the genre's way (2026-09-11, the third camera).** The owner,
-  with a fight on his phone: "the battle ground should look flat, not
-  slanted", then "when the heck are you fixing the camera view? Take a
-  look at Summoners War. DO THAT." What the genre shows and what the
-  build shows now: the camera looks STRAIGHT up the field
-  (`CameraDirector.homeYaw` 0, `homePitch` 20°, a 26° lens, solved by
-  `CameraDirector` from the figures on their marks — 12 m out for a
-  three-a-side, the front figures 37% of the frame tall, 17.5 m for a
-  five-a-side), so the world's axes are square to the screen; the ground
-  is a 44 m square slab (`StageBuilder.slab`, `battleFloorSize`), its
-  side faces outside the frame and its near face behind the camera, so
-  the ONE edge in view is the far one, level across the frame 29–38%
-  down with the painting above it (`battleFloorFarEdge` −8.4, boulders
-  along it, mist on the far arc, no hanging rocks, no disc); and the two
-  teams are two WINGS on the floor (`BattleSceneController.position`):
-  the player's on the left, the enemy's on the right, mark i at
-  (±(3 + 1.3 i), 0, 2.2 − 1.9 i) — a front unit near the centre line and
-  the camera, each rank a step outward (more than a figure is wide, so
-  nobody is in front of anybody) and a step deeper (higher up the frame)
-  — facing each other turned 60° toward the camera, an open middle
-  between the fronts where the attacks cross, and the far centre beyond
-  the backs for the boss. The two earlier cameras are in the git history
-  and their lessons here: rows abreast at 27° photographed as "a small
-  tilted disc in a void"; lines abreast turned 58° round read as columns
-  but turned the whole world with them (diagonal grid, slanted rim,
-  askew pillars) and were called "slanted" twice; and rotating a
-  cylinder cap's texture with `contentsTransform` did nothing visible in
-  CI. A boss fight is framed from BEHIND the team (`bossYaw` −12°,
-  `bossPitch` 20°, the team's feet allowed just below the bottom edge at
-  `bossFeetLine` 1.05 — their ankles behind the bottom bar — and the head
-  allowed to `bossTopLine` 0.90, the aim centred on the boss's head via
-  `FramePoint.isBoss`: about 25 m out, the head 22% down under the bar;
-  the numbers come from a sweep of a Python port of the solve — a top
-  line of 0.55 pushed the camera to its 40 m limit), the genre's
-  boss-dungeon shot, and the painting is hung between the two yaws
+  is laid out the genre's way (2026-09-11 evening, the fourth camera, and
+  the owner's own words for it: "Summoners War has it from the back but
+  slightly off to the right").** The camera stands BEHIND the player's
+  team, above it and a little to the right (`CameraDirector.homeYaw`
+  −15°, `homePitch` 26°, a 30° lens, solved by `CameraDirector` from the
+  figures on their marks: about 14 m out for a three-a-side, the team's
+  figures a quarter of the frame tall, 16 m for a five); the team stands
+  in a ROW across the bottom of the frame with its back to the camera at
+  z = +3.0, the enemy in a row across the middle facing it at z = −3.0,
+  2.4 m from mark to mark and the enemy row 0.6 m to the right so no enemy
+  is ever straight behind a player (`BattleSceneController.position`),
+  which puts every enemy alone against the floor where a finger finds it,
+  the enemies' feet a tenth of the frame above the team's heads; the
+  ground is a 44 m square slab (`StageBuilder.slab`, `battleFloorSize`)
+  whose only edge in view is the far one, a low parapet level across the
+  frame about 27% down (`battleFloorFarEdge` −8.4) with the painting
+  above it; and the sets' side pieces stand at 8.5 m, the frame's edge
+  (`StageBuilder.clearOfTheWings`). The three cameras before it are in the
+  git history with their lessons: rows abreast at 27° over a small disc
+  photographed as "a tilted disc in a void"; lines abreast turned 58°
+  round read as columns but turned the whole world with them and were
+  called "slanted" twice; and a straight-up-the-field 0° with the teams as
+  two wings at the sides, on a 20° pitch, was "AWFUL — how do you expect
+  me to click on the target I attack?" with a floor that "continues to
+  look angled" (the 20° foreshortened it into a ramp). Rotating a cylinder
+  cap's texture with `contentsTransform` did nothing visible in CI. A boss
+  fight is framed the same way but wider (`bossYaw` −12°, `bossPitch`
+  20°, the team's feet allowed just below the bottom edge at
+  `bossFeetLine` 1.05 and the head allowed to `bossTopLine` 0.90, the aim
+  centred on the boss's head via `FramePoint.isBoss`: about 25 m out, the
+  head 22% down under the bar; the numbers come from a sweep of a Python
+  port of the solve), and the painting is hung between the two yaws
   (`StageBuilder.farBackdrop` turned to face `backdropYaw`). The field is
   measured when a wave is placed and at every turn's start, not only when
   the queue drains: an auto fight never drains it, so a boss arriving with
@@ -111,8 +108,8 @@ environment can and cannot do. The short version:
   with no 3D bar or ring (the HUD's boss bar reads), never dashes, and is
   framed by its head (`bossTopLine`) rather than its box; its adds stand
   on the marks in front, closing over the boss's slot (`markIndex`).
-  Nothing tall stands in front of the fronts (z > 3): that is the
-  camera's foreground.
+  Nothing tall stands nearer the camera than the team's row (z > 4): that
+  is the foreground.
   On a player's turn every enemy wears a matchup arrow beside its bar
   (`UnitNode.setMatchup`: green up, yellow even, red down). The battle HUD is one
   top row and an open-middled bottom bar whose actor plate is one 54-pt
@@ -283,7 +280,7 @@ environment can and cannot do. The short version:
   and will not go through Meshy's biped rigger — they go image-to-3D only,
   30 credits each, and fight the Hydra's way, an unrigged mesh moved
   procedurally; `beast_wave.sh` launches and ships them). The owner
-  lowered the floor to **1,500** on 2026-09-11 for exactly these twenty;
+  lowered the floor to **2,000** on 2026-09-11 (1,500 for an hour, then "2000 is okay") for exactly these twenty;
   the night-3 routine launches them the moment their concepts are painted
   and ships what finishes.
   `balance.py --chapters` and `--families` measure them; the rows and the
@@ -446,8 +443,8 @@ environment can and cannot do. The short version:
   into the box and a lid whose origin is its back-bottom edge
   (`RewardChestView` in `BattleView.swift` hinges it there: shake, lid,
   beam, flash, gone, spoils). The user bought the 8,000-credit plan on
-  2026-09-09; the floor was 3,000 and is **1,500** since 2026-09-11 ("we can
-  go down to 1500 credits, not lower"), and `tools/batch/wave_run.sh` keeps
+  2026-09-09; the floor was 3,000 and is **2,000** since 2026-09-11 ("you can
+  bring us down to 2000 credits, that's okay"), and `tools/batch/wave_run.sh` keeps
   every wave above it.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
   for an attack clip and back at the next turn, and every hit flashes the
@@ -617,8 +614,8 @@ environment can and cannot do. The short version:
   arms, no weapon held out; redraw, run as `<asset>_v2`, ship with
   `mesh.py <asset>_v2 --as <asset>`. Text-to-3D props are charged by what
   Meshy generates, 30–300 credits each, not a flat rate. The user's floor
-  is **1,500 credits** (500, then 3,000 with the 8,000-credit plan on
-  2026-09-09, then 1,500 on 2026-09-11 to afford Rome and the Jade Court's
+  is **2,000 credits** (500, then 3,000 with the 8,000-credit plan on
+  2026-09-09, then 2,000 on 2026-09-11 to afford Rome and the Jade Court's
   twenty): check `python3 tools/meshy.py balance` before every launch and
   never plan past it. A character is 53: 30 image-to-3D, 5 rig, 3 a clip.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music

@@ -648,7 +648,7 @@ def main():
     p.add_argument("--prompt", required=True, help="the motion in a sentence or two; in place, feet planted")
     p.add_argument("--duration", type=float, default=4.0, help="2-10 seconds in 0.5 s steps")
     p.add_argument("--mode", default="prime", choices=["prime", "swift"], help="prime (10 credits) or swift (3); +3 to apply")
-    p.add_argument("--floor", type=int, default=1500, help="never spend below this balance (the owner's floor, 1,500 since 2026-09-11)")
+    p.add_argument("--floor", type=int, default=2000, help="never spend below this balance (the owner's floor, 2,000 since 2026-09-11)")
 
     p = sub.add_parser("status", help="re-poll every task in an asset's manifest")
     p.add_argument("asset")
