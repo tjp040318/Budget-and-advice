@@ -1,5 +1,6 @@
 import Foundation
 import SceneKit
+import SpriteKit
 import UIKit
 
 protocol BattleSceneDelegate: AnyObject {
@@ -85,6 +86,14 @@ final class BattleSceneController: NSObject {
     }
 
     private(set) var unitNodes: [UUID: UnitNode] = [:]
+    /// The unit plates — every fighter's health and attack bars — drawn over
+    /// the view in points (`UnitPlateOverlay`); `layoutPlates` stands each
+    /// one under its unit's feet on every frame.
+    let plates = UnitPlateOverlay(size: CGSize(width: 2, height: 2))
+    /// The plates and the nodes they follow, snapshotted for the render
+    /// thread under a lock whenever the units change.
+    private let plateLock = NSLock()
+    private var plateTargets: [(UnitPlate, UnitNode)] = []
     private var cameraNode = SCNNode()
     private var director: CameraDirector?
     private var queue: [BattleEvent] = []
@@ -125,6 +134,8 @@ final class BattleSceneController: NSObject {
         scene.rootNode.childNodes.forEach { $0.removeFromParentNode() }
         ledge = nil
         unitNodes.removeAll()
+        plates.removeAllPlates()
+        refreshPlateTargets()
         holdOverride = nil
         castRecovery = 0
 
@@ -328,6 +339,19 @@ final class BattleSceneController: NSObject {
             }
             scene.rootNode.addChildNode(node)
             unitNodes[combatant.id] = node
+            if !combatant.isBoss {
+                // The unit's bars, on the overlay: a boss keeps the HUD's
+                // wide bar and wears no plate.
+                let plate = plates.addPlate(for: combatant.id, elementHex: combatant.element.accentHex)
+                node.plate = plate
+                plate.setHealth(combatant.healthFraction, animated: false)
+                plate.setAttackBar(combatant.attackBar, animated: false)
+                plate.setStatuses(combatant.statuses)
+                if entering {
+                    plate.alpha = 0
+                    plate.run(SKAction.fadeIn(withDuration: beat(0.45)))
+                }
+            }
             if combatant.isBoss, ledge == nil {
                 let recipe = StageBuilder.recipe(for: environment)
                 let rock = StageBuilder.breach(
@@ -338,6 +362,7 @@ final class BattleSceneController: NSObject {
                 ledge = rock
             }
         }
+        refreshPlateTargets()
     }
 
     /// The width of each side's line, in marks, fixed when the fight opens.
@@ -472,6 +497,7 @@ final class BattleSceneController: NSObject {
             guard let node = unitNodes[combatant.id] else { continue }
             node.setHealth(fraction: combatant.healthFraction, animated: false)
             node.setStatuses(combatant.statuses)
+            node.plate?.setAttackBar(combatant.attackBar, animated: true)
             if !combatant.isAlive { node.markDefeated() }
         }
     }
@@ -542,6 +568,8 @@ final class BattleSceneController: NSObject {
             returnEveryoneHome()
             highlight(actor)
             showMatchups(for: actor)
+            // The actor's attack bar is full: that is why it is acting.
+            unitNodes[actor]?.plate?.setAttackBar(1, animated: true)
             // The walk-ons of the last wave are on their marks by now.
             director?.frameField()
 
@@ -762,7 +790,10 @@ final class BattleSceneController: NSObject {
         case .statusExpired(let target, let kind), .statusRemoved(let target, let kind, _):
             unitNodes[target]?.removeStatus(kind)
 
-        case .cooldownStarted, .attackBarChanged:
+        case .attackBarChanged(let target, _, let newValue):
+            unitNodes[target]?.plate?.setAttackBar(newValue, animated: true)
+
+        case .cooldownStarted:
             break
 
         case .counterattack(let actor, _):
@@ -795,6 +826,7 @@ final class BattleSceneController: NSObject {
             for (id, node) in unitNodes where node.side == .opponent && node.isDefeated {
                 node.runAction(.sequence([.fadeOut(duration: 0.3), .removeFromParentNode()]))
                 unitNodes[id] = nil
+                plates.removePlate(for: id)
             }
             registerMaxHealth(opponents)
             place(combatants: opponents, entering: true)
@@ -835,6 +867,56 @@ final class BattleSceneController: NSObject {
 
     private func highlight(_ actorID: UUID) {
         for (id, node) in unitNodes { node.setHighlighted(id == actorID) }
+    }
+
+    // MARK: - Unit plates
+
+    /// The plates and the nodes they follow, for the render thread.
+    private func refreshPlateTargets() {
+        let pairs: [(UnitPlate, UnitNode)] = unitNodes.values.compactMap { node in
+            node.plate.map { ($0, node) }
+        }
+        plateLock.lock()
+        plateTargets = pairs
+        plateLock.unlock()
+    }
+
+    /// The attack bars after a turn resolves, from the engine's truth: the
+    /// actor back at zero, everyone else advanced toward their turn. The
+    /// view model calls it as playback settles.
+    func syncPlates(combatants: [Combatant]) {
+        for combatant in combatants {
+            unitNodes[combatant.id]?.plate?.setAttackBar(combatant.attackBar, animated: true)
+        }
+    }
+
+    /// Stands every plate under its unit's feet for the frame about to be
+    /// drawn. Called by the view's renderer delegate on the render thread,
+    /// with the camera where it will be for that frame, so a plate follows a
+    /// dash and a zoom without a frame of lag.
+    ///
+    /// `projectPoint` answers in the view's points with the origin at the
+    /// top; the overlay's origin is at the bottom, so y is flipped by the
+    /// overlay's height.
+    func layoutPlates(in renderer: SCNSceneRenderer) {
+        if let view = renderer as? SCNView {
+            let size = view.bounds.size
+            if size.width > 0, size.height > 0, plates.size != size { plates.size = size }
+        }
+        let height = plates.size.height
+        guard height > 2 else { return }
+        plateLock.lock()
+        let targets = plateTargets
+        plateLock.unlock()
+        for (plate, node) in targets {
+            let projected = renderer.projectPoint(node.worldPosition)
+            let onScreen = projected.z > 0 && projected.z < 1
+            plate.isHidden = !onScreen
+            plate.position = CGPoint(
+                x: CGFloat(projected.x),
+                y: height - CGFloat(projected.y) - UnitPlate.dropBelowFeet
+            )
+        }
     }
 
     /// The genre's arrows. With one of the player's units up, every enemy

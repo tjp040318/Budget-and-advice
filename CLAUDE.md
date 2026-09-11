@@ -533,7 +533,25 @@ environment can and cannot do. The short version:
   four frames, so the waves are seen walking on), the power-up screen,
   the victory's chest in three frames and the collection's Stage layout
   (21).
-- **The fight reads.** Status effects are tiles over the health bar
+- **The fight reads.** **Every unit's bars are a screen-space plate under
+  its feet (2026-09-11, night):** `UnitPlateOverlay`, a SpriteKit scene laid
+  over the `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one
+  `UnitPlate` per non-boss unit, placed every frame by
+  `BattleSceneController.layoutPlates` from `projectPoint` of the node's
+  feet (view points, origin top; the overlay's origin is bottom, so y is
+  flipped by the scene height). The plate is the genre's: a 76×8 pt green
+  health bar (dark rounded track, gradient fill, amber under 30%, a cream
+  trail that drains 0.35 s after a hit), the 76×3.5 pt light-blue
+  **attack bar** under it (tweened to the engine's value when playback
+  settles — `syncPlates` — and on `attackBarChanged`; gold and pulsing at
+  100%), the element pip at the left, the status tiles above, the matchup
+  arrow at the right, a gold rim on the acting unit. Green for both sides,
+  as the genre has it. The 3D bar in `UnitNode` still exists for the
+  island and the Hall of Ka and is hidden the moment a plate is attached;
+  before this it hung 0.34 m over the head, lit and bloomed, and from the
+  camera behind the team a player's bar landed on the floor at the
+  enemies' feet as a gray block — the owner read those as the enemies'
+  bars. Status effects are tiles over the health bar
   (`StatusIconRenderer`: blue for a buff, red for a debuff, the effect's
   glyph, the turns left in the corner; `UnitNode.setStatuses` takes
   `[ActiveStatus]` and the scene updates them on `.statusApplied` /

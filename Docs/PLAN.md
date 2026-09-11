@@ -1227,3 +1227,81 @@ looks like nothing else" in the same breath.
    (Gemini is capped; the tile textures can be reworked in PIL from what
    exists) — a texture change, no camera change.
 
+## The bars under the feet: unit plates the genre's way (2026-09-11, night)
+
+The owner, with a crop of the arena frame: "the enemies' health bar is just
+gray. It also looks big and blocky. I want it nicer looking and more fluid,
+not so cartoony, like Summoners War. WITH the attack bar (attack speed /
+turn order bar like Summoners War) under it."
+
+**What the gray blocks were.** Not the enemies' bars — the player's own.
+`UnitNode` drew every bar as three SceneKit planes on a billboard 0.34 m
+above the head, 1.15 m wide: a light hairline, a black plate, a green or red
+fill. From the camera behind and above the team, a bar over a player's head
+projects onto the floor between the rows, right at the enemies' feet, so the
+owner read them as the enemies' bars; lit by the scene and softened by the
+bloom and the 2× multisampling, the green fill came out gray-teal, and at
+that size the hairline edge made them blocks. The enemies' own bars were the
+small red-brown ones over their heads. A bar drawn as geometry in the scene
+can never be crisp, never the same size in both rows, and never sit where the
+genre puts it without colliding with something.
+
+**What Summoners War draws** (from playing it; the wiki is refused here):
+under each monster's feet, in screen space at a constant size whatever the
+row — a slim green health bar with a rounded dark track and a lighter top
+edge, damage showing as a pale segment that lingers a beat and then drains;
+under it a thinner light-blue ATTACK BAR that fills as the monster's turn
+approaches and flashes when it is ready; the buff and debuff icons in a row
+above the health bar; the element/level mark at the bar's left end; the
+acting monster and the targeted enemy picked out with a marker. Both sides'
+health bars are green — the row tells you whose it is — and the bars never
+scale with the camera. Epic Seven and Raid do the same in their own dress:
+the unit plate is a screen-space HUD element, not a scene object.
+
+**The options.**
+1. Keep the 3D planes and draw them better — a Core Graphics texture with
+   a gradient and rounded ends on the same billboards, unlit, no depth.
+   Crisper, but still scaled by distance (the far row's bars 30% smaller),
+   still bloomed, still above the head or else on the floor plane under
+   the feet where a foot occludes it.
+2. A SpriteKit overlay on the `SCNView` (`overlaySKScene`, the mechanism
+   Apple's own SceneKit samples use for a HUD): one plate per unit, in
+   points, positioned every frame from `projectPoint` of the unit's feet.
+   Crisp at any distance, constant size, gradient fills from Core
+   Graphics, the fill and the attack bar tweened with `SKAction`, the
+   status tiles and the matchup arrow in the same plate. This is what the
+   genre does.
+3. SwiftUI views over the scene driven by projected positions published
+   from the render loop: the same look, but sixty layout passes a second
+   through SwiftUI for ten units, and the positions a frame late.
+
+**Chosen: 2.** `UnitPlateOverlay` (an `SKScene` in `BattleSceneView.swift`;
+no new file, the project's synchronised group does not pick one up) holds a
+`UnitPlate` per non-boss unit; the view's coordinator is the
+`SCNSceneRendererDelegate` and calls `BattleSceneController.layoutPlates`
+in `willRenderScene`, which projects each node's feet and stands the plate
+12 pt below them (`projectPoint` gives view points with the origin at the
+top on iOS; the overlay's origin is at the bottom, so y is flipped by the
+scene's height). The plate: a 76×8 pt health bar (a dark rounded track, a
+green gradient fill with a light top edge, amber under 30%, a cream trail
+that waits 0.35 s and drains after a hit), a 76×3.5 pt attack bar under it
+(light blue, tweened over 0.45 s to the engine's value after every turn,
+gold and pulsing at 100%), the element pip at the left end, the status
+tiles above (13 pt, six at most, the same `StatusIconRenderer` pictures)
+and the matchup arrow at the right end; a gold rim pulses on the acting
+unit; the plate fades with a death and back with a revival. `UnitNode`
+keeps its 3D bar code but hides it the moment a plate is attached, so the
+island and the Hall of Ka, which have no overlay, are untouched. The
+engine's attack bars reach the plates three ways: `syncPlates` from the
+view model when playback settles (the actor back at zero, everyone else
+advanced), the `attackBarChanged` event when a skill pushes or pulls one,
+and the actor's bar shown full as its turn begins. A boss keeps the HUD's
+bar and no plate. The nodes the render thread reads are snapshotted under
+a lock whenever they change.
+
+**Why green for the enemies too.** It is the genre's convention and the
+owner asked for the genre's bar; whose unit it is reads off the row, and
+the matchup arrow on a player's turn already marks every enemy. The red
+fill of the first build was the one thing that made an enemy's bar look
+like a warning rather than a health bar.
+

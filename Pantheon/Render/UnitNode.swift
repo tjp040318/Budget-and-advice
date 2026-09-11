@@ -29,6 +29,13 @@ final class UnitNode: SCNNode {
     /// The advantage arrow: beside the health bar on an ordinary unit, at
     /// the chest of a boss (whose bar is hidden).
     private let matchupBadge: SCNNode
+    /// The screen-space plate that draws this unit's bars since 2026-09-11
+    /// (`UnitPlateOverlay`, over the battle view). While one is attached the
+    /// 3D bar above the head stays hidden; the island and the Hall of Ka,
+    /// which have no overlay, keep it.
+    weak var plate: UnitPlate? {
+        didSet { if plate != nil { healthBarRoot.isHidden = true } }
+    }
     private let selectionRing: SCNNode
     private let elementTint: UIColor
 
@@ -258,6 +265,7 @@ final class UnitNode: SCNNode {
     /// even, red down — for the unit whose turn it is against this one; nil
     /// takes it off.
     func setMatchup(_ matchup: Element.Matchup?) {
+        plate?.setMatchup(matchup)
         guard let matchup else {
             matchupBadge.isHidden = true
             return
@@ -716,6 +724,7 @@ final class UnitNode: SCNNode {
     // MARK: - State
 
     func setHealth(fraction: Double, animated: Bool = true) {
+        plate?.setHealth(fraction, animated: animated)
         let clamped = Float(min(1, max(0, fraction)))
         // Never below a sliver while there is health at all: a unit on its
         // last points still shows a mark of colour, not a bare plate.
@@ -741,6 +750,7 @@ final class UnitNode: SCNNode {
     }
 
     func setHighlighted(_ highlighted: Bool) {
+        plate?.setActing(highlighted)
         selectionRing.removeAllActions()
         if highlighted {
             selectionRing.opacity = 1.0
@@ -763,6 +773,7 @@ final class UnitNode: SCNNode {
     /// The coloured dots of the first build told the player nothing.
     func setStatuses(_ statuses: [ActiveStatus]) {
         activeStatuses = statuses
+        plate?.setStatuses(statuses)
         statusRow.childNodes.forEach { $0.removeFromParentNode() }
         // One tile per kind, the longest-lasting of each, six at most.
         var byKind: [StatusKind: Int] = [:]
@@ -816,6 +827,7 @@ final class UnitNode: SCNNode {
         guard !isDefeated else { return }
         play(.death)
         isDefeated = true
+        plate?.setDefeated(true)
         healthBarRoot.runAction(.fadeOut(duration: 0.4))
         selectionRing.runAction(.fadeOut(duration: 0.3))
     }
@@ -831,6 +843,7 @@ final class UnitNode: SCNNode {
         // sees.
         modelContainer.position = containerRest
         modelContainer.opacity = 1
+        plate?.setDefeated(false)
         healthBarRoot.runAction(.fadeIn(duration: 0.3))
         setHealth(fraction: healthFraction, animated: false)
         play(.idleCombat)

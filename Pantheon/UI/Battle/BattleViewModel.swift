@@ -459,6 +459,7 @@ final class BattleViewModel: ObservableObject {
     private func settleAfterPlayback() {
         isPlayingBack = false
         displayedCombatants = engine.combatants
+        sceneController.syncPlates(combatants: engine.combatants)
         refreshTurnOrder()
 
         if let result = engine.result {

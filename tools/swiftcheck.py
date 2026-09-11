@@ -811,6 +811,11 @@ def check_unknown_types(files, declared, errors):
         "ButtonStyle","Environment","Configuration","Content","Context","Self","Never",
         "SCNHitTestSearchMode","SCNMatrix4MakeTranslation","SCNVector3Zero","AnimationImportPolicy",
         "SIMD3","simd_quatf","simd_float3",
+        # SpriteKit, since the unit plates went screen-space (2026-09-11),
+        # and the renderer delegate and Core Graphics names they use.
+        "SpriteKit","SKScene","SKNode","SKSpriteNode","SKCropNode","SKTexture","SKAction",
+        "SKShapeNode","SKLabelNode","SCNSceneRenderer","SCNSceneRendererDelegate","CGPath",
+        "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",
         "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
         "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64","Thread","DateFormatter","CFAbsoluteTime","CFAbsoluteTimeGetCurrent","CAKeyframeAnimation","SCNParticleBlendMode","SCNParticlePropertyController",
