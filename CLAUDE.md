@@ -11,6 +11,40 @@ branches rather than hedging.
 Keep the reasoning, but put it after the steps or inline as a short "why",
 never in place of them.
 
+## The owner's two standing rules (2026-09-11)
+
+**1. Finished work is shown, not described.** When a piece of work is done —
+a screen, a fight, a fix, a batch of models — send the owner pictures of it
+with the report, before he tests anything: `SendUserFile` with the CI frames
+of the screens touched (`python3 tools/ciframes.py`, then compose the frames
+that matter into one or two sheets with PIL, portrait frames stood up with
+`rotate(90, expand=True)`) and, for models, the preview sheets
+(`tools/preview.py --sheet`) or one board of the families shipped
+(`python3 tools/roster_board.py <families> --out board.jpg`: each family's
+base model in its three views, named). "Send me screenshots of what you did
+even before I test. This includes the Meshy models. This will help me
+respond faster." A picture he can see in the chat; a sentence about a
+picture is not the rule.
+
+**2. Research the best way before building, every time.** "When I tell you
+to do something, ALWAYS research the most effective way to do it with the
+highest quality. This game is my livelihood and it will be my full-time job.
+I need this at 10000% quality." So a task starts with its research, not
+its first edit: how the best of the genre does this thing (Summoners War
+first — its screens, its camera, its numbers — then Epic Seven, Raid and
+whatever the task calls for), what the tools can actually do (Meshy's
+API options, SceneKit's features, Apple's documentation, the packages
+reachable from here), and what this project already learned (`Docs/PLAN.md`
+and the git history hold every camera, every rig refusal and every measured
+cost). Compare the approaches, pick the one that gives the best result
+rather than the quickest, and write the options and the choice into
+`Docs/PLAN.md` before building — the owner reads that reasoning. Then build
+it whole, verify it (the CI frames, the preview sheets, `swiftcheck`,
+`balance.py`), judge it against the genre's own screen before handing it
+over, and show it (rule 1). Never ship the first thing that works when a
+better way is one search away; never leave a known lesser version in place
+without saying so and what the better one costs.
+
 ## This project
 
 No Swift toolchain exists in the Claude Code environment — `download.swift.org`
