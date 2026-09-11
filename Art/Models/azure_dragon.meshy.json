@@ -18,7 +18,7 @@
       "id": "01a09089-0eb1-7289-9975-58b23b776466",
       "kind": "preview",
       "created": "2026-09-11T12:55:02Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "mode": "preview",
         "prompt": "Full body creature, a serpentine Chinese dragon standing on four clawed legs in a symmetrical pose, head up, body straight, no wings: a long serpentine Chinese dragon with scales of deep azure blue and turquoise fading to a pale jade belly, a flowing dark-blue mane and long whiskers, branching antler-like horns, a golden ridge of spines down the back, four strong legs with gold-clawed feet, small gold rings around each ankle, the body carrying a faint pattern of stars along its flank. Palette azure blue, jade, gold. Plain empty background, no base.",
@@ -31,15 +31,43 @@
         "negative_prompt": "wings, coiled body, base, pedestal, background, scenery, text, watermark, two creatures, photorealism"
       },
       "cost": 25,
-      "progress": 93,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "model_urls.glb": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09089-0eb1-7289-9975-58b23b776466/output/model.glb?Expires=4942684800&Signature=NM~-vcz5nUOjGHMhqzqKxVku-u0eVcnqm3GlQ0~nwhKXDAv~oHScG~mcXcafBWzDaabrUBLrQGNvJkXRV4KbT-UgQTR7n5nsR-w9pjrftvQnt5b7TQEiQsBeBlt~Q-IJlqPNYJv0kJsmQhGO-vNHuQTTGtESGfO7ZdRslasEEeJG5v6M7Hf7iulE-M6WyF4nlTT39UEeqFJEz4g7plaLgBnsVL~7a6ygFh2xXqS3recmBloOiFAeIoyBSItYT-9UpBfAbMG-wfL-gdeNUt~BwQDzKHTB499shKGQLf~9IuIEUXsT0rjHXepEIBdp9nDE1eWNF7TIkYBohOsfwOZOjg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.fbx": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09089-0eb1-7289-9975-58b23b776466/output/model.fbx?Expires=4942684800&Signature=XUHWj~AwfZMQ2R-lITNYnFU5b8Eeksr63hzotSkcutt2kfQfcKhCydA0SGKorvA9jx7q4C9eKDu~opVoT3SUl9ys8tiKcph1hcUecr8v9hBEm8Ye0tsBS-lmkvU7Ni4zXA8IHhiOcvJj~ks1hdxHD0ZBt-W-qvD7gDDX4idVWK7ST3MSGMmkvbRDvICcdJzhQh4yNPYJrNcZ2QfV2JZdMh82DVzHUkDXIpyCTVKVIlgQyylfUF66a2hjfm~5Ps8GfS1w~4I8JQv3MdGnAaUdAj-0x8--VGiS8iEZyz1Tz7GV1vsn9Mw8DsSIa0mpBZYUgqGXQEsbVbMhGdehjmLB2A__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.usdz": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09089-0eb1-7289-9975-58b23b776466/output/model.usdz?Expires=4942684800&Signature=qh69OLQcz3myMq71FxbN~m3oyNxAkJNN04ddthW3c-OFPfuXeV0Yxu2sw2nuPDIZCW51XJe7J-V68ZoBr6EiernqeuIm4Cyok3dAniZk~wtWutiuiUgl~oTcfS199PQ9UEcuk~qGQbQjJIo4RVEeVmHFwPmTvjGQfEXCpfQh4MCA6fq1W-FcA0gJvxdP4EOHBAMyaFImo0PridwI4XMhDrcvZfoPaNp2NsJGAfnLvQ-vEgePcN-xKOlgXFJk1JHwI42J~Rf4~bukRY189Nv6XRbB1OmqzMzENfhxHEDVWWQ5MLe39pLNSnCqTWAk7KSd35JO8EDS3rmL6KVUmUGJoQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.obj": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09089-0eb1-7289-9975-58b23b776466/output/model.obj?Expires=4942684800&Signature=nNHsal19Lf382R-tWxkctW7XkDVOHKv46Z4pT9W~M1E9h8U6y1DicFIOvx8rtHuBhsAbsPMEmrlmAFAMgUEcoSkfEIA7na~QfTvr~RhPhujgTxQA5od54VR-fk6vZODB6cWnruBgOdwKEo3iF5uc~odvd8EBCgS5-3zJopKHWUJQqMN4A7aTlqhrd0pfSmw4MVq~sDh3YkwOqVjNzUTGOnPe95qI9KWmz6DkQ0YZUqZ3PvvQFj1doHuThG43he7ODlVnAE0vXIGOFqZbF-xb3aXD2~SJ0s9-4TawDsUX1R9ORBBLBz~IbI4DnjGnTYWqcoJXTjFmU4CPr1hA1zdcGA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.stl": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09089-0eb1-7289-9975-58b23b776466/output/model.stl?Expires=4942684800&Signature=oaS1JZU1yXi5hlIhPWsncRnIhNkt3Ceup~n3zMEqDNtSHBvk6A1iqK57Ayr9BdG8u9KHWbpUy6Voql8hg8JfEZmXJrTotCZVjLsn044QeFWuhYtEGLe30Y~nVmhIXYFbDJ2yZE8V8PtVmEDIdcpno-~D~jWekJELLHyyOwiAAc7-SpaP3srM6TtCcBZrKqWT34ZrBVpSjHoblBXyR0p~AUaODT-bXcuoMawQTQDaoXtWlRvUMjacKCqzbDphJkBRdekq~rq8skvMoqOHDIZsLKDzUaZoXntRRz6k5t4zBYG1ejOYbrZ~v3lyp-Wko3-SBQ5gMMh7GausQ4-qwydyOQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "thumbnail_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09089-0eb1-7289-9975-58b23b776466/output/preview.png?Expires=4942684800&Signature=CVThzgx2siskX-vLbxLVTVfOB6eVmXPckyyw8UFeFyspKgImxwdQJUY65CaClliOwRdDwKq5M9K4UICe1oJ3I7tVnDHxSBZ-trZbaSOKQro0xJt1xTbXsu9~jvzT91bUDTrZbHXQKF5t6~XWsBwpL-FubiYjzuiWFMGxB-PTHDo49Pk84FrXrbla-kAZKRyUnWur~EkDUX7Yhm9nW~NwyCNWRcES73IDIHgb~WGzTphD6YMWmvoTJzU4WV6wRwYWHpg1GuiICHJVjvba8XHiNdiS4uj241vHPtdG~kBBSFMyfYfjV5rlCajl~-uXZbempwN900CTXlH8lVQzsnWfWA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1789131302168,
       "started_at": 1789131302171,
+      "finished_at": 1789131421700,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T14:32:16Z"
+    },
+    "refine": {
+      "id": "01a090e2-4168-709d-af75-e41810f843df",
+      "kind": "refine",
+      "created": "2026-09-11T14:32:22Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "refine",
+        "preview_task_id": "01a09089-0eb1-7289-9975-58b23b776466",
+        "enable_pbr": true
+      },
+      "cost": 38,
+      "progress": 20,
+      "urls": {},
+      "created_at": 1789137142143,
+      "started_at": 1789137142146,
       "finished_at": 0,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T12:55:42Z"
+      "polled": "2026-09-11T14:32:42Z"
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-11T14:31:32Z"
 }

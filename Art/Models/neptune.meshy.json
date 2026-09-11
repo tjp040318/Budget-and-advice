@@ -45,7 +45,7 @@
       "finished_at": 1789131129996,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T12:52:18Z"
+      "polled": "2026-09-11T14:32:16Z"
     },
     "refine": {
       "id": "01a09086-a7e5-7235-b8b0-2491020d3af4",
@@ -77,8 +77,9 @@
       "finished_at": 1789131241681,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T12:54:10Z"
+      "polled": "2026-09-11T14:32:22Z"
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-11T14:31:09Z"
 }

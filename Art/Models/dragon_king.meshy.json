@@ -45,7 +45,10 @@
       "finished_at": 1789131747055,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T13:02:30Z"
+      "polled": "2026-09-11T14:30:41Z",
+      "downloaded": {
+        "usdz": "Art/Models/dragon_king_preview.usdz"
+      }
     },
     "refine": {
       "id": "01a0908f-fef0-765e-a130-6d795d00e9f6",
@@ -77,8 +80,12 @@
       "finished_at": 1789131841144,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T13:04:02Z"
+      "polled": "2026-09-11T14:30:41Z",
+      "downloaded": {
+        "usdz": "Art/Models/dragon_king_refine.usdz"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-11T14:30:41Z"
 }

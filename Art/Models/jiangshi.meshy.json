@@ -45,7 +45,7 @@
       "finished_at": 1789131696940,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T13:01:37Z"
+      "polled": "2026-09-11T14:31:29Z"
     },
     "refine": {
       "id": "01a0908f-2f27-77bc-a22f-894063d56284",
@@ -77,7 +77,7 @@
       "finished_at": 1789131798760,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T13:03:19Z"
+      "polled": "2026-09-11T14:31:29Z"
     },
     "rig": {
       "id": "01a09090-bc0b-7750-bbf6-4bd048ab22af",
@@ -104,7 +104,7 @@
       "started_at": 1789131802527,
       "finished_at": 1789131840362,
       "name": "",
-      "polled": "2026-09-11T13:04:03Z"
+      "polled": "2026-09-11T14:31:29Z"
     },
     "clip:idle_combat": {
       "id": "01a09091-67a3-740e-92c0-669f74acaf0f",
@@ -127,7 +127,7 @@
       "started_at": 1789131843844,
       "finished_at": 1789131855343,
       "name": "",
-      "polled": "2026-09-11T13:04:19Z"
+      "polled": "2026-09-11T14:31:29Z"
     },
     "clip:attack_basic": {
       "id": "01a09091-6a58-73f1-9d74-0f9b6d96db57",
@@ -150,7 +150,7 @@
       "started_at": 1789131844466,
       "finished_at": 1789131856428,
       "name": "",
-      "polled": "2026-09-11T13:04:18Z"
+      "polled": "2026-09-11T14:31:30Z"
     },
     "clip:attack_heavy": {
       "id": "01a09091-6cbc-7414-b3b7-c2ad1c94bf12",
@@ -173,7 +173,7 @@
       "started_at": 1789131845091,
       "finished_at": 1789131860547,
       "name": "",
-      "polled": "2026-09-11T13:04:29Z"
+      "polled": "2026-09-11T14:31:30Z"
     },
     "clip:hit_react": {
       "id": "01a09091-6f29-71d8-8477-fc203d5e4553",
@@ -196,7 +196,7 @@
       "started_at": 1789131845677,
       "finished_at": 1789131864024,
       "name": "",
-      "polled": "2026-09-11T13:04:29Z"
+      "polled": "2026-09-11T14:31:30Z"
     },
     "clip:death": {
       "id": "01a09091-716e-7487-ae7f-b8159721f056",
@@ -219,7 +219,7 @@
       "started_at": 1789131846291,
       "finished_at": 1789131877728,
       "name": "",
-      "polled": "2026-09-11T13:04:39Z"
+      "polled": "2026-09-11T14:31:30Z"
     },
     "clip:ultimate": {
       "id": "01a09091-73d1-76b0-901e-30c93ac0d482",
@@ -242,13 +242,13 @@
       "started_at": 1789131846915,
       "finished_at": 1789131882384,
       "name": "",
-      "polled": "2026-09-11T13:04:50Z"
+      "polled": "2026-09-11T14:31:30Z"
     },
     "clip:victory": {
       "id": "01a09091-767f-74ed-bd14-16c4a49060bc",
       "kind": "clip",
       "created": "2026-09-11T13:04:07Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a09090-bc0b-7750-bbf6-4bd048ab22af",
         "action_id": 412
@@ -256,14 +256,18 @@
       "cost": 6,
       "clip": "victory",
       "action_id": 412,
-      "progress": 90,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09091-767f-74ed-bd14-16c4a49060bc/output/Animation_victory_withSkin.glb?Expires=1789391093&Signature=oDUv2PYqFO1rn5nsupnTqW8jWmm~XuvGruQYvznQyTwiKKRI3lHGHQCmF7IGhivL1gWly4YO81XdUibp1tKw7jnbMvwfduIlR1WaUGVbhWeH9LfoUtpyau8wVy0jtyh7mwSMjmpv6JFuZQZoYrd~3xe73-ZBlF5o~rn4zrWhZO87IgG9yGfs9cPN2ZzoNvrCPSTLnHGKG3lqAMyF8lxThJP-lL9tqiBur9nSqNX4HGXHKPpVguRPnxFGC9-3KV79IXjpAGABdLf2kC3BQkxg~4vNzQkeHZAqKRjWcKb-liT9XZjqCHuyqsvaYf0HxouMAy9T~LoYG0Xn58avi6iYJA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09091-767f-74ed-bd14-16c4a49060bc/output/Animation_victory_withSkin.fbx?Expires=1789391093&Signature=d1oALOT3Y7kqcmbWS4erlNJ~C9IYxUMCz~bPSDh0tFTMEtHSglultYg2cDUoTi-8eFiGVYPxWnUiav4A7bD2Ap09DJo2ARpku~FlWPmuF4wYGC4IIbPbQVt2Qm8aeHSC90VRSVu2eOObghEQwPOf~GqbYN230OKb0862PPXirZX~qutnrml-HtFIubQlZybANp45U1UhT~CBpuF8Lwt-B5t8254tozn~nARDcUdgqUUDgHhR2N4dE6ZuKKZzX0Pr4ZjCM-gT~Gz19NiiVUuENmg0vnlUiGW2iPz9K09pI-mT86uvqrpr3X7eQn8XukaR44fC44ZhVtofTKwlHTWdhQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1789131847562,
       "started_at": 1789131847565,
-      "finished_at": 0,
+      "finished_at": 1789131893503,
       "name": "",
-      "polled": "2026-09-11T13:04:50Z"
+      "polled": "2026-09-11T14:31:30Z"
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-11T14:31:30Z"
 }
