@@ -1,0 +1,30 @@
+# Meshy runs for batch 4 — Rome and the Jade Court — one per line:
+#   asset:concept:height:palette:kit:family
+# kit is a meshy.py clip set (blade, heavy, caster, archer); family is the
+# roster name the mesh ships under. The concepts are painted by
+# concepts_batch4.sh (Gemini) the same night, so this runs AFTER that script.
+# Run with `bash tools/batch/wave_run.sh tools/batch/wave4.txt 1500` (the
+# owner's floor since 2026-09-11) and ship with
+# `bash tools/batch/ship_wave.sh tools/batch/wave4.txt`. Eighteen rigged
+# characters at 53 credits; the two dragons are beasts4.txt (unrigged, 30).
+#
+# ---- Rome
+mars:Art/Concepts/mars_sw.png:2.25:bronze, legion red, gold:blade:mars
+minerva:Art/Concepts/minerva_sw.png:2.05:white, gold, imperial purple:caster:minerva
+neptune:Art/Concepts/neptune_sw.png:2.20:sea teal, bronze, deep blue:blade:neptune
+pluto:Art/Concepts/pluto_sw.png:2.10:black, old gold, silver:caster:pluto
+diana:Art/Concepts/diana_sw.png:1.95:white, silver, forest green:archer:diana
+mercury:Art/Concepts/mercury_sw.png:1.95:orange, gold, white:blade:mercury
+bellona:Art/Concepts/bellona_sw.png:2.05:blood red, bronze, black:heavy:bellona
+centurion:Art/Concepts/centurion_sw.png:1.95:red, iron, bronze:blade:centurion
+gladiator:Art/Concepts/gladiator_sw.png:1.95:bronze, sand, white:blade:gladiator
+vestal:Art/Concepts/vestal_sw.png:1.85:white, hearth red, bronze:caster:vestal
+# ---- The Jade Court (the Monkey King fights with a staff: blade cuts read as staff swings)
+sun_wukong:Art/Concepts/sun_wukong_sw.png:1.90:gold, red, tiger orange:blade:sun_wukong
+nezha:Art/Concepts/nezha_sw.png:1.80:red, gold, white:blade:nezha
+guan_yu:Art/Concepts/guan_yu_sw.png:2.30:jade green, gold, black:heavy:guan_yu
+chang_e:Art/Concepts/chang_e_sw.png:1.95:moon silver, pale blue, white:caster:chang_e
+nuwa:Art/Concepts/nuwa_sw.png:2.05:yellow, jade green, five-colour:caster:nuwa
+fox_spirit:Art/Concepts/fox_spirit_sw.png:1.85:red, white, silver:caster:fox_spirit
+jiangshi:Art/Concepts/jiangshi_sw.png:1.90:faded blue, grey-green, talisman yellow:blade:jiangshi
+terracotta_soldier:Art/Concepts/terracotta_soldier_sw.png:1.95:terracotta brown, faded red, bronze:blade:terracotta_soldier

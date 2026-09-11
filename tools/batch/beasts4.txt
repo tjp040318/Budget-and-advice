@@ -1,0 +1,10 @@
+# Unrigged Meshy runs for batch 4 — the two dragons — one per line:
+#   asset:concept:height:palette
+# A dragon on four claws will not go through Meshy's biped rigger, so each is
+# image-to-3D only (30 credits) and fights the Hydra's way: a static mesh the
+# game moves procedurally (UnitNode falls back to procedural motion when a
+# model has no clips). Run with
+# `bash tools/batch/beast_wave.sh tools/batch/beasts4.txt 1500` — it launches
+# what has no manifest and ships what has finished, so run it twice.
+azure_dragon:Art/Concepts/azure_dragon_sw.png:2.60:azure blue, jade, gold
+dragon_king:Art/Concepts/dragon_king_sw.png:2.55:sea green, gold, pearl white

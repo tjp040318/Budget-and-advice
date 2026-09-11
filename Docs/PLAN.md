@@ -1022,7 +1022,7 @@ polls, so it is noise whenever runs overlap (Odin's image stage shows 90,
 Harpy's rig 135). Sequential runs and the account itself agree: 30 for the
 image-to-3D, 5 for the rig, 3 a clip — **53 a character**, confirmed again
 today (7,809 → 7,650 for three). The plan is 8,000 credits with a floor of
-**3,000**; `wave_run.sh` reads the balance before every launch and counts
+**1,500** since 2026-09-11 (3,000 before that); `wave_run.sh` reads the balance before every launch and counts
 what the launches of the same run still owe.
 
 **What the floor buys.** Remakes of every family cut with the old prompt

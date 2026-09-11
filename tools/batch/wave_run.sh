@@ -1,12 +1,12 @@
 #!/bin/bash
 # Launches every spec in a wave list (tools/batch/wave3.txt, remake_wave.txt)
 # that has no manifest yet, in order, while the balance stays above a floor.
-# usage: wave_run.sh <list> [floor]      (floor defaults to 3000)
+# usage: wave_run.sh <list> [floor]      (floor defaults to 1500, the owner's since 2026-09-11)
 # A character costs 53: 30 for the image-to-3D when it is created, then 5
 # for the rig and 3 per clip as those stages run, so every launch of this run
 # still has 23 to charge when the next balance is read - that is counted.
 cd /home/user/Budget-and-advice
-list=$1; floor=${2:-3000}; per=53; later=23; launched=0
+list=$1; floor=${2:-1500}; per=53; later=23; launched=0
 [ -s "$list" ] || { echo "no list $list"; exit 1; }
 while IFS= read -r line; do
   [[ -z "$line" || "$line" == \#* ]] && continue

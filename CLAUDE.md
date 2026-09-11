@@ -274,10 +274,14 @@ environment can and cannot do. The short version:
   are stand-ins until made). Both pantheons are in `Pantheon.live`. The
   concepts, cards, banners and backdrops are `tools/batch/concepts_batch4.sh`,
   `portraits_batch4.sh` and `realms_batch4.sh` for the night routine; the
-  rigged models are twenty characters at 53 credits each, 1,060, which the
-  3,000 floor cannot afford until the owner raises it (the two dragons stand
-  on four claws and will not go through Meshy's biped rigger — they are the
-  Hydra's route, an unrigged mesh moved procedurally, unless repainted).
+  rigged models are `tools/batch/wave4.txt` (eighteen characters at 53
+  credits) and `beasts4.txt` (the two dragons, which stand on four claws
+  and will not go through Meshy's biped rigger — they go image-to-3D only,
+  30 credits each, and fight the Hydra's way, an unrigged mesh moved
+  procedurally; `beast_wave.sh` launches and ships them). The owner
+  lowered the floor to **1,500** on 2026-09-11 for exactly these twenty;
+  the night-3 routine launches them the moment their concepts are painted
+  and ships what finishes.
   `balance.py --chapters` and `--families` measure them; the rows and the
   four chapter lines are mirrored there.
 - **The collection has two layouts (2026-09-11)**, switched in the strip and
@@ -438,7 +442,8 @@ environment can and cannot do. The short version:
   into the box and a lid whose origin is its back-bottom edge
   (`RewardChestView` in `BattleView.swift` hinges it there: shake, lid,
   beam, flash, gone, spoils). The user bought the 8,000-credit plan on
-  2026-09-09; the floor is now **3,000**, and `tools/batch/wave_run.sh` keeps
+  2026-09-09; the floor was 3,000 and is **1,500** since 2026-09-11 ("we can
+  go down to 1500 credits, not lower"), and `tools/batch/wave_run.sh` keeps
   every wave above it.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
   for an attack clip and back at the next turn, and every hit flashes the
@@ -608,8 +613,9 @@ environment can and cannot do. The short version:
   arms, no weapon held out; redraw, run as `<asset>_v2`, ship with
   `mesh.py <asset>_v2 --as <asset>`. Text-to-3D props are charged by what
   Meshy generates, 30–300 credits each, not a flat rate. The user's floor
-  is **3,000 credits** (raised from 500 with the 8,000-credit plan on
-  2026-09-09): check `python3 tools/meshy.py balance` before every launch and
+  is **1,500 credits** (500, then 3,000 with the 8,000-credit plan on
+  2026-09-09, then 1,500 on 2026-09-11 to afford Rome and the Jade Court's
+  twenty): check `python3 tools/meshy.py balance` before every launch and
   never plan past it. A character is 53: 30 image-to-3D, 5 rig, 3 a clip.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
