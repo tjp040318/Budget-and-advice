@@ -347,10 +347,7 @@ final class BattleSceneController: NSObject {
                 plate.setHealth(combatant.healthFraction, animated: false)
                 plate.setAttackBar(combatant.attackBar, animated: false)
                 plate.setStatuses(combatant.statuses)
-                if entering {
-                    plate.alpha = 0
-                    plate.run(SKAction.fadeIn(withDuration: beat(0.45)))
-                }
+                if entering { plate.enter(over: beat(0.45)) }
             }
             if combatant.isBoss, ledge == nil {
                 let recipe = StageBuilder.recipe(for: environment)
@@ -903,6 +900,9 @@ final class BattleSceneController: NSObject {
             let size = view.bounds.size
             if size.width > 0, size.height > 0, plates.size != size { plates.size = size }
         }
+        // Everything the main thread asked of the plates since the last
+        // frame, applied here on the renderer's thread, then the positions.
+        plates.drainPending()
         let height = plates.size.height
         guard height > 2 else { return }
         plateLock.lock()

@@ -102,6 +102,30 @@ struct BattleSceneView: UIViewRepresentable {
 final class UnitPlateOverlay: SKScene {
 
     private var plates: [UUID: UnitPlate] = [:]
+    /// Every touch of a SpriteKit node — adding a plate, a bar's new value,
+    /// a status row — is queued here from the main thread and run on the
+    /// render thread just before the frame is drawn (`drainPending`, from
+    /// `BattleSceneController.layoutPlates`). SpriteKit's scene graph is not
+    /// thread-safe, and the first arena run with the plates died mid-fight
+    /// with the main thread rebuilding a status row while the renderer was
+    /// placing the plates. One thread handles the graph now.
+    private let pendingLock = NSLock()
+    private var pending: [() -> Void] = []
+
+    func perform(_ work: @escaping () -> Void) {
+        pendingLock.lock()
+        pending.append(work)
+        pendingLock.unlock()
+    }
+
+    /// Runs the queued work. Called on the render thread.
+    func drainPending() {
+        pendingLock.lock()
+        let work = pending
+        pending.removeAll()
+        pendingLock.unlock()
+        for item in work { item() }
+    }
 
     override init(size: CGSize) {
         super.init(size: size)
@@ -116,21 +140,24 @@ final class UnitPlateOverlay: SKScene {
 
     @discardableResult
     func addPlate(for id: UUID, elementHex: String) -> UnitPlate {
-        plates[id]?.removeFromParent()
+        if let old = plates[id] { perform { old.removeFromParent() } }
         let plate = UnitPlate(elementHex: elementHex)
+        plate.host = self
         plates[id] = plate
-        addChild(plate)
+        perform { [weak self] in self?.addChild(plate) }
         return plate
     }
 
     func removePlate(for id: UUID) {
-        plates[id]?.removeFromParent()
+        guard let plate = plates[id] else { return }
         plates[id] = nil
+        perform { plate.removeFromParent() }
     }
 
     func removeAllPlates() {
-        for plate in plates.values { plate.removeFromParent() }
+        let gone = Array(plates.values)
         plates.removeAll()
+        perform { for plate in gone { plate.removeFromParent() } }
     }
 }
 
@@ -167,6 +194,8 @@ final class UnitPlate: SKNode {
     private let atbTexture: SKTexture
     private let readyTexture: SKTexture
     private var shownFraction: CGFloat = 1
+    /// The overlay this plate is on, whose queue every change goes through.
+    weak var host: UnitPlateOverlay?
 
     init(elementHex: String) {
         let w = UnitPlate.barWidth
@@ -271,10 +300,67 @@ final class UnitPlate: SKNode {
 
     // MARK: State
 
+    /// Queues a change on the overlay, or applies it at once for a plate
+    /// that is not on one yet.
+    private func later(_ work: @escaping () -> Void) {
+        if let host { host.perform(work) } else { work() }
+    }
+
     /// The health bar. A hit drops the fill at once and the cream trail
     /// follows after a beat, so the size of the blow is read off the bar;
     /// a heal lifts both together.
     func setHealth(_ fraction: Double, animated: Bool) {
+        later { [self] in applyHealth(fraction, animated: animated) }
+    }
+
+    /// The attack bar: the fraction of the way to the unit's next turn, gold
+    /// and pulsing once it is full.
+    func setAttackBar(_ value: Double, animated: Bool) {
+        later { [self] in applyAttackBar(value, animated: animated) }
+    }
+
+    /// The buffs and debuffs as a row of tiles over the health bar: one per
+    /// kind, the longest-lasting of each, six at most. The pictures are
+    /// drawn here, on the caller's thread; the row is rebuilt on the
+    /// renderer's.
+    func setStatuses(_ statuses: [ActiveStatus]) {
+        var byKind: [StatusKind: Int] = [:]
+        for status in statuses { byKind[status.kind] = max(byKind[status.kind] ?? 0, status.turnsRemaining) }
+        let shown = byKind.sorted { $0.key.rawValue < $1.key.rawValue }.prefix(6)
+        let images = shown.compactMap { StatusIconRenderer.image(kind: $0.key, turns: $0.value) }
+        later { [self] in applyStatuses(images) }
+    }
+
+    /// The advantage arrow at the bar's right end on a player's turn.
+    func setMatchup(_ matchup: Element.Matchup?) {
+        let image = matchup.map { MatchupIconRenderer.image(for: $0) }
+        later { [self] in applyMatchup(image) }
+    }
+
+    /// The gold rim while this unit acts.
+    func setActing(_ acting: Bool) {
+        later { [self] in applyActing(acting) }
+    }
+
+    /// The plate goes with its unit: out with a death, back with a revival.
+    func setDefeated(_ defeated: Bool) {
+        later { [self] in
+            removeAction(forKey: "fade")
+            run(defeated ? .fadeOut(withDuration: 0.4) : .fadeIn(withDuration: 0.3), withKey: "fade")
+        }
+    }
+
+    /// A plate arriving with a later wave fades in with its unit.
+    func enter(over duration: TimeInterval) {
+        later { [self] in
+            alpha = 0
+            run(.fadeIn(withDuration: duration), withKey: "fade")
+        }
+    }
+
+    // MARK: Applied on the render thread
+
+    private func applyHealth(_ fraction: Double, animated: Bool) {
         let clamped = CGFloat(min(1, max(0, fraction)))
         // Never below a sliver while there is health at all.
         let target = fraction > 0 ? max(0.03, clamped) : 0.001
@@ -301,9 +387,7 @@ final class UnitPlate: SKNode {
         shownFraction = target
     }
 
-    /// The attack bar: the fraction of the way to the unit's next turn, gold
-    /// and pulsing once it is full.
-    func setAttackBar(_ value: Double, animated: Bool) {
+    private func applyAttackBar(_ value: Double, animated: Bool) {
         let target = CGFloat(min(1, max(0, value)))
         let shown = max(0.001, target)
         atbMask.removeAction(forKey: "atb")
@@ -327,18 +411,12 @@ final class UnitPlate: SKNode {
         }
     }
 
-    /// The buffs and debuffs as a row of tiles over the health bar: one per
-    /// kind, the longest-lasting of each, six at most.
-    func setStatuses(_ statuses: [ActiveStatus]) {
+    private func applyStatuses(_ images: [UIImage]) {
         statusRow.removeAllChildren()
-        var byKind: [StatusKind: Int] = [:]
-        for status in statuses { byKind[status.kind] = max(byKind[status.kind] ?? 0, status.turnsRemaining) }
-        let shown = byKind.sorted { $0.key.rawValue < $1.key.rawValue }.prefix(6)
-        guard !shown.isEmpty else { return }
+        guard !images.isEmpty else { return }
         let spacing = UnitPlate.tile + 1
-        let totalWidth = spacing * CGFloat(shown.count - 1)
-        for (index, entry) in shown.enumerated() {
-            guard let image = StatusIconRenderer.image(kind: entry.key, turns: entry.value) else { continue }
+        let totalWidth = spacing * CGFloat(images.count - 1)
+        for (index, image) in images.enumerated() {
             let tile = SKSpriteNode(texture: SKTexture(image: image))
             tile.size = CGSize(width: UnitPlate.tile, height: UnitPlate.tile)
             tile.position = CGPoint(x: -totalWidth / 2 + spacing * CGFloat(index), y: 0)
@@ -346,18 +424,16 @@ final class UnitPlate: SKNode {
         }
     }
 
-    /// The advantage arrow at the bar's right end on a player's turn.
-    func setMatchup(_ matchup: Element.Matchup?) {
-        guard let matchup else {
+    private func applyMatchup(_ image: UIImage?) {
+        guard let image else {
             badge.isHidden = true
             return
         }
-        badge.texture = SKTexture(image: MatchupIconRenderer.image(for: matchup))
+        badge.texture = SKTexture(image: image)
         badge.isHidden = false
     }
 
-    /// The gold rim while this unit acts.
-    func setActing(_ acting: Bool) {
+    private func applyActing(_ acting: Bool) {
         rim.removeAction(forKey: "pulse")
         rim.isHidden = !acting
         if acting {
@@ -369,11 +445,6 @@ final class UnitPlate: SKNode {
         }
     }
 
-    /// The plate goes with its unit: out with a death, back with a revival.
-    func setDefeated(_ defeated: Bool) {
-        removeAction(forKey: "fade")
-        run(defeated ? .fadeOut(withDuration: 0.4) : .fadeIn(withDuration: 0.3), withKey: "fade")
-    }
 }
 
 /// The plates' pictures, drawn once each with Core Graphics at 3× and kept:

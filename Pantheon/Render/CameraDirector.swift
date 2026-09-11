@@ -144,7 +144,9 @@ final class CameraDirector {
     /// projected feet, ran into the actor plate and the resolving panel
     /// along the bottom of the HUD. Five percent of the frame is room for
     /// a plate and a hairline of floor under it.
-    private static let nearFeetLine: Float = 0.69
+    /// 0.65 after the next run: at 0.69 the resolving panel still crossed
+    /// the two left units' bars.
+    private static let nearFeetLine: Float = 0.65
 
     /// The ceiling for an ordinary unit: nothing goes above 10% of the frame
     /// height. A BOSS gets a ceiling of its own, `bossTopLine`: its head may

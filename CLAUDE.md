@@ -131,7 +131,7 @@ environment can and cannot do. The short version:
   and the head allowed to `bossTopLine` 0.90, the aim centred on the
   boss's head via `FramePoint.isBoss`: about 25 m out, the head 22% down
   under the bar; the numbers come from a sweep of a Python port of the
-  solve; likewise `nearFeetLine` is 0.69, down from 0.74, so an ordinary
+  solve; likewise `nearFeetLine` is 0.65, down from 0.74, so an ordinary
   fight's team plates clear the HUD's bottom bar), and the painting is
   hung between the two yaws
   (`StageBuilder.farBackdrop` turned to face `backdropYaw`). The field is
