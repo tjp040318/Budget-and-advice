@@ -37,21 +37,23 @@ import UIKit
 /// That is the whole argument for solving rather than writing a camera down:
 /// one set of rules, and the frame follows the fight it is given.
 ///
-/// **A skill cuts; nothing else moves the camera.** The owner's standing rule
-/// is that the camera is fixed — a basic attack, an enemy's turn and the hits
-/// never touch the frame. But a fixed camera that ALSO discards the four
-/// authored shot types leaves a twenty-turn fight with one frame in it, which
-/// is the other half of "too basic, not fluid". So a special, an ultimate and
-/// a killing blow get a real shot change: a hard CUT to a composed angle, held
-/// for the clip, and a cut back. A cut reads instantly and cannot leave the
-/// camera half way anywhere; the slow push it replaces did neither. Every cut
-/// is taken from the same side of the field as the home framing — the 180°
-/// line — so screen direction never flips, and every cut stands on the camera
-/// side of its subject, which for a player is over the shoulder and for an
-/// enemy is face on. **Cinematic** (More → Sound & camera) still moves the
-/// camera between the cuts; it now aims with `look(at:)` every frame instead
-/// of with a look-at constraint, which is what used to snap the frame to
-/// nowhere when the constraint was dropped at the end of a shot.
+/// **A skill zooms; nothing turns the camera.** The owner's standing rule is
+/// that the camera is fixed — a basic attack, an enemy's turn and the hits
+/// never touch the frame — and since 2026-09-11 (late) the rule is exact: the
+/// camera's ORIENTATION never changes in a fight. A special, an ultimate and a
+/// killing blow get the genre's skill camera, which is a dolly along the home
+/// line of sight toward the unit the skill belongs to, held for the clip, and
+/// back (`zoom`): the same yaw, the same pitch, the same lens, the field the
+/// same field only nearer, exactly as Summoners War zooms on a caster and
+/// never shows its arena from another side. The hard CUTS this replaces — a
+/// three-quarter medium over a player's shoulder, a face-on shot of an enemy
+/// caster — were composed angles, and a composed angle is a different view of
+/// the floor: the CI's arena frame of an enemy's turn showed the tiles
+/// running diagonally and both rows swung round, and the owner asked how that
+/// could have been sent to him as the fixed camera. **Cinematic** (More →
+/// Sound & camera) keeps the authored moves, aiming with `look(at:)` every
+/// frame instead of with a look-at constraint, which is what used to snap the
+/// frame to nowhere when the constraint was dropped at the end of a shot.
 final class CameraDirector {
 
     /// The player's choice, read at shot time. Off is the genre's fixed view.
@@ -181,11 +183,6 @@ final class CameraDirector {
     /// camera swings to meet it.
     static var backdropYaw: Float { (homeYaw + bossYaw) / 2 }
 
-    /// The cut shots' offsets are written for a camera on the −x side of
-    /// the field, which is where the first solve stood; the home framing is
-    /// on the +x side now, and a cut must stay on the camera's side of the
-    /// 180° line or screen direction flips.
-    private static var cutSide: Float { homeYaw < 0 ? -1 : 1 }
 
     /// Distance bounds. The far end is generous because a 4.5 m boss on a
     /// narrow iPad frame needs it; the scene's fog does not begin until 55 m,
@@ -557,7 +554,7 @@ final class CameraDirector {
         completion: (() -> Void)? = nil
     ) {
         guard Self.isCinematic else {
-            cut(shot, on: caster, target: target, completion: completion)
+            zoom(shot, on: caster, target: target, completion: completion)
             return
         }
 
@@ -645,17 +642,22 @@ final class CameraDirector {
         }
     }
 
-    /// The fixed camera's one move: a hard cut to a composed angle on the unit
-    /// the skill belongs to, held for the clip, and a cut back home.
+    /// The fixed camera's one move: a dolly along its own line of sight toward
+    /// the unit the skill belongs to, held for the clip, and back.
     ///
-    /// Every shot is built the same way, which is what makes the fight legible
-    /// rather than merely busy: the camera stands on the +Z side of its
-    /// subject — the side the home framing is on — and a stride to the left,
-    /// the same side the home framing leans from. So a player's skill is seen
-    /// over their shoulder with the enemy line beyond, an enemy's is seen face
-    /// on with the enemy coming at the camera, and the screen direction of the
-    /// fight never flips between one shot and the next.
-    private func cut(
+    /// The orientation is never touched — not the yaw, not the pitch, not the
+    /// lens — so the floor never swings and the field stays the field the
+    /// player has been reading all fight, nearer. The camera slides PARALLEL
+    /// to itself: it moves to the point on the subject's own line of sight
+    /// that stands `distance` back, which recentres the subject without a
+    /// pan, and `distance` is what makes the figure the wanted fraction of
+    /// the frame at the home lens. A subject deeper in the field than that
+    /// distance allows is simply not zoomed on as far (the move never dollies
+    /// OUT past home, so a boss framed from 25 m is left where it is), and
+    /// the move is eased in over 0.22 s and out over 0.30 s rather than cut,
+    /// because there is nothing a parallel move can leave half way — every
+    /// frame of it is the home framing at a different distance.
+    private func zoom(
         _ shot: CameraShot,
         on caster: UnitNode,
         target: UnitNode?,
@@ -677,107 +679,79 @@ final class CameraDirector {
 
         let subject = shot == .impactClose ? (target ?? caster) : caster
         let height = subject.spec.height
-        let base = subject.position
-        // Every offset below is written for a 1.9 m figure and stood off by
-        // this much for anything bigger, so a 4.5 m Colossus is framed the
-        // same fraction of the screen as a hoplite instead of bursting out of
-        // a shot solved for a man.
-        let reach = max(1, height / 1.9)
-
-        let offset: SCNVector3
-        let aimHeight: Float
-        let fov: CGFloat
+        // How much of the frame's height the figure stands, and how long the
+        // shot holds: tighter for a blow landing, looser for an ultimate,
+        // whose effect needs the room around the figure.
+        let fraction: Float
         let hold: TimeInterval
         switch shot {
-        case .pushIn:
-            // A three-quarter medium from just above head height, 4.6 m out:
-            // the figure fills 74% of the frame with the victim beyond it.
-            // Above the figure rather than level with it, because the mist
-            // planes that ring the platform stand up to 2.6 m and a camera
-            // set down among them washes the shot with additive haze.
-            offset = SCNVector3(-2.6 * reach * Self.cutSide, height * 0.95 + 0.6, 3.8 * reach)
-            aimHeight = height * 0.55
-            fov = 30
-            hold = 0.75
         case .impactClose:
-            // Tight on the victim as the blow lands: 4.8 m out at 27°, so the
-            // figure stands 83% of the frame height and the attacker arrives
-            // over the camera's shoulder as a foreground mass on the right.
-            offset = SCNVector3(-2.4 * reach * Self.cutSide, height * 0.85 + 0.5, 4.0 * reach)
-            aimHeight = height * 0.60
-            fov = 27
+            fraction = 0.60
             hold = 0.55
+        case .pushIn:
+            fraction = 0.52
+            hold = 0.75
         case .heroLowAngle:
-            // Three-quarters of a metre off the floor, looking 20° up at the
-            // head. A wide lens from below is what makes a god look like one,
-            // and it is the one shot here worth the haze it stands in.
-            offset = SCNVector3(-2.0 * reach * Self.cutSide, 0.75, 3.2 * reach)
-            aimHeight = height * 0.92
-            fov = 36
+            fraction = 0.48
             hold = 1.0
         default:
-            // An ultimate: further out, higher and wider than the rest,
-            // because the effect needs the room. The figure is half the frame.
-            offset = SCNVector3(-3.0 * reach * Self.cutSide, height * 1.15 + 0.8, 4.6 * reach)
-            aimHeight = height * 0.62
-            fov = 34
+            fraction = 0.44
             hold = 1.2
         }
 
-        var aim = SCNVector3(base.x, base.y + aimHeight, base.z)
-        if shot != .impactClose, let target, target.position.z < base.z - 0.5 {
-            // Lean the aim a third of the way toward the victim, but only when
-            // the victim stands BEYOND the caster: leaning toward one that is
-            // between the camera and the caster would swing the shot round to
-            // face the camera's own side of the field.
-            let victim = SCNVector3(target.position.x, target.position.y + target.spec.height * 0.6, target.position.z)
-            aim = lerp(aim, victim, 0.3)
+        // The home line of sight, kept exactly.
+        let sight = SCNVector3(homeAim.x - homePosition.x, homeAim.y - homePosition.y, homeAim.z - homePosition.z)
+        let length = max(0.001, (sight.x * sight.x + sight.y * sight.y + sight.z * sight.z).squareRoot())
+        let dir = SCNVector3(sight.x / length, sight.y / length, sight.z / length)
+        // The figure `fraction` of the frame tall at the home lens: the frame
+        // is 2·d·tan(fov/2) tall at distance d, so d = (height / fraction) /
+        // (2·tan(fov/2)). A 1.9 m figure at 52% and 30° is 6.8 m.
+        let halfLens = Float(Self.lensFieldOfView) / 2 * .pi / 180
+        let wanted = (height / fraction) / (2 * tan(halfLens))
+        // The subject's chest, and how far along the line of sight it stands
+        // from home; the move never goes past home, so `distance` is capped at
+        // 85% of that depth, which for a boss 25 m out means a modest step.
+        let chest = SCNVector3(subject.position.x, subject.position.y + height * 0.55, subject.position.z)
+        let depth = dot(SCNVector3(chest.x - homePosition.x, chest.y - homePosition.y, chest.z - homePosition.z), dir)
+        guard depth > 3 else {
+            completion?()
+            return
         }
-
-        // Every offset above is written from the subject, and a subject deep
-        // in the field puts the camera among the units rather than in front
-        // of them: an enemy's shot, and an impact shot — which is composed on
-        // the VICTIM — both land it inside the player's front rank. Measured
-        // against the stage's own marks the nearest figure that was not the
-        // subject stood 1.2 m from the lens, which fills the frame with a
-        // back and is near enough for the 0.1 m near plane to slice a body
-        // open across it. So the whole offset is dollied out along its own
-        // line until the camera stands 2.4 m clear of the near rank: the same
-        // angle, the same side of the 180°, only further off and therefore a
-        // smaller subject (a far enemy's ultimate goes from 50% of the frame
-        // height to 30%, and the worst clearance from 1.2 m to 2.5 m). A shot
-        // already outside the field — a near-line caster's own, which is most
-        // of them — comes through at 1× and is untouched.
-        let nearRank = field?.nearZ ?? FieldBounds.standard.nearZ
-        let dolly: Float = offset.z > 0.01
-            ? min(2.5, max(1, (nearRank + 2.4 - base.z) / offset.z))
-            : 1
+        let distance = min(wanted, depth * 0.85)
+        let destination = SCNVector3(chest.x - dir.x * distance, chest.y - dir.y * distance, chest.z - dir.z * distance)
 
         shotGeneration += 1
         let generation = shotGeneration
         cameraNode.removeAllActions()
         cameraNode.constraints = []
-        // The cut itself: position and orientation in one assignment, no
-        // action, no interpolation. This is the whole point — the eye re-reads
-        // a cut frame at once, and a cut cannot be interrupted half way.
-        cameraNode.position = SCNVector3(
-            base.x + offset.x * dolly,
-            base.y + offset.y * dolly,
-            base.z + offset.z * dolly
-        )
-        cameraNode.look(at: aim)
-        cameraNode.camera?.fieldOfView = fov
+        // Orientation set once, from home, and never again during the shot:
+        // the move below changes the position only.
+        cameraNode.position = homePosition
+        cameraNode.look(at: homeAim)
+        cameraNode.camera?.fieldOfView = Self.lensFieldOfView
         isOffHome = true
 
-        // A locked-off shot with a 3% creep in over the hold. It moves nothing
-        // — the camera position is untouched, so a hit shake still shakes
-        // around the cut — but it keeps the frame from reading as a still.
-        let creep = SCNAction.customAction(duration: hold) { node, elapsed in
-            guard let camera = node.camera else { return }
-            let t = CGFloat(min(1, elapsed / CGFloat(hold)))
-            camera.fieldOfView = fov - t * fov * 0.03
+        let home = homePosition
+        let dollyIn = SCNAction.customAction(duration: 0.22) { node, elapsed in
+            let raw = Float(min(1, elapsed / 0.22))
+            let t = raw * raw * (3 - 2 * raw)
+            node.position = SCNVector3(
+                home.x + (destination.x - home.x) * t,
+                home.y + (destination.y - home.y) * t,
+                home.z + (destination.z - home.z) * t
+            )
         }
-        cameraNode.runAction(creep, forKey: "shot") { [weak self] in
+        let settle = SCNAction.wait(duration: hold)
+        let dollyOut = SCNAction.customAction(duration: 0.30) { node, elapsed in
+            let raw = Float(min(1, elapsed / 0.30))
+            let t = raw * raw * (3 - 2 * raw)
+            node.position = SCNVector3(
+                destination.x + (home.x - destination.x) * t,
+                destination.y + (home.y - destination.y) * t,
+                destination.z + (home.z - destination.z) * t
+            )
+        }
+        cameraNode.runAction(.sequence([dollyIn, settle, dollyOut]), forKey: "shot") { [weak self] in
             self?.afterShot(generation, completion)
         }
     }

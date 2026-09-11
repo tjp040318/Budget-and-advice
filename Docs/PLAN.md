@@ -1149,3 +1149,81 @@ before this day were grounded the old way; one whose tail, hem or weapon
 hangs lowest in most frames of a clip floats by that much, and a reship
 fixes it.
 
+## The angled arena frame, and what "the Summoners War feeling" is made of (2026-09-11, late)
+
+The owner, with the CI's arena frame of an enemy's turn: "How can you give
+me a screenshot of the battleground being angled and not see it? HOW can we
+be different than Summoners War but with the same feeling? How can we
+display the battleground? Summoners War is the only style gacha I've ever
+truly loved because of the gameplay."
+
+**What the frame was.** Not the home camera and not a bug in it: the fixed
+camera's skill shot. Since the fourth playtest the fixed mode answered a
+special, an ultimate or a killing blow with a hard CUT to a composed angle
+on the caster — a three-quarter medium over a player's shoulder, a face-on
+shot of an enemy — held for the clip and cut back (`CameraDirector.cut`).
+The arena frame caught Heimdall's buff from that shot: the camera standing
+left of the team looking across at the far right of the enemy row, the
+tiles running diagonally, both rows swung round. A composed angle is a
+different view of the floor, and that is what the owner sees first. It was
+seen here, written off as "the push toward Ptah's ultimate" and sent;
+neither the diagnosis nor the sending was checked. Rule 2 exists for that.
+
+**What Summoners War actually does with its camera** (from playing it, not a
+site — the wiki is refused by the network policy): one angle for the whole
+fight, three-quarter from behind the player's side and a little to the
+right, elevated. On a second or third skill the camera ZOOMS toward the
+caster and back, and for an awakened monster's third skill a portrait
+cut-in flashes over a darkened field; some skills darken the ground and
+light the caster. The angle never changes. Not on an enemy's skill, not on
+a kill, not on a boss. The floor is never seen from another side, which is
+why the player's eye never has to re-find the field. The genre's other
+big ones do the same (Epic Seven zooms and cuts to a 2D animation; Raid
+zooms and shakes); none of them orbit or cut to a new angle in the default
+view.
+
+**The fix.** `CameraDirector.zoom` replaces the cuts in the fixed mode: a
+dolly along the home line of sight to the point on the subject's own
+sight line that stands the wanted distance back — the figure 52% of the
+frame tall for a special, 44% for an ultimate, 60% for the victim of a
+killing blow — eased in over 0.22 s, held for the clip, eased out over
+0.30 s. The camera slides parallel to itself, so it recentres the subject
+without a pan and every frame of the move is the home framing at a
+different distance; the move never dollies out past home, so a boss framed
+from 25 m gets a modest step and not a retreat. The cinematic toggle keeps
+the authored moves for whoever wants them. `cutSide` went with the cuts.
+
+**Different from Summoners War, with the same feeling.** The feeling is
+made of things the player does and reads, not of what the art looks like,
+so every one of these stays exactly as the genre has it: one fixed angle
+for the whole fight, from behind and slightly right; two rows that face
+each other with every enemy alone against the floor where a finger finds
+it; the attack bar with portraits at the top; a health bar under every
+figure; tap the enemy, tap the skill; a zoom and a cut-in on the big
+skills; a flash and a number on every hit; ×1/×2/×3 speed and auto. What
+is ours is the world those rules play in: a real place per pantheon (a
+temple floor between columns, a hall of the dead, a mead hall) with the
+realm painted behind a parapet instead of a disc in a void; bosses that
+stand beyond the far edge on a breach; painted, detailed figures at 9,000
+triangles; the cream-and-gold temple UI; five pantheons with their own
+banners and chapters; the Hall of Ka, the Labyrinth, the living island.
+The player should be able to say "it plays like Summoners War" and "it
+looks like nothing else" in the same breath.
+
+**How to display the battleground** — the three ways, and the one to keep:
+1. A disc in a void with the environment painted far behind (the genre's
+   dungeon look): tried first and photographed as "a tilted disc in a
+   void"; rejected.
+2. A real floor with the environment modelled around it — the 44 m arena
+   slab with a parapet at the far edge, the painting above it, props at
+   the frame's edge (the current stage): keep. It reads as a place, its
+   tiles are square to the screen from the home angle, and with the
+   camera's orientation now fixed the tiles never run any other way.
+3. The same slab with a quieter floor: the flagstones two metres rather
+   than one and the joints at lower contrast, so the pattern stops
+   emphasising perspective under the figures, plus a darkening toward the
+   far edge (the genre's floors are low-contrast, and the figures carry the
+   detail). This is the next step for the stage and needs a texture pass
+   (Gemini is capped; the tile textures can be reworked in PIL from what
+   exists) — a texture change, no camera change.
+

@@ -508,8 +508,18 @@ environment can and cannot do. The short version:
   home framing for the whole fight, a short push toward an ultimate's
   caster and back, a shake on heavy hits, nothing else — the genre's way,
   and what the user asked for after the old close shot left its look-at
-  constraint on across a turn change. The cuts, leans and orbits survive
-  behind More → Sound & camera → Cinematic battle camera
+  constraint on across a turn change. **Since 2026-09-11 (late) the fixed
+  camera never turns**: a special, an ultimate and a killing blow get a
+  dolly along the home line of sight toward the caster (or the victim, for
+  an impact) and back — `CameraDirector.zoom`: the same yaw, pitch and
+  lens, the figure about half the frame tall, eased in over 0.22 s and out
+  over 0.30 s — which is Summoners War's skill camera. The hard CUTS it
+  replaced (a three-quarter medium over a player's shoulder, a face-on shot
+  of an enemy caster) were composed ANGLES, and the owner's arena frame of
+  an enemy's turn showed the tiles running diagonally and both rows swung
+  round: any frame in which the floor's lines run a different way from the
+  home frame is a bug, whatever the shot was meant to be. The cuts, leans
+  and orbits survive behind More → Sound & camera → Cinematic battle camera
   (`UserDefaults` key `cinematicCamera`). `returnHome()` clears the
   constraints, because cancelling a shot's action skips the completion that
   used to. The HUD's top centre is the **attack gauge** (`BattleView.turnGauge`:
