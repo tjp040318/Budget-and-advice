@@ -1,0 +1,45 @@
+{
+  "asset": "nuwa",
+  "created": "2026-09-11T12:54:33Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a majestic woman with long black hair under a crown of five glowing stones of five colours, a long robe of yellow and green silk patterned like serpent scales ending above the ankles so both bare feet show apart, a wide sash of five colours that hangs straight down her back, gold armbands. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 2.05
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09088-b9f7-7223-acb8-22b22f444fe2",
+      "kind": "preview",
+      "created": "2026-09-11T12:54:37Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a majestic woman with long black hair under a crown of five glowing stones of five colours, a long robe of yellow and green silk patterned like serpent scales ending above the ankles so both bare feet show apart, a wide sash of five colours that hangs straight down her back, gold armbands. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 40,
+      "progress": 99,
+      "urls": {},
+      "created_at": 1789131277432,
+      "started_at": 1789131277434,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:55:48Z"
+    }
+  },
+  "history": []
+}

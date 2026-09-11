@@ -1,0 +1,72 @@
+{
+  "asset": "sun_wukong",
+  "created": "2026-09-11T12:53:10Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a wiry grinning monkey-faced figure with golden-brown fur and bright amber eyes, a gold circlet band around his brow, a phoenix-feather cap with two long pheasant plumes, a short golden chainmail shirt over a red and yellow tunic ending above the knees, a tiger-skin kilt, cloud-stepping boots with both feet apart. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 1.9
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09087-75bb-7040-bb11-bb034e9a31ac",
+      "kind": "preview",
+      "created": "2026-09-11T12:53:14Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a wiry grinning monkey-faced figure with golden-brown fur and bright amber eyes, a gold circlet band around his brow, a phoenix-feather cap with two long pheasant plumes, a short golden chainmail shirt over a red and yellow tunic ending above the knees, a tiger-skin kilt, cloud-stepping boots with both feet apart. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 20,
+      "progress": 100,
+      "urls": {
+        "model_urls.glb": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-75bb-7040-bb11-bb034e9a31ac/output/model.glb?Expires=4942684800&Signature=OCY3aP78kIu~N3Dn3-vC2jjDyBh1v05VSG02xogKxho9ZzjF3H0qsebyKN57hMOtWjOteFF3aivujmEvTO0rg1hZewVhCKywgDZVXmN0NrACoqtqDCOGvw9QrycCMGT2bRGtY-O1C0MiWaD0F2BMgWpBdgyDEOTjXhS23EmHdkiBLMwf8a-rB6Q-GQQygC~rN2rWcWKoRooPeZecJRTdnqZLFKUQznkhoSAy3~vuaSv-9HPthnkyErCj5eUKUBPqYSzlys2VuV39DxKSOQ69a2b~uWIJh9FVi0gR~iALPVa76SQitIx-sCaPY4F9BtLi9RHhBkeKh7fRwJcYxJ88LA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.fbx": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-75bb-7040-bb11-bb034e9a31ac/output/model.fbx?Expires=4942684800&Signature=qnbhi0wz4Rkkmg3dgZV-5VVYozbFlefypGmG~zizVRX-9d~VXsukbzYmukuo9jNWJObLSVZN0qob72DaiYou5vNGMKu1EAP9r20nOD1JU1rpDITqIr5EvhgjsJaEQCtFXct43kA2D1CBCiJMz9SV7JdaSd-BviGmtdjz0izEMczZZGyWl~4gfGYHngc0LSmlWD40DrxDTmrtOLO-OlrVckcRc-eqiV5OZu1nGni2ys04IYsU6ZoXwSFvkrujeWGFv-obKDS0vi7y4YhBXluM2d7WiIM9yQsvTOig9O2dX2ZqbXbcy1Zer8pJxYJp9sV4DeYkTBEshykfy8RlKmw9Sw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.usdz": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-75bb-7040-bb11-bb034e9a31ac/output/model.usdz?Expires=4942684800&Signature=nfPaBHkuHe~DfQeKNqjwWjmQ1jU~g3qacypVzaetUBZFH4EiGGjn4S9VB3Quyv4a2b-QzAAvLgX962FerZBt-iGAU2PaR6I8gHHSS4mIDC-YmdiUdHJGRjuWiZZCIUx0-uT9aR27Ix86hR43HqJ9ZaQ~~vVJdPv0Rbldm9nvLEFR7DyrLqw2zuF-eMDePDQHAgf3LapsXJpdP15bjR~9oC-zuccufciJPRovgldOeo~5wNrS4puyMRUYaoP7YNEta-zq9aHoKlizZPNoHMuFqOQ4w4GXkZZpFarqkCzbFfwdUoUKYWDnYUY9564stBf4~MgoQFSGVtoW5~qjISLNeA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.obj": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-75bb-7040-bb11-bb034e9a31ac/output/model.obj?Expires=4942684800&Signature=T0eXziaX17K3a70p7~3D1iqEhaHg6F2GCfVLkg9z9eFB9L2jeZt6qOsyavdgo8p0824Sp82rqN941UAPouv-zYeAn0m-0QqENpGPJC6C9HGPclZ1PkCdWU8ZA6AxbBxMBlHYpNqONZuNtzw2ju~Hj1DrE2~zL5pOuIAUz2~JmJBd6hp6RzwX9lGCpidZRDFXCQffY9ztPce42gzSC5bENYCKuJhqFOxhicM2ZiIKSc9tpVauWH9xfiQtWm89vtS9pBrPlMBOKnSf2ToRXrMeSvzdSF0cFV8PwX20OGzJ7OT6LuzfcKSHF466VnAjFRMB6R5aceM3Vn~lo4K1aFjxkQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.stl": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-75bb-7040-bb11-bb034e9a31ac/output/model.stl?Expires=4942684800&Signature=NHWroFEe6Pf-ELzslYi710FgYesmbczah1j67V1YKQvqDGU00tQsh1caR7Ms-WnqyPZ5HT9asVULBY5wXBQZTc2uki1S5QIWoBFucDoJXWs3pAvu7ECDGA6y28IXHzI8ZPEvLkXAvywFnzsQ4FpBmWodKULK4yoMBboOATiYevOsSIFTcKnA3T2Gc25E5M6G8Tf~1kvU4RoI23Uz3WHAgMv4oieQ8a2VVFEKxEFYMsAN5d0KhHCcWxsU69Rg7HShwT9IdAS4ZA7QUhypTcxdfhhhFZsD4pdl2vNSQCVOZ0-la5LqSJIQhR7LI2UT05HFv8wJld6QJ7RN3mCOg6LO8Q__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "thumbnail_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-75bb-7040-bb11-bb034e9a31ac/output/preview.png?Expires=4942684800&Signature=JEckUHjubz2uRHCdPm6p3rWoLMGxvktWdsuZja3z~WCsRkTLLnB3jSUKkTpAsneTL2GBhQHT1ppV4BlzEdlN0DlmsrY5gILcxE~pbGLLLHaj6XltfC5dcnQP8KD~69VsY2LZzaq4OLfBlqQivWDzvawSc3p36JVxyRWcrDHHLSu3iDIcbiCxj6SnAMf3g17vl~tOR4K8mRw73MpTE1-~pVVDvEEuxR2lHDujURpdX3PK3SfMUXLxPh-uWmhCa7rVguAdKypP~boOatpCVGRUGOK5EjAep-FzBd8MMC2VVOpb8JnY-X~huJRABmh6qetmxaZymFkcM7rf2NO453VajA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789131194042,
+      "started_at": 1789131194045,
+      "finished_at": 1789131293037,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:54:55Z"
+    },
+    "refine": {
+      "id": "01a09089-0bc8-739b-98da-60a8e3b17f58",
+      "kind": "refine",
+      "created": "2026-09-11T12:54:55Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "refine",
+        "preview_task_id": "01a09087-75bb-7040-bb11-bb034e9a31ac",
+        "enable_pbr": true
+      },
+      "cost": 10,
+      "progress": 50,
+      "urls": {},
+      "created_at": 1789131295703,
+      "started_at": 1789131295706,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:55:46Z"
+    }
+  },
+  "history": []
+}

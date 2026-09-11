@@ -1,0 +1,45 @@
+{
+  "asset": "azure_dragon",
+  "created": "2026-09-11T12:54:55Z",
+  "prompt": "Full body creature, a serpentine Chinese dragon standing on four clawed legs in a symmetrical pose, head up, body straight, no wings: a long serpentine Chinese dragon with scales of deep azure blue and turquoise fading to a pale jade belly, a flowing dark-blue mane and long whiskers, branching antler-like horns, a golden ridge of spines down the back, four strong legs with gold-clawed feet, small gold rings around each ankle, the body carrying a faint pattern of stars along its flank. Palette azure blue, jade, gold. Plain empty background, no base.",
+  "negative_prompt": "wings, coiled body, base, pedestal, background, scenery, text, watermark, two creatures, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 2.6
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09089-0eb1-7289-9975-58b23b776466",
+      "kind": "preview",
+      "created": "2026-09-11T12:55:02Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body creature, a serpentine Chinese dragon standing on four clawed legs in a symmetrical pose, head up, body straight, no wings: a long serpentine Chinese dragon with scales of deep azure blue and turquoise fading to a pale jade belly, a flowing dark-blue mane and long whiskers, branching antler-like horns, a golden ridge of spines down the back, four strong legs with gold-clawed feet, small gold rings around each ankle, the body carrying a faint pattern of stars along its flank. Palette azure blue, jade, gold. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "wings, coiled body, base, pedestal, background, scenery, text, watermark, two creatures, photorealism"
+      },
+      "cost": 25,
+      "progress": 93,
+      "urls": {},
+      "created_at": 1789131302168,
+      "started_at": 1789131302171,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:55:42Z"
+    }
+  },
+  "history": []
+}

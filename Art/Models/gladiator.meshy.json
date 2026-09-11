@@ -1,0 +1,72 @@
+{
+  "asset": "gladiator",
+  "created": "2026-09-11T12:52:29Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a muscular scarred man with short dark hair, a bronze visored helmet with a fish crest pushed up on his head, one bronze shoulder guard and a padded arm guard on the right arm, a bare chest, a wide leather belt over a short white loincloth ending above the knees, one bronze greave on the left leg, sandalled feet apart. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 1.95
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09086-d31a-72c1-a45f-1e1ef9ed87fe",
+      "kind": "preview",
+      "created": "2026-09-11T12:52:35Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a muscular scarred man with short dark hair, a bronze visored helmet with a fish crest pushed up on his head, one bronze shoulder guard and a padded arm guard on the right arm, a bare chest, a wide leather belt over a short white loincloth ending above the knees, one bronze greave on the left leg, sandalled feet apart. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 30,
+      "progress": 100,
+      "urls": {
+        "model_urls.glb": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09086-d31a-72c1-a45f-1e1ef9ed87fe/output/model.glb?Expires=4942684800&Signature=YCP5FwDcKwS0QzTmvTlkmAZwgXHTLhEN8kodYXRp~Uv6erZKHk6j8S80BdjCEQEa8ZQjYU1zMt8uqkEnB7yU~KQV~LWdO6U0ot87zUtCIdta4g29lHhZL0EIlIi9WkDd8gnb4MdZ6CrcxmSCxwAoBgFOnS41vxaq-F8MfoRx6E5PSsR12QO0wqwpQRLVQzdy5r1jP2tHIwyXk6-JGGZvkfxd6Hsn~mZy25rvcVZxJbdxLPdGuM1uj5E7OAxLKP-C1Mo6dFBH7A7wmSpyOlZH3RrUnSbJB28d-y~dMVbSTPtKbjJPWyRoTVzWDwTNCwO81zId56G~FgPVFelV68zsIg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.fbx": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09086-d31a-72c1-a45f-1e1ef9ed87fe/output/model.fbx?Expires=4942684800&Signature=dPVjDzTdRd1ATF8wx2tViJRMaMSkCT2ttXui3mCMF4wUOIA2H8E464FF0n63ydAey~z1Xlf45cyC0on0zZYAVIq6g-b0hTEDQqg46vGFAPofp6~Sqr01-ZMrqRL5UmsfLgYJzb~stYRPYO3zdZQ0jlS21ZdRtOr-EyP9WwI9MDW0KdFP5~MgXJQYoNtBGTp-V~1xVLMX7IQb0jo1ec7nOCkk1Xq7k23PSBY-FJalGeWV1R2oyYAh98gn7mVi8Dw8A-oQrdtS82uUkfMb-~bmMOny9FRGJzxvplxyzW~0NGugmUtuNNA23QOtj8FlzGcjMUfN3Njp06~zgnmTTcxKvg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.usdz": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09086-d31a-72c1-a45f-1e1ef9ed87fe/output/model.usdz?Expires=4942684800&Signature=N1SVKdseOAovdOEKoJp2WtRov2AGbHJYEV9ImKBNNpn-eIsncnwC83Jtm2MPXxeEw0pqoiYwAJlUEu9KzcqCQCcoBPM9hlFm~UjZ-owECF8a34FRFdDsiTldVbNF5g4dMBDYUxeq-ikYTGaQ3A1hXWkLhWVuKDmiNvjjDnEMRyLAWTejYRL1rm5k4CDsG7gghl3teYuczcSZc03noofcTdkU3EU7oi0~e1oPqv~tmvhno0cZT0kjhMhtirwrpmOcHgogD6mdb5fLrHamWNzLOFx~xCc1ipawCsTUjNnN8BBVkXfRGZTpj-ETaC2s4GMQOvsmGIcM8wnxU8VbyscgTw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.obj": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09086-d31a-72c1-a45f-1e1ef9ed87fe/output/model.obj?Expires=4942684800&Signature=DN4sMV3cF13DAcZ-mz5sFTNo78ygR--g-53LOXRlC8bwH0cwWMKZ5cMv-qVW18qdczPJzxyXQFWYUb3ZQM7dqxq923XeAW2zaQ45ln-2u0okQQaj4oH8YRrAa9yDjgTQ69T8i79r54UT-9K6W7yxxZ1DceIXqJXkv-OxUpsx~ztGjP21vZmSdKUzUMFHut~LC5pU4EzookOBsOE2vRv4~7Qn9Bj9ibaEbse1~QD25LU9Sx8Lv63Xmk7HxpCaLTY6gliMRewvBs1R6s9k894lmaIf6h3Rh8z7QtbhS7dSxx14kwxEKgk1OM7RgylXTtlLXPMOYJnvZdmGAtfE7r8s3g__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.stl": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09086-d31a-72c1-a45f-1e1ef9ed87fe/output/model.stl?Expires=4942684800&Signature=LKqEk~e5Eu~euUnxAd3fiiwnrfHLXbQ1D7xZghvZ6Oibo0-sWkeLQD0~DVARpwwG7n-iTl-83EADbPTtbTjD1MviRvYNKny~vff-8b2ssC1rKvmPnWHqG8dUpm~XO-1QSYwf7Ou6ZmTFs0~IijnwMSqj~eSHAxRvPialZK-UodEPQLpYEikWlv8X8Duku0M~ddr5PTICP8bADWYUrFX4YrTNTo08K6lxrZu1Q68FHDTKTnZLEZdCZBL1sgQmCUdC-cexCM83pszvzYgNNorNJKlcHzN0JxJ~OjZcpoinvJAy21sOh0fOUPLCqHuupUAXZ-QS6yc~1Q2C5cmYZjaOwQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "thumbnail_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09086-d31a-72c1-a45f-1e1ef9ed87fe/output/preview.png?Expires=4942684800&Signature=ofvJC8KKFqvf16DkBxxDE72sKeDv9S8QUyw6TIfX2EKJWmLYvhhRcGT4EL~fhxLdRIoImh7qOlNppuypp8oKi10Q8mxGJzLI0F3u4mamuHtkIvjqJbkVrS1EK6EYTTpC9Z2dEf9l-~gMxhubMp9lWyZKMgl4qI~DBubzJJLQL54NDkizX9Ff~2wANsv3GT7EVOXyUdf1B7NsSxZ0vbGMdqZpR1HanlSVeIDNM8i79ZK6yxfxFYXqQdV8OnJOXq0S2dkI4NTp1xMfOwe7Dbjj~Yz9cHAHqU~n6nA~rpfMpzYwG7wrPV2ZKTHzgahlDI6oK4dakV9JLCGs9lABcx3mKw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789131155118,
+      "started_at": 1789131155121,
+      "finished_at": 1789131267684,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:54:36Z"
+    },
+    "refine": {
+      "id": "01a09088-c2c3-7121-8381-e174c73594a0",
+      "kind": "refine",
+      "created": "2026-09-11T12:54:37Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "refine",
+        "preview_task_id": "01a09086-d31a-72c1-a45f-1e1ef9ed87fe",
+        "enable_pbr": true
+      },
+      "cost": 10,
+      "progress": 70,
+      "urls": {},
+      "created_at": 1789131277005,
+      "started_at": 1789131277008,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:55:48Z"
+    }
+  },
+  "history": []
+}

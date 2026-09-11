@@ -1,0 +1,72 @@
+{
+  "asset": "nezha",
+  "created": "2026-09-11T12:53:31Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a bright-eyed boy of about twelve with his black hair in two high buns tied with red ribbons, a red silk stomacher and short red and gold jacket over white trousers ending above the ankles, a long red sash that hangs straight down his back, a gold ring worn like a collar, small wheels of fire strapped flat under each foot with both feet apart. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 1.8
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09087-c6e9-7572-8f0d-b35965b159db",
+      "kind": "preview",
+      "created": "2026-09-11T12:53:36Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a bright-eyed boy of about twelve with his black hair in two high buns tied with red ribbons, a red silk stomacher and short red and gold jacket over white trousers ending above the ankles, a long red sash that hangs straight down his back, a gold ring worn like a collar, small wheels of fire strapped flat under each foot with both feet apart. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 30,
+      "progress": 100,
+      "urls": {
+        "model_urls.glb": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-c6e9-7572-8f0d-b35965b159db/output/model.glb?Expires=4942684800&Signature=l8UMoOvRYa4nwokUIcSFMhNDDTr~ZDhmJ1xgNJAVVV9PM8ZTtacpUmlWn9dneVMZIDtkJqHgbLCV-eXKi5Cx~obYtZG0pktYP78CAxn78nO8~vDstwP0EQHO3BxDBHWpiQyPiAVRkVb05iYDnLYO-j2jey9r2PI0q0TeQ-v~Fiubr1xAJBhNBk0DOPfhuuA3MPSeHpNPjwiKn464fGNsEVADtxXpcxJx74vZy7CHzKGfieNbn9FHIueoMTwc~E5ETpSPFPh7ff3erK2MSYs-NUdKmq-WJeq2xg1wO1y8SBL~V8qM-ed5w9QVmR6MLCKPy0ECRel46aBYjrk0eOF9Vg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.fbx": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-c6e9-7572-8f0d-b35965b159db/output/model.fbx?Expires=4942684800&Signature=g2lbFKJnhGHMfZlsq4Fz7f1dXrPkc2PpWSi-BwAd13ROGPf4QCvNA0MyUF8VHRGHk22tySwoFdiN0WhrFMIU~JngbSVPhCLMZzApTpeA1xDZB5N5CDhwRl9njHxWfjdBjlxh9k~x0WdRyPDyngB6T0p6raSxPyRNvPitonMwj~bUywdd9df5oACQ8mW4CSJ5Tgd7r18F99KiUHnoRe4PO7L9VnetksSlKZuWigYfhJ3~dkzJZF4usltWllqR3wAro0398AWl4lXrjI9LmohqaWSkRw3U~F6Rark~NUOw4NXF6JM8euvzpamyYNZZSN~zqpQIAtHm-sYJyq89KoD6Vg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.usdz": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-c6e9-7572-8f0d-b35965b159db/output/model.usdz?Expires=4942684800&Signature=ZiYlqte3mBaOJiBArBW5dR8rOvLaG8k0MGnZzWK5BevZUZRFPB5T3CO8emxiN05x30B2G6ihCxP1F7JHDctwmjYKVHEbbkTtuXbWCxI0kcZljZsyqhCrOYyCJcvQggVP2VQEPyCxlXmp~U0ePvxmb3F3GvT~6ObTjKEhouCHbRdxHjw5mrNJ2hLWhaTNnsiMmgQxUIOg3Q549VjSi~nkUcahIMSdCLWr5RbAiqJJbOE9tu9w7FedvqSN50uIdwx8Q0Ev04eUyEeU1sSm7BDcbximijRlYTciCin57Qvy6QX-ltJgAEO70T7PczPzUPu2KwLu-bCerkc2AaIrT4Js-A__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.obj": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-c6e9-7572-8f0d-b35965b159db/output/model.obj?Expires=4942684800&Signature=gTOTIAiMaews-eJqXfNnXvBE7b9GISXoyU71MdFcBnohn65SJkuIybrJBHEM004CKus~fK02b4DfSKXeOZjrBiyWNC18k1ej-H4vf6bBtRaw6-ZNaN1jQsytd4lpzHEX1jy-6Tg0thQDhdyM4tyvXXGXeSQgUlezNoThnVmPBzrQZZcizKbvuJRrk7THv~Dsyued-OhoQGzW~ZzGZtq5ygKEzGnnQhZlg~7xcFxB1YTbc57ldIy-epgSfiOq4wLAKHg1C7r0tyugXDLkgB3CagIBMa4VhbQagfxcz6J1QZHV1g-M3FZss0lPv3l4RckSjhhhXvaMvjP4vjKGTH8BxA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.stl": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-c6e9-7572-8f0d-b35965b159db/output/model.stl?Expires=4942684800&Signature=qL7tdkFAongcsSXW0jLZPoUVD98hlaW2hxfUe91JXgU6DHgjRxqO4Vr4gtyDlm~eC2mZhxyjniGSn8-qU7L36mY9qAVlJ0NtmflNU9nJWfbnY4y~oWvtsAfTigRNn8n38SaNA~~MJgf78ib8k7iM5wc7~wMs3nwAS8v7hR-ZYAFwlvAoO0QDszkHf8xcdMfyzD~2RLFQZL12mEHs~kkyc28CNd0O-5rRhwAGg3UPx5mIxKuh1g1pipyNlE-XlaSRE6Marx3ZPOj9QNmjr4f7LUl3rQDss2BEYsjfun7-ptXxNip86eeW6KZ5YFQTSTmxjBkbR58KPqdEjCRemLg3LA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "thumbnail_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-c6e9-7572-8f0d-b35965b159db/output/preview.png?Expires=4942684800&Signature=CxiBZj-PdPTlgSPGQRJoXUK8yv50thMKkrTy3uGyiDrLEwXHmg0jifQHYJSXnteIsMyO3JRZnrC6Mofth7ftTzWyJ2bbkO3Dr0kBH9ePs9YC0J6m7DtY-85MpEluTnxQWI~48DM7ZsKM5-UbYX02VaUuTQRowVksSUakyHZtM7lDVowJd6Y6Tv2vx6C97ETZmr9ARzNQXQ~RIsefvywvxH4uR9RqiN5zlNQ75USBH0f0OdVZrM-YitWo1KPcLmH8JHaZ7P23SnERV9yjobmvH6FfHPTRaNpe~NJJP6LN8JxfjRT6~9gyRrzGCt1qcSW7rw6fl6DRz3dfPnJiACg02w__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789131216555,
+      "started_at": 1789131216557,
+      "finished_at": 1789131299727,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:55:07Z"
+    },
+    "refine": {
+      "id": "01a09089-3c19-76a4-8f13-38a866dc6c11",
+      "kind": "refine",
+      "created": "2026-09-11T12:55:08Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "refine",
+        "preview_task_id": "01a09087-c6e9-7572-8f0d-b35965b159db",
+        "enable_pbr": true
+      },
+      "cost": 10,
+      "progress": 35,
+      "urls": {},
+      "created_at": 1789131308069,
+      "started_at": 1789131308075,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:55:48Z"
+    }
+  },
+  "history": []
+}

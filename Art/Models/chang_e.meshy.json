@@ -1,0 +1,45 @@
+{
+  "asset": "chang_e",
+  "created": "2026-09-11T12:54:13Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a graceful woman with long black hair in a high knot with silver moon pins and a few strands falling loose, a flowing pale-blue and white silk robe with wide sleeves and a silver cloud pattern ending above the ankles, a long white silk sash that hangs straight down her back, a small white rabbit sitting on her right shoulder, embroidered slippers with both feet apart. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 1.95
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09088-6bab-7372-9b05-05a9725c8146",
+      "kind": "preview",
+      "created": "2026-09-11T12:54:17Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a graceful woman with long black hair in a high knot with silver moon pins and a few strands falling loose, a flowing pale-blue and white silk robe with wide sleeves and a silver cloud pattern ending above the ankles, a long white silk sash that hangs straight down her back, a small white rabbit sitting on her right shoulder, embroidered slippers with both feet apart. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 20,
+      "progress": 99,
+      "urls": {},
+      "created_at": 1789131257359,
+      "started_at": 1789131257364,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:55:48Z"
+    }
+  },
+  "history": []
+}

@@ -1,0 +1,45 @@
+{
+  "asset": "jiangshi",
+  "created": "2026-09-11T12:59:32Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a stiff greenish-grey figure in a faded dark-blue Qing-dynasty robe with a round mandarin hat, a long yellow paper talisman hanging from the brow over his face, long black nails on stiff hands held slightly away from the body, the robe ending above the ankles so both stiff feet in black boots show apart, a small brass bell tied to his belt. Palette faded blue, grey-green, talisman yellow. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 1.9
+  },
+  "stages": {
+    "preview": {
+      "id": "01a0908d-4849-7540-985f-e0df32e6122d",
+      "kind": "preview",
+      "created": "2026-09-11T12:59:36Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a stiff greenish-grey figure in a faded dark-blue Qing-dynasty robe with a round mandarin hat, a long yellow paper talisman hanging from the brow over his face, long black nails on stiff hands held slightly away from the body, the robe ending above the ankles so both stiff feet in black boots show apart, a small brass bell tied to his belt. Palette faded blue, grey-green, talisman yellow. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 20,
+      "progress": 6,
+      "urls": {},
+      "created_at": 1789131576098,
+      "started_at": 1789131576105,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:59:46Z"
+    }
+  },
+  "history": []
+}

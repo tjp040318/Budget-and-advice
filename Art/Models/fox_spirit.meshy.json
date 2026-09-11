@@ -1,0 +1,45 @@
+{
+  "asset": "fox_spirit",
+  "created": "2026-09-11T12:59:11Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a slender woman with fox ears, silver-white hair to her waist, amber eyes and a knowing smile, a layered red and white silk hanfu robe ending above the knees, nine white fox tails fanned low behind her and kept within the silhouette, a red silk sash that hangs straight down her back, embroidered slippers with both feet apart. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 1.85
+  },
+  "stages": {
+    "preview": {
+      "id": "01a0908c-f887-720d-bd20-53a99b0c1d6b",
+      "kind": "preview",
+      "created": "2026-09-11T12:59:15Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a slender woman with fox ears, silver-white hair to her waist, amber eyes and a knowing smile, a layered red and white silk hanfu robe ending above the knees, nine white fox tails fanned low behind her and kept within the silhouette, a red silk sash that hangs straight down her back, embroidered slippers with both feet apart. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 20,
+      "progress": 72,
+      "urls": {},
+      "created_at": 1789131555566,
+      "started_at": 1789131555568,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:59:46Z"
+    }
+  },
+  "history": []
+}

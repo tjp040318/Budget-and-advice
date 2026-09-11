@@ -1,0 +1,72 @@
+{
+  "asset": "vestal",
+  "created": "2026-09-11T12:52:50Z",
+  "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a serene young woman with her hair bound in six braids under a white veil that hangs straight down her back, a long plain white stola with a narrow red border ending above the ankles, a white woollen band across her brow, a small red-and-white cord at her waist, sandalled feet apart, a small bronze lamp with a steady flame held tight against the outside of her right leg. Palette white, hearth red, bronze. Plain empty background, no base.",
+  "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism",
+  "image": "",
+  "texture_prompt": "",
+  "settings": {
+    "ai_model": "latest",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 1.85
+  },
+  "stages": {
+    "preview": {
+      "id": "01a09087-24f6-74ea-91cf-7b8a15c89678",
+      "kind": "preview",
+      "created": "2026-09-11T12:52:54Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "mode": "preview",
+        "prompt": "Full body game character standing in a symmetrical A-pose, arms lowered and held away from the body, legs straight and shoulder-width apart, facing forward: a serene young woman with her hair bound in six braids under a white veil that hangs straight down her back, a long plain white stola with a narrow red border ending above the ankles, a white woollen band across her brow, a small red-and-white cord at her waist, sandalled feet apart, a small bronze lamp with a steady flame held tight against the outside of her right leg. Palette white, hearth red, bronze. Plain empty background, no base.",
+        "art_style": "realistic",
+        "ai_model": "latest",
+        "topology": "quad",
+        "target_polycount": 30000,
+        "should_remesh": true,
+        "symmetry_mode": "on",
+        "negative_prompt": "base, pedestal, plinth, stand, background, scenery, text, watermark, two characters, extra limbs, crossed arms, arms raised, arms in front of the body, weapon held out, floating, cape flying, long dress hiding the feet, realistic proportions, photorealism"
+      },
+      "cost": 25,
+      "progress": 100,
+      "urls": {
+        "model_urls.glb": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-24f6-74ea-91cf-7b8a15c89678/output/model.glb?Expires=4942684800&Signature=CmNNuKpQQLz-yaxkZpwvM4efqPxaEapYrVB1gZmXRRRZgeorj2n2lL6xqq8NHQNj1FZdxAQ981tqw-RwDJtDti2s~vvqTx-BlFVB9b3z1pkK50iccJKCp6rk0oyxJN3L-n0Zzm7mLfoGfPfc7GAxUTaaSounbCb5K8D5PZsXc6J9QS9sMtGzRlsGfgpkbIP8WkPNMvptzwkD0JeUlhUuIDDwvV4QTKrz8cWBcenpG1ldykhLFyaqbsPg74O2hnOo~53iWiFtJaWPu2~AN0M5~Bbv8VooRk5N0KD4dwNvhn1vqfaELBR4kHS-8FrjzTmavVmwCR78FUwvjZSwWzJ5Aw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.fbx": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-24f6-74ea-91cf-7b8a15c89678/output/model.fbx?Expires=4942684800&Signature=qfx-fA2522JIURxibZXn516LYTeNfFRraqxEEPIuvsDFUtORpLnPo0Yt~mfYSBRjw6xo2b21ghEmeh93e4XWqpPD4Q8dfxUASbP1Be-w2WdQUnX5c8wh3xEiFt9x~CIREmTort9IlpbLyQIFgPBuHHiHYS~l88fyZ9~W9kw4Z-EDLenP7XSEGbSxCC~rakE262NfUnYdkVOpvUcHyMKDEcvKfcFcuWbmcFXVFuWtaG76raqib~OncJVVh09n9ZrHxlNc4q4ZYbEn15u~1Bz94~5gpYM9PXkiq8B4Qt2CjeoMZf81orxeQIhMjJjhlegmT0fEHgyLtKKMVxmHUVEsAw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.usdz": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-24f6-74ea-91cf-7b8a15c89678/output/model.usdz?Expires=4942684800&Signature=QBAPqgwO2sluanEt7FD6CDvM3zldUneWWeRL~cXKVoKXd9sfTU8oPZfG5XyKqKCFuko4sFLS--CBhO7H0pgZCWyGNBMjut0c~eBTd0IDU6C97Qq8xY6ijkYajBwadz7dqGYy7ORPbHZxMkZSUgbG8mSHkxK8~5S4ynlLmrELfswmmyD1uJ7WSdteAKUalCa4K1WFVH4BrQJ6qaEopslDUM-Kehx6Ma2SdP0iyz-U6Rfi-w4RHLjNvOJa5jhluIciaZ6ZRjLRG8S2a3oob5zYb5rP6fxB72EmOTs2j3RNYojAmH2WAFsLcTKcIErfbm0qjcx8-GjGdMVAOZzA9xdlTw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.obj": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-24f6-74ea-91cf-7b8a15c89678/output/model.obj?Expires=4942684800&Signature=StpzDLLWR6tinlqEy7E13RVnuWPCVwzaj7n6IyAmA4oYYoa7lie0dqi98xx5zMWp-6EN9X1KVBaP4YUyw9rKlvOfeWBHD1RZe5zKhvw6-EA9dqvwA~7G40Xfigjao0r0hAhtj0wp5WavGzRhlivBe9IP53lHHhGlM9sg7ywjkQ32KS0s5E~fcKUqz5u64sAmegIDEHpxXQIXnG-tW2Oo6a5jq0qzMWgRsb9EVf~J~scwB8j4WF5UUS9TN2Zl4zJn1hghJLsuAn2rUZDAXxvX6hNVUC7xOKWDakRvnzDsE0G0myKlLWbXU0UyhKnXtHVaAhhf3SipZi7zP0-PgjKAig__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "model_urls.stl": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-24f6-74ea-91cf-7b8a15c89678/output/model.stl?Expires=4942684800&Signature=TM1fXJZff~nuGPCx7TIYeUC09Q3~LzdpftjpjAyGsopVDEY4c1hZoHT9-zr2L5aWqICP99QFAp0EW4IIYJ68lc9ppAOH-j~r3BVtmfwN6xJPOMQahiCk1BTT47sD6uCZRe3MnOene7NsSXTOnmPBfnyWAwqmgbqbMyis2QOwbnWTQQj4cVdGKwT7TWVKYfMsZ-QOzbBQGF5xFYpp93QMrITSoRTSkoFENI2u9arfyQkVpLFob0IzUsDrv4NaEqOKzleXh1gOM1XVjZ8AjKBlFvZDTaPFsDlY5q9AqedTa0dN0SstWcYU-Rgi23I4EHStzqJONHV5F3fN7xH7DqZucw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "thumbnail_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a09087-24f6-74ea-91cf-7b8a15c89678/output/preview.png?Expires=4942684800&Signature=amhYoTTsY57wm~1X0lGIuA3ebE23ib2OEeIguadx3UIldz0M8xt28y4qGy0eUGPNM39qvGbLGEfI7fAmAhJtJDoZZygvSkCNQf5hKi5i5RgRoGbg16itRs14TK3D7CJukxUwSt~tPaEVF4qbDP7aYZBsjGunEqW9Vg9MfZP6~vRIEDonwwnUwggEmPqV5JPNZi1NL-bnlAdGlgG8Ci10BhOMstA1RIzkC1CKbtsemUU67Gru2BlZ4xCWzttb~13K4WfwoMPHbQ9JT4pEMt3xMf6sFkpfEoABxtYiKEV2zRHkqum0aHcXqN30K5RhvlIabA4nWP7Uj7oXfuEL8fPMTg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789131174433,
+      "started_at": 1789131174436,
+      "finished_at": 1789131271092,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:54:36Z"
+    },
+    "refine": {
+      "id": "01a09088-c0b9-717f-af5f-7c34d8cf2d7c",
+      "kind": "refine",
+      "created": "2026-09-11T12:54:36Z",
+      "status": "IN_PROGRESS",
+      "request": {
+        "mode": "refine",
+        "preview_task_id": "01a09087-24f6-74ea-91cf-7b8a15c89678",
+        "enable_pbr": true
+      },
+      "cost": 10,
+      "progress": 70,
+      "urls": {},
+      "created_at": 1789131276481,
+      "started_at": 1789131276484,
+      "finished_at": 0,
+      "art_style": "realistic",
+      "name": "",
+      "polled": "2026-09-11T12:55:47Z"
+    }
+  },
+  "history": []
+}
