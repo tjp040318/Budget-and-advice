@@ -45,7 +45,7 @@
       "finished_at": 1789131179080,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T14:32:15Z"
+      "polled": "2026-09-11T14:33:33Z"
     },
     "refine": {
       "id": "01a09087-5106-7375-a137-285eb96cc4f9",
@@ -77,7 +77,7 @@
       "finished_at": 1789131289459,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T14:32:15Z"
+      "polled": "2026-09-11T14:33:33Z"
     },
     "rig": {
       "id": "01a09089-05be-72f4-938e-42e5a9e54fd2",
@@ -104,7 +104,10 @@
       "started_at": 1789131297336,
       "finished_at": 1789131340554,
       "name": "",
-      "polled": "2026-09-11T14:32:15Z"
+      "polled": "2026-09-11T14:33:33Z",
+      "downloaded": {
+        "glb": "Art/Models/mercury.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a09089-d9ca-75b0-a5a1-70749add2732",
@@ -127,7 +130,10 @@
       "started_at": 1789131348845,
       "finished_at": 1789131391344,
       "name": "",
-      "polled": "2026-09-11T14:32:18Z"
+      "polled": "2026-09-11T14:33:33Z",
+      "downloaded": {
+        "glb": "Art/Models/mercury_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a09089-dcb3-70c2-96d0-b684df12b287",
@@ -150,7 +156,10 @@
       "started_at": 1789131349439,
       "finished_at": 1789131397675,
       "name": "",
-      "polled": "2026-09-11T14:32:17Z"
+      "polled": "2026-09-11T14:33:33Z",
+      "downloaded": {
+        "glb": "Art/Models/mercury_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a09089-df05-77c0-8224-ea76a06709e6",
@@ -173,7 +182,10 @@
       "started_at": 1789131350140,
       "finished_at": 1789131401638,
       "name": "",
-      "polled": "2026-09-11T14:32:17Z"
+      "polled": "2026-09-11T14:33:34Z",
+      "downloaded": {
+        "glb": "Art/Models/mercury_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a09089-e1d1-718b-9a68-4f2067274027",
@@ -196,7 +208,10 @@
       "started_at": 1789131350764,
       "finished_at": 1789131401594,
       "name": "",
-      "polled": "2026-09-11T14:32:17Z"
+      "polled": "2026-09-11T14:33:34Z",
+      "downloaded": {
+        "glb": "Art/Models/mercury_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a09089-e435-76b6-ac72-fbc6605ec6f0",
@@ -219,7 +234,10 @@
       "started_at": 1789131351382,
       "finished_at": 1789131420916,
       "name": "",
-      "polled": "2026-09-11T14:32:17Z"
+      "polled": "2026-09-11T14:33:34Z",
+      "downloaded": {
+        "glb": "Art/Models/mercury_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a090e2-2aa3-76f3-b9dd-8ebe177e75ac",
@@ -242,13 +260,16 @@
       "started_at": 1789137136773,
       "finished_at": 1789137154053,
       "name": "",
-      "polled": "2026-09-11T14:32:38Z"
+      "polled": "2026-09-11T14:33:34Z",
+      "downloaded": {
+        "glb": "Art/Models/mercury_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a090e2-2dfc-7527-b628-4028c955bad7",
       "kind": "clip",
       "created": "2026-09-11T14:32:17Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a09089-05be-72f4-938e-42e5a9e54fd2",
         "action_id": 412
@@ -256,15 +277,21 @@
       "cost": 13,
       "clip": "victory",
       "action_id": 412,
-      "progress": 63,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a090e2-2dfc-7527-b628-4028c955bad7/output/Animation_victory_withSkin.glb?Expires=1789396363&Signature=c-m8SaXcnFhoYFUqQm079xAedBid0b7fzUE555z2BnfdH3Ge-njQLGFISDBnf-W4iPcv2iRCFIJRPP2f-3nTntiLGVLDDI4hIkZgd2W8wC3HM7~E-N-BIuMlCNFLrrbzPHesbFQadgiWcScTTVZD12k5fV48liJVCMWDRqNgenYHTUZ-gXo6S7954jA45MBTgYOGUDbn43duWaWbYCznX7VLgTxf41vct7glu8PzXbc5oCHrrg1vAiPu7LmsH~Zd6u6-Lp6qFQVDRchBbngz1Nj6QNWH8syJXu-i4I8~rVg9gkhGBSB399f9nl55-FFGZ3DTl3hfuH19Bstnw0Hozw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a090e2-2dfc-7527-b628-4028c955bad7/output/Animation_victory_withSkin.fbx?Expires=1789396363&Signature=Bjmb~lNAySVfJHGH0YuFKUxJl~YzGlmL0yb9K286rZhqeiYIC~HSdQDNRAfZVZ8MO848JED41mQKCYgSHaWN97zcQVB41Xf~bBPIuksipN6HRE52ZD9w-Z2S1S7WYF7AC4x~4w-0wukTDsHTd3ZBPctNObZ5T4CkmGN3nurY-2SZm0G1ODdz-x5e7PeVVTlhIBBGwf6mpak4UvgVr6V5eiY3D-ldQG2VB6aYCLNC4jArZxxGSsHbmRJ7LbCq3EOlo9N9JuamBC5L-VGubYL4CzNBBOVpGdixCnVpDCGT34uqHppunwAwF4AAmZ5beAMpFXD9Q77mTrR4jx8aQIQhTQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1789137137421,
       "started_at": 1789137137424,
-      "finished_at": 0,
+      "finished_at": 1789137163656,
       "name": "",
-      "polled": "2026-09-11T14:32:38Z"
+      "polled": "2026-09-11T14:33:34Z",
+      "downloaded": {
+        "glb": "Art/Models/mercury_victory.glb"
+      }
     }
   },
   "history": [],
-  "refreshed": "2026-09-11T14:31:16Z"
+  "refreshed": "2026-09-11T14:33:34Z"
 }

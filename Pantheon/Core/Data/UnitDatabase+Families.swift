@@ -66,6 +66,12 @@ extension UnitDatabase {
         /// Awakened names per element; nil for a 3★, which has no awakening.
         var awakened: [String]?
         var lore: String
+        /// A shipped mesh to fight in this family's place until its own
+        /// lands (`ModelSpec.standInAsset`): Neptune borrows Poseidon's
+        /// trident, the Terracotta Soldier the sandstone sentinel's stance.
+        /// Meshy's rigger refused both of their first meshes (a weapon
+        /// held out beside the body), and the remakes wait on the owner.
+        var standIn: String? = nil
     }
 
     // MARK: - The table
@@ -468,7 +474,8 @@ extension UnitDatabase {
                   hp: 575, atk: 27, def: 33, spd: 98, height: 2.20, melee: true, costumeHue: 190, motif: "Seawall",
                   skills: ["Trident Thrust", "Seawall", "Neptunalia", "Lord of Horses"],
                   awakened: ["Neptune of the Boiling Strait", "Neptune of the Deep Harbour", "Neptune of the Sea-Wind", "Neptune of the Bright Shallows", "Neptune of the Drowned Fleet"],
-                  lore: "The god of fresh water first and the sea second, and of horses always; Rome built him a temple by the Circus and raced in his honour. His festival in July was kept in huts of branches, out of the heat, with a great deal of wine."),
+                  lore: "The god of fresh water first and the sea second, and of horses always; Rome built him a temple by the Circus and raced in his honour. His festival in July was kept in huts of branches, out of the heat, with a great deal of wine.",
+                  standIn: "poseidon"),
         FamilyRow(key: "pluto", name: "Pluto", pantheon: .roman, stars: 4, archetype: .god, role: .support, kit: .trickster,
                   hp: 495, atk: 32, def: 26, spd: 104, height: 2.10, melee: false, costumeHue: 45, motif: "Vault",
                   skills: ["Bident", "Gates of Dis", "Wealth of the Dead", "The Rich One"],
@@ -559,7 +566,8 @@ extension UnitDatabase {
                   hp: 365, atk: 21, def: 28, spd: 90, height: 1.95, melee: true, costumeHue: 30, motif: "First Emperor",
                   skills: ["Bronze Halberd", "Ranks of Clay", "", ""],
                   awakened: nil,
-                  lore: "One of eight thousand fired in clay to guard the First Emperor under his mountain, each with his own face and a real bronze halberd. He has stood at attention for two thousand years and sees no reason to stop now."),
+                  lore: "One of eight thousand fired in clay to guard the First Emperor under his mountain, each with his own face and a real bronze halberd. He has stood at attention for two thousand years and sees no reason to stop now.",
+                  standIn: "sandstone_sentinel"),
     ]
 
     /// Every variant this file adds.
@@ -775,7 +783,8 @@ extension UnitDatabase {
                 auraHex: element.accentHex,
                 portraitName: "portrait_\(id)",
                 melee: row.melee,
-                costumeHue: row.costumeHue
+                costumeHue: row.costumeHue,
+                standInAsset: row.standIn
             ),
             lore: row.lore
         )

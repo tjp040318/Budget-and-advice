@@ -1085,3 +1085,67 @@ Nymph. Norse: Baldr, Frigg, Surtr, Njord, Idunn, Sif, Ullr, Vidar, Fenrir,
 Bragi, Einherjar, Shield Maiden, Light Elf, Dark Elf. Every design is
 described, never named as a likeness; every concept is an A-pose with the
 weapon against the leg and both feet showing, the rigger's two demands.
+
+## Rome and the Jade Court's meshes, made in an afternoon (2026-09-11)
+
+"Don't wait till tonight to make the new meshy characters. Just do it now?"
+Gemini was capped, so the concepts were not painted; the twenty went to Meshy
+as **text-to-3D** from the concept script's own sentences (`tools/batch/
+text_wave.py`: an A-pose prefix, the description after the painter's framing,
+the standard negative prompt, 600 characters at most, a balance check per
+launch against the floor plus what the launched ones still owe). Twenty
+launched between 12:50 and 13:10 UTC; the local pollers died mid-pipeline and
+the tasks ran on at Meshy's end, so `meshy.py status` refreshed the manifests
+and `resume_wave.sh` finished them. The wave cost 1,063 credits and left
+2,133, above the 2,000 floor.
+
+**Eighteen shipped.** Sixteen rigged characters — Mars, Minerva, Pluto,
+Diana, Mercury, Bellona, Centurion, Gladiator, Vestal, Sun Wukong, Nezha,
+Guan Yu, Chang'e, Nüwa, Fox Spirit, Jiangshi — at 9,000 triangles with the
+LOD and seven clips, and the two dragons (the Azure Dragon and the Dragon
+King) as unrigged meshes through `prop.py`, moved procedurally like the
+Hydra. The sheets were looked at: robes split between the legs in the attack
+clips as every robed family's do, Mercury's caduceus and Guan Yu's guandao
+stretch on the carrier meshes (the sheet renders a clip file's 1,500-triangle
+carrier; the game animates the 9,000-triangle model), and nothing was marbled
+or the wrong size.
+
+**Two refused.** Meshy's rigger returned "Pose estimation failed" for Neptune
+and the Terracotta Soldier, twice each, a failed POST charging nothing. Their
+refined meshes were rendered: both hold a pole weapon out beside the body,
+the arm bent away and the shaft reaching the ground a stride from the foot,
+which the pose estimator reads as a third leg — Guan Yu's guandao rigged
+because it stands tight against him. The families fight as Poseidon and the
+sandstone sentinel (`FamilyRow.standIn`, new: a stand-in per table row) until
+a remake is paid for. The `_v2` prompts are written (a short trident or sword
+held point-down flat against the outside of the thigh, both arms straight
+down with a gap, no cloak; the negative prompt names polearms, spears,
+staffs, a weapon beside the body or touching the ground, cloaks and capes);
+a preview is 20 credits and can be judged before the refine, rig and clips
+(36 more) are spent, and two of everything would end the balance near 2,021.
+The launch was held for the owner's word: it is his last hundred credits over
+the floor.
+
+**Two faults in the shipper, found by this wave.** A clip file's mesh is a
+1,500-triangle carrier for the skeleton and the clip, and `mesh.py` grounded
+each clip AFTER that reduction and measured its height on it. At that budget
+a small shell collapses outright: Diana's boots went, the carrier's lowest
+point rose 17 cm, the checker refused her ("feet at y=0.168") and a clip
+grounded on that carrier would have sunk her 17 cm into the floor; the
+Gladiator (5.6 cm), Nüwa (1.1 cm) and the Fox Spirit (a 5 cm crown) failed
+the same way. Now each clip is grounded and measured on the full mesh first
+(`build(..., carrier=True)`, `verify(check_bounds=False)`). The second: the
+grounding took the lowest vertex of the whole mesh, and the Fox Spirit's nine
+tails, weighted to a thigh, swing 24 cm below the floor in her idle, so every
+clip stood her that far in the air. `character.ground_animation` now grounds
+on the feet (the vertices a foot or toe joint owns) while the pelvis stands
+above 45% of its rest height, and on the body with the legs left out when
+the figure lies down — a corpse grounded on its soles would sink Pluto's
+robe 16 cm, and a corpse grounded on its lowest vertex floated the Fox
+Spirit 55 cm, her tails being weighted to a thigh that a fall turns flat.
+Measured across the wave, the rule moves no standing clip of any other
+family and a death clip by a few centimetres at most. Families shipped
+before this day were grounded the old way; one whose tail, hem or weapon
+hangs lowest in most frames of a clip floats by that much, and a reship
+fixes it.
+

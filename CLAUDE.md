@@ -274,15 +274,25 @@ environment can and cannot do. The short version:
   `StageBuilder.recipe(for:)` (`prop_stone_lion` and `prop_pagoda_lantern`
   are stand-ins until made). Both pantheons are in `Pantheon.live`. The
   concepts, cards, banners and backdrops are `tools/batch/concepts_batch4.sh`,
-  `portraits_batch4.sh` and `realms_batch4.sh` for the night routine; the
-  rigged models are `tools/batch/wave4.txt` (eighteen characters at 53
-  credits) and `beasts4.txt` (the two dragons, which stand on four claws
-  and will not go through Meshy's biped rigger — they go image-to-3D only,
-  30 credits each, and fight the Hydra's way, an unrigged mesh moved
-  procedurally; `beast_wave.sh` launches and ships them). The owner
-  lowered the floor to **2,000** on 2026-09-11 (1,500 for an hour, then "2000 is okay") for exactly these twenty;
-  the night-3 routine launches them the moment their concepts are painted
-  and ships what finishes.
+  `portraits_batch4.sh` and `realms_batch4.sh` for the night routine. **The
+  meshes are in (2026-09-11 afternoon):** the owner said "don't wait till
+  tonight, just do it now", so the twenty went to Meshy as text-to-3D from
+  their written descriptions (`tools/batch/text_wave.py`, the concept
+  script's sentence after an A-pose prefix; Gemini was capped), 1,063
+  credits, and eighteen shipped: sixteen rigged characters from
+  `wave4.txt` and the two dragons from `beasts4.txt` (four claws, no rig,
+  `beast_wave.sh`, moved procedurally like the Hydra). Meshy's rigger
+  refused **Neptune and the Terracotta Soldier** twice — a pole weapon held
+  out beside the body with its shaft on the ground reads as a third leg —
+  so they fight as Poseidon and the sandstone sentinel (`FamilyRow.standIn`)
+  until the owner pays for a `_v2` (56 each, a short weapon flat against
+  the thigh, no cloak; the balance would end near 2,021). The Dragon of
+  Longmen stands in as the Dragon King's mesh now, the Colossus of the Sun
+  still as the Vault's. Their cards are tonight's Gemini batch, so the
+  families join the gacha pool in the morning; the meshes are seen at once
+  in the Rome and Jade chapters, whose enemies wear them. The owner
+  lowered the floor to **2,000** on 2026-09-11 (1,500 for an hour, then
+  "2000 is okay") for exactly these twenty; the balance is 2,133.
   `balance.py --chapters` and `--families` measure them; the rows and the
   four chapter lines are mirrored there.
 - **The collection has two layouts (2026-09-11)**, switched in the strip and
@@ -391,7 +401,19 @@ environment can and cannot do. The short version:
   untouched export in `Art/Models/` (Blender USDZ or Meshy GLB) and writes
   Y-up, metre, feet-on-origin, rest-equals-bind, four-influence files into
   `Pantheon/Resources/Models/` (3–4 MB per family), then re-skins them in numpy
-  to prove it. The first Anubis export loaded as gold shards for five reasons
+  to prove it. **A clip file's mesh is a 1,500-triangle carrier** (the game
+  reads it once and discards it), so since 2026-09-11 each clip is grounded
+  and measured on the FULL mesh before the reduction — at that budget a
+  small shell can vanish outright (Diana's boots did; the carrier's lowest
+  point rose 17 cm and a clip grounded on it would have sunk her that far)
+  — and a clip is grounded on the **feet** while the pelvis stands above
+  45% of its rest height, on the body with the legs left out when lying
+  down (`character.ground_animation`): the Fox Spirit's nine tails are
+  weighted to a thigh, swing 24 cm below the floor in her idle and 55 cm
+  in her death, and stood her in the air both times. Families shipped before that
+  day were grounded on their lowest vertex; a tail, a hem or a weapon
+  carried low in most frames of a clip would have lifted them, and a
+  reship fixes it. The first Anubis export loaded as gold shards for five reasons
   listed in `Docs/PLAN.md`; the first Meshy file verified at 190 m tall for a
   sixth (the GLB reader assumed which frame the vertices were in; it now reads
   it off the joints). **Nothing has been confirmed on device** since the

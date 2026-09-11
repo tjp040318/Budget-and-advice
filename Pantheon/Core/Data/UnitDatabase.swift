@@ -1532,7 +1532,7 @@ enum UnitDatabase {
         specialStatus: StatusSpec(.freeze, chance: 0.35, turns: 1, target: .allEnemies),
         specialCooldown: 4,
         pantheon: .chinese, auraHex: "#5FB8E8", height: 6.6,
-        standInAsset: "apep"
+        standInAsset: "dragon_king"
     )
 
     // MARK: - The Labyrinth's bosses

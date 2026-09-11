@@ -18,6 +18,9 @@ re-running one after a quota or a network failure picks up where it stopped.
 | `wave3.txt`, `remake_wave.txt` | the wave lists: batch 3 (with batch 2's leftovers) and the `<key>_hd` detail remakes, one spec per line, priority order |
 | `wave_run.sh <list> [floor]` | launches every spec in a list that has no manifest yet while the balance minus what the wave still owes stays above the floor (2,000 since 2026-09-11) |
 | `ship_wave.sh <list>` | `build_asset.sh` for every finished, unshipped run in a list; leaves `Art/Models/<asset>.shipped` |
+| `text_wave.py <lists> --floor N [--dry-run]` | Meshy **text-to-3D** for a wave list whose concepts are not painted (Gemini capped): the modeller gets the concept script's visual sentence after an A-pose prefix, ≤ 600 chars, and every launch checks the balance against the floor plus what the wave still owes. Rome and the Jade Court went this way on 2026-09-11 |
+| `wave4.txt`, `beasts4.txt` | the batch-4 lists: eighteen rigged characters and the two dragons (four claws; refine only, no rig) |
+| `beast_wave.sh <list> [floor]` | launches and ships the unrigged beasts of a list (`--until refine`, then `prop.py --as` at the roster height); the game moves them procedurally like the Hydra |
 | `props_enemies_launch.sh` | Meshy text-to-3D for the Norse props, the beasts and the bosses |
 | `build_asset.sh asset family height` | download + `mesh.py --as` + preview sheet for one rigged character |
 | `build_queue.sh`, `build_queue2.sh` | the shipped order for the third roster, the beasts and the world tree |
@@ -31,3 +34,15 @@ A character's raw exports: the base `Art/Models/<asset>.glb` and the manifest
 are committed; the six per-clip GLBs are ignored (each is a 6–7 MB copy of the
 mesh carrying one track) and `python3 tools/meshy.py download <asset>` refetches
 them when a family has to be reshipped. The CI checkout skips `Art/` entirely.
+
+How the batch-4 wave went (2026-09-11, 12:50–15:10 UTC): twenty launched at
+once from their descriptions, 1,063 credits, balance 2,133 at the end.
+Eighteen shipped — sixteen rigged characters and the two dragons. Meshy's
+rigger refused Neptune and the Terracotta Soldier twice ("Pose estimation
+failed"): both held a pole weapon out beside the body, its shaft reaching the
+ground a stride from the foot, which the pose estimator reads as a third leg.
+They fight as Poseidon and the sandstone sentinel (`FamilyRow.standIn`) until
+a remake is paid for: `_v2` prompts with a short weapon held point-down flat
+against the thigh and no cloak, 56 credits each to the rig and clips (20 of
+it a preview that can be judged before the rest is spent), which the owner
+has to say yes to — the balance would end at about 2,021.

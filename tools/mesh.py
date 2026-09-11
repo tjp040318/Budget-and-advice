@@ -29,12 +29,18 @@ prints what it measures):
    pose; root joints locked horizontally to the slot; four influences per
    vertex, weights summing to one. The base model decides the transform and
    every clip file gets the same one, so the animations stay in step.
-3. Decimate: 5,000 triangles for the shipped model, 2,500 for the `_lod` and
-   1,500 for every clip file, whose geometry the game reads once and
-   discards. MeshLab's quadric edge collapse with texture does it, so the
-   UVs go through the reduction and every seam stays a seam; skin weights
-   follow by nearest original vertex. (Copying the nearest vertex's UV as
-   well, as the first version did, smeared the atlas across the whole body.)
+3. Ground each clip on the full mesh (the median frame's lowest point goes
+   to y = 0), then decimate: 9,000 triangles for the shipped model, 3,500
+   for the `_lod` and 1,500 for every clip file, whose geometry the game
+   reads once and discards. MeshLab's quadric edge collapse with texture
+   does it, so the UVs go through the reduction and every seam stays a
+   seam; skin weights follow by nearest original vertex. (Copying the
+   nearest vertex's UV as well, as the first version did, smeared the atlas
+   across the whole body.) The clip files are grounded and measured BEFORE
+   their reduction: at 1,500 triangles a small shell can vanish outright
+   (Diana's boots did, and the carrier's lowest point rose 17 cm), so a
+   clip grounded on the reduced mesh would sink the figure into the floor,
+   and a height check on it is a check of nothing.
 4. Write, in the prim layout SceneKit has already been seen to load, with
    computed normals and the textures downsampled.
 5. Verify: skin the written file again in numpy at the bind pose and at three
@@ -44,6 +50,8 @@ prints what it measures):
 
 import argparse, copy, re, sys
 from pathlib import Path
+
+import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import character  # noqa: E402
@@ -85,13 +93,31 @@ def clip_sources(name):
     return list(out.values())
 
 
-def build(char, out, tris, texture, expect_height):
+def build(char, out, tris, texture, expect_height, carrier=False):
+    """Writes one bundle file from a canonical model and verifies it.
+    `carrier` marks a per-clip file: its 1,500-triangle mesh only carries
+    the skeleton and the clip (the game reads the mesh once and discards
+    it), so the height and feet are measured on the full mesh before the
+    reduction, and the clip is grounded on the full mesh too. A reduction
+    that steep can collapse a small shell entirely - Diana's boots went,
+    and her carrier's lowest point rose 17 cm - and a clip grounded on
+    that carrier would have sunk her that far into the floor."""
     work = copy.deepcopy(char)
-    character.decimate(work, tris, texture)
     character.ground_animation(work)
+    lo, hi = character.bounds(work.points.astype(np.float64))
+    character.decimate(work, tris, texture)
     size = character.write_usdz(work, out)
     print(f"  -> {out.relative_to(REPO)}   {work.tris:,} tris  {texture}px  {size / 1048576:.2f} MB")
-    facts = character.verify(out, expect_height=expect_height)
+    facts = character.verify(out, expect_height=None if carrier else expect_height, check_bounds=not carrier)
+    if carrier:
+        height = hi[1] - lo[1]
+        if expect_height and abs(height - expect_height) > 0.02 * expect_height:
+            facts["problems"].append(f"source height {height:.3f} != {expect_height}")
+        if abs(lo[1]) > 0.01:
+            facts["problems"].append(f"source feet at y={lo[1]:.3f}")
+        for prob in facts["problems"]:
+            if prob.startswith("source "):
+                print("    PROBLEM: " + prob)
     return facts
 
 
@@ -169,7 +195,8 @@ def run_family(name, args):
     for clip_name, c in clips.items():
         c.name = out_name
         print(f"\n  building {out_name}_{clip_name}")
-        problems += build(c, BUNDLE_DIR / f"{out_name}_{clip_name}.usdz", args.clip_tris, args.clip_texture, height)["problems"]
+        problems += build(c, BUNDLE_DIR / f"{out_name}_{clip_name}.usdz", args.clip_tris, args.clip_texture, height,
+                          carrier=True)["problems"]
 
     total = sum(p.stat().st_size for p in BUNDLE_DIR.glob(f"{out_name}*.usdz"))
     print(f"\n  {out_name}: {total / 1048576:.1f} MB in the bundle folder")

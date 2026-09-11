@@ -45,7 +45,10 @@
       "finished_at": 1789131129996,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T14:32:16Z"
+      "polled": "2026-09-11T14:45:42Z",
+      "downloaded": {
+        "usdz": "Art/Models/neptune_preview.usdz"
+      }
     },
     "refine": {
       "id": "01a09086-a7e5-7235-b8b0-2491020d3af4",
@@ -77,9 +80,12 @@
       "finished_at": 1789131241681,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T14:32:22Z"
+      "polled": "2026-09-11T14:45:43Z",
+      "downloaded": {
+        "usdz": "Art/Models/neptune_refine.usdz"
+      }
     }
   },
   "history": [],
-  "refreshed": "2026-09-11T14:31:09Z"
+  "refreshed": "2026-09-11T14:45:43Z"
 }

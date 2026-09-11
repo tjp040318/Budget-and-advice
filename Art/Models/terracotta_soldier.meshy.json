@@ -45,7 +45,10 @@
       "finished_at": 1789131697610,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T14:32:22Z"
+      "polled": "2026-09-11T14:45:46Z",
+      "downloaded": {
+        "usdz": "Art/Models/terracotta_soldier_preview.usdz"
+      }
     },
     "refine": {
       "id": "01a0908f-361e-7594-b09c-623c62bf8232",
@@ -77,9 +80,12 @@
       "finished_at": 1789131802530,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T14:32:22Z"
+      "polled": "2026-09-11T14:45:46Z",
+      "downloaded": {
+        "usdz": "Art/Models/terracotta_soldier_refine.usdz"
+      }
     }
   },
   "history": [],
-  "refreshed": "2026-09-11T14:31:31Z"
+  "refreshed": "2026-09-11T14:45:46Z"
 }

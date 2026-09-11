@@ -902,7 +902,30 @@ def ground_animation(char, tolerance=0.005):
     if not (char.skinned and char.anim):
         return 0.0
     frames = len(char.anim["T"])
-    floor = np.array([char.skinned_points(char.joint_world_at(f))[:, 1].min() for f in range(frames)])
+    # The feet decide while the figure is on its feet, not the whole mesh:
+    # the Fox Spirit's nine tails are weighted to a thigh and swing 24 cm
+    # below the floor in her idle, and a clip grounded on its lowest vertex
+    # stood her that far in the air. A frame with the pelvis below 45% of
+    # its rest height is a figure lying down (a death, a knockdown), and
+    # there the body's lowest point is what touches, as before - grounding
+    # a corpse on its soles would sink Pluto's robe 16 cm into the floor.
+    # Lying down, the legs are left out of the measure as well: a skirt, a
+    # robe or a tail is weighted to a thigh, and a thigh turned flat swings it
+    # through the floor (the Fox Spirit's tails, 55 cm under in her death),
+    # while the torso, the head, the arms and the feet are all on the ground.
+    feet = foot_vertices(char)
+    body = body_without_legs(char)
+    pelvis = pelvis_index(char)
+    rest_hip = char.joint_world_at_rest()[pelvis][3, 1] if pelvis is not None else 0.0
+    floor, on_feet = [], 0
+    for f in range(frames):
+        world = char.joint_world_at(f)
+        sp = char.skinned_points(world)
+        standing = feet is not None and pelvis is not None and world[pelvis][3, 1] >= 0.45 * rest_hip
+        floor.append(sp[feet, 1].min() if standing else sp[body if body is not None else slice(None), 1].min())
+        on_feet += standing
+    floor = np.array(floor)
+    which = "the feet" if on_feet > frames / 2 else ("the body lying down, legs left out" if body is not None else "the whole mesh")
     # The median frame, not the lowest: a standing clip has its feet planted in
     # most frames and dips in a few, and a fall spends most of its frames on
     # the ground. Either way the typical frame is the one that must touch.
@@ -911,9 +934,52 @@ def ground_animation(char, tolerance=0.005):
         return 0.0
     for j in np.where(char.parents < 0)[0]:
         char.anim["T"][:, j, 1] -= shift
-    print(f"    clip grounded by {-shift:+.3f} m (typical frame stood at y={shift:+.3f}; "
+    print(f"    clip grounded by {-shift:+.3f} m on {which} (typical frame stood at y={shift:+.3f}; "
           f"lowest {floor.min():+.3f}, highest {floor.max():+.3f})")
     return shift
+
+
+def pelvis_index(char):
+    """The joint whose height says whether the figure is standing: the one
+    named Hips or pelvis, else the highest-standing root joint; None for a
+    rig without joints."""
+    if not len(char.joints):
+        return None
+    for i, j in enumerate(char.joints):
+        if j.rsplit("/", 1)[-1].lower() in ("hips", "pelvis", "hip"):
+            return i
+    roots = np.where(char.parents < 0)[0]
+    rest = char.joint_world_at_rest()
+    return int(max(roots, key=lambda j: rest[j][3, 1]))
+
+
+def body_without_legs(char, minimum=12):
+    """A mask of the vertices whose heaviest joint is not a leg (the feet and
+    toes stay in), for measuring a figure lying down; None when the rig has
+    no leg joints or too few vertices would remain."""
+    if not char.skinned or not len(char.joints):
+        return None
+    legs = np.array(["leg" in j.rsplit("/", 1)[-1].lower() for j in char.joints])
+    if not legs.any():
+        return None
+    dominant = char.joint_indices[np.arange(len(char.joint_indices)), char.joint_weights.argmax(axis=1)]
+    mask = ~legs[dominant]
+    return mask if mask.sum() >= minimum else None
+
+
+def foot_vertices(char, minimum=12):
+    """A mask of the vertices whose heaviest joint is a foot or a toe, or None
+    when the rig has no such joints or too few vertices follow them (a beast,
+    a hovering spirit, a rig with other names) - then the whole mesh stands in."""
+    if not char.skinned or not len(char.joints):
+        return None
+    feet = np.array([j.rsplit("/", 1)[-1].lower().endswith(("foot", "toebase", "toe", "toe_end", "foot_end"))
+                     for j in char.joints])
+    if not feet.any():
+        return None
+    dominant = char.joint_indices[np.arange(len(char.joint_indices)), char.joint_weights.argmax(axis=1)]
+    mask = feet[dominant]
+    return mask if mask.sum() >= minimum else None
 
 
 def smoothstep(x):
@@ -1298,9 +1364,12 @@ def write_usdz(char, out):
 # Checking what was written
 # ---------------------------------------------------------------------------
 
-def verify(path, expect_height=None, quiet=False):
+def verify(path, expect_height=None, quiet=False, check_bounds=True):
     """Re-reads a written file and skins it in numpy at the bind pose and at
-    the first, middle and last animated frames. Returns the facts; prints them."""
+    the first, middle and last animated frames. Returns the facts; prints them.
+    `check_bounds=False` skips the height and feet checks on the bind pose:
+    a per-clip file's mesh is a 1,500-triangle carrier for the skeleton and
+    the clip, and its bounds are measured by the caller on the full mesh."""
     char = read_usdz(path)      # our own file: identity SkelRoot, so this is a plain read
     facts = {"file": str(path), "tris": char.tris, "points": len(char.points), "joints": len(char.joints),
              "frames": len(char.anim["T"]) if char.anim else 0, "problems": []}
@@ -1340,9 +1409,9 @@ def verify(path, expect_height=None, quiet=False):
                                          "size": (h2 - l2)}
                 if not np.isfinite(sp).all() or (h2 - l2).max() > 4 * facts["bind"]["height"]:
                     facts["problems"].append(f"{label} frame explodes: size {(h2 - l2).round(2)}")
-    if expect_height and abs(facts["bind"]["height"] - expect_height) > 0.02 * expect_height:
+    if check_bounds and expect_height and abs(facts["bind"]["height"] - expect_height) > 0.02 * expect_height:
         facts["problems"].append(f"height {facts['bind']['height']:.3f} != {expect_height}")
-    if abs(facts["bind"]["feet"]) > 0.01:
+    if check_bounds and abs(facts["bind"]["feet"]) > 0.01:
         facts["problems"].append(f"feet at y={facts['bind']['feet']:.3f}")
     if facts["facing"] < 0:
         facts["problems"].append("faces -Z")
