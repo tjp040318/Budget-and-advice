@@ -50,7 +50,7 @@
       "finished_at": 1788977547051,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-10T01:11:15Z"
+      "polled": "2026-09-11T02:30:48Z"
     },
     "rig": {
       "id": "01a0875f-17d4-709d-84d9-9808a44cf988",
@@ -77,7 +77,7 @@
       "started_at": 1788977554157,
       "finished_at": 1788977619623,
       "name": "",
-      "polled": "2026-09-10T01:11:15Z",
+      "polled": "2026-09-11T02:30:49Z",
       "downloaded": {
         "glb": "Art/Models/zeus_hd.glb"
       }
@@ -103,7 +103,7 @@
       "started_at": 1788977626149,
       "finished_at": 1788977637569,
       "name": "",
-      "polled": "2026-09-09T18:18:42Z",
+      "polled": "2026-09-11T02:30:49Z",
       "downloaded": {
         "glb": "Art/Models/zeus_hd_idle_combat.glb"
       }
@@ -129,7 +129,7 @@
       "started_at": 1788977626893,
       "finished_at": 1788977638504,
       "name": "",
-      "polled": "2026-09-09T18:18:42Z",
+      "polled": "2026-09-11T02:30:49Z",
       "downloaded": {
         "glb": "Art/Models/zeus_hd_attack_basic.glb"
       }
@@ -155,7 +155,7 @@
       "started_at": 1788977627602,
       "finished_at": 1788977647624,
       "name": "",
-      "polled": "2026-09-09T18:18:42Z",
+      "polled": "2026-09-11T02:30:50Z",
       "downloaded": {
         "glb": "Art/Models/zeus_hd_attack_heavy.glb"
       }
@@ -181,7 +181,7 @@
       "started_at": 1788977628491,
       "finished_at": 1788977645339,
       "name": "",
-      "polled": "2026-09-09T18:18:42Z",
+      "polled": "2026-09-11T02:30:50Z",
       "downloaded": {
         "glb": "Art/Models/zeus_hd_hit_react.glb"
       }
@@ -207,12 +207,88 @@
       "started_at": 1788977629196,
       "finished_at": 1788977659233,
       "name": "",
-      "polled": "2026-09-09T18:18:43Z",
+      "polled": "2026-09-11T02:30:50Z",
       "downloaded": {
         "glb": "Art/Models/zeus_hd_death.glb"
       }
     },
+    "clip:victory": {
+      "id": "01a088de-78a8-775d-9600-ebcae9814029",
+      "kind": "clip",
+      "created": "2026-09-10T01:11:16Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
+        "action_id": 412
+      },
+      "cost": 3,
+      "clip": "victory",
+      "action_id": 412,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a088de-78a8-775d-9600-ebcae9814029/output/Animation_victory_withSkin.glb?Expires=1789261903&Signature=oAmaCHM5SJC9CuIHm2RtW3XUhoj-tLOF9dh3RjF8b83Wnc7ZQegZhHdVKNjISHXwUTgT0q-pB24eESONGBnfT5J73ThTclMDgn2MDNY4BlPKMcmgRZQ2cfRMm8wluiSKl~QQ6rVOwwDNd2NeIzN3tXqiepruxWSlyKLKBxiLvWlSHItMo41wmKYswq~jtRgAU~t2HWbffm7kJz5yL6TqAQWis9CqeEz~ep2UQ9iMlstP~jnyhk-ty4-930gSal6J6tR~OY7uKuiydytXq4Cqo-Eq8w7e8tFbYY~FDUqS56-R~vfH6aIdn~0ZeWEhDtDUVuCwl-zbmn0bsL5vLd-lkQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a088de-78a8-775d-9600-ebcae9814029/output/Animation_victory_withSkin.fbx?Expires=1789261903&Signature=nb5UCGe7gbvMAgWyJEIUsJZJOI-KpYXN3FCrPzxEHcnLkGUBTyZRV68plLuUoD1luqj8alE9ngiv5nCC2~a0~XGQNYzeU0K2lTkv304UYn~jwXquIgriiElqClLGYqXcxPoHDMgkhhTm5DsDskAjFTVV93gZDHGLMv-ihzENARkiZFYCKih0nF4bU3rlozifcbPy9-ZPWJ67KFRcX9TNc1vwyUIRTndSj4NfwPfmYjrVMautr5tWi3w9-dXX98rfpiG2DJLXywSPV4JmmKryk0DMxY14l31l53WjtG5P4A42PJiqywcsiLsGIrpy71p~VslOPupo2NZZXOeUCU1pfQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789002676954,
+      "started_at": 1789002676962,
+      "finished_at": 1789002703442,
+      "name": "",
+      "polled": "2026-09-11T02:30:50Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_hd_victory.glb"
+      }
+    },
+    "motion:ultimate": {
+      "id": "01a08e4c-ea44-754a-9784-ad1ae5b1ca16",
+      "kind": "motion",
+      "created": "2026-09-11T02:30:02Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "A tall warrior god stands with feet planted shoulder-width apart. He raises both arms high overhead and gathers power for one second, his whole body tensing, then steps forward with the left foot and hurls a lightning bolt with his right arm in one explosive overhand throw, holds the follow-through for a moment, and settles back upright into a ready stance. In place, no travel.",
+        "duration": 3.0,
+        "mode": "prime"
+      },
+      "cost": 10,
+      "clip": "ultimate",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08e4c-ea44-754a-9784-ad1ae5b1ca16/output/clip.fbx?Expires=1789353012&Signature=U2rT7CFHDcsE8SvjND1LWNC-Pb-NGSZxeMuJiRPnExEpcaXlTd1ayP8fY1qU7AymlC8H0LVZUvvRDqa9VaheQDr-481Z8k~npQgOsa7IWBV2VFiJ23sKRWPvNBEirgl9sQyiGy5y642fR6BE8OiQBiYOnKWYprXrtaeFqYtVEDEA7VEnC~t7m5uVyQV~ytyoe6aWk4Lk97ln5l0-TH2I-1VF4XTXTOuOnhft5lbXjbmTZaZmyNaDFuCCrcdtpIb0maihovlcajr0baDfI-l9bG~TuJQJcvG36L3wA7sxlLbPz7zskE85cdsmMb5IF6lNpN2hzBOJ7ofKT32KSS~eVA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789093801717,
+      "started_at": 1789093801719,
+      "finished_at": 1789093812115,
+      "name": "",
+      "polled": "2026-09-11T02:30:50Z"
+    },
     "clip:ultimate": {
+      "id": "01a08e4d-1983-7058-84e4-3ef348c319c9",
+      "kind": "clip",
+      "created": "2026-09-11T02:30:13Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
+        "motion_task_id": "01a08e4c-ea44-754a-9784-ad1ae5b1ca16"
+      },
+      "cost": 3,
+      "clip": "ultimate",
+      "motion_task_id": "01a08e4c-ea44-754a-9784-ad1ae5b1ca16",
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08e4d-1983-7058-84e4-3ef348c319c9/output/Animation_01a08e4c-ea44-754a-9784-ad1ae5b1ca16_withSkin.glb?Expires=1789353031&Signature=aOM8-XYyqmSRh1~K0Dumg5r9v6nBY9gFLm2TUTrpdQVcTGDQw-n6Gz4uo95KjzH0qXdvbeNrx6XwnebRk4KKUbUo0Iz5bOj2Po37QF3XP3ca2ByXaCjFHmbwky5g6rReb~nI8dq6NoBepMYkIv7uPg9bZMg8s4chB6EpOu23u1e5cuEdEw5oRLnV29E6J9qa~SVrpOysDMKwiH20xlpkgIlI98g~Oo0bpm0j7FvOz5qv5Jdd0sI2syGxY8jSOfIUtxGkB7RRr~LJLgLTWD1ddSA4hZlXR72wyd3D1CyO-8XdHXvVUCdBT1tqMgzQWHbqsR1bSmtqKrnuIZE1eJdSmQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08e4d-1983-7058-84e4-3ef348c319c9/output/Animation_01a08e4c-ea44-754a-9784-ad1ae5b1ca16_withSkin.fbx?Expires=1789353031&Signature=mtadAWQhvUaDja24LxXu~EyUtkqnr6XHR9Ko~QHRd5PqgiPFgcQvMaNZoRqQxkrw1Yiu~hnfChB9hGq4KYUgHqc4erwyeEQTF8gjjVj4lWnDB23vzEYwickkbXppMkzKs20gSf8RY9zBb8XIZd~VSMmgl29zMaypK8go3cjLspMpX4Ingmc-VYvifzyKOcCFPuTnn4F2kpWfwt-eeK04c1OjT~u3sR9~y856HuhTcN3VtAI1cqRo9so3g4Fl-mXkH2sgGj-szMMJofQprPLGeMy-Aqe~8mL9PUbSjlPYzdPCZYl6IOTlenP4AGKn6G4tctv25jljtogfPfQI4juRBw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789093813150,
+      "started_at": 1789093813153,
+      "finished_at": 1789093831192,
+      "name": "",
+      "polled": "2026-09-11T02:30:51Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_hd_ultimate.glb"
+      }
+    }
+  },
+  "history": [
+    {
       "id": "01a08760-4992-77cf-b017-2d31263dd0b9",
       "kind": "clip",
       "created": "2026-09-09T18:13:50Z",
@@ -238,30 +314,54 @@
         "glb": "Art/Models/zeus_hd_ultimate.glb"
       }
     },
-    "clip:victory": {
-      "id": "01a088de-78a8-775d-9600-ebcae9814029",
+    {
+      "id": "01a08e49-a962-760d-9df4-ab420e9e904f",
+      "kind": "motion",
+      "created": "2026-09-11T02:26:28Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "A tall warrior god stands with feet planted shoulder-width apart. He slowly raises both arms high overhead, gathering power for two seconds with his whole body tensing, then steps forward with the left foot and hurls a lightning bolt with his right arm in one explosive overhand throw, holds the follow-through for a beat, and settles back upright into a ready stance. In place, no travel.",
+        "duration": 4.5,
+        "mode": "prime"
+      },
+      "cost": 10,
+      "clip": "ultimate",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08e49-a962-760d-9df4-ab420e9e904f/output/clip.fbx?Expires=1789352800&Signature=YLgf0paf0MBkPxAYIDQtfwHpbq~dc1GeWNy046opOYVMt9BLE8B7iZfg9TcJAfRtyCub0xfFtDhu7uD-9~l83mkyXYnhEOYfZ5ounNs8wAMo2H1wXNP7J7Ny~0sRbE8GOU2Nso9JudKSHoQD3QmnzSusN0jlY~7Ry~UjIs0godbEyLMt~WaVYY69YPne0KThZw3fe6nur1Fkn1e1pBxF5abxV3lvJpkoeNs-JCK5~nAVotTJr~bizlmN1~N9fyHNsS6l1NogNGoD6WofbI8cDXo-EeJ4ZcNrdt5d4BuLoadV6HNizZwss6JZ6A54eUXUiUnfVopuny9P8LgCNTjtpQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789093588422,
+      "started_at": 1789093588428,
+      "finished_at": 1789093600027,
+      "name": "",
+      "polled": "2026-09-11T02:27:19Z"
+    },
+    {
+      "id": "01a08e4a-05b6-7389-8426-82efa1f3d9db",
       "kind": "clip",
-      "created": "2026-09-10T01:11:16Z",
+      "created": "2026-09-11T02:26:52Z",
       "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
-        "action_id": 412
+        "motion_task_id": "01a08e49-a962-760d-9df4-ab420e9e904f"
       },
       "cost": 3,
-      "clip": "victory",
-      "action_id": 412,
+      "clip": "ultimate",
+      "motion_task_id": "01a08e49-a962-760d-9df4-ab420e9e904f",
       "progress": 100,
       "urls": {
-        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a088de-78a8-775d-9600-ebcae9814029/output/Animation_victory_withSkin.glb?Expires=1789261903&Signature=oAmaCHM5SJC9CuIHm2RtW3XUhoj-tLOF9dh3RjF8b83Wnc7ZQegZhHdVKNjISHXwUTgT0q-pB24eESONGBnfT5J73ThTclMDgn2MDNY4BlPKMcmgRZQ2cfRMm8wluiSKl~QQ6rVOwwDNd2NeIzN3tXqiepruxWSlyKLKBxiLvWlSHItMo41wmKYswq~jtRgAU~t2HWbffm7kJz5yL6TqAQWis9CqeEz~ep2UQ9iMlstP~jnyhk-ty4-930gSal6J6tR~OY7uKuiydytXq4Cqo-Eq8w7e8tFbYY~FDUqS56-R~vfH6aIdn~0ZeWEhDtDUVuCwl-zbmn0bsL5vLd-lkQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
-        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a088de-78a8-775d-9600-ebcae9814029/output/Animation_victory_withSkin.fbx?Expires=1789261903&Signature=nb5UCGe7gbvMAgWyJEIUsJZJOI-KpYXN3FCrPzxEHcnLkGUBTyZRV68plLuUoD1luqj8alE9ngiv5nCC2~a0~XGQNYzeU0K2lTkv304UYn~jwXquIgriiElqClLGYqXcxPoHDMgkhhTm5DsDskAjFTVV93gZDHGLMv-ihzENARkiZFYCKih0nF4bU3rlozifcbPy9-ZPWJ67KFRcX9TNc1vwyUIRTndSj4NfwPfmYjrVMautr5tWi3w9-dXX98rfpiG2DJLXywSPV4JmmKryk0DMxY14l31l53WjtG5P4A42PJiqywcsiLsGIrpy71p~VslOPupo2NZZXOeUCU1pfQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08e4a-05b6-7389-8426-82efa1f3d9db/output/Animation_01a08e49-a962-760d-9df4-ab420e9e904f_withSkin.glb?Expires=1789352819&Signature=QCDY3BFkQCMEQ1aMDkDQU3-UPpECdVcYQICsKB5P0lZEhpzEMqPXHjRD8NyFGPooOzew~EZ19J6Mu2QaTgrr13mrWAcfzRF3VBCt7Tn87PudoXOSGyEQbnrW3X8n1nSs3hs8ZKmwHZaiExl1sYcy13Np5TJIVG1Z~w975mA2lF1Ph26guo36GZSrY-Pqg-jWbz6fW7MVw6z~9jN4-VaqQcwMiFlDjbWqNP7QhAu6Gc3hPVhP5X5R1eJM3igdRvbfvSKT3SzeGj9PcEykR2IfuuYyaw~G~xOY1DIepenQbyFaezDkWdR5lSMYxkdT3Rc3oE6UFDhAhjj2gtckkekZfQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08e4a-05b6-7389-8426-82efa1f3d9db/output/Animation_01a08e49-a962-760d-9df4-ab420e9e904f_withSkin.fbx?Expires=1789352819&Signature=KBx~~zY-7LrM49S2gVcEsojME0lLZiUuu1~GUsMbPuEauB~H1rbl2P9-PqSQyBxte-lKc0KWsQTOhpA8wf-VkMymU6Ev2iuSlTzvHQMSzd~fqqmDcjIjMZ7Sxmh-AFJGHB7kDWpKkq3fc7PjR18ltaL42ogJawVK518iE9nmsmkG6y1S4qwjpLkMbwitZLDWo5UoyGMZlBtKmqTgBvjZpg9BjSScrflgRNoNu6gGMb78ylrs6wQINtQoQdZP7ucG2gu4UCKW07y~aFoZA9Q0kkGIuIxTD3wfXZwqMY1oI~aqCnjJEswEqHg7qGVk9cCwxvw9TdEqDxHaLt9mRoqgrA__&Key-Pair-Id=K1VGYTHIYLM9UM"
       },
-      "created_at": 1789002676954,
-      "started_at": 1789002676962,
-      "finished_at": 1789002703442,
+      "created_at": 1789093611575,
+      "started_at": 1789093611580,
+      "finished_at": 1789093619728,
       "name": "",
-      "polled": "2026-09-10T01:11:47Z"
+      "polled": "2026-09-11T02:27:19Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_hd_ultimate.glb"
+      }
     }
-  },
-  "history": [],
-  "refreshed": "2026-09-09T18:18:43Z"
+  ],
+  "refreshed": "2026-09-11T02:30:51Z"
 }

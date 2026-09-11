@@ -9,6 +9,8 @@ every task id so that a re-run never pays for the same step twice.
         --prompt "..." --negative "..."           # first run; later runs resume
     python3 tools/meshy.py status sekhmet
     python3 tools/meshy.py download sekhmet         # -> Art/Models/sekhmet*.glb
+    python3 tools/meshy.py motion zeus_hd ultimate --prompt "raises both arms, gathers a storm overhead, hurls it forward"
+                                                    # a bespoke clip from a sentence, applied to the rig
     python3 tools/glb2usd.py sekhmet                 # -> Art/Models/sekhmet*.usdz
     python3 tools/mesh.py sekhmet                    # -> Pantheon/Resources/Models/, decimated
 
@@ -98,6 +100,13 @@ ENDPOINT = {
     "image":   "/v1/image-to-3d",
     "rig":     "/v1/rigging",
     "clip":    "/v1/animations",
+    # Text to Motion (2026): a motion clip from a sentence, no character needed
+    # - `prompt`, `duration` 2-10 s in 0.5 s steps, `mode` prime (10 credits,
+    # the quality to ship) or swift (3). The Animation API then takes
+    # `motion_task_id` in place of a preset `action_id`, for the usual 3.
+    # The docs host is closed to this environment; the field names were read
+    # off the API's own validation errors (an empty body creates nothing).
+    "motion":  "/v1/text-to-motion",
 }
 
 
@@ -236,7 +245,9 @@ def record(st, d):
 
 
 def stage_key(kind, clip=None):
-    return f"clip:{clip}" if clip else kind
+    if not clip:
+        return kind
+    return f"clip:{clip}" if kind == "clip" else f"{kind}:{clip}"
 
 
 # ---------------------------------------------------------------------------
@@ -260,7 +271,10 @@ def ensure_task(api, m, kind, body, clip=None):
           "request": body, "cost": (before - after) if before is not None and after is not None else None}
     if clip:
         st["clip"] = clip
-        st["action_id"] = body["action_id"]
+        if body.get("action_id") is not None:
+            st["action_id"] = body["action_id"]
+        if body.get("motion_task_id"):
+            st["motion_task_id"] = body["motion_task_id"]
     m["stages"][key] = st
     save_manifest(m)
     print(f"  {key:22s} created  {tid}   ({st['cost']} credits)")
@@ -460,6 +474,56 @@ def cmd_generate(a):
     print(f"\nnext: python3 tools/meshy.py download {a.asset}")
 
 
+def cmd_motion(a):
+    """A bespoke clip from a sentence. Text-to-motion makes the motion, the
+    Animation API applies it to the asset's finished rig under the clip name
+    given, and from there `download` and `mesh.py` treat it exactly like a
+    preset clip: it lands as Art/Models/<asset>_<clip>.glb and ships as
+    Pantheon/Resources/Models/<asset>_<clip>.usdz. A preset clip of the same
+    name is moved to the manifest's history, so the family keeps one file
+    per clip and the game needs no change to play it."""
+    api = Meshy(load_key(a.key_file))
+    m = load_manifest(a.asset) or sys.exit(f"no manifest for {a.asset}")
+    rig = m["stages"].get("rig")
+    if not rig or rig.get("status") != "SUCCEEDED":
+        sys.exit(f"{a.asset} has no finished rig - run generate first")
+    if a.clip not in DEFAULT_CLIPS:
+        sys.exit(f"'{a.clip}' is not a clip the game plays; one of {', '.join(DEFAULT_CLIPS)}")
+    if (a.duration * 2) != int(a.duration * 2) or not 2 <= a.duration <= 10:
+        sys.exit("--duration is 2 to 10 seconds in 0.5 s steps")
+    start = api.balance()
+    print(f"{a.asset}: {start} credits available")
+    price = (10 if a.mode == "prime" else 3) + 3
+    if start is not None and start - price < a.floor:
+        sys.exit(f"a {a.mode} clip is about {price} credits and the balance would fall below the {a.floor} floor")
+
+    print("motion")
+    mkey = stage_key("motion", a.clip)
+    st = m["stages"].get(mkey)
+    if st and st.get("request", {}).get("prompt") != a.prompt:
+        # A new sentence is a new motion; the old one keeps its place in history.
+        m.setdefault("history", []).append(m["stages"].pop(mkey))
+    ensure_task(api, m, "motion", {"prompt": a.prompt, "duration": a.duration, "mode": a.mode}, clip=a.clip)
+    if wait(api, m, [mkey]):
+        summary(m)
+        sys.exit("text-to-motion failed - re-run to try again, or reword the prompt")
+    motion_id = m["stages"][mkey]["id"]
+
+    print("clip")
+    ckey = stage_key("clip", a.clip)
+    st = m["stages"].get(ckey)
+    if st and st.get("motion_task_id") != motion_id:
+        m.setdefault("history", []).append(m["stages"].pop(ckey))
+    ensure_task(api, m, "clip", {"rig_task_id": rig["id"], "motion_task_id": motion_id}, clip=a.clip)
+    failed = wait(api, m, [ckey])
+    summary(m)
+    end = api.balance()
+    print(f"  balance {start} -> {end}")
+    if failed:
+        sys.exit("the animation failed - re-run to retry it")
+    print(f"\nnext: python3 tools/meshy.py download {a.asset} --force   # the old {a.clip} file is replaced")
+
+
 def refresh(api, m):
     for key, st in m["stages"].items():
         record(st, api.task(st["kind"], st["id"]))
@@ -578,6 +642,14 @@ def main():
     p.add_argument("--until", choices=["preview", "refine", "rig", "clips"], default="clips",
                    help="stop after this stage")
 
+    p = sub.add_parser("motion", help="a bespoke clip from a sentence: text-to-motion, applied to the asset's rig")
+    p.add_argument("asset", help="an asset with a finished rig in its manifest, e.g. zeus_hd")
+    p.add_argument("clip", help="the clip it becomes: ultimate, attack_heavy, attack_basic, ...")
+    p.add_argument("--prompt", required=True, help="the motion in a sentence or two; in place, feet planted")
+    p.add_argument("--duration", type=float, default=4.0, help="2-10 seconds in 0.5 s steps")
+    p.add_argument("--mode", default="prime", choices=["prime", "swift"], help="prime (10 credits) or swift (3); +3 to apply")
+    p.add_argument("--floor", type=int, default=3000, help="never spend below this balance")
+
     p = sub.add_parser("status", help="re-poll every task in an asset's manifest")
     p.add_argument("asset")
 
@@ -589,7 +661,7 @@ def main():
     p.add_argument("--force", action="store_true", help="refetch files that already exist")
 
     a = ap.parse_args()
-    {"balance": cmd_balance, "library": cmd_library, "generate": cmd_generate,
+    {"balance": cmd_balance, "library": cmd_library, "generate": cmd_generate, "motion": cmd_motion,
      "status": cmd_status, "download": cmd_download}[a.cmd](a)
 
 

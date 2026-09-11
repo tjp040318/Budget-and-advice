@@ -119,12 +119,23 @@ def run_family(name, args):
         base.anim = None     # the clips carry the motion; the base is the bind pose
     problems = []
     base.name = out_name
-    problems += build(base, BUNDLE_DIR / f"{out_name}.usdz", args.tris, args.texture, height)["problems"]
-    if args.lod:
-        problems += build(base, BUNDLE_DIR / f"{out_name}_lod.usdz", args.lod, max(512, args.texture // 2), height)["problems"]
+    only = {c.strip() for c in args.only_clips.split(",") if c.strip()} if args.only_clips else None
+    if only is None:
+        problems += build(base, BUNDLE_DIR / f"{out_name}.usdz", args.tris, args.texture, height)["problems"]
+        if args.lod:
+            problems += build(base, BUNDLE_DIR / f"{out_name}_lod.usdz", args.lod, max(512, args.texture // 2), height)["problems"]
+    else:
+        # One clip re-shipped on its own - a bespoke motion replacing a preset
+        # - leaves the base, the LOD and the other clips' files untouched, so
+        # the change in the bundle is the one file. The base is still read
+        # and canonicalised, because the clip is retargeted through its
+        # transform and checked against its bind pose.
+        print(f"  shipping only: {', '.join(sorted(only))}")
 
     clips = {}
     for clip in clip_sources(name):
+        if only is not None and clip.stem[len(name) + 1:] not in only:
+            continue
         print(f"\n  reading {clip.name}")
         c = character.read(clip)
         character.describe(c)
@@ -146,6 +157,8 @@ def run_family(name, args):
     # knockdown, ship a synthesised flinch built from the combat idle instead;
     # the export stays in Art/Models for the day a real flinch replaces it.
     hit = clips.get("hit_react")
+    if only is not None and only - set(clips):
+        sys.exit(f"no source for clip(s) {', '.join(sorted(only - set(clips)))} beside {src.name}")
     if hit is not None and not args.keep_hit_react and character.looks_like_a_fall(hit):
         source = clips.get("idle_combat") or clips.get("idle") or base
         print(f"\n  hit_react: the exported clip is a knock-up or knockdown; "
@@ -191,6 +204,7 @@ def main():
     ap.add_argument("--clip-texture", type=int, default=128, help="max texture edge for per-clip files")
     ap.add_argument("--keep-root-motion", action="store_true", help="keep horizontal root motion in clips")
     ap.add_argument("--keep-base-animation", action="store_true", help="keep whatever clip the base export carries")
+    ap.add_argument("--only-clips", help="ship just these clips (comma list, e.g. ultimate) and leave the rest of the family's files as they are")
     ap.add_argument("--keep-hit-react", action="store_true",
                     help="ship the exported hit_react even when it is a knock-up or knockdown")
     ap.add_argument("--inspect", action="store_true", help="report on a file and change nothing")

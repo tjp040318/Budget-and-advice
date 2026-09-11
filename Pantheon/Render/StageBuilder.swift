@@ -312,7 +312,7 @@ enum StageBuilder {
         stage.addChildNode(platform(radius: Self.battlePlatformRadius, thickness: 1.8, floor: recipe.floor,
                                     repeats: recipe.floorRepeats * 1.3, tint: recipe.floorTint, rock: recipe.rock,
                                     centre: SCNVector3(toward.x * 2.5, 0, toward.z * 2.5 - 0.3),
-                                    floorYaw: -CameraDirector.homeYaw))
+                                    floorYaw: Self.floorYaw(forCameraYaw: CameraDirector.homeYaw)))
         for chunk in hangingRocks(rock: recipe.rock, seed: environment.rawValue.hashValue) {
             stage.addChildNode(chunk)
         }
@@ -402,6 +402,24 @@ enum StageBuilder {
         stage.addChildNode(dust(tint: tint.mixed(with: .white, amount: 0.5), volume: SCNVector3(9, 5, 9), at: SCNVector3(0, 2.5, -1)))
     }
 
+    /// The yaw that stands the platform's tile rows across the frame of a
+    /// camera at `yaw`, so the floor reads as a floor rather than a grid seen
+    /// corner-on.
+    ///
+    /// Measured off the CI frames rather than assumed: with the platform
+    /// unturned the tile rows run along the platform's own Z, and a camera
+    /// at yaw y (`CameraDirector.homeYaw` is −58°, the camera on the +x, +z
+    /// side) has its right-hand vector along (cos y, 0, sin y) on the ground.
+    /// Turning the node by θ about Y carries local Z to (sin θ, 0, cos θ),
+    /// which lies along that right-hand vector at θ = −y − 90°: the rows are
+    /// then parallel to the bottom of the frame and the columns run away
+    /// from the camera. The boss shot (`CameraDirector.bossYaw`, −12°) is
+    /// 46° round from the home one, so `CameraDirector` turns the floor
+    /// again the moment it re-frames from behind the team.
+    static func floorYaw(forCameraYaw yaw: Float) -> Float {
+        -yaw - .pi / 2
+    }
+
     // MARK: - Parts
 
     /// The stone the set stands on: a painted floor on top, a cliff face round
@@ -413,19 +431,21 @@ enum StageBuilder {
         let body = SCNCylinder(radius: radius, height: thickness)
         body.radialSegmentCount = 64
         let top = floorMaterial(floor, repeats: repeats, tint: tint)
-        if floorYaw != 0 {
-            // The tiles run with the camera, not with the world: a grid seen
-            // 58° off its axes reads as a floor tilted sideways.
-            top.diffuse.contentsTransform = SCNMatrix4Mult(SCNMatrix4MakeRotation(floorYaw, 0, 0, 1),
-                                                           SCNMatrix4MakeScale(repeats, repeats, 1))
-        }
         body.materials = [
             rockMaterial(rock, repeats: SCNVector3(Float(radius) * 0.7, 1, 1)),
             top,
             rockMaterial(rock, repeats: SCNVector3(2, 2, 1)),
         ]
         let bodyNode = SCNNode(geometry: body)
+        bodyNode.name = "platform_floor"
         bodyNode.position = SCNVector3(centre.x, centre.y - Float(thickness) / 2, centre.z)
+        // The tiles run with the camera, not with the world: a grid seen 58°
+        // off its axes reads as a floor tilted sideways. The cylinder is
+        // round, so turning the node turns nothing but its textures. (The
+        // first attempt rotated the cap's texture coordinates instead —
+        // `contentsTransform` — and the CI frames showed the grid exactly
+        // where it had always been; a node's yaw cannot be argued with.)
+        bodyNode.eulerAngles.y = floorYaw
         node.addChildNode(bodyNode)
 
         // Boulders round the rim break the perfect circle. Deterministic, so

@@ -93,6 +93,15 @@ enum Theme {
     /// interface was slate; a dark plate under dark text is unreadable.
     static let plate = Color(hex: "#F4EDDD")
 
+    /// Ink or cream, whichever reads on the colour given. The drawn button
+    /// plates are the tint itself, and a tint can be anything from gold to
+    /// ink.
+    static func readableText(on color: Color) -> Color {
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        guard UIColor(color).getRed(&r, green: &g, blue: &b, alpha: &a) else { return ink }
+        return (0.299 * r + 0.587 * g + 0.114 * b) > 0.55 ? ink : surfaceHigh
+    }
+
     // MARK: - Metal
 
     /// Polished bronze. Four stops, because the pale band across the upper

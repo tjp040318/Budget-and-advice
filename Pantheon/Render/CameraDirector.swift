@@ -280,6 +280,7 @@ final class CameraDirector {
         let merged = (field ?? FieldBounds.standard).union(measured)
         if merged.hasBoss, !(field?.hasBoss ?? false) {
             print("[Camera] a boss is on the field: \(merged.points.count) points, re-framing from behind the team")
+            turnFloor(toCameraYaw: Self.bossYaw)
         }
         field = merged
         let solved = solve(for: merged)
@@ -291,6 +292,16 @@ final class CameraDirector {
         // does, that is a wave walking on with something bigger in it: a
         // moment the fight has already announced, not a drift out of nowhere.
         if !isOffHome { applyHome() }
+    }
+
+    /// The platform's tile rows run across the frame of whichever camera has
+    /// the fight (`StageBuilder.floorYaw(forCameraYaw:)`), and the boss shot
+    /// is 46° round from the home one, so the floor turns with the
+    /// re-framing. Instantly, as the re-framing itself is a cut: it happens
+    /// in the frame the boss's wave is placed, with no shot running.
+    private func turnFloor(toCameraYaw yaw: Float) {
+        guard let floor = cameraNode.parent?.childNode(withName: "platform_floor", recursively: true) else { return }
+        floor.eulerAngles.y = StageBuilder.floorYaw(forCameraYaw: yaw)
     }
 
     /// The stage as it stands: how wide the lines are, how deep, how tall.

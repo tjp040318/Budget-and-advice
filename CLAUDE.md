@@ -73,12 +73,26 @@ environment can and cannot do. The short version:
   middle between them, and the painting filling the top half behind the
   far rim (`StageBuilder.farBackdrop` is turned to face the camera). A
   boss fight is framed from BEHIND the team instead (`bossYaw` 12°,
-  `bossPitch` 14°, the feet at `bossFeetLine` 0.75, the head allowed to
-  `bossTopLine` 0.75, the aim centred on the boss's head via
-  `FramePoint.isBoss`; the numbers come from a sweep of a Python port of
-  the solve — a top line of 0.55 pushed the camera to its 40 m limit and
-  the platform became a disc in a void), the genre's boss-dungeon shot,
-  and the painting is hung between the two yaws. The field is measured
+  `bossPitch` 20°, the team's feet allowed just below the bottom edge at
+  `bossFeetLine` 1.05 — their ankles behind the bottom bar — and the
+  head allowed to `bossTopLine` 0.90, the aim centred on the boss's head
+  via `FramePoint.isBoss`: about 25 m out, the head 22% down under the
+  bar. The numbers come from a sweep of a Python port of the solve — a
+  top line of 0.55 pushed the camera to its 40 m limit and the platform
+  became a disc in a void, and 14°/0.75/0.75 stood at 26.7 m until the
+  owner asked for "a little higher, angled down but physically up, and
+  nearer"), the genre's boss-dungeon shot, and the painting is hung
+  between the two yaws. **The floor reads flat (2026-09-11).** The owner
+  called the ordinary shot "slanted": the platform's near rim rose
+  through the bottom-right of the frame as a diagonal and the tile grid
+  ran 58° off the screen. `StageBuilder.battlePlatformRadius` is 10 m
+  (was 7.6), its centre is pulled 2.5 m toward the camera so the near
+  rim is below the frame and only the far rim shows, and the platform's
+  floor node is turned (`StageBuilder.floorYaw(forCameraYaw:)`, measured
+  off the frames: rows along local Z, right-hand vector (cos y, 0, sin y),
+  θ = −y − 90°) so the tile rows run across the frame; `CameraDirector`
+  turns it again when it re-frames for a boss. Turning the cap's texture
+  coordinates with `contentsTransform` did nothing visible in CI. The field is measured
   when a wave is placed and at every turn's start, not only when the
   queue drains: an auto fight never drains it, so a boss arriving with
   the third wave was never measured for three runs of frames. A
@@ -109,8 +123,11 @@ environment can and cannot do. The short version:
   swaps engines and tots up the loot), the **relic inventory** (Collection
   → Relics: sell, lock, reappraise, efficiency; `RelicInventoryView`), the
   **bazaar** (tap the wallet on the island, or More; `ShopService`, game
-  currency only, a free daily offering) and the **living island** (the
-  campaign team stands on the painting; `IslandSceneView`).
+  currency only, a free daily offering; since 2026-09-11 a **Testing**
+  stall gives every essence free and an **Essences** stall sells one
+  awakening in a box per element, `awakening_cache_<element>`, so an
+  awakening can be tested without a week of halls) and the **living
+  island** (the campaign team stands on the painting; `IslandSceneView`).
 - **Seventy-nine families.** Eleven hand-written (`UnitDatabase.swift`,
   `UnitDatabase+Roster.swift`: Anubis, Sekhmet, Thoth, Shabti, Zeus, Ares,
   Heracles, Perseus, Hoplite, Satyr, Harpy) and sixty-eight from one table
@@ -438,10 +455,12 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is twenty screens: an arena battle (step 8) as well
-  as the campaign one, the Labyrinth, a dungeon's levels, the relic
-  picker, a Labyrinth run on auto (`dungeon_battle`, four frames, so the
-  waves are seen walking on) and the power-up screen.
+  pass. The CI tour is twenty-two screens (steps 0–21): an arena battle
+  (step 8) as well as the campaign one, the Labyrinth, a dungeon's
+  levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
+  four frames, so the waves are seen walking on), the power-up screen,
+  the victory's chest in three frames and the collection's Stage layout
+  (21).
 - **The fight reads.** Status effects are tiles over the health bar
   (`StatusIconRenderer`: blue for a buff, red for a debuff, the effect's
   glyph, the turns left in the corner; `UnitNode.setStatuses` takes
@@ -479,7 +498,30 @@ environment can and cannot do. The short version:
   `<identifier>.scnp` replaces the code-built one, so the owner can design
   a hit by hand. The key also lists Veo 3.1 video models (a clip on black
   cut into frames would be a real flipbook); it is billed per second and
-  is not to be used without the owner's word.
+  is not to be used without the owner's word. **Since 2026-09-11** a cast
+  (`castRelease`, `ultimate`) opens a rune ring under the caster
+  (`UnitNode.castRing`), every melee swing draws a ribbon from the weapon
+  hand (`UnitNode.swingTrail`: a triangle strip re-sampled each frame from
+  the hand bone, additive, steel for an attack and the element for an
+  ultimate), and a non-speech cut-in flashes the screen white for half a
+  second (`BattleView.ultimateFlash`).
+- **Bespoke clips from a sentence (2026-09-11).** Meshy's Text to Motion
+  API makes a motion clip from a description (10 credits in prime mode,
+  3 in swift; 2–10 s in 0.5 s steps) and the Animation API applies it to
+  a rigged character in place of a preset (`motion_task_id`, 3 credits):
+  `python3 tools/meshy.py motion zeus_hd ultimate --prompt "..." --duration
+  3` creates both, resumably, and files the clip in the manifest under the
+  clip's name, so `download` and `python3 tools/mesh.py zeus_hd --as zeus
+  --only-clips ultimate` ship it as `zeus_ultimate.usdz` alone and the
+  game plays it with no change. Ask for 3 s for an ultimate and 2 s for an
+  attack: the engine retimes every one-shot to its contract (2.4 s and
+  1.3–1.7 s) between 0.6× and 2×, so a 4.5 s clip is a flicker. Judge a
+  clip with `python3 tools/preview.py Art/Models/<asset>_<clip>.glb
+  --frame N` at a few frames. Zeus's ultimate was the first (both arms
+  overhead gathering, a lunge and an overhand hurl, a settle; 26 credits
+  for two takes). `docs.meshy.ai` is closed to this environment; the
+  field names were read off the API's own validation errors, which an
+  empty body returns without creating anything.
 - **Stand-ins by name.** `ModelSpec.standInAsset` names a shipped mesh to
   fight in a missing one's place, stood up and scaled to the spec's height
   with the stand-in's own clips (`UnitNode.clipAsset`), so a boss whose
