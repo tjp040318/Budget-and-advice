@@ -29,7 +29,9 @@ while IFS= read -r line; do
   if python3 - "$asset" <<'PY'
 import json, sys
 m = json.load(open(f"Art/Models/{sys.argv[1]}.meshy.json"))
-sys.exit(0 if m["stages"].get("image", {}).get("status") == "SUCCEEDED" else 1)
+st = m["stages"]
+mesh = st.get("image") or st.get("refine") or {}
+sys.exit(0 if mesh.get("status") == "SUCCEEDED" else 1)
 PY
   then
     python3 tools/meshy.py download "$asset" --include-unrigged > "$S/dl_$asset.log" 2>&1 || { echo "DOWNLOAD FAILED $asset"; continue; }
