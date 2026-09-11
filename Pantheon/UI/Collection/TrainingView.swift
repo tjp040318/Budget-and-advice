@@ -45,18 +45,22 @@ struct TrainingView: View {
     @State private var stamp: AltarStamp?
     @State private var stampSequence = 0
 
+    /// Which tab the screen opens on, and on whom. Every caller wants the
+    /// default mode; the CI tour wants a way to photograph the fusion board
+    /// without a tap, and `@State` cannot read another property without an
+    /// initialiser. The collection's Train button names the unit it was
+    /// pressed beside, so the hall opens on that unit rather than on the
+    /// strongest; nil keeps the old behaviour, the top of the rail.
+    init(initialMode: Mode = .powerUp, selectedUnitID: UUID? = nil) {
+        _mode = State(initialValue: initialMode)
+        _targetID = State(initialValue: selectedUnitID)
+    }
+
     enum Mode: String, CaseIterable {
         case powerUp = "Power up"
         case evolve = "Evolve"
         case awaken = "Awaken"
         case fuse = "Fuse"
-    }
-
-    /// Which tab the screen opens on. Every caller wants the default; the CI
-    /// tour wants a way to photograph the fusion board without a tap, and
-    /// `@State` cannot read another property without an initialiser.
-    init(initialMode: Mode = .powerUp) {
-        _mode = State(initialValue: initialMode)
     }
 
     /// The mode switch as the strip's segments, in the order it always had.

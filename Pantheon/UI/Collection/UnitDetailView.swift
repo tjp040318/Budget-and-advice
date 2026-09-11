@@ -392,8 +392,7 @@ struct UnitDetailView: View {
 
     private func slotTile(slot: Int, unit: ResolvedUnit) -> some View {
         let relic = unit.unit.equippedRelics[slot].flatMap { store.player.relic($0) }
-        let worn = relic != nil
-        return Button {
+        return RelicSlotTile(slot: slot, relic: relic, size: slotTileSize) {
             Juice.haptic(.light)
             // A worn relic opens its power-up screen (Change is on it);
             // an empty slot opens the picker.
@@ -402,69 +401,7 @@ struct UnitDetailView: View {
             } else {
                 pickingSlot = SlotPick(id: slot)
             }
-        } label: {
-            VStack(spacing: 2) {
-                if let relic {
-                    Image(systemName: relic.set.glyph)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Theme.gold)
-                    // The number over its kind: "CRIT Rate +32%" as one 5pt
-                    // sentence was the one figure a player checks, unreadable.
-                    Text(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))
-                        .font(Theme.numeric(12))
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    Text(relic.effectiveMainStat.kind.displayName.uppercased())
-                        .font(Theme.body(7))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    Text("\(relic.grade)★ +\(relic.level)")
-                        .font(Theme.numeric(7))
-                        .foregroundStyle(Theme.textSecondary)
-                    HStack(spacing: 2) {
-                        ForEach(relic.subStats.indices, id: \.self) { _ in
-                            Circle()
-                                .fill(Theme.info)
-                                .frame(width: 3, height: 3)
-                        }
-                    }
-                } else {
-                    // An empty slot states the rule the relic system runs on:
-                    // odd slots carry a fixed main stat, even ones are free.
-                    Image(systemName: "plus")
-                        .font(.system(size: 15, weight: .black))
-                        .foregroundStyle(Theme.goldDim)
-                    Text(Relic.fixedMainStat(forSlot: slot)?.displayName.uppercased() ?? "FREE")
-                        .font(Theme.body(7).weight(.bold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-            .frame(width: slotTileSize, height: slotTileSize)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(worn ? Theme.surfaceHigh : Theme.surface.opacity(0.7))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .strokeBorder(
-                        worn ? Theme.gold.opacity(0.7) : Theme.stroke,
-                        style: StrokeStyle(lineWidth: 1, dash: worn ? [] : [3, 3])
-                    )
-            )
-            .overlay(alignment: .topLeading) {
-                Text("\(slot)")
-                    .font(Theme.numeric(7))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Capsule().fill(worn ? Theme.gold : Theme.textSecondary))
-                    .offset(x: -4, y: -4)
-            }
         }
-        .buttonStyle(PlateButtonStyle())
     }
 
     private func setsRow(_ unit: ResolvedUnit) -> some View {
@@ -1171,5 +1108,89 @@ struct FodderPickerView: View {
         case .evolve: store.evolve(target.id, fodderIDs: ids)
         }
         dismiss()
+    }
+}
+
+/// One relic slot as a tile: the worn relic's set glyph, its main stat over
+/// its kind, its grade and level and a dot per sub stat — or a plus and the
+/// slot's rule when it is empty — with the slot number badged on the corner.
+///
+/// Pulled out of the unit sheet's ring on 2026-09-11 so the collection's side
+/// panel and its stage layout draw the same tile the sheet does: one place
+/// for the shape a player learns to read, three screens that show it. What
+/// a tap does is the caller's (the sheet opens a worn relic's power-up
+/// screen, the collection opens the picker either way), so the action is
+/// passed in.
+struct RelicSlotTile: View {
+    let slot: Int
+    let relic: Relic?
+    var size: CGFloat = 60
+    let action: () -> Void
+
+    var body: some View {
+        let worn = relic != nil
+        Button(action: action) {
+            VStack(spacing: 2) {
+                if let relic {
+                    Image(systemName: relic.set.glyph)
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(Theme.gold)
+                    // The number over its kind: "CRIT Rate +32%" as one 5pt
+                    // sentence was the one figure a player checks, unreadable.
+                    Text(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))
+                        .font(Theme.numeric(12))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                    Text(relic.effectiveMainStat.kind.displayName.uppercased())
+                        .font(Theme.body(7))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    Text("\(relic.grade)★ +\(relic.level)")
+                        .font(Theme.numeric(7))
+                        .foregroundStyle(Theme.textSecondary)
+                    HStack(spacing: 2) {
+                        ForEach(relic.subStats.indices, id: \.self) { _ in
+                            Circle()
+                                .fill(Theme.info)
+                                .frame(width: 3, height: 3)
+                        }
+                    }
+                } else {
+                    // An empty slot states the rule the relic system runs on:
+                    // odd slots carry a fixed main stat, even ones are free.
+                    Image(systemName: "plus")
+                        .font(.system(size: 15, weight: .black))
+                        .foregroundStyle(Theme.goldDim)
+                    Text(Relic.fixedMainStat(forSlot: slot)?.displayName.uppercased() ?? "FREE")
+                        .font(Theme.body(7).weight(.bold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            .frame(width: size, height: size)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(worn ? Theme.surfaceHigh : Theme.surface.opacity(0.7))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .strokeBorder(
+                        worn ? Theme.gold.opacity(0.7) : Theme.stroke,
+                        style: StrokeStyle(lineWidth: 1, dash: worn ? [] : [3, 3])
+                    )
+            )
+            .overlay(alignment: .topLeading) {
+                Text("\(slot)")
+                    .font(Theme.numeric(7))
+                    .foregroundStyle(Theme.ink)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 1)
+                    .background(Capsule().fill(worn ? Theme.gold : Theme.textSecondary))
+                    .offset(x: -4, y: -4)
+            }
+        }
+        .buttonStyle(PlateButtonStyle())
     }
 }

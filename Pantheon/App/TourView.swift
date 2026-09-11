@@ -38,7 +38,7 @@ struct TourView: View {
         ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("arena_battle", 6), ("more", 2),
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
-        ("victory", 4),
+        ("victory", 4), ("collection_stage", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -89,6 +89,12 @@ struct TourView: View {
             IslandView { _ in }
         case "collection":
             CollectionView()
+        case "collection_stage":
+            // The collection's other shape: the rail along the bottom, the
+            // picked unit's model on the stage, the words and slots on the
+            // left. Opened in that layout because nothing here taps the
+            // switch; the `collection` step above keeps the Cards.
+            CollectionView(initialLayout: .stage)
         case "detail":
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
                 UnitDetailView(unitID: unit.id)
