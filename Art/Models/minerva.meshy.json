@@ -45,7 +45,7 @@
       "finished_at": 1789131091698,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T12:51:37Z"
+      "polled": "2026-09-11T13:44:25Z"
     },
     "refine": {
       "id": "01a09086-07d6-7799-8a06-75ba77203e69",
@@ -77,7 +77,7 @@
       "finished_at": 1789131167431,
       "art_style": "realistic",
       "name": "",
-      "polled": "2026-09-11T12:52:49Z"
+      "polled": "2026-09-11T13:44:26Z"
     },
     "rig": {
       "id": "01a09087-1e35-7212-9474-8e278981fe50",
@@ -104,7 +104,10 @@
       "started_at": 1789131172178,
       "finished_at": 1789131224758,
       "name": "",
-      "polled": "2026-09-11T12:53:53Z"
+      "polled": "2026-09-11T13:44:26Z",
+      "downloaded": {
+        "glb": "Art/Models/minerva.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a09088-1823-74ed-851d-2843eff189ee",
@@ -127,7 +130,10 @@
       "started_at": 1789131233862,
       "finished_at": 1789131246634,
       "name": "",
-      "polled": "2026-09-11T12:54:09Z"
+      "polled": "2026-09-11T13:44:26Z",
+      "downloaded": {
+        "glb": "Art/Models/minerva_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a09088-1ba0-7456-9c1f-67c214e076f9",
@@ -150,7 +156,10 @@
       "started_at": 1789131234505,
       "finished_at": 1789131251047,
       "name": "",
-      "polled": "2026-09-11T12:54:19Z"
+      "polled": "2026-09-11T13:44:26Z",
+      "downloaded": {
+        "glb": "Art/Models/minerva_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a09088-1e13-7315-84f6-85e9bd56443b",
@@ -173,7 +182,10 @@
       "started_at": 1789131235193,
       "finished_at": 1789131252225,
       "name": "",
-      "polled": "2026-09-11T12:54:19Z"
+      "polled": "2026-09-11T13:44:26Z",
+      "downloaded": {
+        "glb": "Art/Models/minerva_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a09088-20bc-7198-ad75-7cc439289dce",
@@ -196,7 +208,10 @@
       "started_at": 1789131235924,
       "finished_at": 1789131255484,
       "name": "",
-      "polled": "2026-09-11T12:54:19Z"
+      "polled": "2026-09-11T13:44:26Z",
+      "downloaded": {
+        "glb": "Art/Models/minerva_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a09088-239c-7590-b14b-cdac3275d6dd",
@@ -219,7 +234,10 @@
       "started_at": 1789131236550,
       "finished_at": 1789131268983,
       "name": "",
-      "polled": "2026-09-11T12:54:30Z"
+      "polled": "2026-09-11T13:44:26Z",
+      "downloaded": {
+        "glb": "Art/Models/minerva_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a09088-2607-7305-8935-41b444d1f31b",
@@ -242,7 +260,10 @@
       "started_at": 1789131237124,
       "finished_at": 1789131262423,
       "name": "",
-      "polled": "2026-09-11T12:54:30Z"
+      "polled": "2026-09-11T13:44:26Z",
+      "downloaded": {
+        "glb": "Art/Models/minerva_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a09088-284e-7456-8b8f-6990669ab8b1",
@@ -265,8 +286,12 @@
       "started_at": 1789131237748,
       "finished_at": 1789131277133,
       "name": "",
-      "polled": "2026-09-11T12:54:40Z"
+      "polled": "2026-09-11T13:44:27Z",
+      "downloaded": {
+        "glb": "Art/Models/minerva_victory.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-11T13:44:27Z"
 }
