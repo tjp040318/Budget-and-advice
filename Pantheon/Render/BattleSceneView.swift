@@ -148,7 +148,7 @@ final class UnitPlate: SKNode {
     static let hpHeight: CGFloat = 8
     static let atbHeight: CGFloat = 3.5
     /// The health bar's centre sits this far under the projected feet.
-    static let dropBelowFeet: CGFloat = 12
+    static let dropBelowFeet: CGFloat = 10
     static let tile: CGFloat = 13
 
     private let hpFill: SKSpriteNode

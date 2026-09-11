@@ -138,7 +138,13 @@ final class CameraDirector {
     /// below centre: 0.68 is 84% of the frame height, which clears the actor
     /// plate along the bottom edge. The genre puts the cast across the lower
     /// two thirds and gives the top of the frame to the environment.
-    private static let nearFeetLine: Float = 0.74
+    ///
+    /// 0.69 since the unit plates went under the feet (2026-09-11, night):
+    /// at 0.74 the team's health and attack bars, drawn 10 pt below the
+    /// projected feet, ran into the actor plate and the resolving panel
+    /// along the bottom of the HUD. Five percent of the frame is room for
+    /// a plate and a hairline of floor under it.
+    private static let nearFeetLine: Float = 0.69
 
     /// The ceiling for an ordinary unit: nothing goes above 10% of the frame
     /// height. A BOSS gets a ceiling of its own, `bossTopLine`: its head may
@@ -175,7 +181,12 @@ final class CameraDirector {
     /// boss-dungeon shot) and the head allowed to 0.90 put the camera about
     /// 25 m out, the head 22% down just under the boss bar, a unit a fifth of
     /// the frame tall, the far rim past mid-frame with the boss over it.
-    private static let bossFeetLine: Float = 1.05
+    ///
+    /// 0.92 since the unit plates went under the feet: with the ankles
+    /// behind the bottom bar the team's bars were below the frame, and a
+    /// boss fight is where the attack bars matter most. The camera steps
+    /// back a little for it and the boss loses a few percent of the frame.
+    private static let bossFeetLine: Float = 0.92
 
     /// The painting is hung between the two yaws (`StageBuilder`), 17° off
     /// either camera, which a painting seventy metres out does not show: a

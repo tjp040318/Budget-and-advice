@@ -125,11 +125,15 @@ environment can and cannot do. The short version:
   look angled" (the 20° foreshortened it into a ramp). Rotating a cylinder
   cap's texture with `contentsTransform` did nothing visible in CI. A boss
   fight is framed the same way but wider (`bossYaw` −12°, `bossPitch`
-  20°, the team's feet allowed just below the bottom edge at
-  `bossFeetLine` 1.05 and the head allowed to `bossTopLine` 0.90, the aim
-  centred on the boss's head via `FramePoint.isBoss`: about 25 m out, the
-  head 22% down under the bar; the numbers come from a sweep of a Python
-  port of the solve), and the painting is hung between the two yaws
+  20°, the team's feet at `bossFeetLine` 0.92 — they were allowed just
+  below the bottom edge at 1.05 until the unit plates went under the
+  feet, which put the team's bars below the frame in every boss fight —
+  and the head allowed to `bossTopLine` 0.90, the aim centred on the
+  boss's head via `FramePoint.isBoss`: about 25 m out, the head 22% down
+  under the bar; the numbers come from a sweep of a Python port of the
+  solve; likewise `nearFeetLine` is 0.69, down from 0.74, so an ordinary
+  fight's team plates clear the HUD's bottom bar), and the painting is
+  hung between the two yaws
   (`StageBuilder.farBackdrop` turned to face `backdropYaw`). The field is
   measured when a wave is placed and at every turn's start, not only when
   the queue drains: an auto fight never drains it, so a boss arriving with
