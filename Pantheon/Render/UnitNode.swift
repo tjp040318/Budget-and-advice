@@ -847,6 +847,110 @@ final class UnitNode: SCNNode {
         return found
     }
 
+    // MARK: - The cast ring and the swing's trail
+
+    /// The node a blade hangs from: the rig's weapon attach point when it has
+    /// one, else the right hand bone. Nil for a rig with neither, and the
+    /// trail is simply not drawn.
+    private lazy var weaponNode: SCNNode? = {
+        if let attach = spec.weaponAttachNode,
+           let named = modelContainer.childNode(withName: attach, recursively: true) { return named }
+        var found: SCNNode?
+        modelContainer.enumerateHierarchy { node, stop in
+            let name = (node.name ?? "").lowercased()
+            if name.contains("hand"), name.contains("r"), !name.contains("l_"), !name.hasPrefix("left") {
+                found = node
+                stop.pointee = true
+            }
+        }
+        return found
+    }()
+
+    /// A rune ring under the caster for the length of a cast: the summon
+    /// dais's own ring in the element's colour, faded in as the clip begins
+    /// and out as it ends. A spell now has a floor to stand on.
+    func castRing(tint: UIColor, duration: TimeInterval, after delay: TimeInterval = 0) {
+        let ring = StageBuilder.runeRing(radius: CGFloat(max(1.1, spec.height * 0.62)), tint: tint)
+        ring.name = "cast_ring"
+        ring.opacity = 0
+        ring.position = SCNVector3(0, 0.03, 0)
+        addChildNode(ring)
+        ring.runAction(.sequence([
+            .wait(duration: delay),
+            .fadeOpacity(to: 0.9, duration: 0.15),
+            .wait(duration: max(0.2, duration - 0.5)),
+            .fadeOut(duration: 0.35),
+            .removeFromParentNode(),
+        ]))
+    }
+
+    /// The blur a weapon leaves through a swing: a ribbon of the last dozen
+    /// frames' blade positions, additive in the strike's colour, rebuilt
+    /// every frame for the length of the clip and gone a beat after. The
+    /// blade is taken to run a metre out along the hand bone, which is where
+    /// a blade is; a rig with no hand draws nothing. The ribbon lives in the
+    /// stage, not in the figure, so the trail stays where the swing was.
+    func swingTrail(tint: UIColor, duration: TimeInterval, after delay: TimeInterval = 0) {
+        guard let hand = weaponNode, let stage = parent else { return }
+        let trail = SCNNode()
+        trail.name = "swing_trail"
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = UIColor.white
+        material.emission.contents = tint
+        material.blendMode = .add
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
+        material.isDoubleSided = true
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        stage.addChildNode(trail)
+        var samples: [(root: SCNVector3, tip: SCNVector3)] = []
+        let keep = 12
+        let reach: Float = min(1.1, spec.height * 0.5)
+        let sampler = SCNAction.customAction(duration: duration) { node, _ in
+            let root = hand.worldPosition
+            let tip = hand.convertPosition(SCNVector3(0, reach, 0), to: nil)
+            samples.append((root, tip))
+            if samples.count > keep { samples.removeFirst() }
+            node.geometry = UnitNode.ribbon(samples, material: material)
+        }
+        trail.runAction(.sequence([
+            .wait(duration: delay),
+            sampler,
+            .fadeOut(duration: 0.12),
+            .removeFromParentNode(),
+        ]))
+    }
+
+    /// A triangle strip through the samples, oldest first, darkening toward
+    /// the tail so the additive ribbon fades along its length.
+    private static func ribbon(_ samples: [(root: SCNVector3, tip: SCNVector3)], material: SCNMaterial) -> SCNGeometry? {
+        guard samples.count >= 2 else { return nil }
+        var vertices: [SCNVector3] = []
+        var colors: [SCNVector4] = []
+        var indices: [Int32] = []
+        for (index, sample) in samples.enumerated() {
+            let age = Float(index) / Float(samples.count - 1)   // 0 oldest, 1 newest
+            let strength = age * age
+            vertices.append(sample.root)
+            vertices.append(sample.tip)
+            colors.append(SCNVector4(strength * 0.35, strength * 0.35, strength * 0.35, 1))
+            colors.append(SCNVector4(strength, strength, strength, 1))
+            indices.append(Int32(index * 2))
+            indices.append(Int32(index * 2 + 1))
+        }
+        let vertexSource = SCNGeometrySource(vertices: vertices)
+        let colorData = Data(bytes: colors, count: colors.count * MemoryLayout<SCNVector4>.stride)
+        let colorSource = SCNGeometrySource(data: colorData, semantic: .color, vectorCount: colors.count,
+                                            usesFloatComponents: true, componentsPerVector: 4,
+                                            bytesPerComponent: MemoryLayout<Float>.size, dataOffset: 0,
+                                            dataStride: MemoryLayout<SCNVector4>.stride)
+        let element = SCNGeometryElement(indices: indices, primitiveType: .triangleStrip)
+        let geometry = SCNGeometry(sources: [vertexSource, colorSource], elements: [element])
+        geometry.firstMaterial = material
+        return geometry
+    }
+
     var chestWorldPosition: SCNVector3 {
         convertPosition(SCNVector3(0, spec.height * 0.6, 0), to: nil)
     }

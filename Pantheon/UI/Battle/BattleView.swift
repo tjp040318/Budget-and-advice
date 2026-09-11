@@ -21,6 +21,7 @@ import SwiftUI
 ///   out the skill in hand before it is committed rather than after.
 struct BattleView: View {
 
+    @State private var ultimateFlash: Double = 0
     @StateObject var model: BattleViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -95,6 +96,17 @@ struct BattleView: View {
                 .padding(.horizontal, 6)
                 .padding(.bottom, 8)
             }
+
+            // The frame goes white for a beat as an ultimate's cut-in lands.
+            Color.white
+                .opacity(ultimateFlash)
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+                .onChange(of: model.cutIn) { _, cutIn in
+                    guard let cutIn, !cutIn.isSpeech else { return }
+                    ultimateFlash = 0.6
+                    withAnimation(.easeOut(duration: 0.5)) { ultimateFlash = 0 }
+                }
 
             if let cutIn = model.cutIn {
                 cutInBanner(cutIn)

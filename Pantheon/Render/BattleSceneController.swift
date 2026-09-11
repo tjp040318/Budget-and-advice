@@ -594,6 +594,21 @@ final class BattleSceneController: NSObject {
                     * (UnitNode.dashGather + UnitNode.dashFlight) - 0.08)
             }
             casterNode.play(animation, after: beat(walkUp))
+            // What the swing leaves behind and what the spell stands on: a
+            // blade's trail through every melee clip, in steel for a strike
+            // and in the element for an ultimate; a rune ring under a caster
+            // for the length of the cast. The owner: "the effects of attacks
+            // ... summoners war quality — even animations of characters."
+            let elementTint = UIColor(hex: casterNode.element.accentHex) ?? .white
+            let clipLength = beat(animation.fallbackDuration)
+            if animation == .castRelease || animation == .ultimate {
+                casterNode.castRing(tint: elementTint, duration: clipLength, after: beat(walkUp))
+            }
+            if casterNode.spec.melee, animation != .castRelease, !casterNode.isBoss {
+                let steel = UIColor(hex: "#D9E4F2") ?? .white
+                casterNode.swingTrail(tint: animation == .ultimate ? elementTint : steel,
+                                      duration: clipLength, after: beat(walkUp))
+            }
             floatText(name, at: casterNode.headWorldPosition, color: .white, scale: 0.7)
 
             // The frame the blade lands, measured from the start of the CLIP
