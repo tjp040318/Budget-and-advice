@@ -585,10 +585,16 @@ environment can and cannot do. The short version:
   model; the ~720 shipped images plus their retries came to the $100, so
   a night's batch of 250 is roughly $30 at that price and $10 buys about
   80 images — or about 250 on `--model gemini-2.5-flash-image`, whose
-  cards would have to be judged first. The night-3 routine
-  (`trig_01VJjUcbfKs8vRHiC1qHtAH7`) is disabled; the cream repaint of
-  `ui_panel`/`ui_button_dark`, batch 4's art and batch 3's awakened cards
-  wait on that word. Gemini's key allows 250 image requests a day; a
+  cards would have to be judged first. **One batch is authorised** (the
+  owner, later that evening: "finish with that $32 worth of art you need
+  and then stop for now until I can figure out costs"): the cream repaint
+  of `ui_panel`/`ui_button_dark` (2 images), Rome and the Jade Court's
+  banners and backdrops (6), concepts (20) and base cards (100), and batch
+  3's missing awakened cards (about 130) — the night-3 routine
+  (`trig_01VJjUcbfKs8vRHiC1qHtAH7`, 00:25 UTC) runs exactly that list,
+  spills its leftover to one more night if the 250-a-day quota ends it,
+  reports the image count, and nothing else is painted afterwards. Batch
+  4's awakened cards are NOT in it. Gemini's key allows 250 image requests a day; a
   roster's cards are about 240, so a big batch spans two days and every
   batch script skips what already exists. A named god can come back as a
   photo of an actor (Loki did; the file was deleted) — describe, don't
