@@ -1649,3 +1649,17 @@ type floor only. The wallet strip, the five-control bars and the
 sentence panels are the next pass (task #50, the 104 audited findings),
 one screen at a time against the genre's own, with a frame looked at for
 each. Saying so here rather than leaving a lesser version silently.
+
+### What shipped (2026-09-12, evening)
+
+On `main` at the fourth run of the day (d3765fd, then 7f49cf0 for one
+fit): the seals, the two faces registered on the simulator ("[Fonts]
+registered 8 of 8 bundled faces; Cinzel true, Manrope true" in every
+step's console), the floor, and the grid inventory. The first grid frame
+had the panel's fixed stack at 352 points in a 330-point frame, which
+pushed the whole screen up under the strip; its words scroll now and its
+buttons stay. Every one of the twenty-four frames was looked at with the
+new type; nothing clipped that did not clip before. Left for the next
+pass, by name: the wallet strip on every screen, the five-to-eight-control
+bars, the sentence panels on the Hall of Ka, the Labyrinth, the halls,
+More and the chapter map, and the painted frame on every inner panel.
