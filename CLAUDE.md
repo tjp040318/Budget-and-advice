@@ -356,7 +356,11 @@ environment can and cannot do. The short version:
   slate button (`ui_panel`, `ui_button_dark`) are held back by
   `Chrome.awaitingCreamRepaint` until `tools/batch/ui_marble.sh` repaints
   them cream with a gold frame; the marble ribbon and the bronze button
-  are live.
+  are live. **The night-3 routine repainted both (2026-09-12, first roll
+  each):** a cream marble panel with a thin gold frame and scrolled
+  acanthus corners that reach 95 px in (`Chrome.panelInsets` 98), and a
+  cream plate with a gold border and 19 px gold ends (`darkButtonInsets`
+  22); the hold-back set is empty and every piece of the kit draws.
 - **The unit sheet is one landscape screen** (`UnitDetailView`): the card,
   level bar, power and the Power up / Evolve / Awaken buttons on the left,
   the six relic slots in a ring around the element in the middle (slot 1
@@ -689,7 +693,22 @@ environment can and cannot do. The short version:
   (`trig_01VJjUcbfKs8vRHiC1qHtAH7`, 00:25 UTC) runs exactly that list,
   spills its leftover to one more night if the 250-a-day quota ends it,
   reports the image count, and nothing else is painted afterwards. Batch
-  4's awakened cards are NOT in it. Gemini's key allows 250 image requests a day; a
+  4's awakened cards are NOT in it. **The batch ran on the night of
+  2026-09-12 (00:26–01:00 UTC) and is complete: 263 images painted** — the
+  2 kit textures, the 6 realm paintings (`banner_eagle_rises`,
+  `banner_jade_court`, `forum_rome_bg`, `colosseum_sands_bg`,
+  `peach_garden_bg`, `dragon_gate_bg`, every one looked at), batch 4's 20
+  concepts, its 100 base cards (Mercury's five repainted once: the first
+  set kept the concept's grey ground), and batch 3's 130 awakened cards;
+  two lane failures were retried and no quota error came. Every batch-3
+  and batch-4 family has its five cards, so all twenty of Rome and the
+  Jade Court are in the gacha pool and both banners are offered; batch 4's
+  70 awakened cards are the one thing still unpainted. Six batch-4
+  families' cards (Neptune, Mercury, Vestal, Chang'e, Jiangshi, the
+  Terracotta Soldier) came back full-figure rather than the portrait crop
+  the prompt asks for — usable, on the dark ground with the glow, but not
+  the same crop as the rest; a re-roll is five images a family and the
+  owner's call. **Gemini is off again** until his word. Gemini's key allows 250 image requests a day; a
   roster's cards are about 240, so a big batch spans two days and every
   batch script skips what already exists. A named god can come back as a
   photo of an actor (Loki did; the file was deleted) — describe, don't

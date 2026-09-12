@@ -1305,3 +1305,41 @@ the matchup arrow on a player's turn already marks every enemy. The red
 fill of the first build was the one thing that made an enemy's bar look
 like a warning rather than a health bar.
 
+## Night 3: the authorised batch, painted (2026-09-12, 00:26–01:00 UTC)
+
+The routine (`trig_01VJjUcbfKs8vRHiC1qHtAH7`) ran the one Gemini batch the
+owner authorised on the evening of 2026-09-11 ("finish with that $32 worth
+of art you need and then stop for now until I can figure out costs") and
+nothing else. 263 images painted, in this order:
+
+1. The cream menu kit, 2 images, first roll each: `ui_panel` (cream marble,
+   a thin gold frame, scrolled acanthus corners reaching 95 px in) and
+   `ui_button_dark` (a cream plate, gold border, 19 px gold ends). The
+   caps in `Theme.swift` are 98 and 22, `paintedPanelMinimum` 165, and
+   `Chrome.awaitingCreamRepaint` is empty: the whole kit draws.
+2. Rome and the Jade Court's realms, 6: the two banners (a war god with
+   the eagle standard, a goddess with an owl and a sea god with a trident;
+   the Monkey King on a cloud before a jade gate with the azure dragon,
+   the boy on fire wheels and the long-bearded general) and the four
+   chapter backdrops (the Forum at midnight, the Colosseum's sand, the
+   peach orchard, the dragon gate under the sea). All six looked at; no
+   real face among them.
+3. Batch 4's 20 concepts (one lane failure, Sun Wukong, retried). All
+   original stylised figures; the board was checked for likenesses.
+4. Batch 4's 100 base cards (one lane failure retried; Mercury's five
+   repainted once because the painter kept the concept's grey ground and
+   boxed the figure). Six families came back full-figure on the dark
+   ground instead of the portrait crop — Neptune, Mercury, Vestal,
+   Chang'e, Jiangshi, the Terracotta Soldier — usable, not the same crop
+   as the other fourteen; a re-roll is five images a family.
+5. Batch 3's 130 awakened cards, no failures.
+
+No quota error at 265 requests, so the 250-a-day figure is not the
+hard limit it was taken for; no spill-over routine was needed. Every
+batch-3 and batch-4 family has its five cards now: all twenty of Rome and
+the Jade Court join the gacha pool, both banners are offered, and batch
+4's 70 awakened cards are the one thing left unpainted. The Meshy steps
+found their manifests and skipped (18 shipped, Neptune and the Terracotta
+Soldier refused, balance 2,133). Gemini is off again until the owner's
+word.
+

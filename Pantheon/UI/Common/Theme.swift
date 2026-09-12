@@ -450,21 +450,24 @@ enum Chrome {
     /// Smallest side a painted panel may be drawn at. Below this the corner
     /// ornament from opposite sides overlaps and the panel reads as a frame
     /// with no middle.
-    static let paintedPanelMinimum: CGFloat = 130 / shrink
+    static let paintedPanelMinimum: CGFloat = 165 / shrink
 
     private static func scaled(_ top: CGFloat, _ leading: CGFloat, _ bottom: CGFloat, _ trailing: CGFloat) -> EdgeInsets {
         EdgeInsets(top: top / shrink, leading: leading / shrink, bottom: bottom / shrink, trailing: trailing / shrink)
     }
 
-    /// ui_panel: 512² → 171pt at full size. The marble kit's acanthus corners
-    /// reach 76 px in (measured), so the caps are 78: everything an ornament
-    /// touches stays fixed and only flat slate is stretched.
-    static let panelInsets = scaled(78, 78, 78, 78)
+    /// ui_panel: 512² → 171pt at full size. The cream kit's scrolled gold
+    /// acanthus corners reach 95 px in along each edge (measured on the
+    /// night-3 painting, 2026-09-12; the slate kit's reached 76), so the
+    /// caps are 98: everything an ornament touches stays fixed and only
+    /// flat marble is stretched.
+    static let panelInsets = scaled(98, 98, 98, 98)
     /// ui_button_gold: 640×192 → 213×64pt at full size. The bronze bar's
     /// scroll bands reach 68 px in (measured); the caps are 70.
     static let goldButtonInsets = scaled(8, 70, 8, 70)
-    /// ui_button_dark: same size, plain ends.
-    static let darkButtonInsets = scaled(10, 17, 10, 17)
+    /// ui_button_dark: same size, a cream plate with a thin gold border and
+    /// a 19 px gold band at each plain end (measured); the caps are 22.
+    static let darkButtonInsets = scaled(10, 22, 10, 22)
     /// ui_ribbon: 640×128 → 213×43pt at full size.
     static let ribbonInsets = scaled(9, 17, 9, 17)
 
@@ -484,12 +487,14 @@ enum Chrome {
     /// image). The indigo kit it replaces was held back here for a day so the
     /// game spoke one language while it waited.
 
-    /// The slate panel and the slate button of the marble kit are held back
-    /// until tonight's routine repaints them in cream marble with a gold
-    /// frame: the owner asked for "a cream color with gold accents (like a
-    /// greek temple)" on 2026-09-11, and a dark slate panel on a cream
-    /// ground is the one thing that would read as the old interface.
-    static let awaitingCreamRepaint: Set<String> = ["ui_panel", "ui_button_dark"]
+    /// The slate panel and the slate button of the marble kit were held back
+    /// here for a day until the night-3 routine repainted them in cream
+    /// marble with a gold frame (2026-09-12, first roll each): the owner
+    /// asked for "a cream color with gold accents (like a greek temple)" on
+    /// 2026-09-11, and a dark slate panel on a cream ground was the one
+    /// thing that would have read as the old interface. Empty now; kept so
+    /// a future repaint can hold a texture back the same way.
+    static let awaitingCreamRepaint: Set<String> = []
 
     static func slice(_ name: String, _ insets: EdgeInsets) -> Image? {
         if awaitingCreamRepaint.contains(name) { return nil }
