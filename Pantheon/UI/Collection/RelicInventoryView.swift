@@ -469,83 +469,91 @@ struct RelicInventoryView: View {
 
     // MARK: - The panel
 
+    /// The panel's words scroll and its buttons stay put, so the panel can
+    /// never be taller than the frame: as one fixed stack it wanted 352
+    /// points of a 330-point frame and pushed the whole screen up under the
+    /// strip (CI frame 11-relics, first run of the grid).
     @ViewBuilder private var panel: some View {
         if let relic = picked {
             let wearer = relic.equippedBy.flatMap { store.resolved($0) }
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .top, spacing: 10) {
-                    RelicIcon(relic: relic, size: 56, showsStars: true, showsLevel: true)
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("\(relic.set.displayName) Relic")
-                            .font(Theme.title(13))
-                            .foregroundStyle(relic.resolvedQuality.inkColor)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
-                        RelicQualityTag(quality: relic.resolvedQuality, size: 8)
-                        Text("Slot \(relic.slot) · \(Relic.shapeName(forSlot: relic.slot)) · \(relic.grade)★")
-                            .font(Theme.body(10))
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                }
-                // The main stat, large: the one figure a player checks.
-                HStack {
-                    Text(relic.effectiveMainStat.kind.displayName)
-                        .font(Theme.body(11).weight(.bold))
-                        .foregroundStyle(Theme.gold)
-                    Spacer()
-                    Text("+\(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))")
-                        .font(Theme.numeric(15))
-                        .foregroundStyle(Theme.gold)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
-                if relic.subStats.isEmpty {
-                    Text("No sub stat yet · +3 adds the first")
-                        .font(Theme.body(10))
-                        .foregroundStyle(Theme.textSecondary)
-                } else {
-                    VStack(spacing: 3) {
-                        ForEach(relic.effectiveSubStats.indices, id: \.self) { index in
-                            let sub = relic.effectiveSubStats[index]
-                            HStack(spacing: 4) {
-                                Text(sub.kind.displayName)
+            VStack(alignment: .leading, spacing: 6) {
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .top, spacing: 10) {
+                            RelicIcon(relic: relic, size: 52, showsStars: true, showsLevel: true)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text("\(relic.set.displayName) Relic")
+                                    .font(Theme.title(13))
+                                    .foregroundStyle(relic.resolvedQuality.inkColor)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                RelicQualityTag(quality: relic.resolvedQuality, size: 8)
+                                Text("Slot \(relic.slot) · \(Relic.shapeName(forSlot: relic.slot)) · \(relic.grade)★")
                                     .font(Theme.body(10))
                                     .foregroundStyle(Theme.textSecondary)
-                                if relic.gemmed == index {
-                                    Image(systemName: "diamond.fill")
-                                        .font(.system(size: 6, weight: .black))
-                                        .foregroundStyle(Theme.gold)
-                                }
-                                Spacer(minLength: 4)
-                                Text("+\(sub.kind.format(sub.value))")
-                                    .font(Theme.numeric(11))
-                                    .foregroundStyle(relic.honedBonus(at: index) > 0 ? Theme.info : Theme.textPrimary)
+                                    .lineLimit(1)
                             }
+                            Spacer(minLength: 0)
+                        }
+                        // The main stat, large: the one figure a player checks.
+                        HStack {
+                            Text(relic.effectiveMainStat.kind.displayName)
+                                .font(Theme.body(11).weight(.bold))
+                                .foregroundStyle(Theme.gold)
+                            Spacer()
+                            Text("+\(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))")
+                                .font(Theme.numeric(15))
+                                .foregroundStyle(Theme.gold)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
+                        if relic.subStats.isEmpty {
+                            Text("No sub stat yet · +3 adds the first")
+                                .font(Theme.body(10))
+                                .foregroundStyle(Theme.textSecondary)
+                        } else {
+                            VStack(spacing: 2) {
+                                ForEach(relic.effectiveSubStats.indices, id: \.self) { index in
+                                    let sub = relic.effectiveSubStats[index]
+                                    HStack(spacing: 4) {
+                                        Text(sub.kind.displayName)
+                                            .font(Theme.body(10))
+                                            .foregroundStyle(Theme.textSecondary)
+                                        if relic.gemmed == index {
+                                            Image(systemName: "diamond.fill")
+                                                .font(.system(size: 6, weight: .black))
+                                                .foregroundStyle(Theme.gold)
+                                        }
+                                        Spacer(minLength: 4)
+                                        Text("+\(sub.kind.format(sub.value))")
+                                            .font(Theme.numeric(11))
+                                            .foregroundStyle(relic.honedBonus(at: index) > 0 ? Theme.info : Theme.textPrimary)
+                                    }
+                                }
+                            }
+                        }
+                        Text("\(relic.set.piecesRequired) pieces · \(relic.set.effectDescription)")
+                            .font(Theme.body(10))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                        HStack(spacing: 6) {
+                            EfficiencyDial(value: RelicService.efficiency(relic, for: role))
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("fit for a \(role.displayName.lowercased())")
+                                    .font(Theme.body(10))
+                                    .foregroundStyle(Theme.textSecondary)
+                                Text(wearer.map { "Worn by \($0.name)" } ?? "Not worn")
+                                    .font(Theme.body(10).weight(.semibold))
+                                    .foregroundStyle(wearer == nil ? Theme.textSecondary : Theme.info)
+                                    .lineLimit(1)
+                            }
+                            Spacer(minLength: 0)
                         }
                     }
                 }
-                Text("\(relic.set.piecesRequired) pieces · \(relic.set.effectDescription)")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 6) {
-                    EfficiencyDial(value: RelicService.efficiency(relic, for: role))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("fit for a \(role.displayName.lowercased())")
-                            .font(Theme.body(10))
-                            .foregroundStyle(Theme.textSecondary)
-                        Text(wearer.map { "Worn by \($0.name)" } ?? "Not worn")
-                            .font(Theme.body(10).weight(.semibold))
-                            .foregroundStyle(wearer == nil ? Theme.textSecondary : Theme.info)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 0)
-                }
-                Spacer(minLength: 0)
+                .frame(maxHeight: .infinity)
                 PrimaryButton(title: "Open", systemImage: "arrow.up.circle.fill") {
                     opened = relic
                 }
