@@ -579,10 +579,8 @@ struct CollectionView: View {
         let sets = unit.activeRelicSets
         return Group {
             if sets.isEmpty {
-                Text(unit.relics.isEmpty
-                     ? "Nothing worn · tap a slot to fit a relic"
-                     : "No set complete · 2 pieces for a stat, 4 for an effect")
-                    .font(Theme.body(9))
+                Text(unit.relics.isEmpty ? "Nothing worn" : "No set bonus")
+                    .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
             } else {
                 Text(sets.map { entry in

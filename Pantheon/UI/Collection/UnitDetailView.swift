@@ -315,10 +315,16 @@ struct UnitDetailView: View {
         let figures = relicFigures(unit)
         return VStack(spacing: 6) {
             ZStack {
-                Circle()
-                    .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1, dash: [3, 5]))
-                    .frame(width: radius * 2, height: radius * 2)
-                    .position(centre)
+                // The rune hexagon: one thin line through the six sockets.
+                Path { path in
+                    for slot in 0..<6 {
+                        let angle = (Double(slot) * 60 - 90) * Double.pi / 180
+                        let point = CGPoint(x: centre.x + CGFloat(cos(angle)) * radius, y: centre.y + CGFloat(sin(angle)) * radius)
+                        if slot == 0 { path.move(to: point) } else { path.addLine(to: point) }
+                    }
+                    path.closeSubpath()
+                }
+                .stroke(Theme.goldDim.opacity(0.35), lineWidth: 1)
                 // The largest clear space on the sheet carries the number the
                 // whole sheet exists to raise, not a second copy of the element.
                 VStack(spacing: 2) {
@@ -410,53 +416,31 @@ struct UnitDetailView: View {
         }
     }
 
+    /// The completed sets as emblem chips — the genre names a set and
+    /// leaves what it does to the relic's own card. The sentences that were
+    /// here ("2 pieces for a stat, 4 for an effect", every set's effect)
+    /// were the ring's clutter.
     private func setsRow(_ unit: ResolvedUnit) -> some View {
-        // One row per completed set, saying what it granted: a capsule
-        // reading only "Fury" told the player nothing they gained.
-        VStack(alignment: .leading, spacing: 3) {
+        Group {
             if unit.activeRelicSets.isEmpty {
-                Text("No set bonus · 2 pieces for a stat, 4 for an effect")
-                    .font(Theme.body(9))
+                Text("No set bonus")
+                    .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
             } else {
-                ForEach(unit.activeRelicSets) { entry in
-                    HStack(spacing: 5) {
-                        Image(systemName: entry.set.glyph)
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Theme.gold)
-                        Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
-                            .font(Theme.body(9).weight(.bold))
-                            .foregroundStyle(Theme.gold)
-                            .lineLimit(1)
-                            .fixedSize()
-                        // `effectDescription` is the stat bonus for the eight
-                        // 2-piece sets and the real sentence for the eight
-                        // 4-piece ones, where "4-piece effect" named nothing.
-                        // Only one 4-piece set can be complete on six slots, so
-                        // at most one row of the three is ever two lines tall.
-                        Text(entry.set.effectDescription)
-                            .font(Theme.body(8))
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.trailing)
-                            .fixedSize(horizontal: false, vertical: true)
-                            // Not a `Spacer` before it: an HStack serves the
-                            // less flexible child first, so a Spacer and a
-                            // wrapping Text split the leftover and the sentence
-                            // truncates beside a gap. This takes all of it.
-                            .frame(maxWidth: .infinity, alignment: .trailing)
+                HStack(spacing: 6) {
+                    ForEach(unit.activeRelicSets) { entry in
+                        HStack(spacing: 4) {
+                            RelicSetEmblem(set: entry.set, size: 12)
+                            Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
+                                .font(Theme.body(10).weight(.bold))
+                                .foregroundStyle(Theme.gold)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 8)
+                        .frame(height: 24)
+                        .background(Capsule().fill(Theme.surfaceHigh))
+                        .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
                     }
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 3)
-                    // A capsule on a two-line row curves in over the text; the
-                    // rows are the same shape as every other tile instead.
-                    .background(
-                        RoundedRectangle(cornerRadius: Theme.tileCorner, style: .continuous)
-                            .fill(Theme.surfaceHigh)
-                    )
                 }
             }
         }
@@ -511,14 +495,6 @@ struct UnitDetailView: View {
                     "QUALITY",
                     tint: figures.worn == 0 ? Theme.textSecondary : qualityTint(figures.quality)
                 )
-            }
-            if let note = figures.note {
-                Text(note)
-                    .font(Theme.body(8))
-                    .foregroundStyle(Theme.goldDim)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
     }
@@ -1117,16 +1093,16 @@ struct FodderPickerView: View {
     }
 }
 
-/// One relic slot as a tile: the worn relic's set glyph, its main stat over
-/// its kind, its grade and level and a dot per sub stat — or a plus and the
-/// slot's rule when it is empty — with the slot number badged on the corner.
+/// One relic socket: the stone alone in a soft recess, its level on its
+/// corner — or, empty, the slot's silhouette as a ghost with the slot's
+/// number on it. The genre's rune hexagon is bare stones; the numbers are
+/// read on a tap.
 ///
-/// Pulled out of the unit sheet's ring on 2026-09-11 so the collection's side
-/// panel and its stage layout draw the same tile the sheet does: one place
-/// for the shape a player learns to read, three screens that show it. What
-/// a tap does is the caller's (the sheet opens a worn relic's power-up
-/// screen, the collection opens the picker either way), so the action is
-/// passed in.
+/// It was a bordered tile with two badges (the slot's number, the level),
+/// a stone a third its size and three lines of seven-point text under it,
+/// and the owner sent a crop of the ring with "look how ugly this is"
+/// (2026-09-12). Shared by the unit sheet's ring, the collection's plate
+/// and its stage layout; what a tap does is the caller's.
 struct RelicSlotTile: View {
     let slot: Int
     let relic: Relic?
@@ -1134,68 +1110,35 @@ struct RelicSlotTile: View {
     let action: () -> Void
 
     var body: some View {
-        let worn = relic != nil
         Button(action: action) {
-            VStack(spacing: 1) {
+            ZStack {
+                // The recess: darker towards the rim, no border.
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Theme.surfaceRaised.opacity(0.9), Theme.stroke.opacity(0.45)],
+                            center: .center, startRadius: size * 0.12, endRadius: size * 0.5
+                        )
+                    )
+                Circle()
+                    .strokeBorder(Theme.stroke.opacity(0.5), lineWidth: 0.5)
                 if let relic {
-                    // The stone itself — the slot's silhouette in the set's
-                    // colour, the quality on the rim, the level badged — over
-                    // the one figure a player checks, the main stat, its
-                    // number over its kind. The grade is the stars under the
-                    // stone on every other screen; here the tile has no room
-                    // for them, and a tap opens the card that has.
-                    RelicIcon(relic: relic, size: size * 0.5, showsStars: false, showsLevel: true)
-                        .padding(.top, 2)
-                    Text(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))
-                        .font(Theme.numeric(size * 0.19))
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                    Text(relic.effectiveMainStat.kind.displayName.uppercased())
-                        .font(Theme.body(size * 0.11))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                    HStack(spacing: 2) {
-                        ForEach(relic.subStats.indices, id: \.self) { index in
-                            Circle()
-                                .fill(relic.gemmed == index ? Theme.gold : Theme.info)
-                                .frame(width: 3, height: 3)
-                        }
-                    }
+                    RelicIcon(relic: relic, size: size * 0.74, showsStars: false, showsLevel: true)
                 } else {
-                    // An empty slot states the rule the relic system runs on:
-                    // odd slots carry a fixed main stat, even ones are free.
-                    Image(systemName: "plus")
-                        .font(.system(size: 15, weight: .black))
-                        .foregroundStyle(Theme.goldDim)
-                    Text(Relic.fixedMainStat(forSlot: slot)?.displayName.uppercased() ?? "FREE")
-                        .font(Theme.body(7).weight(.bold))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
+                    if let ghost = BundleArt.image(Relic.rimImageName(forSlot: slot)) {
+                        Image(uiImage: ghost)
+                            .renderingMode(.template)
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .foregroundStyle(Theme.goldDim.opacity(0.35))
+                            .frame(width: size * 0.64, height: size * 0.64)
+                    }
+                    Text("\(slot)")
+                        .font(Theme.title(13))
+                        .foregroundStyle(Theme.goldDim.opacity(0.85))
                 }
             }
             .frame(width: size, height: size)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(worn ? Theme.surfaceHigh : Theme.surface.opacity(0.7))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .strokeBorder(
-                        worn ? Theme.gold.opacity(0.7) : Theme.stroke,
-                        style: StrokeStyle(lineWidth: 1, dash: worn ? [] : [3, 3])
-                    )
-            )
-            .overlay(alignment: .topLeading) {
-                Text("\(slot)")
-                    .font(Theme.numeric(7))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.horizontal, 4)
-                    .padding(.vertical, 1)
-                    .background(Capsule().fill(worn ? Theme.gold : Theme.textSecondary))
-                    .offset(x: -4, y: -4)
-            }
         }
         .buttonStyle(PlateButtonStyle())
     }

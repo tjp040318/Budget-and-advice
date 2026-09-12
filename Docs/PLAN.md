@@ -1663,3 +1663,17 @@ new type; nothing clipped that did not clip before. Left for the next
 pass, by name: the wallet strip on every screen, the five-to-eight-control
 bars, the sentence panels on the Hall of Ka, the Labyrinth, the halls,
 More and the chapter map, and the painted frame on every inner panel.
+
+### The ring, after "look how ugly this is" (2026-09-12, night)
+
+The crop the owner sent was the unit sheet's relic ring: six bordered
+tiles, each with a slot badge on one corner and a level badge on the
+other, a stone a third of the tile, three lines of seven-point text under
+it, a dashed placeholder circle, and three footers of instruction. The
+genre's rune hexagon is bare stones in quiet sockets joined by one thin
+line, the numbers read on a tap. So: a socket is a soft recess with no
+border, the stone fills three quarters of it with its level on its own
+corner, an empty socket shows the slot's silhouette as a ghost with the
+number on it, the sets are emblem chips with a name and nothing else, and
+the footer is the three figures. The same tile is the collection's plate
+and its stage layout.
