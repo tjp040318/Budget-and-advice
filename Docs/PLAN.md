@@ -1710,3 +1710,100 @@ on four named steps, a tip, the version — held no shorter than 2.6 s and
 dissolved over 0.9 s; the system launch screen is the same ink so the
 first frame and the fade agree. Offered: a painted key art of its own
 (one Gemini image, about fifteen cents) under the same file name.
+
+
+## One stone, the set reference, and the key art (2026-09-12, night)
+
+The owner, with the collection screen in front of him: "how much would
+it cost to have Gemini design the relics? They just look so sloppy, and
+the UI for the relics look weird since they are all different shapes.
+They should be all the same shape but have the different symbols. Where
+can I see what each type of relic does and how many of each relic I need
+to apply before the effect takes place? All this info should be on the
+rune management system. The relic management system is good, but I need
+it SUMMONERS WAR LEVEL." And "Do it" for the painted key art offered the
+night before.
+
+### The shape
+
+What the genre does, from memory: Summoners War's runes do differ by
+slot — each of the six slots has its own silhouette, and a player learns
+to read the slot off the shape — which is where the first cut came from.
+Epic Seven's gear differs by TYPE (weapon, helm, armour, necklace, ring,
+boots), which is the same idea. Raid's artifacts likewise. The owner has
+seen ours and calls the six shapes weird, and his word decides: one
+shape, sixteen seals. The cost of that is that the slot must be said
+some other way, and the genre's other way is a number: a badge on the
+stone's corner (`RelicIcon.showsSlot`), and on the ring the socket's
+place, which never needed a shape.
+
+Which shape: a circle reads as a coin and fights the set emblems, which
+are round chips; a rounded square is a tile and cheap; a shield is one
+set's own seal; a hexagon standing on a point is the ring's own figure
+(the six sockets sit on one), nests at 38 points, and reads as a cut gem.
+Chosen: the hexagon, corners softened 0.09, the same bevel, grain and
+gloss as before, sixteen files instead of ninety-six and one rim instead
+of six. `tools/relic_art.py --ship` writes the sixteen and clears the
+per-slot files; the sheet was judged at the app's four sizes before
+shipping.
+
+### Where a set's effect is read
+
+The genre's rune screen has a set-effect list one tap away, with the
+pieces each takes; ours had the effect only on a relic's own card and the
+rail's caption. Now: `RelicSetsSheet` — every set in two columns (stat
+sets of two, effect sets of four), its seal on a disc of its colour, its
+name, a "2 pieces" chip, the effect in a sentence, and how many of it the
+bag holds and the roster wears. Opened from "Set effects" beside the
+rail's caption, from the inventory's menu, and from the unit sheet's sets
+row; opened from a unit it counts that unit's pieces per set, lit where
+the set is complete, so "one more Fates" is read rather than worked out.
+The unit sheet's sets row is progress chips — "Fury 2/2" in gold, "Fates
+1/4" dim — where it showed completed sets only, and the footer's "In
+progress" line went with it. The grid cells wear the wearer's face on a
+worn relic (the genre's mark) and the slot number; the card prints the
++15 main stat beside the next level's.
+
+### The key art
+
+One Gemini image, authorised: 16:9 at 1920×1080, the five pantheons'
+gods described and not named — a thunder god raising a bolt at the
+centre, a jackal-headed god with crook and flail, a one-eyed all-father
+with two ravens, a Roman war god with an eagle standard, a monkey king
+on a cloud — on a summit over a sea of storm cloud at dawn, the lower
+half asked to be dark for the name. The painter delivered exactly that
+in 22 seconds and lettered the eagle's plaque anyway ("ROMAN"), which
+was dissolved into the gold here rather than re-rolled. Three mocks
+placed the wordmark: at 0.50 of the height it crossed the thunder god's
+waist, at 0.64 it crowded the bar, so it sits at 0.58, on the summit's
+dark base. Shipped as `launch_key_art.jpg` (363 KB); the five banners
+take turns only in a bundle without it.
+
+### The cards, from the team screen
+
+Two more notes on a screenshot of the team screen: "how do I know leader
+skills if there's no symbol for it on the character?" and "why can I not
+see how many stars the mon has. Maybe the borders are excessive if it
+blocks the picture + stars." The star row was there — on a dark capsule
+at the foot of the card — but the carved frame texture was an `.overlay`
+on the whole card, drawn over it, gold on gold. Now the frame is drawn
+under the badges and the stars, and only on cards of 90 points and up:
+the reveal's and the unit sheet's carry it, the 76-point grid card and
+the 58-point team card wear the grade's thin metal stroke, which is what
+the genre's cards wear. A unit with a leader skill wears a gold crown at
+the top right, under the lock.
+
+### Painting the relics, the quote
+
+Gemini is paused, and the owner asked what a painted set would cost. With
+one shape it is one master stone (a hexagonal gem, cream-lit, no seal)
+and fifteen `--ref` edits changing the colour and engraving the seal,
+sixteen images at about fourteen cents on the pro model: about $2.30,
+and $3–5 with the re-rolls a batch always needs. The emblems would then
+be cut from the paintings for the chips. Not spent: it needs his word.
+Meshy is the other painter: `POST /openapi/v1/text-to-image` is on its
+API (read off the validation errors; an empty body creates nothing) and
+takes the same Google and OpenAI image models (`nano-banana-pro` is the
+model the cards were painted with) billed in Meshy credits, whose price
+per image is unknown until one is made. The balance is 2,133 against a
+floor of 2,000, so a test costs room he set aside; his call.

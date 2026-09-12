@@ -260,6 +260,17 @@ struct UnitCard: View {
 
     private var rarity: Rarity { Rarity(stars: unit.stars) }
 
+    /// The carved frame texture is for the big cards only — the unit sheet's,
+    /// the reveal's. On a 76-point grid card its corner scrolls covered a
+    /// quarter of the painting and its bottom bar was drawn OVER the star
+    /// row, gold on gold: the owner's team screen, 2026-09-12 — "why can I
+    /// not see how many stars the mon has. Maybe the borders are excessive if
+    /// it blocks the picture + stars." Under this size the card wears the
+    /// thin metal stroke of its grade instead.
+    static let paintedFrameFrom: CGFloat = 90
+
+    private var showsPaintedFrame: Bool { size >= Self.paintedFrameFrom && rarity.hasPaintedFrame }
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
@@ -280,6 +291,12 @@ struct UnitCard: View {
                     startPoint: .top, endPoint: .bottom
                 )
 
+                // The carved frame, UNDER the badges and the stars: as an
+                // overlay on the whole card it hid the star row.
+                if showsPaintedFrame {
+                    paintedFrame
+                }
+
                 VStack(alignment: .leading, spacing: 3) {
                     ElementBadge(element: unit.element, compact: true)
                     if unit.unit.isAwakened {
@@ -291,14 +308,27 @@ struct UnitCard: View {
                 }
                 .padding(5)
 
-                if unit.unit.isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 9, weight: .bold))
-                        .foregroundStyle(Theme.textPrimary.opacity(0.9))
-                        .shadow(color: .black, radius: 2)
-                        .padding(5)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                VStack(alignment: .trailing, spacing: 3) {
+                    if unit.unit.isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Theme.textPrimary.opacity(0.9))
+                            .shadow(color: .black, radius: 2)
+                    }
+                    // A unit with a leader skill wears a crown, the genre's
+                    // mark for it, so the leader is picked off the grid
+                    // rather than found by tapping every card ("how do I
+                    // know leader skills if there's no symbol for it on the
+                    // character?", the owner, 2026-09-12).
+                    if unit.blueprint.leaderSkill != nil {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: max(8, size * 0.13), weight: .black))
+                            .foregroundStyle(Theme.gold)
+                            .shadow(color: .black.opacity(0.9), radius: 2)
+                    }
                 }
+                .padding(5)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
 
                 // The grade, the way the genre shows it: a row of stars big
                 // enough to count, on a dark band, at the foot of the card.
@@ -326,7 +356,6 @@ struct UnitCard: View {
             }
             .frame(width: size, height: size)
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
-            .overlay(paintedFrame)
 
             VStack(spacing: 0) {
                 Text(unit.name)
@@ -355,7 +384,7 @@ struct UnitCard: View {
                 .fill(LinearGradient(colors: [Theme.surfaceRaised, Theme.surface],
                                      startPoint: .top, endPoint: .bottom))
         )
-        .rarityFrame(rarity, radius: Theme.tightCorner)
+        .rarityFrame(rarity, radius: Theme.tightCorner, painted: showsPaintedFrame)
         .overlay(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                 .strokeBorder(Theme.gold, lineWidth: isSelected ? 2.5 : 0)
@@ -374,13 +403,15 @@ struct UnitCard: View {
 
     /// The carved frame for this grade. Square, transparent centre, sits over
     /// the portrait so its corner ornament overlaps the art the way a real
-    /// gacha card's does. Nothing when the texture has not shipped — the
-    /// code-drawn stroke in `rarityFrame` covers that case.
+    /// gacha card's does — on the big cards (`paintedFrameFrom`). Nothing
+    /// when the texture has not shipped — the code-drawn stroke in
+    /// `rarityFrame` covers that case.
     @ViewBuilder
     private var paintedFrame: some View {
         if let frame = Chrome.image(rarity.frameImageName) {
             Image(uiImage: frame)
                 .resizable()
+                .frame(width: size, height: size)
                 .allowsHitTesting(false)
         }
     }

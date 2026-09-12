@@ -1,12 +1,16 @@
 #!/usr/bin/env python3
-"""Render the relic stones: one PNG per (set, slot), a rim template per slot
-and an emblem template per set.
+"""Render the relic stones: one PNG per set, one rim template and one emblem
+template per set.
 
-A relic is drawn the way the genre draws a rune: the SLOT decides the
-silhouette (1 crystal, 2 medallion, 3 shield, 4 hexagon, 5 vial, 6 tablet),
-the SET decides the stone's colour and the emblem engraved on it, the
-QUALITY decides the rim (tinted by the app from the template) and the grade
-and level are drawn by SwiftUI around it.
+Every relic is the SAME stone — a pointy-top hexagon, the ring's own shape —
+and the SET decides its colour and the seal engraved on it; the QUALITY is
+the rim (tinted by the app from the template), and the grade, the level and
+the SLOT are drawn by SwiftUI around it (stars under, +N on one corner, the
+slot's number on the other). The first cut gave each slot its own
+silhouette, the genre's way; the owner, with the collection's six ghosts in
+front of him: "the UI for the relics look weird since they are all
+different shapes. They should be all the same shape but have the different
+symbols." (2026-09-12)
 
 Every stone is a bevelled gem-cut slab lit from the top left: a distance
 transform of the silhouette gives a height field, its gradient a normal map,
@@ -57,8 +61,6 @@ SETS = [
     ("titanfall", "#7A5A3A", "mountain"),
     ("vigil", "#7C6428", "return"),
 ]
-
-SLOT_SHAPES = {1: "crystal", 2: "medallion", 3: "shield", 4: "hexagon", 5: "vial", 6: "tablet"}
 
 # The app's rarity metals (Theme.Rarity.frameStops), top stop then bottom.
 QUALITY_METALS = {
@@ -203,38 +205,14 @@ def dot(cx, cy, r):
     return Path2D().circle(cx, cy, r)
 
 
-# ---------------------------------------------------------------- slot shapes
+# ---------------------------------------------------------------- the stone
 
-def shape_path(name):
-    p = Path2D()
-    if name == "crystal":
-        # A tall gem: pointed top and bottom, a shoulder above the middle.
-        return p.rounded_polygon([(0, 1.0), (0.58, 0.42), (0.58, -0.5), (0, -1.0), (-0.58, -0.5), (-0.58, 0.42)], 0.06)
-    if name == "medallion":
-        return p.circle(0, 0, 0.94)
-    if name == "shield":
-        p.move(-0.86, 0.72)
-        p.quad(-0.86, 0.9, -0.62, 0.9)
-        p.line(0.62, 0.9)
-        p.quad(0.86, 0.9, 0.86, 0.72)
-        p.line(0.86, 0.15)
-        p.curve(0.86, -0.45, 0.42, -0.85, 0, -1.0)
-        p.curve(-0.42, -0.85, -0.86, -0.45, -0.86, 0.15)
-        return p.close()
-    if name == "hexagon":
-        pts = [(0.95 * math.cos(math.radians(a)), 0.95 * math.sin(math.radians(a))) for a in range(30, 390, 60)]
-        return p.rounded_polygon(pts, 0.08)
-    if name == "vial":
-        # A drop: the apex at the top, a round belly.
-        p.move(0, 1.0)
-        p.curve(0.34, 0.55, 0.78, 0.2, 0.78, -0.3)
-        p.arc(0, -0.3, 0.78, 0, -180, 60)
-        p.curve(-0.78, 0.2, -0.34, 0.55, 0, 1.0)
-        return p.close()
-    if name == "tablet":
-        w, h, c = 0.82, 0.96, 0.26
-        return p.rounded_polygon([(-w + c, h), (w - c, h), (w, h - c), (w, -h + c), (w - c, -h), (-w + c, -h), (-w, -h + c), (-w, h - c)], 0.05)
-    raise ValueError(name)
+def stone_path():
+    """The one silhouette: a regular hexagon standing on a point, its corners
+    softened. It reads as a cut gem at 30 points and as the ring's own shape
+    on the unit sheet, where the six sockets sit on a hexagon."""
+    pts = [(0.97 * math.cos(math.radians(a)), 0.97 * math.sin(math.radians(a))) for a in range(30, 390, 60)]
+    return Path2D().rounded_polygon(pts, 0.09)
 
 
 # ---------------------------------------------------------------- emblems
@@ -433,9 +411,8 @@ def smooth_noise(size, cells, seed):
     return np.array(img).astype(np.float32) / 255.0
 
 
-def render_stone(set_name, colour_hex, emblem_name, slot):
-    shape = shape_path(SLOT_SHAPES[slot])
-    M = mask_of(shape)
+def render_stone(set_name, colour_hex, emblem_name):
+    M = mask_of(stone_path())
     base = hex_to_rgb(colour_hex)
     lum = float(0.299 * base[0] + 0.587 * base[1] + 0.114 * base[2])
 
@@ -508,9 +485,9 @@ def render_stone(set_name, colour_hex, emblem_name, slot):
     return img.resize((SIZE, SIZE), Image.LANCZOS)
 
 
-def render_rim(slot, width=0.045):
+def render_rim(width=0.045):
     """The quality rim as a template: white, alpha only. Tinted in the app."""
-    M = mask_of(shape_path(SLOT_SHAPES[slot]))
+    M = mask_of(stone_path())
     inner = ndimage.binary_erosion(M, iterations=int(width * S4))
     R = M & ~inner
     h = height_field(R, 0.5 * width * S4)
@@ -555,43 +532,43 @@ def composed(stone, rim, quality, px):
     return icon
 
 
-def sheet(path, stones, rims):
+def sheet(path, stones, rim):
     cream = (0xEB, 0xE2, 0xCF)
     cell, pad = 104, 8
-    cols = 6
     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 13)
     small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 11)
-    w = 150 + cols * (cell + pad) + pad
-    shown_count = len([entry for entry in SETS if (entry[0], 1) in stones])
-    h = pad + shown_count * (cell + pad) + 520
+    qualities = list(QUALITY_METALS)
+    shown = [entry for entry in SETS if entry[0] in stones]
+    # Two columns of sets so sixteen rows are not a strip.
+    half = (len(shown) + 1) // 2
+    col_w = 130 + len(qualities) * (cell + pad)
+    w = pad + 2 * col_w + pad
+    h = pad + half * (cell + pad) + 520
     img = Image.new("RGB", (w, h), cream)
     d = ImageDraw.Draw(img)
-    qualities = list(QUALITY_METALS)
-    shown = [entry for entry in SETS if (entry[0], 1) in stones]
     for r, (name, colour, emblem) in enumerate(shown):
-        y = pad + r * (cell + pad)
-        d.text((10, y + cell / 2 - 8), name.upper(), fill=(0x1F, 0x19, 0x12), font=font)
-        for c in range(6):
-            slot = c + 1
-            q = qualities[(r + c) % 5]
-            icon = composed(stones[(name, slot)], rims[slot], q, cell - 12)
-            x = 150 + c * (cell + pad)
+        x0 = pad + (r // half) * col_w
+        y = pad + (r % half) * (cell + pad)
+        d.text((x0 + 4, y + cell / 2 - 8), name.upper(), fill=(0x1F, 0x19, 0x12), font=font)
+        for c, q in enumerate(qualities):
+            icon = composed(stones[name], rim, q, cell - 12)
+            x = x0 + 120 + c * (cell + pad)
             img.paste(icon, (x + 6, y + 2), icon)
-            d.text((x + 6, y + cell - 12), f"{slot} · {q}", fill=(0x6D, 0x5F, 0x4B), font=small)
+            d.text((x + 6, y + cell - 12), q, fill=(0x6D, 0x5F, 0x4B), font=small)
     # The sizes the app draws: 30, 44, 64 and 110 points, at 3x (device
     # pixels) and at 1x (about what the eye gets on the phone).
-    y = pad + shown_count * (cell + pad) + 4
+    y = pad + half * (cell + pad) + 4
     d.text((10, y), "at the app's sizes: 30pt row, 44pt tile, 64pt slot, 110pt card - device pixels (3x), then 1x", fill=(0x1F, 0x19, 0x12), font=font)
     x = 12
     for px in (90, 132, 192, 330):
-        for sample in ((shown[0][0], 3, "legend"), (shown[-1][0], 5, "rare")):
-            icon = composed(stones[(sample[0], sample[1])], rims[sample[1]], sample[2], px)
+        for sample in ((shown[0][0], "legend"), (shown[-1][0], "rare")):
+            icon = composed(stones[sample[0]], rim, sample[1], px)
             img.paste(icon, (x, y + 30 + (330 - px)), icon)
             x += px + 10
         x += 20
     x = 12
     for px in (30, 44, 64, 110):
-        icon = composed(stones[(shown[0][0], 3)], rims[3], "legend", px)
+        icon = composed(stones[shown[0][0]], rim, "legend", px)
         img.paste(icon, (x, y + 380), icon)
         x += px + 16
     img.save(path, quality=92)
@@ -602,17 +579,15 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sheet", help="write a preview sheet (jpg) instead of shipping")
     ap.add_argument("--ship", action="store_true", help="write the bundle files")
-    ap.add_argument("--only", help="one set name, for a quick look")
+    ap.add_argument("--only", help="set names, comma-separated, for a quick look")
     ap.add_argument("--emblems", help="write a sheet of the sixteen emblems alone")
     args = ap.parse_args()
 
     sets = [s for s in SETS if not args.only or s[0] in args.only.split(",")]
-    stones, rims = {}, {}
-    for slot in range(1, 7):
-        rims[slot] = render_rim(slot)
+    rim = render_rim()
+    stones = {}
     for name, colour, emblem in sets:
-        for slot in range(1, 7):
-            stones[(name, slot)] = render_stone(name, colour, emblem, slot)
+        stones[name] = render_stone(name, colour, emblem)
         print(f"rendered {name}")
 
     if args.emblems:
@@ -624,13 +599,19 @@ def main():
         img.save(args.emblems, quality=92)
         print("wrote", args.emblems)
     if args.sheet:
-        print("wrote", sheet(args.sheet, stones, rims))
+        print("wrote", sheet(args.sheet, stones, rim))
     if args.ship:
         OUT.mkdir(parents=True, exist_ok=True)
-        for (name, slot), img in stones.items():
-            img.save(OUT / f"relic_{name}_{slot}.png", optimize=True)
-        for slot, img in rims.items():
-            img.save(OUT / f"relic_rim_{slot}.png", optimize=True)
+        # The per-slot files of the first cut (relic_<set>_<n>, relic_rim_<n>)
+        # would be dead weight in the bundle; a reship clears them.
+        stale = [f for f in OUT.glob("relic_*_[1-6].png")]
+        for f in stale:
+            f.unlink()
+        if stale:
+            print(f"removed {len(stale)} per-slot files")
+        for name, img in stones.items():
+            img.save(OUT / f"relic_{name}.png", optimize=True)
+        rim.save(OUT / "relic_rim.png", optimize=True)
         for name, colour, emblem in SETS:
             render_emblem(emblem).save(OUT / f"relic_emblem_{name}.png", optimize=True)
         total = sum(f.stat().st_size for f in OUT.glob("relic_*.png"))

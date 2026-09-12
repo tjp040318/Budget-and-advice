@@ -434,10 +434,15 @@ final class LaunchProgress: ObservableObject {
     @Published private(set) var step: String = "Registering the faces"
     @Published private(set) var finished = false
 
-    /// The painting and the tip for this launch. The five banners take
-    /// turns, so the screen is not the same twice running.
+    /// The painting and the tip for this launch: the key art, painted for
+    /// this screen (2026-09-12, the one image the owner authorised), or,
+    /// in a bundle without it, one of the five banners in turn.
     let artName: String
     let tip: String
+
+    /// The five pantheons' gods on a summit over a sea of cloud at dawn,
+    /// 16:9, its lower third dark for the name and the bar.
+    static let keyArt = "launch_key_art"
 
     static let paintings = [
         "banner_olympus_stirs", "banner_duat_opens", "banner_ravens_gather",
@@ -463,7 +468,7 @@ final class LaunchProgress: ObservableObject {
         let defaults = UserDefaults.standard
         let count = defaults.integer(forKey: "launchCount")
         defaults.set(count + 1, forKey: "launchCount")
-        artName = Self.paintings[count % Self.paintings.count]
+        artName = BundleArt.exists(Self.keyArt) ? Self.keyArt : Self.paintings[count % Self.paintings.count]
         tip = Self.tips[count % Self.tips.count]
     }
 
@@ -544,8 +549,12 @@ struct LaunchView: View {
                 )
                 LaunchEmbers()
                 VStack(spacing: 0) {
+                    // 0.58 of the height: on the key art the five figures fill
+                    // the top half and the summit's dark base is here; the
+                    // mock at 0.50 put the name across the thunder god's
+                    // waist and 0.64 crowded the bar.
                     Spacer()
-                        .frame(height: geo.size.height * 0.5)
+                        .frame(height: geo.size.height * 0.58)
                     wordmark
                     Spacer(minLength: 8)
                     footer

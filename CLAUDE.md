@@ -414,8 +414,43 @@ environment can and cannot do. The short version:
   system launch screen is ink (`LaunchBackground` in the asset
   catalogue, `INFOPLIST_KEY_UILaunchScreen_UIColorName` in the pbxproj)
   so the first frame and the fade match. The tour's step 24 photographs
-  it frozen at 62%. A painted key art of its own would beat the banners:
-  one Gemini image, about fifteen cents, when the owner says so.
+  it frozen at 62%. **The painting is the game's own key art since
+  2026-09-12 (night):** `launch_key_art.jpg`, one Gemini image the owner
+  authorised ("Do it"), the five pantheons' gods on a summit over a sea
+  of cloud at dawn, described and not named, its lower half dark for the
+  name (`LaunchProgress.keyArt`; the banners take turns only in a bundle
+  without it); the painter lettered the eagle standard's plaque and the
+  letters were dissolved here rather than re-rolled. The wordmark sits at
+  0.58 of the height, on the summit's base under the figures.
+- **Every relic is the same stone (2026-09-12, night).** The owner, with
+  the collection's six differently shaped ghosts in front of him: "They
+  should be all the same shape but have the different symbols." One
+  pointy-top hexagon — the ring's own shape — in the set's colour with
+  the set's seal, `relic_<set>.png` ×16 and one `relic_rim.png`
+  (`tools/relic_art.py --ship` clears the old per-slot files); the slot
+  is a number badge on the stone's top-left corner wherever it stands
+  alone (`RelicIcon.showsSlot`, on in the inventory grid) and the
+  socket's place on the ring, and a filter chip says "Slot 1 · ATK".
+  **The set reference** (`RelicSetsSheet`, the end of
+  `RelicInventoryView.swift`): every set with its seal, its pieces, its
+  effect, and owned/worn counts; opened from "Set effects" on the
+  inventory's rail and in its menu, and from the unit sheet's sets row,
+  where it also counts that unit's pieces per set. The unit sheet's sets
+  row is progress chips — "Fury 2/2" lit, "Fates 1/4" dim — and a worn
+  relic in the grid wears its wearer's face (`WearerBadge`); the card
+  prints the +15 main stat (`Relic.projectedMainStat(atLevel:)`). Tour
+  step 25 photographs the reference. **Cards** (`UnitCard`): the carved
+  frame texture was an overlay on the whole card and hid the star row
+  under its gold bar ("why can I not see how many stars"); it is drawn
+  under the badges now and only on cards of 90 points and up
+  (`paintedFrameFrom`), the small cards wear the grade's thin metal
+  stroke, and a unit with a leader skill wears a gold crown at the top
+  right. **Meshy paints 2D too:** `POST /openapi/v1/text-to-image` exists
+  (read off its validation errors, nothing created) and takes `prompt`
+  and `ai_model` from nano-banana, nano-banana-pro, nano-banana-2,
+  nano-banana-2-lite, gpt-image-2 and two gpt-image-2-5 variants — the
+  same Google and OpenAI models, billed in Meshy credits; the price per
+  image is unknown until one is made, and the floor rule applies.
 - **The type is Cinzel and Manrope, and nothing is under ten points
   (2026-09-12, evening).** The owner: "the UI looks overwhelming",
   "a nice cleaner font", "make things size correctly". Two OFL faces
@@ -619,13 +654,13 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is twenty-four screens (steps 0–23): an arena battle
+  pass. The CI tour is twenty-six screens (steps 0–25): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,
   the victory's chest in three frames, the collection's Stage layout
   (21), the relic drop card (22), the relic filter sheet (23) and the
-  loading screen (24).
+  loading screen (24) and the relic set reference (25).
 - **The fight reads.** **Every unit's bars are a screen-space plate under
   its feet (2026-09-11, night):** `UnitPlateOverlay`, a SpriteKit scene laid
   over the `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one

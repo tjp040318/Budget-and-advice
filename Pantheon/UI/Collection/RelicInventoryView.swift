@@ -20,18 +20,22 @@ extension RelicQuality {
     }
 }
 
-/// A relic drawn the way the genre draws a rune: the slot's stone in the
-/// set's colour with the set's emblem engraved (`relic_<set>_<slot>`, from
+/// A relic drawn the way the genre draws a rune: the one hexagonal stone
+/// in the set's colour with the set's seal engraved (`relic_<set>`, from
 /// `tools/relic_art.py`), the quality's metal on the rim (a template tinted
-/// here), the grade as stars under it and the level badged on the corner.
-/// One view, every screen — the inventory's rows, the unit sheet's ring,
-/// the picker, the chest's shelf, the card — so the shape a player learns
-/// to read is the same shape everywhere.
+/// here), the grade as stars under it, the level badged on one corner and,
+/// where the stone stands alone in a grid or a list, the slot's number on
+/// the other. One view, every screen — the inventory's grid, the unit
+/// sheet's ring, the picker, the chest's shelf, the card — so the shape a
+/// player learns to read is the same shape everywhere.
 struct RelicIcon: View {
     let relic: Relic
     var size: CGFloat = 44
     var showsStars: Bool = true
     var showsLevel: Bool = true
+    /// The slot's number on the top-left corner. Off on the ring, where the
+    /// socket's place says it.
+    var showsSlot: Bool = false
     /// A gold flare, for the moment a power-up lands.
     var glow: Bool = false
 
@@ -55,6 +59,17 @@ struct RelicIcon: View {
                         .offset(x: size * 0.1, y: -size * 0.06)
                 }
             }
+            .overlay(alignment: .topLeading) {
+                if showsSlot {
+                    Text("\(relic.slot)")
+                        .font(Theme.numeric(max(7, size * 0.19)).weight(.bold))
+                        .foregroundStyle(Theme.surfaceHigh)
+                        .frame(width: max(11, size * 0.3), height: max(11, size * 0.3))
+                        .background(Circle().fill(Theme.ink.opacity(0.85)))
+                        .overlay(Circle().strokeBorder(Theme.goldDim, lineWidth: 0.5))
+                        .offset(x: -size * 0.08, y: -size * 0.06)
+                }
+            }
             if showsStars {
                 StarRow(stars: relic.grade, size: max(5, size * 0.13))
             }
@@ -66,7 +81,7 @@ struct RelicIcon: View {
             ZStack {
                 BundleImage(name: relic.stoneImageName, renderedAt: size)
                     .aspectRatio(contentMode: .fit)
-                if let rim = BundleArt.image(Relic.rimImageName(forSlot: relic.slot)) {
+                if let rim = BundleArt.image(Relic.rimImageName) {
                     Image(uiImage: rim)
                         .renderingMode(.template)
                         .resizable()
@@ -111,6 +126,32 @@ struct RelicSetEmblem: View {
                 .foregroundStyle(tint)
                 .frame(width: size, height: size)
         }
+    }
+}
+
+/// A unit's face in a small gold-rimmed disc: the genre's mark on a worn
+/// relic in the grid, which says "equipped, and by whom" without a word.
+struct WearerBadge: View {
+    let unit: ResolvedUnit
+    var size: CGFloat = 16
+
+    var body: some View {
+        let art = unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened)
+        ZStack {
+            Circle().fill(Theme.surfaceHigh)
+            if BundleArt.exists(art) {
+                BundleImage(name: art, renderedAt: size)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size, height: size)
+                    .clipShape(Circle())
+            } else {
+                Image(systemName: "person.fill")
+                    .font(.system(size: size * 0.5, weight: .bold))
+                    .foregroundStyle(Theme.gold)
+            }
+        }
+        .frame(width: size, height: size)
+        .overlay(Circle().strokeBorder(Theme.gold, lineWidth: 1))
     }
 }
 
@@ -210,6 +251,7 @@ struct RelicInventoryView: View {
     @State private var opened: Relic?
     @State private var pickingWearerFor: Relic?
     @State private var showOptimiser = false
+    @State private var showSets = false
 
     enum Sort: String, CaseIterable, Identifiable {
         case efficiency, quality, grade, level, set, slot, mainStat, newest
@@ -317,6 +359,11 @@ struct RelicInventoryView: View {
                     } label: {
                         Label("Optimise a unit", systemImage: "wand.and.stars")
                     }
+                    Button {
+                        showSets = true
+                    } label: {
+                        Label("Set effects", systemImage: "book.closed.fill")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.system(size: 13, weight: .black))
@@ -371,6 +418,10 @@ struct RelicInventoryView: View {
             .sheet(isPresented: $showFilter) {
                 RelicFilterSheet(filter: $filter)
             }
+            .sheet(isPresented: $showSets) {
+                RelicSetsSheet()
+                    .environmentObject(store)
+            }
             .onAppear {
                 // A beat after the screen is up, or the sheet has nothing to
                 // present from.
@@ -410,7 +461,7 @@ struct RelicInventoryView: View {
         return Button {
             tap(relic)
         } label: {
-            RelicIcon(relic: relic, size: 38, showsStars: true, showsLevel: true)
+            RelicIcon(relic: relic, size: 38, showsStars: true, showsLevel: true, showsSlot: true)
                 .frame(width: Self.cell, height: Self.cell + 8)
                 .background(
                     RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
@@ -434,12 +485,12 @@ struct RelicInventoryView: View {
                     }
                 }
                 .overlay(alignment: .bottomTrailing) {
-                    // A worn relic wears a dot, the genre's "equipped" mark.
-                    if relic.equippedBy != nil {
-                        Circle()
-                            .fill(Theme.info)
-                            .frame(width: 6, height: 6)
-                            .padding(4)
+                    // A worn relic wears its wearer's face, the genre's
+                    // "equipped" mark; it was a blue dot that said nothing
+                    // about who.
+                    if let wearer = relic.equippedBy.flatMap({ store.resolved($0) }) {
+                        WearerBadge(unit: wearer, size: 16)
+                            .padding(2)
                     }
                 }
                 .opacity(selecting && relic.isLocked ? 0.45 : 1)
@@ -488,7 +539,7 @@ struct RelicInventoryView: View {
                                     .lineLimit(1)
                                     .minimumScaleFactor(0.8)
                                 RelicQualityTag(quality: relic.resolvedQuality, size: 8)
-                                Text("Slot \(relic.slot) · \(Relic.shapeName(forSlot: relic.slot)) · \(relic.grade)★")
+                                Text("Slot \(relic.slot) · \(Relic.slotLabel(forSlot: relic.slot)) · \(relic.grade)★")
                                     .font(Theme.body(10))
                                     .foregroundStyle(Theme.textSecondary)
                                     .lineLimit(1)
@@ -703,11 +754,28 @@ struct RelicInventoryView: View {
                     .allowsHitTesting(false)
                 }
             }
-            Text(named.map { "\($0.displayName) · \($0.piecesRequired) pieces · \($0.effectDescription)" }
-                 ?? "Tap an emblem to filter by set; a completed set is lit.")
-                .font(Theme.body(10))
-                .foregroundStyle(Theme.textSecondary)
-                .lineLimit(1)
+            HStack(spacing: 6) {
+                Text(named.map { "\($0.displayName) · \($0.piecesRequired) pieces · \($0.effectDescription)" }
+                     ?? "Tap an emblem to filter by set; a completed set is lit.")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                // The reference: every set, its pieces and its effect, and
+                // how many of each the bag holds. The owner's question was
+                // "where can I see what each type of relic does and how
+                // many I need" (2026-09-12); this is where.
+                Button {
+                    Juice.haptic(.light)
+                    showSets = true
+                } label: {
+                    Label("Set effects", systemImage: "book.closed.fill")
+                        .font(Theme.body(10).weight(.bold))
+                        .foregroundStyle(Theme.gold)
+                        .lineLimit(1)
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 }
@@ -991,7 +1059,7 @@ struct RelicDetailView: View {
                     Text("\(relic.set.displayName) Relic")
                         .font(Theme.title(15))
                         .foregroundStyle(relic.resolvedQuality.inkColor)
-                    Text("Slot \(relic.slot) · \(Relic.shapeName(forSlot: relic.slot)) · \(relic.grade)★ · \(relic.set.piecesRequired)-piece set")
+                    Text("Slot \(relic.slot) · \(Relic.slotLabel(forSlot: relic.slot)) · \(relic.grade)★ · \(relic.set.piecesRequired)-piece set")
                         .font(Theme.body(9))
                         .foregroundStyle(Theme.textSecondary)
                     Text(relic.set.effectDescription)
@@ -1029,6 +1097,14 @@ struct RelicDetailView: View {
                     Text("+\(next.kind.format(next.value))")
                         .font(Theme.numeric(11))
                         .foregroundStyle(relic.level + 1 == relic.maxLevel ? Theme.gold : Theme.textSecondary)
+                }
+                // Where the road ends: the genre prints the +15 figure beside
+                // a rune so the player knows what the drachma is buying.
+                if relic.level < relic.maxLevel - 1 {
+                    let peak = relic.projectedMainStat(atLevel: relic.maxLevel)
+                    Text("· +15: +\(peak.kind.format(peak.value))")
+                        .font(Theme.numeric(9))
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
             .padding(.horizontal, 8)
@@ -2114,8 +2190,6 @@ private struct FilterChip: View {
     let isOn: Bool
     var tint: Color = Theme.gold
     var emblem: RelicSet? = nil
-    /// A bundle template image beside the word: the slot's silhouette.
-    var iconName: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -2123,14 +2197,6 @@ private struct FilterChip: View {
             HStack(spacing: 4) {
                 if let emblem {
                     RelicSetEmblem(set: emblem, size: 14, tint: isOn ? Theme.readableText(on: tint) : tint)
-                }
-                if let iconName, let image = BundleArt.image(iconName) {
-                    Image(uiImage: image)
-                        .renderingMode(.template)
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .foregroundStyle(isOn ? Theme.readableText(on: tint) : tint)
-                        .frame(width: 14, height: 14)
                 }
                 if !title.isEmpty {
                     Text(title)
@@ -2184,8 +2250,7 @@ struct RelicFilterSheet: View {
                         section("Slot") {
                             ForEach(1...6, id: \.self) { slot in
                                 FilterChip(
-                                    title: "\(slot) \(Relic.shapeName(forSlot: slot))", isOn: filter.slots.contains(slot),
-                                    iconName: Relic.rimImageName(forSlot: slot)
+                                    title: "Slot \(slot) · \(Relic.slotLabel(forSlot: slot))", isOn: filter.slots.contains(slot)
                                 ) {
                                     toggle(&filter.slots, slot)
                                 }
@@ -2689,7 +2754,7 @@ struct RelicDropCard: View {
             Text("\(relic.set.displayName) Relic")
                 .font(Theme.title(16))
                 .foregroundStyle(relic.resolvedQuality.inkColor)
-            Text("Slot \(relic.slot) · \(Relic.shapeName(forSlot: relic.slot)) · \(relic.grade)★")
+            Text("Slot \(relic.slot) · \(Relic.slotLabel(forSlot: relic.slot)) · \(relic.grade)★")
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textSecondary)
             Text("\(relic.set.piecesRequired) pieces: \(relic.set.effectDescription)")
@@ -2773,5 +2838,114 @@ struct RelicDropCard: View {
         }
         .padding(10)
         .panelBackground(radius: Theme.tightCorner)
+    }
+}
+
+// MARK: - The set reference
+
+/// Every set on one screen — its seal, its name, the pieces it takes, what
+/// it does, and how many of it the bag holds and the roster wears — the
+/// genre's set-effect list, reached from the inventory's rail, its menu and
+/// the unit sheet's sets row. Opened from a unit it also counts that unit's
+/// pieces per set, lit where the set is complete, so "one more Fates" is
+/// read here rather than worked out.
+struct RelicSetsSheet: View {
+    /// The unit whose progress the rows count, when opened from its sheet.
+    var unitID: UUID? = nil
+
+    @EnvironmentObject private var store: GameStore
+    @Environment(\.dismiss) private var dismiss
+
+    private var unit: ResolvedUnit? { unitID.flatMap { store.resolved($0) } }
+
+    var body: some View {
+        NavigationStack {
+            GameScreen(
+                "Relic sets",
+                subtitle: unit.map { "on \($0.name)" } ?? "2 pieces for a stat, 4 for an effect",
+                dismiss: { dismiss() }
+            ) {
+                BarButton(title: "Done", systemImage: "checkmark.circle.fill", tint: Theme.gold) { dismiss() }
+            } content: {
+                ScrollView(showsIndicators: false) {
+                    HStack(alignment: .top, spacing: 8) {
+                        column("STAT SETS · 2 PIECES", sets: RelicSet.allCases.filter { $0.piecesRequired == 2 })
+                        column("EFFECT SETS · 4 PIECES", sets: RelicSet.allCases.filter { $0.piecesRequired == 4 })
+                    }
+                    .padding(.horizontal, ScreenChrome.contentPadding)
+                    .padding(.vertical, 6)
+                }
+            }
+        }
+    }
+
+    private func column(_ title: String, sets: [RelicSet]) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(Theme.body(9).weight(.black))
+                .tracking(0.8)
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.horizontal, 2)
+            ForEach(sets) { relicSet in
+                row(relicSet)
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(8)
+        .panelBackground(radius: Theme.tightCorner)
+    }
+
+    private func row(_ relicSet: RelicSet) -> some View {
+        let owned = store.player.relics.filter { $0.set == relicSet }
+        let worn = owned.filter { $0.equippedBy != nil }.count
+        let onUnit = unit.map { unit in unit.relics.filter { $0.set == relicSet }.count }
+        let complete = (onUnit ?? 0) >= relicSet.piecesRequired
+        return HStack(spacing: 8) {
+            ZStack {
+                Circle().fill(Color(hex: relicSet.stoneHex))
+                RelicSetEmblem(set: relicSet, size: 15, tint: Color(hex: "#F6DC8C"))
+            }
+            .frame(width: 26, height: 26)
+            .overlay(Circle().strokeBorder(complete ? Theme.gold : Theme.stroke, lineWidth: complete ? 1.5 : 0.5))
+            VStack(alignment: .leading, spacing: 1) {
+                HStack(spacing: 5) {
+                    Text(relicSet.displayName)
+                        .font(Theme.title(12))
+                        .foregroundStyle(complete ? Theme.gold : Theme.textPrimary)
+                    Text("\(relicSet.piecesRequired) pieces")
+                        .font(Theme.body(9).weight(.bold))
+                        .foregroundStyle(Theme.textSecondary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Capsule().fill(Theme.surfaceHigh))
+                }
+                Text(relicSet.effectDescription)
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 4)
+            VStack(alignment: .trailing, spacing: 1) {
+                if let onUnit {
+                    Text("\(onUnit)/\(relicSet.piecesRequired)")
+                        .font(Theme.numeric(13).weight(.bold))
+                        .foregroundStyle(complete ? Theme.gold : (onUnit > 0 ? Theme.textPrimary : Theme.textSecondary))
+                    Text(complete ? "COMPLETE" : "WORN")
+                        .font(Theme.body(7).weight(.black))
+                        .tracking(0.5)
+                        .foregroundStyle(complete ? Theme.gold : Theme.textSecondary)
+                }
+                Text("\(owned.count) owned · \(worn) worn")
+                    .font(Theme.numeric(9))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .fill(complete ? Theme.gold.opacity(0.12) : Theme.surface)
+        )
     }
 }

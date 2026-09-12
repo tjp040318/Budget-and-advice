@@ -69,6 +69,7 @@ struct UnitDetailView: View {
     @State private var fodderPurpose: FodderPurpose = .levelUp
     @State private var showAwakening = false
     @State private var showLore = false
+    @State private var showSets = false
     @State private var selectedSkill = 0
 
     /// A slot number that can drive a sheet.
@@ -160,6 +161,10 @@ struct UnitDetailView: View {
                     AwakeningSheet(unit: unit)
                         .environmentObject(store)
                 }
+            }
+            .sheet(isPresented: $showSets) {
+                RelicSetsSheet(unitID: unitID)
+                    .environmentObject(store)
             }
             .alert(unit?.blueprint.epithet ?? "", isPresented: $showLore) {
                 Button("Close", role: .cancel) {}
@@ -416,33 +421,60 @@ struct UnitDetailView: View {
         }
     }
 
-    /// The completed sets as emblem chips — the genre names a set and
-    /// leaves what it does to the relic's own card. The sentences that were
-    /// here ("2 pieces for a stat, 4 for an effect", every set's effect)
-    /// were the ring's clutter.
+    /// Every set with a piece on the ring as a progress chip — "Fury 2/2"
+    /// lit in gold where the set is complete, "Fates 1/4" dim where it is
+    /// not — and a book that opens the set reference counting this unit's
+    /// pieces. The genre shows a set's count against its need beside the
+    /// rune hexagon; the completed-only chips before this left a player to
+    /// work out from six stones which set was one piece short.
     private func setsRow(_ unit: ResolvedUnit) -> some View {
-        Group {
-            if unit.activeRelicSets.isEmpty {
-                Text("No set bonus")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
-            } else {
-                HStack(spacing: 6) {
-                    ForEach(unit.activeRelicSets) { entry in
-                        HStack(spacing: 4) {
-                            RelicSetEmblem(set: entry.set, size: 12)
-                            Text(entry.completions > 1 ? "\(entry.set.displayName) ×\(entry.completions)" : entry.set.displayName)
-                                .font(Theme.body(10).weight(.bold))
-                                .foregroundStyle(Theme.gold)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 8)
-                        .frame(height: 24)
-                        .background(Capsule().fill(Theme.surfaceHigh))
-                        .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
-                    }
+        let tally = Dictionary(grouping: unit.relics, by: { $0.set }).mapValues(\.count)
+        // Complete sets first, then the nearest to complete, then by name,
+        // so the order is the same on every launch.
+        let entries = tally.keys.sorted { a, b in
+            let ca = tally[a, default: 0] / a.piecesRequired, cb = tally[b, default: 0] / b.piecesRequired
+            if ca != cb { return ca > cb }
+            let ra = tally[a, default: 0] % a.piecesRequired, rb = tally[b, default: 0] % b.piecesRequired
+            if ra != rb { return ra > rb }
+            return a.displayName < b.displayName
+        }
+        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 72, maximum: 120), spacing: 4)], spacing: 4) {
+            ForEach(entries) { relicSet in
+                let count = tally[relicSet, default: 0]
+                let complete = count >= relicSet.piecesRequired
+                HStack(spacing: 4) {
+                    RelicSetEmblem(set: relicSet, size: 12, tint: complete ? Theme.gold : Theme.textSecondary)
+                    Text("\(relicSet.displayName) \(count)/\(relicSet.piecesRequired)")
+                        .font(Theme.body(10).weight(.bold))
+                        .foregroundStyle(complete ? Theme.gold : Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
+                .padding(.horizontal, 6)
+                .frame(height: 22)
+                .frame(maxWidth: .infinity)
+                .background(Capsule().fill(complete ? Theme.surfaceHigh : Theme.surface))
+                .overlay(Capsule().strokeBorder(complete ? Theme.gold.opacity(0.35) : Theme.stroke.opacity(0.6), lineWidth: 1))
             }
+            Button {
+                Juice.haptic(.light)
+                showSets = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "book.closed.fill")
+                        .font(.system(size: 10, weight: .bold))
+                    Text(entries.isEmpty ? "Set effects" : "Sets")
+                        .font(Theme.body(10).weight(.bold))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(Theme.gold)
+                .padding(.horizontal, 6)
+                .frame(height: 22)
+                .frame(maxWidth: .infinity)
+                .background(Capsule().fill(Theme.surface))
+                .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
+            }
+            .buttonStyle(.plain)
         }
         .frame(maxWidth: .infinity)
     }
@@ -561,43 +593,12 @@ struct UnitDetailView: View {
         value >= 0.7 ? Theme.success : (value >= 0.45 ? Theme.gold : Theme.textSecondary)
     }
 
-    /// What to farm next, in one line: the set with pieces on it but not
-    /// enough of them, then the slots that are simply empty.
+    /// The slots that are simply empty, in one line. The sets in progress
+    /// used to be here too; the sets row's chips count them now, against
+    /// each set's need, so the footer says only what the chips cannot.
     ///
-    /// Nil when the ring is full and every piece on it belongs to a completed
-    /// set: there is nothing left to farm, and the sets row above is saying so
-    /// in three lines.
+    /// Nil when the ring is full: there is nothing left to say.
     private func setProgressNote(_ unit: ResolvedUnit) -> String? {
-        var tally: [RelicSet: Int] = [:]
-        for relic in unit.relics { tally[relic.set, default: 0] += 1 }
-        let pending = tally
-            .filter { entry in
-                let spare = entry.value % entry.key.piecesRequired
-                guard spare > 0 else { return false }
-                // A set only counts as in progress if finishing it is possible
-                // at all. Five pieces of a four-piece set leaves a spare of
-                // one, and printing "Fury 1/4" there asks for three more Fury
-                // pieces when the eight slots that would take are two more
-                // than the ring has: the honest advice in that case is the
-                // empty-slot line below.
-                let target = (entry.value / entry.key.piecesRequired + 1) * entry.key.piecesRequired
-                return target <= 6
-            }
-            // Closest to done first, then by name. The name is not decoration:
-            // `tally` is a Dictionary, so without it two sets a piece short
-            // would be printed in whichever order the hash table happened to
-            // hold them — an order that is reseeded on every launch.
-            .sorted {
-                let left = $0.value % $0.key.piecesRequired
-                let right = $1.value % $1.key.piecesRequired
-                if left != right { return left > right }
-                return $0.key.displayName < $1.key.displayName
-            }
-            .prefix(2)
-            .map { "\($0.key.displayName) \($0.value % $0.key.piecesRequired)/\($0.key.piecesRequired)" }
-        if !pending.isEmpty {
-            return "In progress: " + pending.joined(separator: " · ")
-        }
         let empty = 6 - unit.relics.count
         guard empty > 0 else { return nil }
         return "\(empty) slot\(empty == 1 ? "" : "s") empty · Auto-equip fills them"
@@ -1125,7 +1126,7 @@ struct RelicSlotTile: View {
                 if let relic {
                     RelicIcon(relic: relic, size: size * 0.74, showsStars: false, showsLevel: true)
                 } else {
-                    if let ghost = BundleArt.image(Relic.rimImageName(forSlot: slot)) {
+                    if let ghost = BundleArt.image(Relic.rimImageName) {
                         Image(uiImage: ghost)
                             .renderingMode(.template)
                             .resizable()

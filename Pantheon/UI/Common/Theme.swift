@@ -741,15 +741,20 @@ extension View {
     }
 
     /// Frames a view in its rarity's metal, with the matching outer glow.
-    func rarityFrame(_ rarity: Rarity, radius: CGFloat = Theme.tightCorner) -> some View {
-        self
+    /// `painted` says whether the caller draws the carved frame texture over
+    /// the card, in which case the metal stroke stays out of its way; nil
+    /// reads it off the bundle, the way every caller did before the small
+    /// cards gave the texture up (2026-09-12).
+    func rarityFrame(_ rarity: Rarity, radius: CGFloat = Theme.tightCorner, painted: Bool? = nil) -> some View {
+        let carved = painted ?? rarity.hasPaintedFrame
+        return self
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(rarity.frame, lineWidth: rarity.hasPaintedFrame ? 0 : rarity.frameWidth)
+                    .strokeBorder(rarity.frame, lineWidth: carved ? 0 : rarity.frameWidth)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Color.white.opacity(rarity.hasPaintedFrame ? 0 : 0.22), lineWidth: 0.5)
+                    .strokeBorder(Color.white.opacity(carved ? 0 : 0.22), lineWidth: 0.5)
             )
             .shadow(color: rarity.glow.opacity(rarity.glowRadius > 0 ? 0.7 : 0),
                     radius: rarity.glowRadius, x: 0, y: 0)

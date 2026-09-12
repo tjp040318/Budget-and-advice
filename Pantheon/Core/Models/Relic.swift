@@ -318,8 +318,14 @@ struct Relic: Codable, Equatable, Identifiable, Sendable {
     /// Main stat value at the current level: linear to +14, then the last
     /// level's jump to 3x the starting value — the genre's +15, which is
     /// what makes the expensive last attempt worth the drachma.
-    var effectiveMainStat: StatModifier {
-        let growth = level >= maxLevel ? 3.0 : 1.0 + (Double(level) / Double(maxLevel)) * 1.8
+    var effectiveMainStat: StatModifier { projectedMainStat(atLevel: level) }
+
+    /// The main stat at any level, for the card's "at +15" figure — the
+    /// number the genre prints beside a rune so a player knows what the
+    /// drachma is buying before the first attempt.
+    func projectedMainStat(atLevel target: Int) -> StatModifier {
+        let clamped = max(0, min(maxLevel, target))
+        let growth = clamped >= maxLevel ? 3.0 : 1.0 + (Double(clamped) / Double(maxLevel)) * 1.8
         return StatModifier(mainStat.kind, mainStat.value * growth)
     }
 
@@ -345,24 +351,25 @@ struct Relic: Codable, Equatable, Identifiable, Sendable {
 
     var allStats: [StatModifier] { [effectiveMainStat] + effectiveSubStats }
 
-    /// The stone's bundle image, drawn by `tools/relic_art.py`: the slot's
-    /// silhouette in the set's colour with the set's emblem engraved.
-    var stoneImageName: String { "relic_\(set.rawValue)_\(slot)" }
+    /// The stone's bundle image, drawn by `tools/relic_art.py`: the one
+    /// hexagon in the set's colour with the set's seal engraved. Every slot
+    /// wears the same stone — the first cut gave each slot its own
+    /// silhouette and the owner called the six shapes weird (2026-09-12) —
+    /// so the slot is a number badge (`RelicIcon.showsSlot`) or the socket's
+    /// place on the ring.
+    var stoneImageName: String { "relic_\(set.rawValue)" }
 
-    /// The quality rim for a slot, a template the app tints with the
-    /// quality's metal.
-    static func rimImageName(forSlot slot: Int) -> String { "relic_rim_\(slot)" }
+    /// The quality rim, a template the app tints with the quality's metal.
+    static let rimImageName = "relic_rim"
 
-    /// What a slot's stone is shaped like, the way a player learns to tell
-    /// the slot from the silhouette before reading a number.
-    static func shapeName(forSlot slot: Int) -> String {
+    /// A slot's main stat in a word, for the chips and captions that name a
+    /// slot: the odd slots are fixed, the even ones the decision.
+    static func slotLabel(forSlot slot: Int) -> String {
         switch slot {
-        case 1: return "Crystal"
-        case 2: return "Medallion"
-        case 3: return "Shield"
-        case 4: return "Hexagon"
-        case 5: return "Vial"
-        default: return "Tablet"
+        case 1: return "ATK"
+        case 3: return "DEF"
+        case 5: return "HP"
+        default: return "Free"
         }
     }
 
