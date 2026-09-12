@@ -572,6 +572,7 @@ struct RelicRow: View {
                             .font(Theme.body(11))
                             .foregroundStyle(Theme.gold)
                             .lineLimit(1)
+                            .layoutPriority(1)
                         Spacer(minLength: 4)
                         if let ownerName {
                             Image(systemName: "person.fill")
@@ -781,10 +782,10 @@ struct RelicDetailView: View {
     /// level takes it, its sub stats with the last roll marked, and the
     /// level track with the sub-stat levels on it.
     private func sheet(_ relic: Relic) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 12) {
                 // The stone, large: the one place a relic is looked at.
-                RelicIcon(relic: relic, size: 92, showsStars: true, showsLevel: false, glow: glow)
+                RelicIcon(relic: relic, size: 80, showsStars: true, showsLevel: false, glow: glow)
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         RelicQualityTag(quality: relic.resolvedQuality, size: 8)
@@ -1125,7 +1126,7 @@ struct RelicDetailView: View {
                     .minimumScaleFactor(0.75)
             }
             .foregroundStyle(enabled ? tint : Theme.textSecondary)
-            .frame(maxWidth: .infinity, minHeight: 32)
+            .frame(maxWidth: .infinity, minHeight: 28)
             .background(Theme.panel(Theme.tightCorner))
         }
         .disabled(!enabled)

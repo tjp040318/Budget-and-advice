@@ -732,6 +732,12 @@ final class GameStore: ObservableObject {
             for stone in RelicStone.all where RelicService.stoneCount(stone, player: player) < 3 {
                 RelicService.addStones(stone.id, 3, player: &player)
             }
+            // Zeus wears what is free, so the sheet's ring, the collection's
+            // slot grid and the picker's "Now" photograph stone tiles rather
+            // than six empty pluses.
+            if let zeus = player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }), zeus.equippedRelics.isEmpty {
+                RelicService.autoEquip(unitID: zeus.id, player: &player)
+            }
             player.wallet.add(.pantheonic, 10)
             for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {
                 player.essences[id, default: 0] += 12
