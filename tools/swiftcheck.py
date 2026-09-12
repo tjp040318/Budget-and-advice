@@ -813,6 +813,8 @@ def check_unknown_types(files, declared, errors):
         "SIMD3","simd_quatf","simd_float3",
         # SpriteKit, since the unit plates went screen-space (2026-09-11),
         # and the renderer delegate and Core Graphics names they use.
+        # CoreText, since the bundled faces are registered at launch (2026-09-12).
+        "CoreText","CTFontManagerRegisterFontsForURL","CFError","CFURL","Unmanaged",
         "SpriteKit","SKScene","SKNode","SKSpriteNode","SKCropNode","SKTexture","SKAction",
         "SKShapeNode","SKLabelNode","SCNSceneRenderer","SCNSceneRendererDelegate","CGPath",
         "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",

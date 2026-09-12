@@ -399,18 +399,50 @@ environment can and cannot do. The short version:
   policy, so the per-level numbers are ours); `balance.py --economy`
   prints the expected drachma to +15 with the odds. Change the table in
   both files.
+- **The type is Cinzel and Manrope, and nothing is under ten points
+  (2026-09-12, evening).** The owner: "the UI looks overwhelming",
+  "a nice cleaner font", "make things size correctly". Two OFL faces
+  ship in `Pantheon/Resources/Fonts/` (eight static instances cut from
+  Google's variable files with fontTools; the licences beside them) and
+  are registered at launch by `FontLibrary.registerBundledFonts()`
+  (Theme.swift, CoreText — the Info.plist is generated, so no
+  `UIAppFonts`): **Cinzel** (Roman inscriptional capitals) for
+  `Theme.display`/`title` — the carved roles, in capitals, never under
+  12 — and **Manrope** for `body` and `numeric` (Manrope-Bold with
+  `monospacedDigit()`, its `tnum`, so stat columns line up without a
+  monospaced face). A missing file falls back to the system faces. The
+  **type floor** is in the same four functions: `body` ≥ 10, `numeric`
+  ≥ 10.5, `title` ≥ 12 after `fontScale`; the density pass had ninety
+  call sites at 7–9 (6.3–8.1 on the phone) and the floor lifted them all.
+  The console's `[Fonts] registered N of N` line says whether the faces
+  arrived. The other screens' bars, wallet strips and sentence panels
+  are the next pass (task #50); this one changed the type everywhere and
+  the relic screens' shape.
 - **Relics are objects, and the rune management is the genre's
   (2026-09-12).** A relic draws as a stone: the SLOT is the silhouette
   (1 crystal, 2 medallion, 3 shield, 4 hexagon, 5 vial, 6 tablet), the
-  SET the colour and the emblem engraved on it, the QUALITY the rim, the
-  grade the stars under it, the level a badge — `RelicIcon` in
-  `RelicInventoryView.swift`, on every screen a relic appears. The stones
-  are rendered here by `python3 tools/relic_art.py --sheet x.jpg` (judge)
-  and `--ship` (writes `relic_<set>_<slot>.png` ×96, `relic_rim_<slot>.png`
-  ×6 as templates the app tints, `relic_emblem_<set>.png` ×16, 5.3 MB) —
-  Gemini is paused, and a painted set dropped in under the same names
-  replaces them with no code change (about 22 images, ~$3, for the
-  emblems and shapes). **Quality** (`RelicQuality`: Normal, Magic, Rare,
+  SET the colour and an **engraved line seal** — one stroke weight for
+  all sixteen, classical motifs: an aspis for Aegis, a Doric column for
+  Bulwark, a torch for Vigil, a chalice for Ichor, a spiral for Wrath,
+  scales for Nemesis, a wheel for Fates, crossed swords for Ruin, a
+  ringed pentagon for Wards, an eye, a bolt, waves, links, a mountain,
+  wind, a flame (the first cut's filled symbols were "clip art", the
+  owner's word) — the QUALITY the rim, the grade the stars under it, the
+  level a badge — `RelicIcon` in `RelicInventoryView.swift`, on every
+  screen a relic appears. The stones are rendered here by `python3
+  tools/relic_art.py --sheet x.jpg` (judge, `--only fury,aegis` for a
+  quick look) and `--ship` (writes `relic_<set>_<slot>.png` ×96,
+  `relic_rim_<slot>.png` ×6 as templates the app tints,
+  `relic_emblem_<set>.png` ×16, about 5 MB) — Gemini is paused, and a
+  painted set dropped in under the same names replaces them with no
+  code change (about 22 images, ~$3, for the emblems and shapes). **The
+  inventory is the genre's grid** (2026-09-12, evening): the stones at
+  38 pt, eight a row, ONE panel at the right for the relic tapped (name,
+  quality, main, subs, set, fit, wearer; Open, Equip on…/Change, Lock,
+  Sell), a second tap opens the card, the set rail is sixteen emblems
+  with a count; the bar is four controls (Filter, Sort, Select, a glyph
+  menu for the fit and the optimiser). The text rows it replaced showed
+  forty-eight sub stats at once and were called overwhelming. **Quality** (`RelicQuality`: Normal, Magic, Rare,
   Hero, Legend = 0–4 sub stats at the drop) is rolled by grade
   (`RelicQuality.weights`, a 6★ Legend one in eight), floored at Magic on
   Hell tiers and Rare from raids (`StageRewards.qualityFloor`), stored as

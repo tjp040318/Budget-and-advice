@@ -1144,7 +1144,7 @@ struct RelicSlotTile: View {
                     // number over its kind. The grade is the stars under the
                     // stone on every other screen; here the tile has no room
                     // for them, and a tap opens the card that has.
-                    RelicIcon(relic: relic, size: size * 0.55, showsStars: false, showsLevel: true)
+                    RelicIcon(relic: relic, size: size * 0.5, showsStars: false, showsLevel: true)
                         .padding(.top, 2)
                     Text(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))
                         .font(Theme.numeric(size * 0.19))

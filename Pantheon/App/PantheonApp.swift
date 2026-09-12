@@ -9,6 +9,9 @@ struct PantheonApp: App {
     /// it in a default property value would leave that isolation implicit.
     @MainActor
     init() {
+        // The two bundled faces, before any view asks `Theme` for a font.
+        FontLibrary.registerBundledFonts()
+
         _store = StateObject(wrappedValue: GameStore.bootstrap())
 
         // The whole app is cream and gold, the tab bar included; setting it

@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreText
 import UIKit
 
 /// The app's visual language, in one place.
@@ -205,22 +206,53 @@ enum Theme {
     /// descriptions; numbers stay monospaced so stat columns line up. Two
     /// voices, each doing the job it is good at, which is the whole of
     /// typography.
+    /// The two bundled faces (`Pantheon/Resources/Fonts`, OFL, registered
+    /// at launch by `FontLibrary`): **Cinzel** — Roman inscriptional
+    /// capitals, the lettering a temple actually wears — for the carved
+    /// roles, and **Manrope** — a clean geometric sans with true tabular
+    /// figures — for every word and every number. The system serif and the
+    /// monospaced digits it replaces were two of the three things the owner
+    /// read as "not premium" (2026-09-12). A missing file falls back to the
+    /// system face, so a broken bundle is a plainer game, never a blank one.
+    static let carvedFace = "Cinzel-Bold"
+    static let carvedHeavyFace = "Cinzel-Black"
+    static let textFace = "Manrope-Medium"
+    static let numberFace = "Manrope-Bold"
+
+    private static let hasCarved: Bool = UIFont(name: carvedFace, size: 12) != nil
+    private static let hasText: Bool = UIFont(name: textFace, size: 12) != nil
+
+    /// Nothing on the phone under ten points. The density pass left ninety
+    /// call sites at 7–9, which after `fontScale` was 6.3–8.1 on the
+    /// screen; Apple's floor for legible text is 11 and the genre's smallest
+    /// label about that. The floor lifts them all at once.
+    static let bodyFloor: CGFloat = 10
+    static let numericFloor: CGFloat = 10.5
+    static let titleFloor: CGFloat = 12
+
     static func display(_ size: CGFloat) -> Font {
-        .system(size: size * fontScale, weight: .black, design: .serif)
+        let points = max(titleFloor, size * fontScale)
+        return hasCarved ? .custom(carvedHeavyFace, size: points) : .system(size: points, weight: .black, design: .serif)
     }
 
     static func title(_ size: CGFloat = 20) -> Font {
-        .system(size: size * fontScale, weight: .heavy, design: .serif)
+        let points = max(titleFloor, size * fontScale)
+        return hasCarved ? .custom(carvedFace, size: points) : .system(size: points, weight: .heavy, design: .serif)
     }
 
     static func body(_ size: CGFloat = 15) -> Font {
-        .system(size: size * fontScale, weight: .medium, design: .default)
+        let points = max(bodyFloor, size * fontScale)
+        return hasText ? .custom(textFace, size: points) : .system(size: points, weight: .medium, design: .default)
     }
 
-    /// Numbers are monospaced so columns of stats line up, which matters more
-    /// here than in most apps — the whole game is comparing two stat blocks.
+    /// Numbers keep tabular figures so columns of stats line up, which
+    /// matters more here than in most apps — the whole game is comparing
+    /// two stat blocks. Manrope's `tnum` does it without a monospaced face.
     static func numeric(_ size: CGFloat = 15) -> Font {
-        .system(size: size * fontScale, weight: .bold, design: .monospaced)
+        let points = max(numericFloor, size * fontScale)
+        return hasText
+            ? Font.custom(numberFace, size: points).monospacedDigit()
+            : .system(size: points, weight: .bold, design: .monospaced)
     }
 
     // MARK: - Shapes
@@ -727,4 +759,31 @@ extension View {
     // and its title style. `GameScreen` replaced it on every menu and it had
     // no call sites left, so it is gone rather than waiting to be picked up
     // again — a second chrome language is exactly what this pass is for.
+}
+
+
+// MARK: - The bundled faces
+
+/// Registers the `.ttf` files in the bundle with CoreText at launch — the
+/// generated Info.plist has no font list, and registration needs none.
+/// Called first thing in `PantheonApp.init`, before any view asks `Theme`
+/// for a font. The console line is for the CI tour: a run whose frames
+/// show the system faces will say why here.
+enum FontLibrary {
+    @discardableResult
+    static func registerBundledFonts() -> Int {
+        var urls = Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? []
+        urls += Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: "Fonts") ?? []
+        var registered = 0
+        for url in urls {
+            var error: Unmanaged<CFError>?
+            if CTFontManagerRegisterFontsForURL(url as CFURL, .process, &error) {
+                registered += 1
+            }
+        }
+        let carved = UIFont(name: Theme.carvedFace, size: 12) != nil
+        let text = UIFont(name: Theme.textFace, size: 12) != nil
+        print("[Fonts] registered \(registered) of \(urls.count) bundled faces; Cinzel \(carved), Manrope \(text)")
+        return registered
+    }
 }

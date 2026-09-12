@@ -172,9 +172,11 @@ class Path2D:
         return min(xs), min(ys), max(xs), max(ys)
 
 
-def mask_of(path, size=S4, scale=None, offset=(0.0, 0.0)):
-    """Even-odd fill of the path's subpaths into a bool array (size×size).
-    Unit coordinate (0,0) is the centre; +y is up; `scale` px per unit."""
+def mask_of(path, size=S4, scale=None, offset=(0.0, 0.0), stroke=None):
+    """Even-odd fill of the path's subpaths into a bool array (size×size),
+    or — with `stroke`, a width in unit coordinates — every subpath drawn as
+    a line of that width with round joints and caps, unioned. Unit
+    coordinate (0,0) is the centre; +y is up; `scale` px per unit."""
     if scale is None:
         scale = size / 2 * 0.94
     acc = None
@@ -182,10 +184,23 @@ def mask_of(path, size=S4, scale=None, offset=(0.0, 0.0)):
         img = Image.new("L", (size, size), 0)
         d = ImageDraw.Draw(img)
         pts = [(size / 2 + (x + offset[0]) * scale, size / 2 - (y + offset[1]) * scale) for x, y in sp]
-        d.polygon(pts, fill=255)
-        m = np.array(img) > 127
-        acc = m if acc is None else (acc ^ m)
+        if stroke is None:
+            d.polygon(pts, fill=255)
+            m = np.array(img) > 127
+            acc = m if acc is None else (acc ^ m)
+        else:
+            w = max(1, int(round(stroke * scale)))
+            d.line(pts, fill=255, width=w, joint="curve")
+            r = w / 2
+            for px, py in (pts[0], pts[-1]):
+                d.ellipse([px - r, py - r, px + r, py + r], fill=255)
+            m = np.array(img) > 127
+            acc = m if acc is None else (acc | m)
     return acc if acc is not None else np.zeros((size, size), bool)
+
+
+def dot(cx, cy, r):
+    return Path2D().circle(cx, cy, r)
 
 
 # ---------------------------------------------------------------- slot shapes
@@ -224,161 +239,162 @@ def shape_path(name):
 
 # ---------------------------------------------------------------- emblems
 
-def emblem_path(name):
-    p = Path2D()
+STROKE = 0.17   # the seal's line, in unit coordinates of the emblem's box
+
+
+def emblem_strokes(name):
+    """The set's seal as line work: a Path2D whose subpaths are STROKED, and a
+    second Path2D of small FILLED marks (a pupil, a boss). Every seal is
+    drawn with the one stroke, so the sixteen read as one engraver's hand —
+    the first cut mixed filled blobs and outlines and photographed as clip
+    art."""
+    lines = Path2D()
+    fills = Path2D()
     if name == "flame":
-        p.move(0, 1.0)
-        p.curve(0.55, 0.55, 0.72, 0.1, 0.5, -0.4)
-        p.curve(0.4, -0.7, 0.2, -0.95, 0, -1.0)
-        p.curve(-0.2, -0.95, -0.62, -0.7, -0.56, -0.2)
-        p.curve(-0.52, 0.15, -0.3, 0.3, -0.36, 0.55)
-        p.curve(-0.2, 0.5, -0.12, 0.35, -0.1, 0.2)
-        p.curve(0.1, 0.5, 0.15, 0.75, 0, 1.0)
-        p.close()
-        # An inner tongue, cut out.
-        p.move(0.02, 0.12)
-        p.curve(0.3, -0.15, 0.32, -0.45, 0.1, -0.68)
-        p.curve(-0.12, -0.5, -0.3, -0.3, -0.16, -0.05)
-        p.curve(-0.08, 0.05, 0.0, 0.05, 0.02, 0.12)
-        return p.close()
-    if name == "shield":
-        p.move(-0.8, 0.75).line(0.8, 0.75).line(0.8, 0.1)
-        p.curve(0.8, -0.5, 0.35, -0.85, 0, -1.0)
-        p.curve(-0.35, -0.85, -0.8, -0.5, -0.8, 0.1)
-        p.close()
-        # A chevron cut out of it.
-        p.move(-0.5, 0.25).line(0, -0.2).line(0.5, 0.25).line(0.5, -0.05).line(0, -0.5).line(-0.5, -0.05)
-        return p.close()
-    if name == "keep":
-        # A crenellated tower with a door.
-        pts = [(-0.7, -1.0), (-0.7, 0.55), (-0.45, 0.55), (-0.45, 0.95), (-0.15, 0.95), (-0.15, 0.55),
-               (0.15, 0.55), (0.15, 0.95), (0.45, 0.95), (0.45, 0.55), (0.7, 0.55), (0.7, -1.0)]
-        p.polygon(pts)
-        p.move(-0.2, -1.0).line(-0.2, -0.35)
-        p.arc(0, -0.35, 0.2, 180, 0, 20)
-        p.line(0.2, -1.0)
-        p.close()
-        # Two arrow slits.
-        p.polygon([(-0.32, 0.05), (-0.18, 0.05), (-0.18, 0.4), (-0.32, 0.4)])
-        p.polygon([(0.18, 0.05), (0.32, 0.05), (0.32, 0.4), (0.18, 0.4)])
-        return p
-    if name == "wing":
-        # Three swept feathers from a root at the lower left.
-        for i, (tipx, tipy, w) in enumerate([(0.95, 0.75, 0.26), (0.95, 0.15, 0.24), (0.8, -0.5, 0.22)]):
-            rx, ry = -0.85, -0.7 + i * 0.12
-            p.move(rx, ry)
-            p.curve(rx + 0.3, ry + 0.9 - i * 0.25, tipx - 0.5, tipy + 0.35, tipx, tipy)
-            p.curve(tipx - 0.35, tipy - 0.1 - w, rx + 0.45, ry + 0.25, rx, ry)
-            p.close()
-        return p
-    if name == "bolt":
-        return p.polygon([(0.15, 1.0), (-0.55, 0.05), (-0.05, 0.05), (-0.35, -1.0), (0.55, 0.15), (0.05, 0.15)])
-    if name == "burst":
+        # A flame leaning right, its outer edge curling back, an inner tongue.
+        lines.move(-0.15, -0.95)
+        lines.curve(-0.85, -0.45, -0.75, 0.3, -0.35, 0.45)
+        lines.curve(-0.15, 0.55, -0.2, 0.8, 0.05, 1.0)
+        lines.curve(0.2, 0.7, 0.55, 0.55, 0.6, 0.15)
+        lines.curve(0.65, -0.3, 0.45, -0.75, -0.15, -0.95)
+        lines.close()
+        tongue = Path2D()
+        tongue.move(0.02, -0.55)
+        tongue.curve(0.4, -0.35, 0.35, 0.15, 0.08, 0.32)
+        lines.subpaths.append(tongue.current)
+    elif name == "shield":
+        # A Greek aspis face on: the rim, the inner ring, the boss.
+        lines.circle(0, 0, 0.95)
+        lines.circle(0, 0, 0.55)
+        fills.circle(0, 0, 0.18)
+    elif name == "keep":
+        # A Doric column: abacus, echinus, fluted shaft, base.
+        lines.subpaths.append([(-0.72, 0.95), (0.72, 0.95)])
+        lines.subpaths.append([(-0.6, 0.72), (0.6, 0.72)])
+        lines.subpaths.append([(-0.62, 0.72), (-0.42, 0.55), (-0.42, -0.6)])
+        lines.subpaths.append([(0.62, 0.72), (0.42, 0.55), (0.42, -0.6)])
+        lines.subpaths.append([(-0.12, 0.5), (-0.12, -0.55)])
+        lines.subpaths.append([(0.12, 0.5), (0.12, -0.55)])
+        lines.subpaths.append([(-0.6, -0.75), (0.6, -0.75)])
+        lines.subpaths.append([(-0.72, -0.95), (0.72, -0.95)])
+    elif name == "wing":
+        # Three strokes of wind, curling at the head.
+        for y0, length in ((0.55, 1.5), (0.0, 1.85), (-0.55, 1.5)):
+            x0 = -0.95
+            p = Path2D()
+            p.move(x0, y0)
+            p.line(x0 + length - 0.5, y0)
+            p.curve(x0 + length - 0.05, y0, x0 + length - 0.05, y0 + 0.42, x0 + length - 0.42, y0 + 0.42)
+            p.curve(x0 + length - 0.62, y0 + 0.42, x0 + length - 0.66, y0 + 0.2, x0 + length - 0.5, y0 + 0.16)
+            lines.subpaths.append(p.current)
+    elif name == "bolt":
+        lines.polygon([(0.2, 1.0), (-0.55, 0.1), (-0.05, 0.1), (-0.35, -1.0), (0.5, 0.15), (0.05, 0.15)])
+    elif name == "burst":
+        # Ruin: two swords crossed — blade, guard, grip.
+        for rot in (45, -45):
+            sword = Path2D()
+            sword.subpaths.append([(0.0, 1.0), (0.0, -0.7)])
+            sword.subpaths.append([(-0.34, -0.42), (0.34, -0.42)])
+            sword.subpaths.append([(0.0, -0.7), (0.0, -0.95)])
+            lines.subpaths.extend(sword.transformed(rotate=rot).subpaths)
+    elif name == "eye":
+        lines.move(-1.0, 0)
+        lines.curve(-0.55, 0.65, 0.55, 0.65, 1.0, 0)
+        lines.curve(0.55, -0.65, -0.55, -0.65, -1.0, 0)
+        lines.close()
+        lines.circle(0, 0, 0.38)
+        fills.circle(0, 0, 0.15)
+    elif name == "seal":
+        # A ward: a ring, and a pentagon set within it.
+        lines.circle(0, 0, 0.95)
+        lines.polygon([(0.6 * math.cos(math.radians(90 + k * 72)), 0.6 * math.sin(math.radians(90 + k * 72))) for k in range(5)])
+        fills.circle(0, 0, 0.1)
+    elif name == "chalice":
+        p = Path2D()
+        p.move(-0.85, 0.75)
+        p.curve(-0.85, 0.1, -0.5, -0.15, 0.0, -0.15)
+        p.curve(0.5, -0.15, 0.85, 0.1, 0.85, 0.75)
+        lines.subpaths.append(p.current)
+        lines.subpaths.append([(-0.85, 0.75), (0.85, 0.75)])
+        lines.subpaths.append([(0.0, -0.15), (0.0, -0.7)])
+        lines.subpaths.append([(-0.5, -0.92), (0.5, -0.92)])
+    elif name == "triskelion":
+        # Wrath: a spiral, two and a quarter turns.
         pts = []
-        for i in range(8):
-            a = math.radians(90 + i * 45)
-            r = 1.0 if i % 2 == 0 else 0.42
+        for i in range(0, 260):
+            t = i / 259
+            a = math.radians(t * 810)
+            r = 0.08 + 0.87 * t
             pts.append((r * math.cos(a), r * math.sin(a)))
-            a2 = math.radians(90 + i * 45 + 22.5)
-            pts.append((0.42 * math.cos(a2), 0.42 * math.sin(a2)) if i % 2 == 0 else (0.72 * math.cos(a2), 0.72 * math.sin(a2)))
-        p.polygon(pts)
-        p.circle(0, 0, 0.16)
-        return p
-    if name == "eye":
-        p.move(-1.0, 0)
-        p.curve(-0.55, 0.62, 0.55, 0.62, 1.0, 0)
-        p.curve(0.55, -0.62, -0.55, -0.62, -1.0, 0)
-        p.close()
-        p.circle(0, 0, 0.36)
-        p.circle(0, 0, 0.16)
-        return p
-    if name == "seal":
-        p.circle(0, 0, 1.0)
-        p.circle(0, 0, 0.8)
-        tri = [(0, -0.72), (0.62, 0.36), (-0.62, 0.36)]
-        p.polygon(tri)
-        p.polygon([(0, -0.42), (0.36, 0.21), (-0.36, 0.21)])
-        p.circle(0, 0, 0.12)
-        return p
-    if name == "chalice":
-        p.move(-0.85, 0.85).line(0.85, 0.85)
-        p.curve(0.85, 0.25, 0.55, -0.1, 0.12, -0.15)
-        p.line(0.12, -0.55)
-        p.line(0.45, -0.72).line(0.45, -0.95).line(-0.45, -0.95).line(-0.45, -0.72).line(-0.12, -0.55)
-        p.line(-0.12, -0.15)
-        p.curve(-0.55, -0.1, -0.85, 0.25, -0.85, 0.85)
-        p.close()
-        p.polygon([(-0.62, 0.7), (0.62, 0.7), (0.62, 0.52), (-0.62, 0.52)])
-        return p
-    if name == "triskelion":
-        for k in range(3):
-            arm = Path2D()
-            arm.move(0, 0)
-            arm.curve(0.55, 0.15, 0.85, 0.55, 0.55, 0.95)
-            arm.curve(0.95, 0.7, 0.95, 0.1, 0.3, -0.15)
-            arm.close()
-            p.subpaths.extend(arm.transformed(rotate=k * 120).subpaths)
-        p.circle(0, 0, 0.2)
-        return p
-    if name == "waves":
-        for y0 in (0.45, -0.05, -0.55):
-            p.move(-1.0, y0)
-            p.curve(-0.7, y0 + 0.45, -0.3, y0 + 0.45, 0, y0)
-            p.curve(0.3, y0 - 0.45, 0.7, y0 - 0.45, 1.0, y0)
-            p.line(1.0, y0 - 0.22)
-            p.curve(0.7, y0 - 0.67, 0.3, y0 - 0.67, 0, y0 - 0.22)
-            p.curve(-0.3, y0 + 0.23, -0.7, y0 + 0.23, -1.0, y0 - 0.22)
-            p.close()
-        return p
-    if name == "links":
-        for dx, dy in ((-0.38, 0.32), (0.38, -0.32)):
-            ring = Path2D()
-            outer = [(0.72 * math.cos(math.radians(a)), 0.5 * math.sin(math.radians(a))) for a in range(0, 360, 6)]
-            inner = [(0.44 * math.cos(math.radians(a)), 0.24 * math.sin(math.radians(a))) for a in range(0, 360, 6)]
-            ring.polygon(outer)
-            ring.polygon(inner)
-            p.subpaths.extend(ring.transformed(rotate=-40, dx=dx, dy=dy).subpaths)
-        return p
-    if name == "wheel":
-        p.circle(0, 0, 1.0)
-        p.circle(0, 0, 0.78)
+        lines.subpaths.append(pts)
+    elif name == "waves":
+        for y0 in (0.55, 0.0, -0.55):
+            p = Path2D()
+            p.move(-0.95, y0)
+            p.curve(-0.65, y0 + 0.5, -0.35, y0 + 0.5, 0.0, y0)
+            p.curve(0.35, y0 - 0.5, 0.65, y0 - 0.5, 0.95, y0)
+            lines.subpaths.append(p.current)
+    elif name == "links":
+        for dx, dy in ((-0.36, 0.3), (0.36, -0.3)):
+            ring = [(0.68 * math.cos(math.radians(a)), 0.44 * math.sin(math.radians(a))) for a in range(0, 361, 5)]
+            ring_path = Path2D()
+            ring_path.subpaths.append(ring)
+            lines.subpaths.extend(ring_path.transformed(rotate=-40, dx=dx, dy=dy).subpaths)
+    elif name == "wheel":
+        lines.circle(0, 0, 0.95)
+        lines.circle(0, 0, 0.22)
         for k in range(8):
-            spoke = Path2D().polygon([(-0.09, 0), (0.09, 0), (0.09, 0.9), (-0.09, 0.9)])
-            p.subpaths.extend(spoke.transformed(rotate=k * 45).subpaths)
-        p.circle(0, 0, 0.22)
-        return p
-    if name == "scales":
-        p.polygon([(-0.08, -0.6), (0.08, -0.6), (0.08, 0.72), (-0.08, 0.72)])          # post
-        p.polygon([(-0.95, 0.62), (0.95, 0.62), (0.95, 0.5), (-0.95, 0.5)])            # beam
-        p.polygon([(-0.4, -0.6), (0.4, -0.6), (0.5, -0.78), (-0.5, -0.78)])            # foot
+            a = math.radians(k * 45)
+            lines.subpaths.append([(0.22 * math.cos(a), 0.22 * math.sin(a)), (0.95 * math.cos(a), 0.95 * math.sin(a))])
+    elif name == "scales":
+        lines.subpaths.append([(0.0, 0.85), (0.0, -0.7)])
+        lines.subpaths.append([(-0.45, -0.85), (0.45, -0.85)])
+        lines.subpaths.append([(-0.85, 0.55), (0.85, 0.55)])
         for sx in (-0.72, 0.72):
+            lines.subpaths.append([(sx, 0.55), (sx, -0.05)])
             pan = Path2D()
-            pan.move(-0.36, 0.0)
-            pan.arc(0, 0.0, 0.36, 180, 360, 24)
-            pan.close()
-            p.subpaths.extend(pan.transformed(dx=sx, dy=-0.1).subpaths)
-            p.polygon([(sx - 0.03, 0.5), (sx + 0.03, 0.5), (sx + 0.03, -0.1), (sx - 0.03, -0.1)])
-        return p
-    if name == "mountain":
-        p.polygon([(-1.0, -0.8), (-0.35, 0.55), (-0.05, 0.15), (0.3, 0.95), (1.0, -0.8)])
-        # Snow caps cut out as the far side's shading.
-        p.polygon([(0.3, 0.95), (0.55, 0.42), (0.42, 0.42), (0.3, 0.55), (0.18, 0.42), (0.05, 0.42)])
-        return p
-    if name == "return":
-        # A U-turn arrow: a thick arc from the lower right round the top to
-        # the left, ending in a head pointing down.
-        p.move(0.55, -0.75)
-        p.line(0.55, 0.1)
-        p.arc(0.05, 0.1, 0.5, 0, 180, 40)
-        p.line(-0.45, -0.25)
-        p.line(-0.15, -0.25)
-        p.line(-0.15, 0.1)
-        p.arc(0.05, 0.1, 0.2, 180, 0, 20)
-        p.line(0.25, -0.75)
-        p.close()
-        p.polygon([(-0.85, -0.2), (-0.05, -0.2), (-0.45, -0.85)])
-        return p
-    raise ValueError(name)
+            pan.move(sx - 0.34, -0.05)
+            pan.arc(sx, -0.05, 0.34, 180, 360, 24)
+            lines.subpaths.append(pan.current)
+    elif name == "mountain":
+        lines.subpaths.append([(-1.0, -0.75), (-0.35, 0.5), (-0.08, 0.18), (0.3, 0.95), (1.0, -0.75)])
+        lines.subpaths.append([(0.05, 0.42), (0.18, 0.55), (0.3, 0.42), (0.42, 0.58), (0.55, 0.42)])
+        lines.subpaths.append([(-1.0, -0.75), (1.0, -0.75)])
+    elif name == "return":
+        # Vigil: a torch — the cup, the handle, the flame kept through the night.
+        p = Path2D()
+        p.move(-0.42, 0.05)
+        p.curve(-0.42, -0.25, 0.42, -0.25, 0.42, 0.05)
+        lines.subpaths.append(p.current)
+        lines.subpaths.append([(-0.42, 0.05), (0.42, 0.05)])
+        lines.subpaths.append([(-0.16, -0.18), (-0.08, -0.95)])
+        lines.subpaths.append([(0.16, -0.18), (0.08, -0.95)])
+        lines.subpaths.append([(-0.1, -0.95), (0.1, -0.95)])
+        f = Path2D()
+        f.move(0.0, 0.05)
+        f.curve(-0.5, 0.35, -0.3, 0.75, 0.0, 1.0)
+        f.curve(0.3, 0.75, 0.5, 0.35, 0.0, 0.05)
+        lines.subpaths.append(f.current)
+    else:
+        raise ValueError(name)
+    return lines, fills
+
+
+def emblem_bbox(lines, fills):
+    xs = [x for sp in lines.subpaths + fills.subpaths for x, _ in sp]
+    ys = [y for sp in lines.subpaths + fills.subpaths for _, y in sp]
+    return min(xs) - STROKE / 2, min(ys) - STROKE / 2, max(xs) + STROKE / 2, max(ys) + STROKE / 2
+
+
+def emblem_mask(name, size, scale, offset):
+    """The seal rendered: strokes unioned with the filled marks."""
+    lines, fills = emblem_strokes(name)
+    bx0, by0, bx1, by1 = emblem_bbox(lines, fills)
+    cx, cy = (bx0 + bx1) / 2, (by0 + by1) / 2
+    E = mask_of(lines.transformed(dx=-cx, dy=-cy), size=size, scale=scale, offset=offset, stroke=STROKE)
+    if fills.subpaths:
+        E |= mask_of(fills.transformed(dx=-cx, dy=-cy), size=size, scale=scale, offset=offset)
+    return E, (bx1 - bx0, by1 - by0)
 
 
 # ---------------------------------------------------------------- shading
@@ -429,8 +445,10 @@ def render_stone(set_name, colour_hex, emblem_name, slot):
 
     # The stone's colour: lighter at the top, darker at the bottom, a gloss
     # at the upper left, and a grain.
-    top = np.clip(base * 1.0 + (1 - base) * 0.22, 0, 1)
-    bottom = np.clip(base * 0.62, 0, 1)
+    grey = np.array([base.mean()] * 3, dtype=np.float32)
+    base = base * 0.9 + grey * 0.1
+    top = np.clip(base * 1.0 + (1 - base) * 0.2, 0, 1)
+    bottom = np.clip(base * 0.6, 0, 1)
     t = ((v + 1) / 2)[..., None]
     col = top * (1 - t) + bottom * t
     gloss = np.exp(-(((u + 0.35) ** 2 + (v + 0.5) ** 2) / 0.32))
@@ -446,6 +464,10 @@ def render_stone(set_name, colour_hex, emblem_name, slot):
     diffuse, spec = shade(h, steep=2.4)
     lit = 0.50 + 0.62 * diffuse
     col = col * lit[..., None] + spec[..., None] * 0.55
+    # A soft vignette towards the edge, so the seal sits in a pool of light.
+    d_in = ndimage.distance_transform_edt(M)
+    vig = np.clip(d_in / (0.42 * S4), 0, 1)
+    col = col * (0.86 + 0.14 * vig)[..., None]
     # A darker line along the very edge so the silhouette holds on cream.
     edge = M & ~ndimage.binary_erosion(M, iterations=int(0.012 * S4))
     col = np.where(edge[..., None], col * 0.55, col)
@@ -455,13 +477,11 @@ def render_stone(set_name, colour_hex, emblem_name, slot):
     ys, xs = np.nonzero(inner)
     cx, cy = (xs.min() + xs.max()) / 2, (ys.min() + ys.max()) / 2
     iw, ih = xs.max() - xs.min(), ys.max() - ys.min()
-    emblem = emblem_path(emblem_name)
-    bx0, by0, bx1, by1 = emblem.bbox()
+    lines, fills = emblem_strokes(emblem_name)
+    bx0, by0, bx1, by1 = emblem_bbox(lines, fills)
     ew, eh = bx1 - bx0, by1 - by0
-    fit = min(iw / ew, ih / eh) * 0.98
-    ecx, ecy = (bx0 + bx1) / 2, (by0 + by1) / 2
-    E = mask_of(emblem.transformed(dx=-ecx, dy=-ecy), scale=fit,
-                offset=((cx - S4 / 2) / fit, -(cy - S4 / 2) / fit))
+    fit = min(iw / ew, ih / eh) * 0.9
+    E, _ = emblem_mask(emblem_name, S4, fit, ((cx - S4 / 2) / fit, -(cy - S4 / 2) / fit))
     E &= M
 
     if lum > 0.55:
@@ -488,7 +508,7 @@ def render_stone(set_name, colour_hex, emblem_name, slot):
     return img.resize((SIZE, SIZE), Image.LANCZOS)
 
 
-def render_rim(slot, width=0.05):
+def render_rim(slot, width=0.045):
     """The quality rim as a template: white, alpha only. Tinted in the app."""
     M = mask_of(shape_path(SLOT_SHAPES[slot]))
     inner = ndimage.binary_erosion(M, iterations=int(width * S4))
@@ -503,7 +523,10 @@ def render_rim(slot, width=0.05):
 
 
 def render_emblem(name, size=128):
-    E = mask_of(emblem_path(name).transformed(scale=0.92), size=size * SS)
+    lines, fills = emblem_strokes(name)
+    bx0, by0, bx1, by1 = emblem_bbox(lines, fills)
+    fit = size * SS / 2 * 0.9 / max(bx1 - bx0, by1 - by0) * 2
+    E, _ = emblem_mask(name, size * SS, fit, (0, 0))
     rgba = np.zeros((size * SS, size * SS, 4), np.float32)
     rgba[..., :3] = 1.0
     rgba[..., 3] = E
@@ -539,11 +562,13 @@ def sheet(path, stones, rims):
     font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 13)
     small = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 11)
     w = 150 + cols * (cell + pad) + pad
-    h = pad + len(SETS) * (cell + pad) + 520
+    shown_count = len([entry for entry in SETS if (entry[0], 1) in stones])
+    h = pad + shown_count * (cell + pad) + 520
     img = Image.new("RGB", (w, h), cream)
     d = ImageDraw.Draw(img)
     qualities = list(QUALITY_METALS)
-    for r, (name, colour, emblem) in enumerate(SETS):
+    shown = [entry for entry in SETS if (entry[0], 1) in stones]
+    for r, (name, colour, emblem) in enumerate(shown):
         y = pad + r * (cell + pad)
         d.text((10, y + cell / 2 - 8), name.upper(), fill=(0x1F, 0x19, 0x12), font=font)
         for c in range(6):
@@ -555,18 +580,18 @@ def sheet(path, stones, rims):
             d.text((x + 6, y + cell - 12), f"{slot} · {q}", fill=(0x6D, 0x5F, 0x4B), font=small)
     # The sizes the app draws: 30, 44, 64 and 110 points, at 3x (device
     # pixels) and at 1x (about what the eye gets on the phone).
-    y = pad + len(SETS) * (cell + pad) + 4
+    y = pad + shown_count * (cell + pad) + 4
     d.text((10, y), "at the app's sizes: 30pt row, 44pt tile, 64pt slot, 110pt card - device pixels (3x), then 1x", fill=(0x1F, 0x19, 0x12), font=font)
     x = 12
     for px in (90, 132, 192, 330):
-        for sample in (("fury", 3, "legend"), ("styx", 5, "rare")):
+        for sample in ((shown[0][0], 3, "legend"), (shown[-1][0], 5, "rare")):
             icon = composed(stones[(sample[0], sample[1])], rims[sample[1]], sample[2], px)
             img.paste(icon, (x, y + 30 + (330 - px)), icon)
             x += px + 10
         x += 20
     x = 12
     for px in (30, 44, 64, 110):
-        icon = composed(stones[("fury", 3)], rims[3], "legend", px)
+        icon = composed(stones[(shown[0][0], 3)], rims[3], "legend", px)
         img.paste(icon, (x, y + 380), icon)
         x += px + 16
     img.save(path, quality=92)
@@ -581,7 +606,7 @@ def main():
     ap.add_argument("--emblems", help="write a sheet of the sixteen emblems alone")
     args = ap.parse_args()
 
-    sets = [s for s in SETS if not args.only or s[0] == args.only]
+    sets = [s for s in SETS if not args.only or s[0] in args.only.split(",")]
     stones, rims = {}, {}
     for slot in range(1, 7):
         rims[slot] = render_rim(slot)

@@ -1548,3 +1548,104 @@ and `balance.py --relics`:
 The expected bill, 6★, with the power-up odds: +3 14,400 drachma, +9
 91,000, +12 170,000, +15 299,000 (`balance.py --relics`). A Legend 6★ is
 one drop in eight at B10; a 3★ Legend one in thirty-three.
+
+## The premium pass: seals, type, and the relic screens in the genre's shape (2026-09-12, evening)
+
+The owner, on the relic pass an hour after it shipped: "1. The symbols on
+the relics look like shit. It doesn't look premium. 2. The menus and UI
+look overwhelming. Remember when I said research? 3. Can we make the UI
+look and feel more premium? And maybe a nice cleaner font? Make things
+size correctly too?" All three are right, and the second is a rule-2
+failure: the relic screens were built as text rows because that is what
+was there, not because that is what the genre does.
+
+### What our own frames say
+
+The twelve busiest tour frames on one sheet, read cold:
+
+- **Bars carry five to eight controls** (the collection: two segments,
+  six element chips, two menus, two buttons; the arena: four counters,
+  two buttons and a four-item wallet). Summoners War shows the wallet in
+  one place, large, and keeps a screen's bar to two or three controls.
+- **Sentences on menus.** The Hall of Ka, the Labyrinth's cards, the
+  halls' boss panels, More's settings and the chapter map all carry
+  9-point paragraphs. The genre's menus carry numbers and icons; words
+  come on a tap.
+- **Ninety call sites of text at 7–9 points** (`body(7)` ×6, `body(8)`
+  ×18, `body(9)` ×66, `numeric(7–9)` ×30), which after `fontScale` 0.9 is
+  6.3–8.1 points on the phone. Apple's floor for legible text is 11; the
+  genre's smallest label is about 11–12.
+- **Numbers in a monospaced system font** — a developer's face, not a
+  game's — and heavy system-serif titles that read as a default rather
+  than a choice.
+- **The painted marble frame on every panel**, corner ornaments included,
+  so a screen of four panels has sixteen acanthus scrolls competing with
+  its content. Premium is one ornate frame per screen and quiet cards
+  inside it.
+- **The relic inventory as text rows**: twelve rows of four sub-stat
+  cells, a dial, a wearer's name and a set rail with sixteen worded chips.
+  The relic card carries eleven lines of words before its buttons; the
+  drop card five dials.
+
+### What the genre does (from memory; the sites are refused here)
+
+- **Summoners War's rune inventory is a grid of rune icons** — six or so
+  a row, the icon alone with its stars and +level — and ONE information
+  panel for the rune tapped: main stat, four sub stats, the set effect,
+  who wears it, and two or three buttons. Filter and sort are two buttons
+  at the top left. The monster's rune screen is the hexagon around the
+  model with the set effects listed once. The power-up screen is the rune
+  large in the middle, its stats at the right and one big button.
+  Titles are a bold sans in capitals; nothing on a menu is a sentence.
+- **Epic Seven's gear** is the same shape: an icon grid, a side panel, a
+  gear score, one Enhance button. **Raid: Shadow Legends** sets its
+  headers in a classical display face over a clean sans body — the
+  precedent for a temple UI that is not carved-looking everywhere.
+  **Genshin's artifacts** are icon-first rows with a detail panel, set at
+  a generous rhythm; the premium feel there is restraint.
+
+### The three levers, with the options weighed
+
+**Type.** (1) Keep the system fonts: free, but the monospaced numbers
+and the default serif are two of the three things that read as cheap.
+(2) Bundle two OFL faces: **Cinzel** (Natanael Gama; Roman inscriptional
+capitals, the lettering a temple actually wears) for titles, display and
+buttons, in capitals with tracking, never under 12 points; **Manrope**
+(Mikhail Sharanda; a clean geometric sans with true tabular figures) for
+every word and every number. About 700 KB in eight static instances cut
+from the variable files with fontTools, registered at launch with
+CoreText (`CTFontManagerRegisterFontsForURL`), so the generated
+Info.plist is untouched; a missing file falls back to the system face.
+(3) A commercial temple face (Trajan): not licensable from here.
+**Choice: 2.** With it a **floor**: `Theme.body` never returns under 10
+points, `numeric` under 10.5, `title` under 12 — the ninety tiny call
+sites lift at once, and nothing else has to be found by hand.
+
+**The seals.** (1) Gemini paints the emblems and shapes: about 22 images,
+about $3, and Gemini is paused until the owner says so. (2) Filled
+code-drawn symbols, which is what shipped: a shuriken, a road-sign
+U-turn, a castle — clip art, as he said. (3) **Engraved line seals**: one
+stroke weight for all sixteen, classical motifs, the engraving's shadow
+and light on the stroke — an aspis of concentric rings for Aegis, a
+Doric column for Bulwark, a torch for Vigil, a chalice for Ichor, a
+spiral for Wrath, scales for Nemesis, a wheel for Fates, an eye for
+Oracle, a bolt, waves, links, a mountain, three curls of wind, a flame,
+crossed swords for Ruin, a ringed pentagon for Wards. Judged on a strip
+and on the stones at 30, 44, 64 and 110 points before shipping.
+**Choice: 3 now, 1 offered.**
+
+**Density.** The relic inventory becomes the genre's grid: the stones at
+48 points, seven or eight a row, one panel at the right for the relic
+tapped, and the set rail sixteen emblem chips with a count and no word.
+The card loses its paragraphs and gains one primary action, the rest a
+quiet grid of small labelled buttons. The drop card loses its five dials
+for one line. The filter's slot chips are the slot silhouettes, its set
+chips the emblems. One painted frame per screen; plain cards inside.
+
+### What this pass does NOT do, said plainly
+
+The other twenty screens keep their layouts and get the fonts and the
+type floor only. The wallet strip, the five-control bars and the
+sentence panels are the next pass (task #50, the 104 audited findings),
+one screen at a time against the genre's own, with a frame looked at for
+each. Saying so here rather than leaving a lesser version silently.
