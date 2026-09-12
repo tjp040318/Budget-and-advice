@@ -557,14 +557,17 @@ struct PrimaryButton: View {
 
     private var labelColor: Color {
         guard isEnabled else { return Theme.textSecondary }
-        // On the painted dark plate the tint carries the meaning, so it goes on
-        // the label; on gold (painted or drawn) ink is the only thing that
-        // reads. On the DRAWN plate of any other tint — the painted one held
-        // back for its cream repaint, or never shipped — the plate is the tint
-        // itself, so the label is whichever of ink and cream reads on it: the
-        // summon screen's ×1 button was ink on an ink plate.
+        // The painted plain plate is cream marble with a gold border since the
+        // night-3 repaint (2026-09-12), so ink is the only label that reads on
+        // it — the first frames of the repaint had the summon screen's ×1 as
+        // cream on cream, because this rule still put the TINT on the label,
+        // which carried the meaning on the slate plate it was written for.
+        // On gold (painted or drawn) ink is the only thing that reads. On the
+        // DRAWN plate of any other tint — the painted one never shipped — the
+        // plate is the tint itself, so the label is whichever of ink and
+        // cream reads on it: the ×1 button was once ink on an ink plate.
         if !usesGoldPlate {
-            return Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) != nil ? tint : Theme.readableText(on: tint)
+            return Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) != nil ? Theme.ink : Theme.readableText(on: tint)
         }
         return Theme.ink
     }
