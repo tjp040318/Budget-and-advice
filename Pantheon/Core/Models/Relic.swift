@@ -133,6 +133,11 @@ enum RelicSet: String, Codable, CaseIterable, Identifiable, Sendable {
         case .nemesis: return "Fills 4% of the attack bar for every 7% of HP lost."
         case .titanfall: return "Deals 30% more damage but cannot recover HP."
         case .vigil: return "15% chance to counterattack when hit."
+        // SPD is a flat kind everywhere else, so the modifier's own text
+        // printed the set's quarter as "SPD +0" on the reference sheet;
+        // the bonus is applied as a percent of base speed
+        // (`ProgressionService.resolve`, `speedIsPercent`).
+        case .zephyr: return "SPD +25%"
         default: return statBonus?.displayText ?? ""
         }
     }
