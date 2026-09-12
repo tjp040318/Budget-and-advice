@@ -815,6 +815,8 @@ def check_unknown_types(files, declared, errors):
         # and the renderer delegate and Core Graphics names they use.
         # CoreText, since the bundled faces are registered at launch (2026-09-12).
         "CoreText","CTFontManagerRegisterFontsForURL","CFError","CFURL","Unmanaged",
+        # The launch screen's progress model (2026-09-12).
+        "ObservedObject","TimelineView",
         "SpriteKit","SKScene","SKNode","SKSpriteNode","SKCropNode","SKTexture","SKAction",
         "SKShapeNode","SKLabelNode","SCNSceneRenderer","SCNSceneRendererDelegate","CGPath",
         "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",

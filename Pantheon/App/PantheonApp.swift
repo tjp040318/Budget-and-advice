@@ -4,6 +4,7 @@ import UIKit
 @main
 struct PantheonApp: App {
     @StateObject private var store: GameStore
+    @StateObject private var launch: LaunchProgress
 
     /// Explicitly main-actor isolated: `GameStore` is `@MainActor`, and building
     /// it in a default property value would leave that isolation implicit.
@@ -13,6 +14,7 @@ struct PantheonApp: App {
         FontLibrary.registerBundledFonts()
 
         _store = StateObject(wrappedValue: GameStore.bootstrap())
+        _launch = StateObject(wrappedValue: LaunchProgress())
 
         // The whole app is cream and gold, the tab bar included; setting it
         // here stops a dark flash on launch before the first SwiftUI frame
@@ -73,13 +75,26 @@ struct PantheonApp: App {
                 TourView()
                     .environmentObject(store)
             } else {
-                RootView()
-                    .environmentObject(store)
+                gate
             }
             #else
-            RootView()
-                .environmentObject(store)
+            gate
             #endif
         }
+    }
+
+    /// The loading screen over the game until the launch has warmed what
+    /// it warms and the painting has had its moment; then it dissolves.
+    private var gate: some View {
+        ZStack {
+            RootView()
+                .environmentObject(store)
+            if !launch.finished {
+                LaunchView(progress: launch)
+                    .transition(.opacity)
+                    .zIndex(1)
+            }
+        }
+        .onAppear { launch.run() }
     }
 }

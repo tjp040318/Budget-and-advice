@@ -417,3 +417,259 @@ struct SettingsView: View {
         }
     }
 }
+
+// MARK: - The launch
+
+/// What the launch has warmed, for the bar, and whether the door is open.
+///
+/// The genre opens on a piece of key art with the game's name and a bar
+/// that fills as the game loads. Ours is the same, with the bar tied to
+/// real work — the unit and stage databases, the Labyrinth, the bundle's
+/// index — and held no shorter than `minimum` seconds so the painting is
+/// seen. Offline, so no "touch to start": that tap is for a server
+/// handshake this game does not have.
+@MainActor
+final class LaunchProgress: ObservableObject {
+    @Published private(set) var fraction: Double = 0
+    @Published private(set) var step: String = "Registering the faces"
+    @Published private(set) var finished = false
+
+    /// The painting and the tip for this launch. The five banners take
+    /// turns, so the screen is not the same twice running.
+    let artName: String
+    let tip: String
+
+    static let paintings = [
+        "banner_olympus_stirs", "banner_duat_opens", "banner_ravens_gather",
+        "banner_eagle_rises", "banner_jade_court",
+    ]
+
+    static let tips = [
+        "A Legend relic drops with four sub stats; a Normal has none until +3.",
+        "Fire beats wind, wind beats water, water beats fire. Light and dark beat each other.",
+        "Slots 1, 3 and 5 always carry flat ATK, DEF and HP. The even slots are the decision.",
+        "Two pieces complete a stat set, four an effect set.",
+        "A whetstone hones a sub stat; a gem replaces one. The raids drop both.",
+        "Hard opens when Normal's boss falls, and Hell when Hard's.",
+        "The same god burns as fire, freezes as water and strikes twice as wind.",
+        "Power-up is sure to +3. After that a failed attempt keeps the level and spends the drachma.",
+        "A relic can be sold from the chest's shelf before it ever reaches the bag.",
+        "Every enemy wears a matchup arrow on your turn: green up, red down.",
+    ]
+
+    private var started = false
+
+    init() {
+        let defaults = UserDefaults.standard
+        let count = defaults.integer(forKey: "launchCount")
+        defaults.set(count + 1, forKey: "launchCount")
+        artName = Self.paintings[count % Self.paintings.count]
+        tip = Self.tips[count % Self.tips.count]
+    }
+
+    /// A frozen state, for the CI tour's frame.
+    init(preview fraction: Double, step: String, art: String) {
+        self.fraction = fraction
+        self.step = step
+        self.artName = art
+        self.tip = Self.tips[0]
+        self.started = true
+    }
+
+    /// Warms the game on a background task, one named step at a time, and
+    /// opens the door no sooner than `minimum` seconds after the call.
+    func run(minimum: TimeInterval = 2.6) {
+        guard !started else { return }
+        started = true
+        let began = Date()
+        Task.detached(priority: .userInitiated) { [weak self] in
+            let steps: [(name: String, work: @Sendable () -> Void)] = [
+                ("Waking the pantheon", { _ = UnitDatabase.summonPool.count }),
+                ("Raising the stages", { _ = StageDatabase.allStages.count }),
+                ("Opening the Labyrinth", { _ = DungeonDatabase.allLevels.count + DungeonDatabase.allFloors.count }),
+                ("Reading the island", { _ = BundleArt.exists("island_bg") }),
+            ]
+            for (index, entry) in steps.enumerated() {
+                await self?.advance(to: Double(index) / Double(steps.count), step: entry.name)
+                entry.work()
+            }
+            let wait = max(0, minimum - Date().timeIntervalSince(began))
+            try? await Task.sleep(nanoseconds: UInt64(wait * 1_000_000_000))
+            await self?.finish()
+        }
+    }
+
+    private func advance(to fraction: Double, step: String) {
+        withAnimation(.easeInOut(duration: 0.5)) { self.fraction = fraction }
+        self.step = step
+    }
+
+    private func finish() {
+        withAnimation(.easeInOut(duration: 0.4)) { fraction = 1 }
+        step = "Enter"
+        withAnimation(.easeInOut(duration: 0.9)) { finished = true }
+    }
+}
+
+/// The loading screen: one of the five banner paintings full-bleed and
+/// anchored to its top so the faces stay, pushed in slowly, ink at the top
+/// and the bottom, embers rising, the name in Cinzel on the clouds, the
+/// five pantheons under it, the bar and a tip. Sits over `RootView` until
+/// `LaunchProgress.finished` and dissolves.
+struct LaunchView: View {
+    @ObservedObject var progress: LaunchProgress
+    @State private var revealed = false
+    @State private var zoom: CGFloat = 1.0
+
+    private let cream = Color(hex: "#EBE2CF")
+
+    var body: some View {
+        GeometryReader { geo in
+            ZStack {
+                Theme.ink
+                BundleImage(name: progress.artName)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+                    .clipped()
+                    .scaleEffect(zoom, anchor: .top)
+                    .opacity(revealed ? 1 : 0)
+                LinearGradient(
+                    stops: [
+                        .init(color: Theme.ink.opacity(0.25), location: 0),
+                        .init(color: .clear, location: 0.2),
+                        .init(color: .clear, location: 0.42),
+                        .init(color: Theme.ink.opacity(0.9), location: 1),
+                    ],
+                    startPoint: .top, endPoint: .bottom
+                )
+                LaunchEmbers()
+                VStack(spacing: 0) {
+                    Spacer()
+                        .frame(height: geo.size.height * 0.5)
+                    wordmark
+                    Spacer(minLength: 8)
+                    footer
+                        .padding(.bottom, 14)
+                }
+                .padding(.horizontal, 24)
+                .frame(width: geo.size.width, height: geo.size.height)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .ignoresSafeArea()
+        .contentShape(Rectangle())
+        .onAppear {
+            withAnimation(.easeOut(duration: 1.1)) { revealed = true }
+            withAnimation(.easeInOut(duration: 9)) { zoom = 1.07 }
+        }
+    }
+
+    private var wordmark: some View {
+        VStack(spacing: 8) {
+            Text("PANTHEON")
+                .font(Theme.display(44))
+                .tracking(9)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [Color(hex: "#FFF0C2"), Color(hex: "#F3D27A"), Color(hex: "#B08A2E")],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                )
+                .shadow(color: .black.opacity(0.7), radius: 6, y: 3)
+            HStack(spacing: 10) {
+                LinearGradient(colors: [.clear, Theme.gold], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 110, height: 1)
+                RelicSetEmblem(set: .fates, size: 14, tint: Theme.gold)
+                LinearGradient(colors: [Theme.gold, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 110, height: 1)
+            }
+            Text("EGYPT  ·  GREECE  ·  NORSE  ·  ROME  ·  THE JADE COURT")
+                .font(Theme.body(10).weight(.bold))
+                .tracking(2.2)
+                .foregroundStyle(cream.opacity(0.85))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .opacity(revealed ? 1 : 0)
+        .offset(y: revealed ? 0 : 12)
+        .animation(.easeOut(duration: 1.0).delay(0.5), value: revealed)
+    }
+
+    private var footer: some View {
+        VStack(spacing: 7) {
+            Text(progress.step.uppercased())
+                .font(Theme.body(10).weight(.bold))
+                .tracking(2)
+                .foregroundStyle(Theme.gold)
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.16))
+                    .frame(width: 280, height: 3)
+                Capsule()
+                    .fill(LinearGradient(colors: [Theme.goldDim, Color(hex: "#FFE49B")], startPoint: .leading, endPoint: .trailing))
+                    .frame(width: max(6, 280 * progress.fraction), height: 3)
+            }
+            .frame(width: 280)
+            Text(progress.tip)
+                .font(Theme.body(11))
+                .foregroundStyle(cream.opacity(0.9))
+                .multilineTextAlignment(.center)
+                .lineLimit(2)
+                .frame(maxWidth: 520)
+        }
+        .frame(maxWidth: .infinity)
+        .overlay(alignment: .bottomTrailing) {
+            Text(Self.version)
+                .font(Theme.body(9))
+                .foregroundStyle(cream.opacity(0.5))
+        }
+    }
+
+    private static var version: String {
+        let info = Bundle.main.infoDictionary
+        let short = info?["CFBundleShortVersionString"] as? String ?? "?"
+        let build = info?["CFBundleVersion"] as? String ?? "?"
+        return "v\(short) (\(build))"
+    }
+}
+
+/// Two dozen gold motes rising through the frame, each on a path of its
+/// own from a seeded draw, redrawn every frame so the painting breathes.
+private struct LaunchEmbers: View {
+    private struct Mote {
+        let x: Double
+        let speed: Double
+        let phase: Double
+        let size: Double
+        let sway: Double
+    }
+
+    private static let motes: [Mote] = (0..<26).map { index in
+        var rng = SeededRandom(seed: 700 + UInt64(index))
+        return Mote(
+            x: rng.double(in: 0.02...0.98),
+            speed: rng.double(in: 0.05...0.11),
+            phase: rng.double(in: 0...1),
+            size: rng.double(in: 1.5...3.2),
+            sway: rng.double(in: 8...26)
+        )
+    }
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            Canvas { context, size in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                for (index, mote) in Self.motes.enumerated() {
+                    let travel = (t * mote.speed + mote.phase).truncatingRemainder(dividingBy: 1)
+                    let y = size.height * (1.05 - travel * 1.1)
+                    let x = size.width * mote.x + sin(t * 0.7 + Double(index)) * mote.sway
+                    let pulse = 0.25 + 0.55 * (0.5 + 0.5 * sin(t * 2.1 + Double(index) * 1.3))
+                    let fade = travel < 0.1 ? travel / 0.1 : (travel > 0.85 ? (1 - travel) / 0.15 : 1)
+                    let rect = CGRect(x: x - mote.size, y: y - mote.size, width: mote.size * 2, height: mote.size * 2)
+                    context.fill(Path(ellipseIn: rect), with: .color(Color(hex: "#FFD678").opacity(pulse * fade)))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}

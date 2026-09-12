@@ -38,7 +38,7 @@ struct TourView: View {
         ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("arena_battle", 6), ("more", 2),
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
-        ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2),
+        ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -161,6 +161,9 @@ struct TourView: View {
         case "relic_filter":
             // The inventory with its filter sheet open.
             RelicInventoryView(openingFilter: true)
+        case "launch":
+            // The loading screen, frozen part way along its bar.
+            LaunchView(progress: LaunchProgress(preview: 0.62, step: "Raising the stages", art: "banner_olympus_stirs"))
         case "dungeon_battle":
             // A Labyrinth run on auto, so the frames catch the second and
             // third waves walking on and the Wave chip counting.

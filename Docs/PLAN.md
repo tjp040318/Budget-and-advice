@@ -1677,3 +1677,36 @@ corner, an empty socket shows the slot's silhouette as a ghost with the
 number on it, the sets are emblem chips with a name and nothing else, and
 the footer is the three figures. The same tile is the collection's plate
 and its stage layout.
+
+
+## The loading screen (2026-09-12, night)
+
+The owner: "a loading screen that's like an art piece of the game,
+something like what Summoners War does before the game starts". What the
+genre does at launch, from memory: Summoners War shows its publisher's
+card, then a full-bleed piece of key art with the game's logo, a bar
+along the bottom with a percentage and a tip, then "Touch to start";
+Epic Seven an animated logo, then title art with the same tap; Genshin a
+logo, then its door. The tap is a server handshake — the game connects
+while the art is up — and this game has no server, so the screen here is
+the art, the name, and a bar tied to real work, held long enough to be
+seen.
+
+The art: Gemini is paused, so the candidates were the twelve paintings
+on one sheet. The five summon banners are key art in all but name — Zeus
+under lightning over his temple, Anubis rising in the Duat, the three
+Norse on a longship under the aurora, the Roman three at sunset, Wukong
+on his cloud — and the first mock on the Olympus banner read as a title
+screen at once. Two things the mock settled: the crop is anchored to the
+painting's TOP (a centred 16:9 crop of a 16:10 banner took Zeus's face
+and put the name across it) and the name sits at half height on the dark
+clouds under the figure, with the bar at 87%. The five banners take turns
+so the screen is not the same twice running.
+
+Chosen: a SwiftUI `LaunchView` over the game — the painting faded up from
+ink with a slow push, a vignette, embers on a canvas, PANTHEON in Cinzel
+with a gold rule and the Fates wheel, the five pantheons, a thin gold bar
+on four named steps, a tip, the version — held no shorter than 2.6 s and
+dissolved over 0.9 s; the system launch screen is the same ink so the
+first frame and the fade agree. Offered: a painted key art of its own
+(one Gemini image, about fifteen cents) under the same file name.

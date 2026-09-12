@@ -399,6 +399,23 @@ environment can and cannot do. The short version:
   policy, so the per-level numbers are ours); `balance.py --economy`
   prints the expected drachma to +15 with the odds. Change the table in
   both files.
+- **The app opens on a loading screen that is a piece of key art
+  (2026-09-12, night).** `LaunchView` (RootView.swift) sits over
+  `RootView` in `PantheonApp.gate` until `LaunchProgress.finished`: one
+  of the five banner paintings full-bleed, anchored to its top so the
+  faces stay (the five take turns by `launchCount` in UserDefaults),
+  pushed in 7% over nine seconds, faded up from ink, a vignette top and
+  bottom, embers on a `TimelineView` canvas, PANTHEON in Cinzel on the
+  clouds with the five pantheons under it, a 280-pt gold bar tied to
+  four real steps (`UnitDatabase.summonPool`, `StageDatabase.allStages`,
+  the Labyrinth, the bundle's index), a tip from ten, the version. Held
+  no shorter than 2.6 s, then a 0.9 s dissolve; no "touch to start",
+  which is a server handshake this offline game has no use for. The
+  system launch screen is ink (`LaunchBackground` in the asset
+  catalogue, `INFOPLIST_KEY_UILaunchScreen_UIColorName` in the pbxproj)
+  so the first frame and the fade match. The tour's step 24 photographs
+  it frozen at 62%. A painted key art of its own would beat the banners:
+  one Gemini image, about fifteen cents, when the owner says so.
 - **The type is Cinzel and Manrope, and nothing is under ten points
   (2026-09-12, evening).** The owner: "the UI looks overwhelming",
   "a nice cleaner font", "make things size correctly". Two OFL faces
@@ -607,7 +624,8 @@ environment can and cannot do. The short version:
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,
   the victory's chest in three frames, the collection's Stage layout
-  (21), the relic drop card (22) and the relic filter sheet (23).
+  (21), the relic drop card (22), the relic filter sheet (23) and the
+  loading screen (24).
 - **The fight reads.** **Every unit's bars are a screen-space plate under
   its feet (2026-09-11, night):** `UnitPlateOverlay`, a SpriteKit scene laid
   over the `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one
