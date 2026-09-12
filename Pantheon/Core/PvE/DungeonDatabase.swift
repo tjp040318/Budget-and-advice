@@ -170,6 +170,10 @@ enum DungeonDatabase {
                     relicChance: 1.0,
                     relicGrade: stars,
                     relicSets: sets,
+                    // A trickle of whetstones from B7, a Hero one from B10:
+                    // the raids are the source, the Labyrinth a taste.
+                    stoneChances: level >= 10 ? ["whetstone_rare": 0.25, "whetstone_hero": 0.10]
+                        : (level >= 7 ? ["whetstone_rare": 0.25] : nil),
                     scrollChances: level >= 7 ? [ScrollType.mystical.rawValue: 0.08] : [:],
                     firstClearDivinity: 20
                 ),
@@ -448,11 +452,11 @@ extension DungeonDatabase {
         case 25:
             return .bundle([.divinity(300), .scrolls(.pantheonic, 2), .relic(grade: 4)])
         case 50:
-            return .bundle([.divinity(600), .scrolls(.divine, 1), .relic(grade: 5), .drachma(100_000)])
+            return .bundle([.divinity(600), .scrolls(.divine, 1), .relic(grade: 5), .drachma(100_000), .stones("whetstone_legend", 1)])
         case 75:
-            return .bundle([.divinity(900), .scrolls(.divine, 2), .relic(grade: 6)])
+            return .bundle([.divinity(900), .scrolls(.divine, 2), .relic(grade: 6), .stones("gem_hero", 1)])
         case 100:
-            return .bundle([.divinity(1_500), .scrolls(.divine, 3), .relic(grade: 6), .relic(grade: 6)])
+            return .bundle([.divinity(1_500), .scrolls(.divine, 3), .relic(grade: 6), .relic(grade: 6), .stones("gem_legend", 1)])
         default:
             return nil
         }
@@ -577,6 +581,7 @@ enum TowerService {
             case .divinity(let amount): outcome.divinityEarned += amount
             case .scrolls(let scroll, let count): outcome.scrollsEarned[scroll.rawValue, default: 0] += count
             case .essences(let id, let count): outcome.essencesEarned[id, default: 0] += count
+            case .stones(let id, let count): outcome.stonesEarned[id, default: 0] += count
             // The relics are already on the receipt, and the tower pays no
             // energy; `.bundle` cannot appear because `grant` flattens it.
             case .relic, .energy, .energyRefill, .bundle: break

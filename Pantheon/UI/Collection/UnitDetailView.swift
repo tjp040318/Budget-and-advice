@@ -103,6 +103,12 @@ struct UnitDetailView: View {
                 BarButton(title: "Auto-equip", systemImage: "wand.and.stars", tint: Theme.info) {
                     store.autoEquip(unitID)
                 }
+                // The genre's "remove all", free: the six come off in one tap
+                // so another unit can wear them.
+                BarButton(title: "Unequip all", systemImage: "minus.circle", tint: Theme.textSecondary, showsTitle: false) {
+                    store.unequipAll(unitID)
+                    AudioLibrary.shared.play(.uiTap)
+                }
                 BarButton(
                     title: isLocked ? "Locked" : "Unlocked",
                     systemImage: isLocked ? "lock.fill" : "lock.open",
@@ -1130,30 +1136,30 @@ struct RelicSlotTile: View {
     var body: some View {
         let worn = relic != nil
         Button(action: action) {
-            VStack(spacing: 2) {
+            VStack(spacing: 1) {
                 if let relic {
-                    Image(systemName: relic.set.glyph)
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundStyle(Theme.gold)
-                    // The number over its kind: "CRIT Rate +32%" as one 5pt
-                    // sentence was the one figure a player checks, unreadable.
+                    // The stone itself — the slot's silhouette in the set's
+                    // colour, the quality on the rim, the level badged — over
+                    // the one figure a player checks, the main stat, its
+                    // number over its kind. The grade is the stars under the
+                    // stone on every other screen; here the tile has no room
+                    // for them, and a tap opens the card that has.
+                    RelicIcon(relic: relic, size: size * 0.55, showsStars: false, showsLevel: true)
+                        .padding(.top, 2)
                     Text(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))
-                        .font(Theme.numeric(12))
+                        .font(Theme.numeric(size * 0.19))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                     Text(relic.effectiveMainStat.kind.displayName.uppercased())
-                        .font(Theme.body(7))
+                        .font(Theme.body(size * 0.11))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                    Text("\(relic.grade)★ +\(relic.level)")
-                        .font(Theme.numeric(7))
-                        .foregroundStyle(Theme.textSecondary)
                     HStack(spacing: 2) {
-                        ForEach(relic.subStats.indices, id: \.self) { _ in
+                        ForEach(relic.subStats.indices, id: \.self) { index in
                             Circle()
-                                .fill(Theme.info)
+                                .fill(relic.gemmed == index ? Theme.gold : Theme.info)
                                 .frame(width: 3, height: 3)
                         }
                     }

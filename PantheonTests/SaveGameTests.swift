@@ -211,6 +211,57 @@ final class SaveGameTests: XCTestCase {
         )
     }
 
+    // MARK: - Relic quality and stones
+
+    /// The three fields the relic pass added — a relic's quality, honing
+    /// and gem — and the player's stone bag, all Optional for the reason the
+    /// loadouts are.
+    func testRelicQualityHoningAndStonesRoundTripThroughJSON() throws {
+        var save = NewGame.create()
+        var rng = SeededRandom(seed: 41)
+        var relic = RelicService.generate(grade: 6, quality: .hero, rng: &rng)
+        relic.honed = [1: 4.0]
+        relic.gemmed = 2
+        save.player.relics.append(relic)
+        save.player.relicStones = ["gem_legend": 2, "whetstone_rare": 1]
+
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let restored = try decoder.decode(SaveGame.self, from: try encoder.encode(save))
+        let back = try XCTUnwrap(restored.player.relic(relic.id))
+        XCTAssertEqual(back.quality, .hero)
+        XCTAssertEqual(back.honed, [1: 4.0])
+        XCTAssertEqual(back.gemmed, 2)
+        XCTAssertEqual(back.effectiveSubStats[1].value, relic.subStats[1].value + 4, accuracy: 0.001)
+        XCTAssertEqual(restored.player.relicStones?["gem_legend"], 2)
+        XCTAssertEqual(RelicService.stoneCount(RelicStone(kind: .whetstone, tier: .rare), player: restored.player), 1)
+    }
+
+    func testASaveWrittenBeforeQualitiesStillDecodes() throws {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        var save = NewGame.create()
+        for index in save.player.relics.indices { save.player.relics[index].quality = nil }
+        let data = try encoder.encode(save)
+        let json = String(data: data, encoding: .utf8) ?? ""
+        XCTAssertFalse(json.contains("\"quality\""), "a relic with no quality writes no key, as an old save has none")
+        XCTAssertFalse(json.contains("\"relicStones\""))
+        XCTAssertFalse(json.contains("\"honed\""))
+
+        let restored = try decoder.decode(SaveGame.self, from: data)
+        XCTAssertNil(restored.player.relicStones)
+        for relic in restored.player.relics {
+            XCTAssertNil(relic.quality)
+            XCTAssertGreaterThanOrEqual(relic.resolvedQuality, .magic, "a starter relic reads as at least Magic")
+        }
+    }
+
     // MARK: - The guided opening
 
     /// The two fields the first hour writes. `firstHourStep` is stored as a raw

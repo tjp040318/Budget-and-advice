@@ -46,6 +46,20 @@ final class ShopTests: XCTestCase {
         XCTAssertEqual(subject.wallet.laurels, 500 - pack.price.amount)
     }
 
+    func testTheStonecuttersCrateFillsTheBag() throws {
+        var subject = player()
+        var rng = SeededRandom(seed: 9)
+        let crate = try XCTUnwrap(ShopService.item("test_stones"))
+        try ShopService.buy(crate, player: &subject, rng: &rng)
+        for stone in RelicStone.all {
+            XCTAssertEqual(RelicService.stoneCount(stone, player: subject), 10, stone.id)
+        }
+        let gem = try XCTUnwrap(ShopService.item("gem_laurels_legend"))
+        try ShopService.buy(gem, player: &subject, rng: &rng)
+        XCTAssertEqual(RelicService.stoneCount(RelicStone(kind: .gem, tier: .legend), player: subject), 11)
+        XCTAssertEqual(subject.wallet.laurels, 500 - gem.price.amount)
+    }
+
     func testDailyOfferingIsOncePerDay() throws {
         var subject = player()
         var rng = SeededRandom(seed: 4)

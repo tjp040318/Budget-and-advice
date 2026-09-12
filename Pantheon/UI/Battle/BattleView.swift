@@ -153,7 +153,7 @@ struct BattleView: View {
             }
 
             if let summary {
-                BattleResultView(summary: summary) { dismiss() }
+                BattleResultView(summary: summary, onDismiss: { dismiss() }, store: model.store)
                     .transition(.opacity.combined(with: .scale(scale: 0.95)))
             }
         }
@@ -1538,6 +1538,9 @@ struct BattleResultView: View {
     /// The CI tour sets this so a five-second photograph catches the chest
     /// open with the spoils out, rather than the reckoning waiting for a tap.
     var autoplay: Bool = false
+    /// The store, for the relic drop card a spoil tile opens; without one
+    /// the tiles are not tappable.
+    var store: GameStore? = nil
 
     private enum Phase { case reckoning, chest, opened }
 
@@ -1554,6 +1557,8 @@ struct BattleResultView: View {
     @State private var continueShown = false
     @State private var pulse = false
     @State private var sequence = 0
+    /// The relic whose drop card is up.
+    @State private var openedRelic: Relic?
 
     private var won: Bool { summary.outcome == .victory }
     private var hasSpoils: Bool { won && !summary.loot.isEmpty }
@@ -1848,7 +1853,7 @@ struct BattleResultView: View {
     private var lootShelf: some View {
         HStack(spacing: 10) {
             ForEach(Array(summary.loot.prefix(7).enumerated()), id: \.element.id) { index, item in
-                LootTile(item: item)
+                LootTile(item: item, onTap: tapAction(for: item))
                     .opacity(index < lootShown ? 1 : 0)
                     .scaleEffect(index < lootShown ? 1 : 0.5)
                     .offset(y: index < lootShown ? 0 : 90)
@@ -1861,6 +1866,21 @@ struct BattleResultView: View {
                     .opacity(lootShown >= 7 ? 1 : 0)
             }
         }
+        // The genre's rune-obtained card: a tap on a relic's tile shows it
+        // large with Sell, Keep or Lock and keep, before the inventory.
+        .sheet(item: $openedRelic) { relic in
+            if let store {
+                RelicDropCard(relicID: relic.id)
+                    .environmentObject(store)
+            }
+        }
+    }
+
+    /// A relic's tile opens its card when there is a store to sell through;
+    /// every other spoil is just shown.
+    private func tapAction(for item: BattleSummary.Loot) -> (() -> Void)? {
+        guard store != nil, let relic = item.relic else { return nil }
+        return { openedRelic = relic }
     }
 
     // MARK: - Sequencing
@@ -1981,11 +2001,16 @@ struct BattleResultView: View {
 /// is its glyph on a bronze-rimmed plate.
 struct LootTile: View {
     let item: BattleSummary.Loot
+    /// A relic's tile opens its drop card; nothing else is tappable.
+    var onTap: (() -> Void)? = nil
 
     var body: some View {
         VStack(spacing: 5) {
             ZStack {
-                if let stars = item.stars {
+                if let relic = item.relic {
+                    // The stone itself, the way the genre shows a rune drop.
+                    RelicIcon(relic: relic, size: 44, showsStars: false, showsLevel: false)
+                } else if let stars = item.stars {
                     RoundedRectangle(cornerRadius: 7, style: .continuous)
                         .fill(Theme.stonePlate)
                         .frame(width: 42, height: 42)
@@ -1996,17 +2021,20 @@ struct LootTile: View {
                         .frame(width: 42, height: 42)
                         .overlay(Circle().strokeBorder(Theme.bronzeFrame, lineWidth: 1.5))
                 }
-                Image(systemName: item.glyph)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(paint)
-                    .shadow(color: paint.opacity(0.6), radius: 6)
+                if item.relic == nil {
+                    Image(systemName: item.glyph)
+                        .font(.system(size: 17, weight: .bold))
+                        .foregroundStyle(paint)
+                        .shadow(color: paint.opacity(0.6), radius: 6)
+                }
             }
+            .frame(height: 44)
             if let stars = item.stars {
                 StarRow(stars: stars, size: 7)
             }
             Text(item.title)
                 .font(Theme.body(9).weight(.semibold))
-                .foregroundStyle(Theme.textPrimary)
+                .foregroundStyle(item.relic.map { $0.resolvedQuality.inkColor } ?? Theme.textPrimary)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .frame(height: 24)
@@ -2018,6 +2046,18 @@ struct LootTile: View {
         .frame(width: 92)
         .padding(.vertical, 8)
         .background(Theme.panel(Theme.tightCorner))
+        .overlay(alignment: .topTrailing) {
+            if onTap != nil {
+                Image(systemName: "hand.tap.fill")
+                    .font(.system(size: 8, weight: .bold))
+                    .foregroundStyle(Theme.gold)
+                    .padding(5)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { onTap?() }
+        // A plain spoil lets the tap through to the screen's own skip.
+        .allowsHitTesting(onTap != nil)
     }
 
     private var paint: Color {
@@ -2029,6 +2069,7 @@ struct LootTile: View {
         case .marble: return Theme.marble
         case .element(let element): return element.color
         case .scroll(let scroll): return scroll.tint
+        case .rarity(let rarity): return rarity.glow
         }
     }
 }

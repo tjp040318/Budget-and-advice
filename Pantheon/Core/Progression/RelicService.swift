@@ -63,6 +63,8 @@ enum RelicService {
         grade: Int,
         slot: Int? = nil,
         set: RelicSet? = nil,
+        quality: RelicQuality? = nil,
+        qualityFloor: RelicQuality = .normal,
         rng: inout SeededRandom
     ) -> Relic {
         let clampedGrade = max(1, min(6, grade))
@@ -74,17 +76,45 @@ enum RelicService {
             ?? .atkPercent
         let main = StatModifier(mainKind, mainStatValue(kind: mainKind, grade: clampedGrade))
 
-        // 4★ drops start with 1-2 subs, 6★ with 2-4. Never duplicates the main.
-        let subCount = max(1, min(4, clampedGrade - 2 + rng.int(in: 0...1)))
+        // The quality is the number of subs it drops with — rolled by grade
+        // unless the caller names it, never below the floor a Hell tier or a
+        // raid sets — and never duplicates the main. This is the genre's
+        // rarity: the sub count used to follow the grade, so every 6★ was a
+        // Legend and there was nothing to hunt for.
+        let rolledQuality: RelicQuality
+        if let quality {
+            rolledQuality = quality
+        } else {
+            rolledQuality = rollQuality(grade: clampedGrade, floor: qualityFloor, rng: &rng)
+        }
         var available = subStatPool.filter { $0 != mainKind }
         var subs: [StatModifier] = []
-        for _ in 0..<subCount {
+        for _ in 0..<rolledQuality.subStatCount {
             guard let kind = rng.pickMutating(available) else { break }
             available.removeAll { $0 == kind }
             subs.append(StatModifier(kind, subStatRoll(kind: kind, grade: clampedGrade, rng: &rng)))
         }
 
-        return Relic(set: chosenSet, slot: chosenSlot, grade: clampedGrade, mainStat: main, subStats: subs)
+        var relic = Relic(set: chosenSet, slot: chosenSlot, grade: clampedGrade, mainStat: main, subStats: subs)
+        relic.quality = rolledQuality
+        return relic
+    }
+
+    /// A drop's quality, by the grade's odds (`RelicQuality.weights`), and
+    /// never below `floor`.
+    static func rollQuality(grade: Int, floor: RelicQuality = .normal, rng: inout SeededRandom) -> RelicQuality {
+        let weights = RelicQuality.weights(forGrade: grade)
+        let total = weights.reduce(0, +)
+        var pick = rng.int(in: 0...(max(1, total) - 1))
+        var chosen = RelicQuality.legend
+        for (index, weight) in weights.enumerated() {
+            if pick < weight {
+                chosen = RelicQuality(rawValue: index) ?? .normal
+                break
+            }
+            pick -= weight
+        }
+        return max(chosen, floor)
     }
 
     /// A full six-piece loadout, used to kit out arena opponents and the
@@ -94,11 +124,12 @@ enum RelicService {
         primarySet: RelicSet,
         secondarySet: RelicSet,
         upgradeLevel: Int,
+        quality: RelicQuality? = nil,
         rng: inout SeededRandom
     ) -> [Relic] {
         (1...6).map { slot in
             let set: RelicSet = slot <= primarySet.piecesRequired ? primarySet : secondarySet
-            var relic = generate(grade: grade, slot: slot, set: set, rng: &rng)
+            var relic = generate(grade: grade, slot: slot, set: set, quality: quality, rng: &rng)
             for _ in 0..<upgradeLevel {
                 upgradeOnce(&relic, rng: &rng)
             }
@@ -237,7 +268,10 @@ enum RelicService {
     /// What a relic fetches: a floor set by its grade, plus a third of what
     /// its upgrades cost, so selling a +12 is not throwing the drachma away.
     static func sellValue(_ relic: Relic) -> Int {
-        let base = 300 * relic.grade * relic.grade
+        // A quality step is worth a fifth more: the genre prices a Legend
+        // above a Normal of the same grade, and a drop screen that sells the
+        // Normals needs the difference to show.
+        let base = 300 * relic.grade * relic.grade * (5 + relic.resolvedQuality.rawValue) / 5
         let invested = (0..<relic.level).reduce(0) { $0 + upgradeCost(grade: relic.grade, level: $1) }
         return base + invested / 3
     }
@@ -280,21 +314,31 @@ enum RelicService {
         guard wallet.drachma >= cost else { throw ManageError.notEnoughDrachma(needed: cost) }
         wallet.drachma -= cost
 
-        let count = relic.subStats.count
+        // From the quality it dropped with, then the level's rolls replayed
+        // — a new sub while under four, then one grows — so the result has
+        // the shape a fresh relic of that quality has at that level. The
+        // honing and the gem went with the old subs.
+        let quality = relic.resolvedQuality
         var available = subStatPool.filter { $0 != relic.mainStat.kind }
         var subs: [StatModifier] = []
-        for _ in 0..<count {
+        for _ in 0..<quality.subStatCount {
             guard let kind = rng.pickMutating(available) else { break }
             available.removeAll { $0 == kind }
             subs.append(StatModifier(kind, subStatRoll(kind: kind, grade: relic.grade, rng: &rng)))
         }
-        let startingSubs = max(1, min(4, relic.grade - 2))
-        let bumps = max(0, relic.level / 3 - max(0, count - startingSubs))
-        for _ in 0..<bumps where !subs.isEmpty {
-            let index = rng.int(in: 0...(subs.count - 1))
-            subs[index].value += subStatRoll(kind: subs[index].kind, grade: relic.grade, rng: &rng)
+        for _ in 0..<(min(relic.level, 12) / 3) {
+            if subs.count < 4, let kind = rng.pickMutating(available) {
+                available.removeAll { $0 == kind }
+                subs.append(StatModifier(kind, subStatRoll(kind: kind, grade: relic.grade, rng: &rng)))
+            } else if !subs.isEmpty {
+                let index = rng.int(in: 0...(subs.count - 1))
+                subs[index].value += subStatRoll(kind: subs[index].kind, grade: relic.grade, rng: &rng)
+            }
         }
         relic.subStats = subs
+        relic.quality = quality
+        relic.honed = nil
+        relic.gemmed = nil
     }
 
     /// How close a relic is to the best its grade, slot and level could have
@@ -957,4 +1001,151 @@ struct RelicLoadout: Codable, Equatable, Identifiable, Sendable {
     /// Relic ids by slot (1...6), the same shape as `Unit.equippedRelics`. A
     /// slot with no entry is a slot this loadout leaves empty.
     var relicIDs: [Int: UUID]
+}
+
+// MARK: - Whetstones and gems
+
+extension RelicService {
+    enum StoneError: Error, LocalizedError {
+        case noStone(RelicStone)
+        case notEnoughDrachma(needed: Int)
+        case noSuchSubStat
+        case anotherSubIsGemmed(index: Int)
+        case kindNotAllowed
+
+        var errorDescription: String? {
+            switch self {
+            case .noStone(let stone): return "You have no \(stone.displayName). Raids drop them."
+            case .notEnoughDrachma(let needed): return "That costs \(needed) drachma."
+            case .noSuchSubStat: return "That relic has no sub stat there."
+            case .anotherSubIsGemmed(let index):
+                return "Sub stat \(index + 1) already carries this relic's gem; a relic holds one."
+            case .kindNotAllowed: return "A gem cannot repeat the main stat or another sub stat."
+            }
+        }
+    }
+
+    /// One honing: what was rolled, and the bonus before and after (the
+    /// better of the two is kept, so `after` never falls).
+    struct HoneOutcome: Equatable, Sendable {
+        var kind: StatKind
+        var rolled: Double
+        var before: Double
+        var after: Double
+        var improved: Bool { after > before }
+    }
+
+    struct GemOutcome: Equatable, Sendable {
+        var before: StatModifier
+        var after: StatModifier
+    }
+
+    static func stoneCount(_ stone: RelicStone, player: Player) -> Int {
+        player.relicStones?[stone.id] ?? 0
+    }
+
+    static func addStones(_ id: String, _ count: Int, player: inout Player) {
+        var stones = player.relicStones ?? [:]
+        stones[id, default: 0] += count
+        player.relicStones = stones
+    }
+
+    private static func spend(_ stone: RelicStone, player: inout Player) {
+        var stones = player.relicStones ?? [:]
+        let left = max(0, (stones[stone.id] ?? 0) - 1)
+        stones[stone.id] = left == 0 ? nil : left
+        player.relicStones = stones.isEmpty ? nil : stones
+    }
+
+    /// Flats and speed are whole numbers, percentages a tenth of a percent.
+    private static func settle(_ kind: StatKind, _ value: Double) -> Double {
+        kind.isPercentage ? (value * 1000).rounded() / 1000 : value.rounded()
+    }
+
+    /// The span a stone gives a kind, for the screen's "SPD +3.8–5.7": the
+    /// tier's fraction of a 6★ sub roll's base.
+    static func stoneSpan(_ stone: RelicStone, kind: StatKind) -> ClosedRange<Double> {
+        let base = subStatBase(kind: kind, grade: 6)
+        return settle(kind, base * stone.range.lowerBound)...settle(kind, base * stone.range.upperBound)
+    }
+
+    static func stoneRoll(_ stone: RelicStone, kind: StatKind, rng: inout SeededRandom) -> Double {
+        settle(kind, subStatBase(kind: kind, grade: 6) * rng.double(in: stone.range))
+    }
+
+    /// The kinds a gem may put in the sub stat at `index`: the pool less the
+    /// main stat and the other subs.
+    static func gemKinds(for relic: Relic, replacing index: Int) -> [StatKind] {
+        let taken = Set(relic.subStats.enumerated().filter { $0.offset != index }.map { $0.element.kind })
+        return subStatPool.filter { $0 != relic.mainStat.kind && !taken.contains($0) }
+    }
+
+    /// Hones the sub stat at `index` with a whetstone of `tier`: the stone
+    /// and the drachma are spent, the better of the old bonus and the roll
+    /// is kept.
+    static func hone(
+        relicID: UUID, subStat index: Int, tier: RelicStone.Tier,
+        player: inout Player, rng: inout SeededRandom
+    ) throws -> HoneOutcome {
+        guard let relicIndex = player.relics.firstIndex(where: { $0.id == relicID }),
+              player.relics[relicIndex].subStats.indices.contains(index) else {
+            throw StoneError.noSuchSubStat
+        }
+        let stone = RelicStone(kind: .whetstone, tier: tier)
+        guard stoneCount(stone, player: player) > 0 else { throw StoneError.noStone(stone) }
+        guard player.wallet.drachma >= stone.cost else { throw StoneError.notEnoughDrachma(needed: stone.cost) }
+
+        var relic = player.relics[relicIndex]
+        let kind = relic.subStats[index].kind
+        let rolled = stoneRoll(stone, kind: kind, rng: &rng)
+        let before = relic.honedBonus(at: index)
+        var honed = relic.honed ?? [:]
+        honed[index] = max(before, rolled)
+        relic.honed = honed
+        player.relics[relicIndex] = relic
+        player.wallet.drachma -= stone.cost
+        spend(stone, player: &player)
+        return HoneOutcome(kind: kind, rolled: rolled, before: before, after: max(before, rolled))
+    }
+
+    /// Replaces the sub stat at `index` with `kind` at a gem of `tier`'s
+    /// roll. One gemmed sub per relic: the same index may be gemmed again,
+    /// another may not. The honing on that sub goes with it.
+    static func engrave(
+        relicID: UUID, subStat index: Int, with kind: StatKind, tier: RelicStone.Tier,
+        player: inout Player, rng: inout SeededRandom
+    ) throws -> GemOutcome {
+        guard let relicIndex = player.relics.firstIndex(where: { $0.id == relicID }),
+              player.relics[relicIndex].subStats.indices.contains(index) else {
+            throw StoneError.noSuchSubStat
+        }
+        var relic = player.relics[relicIndex]
+        if let gemmed = relic.gemmed, gemmed != index { throw StoneError.anotherSubIsGemmed(index: gemmed) }
+        guard gemKinds(for: relic, replacing: index).contains(kind) else { throw StoneError.kindNotAllowed }
+        let stone = RelicStone(kind: .gem, tier: tier)
+        guard stoneCount(stone, player: player) > 0 else { throw StoneError.noStone(stone) }
+        guard player.wallet.drachma >= stone.cost else { throw StoneError.notEnoughDrachma(needed: stone.cost) }
+
+        let before = relic.subStats[index]
+        let after = StatModifier(kind, stoneRoll(stone, kind: kind, rng: &rng))
+        relic.subStats[index] = after
+        relic.gemmed = index
+        if var honed = relic.honed {
+            honed[index] = nil
+            relic.honed = honed.isEmpty ? nil : honed
+        }
+        player.relics[relicIndex] = relic
+        player.wallet.drachma -= stone.cost
+        spend(stone, player: &player)
+        return GemOutcome(before: before, after: after)
+    }
+
+    /// Every slot emptied. Free, on purpose: the genre charges for removal
+    /// and its players resent it, and the owner never asked for the fee.
+    static func unequipAll(unitID: UUID, player: inout Player) {
+        guard let unitIndex = player.units.firstIndex(where: { $0.id == unitID }) else { return }
+        for slot in Array(player.units[unitIndex].equippedRelics.keys) {
+            unequip(slot: slot, from: unitID, player: &player)
+        }
+    }
 }

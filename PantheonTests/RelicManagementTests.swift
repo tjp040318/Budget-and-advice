@@ -153,7 +153,7 @@ final class RelicManagementTests: XCTestCase {
 
     func testSubStatsRollAtThreeSixNineAndTwelveOnly() {
         var rng = SeededRandom(seed: 5)
-        var relic = RelicService.generate(grade: 3, slot: 4, set: .thunder, rng: &rng)
+        var relic = RelicService.generate(grade: 3, slot: 4, set: .thunder, quality: .magic, rng: &rng)
         relic.subStats = [relic.subStats[0]]
         var rolledAt: [Int] = []
         for _ in 0..<15 {
@@ -180,5 +180,175 @@ final class RelicManagementTests: XCTestCase {
         XCTAssertNil(relic.nextMainStat)
         XCTAssertGreaterThan(atFifteen / atFourteen, 1.08, "the last level is a jump")
         XCTAssertEqual(atFifteen / atZero, 3.0, accuracy: 0.01)
+    }
+}
+
+// MARK: - Quality, whetstones and gems
+
+/// The genre's rune rarity and its grindstones and gems, as this game has
+/// them: the quality is the sub count at the drop, rolled by grade and never
+/// below a floor; a whetstone hones one sub stat and keeps the better bonus;
+/// a gem replaces one sub stat, one per relic.
+final class RelicQualityTests: XCTestCase {
+
+    func testQualityIsTheSubCountAtTheDrop() {
+        var rng = SeededRandom(seed: 31)
+        for quality in RelicQuality.allCases {
+            let relic = RelicService.generate(grade: 6, quality: quality, rng: &rng)
+            XCTAssertEqual(relic.quality, quality)
+            XCTAssertEqual(relic.subStats.count, quality.subStatCount)
+            XCTAssertEqual(relic.resolvedQuality, quality)
+        }
+    }
+
+    func testQualityOddsFollowTheGradeAndTheFloor() {
+        var rng = SeededRandom(seed: 32)
+        var legendsAtSix = 0
+        var normalsAtSix = 0
+        for _ in 0..<600 {
+            let relic = RelicService.generate(grade: 6, rng: &rng)
+            if relic.resolvedQuality == .legend { legendsAtSix += 1 }
+            if relic.resolvedQuality == .normal { normalsAtSix += 1 }
+        }
+        // 12% and 6% in the table; loose bounds so a seed cannot fail this.
+        XCTAssertGreaterThan(legendsAtSix, 30)
+        XCTAssertLessThan(legendsAtSix, 130)
+        XCTAssertGreaterThan(normalsAtSix, 8)
+
+        for _ in 0..<200 {
+            XCTAssertEqual(RelicService.generate(grade: 2, rng: &rng).resolvedQuality < .legend, true, "a 2★ never drops a Legend")
+            XCTAssertGreaterThanOrEqual(RelicService.generate(grade: 3, qualityFloor: .rare, rng: &rng).resolvedQuality, .rare)
+        }
+        XCTAssertEqual(RelicQuality.weights(forGrade: 6).reduce(0, +), 100)
+        XCTAssertEqual(RelicQuality.weights(forGrade: 1).reduce(0, +), 100)
+    }
+
+    func testAnOldRelicReadsItsQualityOffItsSubsAndLevel() {
+        var rng = SeededRandom(seed: 33)
+        var relic = RelicService.generate(grade: 6, quality: .hero, rng: &rng)
+        relic.quality = nil
+        XCTAssertEqual(relic.resolvedQuality, .legend, "the old generator's floor for a 6★ was four subs")
+        var three = RelicService.generate(grade: 3, quality: .magic, rng: &rng)
+        three.quality = nil
+        for _ in 0..<6 { RelicService.upgradeOnce(&three, rng: &rng) }
+        XCTAssertEqual(three.subStats.count, 3)
+        XCTAssertEqual(three.resolvedQuality, .magic, "three subs less two rolls is one")
+    }
+
+    func testReappraisalKeepsTheQualityAndClearsTheStones() throws {
+        var rng = SeededRandom(seed: 34)
+        var player = NewGame.create().player
+        player.wallet.drachma = 1_000_000
+        var relic = RelicService.generate(grade: 6, quality: .rare, rng: &rng)
+        for _ in 0..<9 { RelicService.upgradeOnce(&relic, rng: &rng) }
+        relic.honed = [0: 3]
+        relic.gemmed = 1
+        var wallet = player.wallet
+        try RelicService.reappraise(&relic, wallet: &wallet, rng: &rng)
+        XCTAssertEqual(relic.quality, .rare)
+        XCTAssertEqual(relic.subStats.count, 4, "two at the drop, then three rolls: two new and one grown")
+        XCTAssertNil(relic.honed)
+        XCTAssertNil(relic.gemmed)
+        player.wallet = wallet
+    }
+
+    func testAWhetstoneHonesAndKeepsTheBetterBonus() throws {
+        var rng = SeededRandom(seed: 35)
+        var player = NewGame.create().player
+        player.wallet.drachma = 100_000
+        var relic = RelicService.generate(grade: 6, slot: 2, set: .fury, quality: .legend, rng: &rng)
+        relic.subStats[0] = StatModifier(.spd, 6)
+        player.relics.append(relic)
+        let stone = RelicStone(kind: .whetstone, tier: .legend)
+        XCTAssertThrowsError(try RelicService.hone(relicID: relic.id, subStat: 0, tier: .legend, player: &player, rng: &rng), "no stone yet")
+
+        RelicService.addStones(stone.id, 2, player: &player)
+        let first = try RelicService.hone(relicID: relic.id, subStat: 0, tier: .legend, player: &player, rng: &rng)
+        let span = RelicService.stoneSpan(stone, kind: .spd)
+        XCTAssertEqual(first.kind, .spd)
+        XCTAssertEqual(first.before, 0)
+        XCTAssertGreaterThanOrEqual(first.after, span.lowerBound)
+        XCTAssertLessThanOrEqual(first.after, span.upperBound)
+        XCTAssertEqual(player.wallet.drachma, 100_000 - stone.cost)
+        XCTAssertEqual(RelicService.stoneCount(stone, player: player), 1)
+        let honed = try XCTUnwrap(player.relic(relic.id))
+        XCTAssertEqual(honed.subStats[0].value, 6, "the roll itself is untouched")
+        XCTAssertEqual(honed.effectiveSubStats[0].value, 6 + first.after, accuracy: 0.001)
+        XCTAssertEqual(honed.allStats.count, 5)
+
+        let second = try RelicService.hone(relicID: relic.id, subStat: 0, tier: .legend, player: &player, rng: &rng)
+        XCTAssertEqual(second.before, first.after)
+        XCTAssertGreaterThanOrEqual(second.after, first.after, "honing again never lowers the bonus")
+        XCTAssertEqual(RelicService.stoneCount(stone, player: player), 0)
+        XCTAssertNil(player.relicStones?[stone.id])
+    }
+
+    func testAGemReplacesOneSubStatAndOnlyOnePerRelic() throws {
+        var rng = SeededRandom(seed: 36)
+        var player = NewGame.create().player
+        player.wallet.drachma = 100_000
+        var relic = RelicService.generate(grade: 6, slot: 4, set: .thunder, quality: .hero, rng: &rng)
+        relic.honed = [0: 2]
+        player.relics.append(relic)
+        RelicService.addStones("gem_hero", 3, player: &player)
+
+        let kinds = RelicService.gemKinds(for: relic, replacing: 0)
+        XCTAssertFalse(kinds.contains(relic.mainStat.kind))
+        XCTAssertFalse(kinds.contains(relic.subStats[1].kind))
+        let newKind = try XCTUnwrap(kinds.first(where: { $0 != relic.subStats[0].kind }))
+
+        let outcome = try RelicService.engrave(relicID: relic.id, subStat: 0, with: newKind, tier: .hero, player: &player, rng: &rng)
+        XCTAssertEqual(outcome.after.kind, newKind)
+        let span = RelicService.stoneSpan(RelicStone(kind: .gem, tier: .hero), kind: newKind)
+        XCTAssertGreaterThanOrEqual(outcome.after.value, span.lowerBound)
+        XCTAssertLessThanOrEqual(outcome.after.value, span.upperBound)
+        let gemmed = try XCTUnwrap(player.relic(relic.id))
+        XCTAssertEqual(gemmed.gemmed, 0)
+        XCTAssertEqual(gemmed.subStats[0].kind, newKind)
+        XCTAssertNil(gemmed.honed, "the gem clears that sub's honing")
+        XCTAssertEqual(gemmed.subStats.count, 3)
+
+        XCTAssertThrowsError(
+            try RelicService.engrave(relicID: relic.id, subStat: 1, with: newKind, tier: .hero, player: &player, rng: &rng),
+            "a second sub cannot be gemmed"
+        )
+        XCTAssertThrowsError(
+            try RelicService.engrave(relicID: relic.id, subStat: 0, with: relic.mainStat.kind, tier: .hero, player: &player, rng: &rng),
+            "never the main stat"
+        )
+        let again = RelicService.gemKinds(for: gemmed, replacing: 0)
+        let other = try XCTUnwrap(again.first)
+        XCTAssertNoThrow(try RelicService.engrave(relicID: relic.id, subStat: 0, with: other, tier: .hero, player: &player, rng: &rng), "the same sub may be gemmed again")
+        XCTAssertEqual(RelicService.stoneCount(RelicStone(kind: .gem, tier: .hero), player: player), 1)
+    }
+
+    func testStoneRangesMatchTheGenresNumbers() {
+        // A Legend whetstone is the genre's SPD +4–5, a Legend gem its 8–10.
+        let hone = RelicService.stoneSpan(RelicStone(kind: .whetstone, tier: .legend), kind: .spd)
+        XCTAssertEqual(hone.lowerBound, 4, accuracy: 0.5)
+        XCTAssertEqual(hone.upperBound, 6, accuracy: 0.5)
+        let gem = RelicService.stoneSpan(RelicStone(kind: .gem, tier: .legend), kind: .spd)
+        XCTAssertEqual(gem.lowerBound, 8, accuracy: 0.5)
+        XCTAssertEqual(gem.upperBound, 9.5, accuracy: 0.5)
+        for stone in RelicStone.all {
+            XCTAssertEqual(RelicStone.from(id: stone.id), stone)
+            XCTAssertGreaterThan(stone.cost, 0)
+        }
+    }
+
+    func testSellValueRisesWithQuality() {
+        var rng = SeededRandom(seed: 37)
+        let normal = RelicService.generate(grade: 6, quality: .normal, rng: &rng)
+        let legend = RelicService.generate(grade: 6, quality: .legend, rng: &rng)
+        XCTAssertGreaterThan(RelicService.sellValue(legend), RelicService.sellValue(normal))
+    }
+
+    func testUnequipAllEmptiesEverySlot() {
+        var player = NewGame.create().player
+        let starter = player.units[0]
+        XCTAssertFalse(starter.equippedRelics.isEmpty)
+        RelicService.unequipAll(unitID: starter.id, player: &player)
+        XCTAssertTrue(player.units[0].equippedRelics.isEmpty)
+        XCTAssertTrue(player.relics.allSatisfy { $0.equippedBy == nil })
     }
 }

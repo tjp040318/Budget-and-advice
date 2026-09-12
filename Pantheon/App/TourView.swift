@@ -38,7 +38,7 @@ struct TourView: View {
         ("summon", 2), ("reveal", 3), ("battle", 8), ("arena", 2), ("arena_battle", 6), ("more", 2),
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
-        ("victory", 4), ("collection_stage", 2),
+        ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -144,11 +144,23 @@ struct TourView: View {
             }
         case "relic_powerup":
             // The power-up screen on the best relic the roster owns.
-            if let relic = store.player.relics.max(by: { $0.grade < $1.grade }) {
+            if let relic = bestRelic {
                 RelicDetailView(relicID: relic.id)
             } else {
                 RelicInventoryView()
             }
+        case "relic_drop":
+            // The card a relic drop opens from the chest's shelf: Sell, Keep,
+            // Lock and keep.
+            if let relic = bestRelic {
+                RelicDropCard(relicID: relic.id)
+                    .background(Color.black.ignoresSafeArea())
+            } else {
+                RelicInventoryView()
+            }
+        case "relic_filter":
+            // The inventory with its filter sheet open.
+            RelicInventoryView(openingFilter: true)
         case "dungeon_battle":
             // A Labyrinth run on auto, so the frames catch the second and
             // third waves walking on and the Wave chip counting.
@@ -173,11 +185,17 @@ struct TourView: View {
             // The two acts of a win without fighting one: the reckoning,
             // then the chest opening on its spoils. `autoplay` taps through
             // for the camera.
-            BattleResultView(summary: Self.demoVictory(), onDismiss: {}, autoplay: true)
+            BattleResultView(summary: Self.demoVictory(relic: bestRelic), onDismiss: {}, autoplay: true, store: store)
                 .background(Color.black.ignoresSafeArea())
         default:
             SettingsView()
         }
+    }
+
+    /// The relic the relic steps photograph: the highest grade, and among
+    /// those the highest level, so the level track and the rim both show.
+    private var bestRelic: Relic? {
+        store.player.relics.max(by: { ($0.grade, $0.level) < ($1.grade, $1.level) })
     }
 
     private func tick() {
@@ -256,7 +274,7 @@ struct TourView: View {
     /// A won stage as the result screen reads it: three of the first
     /// families, one of them the MVP, one fallen, and a chest with every
     /// kind of spoil in it, so the tiles are all photographed at once.
-    private static func demoVictory() -> BattleSummary {
+    private static func demoVictory(relic: Relic? = nil) -> BattleSummary {
         let cast: [(id: String, dealt: Double, taken: Double, healed: Double, kills: Int, survived: Bool)] = [
             ("anubis_umbra", 14_820, 3_960, 0, 3, true),
             ("sekhmet_ember", 9_140, 6_210, 0, 2, true),
@@ -283,7 +301,8 @@ struct TourView: View {
             .init(glyph: "circle.hexagongrid.fill", title: "Drachma", amount: "+1,240", tint: .gold),
             .init(glyph: "arrow.up.circle.fill", title: "Unit EXP", amount: "+860", tint: .verdigris),
             .init(glyph: "sparkles", title: "Divinity", amount: "+15", tint: .marble),
-            .init(glyph: RelicSet.fury.glyph, title: "Fury Relic", amount: "Slot 4", tint: .gold, stars: 5),
+            .init(glyph: RelicSet.fury.glyph, title: relic?.displayName ?? "Hero Fury Relic", amount: "Slot \(relic?.slot ?? 4)",
+                  tint: .gold, stars: relic?.grade ?? 5, relic: relic),
             .init(glyph: "drop.triangle.fill", title: "Ember Essence", amount: "+3", tint: .element(.ember)),
             .init(glyph: ScrollType.unknown.glyph, title: ScrollType.unknown.displayName, amount: "+1", tint: .scroll(.unknown)),
         ]

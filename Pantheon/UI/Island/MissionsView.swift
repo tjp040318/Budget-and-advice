@@ -325,6 +325,7 @@ struct MissionsView: View {
         case .divinity: return "sparkles"
         case .relic: return "shield.lefthalf.filled"
         case .essences: return "drop.triangle.fill"
+        case .stones: return "diamond.fill"
         case .bundle: return "gift.fill"
         }
     }

@@ -379,6 +379,51 @@ final class GameStore: ObservableObject {
         }
     }
 
+    /// Power-up attempts until the relic reaches `target` or the drachma
+    /// runs out, every outcome handed back for the summary line. Capped so a
+    /// run of failures cannot spin: sixty attempts is far past the expected
+    /// bill from +0 to +15.
+    func powerUpRelic(_ relicID: UUID, to target: Int) -> [RelicService.PowerUpOutcome] {
+        var outcomes: [RelicService.PowerUpOutcome] = []
+        while outcomes.count < 60, let relic = player.relic(relicID), relic.level < min(target, relic.maxLevel) {
+            let cost = RelicService.upgradeCost(grade: relic.grade, level: relic.level)
+            guard player.wallet.drachma >= cost, let outcome = powerUpRelic(relicID) else { break }
+            outcomes.append(outcome)
+        }
+        return outcomes
+    }
+
+    /// Hones one sub stat with a whetstone. Nil, and the reason shown, when
+    /// there is no stone or no drachma.
+    @discardableResult
+    func honeRelic(_ relicID: UUID, subStat index: Int, tier: RelicStone.Tier) -> RelicService.HoneOutcome? {
+        var rng = makeRandom()
+        let result: RelicService.HoneOutcome?? = attempt { player in
+            try RelicService.hone(relicID: relicID, subStat: index, tier: tier, player: &player, rng: &rng)
+        }
+        return result ?? nil
+    }
+
+    /// Replaces one sub stat with a gem's roll of `kind`.
+    @discardableResult
+    func gemRelic(_ relicID: UUID, subStat index: Int, with kind: StatKind, tier: RelicStone.Tier) -> RelicService.GemOutcome? {
+        var rng = makeRandom()
+        let result: RelicService.GemOutcome?? = attempt { player in
+            try RelicService.engrave(relicID: relicID, subStat: index, with: kind, tier: tier, player: &player, rng: &rng)
+        }
+        return result ?? nil
+    }
+
+    func stoneCount(_ stone: RelicStone) -> Int {
+        RelicService.stoneCount(stone, player: player)
+    }
+
+    func unequipAll(_ unitID: UUID) {
+        update { player in
+            RelicService.unequipAll(unitID: unitID, player: &player)
+        }
+    }
+
     // MARK: - The optimiser and loadouts
 
     /// The best six relics for a unit under one goal. A read, not a mutation:
@@ -672,11 +717,20 @@ final class GameStore: ObservableObject {
             // efficiency dials and a few upgrades.
             if player.relics.count < 12 {
                 var rng = SeededRandom(seed: 99)
-                for grade in [4, 5, 5, 6, 6, 6] {
-                    var relic = RelicService.generate(grade: grade, rng: &rng)
-                    for _ in 0..<(grade == 6 ? 9 : 3) { RelicService.upgradeOnce(&relic, rng: &rng) }
+                // One of every quality, so the rims and the coloured names
+                // are all in the frame.
+                let bag: [(grade: Int, quality: RelicQuality, level: Int)] = [
+                    (4, .magic, 3), (5, .rare, 3), (5, .hero, 6), (6, .legend, 9), (6, .hero, 12), (6, .normal, 0),
+                ]
+                for entry in bag {
+                    var relic = RelicService.generate(grade: entry.grade, quality: entry.quality, rng: &rng)
+                    for _ in 0..<entry.level { RelicService.upgradeOnce(&relic, rng: &rng) }
                     player.relics.append(relic)
                 }
+            }
+            // Whetstones and gems, so the stone sheet has something to spend.
+            for stone in RelicStone.all where RelicService.stoneCount(stone, player: player) < 3 {
+                RelicService.addStones(stone.id, 3, player: &player)
             }
             player.wallet.add(.pantheonic, 10)
             for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {

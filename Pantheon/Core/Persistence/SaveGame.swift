@@ -142,6 +142,7 @@ enum NewGame {
             primarySet: .fury,
             secondarySet: .thunder,
             upgradeLevel: 0,
+            quality: .rare,
             rng: &rng
         )
         player.relics.append(contentsOf: starterRelics)

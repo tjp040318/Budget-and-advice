@@ -44,6 +44,8 @@ enum ShopService {
         case divinity(Int)
         case relic(grade: Int)
         case essences(String, Int)
+        /// Whetstones or gems by `RelicStone.id`.
+        case stones(String, Int)
         case bundle([Grant])
     }
 
@@ -118,6 +120,12 @@ enum ShopService {
              icon: "shield.lefthalf.filled", price: .free,
              grant: .bundle([.relic(grade: 6), .relic(grade: 6), .relic(grade: 6),
                              .relic(grade: 6), .relic(grade: 6), .relic(grade: 6)]),
+             section: .testing),
+        Item(id: "test_stones", title: "The stonecutter's crate",
+             subtitle: "Ten whetstones and ten gems of every tier, to hone and gem a relic without a raid.",
+             icon: "diamond.fill", price: .free,
+             grant: .bundle([.stones("whetstone_rare", 10), .stones("whetstone_hero", 10), .stones("whetstone_legend", 10),
+                             .stones("gem_rare", 10), .stones("gem_hero", 10), .stones("gem_legend", 10)]),
              section: .testing),
 
         Item(id: "daily_offering", title: "Daily offering",
@@ -203,6 +211,12 @@ enum ShopService {
         Item(id: "relic_laurels_6", title: "Champion's relic, 6★", subtitle: "One random 6★ relic, for arena laurels.",
              icon: "shield.lefthalf.filled", price: Price(currency: .laurels, amount: 300),
              grant: .relic(grade: 6), section: .laurels),
+        Item(id: "gem_laurels_legend", title: "Legend Gem", subtitle: "Replaces one sub stat with a stat of your choosing, at the top range.",
+             icon: "diamond.fill", price: Price(currency: .laurels, amount: 400),
+             grant: .stones("gem_legend", 1), section: .laurels),
+        Item(id: "whetstone_laurels_legend", title: "Legend Whetstone", subtitle: "Hones one sub stat by the top range.",
+             icon: "seal.fill", price: Price(currency: .laurels, amount: 250),
+             grant: .stones("whetstone_legend", 1), section: .laurels),
         Item(id: "scroll_laurels_pantheonic", title: "Pantheon Scroll", subtitle: "A banner summon, for arena laurels.",
              icon: "sparkles", price: Price(currency: .laurels, amount: 150),
              grant: .scrolls(.pantheonic, 1), section: .laurels),
@@ -313,6 +327,9 @@ enum ShopService {
         case .essences(let id, let count):
             player.essences[id, default: 0] += count
             granted.append(grant)
+        case .stones(let id, let count):
+            RelicService.addStones(id, count, player: &player)
+            granted.append(grant)
         case .bundle(let parts):
             for part in parts { apply(part, to: &player, rng: &rng, into: &granted) }
         }
@@ -328,6 +345,7 @@ enum ShopService {
         case .divinity(let amount): return "Divinity +\(amount)"
         case .relic(let grade): return "\(grade)★ relic"
         case .essences(let id, let count): return "\(EssenceCatalog.name(for: id)) ×\(count)"
+        case .stones(let id, let count): return "\(RelicStone.from(id: id)?.displayName ?? id) ×\(count)"
         case .bundle(let parts): return parts.map(describe).joined(separator: ", ")
         }
     }

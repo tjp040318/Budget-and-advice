@@ -25,6 +25,13 @@ struct StageRewards: Codable, Equatable, Sendable {
     var relicGrade: Int = 3
     /// When set, a dropped relic is one of these sets: a dungeon's own.
     var relicSets: [RelicSet]? = nil
+    /// Whetstone and gem ids (`RelicStone.id`) to chance of dropping: the
+    /// raids, a Hell boss, the deep Labyrinth. Optional so the stage data's
+    /// shape is unchanged for everything that pays none.
+    var stoneChances: [String: Double]? = nil
+    /// A dropped relic is at least this quality: Magic on a Hell tier, Rare
+    /// from a raid. Nil is Normal, the genre's floor.
+    var qualityFloor: RelicQuality? = nil
     /// Essence id to chance of dropping.
     var essenceChances: [String: Double] = [:]
     /// Scroll drops by type and chance.
@@ -244,6 +251,11 @@ enum CampaignDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
         copy.essenceChances = rewards.essenceChances.mapValues { min(1, $0 * dropScale) }
         copy.scrollChances = rewards.scrollChances.mapValues { min(1, $0 * dropScale) }
         copy.firstClearDivinity = Int(Double(rewards.firstClearDivinity) * rewardScale)
+        // A Hell drop is never a Normal: the tier exists to be farmed once
+        // the 6★s are in hand, and a 6★ with no sub stat is not a reward.
+        if self == .hell {
+            copy.qualityFloor = max(rewards.qualityFloor ?? .normal, .magic)
+        }
         return copy
     }
 }
@@ -265,6 +277,14 @@ extension Stage {
         copy.enemies = enemies.map { tier.scale($0) }
         copy.laterWaves = laterWaves.map { wave in wave.map { tier.scale($0) } }
         copy.rewards = tier.scale(rewards)
+        // A Hell boss pays in whetstones and gems as well: with the raids,
+        // the source of the endgame's relic work.
+        if tier == .hell, isBoss {
+            var stones = copy.rewards.stoneChances ?? [:]
+            stones["whetstone_rare"] = max(stones["whetstone_rare"] ?? 0, 0.35)
+            stones["gem_rare"] = max(stones["gem_rare"] ?? 0, 0.15)
+            copy.rewards.stoneChances = stones
+        }
         return copy
     }
 }
@@ -926,6 +946,10 @@ enum StageDatabase {
                     // The offensive half of the sets: what a raid team is
                     // short of once the Labyrinth has paid out its own.
                     relicSets: [.fury, .ruin, .thunder, .styx, .nemesis, .wrath],
+                    // The raid is the genre's Rift: where the whetstones and
+                    // gems come from, and its relic is never below Rare.
+                    stoneChances: ["whetstone_hero": 0.7, "whetstone_legend": 0.25, "gem_hero": 0.35, "gem_legend": 0.12],
+                    qualityFloor: .rare,
                     essenceChances: ["essence_ember_high": 0.8, "essence_magic_high": 0.5],
                     scrollChances: [ScrollType.pantheonic.rawValue: 0.5, ScrollType.divine.rawValue: 0.12],
                     firstClearDivinity: 300

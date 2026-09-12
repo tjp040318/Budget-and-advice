@@ -13,6 +13,9 @@ struct StageOutcome: Sendable {
     var divinityEarned: Int
     var isFirstClear: Bool
     var leveledUnits: [UUID: Int]
+    /// Whetstones and gems by `RelicStone.id`. Defaulted, so the places
+    /// that build an outcome with nothing of the kind need not say so.
+    var stonesEarned: [String: Int] = [:]
 }
 
 /// PvE progression: which stages are open, and what a clear pays.
@@ -160,9 +163,19 @@ enum CampaignService {
             // A dungeon drops its own sets; anywhere else, any set.
             var set: RelicSet?
             if let sets = rewards.relicSets, !sets.isEmpty { set = rng.pickMutating(sets) }
-            let relic = RelicService.generate(grade: rewards.relicGrade, set: set, rng: &rng)
+            let relic = RelicService.generate(
+                grade: rewards.relicGrade, set: set,
+                qualityFloor: rewards.qualityFloor ?? .normal, rng: &rng
+            )
             relics.append(relic)
             player.relics.append(relic)
+        }
+
+        // Whetstones and gems, sorted so the seed's rolls fall in one order.
+        var stones: [String: Int] = [:]
+        for (id, chance) in (rewards.stoneChances ?? [:]).sorted(by: { $0.key < $1.key }) where rng.chance(chance) {
+            stones[id, default: 0] += 1
+            RelicService.addStones(id, 1, player: &player)
         }
 
         var essences: [String: Int] = [:]
@@ -195,7 +208,8 @@ enum CampaignService {
             playerExperience: rewards.playerExperience, unitExperience: unitXP,
             relicsEarned: relics, essencesEarned: essences, scrollsEarned: scrolls,
             divinityEarned: divinity, isFirstClear: isFirstClear,
-            leveledUnits: leveled
+            leveledUnits: leveled,
+            stonesEarned: stones
         )
     }
 

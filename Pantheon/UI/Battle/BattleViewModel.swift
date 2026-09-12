@@ -84,7 +84,8 @@ final class BattleViewModel: ObservableObject {
     private var pendingEvents: [BattleEvent] = []
 
     var waveCount: Int { engine.waveCount }
-    private unowned let store: GameStore
+    /// Not private: the result view hands it to the relic drop card.
+    unowned let store: GameStore
 
     // MARK: - Init
 
@@ -120,6 +121,7 @@ final class BattleViewModel: ObservableObject {
         var relics: [Relic] = []
         var essences: [String: Int] = [:]
         var scrolls: [String: Int] = [:]
+        var stones: [String: Int] = [:]
         var stoppedBecause: String?
 
         var isFinished: Bool { completed >= requested || stoppedBecause != nil }
@@ -153,6 +155,7 @@ final class BattleViewModel: ObservableObject {
         session.relics += stageOutcome.relicsEarned
         for (id, count) in stageOutcome.essencesEarned { session.essences[id, default: 0] += count }
         for (id, count) in stageOutcome.scrollsEarned { session.scrolls[id, default: 0] += count }
+        for (id, count) in stageOutcome.stonesEarned { session.stones[id, default: 0] += count }
 
         if result.outcome != .victory {
             session.stoppedBecause = "Stopped after a defeat."
@@ -210,6 +213,9 @@ final class BattleViewModel: ObservableObject {
             let text = byGrade.keys.sorted(by: >).map { "\($0)★ ×\(byGrade[$0]?.count ?? 0)" }.joined(separator: ", ")
             lines.append(.init(icon: "shield.lefthalf.filled", label: "Relics", value: text))
         }
+        for (id, count) in session.stones.sorted(by: { $0.key < $1.key }) {
+            lines.append(.init(icon: "diamond.fill", label: RelicStone.from(id: id)?.displayName ?? id, value: "+\(count)"))
+        }
         for (id, count) in session.essences.sorted(by: { $0.key < $1.key }) {
             lines.append(.init(icon: "drop.triangle.fill", label: EssenceCatalog.name(for: id), value: "+\(count)"))
         }
@@ -230,7 +236,11 @@ final class BattleViewModel: ObservableObject {
             loot.append(.init(glyph: "sparkles", title: "Divinity", amount: "+\(session.divinity)", tint: .marble))
         }
         for relic in session.relics {
-            loot.append(.init(glyph: relic.set.glyph, title: "\(relic.set.displayName) Relic", amount: "Slot \(relic.slot)", tint: .gold, stars: relic.grade))
+            loot.append(.init(glyph: relic.set.glyph, title: relic.displayName, amount: "Slot \(relic.slot)", tint: .gold, stars: relic.grade, relic: relic))
+        }
+        for (id, count) in session.stones.sorted(by: { $0.key < $1.key }) {
+            guard let stone = RelicStone.from(id: id) else { continue }
+            loot.append(.init(glyph: stone.kind.glyph, title: stone.displayName, amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity)))
         }
         for (id, count) in session.essences.sorted(by: { $0.key < $1.key }) {
             let element = Element(rawValue: id.split(separator: "_").dropFirst().first.map(String.init) ?? "")
@@ -544,8 +554,13 @@ final class BattleViewModel: ObservableObject {
                                amount: "+\(stageOutcome.divinityEarned)", tint: .marble))
         }
         for relic in stageOutcome.relicsEarned {
-            items.append(.init(glyph: relic.set.glyph, title: "\(relic.set.displayName) Relic",
-                               amount: "Slot \(relic.slot)", tint: .gold, stars: relic.grade))
+            items.append(.init(glyph: relic.set.glyph, title: relic.displayName,
+                               amount: "Slot \(relic.slot)", tint: .gold, stars: relic.grade, relic: relic))
+        }
+        for (id, count) in stageOutcome.stonesEarned.sorted(by: { $0.key < $1.key }) {
+            guard let stone = RelicStone.from(id: id) else { continue }
+            items.append(.init(glyph: stone.kind.glyph, title: stone.displayName,
+                               amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity)))
         }
         for (id, count) in stageOutcome.essencesEarned.sorted(by: { $0.key < $1.key }) {
             let element = Element(rawValue: id.split(separator: "_").dropFirst().first.map(String.init) ?? "")
@@ -588,7 +603,10 @@ final class BattleViewModel: ObservableObject {
                 lines.append(.init(icon: "sparkles", label: "Divinity", value: "+\(stageOutcome.divinityEarned)"))
             }
             for relic in stageOutcome.relicsEarned {
-                lines.append(.init(icon: "shield.lefthalf.filled", label: "\(relic.set.displayName) Relic", value: "\(relic.grade)★"))
+                lines.append(.init(icon: "shield.lefthalf.filled", label: relic.displayName, value: "\(relic.grade)★"))
+            }
+            for (id, count) in stageOutcome.stonesEarned.sorted(by: { $0.key < $1.key }) {
+                lines.append(.init(icon: "diamond.fill", label: RelicStone.from(id: id)?.displayName ?? id, value: "+\(count)"))
             }
             for (id, count) in stageOutcome.essencesEarned {
                 lines.append(.init(icon: "drop.triangle.fill", label: EssenceCatalog.name(for: id), value: "+\(count)"))
@@ -688,10 +706,13 @@ struct BattleSummary {
         case gold, verdigris, laurel, wine, marble
         case element(Element)
         case scroll(ScrollType)
+        /// A whetstone or a gem, in its tier's metal.
+        case rarity(Rarity)
     }
 
-    /// One thing the chest gives up. A relic carries its grade so the tile
-    /// can wear the rarity frame; everything else is a glyph on a plate.
+    /// One thing the chest gives up. A relic carries itself so the tile can
+    /// draw the stone and open the drop card; everything else is a glyph on
+    /// a plate.
     struct Loot: Identifiable {
         var id = UUID()
         var glyph: String
@@ -699,6 +720,7 @@ struct BattleSummary {
         var amount: String
         var tint: LootTint
         var stars: Int? = nil
+        var relic: Relic? = nil
     }
 
     var outcome: BattleOutcome

@@ -399,6 +399,40 @@ environment can and cannot do. The short version:
   policy, so the per-level numbers are ours); `balance.py --economy`
   prints the expected drachma to +15 with the odds. Change the table in
   both files.
+- **Relics are objects, and the rune management is the genre's
+  (2026-09-12).** A relic draws as a stone: the SLOT is the silhouette
+  (1 crystal, 2 medallion, 3 shield, 4 hexagon, 5 vial, 6 tablet), the
+  SET the colour and the emblem engraved on it, the QUALITY the rim, the
+  grade the stars under it, the level a badge — `RelicIcon` in
+  `RelicInventoryView.swift`, on every screen a relic appears. The stones
+  are rendered here by `python3 tools/relic_art.py --sheet x.jpg` (judge)
+  and `--ship` (writes `relic_<set>_<slot>.png` ×96, `relic_rim_<slot>.png`
+  ×6 as templates the app tints, `relic_emblem_<set>.png` ×16, 5.3 MB) —
+  Gemini is paused, and a painted set dropped in under the same names
+  replaces them with no code change (about 22 images, ~$3, for the
+  emblems and shapes). **Quality** (`RelicQuality`: Normal, Magic, Rare,
+  Hero, Legend = 0–4 sub stats at the drop) is rolled by grade
+  (`RelicQuality.weights`, a 6★ Legend one in eight), floored at Magic on
+  Hell tiers and Rare from raids (`StageRewards.qualityFloor`), stored as
+  an Optional (`Relic.quality`; `resolvedQuality` reads an old relic's off
+  its subs and level), and colours the rim and the name everywhere.
+  **Whetstones and gems** (`RelicStone`: three tiers, one kind of each,
+  never per set) hone a sub stat (`Relic.honed`, a bonus kept apart from
+  the roll, the better kept on a re-hone) or replace one (`Relic.gemmed`,
+  one per relic); they drop from the raids, Hell bosses, Labyrinth B7+
+  and the Tower's milestones (`StageRewards.stoneChances`,
+  `Grant.stones`), live in `Player.relicStones`, and are spent on the
+  relic card's Hone & gem sheet (`RelicStoneSheet`). The inventory has a
+  **filter sheet** (`RelicFilter`: slot, grade, quality, main, subs —
+  every ticked sub must be on the relic — set, worn, locked), eight
+  sorts, "All shown" while selecting; a relic's card has **Equip on…**
+  (`RelicWearerPicker`, the roster with the delta) and **Power up to +N**
+  (`GameStore.powerUpRelic(_:to:)`); a relic on the chest's shelf opens
+  the **drop card** (`RelicDropCard`: Sell, Keep, Lock and keep); the unit
+  sheet has Unequip all. Removal is free on purpose. Every number is
+  mirrored in `balance.py` (`QUALITY_WEIGHTS`, `STONE_RANGES`,
+  `STONE_COSTS`; `--relics` prints the odds, the stone spans and the bill
+  to each milestone).
 - **The detail pass (2026-09-09).** The playtest called the characters too
   cartoony and the attacks ugly (a leg thrown out). Four things changed, all
   in one place each: the Meshy texture prompt in `tools/batch/wave_launch.sh`
@@ -536,12 +570,12 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is twenty-two screens (steps 0–21): an arena battle
+  pass. The CI tour is twenty-four screens (steps 0–23): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,
-  the victory's chest in three frames and the collection's Stage layout
-  (21).
+  the victory's chest in three frames, the collection's Stage layout
+  (21), the relic drop card (22) and the relic filter sheet (23).
 - **The fight reads.** **Every unit's bars are a screen-space plate under
   its feet (2026-09-11, night):** `UnitPlateOverlay`, a SpriteKit scene laid
   over the `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one

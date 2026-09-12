@@ -18,6 +18,7 @@ the engine; it is the spreadsheet a designer would keep, made executable.
     python3 tools/balance.py --tower    # the Endless Tower's hundred floors
     python3 tools/balance.py --tiers    # the campaign's Hard and Hell against the ladders
     python3 tools/balance.py --raids    # the two raid bosses and their mechanics
+    python3 tools/balance.py --relics   # quality odds, whetstone and gem ranges, the power-up bill
 
 If a constant changes in Swift, change it here and re-run.
 """
@@ -43,6 +44,26 @@ ATB_RATE          = 0.07
 MAX_TURNS         = 150
 
 WHEEL_BEATS = {"ember": "gale", "gale": "tide", "tide": "ember"}
+
+# Relics — must match Core/Models/Relic.swift and Core/Progression/RelicService.swift.
+# A drop's quality (Normal, Magic, Rare, Hero, Legend = 0-4 sub stats) by grade,
+# in percent; the stones' ranges as a fraction of a 6* sub roll's base; the
+# drachma each use costs.
+QUALITY_NAMES   = ["Normal", "Magic", "Rare", "Hero", "Legend"]
+QUALITY_WEIGHTS = {1: [45, 35, 15, 5, 0], 2: [45, 35, 15, 5, 0], 3: [30, 35, 22, 10, 3],
+                   4: [18, 32, 28, 15, 7], 5: [10, 26, 32, 21, 11], 6: [6, 22, 34, 26, 12]}
+SUB_STAT_BASE   = {"hp": 95, "atk": 7, "def": 7, "hp%": 0.03, "atk%": 0.03, "def%": 0.03,
+                   "spd": 3, "crit": 0.025, "critdmg": 0.035, "acc": 0.03, "res": 0.03}
+SUB_GRADE_SCALE = 0.22          # subStatBase: 1 + (grade - 1) * 0.22
+STONE_RANGES    = {("whetstone", "rare"): (0.25, 0.45), ("whetstone", "hero"): (0.40, 0.65),
+                   ("whetstone", "legend"): (0.60, 0.90), ("gem", "rare"): (0.85, 1.05),
+                   ("gem", "hero"): (1.00, 1.25), ("gem", "legend"): (1.20, 1.50)}
+STONE_COSTS     = {("whetstone", "rare"): 4_000, ("whetstone", "hero"): 9_000, ("whetstone", "legend"): 16_000,
+                   ("gem", "rare"): 6_000, ("gem", "hero"): 14_000, ("gem", "legend"): 24_000}
+POWER_UP_CHANCES = [1.0, 1.0, 1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50, 0.45, 0.40]
+
+def sub_stat_base(kind, grade=6):
+    return SUB_STAT_BASE[kind] * (1 + (grade - 1) * SUB_GRADE_SCALE)
 
 def matchup(att, dfn):
     if att == dfn: return "neutral"
@@ -1319,6 +1340,38 @@ def report_gacha():
           "Radiance or Umbra, so a")
     print("    factor applied to all of them alike cancels out")
 
+def report_relics():
+    """The relic hunt: what a drop's quality costs in runs, what a stone is
+    worth against a roll, and the bill to a milestone with the power-up odds."""
+    print("\nRELICS — quality odds by grade (percent), and runs per Legend")
+    print(f"  {'grade':>6}  " + "".join(f"{n:>8}" for n in QUALITY_NAMES) + "   runs/Legend  mean subs")
+    for grade in range(1, 7):
+        w = QUALITY_WEIGHTS[grade]
+        legend = w[4] / 100
+        mean_subs = sum(i * p for i, p in enumerate(w)) / 100
+        runs = f"{1 / legend:.0f}" if legend else "never"
+        print(f"  {grade:>5}*  " + "".join(f"{p:>8}" for p in w) + f"   {runs:>11}  {mean_subs:>9.2f}")
+    print("  Hell tiers floor a drop at Magic, the raids at Rare (StageRewards.qualityFloor).")
+    print("\n  a 6* sub roll: base × 0.75–1.25; a whetstone adds, a gem replaces, as a fraction of the base")
+    print(f"  {'stone':>18}  {'SPD':>10}  {'ATK%':>12}  {'CRIT':>12}  {'HP':>10}  cost")
+    for (kind, tier), (lo, hi) in STONE_RANGES.items():
+        cells = []
+        for stat, pct in (("spd", False), ("atk%", True), ("crit", True), ("hp", False)):
+            b = sub_stat_base(stat)
+            if pct:
+                cells.append(f"{lo*b*100:.1f}–{hi*b*100:.1f}%")
+            else:
+                cells.append(f"{lo*b:.1f}–{hi*b:.1f}")
+        print(f"  {tier + ' ' + kind:>18}  {cells[0]:>10}  {cells[1]:>12}  {cells[2]:>12}  {cells[3]:>10}  {STONE_COSTS[(kind, tier)]:,}")
+    roll = sub_stat_base("spd")
+    print(f"  (a 6* SPD roll is {roll*0.75:.1f}–{roll*1.25:.1f}; the genre's Legend grind is +4–5 and its Legend gem 8–10)")
+    print("\n  power-up to a milestone, 6*: attempts and drachma expected with the odds")
+    for target in (3, 6, 9, 12, 15):
+        attempts = sum(1 / POWER_UP_CHANCES[l] for l in range(target))
+        cost = sum((100 * 36 + l * 100 * 36 // 3) / POWER_UP_CHANCES[l] for l in range(target))
+        print(f"    to +{target:<2}  {attempts:5.1f} attempts  {cost:>9,.0f} drachma")
+
+
 def report_economy():
     print("\nECONOMY — first-clear income vs. upgrade costs")
     drachma = [700, 950, 1200, 1500, 3000]
@@ -1378,8 +1431,9 @@ if __name__ == "__main__":
     elif "--labyrinths" in a: report_labyrinths()
     elif "--tower" in a: report_tower()
     elif "--raids" in a: report_raids()
+    elif "--relics" in a: report_relics()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids()
-        report_gacha(); report_economy()
+        report_gacha(); report_economy(); report_relics()
         print()

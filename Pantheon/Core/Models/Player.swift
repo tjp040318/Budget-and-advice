@@ -92,6 +92,9 @@ struct Player: Codable, Equatable, Sendable {
     /// Named six-relic loadouts, saved against a unit. Ids rather than relics,
     /// so a relic sold since cannot leave a stale copy of itself in the save.
     var relicLoadouts: [RelicLoadout]? = nil
+    /// Whetstones and gems by `RelicStone.id` ("whetstone_hero"). Optional
+    /// for the reason the fields above are.
+    var relicStones: [String: Int]? = nil
     /// How far the guided opening got: a `FirstHourStep` raw value, or
     /// `FirstHourStep.finished` once it has been skipped or seen out. Nil means
     /// nothing has ended it, so the step is worked out from the save itself.

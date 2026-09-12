@@ -468,8 +468,7 @@ struct StageBriefingView: View {
                         ) {
                             ForEach(sets) { relicSet in
                                 HStack(spacing: 3) {
-                                    Image(systemName: relicSet.glyph)
-                                        .font(.system(size: 8, weight: .bold))
+                                    RelicSetEmblem(set: relicSet, size: 9)
                                     Text(relicSet.displayName)
                                         .font(Theme.body(9).weight(.semibold))
                                         .lineLimit(1)

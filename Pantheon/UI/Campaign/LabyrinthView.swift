@@ -181,8 +181,7 @@ struct LabyrinthView: View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 58, maximum: 90), spacing: 4)], spacing: 4) {
             ForEach(sets) { relicSet in
                 HStack(spacing: 3) {
-                    Image(systemName: relicSet.glyph)
-                        .font(.system(size: 8, weight: .bold))
+                    RelicSetEmblem(set: relicSet, size: 9)
                     Text(relicSet.displayName)
                         .font(Theme.body(9).weight(.semibold))
                         .lineLimit(1)

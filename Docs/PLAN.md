@@ -1343,3 +1343,208 @@ found their manifests and skipped (18 shipped, Neptune and the Terracotta
 Soldier refused, balance 2,133). Gemini is off again until the owner's
 word.
 
+
+## Relics designed, and the rune management system (2026-09-12)
+
+The owner's two asks, verbatim: "1. We need actual relics designed (our
+runes) 2. We need a full rune management system like summoners war". Rule 2
+says research first, so this section is the research, the gap list, the
+options and the choice, written before the first edit.
+
+### What Summoners War's rune system is, screen by screen
+
+From memory of the game and its guides — the data sites (the wiki, the
+fan-run rune calculators) are refused by the network policy, so nothing
+below was copied from a page; where a number is Summoners War's, it is the
+number as remembered, and where it is ours it says so.
+
+- **A rune is an object.** Six slots in a hexagon around the monster, slot
+  1 at the top and clockwise. Each slot's rune has its own silhouette — a
+  player tells the slot from the shape before reading the number — the set
+  is an emblem engraved on the stone with a colour of its own, the rarity
+  (the number of sub stats it dropped with: Normal 0, Magic 1, Rare 2, Hero
+  3, Legend 4) is the frame and the name's colour (white, green, blue,
+  purple, orange), the grade is a row of stars, and the level is "+N".
+  Every list, every drop, every slot on the monster shows that one icon.
+- **Slots 1/3/5 carry fixed flat mains** (ATK, DEF, HP) and 2/4/6 roll
+  theirs (2: HP/ATK/DEF % or SPD; 4: + CRIT Rate/DMG; 6: + ACC/RES). Ours
+  already do this (`Relic.fixedMainStat`, `allowedMainStats`).
+- **Sets are 2-piece stat sets and 4-piece effect sets**; the effects that
+  define the game are Violent (extra turn), Swift, Vampire, Despair (stun),
+  Will (immunity), Nemesis, Shield, Revenge, Destroy. Ours: sixteen sets,
+  eight stat and eight effect — Wrath is Violent, Zephyr is Swift, Styx is
+  Vampire, Nemesis, Fates (Shield), Vigil (Revenge), Chains (a slow
+  Despair), Titanfall; Will and Destroy have no equivalent yet.
+- **Power-up** to +15, a chance of failure that rises with the level and a
+  cost either way; a sub stat at +3/+6/+9/+12 (new while under four, then
+  one grows); the main stat's jump at +15. Ours since 2026-09-10.
+- **Grindstones and enchanted gems** from the Rift raids: a grindstone adds
+  to one sub stat within a range set by the stone's rarity (Legend SPD +4–5,
+  ATK% +7–10, as remembered); a gem replaces one sub stat with a chosen
+  stat at a rolled value (Legend SPD 8–10, ATK% 11–13), one gemmed sub per
+  rune, re-gemmable. This is the endgame's rune work and we have none of it.
+- **Manage Runes** (the inventory): filter by set, slot, main stat, sub
+  stats, rarity, grade, equipped state; sort by grade, level, set, slot, main
+  stat, efficiency, recent; multi-select sell with the total; lock; a
+  rune's card with Power-up, Grind, Gem, Equip (choose a monster), Sell.
+  Ours has slot, set, unequipped, four sorts, select-and-sell, lock,
+  power-up, reappraise, change (only for a worn relic).
+- **The drop**: after a battle the rune appears as a card with its stats
+  and two buttons, Sell and Get. Ours lists it on the chest's shelf as a
+  glyph on a plate; the first look at a new relic is the inventory.
+- **Rune removal costs mana.** Deliberately not copied: it is friction the
+  owner never asked for and the genre's players resent.
+- Epic Seven's gear adds a "gear score" and a reforge at +15; Raid's
+  artifacts add ascension. Neither is worth a system of its own here;
+  the efficiency dial already is a gear score.
+
+### What we have and what is missing
+
+| Summoners War | Pantheon before this pass | After |
+|---|---|---|
+| A rune is an object with a shape per slot, an emblem per set, a frame per rarity | an SF Symbol in a cream tile | 96 rendered stones, six rims, sixteen emblems (`RelicIcon`) |
+| Rarity by sub-stat count, coloured everywhere | none; sub count followed the grade | `RelicQuality` Normal…Legend, rolled by weights per grade, the rim and the name's colour |
+| Grindstones and gems from raids | none | whetstones and gems in three tiers, from raids, Hell bosses, the deep Labyrinth and the Tower; Grind and Gem on the relic's card |
+| Filter by main, subs, rarity, grade | slot and set only | a filter sheet with every axis, an active-count badge |
+| Sort by set, slot, main | efficiency, grade, level, newest | + set, slot, main stat, quality |
+| Select all / sell by rule | tap each | "All shown" on the selection bar, with filters that make it a rule |
+| A rune card at the drop with Sell / Get | a glyph on the shelf | tap the spoil: the card, Sell / Keep / Lock |
+| Equip from the inventory | only from the unit's slot | "Equip on…" from any relic's card: the roster, the delta, Equip |
+| Power-up to +N | one tap per level | "Power up to +3…+15" with the bill and the rolls summarised |
+| Unequip all | one at a time | Unequip all on the unit sheet |
+
+### The art: three ways to make a relic look like one
+
+1. **Gemini paints them.** The best possible look — a painted stone per
+   set with a real emblem. Paused: the owner's cap is $10 a month and
+   nothing calls Gemini without his word for the batch. If he gives it,
+   the batch is small: 16 emblems on black plus 6 stone shapes on black
+   (22 images, about $3 at the pro price; 96 finished stones would be
+   about $12). Everything built below keeps working with painted files
+   dropped in under the same names.
+2. **Rendered here, shipped as PNG.** `tools/relic_art.py` draws every
+   stone in Python — the slot's silhouette, a bevelled gem-cut edge lit
+   from the top left (a distance-transform normal map, the same idea as
+   the plates' art), the set's colour with a stone grain and a gloss, the
+   set's emblem engraved in gold — and ships `relic_<set>_<slot>.png` at
+   320 px (the largest it is ever drawn is 110 pt), `relic_rim_<slot>.png`
+   as a template the app tints with the quality's metal, and
+   `relic_emblem_<set>.png` for chips and lists. The look can be judged
+   HERE on a sheet before anything is committed, which no SwiftUI drawing
+   can be (nothing compiles in this environment; a wrong path is a
+   25-minute CI round trip). About 5 MB of bundle for 118 files.
+3. **SwiftUI `Path` drawing.** Resolution-independent and free of bundle
+   cost, but sixteen emblem paths and a bevel written blind, seen for the
+   first time in a CI frame.
+
+**Choice: 2, with 1 offered.** The rendered stones are the best result
+this environment can verify, and the painted upgrade is a $3 batch away
+under the same file names. The rule-1 sheets of the stones are in the
+report.
+
+The design, so the code and the art agree:
+- **Shape by slot** (the ring's order, slot 1 at the top): 1 a crystal
+  (the flat-ATK slot, a blade), 2 a medallion (circle), 3 a shield (flat
+  DEF), 4 a hexagon, 5 a vial (a drop, flat HP), 6 a tablet (a cut-corner
+  cartouche). Six silhouettes a thumb tells apart at 30 pt.
+- **Emblem and colour by set**: Fury a flame on crimson, Aegis a shield on
+  steel blue, Bulwark a keep on green, Zephyr a wing on teal, Thunder a
+  bolt on amber, Ruin a burst on plum, Oracle an eye on violet, Wards a
+  seal on indigo, Ichor a chalice on blood-orange, Wrath a triskelion on
+  magenta, Styx waves on black water, Chains two links on iron, Fates a
+  wheel on silver, Nemesis scales on dark red, Titanfall a mountain on
+  earth, Vigil a return arrow on bronze. A light stone (Fates) takes a
+  dark emblem so it reads.
+- **Rim by quality**, the app's rarity metals: Normal grey, Magic green,
+  Rare blue, Hero purple, Legend gold — the same five the cards wear, so
+  nothing new has to be learned.
+- **Stars are the grade, "+N" the level**, drawn by SwiftUI under and over
+  the stone; the card's name is coloured by quality ("Legend Fury Relic").
+
+### The management, and the numbers
+
+- **Quality** (`RelicQuality`, an Optional on `Relic` so old saves decode;
+  a relic without one is read off its sub count and level). Rolled at the
+  drop by grade, in percent Normal / Magic / Rare / Hero / Legend:
+  1–2★ 45/35/15/5/0, 3★ 30/35/22/10/3, 4★ 18/32/28/15/7, 5★ 10/26/32/21/11,
+  6★ 6/22/34/26/12. Hell tiers floor a drop at Magic, raids at Rare.
+  Summoners War's Legend rate at its top dungeon is lower (about one in
+  twenty, as remembered); ours is one in eight because there is no cash
+  shop pacing it. The sub count IS the quality (0–4); power-up adds while
+  under four, so a Normal fills to four subs by +12 exactly as the genre
+  has it. Reappraisal keeps the quality and rerolls from it. Mirrored as
+  `QUALITY_WEIGHTS` in `balance.py` (`--relics`).
+- **Whetstones and gems** (`RelicStone`): three tiers, Rare / Hero /
+  Legend, one kind of each, NOT per set (Summoners War's per-set
+  grindstones multiply the inventory by twenty and are the part of the
+  system its players complain about). A whetstone adds to one sub stat a
+  bonus of 0.25–0.45 / 0.40–0.65 / 0.60–0.90 of a 6★ sub roll's base
+  (`subStatBase(kind, 6)`: SPD 6.3, so a Legend whetstone is SPD +3.8–5.7,
+  the genre's +4–5); re-honing keeps the better bonus. A gem replaces one
+  sub stat with a chosen kind at 0.85–1.05 / 1.00–1.25 / 1.20–1.50 of that
+  base (Legend SPD 7.6–9.5, the genre's 8–10); one gemmed sub per relic,
+  the same one can be gemmed again, and a gem clears that sub's whetstone
+  bonus. Costs in drachma: whetstone 4,000 / 9,000 / 16,000, gem 6,000 /
+  14,000 / 24,000. Sources: the Apep raid (a Hero whetstone 70%, a Legend
+  25%, a Hero gem 35%, a Legend gem 12%), a Hell boss (a Rare whetstone
+  35%, a Rare gem 15%), Labyrinth B7+ bosses (a Rare whetstone 25%, from
+  B10 a Hero 10%), the Tower's 50/75/100 milestones, the Testing stall (a
+  crate of ten of each, free, while `testingPacksEnabled`) and the laurel
+  stall (a Legend gem). Stored as `Player.relicStones: [String: Int]?`.
+- **The inventory**: `RelicFilter` (slots, grades, qualities, main kinds,
+  sub kinds — every ticked sub must be on the relic, that is what a hunt
+  is — worn state, locked), a sheet of chip rows, the bar showing how many
+  axes are live; the set chips stay as the quick filter. Sorts gain set,
+  slot, main stat and quality. "All shown" selects every unlocked, unworn
+  relic in the current list.
+- **The drop card** (`RelicDropCard`): a tap on a relic's spoil tile on
+  the victory shelf; Sell (with the value), Keep, Lock and keep. An auto
+  run banks everything as before.
+- **Equip on…** (`RelicWearerPicker`): the roster by power, the delta
+  table for the one tapped, Equip. **Power up to +N**: the store attempts
+  until the level or the drachma runs out and hands back every outcome for
+  the summary line. **Unequip all** on the unit sheet's toolbar.
+- **Removal stays free**, on purpose (above).
+
+Verification: the CI tour's relic screens (2 detail, 11 relics, 17
+relic_picker, 19 relic_powerup, 20 victory, 21 collection_stage) plus two
+new steps, 22 `relic_drop` (the card) and 23 `relic_filter` (the sheet);
+`balance.py --relics`; the unit tests for quality, reappraisal, stones and
+the save fields.
+
+### What shipped (2026-09-12, afternoon)
+
+Built whole, as the section above lays out, and checked with
+`swiftcheck --members --types` (clean; it caught two `StageRewards` calls
+with `stoneChances` out of memberwise order, which would not have compiled)
+and `balance.py --relics`:
+
+- `tools/relic_art.py` and its 118 PNGs (5.3 MB). Two sheets were judged
+  here before shipping: the first cut had ten percent of grain and
+  photographed as camouflage, and its emblems sat small in the crystal;
+  the second (a broad marbling at six percent and a fine tooth at two and
+  a half, the emblem fitted to 98% of the inner box) is what shipped. The
+  30-pt row of the size strip still tells slot, set and quality apart.
+- `RelicQuality`, `RelicStone`, `Relic.quality/honed/gemmed` (all
+  Optional), `Player.relicStones`, `StageRewards.stoneChances/qualityFloor`,
+  `StageOutcome.stonesEarned`, `Grant.stones`; `RelicService.rollQuality`,
+  `hone`, `engrave`, `gemKinds`, `stoneSpan`, `unequipAll`; reappraisal
+  replays the level's rolls from the quality; the sell value rises a fifth
+  per quality step; the starter's relics are Rare.
+- `RelicIcon`, `RelicSetEmblem`, `RelicQualityTag`, `RelicFilter` and
+  `RelicFilterSheet`, `RelicStoneSheet`, `RelicWearerPicker`,
+  `RelicDropCard`; the inventory's eight sorts and "All shown"; the card's
+  hero stone, quality tag, honing and gem marks, Power up to +N, Equip
+  on…, Hone & gem; the slot tiles, the picker's summary, the optimiser's
+  rows, the drop lists' chips and the chest's shelf all draw the stone.
+- Sources: the Apep raid (stones at 70/25/35/12%, quality floored at
+  Rare), Hell bosses (a Rare whetstone 35%, a Rare gem 15%, every Hell
+  drop at least Magic), Labyrinth B7+ (a Rare whetstone 25%, from B10 a
+  Hero 10%), the Tower's 50/75/100 milestones, the Testing stall's
+  stonecutter's crate and two laurel items.
+- Tests: `RelicQualityTests` (nine), two save round-trips, the crate.
+- The tour: `relic_drop` (22) and `relic_filter` (23).
+
+The expected bill, 6★, with the power-up odds: +3 14,400 drachma, +9
+91,000, +12 170,000, +15 299,000 (`balance.py --relics`). A Legend 6★ is
+one drop in eight at B10; a 3★ Legend one in thirty-three.

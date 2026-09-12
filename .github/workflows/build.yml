@@ -112,13 +112,13 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
-          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage)
+          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter)
           # Each launch also writes what the app prints — the [ModelLibrary]
           # block, SceneKit's own errors — to shots/<step>-console.txt, so a
           # frame that came out wrong can be read as well as looked at.
           # OS_ACTIVITY_DT_MODE mirrors the frameworks' os_log lines to stderr
           # the way Xcode's console does.
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23; do
             SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
               --stdout="$PWD/shots/$step-${names[$step]}-out.txt" \
               --stderr="$PWD/shots/$step-${names[$step]}-err.txt" \
