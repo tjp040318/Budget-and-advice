@@ -451,6 +451,32 @@ environment can and cannot do. The short version:
   nano-banana-2-lite, gpt-image-2 and two gpt-image-2-5 variants — the
   same Google and OpenAI models, billed in Meshy credits; the price per
   image is unknown until one is made, and the floor rule applies.
+- **The campaign pays as it is walked (2026-09-13): sets by road, and
+  tributes.** The owner: "I like how the campaign has rewards as you
+  complete it, and specific rune types depending on the area. How can we
+  do that without copying exactly?" Every chapter yields TWO sets, one
+  stat set and one effect set of its realm's myth (`Chapter.relicSets`,
+  the `sets:` argument of `generatedChapter`; `yielding` for the
+  hand-written Duat 1: Oracle and Nemesis, the Eye and the scales), on
+  every stage's `rewards.relicSets` at every tier, printed on the chapter
+  map's header as emblem chips — the genre hides which area drops which
+  set; this shows it. A stage's star rating (survivors, turns) is saved as
+  a high-water mark (`Player.stageStars`, Optional) and drawn as pips
+  under the medallions and in the list. Three **tribute chests** stand on
+  each chapter's road at each tier (`TributeService` in
+  `CampaignService.swift`; `Tribute`, `TributeMilestone`): the road's by
+  the third stage (a Pantheon scroll and divinity), the gate's by the boss
+  (the realm's essence and a guaranteed relic of the chapter's set), the
+  judgment beyond it (every stage at three stars: the finest relic, a
+  Legend 6★ on Hell). The table is `TributeService.payout`, mirrored in
+  `tools/balance.py` as `TRIBUTES` (`--tributes` prints it: a Normal
+  chapter's three chests are worth about 4.6 pantheon summons, Hell's
+  9.1); the claim is once per chest (`Player.tributesClaimed`, Optional).
+  A chest is `ui_tribute_chest.png` (the reward chest's concept keyed off
+  its grey ground) in a lane away from the road, pulsing gold when
+  earned; its card (`TributeCard`, the end of `CampaignMapView.swift`)
+  opens the victory's 3D chest on Claim and lists what it paid. Tour step
+  26 photographs the card; step 13 the road with its chests.
 - **The type is Cinzel and Manrope, and nothing is under ten points
   (2026-09-12, evening).** The owner: "the UI looks overwhelming",
   "a nice cleaner font", "make things size correctly". Two OFL faces
@@ -654,13 +680,13 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is twenty-six screens (steps 0–25): an arena battle
+  pass. The CI tour is twenty-seven screens (steps 0–26): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,
   the victory's chest in three frames, the collection's Stage layout
   (21), the relic drop card (22), the relic filter sheet (23) and the
-  loading screen (24) and the relic set reference (25).
+  loading screen (24), the relic set reference (25) and a tribute chest's card (26).
 - **The fight reads.** **Every unit's bars are a screen-space plate under
   its feet (2026-09-11, night):** `UnitPlateOverlay`, a SpriteKit scene laid
   over the `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one

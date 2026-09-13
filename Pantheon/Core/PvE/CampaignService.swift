@@ -218,3 +218,186 @@ enum CampaignService {
         player.wallet.energy = min(player.wallet.maxEnergy, player.wallet.energy + stage.energyCost)
     }
 }
+
+// MARK: - Tributes
+
+/// Where on a chapter's road a tribute chest stands, and what earns it. The
+/// genre pays a campaign as it is walked — first clears, area chests, a
+/// three-star track — and this is that in the realm's own terms: the road's
+/// tribute, the gate's, and the realm's judgment.
+enum TributeMilestone: String, CaseIterable, Identifiable, Sendable {
+    /// The third stage cleared: the realm's first tribute, a scroll of its
+    /// own pantheon.
+    case third
+    /// The boss fallen: the realm's essence and a relic of the chapter's set.
+    case boss
+    /// Every stage of the chapter at three stars: the realm's judgment, its
+    /// finest relic.
+    case flawless
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .third: return "Tribute of the Road"
+        case .boss: return "Tribute of the Gate"
+        case .flawless: return "Judgment of the Realm"
+        }
+    }
+}
+
+/// One tribute chest: what it pays. Built from the chapter at its tier and
+/// never stored; only the claim is (`Player.tributesClaimed`).
+struct Tribute: Identifiable, Equatable, Sendable {
+    let chapterID: String
+    let milestone: TributeMilestone
+    /// Divinity, scrolls, essences, stones.
+    let grants: [ShopService.Grant]
+    /// A guaranteed relic of the chapter's own sets, when the tribute pays
+    /// one: its grade and quality.
+    let relicGrade: Int?
+    let relicQuality: RelicQuality?
+
+    var id: String { "\(chapterID)#\(milestone.rawValue)" }
+}
+
+enum TributeService {
+    /// What a milestone pays at a tier. Mirrored in `tools/balance.py` as
+    /// `TRIBUTES`. A Pantheon scroll is 100 divinity in the bazaar, so the
+    /// road's tribute on Normal is worth a summon and a third; the
+    /// judgment on Hell, a Legend 6★ of the set and two summons' worth.
+    struct Payout: Equatable, Sendable {
+        var divinity: Int
+        var pantheonScrolls: Int
+        var mysticalScrolls: Int
+        var essences: Int
+        var stone: String?
+        var relicGrade: Int?
+        var relicQuality: RelicQuality?
+    }
+
+    static func payout(_ milestone: TributeMilestone, tier: CampaignDifficulty) -> Payout {
+        switch (tier, milestone) {
+        case (.normal, .third):
+            return Payout(divinity: 30, pantheonScrolls: 1, mysticalScrolls: 0, essences: 0, stone: nil, relicGrade: nil, relicQuality: nil)
+        case (.normal, .boss):
+            return Payout(divinity: 60, pantheonScrolls: 0, mysticalScrolls: 0, essences: 3, stone: nil, relicGrade: 4, relicQuality: .rare)
+        case (.normal, .flawless):
+            return Payout(divinity: 120, pantheonScrolls: 0, mysticalScrolls: 2, essences: 0, stone: nil, relicGrade: 5, relicQuality: .hero)
+        case (.hard, .third):
+            return Payout(divinity: 50, pantheonScrolls: 1, mysticalScrolls: 0, essences: 2, stone: nil, relicGrade: nil, relicQuality: nil)
+        case (.hard, .boss):
+            return Payout(divinity: 100, pantheonScrolls: 0, mysticalScrolls: 0, essences: 4, stone: nil, relicGrade: 5, relicQuality: .hero)
+        case (.hard, .flawless):
+            return Payout(divinity: 180, pantheonScrolls: 0, mysticalScrolls: 2, essences: 0, stone: "whetstone_rare", relicGrade: 6, relicQuality: .hero)
+        case (.hell, .third):
+            return Payout(divinity: 80, pantheonScrolls: 2, mysticalScrolls: 0, essences: 3, stone: nil, relicGrade: nil, relicQuality: nil)
+        case (.hell, .boss):
+            return Payout(divinity: 150, pantheonScrolls: 0, mysticalScrolls: 0, essences: 5, stone: "gem_rare", relicGrade: 6, relicQuality: .hero)
+        case (.hell, .flawless):
+            return Payout(divinity: 250, pantheonScrolls: 0, mysticalScrolls: 3, essences: 0, stone: "whetstone_hero", relicGrade: 6, relicQuality: .legend)
+        }
+    }
+
+    /// The three tributes of a chapter at the tier its id carries.
+    static func tributes(for chapter: Chapter) -> [Tribute] {
+        let tier = chapter.difficulty
+        let essence = chapterEssence(chapter)
+        return TributeMilestone.allCases.map { milestone in
+            let pay = payout(milestone, tier: tier)
+            var grants: [ShopService.Grant] = [.divinity(pay.divinity)]
+            if pay.pantheonScrolls > 0 { grants.append(.scrolls(.pantheonic, pay.pantheonScrolls)) }
+            if pay.mysticalScrolls > 0 { grants.append(.scrolls(.mystical, pay.mysticalScrolls)) }
+            if pay.essences > 0, let essence { grants.append(.essences(essence, pay.essences)) }
+            if let stone = pay.stone { grants.append(.stones(stone, 1)) }
+            return Tribute(
+                chapterID: chapter.id, milestone: milestone, grants: grants,
+                relicGrade: pay.relicGrade, relicQuality: pay.relicQuality
+            )
+        }
+    }
+
+    /// The realm's essence, read off the chapter's boss stage: what the
+    /// chapter already drops, so a tribute pays more of the same.
+    static func chapterEssence(_ chapter: Chapter) -> String? {
+        chapter.stages.last?.rewards.essenceChances.keys.sorted().first
+    }
+
+    /// The stage the milestone stands at on the road: the third, the boss,
+    /// or nil for the judgment, which stands beyond the boss.
+    static func stageIndex(for milestone: TributeMilestone, in chapter: Chapter) -> Int? {
+        switch milestone {
+        case .third: return min(3, chapter.stages.count)
+        case .boss: return chapter.stages.count
+        case .flawless: return nil
+        }
+    }
+
+    static func isEarned(_ tribute: Tribute, chapter: Chapter, player: Player) -> Bool {
+        let cleared = player.campaignProgress[chapter.id] ?? 0
+        switch tribute.milestone {
+        case .third: return cleared >= min(3, chapter.stages.count)
+        case .boss: return cleared >= chapter.stages.count
+        case .flawless: return chapter.stages.allSatisfy { (player.stageStars?[$0.id] ?? 0) >= 3 }
+        }
+    }
+
+    static func isClaimed(_ tribute: Tribute, player: Player) -> Bool {
+        player.tributesClaimed?.contains(tribute.id) ?? false
+    }
+
+    /// Earned and unclaimed on a chapter: the map's reason to come back.
+    static func unclaimedCount(for chapter: Chapter, player: Player) -> Int {
+        tributes(for: chapter).filter { isEarned($0, chapter: chapter, player: player) && !isClaimed($0, player: player) }.count
+    }
+
+    /// What earns it, in words, for the card.
+    static func requirement(_ tribute: Tribute, chapter: Chapter) -> String {
+        switch tribute.milestone {
+        case .third:
+            let stage = chapter.stages[min(2, chapter.stages.count - 1)]
+            return "Clear \(stage.name)"
+        case .boss:
+            return "Bring down the boss of \(chapter.name)"
+        case .flawless:
+            return "Three stars on every stage of \(chapter.name): nobody falls, and within the turns"
+        }
+    }
+
+    /// The pips a clear earned, kept as a high-water mark.
+    static func recordStars(stage: Stage, stars: Int, player: inout Player) {
+        guard stars > 0 else { return }
+        var marks = player.stageStars ?? [:]
+        marks[stage.id] = max(marks[stage.id] ?? 0, stars)
+        player.stageStars = marks
+    }
+
+    /// What a claim paid, for the card to show.
+    struct Receipt: Equatable, Sendable {
+        let grants: [ShopService.Grant]
+        let relic: Relic?
+    }
+
+    /// Pays a tribute once. Nil when it is not earned or was claimed.
+    static func claim(
+        _ tribute: Tribute, chapter: Chapter, player: inout Player, rng: inout SeededRandom
+    ) -> Receipt? {
+        guard isEarned(tribute, chapter: chapter, player: player), !isClaimed(tribute, player: player) else { return nil }
+        var claimed = player.tributesClaimed ?? []
+        claimed.append(tribute.id)
+        player.tributesClaimed = claimed
+        var granted: [ShopService.Grant] = []
+        for grant in tribute.grants {
+            granted += ShopService.grant(grant, to: &player, rng: &rng)
+        }
+        var relic: Relic?
+        if let grade = tribute.relicGrade {
+            let pool = chapter.relicSets.isEmpty ? RelicSet.allCases : chapter.relicSets
+            let set = rng.pickMutating(pool)
+            let piece = RelicService.generate(grade: grade, set: set, quality: tribute.relicQuality, rng: &rng)
+            player.relics.append(piece)
+            relic = piece
+        }
+        return Receipt(grants: granted, relic: relic)
+    }
+}

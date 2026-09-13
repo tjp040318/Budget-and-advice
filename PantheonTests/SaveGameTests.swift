@@ -402,3 +402,25 @@ final class SaveGameTests: XCTestCase {
         }
     }
 }
+
+/// The two save fields the tributes added, Optional like every one since the
+/// first, so a save from before them still opens.
+final class TributeSaveTests: XCTestCase {
+
+    func testTributeFieldsRoundTripAndTolerateAbsence() throws {
+        var player = Player()
+        player.stageStars = ["duat_1_1": 3]
+        player.tributesClaimed = ["duat_1#third"]
+        let data = try JSONEncoder().encode(player)
+        let back = try JSONDecoder().decode(Player.self, from: data)
+        XCTAssertEqual(back.stageStars?["duat_1_1"], 3)
+        XCTAssertEqual(back.tributesClaimed, ["duat_1#third"])
+
+        var json = try XCTUnwrap(try JSONSerialization.jsonObject(with: data) as? [String: Any])
+        json["stageStars"] = nil
+        json["tributesClaimed"] = nil
+        let old = try JSONDecoder().decode(Player.self, from: JSONSerialization.data(withJSONObject: json))
+        XCTAssertNil(old.stageStars)
+        XCTAssertNil(old.tributesClaimed)
+    }
+}

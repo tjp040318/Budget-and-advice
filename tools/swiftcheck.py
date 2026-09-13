@@ -815,6 +815,8 @@ def check_unknown_types(files, declared, errors):
         # and the renderer delegate and Core Graphics names they use.
         # CoreText, since the bundled faces are registered at launch (2026-09-12).
         "CoreText","CTFontManagerRegisterFontsForURL","CFError","CFURL","Unmanaged",
+        # Foundation's JSON dictionary, which a save test uses to drop keys (2026-09-13).
+        "JSONSerialization",
         # The launch screen's progress model (2026-09-12).
         "ObservedObject","TimelineView",
         "SpriteKit","SKScene","SKNode","SKSpriteNode","SKCropNode","SKTexture","SKAction",

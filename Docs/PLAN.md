@@ -1807,3 +1807,84 @@ takes the same Google and OpenAI image models (`nano-banana-pro` is the
 model the cards were painted with) billed in Meshy credits, whose price
 per image is unknown until one is made. The balance is 2,133 against a
 floor of 2,000, so a test costs room he set aside; his call.
+
+
+## The campaign pays as it is walked: sets by road, and tributes (2026-09-13)
+
+The owner: "I don't want to copy Summoners War, but I like how the
+campaign has rewards as you complete it (like crystals, and scrolls and
+things) and specific rune types depending on the area or level. How can
+we do that without copying exactly?" Then: "go ahead and do it."
+
+### What the genre does
+
+Summoners War drops fixed rune sets per scenario area and pays crystals,
+energy and scrolls on a stage's first clear, and never says in-game which
+area drops what: players read a wiki. Epic Seven marks the gear set on
+every map node and pays region rewards for full exploration. Raid rates
+every stage out of three stars and pays a chapter chest when all of its
+stages are three-starred; each chapter's stages drop a named artifact
+set. AFK Arena stands chests on the campaign road itself, opened as the
+road is walked. Milestone rewards and loot tied to place are the genre's
+grammar, not one game's; what is ours is what the rewards are called,
+where they show, and which set belongs where.
+
+### What we had
+
+A first clear paid divinity in the Labyrinth only; the campaign paid one
+feat per chapter (100 divinity and a Pantheon scroll) and dropped relics
+of any set. Every stage computed a one-to-three star rating from the
+survivors and the turns taken, paid a quarter more drachma for three,
+and forgot it.
+
+### Chosen
+
+1. **Two sets a chapter, by myth.** One stat set and one effect set, on
+   every stage of the chapter at every tier: the Duat weighs and binds
+   (Oracle and Nemesis; Wards and Styx at the western gates), Olympus
+   arms (Aegis and Ichor; Thunder and Fates; Zephyr and Titanfall),
+   Yggdrasil rages and chains (Fury and Chains, Gleipnir; Thunder and
+   Wrath; Bulwark and Vigil, the wall and the watchman), Rome augurs and
+   fights to the death (Oracle and Vigil, the augurs and the Vestals;
+   Ruin and Titanfall, the sand of the Colosseum), the Jade Court rides
+   the clouds (Zephyr and Ichor, the peaches; Wards and Wrath, the
+   talismans and the havoc). Every one of the sixteen is on some road;
+   eight are on two. The map prints the two as emblem chips over the
+   road: "YIELDS · Oracle · 2 · Nemesis · 4 · Every relic that drops here
+   is one of these." Considered and rejected: widening the sets on Hard
+   and Hell (the tier already raises the grade and the quality floor;
+   widening would blur the farm), and per-stage sets (a ten-stage chapter
+   with ten targets is a wiki again).
+2. **Stars saved.** The rating is a high-water mark per stage id, the
+   tier's suffix included (`Player.stageStars`, Optional), drawn as pips
+   under the medallion and in the list.
+3. **Three tribute chests a road, at each tier.** The road's tribute by
+   the third stage, the gate's by the boss, the realm's judgment beyond
+   it when every stage holds three stars. What they pay is in
+   `TributeService.payout` and `balance.py --tributes`:
+
+   | tier | road | gate | judgment |
+   |---|---|---|---|
+   | Normal | 30 div, 1 Pantheon scroll | 60 div, 3 essence, 4★ Rare of the set | 120 div, 2 Mystical, 5★ Hero |
+   | Hard | 50 div, 1 Pantheon, 2 essence | 100 div, 4 essence, 5★ Hero | 180 div, 2 Mystical, rare whetstone, 6★ Hero |
+   | Hell | 80 div, 2 Pantheon, 3 essence | 150 div, 5 essence, rare gem, 6★ Hero | 250 div, 3 Mystical, hero whetstone, 6★ Legend |
+
+   A Normal chapter's three are worth about 4.6 pantheon summons, Hell's
+   9.1; twelve chapters over three tiers are 108 chests and 72 guaranteed
+   set relics. The essence is the chapter's own, read off its boss
+   stage, and the relic is one of the chapter's two sets at the tier's
+   grade: the tribute pays more of what the road is for.
+4. **The chest is the reward chest.** On the map, its concept painting
+   keyed off the grey ground (`ui_tribute_chest.png`, no spend), standing
+   in the lane the road is not in, shut with a lock, gold and pulsing
+   with a mark when earned, grey with a check when paid. Its card opens
+   the victory's own 3D chest, lid hinged the same way, on Claim, and
+   lists what it paid with the relic drawn as a stone.
+
+### Why it is not a copy
+
+The rewards are tributes of the realm's god, not first-clear crystals;
+the sets are shown on the map and chosen by myth rather than hidden and
+arbitrary; the three-star track is Raid's shape and the road chests are
+AFK's, and together with the names, the seals and the chest they map one
+to one onto none of them.

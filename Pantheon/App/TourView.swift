@@ -39,7 +39,7 @@ struct TourView: View {
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
-        ("relic_sets", 2),
+        ("relic_sets", 2), ("tribute", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -169,6 +169,14 @@ struct TourView: View {
                 preview: 0.62, step: "Raising the stages",
                 art: BundleArt.exists(LaunchProgress.keyArt) ? LaunchProgress.keyArt : "banner_olympus_stirs"
             ))
+        case "tribute":
+            // A tribute chest's card: the road's, earned by the tour's player
+            // (three stages of the Duat walked) and waiting to be claimed.
+            if let chapter = StageDatabase.chapter("duat_1") {
+                TributeCard(tribute: TributeService.tributes(for: chapter)[0], chapterID: chapter.id, difficulty: .normal)
+            } else {
+                CampaignView(openingChapter: "duat_1")
+            }
         case "relic_sets":
             // The set reference, opened from a unit so its counts show.
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {

@@ -579,6 +579,11 @@ final class GameStore: ObservableObject {
             outcome = CampaignService.applyRewards(
                 stage: stage, result: result, player: &player, rng: &rng
             )
+            // The stars the clear earned, kept as a high-water mark for the
+            // map's pips and the realm's judgment (`TributeService`).
+            if result.outcome == .victory, let settled = outcome {
+                TributeService.recordStars(stage: stage, stars: settled.stars, player: &player)
+            }
             // A tower floor pays like any other stage. What a stage cannot
             // express is the high-water mark and the milestone, so the tower
             // settles those here, after the floor has been paid, and folds the
@@ -604,6 +609,16 @@ final class GameStore: ObservableObject {
             relicsEarned: [], essencesEarned: [:], scrollsEarned: [:], divinityEarned: 0,
             isFirstClear: false, leveledUnits: [:]
         )
+    }
+
+    /// Pays a tribute chest once; nil when it is not earned or was claimed.
+    func claimTribute(_ tribute: Tribute, chapter: Chapter) -> TributeService.Receipt? {
+        var rng = makeRandom()
+        var receipt: TributeService.Receipt?
+        update { player in
+            receipt = TributeService.claim(tribute, chapter: chapter, player: &player, rng: &rng)
+        }
+        return receipt
     }
 
     // MARK: - The Endless Tower
@@ -738,6 +753,16 @@ final class GameStore: ObservableObject {
             if let zeus = player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }), zeus.equippedRelics.isEmpty {
                 RelicService.autoEquip(unitID: zeus.id, player: &player)
             }
+            // A road walked part way, so the chapter map photographs its
+            // three tribute chests in their three states: the road's earned,
+            // the gate's shut, the judgment far off, with pips under the
+            // first three medallions.
+            player.campaignProgress["duat_1"] = max(player.campaignProgress["duat_1"] ?? 0, 3)
+            var stars = player.stageStars ?? [:]
+            for (stageID, pips) in [("duat_1_1", 3), ("duat_1_2", 3), ("duat_1_3", 2)] {
+                stars[stageID] = max(stars[stageID] ?? 0, pips)
+            }
+            player.stageStars = stars
             player.wallet.add(.pantheonic, 10)
             for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {
                 player.essences[id, default: 0] += 12

@@ -153,6 +153,8 @@ struct ChapterMapView: View {
     let onSelect: (Stage) -> Void
 
     @State private var pulse = false
+    /// The tribute chest tapped on the road; its card opens as a sheet.
+    @State private var openTribute: Tribute?
 
     private var chapter: Chapter? { StageDatabase.chapter(chapterID)?.at(difficulty) }
 
@@ -171,6 +173,10 @@ struct ChapterMapView: View {
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
                 pulse = true
             }
+        }
+        .sheet(item: $openTribute) { tribute in
+            TributeCard(tribute: tribute, chapterID: chapterID, difficulty: difficulty)
+                .environmentObject(store)
         }
     }
 
@@ -260,6 +266,36 @@ struct ChapterMapView: View {
                     .font(Theme.numeric(13))
                     .foregroundStyle(Theme.textSecondary)
             }
+            // What the road yields: the chapter's two sets, so the farm is
+            // read here and not looked up. The genre hides which area drops
+            // which set; this prints it.
+            if !chapter.relicSets.isEmpty {
+                HStack(spacing: 6) {
+                    Text("YIELDS")
+                        .font(Theme.body(9).weight(.black))
+                        .tracking(1.2)
+                        .foregroundStyle(Theme.textSecondary)
+                    ForEach(chapter.relicSets) { relicSet in
+                        HStack(spacing: 4) {
+                            RelicSetEmblem(set: relicSet, size: 12)
+                            Text("\(relicSet.displayName) · \(relicSet.piecesRequired)")
+                                .font(Theme.body(10).weight(.bold))
+                                .foregroundStyle(Theme.gold)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 7)
+                        .frame(height: 22)
+                        .background(Capsule().fill(Theme.surfaceHigh))
+                        .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
+                    }
+                    Text("Every relic that drops here is one of these.")
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                }
+            }
             StatBar(
                 value: Double(cleared),
                 maximum: Double(chapter.stages.count),
@@ -338,6 +374,14 @@ struct ChapterMapView: View {
                     node(stage, unlocked: unlocked, cleared: cleared, current: unlocked && !cleared)
                         .position(points[index])
                 }
+
+                // The three tribute chests: the road's by the third stage,
+                // the gate's by the boss, the judgment beyond it — in the
+                // lane the road is not in.
+                ForEach(TributeService.tributes(for: chapter)) { tribute in
+                    chest(tribute, chapter: chapter)
+                        .position(Self.chestPoint(for: tribute.milestone, points: points, in: size))
+                }
             }
         }
         .frame(height: 190)
@@ -414,10 +458,97 @@ struct ChapterMapView: View {
                 .padding(.horizontal, 5)
                 .padding(.vertical, 2)
                 .background(Capsule().fill(Theme.plate.opacity(0.85)))
+                starPips(stage, size: 7)
             }
         }
         .buttonStyle(.plain)
         .disabled(!unlocked)
+    }
+
+    /// The stage's best rating as three pips, gold where earned, once it has
+    /// been cleared at all. Saved by `TributeService.recordStars`; the
+    /// judgment wants all three on every stage.
+    @ViewBuilder private func starPips(_ stage: Stage, size: CGFloat) -> some View {
+        if let pips = store.player.stageStars?[stage.id], pips > 0 {
+            HStack(spacing: 1) {
+                ForEach(0..<3, id: \.self) { index in
+                    Image(systemName: "star.fill")
+                        .font(.system(size: size, weight: .black))
+                        .foregroundStyle(index < pips ? Theme.gold : Theme.stroke)
+                        .shadow(color: .black.opacity(0.35), radius: 1)
+                }
+            }
+        }
+    }
+
+    // MARK: - The tributes
+
+    /// A chest on the road in one of three states: shut with a lock until
+    /// earned, gold and pulsing with a mark while it waits to be claimed,
+    /// grey with a check once it has paid.
+    private func chest(_ tribute: Tribute, chapter: Chapter) -> some View {
+        let player = store.player
+        let earned = TributeService.isEarned(tribute, chapter: chapter, player: player)
+        let claimed = TributeService.isClaimed(tribute, player: player)
+        let ready = earned && !claimed
+        return Button {
+            Juice.haptic(.light)
+            openTribute = tribute
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                if ready {
+                    Circle()
+                        .fill(Theme.gold.opacity(pulse ? 0.5 : 0.18))
+                        .frame(width: 48, height: 48)
+                }
+                TributeChestImage(size: 36)
+                    .saturation(claimed ? 0 : (earned ? 1 : 0.4))
+                    .opacity(claimed ? 0.6 : 1)
+                    .scaleEffect(ready && pulse ? 1.08 : 1)
+                    .frame(width: 48, height: 48)
+                if claimed {
+                    chestBadge("checkmark", Theme.success)
+                } else if earned {
+                    chestBadge("exclamationmark", Theme.gold)
+                } else {
+                    chestBadge("lock.fill", Theme.textSecondary)
+                }
+            }
+            .frame(width: 48, height: 48)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func chestBadge(_ symbol: String, _ tint: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 8, weight: .black))
+            .foregroundStyle(Theme.readableText(on: tint))
+            .frame(width: 15, height: 15)
+            .background(Circle().fill(tint))
+            .overlay(Circle().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
+    }
+
+    /// Where a chest stands: in the top or bottom lane of the map, whichever
+    /// the road is farther from at that point, so a chest never sits on a
+    /// medallion. The road's chest is between the third and fourth
+    /// medallions, the gate's beside the boss, the judgment beyond it in
+    /// the other lane.
+    static func chestPoint(for milestone: TributeMilestone, points: [CGPoint], in size: CGSize) -> CGPoint {
+        guard let last = points.last else { return .zero }
+        let top = size.height * 0.15
+        let bottom = size.height * 0.85
+        func lane(awayFrom y: CGFloat) -> CGFloat { y < size.height / 2 ? bottom : top }
+        switch milestone {
+        case .third:
+            let a = points[min(2, points.count - 1)]
+            let b = points[min(3, points.count - 1)]
+            return CGPoint(x: (a.x + b.x) / 2, y: lane(awayFrom: (a.y + b.y) / 2))
+        case .boss:
+            return CGPoint(x: last.x - 34, y: lane(awayFrom: last.y))
+        case .flawless:
+            let other = lane(awayFrom: last.y) == top ? bottom : top
+            return CGPoint(x: min(size.width - 22, last.x + 30), y: other)
+        }
     }
 
     // MARK: - The list under the map
@@ -439,6 +570,7 @@ struct ChapterMapView: View {
                         Text(stage.name)
                             .font(Theme.body(13).weight(.semibold))
                             .foregroundStyle(unlocked ? Theme.textPrimary : Theme.textSecondary)
+                        starPips(stage, size: 8)
                         if stage.isBoss {
                             Text("BOSS")
                                 .font(Theme.body(8).weight(.black))
@@ -691,5 +823,213 @@ struct CityMedallion: View {
         }
         .buttonStyle(.plain)
         .opacity(state == .locked ? 0.75 : 1)
+    }
+}
+
+// MARK: - Tributes
+
+/// The tribute chest as the map draws it: the reward chest's own painting,
+/// keyed off its concept's grey ground (`ui_tribute_chest`, from
+/// `Art/Concepts/prop_reward_chest_sw.png`), or a gift glyph in a bundle
+/// without it.
+struct TributeChestImage: View {
+    var size: CGFloat = 36
+
+    var body: some View {
+        if BundleArt.exists("ui_tribute_chest") {
+            BundleImage(name: "ui_tribute_chest", renderedAt: size)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .shadow(color: .black.opacity(0.45), radius: 3, y: 2)
+        } else {
+            Image(systemName: "gift.fill")
+                .font(.system(size: size * 0.7, weight: .bold))
+                .foregroundStyle(Theme.gold)
+                .frame(width: size, height: size)
+        }
+    }
+}
+
+/// A tribute chest opened: the chest itself (the victory's own model, its
+/// lid hinged the same way), what earns it, what it holds, and Claim — then
+/// what it paid, the relic drawn as a stone. All three chests of a road
+/// open here.
+struct TributeCard: View {
+    let tribute: Tribute
+    let chapterID: String
+    let difficulty: CampaignDifficulty
+
+    @EnvironmentObject private var store: GameStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var opened = false
+    @State private var receipt: TributeService.Receipt?
+
+    private var chapter: Chapter? { StageDatabase.chapter(chapterID)?.at(difficulty) }
+
+    var body: some View {
+        NavigationStack {
+            GameScreen(
+                tribute.milestone.title,
+                subtitle: chapter.map { "\($0.realmName) · \($0.name)" } ?? "",
+                dismiss: { dismiss() }
+            ) {
+                BarWallet(wallet: store.player.wallet, shows: [.divinity])
+            } content: {
+                if let chapter {
+                    HStack(alignment: .top, spacing: 8) {
+                        chestPane(chapter)
+                            .frame(width: 250)
+                        contents(chapter)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .padding(.horizontal, ScreenChrome.contentPadding)
+                    .padding(.top, 6)
+                } else {
+                    EmptyState(icon: "questionmark", title: "No such road", message: "This chapter is not in the campaign.")
+                }
+            }
+        }
+    }
+
+    private func chestPane(_ chapter: Chapter) -> some View {
+        let earned = TributeService.isEarned(tribute, chapter: chapter, player: store.player)
+        let claimed = TributeService.isClaimed(tribute, player: store.player)
+        return VStack(spacing: 8) {
+            ZStack {
+                RadialGradient(
+                    colors: [Theme.gold.opacity(opened ? 0.5 : (earned ? 0.22 : 0.08)), .clear],
+                    center: .center, startRadius: 8, endRadius: 120
+                )
+                if claimed, !opened {
+                    // Paid on an earlier visit: the painting, dimmed, rather
+                    // than a chest that would swing open again.
+                    TributeChestImage(size: 110)
+                        .saturation(0)
+                        .opacity(0.6)
+                } else {
+                    RewardChestView(open: opened, gone: false)
+                }
+            }
+            .frame(width: 230, height: 150)
+            Text(TributeService.requirement(tribute, chapter: chapter))
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            if claimed {
+                Label("Claimed", systemImage: "checkmark.seal.fill")
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(Theme.success)
+            } else if earned {
+                PrimaryButton(title: "Claim the tribute", systemImage: "gift.fill") {
+                    claim(chapter)
+                }
+            } else {
+                Label("Not yet earned", systemImage: "lock.fill")
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
+        .padding(10)
+        .panelBackground(radius: Theme.tightCorner)
+    }
+
+    private func contents(_ chapter: Chapter) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(receipt == nil ? "THE TRIBUTE HOLDS" : "YOU RECEIVED")
+                .font(Theme.body(9).weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(Theme.textSecondary)
+            ForEach(Array(tribute.grants.enumerated()), id: \.offset) { _, grant in
+                HStack(spacing: 8) {
+                    Image(systemName: glyph(for: grant))
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.gold)
+                        .frame(width: 22)
+                    Text(ShopService.describe(grant))
+                        .font(Theme.body(12).weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
+            }
+            if let grade = tribute.relicGrade {
+                HStack(spacing: 8) {
+                    if let relic = receipt?.relic {
+                        RelicIcon(relic: relic, size: 36, showsStars: true, showsLevel: false, showsSlot: true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(relic.displayName)
+                                .font(Theme.body(12).weight(.semibold))
+                                .foregroundStyle(relic.resolvedQuality.inkColor)
+                            Text("Slot \(relic.slot) · \(relic.effectiveMainStat.displayText)")
+                                .font(Theme.body(10))
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    } else {
+                        HStack(spacing: 3) {
+                            ForEach(chapter.relicSets) { relicSet in
+                                RelicSetEmblem(set: relicSet, size: 15)
+                            }
+                        }
+                        .frame(width: 40)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("\(grade)★ \(tribute.relicQuality?.displayName ?? "") relic of \(chapter.relicSets.map(\.displayName).joined(separator: " or "))")
+                                .font(Theme.body(12).weight(.semibold))
+                                .foregroundStyle(Theme.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text("Guaranteed, and the chapter's own set.")
+                                .font(Theme.body(10))
+                                .foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 6)
+                .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
+            }
+            Spacer(minLength: 0)
+            Text(footnote)
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(10)
+        .panelBackground(radius: Theme.tightCorner)
+    }
+
+    private var footnote: String {
+        switch tribute.milestone {
+        case .third: return "The realm's first tribute: a scroll of its own pantheon."
+        case .boss: return "The gate's tribute: the realm's essence and a relic of the road's set."
+        case .flawless: return "The realm's judgment: three stars on every stage, and its finest relic."
+        }
+    }
+
+    private func glyph(for grant: ShopService.Grant) -> String {
+        switch grant {
+        case .divinity: return "sparkles"
+        case .scrolls: return "scroll.fill"
+        case .essences: return "drop.triangle.fill"
+        case .stones: return "diamond.fill"
+        case .drachma: return "circle.hexagongrid.fill"
+        case .energy, .energyRefill: return "bolt.fill"
+        case .relic: return "hexagon.fill"
+        case .bundle: return "gift.fill"
+        }
+    }
+
+    private func claim(_ chapter: Chapter) {
+        guard let paid = store.claimTribute(tribute, chapter: chapter) else { return }
+        Juice.notify(.success)
+        AudioLibrary.shared.play(.uiConfirm)
+        withAnimation(.easeOut(duration: 0.4)) {
+            opened = true
+            receipt = paid
+        }
     }
 }

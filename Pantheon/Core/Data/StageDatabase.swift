@@ -77,6 +77,13 @@ struct Chapter: Identifiable, Codable, Equatable, Sendable {
     /// `duat_1_5`), so it is named here rather than guessed at.
     var bossBlueprintID: String = ""
     var stages: [Stage]
+    /// The two sets this chapter's stages drop — one stat set and one effect
+    /// set from the realm's own myth (the Duat weighs and binds, Olympus
+    /// arms and hastens) — printed on the map so the farm is read there
+    /// rather than looked up. Every stage's `rewards.relicSets` carries the
+    /// same two. Empty for the Labyrinth's chapters, which keep their own
+    /// six on each stage.
+    var relicSets: [RelicSet] = []
 
     var realmName: String { pantheon.realmName }
 }
@@ -313,10 +320,11 @@ extension Chapter {
 enum StageDatabase {
 
     static let chapters: [Chapter] = [
-        duatI,
+        yielding([.oracle, .nemesis], duatI),
         generatedChapter(
             id: "duat_2",
             pantheon: .egyptian,
+            sets: [.wards, .styx],
             name: "The Gates of the West",
             summary: "Seven gates, and a name to be spoken at each one. Something has been eating the names.",
             intro: """
@@ -337,6 +345,7 @@ enum StageDatabase {
         generatedChapter(
             id: "olympus_1",
             pantheon: .greek,
+            sets: [.aegis, .ichor],
             name: "The Gate of Olympus",
             summary: "The mountain's gate stands open and unguarded. What came down the steps was not sent by the gods.",
             intro: """
@@ -359,6 +368,7 @@ enum StageDatabase {
         generatedChapter(
             id: "olympus_2",
             pantheon: .greek,
+            sets: [.thunder, .fates],
             name: "The Aegean Cliffs",
             summary: "Every ship that rounds the cape is found on the rocks by morning, and the crews are not.",
             intro: """
@@ -381,6 +391,7 @@ enum StageDatabase {
         generatedChapter(
             id: "olympus_3",
             pantheon: .greek,
+            sets: [.zephyr, .titanfall],
             name: "The Marsh of Lerna",
             summary: "Heracles cut the heads off once. The marsh has had a long time to grow them back.",
             intro: """
@@ -405,6 +416,7 @@ enum StageDatabase {
         generatedChapter(
             id: "yggdrasil_1",
             pantheon: .norse,
+            sets: [.fury, .chains],
             name: "The Midgard Fjord",
             summary: "The longships have stopped coming home. Something on the fjord road is choosing the slain before the valkyries can.",
             intro: """
@@ -427,6 +439,7 @@ enum StageDatabase {
         generatedChapter(
             id: "yggdrasil_2",
             pantheon: .norse,
+            sets: [.thunder, .wrath],
             name: "The Roots of Yggdrasil",
             summary: "Below the tree, where the serpent gnaws, the barrow-dead are climbing toward the light.",
             intro: """
@@ -449,6 +462,7 @@ enum StageDatabase {
         generatedChapter(
             id: "yggdrasil_3",
             pantheon: .norse,
+            sets: [.bulwark, .vigil],
             name: "The Hall of Jötunheim",
             summary: "The giants have crowned a king under the ice, and he has sent for the hammer.",
             intro: """
@@ -479,6 +493,7 @@ enum StageDatabase {
         generatedChapter(
             id: "rome_1",
             pantheon: .roman,
+            sets: [.oracle, .vigil],
             name: "The Forum at Midnight",
             summary: "The lost legion has marched back into the Forum with its eagles missing, and the hearth of the city went out the night it arrived.",
             intro: """
@@ -502,6 +517,7 @@ enum StageDatabase {
         generatedChapter(
             id: "rome_2",
             pantheon: .roman,
+            sets: [.ruin, .titanfall],
             name: "The Sand of the Colosseum",
             summary: "The games have run every day since the crowd stopped leaving, and the bronze giant outside the gate has come in to watch.",
             intro: """
@@ -527,6 +543,7 @@ enum StageDatabase {
         generatedChapter(
             id: "jade_1",
             pantheon: .chinese,
+            sets: [.zephyr, .ichor],
             name: "The Peach Garden",
             summary: "The peaches of immortality ripen once in three thousand years. Someone has been in the orchard early, and the guards stopped nobody.",
             intro: """
@@ -551,6 +568,7 @@ enum StageDatabase {
         generatedChapter(
             id: "jade_2",
             pantheon: .chinese,
+            sets: [.wards, .wrath],
             name: "The Dragon King's Gate",
             summary: "Every carp that leaps the falls at Longmen becomes a dragon. One of them outgrew the river and lies across the Dragon King's gate.",
             intro: """
@@ -738,9 +756,23 @@ enum StageDatabase {
 
     /// Builds a chapter from a difficulty curve. Every stage after the first
     /// gains roughly 18% power, and the last one is a boss with a stat bump.
+    /// A hand-written chapter given its two sets: on the chapter, and on
+    /// every stage's rewards.
+    private static func yielding(_ sets: [RelicSet], _ chapter: Chapter) -> Chapter {
+        var copy = chapter
+        copy.relicSets = sets
+        copy.stages = chapter.stages.map { stage in
+            var stage = stage
+            stage.rewards.relicSets = sets
+            return stage
+        }
+        return copy
+    }
+
     static func generatedChapter(
         id: String,
         pantheon: Pantheon,
+        sets: [RelicSet] = [],
         name: String,
         summary: String,
         intro: String = "",
@@ -809,11 +841,22 @@ enum StageDatabase {
             ))
         }
 
+        // The chapter's own sets on every stage: what drops here is one of
+        // the two, so a player farming Nemesis knows which road to walk.
+        if !sets.isEmpty {
+            stages = stages.map { stage in
+                var stage = stage
+                stage.rewards.relicSets = sets
+                return stage
+            }
+        }
+
         // The boss is the last slot of the last stage, so the cut-in's speaker
         // is `bossID` and not a guess made later from the spawn list.
         return Chapter(
             id: id, pantheon: pantheon, name: name, summary: summary,
-            intro: intro, bossLine: bossLine, bossBlueprintID: bossID, stages: stages
+            intro: intro, bossLine: bossLine, bossBlueprintID: bossID, stages: stages,
+            relicSets: sets
         )
     }
 

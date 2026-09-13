@@ -101,6 +101,13 @@ struct Player: Codable, Equatable, Sendable {
     var firstHourStep: String? = nil
     /// Chapter ids whose intro card has been shown, so it is shown once.
     var seenChapterIntros: [String]? = nil
+    /// The best star rating per stage id (a tier's suffix included): the
+    /// map's pips, and the realm's judgment wants every stage at three.
+    /// Optional, like every save field added since the first.
+    var stageStars: [String: Int]? = nil
+    /// Tribute ids claimed (`Tribute.id`: chapter id with its tier, and the
+    /// milestone), so a chest pays once.
+    var tributesClaimed: [String]? = nil
 
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }

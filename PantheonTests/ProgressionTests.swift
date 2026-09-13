@@ -229,3 +229,96 @@ final class ProgressionTests: XCTestCase {
         XCTAssertEqual(slot.unitID, barely.id, "fusion ate the copy the player raised")
     }
 }
+
+/// The campaign's tributes: two sets a chapter, three chests a tier, each
+/// paid once, the judgment only when every stage holds three stars.
+final class TributeTests: XCTestCase {
+
+    func testEveryChapterYieldsAStatSetAndAnEffectSet() {
+        var seen: Set<RelicSet> = []
+        for chapter in StageDatabase.chapters {
+            XCTAssertEqual(chapter.relicSets.count, 2, chapter.id)
+            XCTAssertEqual(chapter.relicSets.filter { $0.piecesRequired == 2 }.count, 1, chapter.id)
+            for stage in chapter.stages {
+                XCTAssertEqual(stage.rewards.relicSets, chapter.relicSets, stage.id)
+            }
+            seen.formUnion(chapter.relicSets)
+        }
+        XCTAssertEqual(seen, Set(RelicSet.allCases), "every set is farmed on some road")
+    }
+
+    func testTiersKeepTheChapterSets() {
+        let chapter = StageDatabase.chapters[0]
+        for tier in CampaignDifficulty.allCases {
+            let scaled = chapter.at(tier)
+            XCTAssertEqual(scaled.relicSets, chapter.relicSets, tier.rawValue)
+            XCTAssertEqual(scaled.stages.last?.rewards.relicSets, chapter.relicSets, tier.rawValue)
+            XCTAssertEqual(TributeService.tributes(for: scaled).count, 3, tier.rawValue)
+        }
+    }
+
+    func testTributesAreEarnedClaimedOnceAndPayTheChapterSet() {
+        let chapter = StageDatabase.chapters[0]
+        var player = Player()
+        var rng = SeededRandom(seed: 5)
+        let tributes = TributeService.tributes(for: chapter)
+        let road = tributes[0], gate = tributes[1], judgment = tributes[2]
+        XCTAssertEqual(road.milestone, .third)
+        XCTAssertEqual(gate.milestone, .boss)
+        XCTAssertEqual(judgment.milestone, .flawless)
+
+        XCTAssertFalse(TributeService.isEarned(road, chapter: chapter, player: player))
+        XCTAssertNil(TributeService.claim(road, chapter: chapter, player: &player, rng: &rng))
+
+        player.campaignProgress[chapter.id] = 3
+        XCTAssertTrue(TributeService.isEarned(road, chapter: chapter, player: player))
+        XCTAssertFalse(TributeService.isEarned(gate, chapter: chapter, player: player))
+        let divinity = player.wallet.divinity
+        let scrolls = player.wallet.scrolls[ScrollType.pantheonic.rawValue] ?? 0
+        XCTAssertNotNil(TributeService.claim(road, chapter: chapter, player: &player, rng: &rng))
+        XCTAssertEqual(player.wallet.divinity, divinity + 30)
+        XCTAssertEqual(player.wallet.scrolls[ScrollType.pantheonic.rawValue] ?? 0, scrolls + 1)
+        XCTAssertTrue(TributeService.isClaimed(road, player: player))
+        XCTAssertNil(TributeService.claim(road, chapter: chapter, player: &player, rng: &rng), "paid once")
+
+        player.campaignProgress[chapter.id] = chapter.stages.count
+        let paid = TributeService.claim(gate, chapter: chapter, player: &player, rng: &rng)
+        let relic = try? XCTUnwrap(paid?.relic)
+        XCTAssertEqual(relic?.grade, 4)
+        XCTAssertEqual(relic?.resolvedQuality, .rare)
+        XCTAssertTrue(chapter.relicSets.contains(relic?.set ?? .fury), "the gate pays the chapter's own set")
+        XCTAssertTrue(player.relics.contains(where: { $0.id == relic?.id }))
+
+        XCTAssertFalse(TributeService.isEarned(judgment, chapter: chapter, player: player))
+        for stage in chapter.stages {
+            TributeService.recordStars(stage: stage, stars: 3, player: &player)
+        }
+        XCTAssertTrue(TributeService.isEarned(judgment, chapter: chapter, player: player))
+        XCTAssertEqual(TributeService.unclaimedCount(for: chapter, player: player), 1)
+    }
+
+    func testStarsAreAHighWaterMarkPerTier() {
+        var player = Player()
+        let stage = StageDatabase.chapters[0].stages[0]
+        TributeService.recordStars(stage: stage, stars: 2, player: &player)
+        TributeService.recordStars(stage: stage, stars: 1, player: &player)
+        TributeService.recordStars(stage: stage, stars: 0, player: &player)
+        XCTAssertEqual(player.stageStars?[stage.id], 2)
+        TributeService.recordStars(stage: stage.at(.hard), stars: 3, player: &player)
+        XCTAssertEqual(player.stageStars?[stage.id], 2, "a Hard clear is its own mark")
+        XCTAssertEqual(player.stageStars?[stage.at(.hard).id], 3)
+    }
+
+    func testPayoutsGrowWithTheTier() {
+        for milestone in TributeMilestone.allCases {
+            let normal = TributeService.payout(milestone, tier: .normal)
+            let hard = TributeService.payout(milestone, tier: .hard)
+            let hell = TributeService.payout(milestone, tier: .hell)
+            XCTAssertLessThan(normal.divinity, hard.divinity, milestone.rawValue)
+            XCTAssertLessThan(hard.divinity, hell.divinity, milestone.rawValue)
+            XCTAssertLessThanOrEqual(normal.relicGrade ?? 0, hard.relicGrade ?? 0, milestone.rawValue)
+            XCTAssertLessThanOrEqual(hard.relicGrade ?? 0, hell.relicGrade ?? 0, milestone.rawValue)
+        }
+        XCTAssertEqual(TributeService.payout(.flawless, tier: .hell).relicQuality, .legend)
+    }
+}

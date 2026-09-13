@@ -1340,6 +1340,61 @@ def report_gacha():
           "Radiance or Umbra, so a")
     print("    factor applied to all of them alike cancels out")
 
+# The campaign's tributes (Swift: `TributeService.payout`, `Chapter.relicSets`).
+# Each chapter drops two sets, one stat set and one effect set of its realm's
+# myth; three chests a tier pay the road (third stage), the gate (the boss)
+# and the judgment (every stage at three stars). Divinity is the currency a
+# Pantheon scroll costs 100 of. Change a number in both files.
+CHAPTER_SETS = {
+    "duat_1": ("oracle", "nemesis"), "duat_2": ("wards", "styx"),
+    "olympus_1": ("aegis", "ichor"), "olympus_2": ("thunder", "fates"), "olympus_3": ("zephyr", "titanfall"),
+    "yggdrasil_1": ("fury", "chains"), "yggdrasil_2": ("thunder", "wrath"), "yggdrasil_3": ("bulwark", "vigil"),
+    "rome_1": ("oracle", "vigil"), "rome_2": ("ruin", "titanfall"),
+    "jade_1": ("zephyr", "ichor"), "jade_2": ("wards", "wrath"),
+}
+# (divinity, pantheon scrolls, mystical scrolls, essences, stone, relic grade, relic quality)
+TRIBUTES = {
+    ("normal", "third"): (30, 1, 0, 0, None, None, None),
+    ("normal", "boss"): (60, 0, 0, 3, None, 4, "rare"),
+    ("normal", "flawless"): (120, 0, 2, 0, None, 5, "hero"),
+    ("hard", "third"): (50, 1, 0, 2, None, None, None),
+    ("hard", "boss"): (100, 0, 0, 4, None, 5, "hero"),
+    ("hard", "flawless"): (180, 0, 2, 0, "whetstone_rare", 6, "hero"),
+    ("hell", "third"): (80, 2, 0, 3, None, None, None),
+    ("hell", "boss"): (150, 0, 0, 5, "gem_rare", 6, "hero"),
+    ("hell", "flawless"): (250, 0, 3, 0, "whetstone_hero", 6, "legend"),
+}
+
+
+def report_tributes():
+    """What the campaign pays as it is walked, and what each road drops."""
+    stat_sets = {"fury", "aegis", "bulwark", "zephyr", "thunder", "ruin", "oracle", "wards"}
+    print("Chapter sets (stat set + effect set):")
+    seen = set()
+    for chapter, sets in CHAPTER_SETS.items():
+        assert len([s for s in sets if s in stat_sets]) == 1, chapter
+        seen.update(sets)
+        print(f"  {chapter:<12} {sets[0]:<10} {sets[1]}")
+    missing = {"fury", "aegis", "bulwark", "zephyr", "thunder", "ruin", "oracle", "wards",
+               "ichor", "wrath", "styx", "chains", "fates", "nemesis", "titanfall", "vigil"} - seen
+    print(f"  every set on some road: {'yes' if not missing else 'MISSING ' + ', '.join(sorted(missing))}")
+    print()
+    print("Tributes per chapter (divinity / scrolls / essences / stone / relic):")
+    for tier in ("normal", "hard", "hell"):
+        total = 0
+        for milestone in ("third", "boss", "flawless"):
+            div, pan, mys, ess, stone, grade, quality = TRIBUTES[(tier, milestone)]
+            total += div + pan * 100 + mys * 75
+            relic = f"{grade}★ {quality}" if grade else "-"
+            scrolls = ", ".join(x for x in [f"{pan} pantheon" if pan else "", f"{mys} mystical" if mys else ""] if x) or "-"
+            print(f"  {tier:<7} {milestone:<9} {div:>4} div  {scrolls:<24} {ess} essence  {stone or '-':<15} {relic}")
+        summons = total / 100
+        print(f"  {tier:<7} a chapter's three chests are worth {total} divinity-equivalent, about {summons:.1f} pantheon summons")
+    print()
+    print("Twelve chapters × three tiers: %d chests, %d guaranteed set relics." % (
+        12 * 9, 12 * sum(1 for v in TRIBUTES.values() if v[5])))
+
+
 def report_relics():
     """The relic hunt: what a drop's quality costs in runs, what a stone is
     worth against a roll, and the bill to a milestone with the power-up odds."""
@@ -1432,6 +1487,7 @@ if __name__ == "__main__":
     elif "--tower" in a: report_tower()
     elif "--raids" in a: report_raids()
     elif "--relics" in a: report_relics()
+    elif "--tributes" in a: report_tributes()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids()
