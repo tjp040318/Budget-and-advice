@@ -645,6 +645,26 @@ environment can and cannot do. The short version:
   a small card is mostly portrait. The next areas of the density pass
   (task #50), in the owner's order once he picks them: the battle HUD,
   the menu bars and wallet strips, the popups' and panels' spacing.
+- **Rewards are tiles, and the win ends in the genre's reward box
+  (2026-09-14, late).** The owner, with Summoners War's reward popup beside
+  our victory frame: "Why does ours look so basic and ugly?" `RewardTile`
+  (Components.swift) is the one reward tile — a stone-plate socket in a
+  bronze bevel, the item at three quarters of it, the count printed bold
+  with an edge on the corner (`OutlinedText`), a graded thing's colour on
+  the rim and its stars under it, the name below, a relic as its own stone;
+  `init(grant:)` for anything the bazaar or the quests pay. `ItemIcon`
+  draws `item_<key>.png` when it is in the bundle and the glyph in its tint
+  until then (`ItemArt`: keys, glyphs, tints; the keys are the game's ids —
+  an essence's, a stone's, `scroll_<type>`, `awakening_cache_<element>` —
+  or one word: `drachma`, `divinity`, `energy`, `unit_exp`, `laurels`,
+  `rank_points`, `relic_cache`). `SpoilsPanel` (BattleView.swift) is the
+  win's third act: the marble panel with a ribbon, the chest and the stars
+  as its header, one or two rows of tiles popping in, Continue inside. The
+  tile also draws the tribute card's grants, the bazaar's offers and the
+  login gift's days; the stage popup's drop rows and `BarWallet` carry
+  `ItemIcon`. **The paintings are NOT made yet:** `tools/item_icons.py`
+  paints forty-two icons as five 3×3 sheets on black (about $0.70), keys
+  them off the ground and ships them; it runs on the owner's word only.
 - **Five tabs.** An iPhone folds a sixth tab into a system "More" list, so
   Settings opens over the island from the Obelisk (and Missions, the
   bazaar from the header); `RootView.Tab(destination)` is failable for the

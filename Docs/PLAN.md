@@ -2073,3 +2073,64 @@ that the owner sees all twelve before he pulls, the tour grew a step 28
 twelve frames a–l, about two minutes more on the runner. Gemini since
 the pause: the key art (0.14), the stones (2.95), Duat 1 (0.14), the
 eleven (1.55) — $4.78 of the month's ten.
+
+### The spoils panel: the genre's reward box (2026-09-14, late)
+
+The owner, with Summoners War's "World Boss Reward" popup beside our
+third victory frame: "You see how nice this looks? Why does ours look so
+basic and ugly?" Read against his screenshot, theirs is: a framed box
+(dark wood, a gold rim, corner studs) with a title ribbon standing on its
+top edge and an X at the corner; a header row inside — the reward's own
+icon and its rank ("SSS Treasure Box"); a 3×3 grid of tiles about 57
+points square, each a dark rounded socket with a thin bevel, the item
+PAINTED large in it (the crystal cluster, the rune, the chest) with a
+glow behind a special one, and the count printed bold on the tile
+itself — "+12,000" in white with a dark edge, no name; and one gold OK
+bar under the grid. Epic Seven's stage result is the same anatomy with
+the rarity on the tile's frame; Raid's chest opens into item cards with
+rarity frames. Ours was a loose row of six 92-point cream tiles with a
+grey system glyph and 9-point text on each, floating in the empty
+middle of the screen after the 3D chest had lifted away, the count in
+gold under the name. Four faults: glyphs where the genre has paintings;
+no panel, no title, no header; counts too small and off the tile; tiles
+small and washed out, cream on cream.
+
+Options for the icons. (A) Restyle the glyphs — bigger, on darker
+sockets, with a glow: free, and still a set of system symbols. (B) One
+Gemini image per item, about forty items at 14 cents: about $5.60, past
+the month's ten with $4.78 spent. (C) Paint them as SHEETS the way the
+relic stones were repainted — nine icons to a 3×3 image on black, one
+hand across the set, keyed off the ground by a flood fill from the cell's
+border, trimmed and shipped at 256 px with alpha: five sheets, about
+$0.70 plus a re-roll. (D) Meshy's text-to-image: the price per image is
+unknown and the credit floor applies. C is the choice; the tool is
+`tools/item_icons.py` (`--list`, `--paint <sheet>|all`, `--split`,
+`--preview`), the keys are the game's own ids where it has them (an
+essence's, a stone's) and one word where it does not (`drachma`,
+`divinity`, `energy`, `unit_exp`, `player_exp`, `laurels`,
+`rank_points`, `relic_cache`, `scroll_<type>`, `awakening_cache_<element>`),
+forty-two icons in five sheets, and NOTHING IS PAINTED until the owner's
+word for this batch.
+
+What is built, with no art needed: `ItemArt` (Components.swift) maps a
+key to `item_<key>.png`, a glyph and a tint; `ItemIcon` draws the
+painting when it is in the bundle and the glyph in its tint until then;
+`OutlinedText` prints a count with an edge (eight offset copies under the
+fill — SwiftUI has no text stroke); `RewardTile` is the tile — the relic
+grid's stone plate in a bronze bevel, the item at three quarters of the
+socket, the count bold on the bottom-right corner, a graded thing's
+colour on the inner rim and its stars under it, the name in small type
+below, a relic as its own stone — with an `init(grant:)` for anything the
+bazaar or the quests pay; and `SpoilsPanel` is the third act of a win:
+the cream marble panel, 600 points wide, "SPOILS OF VICTORY" on a ribbon
+standing on its top edge, the chest painting with the stage's name and
+its three stars and the First-clear chip as the header, the spoils as
+one row of up to six tiles or two rows of up to twelve popping in one by
+one on the chest's beat, and the bronze Continue inside the panel. The
+panel springs in where the chest stood the moment the flash takes it.
+The same tile now draws a tribute's grants (52 pt, named), the bazaar's
+offers (42 pt, the count only; the title above says what they are), and
+the login gift's days (`ItemIcon` 16 pt); the stage popup's drop rows and
+the wallet strip carry `ItemIcon` too, so the coin, the crystal and the
+bolt land in the top bar the day they are painted. `BattleSummary.Loot`
+carries the key. Tour frame 20-victory-c photographs the panel.
