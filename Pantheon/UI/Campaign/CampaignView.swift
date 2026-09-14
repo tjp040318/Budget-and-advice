@@ -693,34 +693,33 @@ struct StagePopup: View {
                 }
             }
             if stage.rewards.relicChance > 0 {
-                dropRow("hexagon.fill", "\(stage.rewards.relicGrade)★ relic",
+                dropRow("relic_cache", "\(stage.rewards.relicGrade)★ relic",
                         stage.rewards.relicChance >= 1 ? "always" : "\(Int(stage.rewards.relicChance * 100))%")
             }
             ForEach(stage.rewards.essenceChances.keys.sorted(), id: \.self) { id in
                 if let chance = stage.rewards.essenceChances[id], chance > 0 {
-                    dropRow("drop.triangle.fill", EssenceCatalog.name(for: id), "\(Int(chance * 100))%")
+                    dropRow(id, EssenceCatalog.name(for: id), "\(Int(chance * 100))%")
                 }
             }
             ForEach(stage.rewards.scrollChances.keys.sorted(), id: \.self) { id in
                 if let chance = stage.rewards.scrollChances[id], chance > 0, let scroll = ScrollType(rawValue: id) {
-                    dropRow("scroll.fill", scroll.displayName, "\(Int(chance * 100))%")
+                    dropRow(ItemArt.key(scroll: scroll), scroll.displayName, "\(Int(chance * 100))%")
                 }
             }
-            dropRow("circle.hexagongrid.fill", "Drachma", "\(stage.rewards.drachma)")
+            dropRow("drachma", "Drachma", "\(stage.rewards.drachma)")
             if !CampaignService.isCleared(stage, player: store.player), stage.rewards.firstClearDivinity > 0 {
-                dropRow("sparkles", "First clear", "\(stage.rewards.firstClearDivinity) divinity")
+                dropRow("divinity", "First clear", "\(stage.rewards.firstClearDivinity) divinity")
             }
         }
         .padding(8)
         .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
     }
 
-    private func dropRow(_ icon: String, _ label: String, _ value: String) -> some View {
+    /// One thing the stage can drop: the item (painted once its icon is in
+    /// the bundle), its name and its chance.
+    private func dropRow(_ key: String, _ label: String, _ value: String) -> some View {
         HStack(spacing: 6) {
-            Image(systemName: icon)
-                .font(.system(size: 9, weight: .bold))
-                .frame(width: 14)
-                .foregroundStyle(Theme.goldDim)
+            ItemIcon(key: key, size: 14, tint: Theme.goldDim, glow: false)
             Text(label)
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textPrimary)

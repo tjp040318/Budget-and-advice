@@ -1194,23 +1194,16 @@ struct TributeCard: View {
                 .font(Theme.body(9).weight(.black))
                 .tracking(1.2)
                 .foregroundStyle(Theme.textSecondary)
-            ForEach(Array(tribute.grants.enumerated()), id: \.offset) { _, grant in
-                HStack(spacing: 8) {
-                    Image(systemName: glyph(for: grant))
-                        .font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(Theme.gold)
-                        .frame(width: 22)
-                    Text(ShopService.describe(grant))
-                        .font(Theme.body(12).weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Spacer(minLength: 0)
+            // The grants as the genre's tiles, the count on each, the name
+            // under it.
+            HStack(alignment: .top, spacing: 10) {
+                ForEach(Array(tribute.grants.enumerated()), id: \.offset) { _, grant in
+                    RewardTile(grant: grant, size: 52)
                 }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 6)
-                .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
+                Spacer(minLength: 0)
             }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 4)
             if let grade = tribute.relicGrade {
                 HStack(spacing: 8) {
                     if let relic = receipt?.relic {
@@ -1261,19 +1254,6 @@ struct TributeCard: View {
         case .third: return "The realm's first tribute: a scroll of its own pantheon."
         case .boss: return "The gate's tribute: the realm's essence and a relic of the road's set."
         case .flawless: return "The realm's judgment: three stars on every stage, and its finest relic."
-        }
-    }
-
-    private func glyph(for grant: ShopService.Grant) -> String {
-        switch grant {
-        case .divinity: return "sparkles"
-        case .scrolls: return "scroll.fill"
-        case .essences: return "drop.triangle.fill"
-        case .stones: return "diamond.fill"
-        case .drachma: return "circle.hexagongrid.fill"
-        case .energy, .energyRefill: return "bolt.fill"
-        case .relic: return "hexagon.fill"
-        case .bundle: return "gift.fill"
         }
     }
 

@@ -1801,39 +1801,47 @@ struct BattleResultView: View {
             .allowsHitTesting(false)
             .animation(.easeOut(duration: 0.6), value: lidOpen)
 
-            // One centred stack: the shelf the spoils rise onto, the chest,
-            // the line under it. The first cut pinned the shelf to the top
-            // and the chest to the bottom with a spacer between, and the
-            // tour photographed the Continue button sitting on the chest.
-            VStack(spacing: 14) {
-                Spacer(minLength: 0)
+            // The chest, centred, until the flash takes it; then the
+            // spoils panel stands where it stood — the genre's reward box,
+            // with the tiles popping in one by one and the way out inside
+            // it. The shelf this replaces floated six pale tiles in the
+            // empty middle of the screen once the chest had gone.
+            if chestGone {
+                SpoilsPanel(
+                    title: summary.title,
+                    stars: summary.stars,
+                    isFirstClear: summary.isFirstClear,
+                    loot: summary.loot,
+                    shown: lootShown,
+                    continueShown: continueShown,
+                    tapAction: tapAction(for:),
+                    onContinue: onDismiss
+                )
+                .transition(.scale(scale: 0.9).combined(with: .opacity))
+            } else {
+                VStack(spacing: 14) {
+                    Spacer(minLength: 0)
 
-                lootShelf
-                    .frame(height: 122)
+                    RewardChestView(open: lidOpen, gone: chestGone)
+                        .frame(width: 300, height: 170)
+                        .contentShape(Rectangle())
+                        .onTapGesture { openChest() }
 
-                RewardChestView(open: lidOpen, gone: chestGone)
-                    .frame(width: 300, height: 170)
-                    .contentShape(Rectangle())
-                    .onTapGesture { openChest() }
-
-                Group {
-                    if phase == .chest {
-                        Text("TAP TO OPEN")
-                            .font(Theme.body(11).weight(.black))
-                            .tracking(2.2)
-                            .foregroundStyle(Theme.gold)
-                            .opacity(pulse ? 1 : 0.45)
-                    } else if continueShown {
-                        PrimaryButton(title: "Continue", action: onDismiss)
-                            .frame(width: 220)
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    } else {
-                        Color.clear.frame(height: 1)
+                    Group {
+                        if phase == .chest {
+                            Text("TAP TO OPEN")
+                                .font(Theme.body(11).weight(.black))
+                                .tracking(2.2)
+                                .foregroundStyle(Theme.gold)
+                                .opacity(pulse ? 1 : 0.45)
+                        } else {
+                            Color.clear.frame(height: 1)
+                        }
                     }
-                }
-                .frame(height: 44)
+                    .frame(height: 44)
 
-                Spacer(minLength: 0)
+                    Spacer(minLength: 0)
+                }
             }
 
             // The flash on the lid coming up. White over gold, gone in under
@@ -1847,24 +1855,6 @@ struct BattleResultView: View {
         .contentShape(Rectangle())
         .onTapGesture {
             if phase == .chest { openChest() } else if phase == .opened, !continueShown { finishOpeningNow() }
-        }
-    }
-
-    private var lootShelf: some View {
-        HStack(spacing: 10) {
-            ForEach(Array(summary.loot.prefix(7).enumerated()), id: \.element.id) { index, item in
-                LootTile(item: item, onTap: tapAction(for: item))
-                    .opacity(index < lootShown ? 1 : 0)
-                    .scaleEffect(index < lootShown ? 1 : 0.5)
-                    .offset(y: index < lootShown ? 0 : 90)
-                    .animation(.spring(response: 0.45, dampingFraction: 0.66), value: lootShown)
-            }
-            if summary.loot.count > 7 {
-                Text("+\(summary.loot.count - 7) more")
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.marble)
-                    .opacity(lootShown >= 7 ? 1 : 0)
-            }
         }
         // The genre's rune-obtained card: a tap on a relic's tile shows it
         // large with Sell, Keep or Lock and keep, before the inventory.
@@ -1959,10 +1949,10 @@ struct BattleResultView: View {
             flash = 1
             withAnimation(.easeOut(duration: 0.5)) { flash = 0 }
             raysShown = true
-            chestGone = true
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.78)) { chestGone = true }
         }
 
-        let count = min(7, summary.loot.count)
+        let count = min(SpoilsPanel.capacity, summary.loot.count)
         for i in 0..<count {
             after(1.6 + Double(i) * 0.14) {
                 guard mine == sequence else { return }
@@ -1981,10 +1971,10 @@ struct BattleResultView: View {
     private func finishOpeningNow() {
         sequence += 1
         lidOpen = true
-        chestGone = true
+        withAnimation(.easeOut(duration: 0.25)) { chestGone = true }
         raysShown = true
         flash = 0
-        lootShown = min(7, summary.loot.count)
+        lootShown = min(SpoilsPanel.capacity, summary.loot.count)
         withAnimation(.easeOut(duration: 0.2)) { continueShown = true }
     }
 
@@ -1997,79 +1987,132 @@ struct BattleResultView: View {
     }
 }
 
-/// One spoil on the shelf. A relic wears its rarity frame; everything else
-/// is its glyph on a bronze-rimmed plate.
-struct LootTile: View {
-    let item: BattleSummary.Loot
-    /// A relic's tile opens its drop card; nothing else is tappable.
-    var onTap: (() -> Void)? = nil
+/// The third act of a win, the genre's reward box: a framed panel with a
+/// ribbon, the chest and the stars at its head, the spoils as a grid of
+/// tiles with their counts printed on them, and the way out under them. The
+/// owner, with Summoners War's box beside our shelf of six pale glyph tiles
+/// on a gradient: "You see how nice this looks? Why does ours look so basic
+/// and ugly?" The tiles are `RewardTile`, the same one every screen that
+/// pays out now draws, so the painted icons land here the day they ship.
+struct SpoilsPanel: View {
+    let title: String
+    let stars: Int
+    let isFirstClear: Bool
+    let loot: [BattleSummary.Loot]
+    /// How many tiles have popped in so far.
+    let shown: Int
+    let continueShown: Bool
+    var tapAction: (BattleSummary.Loot) -> (() -> Void)? = { _ in nil }
+    let onContinue: () -> Void
+
+    /// Two rows of six; a longer haul says how many more.
+    static let capacity = 12
+
+    private var items: [BattleSummary.Loot] { Array(loot.prefix(Self.capacity)) }
+    /// Up to six in one row; more than six splits into two rows as even as
+    /// they come.
+    private var columns: Int { items.count <= 6 ? max(1, items.count) : min(6, (items.count + 1) / 2) }
+    private var tileSize: CGFloat { columns >= 6 ? 58 : 64 }
 
     var body: some View {
-        VStack(spacing: 5) {
-            ZStack {
-                if let relic = item.relic {
-                    // The stone itself, the way the genre shows a rune drop.
-                    RelicIcon(relic: relic, size: 44, showsStars: false, showsLevel: false)
-                } else if let stars = item.stars {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Theme.stonePlate)
-                        .frame(width: 42, height: 42)
-                        .rarityFrame(Rarity(stars: stars), radius: 7)
+        VStack(spacing: 10) {
+            header
+            grid
+            Group {
+                if continueShown {
+                    PrimaryButton(title: "Continue", action: onContinue)
+                        .frame(width: 220)
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
                 } else {
-                    Circle()
-                        .fill(Theme.stonePlate)
-                        .frame(width: 42, height: 42)
-                        .overlay(Circle().strokeBorder(Theme.bronzeFrame, lineWidth: 1.5))
-                }
-                if item.relic == nil {
-                    Image(systemName: item.glyph)
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(paint)
-                        .shadow(color: paint.opacity(0.6), radius: 6)
+                    Color.clear
                 }
             }
-            .frame(height: 44)
-            if let stars = item.stars {
-                StarRow(stars: stars, size: 7)
-            }
-            Text(item.title)
-                .font(Theme.body(9).weight(.semibold))
-                .foregroundStyle(item.relic.map { $0.resolvedQuality.inkColor } ?? Theme.textPrimary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .frame(height: 24)
-            Text(item.amount)
-                .font(Theme.numeric(12))
-                .foregroundStyle(Theme.gold)
-                .lineLimit(1)
+            .frame(height: Theme.buttonHeight)
         }
-        .frame(width: 92)
-        .padding(.vertical, 8)
-        .background(Theme.panel(Theme.tightCorner))
-        .overlay(alignment: .topTrailing) {
-            if onTap != nil {
-                Image(systemName: "hand.tap.fill")
-                    .font(.system(size: 8, weight: .bold))
-                    .foregroundStyle(Theme.gold)
-                    .padding(5)
-            }
+        .padding(.horizontal, 22)
+        .padding(.top, 24)
+        .padding(.bottom, 14)
+        .frame(width: 600)
+        .panelBackground()
+        .overlay(alignment: .top) {
+            ribbon.offset(y: -14)
         }
-        .contentShape(Rectangle())
-        .onTapGesture { onTap?() }
-        // A plain spoil lets the tap through to the screen's own skip.
-        .allowsHitTesting(onTap != nil)
     }
 
-    private var paint: Color {
-        switch item.tint {
-        case .gold: return Theme.gold
-        case .verdigris: return Theme.verdigris
-        case .laurel: return Theme.laurel
-        case .wine: return Theme.wine
-        case .marble: return Theme.marble
-        case .element(let element): return element.color
-        case .scroll(let scroll): return scroll.tint
-        case .rarity(let rarity): return rarity.glow
+    private var ribbon: some View {
+        Text("SPOILS OF VICTORY")
+            .font(Theme.title(13))
+            .tracking(2)
+            .foregroundStyle(Theme.ink)
+            .padding(.horizontal, 28)
+            .padding(.vertical, 7)
+            .background {
+                if let ribbon = Chrome.slice("ui_ribbon", Chrome.ribbonInsets) {
+                    ribbon
+                } else {
+                    Capsule().fill(Theme.gold)
+                }
+            }
+            .shadow(color: .black.opacity(0.3), radius: 4, y: 2)
+    }
+
+    /// The chest, the stage and its stars: what was won, and how well.
+    private var header: some View {
+        HStack(spacing: 12) {
+            TributeChestImage(size: 44)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title.isEmpty ? "The spoils" : title)
+                    .font(Theme.title(13))
+                    .tracking(1)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                HStack(spacing: 4) {
+                    ForEach(1...3, id: \.self) { index in
+                        Image(systemName: "star.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(index <= stars ? Theme.gold : Theme.stroke)
+                            .shadow(color: Theme.gold.opacity(index <= stars ? 0.6 : 0), radius: 4)
+                    }
+                    if isFirstClear {
+                        Chip(text: "First clear", systemImage: "seal.fill", tint: Theme.verdigris, filled: true)
+                            .padding(.leading, 6)
+                    }
+                }
+            }
+            Spacer(minLength: 0)
+            Text("\(loot.count) \(loot.count == 1 ? "spoil" : "spoils")")
+                .font(Theme.body(10).weight(.bold))
+                .foregroundStyle(Theme.textSecondary)
+        }
+    }
+
+    private var grid: some View {
+        let rows = stride(from: 0, to: items.count, by: columns).map { Array(items[$0..<min($0 + columns, items.count)]) }
+        return VStack(spacing: 8) {
+            ForEach(Array(rows.enumerated()), id: \.offset) { rowIndex, row in
+                HStack(alignment: .top, spacing: 10) {
+                    ForEach(Array(row.enumerated()), id: \.element.id) { column, item in
+                        let index = rowIndex * columns + column
+                        RewardTile(
+                            key: item.key ?? "",
+                            title: item.title,
+                            amount: item.amount,
+                            stars: item.relic == nil ? item.stars : nil,
+                            relic: item.relic,
+                            size: tileSize,
+                            onTap: tapAction(item)
+                        )
+                        .opacity(index < shown ? 1 : 0)
+                        .scaleEffect(index < shown ? 1 : 0.4)
+                        .animation(.spring(response: 0.4, dampingFraction: 0.62), value: shown)
+                    }
+                }
+            }
+            if loot.count > items.count {
+                Text("+\(loot.count - items.count) more in the inventory")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+            }
         }
     }
 }

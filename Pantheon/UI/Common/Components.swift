@@ -252,6 +252,273 @@ struct BundleImage: View {
 
     static func exists(_ name: String) -> Bool { BundleArt.exists(name) }
 }
+// MARK: - Items and rewards
+
+/// The painted item icons: one `Portraits/item_<key>.png` per thing the
+/// game pays out — the currencies, every scroll, essence and stone, the
+/// relic cache, the awakening caches — painted by Gemini as 3×3 sheets on
+/// black (`tools/item_icons.py`) and keyed off the ground the way the relic
+/// stones were. Until a painting lands, an item draws as its glyph in its
+/// tint, exactly as before, so nothing here waits on art. The keys are the
+/// game's own ids where it has them (an essence's, a stone's) and one word
+/// where it does not.
+enum ItemArt {
+    static func imageName(_ key: String) -> String { "item_\(key)" }
+    static func hasPainting(_ key: String) -> Bool { !key.isEmpty && BundleArt.exists(imageName(key)) }
+
+    static func key(scroll: ScrollType) -> String { "scroll_\(scroll.rawValue)" }
+
+    /// The key a shop or quest grant draws as. A bundle draws as a gift.
+    static func key(for grant: ShopService.Grant) -> String {
+        switch grant {
+        case .scrolls(let scroll, _): return key(scroll: scroll)
+        case .energy, .energyRefill: return "energy"
+        case .drachma: return "drachma"
+        case .divinity: return "divinity"
+        case .relic: return "relic_cache"
+        case .essences(let id, _): return id
+        case .stones(let id, _): return id
+        case .bundle: return "bundle"
+        }
+    }
+
+    /// What a grant adds, as its tile prints it: "+120", "×5", "Refill".
+    static func amount(for grant: ShopService.Grant) -> String {
+        switch grant {
+        case .scrolls(_, let count): return "×\(count)"
+        case .energy(let amount): return "+\(amount)"
+        case .energyRefill: return "Refill"
+        case .drachma(let amount): return "+\(amount.formatted())"
+        case .divinity(let amount): return "+\(amount)"
+        case .relic(let grade): return "\(grade)★"
+        case .essences(_, let count): return "×\(count)"
+        case .stones(_, let count): return "×\(count)"
+        case .bundle(let parts): return "×\(parts.count)"
+        }
+    }
+
+    /// The short name under a grant's tile.
+    static func title(for grant: ShopService.Grant) -> String {
+        switch grant {
+        case .scrolls(let scroll, _): return scroll.displayName
+        case .energy, .energyRefill: return "Energy"
+        case .drachma: return "Drachma"
+        case .divinity: return "Divinity"
+        case .relic(let grade): return "\(grade)★ relic"
+        case .essences(let id, _): return EssenceCatalog.name(for: id)
+        case .stones(let id, _): return RelicStone.from(id: id)?.displayName ?? id
+        case .bundle: return "Bundle"
+        }
+    }
+
+    /// The stars a grant's tile wears: a relic cache shows its grade.
+    static func stars(for grant: ShopService.Grant) -> Int? {
+        if case .relic(let grade) = grant { return grade }
+        return nil
+    }
+
+    /// The glyph an item falls back to without its painting.
+    static func glyph(_ key: String) -> String {
+        if let scroll = scrollType(of: key) { return scroll.glyph }
+        if key.hasPrefix("essence_") { return "drop.triangle.fill" }
+        if key.hasPrefix("whetstone_") { return "seal.fill" }
+        if key.hasPrefix("gem_") { return "diamond.fill" }
+        if key.hasPrefix("awakening_cache_") { return "shippingbox.fill" }
+        switch key {
+        case "drachma": return "circle.hexagongrid.fill"
+        case "divinity": return "sparkles"
+        case "energy": return "bolt.fill"
+        case "laurels": return "laurel.leading"
+        case "rank_points": return "trophy.fill"
+        case "unit_exp": return "arrow.up.circle.fill"
+        case "player_exp": return "person.fill"
+        case "relic_cache": return "hexagon.fill"
+        case "level_up": return "chevron.up.circle.fill"
+        case "bundle": return "gift.fill"
+        default: return "circle.fill"
+        }
+    }
+
+    /// The colour a glyph burns in, and the glow behind a painted icon.
+    static func tint(_ key: String) -> Color {
+        if let scroll = scrollType(of: key) { return scroll.tint }
+        if key.hasPrefix("essence_") {
+            let parts = key.split(separator: "_")
+            if parts.count >= 3, let element = Element(rawValue: String(parts[1])) { return element.color }
+            return Theme.verdigris
+        }
+        if key.hasPrefix("awakening_cache_") {
+            return Element(rawValue: String(key.dropFirst("awakening_cache_".count)))?.color ?? Theme.gold
+        }
+        if let stone = RelicStone.from(id: key) { return stone.tier.quality.rarity.glow }
+        switch key {
+        case "drachma", "relic_cache", "rank_points", "bundle": return Theme.gold
+        case "divinity": return Theme.marble
+        case "energy": return Theme.info
+        case "laurels", "level_up": return Theme.laurel
+        case "unit_exp": return Theme.verdigris
+        default: return Theme.gold
+        }
+    }
+
+    private static func scrollType(of key: String) -> ScrollType? {
+        guard key.hasPrefix("scroll_") else { return nil }
+        return ScrollType(rawValue: String(key.dropFirst("scroll_".count)))
+    }
+}
+
+/// A word or a number that stands on any ground: the fill over a thin edge,
+/// drawn as eight offset copies under it because SwiftUI has no text stroke
+/// — the way the genre prints a reward's count on its tile.
+struct OutlinedText: View {
+    let text: String
+    var font: Font = Theme.numeric(12).weight(.black)
+    var fill: Color = .white
+    var edge: Color = Theme.ink
+    var width: CGFloat = 1
+
+    var body: some View {
+        ZStack {
+            ForEach(0..<8, id: \.self) { index in
+                let angle = Double(index) * .pi / 4
+                Text(text)
+                    .font(font)
+                    .foregroundStyle(edge)
+                    .offset(x: CGFloat(cos(angle)) * width, y: CGFloat(sin(angle)) * width)
+            }
+            Text(text)
+                .font(font)
+                .foregroundStyle(fill)
+        }
+        .lineLimit(1)
+    }
+}
+
+/// A thing the game pays out: its painting when one is in the bundle, its
+/// glyph in its tint until then.
+struct ItemIcon: View {
+    let key: String
+    var size: CGFloat = 32
+    /// A tint for the glyph; the painting ignores it.
+    var tint: Color? = nil
+    var glow: Bool = true
+
+    var body: some View {
+        let paint = tint ?? ItemArt.tint(key)
+        if ItemArt.hasPainting(key) {
+            BundleImage(name: ItemArt.imageName(key), renderedAt: size)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .shadow(color: paint.opacity(glow ? 0.35 : 0), radius: size * 0.12)
+        } else {
+            Image(systemName: ItemArt.glyph(key))
+                .font(.system(size: size * 0.6, weight: .bold))
+                .foregroundStyle(paint)
+                .shadow(color: paint.opacity(glow ? 0.6 : 0), radius: size * 0.14)
+                .frame(width: size, height: size)
+        }
+    }
+}
+
+/// One reward, the genre's way: a socket with the item painted large in it,
+/// its count printed bold on the socket's corner, its stars under it when it
+/// has a grade, and its name in small type below. A relic is its own stone.
+/// Drawn wherever the game pays out — the spoils panel, a tribute's card,
+/// the bazaar's offers, the missions' gifts — so every reward reads the
+/// same. The owner, with Summoners War's reward box beside our row of six
+/// pale glyph tiles: "Why does ours look so basic and ugly?"
+struct RewardTile: View {
+    var key: String = ""
+    var title: String? = nil
+    var amount: String? = nil
+    var stars: Int? = nil
+    var relic: Relic? = nil
+    var size: CGFloat = 64
+    var showsTitle: Bool = true
+    var onTap: (() -> Void)? = nil
+
+    init(key: String, title: String? = nil, amount: String? = nil, stars: Int? = nil, relic: Relic? = nil,
+         size: CGFloat = 64, showsTitle: Bool = true, onTap: (() -> Void)? = nil) {
+        self.key = key
+        self.title = title
+        self.amount = amount
+        self.stars = stars
+        self.relic = relic
+        self.size = size
+        self.showsTitle = showsTitle
+        self.onTap = onTap
+    }
+
+    /// A grant, as the bazaar and the quests pay it.
+    init(grant: ShopService.Grant, size: CGFloat = 64, showsTitle: Bool = true) {
+        self.init(key: ItemArt.key(for: grant), title: ItemArt.title(for: grant), amount: ItemArt.amount(for: grant),
+                  stars: ItemArt.stars(for: grant), size: size, showsTitle: showsTitle)
+    }
+
+    private var corner: CGFloat { max(6, size * 0.16) }
+    private var rarity: Rarity? {
+        if let relic { return relic.resolvedQuality.rarity }
+        if let stars { return Rarity(stars: stars) }
+        return nil
+    }
+
+    var body: some View {
+        VStack(spacing: max(2, size * 0.05)) {
+            ZStack(alignment: .bottomTrailing) {
+                socket
+                Group {
+                    if let relic {
+                        RelicIcon(relic: relic, size: size * 0.78, showsStars: false, showsLevel: false)
+                    } else {
+                        ItemIcon(key: key, size: size * 0.74)
+                    }
+                }
+                .frame(width: size, height: size)
+                if let amount {
+                    OutlinedText(
+                        text: amount,
+                        font: Theme.numeric(max(10.5, size * 0.21)).weight(.black),
+                        width: max(0.8, size * 0.016)
+                    )
+                    .padding(.trailing, max(3, size * 0.07))
+                    .padding(.bottom, max(2, size * 0.05))
+                }
+            }
+            .frame(width: size, height: size)
+            if let stars = relic?.grade ?? stars {
+                StarRow(stars: stars, size: max(6, size * 0.12))
+            }
+            if showsTitle, let title {
+                Text(title)
+                    .font(Theme.body(max(9, size * 0.15)).weight(.semibold))
+                    .foregroundStyle(relic.map { $0.resolvedQuality.inkColor } ?? Theme.textPrimary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(width: size * 1.35)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { onTap?() }
+        .allowsHitTesting(onTap != nil)
+    }
+
+    /// The socket: the relic grid's stone plate in a bronze bevel, with a
+    /// graded thing's colour on the inner rim.
+    private var socket: some View {
+        let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
+        return shape
+            .fill(Theme.stonePlate)
+            .overlay(shape.strokeBorder(Theme.bronzeFrame, lineWidth: max(1, size * 0.02)))
+            .overlay(
+                shape
+                    .strokeBorder((rarity?.glow ?? Color.clear).opacity(0.7), lineWidth: max(1, size * 0.03))
+                    .padding(max(1, size * 0.02))
+            )
+            .shadow(color: .black.opacity(0.18), radius: size * 0.05, y: size * 0.03)
+    }
+}
+
 /// The portrait tile used everywhere a unit appears in a list or a team slot.
 ///
 /// The frame carries the star grade. That is deliberate and it is the main
@@ -1078,9 +1345,9 @@ struct BarWallet: View {
         HStack(spacing: 8) {
             ForEach(Array(shows.enumerated()), id: \.offset) { _, kind in
                 HStack(spacing: 3) {
-                    Image(systemName: icon(kind))
-                        .font(.system(size: 10, weight: .black))
-                        .foregroundStyle(tint(kind))
+                    // The painted coin, crystal and bolt once they land; the
+                    // glyph in its tint until then.
+                    ItemIcon(key: key(kind), size: 13, tint: tint(kind), glow: false)
                     Text(value(kind))
                         .font(Theme.numeric(11))
                         .foregroundStyle(Theme.textPrimary)
@@ -1093,12 +1360,12 @@ struct BarWallet: View {
         .overlay(ScreenChrome.controlShape.strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5))
     }
 
-    private func icon(_ kind: Kind) -> String {
+    private func key(_ kind: Kind) -> String {
         switch kind {
-        case .energy: return "bolt.fill"
-        case .divinity: return "sparkles"
-        case .drachma: return "circle.hexagongrid.fill"
-        case .laurels: return "laurel.leading"
+        case .energy: return "energy"
+        case .divinity: return "divinity"
+        case .drachma: return "drachma"
+        case .laurels: return "laurels"
         }
     }
 

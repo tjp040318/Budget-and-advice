@@ -137,9 +137,8 @@ struct MissionsView: View {
         let taken = number < day || (number == day && claimed)
         let isToday = number == day
         return VStack(spacing: 2) {
-            Image(systemName: icon(for: gifts[index]))
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(taken ? Theme.ink : (isToday ? Theme.gold : Theme.textSecondary))
+            ItemIcon(key: ItemArt.key(for: gifts[index]), size: 16,
+                     tint: taken ? Theme.ink : (isToday ? Theme.gold : Theme.textSecondary), glow: false)
             Text("\(number)")
                 .font(Theme.numeric(9))
                 .foregroundStyle(taken ? Theme.ink : Theme.textSecondary)
@@ -317,16 +316,4 @@ struct MissionsView: View {
         receipt = "Received " + grants.map(ShopService.describe).joined(separator: ", ") + "."
     }
 
-    private func icon(for grant: ShopService.Grant) -> String {
-        switch grant {
-        case .scrolls: return "scroll.fill"
-        case .energy, .energyRefill: return "bolt.fill"
-        case .drachma: return "circle.hexagongrid.fill"
-        case .divinity: return "sparkles"
-        case .relic: return "shield.lefthalf.filled"
-        case .essences: return "drop.triangle.fill"
-        case .stones: return "diamond.fill"
-        case .bundle: return "gift.fill"
-        }
-    }
 }

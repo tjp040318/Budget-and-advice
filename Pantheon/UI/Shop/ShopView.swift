@@ -149,18 +149,13 @@ struct ShopView: View {
                     .multilineTextAlignment(.center)
             }
 
-            HStack(spacing: 6) {
-                // Offsets, not the strings themselves: two identical grants in
-                // one bundle would collide on `id: \.self`.
+            HStack(spacing: 8) {
+                // What the offer holds, as the genre's tiles with the count
+                // on each; the title above says what they are. Offsets, not
+                // the grants themselves: two identical grants in one bundle
+                // would collide on `id: \.self`.
                 ForEach(Array(grantParts(item.grant).enumerated()), id: \.offset) { _, part in
-                    Text(part)
-                        .font(Theme.body(10).weight(.bold))
-                        .foregroundStyle(Theme.gold)
-                        .lineLimit(1)
-                        .padding(.horizontal, 8)
-                        .frame(height: 22)
-                        .background(Capsule().fill(Theme.surfaceRaised))
-                        .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.4), lineWidth: 0.5))
+                    RewardTile(grant: part, size: 42, showsTitle: false)
                 }
             }
 
@@ -258,12 +253,10 @@ struct ShopView: View {
         return available ? "BUY" : "NEED MORE"
     }
 
-    /// A bundle spelled out one grant to a chip; anything else is one chip.
-    private func grantParts(_ grant: ShopService.Grant) -> [String] {
-        if case .bundle(let parts) = grant {
-            return parts.map(ShopService.describe)
-        }
-        return [ShopService.describe(grant)]
+    /// A bundle spelled out one grant to a tile; anything else is one tile.
+    private func grantParts(_ grant: ShopService.Grant) -> [ShopService.Grant] {
+        if case .bundle(let parts) = grant { return parts }
+        return [grant]
     }
 
     /// 45000 → "45,000". A price is read, not estimated, so the wallet's

@@ -543,15 +543,15 @@ final class BattleViewModel: ObservableObject {
         var items: [BattleSummary.Loot] = []
         if stageOutcome.drachma > 0 {
             items.append(.init(glyph: "circle.hexagongrid.fill", title: "Drachma",
-                               amount: "+\(stageOutcome.drachma.formatted())", tint: .gold))
+                               amount: "+\(stageOutcome.drachma.formatted())", tint: .gold, key: "drachma"))
         }
         if stageOutcome.unitExperience > 0 {
             items.append(.init(glyph: "arrow.up.circle.fill", title: "Unit EXP",
-                               amount: "+\(stageOutcome.unitExperience.formatted())", tint: .verdigris))
+                               amount: "+\(stageOutcome.unitExperience.formatted())", tint: .verdigris, key: "unit_exp"))
         }
         if stageOutcome.divinityEarned > 0 {
             items.append(.init(glyph: "sparkles", title: "Divinity",
-                               amount: "+\(stageOutcome.divinityEarned)", tint: .marble))
+                               amount: "+\(stageOutcome.divinityEarned)", tint: .marble, key: "divinity"))
         }
         for relic in stageOutcome.relicsEarned {
             items.append(.init(glyph: relic.set.glyph, title: relic.displayName,
@@ -560,17 +560,17 @@ final class BattleViewModel: ObservableObject {
         for (id, count) in stageOutcome.stonesEarned.sorted(by: { $0.key < $1.key }) {
             guard let stone = RelicStone.from(id: id) else { continue }
             items.append(.init(glyph: stone.kind.glyph, title: stone.displayName,
-                               amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity)))
+                               amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity), key: id))
         }
         for (id, count) in stageOutcome.essencesEarned.sorted(by: { $0.key < $1.key }) {
             let element = Element(rawValue: id.split(separator: "_").dropFirst().first.map(String.init) ?? "")
             items.append(.init(glyph: "drop.triangle.fill", title: EssenceCatalog.name(for: id),
-                               amount: "+\(count)", tint: element.map { .element($0) } ?? .verdigris))
+                               amount: "+\(count)", tint: element.map { .element($0) } ?? .verdigris, key: id))
         }
         for (id, count) in stageOutcome.scrollsEarned.sorted(by: { $0.key < $1.key }) {
             if let scroll = ScrollType(rawValue: id) {
                 items.append(.init(glyph: scroll.glyph, title: scroll.displayName,
-                                   amount: "+\(count)", tint: .scroll(scroll)))
+                                   amount: "+\(count)", tint: .scroll(scroll), key: ItemArt.key(scroll: scroll)))
             } else {
                 items.append(.init(glyph: "scroll.fill", title: id, amount: "+\(count)", tint: .gold))
             }
@@ -578,7 +578,7 @@ final class BattleViewModel: ObservableObject {
         for (unitID, levels) in stageOutcome.leveledUnits {
             let name = store.resolved(unitID)?.name ?? "Unit"
             items.append(.init(glyph: "chevron.up.circle.fill", title: "\(name) levelled",
-                               amount: "+\(levels)", tint: .laurel))
+                               amount: "+\(levels)", tint: .laurel, key: "level_up"))
         }
         return items
     }
@@ -637,8 +637,8 @@ final class BattleViewModel: ObservableObject {
             var loot: [BattleSummary.Loot] = []
             if result.outcome == .victory {
                 loot.append(.init(glyph: "trophy.fill", title: "Rank Points",
-                                  amount: delta >= 0 ? "+\(delta)" : "\(delta)", tint: .gold))
-                loot.append(.init(glyph: "laurel.leading", title: "Laurels", amount: "+\(laurels)", tint: .laurel))
+                                  amount: delta >= 0 ? "+\(delta)" : "\(delta)", tint: .gold, key: "rank_points"))
+                loot.append(.init(glyph: "laurel.leading", title: "Laurels", amount: "+\(laurels)", tint: .laurel, key: "laurels"))
             }
             return BattleSummary(
                 outcome: result.outcome,
@@ -721,6 +721,9 @@ struct BattleSummary {
         var tint: LootTint
         var stars: Int? = nil
         var relic: Relic? = nil
+        /// The `ItemArt` key the tile paints; nil for a relic, which draws
+        /// itself, or a spoil with no painting of its own.
+        var key: String? = nil
     }
 
     var outcome: BattleOutcome

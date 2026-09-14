@@ -340,13 +340,13 @@ struct TourView: View {
             ))
         }
         let loot: [BattleSummary.Loot] = [
-            .init(glyph: "circle.hexagongrid.fill", title: "Drachma", amount: "+1,240", tint: .gold),
-            .init(glyph: "arrow.up.circle.fill", title: "Unit EXP", amount: "+860", tint: .verdigris),
-            .init(glyph: "sparkles", title: "Divinity", amount: "+15", tint: .marble),
+            .init(glyph: "circle.hexagongrid.fill", title: "Drachma", amount: "+1,240", tint: .gold, key: "drachma"),
+            .init(glyph: "arrow.up.circle.fill", title: "Unit EXP", amount: "+860", tint: .verdigris, key: "unit_exp"),
+            .init(glyph: "sparkles", title: "Divinity", amount: "+15", tint: .marble, key: "divinity"),
             .init(glyph: RelicSet.fury.glyph, title: relic?.displayName ?? "Hero Fury Relic", amount: "Slot \(relic?.slot ?? 4)",
                   tint: .gold, stars: relic?.grade ?? 5, relic: relic),
-            .init(glyph: "drop.triangle.fill", title: "Ember Essence", amount: "+3", tint: .element(.ember)),
-            .init(glyph: ScrollType.unknown.glyph, title: ScrollType.unknown.displayName, amount: "+1", tint: .scroll(.unknown)),
+            .init(glyph: "drop.triangle.fill", title: "Mid Ember Essence", amount: "+3", tint: .element(.ember), key: "essence_ember_mid"),
+            .init(glyph: ScrollType.unknown.glyph, title: ScrollType.unknown.displayName, amount: "+1", tint: .scroll(.unknown), key: ItemArt.key(scroll: .unknown)),
         ]
         return BattleSummary(
             outcome: .victory,
