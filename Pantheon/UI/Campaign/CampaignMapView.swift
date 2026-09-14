@@ -168,14 +168,160 @@ struct ChapterMapArt {
     let chests: [CGPoint]
 
     static let byChapter: [String: ChapterMapArt] = [
-        // The jackal gate at the lower left, the reed island, the scarab
-        // court, the hall of sentinels, the serpent's hall of scales at the
-        // upper right; the chests on open sand by the road.
+        // Every chapter, its stages in story order along the painted road
+        // (a ten-stage chapter stands on its five landmarks and the road
+        // between them) and its three chests on open ground beside it; each
+        // point read off the painting with tools/mapgrid.py and looked at.
+        // Duat 1: the jackal gate at the lower left, the reed island, the
+        // scarab court, the hall of sentinels, the serpent's hall of scales.
         "duat_1": ChapterMapArt(
             image: "map_duat_1",
             nodes: [CGPoint(x: 0.13, y: 0.70), CGPoint(x: 0.32, y: 0.47), CGPoint(x: 0.59, y: 0.63),
                     CGPoint(x: 0.70, y: 0.40), CGPoint(x: 0.86, y: 0.30)],
             chests: [CGPoint(x: 0.47, y: 0.83), CGPoint(x: 0.80, y: 0.58), CGPoint(x: 0.94, y: 0.80)]
+        ),
+        // The first gate, the road, the half-buried gate, the road, the gate of statues, the road, its loop, the hall of two truths, the road, the fourth gate.
+        "duat_2": ChapterMapArt(
+            image: "map_duat_2",
+            nodes: [
+                CGPoint(x: 0.12, y: 0.66), CGPoint(x: 0.30, y: 0.80), CGPoint(x: 0.34, y: 0.42),
+                CGPoint(x: 0.50, y: 0.72), CGPoint(x: 0.59, y: 0.58), CGPoint(x: 0.72, y: 0.70),
+                CGPoint(x: 0.90, y: 0.60), CGPoint(x: 0.62, y: 0.22), CGPoint(x: 0.80, y: 0.40),
+                CGPoint(x: 0.92, y: 0.18),
+            ],
+            chests: [
+                CGPoint(x: 0.40, y: 0.86), CGPoint(x: 0.70, y: 0.46), CGPoint(x: 0.96, y: 0.42),
+            ]
+        ),
+        // The shrine, the stair's foot, the column terrace, the stair, the round temple, the spring, the stair up, the gate, the rock, the forge cellar.
+        "olympus_1": ChapterMapArt(
+            image: "map_olympus_1",
+            nodes: [
+                CGPoint(x: 0.11, y: 0.63), CGPoint(x: 0.30, y: 0.80), CGPoint(x: 0.27, y: 0.30),
+                CGPoint(x: 0.45, y: 0.72), CGPoint(x: 0.50, y: 0.30), CGPoint(x: 0.57, y: 0.62),
+                CGPoint(x: 0.66, y: 0.60), CGPoint(x: 0.67, y: 0.22), CGPoint(x: 0.80, y: 0.42),
+                CGPoint(x: 0.89, y: 0.35),
+            ],
+            chests: [
+                CGPoint(x: 0.12, y: 0.85), CGPoint(x: 0.85, y: 0.72), CGPoint(x: 0.95, y: 0.85),
+            ]
+        ),
+        // The harbour, the beach road, the lighthouse, the cliff road, the sea cave, the cliff, the trident temple, the ruins path, the columns, the statue garden.
+        "olympus_2": ChapterMapArt(
+            image: "map_olympus_2",
+            nodes: [
+                CGPoint(x: 0.12, y: 0.78), CGPoint(x: 0.22, y: 0.60), CGPoint(x: 0.31, y: 0.32),
+                CGPoint(x: 0.42, y: 0.28), CGPoint(x: 0.60, y: 0.42), CGPoint(x: 0.70, y: 0.50),
+                CGPoint(x: 0.78, y: 0.58), CGPoint(x: 0.88, y: 0.47), CGPoint(x: 0.82, y: 0.30),
+                CGPoint(x: 0.92, y: 0.18),
+            ],
+            chests: [
+                CGPoint(x: 0.44, y: 0.40), CGPoint(x: 0.90, y: 0.75), CGPoint(x: 0.96, y: 0.58),
+            ]
+        ),
+        // The stilt village, the boardwalk, the drowned shrine, the boardwalk, the dead trees, the boardwalk, the bone mound, its end, the reeds, the hydra's pool.
+        "olympus_3": ChapterMapArt(
+            image: "map_olympus_3",
+            nodes: [
+                CGPoint(x: 0.13, y: 0.52), CGPoint(x: 0.20, y: 0.72), CGPoint(x: 0.38, y: 0.60),
+                CGPoint(x: 0.50, y: 0.57), CGPoint(x: 0.48, y: 0.30), CGPoint(x: 0.62, y: 0.57),
+                CGPoint(x: 0.65, y: 0.37), CGPoint(x: 0.76, y: 0.42), CGPoint(x: 0.80, y: 0.30),
+                CGPoint(x: 0.88, y: 0.16),
+            ],
+            chests: [
+                CGPoint(x: 0.42, y: 0.85), CGPoint(x: 0.92, y: 0.45), CGPoint(x: 0.96, y: 0.70),
+            ]
+        ),
+        // The longships, the pyre, the rune stone, the road, the stave church, the road, the burial mound, the road, the climb, the mead hall.
+        "yggdrasil_1": ChapterMapArt(
+            image: "map_yggdrasil_1",
+            nodes: [
+                CGPoint(x: 0.13, y: 0.70), CGPoint(x: 0.28, y: 0.80), CGPoint(x: 0.27, y: 0.30),
+                CGPoint(x: 0.40, y: 0.45), CGPoint(x: 0.53, y: 0.35), CGPoint(x: 0.50, y: 0.68),
+                CGPoint(x: 0.72, y: 0.58), CGPoint(x: 0.80, y: 0.80), CGPoint(x: 0.90, y: 0.48),
+                CGPoint(x: 0.88, y: 0.27),
+            ],
+            chests: [
+                CGPoint(x: 0.62, y: 0.48), CGPoint(x: 0.78, y: 0.38), CGPoint(x: 0.97, y: 0.75),
+            ]
+        ),
+        // The cave stair, the path, the well, the path, the barrow field, the root bridge, the bridge, the ice, the frozen roots, the serpent.
+        "yggdrasil_2": ChapterMapArt(
+            image: "map_yggdrasil_2",
+            nodes: [
+                CGPoint(x: 0.14, y: 0.75), CGPoint(x: 0.30, y: 0.72), CGPoint(x: 0.32, y: 0.38),
+                CGPoint(x: 0.42, y: 0.52), CGPoint(x: 0.55, y: 0.30), CGPoint(x: 0.50, y: 0.62),
+                CGPoint(x: 0.65, y: 0.48), CGPoint(x: 0.76, y: 0.42), CGPoint(x: 0.80, y: 0.25),
+                CGPoint(x: 0.88, y: 0.40),
+            ],
+            chests: [
+                CGPoint(x: 0.45, y: 0.86), CGPoint(x: 0.92, y: 0.70), CGPoint(x: 0.95, y: 0.15),
+            ]
+        ),
+        // The ice pillars, the road, the giant's camp, the road, the frozen waterfall, the road's top, the icicles, the ice bridge, the road, the ice hall.
+        "yggdrasil_3": ChapterMapArt(
+            image: "map_yggdrasil_3",
+            nodes: [
+                CGPoint(x: 0.14, y: 0.62), CGPoint(x: 0.30, y: 0.48), CGPoint(x: 0.38, y: 0.72),
+                CGPoint(x: 0.30, y: 0.30), CGPoint(x: 0.47, y: 0.48), CGPoint(x: 0.55, y: 0.22),
+                CGPoint(x: 0.70, y: 0.35), CGPoint(x: 0.75, y: 0.62), CGPoint(x: 0.88, y: 0.55),
+                CGPoint(x: 0.86, y: 0.28),
+            ],
+            chests: [
+                CGPoint(x: 0.10, y: 0.85), CGPoint(x: 0.65, y: 0.85), CGPoint(x: 0.96, y: 0.80),
+            ]
+        ),
+        // The arch, the road, the cold temple, the road, the basilica, the road, the rostra, the road, the camp gate, the Capitol.
+        "rome_1": ChapterMapArt(
+            image: "map_rome_1",
+            nodes: [
+                CGPoint(x: 0.16, y: 0.62), CGPoint(x: 0.30, y: 0.55), CGPoint(x: 0.29, y: 0.30),
+                CGPoint(x: 0.42, y: 0.48), CGPoint(x: 0.52, y: 0.28), CGPoint(x: 0.55, y: 0.70),
+                CGPoint(x: 0.63, y: 0.58), CGPoint(x: 0.78, y: 0.80), CGPoint(x: 0.79, y: 0.45),
+                CGPoint(x: 0.89, y: 0.22),
+            ],
+            chests: [
+                CGPoint(x: 0.10, y: 0.35), CGPoint(x: 0.93, y: 0.64), CGPoint(x: 0.96, y: 0.86),
+            ]
+        ),
+        // The gladiator school, the road, the beast pens, the road, the market, the weapon stall, the road, the arena gate, the sand, the bronze giant.
+        "rome_2": ChapterMapArt(
+            image: "map_rome_2",
+            nodes: [
+                CGPoint(x: 0.14, y: 0.72), CGPoint(x: 0.25, y: 0.40), CGPoint(x: 0.30, y: 0.20),
+                CGPoint(x: 0.40, y: 0.55), CGPoint(x: 0.50, y: 0.42), CGPoint(x: 0.55, y: 0.72),
+                CGPoint(x: 0.66, y: 0.82), CGPoint(x: 0.68, y: 0.55), CGPoint(x: 0.78, y: 0.40),
+                CGPoint(x: 0.87, y: 0.20),
+            ],
+            chests: [
+                CGPoint(x: 0.42, y: 0.12), CGPoint(x: 0.93, y: 0.80), CGPoint(x: 0.80, y: 0.86),
+            ]
+        ),
+        // The moon gate, the path, the pavilion, the path, the peach terraces, the path, the bridge, the path, the shrine stair, the fox shrine.
+        "jade_1": ChapterMapArt(
+            image: "map_jade_1",
+            nodes: [
+                CGPoint(x: 0.13, y: 0.72), CGPoint(x: 0.28, y: 0.66), CGPoint(x: 0.23, y: 0.30),
+                CGPoint(x: 0.36, y: 0.48), CGPoint(x: 0.45, y: 0.62), CGPoint(x: 0.55, y: 0.45),
+                CGPoint(x: 0.63, y: 0.47), CGPoint(x: 0.74, y: 0.33), CGPoint(x: 0.83, y: 0.42),
+                CGPoint(x: 0.87, y: 0.18),
+            ],
+            chests: [
+                CGPoint(x: 0.08, y: 0.86), CGPoint(x: 0.95, y: 0.60), CGPoint(x: 0.93, y: 0.85),
+            ]
+        ),
+        // The falls, the bridge, the sunken temple, the sand, the wrecked junk, the path, the pearl grotto, the path, the climb, the dragon gate.
+        "jade_2": ChapterMapArt(
+            image: "map_jade_2",
+            nodes: [
+                CGPoint(x: 0.14, y: 0.45), CGPoint(x: 0.22, y: 0.70), CGPoint(x: 0.36, y: 0.30),
+                CGPoint(x: 0.42, y: 0.58), CGPoint(x: 0.55, y: 0.50), CGPoint(x: 0.62, y: 0.80),
+                CGPoint(x: 0.64, y: 0.22), CGPoint(x: 0.78, y: 0.65), CGPoint(x: 0.85, y: 0.48),
+                CGPoint(x: 0.86, y: 0.25),
+            ],
+            chests: [
+                CGPoint(x: 0.45, y: 0.86), CGPoint(x: 0.96, y: 0.62), CGPoint(x: 0.93, y: 0.85),
+            ]
         ),
     ]
 

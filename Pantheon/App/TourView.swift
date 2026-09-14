@@ -39,8 +39,18 @@ struct TourView: View {
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
-        ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2),
+        ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2),
     ]
+
+    /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
+    /// the CI job relaunches that step once per chapter so every painted
+    /// map is photographed.
+    static var pinnedChapter: Int {
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-chapter"), at + 1 < args.count,
+              let chapter = Int(args[at + 1]) else { return 0 }
+        return min(max(0, chapter), StageDatabase.chapters.count - 1)
+    }
 
     /// Seconds per tick. The runner screenshots on the same period, so every
     /// step is caught at least once.
@@ -206,6 +216,11 @@ struct TourView: View {
             // The fourth stage's card over the map: story, enemies, drops,
             // power, Fight.
             CampaignView(openingChapter: "duat_1", openingStage: "duat_1_4")
+        case "chapter_maps":
+            // Every chapter's map in turn (-tour-chapter K), so a painted
+            // region's medallions are seen on their landmarks before the
+            // owner does.
+            CampaignView(openingChapter: StageDatabase.chapters[Self.pinnedChapter].id)
         case "missions":
             MissionsView()
         case "victory":

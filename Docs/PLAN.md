@@ -2054,3 +2054,22 @@ ten-by-ten grid and a guessed row of medallions on the painting so a
 chapter's anchors can be checked before they are committed. The eleven
 generated chapters have ten stages each, so their ten medallions stand on
 the five landmarks and the road between them.
+
+**The other eleven, the same evening.** The owner, of Duat 1's frames:
+"I love it, go ahead and make the other maps. Then I will pull and
+test." The script ran as written — eleven images in five minutes, $1.55,
+every painting delivered its five landmarks in story order with the
+lair largest at the upper right (Rome's Colosseum road comes down from
+the upper left instead of up from the lower left, and its medallions
+follow the painting) — and every one was measured the same way: the
+grid, a guessed row of ten medallions and three chests drawn on the
+painting with `tools/mapgrid.py`, looked at, moved where a medallion sat
+on a wall or a chest on the road (Duat 2's gate chest, the Aegean's
+ruins path, the fjord's climb), looked at again. The rows are in
+`ChapterMapArt.byChapter`, a comment naming each stage's landmark. So
+that the owner sees all twelve before he pulls, the tour grew a step 28
+`chapter_maps`: the CI job launches it once per chapter with
+`-tour-chapter K` (`TourView.pinnedChapter`) and shoots a frame each,
+twelve frames a–l, about two minutes more on the runner. Gemini since
+the pause: the key art (0.14), the stones (2.95), Duat 1 (0.14), the
+eleven (1.55) — $4.78 of the month's ten.

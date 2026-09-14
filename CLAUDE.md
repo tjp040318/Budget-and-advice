@@ -239,11 +239,18 @@ environment can and cannot do. The short version:
   `ChapterMapView` full bleed: **the chapter's own painted map** where it
   has one (`ChapterMapArt.byChapter`: the region seen from above with its
   road and landmarks, `map_<chapter>.jpg`, one Gemini image at 21:9 —
-  Duat 1 first, 2026-09-14, the owner's choice to judge one before the
-  other eleven; the medallions and the chests stand on landmarks MEASURED
+  Duat 1 first on 2026-09-14 (14 cents) so the owner could judge one,
+  then, on his "I love it, go ahead and make the other maps", the other
+  eleven the same evening (`tools/batch/chapter_maps.sh`, $1.55), so
+  EVERY chapter has its map; the medallions and the chests stand on landmarks MEASURED
   off the painting with a grid, in 0…1 of the painting, placed through
-  the fill's crop by `ChapterMapArt.place`; the code road is not drawn
-  on a painted map) or, until then, the stage's
+  the fill's crop by `ChapterMapArt.place` — `python3 tools/mapgrid.py
+  <map> --dots x,y … --chests x,y …` draws the grid and a guessed row on
+  the painting, and every row was looked at that way; a ten-stage
+  chapter's medallions stand on its five landmarks and the road between
+  them; the code road is not drawn on a painted map; CI step 28
+  `chapter_maps` relaunches the app once per chapter with
+  `-tour-chapter K` and photographs all twelve) or, for a chapter without a row, the stage's
   painting with the dotted road winding through the middle band and a medallion per stage
   (52 pt, 64 for the boss; gold with a check once cleared, a pulsing ring
   where the player stands, a lock beyond, star pips under each), the
@@ -738,13 +745,13 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is twenty-eight screens (steps 0–27): an arena battle
+  pass. The CI tour is twenty-nine screens (steps 0–28): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,
   the victory's chest in three frames, the collection's Stage layout
   (21), the relic drop card (22), the relic filter sheet (23) and the
-  loading screen (24), the relic set reference (25), a tribute chest's card (26) and a stage's popup over the chapter map (27).
+  loading screen (24), the relic set reference (25), a tribute chest's card (26), a stage's popup over the chapter map (27) and every chapter's painted map (28, twelve frames a–l).
 - **The fight reads.** **Every unit's bars are a screen-space plate under
   its feet (2026-09-11, night):** `UnitPlateOverlay`, a SpriteKit scene laid
   over the `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one
