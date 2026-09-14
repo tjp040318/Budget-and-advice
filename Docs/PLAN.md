@@ -1888,3 +1888,59 @@ the sets are shown on the map and chosen by myth rather than hidden and
 arbitrary; the three-star track is Raid's shape and the road chests are
 AFK's, and together with the names, the seals and the chest they map one
 to one onto none of them.
+
+## The stones painted (2026-09-14)
+
+The owner: "Do the painted relics. I want those to look better." His word
+for this batch; the cap stays ten dollars a month and the quote was
+$2.30 to $5.
+
+### What the genre's icons are
+
+Summoners War's runes are painted gems: a saturated mineral with a gloss,
+the set's symbol on the face, read at forty points in a grid of hundreds.
+Epic Seven's gear is painted per piece with the set's icon over it; Raid's
+artifacts likewise. None of them is a line drawing; all of them are one
+painter's hand across the whole set, which is what makes a grid of them
+read as a system rather than a pile.
+
+### Three ways to paint sixteen stones
+
+1. **Sixteen singles, each from its own rendered stone as the reference.**
+   About $2.30. The seal is held to ours by the reference. The risk is
+   sixteen slightly different hands.
+2. **One sheet: the sixteen rendered stones on black as ONE reference,
+   repainted as one image.** About 14 cents an attempt. One hand by
+   construction; the painter keeps the positions, colours and seals of the
+   reference. The risk is a cell that mutates, which is fixed by option 1
+   for that cell alone.
+3. **Meshy's text-to-image.** The same models for credits, at a price per
+   image nobody has read yet, against a floor of 2,000 with 133 to spare.
+   Not for a batch.
+
+Chosen: the sheet, singles for the outliers. Black ground, keyed by
+darkness and flood-filled from the border (a dark carve inside a stone
+survives; the sprites of 2026-09-10 learned the same). The painting
+supplies the surface and the code the cut: `tools/relic_paint.py` scales
+each painted stone to cover the renderer's hexagon and clips it to that
+hexagon, adds the renderer's edge line, and ships it under the same
+`relic_<set>.png` name, so the tinted rim still fits and nothing in Swift
+changes; the emblems stay the line seals, which are chips at twelve
+points. Judged on the same sheet as the rendered stones, at the app's
+four sizes, before shipping.
+
+### What shipped (2026-09-14)
+
+Three images, 42 cents. The sheet came back as one hand: sixteen faceted
+gems, every position, colour family and seal where the reference put
+them, on black. Two drifted — Ichor to lavender and Titanfall to obsidian
+— and were re-rolled alone from their own renders (a copper chalice
+stone and a brown mountain stone came back). Each stone was keyed off
+the ground, scaled to cover the renderer's hexagon (3% over, so no
+edge shows), clipped to it, given the renderer's edge line, and judged
+on the same sheet as the renders at the app's four sizes before shipping.
+`relic_art.py --ship` now leaves the paintings alone unless told
+`--ship-stones`. `RelicSet.stoneHex`, the disc behind an emblem chip,
+was left as it was: the chips are read beside the stones, not matched to
+them, and a median measured off a faceted painting is the colour of its
+shadows. The bundle grew 0.6 MB.

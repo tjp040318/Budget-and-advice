@@ -20,11 +20,13 @@ round, so its top-left edge is in shadow — in gold, or in dark bronze on a
 light stone.
 
     python3 tools/relic_art.py --sheet /tmp/relics/sheet.jpg    # judge first
-    python3 tools/relic_art.py --ship                            # write the bundle files
+    python3 tools/relic_art.py --ship                            # the rim and the emblems
+    python3 tools/relic_art.py --ship --ship-stones              # the rendered stones too
 
-Gemini is paused (CLAUDE.md), so these are drawn here rather than painted;
-a painted set dropped in under the same names replaces them with no code
-change.
+The stones in the bundle are PAINTED (2026-09-14, `tools/relic_paint.py`:
+Gemini from these renders as the reference, fitted into this hexagon); the
+renders here are the reference and the fallback, and `--ship` alone leaves
+the paintings in place.
 """
 import argparse
 import math
@@ -581,6 +583,10 @@ def main():
     ap.add_argument("--ship", action="store_true", help="write the bundle files")
     ap.add_argument("--only", help="set names, comma-separated, for a quick look")
     ap.add_argument("--emblems", help="write a sheet of the sixteen emblems alone")
+    ap.add_argument("--ship-stones", action="store_true",
+                    help="with --ship: overwrite the stones too. They are PAINTED since 2026-09-14 "
+                         "(tools/relic_paint.py); the renders are the fallback, so --ship alone "
+                         "writes the rim and the emblems only")
     args = ap.parse_args()
 
     sets = [s for s in SETS if not args.only or s[0] in args.only.split(",")]
@@ -609,8 +615,11 @@ def main():
             f.unlink()
         if stale:
             print(f"removed {len(stale)} per-slot files")
-        for name, img in stones.items():
-            img.save(OUT / f"relic_{name}.png", optimize=True)
+        if args.ship_stones:
+            for name, img in stones.items():
+                img.save(OUT / f"relic_{name}.png", optimize=True)
+        else:
+            print("stones left as painted (tools/relic_paint.py); --ship-stones overwrites them with the renders")
         rim.save(OUT / "relic_rim.png", optimize=True)
         for name, colour, emblem in SETS:
             render_emblem(emblem).save(OUT / f"relic_emblem_{name}.png", optimize=True)

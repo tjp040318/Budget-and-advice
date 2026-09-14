@@ -507,13 +507,21 @@ environment can and cannot do. The short version:
   wind, a flame (the first cut's filled symbols were "clip art", the
   owner's word) — the QUALITY the rim, the grade the stars under it, the
   level a badge — `RelicIcon` in `RelicInventoryView.swift`, on every
-  screen a relic appears. The stones are rendered here by `python3
-  tools/relic_art.py --sheet x.jpg` (judge, `--only fury,aegis` for a
-  quick look) and `--ship` (writes `relic_<set>_<slot>.png` ×96,
-  `relic_rim_<slot>.png` ×6 as templates the app tints,
-  `relic_emblem_<set>.png` ×16, about 5 MB) — Gemini is paused, and a
-  painted set dropped in under the same names replaces them with no
-  code change (about 22 images, ~$3, for the emblems and shapes). **The
+  screen a relic appears. **The stones are PAINTED (2026-09-14):** the owner, "Do the painted
+  relics. I want those to look better." `tools/relic_paint.py` put the
+  sixteen rendered stones on black as ONE reference sheet and had Gemini
+  repaint it as one image (14 cents; one hand across all sixteen, every
+  position, colour and seal kept), re-rolled Ichor and Titanfall alone
+  from their own renders (the sheet had made them lavender and obsidian;
+  14 cents each), keyed each stone off the black ground (flood-filled from
+  the border), scaled it to cover the renderer's hexagon and clipped it to
+  it, and shipped `relic_<set>.png` ×16 (1.6 MB) under the same names —
+  so the tinted `relic_rim.png` still fits and nothing in Swift changed;
+  the emblems stay the line seals. Three images, 42 cents. The renders
+  (`python3 tools/relic_art.py --sheet x.jpg`, `--only fury,aegis`) are the
+  reference and the fallback: `--ship` writes the rim and the emblems
+  only, and `--ship --ship-stones` would put the renders back over the
+  paintings. **The
   inventory is the genre's grid** (2026-09-12, evening): the stones at
   38 pt, eight a row, ONE panel at the right for the relic tapped (name,
   quality, main, subs, set, fit, wearer; Open, Equip on…/Change, Lock,
