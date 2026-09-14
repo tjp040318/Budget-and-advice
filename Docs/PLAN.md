@@ -2036,8 +2036,16 @@ off the painting with a ten-by-ten grid (`ChapterMapArt.byChapter`) and
 placed through the fill's crop, the island's and the world map's method;
 the code road is not drawn on a painted map, since the painting has its
 own. The tier chips moved from the top right to the top centre, where
-the sky is, because the maps put the boss's lair in the upper right.
-Fifteen cents. If it is right, the other eleven are one script and about
+the sky is, because the maps put the boss's lair in the upper right —
+and the first frames showed them across the title plate: a 300-point
+plate at the left and a 250-point row centred on an 852-point phone
+overlap by 70 points. They stand in the strip's empty centre now
+(`TierChips`, between the title and the Realms button, the genre's
+top-bar tabs), Hard's and Hell's terms are the plate's last line (Normal
+needs none), a tier shut on the chapter opened falls back to Normal
+(`settleTier`), and the World button is gone: the chevron is the same
+door, and the strip has to fit a 667-point SE with the three chips in
+it (about 620 points with them, 700 with World). Fifteen cents. If it is right, the other eleven are one script and about
 $1.60 more, each measured the same way: `tools/batch/chapter_maps.sh` is
 that script, written and NOT run (every prompt is the Duat 1 template with
 the chapter's own five landmarks in story order, the lair last), and

@@ -242,15 +242,18 @@ environment can and cannot do. The short version:
   Duat 1 first, 2026-09-14, the owner's choice to judge one before the
   other eleven; the medallions and the chests stand on landmarks MEASURED
   off the painting with a grid, in 0…1 of the painting, placed through
-  the fill's crop by `ChapterMapArt.place`; the tier chips sit at the top
-  centre because the maps put the boss's lair at the upper right; the
-  code road is not drawn on a painted map) or, until then, the stage's
+  the fill's crop by `ChapterMapArt.place`; the code road is not drawn
+  on a painted map) or, until then, the stage's
   painting with the dotted road winding through the middle band and a medallion per stage
   (52 pt, 64 for the boss; gold with a check once cleared, a pulsing ring
   where the player stands, a lock beyond, star pips under each), the
   three tribute chests along the bottom of the road, one plate at the
-  top left (realm · chapter, the story line, progress, Next, YIELDS), the
-  tier chips and their note at the top right, and an arrow at either
+  top left (realm · chapter, the story line, progress, Next, YIELDS,
+  and Hard's or Hell's terms as its last line), the tier chips
+  (`TierChips`) in the empty CENTRE OF THE STRIP — the genre's top-bar
+  tabs; they stood at the top centre of the painted map for one run of
+  frames and collided with the plate, and the World button gave up its
+  place since the chevron is the same door — and an arrow at either
   edge to the chapter before and after. No header panel, no list: the
   owner, of the strip-over-panel-over-list it replaced, "looks so dumb …
   I want just a map". A tap on a medallion opens `StagePopup` over the

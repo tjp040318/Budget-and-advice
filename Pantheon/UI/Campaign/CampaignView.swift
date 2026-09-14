@@ -77,10 +77,12 @@ struct CampaignView: View {
                 subtitle: openChapterID == nil ? "Three realms, and the road between them" : realmSubtitle,
                 dismiss: openChapterID == nil ? nil : { openChapterID = nil }
             ) {
-                if openChapterID != nil {
-                    BarButton(title: "World", systemImage: "map.fill") {
-                        openChapterID = nil
-                    }
+                // The tier tabs stand in the strip's empty centre, the
+                // genre's place for them, so the painted map keeps its sky
+                // and its plate; the chevron is the way back to the world.
+                if let openChapterID, let base = StageDatabase.chapter(openChapterID) {
+                    TierChips(base: base, difficulty: $difficulty)
+                    Spacer(minLength: 6)
                 }
                 BarButton(title: "Realms", systemImage: "globe.europe.africa.fill") {
                     showRealms = true

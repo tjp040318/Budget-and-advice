@@ -191,6 +191,56 @@ struct ChapterMapArt {
     }
 }
 
+/// Normal, Hard, Hell as three chips in the strip's centre — the genre's
+/// top-bar tabs. The tier being shown is filled in its own colour, a shut
+/// tier wears a lock, and a tier cleared to its boss wears a check. What a
+/// tier pays is a line in the chapter's plate on the map. They stood at the
+/// top centre of the painted map first and collided with the plate on the
+/// first frames; the strip has the room and the map keeps its sky.
+struct TierChips: View {
+    @EnvironmentObject private var store: GameStore
+    let base: Chapter
+    @Binding var difficulty: CampaignDifficulty
+
+    var body: some View {
+        let player = store.player
+        HStack(spacing: 6) {
+            ForEach(CampaignDifficulty.allCases) { tier in
+                let open = CampaignService.isOpen(tier, of: base, player: player)
+                let cleared = (player.campaignProgress[base.id + tier.suffix] ?? 0) >= base.stages.count
+                let selected = tier == difficulty
+                let tint = Color(hex: tier.accentHex)
+                Button {
+                    guard open else { return }
+                    Juice.haptic(.light)
+                    withAnimation(.easeOut(duration: 0.2)) { difficulty = tier }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: open ? (cleared ? "checkmark.seal.fill" : tier.glyph) : "lock.fill")
+                            .font(.system(size: 9, weight: .bold))
+                        Text(tier.displayName.uppercased())
+                            .font(Theme.body(10).weight(.black))
+                            .tracking(1.1)
+                    }
+                    .foregroundStyle(selected ? Theme.ink : (open ? tint : Theme.textSecondary))
+                    .padding(.horizontal, 9)
+                    .frame(height: ScreenChrome.control)
+                    .background(
+                        ScreenChrome.controlShape.fill(selected ? tint : Theme.surfaceRaised)
+                    )
+                    .overlay(
+                        ScreenChrome.controlShape.strokeBorder(open ? tint.opacity(selected ? 0 : 0.7) : Theme.stroke, lineWidth: 0.5)
+                    )
+                    .opacity(open ? 1 : 0.7)
+                    .stripHitTarget()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(open ? tier.displayName : "\(tier.displayName), locked")
+            }
+        }
+    }
+}
+
 struct ChapterMapView: View {
     @EnvironmentObject private var store: GameStore
     let chapterID: String
@@ -220,23 +270,20 @@ struct ChapterMapView: View {
                 if let base = StageDatabase.chapter(chapterID), let chapter {
                     painting(chapter, size: size)
                     road(chapter, size: size)
-                    titlePlate(chapter)
+                    titlePlate(chapter, base: base)
                         .padding(10)
-                    // Top centre: the maps put the boss's lair in the upper
-                    // right and the chapter's plate holds the upper left.
-                    tierChips(base)
-                        .padding(.top, 10)
-                        .frame(width: size.width, alignment: .top)
                     arrows(size: size)
                 }
             }
             .frame(width: size.width, height: size.height)
         }
         .onAppear {
+            settleTier()
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
                 pulse = true
             }
         }
+        .onChange(of: chapterID) { _, _ in settleTier() }
         .sheet(item: $openTribute) { tribute in
             TributeCard(tribute: tribute, chapterID: chapterID, difficulty: difficulty)
                 .environmentObject(store)
@@ -453,7 +500,7 @@ struct ChapterMapView: View {
 
     /// The chapter's name, its story line, its progress and what it yields,
     /// on one plate at the top left.
-    private func titlePlate(_ chapter: Chapter) -> some View {
+    private func titlePlate(_ chapter: Chapter, base: Chapter) -> some View {
         let player = store.player
         let cleared = player.campaignProgress[chapter.id] ?? 0
         let next = chapter.stages.first(where: { CampaignService.isUnlocked($0, player: player) && !CampaignService.isCleared($0, player: player) })
@@ -512,6 +559,15 @@ struct ChapterMapView: View {
                     }
                 }
             }
+            // What the tier changes, on Hard and Hell only: Normal is the
+            // story and needs no terms.
+            if difficulty != .normal {
+                Text(tierNote(difficulty, open: CampaignService.isOpen(difficulty, of: base, player: player), base: base))
+                    .font(Theme.body(10))
+                    .foregroundStyle(Color(hex: difficulty.accentHex))
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(9)
         .frame(width: 300, alignment: .leading)
@@ -519,54 +575,13 @@ struct ChapterMapView: View {
         .overlay(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).strokeBorder(Theme.gold.opacity(0.45), lineWidth: 1))
     }
 
-    /// Normal, Hard, Hell as three chips, the genre's way: the tier being
-    /// shown is filled in its own colour, a shut tier wears a lock and says
-    /// what opens it, and a tier cleared to its boss wears a check. What the
-    /// tier pays is the line under them.
-    private func tierChips(_ base: Chapter) -> some View {
-        let player = store.player
-        return VStack(alignment: .center, spacing: 4) {
-            HStack(spacing: 6) {
-                ForEach(CampaignDifficulty.allCases) { tier in
-                    let open = CampaignService.isOpen(tier, of: base, player: player)
-                    let cleared = (player.campaignProgress[base.id + tier.suffix] ?? 0) >= base.stages.count
-                    let selected = tier == difficulty
-                    let tint = Color(hex: tier.accentHex)
-                    Button {
-                        guard open else { return }
-                        withAnimation(.easeOut(duration: 0.2)) { difficulty = tier }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: open ? (cleared ? "checkmark.seal.fill" : tier.glyph) : "lock.fill")
-                                .font(.system(size: 10, weight: .bold))
-                            Text(tier.displayName.uppercased())
-                                .font(Theme.body(10).weight(.black))
-                                .tracking(1.2)
-                        }
-                        .foregroundStyle(selected ? Theme.ink : (open ? tint : Theme.textSecondary))
-                        .padding(.horizontal, 11)
-                        .frame(height: 26)
-                        .background(
-                            Capsule().fill(selected ? tint : Theme.plate.opacity(open ? 0.9 : 0.6))
-                        )
-                        .overlay(
-                            Capsule().strokeBorder(open ? tint.opacity(selected ? 0 : 0.7) : Theme.stroke, lineWidth: 1)
-                        )
-                        .opacity(open ? 1 : 0.7)
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            Text(tierNote(difficulty, open: CampaignService.isOpen(difficulty, of: base, player: player), base: base))
-                .font(Theme.body(10))
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.plate.opacity(0.85)))
+    /// A tier carried over from another chapter may be shut on this one; the
+    /// road then shows Normal rather than a locked tier's stages.
+    private func settleTier() {
+        guard let base = StageDatabase.chapter(chapterID) else { return }
+        if !CampaignService.isOpen(difficulty, of: base, player: store.player) {
+            difficulty = .normal
         }
-        .frame(width: 250, alignment: .center)
     }
 
     private func tierNote(_ tier: CampaignDifficulty, open: Bool, base: Chapter) -> String {
@@ -575,12 +590,12 @@ struct ChapterMapView: View {
             return "The story. Relics as the stage gives them."
         case .hard:
             return open
-                ? "Enemies a grade up and ×1.2. Every stage drops a 5★ relic or better; ×1.7 drachma and EXP."
-                : "Opens when \(base.name)'s boss falls on Normal."
+                ? "Hard: a grade up, ×1.2 · every stage drops a 5★+ relic · ×1.7 drachma and EXP"
+                : "Hard opens when \(base.name)'s boss falls on Normal."
         case .hell:
             return open
-                ? "Enemies two grades up and ×1.5. Every stage drops a 6★ relic; ×2.6 drachma and EXP."
-                : "Opens when \(base.name)'s boss falls on Hard."
+                ? "Hell: two grades up, ×1.5 · every stage drops a 6★ relic · ×2.6 drachma and EXP"
+                : "Hell opens when \(base.name)'s boss falls on Hard."
         }
     }
 
