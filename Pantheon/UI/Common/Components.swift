@@ -353,7 +353,9 @@ enum ItemArt {
         if let stone = RelicStone.from(id: key) { return stone.tier.quality.rarity.glow }
         switch key {
         case "drachma", "relic_cache", "rank_points", "bundle": return Theme.gold
-        case "divinity": return Theme.marble
+        // Violet, the colour its crystals will be painted: the marble the
+        // old shelf used was invisible on a cream socket in the first frames.
+        case "divinity": return Color(hex: "#7E63B8")
         case "energy": return Theme.info
         case "laurels", "level_up": return Theme.laurel
         case "unit_exp": return Theme.verdigris

@@ -128,7 +128,13 @@ jobs:
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
               arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
-              victory) sleep 4; shoot "$step-${names[$step]}-a"; sleep 1; shoot "$step-${names[$step]}-b"; sleep 3; shoot "$step-${names[$step]}-c" ;;
+              # The reckoning (about 3 s in), the chest with its lid coming
+              # up (about 7.6 s), the spoils panel with every tile and
+              # Continue (about 14 s); a screenshot itself takes a second
+              # or more, which is in these numbers. The old 4/5/8 landed the
+              # first frame on the very instant the chest's SceneKit view was
+              # made, and photographed a black screen with TAP TO OPEN on it.
+              victory) sleep 2; shoot "$step-${names[$step]}-a"; sleep 3; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
               # Every chapter's map: the step is relaunched once per chapter
               # (-tour-chapter K) so each painted region is photographed with
               # its medallions and chests in place.
