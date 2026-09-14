@@ -1944,3 +1944,29 @@ on the same sheet as the renders at the app's four sizes before shipping.
 was left as it was: the chips are read beside the stones, not matched to
 them, and a median measured off a faceted painting is the colour of its
 shadows. The bundle grew 0.6 MB.
+
+### The devices, after "as if they were drawn by a kid" (2026-09-14)
+
+The owner sent the painted sheet back: "the symbols on the relics look
+basic and shitty, as if they were drawn by a kid." True, and the cause was
+mine: the seals were line drawings made for legibility at twelve points,
+and a painter handed a stick figure paints a stick figure in gold. What the
+genre's rune symbols are is sculpture — a device with mass, light and
+shadow, like the face of a coin. So the fix was not a better drawing to
+copy but a description to sculpt from: each set's subject kept and
+written for a carver (`relic_paint.SYMBOLS`), and the shipped painted
+stone given back as the reference with "keep the gem, replace the line
+symbol with an ornate gold bas-relief of X". Fury was tested first and
+came back a three-tongued flame in relief on the ruby; the other fifteen
+followed in three lanes; Chains (a plaque that swallowed the stone) and
+Wards (a coin that read like Aegis's medallion at thirty points) were
+re-rolled once with "engraved directly into the face, no plaque, no coin".
+Eighteen images, about $2.50, on top of the three before.
+
+The chips could not follow the same road: cutting a device down to a
+thirteen-pixel template makes a blob where the line seal stays a glyph
+(measured on a sheet at 13, 16, 24 and 40 pixels). So the chips show the
+painted gem itself, small, with the set's name beside it everywhere a chip
+appears — the rail's count, the sets row, the map's YIELDS, the filter,
+the reference — which is how the genre's set filters show the rune. The
+loading screen's gold rule keeps the tinted line wheel (`lineSeal`).

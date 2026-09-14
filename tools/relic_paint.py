@@ -65,6 +65,63 @@ PROMPT = (
 )
 
 
+# The sixteen devices, described for a sculptor. The first paintings copied
+# the line seals of `relic_art.emblem_strokes` faithfully and the owner
+# called the symbols "basic, as if drawn by a kid" (2026-09-14): the seals
+# were drawn for legibility at twelve points, and a painter handed a
+# stick figure paints a stick figure. Each set's subject is kept — the
+# aspis, the column, the torch — and given the detail a coin's device has.
+SYMBOLS = {
+    "fury": "a roaring flame with three curling tongues and embers rising from it",
+    "aegis": "a round Greek hoplite shield seen face on, a snarling gorgon's head as its boss, a laurel wreath around its rim",
+    "bulwark": "a Doric temple column with a fluted shaft, a carved capital and a stepped base, a fortress wall behind it",
+    "zephyr": "a single feathered wing sweeping to the right with three streaming wind lines behind it",
+    "thunder": "a jagged thunderbolt clasped in an eagle's talon, sparks at its tips",
+    "ruin": "two swords with ornate hilts crossed over a broken laurel wreath",
+    "oracle": "an all-seeing eye within a sunburst of rays, a teardrop of the Eye of Horus below it",
+    "wards": "a pentagonal amulet with a ring of small runes around it and a gem at its centre, engraved directly into the stone's face with the stone visible around it, not a coin and not a medallion",
+    "ichor": "an ornate two-handled chalice overflowing with the golden blood of the gods, three drops falling",
+    "wrath": "a triskelion of three spiralling arms with a burst of light at its centre",
+    "styx": "three cresting waves of the river of the dead with a ferryman's oar across them and a crescent moon above",
+    "chains": "three heavy chain links in a diagonal, the last one broken open, engraved directly into the stone's face with the stone visible around them, no plaque, no inner hexagon, no frame",
+    "fates": "an eight-spoked wheel of fate with a spindle and a thread wound through its rim",
+    "nemesis": "a balance scale whose beam is a sword, a feather in one pan and a heart in the other",
+    "titanfall": "a jagged mountain peak split by a lightning crack, a fallen crown at its foot",
+    "vigil": "an upright burning torch wrapped in a laurel vine, its flame leaning in a wind",
+}
+
+SYMBOL_PROMPT = (
+    "Keep this painted hexagonal gemstone exactly as it is: its pointy-top cut, its "
+    "colour, its facets and its gloss, on the same pure black background. REPLACE the "
+    "thin gold line symbol on its face with an ornate, richly detailed emblem of "
+    "{device}, sculpted as a gold bas-relief set into the stone: bevelled edges, fine "
+    "chiselled detail, bright highlights on the raised gold and deep shadow in the "
+    "recesses, like the device struck on an ancient coin, filling the central sixty "
+    "percent of the face, crisp and readable at small size, one emblem only. No glow, "
+    "no drop shadow, no lettering, nothing outside the stone"
+)
+
+
+def symbol_reference(name, path):
+    """The shipped painted stone, stood on black at the single's size, as the
+    reference for its emblem's repaint."""
+    stone = Image.open(OUT / f"relic_{name}.png").convert("RGBA")
+    size = int(SINGLE_CANVAS * 0.72)
+    stone = stone.resize((size, size), Image.LANCZOS)
+    img = Image.new("RGB", (SINGLE_CANVAS, SINGLE_CANVAS), (0, 0, 0))
+    img.paste(stone, ((SINGLE_CANVAS - size) // 2, (SINGLE_CANVAS - size) // 2), stone)
+    img.save(path)
+    print("wrote", path)
+
+
+def paint_symbol(name, reference_path, out_path):
+    cmd = [sys.executable, str(ROOT / "tools" / "genart.py"),
+           "--prompt", SYMBOL_PROMPT.format(device=SYMBOLS[name]),
+           "--ref", str(reference_path), "--out", str(out_path),
+           "--size", f"{SINGLE_CANVAS}x{SINGLE_CANVAS}", "--raw", str(Path(out_path).with_suffix(".raw.png"))]
+    subprocess.run(cmd, check=True)
+
+
 def names(single):
     return [single] if single else [s[0] for s in relic_art.SETS]
 
@@ -190,7 +247,14 @@ def main():
     ap.add_argument("--split", metavar="PAINTED", help="key, cut and fit a painted sheet")
     ap.add_argument("--sheet", metavar="JPG", help="with --split: the judging sheet at the app's sizes")
     ap.add_argument("--ship", action="store_true", help="with --split: write relic_<set>.png into the bundle")
+    ap.add_argument("--symbol-reference", metavar="PNG", help="with --single: the shipped stone on black, for its emblem's repaint")
+    ap.add_argument("--paint-symbol", nargs=2, metavar=("REF", "OUT"), help="with --single: ONE Gemini image repainting the emblem")
     args = ap.parse_args()
+
+    if args.symbol_reference:
+        symbol_reference(args.single, args.symbol_reference)
+    if args.paint_symbol:
+        paint_symbol(args.single, args.paint_symbol[0], args.paint_symbol[1])
 
     if args.reference:
         reference(args.reference, args.single)

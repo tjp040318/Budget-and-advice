@@ -99,6 +99,12 @@ enum RelicSet: String, Codable, CaseIterable, Identifiable, Sendable {
     /// by `tools/relic_art.py`, for chips and lists.
     var emblemImageName: String { "relic_emblem_\(rawValue)" }
 
+    /// The set's painted stone (`relic_<set>`, from `tools/relic_paint.py`):
+    /// the gem in the set's colour with its device sculpted in gold, which
+    /// is also the set's mark on every chip, the way the genre's set
+    /// filters show the rune itself.
+    var stoneImageName: String { "relic_\(rawValue)" }
+
     /// The stone's colour, as the art tool paints it, for the places that
     /// tint something by set (a glow behind the card). Kept in step with
     /// `SETS` in `tools/relic_art.py` by hand.
@@ -362,7 +368,7 @@ struct Relic: Codable, Equatable, Identifiable, Sendable {
     /// silhouette and the owner called the six shapes weird (2026-09-12) —
     /// so the slot is a number badge (`RelicIcon.showsSlot`) or the socket's
     /// place on the ring.
-    var stoneImageName: String { "relic_\(set.rawValue)" }
+    var stoneImageName: String { self.set.stoneImageName }
 
     /// The quality rim, a template the app tints with the quality's metal.
     static let rimImageName = "relic_rim"

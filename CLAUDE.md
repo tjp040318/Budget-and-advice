@@ -517,11 +517,26 @@ environment can and cannot do. The short version:
   the border), scaled it to cover the renderer's hexagon and clipped it to
   it, and shipped `relic_<set>.png` ×16 (1.6 MB) under the same names —
   so the tinted `relic_rim.png` still fits and nothing in Swift changed;
-  the emblems stay the line seals. Three images, 42 cents. The renders
-  (`python3 tools/relic_art.py --sheet x.jpg`, `--only fury,aegis`) are the
-  reference and the fallback: `--ship` writes the rim and the emblems
-  only, and `--ship --ship-stones` would put the renders back over the
-  paintings. **The
+  the emblems stay the line seals. Then the owner, of that sheet: "the symbols on
+  the relics look basic and shitty, as if they were drawn by a kid" — the
+  painter had copied the line seals faithfully. So each set's device was
+  DESCRIBED for a sculptor instead (`relic_paint.SYMBOLS`: a gorgon aspis,
+  a fluted column before a wall, a wing, a talon clasping a bolt, crossed
+  swords over a laurel, an eye in a sunburst, a rune amulet, an
+  overflowing chalice, a triskelion, waves with a ferryman's oar, broken
+  chain links, a wheel with its thread, a sword-beamed scale, a split
+  peak with a fallen crown, a laurelled torch) and repainted on each
+  shipped stone as a gold bas-relief (`--single X --symbol-reference`
+  then `--paint-symbol`, the stone itself as the reference so the gem
+  stays; Chains and Wards re-rolled once when a plaque and a coin
+  swallowed the stone). Twenty-one images in all, about $2.95. The chips
+  show the painted gem itself (`RelicSetEmblem`, `RelicSet.stoneImageName`,
+  the name beside it everywhere; `lineSeal: true` keeps the tinted line
+  seal for the loading screen's gold rule): a device cut down to thirteen
+  pixels was tried and is a blob. The renders (`python3 tools/relic_art.py
+  --sheet x.jpg`, `--only fury,aegis`) are the reference and the fallback:
+  `--ship` writes the rim and the emblems only, and `--ship --ship-stones`
+  would put the renders back over the paintings. **The
   inventory is the genre's grid** (2026-09-12, evening): the stones at
   38 pt, eight a row, ONE panel at the right for the relic tapped (name,
   quality, main, subs, set, fit, wearer; Open, Equip on…/Change, Lock,

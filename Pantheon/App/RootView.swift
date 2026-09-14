@@ -588,7 +588,7 @@ struct LaunchView: View {
             HStack(spacing: 10) {
                 LinearGradient(colors: [.clear, Theme.gold], startPoint: .leading, endPoint: .trailing)
                     .frame(width: 110, height: 1)
-                RelicSetEmblem(set: .fates, size: 14, tint: Theme.gold)
+                RelicSetEmblem(set: .fates, size: 14, tint: Theme.gold, lineSeal: true)
                 LinearGradient(colors: [Theme.gold, .clear], startPoint: .leading, endPoint: .trailing)
                     .frame(width: 110, height: 1)
             }

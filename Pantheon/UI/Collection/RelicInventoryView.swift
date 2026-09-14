@@ -106,14 +106,25 @@ struct RelicIcon: View {
     }
 }
 
-/// A set's emblem alone, tinted, for chips and lists.
+/// A set's mark for chips and lists: the painted stone itself, small — the
+/// gem in the set's colour with its device — the way the genre's set
+/// filters show the rune. The line seal, tinted, only where a coloured gem
+/// would be wrong (`lineSeal`: the loading screen's gold rule) or in a
+/// bundle without the paintings. A device cut down to thirteen pixels was
+/// tried and is a blob; the line seal stays a glyph, and the gem's colour
+/// with the set's name beside it reads better than either (2026-09-14).
 struct RelicSetEmblem: View {
     let set: RelicSet
     var size: CGFloat = 12
     var tint: Color = Theme.gold
+    var lineSeal: Bool = false
 
     var body: some View {
-        if let image = BundleArt.image(set.emblemImageName) {
+        if !lineSeal, BundleArt.exists(set.stoneImageName) {
+            BundleImage(name: set.stoneImageName, renderedAt: size)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+        } else if let image = BundleArt.image(set.emblemImageName) {
             Image(uiImage: image)
                 .renderingMode(.template)
                 .resizable()
@@ -2901,12 +2912,9 @@ struct RelicSetsSheet: View {
         let onUnit = unit.map { unit in unit.relics.filter { $0.set == relicSet }.count }
         let complete = (onUnit ?? 0) >= relicSet.piecesRequired
         return HStack(spacing: 8) {
-            ZStack {
-                Circle().fill(Color(hex: relicSet.stoneHex))
-                RelicSetEmblem(set: relicSet, size: 15, tint: Color(hex: "#F6DC8C"))
-            }
-            .frame(width: 26, height: 26)
-            .overlay(Circle().strokeBorder(complete ? Theme.gold : Theme.stroke, lineWidth: complete ? 1.5 : 0.5))
+            RelicSetEmblem(set: relicSet, size: 30)
+                .frame(width: 30, height: 30)
+                .shadow(color: Theme.gold.opacity(complete ? 0.8 : 0), radius: 4)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 5) {
                     Text(relicSet.displayName)
