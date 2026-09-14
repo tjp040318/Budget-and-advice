@@ -2038,4 +2038,11 @@ the code road is not drawn on a painted map, since the painting has its
 own. The tier chips moved from the top right to the top centre, where
 the sky is, because the maps put the boss's lair in the upper right.
 Fifteen cents. If it is right, the other eleven are one script and about
-$1.60 more, each measured the same way.
+$1.60 more, each measured the same way: `tools/batch/chapter_maps.sh` is
+that script, written and NOT run (every prompt is the Duat 1 template with
+the chapter's own five landmarks in story order, the lair last), and
+`python3 tools/mapgrid.py <map> --dots x,y … --chests x,y …` draws the
+ten-by-ten grid and a guessed row of medallions on the painting so a
+chapter's anchors can be checked before they are committed. The eleven
+generated chapters have ten stages each, so their ten medallions stand on
+the five landmarks and the road between them.
