@@ -236,8 +236,16 @@ environment can and cannot do. The short version:
 - **The campaign is two maps and a popup (2026-09-14).** `CampaignView`
   opens on the world road (`WorldRoadMapView`: the painted world with a
   city per chapter); a city opens the chapter as a PLACE —
-  `ChapterMapView` full bleed: the stage's painting fills the frame, the
-  dotted road winds through the middle band with a medallion per stage
+  `ChapterMapView` full bleed: **the chapter's own painted map** where it
+  has one (`ChapterMapArt.byChapter`: the region seen from above with its
+  road and landmarks, `map_<chapter>.jpg`, one Gemini image at 21:9 —
+  Duat 1 first, 2026-09-14, the owner's choice to judge one before the
+  other eleven; the medallions and the chests stand on landmarks MEASURED
+  off the painting with a grid, in 0…1 of the painting, placed through
+  the fill's crop by `ChapterMapArt.place`; the tier chips sit at the top
+  centre because the maps put the boss's lair at the upper right; the
+  code road is not drawn on a painted map) or, until then, the stage's
+  painting with the dotted road winding through the middle band and a medallion per stage
   (52 pt, 64 for the boss; gold with a check once cleared, a pulsing ring
   where the player stands, a lock beyond, star pips under each), the
   three tribute chests along the bottom of the road, one plate at the
@@ -619,6 +627,14 @@ environment can and cannot do. The short version:
   does. And a camera node looks along its own −Z: orient it with
   `SCNNode.look(at:)`, never `atan2(dx, dz)` (that was half a turn off and
   the orbit shot showed the empty side of the stage).
+- **A card's wear scales with the card (2026-09-14).** The owner, of the
+  popup's 50-point enemy cards: "Do the elemental symbols need to be so
+  big? We can't see the picture." `UnitCard.wear` is `size / 80` clamped
+  to 0.6…1 and scales the element badge (`ElementBadge.scale`), the
+  awakened sun, the lock, the crown, the star row and their paddings, so
+  a small card is mostly portrait. The next areas of the density pass
+  (task #50), in the owner's order once he picks them: the battle HUD,
+  the menu bars and wallet strips, the popups' and panels' spacing.
 - **Five tabs.** An iPhone folds a sixth tab into a system "More" list, so
   Settings opens over the island from the Obelisk (and Missions, the
   bazaar from the header); `RootView.Tab(destination)` is failable for the

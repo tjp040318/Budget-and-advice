@@ -119,7 +119,8 @@ def main():
     args = ap.parse_args()
 
     w, h = (int(v) for v in args.size.lower().split("x"))
-    aspect = {1.0: "1:1", 16 / 9: "16:9", 9 / 16: "9:16", 4 / 3: "4:3", 3 / 4: "3:4"}
+    # 21:9 is the phone's landscape content area (about 2.5:1) for the chapter maps.
+    aspect = {1.0: "1:1", 16 / 9: "16:9", 9 / 16: "9:16", 4 / 3: "4:3", 3 / 4: "3:4", 21 / 9: "21:9"}
     ratio = w / h
     aspect_str = min(aspect.items(), key=lambda kv: abs(kv[0] - ratio))[1]
 

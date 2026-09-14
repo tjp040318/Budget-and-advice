@@ -45,11 +45,16 @@ struct StarRow: View {
 struct ElementBadge: View {
     let element: Element
     var compact: Bool = false
+    /// The compact badge's size relative to the one a 76-point card wears:
+    /// a card scales it with itself, so a 46-point enemy card in a popup
+    /// is not a quarter badge ("do the elemental symbols need to be so
+    /// big? We can't see the picture" — the owner, 2026-09-14).
+    var scale: CGFloat = 1
 
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: element.glyph)
-                .font(.system(size: compact ? 10 : 12, weight: .black))
+                .font(.system(size: compact ? max(7, 10 * scale) : 12, weight: .black))
             if !compact {
                 Text(element.displayName.uppercased())
                     .font(Theme.body(10).weight(.black))
@@ -58,8 +63,8 @@ struct ElementBadge: View {
         }
         .foregroundStyle(.white)
         .shadow(color: .black.opacity(0.7), radius: 1, x: 0, y: 0.5)
-        .padding(.horizontal, compact ? 5 : 8)
-        .padding(.vertical, compact ? 3 : 4)
+        .padding(.horizontal, compact ? max(3, 5 * scale) : 8)
+        .padding(.vertical, compact ? max(2, 3 * scale) : 4)
         .background(
             Capsule().fill(
                 LinearGradient(
@@ -271,6 +276,11 @@ struct UnitCard: View {
 
     private var showsPaintedFrame: Bool { size >= Self.paintedFrameFrom && rarity.hasPaintedFrame }
 
+    /// Everything the card wears — the badge, the sun, the lock, the crown,
+    /// the stars and their band — scales with the card below 80 points, so
+    /// the portrait is what a small card shows.
+    private var wear: CGFloat { max(0.6, min(1, size / 80)) }
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
@@ -297,21 +307,21 @@ struct UnitCard: View {
                     paintedFrame
                 }
 
-                VStack(alignment: .leading, spacing: 3) {
-                    ElementBadge(element: unit.element, compact: true)
+                VStack(alignment: .leading, spacing: max(2, 3 * wear)) {
+                    ElementBadge(element: unit.element, compact: true, scale: wear)
                     if unit.unit.isAwakened {
                         Image(systemName: "sun.max.fill")
-                            .font(.system(size: 10, weight: .black))
+                            .font(.system(size: max(7, 10 * wear), weight: .black))
                             .foregroundStyle(Theme.gold)
                             .shadow(color: Theme.gold.opacity(0.9), radius: 4)
                     }
                 }
-                .padding(5)
+                .padding(max(3, 5 * wear))
 
-                VStack(alignment: .trailing, spacing: 3) {
+                VStack(alignment: .trailing, spacing: max(2, 3 * wear)) {
                     if unit.unit.isLocked {
                         Image(systemName: "lock.fill")
-                            .font(.system(size: 9, weight: .bold))
+                            .font(.system(size: max(7, 9 * wear), weight: .bold))
                             .foregroundStyle(Theme.textPrimary.opacity(0.9))
                             .shadow(color: .black, radius: 2)
                     }
@@ -322,12 +332,12 @@ struct UnitCard: View {
                     // character?", the owner, 2026-09-12).
                     if unit.blueprint.leaderSkill != nil {
                         Image(systemName: "crown.fill")
-                            .font(.system(size: max(8, size * 0.13), weight: .black))
+                            .font(.system(size: max(7, size * 0.12), weight: .black))
                             .foregroundStyle(Theme.gold)
                             .shadow(color: .black.opacity(0.9), radius: 2)
                     }
                 }
-                .padding(5)
+                .padding(max(3, 5 * wear))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
 
                 // The grade, the way the genre shows it: a row of stars big
@@ -336,12 +346,12 @@ struct UnitCard: View {
                 // the gold frame, and the owner could not read a grade off
                 // his collection.
                 StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars,
-                        size: max(9, size * 0.135))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                        size: max(7, size * 0.12))
+                    .padding(.horizontal, max(3, 6 * wear))
+                    .padding(.vertical, max(1, 2 * wear))
                     .background(Capsule().fill(Theme.ink.opacity(0.74)))
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-                    .padding(.bottom, 4)
+                    .padding(.bottom, max(2, 4 * wear))
 
                 // The sheen is a repeating animation, and a repeating
                 // animation is a card that never stops re-rendering: the

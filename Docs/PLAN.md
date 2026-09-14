@@ -2014,3 +2014,28 @@ your power against the stage's, "Team & runs" for the full briefing and
 (a sheet is a whole screen on a landscape phone; the genre's popup is a
 card over the map, and the map should stay in view), and keeping the
 list as a scrollable drawer (the list was the complaint).
+
+### The map painted: the region from above (2026-09-14, afternoon)
+
+The owner, of the full-bleed chapter: "I meant literally a map of like
+the area. Not just a plain background with lines. Ask me questions to
+clarify." Asked, he chose: painted terrain seen from above, the way
+Summoners War draws a scenario area; paint Duat 1 first and judge it on
+the finished screen before the other eleven; fit one screen; and for the
+density pass, the small cards first.
+
+One Gemini image at 21:9 (the phone's landscape content area is about
+2.5:1, so the fill crops only 3% top and bottom): the Duat's first region
+at dusk from a high oblique angle, one road unbroken from the lower left
+to the upper right past five landmarks named in the prompt in story
+order — the jackal gate, the reed river, the scarab court, the hall of
+sentinels, the serpent's hall of scales as the boss's lair, largest.
+The painter delivered all five in order. The medallions stand on the
+landmarks and the chests on open sand by the road, at points measured
+off the painting with a ten-by-ten grid (`ChapterMapArt.byChapter`) and
+placed through the fill's crop, the island's and the world map's method;
+the code road is not drawn on a painted map, since the painting has its
+own. The tier chips moved from the top right to the top centre, where
+the sky is, because the maps put the boss's lair in the upper right.
+Fifteen cents. If it is right, the other eleven are one script and about
+$1.60 more, each measured the same way.

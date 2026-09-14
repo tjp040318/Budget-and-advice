@@ -154,6 +154,43 @@ struct WorldMapView: View {
 /// same stages, and the owner called it "so dumb ... not a map and a list
 /// below, I want just a map" (2026-09-14). The genre's chapter screen is
 /// the painting with the stages standing on it and the details in a popup.
+/// A chapter's painted map — the region seen from above with its road and
+/// its landmarks — and where on it the stages and the chests stand, in
+/// 0...1 of the painting's width and height. Measured off the painting
+/// with a grid, never guessed, the way the island's landmarks and the
+/// world map's cities were; a repainted map is re-measured. A chapter
+/// without one shows its stage's backdrop with a drawn road.
+struct ChapterMapArt {
+    let image: String
+    /// One point per stage, in story order, on the painted landmark.
+    let nodes: [CGPoint]
+    /// The three tribute chests: the road's, the gate's, the judgment's.
+    let chests: [CGPoint]
+
+    static let byChapter: [String: ChapterMapArt] = [
+        // The jackal gate at the lower left, the reed island, the scarab
+        // court, the hall of sentinels, the serpent's hall of scales at the
+        // upper right; the chests on open sand by the road.
+        "duat_1": ChapterMapArt(
+            image: "map_duat_1",
+            nodes: [CGPoint(x: 0.13, y: 0.70), CGPoint(x: 0.32, y: 0.47), CGPoint(x: 0.59, y: 0.63),
+                    CGPoint(x: 0.70, y: 0.40), CGPoint(x: 0.86, y: 0.30)],
+            chests: [CGPoint(x: 0.47, y: 0.83), CGPoint(x: 0.80, y: 0.58), CGPoint(x: 0.94, y: 0.80)]
+        ),
+    ]
+
+    /// Where a point of the painting lands in a frame the painting fills
+    /// (`.fill` crops the long side), so a measured landmark and its
+    /// medallion stay together on every phone.
+    static func place(_ point: CGPoint, imageSize: CGSize, in size: CGSize) -> CGPoint {
+        guard imageSize.width > 0, imageSize.height > 0 else { return CGPoint(x: point.x * size.width, y: point.y * size.height) }
+        let scale = max(size.width / imageSize.width, size.height / imageSize.height)
+        let drawn = CGSize(width: imageSize.width * scale, height: imageSize.height * scale)
+        let offset = CGPoint(x: (size.width - drawn.width) / 2, y: (size.height - drawn.height) / 2)
+        return CGPoint(x: offset.x + point.x * drawn.width, y: offset.y + point.y * drawn.height)
+    }
+}
+
 struct ChapterMapView: View {
     @EnvironmentObject private var store: GameStore
     let chapterID: String
@@ -170,6 +207,12 @@ struct ChapterMapView: View {
 
     private var chapter: Chapter? { StageDatabase.chapter(chapterID)?.at(difficulty) }
 
+    /// The chapter's painted map, when it has one in the bundle.
+    private var art: ChapterMapArt? {
+        guard let art = ChapterMapArt.byChapter[chapterID], BundleImage.exists(art.image) else { return nil }
+        return art
+    }
+
     var body: some View {
         GeometryReader { geometry in
             let size = geometry.size
@@ -179,9 +222,11 @@ struct ChapterMapView: View {
                     road(chapter, size: size)
                     titlePlate(chapter)
                         .padding(10)
+                    // Top centre: the maps put the boss's lair in the upper
+                    // right and the chapter's plate holds the upper left.
                     tierChips(base)
-                        .padding(10)
-                        .frame(width: size.width, alignment: .topTrailing)
+                        .padding(.top, 10)
+                        .frame(width: size.width, alignment: .top)
                     arrows(size: size)
                 }
             }
@@ -206,7 +251,14 @@ struct ChapterMapView: View {
     private func painting(_ chapter: Chapter, size: CGSize) -> some View {
         let backdrop = chapter.stages.first?.environment.backdropName ?? ""
         return ZStack {
-            if BundleImage.exists(backdrop) {
+            if let art {
+                // The region itself, painted from above; the shading stays
+                // light so the map is the map.
+                BundleImage(name: art.image)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+            } else if BundleImage.exists(backdrop) {
                 BundleImage(name: backdrop)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size.width, height: size.height)
@@ -218,10 +270,10 @@ struct ChapterMapView: View {
             }
             LinearGradient(
                 stops: [
-                    .init(color: Theme.ink.opacity(0.32), location: 0),
-                    .init(color: .clear, location: 0.34),
-                    .init(color: .clear, location: 0.62),
-                    .init(color: Theme.ink.opacity(0.4), location: 1),
+                    .init(color: Theme.ink.opacity(art == nil ? 0.32 : 0.22), location: 0),
+                    .init(color: .clear, location: 0.3),
+                    .init(color: .clear, location: 0.7),
+                    .init(color: Theme.ink.opacity(art == nil ? 0.4 : 0.18), location: 1),
                 ],
                 startPoint: .top, endPoint: .bottom
             )
@@ -230,13 +282,37 @@ struct ChapterMapView: View {
         .allowsHitTesting(false)
     }
 
+    /// The medallions' points: on a painted map, the measured landmarks
+    /// through the painting's fill; otherwise the drawn road's.
+    private func nodePoints(_ chapter: Chapter, in size: CGSize) -> [CGPoint] {
+        if let art, art.nodes.count >= chapter.stages.count, let image = BundleArt.image(art.image) {
+            return chapter.stages.indices.map { ChapterMapArt.place(art.nodes[$0], imageSize: image.size, in: size) }
+        }
+        return Self.nodePoints(count: chapter.stages.count, in: size)
+    }
+
+    private func chestPoint(_ milestone: TributeMilestone, points: [CGPoint], in size: CGSize) -> CGPoint {
+        if let art, art.chests.count == 3, let image = BundleArt.image(art.image) {
+            let index: Int
+            switch milestone {
+            case .third: index = 0
+            case .boss: index = 1
+            case .flawless: index = 2
+            }
+            return ChapterMapArt.place(art.chests[index], imageSize: image.size, in: size)
+        }
+        return Self.chestPoint(for: milestone, points: points, in: size)
+    }
+
     // MARK: - The road
 
     private func road(_ chapter: Chapter, size: CGSize) -> some View {
         let player = store.player
-        let points = Self.nodePoints(count: chapter.stages.count, in: size)
+        let points = nodePoints(chapter, in: size)
         return ZStack(alignment: .topLeading) {
-            // The road: a dotted curve through the medallions.
+            // The road: a dotted curve through the medallions — drawn only
+            // where the map is not painted, since a painted map has its own.
+            if art == nil {
             Path { path in
                 guard let first = points.first else { return }
                 path.move(to: first)
@@ -256,6 +332,7 @@ struct ChapterMapView: View {
             .stroke(Theme.surfaceHigh.opacity(0.8), style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [2, 10]))
             .shadow(color: .black.opacity(0.55), radius: 2, y: 1)
             .allowsHitTesting(false)
+            }
 
             ForEach(Array(chapter.stages.enumerated()), id: \.element.id) { index, stage in
                 let unlocked = CampaignService.isUnlocked(stage, player: player)
@@ -269,7 +346,7 @@ struct ChapterMapView: View {
             // either side of the boss.
             ForEach(TributeService.tributes(for: chapter)) { tribute in
                 chest(tribute, chapter: chapter)
-                    .position(Self.chestPoint(for: tribute.milestone, points: points, in: size))
+                    .position(chestPoint(tribute.milestone, points: points, in: size))
             }
         }
         .frame(width: size.width, height: size.height)
@@ -448,7 +525,7 @@ struct ChapterMapView: View {
     /// tier pays is the line under them.
     private func tierChips(_ base: Chapter) -> some View {
         let player = store.player
-        return VStack(alignment: .trailing, spacing: 4) {
+        return VStack(alignment: .center, spacing: 4) {
             HStack(spacing: 6) {
                 ForEach(CampaignDifficulty.allCases) { tier in
                     let open = CampaignService.isOpen(tier, of: base, player: player)
@@ -484,12 +561,12 @@ struct ChapterMapView: View {
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(2)
-                .multilineTextAlignment(.trailing)
+                .multilineTextAlignment(.center)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.plate.opacity(0.85)))
         }
-        .frame(width: 290, alignment: .trailing)
+        .frame(width: 250, alignment: .center)
     }
 
     private func tierNote(_ tier: CampaignDifficulty, open: Bool, base: Chapter) -> String {
