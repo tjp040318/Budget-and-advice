@@ -39,7 +39,7 @@ struct TourView: View {
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
-        ("relic_sets", 2), ("tribute", 2),
+        ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2),
     ]
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -198,10 +198,14 @@ struct TourView: View {
         case "shop":
             ShopView()
         case "chapter_map":
-            // The first chapter's road, with the Normal / Hard / Hell chips
-            // above it; the world map is the `island` step's neighbour and
-            // is seen from there.
+            // The first chapter as a place: the painting, the road, the
+            // medallions and the chests; the world map is the `island`
+            // step's neighbour and is seen from there.
             CampaignView(openingChapter: "duat_1")
+        case "stage_popup":
+            // The fourth stage's card over the map: story, enemies, drops,
+            // power, Fight.
+            CampaignView(openingChapter: "duat_1", openingStage: "duat_1_4")
         case "missions":
             MissionsView()
         case "victory":

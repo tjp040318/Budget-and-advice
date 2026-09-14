@@ -141,9 +141,19 @@ struct WorldMapView: View {
     }
 }
 
-/// A chapter as a map: the stage's painting, a path winding across it and a
-/// medallion per stage — gold once cleared, ringed and pulsing where the
-/// player stands, shut with a lock beyond. The boss is the last and largest.
+/// A chapter as a place: the stage's painting fills the screen, the road
+/// winds across it with a medallion per stage — gold once cleared, ringed
+/// and pulsing where the player stands, shut with a lock beyond, the boss
+/// last and largest — and the three tribute chests wait along the bottom
+/// of the road. A tap on a medallion opens the stage's card over the map
+/// (`StagePopup`); the chapter's name, story line, progress and yields sit
+/// on one plate at the top left, the tiers at the top right, and the
+/// chapters before and after are an arrow at either edge.
+///
+/// It was a 190-point strip of map over a header panel over a list of the
+/// same stages, and the owner called it "so dumb ... not a map and a list
+/// below, I want just a map" (2026-09-14). The genre's chapter screen is
+/// the painting with the stages standing on it and the details in a popup.
 struct ChapterMapView: View {
     @EnvironmentObject private var store: GameStore
     let chapterID: String
@@ -151,6 +161,8 @@ struct ChapterMapView: View {
     /// screen so it survives a change of chapter.
     @Binding var difficulty: CampaignDifficulty
     let onSelect: (Stage) -> Void
+    /// The chapter before or after this one, from the arrows at the edges.
+    var onChapter: (String) -> Void = { _ in }
 
     @State private var pulse = false
     /// The tribute chest tapped on the road; its card opens as a sheet.
@@ -159,15 +171,21 @@ struct ChapterMapView: View {
     private var chapter: Chapter? { StageDatabase.chapter(chapterID)?.at(difficulty) }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if let base = StageDatabase.chapter(chapterID) {
-                tierChips(base)
+        GeometryReader { geometry in
+            let size = geometry.size
+            ZStack(alignment: .topLeading) {
+                if let base = StageDatabase.chapter(chapterID), let chapter {
+                    painting(chapter, size: size)
+                    road(chapter, size: size)
+                    titlePlate(chapter)
+                        .padding(10)
+                    tierChips(base)
+                        .padding(10)
+                        .frame(width: size.width, alignment: .topTrailing)
+                    arrows(size: size)
+                }
             }
-            if let chapter {
-                map(chapter)
-                header(chapter)
-                stageRows(chapter)
-            }
+            .frame(width: size.width, height: size.height)
         }
         .onAppear {
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
@@ -180,52 +198,298 @@ struct ChapterMapView: View {
         }
     }
 
-    // MARK: - The tiers
+    // MARK: - The painting
+
+    /// The stage's painting, full bleed, shaded a little at the top and the
+    /// bottom so the plates and the gold read on any sky. Decorative only:
+    /// `.clipped()` does not clip hit testing, so it must never take a tap.
+    private func painting(_ chapter: Chapter, size: CGSize) -> some View {
+        let backdrop = chapter.stages.first?.environment.backdropName ?? ""
+        return ZStack {
+            if BundleImage.exists(backdrop) {
+                BundleImage(name: backdrop)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: size.width, height: size.height)
+                    .clipped()
+            } else {
+                Rectangle()
+                    .fill(chapter.pantheon.color.opacity(0.25))
+                    .frame(width: size.width, height: size.height)
+            }
+            LinearGradient(
+                stops: [
+                    .init(color: Theme.ink.opacity(0.32), location: 0),
+                    .init(color: .clear, location: 0.34),
+                    .init(color: .clear, location: 0.62),
+                    .init(color: Theme.ink.opacity(0.4), location: 1),
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(width: size.width, height: size.height)
+        }
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - The road
+
+    private func road(_ chapter: Chapter, size: CGSize) -> some View {
+        let player = store.player
+        let points = Self.nodePoints(count: chapter.stages.count, in: size)
+        return ZStack(alignment: .topLeading) {
+            // The road: a dotted curve through the medallions.
+            Path { path in
+                guard let first = points.first else { return }
+                path.move(to: first)
+                if points.count > 1 {
+                    for index in 1..<points.count {
+                        let previous = points[index - 1]
+                        let next = points[index]
+                        let middle = (previous.x + next.x) / 2
+                        path.addCurve(
+                            to: next,
+                            control1: CGPoint(x: middle, y: previous.y),
+                            control2: CGPoint(x: middle, y: next.y)
+                        )
+                    }
+                }
+            }
+            .stroke(Theme.surfaceHigh.opacity(0.8), style: StrokeStyle(lineWidth: 4, lineCap: .round, dash: [2, 10]))
+            .shadow(color: .black.opacity(0.55), radius: 2, y: 1)
+            .allowsHitTesting(false)
+
+            ForEach(Array(chapter.stages.enumerated()), id: \.element.id) { index, stage in
+                let unlocked = CampaignService.isUnlocked(stage, player: player)
+                let cleared = CampaignService.isCleared(stage, player: player)
+                node(stage, unlocked: unlocked, cleared: cleared, current: unlocked && !cleared)
+                    .position(points[index])
+            }
+
+            // The three tribute chests wait along the bottom of the road: the
+            // road's below the third stage, the gate's and the judgment
+            // either side of the boss.
+            ForEach(TributeService.tributes(for: chapter)) { tribute in
+                chest(tribute, chapter: chapter)
+                    .position(Self.chestPoint(for: tribute.milestone, points: points, in: size))
+            }
+        }
+        .frame(width: size.width, height: size.height)
+    }
+
+    /// Where the medallions sit: spread across the width between the
+    /// arrows, wandering up and down through the middle band of the frame
+    /// so the plates above and the chests below have their own room.
+    static func nodePoints(count: Int, in size: CGSize) -> [CGPoint] {
+        guard count > 0 else { return [] }
+        let inset: CGFloat = 84
+        let usable = max(0, size.width - inset * 2)
+        return (0..<count).map { index in
+            let t = count == 1 ? 0.5 : CGFloat(index) / CGFloat(count - 1)
+            let wave = sin(CGFloat(index) * 1.25 + 0.6)
+            return CGPoint(x: inset + usable * t, y: size.height * 0.56 + wave * size.height * 0.15)
+        }
+    }
+
+    private func node(_ stage: Stage, unlocked: Bool, cleared: Bool, current: Bool) -> some View {
+        let diameter: CGFloat = stage.isBoss ? 64 : 52
+        return Button {
+            if unlocked { onSelect(stage) }
+        } label: {
+            VStack(spacing: 3) {
+                ZStack {
+                    if current {
+                        Circle()
+                            .fill(Theme.gold.opacity(pulse ? 0.4 : 0.1))
+                            .frame(width: diameter + 26, height: diameter + 26)
+                    }
+                    Circle()
+                        .fill(
+                            cleared
+                                ? LinearGradient(colors: [Color(hex: "#F3D27A"), Color(hex: "#B08A2E")], startPoint: .top, endPoint: .bottom)
+                                : LinearGradient(
+                                    colors: unlocked ? [Theme.surfaceHigh, Theme.surfaceRaised] : [Theme.surface.opacity(0.75), Theme.surface.opacity(0.55)],
+                                    startPoint: .top, endPoint: .bottom
+                                )
+                        )
+                        .frame(width: diameter, height: diameter)
+                        .overlay(
+                            Circle().strokeBorder(
+                                cleared ? Theme.goldDeep : (current ? Theme.gold : Theme.stroke),
+                                lineWidth: current ? 2.5 : 1.5
+                            )
+                        )
+                        .shadow(color: .black.opacity(0.55), radius: 5, y: 3)
+                    if cleared {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 20, weight: .black))
+                            .foregroundStyle(Theme.ink)
+                    } else if !unlocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 15, weight: .bold))
+                            .foregroundStyle(Theme.textSecondary)
+                    } else if stage.isBoss {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 22, weight: .bold))
+                            .foregroundStyle(Theme.danger)
+                    } else {
+                        Text("\(stage.index)")
+                            .font(Theme.title(19))
+                            .foregroundStyle(Theme.textPrimary)
+                    }
+                }
+                starPips(stage, size: 8)
+                HStack(spacing: 2) {
+                    if stage.isBoss {
+                        Text("BOSS")
+                    } else {
+                        Image(systemName: "bolt.fill")
+                        Text("\(stage.energyCost)")
+                    }
+                }
+                .font(Theme.body(9).weight(.black))
+                .foregroundStyle(stage.isBoss ? Theme.danger : Theme.info)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Theme.plate.opacity(0.9)))
+            }
+        }
+        .buttonStyle(.plain)
+        .disabled(!unlocked)
+    }
+
+    /// The stage's best rating as three pips, gold where earned, once it has
+    /// been cleared at all. Saved by `TributeService.recordStars`; the
+    /// judgment wants all three on every stage.
+    @ViewBuilder private func starPips(_ stage: Stage, size: CGFloat) -> some View {
+        if let pips = store.player.stageStars?[stage.id], pips > 0 {
+            HStack(spacing: 1) {
+                ForEach(0..<3, id: \.self) { index in
+                    Image(systemName: "star.fill")
+                        .font(.system(size: size, weight: .black))
+                        .foregroundStyle(index < pips ? Theme.gold : Theme.stroke)
+                        .shadow(color: .black.opacity(0.5), radius: 1)
+                }
+            }
+        }
+    }
+
+    // MARK: - The plates
+
+    /// The chapter's name, its story line, its progress and what it yields,
+    /// on one plate at the top left.
+    private func titlePlate(_ chapter: Chapter) -> some View {
+        let player = store.player
+        let cleared = player.campaignProgress[chapter.id] ?? 0
+        let next = chapter.stages.first(where: { CampaignService.isUnlocked($0, player: player) && !CampaignService.isCleared($0, player: player) })
+        return VStack(alignment: .leading, spacing: 5) {
+            Text("\(chapter.realmName.uppercased()) · \(chapter.name.uppercased())")
+                .font(Theme.body(9).weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(chapter.pantheon.color)
+            Text(chapter.summary)
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 6) {
+                StatBar(
+                    value: Double(cleared),
+                    maximum: Double(chapter.stages.count),
+                    tint: chapter.pantheon.color,
+                    height: 4
+                )
+                .frame(width: 70)
+                Text("\(cleared)/\(chapter.stages.count)")
+                    .font(Theme.numeric(10))
+                    .foregroundStyle(Theme.textSecondary)
+                if let next {
+                    Text("· Next: \(next.name)")
+                        .font(Theme.body(10).weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                } else {
+                    Label("Cleared", systemImage: "checkmark.seal.fill")
+                        .font(Theme.body(10).weight(.semibold))
+                        .foregroundStyle(Theme.gold)
+                }
+            }
+            // What the road yields: the chapter's two sets, so the farm is
+            // read here and not looked up.
+            if !chapter.relicSets.isEmpty {
+                HStack(spacing: 5) {
+                    Text("YIELDS")
+                        .font(Theme.body(9).weight(.black))
+                        .tracking(1.2)
+                        .foregroundStyle(Theme.textSecondary)
+                    ForEach(chapter.relicSets) { relicSet in
+                        HStack(spacing: 3) {
+                            RelicSetEmblem(set: relicSet, size: 14)
+                            Text(relicSet.displayName)
+                                .font(Theme.body(10).weight(.bold))
+                                .foregroundStyle(Theme.gold)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 6)
+                        .frame(height: 20)
+                        .background(Capsule().fill(Theme.surfaceHigh))
+                    }
+                }
+            }
+        }
+        .padding(9)
+        .frame(width: 300, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.plate.opacity(0.9)))
+        .overlay(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).strokeBorder(Theme.gold.opacity(0.45), lineWidth: 1))
+    }
 
     /// Normal, Hard, Hell as three chips, the genre's way: the tier being
     /// shown is filled in its own colour, a shut tier wears a lock and says
-    /// what opens it, and a tier cleared to its boss wears a check.
+    /// what opens it, and a tier cleared to its boss wears a check. What the
+    /// tier pays is the line under them.
     private func tierChips(_ base: Chapter) -> some View {
         let player = store.player
-        return HStack(spacing: 8) {
-            ForEach(CampaignDifficulty.allCases) { tier in
-                let open = CampaignService.isOpen(tier, of: base, player: player)
-                let cleared = (player.campaignProgress[base.id + tier.suffix] ?? 0) >= base.stages.count
-                let selected = tier == difficulty
-                let tint = Color(hex: tier.accentHex)
-                Button {
-                    guard open else { return }
-                    withAnimation(.easeOut(duration: 0.2)) { difficulty = tier }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: open ? (cleared ? "checkmark.seal.fill" : tier.glyph) : "lock.fill")
-                            .font(.system(size: 10, weight: .bold))
-                        Text(tier.displayName.uppercased())
-                            .font(Theme.body(10).weight(.black))
-                            .tracking(1.2)
+        return VStack(alignment: .trailing, spacing: 4) {
+            HStack(spacing: 6) {
+                ForEach(CampaignDifficulty.allCases) { tier in
+                    let open = CampaignService.isOpen(tier, of: base, player: player)
+                    let cleared = (player.campaignProgress[base.id + tier.suffix] ?? 0) >= base.stages.count
+                    let selected = tier == difficulty
+                    let tint = Color(hex: tier.accentHex)
+                    Button {
+                        guard open else { return }
+                        withAnimation(.easeOut(duration: 0.2)) { difficulty = tier }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: open ? (cleared ? "checkmark.seal.fill" : tier.glyph) : "lock.fill")
+                                .font(.system(size: 10, weight: .bold))
+                            Text(tier.displayName.uppercased())
+                                .font(Theme.body(10).weight(.black))
+                                .tracking(1.2)
+                        }
+                        .foregroundStyle(selected ? Theme.ink : (open ? tint : Theme.textSecondary))
+                        .padding(.horizontal, 11)
+                        .frame(height: 26)
+                        .background(
+                            Capsule().fill(selected ? tint : Theme.plate.opacity(open ? 0.9 : 0.6))
+                        )
+                        .overlay(
+                            Capsule().strokeBorder(open ? tint.opacity(selected ? 0 : 0.7) : Theme.stroke, lineWidth: 1)
+                        )
+                        .opacity(open ? 1 : 0.7)
                     }
-                    .foregroundStyle(selected ? Theme.ink : (open ? tint : Theme.textSecondary))
-                    .padding(.horizontal, 12)
-                    .frame(height: 28)
-                    .background(
-                        Capsule().fill(selected ? tint : Theme.plate.opacity(open ? 0.85 : 0.6))
-                    )
-                    .overlay(
-                        Capsule().strokeBorder(open ? tint.opacity(selected ? 0 : 0.7) : Theme.stroke, lineWidth: 1)
-                    )
-                    .opacity(open ? 1 : 0.7)
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
             }
-            Spacer(minLength: 0)
-            // What the tier pays, in one line, so the reason to come back is
-            // on the map and not buried in a briefing.
             Text(tierNote(difficulty, open: CampaignService.isOpen(difficulty, of: base, player: player), base: base))
                 .font(Theme.body(10))
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(Theme.textPrimary)
                 .lineLimit(2)
                 .multilineTextAlignment(.trailing)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.plate.opacity(0.85)))
         }
+        .frame(width: 290, alignment: .trailing)
     }
 
     private func tierNote(_ tier: CampaignDifficulty, open: Bool, base: Chapter) -> String {
@@ -243,242 +507,46 @@ struct ChapterMapView: View {
         }
     }
 
-    // MARK: - Header
-
-    private func header(_ chapter: Chapter) -> some View {
+    /// The chapter before and the chapter after, an arrow at either edge of
+    /// the map, where the story lets the player walk.
+    private func arrows(size: CGSize) -> some View {
+        let chapters = StageDatabase.chapters
+        let index = chapters.firstIndex(where: { $0.id == chapterID }) ?? 0
         let player = store.player
-        let cleared = player.campaignProgress[chapter.id] ?? 0
-        let next = chapter.stages.first(where: { CampaignService.isUnlocked($0, player: player) && !CampaignService.isCleared($0, player: player) })
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(chapter.realmName.uppercased()) · \(chapter.name.uppercased())")
-                        .font(Theme.body(10).weight(.bold))
-                        .tracking(1.4)
-                        .foregroundStyle(chapter.pantheon.color)
-                    Text(chapter.summary)
-                        .font(Theme.body(11))
-                        .foregroundStyle(Theme.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer()
-                Text("\(cleared)/\(chapter.stages.count)")
-                    .font(Theme.numeric(13))
-                    .foregroundStyle(Theme.textSecondary)
+        let previous = index > 0 ? chapters[index - 1] : nil
+        let next = index + 1 < chapters.count ? chapters[index + 1] : nil
+        func open(_ chapter: Chapter?) -> Chapter? {
+            guard let chapter, let first = chapter.stages.first, CampaignService.isUnlocked(first, player: player) else { return nil }
+            return chapter
+        }
+        return ZStack(alignment: .topLeading) {
+            if let previous = open(previous) {
+                arrow("chevron.left", previous.name) { onChapter(previous.id) }
+                    .position(x: 24, y: size.height * 0.56)
             }
-            // What the road yields: the chapter's two sets, so the farm is
-            // read here and not looked up. The genre hides which area drops
-            // which set; this prints it.
-            if !chapter.relicSets.isEmpty {
-                HStack(spacing: 6) {
-                    Text("YIELDS")
-                        .font(Theme.body(9).weight(.black))
-                        .tracking(1.2)
-                        .foregroundStyle(Theme.textSecondary)
-                    ForEach(chapter.relicSets) { relicSet in
-                        HStack(spacing: 4) {
-                            RelicSetEmblem(set: relicSet, size: 12)
-                            Text("\(relicSet.displayName) · \(relicSet.piecesRequired)")
-                                .font(Theme.body(10).weight(.bold))
-                                .foregroundStyle(Theme.gold)
-                                .lineLimit(1)
-                        }
-                        .padding(.horizontal, 7)
-                        .frame(height: 22)
-                        .background(Capsule().fill(Theme.surfaceHigh))
-                        .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
-                    }
-                    Text("Every relic that drops here is one of these.")
-                        .font(Theme.body(10))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Spacer(minLength: 0)
-                }
-            }
-            StatBar(
-                value: Double(cleared),
-                maximum: Double(chapter.stages.count),
-                tint: chapter.pantheon.color,
-                height: 4
-            )
-            if let next {
-                HStack(spacing: 6) {
-                    Image(systemName: "location.fill")
-                        .foregroundStyle(Theme.gold)
-                    Text("Next: \(next.name)")
-                        .font(Theme.body(12).weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    Text("· Power \(next.recommendedPower)")
-                        .font(Theme.numeric(11))
-                        .foregroundStyle(store.totalPower >= next.recommendedPower ? Theme.success : Theme.danger)
-                }
-            } else {
-                Label("Chapter cleared", systemImage: "checkmark.seal.fill")
-                    .font(Theme.body(12).weight(.semibold))
-                    .foregroundStyle(Theme.gold)
+            if let next = open(next) {
+                arrow("chevron.right", next.name) { onChapter(next.id) }
+                    .position(x: size.width - 24, y: size.height * 0.56)
             }
         }
-        .padding(10)
-        .panelBackground()
+        .frame(width: size.width, height: size.height)
     }
 
-    // MARK: - The map
-
-    private func map(_ chapter: Chapter) -> some View {
-        let player = store.player
-        let backdrop = chapter.stages.first?.environment.backdropName ?? ""
-        return GeometryReader { geometry in
-            let size = geometry.size
-            let points = Self.nodePoints(count: chapter.stages.count, in: size)
-            ZStack(alignment: .topLeading) {
-                if BundleImage.exists(backdrop) {
-                    BundleImage(name: backdrop)
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: size.width, height: size.height)
-                        .clipped()
-                        .allowsHitTesting(false)
-                } else {
-                    Rectangle()
-                        .fill(chapter.pantheon.color.opacity(0.25))
-                        .frame(width: size.width, height: size.height)
-                }
-                Rectangle()
-                    .fill(Theme.plate.opacity(0.3))
-                    .frame(width: size.width, height: size.height)
-                    .allowsHitTesting(false)
-
-                // The road: a dotted curve through the medallions.
-                Path { path in
-                    guard let first = points.first else { return }
-                    path.move(to: first)
-                    if points.count > 1 {
-                        for index in 1..<points.count {
-                            let previous = points[index - 1]
-                            let next = points[index]
-                            let middle = (previous.x + next.x) / 2
-                            path.addCurve(
-                                to: next,
-                                control1: CGPoint(x: middle, y: previous.y),
-                                control2: CGPoint(x: middle, y: next.y)
-                            )
-                        }
-                    }
-                }
-                .stroke(Theme.textPrimary.opacity(0.6), style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [2, 8]))
-                .allowsHitTesting(false)
-
-                ForEach(Array(chapter.stages.enumerated()), id: \.element.id) { index, stage in
-                    let unlocked = CampaignService.isUnlocked(stage, player: player)
-                    let cleared = CampaignService.isCleared(stage, player: player)
-                    node(stage, unlocked: unlocked, cleared: cleared, current: unlocked && !cleared)
-                        .position(points[index])
-                }
-
-                // The three tribute chests: the road's by the third stage,
-                // the gate's by the boss, the judgment beyond it — in the
-                // lane the road is not in.
-                ForEach(TributeService.tributes(for: chapter)) { tribute in
-                    chest(tribute, chapter: chapter)
-                        .position(Self.chestPoint(for: tribute.milestone, points: points, in: size))
-                }
-            }
-        }
-        .frame(height: 190)
-        .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-                .strokeBorder(Theme.stroke, lineWidth: 1)
-        )
-    }
-
-    /// Where the medallions sit: spread across the width, wandering up and
-    /// down so the road reads as a road.
-    static func nodePoints(count: Int, in size: CGSize) -> [CGPoint] {
-        guard count > 0 else { return [] }
-        let inset: CGFloat = 48
-        let usable = max(0, size.width - inset * 2)
-        return (0..<count).map { index in
-            let t = count == 1 ? 0.5 : CGFloat(index) / CGFloat(count - 1)
-            let wave = sin(CGFloat(index) * 1.25 + 0.6)
-            return CGPoint(x: inset + usable * t, y: size.height * 0.5 + wave * size.height * 0.2)
-        }
-    }
-
-    private func node(_ stage: Stage, unlocked: Bool, cleared: Bool, current: Bool) -> some View {
-        let diameter: CGFloat = stage.isBoss ? 56 : 44
-        return Button {
-            if unlocked { onSelect(stage) }
+    private func arrow(_ symbol: String, _ name: String, action: @escaping () -> Void) -> some View {
+        Button {
+            Juice.haptic(.light)
+            action()
         } label: {
-            VStack(spacing: 3) {
-                ZStack {
-                    if current {
-                        Circle()
-                            .fill(Theme.gold.opacity(pulse ? 0.35 : 0.1))
-                            .frame(width: diameter + 22, height: diameter + 22)
-                    }
-                    Circle()
-                        .fill(cleared ? Theme.gold : (unlocked ? Theme.surfaceHigh : Theme.surface.opacity(0.7)))
-                        .frame(width: diameter, height: diameter)
-                        .overlay(
-                            Circle().strokeBorder(
-                                cleared ? Theme.goldDeep : (current ? Theme.gold : Theme.stroke),
-                                lineWidth: current ? 2.5 : 1.5
-                            )
-                        )
-                        .shadow(color: .black.opacity(0.5), radius: 4, y: 2)
-                    if cleared {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 16, weight: .black))
-                            .foregroundStyle(Theme.ink)
-                    } else if !unlocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 13, weight: .bold))
-                            .foregroundStyle(Theme.textSecondary)
-                    } else if stage.isBoss {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 18, weight: .bold))
-                            .foregroundStyle(Theme.danger)
-                    } else {
-                        Text("\(stage.index)")
-                            .font(Theme.numeric(15).weight(.bold))
-                            .foregroundStyle(Theme.textPrimary)
-                    }
-                }
-                HStack(spacing: 2) {
-                    if stage.isBoss {
-                        Text("BOSS")
-                    } else {
-                        Image(systemName: "bolt.fill")
-                        Text("\(stage.energyCost)")
-                    }
-                }
-                .font(Theme.body(9).weight(.black))
-                .foregroundStyle(stage.isBoss ? Theme.danger : Theme.info)
-                .padding(.horizontal, 5)
-                .padding(.vertical, 2)
-                .background(Capsule().fill(Theme.plate.opacity(0.85)))
-                starPips(stage, size: 7)
-            }
+            Image(systemName: symbol)
+                .font(.system(size: 15, weight: .black))
+                .foregroundStyle(Theme.gold)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(Theme.plate.opacity(0.9)))
+                .overlay(Circle().strokeBorder(Theme.gold.opacity(0.6), lineWidth: 1))
+                .shadow(color: .black.opacity(0.4), radius: 3, y: 2)
         }
         .buttonStyle(.plain)
-        .disabled(!unlocked)
-    }
-
-    /// The stage's best rating as three pips, gold where earned, once it has
-    /// been cleared at all. Saved by `TributeService.recordStars`; the
-    /// judgment wants all three on every stage.
-    @ViewBuilder private func starPips(_ stage: Stage, size: CGFloat) -> some View {
-        if let pips = store.player.stageStars?[stage.id], pips > 0 {
-            HStack(spacing: 1) {
-                ForEach(0..<3, id: \.self) { index in
-                    Image(systemName: "star.fill")
-                        .font(.system(size: size, weight: .black))
-                        .foregroundStyle(index < pips ? Theme.gold : Theme.stroke)
-                        .shadow(color: .black.opacity(0.35), radius: 1)
-                }
-            }
-        }
+        .accessibilityLabel(name)
     }
 
     // MARK: - The tributes
@@ -499,13 +567,13 @@ struct ChapterMapView: View {
                 if ready {
                     Circle()
                         .fill(Theme.gold.opacity(pulse ? 0.5 : 0.18))
-                        .frame(width: 48, height: 48)
+                        .frame(width: 54, height: 54)
                 }
-                TributeChestImage(size: 36)
+                TributeChestImage(size: 40)
                     .saturation(claimed ? 0 : (earned ? 1 : 0.4))
                     .opacity(claimed ? 0.6 : 1)
                     .scaleEffect(ready && pulse ? 1.08 : 1)
-                    .frame(width: 48, height: 48)
+                    .frame(width: 54, height: 54)
                 if claimed {
                     chestBadge("checkmark", Theme.success)
                 } else if earned {
@@ -514,7 +582,7 @@ struct ChapterMapView: View {
                     chestBadge("lock.fill", Theme.textSecondary)
                 }
             }
-            .frame(width: 48, height: 48)
+            .frame(width: 54, height: 54)
         }
         .buttonStyle(.plain)
     }
@@ -528,74 +596,22 @@ struct ChapterMapView: View {
             .overlay(Circle().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
     }
 
-    /// Where a chest stands: in the top or bottom lane of the map, whichever
-    /// the road is farther from at that point, so a chest never sits on a
-    /// medallion. The road's chest is between the third and fourth
-    /// medallions, the gate's beside the boss, the judgment beyond it in
-    /// the other lane.
+    /// Where a chest stands: along the bottom of the road, below the band
+    /// the medallions wander in. The road's chest under the gap between the
+    /// third and fourth medallions, the gate's just before the boss, the
+    /// judgment just past it.
     static func chestPoint(for milestone: TributeMilestone, points: [CGPoint], in size: CGSize) -> CGPoint {
         guard let last = points.last else { return .zero }
-        let top = size.height * 0.15
-        let bottom = size.height * 0.85
-        func lane(awayFrom y: CGFloat) -> CGFloat { y < size.height / 2 ? bottom : top }
+        let lane = size.height * 0.87
         switch milestone {
         case .third:
             let a = points[min(2, points.count - 1)]
             let b = points[min(3, points.count - 1)]
-            return CGPoint(x: (a.x + b.x) / 2, y: lane(awayFrom: (a.y + b.y) / 2))
+            return CGPoint(x: (a.x + b.x) / 2, y: lane)
         case .boss:
-            return CGPoint(x: last.x - 34, y: lane(awayFrom: last.y))
+            return CGPoint(x: last.x - 44, y: lane)
         case .flawless:
-            let other = lane(awayFrom: last.y) == top ? bottom : top
-            return CGPoint(x: min(size.width - 22, last.x + 30), y: other)
-        }
-    }
-
-    // MARK: - The list under the map
-
-    private func stageRows(_ chapter: Chapter) -> some View {
-        let player = store.player
-        return VStack(spacing: 6) {
-            ForEach(chapter.stages) { stage in
-                let unlocked = CampaignService.isUnlocked(stage, player: player)
-                let cleared = CampaignService.isCleared(stage, player: player)
-                Button {
-                    if unlocked { onSelect(stage) }
-                } label: {
-                    HStack(spacing: 10) {
-                        Text("\(stage.index)")
-                            .font(Theme.numeric(12).weight(.bold))
-                            .foregroundStyle(cleared ? Theme.gold : (unlocked ? Theme.textPrimary : Theme.textSecondary))
-                            .frame(width: 22)
-                        Text(stage.name)
-                            .font(Theme.body(13).weight(.semibold))
-                            .foregroundStyle(unlocked ? Theme.textPrimary : Theme.textSecondary)
-                        starPips(stage, size: 8)
-                        if stage.isBoss {
-                            Text("BOSS")
-                                .font(Theme.body(8).weight(.black))
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 1)
-                                .background(Capsule().fill(Theme.danger.opacity(0.25)))
-                                .foregroundStyle(Theme.danger)
-                        }
-                        Spacer()
-                        Text("Power \(stage.recommendedPower)")
-                            .font(Theme.numeric(10))
-                            .foregroundStyle(store.totalPower >= stage.recommendedPower ? Theme.success : Theme.danger)
-                        Image(systemName: cleared ? "checkmark.seal.fill" : (unlocked ? "chevron.right" : "lock.fill"))
-                            .font(.system(size: 11))
-                            .foregroundStyle(cleared ? Theme.gold : Theme.textSecondary)
-                    }
-                    .padding(9)
-                    .background(
-                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                            .fill(Theme.surface.opacity(unlocked ? 1 : 0.4))
-                    )
-                }
-                .buttonStyle(.plain)
-                .disabled(!unlocked)
-            }
+            return CGPoint(x: min(size.width - 30, last.x + 44), y: lane)
         }
     }
 }

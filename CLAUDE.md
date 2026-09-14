@@ -233,13 +233,29 @@ environment can and cannot do. The short version:
   `ScrollType` and drawing from `SummonService.pool(where:)`. The summon
   screen has two chip rows, pantheons and scrolls, with counts. The
   bazaar sells every one (Unknown for drachma).
-- **The campaign opens on the map** (`CampaignView`): a strip of chapter
-  chips along the top and the chapter the player is in below
-  (`ChapterMapView`: the stage's painting, a dotted road and a medallion
-  per stage — gold, pulsing ring, lock, a crown for the boss), so the
-  island's gate is one tap from a stage. `WorldMapView` (the realms and
-  which boss shuts a chapter) is a sheet behind the Realms button;
-  `world_map.png` shows above the realms once painted.
+- **The campaign is two maps and a popup (2026-09-14).** `CampaignView`
+  opens on the world road (`WorldRoadMapView`: the painted world with a
+  city per chapter); a city opens the chapter as a PLACE —
+  `ChapterMapView` full bleed: the stage's painting fills the frame, the
+  dotted road winds through the middle band with a medallion per stage
+  (52 pt, 64 for the boss; gold with a check once cleared, a pulsing ring
+  where the player stands, a lock beyond, star pips under each), the
+  three tribute chests along the bottom of the road, one plate at the
+  top left (realm · chapter, the story line, progress, Next, YIELDS), the
+  tier chips and their note at the top right, and an arrow at either
+  edge to the chapter before and after. No header panel, no list: the
+  owner, of the strip-over-panel-over-list it replaced, "looks so dumb …
+  I want just a map". A tap on a medallion opens `StagePopup` over the
+  dimmed map (the end of `CampaignView.swift`): the stage and its place
+  on the road, the chapter's story line, the first wave's enemies as
+  cards, DROPS with the chapter's two set gems first, the relic chance
+  and grade, essences, scrolls, drachma and the first-clear divinity,
+  your power against the stage's, "Team & runs" (the full
+  `StageBriefingView` sheet) and "Fight — N energy" (one run with the
+  campaign team). The chapter strip is gone; the Realms sheet
+  (`WorldMapView`) still lists every chapter, Rome and the Jade Court
+  included, which have no city on the world painting yet. Tour step 13
+  is the map, step 27 the popup on the fourth stage.
 - **Campaign tiers** (`CampaignDifficulty` in `StageDatabase.swift`): every
   chapter plays at Normal, Hard and Hell, chosen by three chips above the
   chapter map. A tier is DERIVED from the Normal chapter — `Stage.at(_:)`,
@@ -703,13 +719,13 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is twenty-seven screens (steps 0–26): an arena battle
+  pass. The CI tour is twenty-eight screens (steps 0–27): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,
   the victory's chest in three frames, the collection's Stage layout
   (21), the relic drop card (22), the relic filter sheet (23) and the
-  loading screen (24), the relic set reference (25) and a tribute chest's card (26).
+  loading screen (24), the relic set reference (25), a tribute chest's card (26) and a stage's popup over the chapter map (27).
 - **The fight reads.** **Every unit's bars are a screen-space plate under
   its feet (2026-09-11, night):** `UnitPlateOverlay`, a SpriteKit scene laid
   over the `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one

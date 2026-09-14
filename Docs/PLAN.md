@@ -1970,3 +1970,47 @@ painted gem itself, small, with the set's name beside it everywhere a chip
 appears — the rail's count, the sets row, the map's YIELDS, the filter,
 the reference — which is how the genre's set filters show the rune. The
 loading screen's gold rule keeps the tinted line wheel (`lineSeal`).
+
+
+## The chapter as a place (2026-09-14)
+
+The owner, of the chapter screen: "looks so dumb. If we click on the basic
+map onto a chapter, it should open a NICE looking map that has the stages.
+Not a map and a list below. I want just a map that when I click on it, it
+shows a pop up of the chapter and description/rewards (kind of like
+Summoners War), but I like the high level map first, then chapter map."
+
+### What the genre does
+
+Summoners War's scenario screen is the region's painting filling the
+frame with the stage nodes standing on it along a path; a tap on a node
+opens a popup with the stage, its drops as icons, the energy and Start,
+which leads to the team prep; difficulty tabs at the top; arrows to the
+neighbouring regions; no list anywhere. Epic Seven and Raid are the same
+shape: the map is the screen, the details are a popup. Ours was a
+190-point strip of map over a header panel over a list of the same
+stages — three views of one fact, and a form.
+
+### Chosen
+
+The world road stays as the high-level map (the owner likes it first).
+A city opens the chapter full bleed: the stage's painting fills the
+frame, shaded a little top and bottom so gold and cream read; the road
+winds through the middle band (0.41–0.71 of the height) with larger
+medallions and their pips; the tribute chests wait along the bottom of
+the road (0.87) — one lane, so they never sit on a medallion and never
+under the plates; the chapter's plate at the top left carries the realm
+and name, the story line, the progress bar, Next and the YIELDS chips;
+the tier chips and their one-line note sit at the top right; an arrow
+at either edge walks to the chapter before or after, where the story
+lets it, which replaces the chip strip (the Realms sheet still lists
+every chapter, Rome and the Jade Court included, until the world
+painting has their cities). A medallion opens the stage's popup over
+the dimmed map: the stage and "Stage 4 of 5", the story line, the first
+wave's enemies as cards, DROPS with the chapter's two gems first, the
+relic chance and grade, essences, scrolls, drachma and the first clear,
+your power against the stage's, "Team & runs" for the full briefing and
+"Fight" for one run now. Considered and rejected: the popup as a sheet
+(a sheet is a whole screen on a landscape phone; the genre's popup is a
+card over the map, and the map should stay in view), and keeping the
+list as a scrollable drawer (the list was the complaint).

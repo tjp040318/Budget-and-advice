@@ -20,11 +20,15 @@ struct CampaignView: View {
     /// The tier of the open chapter being shown: Normal, Hard or Hell.
     @State private var difficulty: CampaignDifficulty = .normal
 
+    /// The stage whose card is open over the map.
+    @State private var popupStage: Stage?
+
     /// The world by default; the tour asks for a chapter so the road and
-    /// the tier chips are photographed.
-    init(openingChapter: String? = nil) {
+    /// the tier chips are photographed, and for a stage so its card is.
+    init(openingChapter: String? = nil, openingStage: String? = nil) {
         _openChapterID = State(initialValue: openingChapter)
         _chapterID = State(initialValue: openingChapter)
+        _popupStage = State(initialValue: openingStage.flatMap { StageDatabase.stage($0) })
     }
 
     /// Engines are built before presentation so that a failure (no energy, stage
@@ -87,16 +91,23 @@ struct CampaignView: View {
                 // map of Egypt, Greece and the north with a city per chapter,
                 // and the chapter's own road of stages one tap in.
                 if let openChapterID {
-                    VStack(spacing: 0) {
-                        chapterStrip
-                        ScrollView {
-                            ChapterMapView(chapterID: openChapterID, difficulty: $difficulty) { stage in
-                                selectedStage = stage
+                    // The chapter is a place, not a form: the painting fills
+                    // the frame, the stages stand on it, and a tap opens the
+                    // stage's card over the map.
+                    ChapterMapView(
+                        chapterID: openChapterID,
+                        difficulty: $difficulty,
+                        onSelect: { stage in
+                            Juice.haptic(.light)
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { popupStage = stage }
+                        },
+                        onChapter: { id in
+                            withAnimation(.easeOut(duration: 0.25)) {
+                                chapterID = id
+                                self.openChapterID = id
                             }
-                            .padding(.horizontal, ScreenChrome.contentPadding)
-                            .padding(.vertical, 8)
                         }
-                    }
+                    )
                 } else {
                     WorldRoadMapView { chapter in
                         chapterID = chapter.id
@@ -134,76 +145,24 @@ struct CampaignView: View {
             .fullScreenCover(item: $battle) { context in
                 battleScreen(for: context)
             }
-        }
-    }
-
-    // MARK: - The chapter strip
-
-    /// Every chapter as a chip in story order: gold where the player is,
-    /// a check where it is finished, a lock where its gate is still shut.
-    /// It is a selector, not a filter, so it stays in the content — but at
-    /// 28 points, a rail under the strip rather than a second bar.
-    ///
-    /// Eight chapters at full name are wider than the frame, so the rail
-    /// scrolls itself to the chapter the player is in: without that, a player
-    /// deep in Yggdrasil opened Campaign with no gold chip on screen and a map
-    /// below that belonged to a chapter he could not see.
-    private var chapterStrip: some View {
-        let player = store.player
-        let current = currentChapterID
-        return ScrollViewReader { proxy in
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 5) {
-                    ForEach(StageDatabase.chapters) { chapter in
-                        let cleared = player.campaignProgress[chapter.id] ?? 0
-                        let finished = cleared >= chapter.stages.count
-                        let unlocked = chapter.stages.first.map { CampaignService.isUnlocked($0, player: player) } ?? false
-                        let selected = chapter.id == current
-                        Button {
-                            guard unlocked else {
-                                Juice.notify(.warning)
-                                return
-                            }
-                            Juice.haptic(.light)
-                            withAnimation { chapterID = chapter.id }
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: unlocked ? (finished ? "checkmark" : "map.fill") : "lock.fill")
-                                    .font(.system(size: 8, weight: .black))
-                                Text(chapter.name)
-                                    .font(Theme.body(10).weight(.semibold))
-                                    .lineLimit(1)
-                                Text("\(cleared)/\(chapter.stages.count)")
-                                    .font(Theme.numeric(8))
-                            }
-                            .foregroundStyle(selected ? Theme.ink : (unlocked ? Theme.textPrimary : Theme.textSecondary))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Capsule().fill(selected ? Theme.gold : Theme.surface.opacity(unlocked ? 1 : 0.5)))
-                            .overlay(
-                                Capsule().strokeBorder(
-                                    selected ? Theme.gold : chapter.pantheon.color.opacity(unlocked ? 0.7 : 0.3),
-                                    lineWidth: 1
-                                )
-                            )
+            .overlay {
+                if let stage = popupStage, let chapter = StageDatabase.chapter(stage.chapterID) {
+                    StagePopup(
+                        stage: stage, chapter: chapter,
+                        onPrepare: {
+                            popupStage = nil
+                            selectedStage = stage
+                        },
+                        onFight: {
+                            popupStage = nil
+                            launch(stage, runs: 1)
+                        },
+                        onClose: {
+                            withAnimation(.easeOut(duration: 0.2)) { popupStage = nil }
                         }
-                        .buttonStyle(.plain)
-                        .id(chapter.id)
-                    }
+                    )
+                    .transition(.opacity)
                 }
-                .padding(.horizontal, ScreenChrome.contentPadding)
-                .padding(.vertical, 4)
-            }
-            .background(Theme.plate.opacity(0.6))
-            // A `scrollTo` issued from `onAppear` runs before the rail has been
-            // laid out, so the proxy has no chip to scroll to yet and it does
-            // nothing at all — silently, which is how it would have shipped.
-            // One turn of the run loop later the chips exist and it lands.
-            .onAppear {
-                DispatchQueue.main.async { proxy.scrollTo(current, anchor: .center) }
-            }
-            .onChange(of: current) { _, id in
-                withAnimation { proxy.scrollTo(id, anchor: .center) }
             }
         }
     }
@@ -582,5 +541,192 @@ struct StageBriefingView: View {
         }
         .padding(8)
         .background(Theme.panel(Theme.tightCorner))
+    }
+}
+
+/// A stage's card over the map, the genre's stage popup: the stage and its
+/// place on the road, the chapter's story line, the enemies of the first
+/// wave, what the stage drops — the chapter's two sets first, since every
+/// relic here is one of them — the energy, your power against its power,
+/// and Fight. "Team & runs" opens the full briefing for the team picker and
+/// the auto runs.
+struct StagePopup: View {
+    let stage: Stage
+    let chapter: Chapter
+    let onPrepare: () -> Void
+    let onFight: () -> Void
+    let onClose: () -> Void
+
+    @EnvironmentObject private var store: GameStore
+
+    private var team: [ResolvedUnit] { store.team(store.player.campaignTeam) }
+    private var teamPower: Int { team.reduce(0) { $0 + $1.power } }
+    private var hasEnergy: Bool { store.player.wallet.energy >= stage.energyCost }
+    private var enemies: [ResolvedUnit] { StageDatabase.buildEnemies(for: stage) }
+    private var waveCount: Int { 1 + stage.laterWaves.count }
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(0.45)
+                .ignoresSafeArea()
+                .onTapGesture(perform: onClose)
+            card
+                .frame(maxWidth: 660)
+                .padding(.horizontal, 24)
+        }
+    }
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(stage.name)
+                        .font(Theme.title(15))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text("\(chapter.realmName) · Stage \(stage.index) of \(chapter.stages.count) · \(stage.environment.displayName)")
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 8)
+                HStack(spacing: 4) {
+                    Image(systemName: "bolt.fill")
+                        .font(.system(size: 10, weight: .black))
+                    Text("\(stage.energyCost)")
+                        .font(Theme.numeric(12))
+                }
+                .foregroundStyle(hasEnergy ? Theme.info : Theme.danger)
+                .padding(.horizontal, 8)
+                .frame(height: 24)
+                .background(Capsule().fill(Theme.surfaceHigh))
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 24, height: 24)
+                        .background(Circle().fill(Theme.surfaceHigh))
+                }
+                .buttonStyle(.plain)
+            }
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(chapter.summary)
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(waveCount > 1 ? "ENEMIES · WAVE 1 OF \(waveCount)" : "ENEMIES")
+                        .font(Theme.body(9).weight(.black))
+                        .tracking(1.2)
+                        .foregroundStyle(Theme.textSecondary)
+                    HStack(spacing: 6) {
+                        ForEach(enemies.prefix(5)) { enemy in
+                            UnitCard(unit: enemy, showPower: false, size: 50)
+                        }
+                        Spacer(minLength: 0)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                drops
+                    .frame(width: 236)
+            }
+            HStack(spacing: 8) {
+                HStack(spacing: 4) {
+                    Image(systemName: teamPower >= stage.recommendedPower ? "checkmark.shield.fill" : "exclamationmark.triangle.fill")
+                        .font(.system(size: 10, weight: .black))
+                    Text("Power \(teamPower) / \(stage.recommendedPower)")
+                        .font(Theme.numeric(11))
+                }
+                .foregroundStyle(teamPower >= stage.recommendedPower ? Theme.success : Theme.danger)
+                Spacer(minLength: 8)
+                Button(action: onPrepare) {
+                    Label("Team & runs", systemImage: "person.2.fill")
+                        .font(Theme.body(11).weight(.bold))
+                        .foregroundStyle(Theme.gold)
+                        .padding(.horizontal, 12)
+                        .frame(height: 34)
+                        .background(Capsule().fill(Theme.surfaceHigh))
+                        .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.5), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                PrimaryButton(
+                    title: "Fight — \(stage.energyCost) energy",
+                    systemImage: "play.fill",
+                    isEnabled: hasEnergy && !team.isEmpty
+                ) {
+                    onFight()
+                }
+                .frame(width: 220)
+            }
+        }
+        .padding(12)
+        .panelBackground()
+        .shadow(color: .black.opacity(0.5), radius: 18, y: 8)
+    }
+
+    /// What the stage drops, the chapter's two sets first.
+    private var drops: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("DROPS")
+                .font(Theme.body(9).weight(.black))
+                .tracking(1.2)
+                .foregroundStyle(Theme.textSecondary)
+            if let sets = stage.rewards.relicSets, !sets.isEmpty {
+                HStack(spacing: 6) {
+                    ForEach(sets) { relicSet in
+                        HStack(spacing: 4) {
+                            RelicSetEmblem(set: relicSet, size: 18)
+                            Text(relicSet.displayName)
+                                .font(Theme.body(10).weight(.bold))
+                                .foregroundStyle(Theme.gold)
+                                .lineLimit(1)
+                        }
+                        .padding(.horizontal, 6)
+                        .frame(height: 24)
+                        .background(Capsule().fill(Theme.surfaceHigh))
+                    }
+                    Spacer(minLength: 0)
+                }
+            }
+            if stage.rewards.relicChance > 0 {
+                dropRow("hexagon.fill", "\(stage.rewards.relicGrade)★ relic",
+                        stage.rewards.relicChance >= 1 ? "always" : "\(Int(stage.rewards.relicChance * 100))%")
+            }
+            ForEach(stage.rewards.essenceChances.keys.sorted(), id: \.self) { id in
+                if let chance = stage.rewards.essenceChances[id], chance > 0 {
+                    dropRow("drop.triangle.fill", EssenceCatalog.name(for: id), "\(Int(chance * 100))%")
+                }
+            }
+            ForEach(stage.rewards.scrollChances.keys.sorted(), id: \.self) { id in
+                if let chance = stage.rewards.scrollChances[id], chance > 0, let scroll = ScrollType(rawValue: id) {
+                    dropRow("scroll.fill", scroll.displayName, "\(Int(chance * 100))%")
+                }
+            }
+            dropRow("circle.hexagongrid.fill", "Drachma", "\(stage.rewards.drachma)")
+            if !CampaignService.isCleared(stage, player: store.player), stage.rewards.firstClearDivinity > 0 {
+                dropRow("sparkles", "First clear", "\(stage.rewards.firstClearDivinity) divinity")
+            }
+        }
+        .padding(8)
+        .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
+    }
+
+    private func dropRow(_ icon: String, _ label: String, _ value: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: icon)
+                .font(.system(size: 9, weight: .bold))
+                .frame(width: 14)
+                .foregroundStyle(Theme.goldDim)
+            Text(label)
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+            Spacer(minLength: 4)
+            Text(value)
+                .font(Theme.numeric(10))
+                .foregroundStyle(Theme.textSecondary)
+        }
     }
 }
