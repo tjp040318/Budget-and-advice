@@ -29,7 +29,10 @@ FRAMES = "/tmp/ci_frames/frames"
 BANDS = (("painting", 0.0, 0.28), ("middle", 0.28, 0.62), ("near floor", 0.62, 1.0))
 CLIPPED = 240
 TARGET_CLIP = 2.0
-TARGET_MEAN = (70, 130)
+# A night marsh and a dusk garden are legitimately dark and a sunlit temple
+# legitimately bright; only the ends of the range are worth a flag. The
+# CLIPPED share is the rule.
+TARGET_MEAN = (35, 155)
 
 
 def luminance(path):

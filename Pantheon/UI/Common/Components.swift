@@ -455,7 +455,7 @@ enum SkillArt {
     /// icon outright. The generic `impact_<element>` ones are NOT here —
     /// they are the last resort, after the skill's shape.
     private static let namedEffects: [String: String] = [
-        "thunderbolt": "bolt", "thunderclap": "bolt", "keraunos": "bolt",
+        "thunderbolt": "bolt", "thunderclap": "nova", "keraunos": "beam",
         "olympian_decree": "brand", "maat_shield": "shield",
         "lioness_rake": "multi", "eye_of_ra": "beam", "wrath_of_the_eye": "nova",
         "blood_thirst": "drain", "blood_slash": "cleave",
@@ -476,53 +476,82 @@ enum SkillArt {
         }
     }
 
-    static func key(for skill: Skill, element: Element, ranged: Bool = false) -> String {
-        if let named = namedEffects[skill.vfx] { return named }
+    /// Every icon this skill could wear, best first: its named effect, what
+    /// it does to the field, its shape, its element. A kit resolves through
+    /// this list so no unit ever wears the same square twice — Zeus's three
+    /// skills all named a bolt and the first frames showed him with three
+    /// identical squares, which is worse than no art at all.
+    static func candidates(for skill: Skill, element: Element, ranged: Bool = false) -> [String] {
+        var out: [String] = []
+        func add(_ key: String) { if !out.contains(key) { out.append(key) } }
+        if let named = namedEffects[skill.vfx] { add(named) }
 
         // What it does to the field, in the order a player reads it.
         func has(_ test: (UtilityEffect) -> Bool) -> Bool { skill.utilities.contains(where: test) }
-        if has({ if case .revive = $0 { return true }; return false }) { return "revive" }
-        if has({ if case .cleanse = $0 { return true }; return false }) { return "cleanse" }
-        if has({ if case .strip = $0 { return true }; return false }) { return "strip" }
-        if has({ if case .lifesteal = $0 { return true }; return false }) { return "drain" }
+        if has({ if case .revive = $0 { return true }; return false }) { add("revive") }
+        if has({ if case .cleanse = $0 { return true }; return false }) { add("cleanse") }
+        if has({ if case .strip = $0 { return true }; return false }) { add("strip") }
+        if has({ if case .lifesteal = $0 { return true }; return false }) { add("drain") }
         if has({
             if case .healFromAttack = $0 { return true }
             if case .healTargetMaxHealth = $0 { return true }
             return false
-        }) { return skill.damage == nil ? "heal" : "drain" }
-        if has({ if case .attackBarChange = $0 { return true }; return false }) { return "tempo" }
+        }) { add(skill.damage == nil ? "heal" : "drain") }
+        if has({ if case .attackBarChange = $0 { return true }; return false }) { add("tempo") }
         if has({
             if case .extraTurn = $0 { return true }
             if case .resetOwnCooldowns = $0 { return true }
             return false
-        }) { return "gale" }
+        }) { add("gale") }
 
         let kinds = skill.statuses.map(\.kind)
-        if kinds.contains(where: { $0 == .shield || $0 == .invincible || $0 == .endure }) { return "shield" }
-        if kinds.contains(.freeze) { return "freeze" }
-        if kinds.contains(where: { $0 == .stun || $0 == .sleep }) { return "stun" }
-        if kinds.contains(.burn) { return "burn" }
-        if kinds.contains(.bomb) { return "bomb" }
-        if kinds.contains(.defenseDown) { return "pierce" }
-        if kinds.contains(where: { $0 == .brand || $0 == .unrecoverable || $0 == .silence }) { return "brand" }
+        if kinds.contains(where: { $0 == .shield || $0 == .invincible || $0 == .endure }) { add("shield") }
+        if kinds.contains(.freeze) { add("freeze") }
+        if kinds.contains(where: { $0 == .stun || $0 == .sleep }) { add("stun") }
+        if kinds.contains(.burn) { add("burn") }
+        if kinds.contains(.bomb) { add("bomb") }
+        if kinds.contains(.defenseDown) { add("pierce") }
+        if kinds.contains(where: { $0 == .brand || $0 == .unrecoverable || $0 == .silence }) { add("brand") }
         // A damaging skill with a rider reads better as the blow it is; a
         // skill that is ONLY the rider reads as the rider.
-        if skill.damage == nil, kinds.contains(where: { $0.isBuff }) { return "buff" }
-        if skill.damage == nil, !kinds.isEmpty { return "debuff" }
+        if skill.damage == nil, kinds.contains(where: { $0.isBuff }) { add("buff") }
+        if skill.damage == nil, !kinds.isEmpty { add("debuff") }
 
         if let damage = skill.damage {
             switch skill.target {
-            case .allEnemies: return "nova"
-            case .randomEnemies: return ranged ? "volley" : "nova"
+            case .allEnemies: add("nova")
+            case .randomEnemies: add(ranged ? "volley" : "nova")
             default: break
             }
-            if damage.hits >= 3 { return ranged ? "volley" : "multi" }
-            if damage.alwaysCrits || skill.cooldown >= 4 { return ranged ? "beam" : "crit" }
-            if damage.hits == 2 { return "cleave" }
-            if ranged { return skill.cooldown >= 2 ? "beam" : elementMark(element) }
-            return skill.cooldown >= 2 ? "slam" : "strike"
+            if damage.hits >= 3 { add(ranged ? "volley" : "multi") }
+            if damage.alwaysCrits || skill.cooldown >= 4 { add(ranged ? "beam" : "crit") }
+            if damage.hits == 2 { add("cleave") }
+            if ranged {
+                add(skill.cooldown >= 2 ? "beam" : elementMark(element))
+            } else {
+                add(skill.cooldown >= 2 ? "slam" : "strike")
+            }
+            add(elementMark(element))
+            add(skill.cooldown >= 2 ? "crit" : "strike")
         }
-        return elementMark(element)
+        add(elementMark(element))
+        return out
+    }
+
+    static func key(for skill: Skill, element: Element, ranged: Bool = false) -> String {
+        candidates(for: skill, element: element, ranged: ranged).first ?? elementMark(element)
+    }
+
+    /// One icon per skill of a KIT, none of them repeated: each skill takes
+    /// the best of its own candidates that an earlier skill has not taken.
+    static func keys(for kit: [Skill], element: Element, ranged: Bool = false) -> [String] {
+        var taken = Set<String>()
+        return kit.map { skill in
+            let options = candidates(for: skill, element: element, ranged: ranged)
+            let pick = options.first { !taken.contains($0) } ?? options.first ?? elementMark(element)
+            taken.insert(pick)
+            return pick
+        }
     }
 
     /// The same twenty-seven as SF Symbols, for a key whose painting has not
@@ -574,12 +603,16 @@ struct SkillIcon: View {
     let skill: Skill
     var element: Element = .radiance
     var ranged: Bool = false
+    /// The icon resolved for the whole KIT (`SkillArt.keys(for:)`), so three
+    /// skills of one unit never wear the same square. Nil resolves this
+    /// skill alone, which is right for a card that shows one.
+    var resolvedKey: String? = nil
     var size: CGFloat = 34
     var tint: Color? = nil
     var dimmed: Bool = false
 
     var body: some View {
-        let key = SkillArt.key(for: skill, element: element, ranged: ranged)
+        let key = resolvedKey ?? SkillArt.key(for: skill, element: element, ranged: ranged)
         if SkillArt.hasPainting(key) {
             BundleImage(name: SkillArt.imageName(key), renderedAt: size)
                 .aspectRatio(contentMode: .fit)

@@ -304,14 +304,19 @@ struct BattleView: View {
     /// The skills as the genre's squares at the bottom right: no plate
     /// behind them, the caster's element lighting each.
     private func skillRow(_ actor: Combatant) -> some View {
-        HStack(spacing: 10) {
-            ForEach(model.availableSkills) { option in
+        // Resolved together: three skills of one unit never wear the same
+        // square (Zeus's bolt, clap and keraunos all named a bolt).
+        let icons = SkillArt.keys(for: model.availableSkills.map(\.skill),
+                                  element: actor.element, ranged: !actor.model.melee)
+        return HStack(spacing: 10) {
+            ForEach(Array(model.availableSkills.enumerated()), id: \.element.id) { index, option in
                 SkillButton(
                     skill: option.skill,
                     cooldown: option.cooldown,
                     isSelected: model.selectedSkillSlot == option.slot,
                     element: actor.element,
                     ranged: !actor.model.melee,
+                    iconKey: index < icons.count ? icons[index] : nil,
                     onHold: { withAnimation { heldSkill = option.skill } },
                     onPreview: { pressed in
                         previewSlot = pressed ? option.slot : nil
@@ -684,6 +689,8 @@ struct SkillButton: View {
     /// A caster or an archer strikes from where it stands, and its skills
     /// read as thrown rather than swung.
     var ranged: Bool = false
+    /// The icon chosen for this slot with the caster's other skills in mind.
+    var iconKey: String? = nil
     /// Held down: show what the skill does.
     var onHold: (() -> Void)? = nil
     /// True the moment a finger lands on the tile, false when it lifts.
@@ -713,7 +720,8 @@ struct SkillButton: View {
                 RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
                     .fill(LinearGradient(colors: [Color(hex: "#3B2F22"), Color(hex: "#160F09")], startPoint: .top, endPoint: .bottom))
                 RadialGradient(colors: [tint.opacity(isReady ? 0.55 : 0.18), .clear], center: .center, startRadius: 2, endRadius: 38)
-                SkillIcon(skill: skill, element: element, ranged: ranged, size: 50, tint: .white, dimmed: !isReady)
+                SkillIcon(skill: skill, element: element, ranged: ranged, resolvedKey: iconKey,
+                          size: 50, tint: .white, dimmed: !isReady)
                     .shadow(color: tint.opacity(isReady ? 0.8 : 0), radius: 7)
                 if !isReady {
                     RoundedRectangle(cornerRadius: Self.corner, style: .continuous)

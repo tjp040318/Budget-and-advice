@@ -2595,3 +2595,23 @@ by a FLOOD FILL from each cell's border rather than by brightness, so a
 dark line inside an icon survives where the flipbooks' brightest-channel
 alpha would have eaten it. 1,891 → 1,867; the owner's floor for these
 tests is 1,500.
+
+**Measured after (the same run).** `framelight.py` on the frames of
+ee4e549, against the table above: Olympus's near floor 178 / 25.2% → 148
+/ 0.0%, its middle 173 / 17.5% → 142 / 0.1%; the fjord's painting band
+108 / 16.5% → 52 / 0.2%; the Vault 95-107 / 3-9% → 90-102 / 0.1-0.3%;
+and the sets that were already right barely moved — the Duat 68/88/87 →
+63/83/86, the arena 65/89/97 → 62/83/90. Nothing in any battle frame is
+clipped above 0.7% now except two frames that are an ultimate's white
+FLASH, which is an effect and not the light. The pale sets came down a
+sixth and the rest a twentieth, which is what a shoulder plus a
+painting-matched exposure is supposed to do.
+
+**And the squares must differ inside one kit.** The first frames showed
+Zeus with three IDENTICAL squares: his bolt, his clap and his keraunos
+all name a bolt in `VFXLibrary`, and the table handed all three the same
+icon — worse than no art. `SkillArt.candidates(for:)` now returns every
+icon a skill could wear, best first, and `SkillArt.keys(for kit:)`
+walks a unit's skills taking the best each has that an earlier one has
+not taken; the battle row and the unit sheet both resolve through it.
+Zeus reads bolt, ring, column.

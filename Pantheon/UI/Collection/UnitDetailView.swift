@@ -746,6 +746,7 @@ struct UnitDetailView: View {
 
     private func skills(_ unit: ResolvedUnit) -> some View {
         let index = min(selectedSkill, max(0, unit.skills.count - 1))
+        let icons = SkillArt.keys(for: unit.skills, element: unit.element, ranged: !unit.blueprint.model.melee)
         return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 ForEach(unit.skills.indices, id: \.self) { slot in
@@ -758,7 +759,8 @@ struct UnitDetailView: View {
                             selected: slot == index,
                             level: unit.unit.skillLevels.indices.contains(slot) ? unit.unit.skillLevels[slot] : 1,
                             element: unit.element,
-                            ranged: !unit.blueprint.model.melee
+                            ranged: !unit.blueprint.model.melee,
+                            iconKey: slot < icons.count ? icons[slot] : nil
                         )
                     }
                     .buttonStyle(PlateButtonStyle())
@@ -783,9 +785,9 @@ struct UnitDetailView: View {
     }
 
     private func skillTile(_ skill: Skill, selected: Bool, level: Int,
-                           element: Element, ranged: Bool) -> some View {
+                           element: Element, ranged: Bool, iconKey: String?) -> some View {
         VStack(spacing: 2) {
-            SkillIcon(skill: skill, element: element, ranged: ranged,
+            SkillIcon(skill: skill, element: element, ranged: ranged, resolvedKey: iconKey,
                       size: 22, tint: selected ? Theme.gold : Theme.textSecondary, dimmed: !selected)
             Text(skill.name)
                 .font(Theme.body(9).weight(.semibold))
