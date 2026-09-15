@@ -805,7 +805,17 @@ environment can and cannot do. The short version:
   and orbits survive behind More → Sound & camera → Cinematic battle camera
   (`UserDefaults` key `cinematicCamera`). `returnHome()` clears the
   constraints, because cancelling a shot's action skips the completion that
-  used to. The HUD's top centre is the **attack gauge** (`BattleView.turnGauge`:
+  used to. **Since 2026-09-15 the zoom is told where a leaping caster will
+  land** (`perform(_:on:target:focus:)`, `UnitNode.dashDestination`): the
+  push-in on Sekhmet's Seven Arrows was aimed at her mark and held on the
+  empty floor while she fought four metres away (the owner: "the camera
+  zooms really close to nothing"). **The basic attack is armed the moment
+  a player's turn opens** (`BattleViewModel.armBasicAttack`, aimed at the
+  obvious target), so one tap on an enemy attacks; skills 2 and 3 arm
+  first and commit on a second tap, and a tap on the armed basic's square
+  commits it on the marked target (the owner: "attacks should default to
+  skill 1, so I don't ALWAYS have to click skill 1 if 2 and 3 are on
+  cooldown"). The HUD's top centre WAS the **attack gauge** (`BattleView.turnGauge`, deleted 2026-09-15:
   portraits on one track by `attackBar`, ready unit in gold); tapping a
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),

@@ -642,15 +642,22 @@ final class BattleSceneController: NSObject {
             }
             Juice.prepareHaptics()
             AudioLibrary.shared.play(.whoosh, volume: animation == .ultimate ? 1.0 : 0.6)
-            director?.perform(shot, on: casterNode, target: targetNode)
             // A melee unit closes on its one victim before the swing and stays
             // there through the hits; casters, archers and line-wide skills
-            // strike from where they stand.
+            // strike from where they stand. A boss has no floor to cross: it
+            // strikes from where it towers.
+            let closes = targetNode.map { victim in
+                casterNode.spec.melee && !casterNode.isBoss && targets.count == 1
+                    && victim.side != casterNode.side
+                    && (animation == .attackBasic || animation == .attackHeavy)
+            } ?? false
+            // The camera is told where the leap will land before it begins:
+            // a push-in aimed at the caster's mark held on empty floor while
+            // the caster fought four metres away (2026-09-15).
+            let landing = closes ? targetNode.map { casterNode.dashDestination(toward: $0) } : nil
+            director?.perform(shot, on: casterNode, target: targetNode, focus: landing)
             var walkUp: TimeInterval = 0
-            // A boss has no floor to cross: it strikes from where it towers.
-            if let targetNode, casterNode.spec.melee, !casterNode.isBoss, targets.count == 1,
-               targetNode.side != casterNode.side,
-               animation == .attackBasic || animation == .attackHeavy {
+            if let targetNode, closes {
                 casterNode.dash(toward: targetNode, duration: beat(Self.dashDuration))
                 // The swing waits for the feet. These two lines used to be
                 // consecutive statements, so the clip and the leap started on

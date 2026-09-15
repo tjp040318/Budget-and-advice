@@ -595,14 +595,22 @@ final class CameraDirector {
     // MARK: - Shots
 
     /// Plays a shot on a caster, optionally aimed at a victim.
+    ///
+    /// `focus` is where the caster will be STANDING when the shot lands, when
+    /// that is not where it stands now: a melee unit leaps at its victim in
+    /// the same beat the shot is asked for, and a push-in aimed at its mark
+    /// zoomed onto the empty floor it had just left while it fought four
+    /// metres away (the owner, 2026-09-15, with Sekhmet's Seven Arrows:
+    /// "the camera zooms really close to nothing").
     func perform(
         _ shot: CameraShot,
         on caster: UnitNode,
         target: UnitNode?,
+        focus: SCNVector3? = nil,
         completion: (() -> Void)? = nil
     ) {
         guard Self.isCinematic else {
-            zoom(shot, on: caster, target: target, completion: completion)
+            zoom(shot, on: caster, target: target, focus: focus, completion: completion)
             return
         }
 
@@ -611,7 +619,8 @@ final class CameraDirector {
         cameraNode.constraints = []
         isOffHome = true
 
-        let casterPosition = caster.chestWorldPosition
+        let casterPosition = focus.map { SCNVector3($0.x, $0.y + caster.spec.height * 0.6, $0.z) }
+            ?? caster.chestWorldPosition
         let duration = shot.duration
 
         switch shot {
@@ -709,6 +718,7 @@ final class CameraDirector {
         _ shot: CameraShot,
         on caster: UnitNode,
         target: UnitNode?,
+        focus: SCNVector3?,
         completion: (() -> Void)?
     ) {
         // A basic attack never moves the camera. That is the owner's rule and
@@ -759,7 +769,10 @@ final class CameraDirector {
         // The subject's chest, and how far along the line of sight it stands
         // from home; the move never goes past home, so `distance` is capped at
         // 85% of that depth, which for a boss 25 m out means a modest step.
-        let chest = SCNVector3(subject.position.x, subject.position.y + height * 0.55, subject.position.z)
+        // The caster's landing spot when it is about to leap; otherwise
+        // where the subject stands now.
+        let standing = (subject === caster ? focus : nil) ?? subject.position
+        let chest = SCNVector3(standing.x, standing.y + height * 0.55, standing.z)
         let depth = dot(SCNVector3(chest.x - homePosition.x, chest.y - homePosition.y, chest.z - homePosition.z), dir)
         guard depth > 3 else {
             completion?()

@@ -553,6 +553,20 @@ final class UnitNode: SCNNode {
     /// it, turning to face it on the way. The genre's melee attacks all do
     /// this — a swing from four metres away reads as mime — and the unit
     /// stays there through the hits until `returnHome`.
+    /// Where a dash at `target` lands: a stride short of it, on the line
+    /// between them. The camera asks before the leap begins
+    /// (`CameraDirector.perform(_:on:target:focus:)`), so a push-in on a
+    /// melee caster lands on the figure and not on the mark it just left.
+    func dashDestination(toward target: UnitNode) -> SCNVector3 {
+        let from = position
+        let to = target.position
+        let dx = to.x - from.x, dz = to.z - from.z
+        let distance = max(0.001, (dx * dx + dz * dz).squareRoot())
+        let stride = spec.height * 0.7
+        let travel = max(0, distance - stride)
+        return SCNVector3(from.x + dx / distance * travel, from.y, from.z + dz / distance * travel)
+    }
+
     func dash(toward target: UnitNode, duration: TimeInterval) {
         if homePosition == nil {
             homePosition = position
@@ -561,10 +575,7 @@ final class UnitNode: SCNNode {
         let from = position
         let to = target.position
         let dx = to.x - from.x, dz = to.z - from.z
-        let distance = max(0.001, (dx * dx + dz * dz).squareRoot())
-        let stride = spec.height * 0.7
-        let travel = max(0, distance - stride)
-        let destination = SCNVector3(from.x + dx / distance * travel, from.y, from.z + dz / distance * travel)
+        let destination = dashDestination(toward: target)
 
         // Gather, fly, land — the three beats every convincing jump has, and
         // the reason this one now reads as a figure moving itself rather than

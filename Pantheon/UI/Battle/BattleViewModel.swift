@@ -484,8 +484,24 @@ final class BattleViewModel: ObservableObject {
         if let waitingID = engine.awaitingActor,
            let actor = engine.combatants.first(where: { $0.id == waitingID }) {
             awaitingActor = actor
-            if autoBattle { takeAutoTurn() }
+            if autoBattle {
+                takeAutoTurn()
+            } else {
+                armBasicAttack(for: actor)
+            }
         }
+    }
+
+    /// The basic attack is in hand the moment a turn opens, aimed at the
+    /// obvious target, so one tap on an enemy attacks — the genre's rhythm,
+    /// and the owner's (2026-09-15): "attacks should default to skill 1, so I
+    /// don't ALWAYS have to click skill 1 if 2 and 3 are on cooldown." The
+    /// other skills still arm first and commit on a second tap; a tap on the
+    /// armed basic's square commits it on the marked target.
+    private func armBasicAttack(for actor: Combatant) {
+        guard actor.isSkillReady(0), let skill = actor.skill(at: 0) else { return }
+        selectedSkillSlot = 0
+        highlightedTarget = Self.needsTarget(skill) ? defaultTarget(for: skill, actor: actor) : nil
     }
 
     /// Predicts the next few actors from current speed and attack bars. It is a
