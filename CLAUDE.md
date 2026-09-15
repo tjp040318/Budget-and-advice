@@ -219,11 +219,20 @@ environment can and cannot do. The short version:
   from its row. `DamageSpec.bonusPerMissingHealth` is the bonus at ZERO
   health, scaled by the fraction missing (`1 + bonus × fraction`): 0.8
   means up to 80% more, and 0.008 meant nothing.
-- Eight chapters: Duat 1–2, Olympus 1–3, Yggdrasil 1–3. The generated ones
+- Twelve chapters: Duat 1–2, Olympus 1–3, Yggdrasil 1–3, Rome 1–2, the
+  Jade Court 1–2. **Every campaign stage is THREE WAVES (2026-09-15; the
+  owner: "most bosses and levels are 3 waves, 1 being a boss"):** two of
+  the chapter's mobs at ×0.75 then ×0.85, and a third with two adds and
+  either the chapter's boss (×1.4, the last stage) or a leader of the
+  roster a grade up and ×1.3 (`generatedChapter`; Duat 1 by hand in
+  `laterWaves`); wounds and cooldowns carry across waves, the boss speaks
+  when its wave arrives (`announceBoss(ifPresentIn:)`), and the third
+  star's par is the old 18/30 turns × the waves × 0.8. The generated ones
   take `enemyStars` and `difficulty` (later chapters field the same
   creatures at a higher grade, not at absurd levels); the curve is measured
-  by `python3 tools/balance.py --chapters` and `--halls`, and a change to
-  a chapter's numbers goes into both files. Campaign enemies borrow the
+  by `python3 tools/balance.py --chapters` (three waves, `generated_waves`),
+  `--campaign` and `--halls`, and a change to a chapter's numbers goes
+  into both files. Campaign enemies borrow the
   roster's models and cards (`enemy(... assetName:portraitName:)`); the
   Hydra and the Jötunn are unrigged meshes moved procedurally.
 - New save fields must be **Optional** (`Player.lastDailyPackClaim` is the

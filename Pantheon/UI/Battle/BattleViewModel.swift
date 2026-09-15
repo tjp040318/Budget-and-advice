@@ -284,12 +284,16 @@ final class BattleViewModel: ObservableObject {
     /// is guarded: `onAppear` fires more than once, and an auto-repeat run keeps
     /// this view alive across fights — the line belongs to walking in, not to
     /// every lap.
-    func announceBoss() {
+    /// The boss's line, the moment the boss is on the field: at the opening
+    /// when it stands in the first wave, and otherwise when its wave walks
+    /// on — a boss that spoke before it arrived was announcing a mob fight.
+    func announceBoss(ifPresentIn combatants: [Combatant]) {
         guard !hasSpoken else { return }
-        hasSpoken = true
         guard case .campaign(let stage) = context,
               let boss = StageDatabase.bossLine(for: stage),
+              combatants.contains(where: { $0.blueprintID == boss.blueprintID && $0.side == .opponent }),
               let blueprint = UnitDatabase.blueprint(boss.blueprintID) else { return }
+        hasSpoken = true
         cutIn = CutIn(
             portrait: blueprint.model.portraitName(awakened: false),
             unitName: blueprint.name,
@@ -812,6 +816,7 @@ extension BattleViewModel: BattleSceneDelegate {
             for arrival in opponents where !displayedCombatants.contains(where: { $0.id == arrival.id }) {
                 displayedCombatants.append(arrival)
             }
+            announceBoss(ifPresentIn: opponents)
         default:
             break
         }

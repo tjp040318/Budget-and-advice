@@ -61,7 +61,11 @@ enum CampaignService {
         guard result.outcome == .victory else { return 0 }
         var stars = 1
         if result.survivorFraction >= 1.0 { stars += 1 }
-        let par = stage.isBoss ? 30 : 18
+        // Par turns for the third star: a wave is a fight of its own, so a
+        // three-wave stage is allowed three of them (measured medians in
+        // `balance.py --campaign`).
+        let waves = 1 + stage.laterWaves.count
+        let par = (stage.isBoss ? 30 : 18) * waves * 4 / 5
         if result.turnsTaken <= par { stars += 1 }
         return stars
     }

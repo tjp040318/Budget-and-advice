@@ -143,7 +143,7 @@ struct BattleView: View {
             model.begin()
             // A chapter boss or a raid says its one line as the fight opens;
             // every other stage returns from this without doing anything.
-            model.announceBoss()
+            model.announceBoss(ifPresentIn: model.displayedCombatants)
             AudioLibrary.shared.playMusic(.battle)
         }
         .onDisappear { AudioLibrary.shared.playMusic(.island) }

@@ -654,11 +654,25 @@ STAGES = [
     # is a mirror match with no stuns and no defence break. Once the roster has
     # other families in it there will be a real variance band; for now the
     # numbers below are gates, and they are meant to be.
-    ("1-1 The First Gate",    400, [(SHABTI,5,2),(SHABTI,5,2)]),
-    ("1-2 Reed Fields",       800, [(SHABTI,8,2),(SERPOPARD,8,3)]),
-    ("1-3 Scarab Court",     1800, [(SERPOPARD,14,3),(SCARAB,14,3),(SHABTI,14,2)]),
-    ("1-4 Hall of Sentinels",3600, [(SENTINEL,20,3),(SERPOPARD,20,3),(SCARAB,20,3),(AMMIT,20,4)]),
-    ("1-5 Coils of Apep",    7000, [(SENTINEL,26,3),(SERPOPARD,26,3),(APEP,28,5,1.42),(AMMIT,26,4)]),
+    # THREE WAVES a stage since 2026-09-15 (the owner: "most bosses and
+    # levels are 3 waves, 1 being a boss"), mirroring StageDatabase's Duat 1:
+    # two weaker waves (x0.75, x0.85), then the wave with the leader or the
+    # boss. A stage's spec is a list of waves; the team carries its wounds.
+    ("1-1 The First Gate",    400, [[(SHABTI,4,2,0.75),(SHABTI,4,2,0.75)],
+                                    [(SHABTI,5,2,0.85),(SHABTI,5,2,0.85)],
+                                    [(SHABTI,5,2),(SHABTI,6,3,1.2)]]),
+    ("1-2 Reed Fields",       800, [[(SHABTI,7,2,0.75),(SHABTI,7,2,0.75)],
+                                    [(SHABTI,8,2,0.85),(SERPOPARD,8,3,0.85)],
+                                    [(SHABTI,8,2),(SERPOPARD,9,3,1.25)]]),
+    ("1-3 Scarab Court",     1800, [[(SHABTI,13,2,0.75),(SERPOPARD,13,3,0.75)],
+                                    [(SERPOPARD,14,3,0.85),(SHABTI,14,2,0.85)],
+                                    [(SERPOPARD,14,3),(SCARAB,15,4,1.25),(SHABTI,14,2)]]),
+    ("1-4 Hall of Sentinels",3600, [[(SERPOPARD,19,3,0.75),(SCARAB,19,3,0.75),(SHABTI,19,2,0.75)],
+                                    [(SENTINEL,20,3,0.85),(SERPOPARD,20,3,0.85),(SCARAB,20,3,0.85)],
+                                    [(SENTINEL,20,3),(AMMIT,21,4,1.3),(SERPOPARD,20,3)]]),
+    ("1-5 Coils of Apep",    7000, [[(SERPOPARD,25,3,0.75),(SCARAB,25,3,0.75),(SHABTI,25,2,0.75)],
+                                    [(SENTINEL,26,3,0.85),(SERPOPARD,26,3,0.85),(AMMIT,26,4,0.85)],
+                                    [(SENTINEL,26,3),(APEP,28,5,1.42),(AMMIT,26,4)]]),
 ]
 
 def build_stage(spec):
@@ -766,18 +780,33 @@ CHAPTERS = [  # name, start level, step, stages, power scale, roster, boss, star
     ("Jade 2 Dragon King's Gate",      59, 1, 10, 26.0, [E_GENERAL, E_FOX, E_JIANGSHI, E_TERRACOTTA], LONGMEN, 6, 1.45),
 ]
 
-def generated_stage(chapter, index):
+def generated_waves(chapter, index):
+    """The three waves of a generated stage, mirroring generatedChapter:
+    min(3, 2 + i//4) mobs at x0.75, the same count at x0.85 (the roster
+    rotated two on), then two adds at x1.0 with the chapter's boss at x1.4
+    on the last stage or a leader of the roster a grade up, a step higher
+    in level and x1.3 on every other."""
     _, start, step, stages, scale, roster, boss, stars, difficulty = chapter
     is_boss = index == stages
     level = start + (index - 1) * step
-    n = 4 if is_boss else min(4, 2 + index // 3)
-    spec = []
-    for slot in range(n):
-        last = is_boss and slot == n - 1
-        bp = boss if last else roster[(index + slot) % len(roster)]
-        grade = max(stars or bp.stars, bp.stars) if last else (stars or bp.stars)
-        spec.append((bp, level, grade, difficulty * (1.4 if last else 1.0)))
-    return spec, int(2500 * scale * 1.18 ** (index - 1))
+    def mob(slot, wave, mult):
+        bp = roster[(index + slot + wave * 2) % len(roster)]
+        return (bp, level, stars or bp.stars, difficulty * mult)
+    mobs = min(3, 2 + index // 4)
+    first = [mob(slot, 0, 0.75) for slot in range(mobs)]
+    second = [mob(slot, 1, 0.85) for slot in range(mobs)]
+    last = [mob(slot, 2, 1.0) for slot in range(2)]
+    if is_boss:
+        last.append((boss, level, max(stars or boss.stars, boss.stars), difficulty * 1.4))
+    else:
+        leader = roster[index % len(roster)]
+        last.append((leader, min(60, level + step), min(6, (stars or leader.stars) + 1), difficulty * 1.3))
+    return [first, second, last], int(2500 * scale * 1.18 ** (index - 1))
+
+def generated_stage(chapter, index):
+    """The last wave alone, for the probes that want one fight."""
+    waves, power = generated_waves(chapter, index)
+    return waves[-1], power
 
 CHAPTER_LADDERS = [
     ("4x 4* lv35",          [(ANUBIS, 35, 4, 1.15)] * 4),
@@ -793,11 +822,11 @@ def report_chapters(trials=100):
     print(f"{'stage':>36}{'lvl':>5}{'rec.pwr':>9}  " + "".join(f"{n:>22}" for n, _ in CHAPTER_LADDERS))
     for ch in CHAPTERS:
         for index in (1, 5, ch[3]):
-            spec, power = generated_stage(ch, index)
+            waves, power = generated_waves(ch, index)
             label = ch[0] + (" BOSS" if index == ch[3] else f" -{index}")
-            row = f"{label:>36}{spec[0][1]:>5}{power:>9}  "
+            row = f"{label:>36}{waves[0][0][1]:>5}{power:>9}  "
             for _, team in CHAPTER_LADDERS:
-                wr, med = winrate(team, spec, trials=trials)
+                wr, med = winrate_waves(team, waves, trials=trials)
                 row += f"{wr*100:>16.0f}% {med:>3.0f}t"
             print(row)
 
@@ -828,13 +857,13 @@ def report_tiers(trials=100):
     print(f"{'stage':>36}{'tier':>7}  " + "".join(f"{n:>22}" for n, _ in CHAPTER_LADDERS))
     probes = [("Duat 1 Coils of Apep BOSS", STAGES[-1][2])]
     for ch in (CHAPTERS[0], CHAPTERS[3], CHAPTERS[6]):
-        spec, _ = generated_stage(ch, ch[3])
-        probes.append((ch[0] + " BOSS", spec))
-    for name, spec in probes:
+        waves, _ = generated_waves(ch, ch[3])
+        probes.append((ch[0] + " BOSS", waves))
+    for name, waves in probes:
         for tier in DIFFICULTIES:
             row = f"{name:>36}{tier[0]:>7}  "
             for _, team in CHAPTER_LADDERS:
-                wr, med = winrate(team, tiered(spec, tier), trials=trials)
+                wr, med = winrate_waves(team, [tiered(w, tier) for w in waves], trials=trials)
                 row += f"{wr*100:>16.0f}% {med:>3.0f}t"
             print(row)
 
@@ -1280,10 +1309,10 @@ def report_campaign(trials=200):
     head = f"{'stage':>22}{'rec.pwr':>9}  "
     for name, _ in LADDERS: head += f"{name:>17}"
     print(head)
-    for name, rec, spec in STAGES:
+    for name, rec, waves in STAGES:
         row = f"{name:>22}{rec:>9}  "
         for _, team in LADDERS:
-            wr, med = winrate(team, spec, trials=trials)
+            wr, med = winrate_waves(team, waves, trials=trials)
             row += f"{wr*100:>11.0f}% {med:>3.0f}t"
         print(row)
     print(f"\n{'team power':>22}{'':>9}  " + "".join(
@@ -1449,8 +1478,8 @@ def report_tune(trials=140):
     honest about what the curve is meant to be."""
     targets = [
         # stage index, which ladder it is tuned against, target win rate
-        (0, 0, 0.97),   # tutorial: the day-one account clears it
-        (1, 0, 0.60),   # solo, but only just — the "get a second unit" wall
+        (0, 0, 0.97),   # tutorial: the day-one account clears it, all three waves
+        (1, 1, 0.90),   # the "get a second unit" wall: three waves are past a solo
         (2, 1, 0.80),   # two units, levelled
         (3, 2, 0.80),   # three units
         (4, 3, 0.80),   # the chapter boss: four units, no evolution required
@@ -1458,14 +1487,15 @@ def report_tune(trials=140):
     print("\nSTAGE TUNING — solving enemy level for the intended win rate")
     print(f"{'stage':>22}{'tuned against':>22}{'target':>8}{'level':>7}{'actual':>8}")
     for si, li, target in targets:
-        name, rec, spec = STAGES[si]
+        name, rec, waves = STAGES[si]
         team = LADDERS[li][1]
         best = None
+        base = waves[-1][-1][1]
         for lvl in range(1, 46):
             probe = []
-            for e in spec:
-                probe.append((e[0], lvl, e[2]) + tuple(e[3:]))
-            wr, _ = winrate(team, probe, trials=trials)
+            for wave in waves:
+                probe.append([(e[0], max(1, lvl + e[1] - base), e[2]) + tuple(e[3:]) for e in wave])
+            wr, _ = winrate_waves(team, probe, trials=trials)
             if best is None or abs(wr - target) < abs(best[1] - target):
                 best = (lvl, wr)
             if wr < target - 0.30 and lvl > 3:

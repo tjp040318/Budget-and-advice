@@ -650,8 +650,8 @@ enum StageDatabase {
                 energyCost: 3,
                 recommendedPower: 400,
                 enemies: [
-                    EnemySpawn(blueprintID: "shabti", level: 5, stars: 2),
-                    EnemySpawn(blueprintID: "shabti", level: 5, stars: 2)
+                    EnemySpawn(blueprintID: "shabti", level: 4, stars: 2, statMultiplier: 0.75),
+                    EnemySpawn(blueprintID: "shabti", level: 4, stars: 2, statMultiplier: 0.75)
                 ],
                 rewards: StageRewards(
                     drachma: 700, playerExperience: 30, unitExperience: 240,
@@ -659,7 +659,17 @@ enum StageDatabase {
                     scrollChances: [ScrollType.unknown.rawValue: 0.2],
                     firstClearDivinity: 30
                 ),
-                environment: .duatGate
+                environment: .duatGate,
+                laterWaves: [
+                    [
+                        EnemySpawn(blueprintID: "shabti", level: 5, stars: 2, statMultiplier: 0.85),
+                        EnemySpawn(blueprintID: "shabti", level: 5, stars: 2, statMultiplier: 0.85)
+                    ],
+                    [
+                        EnemySpawn(blueprintID: "shabti", level: 5, stars: 2),
+                        EnemySpawn(blueprintID: "shabti", level: 6, stars: 3, statMultiplier: 1.2)
+                    ]
+                ]
             ),
             Stage(
                 id: "duat_1_2",
@@ -669,8 +679,8 @@ enum StageDatabase {
                 energyCost: 3,
                 recommendedPower: 800,
                 enemies: [
-                    EnemySpawn(blueprintID: "shabti", level: 8, stars: 2),
-                    EnemySpawn(blueprintID: "serpopard", level: 8, stars: 3)
+                    EnemySpawn(blueprintID: "shabti", level: 7, stars: 2, statMultiplier: 0.75),
+                    EnemySpawn(blueprintID: "shabti", level: 7, stars: 2, statMultiplier: 0.75)
                 ],
                 rewards: StageRewards(
                     drachma: 950, playerExperience: 40, unitExperience: 330,
@@ -678,7 +688,17 @@ enum StageDatabase {
                     scrollChances: [ScrollType.mystical.rawValue: 0.25],
                     firstClearDivinity: 30
                 ),
-                environment: .reedFields
+                environment: .reedFields,
+                laterWaves: [
+                    [
+                        EnemySpawn(blueprintID: "shabti", level: 8, stars: 2, statMultiplier: 0.85),
+                        EnemySpawn(blueprintID: "serpopard", level: 8, stars: 3, statMultiplier: 0.85)
+                    ],
+                    [
+                        EnemySpawn(blueprintID: "shabti", level: 8, stars: 2),
+                        EnemySpawn(blueprintID: "serpopard", level: 9, stars: 3, statMultiplier: 1.25)
+                    ]
+                ]
             ),
             Stage(
                 id: "duat_1_3",
@@ -688,9 +708,8 @@ enum StageDatabase {
                 energyCost: 4,
                 recommendedPower: 1_800,
                 enemies: [
-                    EnemySpawn(blueprintID: "serpopard", level: 14, stars: 3),
-                    EnemySpawn(blueprintID: "sun_scarab", level: 14, stars: 3),
-                    EnemySpawn(blueprintID: "shabti", level: 14, stars: 2)
+                    EnemySpawn(blueprintID: "shabti", level: 13, stars: 2, statMultiplier: 0.75),
+                    EnemySpawn(blueprintID: "serpopard", level: 13, stars: 3, statMultiplier: 0.75)
                 ],
                 rewards: StageRewards(
                     drachma: 1_200, playerExperience: 55, unitExperience: 430,
@@ -699,7 +718,18 @@ enum StageDatabase {
                     scrollChances: [ScrollType.unknown.rawValue: 0.2],
                     firstClearDivinity: 30
                 ),
-                environment: .reedFields
+                environment: .reedFields,
+                laterWaves: [
+                    [
+                        EnemySpawn(blueprintID: "serpopard", level: 14, stars: 3, statMultiplier: 0.85),
+                        EnemySpawn(blueprintID: "shabti", level: 14, stars: 2, statMultiplier: 0.85)
+                    ],
+                    [
+                        EnemySpawn(blueprintID: "serpopard", level: 14, stars: 3),
+                        EnemySpawn(blueprintID: "sun_scarab", level: 15, stars: 4, statMultiplier: 1.25),
+                        EnemySpawn(blueprintID: "shabti", level: 14, stars: 2)
+                    ]
+                ]
             ),
             Stage(
                 id: "duat_1_4",
@@ -709,10 +739,9 @@ enum StageDatabase {
                 energyCost: 4,
                 recommendedPower: 3_600,
                 enemies: [
-                    EnemySpawn(blueprintID: "sandstone_sentinel", level: 20, stars: 3),
-                    EnemySpawn(blueprintID: "serpopard", level: 20, stars: 3),
-                    EnemySpawn(blueprintID: "sun_scarab", level: 20, stars: 3),
-                    EnemySpawn(blueprintID: "ammit", level: 20, stars: 4)
+                    EnemySpawn(blueprintID: "serpopard", level: 19, stars: 3, statMultiplier: 0.75),
+                    EnemySpawn(blueprintID: "sun_scarab", level: 19, stars: 3, statMultiplier: 0.75),
+                    EnemySpawn(blueprintID: "shabti", level: 19, stars: 2, statMultiplier: 0.75)
                 ],
                 rewards: StageRewards(
                     drachma: 1_500, playerExperience: 70, unitExperience: 540,
@@ -721,7 +750,19 @@ enum StageDatabase {
                     scrollChances: [ScrollType.unknown.rawValue: 0.2],
                     firstClearDivinity: 30
                 ),
-                environment: .hallOfTwoTruths
+                environment: .hallOfTwoTruths,
+                laterWaves: [
+                    [
+                        EnemySpawn(blueprintID: "sandstone_sentinel", level: 20, stars: 3, statMultiplier: 0.85),
+                        EnemySpawn(blueprintID: "serpopard", level: 20, stars: 3, statMultiplier: 0.85),
+                        EnemySpawn(blueprintID: "sun_scarab", level: 20, stars: 3, statMultiplier: 0.85)
+                    ],
+                    [
+                        EnemySpawn(blueprintID: "sandstone_sentinel", level: 20, stars: 3),
+                        EnemySpawn(blueprintID: "ammit", level: 21, stars: 4, statMultiplier: 1.3),
+                        EnemySpawn(blueprintID: "serpopard", level: 20, stars: 3)
+                    ]
+                ]
             ),
             Stage(
                 id: "duat_1_5",
@@ -731,10 +772,9 @@ enum StageDatabase {
                 energyCost: 6,
                 recommendedPower: 7_000,
                 enemies: [
-                    EnemySpawn(blueprintID: "sandstone_sentinel", level: 26, stars: 3),
-                    EnemySpawn(blueprintID: "serpopard", level: 26, stars: 3),
-                    EnemySpawn(blueprintID: "apep", level: 28, stars: 5, statMultiplier: 1.42),
-                    EnemySpawn(blueprintID: "ammit", level: 26, stars: 4)
+                    EnemySpawn(blueprintID: "serpopard", level: 25, stars: 3, statMultiplier: 0.75),
+                    EnemySpawn(blueprintID: "sun_scarab", level: 25, stars: 3, statMultiplier: 0.75),
+                    EnemySpawn(blueprintID: "shabti", level: 25, stars: 2, statMultiplier: 0.75)
                 ],
                 rewards: StageRewards(
                     drachma: 3_000, playerExperience: 140, unitExperience: 900,
@@ -747,7 +787,19 @@ enum StageDatabase {
                     firstClearDivinity: 100
                 ),
                 environment: .serpentDeep,
-                isBoss: true
+                isBoss: true,
+                laterWaves: [
+                    [
+                        EnemySpawn(blueprintID: "sandstone_sentinel", level: 26, stars: 3, statMultiplier: 0.85),
+                        EnemySpawn(blueprintID: "serpopard", level: 26, stars: 3, statMultiplier: 0.85),
+                        EnemySpawn(blueprintID: "ammit", level: 26, stars: 4, statMultiplier: 0.85)
+                    ],
+                    [
+                        EnemySpawn(blueprintID: "sandstone_sentinel", level: 26, stars: 3),
+                        EnemySpawn(blueprintID: "apep", level: 28, stars: 5, statMultiplier: 1.42),
+                        EnemySpawn(blueprintID: "ammit", level: 26, stars: 4)
+                    ]
+                ]
             )
         ]
     )
@@ -794,25 +846,50 @@ enum StageDatabase {
             let level = startingLevel + (index - 1) * levelStep
             let power = Int(Double(2_500) * powerScale * pow(1.18, Double(index - 1)))
 
-            var enemies: [EnemySpawn] = []
-            let count = isBoss ? 4 : min(4, 2 + index / 3)
-            for slot in 0..<count {
-                // Rotate through the roster so consecutive stages are not
-                // identical, and drop the boss into the last slot of a boss stage.
-                let blueprintID = (isBoss && slot == count - 1)
-                    ? bossID
-                    : roster[(index + slot) % roster.count]
-                // Later chapters field the same creatures at a higher grade,
-                // the way the genre does, rather than at absurd levels; the
-                // boss keeps its own grade when that is higher.
+            // THREE WAVES, the genre's stage (2026-09-15; the owner: "most
+            // bosses and levels are 3 waves, 1 being a boss. Can we do
+            // that?"): two waves of the chapter's mobs, weaker than the
+            // stage's number (×0.75, then ×0.85, so the run is a climb and
+            // not the same fight three times), then the wave that matters —
+            // the chapter's boss with two adds on the last stage, and on
+            // every other stage a LEADER of the roster a grade up, a step
+            // higher in level and ×1.3, with two adds. The team's wounds and
+            // cooldowns carry from wave to wave (`BattleEngine`), which is
+            // what makes three waves harder than their last wave alone;
+            // `tools/balance.py --chapters` runs the same three.
+            // Later chapters field the same creatures at a higher grade,
+            // the way the genre does, rather than at absurd levels; the
+            // boss keeps its own grade when that is higher.
+            func mob(_ slot: Int, wave: Int, scale: Double) -> EnemySpawn {
+                let blueprintID = roster[(index + slot + wave * 2) % roster.count]
                 let natural = UnitDatabase.blueprint(blueprintID)?.naturalStars ?? 3
-                let isTheBoss = isBoss && slot == count - 1
-                let stars = isTheBoss ? max(enemyStars ?? natural, natural) : (enemyStars ?? natural)
-                enemies.append(EnemySpawn(
+                return EnemySpawn(
                     blueprintID: blueprintID,
                     level: level,
-                    stars: stars,
-                    statMultiplier: difficulty * (isTheBoss ? 1.4 : 1.0)
+                    stars: enemyStars ?? natural,
+                    statMultiplier: difficulty * scale
+                )
+            }
+            let mobs = min(3, 2 + index / 4)
+            let firstWave = (0..<mobs).map { mob($0, wave: 0, scale: 0.75) }
+            let secondWave = (0..<mobs).map { mob($0, wave: 1, scale: 0.85) }
+            var lastWave = (0..<2).map { mob($0, wave: 2, scale: 1.0) }
+            if isBoss {
+                let natural = UnitDatabase.blueprint(bossID)?.naturalStars ?? 3
+                lastWave.append(EnemySpawn(
+                    blueprintID: bossID,
+                    level: level,
+                    stars: max(enemyStars ?? natural, natural),
+                    statMultiplier: difficulty * 1.4
+                ))
+            } else {
+                let leaderID = roster[index % roster.count]
+                let natural = UnitDatabase.blueprint(leaderID)?.naturalStars ?? 3
+                lastWave.append(EnemySpawn(
+                    blueprintID: leaderID,
+                    level: min(60, level + levelStep),
+                    stars: min(6, (enemyStars ?? natural) + 1),
+                    statMultiplier: difficulty * 1.3
                 ))
             }
 
@@ -823,7 +900,7 @@ enum StageDatabase {
                 name: isBoss ? "\(name) — Confrontation" : "\(name) \(index)",
                 energyCost: isBoss ? 6 : 4,
                 recommendedPower: power,
-                enemies: enemies,
+                enemies: firstWave,
                 rewards: StageRewards(
                     drachma: 900 + index * 220,
                     playerExperience: 45 + index * 10,
@@ -837,7 +914,8 @@ enum StageDatabase {
                     firstClearDivinity: isBoss ? 60 : 20
                 ),
                 environment: environment,
-                isBoss: isBoss
+                isBoss: isBoss,
+                laterWaves: [secondWave, lastWave]
             ))
         }
 

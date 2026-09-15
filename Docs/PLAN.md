@@ -2214,3 +2214,37 @@ flood. The free half is a colour grade per environment and a bounded
 arena; the rest is Gemini floor tiles (about ten at 14 cents) and Meshy
 set pieces at 30 credits each against a balance of 2,133 over a floor
 of 2,000 — four props, or the owner's word to go lower or buy more.
+
+### Three waves a stage (2026-09-15, part 3)
+
+The owner: "most bosses and levels are 3 waves, 1 being a boss. Can we
+do that?" Summoners War's scenario stage is three waves — two of the
+area's mobs, the third with its mid-boss, and the area's boss on the
+last stage's third wave; the Labyrinth here already fought that way.
+Every campaign stage does now. `generatedChapter` builds the first wave
+as `min(3, 2 + i/4)` of the roster at ×0.75, the second the same count
+two places on at ×0.85, and the third two adds at ×1.0 with the
+chapter's boss at ×1.4 on the last stage or a LEADER of the roster — a
+grade up, a step higher in level, ×1.3 — on every other; Duat 1's five
+stages were rewritten by hand in the same shape. The team's wounds and
+cooldowns carry from wave to wave (`BattleEngine`), the HUD counts
+"Wave 1/3", the arrivals walk on from the far side, and the boss's line
+is spoken when ITS wave walks on (`announceBoss(ifPresentIn:)`) rather
+than at the opening of a fight it is not yet in. The third star's par
+grows with the waves (`CampaignService.starRating`: the old 18 or 30
+turns, times the waves, times 0.8 — 43 on a normal stage, 72 on a boss
+stage).
+
+Measured with `balance.py --campaign --chapters --tiers`, the sim
+running the same three waves (`STAGES` as wave lists,
+`generated_waves`): the ladder still steps where it did — Duat 1 opens
+solo and needs a second unit at 1-2 (a solo cannot outlast three
+waves; the tuning target moved from "solo at 60%" to "two units at
+90%"), Duat 2's boss needs 5★s, Olympus 3's 5★s with relics (98% in
+150 turns), Yggdrasil 3's maxed 6★s (137 turns), Rome and the Jade
+Court 6★s (Jade 1's boss 204 turns for the 6★s, 105 for the gods), and
+Hard's top boss now wants the gods where a single wave took the 6★s
+(Jötunheim Hard: 6★s 0%, gods 100% in 134 turns; Hell everywhere is
+the gods'). The turn counts are the sum of three fights, so a three-wave
+median of 150 is a 50-turn wave. The multipliers were not retuned: the
+curve held its order.
