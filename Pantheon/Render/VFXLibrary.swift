@@ -312,22 +312,32 @@ enum VFXLibrary {
         let host = SCNNode()
         host.position = SCNVector3(0, 1.0 * scale, 0)
         caster.addChildNode(host)
+        // The motes are born through the wind-up and are gone by the blow.
+        let moteLife = CGFloat(max(0.3, duration * 0.45))
+        let emitting = CGFloat(max(0.2, duration * 0.85))
         if let flare = sprite("flare") {
-            let motes = puff(flare, tint: tint, count: 28, speed: 0.9, size: 0.16 * CGFloat(scale), life: CGFloat(max(0.3, duration)),
+            let motes = puff(flare, tint: tint, count: 28, speed: 0.9, size: 0.16 * CGFloat(scale), life: moteLife,
                              spread: 180, lift: 1.6, spin: 1)
-            motes.emissionDuration = CGFloat(max(0.2, duration * 0.8))
-            motes.birthRate = 28 / CGFloat(max(0.2, duration * 0.8))
+            motes.emissionDuration = emitting
+            motes.birthRate = 28 / emitting
             motes.emitterShape = SCNSphere(radius: CGFloat(0.9 * scale))
             host.addParticleSystem(motes)
             let core = puff(flare, tint: tint.mixed(with: .white, amount: 0.4), count: 1, speed: 0, size: 0.5 * CGFloat(scale),
                             life: CGFloat(max(0.3, duration)), spread: 0, lift: 0, spin: 0.3, grow: 3.2)
             host.addParticleSystem(core)
         }
-        // Gone from the main thread once the wind-up is over: nothing of this
-        // effect runs on the render thread.
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 1.5) { [weak host] in
-            host?.removeFromParentNode()
-        }
+        // The host outlives its last particle by a second (`puff` varies a
+        // life by 30%: the last mote dies at 0.85 + 1.3 × 0.45 of the wind-up,
+        // the core at 1.3 of it). A node removed while a one-shot system of
+        // its is still alive was the crash of 2026-09-15, twice over: with
+        // the removal in an action the pipeline asserted on hidden elements
+        // (the arena); on the main thread SceneKit's particle manager
+        // dereferenced the freed node when the system finished
+        // (SCNNodeRemoveDeadParticleInstance, the dungeon's crash report).
+        // The first build removed this host at the wind-up + 1.5 s with motes
+        // living to 2.1 wind-ups. Every host in this file waits for its
+        // systems to finish before it goes.
+        host.runAction(.sequence([.wait(duration: duration * 1.5 + 1.0), .removeFromParentNode()]))
     }
 
     // MARK: - Authored systems

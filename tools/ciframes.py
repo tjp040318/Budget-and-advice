@@ -45,6 +45,8 @@ def crash_summary(path):
     if not isinstance(body, dict):
         return lines[:80]
     out = []
+    if body.get("procLaunch") or body.get("captureTime"):
+        out.append(f"launched {body.get('procLaunch', '?')}, crashed {body.get('captureTime', '?')}")
     exc = body.get("exception") or {}
     out.append(" ".join(str(exc.get(k, "")) for k in ("type", "signal", "subtype") if exc.get(k)) or "exception ?")
     term = body.get("termination") or {}

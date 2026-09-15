@@ -658,14 +658,17 @@ environment can and cannot do. The short version:
   `.frame(width:height:)` off a GeometryReader, which is what the island
   does. And a camera node looks along its own −Z: orient it with
   `SCNNode.look(at:)`, never `atan2(dx, dz)` (that was half a turn off and
-  the orbit shot showed the empty side of the stage). And SceneKit's
-  render thread is SceneKit's: an `SCNAction.customAction` block runs
-  there, and a material's contents swapped inside one crashed the arena
-  fight on 2026-09-15 ("Hidden nodes should have been removed from the
-  pipeline already", six times across three threads, then the app gone) —
-  a texture, a hidden flag or the scene graph changes on the main thread,
-  on a `Timer` or `DispatchQueue.main.asyncAfter`, never in an action's
-  block.
+  the orbit shot showed the empty side of the stage). And **a node with a
+  one-shot particle system goes only after the system has finished**:
+  SceneKit's particle manager keeps a finished instance and looks its
+  node up when it dies, and a host removed while its motes still lived
+  crashed the fight twice on 2026-09-15 — hidden-element assertions when
+  the removal was an action, a SIGSEGV in
+  `SCNNodeRemoveDeadParticleInstance` when it was the main thread (the
+  crash report the CI job now publishes read it). Every `spawn` host waits
+  3 s over sub-second bursts; the ultimate's charge waits 1.5 wind-ups + 1
+  s. And nothing swaps a texture or touches the scene graph inside an
+  `SCNAction` block — hygiene, not the cause.
 - **A card's wear scales with the card (2026-09-14).** The owner, of the
   popup's 50-point enemy cards: "Do the elemental symbols need to be so
   big? We can't see the picture." `UnitCard.wear` is `size / 80` clamped

@@ -2448,23 +2448,36 @@ The contact frames read off the clips: Anubis 0.38 / 0.50 / 0.55,
 Sekhmet 0.45 / 0.42 / 0.45, Zeus 0.47 / 0.40 (ultimate 0.68), Ares
 0.47 / 0.50 / 0.45, Thoth 0.55 / 0.60 / 0.65.
 
-**The arena crash, and the rule it left (2026-09-15, later).** The
+**The crash, twice, and the rule it left (2026-09-15, later).** The
 commit's CI run was green and its frames showed every fight but one: the
-arena's three frames were the iPhone's home screen. The console said why
-as far as it could — the last thing the app printed was Chang'e's ultimate
-clip loading, and two seconds later six SceneKit assertions across three
-render threads, `C3DRendererElementIsHidden(rendererElement) != true …
-Hidden nodes should have been removed from the pipeline already`, then
-nothing. The one new kind of thing the commit did off the main thread was
-the shockwave ring: a plane on the floor whose texture was swapped frame
-by frame inside an `SCNAction.customAction` block, which SceneKit runs on
-its render threads. The ring's frames step on a main-thread timer now,
-the ultimate's charge leaves from the main thread, and every cast prints
-a stamped `[Perf] cast …` line so a console that ends mid-fight names the
-cast it ended in. The job also copies any crash report the host wrote for
-the app during the tour into the frames branch (`crash-*.txt`;
-`ciframes.py` prints the crashed thread's frames) and reads the unified
-log from the tour's start rather than its last twelve minutes, which had
-missed the crash. The rule: nothing touches a material, a node's hidden
-flag or the scene graph from inside an `SCNAction` block or a renderer
-delegate callback; the render thread is SceneKit's.
+arena's three frames were the iPhone's home screen. The console said as
+much as it could — the last line was Chang'e's ultimate clip loading, and
+two seconds on six SceneKit assertions across three render threads,
+`C3DRendererElementIsHidden(rendererElement) != true … Hidden nodes should
+have been removed from the pipeline already`, then nothing. The first
+diagnosis blamed the one texture the commit swapped inside an
+`SCNAction.customAction` block (the shockwave ring's frames, on the render
+thread) and moved it to a main-thread timer; that run's arena played eight
+casts clean — and the job's NEW crash capture (`crash-*.txt`, the host's
+report for the app, copied into the frames branch; `ciframes.py` prints
+the crashed thread) caught the dungeon battle dying instead, 3.5 s after
+Zeus's Keraunos with the main thread idle in its run loop: `SIGSEGV` in
+`SCNNodeRemoveDeadParticleInstance → +[SCNNode nodeWithNodeRef:] →
+objc_loadWeakRetained` on the render queue. SceneKit's particle manager
+keeps a finished one-shot system's instance and looks its node up when it
+dies; the one node the commit removed while a one-shot system of its was
+still alive was the ultimate's charge host — motes born through 80% of a
+1.63 s wind-up with lives of up to 130% of it (the last dies at 3.4 s),
+the host gone at the wind-up + 1.5 s (3.1 s), the crash at 3.5 s. Both
+deaths are that one mistake: removed in an action, the pipeline asserted
+on the hidden instance; removed on the main thread, the manager
+dereferenced the freed node; and three ultimates in the same run's arena
+lived because the window is a few tenths wide and a life is rolled. The
+motes now die by the blow and the host waits 1.5 wind-ups + 1 s. The rule: **a node with a one-shot
+particle system goes only after the system has finished** (every `spawn`
+host waits 3 s over sub-second bursts, which is why they never crashed);
+and, hygiene rather than cause, nothing swaps a texture or touches the
+scene graph from inside an action's block. Every cast prints a stamped
+`[Perf] cast …` line now, so a console that ends mid-fight names the cast
+it ended in, and the system log covers the whole tour rather than its
+last twelve minutes.
