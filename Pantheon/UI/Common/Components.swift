@@ -572,7 +572,7 @@ enum SkillArt {
 /// same one, so a skill looks the same wherever it is met.
 struct SkillIcon: View {
     let skill: Skill
-    var element: Element = .light
+    var element: Element = .radiance
     var ranged: Bool = false
     var size: CGFloat = 34
     var tint: Color? = nil

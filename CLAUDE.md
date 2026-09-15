@@ -58,7 +58,12 @@ python3 tools/balance.py                        # stat curves, win rates, gacha 
 ```
 
 `--types` was noise-only until its allow-list covered the frameworks actually
-used here; it is now clean and worth running. Every rule in the checker was
+used here; it is now clean and worth running. Swift's leading-dot shorthand
+has no compiler here, so the checker reads it: a switch must handle every
+case of the enum its subject is declared as, and `: SomeEnum = .case` must
+name a real one (`var element: Element = .light` cost a CI run on
+2026-09-15 — the elements are `.ember`, `.tide`, `.gale`, `.radiance`,
+`.umbra`). Every rule in the checker was
 proven by reintroducing a real bug and watching it fail.
 
 If a tuning constant changes in Swift, change it in `tools/balance.py` too. They

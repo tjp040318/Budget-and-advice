@@ -527,6 +527,77 @@ def check_foreign_wrapped_properties(files, errors):
 # Rule 15: a switch that has not kept up with its enum
 # ---------------------------------------------------------------------------
 
+def collect_enum_labels(files):
+    """Every enum by SIMPLE name, as (cases, statics, seen). The two are kept
+    APART because they answer different questions: a switch must handle every
+    CASE and a static member is not one of them (`CampaignDifficulty.split`
+    is a function, and folding it in made the switch rule demand a `.split`
+    branch), while a leading-dot default value may legally name either. A
+    name used by two enums (this module has two `Kind`s and two `Tab`s) is
+    counted in `seen` so a caller can drop it rather than guess."""
+    cases, statics, seen = {}, {}, {}
+    enum_start = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)")
+    case_line = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)")
+    static_line = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?static\s+(?:let|var|func)\s+([A-Za-z_][A-Za-z0-9_]*)")
+    for path in files:
+        lines = strip_noise(open(path).read()).splitlines()
+        current, indent = None, 0
+        for line in lines:
+            m = enum_start.match(line)
+            if m:
+                current, indent = m.group(1), len(line) - len(line.lstrip())
+                cases.setdefault(current, set())
+                statics.setdefault(current, set())
+                seen[current] = seen.get(current, 0) + 1
+                continue
+            if current is None:
+                continue
+            stripped = line.strip()
+            if stripped and (len(line) - len(line.lstrip())) <= indent and not stripped.startswith("case"):
+                current = None
+                continue
+            cm = case_line.match(line)
+            if cm:
+                for name in cm.group(1).split(","):
+                    name = name.strip().split("(")[0]
+                    if name:
+                        cases[current].add(name)
+                continue
+            sm = static_line.match(line)
+            if sm:
+                statics[current].add(sm.group(1))
+    return cases, statics, seen
+
+
+def check_enum_dot_defaults(files, errors):
+    """`: SomeEnum = .caseThatIsNotThere`.
+
+    Swift's leading-dot shorthand is only checked by the compiler, and there
+    is no compiler here. `SkillIcon`'s `var element: Element = .light` cost a
+    whole CI run on 2026-09-15 — the elements are spelled `.ember`, `.tide`,
+    `.gale`, `.radiance`, `.umbra`, and the switch rule caught the switch in
+    the same file while the default value sailed past it.
+
+    Only a default VALUE with an explicit enum type on the left is checked,
+    which is the shape a human writes by hand and gets wrong; an ambiguous
+    simple name is dropped the way the switch rule drops one."""
+    cases, statics, seen = collect_enum_labels(files)
+    labels = {name: cases[name] | statics.get(name, set()) for name in cases}
+    site = re.compile(r":\s*(?:[A-Za-z_][A-Za-z0-9_]*\.)*([A-Z][A-Za-z0-9_]*)\??\s*=\s*\.([A-Za-z_][A-Za-z0-9_]*)")
+    for path in files:
+        lines = strip_noise(open(path).read()).splitlines()
+        for i, line in enumerate(lines):
+            for m in site.finditer(line):
+                enum, label = m.group(1), m.group(2)
+                if enum not in labels or seen.get(enum, 0) != 1:
+                    continue
+                if not labels[enum]:
+                    continue
+                if label not in labels[enum]:
+                    errors.append(f"{path}:{i + 1}: '{enum}' has no member '.{label}' "
+                                  f"(its labels: {', '.join('.' + x for x in sorted(labels[enum])[:8])})")
+
+
 def check_switch_exhaustive(files, errors):
     """A switch over an enum PARAMETER that is missing one of its cases.
 
@@ -542,35 +613,7 @@ def check_switch_exhaustive(files, errors):
     `func glyph(for candidate: ShopService.Section)` followed by `switch
     candidate` is unambiguous. That is narrower, and it catches the real
     thing without crying wolf, which is the whole bargain of this file."""
-    # Keyed by SIMPLE name, which is all a switch site gives us — so a name
-    # used by two enums (this module has two `Kind`s and two `Tab`s) is
-    # ambiguous and is dropped rather than guessed at.
-    enum_cases_all = {}
-    enum_seen = {}
-    enum_start = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)")
-    case_line = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)")
-    for path in files:
-        lines = strip_noise(open(path).read()).splitlines()
-        current, indent = None, 0
-        for line in lines:
-            m = enum_start.match(line)
-            if m:
-                current, indent = m.group(1), len(line) - len(line.lstrip())
-                enum_cases_all.setdefault(current, set())
-                enum_seen[current] = enum_seen.get(current, 0) + 1
-                continue
-            if current is None:
-                continue
-            stripped = line.strip()
-            if stripped and (len(line) - len(line.lstrip())) <= indent and not stripped.startswith("case"):
-                current = None
-                continue
-            cm = case_line.match(line)
-            if cm:
-                for name in cm.group(1).split(","):
-                    name = name.strip().split("(")[0]
-                    if name:
-                        enum_cases_all[current].add(name)
+    enum_cases_all, _statics, enum_seen = collect_enum_labels(files)
 
     param = re.compile(r"[(,]\s*(?:[A-Za-z_][A-Za-z0-9_]*\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:\s*"
                        r"(?:[A-Za-z_][A-Za-z0-9_]*\.)*([A-Za-z_][A-Za-z0-9_]*)")
@@ -1094,6 +1137,7 @@ def main():
     if "--members" in sys.argv:
         check_static_members(files, collect_static_members(files), errors)
     check_patterns(files, enum_cases, errors)
+    check_enum_dot_defaults(files, errors)
     check_accessor_keywords(files, errors)
     check_duplicate_funcs(files, errors)
     check_bundle_resources(errors)
