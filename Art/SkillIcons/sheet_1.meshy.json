@@ -1,0 +1,18 @@
+{
+  "id": "01a0a598-bda5-7543-8d7b-6572a8e3c02f",
+  "kind": "picture",
+  "created": "2026-09-15T15:04:05Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "A 3 by 3 grid of nine separate square video-game skill icons, painted in a rich ancient-Greek and Egyptian mythology style with bold readable silhouettes, warm rim light and painted highlights. The entire image background is solid pure black and there is black space between the nine icons. Each icon is centred in its own cell and touches nothing else. No text, no letters, no numbers, no captions, no frames, no borders, no grid lines, no drop shadows on the background. Top row, left to right: a single curved sword sweeping through its own arc of white light, steel blade, gold hilt; a broad double-headed axe mid-swing carving one wide crescent of light, splinters flying; a bronze spear point punching through a cracked round shield, the crack spreading from the hole. Middle row, left to right: three long arrows in flight side by side, fletching trailing thin streaks of light; three parallel claw gashes torn through the air, the torn edges glowing hot; a heavy stone war hammer striking flagstones, chips and dust bursting upward. Bottom row, left to right: a thin sharp ring of white force bursting outward from a single bright point; a column of golden light falling from above onto a small circle of scorched ground; a white starburst impact with a cracked centre and four long spikes of light. ",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1891,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789484645818,
+  "started_at": 1789484645825,
+  "polled": "2026-09-15T15:05:57Z",
+  "consumed_credits": 6,
+  "finished_at": 1789484753730
+}

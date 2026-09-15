@@ -584,15 +584,30 @@ enum StageBuilder {
         var sky: UIColor
         var horizon: UIColor
         var ground: UIColor
+        /// The whole painting's mean luminance, 0…1. A pale painting is a
+        /// set whose lights are about to double it (2026-09-15: a quarter
+        /// of Olympus's marble floor came out as white with no stone in
+        /// it), so the camera takes its exposure off this — see
+        /// `PaintingPalette.exposureCompensation`.
+        var luminance: Double = 0.45
 
         static let neutral = PaintingPalette(sky: UIColor(white: 0.5, alpha: 1),
                                              horizon: UIColor(white: 0.35, alpha: 1),
                                              ground: UIColor(white: 0.2, alpha: 1))
 
-        init(sky: UIColor, horizon: UIColor, ground: UIColor) {
+        init(sky: UIColor, horizon: UIColor, ground: UIColor, luminance: Double = 0.45) {
             self.sky = sky
             self.horizon = horizon
             self.ground = ground
+            self.luminance = luminance
+        }
+
+        /// Stops to add to the grade's own exposure: nothing for a painting
+        /// at mid grey, down to −0.55 for a sunlit marble one and up to
+        /// +0.25 for a night. The hand-picked grade is still added on top,
+        /// so a set that is meant to be dark stays dark.
+        var exposureCompensation: CGFloat {
+            CGFloat(min(0.25, max(-0.55, (0.45 - luminance) * 1.3)))
         }
 
         init?(image: UIImage) {
@@ -631,6 +646,11 @@ enum StageBuilder {
             sky = band(fromTop: 0, 0.125)
             horizon = band(fromTop: 0.37, 0.56)
             ground = band(fromTop: 0.8, 1.0)
+            var light = 0.0
+            for at in stride(from: 0, to: side * side * 4, by: 4) {
+                light += 0.2126 * Double(data[at]) + 0.7152 * Double(data[at + 1]) + 0.0722 * Double(data[at + 2])
+            }
+            luminance = light / Double(side * side) / 255
         }
     }
 
@@ -1180,8 +1200,11 @@ enum StageBuilder {
 
     /// How polished each floor is: marble takes a sheen the key light draws
     /// across it, slate a little, sandstone almost none, moss none at all.
+    /// Marble was 0.52 and threw the key straight back as a sheet of white
+    /// across the whole floor (2026-09-15); the relief map does the reading
+    /// now and the sheen is a hint.
     private static let floorRoughness: [String: CGFloat] = [
-        "floor_marble": 0.52, "floor_slate": 0.66, "floor_sandstone": 0.84, "floor_moss": 0.95,
+        "floor_marble": 0.62, "floor_slate": 0.72, "floor_sandstone": 0.86, "floor_moss": 0.95,
     ]
 
     /// `mottleRepeats`: the slab's macro variation (`mottle`) in place of a

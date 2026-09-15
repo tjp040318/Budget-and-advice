@@ -87,7 +87,10 @@ force-pushes them to (the artifact store is on a host the network policy
 refuses) and prints the lines that matter from each step's console, which
 the job publishes beside the frames (`<step>-console.txt`, the app's stdout
 and stderr with the frameworks' os_log lines mirrored in). A frame that came
-out wrong can be read as well as looked at, and a launch that died leaves
+out wrong can be read as well as looked at — `python3 tools/framelight.py`
+prints how bright every battle frame is, per band, and what share of it
+has no detail left (the target is under 2% over 240 with the mean in
+70-130) — and a launch that died leaves
 its crash report beside the frames (`crash-*.txt`, the host's report for
 the app, its crashed thread printed by `ciframes.py`; `system-log.txt`
 covers the whole tour). Never push without reading the
@@ -773,7 +776,8 @@ environment can and cannot do. The short version:
   ground off a 32 × 32 reduction and the fog, the sky, the fill and the
   ambient take theirs from it, mixed with the hand-picked `fogHex` so a
   night painting keeps its intent; the camera wears one grade per place
-  (`StageBuilder.grade(for:)`: saturation, contrast, exposure, vignette);
+  (`StageBuilder.grade(for:)`: saturation, contrast, exposure, vignette,
+  plus what the painting itself asks for — see the shoulder below);
   and each realm has weather (`StageBuilder.weather(for:)` →
   `VFXLibrary.weather`: embers in Egypt and the arenas, leaves in the
   marsh and under Yggdrasil, snow in the fjord and Jötunheim, petals in
@@ -798,6 +802,25 @@ environment can and cannot do. The short version:
   2026-09-09; the floor was 3,000 and is **2,000** since 2026-09-11 ("you can
   bring us down to 2000 credits, that's okay"), and `tools/batch/wave_run.sh` keeps
   every wave above it.
+- **The light has a shoulder (2026-09-15).** The owner, of four battle
+  frames: "Lighting and contrast feels too bright doesnt it?" It was not
+  global — `tools/framelight.py` measured the Duat and the arena at 0.2%
+  of their pixels blown and Olympus's near floor at 25.2%, the fjord's
+  sky at 16.5%: the PALE sets. `SCNCamera.whitePoint` had sat at
+  SceneKit's default 1.0 for the life of the project, which clips every
+  surface at or over 1.0 flat to paper; it is **1.85** now, so the tone
+  curve keeps rolling and lit marble keeps its grain. With it: each set's
+  exposure takes the grade's hand-picked number PLUS
+  `PaintingPalette.exposureCompensation`, which reads the backdrop's own
+  mean luminance off the same 32x32 reduction that colours the fog and
+  pulls a pale painting down as far as half a stop (a night is lifted a
+  quarter), so a set is lit to MATCH its painting rather than on top of
+  it; the key is 1,150 (was 1,400), the fill 400, the ambient 240, the
+  image-based light 1.15 (was 1.6); bloom is 0.22 over 0.975, because
+  bloom on a clipped floor is what spreads the white onto the figures
+  standing on it; and marble's roughness went 0.52 to 0.62, since a
+  polished floor threw the key straight back as one sheet. Check a run's
+  frames with `framelight.py` before believing a lighting change.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
   for an attack clip and back at the next turn, and every hit flashes the
   victim white. **The camera is fixed by default** (`CameraDirector`): one
@@ -833,7 +856,24 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is thirty screens (steps 0–29): an arena battle
+  pass. **A skill square carries its ART and nothing else since
+  2026-09-15** (the owner: "I hate having the NUMBER show on top of the
+  skill. We dont need that. Lets do it like summoners war and only show
+  the damage when the character attacks"): the painted icon fills the
+  60-pt square with the caster's element as the light behind it, the
+  cooldown is a number over a veil, the target badge is drawn only when
+  the skill is not a plain single-enemy one, and the estimate and the
+  name are on the held card. `SkillArt` (Components.swift) maps every
+  skill in the game to one of TWENTY-SEVEN painted icons by what it does
+  — its named `vfx` first, then its effect (revive, heal, cleanse,
+  strip, shield, buff, a bar drag, a stun, a defence break, a burn, a
+  drain, a brand), then its shape (all enemies, three hits, a heavy
+  single blow, thrown or swung), then its element's mark — and
+  `SkillIcon` draws it for the battle squares and the unit sheet alike;
+  `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
+  through Meshy (6 credits each) and keys them off the black by a flood
+  fill from the cell's border. A painted icon per skill would be
+  thousands of images. The CI tour is thirty screens (steps 0–29): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,

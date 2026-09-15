@@ -2481,3 +2481,117 @@ scene graph from inside an action's block. Every cast prints a stamped
 `[Perf] cast …` line now, so a console that ends mid-fight names the cast
 it ended in, and the system log covers the whole tour rather than its
 last twelve minutes.
+
+## The light tamed and the skill squares repainted (2026-09-15, night)
+
+The owner, with four battle frames in front of him: "Lighting and contrast
+feels too bright doesnt it?" And, with a close-up of the three skill
+squares: "Also cann we get better skill artwork? AND I hate having the
+NUMBER show on top of the skill. We dont need that. Lets do it like
+summoners war and only show the damage when the character attacks."
+
+### How bright is too bright, in numbers
+
+`python3 tools/framelight.py` reads every battle frame off the CI branch
+and prints, per frame and per band (the painting's band, the middle where
+the enemies stand, the near floor), the mean luminance and the share of
+pixels at 240 or over — pixels with no detail left in them. The run before
+this pass:
+
+| frame | painting | middle | near floor |
+|---|---|---|---|
+| Duat (6-battle-a) | 68 / 0.2% | 88 / 0.5% | 87 / 0.0% |
+| arena (8-b) | 65 / 0.2% | 89 / 0.5% | 97 / 0.1% |
+| Olympus (29-a) | 131 / 2.6% | 173 / 17.5% | **178 / 25.2%** |
+| the fjord (29-c) | 108 / **16.5%** | 162 / 29.4% | 84 / 1.6% |
+| the Vault (18-c) | 95 / 3.1% | 107 / 8.8% | 79 / 4.6% |
+
+So it is not a global overexposure — Egypt and the arena are right, and
+a quarter of Olympus's floor is a sheet of white with no stone in it. The
+sets that blow are the PALE ones: white marble, ice, sunlit sandstone.
+Anything that lifts or lowers everything equally would fix Olympus by
+ruining the Duat.
+
+### The options
+
+1. **Turn the lights down globally.** One number, and it takes the Egypt
+   sets — which the owner has never complained about — down with it.
+   Rejected.
+2. **Tone-map the camera (`SCNCamera.whitePoint`).** With `wantsHDR` on,
+   SceneKit maps luminance through a curve whose shoulder sits at
+   `whitePoint`, and ours has been at the default 1.0 for the life of the
+   project: everything at or above 1.0 clips flat to white. At 1.85 the
+   curve keeps rolling past 1.0, so a lit marble floor keeps its grain and
+   only a real emissive reaches paper white. This is the shoulder every
+   film-grade renderer has and the reason the genre's sunlit sets still
+   read as stone.
+3. **Expose each set from its own painting.** `PaintingPalette` already
+   reduces the backdrop to 32 × 32 to colour the fog and the fill; the
+   same reduction gives its mean luminance, and a set whose painting is
+   pale is a set whose lights are about to double it. `exposureOffset`
+   now carries the grade's hand-picked number MINUS up to 0.55 stops for
+   a bright painting (nothing for a painting at or below mid grey). The
+   set is lit to match its painting rather than on top of it.
+4. **Trim the lights.** key 1,400 → 1,150, fill 500 → 400, ambient
+   300 → 240, the image-based light 1.6 → 1.15: about a fifth off, which
+   is the headroom the shoulder needs to work in.
+5. **Bloom off the floor.** 0.3 over 0.94 was tuned when nothing rolled
+   off; a clipped floor above the threshold is what SPREADS the white
+   over the figures. 0.22 over 0.975.
+6. **Polished stone is a mirror.** The marble floors went to roughness
+   0.52 in the dressing pass and threw the key back as one sheet; 0.62,
+   with the relief map doing the reading instead.
+
+Taken: 2 + 3 + 4 + 5 + 6. The target is every band under 2% clipped with
+its mean between 70 and 130, measured by `framelight.py` on the frames of
+the run that follows — a number, not an opinion.
+
+### The skill squares
+
+Summoners War's skill buttons carry ONE thing: a painted icon, in a
+metal frame, greyed with a number over it while it cools. No name, no
+damage. The damage is the floating number over the victim when the blow
+lands, which this game has had since the first build. Ours carried a
+painted-on estimate ("≈847"), the skill's name at 8 pt, a target glyph
+and the icon, all inside 60 points — four things where the genre has
+one, and the estimate was the one the owner named.
+
+So the estimate is gone from the square (it stays on the held card,
+where a player who wants it is asking for it), the name is gone, the
+target badge is drawn only when a skill is NOT a plain single-target one
+(so the common case is art), and the icon fills the square.
+
+**The artwork.** A painted icon per skill is impossible here: seventy-nine
+families × three skills × five elements is thousands of images. The
+genre's own answer is an icon per skill drawn once by an artist; ours is
+an icon per **what the skill does** — twenty-seven of them, painted, with
+the caster's element as the light behind. A skill resolves to one by:
+its named effect first (`VFXLibrary`'s own names — a keraunos is a bolt,
+a lioness's rake is three claws), then what it actually does in the
+engine (revive, heal, cleanse, strip, shield, a buff, an attack-bar drag,
+a stun, a defence break, a burn, a drain, a curse), then its shape (all
+enemies, three hits, a heavy single blow, a plain strike), and last its
+element's own impact. `SkillArt` in `Components.swift` holds the table;
+`tools/skill_icons.py` paints the three 3 × 3 sheets through
+`meshy.py picture` (6 credits a sheet while Gemini is paused), keys them
+off the black ground and ships them as `skill_<key>.png` at 256 px. A
+missing painting falls back to the same table's SF Symbol, so the button
+is right before the art lands and better after.
+
+**Painted (the same night), 24 credits.** Sheets 1 and 2 were right at
+the first take — a scimitar through its own arc, an axe's crescent, a
+spear through a cracked shield, arrows, claws, a hammer on flagstones, a
+force ring, a column of light, a starburst; then flame, ice, wind curls,
+a wave, a forked bolt, an eye in smoke, a burning tablet, a chained
+bomb, a red crescent drawing threads. Sheet 3 came back with a GOLD
+FRAME drawn round every icon and a brown ground inside it, which keys
+wrong and matches neither of the others, so the prompt learned to refuse
+frames, panels, tiles, plaques, ground and scenery by name and the
+re-roll (6 credits) put the nine shapers on the same black: a chalice, a
+burning feather over an open palm, a bronze aspis, a bell, a fist
+tearing a veil of light, a winged laurel, a sinking one, a cracked star
+in its rings, an hourglass in a curl of wind. Keyed off the background
+by a FLOOD FILL from each cell's border rather than by brightness, so a
+dark line inside an icon survives where the flipbooks' brightest-channel
+alpha would have eaten it. 1,891 → 1,867; the owner's floor for these
+tests is 1,500.

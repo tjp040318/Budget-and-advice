@@ -756,7 +756,9 @@ struct UnitDetailView: View {
                         skillTile(
                             unit.skills[slot],
                             selected: slot == index,
-                            level: unit.unit.skillLevels.indices.contains(slot) ? unit.unit.skillLevels[slot] : 1
+                            level: unit.unit.skillLevels.indices.contains(slot) ? unit.unit.skillLevels[slot] : 1,
+                            element: unit.element,
+                            ranged: !unit.blueprint.model.melee
                         )
                     }
                     .buttonStyle(PlateButtonStyle())
@@ -780,11 +782,11 @@ struct UnitDetailView: View {
         .panelBackground(radius: Theme.tightCorner)
     }
 
-    private func skillTile(_ skill: Skill, selected: Bool, level: Int) -> some View {
+    private func skillTile(_ skill: Skill, selected: Bool, level: Int,
+                           element: Element, ranged: Bool) -> some View {
         VStack(spacing: 2) {
-            Image(systemName: SkillButton.glyph(for: skill))
-                .font(.system(size: 15, weight: .bold))
-                .foregroundStyle(selected ? Theme.gold : Theme.textSecondary)
+            SkillIcon(skill: skill, element: element, ranged: ranged,
+                      size: 22, tint: selected ? Theme.gold : Theme.textSecondary, dimmed: !selected)
             Text(skill.name)
                 .font(Theme.body(9).weight(.semibold))
                 .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)

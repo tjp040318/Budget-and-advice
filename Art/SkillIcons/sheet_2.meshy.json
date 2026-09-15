@@ -1,0 +1,18 @@
+{
+  "id": "01a0a59a-78d1-77d6-8dad-1b3ab5537598",
+  "kind": "picture",
+  "created": "2026-09-15T15:05:59Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "A 3 by 3 grid of nine separate square video-game skill icons, painted in a rich ancient-Greek and Egyptian mythology style with bold readable silhouettes, warm rim light and painted highlights. The entire image background is solid pure black and there is black space between the nine icons. Each icon is centred in its own cell and touches nothing else. No text, no letters, no numbers, no captions, no frames, no borders, no grid lines, no drop shadows on the background. Top row, left to right: a coiling orange flame with a white-hot core and embers rising from it; a cluster of pale blue ice shards thrust upward with frost feathering from their base; three pale green crescent blades of wind curling around one another. Middle row, left to right: a curling crest of deep blue water with white spray along its lip; a jagged forked lightning bolt, white at its core with a violet edge; a curl of black smoke wrapping around one hollow violet eye. Bottom row, left to right: a glowing sigil burned into dark stone, its lines molten gold; a round iron sphere bound in chains with a short lit fuse sparking; a crescent of red light drawing thin threads of blood upward into itself. ",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1885,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789484759256,
+  "started_at": 1789484759258,
+  "polled": "2026-09-15T15:07:10Z",
+  "consumed_credits": 6,
+  "finished_at": 1789484829079
+}

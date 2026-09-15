@@ -107,7 +107,7 @@ struct BattleView: View {
             if showLog { logOverlay }
 
             if let heldSkill {
-                skillCard(heldSkill)
+                skillCard(heldSkill, actor: model.awaitingActor)
                     .transition(.opacity.combined(with: .scale(scale: 0.96)))
                     .onTapGesture { withAnimation { self.heldSkill = nil } }
                     .onAppear {
@@ -310,8 +310,8 @@ struct BattleView: View {
                     skill: option.skill,
                     cooldown: option.cooldown,
                     isSelected: model.selectedSkillSlot == option.slot,
-                    tint: actor.element.color,
-                    forecast: forecast(option.skill, actor: actor),
+                    element: actor.element,
+                    ranged: !actor.model.melee,
                     onHold: { withAnimation { heldSkill = option.skill } },
                     onPreview: { pressed in
                         previewSlot = pressed ? option.slot : nil
@@ -600,13 +600,23 @@ struct BattleView: View {
     }
 
     /// The card a held skill shows: name, cooldown, what it does.
-    private func skillCard(_ skill: Skill) -> some View {
+    private func skillCard(_ skill: Skill, actor: Combatant?) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
+                if let actor {
+                    SkillIcon(skill: skill, element: actor.element, ranged: !actor.model.melee, size: 26)
+                }
                 Text(skill.name)
                     .font(Theme.title(15))
                     .foregroundStyle(Theme.gold)
                 Spacer()
+                // What it would do to the unit aimed at — the estimate the
+                // squares used to print across their own art.
+                if let actor, let forecast = forecast(skill, actor: actor) {
+                    Text(forecast)
+                        .font(Theme.numeric(11).weight(.bold))
+                        .foregroundStyle(Theme.gold)
+                }
                 Text(skill.cooldown > 0 ? "Cooldown \(skill.cooldown) turns" : "No cooldown")
                     .font(Theme.numeric(10))
                     .foregroundStyle(Theme.textSecondary)
@@ -668,12 +678,12 @@ struct SkillButton: View {
     let skill: Skill
     let cooldown: Int
     let isSelected: Bool
-    /// The caster's element, the light behind the glyph.
-    var tint: Color = Theme.gold
-    /// One line saying what the skill will do — "≈1240 ×3", "HEAL",
-    /// "DEBUFF". Worked out by the view that knows the caster's stats and
-    /// what is aimed at, because the tile does not.
-    var forecast: String? = nil
+    /// The caster's element: the light behind the art, and which mark a
+    /// plain elemental throw draws.
+    var element: Element = .radiance
+    /// A caster or an archer strikes from where it stands, and its skills
+    /// read as thrown rather than swung.
+    var ranged: Bool = false
     /// Held down: show what the skill does.
     var onHold: (() -> Void)? = nil
     /// True the moment a finger lands on the tile, false when it lifts.
@@ -685,6 +695,7 @@ struct SkillButton: View {
     @State private var wasHeld = false
 
     private var isReady: Bool { cooldown <= 0 }
+    private var tint: Color { element.color }
     private static let corner: CGFloat = 10
 
     var body: some View {
@@ -692,28 +703,18 @@ struct SkillButton: View {
             if wasHeld { wasHeld = false; return }
             if isReady { action() }
         } label: {
+            // The genre's square: the art, and nothing else. The estimate
+            // that used to be printed across the bottom ("≈847") is on the
+            // held card now, and the damage a skill really does is the
+            // number that flies off the victim when the blow lands — the
+            // owner: "I hate having the NUMBER show on top of the skill …
+            // only show the damage when the character attacks."
             ZStack {
                 RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
-                    .fill(LinearGradient(colors: [Color(hex: "#3B2F22"), Color(hex: "#1A1410")], startPoint: .top, endPoint: .bottom))
-                RadialGradient(colors: [tint.opacity(isReady ? 0.8 : 0.25), .clear], center: .center, startRadius: 2, endRadius: 34)
-                VStack(spacing: 2) {
-                    Image(systemName: glyph)
-                        .font(.system(size: 22, weight: .bold))
-                        .foregroundStyle(isReady ? Color.white : Theme.textSecondary)
-                        .shadow(color: tint.opacity(isReady ? 0.9 : 0), radius: 6)
-                    Text(skill.name)
-                        .font(Theme.body(8).weight(.bold))
-                        .foregroundStyle(Color.white.opacity(isReady ? 0.92 : 0.5))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .padding(.horizontal, 3)
-                }
-                .padding(.bottom, forecast == nil ? 0 : 6)
-                if let forecast {
-                    OutlinedText(text: forecast, font: Theme.numeric(9).weight(.black), width: 0.8)
-                        .frame(maxHeight: .infinity, alignment: .bottom)
-                        .padding(.bottom, 2)
-                }
+                    .fill(LinearGradient(colors: [Color(hex: "#3B2F22"), Color(hex: "#160F09")], startPoint: .top, endPoint: .bottom))
+                RadialGradient(colors: [tint.opacity(isReady ? 0.55 : 0.18), .clear], center: .center, startRadius: 2, endRadius: 38)
+                SkillIcon(skill: skill, element: element, ranged: ranged, size: 50, tint: .white, dimmed: !isReady)
+                    .shadow(color: tint.opacity(isReady ? 0.8 : 0), radius: 7)
                 if !isReady {
                     RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
                         .fill(Color.black.opacity(0.55))
@@ -721,15 +722,19 @@ struct SkillButton: View {
                 }
             }
             .frame(width: 60, height: 60)
+            .clipShape(RoundedRectangle(cornerRadius: Self.corner, style: .continuous))
             .overlay(alignment: .topTrailing) {
-                // Who it lands on, as a glyph in the corner: one figure,
-                // three figures, a heart.
-                Image(systemName: Self.targetGlyph(for: skill))
-                    .font(.system(size: 7, weight: .black))
-                    .foregroundStyle(Theme.ink)
-                    .padding(2.5)
-                    .background(Circle().fill(Theme.plate.opacity(0.95)))
-                    .offset(x: 3, y: -3)
+                // Who it lands on — but only when that is worth saying. A
+                // plain single-enemy skill is the common case and wears
+                // nothing, so the art is what the eye meets.
+                if let badge = Self.targetGlyph(for: skill) {
+                    Image(systemName: badge)
+                        .font(.system(size: 7, weight: .black))
+                        .foregroundStyle(Theme.ink)
+                        .padding(2.5)
+                        .background(Circle().fill(Theme.plate.opacity(0.95)))
+                        .offset(x: 3, y: -3)
+                }
             }
             .overlay(
                 RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
@@ -770,24 +775,9 @@ struct SkillButton: View {
         }
     }
 
-    private var glyph: String { Self.glyph(for: skill) }
-
-    /// A glyph per skill shape, so the bar is readable without art. The
-    /// unit sheet's skill tiles use the same one.
-    static func glyph(for skill: Skill) -> String {
-        if skill.utilities.contains(where: {
-            if case .healTargetMaxHealth = $0 { return true }
-            if case .healFromAttack = $0 { return true }
-            return false
-        }) { return "cross.case.fill" }
-        if skill.cooldown >= 4 { return "burst.fill" }
-        if skill.statuses.contains(where: { $0.kind.isHardCC }) { return "bolt.slash.fill" }
-        if (skill.damage?.hits ?? 1) > 1 { return "square.stack.3d.down.right.fill" }
-        return skill.cooldown > 0 ? "flame.fill" : "figure.fencing"
-    }
-
-    /// A glyph per target shape: how many, and which side.
-    static func targetGlyph(for skill: Skill) -> String {
+    /// A glyph per target shape: how many, and which side. Nil for the one
+    /// enemy in front of you, which needs no telling.
+    static func targetGlyph(for skill: Skill) -> String? {
         switch skill.target {
         case .allEnemies: return "person.3.fill"
         case .randomEnemies: return "die.face.5.fill"
@@ -795,7 +785,7 @@ struct SkillButton: View {
         case .singleAlly, .lowestHealthAlly: return "heart.fill"
         case .deadAlly: return "arrow.uturn.up.circle.fill"
         case .caster: return "person.crop.circle.fill"
-        default: return "person.fill"
+        default: return nil
         }
     }
 }

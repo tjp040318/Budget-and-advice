@@ -422,6 +422,179 @@ struct ItemIcon: View {
     }
 }
 
+// MARK: - Skills
+
+/// The icon a skill draws, keyed on WHAT THE SKILL DOES.
+///
+/// The owner, with our three skill squares in front of him (2026-09-15):
+/// "cann we get better skill artwork? AND I hate having the NUMBER show on
+/// top of the skill. We dont need that. Lets do it like summoners war and
+/// only show the damage when the character attacks."
+///
+/// A painted icon per skill is out of reach here — seventy-nine families,
+/// three skills each, five elements apiece is thousands of paintings. The
+/// genre pays an artist per skill; this pays for TWENTY-SEVEN, one per
+/// thing a skill can be, and lets the caster's element be the light behind
+/// the art. A skill finds its own by, in order: its named effect
+/// (`VFXLibrary` already knows a keraunos from a lioness's rake), then what
+/// it actually does to the field (revive, heal, cleanse, strip, shield, a
+/// buff, an attack-bar drag, a stun, a defence break, a burn, a drain, a
+/// brand), then its shape (every enemy, three hits, a heavy single blow, a
+/// plain strike, and whether the caster throws or swings), and last its
+/// element's own mark.
+///
+/// The paintings are `Portraits/skill_<key>.png`, three 3 x 3 sheets on
+/// black painted by `tools/skill_icons.py` and keyed off the ground; until
+/// one lands the same key names an SF Symbol, so every button is right
+/// before the art and better after.
+enum SkillArt {
+    static func imageName(_ key: String) -> String { "skill_\(key)" }
+    static func hasPainting(_ key: String) -> Bool { !key.isEmpty && BundleArt.exists(imageName(key)) }
+
+    /// The effects with a look of their own: a named `Skill.vfx` names its
+    /// icon outright. The generic `impact_<element>` ones are NOT here —
+    /// they are the last resort, after the skill's shape.
+    private static let namedEffects: [String: String] = [
+        "thunderbolt": "bolt", "thunderclap": "bolt", "keraunos": "bolt",
+        "olympian_decree": "brand", "maat_shield": "shield",
+        "lioness_rake": "multi", "eye_of_ra": "beam", "wrath_of_the_eye": "nova",
+        "blood_thirst": "drain", "blood_slash": "cleave",
+        "scale_strike": "strike", "heart_weigh": "crit", "duat_rite": "shadow",
+        "shockwave": "slam", "slash": "strike", "crit": "crit",
+        "heal": "heal", "buff": "buff", "debuff": "debuff",
+    ]
+
+    /// The element's own mark, for a caster's plain throw and for anything
+    /// that does nothing the table above can read.
+    static func elementMark(_ element: Element) -> String {
+        switch element {
+        case .ember: return "burn"
+        case .tide: return "surge"
+        case .gale: return "gale"
+        case .radiance: return "beam"
+        case .umbra: return "shadow"
+        }
+    }
+
+    static func key(for skill: Skill, element: Element, ranged: Bool = false) -> String {
+        if let named = namedEffects[skill.vfx] { return named }
+
+        // What it does to the field, in the order a player reads it.
+        func has(_ test: (UtilityEffect) -> Bool) -> Bool { skill.utilities.contains(where: test) }
+        if has({ if case .revive = $0 { return true }; return false }) { return "revive" }
+        if has({ if case .cleanse = $0 { return true }; return false }) { return "cleanse" }
+        if has({ if case .strip = $0 { return true }; return false }) { return "strip" }
+        if has({ if case .lifesteal = $0 { return true }; return false }) { return "drain" }
+        if has({
+            if case .healFromAttack = $0 { return true }
+            if case .healTargetMaxHealth = $0 { return true }
+            return false
+        }) { return skill.damage == nil ? "heal" : "drain" }
+        if has({ if case .attackBarChange = $0 { return true }; return false }) { return "tempo" }
+        if has({
+            if case .extraTurn = $0 { return true }
+            if case .resetOwnCooldowns = $0 { return true }
+            return false
+        }) { return "gale" }
+
+        let kinds = skill.statuses.map(\.kind)
+        if kinds.contains(where: { $0 == .shield || $0 == .invincible || $0 == .endure }) { return "shield" }
+        if kinds.contains(.freeze) { return "freeze" }
+        if kinds.contains(where: { $0 == .stun || $0 == .sleep }) { return "stun" }
+        if kinds.contains(.burn) { return "burn" }
+        if kinds.contains(.bomb) { return "bomb" }
+        if kinds.contains(.defenseDown) { return "pierce" }
+        if kinds.contains(where: { $0 == .brand || $0 == .unrecoverable || $0 == .silence }) { return "brand" }
+        // A damaging skill with a rider reads better as the blow it is; a
+        // skill that is ONLY the rider reads as the rider.
+        if skill.damage == nil, kinds.contains(where: { $0.isBuff }) { return "buff" }
+        if skill.damage == nil, !kinds.isEmpty { return "debuff" }
+
+        if let damage = skill.damage {
+            switch skill.target {
+            case .allEnemies: return "nova"
+            case .randomEnemies: return ranged ? "volley" : "nova"
+            default: break
+            }
+            if damage.hits >= 3 { return ranged ? "volley" : "multi" }
+            if damage.alwaysCrits || skill.cooldown >= 4 { return ranged ? "beam" : "crit" }
+            if damage.hits == 2 { return "cleave" }
+            if ranged { return skill.cooldown >= 2 ? "beam" : elementMark(element) }
+            return skill.cooldown >= 2 ? "slam" : "strike"
+        }
+        return elementMark(element)
+    }
+
+    /// The same twenty-seven as SF Symbols, for a key whose painting has not
+    /// shipped and for the lists that want a mark rather than a picture.
+    static func glyph(_ key: String) -> String {
+        switch key {
+        case "cleave": return "burst.fill"
+        case "pierce": return "arrowtriangle.right.fill"
+        case "volley": return "arrow.up.right"
+        case "multi": return "square.stack.3d.down.right.fill"
+        case "slam": return "hammer.fill"
+        case "nova": return "circle.hexagongrid.fill"
+        case "beam": return "sun.max.fill"
+        case "crit": return "sparkles"
+        case "burn": return "flame.fill"
+        case "freeze": return "snowflake"
+        case "gale": return "wind"
+        case "surge": return "drop.fill"
+        case "bolt": return "bolt.fill"
+        case "shadow": return "moon.fill"
+        case "brand": return "eye.fill"
+        case "bomb": return "exclamationmark.triangle.fill"
+        case "drain": return "drop.triangle.fill"
+        case "heal": return "cross.case.fill"
+        case "revive": return "arrow.uturn.up.circle.fill"
+        case "shield": return "shield.fill"
+        case "cleanse": return "sparkle"
+        case "strip": return "hand.raised.fill"
+        case "buff": return "arrow.up.circle.fill"
+        case "debuff": return "arrow.down.circle.fill"
+        case "stun": return "bolt.slash.fill"
+        case "tempo": return "hourglass"
+        default: return "figure.fencing"
+        }
+    }
+
+    /// Every key, so `tools/skill_icons.py` and the checker can see the set.
+    static let allKeys = [
+        "strike", "cleave", "pierce", "volley", "multi", "slam", "nova", "beam", "crit",
+        "burn", "freeze", "gale", "surge", "bolt", "shadow", "brand", "bomb", "drain",
+        "heal", "revive", "shield", "cleanse", "strip", "buff", "debuff", "stun", "tempo",
+    ]
+}
+
+/// A skill as its picture: the painting when it has shipped, its glyph
+/// until then. The battle's squares and the unit sheet's tiles draw the
+/// same one, so a skill looks the same wherever it is met.
+struct SkillIcon: View {
+    let skill: Skill
+    var element: Element = .light
+    var ranged: Bool = false
+    var size: CGFloat = 34
+    var tint: Color? = nil
+    var dimmed: Bool = false
+
+    var body: some View {
+        let key = SkillArt.key(for: skill, element: element, ranged: ranged)
+        if SkillArt.hasPainting(key) {
+            BundleImage(name: SkillArt.imageName(key), renderedAt: size)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: size, height: size)
+                .saturation(dimmed ? 0.2 : 1)
+                .opacity(dimmed ? 0.55 : 1)
+        } else {
+            Image(systemName: SkillArt.glyph(key))
+                .font(.system(size: size * 0.58, weight: .bold))
+                .foregroundStyle(dimmed ? Theme.textSecondary : (tint ?? .white))
+                .frame(width: size, height: size)
+        }
+    }
+}
+
 /// One reward, the genre's way: a socket with the item painted large in it,
 /// its count printed bold on the socket's corner, its stars under it when it
 /// has a grade, and its name in small type below. A relic is its own stone.

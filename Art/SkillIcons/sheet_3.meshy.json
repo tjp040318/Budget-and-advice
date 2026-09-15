@@ -1,0 +1,18 @@
+{
+  "id": "01a0a59c-e8e6-7424-9a60-7042ec306522",
+  "kind": "picture",
+  "created": "2026-09-15T15:08:38Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "A 3 by 3 grid of nine separate square video-game skill icons, painted in a rich ancient-Greek and Egyptian mythology style with bold readable silhouettes, warm rim light and painted highlights. The entire image background is solid pure black, edge to edge, and every icon floats directly on that same black with black space around it. Each icon is a single object painted against black and touches nothing else. No frames, no borders, no square panels, no tiles, no plaques, no cards, no gold edging around the icons, no grid lines, no ground or floor under the objects, no background scenery, no drop shadows. No text, no letters, no numbers, no runes, no captions, no signature. Top row, left to right: a golden chalice overflowing with soft green light; a single burning feather falling onto an open upturned palm; a round bronze shield seen face on with a glowing rim. Middle row, left to right: a small bronze bell ringing, clean white light washing down from it; a hand tearing a glowing veil away, the veil ripping into light; a laurel wreath rising on a pair of small white wings. Bottom row, left to right: a cracked laurel wreath sinking with its leaves falling and a dark downward arrow; a cracked white star with three small rings spiralling around it; an hourglass wrapped in a curl of wind, its sand streaming sideways. ",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1873,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789484919027,
+  "started_at": 1789484919030,
+  "polled": "2026-09-15T15:09:09Z",
+  "consumed_credits": 6,
+  "finished_at": 1789484942165
+}

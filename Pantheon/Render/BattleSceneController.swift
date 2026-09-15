@@ -186,7 +186,7 @@ final class BattleSceneController: NSObject {
         if let iblURL = Bundle.main.url(forResource: environment.environmentMap, withExtension: "hdr")
             ?? Bundle.main.url(forResource: environment.environmentMap, withExtension: "exr") {
             scene.lightingEnvironment.contents = iblURL
-            scene.lightingEnvironment.intensity = 1.6
+            scene.lightingEnvironment.intensity = 1.15
         } else {
             // A flat colour as the lighting environment lights every surface
             // uniformly in that colour, which is what washed the whole stage
@@ -242,7 +242,7 @@ final class BattleSceneController: NSObject {
         // Jötunheim on the first run of frames. The genre keeps its
         // monsters their own colours inside a tinted world.
         key.color = (UIColor(hex: environment.keyLightHex) ?? .white).mixed(with: .white, amount: 0.45)
-        key.intensity = 1_400
+        key.intensity = 1_150
         key.castsShadow = true
         key.shadowMode = .deferred
         key.shadowRadius = 6
@@ -265,7 +265,7 @@ final class BattleSceneController: NSObject {
         let fill = SCNLight()
         fill.type = .directional
         fill.color = palette.sky.mixed(with: .white, amount: 0.55)
-        fill.intensity = 500
+        fill.intensity = 400
         let fillNode = SCNNode()
         fillNode.light = fill
         fillNode.position = SCNVector3(7, 5, -5)
@@ -279,7 +279,7 @@ final class BattleSceneController: NSObject {
         ambient.type = .ambient
         let hand = UIColor(hex: environment.fogHex) ?? .darkGray
         ambient.color = palette.horizon.mixed(with: hand, amount: 0.35).mixed(with: .white, amount: 0.5)
-        ambient.intensity = 300
+        ambient.intensity = 240
         let ambientNode = SCNNode()
         ambientNode.light = ambient
         scene.rootNode.addChildNode(ambientNode)
@@ -302,10 +302,22 @@ final class BattleSceneController: NSObject {
         camera.zFar = 120
         camera.wantsHDR = true
         camera.wantsExposureAdaptation = false
+        // THE SHOULDER (2026-09-15). `whitePoint` is where the tone curve
+        // stops climbing, and it sat at SceneKit's default 1.0 for the life
+        // of the project: every surface at or over 1.0 clipped flat to
+        // paper. `tools/framelight.py` measured a quarter of Olympus's near
+        // floor and a sixth of the fjord's sky with no detail left in them
+        // while the Duat sat at 0.2%; the owner: "Lighting and contrast
+        // feels too bright doesnt it?" At 1.85 the curve keeps rolling past
+        // 1.0, so lit marble keeps its grain and only a real emissive
+        // reaches white.
+        camera.whitePoint = 1.85
         // Bloom only on real highlights: at 0.55 over 0.85 a sunlit sandstone
-        // floor became a sheet of light and a boss's glow a wall of yellow.
-        camera.bloomIntensity = 0.3
-        camera.bloomThreshold = 0.94
+        // floor became a sheet of light and a boss's glow a wall of yellow,
+        // and 0.3 over 0.94 still spread a clipped floor over the figures
+        // standing on it.
+        camera.bloomIntensity = 0.22
+        camera.bloomThreshold = 0.975
         camera.bloomBlurRadius = 10
         camera.colorFringeStrength = 0.35
         // One grade per place (2026-09-15): the genre's sets are each one
@@ -313,7 +325,11 @@ final class BattleSceneController: NSObject {
         let grade = StageBuilder.grade(for: environment)
         camera.saturation = grade.saturation
         camera.contrast = grade.contrast
-        camera.exposureOffset = grade.exposure
+        // The grade's hand-picked exposure, plus what the painting itself
+        // asks for: a pale painting is pulled down up to half a stop, a
+        // night lifted a quarter (`PaintingPalette.exposureCompensation`),
+        // so each set is lit to MATCH its backdrop rather than on top of it.
+        camera.exposureOffset = grade.exposure + palette.exposureCompensation
         camera.vignettingIntensity = grade.vignette
         camera.vignettingPower = 1.2
         camera.screenSpaceAmbientOcclusionIntensity = 0.6
