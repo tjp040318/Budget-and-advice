@@ -30,6 +30,8 @@ struct Combatant: Identifiable, Sendable {
     let isLeader: Bool
     /// Awakened units show their awakened card and form on the stage.
     let isAwakened: Bool
+    /// The unit's level, for the badge on its plate.
+    let level: Int
 
     /// Stats after levels, relics, set bonuses and leader skill — but before
     /// any in-battle status.
@@ -75,6 +77,7 @@ struct Combatant: Identifiable, Sendable {
         self.model = resolved.blueprint.model
         self.isLeader = isLeader
         self.isAwakened = resolved.unit.isAwakened
+        self.level = resolved.unit.level
         let stats = (statsOverride ?? resolved.stats).clamped()
         self.baseStats = stats
         self.skills = resolved.skills

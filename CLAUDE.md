@@ -149,11 +149,21 @@ environment can and cannot do. The short version:
   on the marks in front, closing over the boss's slot (`markIndex`).
   Nothing tall stands nearer the camera than the team's row (z > 4): that
   is the foreground.
-  On a player's turn every enemy wears a matchup arrow beside its bar
-  (`UnitNode.setMatchup`: green up, yellow even, red down). The battle HUD is one
-  top row and an open-middled bottom bar whose actor plate is one 54-pt
-  translucent row (it was 129 pt and solid), the summon reveal is stage
-  left and words right, and the island painting is 16:9.
+  On a player's turn every enemy wears a matchup arrow over its plate
+  (`UnitNode.setMatchup`: green up, yellow even, red down). **The cameras
+  are the genre's since 2026-09-15** (the owner's Summoners War frames,
+  measured): home `homeYaw` −32°, `homePitch` 36°, `nearFeetLine` 0.82 —
+  HIGH, so the floor reads, and turned so the two rows lie on a diagonal,
+  the team across the lower left, the enemies across the upper right;
+  the boss `bossYaw` −8°, `bossPitch` 8°, `bossFeetLine` 0.94,
+  `bossTopLine` 0.98 — LOW and close, the boss ON the rim
+  (`bossMark` z −8.4, `bossSink` 0.32) filling the upper half of the frame
+  with its head at the top edge, the team large at the bottom, and a warm
+  spot light riding with every boss aimed at its chest ("it's hard to
+  see the boss"). The numbers before them (−15°/26°, −12°/20°, the boss
+  at −9.8 sunk 42%) are the paragraph above and the git history. The
+  summon reveal is stage left and words right, and the island painting
+  is 16:9.
 - Battle, summon, collection, arena, campaign and the Hall of Ka (training:
   power-up, skill-ups from duplicates, evolution, awakening) all work. So do
   the **Labyrinth** (a building on the island, `LabyrinthView`: three
@@ -772,20 +782,35 @@ environment can and cannot do. The short version:
   the victory's chest in three frames, the collection's Stage layout
   (21), the relic drop card (22), the relic filter sheet (23) and the
   loading screen (24), the relic set reference (25), a tribute chest's card (26), a stage's popup over the chapter map (27) and every chapter's painted map (28, twelve frames a–l).
-- **The fight reads.** **Every unit's bars are a screen-space plate under
-  its feet (2026-09-11, night):** `UnitPlateOverlay`, a SpriteKit scene laid
-  over the `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one
+- **The fight reads.** **Every unit's bars are a screen-space plate OVER
+  ITS HEAD (2026-09-15; under the feet from 2026-09-11 until the owner,
+  with Summoners War's frame beside ours: "The health bars are not above
+  the heads"):** `UnitPlateOverlay`, a SpriteKit scene laid over the
+  `SCNView` (`overlaySKScene`, in `BattleSceneView.swift`), one
   `UnitPlate` per non-boss unit, placed every frame by
-  `BattleSceneController.layoutPlates` from `projectPoint` of the node's
-  feet (view points, origin top; the overlay's origin is bottom, so y is
-  flipped by the scene height). The plate is the genre's: a 64×5.5 pt green
-  health bar (dark rounded track, gradient fill, amber under 30%, a cream
-  trail that drains 0.35 s after a hit), the 64×2.5 pt light-blue
-  **attack bar** under it (tweened to the engine's value when playback
-  settles — `syncPlates` — and on `attackBarChanged`; gold and pulsing at
-  100%), the element pip at the left, the status tiles above, the matchup
-  arrow at the right, a gold rim on the acting unit. Green for both sides,
-  as the genre has it. The 3D bar in `UnitNode` still exists for the
+  `BattleSceneController.layoutPlates` from `projectPoint` of the top of
+  the figure (`spec.height` over the node's feet; view points, origin
+  top; the overlay's origin is bottom, so y is flipped by the scene
+  height), the track's bottom 12 pt above it. The plate is the genre's:
+  ONE dark track (66 × 14.5) holding the 6.5-pt green health bar
+  (gradient fill, amber under 30%, a cream trail that drains 0.35 s after
+  a hit) and the 3-pt light-blue **attack bar** under it (tweened to the
+  engine's value when playback settles — `syncPlates` — and on
+  `attackBarChanged`; gold and pulsing at 100%), the **level badge** on
+  the track's left end (a dark disc ringed in the element's colour with
+  `Combatant.level` in it, `PlateArt.levelBadge`), the status tiles on
+  the track, the matchup arrow above them, a gold rim on the acting
+  unit. Green for both sides, as the genre has it. **The HUD is the
+  genre's (2026-09-15):** the boss bar the full width of the very top
+  (gold health over blue attack in one track), the stage and the wave
+  small at the top left, three 36-pt controls at the bottom left (gear →
+  log or forfeit, ×N, play/pause), the three 60-pt skill squares at the
+  bottom right (`SkillButton`: a dark socket lit in the caster's element,
+  a gold frame, the estimate on the bottom edge, a veil with the turns
+  left) with nothing behind them. The actor plate, the team column, the
+  combat feed, the turn gauge and the target strip were deleted — the
+  owner: "the UI of the skills and the descriptions like the bottom left
+  UI and more I just don't like." The 3D bar in `UnitNode` still exists for the
   island and the Hall of Ka and is hidden the moment a plate is attached;
   before this it hung 0.34 m over the head, lit and bloomed, and from the
   camera behind the team a player's bar landed on the floor at the

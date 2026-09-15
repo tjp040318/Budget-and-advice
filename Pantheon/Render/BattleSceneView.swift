@@ -161,25 +161,32 @@ final class UnitPlateOverlay: SKScene {
     }
 }
 
-/// One fighter's bars, the genre's way: a slim green health bar under the
-/// feet with a dark rounded track, a gradient fill and a cream trail that
-/// lingers a beat after a hit, the thinner light-blue attack bar under it
-/// that fills toward the unit's turn and turns gold when it is ready, the
-/// element pip at the left end, the status tiles above, the matchup arrow at
-/// the right, and a gold rim while the unit is acting. Every size here is in
-/// points and the same in both rows, which is what makes health comparable
-/// across the field and the bars as crisp as the HUD.
+/// One fighter's bars, the genre's way — and OVER THE HEAD, where the genre
+/// keeps them (2026-09-15; the owner, with Summoners War's frame beside
+/// ours: "The health bars are not above the heads"). One dark rounded
+/// track holding a green health bar with a gradient fill and a cream trail
+/// that lingers a beat after a hit, and the thinner light-blue attack bar
+/// under it that fills toward the unit's turn and turns gold when it is
+/// ready; the LEVEL BADGE on the track's left end, a dark disc ringed in
+/// the element's colour with the number in it, the genre's mark; the
+/// status tiles above the track; the matchup arrow above those; and a gold
+/// rim while the unit acts. Every size here is in points and the same in
+/// both rows, which is what makes health comparable across the field and
+/// the bars as crisp as the HUD.
 final class UnitPlate: SKNode {
 
-    /// 64 × 5.5 and 64 × 2.5 since the owner saw the first run: "I love it,
-    /// but can we make the health bars a little thinner? They are TOO big."
-    /// (They were 76 × 8 and 76 × 3.5.)
-    static let barWidth: CGFloat = 64
-    static let hpHeight: CGFloat = 5.5
-    static let atbHeight: CGFloat = 2.5
-    /// The health bar's centre sits this far under the projected feet.
-    static let dropBelowFeet: CGFloat = 9
-    static let tile: CGFloat = 11
+    static let barWidth: CGFloat = 66
+    static let hpHeight: CGFloat = 6.5
+    static let atbHeight: CGFloat = 3
+    /// The gap between the two bars, and the track's padding round them.
+    static let barGap: CGFloat = 1.5
+    static let trackPad: CGFloat = 1.75
+    static var trackHeight: CGFloat { hpHeight + barGap + atbHeight + 2 * trackPad }
+    /// The track's bottom edge stands this far above the projected top of
+    /// the head.
+    static let riseAboveHead: CGFloat = 12
+    static let tile: CGFloat = 12
+    static let badgeSize: CGFloat = 19
 
     private let hpFill: SKSpriteNode
     private let hpMask: SKSpriteNode
@@ -188,6 +195,8 @@ final class UnitPlate: SKNode {
     private let atbMask: SKSpriteNode
     private let statusRow = SKNode()
     private let badge: SKSpriteNode
+    private let levelBadge: SKSpriteNode
+    private let elementHex: String
     private let rim: SKSpriteNode
     private let fullTexture: SKTexture
     private let lowTexture: SKTexture
@@ -201,6 +210,7 @@ final class UnitPlate: SKNode {
         let w = UnitPlate.barWidth
         let h = UnitPlate.hpHeight
         let a = UnitPlate.atbHeight
+        self.elementHex = elementHex
         let full = PlateArt.fill("hp", width: w, height: h, radius: 2, top: "#9CF2B0", bottom: "#3DB868")
         let low = PlateArt.fill("hp_low", width: w, height: h, radius: 2, top: "#FFD27A", bottom: "#E0762E")
         let trail = PlateArt.fill("hp_trail", width: w, height: h, radius: 2, top: "#FFF6E6", bottom: "#E8CBA8")
@@ -217,10 +227,12 @@ final class UnitPlate: SKNode {
         trailFillNode.size = CGSize(width: w, height: h)
         let atbFillNode = SKSpriteNode(texture: atb)
         atbFillNode.size = CGSize(width: w, height: a)
-        let badgeNode = SKSpriteNode(color: .clear, size: CGSize(width: 12, height: 12))
+        let badgeNode = SKSpriteNode(color: .clear, size: CGSize(width: 18, height: 18))
         badgeNode.isHidden = true
-        let rimNode = SKSpriteNode(texture: PlateArt.rim("rim_acting", width: w + 10, height: h + a + 10, radius: 5, hex: "#F2C75C"))
-        rimNode.size = CGSize(width: w + 10, height: h + a + 10)
+        let levelNode = SKSpriteNode(color: .clear, size: CGSize(width: UnitPlate.badgeSize, height: UnitPlate.badgeSize))
+        let track = UnitPlate.trackHeight
+        let rimNode = SKSpriteNode(texture: PlateArt.rim("rim_acting", width: w + 12, height: track + 8, radius: 7, hex: "#F2C75C"))
+        rimNode.size = CGSize(width: w + 12, height: track + 8)
         rimNode.isHidden = true
 
         hpFill = hpFillNode
@@ -229,19 +241,22 @@ final class UnitPlate: SKNode {
         atbFill = atbFillNode
         atbMask = UnitPlate.mask(width: w, height: a)
         badge = badgeNode
+        levelBadge = levelNode
         rim = rimNode
         super.init()
 
-        let hpY: CGFloat = 0
-        let atbY: CGFloat = -(h / 2 + 1.5 + a / 2)
+        // One track for both bars, its centre on the node's origin: the
+        // health bar in the upper part, the attack bar under it.
+        let hpY: CGFloat = (a + UnitPlate.barGap) / 2
+        let atbY: CGFloat = -(h + UnitPlate.barGap) / 2
 
-        rim.position = CGPoint(x: 0, y: (hpY + atbY) / 2)
+        rim.position = .zero
         rim.zPosition = 0
         addChild(rim)
 
-        let hpTrack = SKSpriteNode(texture: PlateArt.track("hp_track", width: w + 2, height: h + 2, radius: 3))
-        hpTrack.size = CGSize(width: w + 2, height: h + 2)
-        hpTrack.position = CGPoint(x: 0, y: hpY)
+        let hpTrack = SKSpriteNode(texture: PlateArt.track("plate_track", width: w + 2 * UnitPlate.trackPad + 2, height: track, radius: 4))
+        hpTrack.size = CGSize(width: w + 2 * UnitPlate.trackPad + 2, height: track)
+        hpTrack.position = .zero
         hpTrack.zPosition = 1
         addChild(hpTrack)
 
@@ -259,12 +274,6 @@ final class UnitPlate: SKNode {
         hpCrop.zPosition = 3
         addChild(hpCrop)
 
-        let atbTrack = SKSpriteNode(texture: PlateArt.track("atb_track", width: w + 2, height: a + 2, radius: 2))
-        atbTrack.size = CGSize(width: w + 2, height: a + 2)
-        atbTrack.position = CGPoint(x: 0, y: atbY)
-        atbTrack.zPosition = 1
-        addChild(atbTrack)
-
         let atbCrop = SKCropNode()
         atbCrop.maskNode = atbMask
         atbCrop.addChild(atbFill)
@@ -272,19 +281,29 @@ final class UnitPlate: SKNode {
         atbCrop.zPosition = 3
         addChild(atbCrop)
 
-        let pip = SKSpriteNode(texture: PlateArt.pip(elementHex))
-        pip.size = CGSize(width: 8, height: 8)
-        pip.position = CGPoint(x: -w / 2 - 7, y: hpY)
-        pip.zPosition = 4
-        addChild(pip)
+        // The level badge overlaps the track's left end, the genre's way.
+        levelBadge.position = CGPoint(x: -w / 2 - UnitPlate.trackPad - 3, y: 0)
+        levelBadge.zPosition = 5
+        addChild(levelBadge)
+        applyLevel(1)
 
-        statusRow.position = CGPoint(x: 0, y: hpY + h / 2 + 1.5 + UnitPlate.tile / 2)
+        // The status tiles stand on the track; the matchup arrow above them.
+        statusRow.position = CGPoint(x: 0, y: track / 2 + 1.5 + UnitPlate.tile / 2)
         statusRow.zPosition = 4
         addChild(statusRow)
 
-        badge.position = CGPoint(x: w / 2 + 9, y: hpY)
+        badge.position = CGPoint(x: 0, y: track / 2 + 1.5 + UnitPlate.tile + 3 + 9)
         badge.zPosition = 4
         addChild(badge)
+    }
+
+    /// The number in the badge: the unit's level.
+    func setLevel(_ level: Int) {
+        later { [self] in applyLevel(level) }
+    }
+
+    private func applyLevel(_ level: Int) {
+        levelBadge.texture = PlateArt.levelBadge(level: level, hex: elementHex)
     }
 
     required init?(coder: NSCoder) { fatalError("UnitPlate is created in code") }
@@ -430,6 +449,7 @@ final class UnitPlate: SKNode {
             return
         }
         badge.texture = SKTexture(image: image)
+        badge.size = CGSize(width: 18, height: 18)
         badge.isHidden = false
     }
 
@@ -530,6 +550,38 @@ enum PlateArt {
             context.strokePath()
             context.setFillColor(UIColor.white.withAlphaComponent(0.55).cgColor)
             context.fillEllipse(in: CGRect(x: circle.minX + 2, y: circle.minY + 1.5, width: 2.6, height: 1.8))
+        }
+    }
+
+    /// The level badge on the track's left end: a dark disc, a ring in the
+    /// element's colour, the level in white with a dark edge.
+    static func levelBadge(level: Int, hex: String) -> SKTexture {
+        let size = UnitPlate.badgeSize
+        return texture("level_\(level)_\(hex)", size: CGSize(width: size, height: size)) { context, rect in
+            let disc = rect.insetBy(dx: 1.2, dy: 1.2)
+            let path = UIBezierPath(ovalIn: disc).cgPath
+            paintGradient(context, in: disc, path: path, top: color("#3A2F24"), bottom: color("#130E0A"))
+            context.addPath(UIBezierPath(ovalIn: rect.insetBy(dx: 0.6, dy: 0.6)).cgPath)
+            context.setStrokeColor(UIColor.black.withAlphaComponent(0.7).cgColor)
+            context.setLineWidth(1)
+            context.strokePath()
+            context.addPath(UIBezierPath(ovalIn: rect.insetBy(dx: 1.6, dy: 1.6)).cgPath)
+            context.setStrokeColor(color(hex).cgColor)
+            context.setLineWidth(1.7)
+            context.strokePath()
+            let text = "\(level)" as NSString
+            let font = UIFont.systemFont(ofSize: level >= 100 ? 7.5 : 9, weight: .heavy)
+            let paragraph = NSMutableParagraphStyle()
+            paragraph.alignment = .center
+            let shadow = NSShadow()
+            shadow.shadowColor = UIColor.black.withAlphaComponent(0.9)
+            shadow.shadowOffset = CGSize(width: 0, height: 0.6)
+            shadow.shadowBlurRadius = 0.8
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: font, .foregroundColor: UIColor.white, .paragraphStyle: paragraph, .shadow: shadow,
+            ]
+            let height = font.lineHeight
+            text.draw(in: CGRect(x: rect.minX, y: rect.midY - height / 2 - 0.3, width: rect.width, height: height), withAttributes: attributes)
         }
     }
 

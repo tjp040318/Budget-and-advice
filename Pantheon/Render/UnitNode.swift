@@ -212,7 +212,7 @@ final class UnitNode: SCNNode {
         }
 
         // Ground ring under the unit — the readable "who is this" cue.
-        let ringGeometry = SCNTorus(ringRadius: modelHeight * 0.22, pipeRadius: 0.012)
+        let ringGeometry = SCNTorus(ringRadius: modelHeight * 0.27, pipeRadius: 0.028)
         ringGeometry.firstMaterial = UnitNode.flatMaterial(tint.withAlphaComponent(0.85))
         let ring = SCNNode(geometry: ringGeometry)
         ring.position = SCNVector3(0, 0.01, 0)

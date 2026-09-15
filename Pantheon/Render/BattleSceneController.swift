@@ -344,10 +344,36 @@ final class BattleSceneController: NSObject {
                 // wide bar and wears no plate.
                 let plate = plates.addPlate(for: combatant.id, elementHex: combatant.element.accentHex)
                 node.plate = plate
+                plate.setLevel(combatant.level)
                 plate.setHealth(combatant.healthFraction, animated: false)
                 plate.setAttackBar(combatant.attackBar, animated: false)
                 plate.setStatuses(combatant.statuses)
                 if entering { plate.enter(over: beat(0.45)) }
+            }
+            if combatant.isBoss {
+                // A boss is LIT: a warm spot from its front, riding with it,
+                // aimed at its chest. The owner, with the Coils of Apep on
+                // his phone: "it's hard to see the boss" — a dark serpent
+                // against a night painting behind two columns.
+                let spot = SCNLight()
+                spot.type = .spot
+                spot.color = (UIColor(hex: environment.keyLightHex) ?? .white).mixed(with: .white, amount: 0.55)
+                spot.intensity = 3_000
+                spot.spotInnerAngle = 28
+                spot.spotOuterAngle = 75
+                spot.attenuationStartDistance = 4
+                spot.attenuationEndDistance = 34
+                let height = combatant.model.height
+                let chest = SCNNode()
+                chest.position = SCNVector3(0, height * 0.42, 0)
+                node.addChildNode(chest)
+                let lamp = SCNNode()
+                lamp.light = spot
+                lamp.position = SCNVector3(3.0, height * 0.95, 7.0)
+                let aim = SCNLookAtConstraint(target: chest)
+                aim.isGimbalLockEnabled = true
+                lamp.constraints = [aim]
+                node.addChildNode(lamp)
             }
             if combatant.isBoss, ledge == nil {
                 let recipe = StageBuilder.recipe(for: environment)
@@ -413,8 +439,13 @@ final class BattleSceneController: NSObject {
     /// the centre line, between the two columns that close the back of
     /// every set, because a boss fight is framed from behind the team
     /// (`CameraDirector.bossYaw`) and the gate is centred from there.
-    private static let bossMark = SCNVector3(0, 0, -9.8)
-    static let bossSink: Float = 0.42
+    /// On the rim itself since 2026-09-15 (a stride beyond it, at −9.8,
+    /// before): the genre's boss stands close over its adds and fills the
+    /// frame, and the camera is solved low and near for it
+    /// (`CameraDirector.bossPitch`). Sunk 32% rather than 42% for the same
+    /// reason: more of it above the floor.
+    private static let bossMark = SCNVector3(0, 0, -8.4)
+    static let bossSink: Float = 0.32
 
     /// TWO ROWS ABREAST, the team's nearest the camera (2026-09-11, the
     /// fourth layout and the genre's own).
@@ -909,12 +940,17 @@ final class BattleSceneController: NSObject {
         let targets = plateTargets
         plateLock.unlock()
         for (plate, node) in targets {
-            let projected = renderer.projectPoint(node.worldPosition)
+            // Over the head: the top of the figure, projected, and the
+            // track's bottom edge a little above it (the genre's place;
+            // under the feet before 2026-09-15).
+            let feet = node.worldPosition
+            let head = SCNVector3(feet.x, feet.y + node.spec.height, feet.z)
+            let projected = renderer.projectPoint(head)
             let onScreen = projected.z > 0 && projected.z < 1
             plate.isHidden = !onScreen
             plate.position = CGPoint(
                 x: CGFloat(projected.x),
-                y: height - CGFloat(projected.y) - UnitPlate.dropBelowFeet
+                y: height - CGFloat(projected.y) + UnitPlate.riseAboveHead + UnitPlate.trackHeight / 2
             )
         }
     }

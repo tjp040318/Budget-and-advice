@@ -94,7 +94,16 @@ final class CameraDirector {
     /// painting above it. Lower — the 20° the wings had — foreshortens the
     /// floor into something the owner read as a ramp: "the ground continues
     /// to look weird and angled".
-    private static let homePitch: Float = 26 * .pi / 180
+    /// 36° since 2026-09-15: the owner's Summoners War frame, measured. Their
+    /// camera stands high enough that the floor's pattern reads and the two
+    /// rows lie on a diagonal — the team at the lower left, the enemies at
+    /// the upper right — which is the yaw below; at 26° the floor was a
+    /// strip and the rows two flat lines. Solved in the Python port before
+    /// it was tried: at −32°/36° a three-a-side puts the team's feet 75%
+    /// down the frame across its left third, the enemies' 45% down across
+    /// its right third, both about a sixth of the frame tall, the far rim
+    /// 23% down.
+    private static let homePitch: Float = 36 * .pi / 180
 
     /// 58° of yaw, camera on the right, well round toward the side of the
     /// field. This is the composition, and it is the third attempt at it.
@@ -126,7 +135,13 @@ final class CameraDirector {
     /// with its backs to the camera, the enemy row runs across the middle
     /// facing it, and the fifteen degrees to the right is what keeps an
     /// enemy from standing straight behind the player in front of it.
-    static let homeYaw: Float = -15 * .pi / 180
+    /// −32° since 2026-09-15 (see `homePitch`): the genre's three-quarter,
+    /// read off the owner's own screenshot. −15° was "behind the team and
+    /// a little to the right", his words for an earlier frame; the frame
+    /// he sent after it shows the rows on a diagonal, which takes twice
+    /// the yaw and a higher pitch, and is not the 58° that turned the
+    /// whole world and was called slanted.
+    static let homeYaw: Float = -32 * .pi / 180
 
     /// How much of the half-frame the outermost figure may reach, and the
     /// metres of air left beside it. A figure is about 0.9 m across, so 0.9 m
@@ -146,7 +161,10 @@ final class CameraDirector {
     /// a plate and a hairline of floor under it.
     /// 0.65 after the next run: at 0.69 the resolving panel still crossed
     /// the two left units' bars.
-    private static let nearFeetLine: Float = 0.65
+    /// 0.82 since the plates moved over the heads (2026-09-15): nothing
+    /// hangs under the feet any more, so the team stands low in the frame
+    /// with the bottom-left controls beside it, the genre's way.
+    private static let nearFeetLine: Float = 0.82
 
     /// The ceiling for an ordinary unit: nothing goes above 10% of the frame
     /// height. A BOSS gets a ceiling of its own, `bossTopLine`: its head may
@@ -158,7 +176,9 @@ final class CameraDirector {
     /// 0.55 of the half-frame above the aim: the head lands 22% down the
     /// frame, under the boss bar rather than behind it (at 0.90 it was 5%
     /// down, behind the wave chip).
-    private static let bossTopLine: Float = 0.90
+    /// 0.98 since 2026-09-15: the head runs to the frame's top edge under
+    /// the full-width boss bar, the genre's boss shot.
+    private static let bossTopLine: Float = 0.98
 
     /// A boss fight is framed from BEHIND the player's team: 12° of yaw
     /// instead of 58°, 19° down, and further back, so the whole of a boss
@@ -171,8 +191,16 @@ final class CameraDirector {
     /// left — so the aim now centres on the boss's head (`FramePoint.isBoss`)
     /// and the yaw is nearly straight up the field, where the team's row is
     /// symmetrical about it and costs the boss no size.
-    static let bossYaw: Float = -12 * .pi / 180
-    private static let bossPitch: Float = 20 * .pi / 180
+    /// −8° and 8° since 2026-09-15, from the owner's Summoners War boss
+    /// frame: the camera LOW, nearly level, close behind the team, so the
+    /// boss fills the upper half of the frame and the team stands large at
+    /// the bottom. Solved in the Python port: Apep on the rim (−8.4, sunk
+    /// 32%) at 8° with the feet at 0.94 and the head at 0.98 puts the
+    /// camera 13 m out and 3.4 m up, the boss 46% of the frame tall with
+    /// its head a tenth down, the team 39% tall. At 20° from 18 m the boss
+    /// was 30% and the team 23%, and the owner could not see the boss.
+    static let bossYaw: Float = -8 * .pi / 180
+    private static let bossPitch: Float = 8 * .pi / 180
     /// The near feet a little higher up the frame in a boss fight, so the
     /// boss has the frame and the team is the foreground.
     /// Solved, not dialled: a Python port of `solve` swept pitch, feet line
@@ -193,7 +221,9 @@ final class CameraDirector {
     /// the frame's bottom edge and under the actor plate in every boss
     /// fight. Nine percent of the frame under the feet is a plate and a
     /// hairline of floor, the same room an ordinary fight has.
-    private static let bossFeetLine: Float = 0.82
+    /// 0.94 since the plates moved over the heads: the feet may stand at
+    /// the frame's bottom edge, the genre's boss shot.
+    private static let bossFeetLine: Float = 0.94
 
     /// The painting is hung between the two yaws (`StageBuilder`), 17° off
     /// either camera, which a painting seventy metres out does not show: a

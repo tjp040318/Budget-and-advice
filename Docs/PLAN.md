@@ -2134,3 +2134,83 @@ the login gift's days (`ItemIcon` 16 pt); the stage popup's drop rows and
 the wallet strip carry `ItemIcon` too, so the coin, the crystal and the
 bolt land in the top bar the day they are painted. `BattleSummary.Loot`
 carries the key. Tour frame 20-victory-c photographs the panel.
+
+### The fight as the genre frames it (2026-09-15, morning)
+
+The owner, with three screenshots — our Coils of Apep beside a Summoners
+War wave and a Summoners War boss: "The health bars are not above the
+heads. Also the UI of the skills and the descriptions like the bottom
+left UI and more I just don't like. Plus it's hard to see the boss. 1.
+Look at the graphics and backgrounds of summoners war. I want THAT level
+of detail. 2. Look at the camera angles. Also most bosses and levels are
+3 waves, 1 being a boss. Can we do that? 3. Look at the camera angle of
+the boss battle."
+
+**Read off his two frames (2000 px across for an 852-point screen, 2.35
+px a point).** The wave: every unit wears its bars OVER ITS HEAD — a
+level badge (a 20-point disc, the number in white, ringed) on the left
+end of a 68 × 7 green health bar, the thin blue attack bar under it in
+the same dark track, the status tiles (19 pt, red-framed, a turn count
+in the corner) above the track and the matchup arrow (30 pt) above
+those; the plates are the only readout on the field. At the bottom left
+three 38-point squares: a gear, ×3, play. At the bottom right three
+55-point skill squares in gold-orange painted frames, the one in hand
+lit, nothing behind them. At the top of a wave, nothing but a chat
+bubble. The camera is HIGH — the floor's carved pattern reads — and
+turned so the two rows lie on a diagonal, the team across the lower
+left third, the enemies across the upper right, figures about 22% of
+the frame tall. The boss: a gold bar the full width of the very top
+with the blue attack bar under it and the boss's own icons at the two
+top corners; the boss's head at the frame's top edge and its fists at
+the sides, filling the upper 60%; the team in a row at the bottom, seen
+from behind and a little above, about a quarter of the frame tall, its
+plates over its heads; the camera low, close, nearly level.
+
+**Ours before this.** Bars UNDER the feet (2026-09-11); a 54-point actor
+plate at the bottom left with the unit's name, YOUR TURN, its health
+line and "Choose a skill · Tap a skill to read it; hold it for the full
+card"; a column of three team readouts down the left; a damage feed down
+the right; a turn gauge of portraits across the top with AUTO, ×1 and
+the log beside it; the skills three 60-point cream tiles on a cream
+plate; the boss bar a capsule of name, bar and numbers; the camera 26°
+down from −15°, the enemies a flat row across the middle; the boss a
+stride beyond the rim, sunk 42%, framed from 18 m at 20° down, 30% of
+the frame tall and unlit in front of a night painting.
+
+**Built (parts 1 and 2, one push).** `UnitPlate` over the head: one
+track (66 × 14.5) holding the 6.5-pt health bar and the 3-pt attack bar,
+the level badge (`PlateArt.levelBadge`, `Combatant.level` rides along)
+overlapping its left end in the element's ring, the status tiles on
+the track and the matchup arrow above them; `layoutPlates` projects the
+top of the figure (`spec.height`) and stands the track 12 pt over it.
+The HUD is the genre's: `bossBar` the full width at the very top (name
+and numbers on a line, then a gold health bar over a blue attack bar in
+one dark track, the barrier and the chips where they were), `topStrip`
+small at the top left (the stage, the wave, a repeat run), `controls`
+at the bottom left (gear → the log or forfeit, ×N, play/pause for auto),
+`skillRow` at the bottom right — `SkillButton` a 60-point dark socket
+lit from behind in the caster's element, the glyph white and large, the
+name small, the estimate on the bottom edge, a gold frame that brightens
+and grows in hand, a dark veil with the turns left while it cools. The
+actor plate, the team column, the combat feed, the turn gauge and the
+target strip are deleted, not hidden. The cameras: home −32° / 36°
+(solved in the Python port before it was tried — a three-a-side's team
+feet 75% down across the left third, the enemies' 45% down across the
+right third, both a sixth of the frame tall, the far rim 23% down); boss
+−8° / 8° with the feet at 0.94 and the head at 0.98, the boss ON the
+rim (−8.4) and sunk 32% — 13 m out, 3.4 m up, the boss 46% of the frame
+tall with its head a tenth down, the team 39% — and a warm spot light
+riding with every boss, aimed at its chest, so it is the brightest
+thing on the field. What the frames must show: the diagonal rows, the
+plates over the heads with the level in the badge, the boss filling the
+upper half, the corners as the genre has them.
+
+**Not in this push.** Three waves per stage (part 3: `generatedChapter`
+builds `laterWaves` the way the Labyrinth does, a wave boss on the
+third, the sim mirrors it). The environment's detail (part 4) is the
+one that costs: SW's floors are carved patterns with bevelled edges and
+the whole set is one hue; ours is a flat repeated tile under a magenta
+flood. The free half is a colour grade per environment and a bounded
+arena; the rest is Gemini floor tiles (about ten at 14 cents) and Meshy
+set pieces at 30 credits each against a balance of 2,133 over a floor
+of 2,000 — four props, or the owner's word to go lower or buy more.
