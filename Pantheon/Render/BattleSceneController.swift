@@ -646,6 +646,10 @@ final class BattleSceneController: NSObject {
         case .skillCast(let actor, _, let name, let targets, let shot, let animation, let vfx):
             guard let casterNode = unitNodes[actor] else { return 0 }
             let targetNode = targets.first.flatMap { unitNodes[$0] }
+            // Stamped, so a console that ends mid-fight says which cast it
+            // ended in (the arena crash of 2026-09-15 was read off the last
+            // clip loaded, which is a poorer clock).
+            Perf.note("cast \(name) by \(casterNode.spec.assetName) as \(animation) on \(targets.count) target(s)")
             lastCastClip = animation
             // A melee unit swinging is steel or stone; anything else is its
             // element. `castRelease` and the ultimate are always the element,

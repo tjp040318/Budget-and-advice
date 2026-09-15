@@ -118,6 +118,8 @@ jobs:
           # frame that came out wrong can be read as well as looked at.
           # OS_ACTIVITY_DT_MODE mirrors the frameworks' os_log lines to stderr
           # the way Xcode's console does.
+          TOUR_START="$(date +'%Y-%m-%d %H:%M:%S')"
+          touch /tmp/tour-start
           for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29; do
             SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
               --stdout="$PWD/shots/$step-${names[$step]}-out.txt" \
@@ -165,12 +167,25 @@ jobs:
           rm -f shots/warmup.png
           echo "$(date -u +%T) $(ls shots | wc -l | tr -d ' ') frames"
           xcrun simctl terminate "$UDID" com.pantheon.game || true
-          # The unified log for the process, in case something never reached
-          # stderr (a crash report's first lines, a Metal compiler message).
-          xcrun simctl spawn "$UDID" log show --last 12m --style compact \
+          # The unified log for the process over the WHOLE tour (--last 12m
+          # missed a crash in its sixth minute), in case something never
+          # reached stderr (a Metal compiler message, the OS killing the app).
+          xcrun simctl spawn "$UDID" log show --start "$TOUR_START" --style compact \
             --predicate 'process == "Pantheon" OR (eventMessage CONTAINS "Pantheon" AND messageType == error)' \
             2>/dev/null | grep -v -E 'CoreAnalytics|Bluetooth|RunningBoard|LaunchServices|activity' \
-            | tail -n 600 > shots/system-log.txt || true
+            | grep -i -E 'error|fault|assert|crash|fatal|exc_|signal|abort|terminat|kill|jetsam|hidden|SceneKit|Metal' \
+            | head -n 1500 > shots/system-log.txt || true
+          # A crash report, when a launch died: the host's ReportCrash writes
+          # one for a simulated process too. Every report for the app since
+          # the tour began is published as text, and tools/ciframes.py prints
+          # the crashed thread's frames from it.
+          for d in "$HOME/Library/Logs/DiagnosticReports" "$HOME/Library/Logs/CrashReporter" \
+                   "$HOME/Library/Developer/CoreSimulator/Devices/$UDID/data/Library/Logs/DiagnosticReports"; do
+            [ -d "$d" ] || continue
+            find "$d" -maxdepth 1 \( -name 'Pantheon*.ips' -o -name 'Pantheon*.crash' \) -newer /tmp/tour-start \
+              -exec sh -c 'cp "$1" "shots/crash-$(basename "$1").txt"' _ {} \;
+          done
+          echo "crash reports: $(ls shots/crash-*.txt 2>/dev/null | wc -l | tr -d ' ')"
           for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29; do
             base="shots/$step-${names[$step]}"
             { echo "== stdout"; cat "$base-out.txt" 2>/dev/null; echo; echo "== stderr"; cat "$base-err.txt" 2>/dev/null; } \

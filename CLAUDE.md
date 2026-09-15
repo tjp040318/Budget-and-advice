@@ -87,7 +87,10 @@ force-pushes them to (the artifact store is on a host the network policy
 refuses) and prints the lines that matter from each step's console, which
 the job publishes beside the frames (`<step>-console.txt`, the app's stdout
 and stderr with the frameworks' os_log lines mirrored in). A frame that came
-out wrong can be read as well as looked at. Never push without reading the
+out wrong can be read as well as looked at, and a launch that died leaves
+its crash report beside the frames (`crash-*.txt`, the host's report for
+the app, its crashed thread printed by `ciframes.py`; `system-log.txt`
+covers the whole tour). Never push without reading the
 run that follows; a push while a run is in progress cancels it, so wait for
 the frames first.
 
@@ -655,7 +658,14 @@ environment can and cannot do. The short version:
   `.frame(width:height:)` off a GeometryReader, which is what the island
   does. And a camera node looks along its own −Z: orient it with
   `SCNNode.look(at:)`, never `atan2(dx, dz)` (that was half a turn off and
-  the orbit shot showed the empty side of the stage).
+  the orbit shot showed the empty side of the stage). And SceneKit's
+  render thread is SceneKit's: an `SCNAction.customAction` block runs
+  there, and a material's contents swapped inside one crashed the arena
+  fight on 2026-09-15 ("Hidden nodes should have been removed from the
+  pipeline already", six times across three threads, then the app gone) —
+  a texture, a hidden flag or the scene graph changes on the main thread,
+  on a `Timer` or `DispatchQueue.main.asyncAfter`, never in an action's
+  block.
 - **A card's wear scales with the card (2026-09-14).** The owner, of the
   popup's 50-point enemy cards: "Do the elemental symbols need to be so
   big? We can't see the picture." `UnitCard.wear` is `size / 80` clamped

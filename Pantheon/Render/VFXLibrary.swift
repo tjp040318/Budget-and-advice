@@ -258,7 +258,13 @@ enum VFXLibrary {
     /// through frame by frame — the shockwave ring of a heavy blow, which a
     /// screen-facing particle could only stand upright. The frames are
     /// swapped as the material's contents, so nothing depends on how a
-    /// texture transform reads a sheet.
+    /// texture transform reads a sheet — and swapped from the MAIN thread on
+    /// a timer, never inside an `SCNAction`: an action's block runs on
+    /// SceneKit's render threads, and the first build swapped the texture
+    /// there. The arena fight of 2026-09-15 died two seconds in on
+    /// "Hidden nodes should have been removed from the pipeline already",
+    /// six times across three render threads, with nothing else new off the
+    /// main thread. Nothing here touches the scene off it now.
     private static func groundFlipbook(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
                                        size: CGFloat, life: TimeInterval) {
         let cut = frames(of: name, rows: 4, cols: 4)
@@ -280,11 +286,23 @@ enum VFXLibrary {
         node.castsShadow = false
         scene.rootNode.addChildNode(node)
         let count = cut.count
-        let step = SCNAction.customAction(duration: life) { node, elapsed in
-            let index = min(count - 1, max(0, Int(Double(elapsed) / life * Double(count))))
-            node.geometry?.firstMaterial?.diffuse.contents = cut[index]
+        let start = CACurrentMediaTime()
+        var shown = 0
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak node] timer in
+            guard let node, node.parent != nil else { timer.invalidate(); return }
+            let elapsed = CACurrentMediaTime() - start
+            guard elapsed < life else {
+                timer.invalidate()
+                node.removeFromParentNode()
+                return
+            }
+            let index = min(count - 1, max(0, Int(elapsed / life * Double(count))))
+            if index != shown {
+                shown = index
+                node.geometry?.firstMaterial?.diffuse.contents = cut[index]
+            }
         }
-        node.runAction(.sequence([step, .removeFromParentNode()]))
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     /// The gathering before an ultimate: motes of the element drawn up round
@@ -305,7 +323,11 @@ enum VFXLibrary {
                             life: CGFloat(max(0.3, duration)), spread: 0, lift: 0, spin: 0.3, grow: 3.2)
             host.addParticleSystem(core)
         }
-        host.runAction(.sequence([.wait(duration: duration + 1.5), .removeFromParentNode()]))
+        // Gone from the main thread once the wind-up is over: nothing of this
+        // effect runs on the render thread.
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration + 1.5) { [weak host] in
+            host?.removeFromParentNode()
+        }
     }
 
     // MARK: - Authored systems

@@ -22,11 +22,48 @@ network policy refuses; the branch does not.
 The simulator captures a landscape-only app in a portrait framebuffer, so a
 frame taller than it is wide is stood up here.
 """
-import argparse, glob, os, subprocess, sys
+import argparse, glob, json, os, subprocess, sys
 
 from PIL import Image, ImageDraw
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def crash_summary(path):
+    """The lines of a crash report that name the death. An .ips is a JSON
+    header line and a JSON body: the exception, the termination, the
+    application-specific lines (an assertion's text) and the crashed thread's
+    frames. A legacy .crash text is printed as it is."""
+    lines = open(path, errors="replace").read().splitlines()
+    body = None
+    for i in range(min(3, len(lines))):
+        try:
+            body = json.loads("\n".join(lines[i + 1:]))
+            break
+        except ValueError:
+            continue
+    if not isinstance(body, dict):
+        return lines[:80]
+    out = []
+    exc = body.get("exception") or {}
+    out.append(" ".join(str(exc.get(k, "")) for k in ("type", "signal", "subtype") if exc.get(k)) or "exception ?")
+    term = body.get("termination") or {}
+    if term:
+        out.append("termination " + " ".join(str(term.get(k, "")) for k in ("indicator", "namespace", "code", "byProc") if term.get(k)))
+    for lib, msgs in (body.get("asi") or {}).items():
+        for m in (msgs if isinstance(msgs, list) else [msgs]):
+            out.append(f"{lib}: {m}")
+    images = body.get("usedImages") or []
+    threads = body.get("threads") or []
+    faulting = body.get("faultingThread", 0)
+    if faulting < len(threads):
+        t = threads[faulting]
+        out.append(f"thread {faulting} {t.get('name') or t.get('queue') or ''} crashed:")
+        for j, f in enumerate((t.get("frames") or [])[:32]):
+            k = f.get("imageIndex", -1)
+            img = images[k].get("name", "?") if 0 <= k < len(images) else "?"
+            out.append(f"  {j:2d} {str(img):28s} {f.get('symbol', '')} +{f.get('symbolLocation', f.get('imageOffset', 0))}")
+    return out
 
 
 def main():
@@ -66,6 +103,12 @@ def main():
             print("   " + l[:220])
         if len(wanted) > a.log_lines:
             print(f"   … {len(wanted) - a.log_lines} more in {log}")
+    # A crash report is the one file that says why a step's frames are the
+    # home screen; the job copies every one written during the tour.
+    for crash in sorted(glob.glob(os.path.join(frames_dir, "crash-*.txt"))):
+        print(f"-- {os.path.basename(crash)}")
+        for l in crash_summary(crash):
+            print("   " + l[:220])
 
     files = sorted(f for f in glob.glob(os.path.join(frames_dir, "*")) if f.lower().endswith((".jpg", ".png")))
     if not files:

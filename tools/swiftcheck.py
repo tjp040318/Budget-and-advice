@@ -825,7 +825,7 @@ def check_unknown_types(files, declared, errors):
         "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",
         "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
-        "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64","Thread","DateFormatter","CFAbsoluteTime","CFAbsoluteTimeGetCurrent","CAKeyframeAnimation","SCNParticleBlendMode","SCNParticlePropertyController",
+        "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64","Thread","DateFormatter","CFAbsoluteTime","CFAbsoluteTimeGetCurrent","CACurrentMediaTime","RunLoop","CAKeyframeAnimation","SCNParticleBlendMode","SCNParticlePropertyController",
         "ClosedRange","Key","DEBUG","NONE","Menu","AnyView","EmptyView","Namespace",
         "Canvas","GraphicsContext","ScrollViewProxy","UnitCurve","CGVector","Ellipse", "ImageIO", "CFURL", "CFDictionary", "CFString",
         "CGImageSourceCreateWithURL", "CGImageSourceCreateThumbnailAtIndex",
