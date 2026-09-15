@@ -714,10 +714,10 @@ final class BattleSceneController: NSObject {
             // rather than of the turn, and held by the queue so the damage
             // event arrives on it. What is left of the clip is repaid to the
             // next turn as recovery.
-            let landing = Self.contactFraction(of: animation, for: casterNode.spec.assetName)
-            let contact = walkUp + animation.fallbackDuration * landing
+            let blowAt = Self.contactFraction(of: animation, for: casterNode.spec.assetName)
+            let contact = walkUp + animation.fallbackDuration * blowAt
             holdOverride = contact
-            castRecovery = animation.fallbackDuration * (1 - landing)
+            castRecovery = animation.fallbackDuration * (1 - blowAt)
 
             // A ranged strike flies: the element's painted sprite leaves the
             // caster's chest and lands on the victim's on the frame of
