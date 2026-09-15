@@ -825,7 +825,24 @@ environment can and cannot do. The short version:
   bloom on a clipped floor is what spreads the white onto the figures
   standing on it; and marble's roughness went 0.52 to 0.62, since a
   polished floor threw the key straight back as one sheet. Check a run's
-  frames with `framelight.py` before believing a lighting change.
+  frames with `framelight.py` before believing a lighting change — it
+  prints each band's mean and clipped share AND the most blown 64 x 64
+  patch, because a band's mean misses a white blob over a fifth of the
+  screen.
+- **An effect may not relight the set (2026-09-15, later).** The owner sent
+  back the one frame still bleached: `VFXLibrary.flash`, the point light
+  every one of the twenty-four impacts spawns, was a flat 4,000 reaching
+  FOUR TIMES its radius — three and a half times the key light, nine
+  metres wide for a basic attack and twenty-eight through `skyFlash`, so
+  every hit relit the arena instead of the victim, and no camera shoulder
+  can save a surface genuinely lit to four times white. It reaches
+  `radius × 1.5` now, falls off from a third of the way out, and scales
+  from 1,320 to a cap of 2,400; `skyFlash` is a quarter strength and is
+  spent on a heavy or an ultimate only; and the lightning sheet is tinted
+  off pure white so an additive layer cannot climb past the bloom
+  threshold alone. Brightness belongs to the SPRITE, which covers only its
+  own pixels; a light in an effect reaches about as far as the thing it is
+  lighting.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
   for an attack clip and back at the next turn, and every hit flashes the
   victim white. **The camera is fixed by default** (`CameraDirector`): one
