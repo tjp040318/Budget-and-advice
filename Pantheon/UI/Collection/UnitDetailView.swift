@@ -788,7 +788,8 @@ struct UnitDetailView: View {
                            element: Element, ranged: Bool, iconKey: String?) -> some View {
         VStack(spacing: 2) {
             SkillIcon(skill: skill, element: element, ranged: ranged, resolvedKey: iconKey,
-                      size: 22, tint: selected ? Theme.gold : Theme.textSecondary, dimmed: !selected)
+                      size: 26, tint: selected ? Theme.gold : Theme.textSecondary,
+                      dimmed: !selected, socket: true)
             Text(skill.name)
                 .font(Theme.body(9).weight(.semibold))
                 .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)

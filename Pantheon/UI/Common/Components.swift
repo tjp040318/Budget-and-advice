@@ -610,21 +610,41 @@ struct SkillIcon: View {
     var size: CGFloat = 34
     var tint: Color? = nil
     var dimmed: Bool = false
+    /// A dark stone socket behind the art. The icons are PAINTED ON BLACK
+    /// and keyed off it, so a dark part of one — the hollow in the force
+    /// ring, the shadow in a curl of smoke — needs a dark ground to read
+    /// against: on the unit sheet's cream panel the ring came out as a
+    /// blot. The battle square draws its own socket and leaves this off.
+    var socket: Bool = false
 
     var body: some View {
         let key = resolvedKey ?? SkillArt.key(for: skill, element: element, ranged: ranged)
-        if SkillArt.hasPainting(key) {
-            BundleImage(name: SkillArt.imageName(key), renderedAt: size)
-                .aspectRatio(contentMode: .fit)
-                .frame(width: size, height: size)
-                .saturation(dimmed ? 0.2 : 1)
-                .opacity(dimmed ? 0.55 : 1)
-        } else {
-            Image(systemName: SkillArt.glyph(key))
-                .font(.system(size: size * 0.58, weight: .bold))
-                .foregroundStyle(dimmed ? Theme.textSecondary : (tint ?? .white))
-                .frame(width: size, height: size)
+        let art = size * (socket ? 0.84 : 1)
+        ZStack {
+            if socket {
+                RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+                    .fill(LinearGradient(colors: [Color(hex: "#3B2F22"), Color(hex: "#181109")],
+                                         startPoint: .top, endPoint: .bottom))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
+                            .strokeBorder(Theme.goldDeep.opacity(dimmed ? 0.4 : 0.85), lineWidth: 1)
+                    )
+                    .frame(width: size, height: size)
+            }
+            if SkillArt.hasPainting(key) {
+                BundleImage(name: SkillArt.imageName(key), renderedAt: art)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: art, height: art)
+                    .saturation(dimmed ? 0.2 : 1)
+                    .opacity(dimmed ? 0.55 : 1)
+            } else {
+                Image(systemName: SkillArt.glyph(key))
+                    .font(.system(size: art * 0.58, weight: .bold))
+                    .foregroundStyle(dimmed ? Theme.textSecondary : (tint ?? .white))
+                    .frame(width: art, height: art)
+            }
         }
+        .frame(width: size, height: size)
     }
 }
 

@@ -2614,4 +2614,14 @@ icon — worse than no art. `SkillArt.candidates(for:)` now returns every
 icon a skill could wear, best first, and `SkillArt.keys(for kit:)`
 walks a unit's skills taking the best each has that an earlier one has
 not taken; the battle row and the unit sheet both resolve through it.
-Zeus reads bolt, ring, column.
+Zeus reads bolt, ring, column — read off the unit sheet in the frames of
+e3e312b, where Thunderclap wears the force ring and Keraunos the column
+of light.
+
+**And a painted-on-black icon needs a dark ground.** On the unit sheet's
+CREAM panel the force ring's hollow centre read as a blot: the icons are
+keyed off black, so their dark parts are transparent and take whatever is
+behind them. `SkillIcon(socket: true)` puts the battle square's own stone
+plate and gold edge behind the art wherever it stands on cream — the unit
+sheet's tiles and the battle's held card. The battle squares draw their
+own socket and leave it off.

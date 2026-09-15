@@ -609,7 +609,8 @@ struct BattleView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
                 if let actor {
-                    SkillIcon(skill: skill, element: actor.element, ranged: !actor.model.melee, size: 26)
+                    SkillIcon(skill: skill, element: actor.element, ranged: !actor.model.melee,
+                              size: 28, socket: true)
                 }
                 Text(skill.name)
                     .font(Theme.title(15))
