@@ -647,10 +647,13 @@ enum StageBuilder {
 
     static func grade(for environment: BattleEnvironment) -> Grade {
         switch environment {
+        // The warm sets began at 1.12 and 1.15: with the braziers' orange
+        // light on a mottled sandstone floor the first frames were a sheet
+        // of orange, so the push is gentler there.
         case .duatGate, .hallOfTwoTruths, .arenaOfSouls, .colosseumSands:
-            return Grade(saturation: 1.12, contrast: 1.06, exposure: 0.0, vignette: 0.32)
+            return Grade(saturation: 1.06, contrast: 1.06, exposure: 0.0, vignette: 0.32)
         case .reedFields, .peachGarden:
-            return Grade(saturation: 1.15, contrast: 1.03, exposure: 0.05, vignette: 0.26)
+            return Grade(saturation: 1.08, contrast: 1.03, exposure: 0.05, vignette: 0.26)
         case .serpentDeep, .necropolis:
             return Grade(saturation: 1.05, contrast: 1.12, exposure: -0.1, vignette: 0.42)
         case .colossusVault:
@@ -659,7 +662,11 @@ enum StageBuilder {
             return Grade(saturation: 1.04, contrast: 1.04, exposure: 0.05, vignette: 0.24)
         case .lernaMarsh, .hydraLair, .yggdrasilRoots:
             return Grade(saturation: 0.98, contrast: 1.1, exposure: -0.05, vignette: 0.38)
-        case .midgardFjord, .jotunheimHall, .dragonGate:
+        case .midgardFjord:
+            // A night fjord under a grey sky: lifted a little, or the floor
+            // is only what the braziers reach.
+            return Grade(saturation: 1.0, contrast: 1.08, exposure: 0.08, vignette: 0.32)
+        case .jotunheimHall, .dragonGate:
             return Grade(saturation: 1.0, contrast: 1.08, exposure: 0.0, vignette: 0.32)
         case .forumRome:
             return Grade(saturation: 0.96, contrast: 1.1, exposure: -0.08, vignette: 0.4)

@@ -220,7 +220,13 @@ final class BattleSceneController: NSObject {
         // Key: a shadow-casting directional light from the front-left.
         let key = SCNLight()
         key.type = .directional
-        key.color = UIColor(hex: environment.keyLightHex) ?? .white
+        // The sun is nearly white (the realm's colour lifted 45% toward
+        // it) since 2026-09-15: with the fill and the ambient now carrying
+        // the painting's hue, a coloured key on top of them painted every
+        // figure the set's colour — Zeus green in the marsh, blue in
+        // Jötunheim on the first run of frames. The genre keeps its
+        // monsters their own colours inside a tinted world.
+        key.color = (UIColor(hex: environment.keyLightHex) ?? .white).mixed(with: .white, amount: 0.45)
         key.intensity = 1_400
         key.castsShadow = true
         key.shadowMode = .deferred
@@ -243,7 +249,7 @@ final class BattleSceneController: NSObject {
         // per place is what the genre's sets have.
         let fill = SCNLight()
         fill.type = .directional
-        fill.color = palette.sky.mixed(with: .white, amount: 0.5)
+        fill.color = palette.sky.mixed(with: .white, amount: 0.55)
         fill.intensity = 500
         let fillNode = SCNNode()
         fillNode.light = fill
@@ -257,7 +263,7 @@ final class BattleSceneController: NSObject {
         let ambient = SCNLight()
         ambient.type = .ambient
         let hand = UIColor(hex: environment.fogHex) ?? .darkGray
-        ambient.color = palette.horizon.mixed(with: hand, amount: 0.35).mixed(with: .white, amount: 0.4)
+        ambient.color = palette.horizon.mixed(with: hand, amount: 0.35).mixed(with: .white, amount: 0.5)
         ambient.intensity = 300
         let ambientNode = SCNNode()
         ambientNode.light = ambient

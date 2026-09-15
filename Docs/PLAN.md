@@ -2304,9 +2304,22 @@ way to white; it was a fixed #7F9BD8 blue over every set) and the
 ambient (the horizon, mixed 35% with the hand-picked `fogHex` so the
 Serpent Deep keeps its violet over its measured near-black) take theirs
 from it. The camera wears one grade per place (`grade(for:)`: warm
-stone at saturation 1.12 / contrast 1.06, the deeps at 1.05 / 1.12 with
-a darker vignette, the cold realms at 1.0 / 1.08, Rome by night at 0.96
-/ 1.10). And each realm has weather (`weather(for:)` →
+stone at saturation 1.06 / contrast 1.06, the deeps at 1.05 / 1.12 with
+a darker vignette, the cold realms at 1.0 / 1.08 with the fjord lifted
++0.08, Rome by night at 0.96 / 1.10).
+
+**The first run of frames, and what it changed.** Every set came out in
+its own hue with the relief, the inlay and the walls reading at 1:1 —
+and the FIGURES in that hue too: Zeus green in the marsh, blue in
+Jötunheim, orange in the Duat, because the hand-picked key light
+already carried the realm's colour and the fill and the ambient now
+carried it again. The genre keeps its monsters their own colours inside
+a tinted world, so the key is lifted 45% toward white, the ambient and
+the fill a little further, and the warm sets' saturation came down from
+1.12–1.15 to 1.06–1.08 (the braziers' orange on a mottled sandstone
+floor had made the Duat a sheet of orange). One arena frame was a wall
+of yellow: an ultimate's white flash caught mid-frame, normal eight
+seconds later. And each realm has weather (`weather(for:)` →
 `VFXLibrary.weather`, on the sprites the effects already ship): embers
 rise in Egypt and the arenas, leaves fall in the marsh and under
 Yggdrasil, reed chaff over the Field of Reeds, snow in the fjord and
