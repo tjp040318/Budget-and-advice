@@ -293,7 +293,9 @@ enum StageBuilder {
 
     /// The whole set for a battle, added to `scene`. The camera is at +Z
     /// looking toward -Z; units stand between z = +2.2 and z = -5.4.
-    static func buildBattleStage(_ environment: BattleEnvironment, into scene: SCNScene) {
+    /// Returns the painting's palette so the lights can be built to match it.
+    @discardableResult
+    static func buildBattleStage(_ environment: BattleEnvironment, into scene: SCNScene) -> PaintingPalette {
         let recipe = recipe(for: environment)
         let stage = SCNNode()
         stage.name = "stage"
@@ -318,6 +320,13 @@ enum StageBuilder {
         stage.addChildNode(slab(size: Self.battleFloorSize, thickness: 1.8, farEdge: Self.battleFloorFarEdge,
                                 floor: recipe.floor, repeats: recipe.floorRepeats * 2.86,
                                 tint: recipe.floorTint, rock: recipe.rock))
+        // THE ARENA DRESSED (2026-09-15, part 4 of "I want THAT level of
+        // detail"): its sides walled, its floor inlaid, its air moving —
+        // the free half of the pass; the painted tiles and the Meshy set
+        // pieces are the half that costs (Docs/PLAN.md).
+        stage.addChildNode(sideWalls(rock: recipe.rock, farEdge: Self.battleFloorFarEdge, nearEnd: 9.0))
+        let groove = (UIColor(hex: recipe.floorTint ?? "#9C8468") ?? .brown).mixed(with: .black, amount: 0.55)
+        stage.addChildNode(arenaInlay(radius: 6.6, groove: groove, at: SCNVector3(0.3, 0, 0)))
 
         // The sets were dressed for two lines abreast at z = ±3.4, with the
         // statues, obelisks and braziers standing 5–7 m out to the sides at
@@ -349,17 +358,37 @@ enum StageBuilder {
         stage.addChildNode(dust(tint: UIColor(hex: recipe.dustHex) ?? .white,
                                 volume: SCNVector3(18, 6, 16), at: SCNVector3(0, 3, -1)))
 
-        if let backdrop = recipe.backdrop, let image = BundleArt.image(backdrop) {
-            stage.addChildNode(farBackdrop(image, yaw: CameraDirector.backdropYaw))
+        if let weather = weather(for: environment) {
+            let air = SCNNode()
+            let rises = weather.kind == .embers || weather.kind == .wisps || weather.kind == .motes
+            air.position = SCNVector3(0, rises ? 0.4 : 6.5, -1)
+            air.addParticleSystem(VFXLibrary.weather(weather.kind, tint: weather.tint,
+                                                     volume: SCNVector3(22, rises ? 1.5 : 1, 18)))
+            stage.addChildNode(air)
         }
 
-        // The sky beyond the painting, and a light haze on the distance.
-        let fog = UIColor(hex: environment.fogHex) ?? .darkGray
-        scene.background.contents = fog.mixed(with: .white, amount: 0.15)
-        scene.fogStartDistance = 55
+        let painting = recipe.backdrop.flatMap { BundleArt.image($0) }
+        if let painting {
+            stage.addChildNode(farBackdrop(painting, yaw: CameraDirector.backdropYaw))
+        }
+
+        // ONE LIGHT FOR THE SET AND THE PAINTING (2026-09-15). The fog and
+        // the sky beyond the painting are the painting's own horizon and
+        // sky, mixed with the hand-picked fog so a night painting's intent
+        // (the Serpent Deep's violet) survives its measured near-black;
+        // `BattleSceneController` lights the set from the same palette. The
+        // haze is light and starts beyond the far parapet: the floor is
+        // never fogged, the painting takes about a tenth of the horizon
+        // colour at 70 m, enough to sit in the same air.
+        let palette = painting.flatMap { PaintingPalette(image: $0) } ?? .neutral
+        let hand = UIColor(hex: environment.fogHex) ?? .darkGray
+        let fog = palette.horizon.mixed(with: hand, amount: 0.35)
+        scene.background.contents = palette.sky.mixed(with: fog, amount: 0.3)
+        scene.fogStartDistance = 45
         scene.fogEndDistance = 170
-        scene.fogColor = fog.mixed(with: .white, amount: 0.25)
-        scene.fogDensityExponent = 1.2
+        scene.fogColor = fog
+        scene.fogDensityExponent = 1.4
+        return palette
     }
 
     // MARK: - The summoning circle
@@ -419,6 +448,259 @@ enum StageBuilder {
         stage.addChildNode(dust(tint: tint.mixed(with: .white, amount: 0.5), volume: SCNVector3(9, 5, 9), at: SCNVector3(0, 2.5, -1)))
     }
 
+    // MARK: - The arena's edges, its inlay, its light and its air (2026-09-15)
+
+    /// The arena's sides: a low balustrade down each flank of the field from
+    /// the far parapet to behind the team, so the ground is a bounded PLACE
+    /// — the genre's arena has an edge on every side — and not a slab
+    /// running off into the wings. At ±9.8 m the walls stand a stride
+    /// outside the side pieces (`clearOfTheWings` puts them at 8.5) and
+    /// outside a five-a-side's outer marks (±5.4). Projected in the Python
+    /// port of the camera solve before it was built: from the home camera
+    /// the far-side wall runs diagonally down the upper left of the frame
+    /// between the floor and the painting, the near-side one lies along the
+    /// frame's right edge (inside it only for a five-a-side), and from the
+    /// boss camera both flank the boss.
+    static let arenaHalfWidth: Float = 9.8
+
+    static func sideWalls(rock: String, farEdge: Float, nearEnd: Float) -> SCNNode {
+        let node = SCNNode()
+        node.name = "walls"
+        let length = CGFloat(nearEnd - farEdge)
+        let centreZ = (nearEnd + farEdge) / 2
+        for sign in [Float(-1), Float(1)] {
+            let x = sign * arenaHalfWidth
+            let wall = SCNBox(width: 0.6, height: 0.9, length: length, chamferRadius: 0.05)
+            wall.materials = [rockMaterial(rock, repeats: SCNVector3(Float(length) * 0.5, 1, 1))]
+            let wallNode = SCNNode(geometry: wall)
+            wallNode.position = SCNVector3(x, 0.45, centreZ)
+            node.addChildNode(wallNode)
+            // A coping along the top, a hand wider than the wall.
+            let coping = SCNBox(width: 0.8, height: 0.14, length: length + 0.2, chamferRadius: 0.03)
+            coping.materials = [rockMaterial(rock, repeats: SCNVector3(Float(length) * 0.5, 0.3, 1))]
+            let copingNode = SCNNode(geometry: coping)
+            copingNode.position = SCNVector3(x, 0.97, centreZ)
+            node.addChildNode(copingNode)
+            // Posts every four metres break the line.
+            var z = farEdge + 1.0
+            while z < nearEnd - 0.5 {
+                let post = SCNBox(width: 0.72, height: 1.25, length: 0.72, chamferRadius: 0.04)
+                post.materials = [rockMaterial(rock, repeats: SCNVector3(1, 1, 1))]
+                let postNode = SCNNode(geometry: post)
+                postNode.position = SCNVector3(x, 0.625, z)
+                node.addChildNode(postNode)
+                z += 4.0
+            }
+        }
+        return node
+    }
+
+    /// The arena's floor inlay: rings and a compass star cut into the stone
+    /// under the fight, the genre's circular battleground (every Summoners
+    /// War scenario floor has one). A quad a finger above the slab whose
+    /// grooves are MULTIPLIED over the tiles, so they darken the stone the
+    /// way a cut does and the relief still shows through them; the image is
+    /// white everywhere else and changes nothing there. 6.6 m round, so the
+    /// outer band passes just outside both rows (marks at r ≈ 3–3.9) and
+    /// the near arc leaves the frame under the HUD.
+    static func arenaInlay(radius: CGFloat, groove: UIColor, at centre: SCNVector3) -> SCNNode {
+        let plane = SCNPlane(width: radius * 2, height: radius * 2)
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = inlayImage(groove: groove)
+        material.blendMode = .multiply
+        // Writes colour only: a quad that darkens what is under it has no
+        // business changing the frame buffer's alpha (see `runeRing`).
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
+        material.isDoubleSided = false
+        plane.firstMaterial = material
+        let node = SCNNode(geometry: plane)
+        node.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        node.position = SCNVector3(centre.x, 0.02, centre.z)
+        node.castsShadow = false
+        node.name = "inlay"
+        return node
+    }
+
+    private static var inlayCache: [String: UIImage] = [:]
+
+    /// The inlay's drawing: an outer band, a ring of ticks inside it, a
+    /// thin ring, an inner ring just inside the rows, and an eight-point
+    /// star of thin spokes at the centre. Geometry only — a device drawn
+    /// here would be the thing the owner called clip art; the stone's own
+    /// carving is the tiles' relief.
+    private static func inlayImage(groove: UIColor) -> UIImage {
+        let key = groove.description
+        if let cached = inlayCache[key] { return cached }
+        let size: CGFloat = 1024
+        let image = UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { context in
+            let cg = context.cgContext
+            UIColor.white.setFill()
+            cg.fill(CGRect(x: 0, y: 0, width: size, height: size))
+            let centre = CGPoint(x: size / 2, y: size / 2)
+            let radius = size / 2
+            func ring(_ r: CGFloat, width: CGFloat, alpha: CGFloat) {
+                cg.setStrokeColor(groove.withAlphaComponent(alpha).cgColor)
+                cg.setLineWidth(width)
+                cg.strokeEllipse(in: CGRect(x: centre.x - r, y: centre.y - r, width: r * 2, height: r * 2))
+            }
+            func spoke(angle: CGFloat, from inner: CGFloat, to outer: CGFloat, width: CGFloat, alpha: CGFloat) {
+                cg.setStrokeColor(groove.withAlphaComponent(alpha).cgColor)
+                cg.setLineWidth(width)
+                cg.setLineCap(.round)
+                cg.move(to: CGPoint(x: centre.x + cos(angle) * inner, y: centre.y + sin(angle) * inner))
+                cg.addLine(to: CGPoint(x: centre.x + cos(angle) * outer, y: centre.y + sin(angle) * outer))
+                cg.strokePath()
+            }
+            ring(radius * 0.93, width: radius * 0.06, alpha: 0.5)
+            ring(radius * 0.885, width: radius * 0.012, alpha: 0.45)
+            for index in 0..<36 {
+                let angle = CGFloat(index) / 36 * .pi * 2
+                spoke(angle: angle, from: radius * 0.845, to: radius * 0.87, width: radius * 0.012, alpha: 0.45)
+            }
+            ring(radius * 0.83, width: radius * 0.012, alpha: 0.45)
+            ring(radius * 0.42, width: radius * 0.02, alpha: 0.45)
+            ring(radius * 0.09, width: radius * 0.012, alpha: 0.45)
+            for index in 0..<8 {
+                let angle = CGFloat(index) / 8 * .pi * 2 + .pi / 8
+                spoke(angle: angle, from: radius * 0.1, to: radius * 0.40, width: radius * 0.009, alpha: 0.42)
+            }
+        }
+        inlayCache[key] = image
+        return image
+    }
+
+    /// What the painting says the light is: the average colour of its sky
+    /// (the top eighth), its horizon (the band the floor's far edge meets,
+    /// 37–56% down) and its ground (the bottom fifth), read off a 32 × 32
+    /// reduction. The fog, the sky beyond the painting, the ambient and the
+    /// fill light take theirs from here, so the set and the painting are lit
+    /// as one place — a marsh's floor sits in the marsh's green, a vault's
+    /// in the vault's brown — where every stage used to sit under the same
+    /// blue fill.
+    struct PaintingPalette {
+        var sky: UIColor
+        var horizon: UIColor
+        var ground: UIColor
+
+        static let neutral = PaintingPalette(sky: UIColor(white: 0.5, alpha: 1),
+                                             horizon: UIColor(white: 0.35, alpha: 1),
+                                             ground: UIColor(white: 0.2, alpha: 1))
+
+        init(sky: UIColor, horizon: UIColor, ground: UIColor) {
+            self.sky = sky
+            self.horizon = horizon
+            self.ground = ground
+        }
+
+        init?(image: UIImage) {
+            guard let cg = image.cgImage else { return nil }
+            let side = 32
+            var data = [UInt8](repeating: 0, count: side * side * 4)
+            let drawn = data.withUnsafeMutableBytes { buffer -> Bool in
+                guard let base = buffer.baseAddress,
+                      let context = CGContext(data: base, width: side, height: side, bitsPerComponent: 8,
+                                              bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+                context.interpolationQuality = .medium
+                context.draw(cg, in: CGRect(x: 0, y: 0, width: side, height: side))
+                return true
+            }
+            guard drawn else { return nil }
+            // Core Graphics draws with its origin at the bottom left, so the
+            // buffer's first row is the painting's bottom.
+            func band(fromTop lower: Double, _ upper: Double) -> UIColor {
+                var red = 0.0, green = 0.0, blue = 0.0, count = 0.0
+                for row in 0..<side {
+                    let fromTop = 1 - (Double(row) + 0.5) / Double(side)
+                    guard fromTop >= lower, fromTop < upper else { continue }
+                    for column in 0..<side {
+                        let at = (row * side + column) * 4
+                        red += Double(data[at])
+                        green += Double(data[at + 1])
+                        blue += Double(data[at + 2])
+                        count += 1
+                    }
+                }
+                guard count > 0 else { return .gray }
+                return UIColor(red: CGFloat(red / count / 255), green: CGFloat(green / count / 255),
+                               blue: CGFloat(blue / count / 255), alpha: 1)
+            }
+            sky = band(fromTop: 0, 0.125)
+            horizon = band(fromTop: 0.37, 0.56)
+            ground = band(fromTop: 0.8, 1.0)
+        }
+    }
+
+    /// The camera's grade for a place: the genre's sets are each ONE hue,
+    /// pushed — warm stone in the sun, cold blue in the ice, a violet dark
+    /// in the deep. Saturation and contrast on the camera, an exposure
+    /// nudge, and how far the corners fall off.
+    struct Grade {
+        var saturation: CGFloat
+        var contrast: CGFloat
+        var exposure: CGFloat
+        var vignette: CGFloat
+    }
+
+    static func grade(for environment: BattleEnvironment) -> Grade {
+        switch environment {
+        case .duatGate, .hallOfTwoTruths, .arenaOfSouls, .colosseumSands:
+            return Grade(saturation: 1.12, contrast: 1.06, exposure: 0.0, vignette: 0.32)
+        case .reedFields, .peachGarden:
+            return Grade(saturation: 1.15, contrast: 1.03, exposure: 0.05, vignette: 0.26)
+        case .serpentDeep, .necropolis:
+            return Grade(saturation: 1.05, contrast: 1.12, exposure: -0.1, vignette: 0.42)
+        case .colossusVault:
+            return Grade(saturation: 1.05, contrast: 1.1, exposure: -0.05, vignette: 0.4)
+        case .olympusGate, .aegeanCliffs:
+            return Grade(saturation: 1.04, contrast: 1.04, exposure: 0.05, vignette: 0.24)
+        case .lernaMarsh, .hydraLair, .yggdrasilRoots:
+            return Grade(saturation: 0.98, contrast: 1.1, exposure: -0.05, vignette: 0.38)
+        case .midgardFjord, .jotunheimHall, .dragonGate:
+            return Grade(saturation: 1.0, contrast: 1.08, exposure: 0.0, vignette: 0.32)
+        case .forumRome:
+            return Grade(saturation: 0.96, contrast: 1.1, exposure: -0.08, vignette: 0.4)
+        }
+    }
+
+    /// The air of each realm: the genre's stages are never still — leaves
+    /// fall in its forests, embers rise in its ruins, snow drifts across its
+    /// passes. One system over the field per place, on the sprites the
+    /// effects already ship (`VFXLibrary.weather`); the dust motes stay
+    /// underneath.
+    static func weather(for environment: BattleEnvironment) -> (kind: VFXLibrary.Weather, tint: UIColor)? {
+        func colour(_ hex: String) -> UIColor { UIColor(hex: hex) ?? .white }
+        switch environment {
+        case .duatGate, .arenaOfSouls, .colosseumSands, .colossusVault, .hallOfTwoTruths:
+            return (.embers, colour("#FFB050"))
+        case .lernaMarsh:
+            return (.leaves, colour("#B8C8A0"))
+        case .yggdrasilRoots:
+            return (.leaves, colour("#E0B060"))
+        case .reedFields:
+            return (.leaves, colour("#E8E0B8"))
+        case .midgardFjord, .jotunheimHall:
+            return (.snow, colour("#F0F6FF"))
+        case .peachGarden:
+            return (.petals, colour("#FFB8C8"))
+        case .serpentDeep, .necropolis:
+            return (.wisps, colour("#B08CFF"))
+        case .hydraLair:
+            return (.wisps, colour("#90E0A0"))
+        case .dragonGate:
+            return (.wisps, colour("#70D0FF"))
+        case .forumRome:
+            return (.motes, colour("#C8D0FF"))
+        case .olympusGate:
+            return (.motes, colour("#FFE8B0"))
+        case .aegeanCliffs:
+            return (.motes, colour("#FFFFFF"))
+        }
+    }
+
     /// Where a set piece may stand beside the rows: anything in the rows'
     /// band (z above −6, between 4.5 and 8 m out) goes to 8.5 m out on its
     /// own side, the edge of the frame. A five-a-side's outermost mark is
@@ -449,7 +731,10 @@ enum StageBuilder {
         let node = SCNNode()
         node.name = "platform"
         let body = SCNBox(width: size, height: thickness, length: size, chamferRadius: 0)
-        let top = floorMaterial(floor, repeats: repeats, tint: tint)
+        // The tint as clouds of shade (`mottle`), 1.6 repeats across the
+        // slab, so fourteen identical tiles each way stop reading as
+        // wallpaper.
+        let top = floorMaterial(floor, repeats: repeats, tint: tint, mottleRepeats: 1.6)
         let side = rockMaterial(rock, repeats: SCNVector3(Float(size) * 0.35, 1, 1))
         // SCNBox: front (+z), right (+x), back (−z), left (−x), top, bottom.
         body.materials = [side, side, side, side, top, rockMaterial(rock, repeats: SCNVector3(4, 4, 1))]
@@ -886,17 +1171,36 @@ enum StageBuilder {
 
     // MARK: - Materials
 
-    static func floorMaterial(_ texture: String, repeats: Float, tint: String?) -> SCNMaterial {
+    /// How polished each floor is: marble takes a sheen the key light draws
+    /// across it, slate a little, sandstone almost none, moss none at all.
+    private static let floorRoughness: [String: CGFloat] = [
+        "floor_marble": 0.52, "floor_slate": 0.66, "floor_sandstone": 0.84, "floor_moss": 0.95,
+    ]
+
+    /// `mottleRepeats`: the slab's macro variation (`mottle`) in place of a
+    /// flat tint, repeated that many times across the surface; nil keeps the
+    /// flat tint, which is what the dais, a stand-in column and a thrown
+    /// tile want.
+    static func floorMaterial(_ texture: String, repeats: Float, tint: String?, mottleRepeats: Float? = nil) -> SCNMaterial {
         let material = SCNMaterial()
         material.lightingModel = .physicallyBased
         material.diffuse.contents = UIImage(named: texture) ?? UIColor(hex: "#B08A5A")
         material.diffuse.wrapS = .repeat
         material.diffuse.wrapT = .repeat
         material.diffuse.contentsTransform = SCNMatrix4MakeScale(repeats, repeats, 1)
-        material.roughness.contents = 0.8
+        material.diffuse.mipFilter = .linear
+        material.roughness.contents = floorRoughness[texture] ?? 0.8
         material.metalness.contents = 0.0
+        applyRelief(texture, to: material, repeats: SCNVector3(repeats, repeats, 1))
         if let tint, let colour = UIColor(hex: tint) {
-            material.multiply.contents = colour
+            if let mottleRepeats {
+                material.multiply.contents = mottle(tint: colour)
+                material.multiply.wrapS = .repeat
+                material.multiply.wrapT = .repeat
+                material.multiply.contentsTransform = SCNMatrix4MakeScale(mottleRepeats, mottleRepeats, 1)
+            } else {
+                material.multiply.contents = colour
+            }
         }
         return material
     }
@@ -908,8 +1212,69 @@ enum StageBuilder {
         material.diffuse.wrapS = .repeat
         material.diffuse.wrapT = .repeat
         material.diffuse.contentsTransform = SCNMatrix4MakeScale(repeats.x, repeats.y, 1)
+        material.diffuse.mipFilter = .linear
         material.roughness.contents = 0.9
         material.metalness.contents = 0.0
+        applyRelief(texture, to: material, repeats: repeats)
         return material
+    }
+
+    /// RELIEF (2026-09-15). Summoners War's floors are carved patterns with
+    /// bevelled edges, and what makes them read is the light catching the
+    /// edge of every tile; ours were paintings with the shading baked flat,
+    /// so the key light slid over them as over a photograph. Each tile now
+    /// ships with a normal map derived from its own painting by
+    /// `tools/floor_relief.py` (`<texture>_n.png`: the grout low, the stone
+    /// high, the cracks cut in), aligned with the diffuse by the same
+    /// repeat, so the 36° key light bevels every grout line and every
+    /// crack. A tile without a map (a stand-in colour) shades flat as
+    /// before.
+    private static func applyRelief(_ texture: String, to material: SCNMaterial, repeats: SCNVector3) {
+        guard let relief = UIImage(named: "\(texture)_n") else { return }
+        material.normal.contents = relief
+        material.normal.wrapS = .repeat
+        material.normal.wrapT = .repeat
+        material.normal.contentsTransform = SCNMatrix4MakeScale(repeats.x, repeats.y, 1)
+        material.normal.mipFilter = .linear
+        material.normal.intensity = 0.9
+    }
+
+    private static var mottleCache: [String: UIImage] = [:]
+
+    /// The slab's macro variation: the floor's tint with soft lighter and
+    /// darker clouds through it, drawn wrapped so it tiles, multiplied over
+    /// the tiles at about 1.6 repeats across the 44 m slab so the clouds
+    /// are eight to twenty metres wide. Fourteen identical tiles each way
+    /// read as wallpaper; the same tiles under clouds of shade read as a
+    /// floor that has been walked on.
+    static func mottle(tint: UIColor) -> UIImage {
+        let key = tint.description
+        if let cached = mottleCache[key] { return cached }
+        let size: CGFloat = 256
+        var rng = SeededRandom(seed: 0x5EED7)
+        let space = CGColorSpaceCreateDeviceRGB()
+        let image = UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { context in
+            let cg = context.cgContext
+            tint.setFill()
+            cg.fill(CGRect(x: 0, y: 0, width: size, height: size))
+            for _ in 0..<9 {
+                let cloud: UIColor = rng.unit() < 0.5 ? .white : .black
+                let alpha = CGFloat(0.06 + rng.unit() * 0.08)
+                let colors = [cloud.withAlphaComponent(alpha).cgColor, cloud.withAlphaComponent(0).cgColor] as CFArray
+                guard let gradient = CGGradient(colorsSpace: space, colors: colors, locations: [0, 1]) else { continue }
+                let radius = CGFloat(50 + rng.unit() * 80)
+                let centre = CGPoint(x: CGFloat(rng.unit()) * size, y: CGFloat(rng.unit()) * size)
+                // Nine copies, so a cloud that crosses the edge continues
+                // on the other side and the tile has no seam.
+                for dx in [-size, 0, size] {
+                    for dy in [-size, 0, size] {
+                        let at = CGPoint(x: centre.x + dx, y: centre.y + dy)
+                        cg.drawRadialGradient(gradient, startCenter: at, startRadius: 0, endCenter: at, endRadius: radius, options: [])
+                    }
+                }
+            }
+        }
+        mottleCache[key] = image
+        return image
     }
 }

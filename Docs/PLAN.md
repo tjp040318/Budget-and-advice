@@ -2248,3 +2248,86 @@ Hard's top boss now wants the gods where a single wave took the 6★s
 the gods'). The turn counts are the sum of three fights, so a three-wave
 median of 150 is a 50-turn wave. The multipliers were not retuned: the
 curve held its order.
+
+### The set dressed: the free half of part 4 (2026-09-15)
+
+The owner's first point, with Summoners War's frames beside ours: "Look
+at the graphics and backgrounds of summoners war. I want THAT level of
+detail." What the genre's stage has, frame by frame: a floor of CARVED
+tiles whose edges catch the light, one strong hue over the whole set
+(Faimon red, Mt. Siz blue-white, Kabir ochre), a bounded arena — an
+edge on every side, a circular design under the fight — a few big set
+pieces at the edges, and air that moves: leaves, embers, snow, motes.
+What ours had: a painted tile repeated fourteen times each way with its
+shading baked flat, a fixed blue fill over every set whatever the
+painting's colour, a far parapet and two open sides, no floor design,
+dust motes only.
+
+**Three ways to get the carved floor.** (1) Gemini paints each realm's
+floor again with a carved arena pattern and bevelled tiles, and a
+matching normal map is derived here: about ten images at 14 cents, the
+best result, and Gemini is paused. (2) Meshy makes the arena as one
+mesh: 30–300 credits, unrepeatable across realms, and the balance is
+2,133 over a 2,000 floor. (3) Derive the relief from the paintings we
+already have: a height field from each tile's luminance (grout dark and
+low, stone bright and high, cracks low), a normal map from its gradient,
+SceneKit shades it — free, and on the lit preview the grout bevels and
+the cracks cut in exactly as the genre's do. (3) is built, and (1) is
+the upgrade the owner can buy on top of it (the maps derive the same
+way from any new tile).
+
+**Built, all of it free.** `tools/floor_relief.py` writes `<tile>_n.png`
+for the four floors and two rocks (512 px, ~2 MB in all, PNG because a
+JPEG's ringing is a surface full of dents), and `floorMaterial` /
+`rockMaterial` wear it at the diffuse's own repeat with roughness per
+stone (marble 0.52, slate 0.66, sandstone 0.84, moss 0.95). The slab's
+tint became `mottle`: the tint with nine soft clouds of shade through
+it, drawn wrapped so it tiles, at 1.6 repeats across 44 m. The arena's
+sides are walled (`sideWalls`: a 0.9 m balustrade with a coping and a
+post every four metres at x ±9.8, outside the side pieces at 8.5 and a
+five-a-side's outer marks at ±5.4; projected in the Python port of the
+solve before it was built — the far-side wall runs from (0.39, 0.07) to
+(0.08, 0.43) of the home frame, the near-side one lies along the right
+edge and enters the frame only for a five-a-side, and both flank the
+boss in the boss frame). The floor is inlaid (`arenaInlay`: a 6.6 m
+quad a finger above the slab with an outer band, thirty-six ticks, two
+rings, an inner ring just inside the rows and an eight-point star,
+MULTIPLIED over the tiles so the grooves darken the stone like a cut
+and the relief shows through them; geometry only, since a device drawn
+in code is what the owner called clip art). The set and the painting
+are lit as ONE place: `PaintingPalette` reads each painting's sky (top
+eighth), horizon (37–56% down) and ground (bottom fifth) off a 32 × 32
+reduction — measured here first: the Duat's horizon is #512E15, the
+marsh's #2B463D, the fjord's #536E7C, the Serpent Deep's #08080D — and
+the fog and the sky beyond the painting, the fill light (the sky, half
+way to white; it was a fixed #7F9BD8 blue over every set) and the
+ambient (the horizon, mixed 35% with the hand-picked `fogHex` so the
+Serpent Deep keeps its violet over its measured near-black) take theirs
+from it. The camera wears one grade per place (`grade(for:)`: warm
+stone at saturation 1.12 / contrast 1.06, the deeps at 1.05 / 1.12 with
+a darker vignette, the cold realms at 1.0 / 1.08, Rome by night at 0.96
+/ 1.10). And each realm has weather (`weather(for:)` →
+`VFXLibrary.weather`, on the sprites the effects already ship): embers
+rise in Egypt and the arenas, leaves fall in the marsh and under
+Yggdrasil, reed chaff over the Field of Reeds, snow in the fjord and
+Jötunheim, petals in the Peach Garden, wisps in the Serpent Deep, the
+Necropolis, the Hydra's lair and at the Dragon Gate, motes on Olympus,
+the cliffs and in the Forum. Every count is low: weather is felt at the
+edge of the eye.
+
+**Seen before it is handed over.** Tour step 29 (`realm_battle`) fights
+the first stage of a realm named at launch (`-tour-environment`), the
+engine built directly because the stage is locked on a fresh save, and
+the CI job relaunches it six times — Olympus, the marsh, the fjord,
+Jötunheim, Rome, the Peach Garden — so the sets the other three battle
+steps never reach (all Egypt) are photographed too.
+
+**The half that costs, for the owner's word.** Gemini: one carved floor
+tile per realm family — sandstone with a sun-disc arena, marble with a
+meander border, slate with a knotwork ring, moss stone with a root
+circle, a Roman mosaic, a jade-court flagstone — ten images, about
+$1.40, $4.78 of the $10 spent so far this month; the relief derives from
+them the same way. Meshy: the set pieces the recipes stand in for
+(`prop_stone_lion`, `prop_pagoda_lantern`) and the dungeon set (task
+#43) at 30 credits each — four props would end at 2,013 over the 2,000
+floor, so the rest waits on a lower floor or more credits.

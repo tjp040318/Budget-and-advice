@@ -104,6 +104,9 @@ final class BattleSceneController: NSObject {
     /// would take a second turn.
     private var playbackGeneration = 0
     private(set) var environment: BattleEnvironment = .duatGate
+    /// The painting's own colours, read when the stage is built, so the
+    /// lights match it (`StageBuilder.PaintingPalette`).
+    private var palette = StageBuilder.PaintingPalette.neutral
     /// The rock under the boss's mark, built once per fight.
     private var ledge: SCNNode?
     /// The clip of the most recent cast, so its hits know how hard to land.
@@ -159,8 +162,9 @@ final class BattleSceneController: NSObject {
         } else {
             // The 3D set: a floating platform, ruins and statues, braziers,
             // mist and dust, with the environment's painting far behind it
-            // for parallax. `StageBuilder` also sets the fog and the sky.
-            StageBuilder.buildBattleStage(environment, into: scene)
+            // for parallax. `StageBuilder` also sets the fog and the sky,
+            // and hands back the painting's palette for the lights.
+            palette = StageBuilder.buildBattleStage(environment, into: scene)
         }
 
         // Image-based lighting if the HDR shipped; a coloured ambient if not.
@@ -232,22 +236,29 @@ final class BattleSceneController: NSObject {
         keyNode.eulerAngles = SCNVector3(-0.85, -0.6, 0)
         scene.rootNode.addChildNode(keyNode)
 
-        // Fill: cool, opposite side, no shadow — keeps dark models readable.
+        // Fill: from the painting's side, no shadow — keeps dark models
+        // readable. In the PAINTING'S sky colour since 2026-09-15 (lifted
+        // halfway to white so a night sky still fills): the fixed blue it
+        // was pulled every warm set toward the same neutral, and one hue
+        // per place is what the genre's sets have.
         let fill = SCNLight()
         fill.type = .directional
-        fill.color = UIColor(hex: "#7F9BD8") ?? .blue
-        fill.intensity = 450
+        fill.color = palette.sky.mixed(with: .white, amount: 0.5)
+        fill.intensity = 500
         let fillNode = SCNNode()
         fillNode.light = fill
         fillNode.position = SCNVector3(7, 5, -5)
         fillNode.eulerAngles = SCNVector3(-0.5, 2.3, 0)
         scene.rootNode.addChildNode(fillNode)
 
-        // Ambient floor so nothing goes fully black.
+        // Ambient floor so nothing goes fully black — in the painting's
+        // horizon colour, mixed with the hand-picked fog so a very dark
+        // painting keeps its intended hue, and lifted toward white.
         let ambient = SCNLight()
         ambient.type = .ambient
-        ambient.color = UIColor(hex: environment.fogHex)?.mixed(with: .white, amount: 0.3)
-        ambient.intensity = 260
+        let hand = UIColor(hex: environment.fogHex) ?? .darkGray
+        ambient.color = palette.horizon.mixed(with: hand, amount: 0.35).mixed(with: .white, amount: 0.4)
+        ambient.intensity = 300
         let ambientNode = SCNNode()
         ambientNode.light = ambient
         scene.rootNode.addChildNode(ambientNode)
@@ -276,7 +287,13 @@ final class BattleSceneController: NSObject {
         camera.bloomThreshold = 0.94
         camera.bloomBlurRadius = 10
         camera.colorFringeStrength = 0.35
-        camera.vignettingIntensity = 0.3
+        // One grade per place (2026-09-15): the genre's sets are each one
+        // hue, pushed. `StageBuilder.grade(for:)` holds the numbers.
+        let grade = StageBuilder.grade(for: environment)
+        camera.saturation = grade.saturation
+        camera.contrast = grade.contrast
+        camera.exposureOffset = grade.exposure
+        camera.vignettingIntensity = grade.vignette
         camera.vignettingPower = 1.2
         camera.screenSpaceAmbientOcclusionIntensity = 0.6
         camera.screenSpaceAmbientOcclusionRadius = 0.6

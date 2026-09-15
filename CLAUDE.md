@@ -741,7 +741,33 @@ environment can and cannot do. The short version:
   `Pantheon/Resources/Stage/`), Meshy props (`prop_*.usdz`, shipped by
   `tools/prop.py <asset> --height H` from `Art/Models/<asset>_refine.usdz`),
   braziers with fire, mist, dust, and the environment painting far behind
-  for parallax. A missing prop gets a built stand-in. **A Meshy prop is 30
+  for parallax. A missing prop gets a built stand-in. **The arena is
+  dressed (2026-09-15, the free half of "I want THAT level of detail"):**
+  every floor and rock tile ships a normal map derived from its own
+  painting (`tools/floor_relief.py` → `<tile>_n.png`, 512 px, PNG; the
+  grout low, the stone high; `StageBuilder.applyRelief`) so the 36° key
+  light bevels every grout line, marble is polished (0.52) and moss is
+  not (`floorRoughness`); the slab's tint is clouds of shade drawn at
+  runtime (`mottle`, 1.6 repeats across 44 m) so fourteen identical tiles
+  stop reading as wallpaper; the arena has SIDE WALLS (`sideWalls`, a
+  0.9 m balustrade with coping and posts at x ±9.8 from the far parapet
+  to z +9, projected in the camera port first: the far-side one runs
+  diagonally down the upper left of the home frame) and a floor INLAY
+  (`arenaInlay`, 6.6 m round at (0.3, 0): an outer band, ticks, rings and
+  an eight-point star drawn at runtime and MULTIPLIED over the tiles as
+  grooves — geometry only, no device); the set and the painting are lit
+  as one place — `PaintingPalette` reads the painting's sky, horizon and
+  ground off a 32 × 32 reduction and the fog, the sky, the fill and the
+  ambient take theirs from it, mixed with the hand-picked `fogHex` so a
+  night painting keeps its intent; the camera wears one grade per place
+  (`StageBuilder.grade(for:)`: saturation, contrast, exposure, vignette);
+  and each realm has weather (`StageBuilder.weather(for:)` →
+  `VFXLibrary.weather`: embers in Egypt and the arenas, leaves in the
+  marsh and under Yggdrasil, snow in the fjord and Jötunheim, petals in
+  the Peach Garden, wisps in the deeps, motes on Olympus). The half that
+  COSTS — Gemini floor tiles with a carved arena pattern (about ten at
+  14 cents) and Meshy set pieces (30 credits each over a floor of 2,000
+  with 2,133 in hand) — waits on the owner's word (`Docs/PLAN.md`). **A Meshy prop is 30
   credits either way** — text-to-3D (preview + refine) or image-to-3D — as
   `Docs/PLAN.md` measured over ten props; the `cost` a manifest records per
   task is the balance's drop while that task ran, which twenty parallel
@@ -784,13 +810,13 @@ environment can and cannot do. The short version:
   skill shows its name and description above the skill row and holding one
   opens a card. The painted chrome is drawn at 1/1.4 (`Chrome.shrink`),
   fonts at 0.9 (`Theme.fontScale`), cards 76pt: the playtest's density
-  pass. The CI tour is twenty-nine screens (steps 0–28): an arena battle
+  pass. The CI tour is thirty screens (steps 0–29): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,
   the victory's chest in three frames, the collection's Stage layout
   (21), the relic drop card (22), the relic filter sheet (23) and the
-  loading screen (24), the relic set reference (25), a tribute chest's card (26), a stage's popup over the chapter map (27) and every chapter's painted map (28, twelve frames a–l).
+  loading screen (24), the relic set reference (25), a tribute chest's card (26), a stage's popup over the chapter map (27), every chapter's painted map (28, twelve frames a–l) and a fight on six other realms' sets (29, `realm_battle`, relaunched with `-tour-environment <rawValue>`: Olympus, the marsh, the fjord, Jötunheim, Rome, the Peach Garden — the other battle steps only ever show Egypt).
 - **The fight reads.** **Every unit's bars are a screen-space plate OVER
   ITS HEAD (2026-09-15; under the feet from 2026-09-11 until the owner,
   with Summoners War's frame beside ours: "The health bars are not above

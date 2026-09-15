@@ -17,6 +17,7 @@ struct TourView: View {
     @State private var index = TourView.pinnedStep ?? 0
     @State private var ticksOnStep = 0
     @State private var battleModel: BattleViewModel?
+    @State private var realmModel: BattleViewModel?
     @State private var arenaModel: BattleViewModel?
     @State private var dungeonModel: BattleViewModel?
     @State private var seeded = false
@@ -39,7 +40,7 @@ struct TourView: View {
         ("halls", 2), ("relics", 2), ("shop", 2), ("chapter_map", 2), ("missions", 2),
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
-        ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2),
+        ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -50,6 +51,16 @@ struct TourView: View {
         guard let at = args.firstIndex(of: "-tour-chapter"), at + 1 < args.count,
               let chapter = Int(args[at + 1]) else { return 0 }
         return min(max(0, chapter), StageDatabase.chapters.count - 1)
+    }
+
+    /// `-tour-environment <rawValue>` picks the set the `realm_battle` step
+    /// fights on; the CI job relaunches that step once per realm so every
+    /// dressed set is photographed, not only Egypt's three the other battle
+    /// steps happen to use.
+    static var pinnedEnvironment: BattleEnvironment? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-environment"), at + 1 < args.count else { return nil }
+        return BattleEnvironment(rawValue: args[at + 1])
     }
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -78,6 +89,7 @@ struct TourView: View {
             if current == "battle" { startBattle() }
             if current == "arena_battle" { startArenaBattle() }
             if current == "dungeon_battle" { startDungeonBattle() }
+            if current == "realm_battle" { startRealmBattle() }
         }
         .onReceive(timer) { _ in
             if Self.pinnedStep == nil { tick() }
@@ -86,7 +98,7 @@ struct TourView: View {
             // waiting for a thumb. Auto-battle would win before the first
             // frame; one basic attack every four seconds is a fight in
             // progress for the whole step.
-            for model in [battleModel, arenaModel].compactMap({ $0 }) {
+            for model in [battleModel, arenaModel, realmModel].compactMap({ $0 }) {
                 model.selectSkill(0)
                 model.confirmTarget()
             }
@@ -203,6 +215,16 @@ struct TourView: View {
                 Theme.surface.ignoresSafeArea()
                     .onAppear { startDungeonBattle() }
             }
+        case "realm_battle":
+            // A fight on the realm named at launch (-tour-environment), one
+            // command a tick, so each set's floor, walls, light and weather
+            // are seen — the other battle steps only ever show Egypt.
+            if let realmModel {
+                BattleView(model: realmModel)
+            } else {
+                Theme.surface.ignoresSafeArea()
+                    .onAppear { startRealmBattle() }
+            }
         case "relics":
             RelicInventoryView()
         case "shop":
@@ -249,7 +271,29 @@ struct TourView: View {
             if current == "battle" { startBattle() }
             if current == "arena_battle" { startArenaBattle() }
             if current == "dungeon_battle" { startDungeonBattle() }
+            if current == "realm_battle" { startRealmBattle() }
         }
+    }
+
+    /// The first stage set in the pinned realm. It is locked on a fresh
+    /// save, so the engine is built directly rather than through the
+    /// store's gate: no energy is spent and no clear is recorded.
+    private func startRealmBattle() {
+        guard realmModel == nil else { return }
+        let environment = Self.pinnedEnvironment ?? .olympusGate
+        guard let stage = StageDatabase.allStages.first(where: { $0.environment == environment }) else { return }
+        let team = CampaignService.resolveTeam(store.player.campaignTeam, player: store.player)
+        guard !team.isEmpty else { return }
+        let engine = BattleEngine(
+            playerTeam: team,
+            opponentTeam: StageDatabase.buildEnemies(for: stage),
+            mode: .campaign,
+            seed: 7,
+            laterWaves: stage.laterWaves.map { StageDatabase.buildEnemies(spawns: $0) }
+        )
+        let model = BattleViewModel(engine: engine, context: .campaign(stage), store: store)
+        model.autoBattle = false
+        realmModel = model
     }
 
     private func seedIfNeeded() {

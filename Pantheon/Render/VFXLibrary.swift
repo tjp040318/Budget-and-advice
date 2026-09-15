@@ -427,6 +427,107 @@ enum VFXLibrary {
         return system
     }
 
+    /// The air over a stage: what falls or rises through it all fight long
+    /// (`StageBuilder.weather(for:)` picks one per place).
+    enum Weather {
+        case embers, leaves, petals, snow, wisps, motes
+    }
+
+    /// One looping system filling `volume` (a flat box: near the floor for
+    /// what rises, six metres up for what falls), on the painted sprites —
+    /// the ember and the wisp additive, the leaf and the snow alpha-blended
+    /// so they read as things and not as light. Every count is low: the
+    /// weather is felt at the edge of the eye, never watched.
+    static func weather(_ kind: Weather, tint: UIColor, volume: SCNVector3) -> SCNParticleSystem {
+        let system = SCNParticleSystem()
+        system.loops = true
+        system.emissionDuration = 1
+        system.idleDuration = 0
+        system.birthLocation = .volume
+        system.emitterShape = SCNBox(width: CGFloat(volume.x), height: CGFloat(volume.y), length: CGFloat(volume.z), chamferRadius: 0)
+        system.isLightingEnabled = false
+        system.sortingMode = .distance
+        system.orientationMode = .billboardScreenAligned
+        system.isAffectedByGravity = false
+        system.particleColor = tint
+        let spark = UIImage(named: "spark")
+        switch kind {
+        case .embers:
+            system.particleImage = sprite("ember") ?? spark
+            system.blendMode = .additive
+            system.birthRate = 9
+            system.particleSize = 0.09
+            system.particleSizeVariation = 0.05
+            system.emittingDirection = SCNVector3(0, 1, 0)
+            system.spreadingAngle = 40
+            system.particleVelocity = 0.5
+            system.particleVelocityVariation = 0.3
+            system.acceleration = SCNVector3(0.15, 0.25, 0)
+            system.particleLifeSpan = 5
+            system.particleLifeSpanVariation = 2
+            system.particleAngularVelocity = 60
+            system.particleAngularVelocityVariation = 40
+        case .leaves, .petals:
+            system.particleImage = kind == .leaves ? (sprite("leaf") ?? spark) : (sprite("flare") ?? spark)
+            system.blendMode = .alpha
+            system.birthRate = kind == .petals ? 7 : 5
+            system.particleSize = kind == .petals ? 0.09 : 0.16
+            system.particleSizeVariation = 0.05
+            system.emittingDirection = SCNVector3(0, -1, 0)
+            system.spreadingAngle = 30
+            system.particleVelocity = 0.5
+            system.particleVelocityVariation = 0.25
+            system.acceleration = SCNVector3(0.35, -0.2, 0)
+            system.particleLifeSpan = 7
+            system.particleLifeSpanVariation = 2
+            system.particleAngularVelocity = 90
+            system.particleAngularVelocityVariation = 60
+            system.particleAngleVariation = 180
+            system.particleColorVariation = SCNVector4(0.05, 0.08, 0.03, 0)
+        case .snow:
+            system.particleImage = sprite("flare") ?? spark
+            system.blendMode = .alpha
+            system.birthRate = 26
+            system.particleSize = 0.06
+            system.particleSizeVariation = 0.03
+            system.emittingDirection = SCNVector3(0, -1, 0)
+            system.spreadingAngle = 25
+            system.particleVelocity = 0.7
+            system.particleVelocityVariation = 0.3
+            system.acceleration = SCNVector3(0.25, -0.1, 0)
+            system.particleLifeSpan = 8
+            system.particleLifeSpanVariation = 2
+        case .wisps:
+            system.particleImage = sprite("wisp") ?? spark
+            system.blendMode = .additive
+            system.birthRate = 4
+            system.particleSize = 0.35
+            system.particleSizeVariation = 0.15
+            system.emittingDirection = SCNVector3(0, 1, 0)
+            system.spreadingAngle = 60
+            system.particleVelocity = 0.2
+            system.particleVelocityVariation = 0.1
+            system.acceleration = SCNVector3(0.05, 0.08, 0)
+            system.particleLifeSpan = 7
+            system.particleLifeSpanVariation = 3
+            system.particleColor = tint.withAlphaComponent(0.5)
+        case .motes:
+            system.particleImage = sprite("flare") ?? spark
+            system.blendMode = .additive
+            system.birthRate = 10
+            system.particleSize = 0.05
+            system.particleSizeVariation = 0.03
+            system.emittingDirection = SCNVector3(0, 1, 0)
+            system.spreadingAngle = 180
+            system.particleVelocity = 0.15
+            system.particleVelocityVariation = 0.1
+            system.particleLifeSpan = 7
+            system.particleLifeSpanVariation = 3
+            system.particleColor = tint.withAlphaComponent(0.7)
+        }
+        return system
+    }
+
     /// The awakened aura: a thin, endless rise of light from a disc at the
     /// feet. Attached to a unit's model node, not spawned and removed.
     static func aura(tint: UIColor, scale: Float) -> SCNParticleSystem {
