@@ -2805,3 +2805,112 @@ Four decisions are his, and the build changes with each:
 Sources: the Summoners War wiki's Ellia and Challenges pages, Theria
 Games' and sw-database's beginner guides, BlueStacks' Summoner's Way
 write-up, and Udonis' and Game Developer's FTUE guidance.
+
+### The owner's answers, and the plan as it now stands (2026-09-15, later)
+
+1. **Athena is a voice, not a unit.** "Athena should be just a voice.
+   Ellia can't battle." So no cards and no mesh for her: portrait art
+   only, and she never appears in the collection or on a team.
+2. **The first battle cannot be lost.** As the genre does it.
+3. **Skippable AND replayable — and expand it.** "That would be a good
+   idea, let's expand on that." See *The Lessons* below: this stops being
+   a tutorial that is spent once and becomes the game's permanent help.
+4. **100 Meshy credits** for the art. At 6 a picture that is sixteen
+   images: eight expressions with room for re-rolls, and a sign or two
+   for the shop below. Balance 1,867, floor 1,500.
+
+**The name.** "Athena's Way" is out. Four candidates, and note that
+Summoners War already uses *Blessing* for its beginner perk (Goddess
+Amaria's Blessing, a month of free rune removal), so taking that word for
+the checklist is the one option that lands closest to theirs:
+
+- **Athena's Counsel** — she is the goddess of counsel, and a counsel is
+  advice, which is exactly what the list is. Recommended.
+- **The Aegis** — her shield; short, ownable, and it reads as protection
+  rather than instruction.
+- **The Owl's Path** — her bird; softer, more like a road.
+- **Athena's Blessing** — the owner's own, clear, but see above.
+
+The recommendation is **Athena's Counsel** for the checklist, and to keep
+**Athena's Blessing** for a separate beginner GRACE if one is ever added
+(this game already gives free relic removal, so a Blessing here would be
+something else: a daily scroll for a month, say).
+
+**The Lessons (the expansion of decision 3).** Every beat Athena gives is
+a LESSON with an id, and every lesson is kept: a *Lessons* screen (from
+More, and from the Obelisk on the island) lists them all — the ones she
+has given, replayable at any time, and the ones still locked, named but
+greyed, so a player can see what the game still holds. That turns the
+tutorial into the manual, which almost nothing in the genre does.
+
+Two consequences for the design:
+
+- A lesson needs two modes. **Live**: she speaks on the real screen, a
+  caret points at the real control, and the player must do the thing to
+  advance. **Replay**: the same words on a card with a still of the
+  screen it talks about and a "Take me there" button, because a player
+  replaying the relic lesson may be standing on the island. The script
+  format carries both from one definition.
+- A replay never pays again. The reward is on the first completion only,
+  recorded in the save.
+
+**The opening is skippable once**, with the ask worded so the player
+knows nothing is lost: "Skip the opening? Athena keeps every lesson in
+More → Lessons." And "Replay the opening" is the first entry in that
+list.
+
+## A magic shop (2026-09-15, planned)
+
+The owner: "we should have a 'magic shop' too right?" He is right, and
+the genre's own Magic Shop is one of its load-bearing systems.
+
+**What Summoners War's Magic Shop is.** A building that sells monsters,
+summon scrolls and runes from a stock that ROLLS: four sell slots at
+first, unlockable to twelve with mana stones or crystals. The stock
+refreshes on a timer, and a player may pay crystals to refresh it early.
+That paid refresh is the engine of the whole thing — players grind mana
+and then refresh over and over hunting a Mystical Scroll, at roughly
+130k mana a scroll and, over a hundred-refresh streak, about 20–30
+crystals a scroll, which is cheaper than buying them. There are sibling
+shops on the same pattern: the Guild Magic Shop (monster pieces, scrolls,
+runes, grindstones, enchanted gems) and the Ancient Magic Shop (legendary
+scroll pieces, 6★ legend runes, reappraisal stones).
+
+**Why this game needs it.** Drachma has exactly ONE sink today — relic
+power-up — and a currency with one sink stops meaning anything once a
+player has what they want. A rolling stall is the sink, and it is also
+the reason to open the game between energy ticks: a stock that changes is
+a reason to look.
+
+**The shape it should take here.** `ShopService` already has everything
+but the roll: `Grant` covers scrolls, energy, drachma, divinity, a relic
+by grade, essences, stones and bundles, and `Section` is already a row of
+stalls (Daily, Testing, Scrolls, Energy, Relics, Essences). So the magic
+shop is a new section whose offers are ROLLED and SAVED rather than
+written down:
+
+- **Six slots**, rising to ten as the summoner levels (no purchase — this
+  game does not sell convenience for real money).
+- **Free refresh on a timer**, on the same hourly tick the energy already
+  runs on, plus a paid refresh in divinity that costs more each time
+  within a day and resets with the day.
+- **The stock**: a relic of a random set, slot, grade and quality; a
+  scroll of a random type; essences; a whetstone or gem; a bundle of
+  drachma-for-EXP; and, rarely, a UNIT — which is the row that makes a
+  player look, exactly as the genre's monster row does.
+- **Priced in drachma** for most rows, divinity for the rare ones, and
+  every price rolled against the player's level so the shop scales.
+- **Sold out is shown**, not hidden: a bought slot stays on the shelf
+  crossed out until the refresh, so the player can see what the roll gave.
+- Named for the world — the **Oracle's Stall**, or the **Night Market** —
+  rather than "magic shop", which is Summoners War's own words.
+
+**What it needs before it is built**: `balance.py --shop` pricing every
+row against what a stage pays, so a refresh loop cannot out-earn the
+campaign; the rolled stock in the save as an Optional field with its
+roll seed and expiry; and the art, which is the item icons already
+planned (task #79) plus a stall sign.
+
+This is a SEPARATE piece of work from the tutorial and should not be
+built inside it. Athena gets one lesson pointing at it, like every other
+system.
