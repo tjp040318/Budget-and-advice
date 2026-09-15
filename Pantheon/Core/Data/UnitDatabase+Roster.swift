@@ -220,7 +220,7 @@ extension UnitDatabase {
             third = smite(id, slot: 2, "Slaughter",
                           "A killing blow that deals up to 80% more damage the more health the target has lost, with a 35% chance to take another turn.",
                           cd: 4, DamageSpec(multiplier: 4.60, bonusPerMissingHealth: 0.80),
-                          utilities: [.extraTurn(chance: 0.35)], vfx: "eye_of_ra")
+                          utilities: [.extraTurn(chance: 0.35)], vfx: "blood_slash")
         case .tide:
             second = smite(id, slot: 1, "Bronze Tide",
                            "Wades in behind the shield: a blow with a 60% chance to Freeze the target for 1 turn; he takes Defense Up for 2 turns and heals for 10% of his maximum health.",

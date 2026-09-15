@@ -1,0 +1,18 @@
+{
+  "id": "01a0a4f2-27f2-75dc-bd53-4d5771bda48c",
+  "kind": "picture",
+  "created": "2026-09-15T12:02:08Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Stylised hand-painted game VFX with crisp dark outlines, on a pure black background. A sprite sheet for a video game visual effect: 16 sequential animation frames arranged in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, no borders, no gaps, no numbers, no text. The effect: a ground shockwave seen from slightly above. Frame 1: a small white-hot flash at the centre. Frames 2 to 6: a bright ring of dust and stone chips expands outward as a flattened ellipse, with cracks of orange light in the ground at the centre. Frames 7 to 11: the ring keeps expanding and thins into a dust cloud with tumbling stone fragments. Frames 12 to 16: the dust drifts and fades until the last frame is nearly black. Tan dust, grey stone, orange light and white.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1933,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789473728506,
+  "started_at": 1789473728510,
+  "polled": "2026-09-15T12:04:29Z",
+  "consumed_credits": 6,
+  "finished_at": 1789473864165
+}

@@ -107,21 +107,41 @@ enum VFXLibrary {
         // grows in and fades in a quarter of a second.
         case "slash":
             addSlash(to: host, tint: tint, scale: scale)
+        // THE PAINTED FLIPBOOKS (2026-09-15, "REAL animated attacks ... that
+        // includes effects"): eight sheets of sixteen frames each, painted by
+        // Meshy's text-to-image in Meshy credits while Gemini is paused
+        // (`meshy.py picture`, shipped by tools/vfx_sheets.py) — a claw
+        // rake, a solar burst, a shadow-and-scales burst, a lightning
+        // strike, a crimson X, a golden script, a dust shockwave, a healing
+        // lotus — so each god's skill lands as a DRAWN animation, the genre's
+        // way, with the code-built parts (the bolt, the column, the ring,
+        // the sparks, the flash) playing under it. Without its sheet an
+        // effect keeps the code-built parts alone.
+
+        // Anubis. The jackal's strike is a burst of shadow with the scales of
+        // Ma'at in it; the weighing is the same in gold under a column of
+        // judgment; a rite is golden script over the whole team; the shield
+        // of Ma'at blooms.
         case "scale_strike":
-            host.addParticleSystem(sparks(tint: tint, count: 60, speed: 5, scale: scale))
+            addFlipbook(to: host, "shadow", tint: tint.mixed(with: .white, amount: 0.35), size: 1.9 * CGFloat(scale), life: 0.5)
+            host.addParticleSystem(sparks(tint: tint, count: 40, speed: 5, scale: scale))
             flash(at: position, in: scene, color: tint, radius: 1.2 * scale, duration: 0.18)
         case "heart_weigh":
+            addFlipbook(to: host, "shadow", tint: UIColor(hex: "#FFD680") ?? .white, size: 3.0 * CGFloat(scale), life: 0.7)
             addBoltColumn(to: host, tint: tint, scale: scale)
-            host.addParticleSystem(sparks(tint: tint, count: 160, speed: 9, scale: scale))
+            host.addParticleSystem(sparks(tint: tint, count: 120, speed: 8, scale: scale))
             flash(at: position, in: scene, color: tint, radius: 2.6 * scale, duration: 0.3)
         case "duat_rite":
+            addFlipbook(to: host, "script", tint: .white, size: 3.2 * CGFloat(scale), life: 0.9)
             addStormRing(to: host, tint: tint, scale: scale)
-            host.addParticleSystem(sparks(tint: tint, count: 260, speed: 12, scale: scale * 1.4))
-            flash(at: position, in: scene, color: tint, radius: 4.5 * scale, duration: 0.5)
+            host.addParticleSystem(sparks(tint: tint, count: 160, speed: 10, scale: scale * 1.2))
+            flash(at: position, in: scene, color: tint, radius: 4.0 * scale, duration: 0.45)
         case "maat_shield":
-            host.addParticleSystem(rising(tint: tint, count: 90, scale: scale))
+            addFlipbook(to: host, "bless", tint: UIColor(hex: "#FFE6A0") ?? .white, size: 2.6 * CGFloat(scale), life: 0.9)
+            host.addParticleSystem(rising(tint: tint, count: 60, scale: scale))
         case "heal":
-            host.addParticleSystem(rising(tint: UIColor(hex: "#7FE8A0")!, count: 50, scale: scale))
+            addFlipbook(to: host, "bless", tint: .white, size: 2.6 * CGFloat(scale), life: 0.9)
+            host.addParticleSystem(rising(tint: UIColor(hex: "#7FE8A0")!, count: 40, scale: scale))
         case "buff":
             host.addParticleSystem(rising(tint: UIColor(hex: "#6BD8F2")!, count: 40, scale: scale))
         case "debuff":
@@ -130,42 +150,68 @@ enum VFXLibrary {
             host.addParticleSystem(sparks(tint: UIColor(hex: "#FFD24F")!, count: 90, speed: 7, scale: scale))
             flash(at: position, in: scene, color: UIColor(hex: "#FFD24F")!, radius: 1.6 * scale, duration: 0.2)
 
-        // Sekhmet. Claws, the beam of the sun, the Eye let loose on the line.
+        // Sekhmet. Three claws rake across the victim; the Eye is the sun
+        // itself bursting on it under a column of light; the Wrath is the
+        // sun over the whole line with the sky flashing.
         case "lioness_rake":
-            host.addParticleSystem(sparks(tint: tint, count: 70, speed: 6, scale: scale))
+            addFlipbook(to: host, "claw", tint: .white, size: 2.3 * CGFloat(scale), life: 0.5)
+            host.addParticleSystem(sparks(tint: tint, count: 50, speed: 6, scale: scale))
             flash(at: position, in: scene, color: tint, radius: 1.1 * scale, duration: 0.15)
         case "eye_of_ra":
+            addFlipbook(to: host, "sunburst", tint: .white, size: 3.4 * CGFloat(scale), life: 0.7)
             addBoltColumn(to: host, tint: tint, scale: scale)
-            host.addParticleSystem(sparks(tint: tint, count: 150, speed: 9, scale: scale))
+            host.addParticleSystem(sparks(tint: tint, count: 120, speed: 9, scale: scale))
             flash(at: position, in: scene, color: tint, radius: 2.6 * scale, duration: 0.3)
         case "wrath_of_the_eye":
+            addFlipbook(to: host, "sunburst", tint: .white, size: 4.8 * CGFloat(scale), life: 0.85)
             addStormRing(to: host, tint: tint, scale: scale)
-            host.addParticleSystem(sparks(tint: tint, count: 240, speed: 12, scale: scale * 1.3))
+            skyFlash(over: position, in: scene, scale: scale, duration: 0.2)
+            host.addParticleSystem(sparks(tint: tint, count: 200, speed: 12, scale: scale * 1.3))
             flash(at: position, in: scene, color: tint, radius: 4.5 * scale, duration: 0.5)
         case "blood_thirst":
             host.addParticleSystem(rising(tint: UIColor(hex: "#E0453C")!, count: 80, scale: scale))
 
-        // Zeus. Every effect is a real forked bolt out of the sky, and the sky
-        // itself flashes: a second light far overhead lights the whole arena
-        // for a frame or two, which is what makes lightning read as lightning.
+        // Ares. Slaughter is a crimson X cut across the victim.
+        case "blood_slash":
+            addFlipbook(to: host, "blood", tint: .white, size: 2.8 * CGFloat(scale), life: 0.6)
+            host.addParticleSystem(sparks(tint: UIColor(hex: "#FF4040")!, count: 90, speed: 8, scale: scale))
+            flash(at: position, in: scene, color: UIColor(hex: "#FF3030")!, radius: 2.2 * scale, duration: 0.25)
+
+        // The ground breaking under a heavy blow: the dust ring laid flat on
+        // the floor at the victim's feet (`groundFlipbook`), with the stone
+        // chips as sparks.
+        case "shockwave":
+            groundFlipbook("shockwave", at: position, in: scene, tint: .white, size: 3.6 * CGFloat(scale), life: 0.7)
+            host.addParticleSystem(sparks(tint: UIColor(hex: "#D8C0A0")!, count: 50, speed: 5, scale: scale))
+
+        // Zeus. Every effect is a real forked bolt out of the sky with the
+        // painted strike drawn over it — the strike's impact at the feet, so
+        // the sheet is lifted to stand on the ground — and the sky itself
+        // flashes: a second light far overhead lights the whole arena for a
+        // frame or two, which is what makes lightning read as lightning.
         case "thunderbolt":
+            addFlipbook(to: host, "lightning", tint: .white, size: 3.6 * CGFloat(scale), life: 0.55, lift: 1.8 * scale - 1.1 * scale)
             addLightningBolt(to: host, tint: tint, scale: scale, thickness: 0.05, height: 9, forks: 1)
             skyFlash(over: position, in: scene, scale: scale, duration: 0.12)
             host.addParticleSystem(sparks(tint: tint, count: 90, speed: 7, scale: scale))
             flash(at: position, in: scene, color: tint, radius: 2.2 * scale, duration: 0.22)
         case "thunderclap":
+            addFlipbook(to: host, "lightning", tint: .white, size: 4.0 * CGFloat(scale), life: 0.6, lift: 2.0 * scale - 1.1 * scale)
             addLightningBolt(to: host, tint: tint, scale: scale, thickness: 0.035, height: 8, forks: 0)
-            addStormRing(to: host, tint: tint, scale: scale * 0.6)
+            groundFlipbook("shockwave", at: position, in: scene, tint: tint.mixed(with: .white, amount: 0.5), size: 3.4 * CGFloat(scale), life: 0.7)
             skyFlash(over: position, in: scene, scale: scale, duration: 0.18)
             host.addParticleSystem(sparks(tint: tint, count: 120, speed: 8, scale: scale))
             flash(at: position, in: scene, color: tint, radius: 2.8 * scale, duration: 0.25)
         case "keraunos":
+            addFlipbook(to: host, "lightning", tint: .white, size: 5.2 * CGFloat(scale), life: 0.65, lift: 2.6 * scale - 1.1 * scale)
             addLightningBolt(to: host, tint: tint, scale: scale, thickness: 0.09, height: 11, forks: 3)
             addBoltColumn(to: host, tint: tint, scale: scale)
+            groundFlipbook("shockwave", at: position, in: scene, tint: tint.mixed(with: .white, amount: 0.5), size: 4.4 * CGFloat(scale), life: 0.8)
             skyFlash(over: position, in: scene, scale: scale, duration: 0.22)
             host.addParticleSystem(sparks(tint: tint, count: 260, speed: 12, scale: scale * 1.3))
             flash(at: position, in: scene, color: tint, radius: 4.5 * scale, duration: 0.45)
         case "olympian_decree":
+            addFlipbook(to: host, "script", tint: .white, size: 3.2 * CGFloat(scale), life: 0.9)
             host.addParticleSystem(rising(tint: tint, count: 120, scale: scale))
             flash(at: position, in: scene, color: tint, radius: 2.0 * scale, duration: 0.3)
         default:
@@ -174,6 +220,92 @@ enum VFXLibrary {
 
         // Particle hosts clean themselves up; nothing accumulates in the scene.
         host.runAction(.sequence([.wait(duration: 3.0), .removeFromParentNode()]))
+    }
+
+    /// A painted sheet on a screen-facing particle at the host, `lift` metres
+    /// above it — the lightning sheets strike downward, so their impact
+    /// point (the bottom of the frame) is raised to the victim's feet.
+    /// Nothing is added when the sheet has not shipped.
+    private static func addFlipbook(to host: SCNNode, _ name: String, tint: UIColor, size: CGFloat, life: CGFloat,
+                                    lift: Float = 0) {
+        guard let burst = flipbook(name, rows: 4, cols: 4, tint: tint, size: size, life: life) else { return }
+        let carrier = SCNNode()
+        carrier.position = SCNVector3(0, lift, 0)
+        carrier.addParticleSystem(burst)
+        host.addChildNode(carrier)
+    }
+
+    private static var frameCache: [String: [CGImage]] = [:]
+
+    /// The sixteen frames of a sheet as separate images, cut once and kept.
+    private static func frames(of name: String, rows: Int, cols: Int) -> [CGImage] {
+        if let cached = frameCache[name] { return cached }
+        guard let image = sprite("\(name)_sheet"), let cg = image.cgImage else { return [] }
+        let width = cg.width / cols, height = cg.height / rows
+        var cut: [CGImage] = []
+        for row in 0..<rows {
+            for col in 0..<cols {
+                if let frame = cg.cropping(to: CGRect(x: col * width, y: row * height, width: width, height: height)) {
+                    cut.append(frame)
+                }
+            }
+        }
+        frameCache[name] = cut
+        return cut
+    }
+
+    /// A painted sheet laid FLAT on the floor under `position` and stepped
+    /// through frame by frame — the shockwave ring of a heavy blow, which a
+    /// screen-facing particle could only stand upright. The frames are
+    /// swapped as the material's contents, so nothing depends on how a
+    /// texture transform reads a sheet.
+    private static func groundFlipbook(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
+                                       size: CGFloat, life: TimeInterval) {
+        let cut = frames(of: name, rows: 4, cols: 4)
+        guard !cut.isEmpty else { return }
+        let plane = SCNPlane(width: size, height: size)
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = cut[0]
+        material.multiply.contents = tint
+        material.blendMode = .add
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
+        material.isDoubleSided = true
+        plane.firstMaterial = material
+        let node = SCNNode(geometry: plane)
+        node.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        node.position = SCNVector3(position.x, 0.04, position.z)
+        node.castsShadow = false
+        scene.rootNode.addChildNode(node)
+        let count = cut.count
+        let step = SCNAction.customAction(duration: life) { node, elapsed in
+            let index = min(count - 1, max(0, Int(Double(elapsed) / life * Double(count))))
+            node.geometry?.firstMaterial?.diffuse.contents = cut[index]
+        }
+        node.runAction(.sequence([step, .removeFromParentNode()]))
+    }
+
+    /// The gathering before an ultimate: motes of the element drawn up round
+    /// the caster and a swelling flare at its chest for the wind-up, so the
+    /// blow is announced the way the genre announces one. Removes itself.
+    static func charge(on caster: SCNNode, tint: UIColor, duration: TimeInterval, scale: Float) {
+        let host = SCNNode()
+        host.position = SCNVector3(0, 1.0 * scale, 0)
+        caster.addChildNode(host)
+        if let flare = sprite("flare") {
+            let motes = puff(flare, tint: tint, count: 28, speed: 0.9, size: 0.16 * CGFloat(scale), life: CGFloat(max(0.3, duration)),
+                             spread: 180, lift: 1.6, spin: 1)
+            motes.emissionDuration = CGFloat(max(0.2, duration * 0.8))
+            motes.birthRate = 28 / CGFloat(max(0.2, duration * 0.8))
+            motes.emitterShape = SCNSphere(radius: CGFloat(0.9 * scale))
+            host.addParticleSystem(motes)
+            let core = puff(flare, tint: tint.mixed(with: .white, amount: 0.4), count: 1, speed: 0, size: 0.5 * CGFloat(scale),
+                            life: CGFloat(max(0.3, duration)), spread: 0, lift: 0, spin: 0.3, grow: 3.2)
+            host.addParticleSystem(core)
+        }
+        host.runAction(.sequence([.wait(duration: duration + 1.5), .removeFromParentNode()]))
     }
 
     // MARK: - Authored systems

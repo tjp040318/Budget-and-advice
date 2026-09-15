@@ -1,0 +1,18 @@
+{
+  "id": "01a0a4f0-2452-7598-b761-ba7984cc7904",
+  "kind": "picture",
+  "created": "2026-09-15T11:59:56Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "A sprite sheet for a video game visual effect: 16 sequential animation frames of a lightning strike arranged in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, no borders, no gaps, no numbers, no text. Frame 1: a faint blue glow at the top. Frames 2 to 4: a jagged white-blue bolt strikes straight down from the top edge and hits the ground at the bottom centre with a blinding white flash. Frames 5 to 8: branching forks and a burst of sparks and a ring of light at the impact point. Frames 9 to 16: the bolt thins and fades, the sparks scatter outward and dim until the last frame is nearly black. Stylised hand-painted game VFX in bold saturated electric blue and white with crisp dark outlines, on a pure black background.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1951,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789473596505,
+  "started_at": 1789473596508,
+  "polled": "2026-09-15T12:00:16Z",
+  "consumed_credits": 6,
+  "finished_at": 1789473608360
+}

@@ -2344,3 +2344,106 @@ them the same way. Meshy: the set pieces the recipes stand in for
 (`prop_stone_lion`, `prop_pagoda_lantern`) and the dungeon set (task
 #43) at 30 credits each — four props would end at 2,013 over the 2,000
 floor, so the rest waits on a lower floor or more credits.
+
+## Real animated attacks: the five-god test (2026-09-15, night)
+
+The owner: "I want REAL animated attacks (that includes effects, not
+just the animated model)", with a floor of 1,500 for the test — 633
+credits over the 2,133 in hand.
+
+### What a Summoners War attack is made of
+
+Frame by frame, one of the genre's attacks is five things at once, and
+ours had two of them: (1) a motion that belongs to THIS monster — a
+lioness pounces, a thunder god hurls, a scribe writes in the air;
+(2) a painted effect that belongs to THIS skill, big and bold, drawn as
+a frame sequence, not a particle puff; (3) the hit landing on the exact
+frame the blow connects, with a freeze, a shake and a flash; (4) a
+camera that pushes in; (5) a sound. We had (3), (4) and (5) — the
+freeze, the shake, the push-in, the hit sounds — and for (1) every one
+of 103 characters swung one of four stock clips (a sword slash, a
+hammer, a spell cast, a bow), and for (2) each element had a puff of
+two painted sprites. That is why the fights read as canned.
+
+### The motion: three ways, and the one taken
+
+- Meshy Text to Motion, a sentence per skill, applied to the family's
+  rig: 13 credits a clip in prime mode (10 + 3 to apply), Zeus's
+  ultimate took two takes (26), nothing else changes — the game already
+  plays `<asset>_<clip>.usdz` per skill slot (basic → skill 1, heavy →
+  skill 2 and every ritual, ultimate → skill 3). CHOSEN.
+- Better stock picks: 3 credits a clip, but the library has no spear,
+  claw, staff, dagger or whip, so most families cannot be fixed with it.
+- Mixamo mocap retargeted in Blender: no credits, days of pipeline,
+  generic again. A freelance animator: $150–400 a clip, $45k–120k the
+  roster — the genre's own cost, not this game's.
+
+Five families, three clips each (Zeus keeps his ultimate): Anubis,
+Sekhmet, Zeus, Ares, Thoth — the three flagship remakes and two other
+kits (a shield-and-sword warrior, a caster), so the test shows a
+pounce, a throw, a shield bash and a spell as well as a slash. The
+sentences are in `scratchpad/motion_wave.sh` and the manifests; each
+describes the motion in human terms, in place, starting and ending in
+the fighting stance so it cross-fades with the idle. Durations 2.0 s
+(basic), 2.5 s (heavy), 3.0 s (ultimate): the engine retimes each
+one-shot to its contract (1.3 / 1.7 / 2.4 s) inside 0.6–2×. Fourteen
+clips, 182 credits at one take; the motions all came back in about
+twenty seconds each, the application in a minute or two.
+
+### The effects: what can be painted, and with what
+
+Veo flipbooks (the fireball) are the right tool and are barred: Veo
+bills through the Gemini key and the owner's Gemini cap is $10 a month
+with $4.78 spent. Gemini's image model is paused for the same cap. But
+Meshy's text-to-image (`meshy.py picture`) paints with the same Google
+model (nano-banana-2) in MESHY credits — 6 a picture, measured on the
+first one (an accidental one: a probe with `dry_run` in the body was
+accepted and painted the prompt "x"; noted, 6 credits) — inside the
+floor the owner just set. So each skill family's effect is a painted
+4 × 4 flipbook sheet (16 frames on black, keyed and shipped by
+`vfx_ship.py`, played by `VFXLibrary.flipbook`) plus the code-built
+parts that already work: the slash arc, the bolt column, the storm
+ring, the sky flash, sparks, the freeze and the shake. The sheets to
+paint, one per skill family: a lightning strike (Zeus), a claw rake and
+a solar burst (Sekhmet), a shadow-and-gold burst (Anubis), a blood
+slash (Ares), a golden script burst and a heal (Thoth), a ground
+shockwave for every heavy slam. About 8 sheets plus re-rolls, 60–90
+credits. The risk, and the reason the first sheet is judged before the
+rest: a painter's 16 frames may not read as one motion; a sheet that
+flickers is played slower with a cross-fade, or cut to its four best
+frames.
+
+### Timing
+
+A bespoke clip's blow lands where the animator put it, not at the
+stock clip's 42% / 55% / 62%: each shipped clip is looked at frame by
+frame (`preview.py --frame`) and its contact fraction written into
+`BattleSceneController.contactFraction`'s per-family table, so the
+freeze, the flash and the damage number land on the frame the claw
+closes. Zeus becomes ranged (`melee: false`): a thrower does not run
+up to its victim, and the bolt sprite flies from his hand on the frame
+of release.
+
+### What the frames must show
+
+The tour's team is Anubis, Sekhmet and Zeus, so steps 6, 8, 18 and 29
+photograph the new clips and effects mid-swing; a preview sheet per
+clip (seven frames) is sent with the report, and the owner judges the
+motion on the phone.
+
+**Shipped (the same night).** Fourteen clips, every one right at the
+first take (the sheets of seven frames are in the scratchpad: Anubis
+lunges, leaps to a one-knee slam and weighs the scales; Sekhmet slashes,
+pounces twice and roars into a spin; Zeus hurls and drives the bolt
+down; Ares bashes and thrusts, charges into a chop and whirls; Thoth
+writes in the air, opens the scroll and reads the decree), 182 credits.
+Eight painted sheets at 6 each plus one re-roll (the blood slash came
+back on grey cells; "the entire image background is solid pure black"
+in the prompt fixed it) and one accidental 6: 242 credits in all,
+2,133 → 1,891, floor 1,500 untouched by 391. `tools/vfx_sheets.py`
+ships the sheets with alpha and a fade over each cell's outer ring — a
+painter's brightest frame fills its cell to the corners, and a square
+of light bursting on a victim was the one thing a sheet could do wrong.
+The contact frames read off the clips: Anubis 0.38 / 0.50 / 0.55,
+Sekhmet 0.45 / 0.42 / 0.45, Zeus 0.47 / 0.40 (ultimate 0.68), Ares
+0.47 / 0.50 / 0.45, Thoth 0.55 / 0.60 / 0.65.

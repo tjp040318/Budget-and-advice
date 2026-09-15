@@ -107,6 +107,13 @@ ENDPOINT = {
     # The docs host is closed to this environment; the field names were read
     # off the API's own validation errors (an empty body creates nothing).
     "motion":  "/v1/text-to-motion",
+    # Text to Image (2026-09-15): Meshy paints 2D too, billed in the same
+    # credits — 6 a picture on nano-banana-2 (the same Google image model
+    # the cards were painted with, measured on the first one). `prompt`
+    # and `ai_model` are the required fields (read off the validation
+    # error an empty body returns); the finished task carries the image
+    # under a URL field that `urls_in` finds.
+    "picture": "/v1/text-to-image",
 }
 
 
@@ -526,9 +533,60 @@ def cmd_motion(a):
 
 def refresh(api, m):
     for key, st in m["stages"].items():
+        # A finished stage keeps what it recorded: Meshy forgets a task after
+        # a while (a 404 on an image-to-3D from four days ago), and polling
+        # it again used to stop a download of the clips made a minute ago.
+        if st.get("status") in TERMINAL:
+            continue
         record(st, api.task(st["kind"], st["id"]))
     m["refreshed"] = now()
     save_manifest(m)
+
+
+def cmd_picture(a):
+    """A painting from a sentence, in Meshy credits: Art/VFX/<name>.png (or
+    --out). Used for effect flipbook sheets while Gemini is paused — the
+    owner's Meshy floor covers it. The task id is kept beside the file so a
+    re-run resumes rather than paying twice."""
+    api = Meshy(load_key(a.key_file))
+    out = Path(a.out) if a.out else REPO / "Art" / "VFX" / f"{a.name}.png"
+    side = out.with_suffix(".meshy.json")
+    st = json.loads(side.read_text()) if side.exists() else None
+    if st and st.get("request", {}).get("prompt") == a.prompt and st.get("status") not in ("FAILED", "CANCELED", "EXPIRED"):
+        tid = st["id"]
+        print(f"{a.name}: resuming {tid}")
+    else:
+        start = api.balance()
+        if start is not None and start - a.price < a.floor:
+            sys.exit(f"a picture is about {a.price} credits and the balance would fall below the {a.floor} floor")
+        body = {"prompt": a.prompt, "ai_model": a.model}
+        tid = api.create("picture", body)
+        st = {"id": tid, "kind": "picture", "created": now(), "status": "PENDING", "request": body, "balance_before": start}
+        side.parent.mkdir(parents=True, exist_ok=True)
+        side.write_text(json.dumps(st, indent=2) + "\n")
+        print(f"{a.name}: created {tid} ({start} credits before)")
+    t0 = time.time()
+    while True:
+        d = api.task("picture", tid)
+        record(st, d)
+        st["consumed_credits"] = d.get("consumed_credits")
+        side.write_text(json.dumps(st, indent=2) + "\n")
+        if st["status"] in TERMINAL:
+            break
+        if time.time() - t0 > TASK_TIMEOUT:
+            sys.exit("timed out; re-run to keep waiting")
+        time.sleep(POLL_SECONDS)
+    if st["status"] != "SUCCEEDED":
+        sys.exit(f"{a.name}: {st['status']} {(st.get('error') or {}).get('message', '')}")
+    urls = urls_in(d)
+    picks = [u for k, u in urls.items() if any(x in k.lower() for x in ("image", "result", "url"))]
+    if not picks:
+        sys.exit(f"no image URL in the finished task: {list(urls)}")
+    r = requests.get(picks[0], timeout=120)
+    r.raise_for_status()
+    out.write_bytes(r.content)
+    end = api.balance()
+    print(f"{a.name}: {out.relative_to(REPO)} {len(r.content) // 1024} KB, consumed {st.get('consumed_credits')} credits, balance {end}")
 
 
 def cmd_status(a):
@@ -602,7 +660,15 @@ def cmd_download(a):
         if out.exists() and not a.force:
             print(f"  {name:28s} exists ({out.stat().st_size / 1048576:.1f} MB) - skipped, --force to refetch")
             continue
-        size = fetch(url, out)
+        if a.clips_only and hint != "animation":
+            continue
+        try:
+            size = fetch(url, out)
+        except requests.exceptions.HTTPError as e:
+            # A signed URL from days ago has expired (403); the file on disk
+            # stays, and the clips made a minute ago still come down.
+            print(f"  {name:28s} not refetched: {e}")
+            continue
         st.setdefault("downloaded", {})[fmt] = str(out.relative_to(REPO)) if out.is_relative_to(REPO) else str(out)
         print(f"  {name:28s} {fmt:5s} {size / 1048576:6.1f} MB  -> {out}")
     save_manifest(m)
@@ -650,6 +716,14 @@ def main():
     p.add_argument("--mode", default="prime", choices=["prime", "swift"], help="prime (10 credits) or swift (3); +3 to apply")
     p.add_argument("--floor", type=int, default=2000, help="never spend below this balance (the owner's floor, 2,000 since 2026-09-11)")
 
+    p = sub.add_parser("picture", help="a painting from a sentence, in Meshy credits (effect sheets while Gemini is paused)")
+    p.add_argument("name", help="file stem: Art/VFX/<name>.png")
+    p.add_argument("--prompt", required=True)
+    p.add_argument("--model", default="nano-banana-2", help="nano-banana-2 (6 credits, measured), nano-banana-pro, gpt-image-2, ...")
+    p.add_argument("--out", help="write here instead of Art/VFX/<name>.png")
+    p.add_argument("--price", type=int, default=6, help="the credits one picture costs, for the floor check")
+    p.add_argument("--floor", type=int, default=2000, help="never spend below this balance")
+
     p = sub.add_parser("status", help="re-poll every task in an asset's manifest")
     p.add_argument("asset")
 
@@ -658,10 +732,11 @@ def main():
     p.add_argument("--formats", default="usdz,glb", help="preference order")
     p.add_argument("--dest", help="folder (default Art/Models)")
     p.add_argument("--include-unrigged", action="store_true", help="also fetch the preview and refine meshes")
+    p.add_argument("--clips-only", action="store_true", help="fetch the clips and leave the character files alone")
     p.add_argument("--force", action="store_true", help="refetch files that already exist")
 
     a = ap.parse_args()
-    {"balance": cmd_balance, "library": cmd_library, "generate": cmd_generate, "motion": cmd_motion,
+    {"balance": cmd_balance, "library": cmd_library, "generate": cmd_generate, "motion": cmd_motion, "picture": cmd_picture,
      "status": cmd_status, "download": cmd_download}[a.cmd](a)
 
 

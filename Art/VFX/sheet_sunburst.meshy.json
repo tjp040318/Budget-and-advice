@@ -1,0 +1,18 @@
+{
+  "id": "01a0a4f2-286f-775c-a66b-63f62c3fa1db",
+  "kind": "picture",
+  "created": "2026-09-15T12:02:08Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Stylised hand-painted game VFX with crisp dark outlines, on a pure black background. A sprite sheet for a video game visual effect: 16 sequential animation frames arranged in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, no borders, no gaps, no numbers, no text. The effect: a solar burst. Frame 1: a small golden spark at the centre. Frames 2 to 5: a blinding golden-white sun disc swells with long rays shooting out in every direction. Frames 6 to 9: a ring of golden light expands outward with a rain of gold sparks. Frames 10 to 16: the disc shrinks, the rays and sparks fade and dim until the last frame is nearly black. Bold saturated gold, orange and white.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1927,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789473728631,
+  "started_at": 1789473728636,
+  "polled": "2026-09-15T12:02:28Z",
+  "consumed_credits": 6,
+  "finished_at": 1789473742081
+}

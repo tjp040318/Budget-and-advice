@@ -1,0 +1,18 @@
+{
+  "id": "01a0a4f2-27dd-7787-887b-6d89db903291",
+  "kind": "picture",
+  "created": "2026-09-15T12:02:08Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Stylised hand-painted game VFX with crisp dark outlines, on a pure black background. A sprite sheet for a video game visual effect: 16 sequential animation frames arranged in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, no borders, no gaps, no numbers, no text. The effect: three parallel curved claw slash marks raking diagonally from upper left to lower right. Frames 1 to 3: the three glowing red-orange claw streaks appear one after another, each with a white-hot core. Frames 4 to 8: they blaze at full brightness with sparks and drops of glowing ember flying off them. Frames 9 to 16: the streaks break apart into embers, fade and dim until the last frame is nearly black. Bold saturated red, orange and white.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1939,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789473728490,
+  "started_at": 1789473728495,
+  "polled": "2026-09-15T12:03:19Z",
+  "consumed_credits": 6,
+  "finished_at": 1789473796505
+}

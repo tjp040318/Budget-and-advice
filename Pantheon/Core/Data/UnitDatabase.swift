@@ -1036,7 +1036,11 @@ enum UnitDatabase {
                 handAttachNode: "hand_r",
                 chestAttachNode: "spine_03",
                 auraHex: f.auraHex,
-                portraitName: "portrait_\(f.id)"
+                portraitName: "portrait_\(f.id)",
+                // A thrower (2026-09-15): the bespoke basic and heavy clips
+                // hurl the bolt, so he strikes from where he stands and the
+                // bolt sprite flies from his hand.
+                melee: false
             ),
             lore: """
             Kronos swallowed each of his children as they were born, and the sixth \

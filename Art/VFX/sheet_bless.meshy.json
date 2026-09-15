@@ -1,0 +1,18 @@
+{
+  "id": "01a0a4f2-2892-7197-ab9c-974506e0ceb0",
+  "kind": "picture",
+  "created": "2026-09-15T12:02:08Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Stylised hand-painted game VFX with crisp dark outlines, on a pure black background. A sprite sheet for a video game visual effect: 16 sequential animation frames arranged in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, no borders, no gaps, no numbers, no text. The effect: a blessing of healing light. Frames 1 to 4: a gentle green-gold glow rises from the bottom as petals of light spiral upward. Frames 5 to 10: a bloom of white-green light opens at the centre with sparkles drifting up. Frames 11 to 16: the light softens and fades until the last frame is nearly black. Soft green, gold and white.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1921,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789473728665,
+  "started_at": 1789473728670,
+  "polled": "2026-09-15T12:02:49Z",
+  "consumed_credits": 6,
+  "finished_at": 1789473761614
+}

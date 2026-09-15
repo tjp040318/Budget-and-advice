@@ -1,0 +1,18 @@
+{
+  "id": "01a0a4f5-9a26-7258-b0ee-da1e5cb0f701",
+  "kind": "picture",
+  "created": "2026-09-15T12:05:54Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Stylised hand-painted game VFX with crisp dark outlines. IMPORTANT: the entire image background is solid pure black, every one of the 16 cells sits on the same continuous pure black, with no white, grey or coloured cell backgrounds anywhere. A sprite sheet for a video game visual effect: 16 sequential animation frames arranged in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, no borders, no gaps, no numbers, no text. The effect: a glowing crimson X-shaped double slash. Frames 1 to 2: the first diagonal crimson slash streak cuts across with a white-hot core. Frames 3 to 4: the second slash crosses it forming an X with a red flash at the crossing. Frames 5 to 9: blood-red spray and glowing droplets fly outward from the crossing. Frames 10 to 16: the streaks fade and the droplets fall and dim until the last frame is nearly black. Bold saturated crimson, red and white light on black.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1897,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789473954352,
+  "started_at": 1789473954356,
+  "polled": "2026-09-15T12:06:14Z",
+  "consumed_credits": 6,
+  "finished_at": 1789473969896
+}

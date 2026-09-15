@@ -918,7 +918,29 @@ environment can and cannot do. The short version:
   clip with `python3 tools/preview.py Art/Models/<asset>_<clip>.glb
   --frame N` at a few frames. Zeus's ultimate was the first (both arms
   overhead gathering, a lunge and an overhand hurl, a settle; 26 credits
-  for two takes). `docs.meshy.ai` is closed to this environment; the
+  for two takes). **The five-god test (2026-09-15, night; the owner: "I
+  want REAL animated attacks (that includes effects, not just the
+  animated model)", floor 1,500):** Anubis, Sekhmet, Zeus, Ares and Thoth
+  each got a bespoke basic, heavy and ultimate from a sentence
+  (`scratchpad/motion_wave.sh` holds the fourteen sentences; every one
+  read right at the first take, 182 credits), shipped with
+  `mesh.py <asset>_hd --as <name> --only-clips attack_basic,attack_heavy,ultimate`;
+  each clip's blow frame is in `BattleSceneController.contactFraction`'s
+  per-god table so the freeze and the flash land on it; Zeus is ranged
+  (`melee: false`) since his clips hurl. **The effects are painted
+  flipbooks:** `meshy.py picture` paints in MESHY credits (6 a picture on
+  nano-banana-2, measured) while Gemini is paused, and
+  `tools/vfx_sheets.py` ships `Art/VFX/sheet_<name>.png` (4 × 4, sixteen
+  frames on black) as `vfx_<name>_sheet.png` with alpha and a fade over
+  every cell's outer ring; eight sheets — claw, sunburst, shadow,
+  lightning, blood, script, shockwave, bless (54 credits with one
+  re-roll; the blood sheet's first take put its cells on grey) — play
+  under the named skill effects (`VFXLibrary.addFlipbook`), the
+  shockwave lies flat on the floor under every heavy blow
+  (`groundFlipbook`, frames swapped as the material's contents), and an
+  ultimate gathers motes round its caster through the wind-up
+  (`charge`). Ares's Slaughter is `blood_slash`. 242 credits in all,
+  2,133 → 1,891, six of them a probe that painted the prompt "x". `docs.meshy.ai` is closed to this environment; the
   field names were read off the API's own validation errors, which an
   empty body returns without creating anything.
 - **Stand-ins by name.** `ModelSpec.standInAsset` names a shipped mesh to

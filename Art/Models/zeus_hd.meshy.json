@@ -108,58 +108,6 @@
         "glb": "Art/Models/zeus_hd_idle_combat.glb"
       }
     },
-    "clip:attack_basic": {
-      "id": "01a08760-3db8-7137-9994-125adba5ff53",
-      "kind": "clip",
-      "created": "2026-09-09T18:13:47Z",
-      "status": "SUCCEEDED",
-      "request": {
-        "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
-        "action_id": 219
-      },
-      "cost": -6,
-      "clip": "attack_basic",
-      "action_id": 219,
-      "progress": 100,
-      "urls": {
-        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08760-3db8-7137-9994-125adba5ff53/output/Animation_Right_Hand_Sword_Slash_withSkin.glb?Expires=1789236838&Signature=k9eSJ4qDhNPV4y2hTLYEt~CAq0AengKBT8XIpR2dF9Lmy8l8stM3l6rNfTciH3kdeldH6boRrv5YrDWT711xDXwl0rkeuitNBWLhcBwDXTA7jOjLjaZnZdwvgCQVmJDCraiQBu49~oxtgA1grdawOVi016YX643qSnvn5sOd3BC1Pr8BC4Gajt~4dLPws3iexG9L9s7ou1aJyimCwDWRw~OpDIIEzNAoPn5VQ~hIgyjteaq3GUfg7w5~R56c0Z3eCF80Gq3YOu2ey3m7Dj47IlqjyK9KGuS0LWkzZGD0Fl3YDwcllP1Nuk9mZTzGt3omHQmRQHWLDC4N10D3AOBBhA__&Key-Pair-Id=K1VGYTHIYLM9UM",
-        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08760-3db8-7137-9994-125adba5ff53/output/Animation_Right_Hand_Sword_Slash_withSkin.fbx?Expires=1789236838&Signature=HOmagfWUQE1NdVeh9d1WFxmU58JRwc3GFLNpL~8d99Rgy9C3~JoY93VHpZRsd58TSLhMZgd4lWFR-Z7vLUuVLisKHO7G8Q9fe0LHh~L9W-eGojYk8k-SIky3FJ8h7g9cxnZ1hxrWIlb7SyCTCJg3jvqrleUtqE1lbXVUR5ggRwVCx1WJSPYKi66we4b9wosZJN45S1C5gMiTp1rrC1I2hJrA8E4O9~gLg25rosl1viO1D4HJEOabdHOxLe0cpk4ZKzw0UAULa-Xfp0Chm-zizqNsvJQyVJ5a~ol3ZhSx9j3DjEnYggAb1GrXkaZRAQMB9ae0zdde6uYsYLHUsKyTIg__&Key-Pair-Id=K1VGYTHIYLM9UM"
-      },
-      "created_at": 1788977626890,
-      "started_at": 1788977626893,
-      "finished_at": 1788977638504,
-      "name": "",
-      "polled": "2026-09-11T02:30:49Z",
-      "downloaded": {
-        "glb": "Art/Models/zeus_hd_attack_basic.glb"
-      }
-    },
-    "clip:attack_heavy": {
-      "id": "01a08760-4093-7398-8784-9e0d6967060c",
-      "kind": "clip",
-      "created": "2026-09-09T18:13:47Z",
-      "status": "SUCCEEDED",
-      "request": {
-        "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
-        "action_id": 242
-      },
-      "cost": 12,
-      "clip": "attack_heavy",
-      "action_id": 242,
-      "progress": 100,
-      "urls": {
-        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08760-4093-7398-8784-9e0d6967060c/output/Animation_Charged_Slash_withSkin.glb?Expires=1789236847&Signature=gQtgiwxQtJzhsIiB2CgSO8U9jF-rBNoYg52PjHysZlUd39FMY3YEVi1at9cfa4Mb13ZUDL-jq8m4cwc~7M~23lwbXXV9T0IoMK2hPZrLPm8k9DYhWMzvITmiFpY-itH8Y0P0qUQ1oNSOrM-o3PFtIrgW3amhr-8hwSl3vC6SJMzhRLITIF6P0Vk-WhoCxMAP8bC0CoQE1nsFoaDlYVHal7-VPL9s7pE5iu9rAnNdoT9-jICKUm9z0x1Bba7EBWsKqa70BGQ-j3hJWk5F1NKmIrlhJb8e6eg5G~SGBxC0ajJdBIBVWiECyP6p~uLt-JFv08eX3uUqlTYlN9Xcyv0cmw__&Key-Pair-Id=K1VGYTHIYLM9UM",
-        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08760-4093-7398-8784-9e0d6967060c/output/Animation_Charged_Slash_withSkin.fbx?Expires=1789236847&Signature=GPEgoxnR3WDl7dC-XNKQwuhginLqIJm2mkvY34epR3kDPvwt~a-zvdF9-x9Zjx-g0iI60lvtP20Mn2hJ6E7~7tY8-vEPcMsNsvOBG9OlYjRB60fZR5dfbouT4XtmxHAJtZ4M5V8DvAStN88kn99oZVa5GRtpbczeB2en5y-ZurjYFanO07G7cVbaPL~2ar6UfnbYoSchN8unkpHzgR98VNA6N7NPnmUrKdi39393gZf0undDjROMI0vcFDMWozlj4IGMnz8g~khwLm~fWylcgSc63cS5b7im445flKMrwTFX1rTpDN0YYBDQOgSD4LZ5NWSpxmvVUEAtPaugTM6hKA__&Key-Pair-Id=K1VGYTHIYLM9UM"
-      },
-      "created_at": 1788977627599,
-      "started_at": 1788977627602,
-      "finished_at": 1788977647624,
-      "name": "",
-      "polled": "2026-09-11T02:30:50Z",
-      "downloaded": {
-        "glb": "Art/Models/zeus_hd_attack_heavy.glb"
-      }
-    },
     "clip:hit_react": {
       "id": "01a08760-4359-70a4-aadb-5f88d9cd4b39",
       "kind": "clip",
@@ -285,6 +233,102 @@
       "downloaded": {
         "glb": "Art/Models/zeus_hd_ultimate.glb"
       }
+    },
+    "motion:attack_basic": {
+      "id": "01a0a4ee-7fad-7155-9698-a3fec479b2d5",
+      "kind": "motion",
+      "created": "2026-09-15T11:58:09Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "Fighting stance, the right hand holding a short spear, a quick overhand throw like hurling a javelin with the left arm pointing at the target and the weight following through, then back to the fighting stance. In place.",
+        "duration": 2.0,
+        "mode": "prime"
+      },
+      "cost": 50,
+      "clip": "attack_basic",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ee-7fad-7155-9698-a3fec479b2d5/output/clip.fbx?Expires=1789732705&Signature=eYwnuDHNj7ikX96WAhyyX1MjmoKDASVc4865Zrjd46F8eUrzsNwm2OM-knQb~YeT79fuIuqcapvX-td4y3hKmurwra~gFHZezfAw2vIyW6yc3CgKg7owAM7VUGRFocy1sOuEkkiT~YahcZxJkheWcnlUyvts5cvb1Ekiy3dDe3PP6YPfkjhWSHp32PZeor-3vyBpxImffjY2XxqvWbf0hzqFJVCAqsyeOrWTl-h615KNBlq8zm9tOJapnIZHqPHJPiIdTWZn2VU8YAjQchFK6II3Skg21mvTyDapX~ruzLjyNblZ4BUFgohKzYNMLZKxC1pwx2pVUEfFngV9lqCBmA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473489898,
+      "started_at": 1789473489902,
+      "finished_at": 1789473505426,
+      "name": "",
+      "polled": "2026-09-15T11:58:30Z"
+    },
+    "clip:attack_basic": {
+      "id": "01a0a4ee-d4f0-7124-80a8-956ea1d07c78",
+      "kind": "clip",
+      "created": "2026-09-15T11:58:31Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
+        "motion_task_id": "01a0a4ee-7fad-7155-9698-a3fec479b2d5"
+      },
+      "cost": 3,
+      "clip": "attack_basic",
+      "motion_task_id": "01a0a4ee-7fad-7155-9698-a3fec479b2d5",
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ee-d4f0-7124-80a8-956ea1d07c78/output/Animation_01a0a4ee-7fad-7155-9698-a3fec479b2d5_withSkin.glb?Expires=1789732716&Signature=eGIr-NsL95450fgdZWKJmWGeNj0gNLBqNVn~JfFT5Bxb9eyQjQNFcEb~Nb81ouclRyeSLBPrTnvpTje5NgmJCf2i3rC2DBK-YChL7ZNBUqyAA-CYsQ7bZneCHolNUcHLW4kVzB0PRC-XF6SJZ~a065V7ih35qTuuP5TCm43kXnTTtZFvIhthtEO0KucKSdCAINXHTYQxJ9hwOeZ7L4iKD59ifPytHVWfkZjCZoJua3EyNLNpbFVoEE1-HjKlN8U16kWNZNXDWB-vSZ0PsMX6PMJ4Ynj6QGWnmiY1zpXfxkol8czlioRbWbl7-AbzCJyE6dzSYQ5heAfLBTFUiOYTIQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ee-d4f0-7124-80a8-956ea1d07c78/output/Animation_01a0a4ee-7fad-7155-9698-a3fec479b2d5_withSkin.fbx?Expires=1789732716&Signature=aM-EVuEGu-fL3akepOdhLle~P3tmhKs5jOvmFrgZHbjOy-Y2DhCncsDrs4afpnWLl0lk3pevO35j9jY9abuOoZgMg8K~Zplk34G67GzsIJTufnPqkUugqihbKvYlOx3zemzKGhNnAaPhw3vMOk9q1iSvtCvTdJ9yY5abeGlY3I9GLXK3RStEw84gmTZPYJT-QJ3RZOFgB0qvdBnxSr9mHOdIYEkRHQLzOZDklxgqeAMRU-EAahgfBQ-DRNilmGrng~HjgVmx8G7alieF4MkdyptdFzzMQx64pcKUUPm8YyZM97D0fKZrHSvtA~ps7hwoYAvB~tqFwK2kOaB1Hdj-Jw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473511198,
+      "started_at": 1789473511201,
+      "finished_at": 1789473516522,
+      "name": "",
+      "polled": "2026-09-15T11:58:41Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_hd_attack_basic.glb"
+      }
+    },
+    "motion:attack_heavy": {
+      "id": "01a0a4ef-039b-70cd-8cb0-fb2b9fc8b3fe",
+      "kind": "motion",
+      "created": "2026-09-15T11:58:43Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "The right arm raises a short spear high overhead with the body stretched tall, a stomp forward and a mighty downward strike driving the spear into the ground with both hands, a crouched hold, then rising back to the fighting stance. In place.",
+        "duration": 2.5,
+        "mode": "prime"
+      },
+      "cost": 20,
+      "clip": "attack_heavy",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ef-039b-70cd-8cb0-fb2b9fc8b3fe/output/clip.fbx?Expires=1789732745&Signature=GTc4qwxYrzM4v6Adcm6GvA2SZ8QMpfkTeIzkpRQvwz6jEFgslAZMjvIiRyuzLuZCAmONE~f5vUcDDLedXDfAHT6FPQ0veMlS13OpdU~aUE5RdB6lPF7rDL2ixjV~6qLs2Crcd1QkwQhJg~oSBEmdUnfmQc73oEd5NMyZ4q7NmiS6LbXGFaos9eaYZf-XhR5XT8VFvs45yTg8Pg2eSklQpoY9dJAWbr6GM~TpADI8z0gWszY~4fXdBgXw~EuiMLFQFnrsbPsBpfuuEQaphQXYuUbjiWsqf6KC31zmiA5YkQAdruvnMT79TMTLe90FpCYM7B2DvOFkZNCkAV9Xg9xu6Q__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473523406,
+      "started_at": 1789473523408,
+      "finished_at": 1789473545273,
+      "name": "",
+      "polled": "2026-09-15T11:59:13Z"
+    },
+    "clip:attack_heavy": {
+      "id": "01a0a4ef-7f46-715e-8215-94eb526f17ba",
+      "kind": "clip",
+      "created": "2026-09-15T11:59:14Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
+        "motion_task_id": "01a0a4ef-039b-70cd-8cb0-fb2b9fc8b3fe"
+      },
+      "cost": 3,
+      "clip": "attack_heavy",
+      "motion_task_id": "01a0a4ef-039b-70cd-8cb0-fb2b9fc8b3fe",
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ef-7f46-715e-8215-94eb526f17ba/output/Animation_01a0a4ef-039b-70cd-8cb0-fb2b9fc8b3fe_withSkin.glb?Expires=1789732761&Signature=p-gnHzxBB~aX1kRHFTgYAWftfo3fqwkZDNGtk4HGBxeGfb8VM1PeZtKj0nODu8x~8dVeGigDZmVfbp1~vjtzi8mGnpvTN4LRhLPOXttDNxetmRxK5Qnn0So4O0SaJr0SvAUS9tlCCgqIgbcdVm20lbWd4VsgTomeDiLUsiQP7SxYAkmM1q~TZbxfqdZPAflaB1ODgn1ATMxc-DEhsSZIXhAwltbnjyPzFZna1sT4Aj0q7I8qAMC4n-phTQwYBgdmmDnDzeOoJ-MKR0Fo4Th4QJkxIllnwfW-TL7FR7KZJb4TRGRhRThw8tmv7Dr6-TPRWjuiXh~c9mfgi9t9cBu39w__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ef-7f46-715e-8215-94eb526f17ba/output/Animation_01a0a4ef-039b-70cd-8cb0-fb2b9fc8b3fe_withSkin.fbx?Expires=1789732761&Signature=D2l1xQZXQ5eDIYd8dVUa4RFpcSdW3TGyCtxG3~UWr5tuAg4rbiaUh61N9RpitYEKocwlvhJr1fMNd9R2Ia7f2QaYxUqPeju4GcbSt3YQ0ZP8ThdzDUglSf8bHimRk5uGo~Rrnd4SCypuusikTy2hwTqki75IgzupnUhvIznDAVuonDOLGwMQb9bQ-Z4L3A0LAj-i12Bak~aJb-v0eC-zu4SQTJfbRcM4Gn-ZdApdwa9FEdcHc7FF~i~g1MsHrMyGK6dNPQ2qmFW73YtnQn9W8h-nwtXXWAvw9QYJH5PdI~U8GRY82j29AC49H~TRDStp1ragndjOjOHpoiH3wut3gA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473554765,
+      "started_at": 1789473554768,
+      "finished_at": 1789473561015,
+      "name": "",
+      "polled": "2026-09-15T11:59:25Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_hd_attack_heavy.glb"
+      }
     }
   },
   "history": [
@@ -361,7 +405,59 @@
       "downloaded": {
         "glb": "Art/Models/zeus_hd_ultimate.glb"
       }
+    },
+    {
+      "id": "01a08760-3db8-7137-9994-125adba5ff53",
+      "kind": "clip",
+      "created": "2026-09-09T18:13:47Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
+        "action_id": 219
+      },
+      "cost": -6,
+      "clip": "attack_basic",
+      "action_id": 219,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08760-3db8-7137-9994-125adba5ff53/output/Animation_Right_Hand_Sword_Slash_withSkin.glb?Expires=1789236838&Signature=k9eSJ4qDhNPV4y2hTLYEt~CAq0AengKBT8XIpR2dF9Lmy8l8stM3l6rNfTciH3kdeldH6boRrv5YrDWT711xDXwl0rkeuitNBWLhcBwDXTA7jOjLjaZnZdwvgCQVmJDCraiQBu49~oxtgA1grdawOVi016YX643qSnvn5sOd3BC1Pr8BC4Gajt~4dLPws3iexG9L9s7ou1aJyimCwDWRw~OpDIIEzNAoPn5VQ~hIgyjteaq3GUfg7w5~R56c0Z3eCF80Gq3YOu2ey3m7Dj47IlqjyK9KGuS0LWkzZGD0Fl3YDwcllP1Nuk9mZTzGt3omHQmRQHWLDC4N10D3AOBBhA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08760-3db8-7137-9994-125adba5ff53/output/Animation_Right_Hand_Sword_Slash_withSkin.fbx?Expires=1789236838&Signature=HOmagfWUQE1NdVeh9d1WFxmU58JRwc3GFLNpL~8d99Rgy9C3~JoY93VHpZRsd58TSLhMZgd4lWFR-Z7vLUuVLisKHO7G8Q9fe0LHh~L9W-eGojYk8k-SIky3FJ8h7g9cxnZ1hxrWIlb7SyCTCJg3jvqrleUtqE1lbXVUR5ggRwVCx1WJSPYKi66we4b9wosZJN45S1C5gMiTp1rrC1I2hJrA8E4O9~gLg25rosl1viO1D4HJEOabdHOxLe0cpk4ZKzw0UAULa-Xfp0Chm-zizqNsvJQyVJ5a~ol3ZhSx9j3DjEnYggAb1GrXkaZRAQMB9ae0zdde6uYsYLHUsKyTIg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1788977626890,
+      "started_at": 1788977626893,
+      "finished_at": 1788977638504,
+      "name": "",
+      "polled": "2026-09-11T02:30:49Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_hd_attack_basic.glb"
+      }
+    },
+    {
+      "id": "01a08760-4093-7398-8784-9e0d6967060c",
+      "kind": "clip",
+      "created": "2026-09-09T18:13:47Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0875f-17d4-709d-84d9-9808a44cf988",
+        "action_id": 242
+      },
+      "cost": 12,
+      "clip": "attack_heavy",
+      "action_id": 242,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08760-4093-7398-8784-9e0d6967060c/output/Animation_Charged_Slash_withSkin.glb?Expires=1789236847&Signature=gQtgiwxQtJzhsIiB2CgSO8U9jF-rBNoYg52PjHysZlUd39FMY3YEVi1at9cfa4Mb13ZUDL-jq8m4cwc~7M~23lwbXXV9T0IoMK2hPZrLPm8k9DYhWMzvITmiFpY-itH8Y0P0qUQ1oNSOrM-o3PFtIrgW3amhr-8hwSl3vC6SJMzhRLITIF6P0Vk-WhoCxMAP8bC0CoQE1nsFoaDlYVHal7-VPL9s7pE5iu9rAnNdoT9-jICKUm9z0x1Bba7EBWsKqa70BGQ-j3hJWk5F1NKmIrlhJb8e6eg5G~SGBxC0ajJdBIBVWiECyP6p~uLt-JFv08eX3uUqlTYlN9Xcyv0cmw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a08760-4093-7398-8784-9e0d6967060c/output/Animation_Charged_Slash_withSkin.fbx?Expires=1789236847&Signature=GPEgoxnR3WDl7dC-XNKQwuhginLqIJm2mkvY34epR3kDPvwt~a-zvdF9-x9Zjx-g0iI60lvtP20Mn2hJ6E7~7tY8-vEPcMsNsvOBG9OlYjRB60fZR5dfbouT4XtmxHAJtZ4M5V8DvAStN88kn99oZVa5GRtpbczeB2en5y-ZurjYFanO07G7cVbaPL~2ar6UfnbYoSchN8unkpHzgR98VNA6N7NPnmUrKdi39393gZf0undDjROMI0vcFDMWozlj4IGMnz8g~khwLm~fWylcgSc63cS5b7im445flKMrwTFX1rTpDN0YYBDQOgSD4LZ5NWSpxmvVUEAtPaugTM6hKA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1788977627599,
+      "started_at": 1788977627602,
+      "finished_at": 1788977647624,
+      "name": "",
+      "polled": "2026-09-11T02:30:50Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_hd_attack_heavy.glb"
+      }
     }
   ],
-  "refreshed": "2026-09-11T02:30:51Z"
+  "refreshed": "2026-09-15T12:05:12Z"
 }

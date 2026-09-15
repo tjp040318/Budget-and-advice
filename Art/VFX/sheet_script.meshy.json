@@ -1,0 +1,18 @@
+{
+  "id": "01a0a4f2-2835-7173-9cb4-cd6a1222f33f",
+  "kind": "picture",
+  "created": "2026-09-15T12:02:08Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Stylised hand-painted game VFX with crisp dark outlines, on a pure black background. A sprite sheet for a video game visual effect: 16 sequential animation frames arranged in a 4 by 4 grid, read left to right then top to bottom, every cell exactly the same size, no borders, no gaps, no numbers, no text. The effect: a burst of golden light full of glowing hieroglyph-like glyph shapes. Frame 1: a soft gold glow at the centre. Frames 2 to 6: rings of glowing golden glyph symbols spin outward from the centre with a white-gold flash. Frames 7 to 11: the glyphs rise upward and scatter like sparks. Frames 12 to 16: everything fades softly until the last frame is nearly black. Gold, white and pale blue.",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1933,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789473728578,
+  "started_at": 1789473728582,
+  "polled": "2026-09-15T12:04:30Z",
+  "consumed_credits": 6,
+  "finished_at": 1789473862677
+}

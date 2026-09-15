@@ -63,7 +63,22 @@ final class BattleSceneController: NSObject {
     /// contact is written down, and `UnitNode.play` retimes every one-shot to
     /// its contract so the fraction means the same thing whatever length Meshy
     /// happened to author the clip at.
-    private static func contactFraction(of clip: AnimationClip) -> Double {
+    /// Where in a clip the blow lands, as a fraction of its length. The stock
+    /// clips' values first; a bespoke clip's blow lands where its sentence
+    /// put it, read off the clip's frames when it shipped (2026-09-15: the
+    /// five gods' fourteen clips, `preview.py --frame`), so the freeze, the
+    /// flash and the damage number meet the claw as it closes. `castRelease`
+    /// plays the heavy clip, so it reads the heavy's row.
+    private static func contactFraction(of clip: AnimationClip, for asset: String = "") -> Double {
+        let bespoke: [String: [AnimationClip: Double]] = [
+            "anubis":  [.attackBasic: 0.38, .attackHeavy: 0.50, .ultimate: 0.55],
+            "sekhmet": [.attackBasic: 0.45, .attackHeavy: 0.42, .ultimate: 0.45],
+            "zeus":    [.attackBasic: 0.47, .attackHeavy: 0.40, .ultimate: 0.68],
+            "ares":    [.attackBasic: 0.47, .attackHeavy: 0.50, .ultimate: 0.45],
+            "thoth":   [.attackBasic: 0.55, .attackHeavy: 0.60, .ultimate: 0.65],
+        ]
+        let row = clip == .castRelease ? AnimationClip.attackHeavy : clip
+        if let value = bespoke[asset]?[row] { return value }
         switch clip {
         case .attackBasic: return 0.42
         case .attackHeavy: return 0.55
@@ -681,6 +696,13 @@ final class BattleSceneController: NSObject {
             if animation == .castRelease || animation == .ultimate {
                 casterNode.castRing(tint: elementTint, duration: clipLength, after: beat(walkUp))
             }
+            // An ultimate gathers before it lands: motes drawn up round the
+            // caster and a swelling core through the wind-up (2026-09-15).
+            if animation == .ultimate {
+                VFXLibrary.charge(on: casterNode, tint: elementTint,
+                                  duration: beat(walkUp + animation.fallbackDuration * Self.contactFraction(of: animation, for: casterNode.spec.assetName)),
+                                  scale: casterNode.spec.height / 1.9)
+            }
             if casterNode.spec.melee, animation != .castRelease, !casterNode.isBoss {
                 let steel = UIColor(hex: "#D9E4F2") ?? .white
                 casterNode.swingTrail(tint: animation == .ultimate ? elementTint : steel,
@@ -692,9 +714,10 @@ final class BattleSceneController: NSObject {
             // rather than of the turn, and held by the queue so the damage
             // event arrives on it. What is left of the clip is repaid to the
             // next turn as recovery.
-            let contact = walkUp + animation.fallbackDuration * Self.contactFraction(of: animation)
+            let landing = Self.contactFraction(of: animation, for: casterNode.spec.assetName)
+            let contact = walkUp + animation.fallbackDuration * landing
             holdOverride = contact
-            castRecovery = animation.fallbackDuration * (1 - Self.contactFraction(of: animation))
+            castRecovery = animation.fallbackDuration * (1 - landing)
 
             // A ranged strike flies: the element's painted sprite leaves the
             // caster's chest and lands on the victim's on the frame of
@@ -758,6 +781,11 @@ final class BattleSceneController: NSObject {
                                     "slash", at: node.chestWorldPosition, in: self.scene,
                                     tint: tint, scale: node.spec.height / 1.9 * (animation == .attackHeavy ? 1.3 : 1.0)
                                 )
+                            }
+                            // A heavy blow breaks the ground under its victim.
+                            if animation == .attackHeavy, casterNode.spec.melee {
+                                VFXLibrary.spawn("shockwave", at: node.position, in: self.scene, tint: tint,
+                                                 scale: node.spec.height / 1.9)
                             }
                         }
                     }
