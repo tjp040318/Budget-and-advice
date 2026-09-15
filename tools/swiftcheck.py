@@ -873,6 +873,67 @@ def check_accessor_keywords(files, errors):
                 f"write `self.{word}`")
 
 
+
+# ---------------------------------------------------------------------------
+# Rule 12: a local declared twice in one scope
+# ---------------------------------------------------------------------------
+#
+# `let landing = ...` twice in the same block is "invalid redeclaration" to
+# the compiler and cost a CI run on 2026-09-15 (the second one was added by
+# a later edit that never saw the first). Scopes are counted by braces after
+# the noise is stripped; a `switch`'s cases are separate scopes, as they are
+# in Swift; `if let` / `guard let` / `for` bind in the block they open, so
+# only a declaration that starts its own line counts, plus a `guard let`,
+# which binds in the enclosing scope.
+
+DECL_LINE = re.compile(r"^\s*(?:guard\s+)?(?:let|var)\s+([A-Za-z_]\w*)\b")
+CASE_LINE = re.compile(r"^\s*(?:case\b.*|default)\s*:\s*(?://.*)?$")
+
+
+def check_redeclared_locals(files, errors):
+    for path in files:
+        src = strip_noise(open(path, encoding="utf-8", errors="replace").read())
+        # Each scope: (kind, {name: line}); kind is "brace", "switch" or "case".
+        scopes = [("brace", {})]
+        for i, raw in enumerate(src.split("\n")):
+            line = raw.strip()
+            if not line:
+                continue
+            # A `case` inside a switch opens a fresh case scope (closing the
+            # one before it) — the same name may be bound in every case.
+            if CASE_LINE.match(line) and any(k == "switch" for k, _ in scopes):
+                while scopes and scopes[-1][0] == "case":
+                    scopes.pop()
+                scopes.append(("case", {}))
+            m = DECL_LINE.match(line)
+            declared = m.group(1) if m else None
+            if declared in ("_",):
+                declared = None
+            guarded = line.startswith("guard ")
+            # A declaration whose line opens a block (`let x = f() {` in a
+            # multi-line `if`, a computed property) binds inside that block.
+            binds_inside = declared is not None and line.endswith("{")
+            if declared and not binds_inside:
+                names = scopes[-1][1]
+                if declared in names and not guarded:
+                    errors.append(f"{path}:{i + 1}: `{declared}` is declared again in the same scope "
+                                  f"(first at line {names[declared]}) — the compiler calls this an invalid "
+                                  f"redeclaration; give the second one its own name")
+                else:
+                    names.setdefault(declared, i + 1)
+            # Braces in the order they come: `} else {` closes, then opens.
+            for ch in line:
+                if ch == "{":
+                    scopes.append(("switch" if "switch " in line else "brace", {}))
+                elif ch == "}":
+                    while len(scopes) > 1 and scopes[-1][0] == "case":
+                        scopes.pop()
+                    if len(scopes) > 1:
+                        scopes.pop()
+            if declared and binds_inside:
+                scopes[-1][1].setdefault(declared, i + 1)
+
+
 # ---------------------------------------------------------------------------
 # Rule 9: duplicate bundle-resource filenames
 # ---------------------------------------------------------------------------
@@ -1042,6 +1103,7 @@ def main():
     check_switch_exhaustive(files, errors)
     check_model_members(files, errors)
     check_extension_stored_properties(files, errors)
+    check_redeclared_locals(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 
