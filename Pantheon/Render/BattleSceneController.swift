@@ -412,11 +412,22 @@ final class BattleSceneController: NSObject {
                 let spot = SCNLight()
                 spot.type = .spot
                 spot.color = (UIColor(hex: environment.keyLightHex) ?? .white).mixed(with: .white, amount: 0.55)
-                spot.intensity = 3_000
-                spot.spotInnerAngle = 28
-                spot.spotOuterAngle = 75
-                spot.attenuationStartDistance = 4
-                spot.attenuationEndDistance = 34
+                // A SPOT, not a second sun. It was 3,000 through a 75°
+                // cone reaching 34 m — the key light is 1,150 and the slab
+                // is 44 m across, so the moment a boss walked on, the whole
+                // set was lit two and a half times over: the owner's
+                // Labyrinth frame of wave 3 is the arena as a pale wash with
+                // only the health bars in it. Same mistake as the impact
+                // flash, one screen further on. The lamp stands about 8.5 m
+                // from the chest it aims at, so a 46° cone covers a boss
+                // three and a half metres wide with margin and nothing else,
+                // and the light is gone by 14 m — before the player's row,
+                // which is behind it anyway.
+                spot.intensity = 2_400
+                spot.spotInnerAngle = 22
+                spot.spotOuterAngle = 46
+                spot.attenuationStartDistance = 5
+                spot.attenuationEndDistance = 14
                 let height = combatant.model.height
                 let chest = SCNNode()
                 chest.position = SCNVector3(0, height * 0.42, 0)

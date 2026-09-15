@@ -2678,3 +2678,19 @@ basic's size: the sheet 3.6 m → 2.6, the bolt 9 m → 7, the sparks 90 →
 relight the set.** Brightness belongs to the sprite, which covers only
 itself; a light in an effect reaches about as far as the thing it is
 lighting.
+
+**And the same mistake one screen further on.** The run that proved the
+impact fix (the worst 64 × 64 patch fell from 100% blown to 25%, no band
+over 1.6%) photographed the Labyrinth's third wave as a pale wash with
+only the health bars legible — 191/211/207 mean and almost nothing
+clipped, which is what a scene lit to several times white looks like
+AFTER the shoulder: it rolls off instead of clipping, and it is still a
+white-out. The boss's own lamp: `intensity = 3,000` through a **75°
+cone** with `attenuationEndDistance = 34`. The key light is 1,150 and the
+slab is 44 m across, so a boss walking on lit the entire set two and a
+half times over. It was added on the owner's "it's hard to see the boss"
+and it made everything else hard to see instead. The lamp stands about
+8.5 m from the chest it aims at, so: 2,400 through a 46° cone, gone by
+14 m — the boss picked out of its background, and nothing else touched.
+Both lamps are the same lesson, and `framelight.py`'s worst-patch column
+plus the band means are what will catch the third one.

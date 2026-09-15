@@ -842,7 +842,11 @@ environment can and cannot do. The short version:
   off pure white so an additive layer cannot climb past the bloom
   threshold alone. Brightness belongs to the SPRITE, which covers only its
   own pixels; a light in an effect reaches about as far as the thing it is
-  lighting.
+  lighting. The boss's warm spot was the same mistake one screen further
+  on — 3,000 through a 75° cone reaching 34 m, so a boss walking on lit
+  the whole 44 m slab and the Labyrinth's third wave photographed as a
+  pale wash with only the health bars in it; it is 2,400 through a 46°
+  cone, gone by 14 m, which is the boss and nothing else.
 - **Battle feel.** A melee unit (`ModelSpec.melee`) dashes to its one victim
   for an attack clip and back at the next turn, and every hit flashes the
   victim white. **The camera is fixed by default** (`CameraDirector`): one
