@@ -2625,3 +2625,56 @@ behind them. `SkillIcon(socket: true)` puts the battle square's own stone
 plate and gold edge behind the art wherever it stands on cream — the unit
 sheet's tiles and the battle's held card. The battle squares draw their
 own socket and leave it off.
+
+### The white sheet was a lamp, not the light (2026-09-15, later)
+
+The owner sent back the one frame of the shoulder pass that still reads as
+a white-out: a fight in the Duat with a white blob over the enemy row and
+the floor bleached for four metres around it. "This one still needs a
+fix." `framelight.py` had flagged it too — 10.7% of that frame's middle
+band with no detail in it while every other band in the run sat under
+0.4% — and the first report called it "an effect, not the light", which
+was half true and not good enough.
+
+Read off the console's cast stamps, the frame is 3.4 s after
+`Thunderbolt by zeus as attackBasic`: a BASIC ATTACK, cast every four
+seconds. What it fires is five things at once, and one of them is the
+whole problem.
+
+**`VFXLibrary.flash` is an omni light at intensity 4,000 whose
+`attenuationEndDistance` is FOUR TIMES its radius.** The battle's key
+light is 1,150. So every impact in the game — all twenty-four call sites,
+every basic attack included — drops a lamp three and a half times the sun
+into the set, reaching 9 m for a thunderbolt and, through `skyFlash`
+(radius 7 × scale), **28 m**: further than the 44 m slab is wide. It does
+not light the victim; it relights the arena. The shoulder added on
+2026-09-15 stops a bright surface clipping, and it cannot help a surface
+that is genuinely being lit to four times white.
+
+**What the genre does.** Summoners War's hits are bright but its scene's
+exposure never moves: the brightness is in ADDITIVE SPRITES, which only
+touch their own pixels, and in a brief full-screen flash for an ultimate.
+The 3D set is not relit. A point light in an impact is for picking the
+victim and the metre around it out of the dark — a local pop against the
+key, not a second sun.
+
+**The fix, in one place.** `flash` becomes local: its reach is
+`radius × 1.5` instead of `radius × 4` (so a thunderbolt's flash is dark
+before it crosses the 6 m to the player's row), it starts falling off at
+a third of the radius, and its intensity scales with the radius from
+1,320 to a cap of 2,400 instead of a flat 4,000 — the key light's
+neighbourhood rather than several times it. Every one of the
+twenty-four impacts improves at once, which is the point of fixing the
+helper and not the call sites.
+
+Three smaller things with it. `skyFlash` — the flash that makes lightning
+read as lightning — is a wide weak lift now (intensity 600, its own
+falloff) and is spent only on a HEAVY or an ULTIMATE; a basic attack no
+longer flashes the sky. The lightning flipbook is tinted to 60% white
+rather than pure white, so an additive sheet stops climbing past the
+bloom threshold on its own. And the basic's numbers come down to a
+basic's size: the sheet 3.6 m → 2.6, the bolt 9 m → 7, the sparks 90 →
+55, its flash 2.2 → 1.5. The rule this leaves: **an effect may not
+relight the set.** Brightness belongs to the sprite, which covers only
+itself; a light in an effect reaches about as far as the thing it is
+lighting.

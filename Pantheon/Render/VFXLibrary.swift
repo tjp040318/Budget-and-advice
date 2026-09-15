@@ -190,13 +190,18 @@ enum VFXLibrary {
         // flashes: a second light far overhead lights the whole arena for a
         // frame or two, which is what makes lightning read as lightning.
         case "thunderbolt":
-            addFlipbook(to: host, "lightning", tint: .white, size: 3.6 * CGFloat(scale), life: 0.55, lift: 1.8 * scale - 1.1 * scale)
-            addLightningBolt(to: host, tint: tint, scale: scale, thickness: 0.05, height: 9, forks: 1)
-            skyFlash(over: position, in: scene, scale: scale, duration: 0.12)
-            host.addParticleSystem(sparks(tint: tint, count: 90, speed: 7, scale: scale))
-            flash(at: position, in: scene, color: tint, radius: 2.2 * scale, duration: 0.22)
+            // A BASIC attack, cast every few seconds: a bolt and a burst on
+            // the victim, no sky flash, and the sheet tinted off pure white
+            // so an additive layer cannot climb past the bloom threshold by
+            // itself.
+            addFlipbook(to: host, "lightning", tint: tint.mixed(with: .white, amount: 0.6),
+                        size: 2.6 * CGFloat(scale), life: 0.45, lift: 1.8 * scale - 1.1 * scale)
+            addLightningBolt(to: host, tint: tint, scale: scale, thickness: 0.05, height: 7, forks: 1)
+            host.addParticleSystem(sparks(tint: tint, count: 55, speed: 7, scale: scale))
+            flash(at: position, in: scene, color: tint, radius: 1.5 * scale, duration: 0.2)
         case "thunderclap":
-            addFlipbook(to: host, "lightning", tint: .white, size: 4.0 * CGFloat(scale), life: 0.6, lift: 2.0 * scale - 1.1 * scale)
+            addFlipbook(to: host, "lightning", tint: tint.mixed(with: .white, amount: 0.75),
+                        size: 3.6 * CGFloat(scale), life: 0.6, lift: 2.0 * scale - 1.1 * scale)
             addLightningBolt(to: host, tint: tint, scale: scale, thickness: 0.035, height: 8, forks: 0)
             groundFlipbook("shockwave", at: position, in: scene, tint: tint.mixed(with: .white, amount: 0.5), size: 3.4 * CGFloat(scale), life: 0.7)
             skyFlash(over: position, in: scene, scale: scale, duration: 0.18)
@@ -929,9 +934,15 @@ enum VFXLibrary {
     /// The sky lighting up: a large white light far above the strike, gone in
     /// a few frames. Cheap, and the difference between a bolt and a lightning
     /// strike.
+    /// The sky itself flashing, which is what makes lightning read as
+    /// lightning: WIDE and WEAK, a fifth of an impact's strength, so the
+    /// world changes for a frame or two without the floor going white. Spent
+    /// on a heavy blow or an ultimate only — a basic attack does not flash
+    /// the sky (2026-09-15).
     private static func skyFlash(over position: SCNVector3, in scene: SCNScene, scale: Float, duration: TimeInterval) {
         let above = SCNVector3(position.x, position.y + 7 * scale, position.z)
-        flash(at: above, in: scene, color: UIColor(white: 1.0, alpha: 1.0), radius: 7 * scale, duration: duration)
+        flash(at: above, in: scene, color: UIColor(white: 1.0, alpha: 1.0),
+              radius: 7 * scale, duration: duration, strength: 0.25)
     }
 
     /// The expanding shockwave for the ultimate.
@@ -982,19 +993,41 @@ enum VFXLibrary {
         ]))
     }
 
-    /// A short-lived point light, which is what actually sells an impact.
+    /// A short-lived point light, which is what actually sells an impact —
+    /// and which must stay LOCAL.
+    ///
+    /// It was a flat 4,000 reaching four times its radius (2026-09-15, and
+    /// every impact in the game since the first build). The battle's key
+    /// light is 1,150, so every basic attack dropped a lamp three and a half
+    /// times the sun into the set, nine metres wide for a thunderbolt and
+    /// twenty-eight through `skyFlash`: it did not light the victim, it
+    /// relit the arena, and the owner sent back the frame — a white blob
+    /// over the enemy row with the floor bleached round it, 10.7% of that
+    /// band with no detail in it. The camera's shoulder stops a bright
+    /// surface clipping and can do nothing for a surface genuinely lit to
+    /// four times white.
+    ///
+    /// So: the reach is one and a half radii, the falloff starts a third of
+    /// the way out, and the intensity scales with the radius into the key
+    /// light's neighbourhood rather than several times it. THE RULE: an
+    /// effect may not relight the set. Brightness belongs to the additive
+    /// sprite, which covers only its own pixels; a light in an effect
+    /// reaches about as far as the thing it is lighting.
     private static func flash(
         at position: SCNVector3,
         in scene: SCNScene,
         color: UIColor,
         radius: Float,
-        duration: TimeInterval
+        duration: TimeInterval,
+        strength: CGFloat = 1
     ) {
+        let peak = min(2_400, 900 + 420 * CGFloat(max(0.2, radius))) * strength
         let light = SCNLight()
         light.type = .omni
         light.color = color
-        light.intensity = 4_000
-        light.attenuationEndDistance = CGFloat(radius * 4)
+        light.intensity = peak
+        light.attenuationStartDistance = CGFloat(radius * 0.35)
+        light.attenuationEndDistance = CGFloat(radius * 1.5)
 
         let node = SCNNode()
         node.light = light
@@ -1004,7 +1037,7 @@ enum VFXLibrary {
         node.runAction(.sequence([
             .customAction(duration: duration) { node, elapsed in
                 let t = Float(elapsed) / Float(duration)
-                node.light?.intensity = CGFloat(4_000 * (1 - t))
+                node.light?.intensity = peak * CGFloat(1 - t)
             },
             .removeFromParentNode()
         ]))
