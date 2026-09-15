@@ -2694,3 +2694,114 @@ and it made everything else hard to see instead. The lamp stands about
 14 m — the boss picked out of its background, and nothing else touched.
 Both lamps are the same lesson, and `framelight.py`'s worst-patch column
 plus the band means are what will catch the third one.
+
+## The tutorial, and a guide called Athena (2026-09-15, planned)
+
+The owner: "The next thing im going to want to work on is a full tutorial
+of the entire game. Like how summoners war uses Ellia, maybe we should
+have a 2D Athena that runs you through the tutorial. Can you research
+summoners war tutorial and come back to me with a plan?" Plan only — no
+code until he picks.
+
+### What Summoners War actually does
+
+Read off the beginner guides and the wiki summaries (the fandom wiki and
+several guide sites are refused by this environment's egress proxy; the
+search summaries and the sources below are what the research rests on).
+
+- **One named guide, and she is also a unit you own.** Ellia — a Water
+  Magic Knight — meets the player at the start, teaches the basics and
+  hands out the main quests. She is not a disembodied tooltip: she is a
+  monster in the collection, which is why players remember her.
+- **The hard tutorial is short and is all DOING.** A first battle, then a
+  first summon that Ellia runs for you, then straight into the early
+  areas. The player is never sat down and lectured.
+- **Systems arrive where they become useful, not at the start.** The
+  first area (Forest of Garen) teaches fighting; runes are not taught
+  until the THIRD area (Mt. Siz), because that is where the first rune
+  drops. Kabir Ruins follows.
+- **The tutorial pays.** Five standard monsters over the opening, good
+  enough to carry the early game, plus scrolls at each step.
+- **The long tutorial is a CHECKLIST, not a script.** "Summoner's Way" is
+  a tiered list of one-time quests — Novice, Intermediate, Advanced —
+  each teaching one system, each with its own reward, each tier unlocking
+  the next and paying a large prize at the end (750 crystals for the
+  full set). Later tiers cover the Dragon's Lair, the Necropolis, the
+  Rift dungeons, Raids.
+- **Experimenting is free for a month.** New players get free rune
+  removal, so a beginner cannot brick a monster by equipping wrong.
+
+And the FTUE literature agrees with all of it: get the player playing
+inside thirty seconds, never pause the game to explain, point at ONE
+control at a time, make the first actions pay, and make the player feel
+clever rather than taught.
+
+### What this game already has
+
+`FirstHourStep` (IslandView.swift) is four coach-marks on the island —
+summon, fight, equip, power up — each a caret on a landmark with one
+line under it, a skip chip, and, importantly, `isDone(for:)` derived from
+what the SAVE actually contains rather than a flag written by the screen
+that did it. `QuestService` already has daily missions, sixteen feats
+plus one per chapter, and a login gift: the skeleton of a Summoner's Way
+is there. That is the foundation; none of it is thrown away.
+
+### The plan, in five phases
+
+**Phase 1 — the teacher.** One overlay that can appear on any screen: a
+2D Athena bust at the left, a cream plate with her name and typewriter
+text, a tap to advance, and a caret that can point at any control. Plus
+a script format (a list of beats, each: what she says, what to point at,
+what the player must do to advance) and the save fields (all Optional:
+the step reached, the set of pop-ins already seen, the Way's claims).
+This is the machinery every later phase uses.
+
+**Phase 2 — the opening eight minutes**, the hard tutorial, one scripted
+run:
+1. Athena speaks over the island. The gods sleep; you will wake them.
+2. A first battle she walks you into — tap an enemy, the skill squares,
+   the element arrow. It cannot be lost.
+3. The reward box, named.
+4. The Summoning Circle: she runs the first summon, the reveal plays,
+   the god is yours.
+5. A second fight with the new god, which teaches waves.
+6. The relic that drops: Collection, the unit, the slot, Equip.
+7. The Hall of Ka: feed the spares, watch the level go up.
+8. She hands the player to the map.
+
+**Phase 3 — a pop-in per system, where it first becomes reachable.** One
+Athena beat, one pointer, one reward, seen once (about fourteen):
+relic power-up and its odds, evolution, awakening, the Labyrinth, the
+Halls of Essence, the arena, Hard and Hell, the tribute chests, fusion,
+the Tower, raids, the scroll types, the bazaar, auto-repeat and speed.
+
+**Phase 4 — Athena's Way**, the checklist that replaces the feats screen
+as the spine of the first week: three tiers (Initiate, Adept,
+Hierophant), a dozen entries each, one-time, each paying, each tier
+unlocking the next and ending in a large prize. Built on `QuestService`,
+which already records every mutation that would tick one.
+
+**Phase 5 — the art.** Athena as a painted 2D bust with four to six
+expressions (neutral, pleased, concerned, urging, proud, surprised),
+keyed off black the way the skill icons were.
+
+### What it costs, and what has to be decided
+
+Art: six expressions is 36 Meshy credits (6 each, the rate the skill
+sheets measured) or about 84 cents of Gemini, which is paused and needs
+his word for the batch. If Athena is also to be a PLAYABLE unit the way
+Ellia is — the thing that makes a guide memorable — she needs the five
+element cards and a rigged mesh on top: about 53 credits plus a card
+batch.
+
+Four decisions are his, and the build changes with each:
+1. Is Athena a unit the player owns, or only a voice?
+2. Can the first battle be lost, or is it floored the way the genre
+   floors it?
+3. Is the opening skippable, and is it replayable from More afterwards?
+4. How much of the art to buy now, given Gemini is paused and the Meshy
+   floor is 1,500 with 1,867 in hand.
+
+Sources: the Summoners War wiki's Ellia and Challenges pages, Theria
+Games' and sw-database's beginner guides, BlueStacks' Summoner's Way
+write-up, and Udonis' and Game Developer's FTUE guidance.
