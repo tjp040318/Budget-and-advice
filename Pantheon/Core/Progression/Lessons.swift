@@ -277,12 +277,11 @@ enum LessonBook {
             title: "The Night Market",
             topic: .economy,
             beats: [
-                LessonBeat("There is a market that keeps no fixed stock. What is on the table changes, and when it changes it is gone."),
-                LessonBeat("Drachma buys most of it. Divinity buys another look.", .urging),
+                LessonBeat("There is a market that keeps no fixed stock. What is on the table changes on the hour, and when it changes it is gone."),
+                LessonBeat("Drachma buys most of it, which is the only place your coin is worth anything but relic dust."),
+                LessonBeat("Divinity buys another look, if you cannot wait an hour. It costs more each time you ask.", .urging),
             ],
-            // Not built yet: it sits in the library as a locked row, which is
-            // how a player sees what the game still holds.
-            unlock: { _ in false }
+            unlock: { player in (player.campaignProgress["duat_1"] ?? 0) >= 3 }
         ),
     ]
 

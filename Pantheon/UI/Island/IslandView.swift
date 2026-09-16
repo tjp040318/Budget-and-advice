@@ -501,6 +501,17 @@ enum FirstHourStep: String, CaseIterable, Sendable {
                 || player.units.contains { $0.level > 1 }
         }
     }
+
+    /// The step the player is on, or nil when all four are done. The first one
+    /// not done, so a relic that drops later brings the equip step back rather
+    /// than losing it.
+    ///
+    /// Athena drives her own carets from `LessonBook` now, so nothing in the
+    /// app calls this; `SaveGameTests` does, and it is the one place the four
+    /// tests are asserted in order against a real save. That is worth keeping.
+    static func current(for player: Player) -> FirstHourStep? {
+        allCases.first { !$0.isDone(for: player) }
+    }
 }
 
 // MARK: - Chapter intro card

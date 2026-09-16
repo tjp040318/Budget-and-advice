@@ -136,6 +136,9 @@ final class GameStore: ObservableObject {
         QuestService.refreshDay(player: &copy, now: now)
         if copy.quests != questsBefore || copy.loginStreak != streakBefore { changed = true }
 
+        // The Night Market turns over on the hour, on this same clock.
+        if NightMarketService.refreshIfNeeded(player: &copy, now: now) { changed = true }
+
         if changed {
             player = copy
             markDirty()
@@ -493,6 +496,47 @@ final class GameStore: ObservableObject {
             update { player in QuestService.record(.dailyOfferingClaimed, player: &player) }
         }
         return grants
+    }
+
+    // MARK: - The Night Market
+
+    /// Tonight's shelf. Empty only in the instant before the first tick rolls
+    /// one, which the view handles by asking for a refresh on appear.
+    var nightMarketStalls: [NightMarketService.Stall] {
+        NightMarketService.stalls(for: player)
+    }
+
+    /// When the shelf turns over for nothing, or nil before it has opened.
+    var nightMarketRefreshesAt: Date? {
+        player.nightMarket.map { NightMarketService.refreshesAt($0) }
+    }
+
+    /// What the next paid re-roll costs, in divinity.
+    var nightMarketRerollPrice: Int {
+        NightMarketService.rerollPrice(
+            afterRerolls: player.nightMarket.map { NightMarketService.rerollsToday($0) } ?? 0
+        )
+    }
+
+    /// Opens the market if it has never been opened, or if the hour is up.
+    func refreshNightMarket() {
+        var copy = player
+        guard NightMarketService.refreshIfNeeded(player: &copy) else { return }
+        player = copy
+        markDirty()
+    }
+
+    func buyFromNightMarket(slot: Int) -> [ShopService.Grant]? {
+        var rng = makeRandom()
+        return attempt { player in
+            try NightMarketService.buy(slot: slot, player: &player, rng: &rng)
+        }
+    }
+
+    func rerollNightMarket() {
+        attempt { player in
+            try NightMarketService.reroll(player: &player)
+        }
     }
 
     // MARK: - Missions

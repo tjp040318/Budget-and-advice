@@ -3008,3 +3008,79 @@ and both are silent on the tree as it stands. `strip_noise` grew a
 `mask_strings` mode for the first of them — it deletes string literals by
 default, which turns `LessonBeat("a sentence")` into a call with no
 arguments at all.
+
+
+### Built: the Night Market (2026-09-16)
+
+The owner named it — "I like night market" — and it is the drachma sink the
+game did not have. Before it, drachma had exactly ONE use, relic power-up,
+and a currency with one sink stops meaning anything once a player has what
+they want.
+
+**A stall of the bazaar, not a building.** The bazaar already opens from the
+wallet on the island and from More; a sixth landmark for a shop that changes
+every hour would be a walk for nothing. `ShopService.Section.nightMarket`
+sits beside Daily and Scrolls in the same dropdown, and `NightMarketBoard`
+draws the shelf.
+
+**The shelf is a SEED, not a list.** `Player.nightMarket` (Optional, as every
+field added since the first must be) saves four things: the seed, the hour it
+was rolled, the level it was rolled at, and which slots have been emptied.
+`NightMarketService.stalls(for:)` derives the same six to ten wares from it
+every time. A saved list of wares would put a relic in a second place — the
+loadouts already taught this project that a relic lives in exactly one — and
+would grow the save by a relic's worth of stats per slot per hour. Saving the
+LEVEL with the roll matters too: without it, levelling up mid-hour would
+change the shelf under the player's hand.
+
+**Three things are deliberately not Summoners War's**, and each is a decision
+rather than an omission:
+
+1. **Slots are levels, never purchases.** Their Magic Shop sells slots for
+   crystals, four rising to twelve. This game sells nothing for real money,
+   so the six rise to ten at levels 10, 20, 30 and 40.
+2. **No 5★ is ever on the shelf.** Their shop sells nat 3★ and, rarely, nat
+   4★ monsters, and never a nat 5★. That is the line that keeps the gacha
+   worth pulling, and it is the line here: 40,000 drachma for a 3★ and
+   250,000 for a 4★ — a unit you can SEE, at a price the campaign has to pay
+   for (5.4 and 34 full clears of chapter 1).
+3. **A sold slot stays on the shelf, crossed out.** Theirs empties. A player
+   should be able to see what tonight gave them and what they took.
+
+**The engine is the re-roll.** A free refresh every hour on the same tick
+that restores energy, and a paid one in divinity that climbs within a day and
+resets with it: 30, 45, 70, 105, 155, 230, 345, 500. `balance.py --shop`
+exists to check the one thing that must not be true — that chasing beats
+buying. A Divine Scroll is on 5.6% of shelves, so about eighteen re-rolls to
+find one: 5,980 divinity of re-rolls plus 430 to buy it, against 600 in the
+bazaar outright. Ten times dearer, which is correct; eighteen hours of free
+refreshes is the intended way. Every price is mirrored in `balance.py`
+(`MARKET_WEIGHTS`, `MARKET_REROLLS`, `MARKET_SCROLL_PRICE`,
+`MARKET_UNIT_PRICE`), with `DIVINITY_IN_DRACHMA = 300` read off the two
+things the bazaar sells for both, so a drachma row can be judged against a
+divinity one. The Mystical Scroll row is 24% DEARER at that rate than the
+bazaar's 75 divinity, on purpose: it is the only way to buy a hard-currency
+scroll with soft coin, and a premium is what stops it being a mint.
+
+**`ShopService.Grant` grew a `unit(String)` case** for the rare row. A
+duplicate becomes a skill-up exactly as a summon's does, so a second copy is
+never clutter, and `ItemArt`'s four switches learned it — the tile draws the
+unit's PORTRAIT with its grade's frame and star row, because the row is only
+worth having if the player can see whose face is on the shelf.
+
+**Athena's Night Market lesson is unlocked** (it shipped locked, as the
+library's example of a thing the game still held): three stages into the Duat
+she explains the hour, the coin and the price of not waiting. Tour step 32
+photographs the shelf, opened straight on its stall through
+`ShopView(opening:)` since nothing in a pinned tour taps a dropdown.
+
+**A third checker rule, from the same day's red run.** The build went green
+and the UNIT TESTS failed: `FirstHourStep.current(for:)` was trimmed as dead
+code while `SaveGameTests` pins it, so the test target would not compile.
+`check_static_members` should have caught it and did not — `current` was in
+`SYNTHESISED`, the allow-list of members no source line declares
+(`Calendar.current` and friends). It is out of that list now, the tree is
+clean without it, and deleting the function again reports all seven call
+sites. The helper is restored and says in its own comment why it survives:
+nothing in the app calls it, and it is the one place the four first-hour
+tests are asserted in order against a real save.

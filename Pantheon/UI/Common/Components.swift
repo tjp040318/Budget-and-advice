@@ -278,6 +278,7 @@ enum ItemArt {
         case .relic: return "relic_cache"
         case .essences(let id, _): return id
         case .stones(let id, _): return id
+        case .unit: return "unit"
         case .bundle: return "bundle"
         }
     }
@@ -293,6 +294,7 @@ enum ItemArt {
         case .relic(let grade): return "\(grade)★"
         case .essences(_, let count): return "×\(count)"
         case .stones(_, let count): return "×\(count)"
+        case .unit: return nil
         case .bundle(let parts): return "×\(parts.count)"
         }
     }
@@ -307,6 +309,7 @@ enum ItemArt {
         case .relic(let grade): return "\(grade)★ relic"
         case .essences(let id, _): return EssenceCatalog.name(for: id)
         case .stones(let id, _): return RelicStone.from(id: id)?.displayName ?? id
+        case .unit(let id): return UnitDatabase.blueprint(id)?.name ?? id
         case .bundle: return "Bundle"
         }
     }
@@ -314,6 +317,7 @@ enum ItemArt {
     /// The stars a grant's tile wears: a relic cache shows its grade.
     static func stars(for grant: ShopService.Grant) -> Int? {
         if case .relic(let grade) = grant { return grade }
+        if case .unit(let id) = grant { return UnitDatabase.blueprint(id)?.naturalStars }
         return nil
     }
 
@@ -335,6 +339,7 @@ enum ItemArt {
         case "relic_cache": return "hexagon.fill"
         case "level_up": return "chevron.up.circle.fill"
         case "bundle": return "gift.fill"
+        case "unit": return "person.crop.square.fill"
         default: return "circle.fill"
         }
     }

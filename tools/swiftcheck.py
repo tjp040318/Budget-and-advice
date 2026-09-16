@@ -373,7 +373,7 @@ def collect_static_members(files):
 SYNTHESISED = {
     "self", "init", "allCases", "rawValue", "hashValue", "description", "id",
     "count", "first", "last", "min", "max", "zero", "none", "some", "shared",
-    "current", "main", "default", "type",
+    "main", "default", "type",
 }
 
 def check_static_members(files, members, errors):

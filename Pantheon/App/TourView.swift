@@ -41,7 +41,7 @@ struct TourView: View {
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
-        ("guide", 2), ("lessons", 2),
+        ("guide", 2), ("lessons", 2), ("night_market", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -218,6 +218,10 @@ struct TourView: View {
             }
         case "lessons":
             LessonsView()
+        case "night_market":
+            // The rolled shelf. Opened straight on its stall, because nothing
+            // in a pinned tour taps the bazaar's dropdown.
+            ShopView(opening: .nightMarket)
         case "relic_sets":
             // The set reference, opened from a unit so its counts show.
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
@@ -319,6 +323,13 @@ struct TourView: View {
         guard !seeded else { return }
         seeded = true
         store.grantTourRoster()
+        // The opening's lessons, given. Without this the library photographs
+        // as fourteen greyed rows — true of a save that has never met Athena,
+        // and useless as a picture of the screen: what it is FOR is the
+        // difference between a lesson kept and a lesson still locked.
+        for lesson in LessonBook.opening.prefix(4) {
+            store.markLessonRead(lesson.id)
+        }
     }
 
     private func startBattle() {

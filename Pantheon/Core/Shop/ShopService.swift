@@ -46,6 +46,10 @@ enum ShopService {
         case essences(String, Int)
         /// Whetstones or gems by `RelicStone.id`.
         case stones(String, Int)
+        /// A named family, by blueprint id. Only the Night Market pays in
+        /// this: a duplicate becomes a skill-up, exactly as a summon's does,
+        /// so a second copy is never clutter.
+        case unit(String)
         case bundle([Grant])
     }
 
@@ -62,6 +66,9 @@ enum ShopService {
 
     enum Section: String, CaseIterable, Identifiable, Sendable {
         case daily = "Daily"
+        /// The rolled shelf. Its wares are not in `items` — they are derived
+        /// from the save's seed by `NightMarketService`.
+        case nightMarket = "Night Market"
         case testing = "Testing"
         case scrolls = "Scrolls"
         case energy = "Energy"
@@ -330,6 +337,18 @@ enum ShopService {
         case .stones(let id, let count):
             RelicService.addStones(id, count, player: &player)
             granted.append(grant)
+        case .unit(let blueprintID):
+            if let blueprint = UnitDatabase.blueprint(blueprintID) {
+                let isNew = !player.codex.contains(blueprint.id)
+                player.codex.insert(blueprint.id)
+                var unit = Unit(blueprint: blueprint)
+                unit.acquiredFrom = "night_market"
+                if !isNew, let existing = player.units.firstIndex(where: { $0.blueprintID == blueprint.id }) {
+                    _ = ProgressionService.applySkillUp(to: &player.units[existing], using: &rng)
+                }
+                player.units.append(unit)
+                granted.append(grant)
+            }
         case .bundle(let parts):
             for part in parts { apply(part, to: &player, rng: &rng, into: &granted) }
         }
@@ -346,6 +365,7 @@ enum ShopService {
         case .relic(let grade): return "\(grade)★ relic"
         case .essences(let id, let count): return "\(EssenceCatalog.name(for: id)) ×\(count)"
         case .stones(let id, let count): return "\(RelicStone.from(id: id)?.displayName ?? id) ×\(count)"
+        case .unit(let id): return UnitDatabase.blueprint(id)?.name ?? id
         case .bundle(let parts): return parts.map(describe).joined(separator: ", ")
         }
     }

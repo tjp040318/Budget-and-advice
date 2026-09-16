@@ -13,8 +13,18 @@ struct ShopView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
 
-    @State private var section: ShopService.Section = .daily
+    /// Which stall the screen opens on. The island's wallet and More both
+    /// want the daily offering; the CI tour wants the Night Market, which is
+    /// the only way to photograph a stall nothing taps its way to.
+    var opening: ShopService.Section = .daily
+
+    @State private var section: ShopService.Section
     @State private var receipt: String?
+
+    init(opening: ShopService.Section = .daily) {
+        self.opening = opening
+        _section = State(initialValue: opening)
+    }
 
     /// As many 208-point tiles as the width holds: four across a landscape
     /// phone, three on a short one, rather than one column down the middle.
@@ -28,6 +38,7 @@ struct ShopView: View {
         switch section {
         case .daily: return "Free, once a day"
         case .laurels: return "Won in the arena"
+        case .nightMarket: return "Rolled. Turns over on the hour"
         default: return "\(offers.count) offers"
         }
     }
@@ -51,7 +62,11 @@ struct ShopView: View {
                 )
             } content: {
                 ZStack(alignment: .bottom) {
-                    if section == .daily, let offering = offers.first {
+                    if section == .nightMarket {
+                        NightMarketBoard { text in
+                            withAnimation(.easeOut(duration: 0.2)) { receipt = text }
+                        }
+                    } else if section == .daily, let offering = offers.first {
                         hero(offering)
                     } else {
                         ScrollView {
@@ -274,6 +289,7 @@ struct ShopView: View {
     private func glyph(for candidate: ShopService.Section) -> String {
         switch candidate {
         case .daily: return "gift.fill"
+        case .nightMarket: return "moon.stars.fill"
         case .testing: return "wrench.and.screwdriver.fill"
         case .scrolls: return "scroll.fill"
         case .energy: return "bolt.fill"

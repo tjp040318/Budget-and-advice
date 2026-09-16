@@ -101,6 +101,10 @@ struct Player: Codable, Equatable, Sendable {
     var firstHourStep: String? = nil
     /// Chapter ids whose intro card has been shown, so it is shown once.
     var seenChapterIntros: [String]? = nil
+    /// The Night Market's rolled shelf: a seed, the hour it was rolled and
+    /// the slots already emptied. Optional, like every field added since the
+    /// first; nil simply means the market has not opened yet.
+    var nightMarket: NightMarketStock? = nil
     /// The best star rating per stage id (a tier's suffix included): the
     /// map's pips, and the realm's judgment wants every stage at three.
     /// Optional, like every save field added since the first.

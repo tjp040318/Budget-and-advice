@@ -1424,6 +1424,123 @@ def report_tributes():
         12 * 9, 12 * sum(1 for v in TRIBUTES.values() if v[5])))
 
 
+# ---------------------------------------------------------------------------
+# The Night Market (NightMarketService.swift). Change a number in both files.
+# ---------------------------------------------------------------------------
+#
+# The point of the shop is a DRACHMA SINK: before it, drachma had exactly one
+# use (relic power-up), and a currency with one sink stops meaning anything
+# once a player has what they want. The point of the report is the opposite
+# question — that a shelf a player can re-roll must never out-earn the fight.
+
+MARKET_WEIGHTS = {            # NightMarketService.Kind.weight
+    "relic": 28, "scroll": 24, "essence": 16, "stone": 12, "energy": 12, "unit": 8,
+}
+MARKET_SLOTS = [(0, 6), (10, 7), (20, 8), (30, 9), (40, 10)]   # level floor -> slots
+MARKET_WINDOW_MINUTES = 60
+MARKET_REROLLS = [30, 45, 70, 105, 155, 230, 345, 500]          # divinity, nth of the day
+MARKET_RELIC_PRICE = {6: 90_000, 5: 45_000, 4: 22_000, 3: 10_000}
+MARKET_SCROLL_WEIGHTS = {     # what a scroll slot rolls
+    "unknown": 26, "mystical": 24, "ember": 10, "tide": 10, "gale": 10,
+    "pantheonic": 12, "light_dark": 5, "divine": 3,
+}
+# (currency, price for one) — the bazaar's shelf price beside it, for the
+# discount a shelf you cannot choose from has to be worth.
+MARKET_SCROLL_PRICE = {
+    "unknown": ("drachma", 3_400), "mystical": ("drachma", 28_000),
+    "ember": ("divinity", 135), "tide": ("divinity", 135), "gale": ("divinity", 135),
+    "pantheonic": ("divinity", 70), "light_dark": ("divinity", 320), "divine": ("divinity", 430),
+}
+# What a divinity is worth in drachma, read off the two things the bazaar
+# sells for both: a 4★ relic pack is 25,000 drachma and a 5★ is 150 divinity,
+# and an Unknown Scroll is 5,000 drachma against a Mystical's 75 divinity.
+# Both land near 300, which is the rate the market's drachma rows are judged
+# against — a drachma row must never be a cheap way to buy hard currency.
+DIVINITY_IN_DRACHMA = 300
+BAZAAR_SCROLL_PRICE = {
+    "unknown": ("drachma", 5_000), "mystical": ("divinity", 75),
+    "ember": ("divinity", 200), "tide": ("divinity", 200), "gale": ("divinity", 200),
+    "pantheonic": ("divinity", 100), "light_dark": ("divinity", 450), "divine": ("divinity", 600),
+}
+MARKET_UNIT_PRICE = {3: 40_000, 4: 250_000}     # drachma; a 5* is never on the shelf
+MARKET_UNIT_FOUR_STAR_CHANCE = 0.28             # from level 12
+
+
+def report_shop():
+    """The Night Market: what a shelf holds, what it costs, and the one thing
+    that must not be true — that re-rolling beats playing."""
+    total = sum(MARKET_WEIGHTS.values())
+    print("\nTHE NIGHT MARKET — a rolled shelf, an hour at a time")
+    print(f"  slots: " + ", ".join(f"{n} from level {lvl}" for lvl, n in MARKET_SLOTS))
+    print(f"  the shelf turns over every {MARKET_WINDOW_MINUTES} minutes for nothing")
+    print("  paid re-rolls within a day (divinity): " + ", ".join(str(p) for p in MARKET_REROLLS)
+          + " and 500 thereafter")
+    print()
+    print(f"  {'ware':>9}{'weight':>8}{'share':>8}   per 8-slot shelf")
+    for kind, weight in MARKET_WEIGHTS.items():
+        share = weight / total
+        print(f"  {kind:>9}{weight:>8}{share*100:>7.0f}%   {share*8:>5.1f}")
+
+    print("\n  scroll slot, and the bazaar's price beside it")
+    scroll_total = sum(MARKET_SCROLL_WEIGHTS.values())
+    for scroll, weight in MARKET_SCROLL_WEIGHTS.items():
+        cur, price = MARKET_SCROLL_PRICE[scroll]
+        bcur, bprice = BAZAAR_SCROLL_PRICE[scroll]
+        # Compare like with like: a drachma row against a divinity shelf price
+        # is judged at the rate above, since the whole point of the row is to
+        # give drachma somewhere to go.
+        mine = price if cur == "drachma" else price * DIVINITY_IN_DRACHMA
+        theirs = bprice if bcur == "drachma" else bprice * DIVINITY_IN_DRACHMA
+        delta = (1 - mine / theirs) * 100
+        cut = f"{delta:>3.0f}% off" if delta >= 0 else f"{-delta:>3.0f}% dearer"
+        # A drachma row that is DEARER at the rate is right, not a mistake: it
+        # is the only way to buy a hard-currency scroll with soft coin, and a
+        # premium is what stops it being a mint.
+        note = "" if cur == bcur else "  (soft coin for a hard-coin scroll — the premium is the point)"
+        print(f"  {scroll:>11}{weight * 100 // scroll_total:>4}%   {price:>7,} {cur:<8}"
+              f"  bazaar {bprice:>6,} {bcur:<8}  {cut}{note}")
+
+    # The one thing that must not be true. A Divine Scroll is the best row on
+    # the shelf; how much divinity does re-rolling until one appears cost,
+    # against buying it outright in the bazaar?
+    slots = 8
+    per_shelf = 1 - (1 - (MARKET_WEIGHTS["scroll"] / total)
+                     * (MARKET_SCROLL_WEIGHTS["divine"] / scroll_total)) ** slots
+    shelves = 1 / per_shelf
+    # The re-roll price climbs, so the bill for N re-rolls in one day is the
+    # head of the table plus 500 for the rest.
+    def reroll_bill(n):
+        return sum(MARKET_REROLLS[min(i, len(MARKET_REROLLS) - 1)] for i in range(int(n)))
+    bill = reroll_bill(shelves)
+    outright = BAZAAR_SCROLL_PRICE["divine"][1] + MARKET_SCROLL_PRICE["divine"][1]
+    print(f"\n  a Divine Scroll is on {per_shelf*100:.1f}% of shelves, so {shelves:.0f} re-rolls to find one:")
+    print(f"    {bill:,} divinity of re-rolls, then {MARKET_SCROLL_PRICE['divine'][1]} to buy it"
+          f"  = {bill + MARKET_SCROLL_PRICE['divine'][1]:,}")
+    print(f"    the bazaar sells it outright for {BAZAAR_SCROLL_PRICE['divine'][1]}")
+    verdict = "chasing is dearer than buying — correct" if bill + MARKET_SCROLL_PRICE["divine"][1] > BAZAAR_SCROLL_PRICE["divine"][1] \
+        else "CHASING IS CHEAPER THAN BUYING — raise the re-roll price"
+    print(f"    → {verdict}")
+    print(f"    (waiting out the free hourly refresh finds one in about {shelves:.0f} hours, which is the intended way)")
+    _ = outright
+
+    print("\n  the unit row, the one that makes a player look")
+    print(f"    3★ {MARKET_UNIT_PRICE[3]:,} drachma, 4★ {MARKET_UNIT_PRICE[4]:,} drachma, "
+          f"5★ never — the genre's own line, and what keeps the summon screen worth opening")
+    unit_share = MARKET_WEIGHTS["unit"] / total
+    four = unit_share * MARKET_UNIT_FOUR_STAR_CHANCE
+    print(f"    a unit is on {(1 - (1 - unit_share) ** slots) * 100:.0f}% of shelves; "
+          f"a 4★ on {(1 - (1 - four) ** slots) * 100:.0f}%")
+    chapter_one = 700 + 950 + 1200 + 1500 + 3000
+    print(f"    a 3★ costs {MARKET_UNIT_PRICE[3] / chapter_one:.1f} full clears of chapter 1, "
+          f"a 4★ {MARKET_UNIT_PRICE[4] / chapter_one:.0f}")
+
+    print("\n  relics on the shelf, against the bazaar's packs")
+    for grade in (6, 5, 4, 3):
+        print(f"    {grade}★ {MARKET_RELIC_PRICE[grade]:>7,} drachma")
+    print("    the bazaar: 4★ 25,000 drachma, 5★ 150 divinity — the market is the cheaper")
+    print("    4★ and the only place a 6★ is bought with coin at all.")
+
+
 def report_relics():
     """The relic hunt: what a drop's quality costs in runs, what a stone is
     worth against a roll, and the bill to a milestone with the power-up odds."""
@@ -1518,8 +1635,9 @@ if __name__ == "__main__":
     elif "--raids" in a: report_raids()
     elif "--relics" in a: report_relics()
     elif "--tributes" in a: report_tributes()
+    elif "--shop" in a: report_shop()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids()
-        report_gacha(); report_economy(); report_relics()
+        report_gacha(); report_economy(); report_relics(); report_shop()
         print()
