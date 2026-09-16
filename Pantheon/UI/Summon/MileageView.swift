@@ -52,7 +52,26 @@ struct MileageSheet: View {
     private static let columns = [GridItem(.adaptive(minimum: 138, maximum: 210), spacing: 8)]
 
     private var points: Int { MileageService.points(on: banner, player: store.player) }
+    /// The whole board, dearest first — the catalogue's own order, and what
+    /// the header's target is read off.
     private var offers: [MileageService.Offer] { MileageService.catalogue(for: banner) }
+
+    /// What the grid actually draws: **what you can take, first.**
+    ///
+    /// Run 153's frame is why. The catalogue is sorted dearest-first so the
+    /// thing a player is saving for is the headline — and with 122 units in
+    /// the Duat's pool that filled the entire first screen with 5★s at 153
+    /// points and "35 MORE" under every one of them. A shop whose first
+    /// screenful is nothing you can buy reads as a wall, not an offer. The
+    /// affordable band comes first now, dearest within it, and the
+    /// aspirational tail follows in the catalogue's own order underneath.
+    private var sortedOffers: [MileageService.Offer] {
+        let all = offers
+        return all.filter { points >= $0.price } + all.filter { points < $0.price }
+    }
+
+    /// How many are within reach right now, for the band's own header.
+    private var affordableCount: Int { offers.filter { points >= $0.price }.count }
 
     /// The dearest thing on the board, so the header can say how far off it is.
     private var target: MileageService.Offer? { offers.first }
@@ -71,7 +90,7 @@ struct MileageSheet: View {
                     explanation
                     ScrollView {
                         LazyVGrid(columns: Self.columns, spacing: 8) {
-                            ForEach(offers) { offer in
+                            ForEach(sortedOffers) { offer in
                                 tile(offer)
                             }
                         }
@@ -91,8 +110,8 @@ struct MileageSheet: View {
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.textPrimary)
             if let target {
-                Text(points >= target.price
-                     ? "You can take \(target.blueprint.name) now."
+                Text(affordableCount > 0
+                     ? "\(affordableCount) within reach, shown first. \(target.price - points) more for \(target.blueprint.name)."
                      : "\(target.price - points) more for \(target.blueprint.name).")
                     .font(Theme.numeric(11))
                     .foregroundStyle(points >= target.price ? Theme.success : Theme.textSecondary)

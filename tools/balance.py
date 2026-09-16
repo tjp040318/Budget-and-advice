@@ -1654,6 +1654,54 @@ def report_economy():
     print(f"  6* evolution ladder      {3000+8000+20000+60000+150000:,} drachma")
     print("  → chapter 1 alone funds roughly one relic. Grinding is the game.")
 
+# Choice of two on a sub-stat roll, mirrored from RelicService.candidates.
+#
+# A roll is subStatBase(kind, grade) * U(0.75, 1.25). Offering TWO candidates
+# and letting the player take one is a best-of-two, which raises the mean —
+# so the question this report exists to answer is BY HOW MUCH, before the
+# feature is called free.
+#
+# Only the GROW rolls (a relic that already has four subs) can be measured in
+# one currency: both candidates are a bump to an existing sub, so "better" is
+# simply the bigger number. The ADD rolls offer two different KINDS — SPD +3
+# against CRIT DMG +5% — whose lift is RELEVANCE and not magnitude, and a
+# single number for that would be invented rather than measured. Said out
+# loud below rather than papered over.
+SUB_ROLL_SPREAD = (0.75, 1.25)   # RelicService.subStatRoll
+
+def report_targeting(trials=200_000):
+    import random as _r
+    lo, hi = SUB_ROLL_SPREAD
+    rng = _r.Random(20260916)
+
+    one = sum(rng.uniform(lo, hi) for _ in range(trials)) / trials
+    rng = _r.Random(20260916)
+    best = sum(max(rng.uniform(lo, hi), rng.uniform(lo, hi)) for _ in range(trials)) / trials
+
+    print("\nRELIC TARGETING — what choice-of-two costs in balance")
+    print("a roll is subStatBase(kind, grade) x U(%.2f, %.2f); the player takes one of two\n"
+          % (lo, hi))
+    print(f"{'':>26}{'one roll':>11}{'best of two':>14}{'lift':>9}")
+    print(f"{'mean multiplier':>26}{one:>11.4f}{best:>14.4f}{(best / one - 1) * 100:>8.1f}%")
+
+    # A relic that drops with four subs grows one at each of +3/+6/+9/+12:
+    # four grow rolls, and every one of them is a best-of-two.
+    grows = 4
+    print(f"\n  a Legend relic (four subs at the drop) takes {grows} GROW rolls on the way to +12,")
+    print(f"  so its rolled sub-stat total ends about {(best / one - 1) * 100:.1f}% higher than before —")
+    print(f"  {grows} rolls x the lift, spread across four subs.")
+
+    # The honest limit of the measurement.
+    print("\n  the ADD rolls are NOT in that number. A relic with fewer than four subs is")
+    print("  offered two different KINDS, and picking CRIT DMG over DEF% is worth a great")
+    print("  deal to a player and nothing at all to a spreadsheet. The lift there is")
+    print("  relevance, which is the point of the feature and cannot be priced here.")
+
+    verdict = "acceptable" if (best / one - 1) < 0.20 else "TOO MUCH — narrow the second candidate"
+    print(f"\n  -> {(best / one - 1) * 100:.1f}% on the measurable half: {verdict}")
+    print("  (if it were too much the fix is to offer the SAME stat at a second value")
+    print("   rather than a free second draw, not to drop the choice)")
+
 # Mileage, mirrored from MileageService.swift.
 #
 # A point per summon on a banner, spent on a unit of the player's choosing
@@ -1851,9 +1899,10 @@ if __name__ == "__main__":
     elif "--counsel" in a: report_counsel()
     elif "--sweep" in a: report_sweep()
     elif "--mileage" in a: report_mileage()
+    elif "--targeting" in a: report_targeting()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
-        report_sweep(); report_mileage()
+        report_sweep(); report_mileage(); report_targeting()
         print()

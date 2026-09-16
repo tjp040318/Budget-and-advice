@@ -312,6 +312,20 @@ struct Relic: Codable, Equatable, Identifiable, Sendable {
     var honed: [Int: Double]? = nil
     /// The index of the sub stat a gem replaced, if one has. One per relic.
     var gemmed: Int? = nil
+    /// A successful +3/+6/+9/+12 that is WAITING ON THE PLAYER: the seed the
+    /// two candidate outcomes are derived from (`RelicService.candidates`).
+    ///
+    /// A SEED and not the two rolled candidates, for the same reason the
+    /// Night Market's shelf is a seed: a stored pair is a second copy of
+    /// something, and here it would also be a free infinite reroll — close
+    /// the sheet, reopen it, draw again. Derived from the seed, the offer a
+    /// player walks away from is the offer he comes back to. Optional, like
+    /// every save field added since the first.
+    var pendingRoll: UInt64? = nil
+
+    /// True while a sub-stat choice is owed. The level is already up; the
+    /// roll is not spent.
+    var hasPendingRoll: Bool { pendingRoll != nil }
 
     var maxLevel: Int { 15 }
     var isMaxLevel: Bool { level >= maxLevel }

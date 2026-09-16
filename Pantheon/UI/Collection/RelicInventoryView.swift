@@ -995,7 +995,12 @@ struct RelicDetailView: View {
                         }
                         .frame(maxWidth: .infinity)
                         ScrollView {
-                            powerUpPanel(relic)
+                            VStack(spacing: 8) {
+                                if relic.hasPendingRoll {
+                                    rollChoicePanel(relic)
+                                }
+                                powerUpPanel(relic)
+                            }
                         }
                         .frame(width: 300)
                     }
@@ -1279,7 +1284,11 @@ struct RelicDetailView: View {
                         .font(Theme.body(10).weight(.semibold))
                         .foregroundStyle(Theme.gold)
                 }
-                PrimaryButton(title: "Power up", systemImage: "arrow.up.circle.fill", isEnabled: affordable) {
+                PrimaryButton(
+                    title: relic.hasPendingRoll ? "Take a roll first" : "Power up",
+                    systemImage: "arrow.up.circle.fill",
+                    isEnabled: affordable && !relic.hasPendingRoll
+                ) {
                     attempt()
                 }
                 .offset(x: shakeOffset)
@@ -1323,7 +1332,10 @@ struct RelicDetailView: View {
             // failure line below says so; this line used to promise the
             // opposite, which is a player gambling at 40% believing failure is
             // free and watching the bank drain with no explanation.
-            Text("A failed attempt spends the drachma and keeps the level.")
+            // Players assume the worst because every game before this one
+            // took something on a failure. It never has here, and a rule the
+            // player cannot see does none of the work it was built to do.
+            Text("A failed attempt spends the drachma and keeps the level. It never takes a level or a sub stat.")
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1367,6 +1379,106 @@ struct RelicDetailView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - The choice of two
+
+    /// The roll a successful +3/+6/+9/+12 opened, as two cards to pick from.
+    ///
+    /// It sits ABOVE the power-up panel and blocks it, because a relic that
+    /// could stack choices would need every screen in the game to explain a
+    /// half-rolled state. The two candidates come from the relic's own seed,
+    /// so closing this and coming back shows the same pair — the choice is a
+    /// decision, not a reroll button.
+    private func rollChoicePanel(_ relic: Relic) -> some View {
+        let offers = RelicService.candidates(for: relic)
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 11, weight: .black))
+                    .foregroundStyle(Theme.gold)
+                Text("CHOOSE YOUR ROLL")
+                    .font(Theme.title(12))
+                    .tracking(1.2)
+                    .foregroundStyle(Theme.goldDeep)
+                Spacer(minLength: 0)
+                Text("+\(relic.level)")
+                    .font(Theme.numeric(12).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+            }
+            Text(relic.subStats.count < 4
+                 ? "This level adds a sub stat. Take either one."
+                 : "This level grows a sub stat. Take either one.")
+                .font(Theme.body(10))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            ForEach(offers) { offer in
+                rollCard(offer)
+            }
+        }
+        .padding(9)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .fill(Theme.surfaceHigh)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .strokeBorder(Theme.gold, lineWidth: 1.5)
+        )
+    }
+
+    private func rollCard(_ offer: RelicService.RollCandidate) -> some View {
+        let change = offer.change
+        return Button {
+            take(offer)
+        } label: {
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(change.kind.displayName)
+                        .font(Theme.body(12).weight(.bold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(change.isNew
+                         ? "new · +\(change.kind.format(change.after))"
+                         : "+\(change.kind.format(change.before)) → +\(change.kind.format(change.after))")
+                        .font(Theme.numeric(11))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                Spacer(minLength: 4)
+                Text("+\(change.kind.format(change.after - change.before))")
+                    .font(Theme.numeric(13).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+            }
+            .padding(.horizontal, 9)
+            .frame(maxWidth: .infinity, minHeight: 40, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Theme.surfaceRaised)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .strokeBorder(Theme.goldDim.opacity(0.6), lineWidth: 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func take(_ offer: RelicService.RollCandidate) {
+        guard let change = store.takeRelicRoll(relicID, candidate: offer.id) else { return }
+        AudioLibrary.shared.play(.uiConfirm)
+        Juice.haptic(.medium)
+        lastOutcome = RelicService.PowerUpOutcome(
+            succeeded: true,
+            level: store.player.relic(relicID)?.level ?? 0,
+            cost: 0,
+            chance: 1,
+            subStatChange: change
+        )
+        withAnimation(.easeOut(duration: 0.25)) { glow = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            withAnimation(.easeOut(duration: 0.4)) { glow = false }
         }
     }
 

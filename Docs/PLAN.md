@@ -3394,3 +3394,78 @@ the Duat banner, so the exchange shows a 4★ that can be taken (61) beside a
 5★ that cannot (153) rather than a board of identical refusals, and its
 selector is marked spent — an unspent one would otherwise pop the gift sheet
 over step 4's summoning room.
+
+## Choice of two: the relic roll made an act, not an accident (2026-09-16)
+
+The market report's item 3, and the one it argues hardest for. Worth stating
+plainly why, because it is the only item that changes a system already
+shipped rather than adding one.
+
+**What the genre did this year.** Summoners War's **Reappraisal Stones**
+reroll a Legendary rune's four sub stats keeping slot, set, main stat and
+grade — and each roll **offers a choice between two options**. Its November
+2025 update added **Refinement Stones** and **Core Fragments**, which "let
+players power up their Runes and Artifacts **while keeping desired sub
+properties**". Epic Seven's **Steel Workshop** crafts gear to a chosen set
+and slot, and its **reforge** raises +15 gear from 85 to 90 with sub stats
+"guaranteed to increase with a set value". Read together, that is the genre
+leader spending a flagship update walking back the exact mechanic this game
+copied: pure RNG with failure.
+
+**What this game has.** `RelicService.upgradeOnce` rolls a sub stat at +3,
++6, +9 and +12 — adding one while there are fewer than four, otherwise
+growing a random one — and the player watches. He pays 100·g² + level·… of
+drachma per attempt and has a 40% chance of the attempt landing at +15.
+Rune farming was the most-complained-about system in the genre for a decade
+for exactly this shape.
+
+**What is NOT wrong with it, and is invisible.** A failed attempt here has
+never destroyed anything: it costs drachma and the level stays. Players
+assume the worst because every game they have played before this one did
+destroy something. That is a line of text on a screen, not a change.
+
+### The design
+
+1. **Two candidates at every sub-stat roll.** The attempt succeeds as it does
+   now; then the screen offers two outcomes — "+ CRIT DMG 5.4%" beside "SPD
+   +3 becomes SPD +7" — and the player takes one. This is the single change
+   the report calls the one that converts rage into agency, and it is
+   Summoners War's own reappraisal shape moved onto the roll that happens
+   forty times more often.
+
+2. **The offer is a SEED on the relic, not a stored pair.** `Relic` gets an
+   Optional `pendingRoll: UInt64?`. The level goes up immediately; the two
+   candidates are derived from that seed every time the screen is opened, so
+   closing the sheet and coming back cannot reroll them. This is the Night
+   Market's lesson applied again — a thing that exists in exactly one place
+   is a seed, never a list — and it is what stops the choice being a free
+   infinite reroll, which would be worse than no choice at all.
+
+3. **A pending choice blocks the next attempt.** Otherwise a relic could sit
+   at +12 with three choices stacked up behind it, and every screen that
+   draws a relic would have to explain a half-rolled state.
+
+4. **One new stone: the targeted reroll.** `RelicStone.Kind.chisel` —
+   "reroll this ONE sub stat, keep the other three", which is the thing
+   Refinement Stones do and the thing the existing gem does not (a gem
+   REPLACES a sub with a new kind; a chisel keeps the kind and rerolls the
+   value, with the better of the two kept). Three tiers like the others,
+   dropping where the others drop.
+
+5. **Say the failure rule out loud** on the power-up screen, in the same
+   size as the odds: "A failed attempt costs drachma. It never takes your
+   level or your sub stats."
+
+### What it must not do
+
+Not change the expected VALUE of a relic much. Two candidates is a
+best-of-two, which raises the average roll — measured in `balance.py
+--targeting`, which reports the mean sub-stat total at +12 under one roll and
+under choice-of-two, so the drift is a number rather than a feeling. If the
+lift is large the answer is to narrow the second candidate (offer the same
+stat at a second value rather than a free second draw), not to abandon the
+choice.
+
+Built after run 153 lands; the research is written first because the owner
+reads this file and because the seed-not-a-list decision is the one that
+needed making before any code.

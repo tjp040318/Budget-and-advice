@@ -187,33 +187,65 @@ enum MileageService {
 /// so the first face in his collection is one he wanted.
 enum SelectorService {
 
-    /// Six candidates, one per element where the roster allows, drawn from
-    /// the 4★ tier of the pantheon the game opens in.
+    /// Five candidates — five different CHARACTERS — drawn from the 4★ tier
+    /// of the pantheon the game opens in.
     ///
     /// DERIVED rather than a hand-written list, so it cannot name a family
     /// whose cards have not been painted; and sorted by id rather than rolled,
-    /// so the six are the same six every launch — a shortlist that changed
+    /// so the five are the same five every launch — a shortlist that changed
     /// under the player between one look and the next would read as a bug.
+    ///
+    /// **One per FAMILY, and only then one per element.** The first cut took
+    /// one per element and nothing else, and run 153's frame is what it looks
+    /// like: five cards, all of them Anhur, in fire, wind, light, water and
+    /// dark. Every rule was satisfied and the screen was worthless — a player
+    /// choosing his first god was being offered an element picker. A family
+    /// is the id without its element suffix (`anhur_ember` → `anhur`).
     static func candidates() -> [UnitBlueprint] {
         let pool = SummonService.eligible(for: Banner.duatOpens)
             .filter { $0.naturalStars == 4 && $0.hasShippedArt }
             .sorted { $0.id < $1.id }
 
-        var seen: Set<Element> = []
+        var families: Set<String> = []
+        var elements: Set<Element> = []
         var picked: [UnitBlueprint] = []
-        for blueprint in pool where !seen.contains(blueprint.element) {
-            seen.insert(blueprint.element)
+
+        // First pass: a family not yet on the board AND an element not yet on
+        // it, so the five are five characters that also read as five colours.
+        for blueprint in pool where picked.count < 5 {
+            let family = familyID(of: blueprint)
+            guard !families.contains(family), !elements.contains(blueprint.element) else { continue }
+            families.insert(family)
+            elements.insert(blueprint.element)
             picked.append(blueprint)
         }
-        // A roster that has fewer than five elements at 4★ falls back to the
-        // rest of the tier rather than showing two cards.
-        if picked.count < 5 {
-            for blueprint in pool where !picked.contains(where: { $0.id == blueprint.id }) {
-                picked.append(blueprint)
-                if picked.count >= 5 { break }
-            }
+        // Second pass: fill from families still unrepresented, element be
+        // damned. Five characters in four colours beats four characters.
+        for blueprint in pool where picked.count < 5 {
+            let family = familyID(of: blueprint)
+            guard !families.contains(family) else { continue }
+            families.insert(family)
+            picked.append(blueprint)
+        }
+        // Last resort: a roster with fewer than five 4★ families at all.
+        for blueprint in pool where picked.count < 5 {
+            guard !picked.contains(where: { $0.id == blueprint.id }) else { continue }
+            picked.append(blueprint)
         }
         return picked
+    }
+
+    /// The family an id belongs to: the id with its element suffix stripped.
+    /// There is no `family` field on a blueprint — the id IS the family plus
+    /// the element, everywhere in the game.
+    static func familyID(of blueprint: UnitBlueprint) -> String {
+        for element in Element.allCases {
+            let suffix = "_" + element.rawValue
+            if blueprint.id.hasSuffix(suffix) {
+                return String(blueprint.id.dropLast(suffix.count))
+            }
+        }
+        return blueprint.id
     }
 
     /// Owed until it is taken, and only while the roster can honour it.

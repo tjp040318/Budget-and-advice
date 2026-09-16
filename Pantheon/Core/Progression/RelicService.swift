@@ -184,6 +184,85 @@ enum RelicService {
         var subStatChange: SubStatChange?
     }
 
+    /// One of the two outcomes a successful sub-stat level offers.
+    ///
+    /// The genre spent 2025 walking back the pure-RNG roll this game copied:
+    /// Summoners War's Reappraisal Stones offer a CHOICE BETWEEN TWO on every
+    /// roll, and its November update added stones that power a rune up "while
+    /// keeping desired sub properties". Two candidates is that, moved onto
+    /// the roll that happens forty times more often.
+    struct RollCandidate: Identifiable, Equatable, Sendable {
+        /// 0 or 1 — which of the pair, and what `take` is called with.
+        var id: Int
+        var change: SubStatChange
+        /// The index in `subStats` this grows, or nil when it adds a new one.
+        var growsIndex: Int?
+    }
+
+    /// The two outcomes on offer, derived from the relic's own pending seed.
+    ///
+    /// Pure: same relic, same two candidates, every time. That is the whole
+    /// point of storing a seed rather than a rolled pair — a player who backs
+    /// out of the screen comes back to the offer he left.
+    ///
+    /// Both candidates are the same KIND of thing, because the roll is: while
+    /// the relic has fewer than four subs the pair is two different stats it
+    /// could gain, and once it has four the pair is two different subs it
+    /// could grow. A choice between "gain something" and "grow something" is
+    /// not a choice a player can weigh — the first is always worth more.
+    static func candidates(for relic: Relic) -> [RollCandidate] {
+        guard let seed = relic.pendingRoll else { return [] }
+        var rng = SeededRandom(seed: seed)
+        var offers: [RollCandidate] = []
+
+        if relic.subStats.count < 4 {
+            var available = subStatPool.filter { kind in
+                kind != relic.mainStat.kind && !relic.subStats.contains(where: { $0.kind == kind })
+            }
+            for index in 0..<2 {
+                guard let kind = rng.pickMutating(available) else { break }
+                available.removeAll { $0 == kind }
+                let value = subStatRoll(kind: kind, grade: relic.grade, rng: &rng)
+                offers.append(RollCandidate(
+                    id: index,
+                    change: SubStatChange(kind: kind, before: 0, after: value, isNew: true),
+                    growsIndex: nil
+                ))
+            }
+        } else {
+            var indices = Array(relic.subStats.indices)
+            for index in 0..<2 {
+                guard !indices.isEmpty else { break }
+                let pick = indices.remove(at: rng.int(in: 0...(indices.count - 1)))
+                let sub = relic.subStats[pick]
+                let bump = subStatRoll(kind: sub.kind, grade: relic.grade, rng: &rng)
+                offers.append(RollCandidate(
+                    id: index,
+                    change: SubStatChange(
+                        kind: sub.kind, before: sub.value, after: sub.value + bump, isNew: false
+                    ),
+                    growsIndex: pick
+                ))
+            }
+        }
+        return offers
+    }
+
+    /// Spends the pending roll on one of the two. Nil when there is no choice
+    /// waiting or the id is not one of the pair — both of which mean a stale
+    /// screen rather than an error worth showing.
+    @discardableResult
+    static func takeRoll(_ relic: inout Relic, candidate id: Int) -> SubStatChange? {
+        guard let pick = candidates(for: relic).first(where: { $0.id == id }) else { return nil }
+        if let index = pick.growsIndex {
+            relic.subStats[index].value = pick.change.after
+        } else {
+            relic.subStats.append(StatModifier(pick.change.kind, pick.change.after))
+        }
+        relic.pendingRoll = nil
+        return pick.change
+    }
+
     /// One guaranteed +1. At +3, +6, +9 and +12 a sub stat is added while
     /// there are fewer than four, else an existing one grows — which is
     /// where the grind's variance lives. +15 rolls nothing.
@@ -219,18 +298,24 @@ enum RelicService {
         case notEnoughDrachma(needed: Int)
         case maxLevel
         case slotMismatch
+        case choiceWaiting
 
         var errorDescription: String? {
             switch self {
             case .notEnoughDrachma(let needed): return "Upgrading costs \(needed) drachma."
             case .maxLevel: return "This relic is already +15."
             case .slotMismatch: return "That relic does not fit this slot."
+            case .choiceWaiting: return "Take one of the two rolls on this relic first."
             }
         }
     }
 
     /// One paid attempt: the drachma goes either way, the level only on a
     /// success.
+    ///
+    /// A success at +3, +6, +9 or +12 does NOT roll a sub stat any more — it
+    /// opens a choice of two (`relic.pendingRoll`) and the player takes one.
+    /// The level is already his; only the roll is waiting.
     @discardableResult
     static func upgrade(
         _ relic: inout Relic,
@@ -238,6 +323,10 @@ enum RelicService {
         rng: inout SeededRandom
     ) throws -> PowerUpOutcome {
         guard !relic.isMaxLevel else { throw RelicError.maxLevel }
+        // A relic cannot stack choices. Without this a +12 could arrive with
+        // four of them behind it, and every screen that draws a relic would
+        // have to explain a half-rolled state.
+        guard !relic.hasPendingRoll else { throw RelicError.choiceWaiting }
         let cost = upgradeCost(grade: relic.grade, level: relic.level)
         guard wallet.drachma >= cost else { throw RelicError.notEnoughDrachma(needed: cost) }
         wallet.drachma -= cost
@@ -245,8 +334,13 @@ enum RelicService {
         guard rng.chance(chance) else {
             return PowerUpOutcome(succeeded: false, level: relic.level, cost: cost, chance: chance, subStatChange: nil)
         }
-        let change = upgradeOnce(&relic, rng: &rng)
-        return PowerUpOutcome(succeeded: true, level: relic.level, cost: cost, chance: chance, subStatChange: change)
+        relic.level += 1
+        if levelRollsSubStat(relic.level) {
+            relic.pendingRoll = rng.next()
+        }
+        return PowerUpOutcome(
+            succeeded: true, level: relic.level, cost: cost, chance: chance, subStatChange: nil
+        )
     }
 
     // MARK: - Selling, reappraisal, efficiency

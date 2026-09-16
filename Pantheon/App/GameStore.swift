@@ -381,6 +381,21 @@ final class GameStore: ObservableObject {
         powerUpRelic(relicID)
     }
 
+    /// Takes one of the two rolls a successful +3/+6/+9/+12 offered. The
+    /// candidates are derived from the relic's own seed, so this cannot be
+    /// used to draw a different pair — it only spends the one on the table.
+    @discardableResult
+    func takeRelicRoll(_ relicID: UUID, candidate: Int) -> RelicService.SubStatChange? {
+        var change: RelicService.SubStatChange?
+        update { player in
+            guard let index = player.relics.firstIndex(where: { $0.id == relicID }) else { return }
+            var relic = player.relics[index]
+            change = RelicService.takeRoll(&relic, candidate: candidate)
+            player.relics[index] = relic
+        }
+        return change
+    }
+
     /// Sells relics, taking any off their wearers first. Nil, and an error
     /// shown, if one of them is locked.
     @discardableResult
@@ -415,7 +430,12 @@ final class GameStore: ObservableObject {
     /// bill from +0 to +15.
     func powerUpRelic(_ relicID: UUID, to target: Int) -> [RelicService.PowerUpOutcome] {
         var outcomes: [RelicService.PowerUpOutcome] = []
-        while outcomes.count < 60, let relic = player.relic(relicID), relic.level < min(target, relic.maxLevel) {
+        // `!relic.hasPendingRoll` is the stop: a batch that powered straight
+        // through +3 would have to pick for the player, which is the whole
+        // thing this feature exists to stop. It halts and the screen shows
+        // the two candidates.
+        while outcomes.count < 60, let relic = player.relic(relicID),
+              !relic.hasPendingRoll, relic.level < min(target, relic.maxLevel) {
             let cost = RelicService.upgradeCost(grade: relic.grade, level: relic.level)
             guard player.wallet.drachma >= cost, let outcome = powerUpRelic(relicID) else { break }
             outcomes.append(outcome)
@@ -846,6 +866,20 @@ final class GameStore: ObservableObject {
                     for _ in 0..<entry.level { RelicService.upgradeOnce(&relic, rng: &rng) }
                     player.relics.append(relic)
                 }
+            }
+            // One relic left mid-choice, so tour step 37 photographs the two
+            // candidates rather than a power-up panel with nothing waiting.
+            //
+            // The SECOND-best relic, deliberately: step 19 opens the best one
+            // (`TourView.bestRelic`) to photograph the power-up panel, and a
+            // pending choice blocks that panel — seeding the best one would
+            // have quietly replaced an existing frame with this one.
+            let ranked = player.relics.indices.sorted {
+                (player.relics[$0].grade, player.relics[$0].level)
+                    > (player.relics[$1].grade, player.relics[$1].level)
+            }
+            if ranked.count > 1 {
+                player.relics[ranked[1]].pendingRoll = 0xC0FFEE1234
             }
             // Whetstones and gems, so the stone sheet has something to spend.
             for stone in RelicStone.all where RelicService.stoneCount(stone, player: player) < 3 {
