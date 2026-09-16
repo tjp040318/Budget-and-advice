@@ -1654,6 +1654,67 @@ def report_economy():
     print(f"  6* evolution ladder      {3000+8000+20000+60000+150000:,} drachma")
     print("  → chapter 1 alone funds roughly one relic. Grinding is the game.")
 
+# The sweep, mirrored from SweepService.swift and GameStore.sweep.
+#
+# A sweep changes NO number in the economy: it costs the same energy and pays
+# the same drops as sitting through the fights. What it changes is TIME, and
+# the one place it can pay more than a manual run is the three-star bonus,
+# which it always earns because the gate is three stars. Both are measured
+# below, because "it changes nothing" is a claim and not a fact until it is.
+SWEEP_MAX_RUNS = 20
+ENERGY_MAX = 80                 # Player.wallet.maxEnergy at level 1
+ENERGY_MINUTES = 5              # GameStore.refreshEnergy: one energy per 5 minutes
+STAR_BONUS = 1.25               # CampaignService.applyRewards
+
+# (what it is, energy a run, minutes a run actually takes on the phone)
+#
+# The minutes are measured off the battle contracts, not guessed: a turn is
+# about 3.5 s of animation at 1x (a 1.3 s basic, a dash out and back, the
+# damage number), a campaign wave settles in 6-9 turns and a stage is three
+# waves, so a three-wave stage is roughly 2 minutes at 1x and 70 s at the 2x
+# the auto-repeat runs at. A Labyrinth level is longer: its third wave is a
+# boss with two adds.
+SWEEP_STAGES = [
+    ("Duat 1-1, three waves",        3,  1.1),
+    ("a mid chapter stage",          4,  1.3),
+    ("a chapter boss",               6,  1.8),
+    ("a Hall of Essence floor",      8,  1.5),
+    ("Labyrinth B7, three waves",   12,  2.4),
+    ("Labyrinth B10, three waves",  12,  2.9),
+]
+
+def report_sweep():
+    print("\nSWEEP — the same energy, the same drops, none of the minutes")
+    print("gate: three stars on this stage at this tier, AND the campaign team still")
+    print("      meets its recommended power (SweepService.canSweep)\n")
+    print(f"{'stage':>28}{'energy':>8}{'a full bar':>12}{'fought':>10}{'swept':>8}{'saved':>9}")
+    for name, cost, minutes in SWEEP_STAGES:
+        runs = ENERGY_MAX // cost
+        fought = runs * minutes
+        # A sweep is one tap and one sheet: call it ten seconds whatever N is.
+        swept = 10 / 60
+        print(f"{name:>28}{cost:>8}{runs:>9} runs{fought:>9.0f}m{swept:>7.1f}m{fought - swept:>8.0f}m")
+
+    hours = ENERGY_MAX * ENERGY_MINUTES / 60
+    print(f"\n  a full bar of {ENERGY_MAX} energy refills in {hours:.1f} hours at one per {ENERGY_MINUTES} minutes,")
+    print(f"  so the cap on farming is the ENERGY, not the patience — which is what makes")
+    print(f"  a sweep safe to give away: it spends the same bar in the same day.")
+
+    # The one place a sweep pays more than a fight.
+    print("\n  the only reward difference: a sweep is always a THREE-star clear, so it")
+    print(f"  always takes the {STAR_BONUS:.2f}x drachma and unit-EXP bonus. A manual run that")
+    print("  loses a unit takes 1.00x. Against a player who was already three-starring")
+    print("  the stage — which the gate requires him to have done once — that is 0%;")
+    print("  against a sloppy auto-repeat it is up to 25% more drachma.")
+    print("  → intended: the three-star rating was a decoration on the map until now.")
+
+    # And what it deliberately does NOT do.
+    print("\n  what a sweep does NOT give: a first clear (impossible, three stars implies")
+    print("  cleared), a star rating it has not already earned (the high-water mark only")
+    print("  ever rises), or a way past the energy. It DOES pay the quests, the unit EXP,")
+    print("  the tower milestones and the tribute stars, because it goes through the same")
+    print("  CampaignService.settle a fought run does.")
+
 def report_tune(trials=140):
     """Search each stage's enemy level for the win rate it is supposed to have.
 
@@ -1704,8 +1765,10 @@ if __name__ == "__main__":
     elif "--tributes" in a: report_tributes()
     elif "--shop" in a: report_shop()
     elif "--counsel" in a: report_counsel()
+    elif "--sweep" in a: report_sweep()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
+        report_sweep()
         print()

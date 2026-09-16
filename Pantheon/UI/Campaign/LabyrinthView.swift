@@ -680,6 +680,8 @@ struct DungeonLevelsView: View {
     @State private var pendingEngines: [String: BattleEngine] = [:]
     @State private var pendingRuns: [String: Int] = [:]
     @State private var pulse = false
+    /// The haul of the last sweep, shown over the level list.
+    @State private var sweepReceipt: SweepReceipt?
 
     private var labyrinth: DungeonDatabase.Labyrinth? { DungeonDatabase.labyrinth(chapterID) }
     private var hall: DungeonDatabase.Hall? { DungeonDatabase.hall(chapterID) }
@@ -761,14 +763,45 @@ struct DungeonLevelsView: View {
             #endif
         }
         .sheet(item: $selectedStage) { stage in
-            StageBriefingView(stage: stage) { runs in
-                selectedStage = nil
-                launch(stage, runs: runs)
-            }
+            StageBriefingView(
+                stage: stage,
+                onStart: { runs in
+                    selectedStage = nil
+                    launch(stage, runs: runs)
+                },
+                onSweep: { runs in
+                    selectedStage = nil
+                    sweep(stage, runs: runs)
+                }
+            )
         }
         .fullScreenCover(item: $battle) { context in
             battleScreen(for: context)
         }
+        .overlay {
+            if let receipt = sweepReceipt {
+                SweepReceiptCard(
+                    receipt: receipt,
+                    loot: BattleSummary.loot(from: receipt.outcome) {
+                        store.resolved($0)?.name ?? "Unit"
+                    },
+                    onClose: {
+                        withAnimation(.easeOut(duration: 0.2)) { sweepReceipt = nil }
+                    }
+                )
+                .transition(.opacity)
+            }
+        }
+    }
+
+    /// Clears a mastered level without a battle. The relic grind is the one
+    /// this matters most for: ten runs of a B10 is ten minutes of watching
+    /// three waves resolve the same way.
+    private func sweep(_ stage: Stage, runs: Int) {
+        guard let receipt = store.sweep(stage: stage, runs: runs), receipt.runs > 0 else { return }
+        AudioLibrary.shared.play(.uiConfirm)
+        Juice.haptic(.medium)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { sweepReceipt = receipt }
     }
 
     // MARK: - The place, behind everything

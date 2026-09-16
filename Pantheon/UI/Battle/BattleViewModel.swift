@@ -560,47 +560,7 @@ final class BattleViewModel: ObservableObject {
     }
 
     private func loot(from stageOutcome: StageOutcome) -> [BattleSummary.Loot] {
-        var items: [BattleSummary.Loot] = []
-        if stageOutcome.drachma > 0 {
-            items.append(.init(glyph: "circle.hexagongrid.fill", title: "Drachma",
-                               amount: "+\(stageOutcome.drachma.formatted())", tint: .gold, key: "drachma"))
-        }
-        if stageOutcome.unitExperience > 0 {
-            items.append(.init(glyph: "arrow.up.circle.fill", title: "Unit EXP",
-                               amount: "+\(stageOutcome.unitExperience.formatted())", tint: .verdigris, key: "unit_exp"))
-        }
-        if stageOutcome.divinityEarned > 0 {
-            items.append(.init(glyph: "sparkles", title: "Divinity",
-                               amount: "+\(stageOutcome.divinityEarned)", tint: .marble, key: "divinity"))
-        }
-        for relic in stageOutcome.relicsEarned {
-            items.append(.init(glyph: relic.set.glyph, title: relic.displayName,
-                               amount: "Slot \(relic.slot)", tint: .gold, stars: relic.grade, relic: relic))
-        }
-        for (id, count) in stageOutcome.stonesEarned.sorted(by: { $0.key < $1.key }) {
-            guard let stone = RelicStone.from(id: id) else { continue }
-            items.append(.init(glyph: stone.kind.glyph, title: stone.displayName,
-                               amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity), key: id))
-        }
-        for (id, count) in stageOutcome.essencesEarned.sorted(by: { $0.key < $1.key }) {
-            let element = Element(rawValue: id.split(separator: "_").dropFirst().first.map(String.init) ?? "")
-            items.append(.init(glyph: "drop.triangle.fill", title: EssenceCatalog.name(for: id),
-                               amount: "+\(count)", tint: element.map { .element($0) } ?? .verdigris, key: id))
-        }
-        for (id, count) in stageOutcome.scrollsEarned.sorted(by: { $0.key < $1.key }) {
-            if let scroll = ScrollType(rawValue: id) {
-                items.append(.init(glyph: scroll.glyph, title: scroll.displayName,
-                                   amount: "+\(count)", tint: .scroll(scroll), key: ItemArt.key(scroll: scroll)))
-            } else {
-                items.append(.init(glyph: "scroll.fill", title: id, amount: "+\(count)", tint: .gold))
-            }
-        }
-        for (unitID, levels) in stageOutcome.leveledUnits {
-            let name = store.resolved(unitID)?.name ?? "Unit"
-            items.append(.init(glyph: "chevron.up.circle.fill", title: "\(name) levelled",
-                               amount: "+\(levels)", tint: .laurel, key: "level_up"))
-        }
-        return items
+        BattleSummary.loot(from: stageOutcome) { self.store.resolved($0)?.name ?? "Unit" }
     }
 
     func finish() -> BattleSummary {
@@ -761,6 +721,60 @@ struct BattleSummary {
     var mvpID: UUID? = nil
     var loot: [Loot] = []
     var isFirstClear: Bool = false
+
+    /// The chest's contents for one settled stage, as tiles.
+    ///
+    /// A type method rather than a method on the battle screen because the
+    /// sweep shows the same haul without ever building a battle: one
+    /// vocabulary of spoils for the game, so a swept run and a fought one
+    /// cannot be drawn differently. `unitName` is the only thing it cannot
+    /// work out for itself.
+    static func loot(
+        from stageOutcome: StageOutcome,
+        unitName: (UUID) -> String
+    ) -> [BattleSummary.Loot] {
+        var items: [BattleSummary.Loot] = []
+        if stageOutcome.drachma > 0 {
+            items.append(.init(glyph: "circle.hexagongrid.fill", title: "Drachma",
+                               amount: "+\(stageOutcome.drachma.formatted())", tint: .gold, key: "drachma"))
+        }
+        if stageOutcome.unitExperience > 0 {
+            items.append(.init(glyph: "arrow.up.circle.fill", title: "Unit EXP",
+                               amount: "+\(stageOutcome.unitExperience.formatted())", tint: .verdigris, key: "unit_exp"))
+        }
+        if stageOutcome.divinityEarned > 0 {
+            items.append(.init(glyph: "sparkles", title: "Divinity",
+                               amount: "+\(stageOutcome.divinityEarned)", tint: .marble, key: "divinity"))
+        }
+        for relic in stageOutcome.relicsEarned {
+            items.append(.init(glyph: relic.set.glyph, title: relic.displayName,
+                               amount: "Slot \(relic.slot)", tint: .gold, stars: relic.grade, relic: relic))
+        }
+        for (id, count) in stageOutcome.stonesEarned.sorted(by: { $0.key < $1.key }) {
+            guard let stone = RelicStone.from(id: id) else { continue }
+            items.append(.init(glyph: stone.kind.glyph, title: stone.displayName,
+                               amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity), key: id))
+        }
+        for (id, count) in stageOutcome.essencesEarned.sorted(by: { $0.key < $1.key }) {
+            let element = Element(rawValue: id.split(separator: "_").dropFirst().first.map(String.init) ?? "")
+            items.append(.init(glyph: "drop.triangle.fill", title: EssenceCatalog.name(for: id),
+                               amount: "+\(count)", tint: element.map { .element($0) } ?? .verdigris, key: id))
+        }
+        for (id, count) in stageOutcome.scrollsEarned.sorted(by: { $0.key < $1.key }) {
+            if let scroll = ScrollType(rawValue: id) {
+                items.append(.init(glyph: scroll.glyph, title: scroll.displayName,
+                                   amount: "+\(count)", tint: .scroll(scroll), key: ItemArt.key(scroll: scroll)))
+            } else {
+                items.append(.init(glyph: "scroll.fill", title: id, amount: "+\(count)", tint: .gold))
+            }
+        }
+        for (unitID, levels) in stageOutcome.leveledUnits {
+            let name = unitName(unitID)
+            items.append(.init(glyph: "chevron.up.circle.fill", title: "\(name) levelled",
+                               amount: "+\(levels)", tint: .laurel, key: "level_up"))
+        }
+        return items
+    }
 }
 
 // MARK: - Scene playback

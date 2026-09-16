@@ -3204,3 +3204,101 @@ is 116 instead of 132, so a new player's six are one clean row and a level-40
 summoner's ten are two. Tour step 33 photographs the Counsel, opened straight
 on its tab through `MissionsView(opening:)` — the same trick as the bazaar's,
 since nothing in a pinned tour taps a segmented control.
+
+## The sweep (2026-09-16)
+
+The owner asked for a batch of work while he tested, and for research into
+"the top gatcha games that people are playing right now". That research is
+`Docs/MARKET_2026.md`; this is the first thing built out of it, and it is
+the item the report ranked second of ten.
+
+**What the genre does.** Blue Archive lets a player sweep cleared content
+instantly and take the drops without replaying it. Summoners War shipped its
+own version in the **TOMORROW** update of November 2025 — **Scout Battle**,
+which farms Cairos and the Rift **for up to eight hours while the app is
+shut**, alongside Ameria's Luck, a daily 5x boost to high-grade drop rates.
+Genshin and Honkai both sell an instant clear against the same stamina a run
+would have cost. A 2026 round-up of the genre describes the modern shape as
+"short dailies, generous sweep and auto features, and no punishment for
+skipping a day".
+
+**What this game had.** Auto-repeat, 1/5/10/20 runs — which still *plays*
+every battle. Twenty runs of a three-wave Labyrinth level is seventeen
+minutes of watching a fight whose outcome was settled the first time. That
+was the genre's answer in 2014. The relic grind is the reason people leave
+this kind of game, and a sweep is the single change that makes it survivable.
+
+### The three ways to build it, and the one chosen
+
+1. **Simulate headless.** Run the real `BattleEngine` N times with no scene,
+   no animation, no HUD, and pay whatever the simulation returns. The truest
+   of the three — a team that would lose, loses. It also costs twenty full
+   three-wave simulations on the phone for a ×20, and the outcome is a
+   foregone conclusion *by construction*, because of the gate below.
+2. **Roll the rewards.** Skip the fight entirely and pay N clears. Instant,
+   and it is what Blue Archive and Genshin actually do. On its own it lets a
+   player who mastered Duat 1-5 at level 20 and has since fed his whole team
+   to the Hall of Ka go on sweeping it forever.
+3. **Hybrid** — simulate one battle to prove the current team still wins,
+   then roll the other nineteen. One simulation's cost for most of (1)'s
+   honesty.
+
+**Chosen: (2), with a second gate the genre does not have.** A sweep needs
+**three stars on this stage at this tier** — not a clear. A clear says you
+beat it once, possibly by a hair with one unit standing; three stars says
+everyone lived and it was inside the turn par, which is the same statement as
+"the outcome of this fight is no longer in doubt". And the campaign team that
+*would* have fought must still meet the stage's recommended power, which is
+what closes the fed-my-team hole without a simulation. Between them the two
+gates make (3)'s simulation redundant: it would be re-proving a fight the
+save already records as mastered, against a team the screen has just checked.
+
+It also gives the **star rating a job**. Until today it was pips on a
+medallion. Now it is the key to the stage.
+
+### What it is made of
+
+- `SweepService` — the gates (`isMastered`, `isPowered`, `canSweep`), the
+  refusal sentence, how many runs the energy pays for, and `masteredResult`,
+  which builds the `BattleResult` a swept run is paid as: everyone alive,
+  turns exactly at par. The three stars are not asserted — they are EARNED,
+  by a result that satisfies the same `CampaignService.starRating` rule a
+  fought run does.
+- `CampaignService.settle` — new, and the reason this is safe. Everything a
+  finished run does to the save (rewards, the star high-water mark, a tower
+  floor's milestone, the quests) was inline in `GameStore.finishCampaignBattle`;
+  it is one function now, and the sweep and the fight both go through it. A
+  second way to clear a stage that pays through a second code path is a
+  divergence waiting to happen.
+- `GameStore.sweep(stage:runs:)` — checks the gates again (a screen can go
+  stale, and this one spends energy), then loops: spend, settle, collect.
+  Returns a `SweepReceipt` that keeps `runs` and `requested` apart, so a
+  sweep that was asked for twenty and could afford eleven says so instead of
+  quietly coming up short.
+- `SweepButton` and `SweepReceiptCard` — the button sits beside Begin in the
+  briefing's launch bar and on the stage popup, which is where the genre puts
+  it, because the decision is "this stage, now, how many times" and a sweep is
+  one of the answers to it. The button is dark most of the time by design, so
+  it carries the sentence that says why ("Three-star this stage first — you
+  have 2 of 3"). The receipt is the win's own `SpoilsPanel`, tiles and all:
+  a sweep pays exactly what the fights would have paid, and a player who sees
+  the same framed chest learns that without being told. `BattleSummary.loot`
+  moved off the battle view model to a type method so both can draw it.
+
+### What `balance.py --sweep` says
+
+The economy does not move: the same energy, the same drops. A full 80-energy
+bar refills in 6.7 hours at one per five minutes, so the cap on farming was
+always the ENERGY and never the patience — which is exactly why a sweep is
+safe to give away. What changes is the minutes: a bar of Duat 1-1 is 26 runs,
+29 minutes fought and ten seconds swept.
+
+There is **one** reward difference and the report names it rather than hiding
+it: a sweep is always a three-star clear, so it always takes the ×1.25
+drachma and unit-EXP bonus, where a sloppy auto-repeat that loses a unit takes
+×1.00. Against the player the gate describes — one who has already
+three-starred the stage — that is 0%. Against careless auto-repeat it is up to
+25% more drachma, and that is intended.
+
+Tour step 34 photographs it: a real sweep of `duat_1_1` on the tour's save,
+the briefing behind and the chest in front.

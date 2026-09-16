@@ -36,6 +36,8 @@ struct CampaignView: View {
     @State private var pendingEngines: [String: BattleEngine] = [:]
     /// How many times the briefing asked the stage to be run on auto.
     @State private var pendingRuns: [String: Int] = [:]
+    /// The haul of the last sweep, shown over the map until it is dismissed.
+    @State private var sweepReceipt: SweepReceipt?
 
     private var currentChapterID: String {
         chapterID ?? Self.currentChapter(for: store.player).id
@@ -139,10 +141,17 @@ struct CampaignView: View {
                 .environmentObject(store)
             }
             .sheet(item: $selectedStage) { stage in
-                StageBriefingView(stage: stage) { runs in
-                    selectedStage = nil
-                    launch(stage, runs: runs)
-                }
+                StageBriefingView(
+                    stage: stage,
+                    onStart: { runs in
+                        selectedStage = nil
+                        launch(stage, runs: runs)
+                    },
+                    onSweep: { runs in
+                        selectedStage = nil
+                        sweep(stage, runs: runs)
+                    }
+                )
             }
             .fullScreenCover(item: $battle) { context in
                 battleScreen(for: context)
@@ -159,8 +168,26 @@ struct CampaignView: View {
                             popupStage = nil
                             launch(stage, runs: 1)
                         },
+                        onSweep: { runs in
+                            popupStage = nil
+                            sweep(stage, runs: runs)
+                        },
                         onClose: {
                             withAnimation(.easeOut(duration: 0.2)) { popupStage = nil }
+                        }
+                    )
+                    .transition(.opacity)
+                }
+            }
+            .overlay {
+                if let receipt = sweepReceipt {
+                    SweepReceiptCard(
+                        receipt: receipt,
+                        loot: BattleSummary.loot(from: receipt.outcome) {
+                            store.resolved($0)?.name ?? "Unit"
+                        },
+                        onClose: {
+                            withAnimation(.easeOut(duration: 0.2)) { sweepReceipt = nil }
                         }
                     )
                     .transition(.opacity)
@@ -192,6 +219,14 @@ struct CampaignView: View {
         pendingRuns[stage.id] = runs
         battle = .campaign(stage)
     }
+
+    /// Clears a mastered stage without a battle and shows what it paid.
+    private func sweep(_ stage: Stage, runs: Int) {
+        guard let receipt = store.sweep(stage: stage, runs: runs), receipt.runs > 0 else { return }
+        AudioLibrary.shared.play(.uiConfirm)
+        Juice.haptic(.medium)
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) { sweepReceipt = receipt }
+    }
 }
 
 /// Pre-battle screen: what you are about to fight, wave by wave, and who
@@ -205,6 +240,10 @@ struct StageBriefingView: View {
     let stage: Stage
     /// Called with how many runs to fight on auto (1 is one fight by hand).
     let onStart: (Int) -> Void
+    /// Called with how many runs to sweep — the same stage, the same energy,
+    /// no battle. The screen that presented this one shows the receipt,
+    /// because the sweep closes this sheet.
+    let onSweep: (Int) -> Void
 
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
@@ -530,6 +569,8 @@ struct StageBriefingView: View {
 
             Spacer(minLength: 8)
 
+            SweepButton(stage: stage, runs: runs, onSweep: onSweep)
+
             PrimaryButton(
                 title: runs > 1
                     ? "Begin ×\(runs) — \(stage.energyCost) energy each"
@@ -539,7 +580,7 @@ struct StageBriefingView: View {
             ) {
                 onStart(runs)
             }
-            .frame(width: 260)
+            .frame(width: 240)
         }
         .padding(8)
         .background(Theme.panel(Theme.tightCorner))
@@ -557,6 +598,10 @@ struct StagePopup: View {
     let chapter: Chapter
     let onPrepare: () -> Void
     let onFight: () -> Void
+    /// Sweep this stage as many times as the energy allows, up to the
+    /// maximum. The popup's Fight is one run, but a sweep of one is barely
+    /// worth the tap — the point of it is the twenty.
+    let onSweep: (Int) -> Void
     let onClose: () -> Void
 
     @EnvironmentObject private var store: GameStore
@@ -653,6 +698,12 @@ struct StagePopup: View {
                         .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.5), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
+                // Only once the stage is mastered: until then the button is
+                // dark and the popup has no room for the sentence that says
+                // why, which the briefing behind "Team & runs" does have.
+                if SweepService.canSweep(stage, player: store.player) {
+                    SweepButton(stage: stage, runs: SweepService.maximumRuns, onSweep: onSweep)
+                }
                 PrimaryButton(
                     title: "Fight — \(stage.energyCost) energy",
                     systemImage: "play.fill",

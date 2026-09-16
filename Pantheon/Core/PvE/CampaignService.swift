@@ -226,6 +226,59 @@ enum CampaignService {
         )
     }
 
+    /// Everything a finished run does to the save, in one place: the rewards,
+    /// the star high-water mark, a tower floor's milestone and the quests it
+    /// advances.
+    ///
+    /// `GameStore.finishCampaignBattle` and `GameStore.sweep` both come
+    /// through here, so a swept run and a fought one cannot pay differently —
+    /// which was the whole risk of adding a second way to clear a stage.
+    @discardableResult
+    static func settle(
+        stage: Stage,
+        result: BattleResult,
+        player: inout Player,
+        rng: inout SeededRandom
+    ) -> StageOutcome {
+        var outcome = applyRewards(stage: stage, result: result, player: &player, rng: &rng)
+
+        // The stars the clear earned, kept as a high-water mark for the map's
+        // pips, the realm's judgment (`TributeService`) and the sweep's gate.
+        if result.outcome == .victory {
+            TributeService.recordStars(stage: stage, stars: outcome.stars, player: &player)
+        }
+        // A tower floor pays like any other stage. What a stage cannot express
+        // is the high-water mark and the milestone, so the tower settles those
+        // here, after the floor has been paid, and folds the milestone's
+        // grants into the same receipt rather than letting them arrive
+        // silently in the wallet.
+        if DungeonDatabase.isTowerFloor(stage) {
+            TowerService.recordClear(
+                stage: stage, result: result, outcome: &outcome,
+                player: &player, rng: &rng
+            )
+        }
+        if result.outcome == .victory {
+            let event: QuestService.Event = DungeonDatabase.hall(containing: stage) != nil
+                ? .hallFloorCleared(stage)
+                : .stageCleared(stage)
+            QuestService.record(event, player: &player)
+        }
+        QuestService.record(.energySpent(stage.energyCost), player: &player)
+        return outcome
+    }
+
+    /// Spends one swept run's energy, or refuses. The sweep's own gates —
+    /// three stars and a team that still meets the stage — are
+    /// `SweepService.canSweep`, checked once before the loop; this is only
+    /// the wallet.
+    static func spendSweptRun(stage: Stage, player: inout Player) throws {
+        guard player.wallet.energy >= stage.energyCost else {
+            throw CampaignError.notEnoughEnergy(needed: stage.energyCost)
+        }
+        player.wallet.energy -= stage.energyCost
+    }
+
     /// Refunds the energy when a run is abandoned before the first turn resolves.
     static func refund(stage: Stage, player: inout Player) {
         player.wallet.energy = min(player.wallet.maxEnergy, player.wallet.energy + stage.energyCost)

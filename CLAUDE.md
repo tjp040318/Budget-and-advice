@@ -200,7 +200,14 @@ environment can and cannot do. The short version:
   power-up, skill-ups from duplicates, evolution, awakening) all work. So do
   the **Labyrinth** (a building on the island, `LabyrinthView`: three
   relic dungeons and the five Halls of Essence; `DungeonDatabase`;
-  a dungeon level is one battle of three waves), **auto-repeat**
+  a dungeon level is one battle of three waves), **the sweep**
+  (`SweepService`, `SweepView.swift`: a stage THREE-STARRED at this tier,
+  whose campaign team still meets its recommended power, is cleared N times
+  with no battle for the same energy — the button sits beside Begin in the
+  briefing and on the stage popup, the receipt is the win's own
+  `SpoilsPanel`, and every run goes through `CampaignService.settle`, the
+  one path a fought run takes as well, so the two cannot pay differently;
+  `balance.py --sweep`; tour step 34), **auto-repeat**
   (the briefing asks for 1/5/10/20 runs; `BattleViewModel.conclude()`
   swaps engines and tots up the loot), the **relic inventory** (Collection
   → Relics: sell, lock, reappraise, efficiency; `RelicInventoryView`), the
@@ -920,7 +927,7 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is thirty screens (steps 0–29): an arena battle
+  thousands of images. The CI tour is thirty-five screens (steps 0–34): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,

@@ -42,6 +42,7 @@ struct TourView: View {
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
+        ("sweep", 3),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -226,6 +227,13 @@ struct TourView: View {
             // Athena's road: the tier the tour's save is on, its steps and the
             // tier's prize. Opened on that tab for the same reason.
             MissionsView(opening: .counsel)
+        case "sweep":
+            // The briefing with its Sweep button, and the receipt over it once
+            // the sweep has run. The tour's save three-stars Duat 1-1, so this
+            // is a real sweep of a real stage; if it were ever refused the
+            // frame still shows the button and the sentence that says why,
+            // which is the other thing worth photographing.
+            TourSweepScene()
         case "relic_sets":
             // The set reference, opened from a unit so its counts show.
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
@@ -442,3 +450,38 @@ struct TourView: View {
     }
 }
 #endif
+
+/// The sweep, photographed: the briefing it is launched from and the chest it
+/// leaves. It runs a REAL sweep on the tour's save — `duat_1_1`, which the
+/// debug save three-stars — rather than building a receipt by hand, because a
+/// hand-built one would photograph a screen the game cannot actually produce.
+private struct TourSweepScene: View {
+    @EnvironmentObject private var store: GameStore
+    @State private var receipt: SweepReceipt?
+
+    private var stage: Stage? { StageDatabase.stage("duat_1_1") }
+
+    var body: some View {
+        ZStack {
+            if let stage {
+                StageBriefingView(stage: stage, onStart: { _ in }, onSweep: { _ in })
+                if let receipt {
+                    SweepReceiptCard(
+                        receipt: receipt,
+                        loot: BattleSummary.loot(from: receipt.outcome) {
+                            store.resolved($0)?.name ?? "Unit"
+                        },
+                        onClose: {}
+                    )
+                }
+            }
+        }
+        .onAppear {
+            guard let stage, receipt == nil else { return }
+            receipt = store.sweep(stage: stage, runs: 5)
+            print("[Tour] sweep duat_1_1 runs=\(receipt?.runs ?? -1) "
+                  + "mastered=\(SweepService.isMastered(stage, player: store.player)) "
+                  + "powered=\(SweepService.isPowered(stage, player: store.player))")
+        }
+    }
+}

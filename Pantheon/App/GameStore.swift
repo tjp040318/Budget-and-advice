@@ -638,39 +638,54 @@ final class GameStore: ObservableObject {
         var rng = makeRandom()
         var outcome: StageOutcome?
         update { player in
-            outcome = CampaignService.applyRewards(
+            outcome = CampaignService.settle(
                 stage: stage, result: result, player: &player, rng: &rng
             )
-            // The stars the clear earned, kept as a high-water mark for the
-            // map's pips and the realm's judgment (`TributeService`).
-            if result.outcome == .victory, let settled = outcome {
-                TributeService.recordStars(stage: stage, stars: settled.stars, player: &player)
-            }
-            // A tower floor pays like any other stage. What a stage cannot
-            // express is the high-water mark and the milestone, so the tower
-            // settles those here, after the floor has been paid, and folds the
-            // milestone's grants into the same receipt rather than letting them
-            // arrive silently in the wallet.
-            if DungeonDatabase.isTowerFloor(stage), var settled = outcome {
-                TowerService.recordClear(
-                    stage: stage, result: result, outcome: &settled,
-                    player: &player, rng: &rng
-                )
-                outcome = settled
-            }
-            if result.outcome == .victory {
-                let event: QuestService.Event = DungeonDatabase.hall(containing: stage) != nil
-                    ? .hallFloorCleared(stage)
-                    : .stageCleared(stage)
-                QuestService.record(event, player: &player)
-            }
-            QuestService.record(.energySpent(stage.energyCost), player: &player)
         }
         return outcome ?? StageOutcome(
             result: result, stars: 0, drachma: 0, playerExperience: 0, unitExperience: 0,
             relicsEarned: [], essencesEarned: [:], scrollsEarned: [:], divinityEarned: 0,
             isFirstClear: false, leveledUnits: [:]
         )
+    }
+
+    /// Clears a mastered stage `runs` times without a battle, and hands back
+    /// the whole haul as one outcome.
+    ///
+    /// The gates are checked here rather than trusted from the button, because
+    /// a sweep spends energy and a screen that has gone stale must not be able
+    /// to spend it. Each run goes through `CampaignService.settle`, the same
+    /// path a fought run takes, so the drops, the quests, the levels and the
+    /// tower's milestones are identical to sitting through twenty fights.
+    ///
+    /// Nil when the stage is not sweepable at all; a short haul when the
+    /// energy ran out partway, which the receipt says out loud.
+    func sweep(stage: Stage, runs: Int) -> SweepReceipt? {
+        guard SweepService.canSweep(stage, player: player) else { return nil }
+        var rng = makeRandom()
+        var receipt: SweepReceipt?
+        update { player in
+            var outcomes: [StageOutcome] = []
+            for _ in 0..<max(1, runs) {
+                do {
+                    try CampaignService.spendSweptRun(stage: stage, player: &player)
+                } catch {
+                    break
+                }
+                let result = SweepService.masteredResult(for: stage, seed: rng.next())
+                outcomes.append(
+                    CampaignService.settle(stage: stage, result: result, player: &player, rng: &rng)
+                )
+            }
+            receipt = SweepReceipt(
+                stage: stage,
+                runs: outcomes.count,
+                requested: max(1, runs),
+                energySpent: outcomes.count * stage.energyCost,
+                outcome: SweepService.total(outcomes, stage: stage)
+            )
+        }
+        return receipt
     }
 
     /// Pays a tribute chest once; nil when it is not earned or was claimed.
