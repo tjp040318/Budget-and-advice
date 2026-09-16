@@ -34,7 +34,16 @@ final class DungeonTests: XCTestCase {
             for floor in floors {
                 XCTAssertNotNil(floor.rewards.essenceChances[essence], "\(floor.id) does not drop \(essence)")
             }
-            XCTAssertEqual(floors.last?.rewards.relicGrade, 6)
+            // A Hall's top floor pays 5★, deliberately ONE BELOW the
+            // Labyrinth's last level. A Hall is the ESSENCE farm: when it
+            // paid 6★ its B4 out-dropped Labyrinth B9 by a full grade at
+            // half the power (`balance.py --drops`, 2026-09-16).
+            XCTAssertEqual(floors.last?.rewards.relicGrade, 5, hall.id)
+            XCTAssertLessThan(
+                floors.last?.rewards.relicGrade ?? 0,
+                DungeonDatabase.labyrinthGrade(level: 10),
+                "\(hall.id): a Hall floor must never pay what the Labyrinth's last level pays"
+            )
         }
     }
 

@@ -84,6 +84,16 @@ proven by reintroducing a real bug and watching it fail.
 If a tuning constant changes in Swift, change it in `tools/balance.py` too. They
 are kept in step by hand.
 
+**And grep `PantheonTests/` for it in the same breath.** That is the THIRD
+place a constant lives and the one neither checker can see: `swiftcheck` reads
+shapes, not numbers, and `balance.py` is a mirror the tests know nothing about.
+Capping the Halls at 5★ on 2026-09-16 cost a red run because
+`DungeonTests.testFloorsClimbAndPayTheirElement` pinned the top floor to `6` —
+the build compiled and five tests failed. A test that pins a tuning number
+should say the INTENT beside it (the Hall's floor is now asserted to be *below*
+`labyrinthGrade(level: 10)`, not merely equal to 5), so the next change to
+either number fails loudly instead of drifting.
+
 The 3D tools need packages that are not preinstalled. PyPI is reachable, so at
 the start of a session that will touch models:
 
