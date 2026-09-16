@@ -455,7 +455,19 @@ environment can and cannot do. The short version:
   relic is a stone, not a figure for the dais; PLAN.md says why.
   `balance.py --awakening` asserts a well-rolled ordinary 6★ still beats a
   badly-rolled awakened one and the average premium sits in 1.05–1.40×.
-  Tour step 40 (`relic_awaken`, two frames). **The guided first hour** (`FirstHourStep`, `IslandView`): four
+  Tour step 40 (`relic_awaken`, two frames). **The five Titans (2026-09-16,
+  phase 3, no credits):** the Raids wing is the **Titans** wing — a rail of
+  five down the left and one card (`LabyrinthView.titansWing`) — and
+  `StageDatabase.raids` holds one Titan per element: the serpent (ember),
+  the Jötunn (gale), and the three Labyrinth bosses fought as raids, the
+  Hydra (tide, `raid_hydra`: the GUARD, heads that grow back), the
+  Colossus (radiance, `raid_colossus`: the SHELL, 16% bronze and a 2-turn
+  stun when it cracks), the Unwrapped King (umbra, `raid_unwrapped_king`:
+  the CLOCK, an enrage at 55). Their meshes, paintings and lines were
+  already in the bundle. A Titan's enrage turn is set where the sim's best
+  team's median kill falls (`balance.py --grades`, `RAIDS`): 65, 60, 80,
+  82, 55. `testShippedRaidsAreWellFormed` asserts one Titan per element.
+  **The guided first hour** (`FirstHourStep`, `IslandView`): four
   steps pointing at the landmark each wants, with a skip chip and a chapter
   intro card shown once. Five new save fields, every one Optional with a nil
   default.

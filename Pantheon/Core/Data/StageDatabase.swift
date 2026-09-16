@@ -293,7 +293,7 @@ enum CampaignDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
             // fifty is awakened: the campaign's one road to the tier above,
             // and the softest of them (`balance.py --awakening`).
             if relicGradeFloor(chapterOrder: chapterOrder) >= 6 {
-                copy.awakenedChance = max(rewards.awakenedChance ?? 0, hellAwakenedChance)
+                copy.awakenedChance = max(rewards.awakenedChance ?? 0, CampaignDifficulty.hellAwakenedChance)
             }
         }
         return copy
@@ -1196,6 +1196,210 @@ enum StageDatabase {
                     firstClearDivinity: 300
                 ),
                 environment: .jotunheimHall,
+                isBoss: true
+            )
+        ),
+        // The three Titans that stood in the Labyrinth all along (phase 3,
+        // 2026-09-16): the Hydra, the Colossus and the Unwrapped King, each
+        // with its mesh, its painting and its set already shipped, so the
+        // five elements have their five beasts at no cost. Each is the
+        // Labyrinth's boss fought as a RAID — the barrier, the guard, the
+        // clock and the wheel — and pays its own colour of aether.
+        RaidEncounter(
+            id: "raid_hydra",
+            name: "The Marsh That Grows Back",
+            summary: """
+            Cut a head and two come up out of the warm water in its place. \
+            The marsh feeds it, and the things that live in the marsh feed \
+            it too; the only way through is faster than it can grow.
+            """,
+            bossLine: "Cut one. Go on. I have eight more, and all the time in the marsh.",
+            environment: .hydraLair,
+            stage: Stage(
+                id: "raid_hydra_1",
+                chapterID: "raid_hydra",
+                index: 1,
+                name: "The Marsh That Grows Back",
+                energyCost: 12,
+                recommendedPower: 40_000,
+                enemies: [
+                    EnemySpawn(
+                        blueprintID: "boss_hydra", level: 60, stars: 6, statMultiplier: 1.9,
+                        raid: RaidBossProfile(
+                            // A thin mist that comes back quickly: the
+                            // Hydra's fight is the GUARD, not the shell.
+                            barrierFraction: 0.10,
+                            barrierRegenTurns: 4,
+                            barrierStunTurns: 1,
+                            barrierName: "Marsh Mist",
+                            // The heads that grow back, as the marsh's own
+                            // hunters: two every third boss turn, and each
+                            // one alive feeds it 3% a turn.
+                            adds: [
+                                EnemySpawn(blueprintID: "serpopard", level: 55, stars: 5, statMultiplier: 1.0),
+                                EnemySpawn(blueprintID: "serpopard", level: 55, stars: 5, statMultiplier: 1.0)
+                            ],
+                            addInterval: 3,
+                            addDrain: 0.03,
+                            summonName: "Heads Regrow",
+                            drainName: "Drinks the Marsh",
+                            // The guard makes this a longer fight than the
+                            // serpent's — the probe's best team kills it in
+                            // 55–91 turns, median 82 — so its clock is set
+                            // where that median falls, which is the rule
+                            // every Titan's clock follows (`balance.py
+                            // --grades`). It has all the time in the marsh.
+                            enrageTurn: 80,
+                            enrageMultiplier: 1.7,
+                            enrageInterval: 12,
+                            // Tide, so Gale has the wheel on it; the wheel
+                            // rotates on past it.
+                            weaknesses: [.gale, .radiance, .umbra],
+                            weaknessInterval: 3,
+                            weaknessMultiplier: 1.7,
+                            offElementMultiplier: 0.75
+                        )
+                    )
+                ],
+                rewards: StageRewards(
+                    drachma: 13_000, playerExperience: 310, unitExperience: 2_500,
+                    relicChance: 1.0, relicGrade: 6,
+                    // The Lair's own offensive sets and the two tempo sets.
+                    relicSets: [.thunder, .ruin, .titanfall, .chains, .wrath, .zephyr],
+                    stoneChances: ["whetstone_hero": 0.7, "whetstone_legend": 0.25, "gem_hero": 0.35, "gem_legend": 0.12],
+                    qualityFloor: .rare,
+                    essenceChances: ["essence_tide_high": 0.8, "essence_magic_high": 0.5],
+                    scrollChances: [ScrollType.pantheonic.rawValue: 0.5, ScrollType.divine.rawValue: 0.12],
+                    firstClearDivinity: 300
+                ),
+                environment: .hydraLair,
+                isBoss: true
+            )
+        ),
+        RaidEncounter(
+            id: "raid_colossus",
+            name: "The Statue That Stood Up",
+            summary: """
+            It was carved to hold the sun up and one day it decided it \
+            would rather hold it down. The bronze on its skin is thicker \
+            than any shield and it takes a long time to crack; when it \
+            cracks, the giant stops, and that is the fight.
+            """,
+            bossLine: "I stood up once, for the sun. I will not sit down for you.",
+            environment: .colossusVault,
+            stage: Stage(
+                id: "raid_colossus_1",
+                chapterID: "raid_colossus",
+                index: 1,
+                name: "The Statue That Stood Up",
+                energyCost: 12,
+                recommendedPower: 48_000,
+                enemies: [
+                    EnemySpawn(
+                        blueprintID: "boss_colossus", level: 60, stars: 6, statMultiplier: 1.8,
+                        raid: RaidBossProfile(
+                            // The thickest shell of the five and the longest
+                            // stun when it goes: the burst team's raid.
+                            barrierFraction: 0.16,
+                            barrierRegenTurns: 6,
+                            barrierStunTurns: 2,
+                            barrierName: "Bronze Skin",
+                            adds: [
+                                EnemySpawn(blueprintID: "sandstone_sentinel", level: 55, stars: 5, statMultiplier: 0.9),
+                                EnemySpawn(blueprintID: "sandstone_sentinel", level: 55, stars: 5, statMultiplier: 0.9)
+                            ],
+                            addInterval: 5,
+                            addDrain: 0.03,
+                            summonName: "Calls the Sentinels",
+                            drainName: "Drinks the Sunlight",
+                            // The best team needs 74–89 turns through the
+                            // bronze, median 83; the clock sits on it.
+                            enrageTurn: 82,
+                            enrageMultiplier: 1.8,
+                            enrageInterval: 12,
+                            // Radiance, so Umbra has the wheel on it.
+                            weaknesses: [.umbra, .tide],
+                            weaknessInterval: 2,
+                            weaknessMultiplier: 1.7,
+                            offElementMultiplier: 0.75
+                        )
+                    )
+                ],
+                rewards: StageRewards(
+                    drachma: 16_000, playerExperience: 350, unitExperience: 2_900,
+                    relicChance: 1.0, relicGrade: 6,
+                    // The Vault's own defensive sets and the two that read.
+                    relicSets: [.aegis, .bulwark, .fates, .vigil, .oracle, .wards],
+                    stoneChances: ["whetstone_hero": 0.7, "whetstone_legend": 0.25, "gem_hero": 0.35, "gem_legend": 0.12],
+                    qualityFloor: .rare,
+                    essenceChances: ["essence_radiance_high": 0.8, "essence_magic_high": 0.5],
+                    scrollChances: [ScrollType.pantheonic.rawValue: 0.5, ScrollType.divine.rawValue: 0.15],
+                    firstClearDivinity: 300
+                ),
+                environment: .colossusVault,
+                isBoss: true
+            )
+        ),
+        RaidEncounter(
+            id: "raid_unwrapped_king",
+            name: "The King Who Was Never Weighed",
+            summary: """
+            He unwrapped himself rather than face the scales, and the dead \
+            he filed away rise when he calls their names. He is quick for a \
+            dead man and quicker as the ledger fills: the fight is short or \
+            it is lost.
+            """,
+            bossLine: "They never weighed my heart. Come and see why.",
+            environment: .necropolis,
+            stage: Stage(
+                id: "raid_unwrapped_king_1",
+                chapterID: "raid_unwrapped_king",
+                index: 1,
+                name: "The King Who Was Never Weighed",
+                energyCost: 12,
+                recommendedPower: 42_000,
+                enemies: [
+                    EnemySpawn(
+                        blueprintID: "boss_unwrapped_king", level: 60, stars: 6, statMultiplier: 1.85,
+                        raid: RaidBossProfile(
+                            // The thinnest shell and the earliest clock: the
+                            // speed team's raid, over before it enrages or
+                            // not at all.
+                            barrierFraction: 0.08,
+                            barrierRegenTurns: 3,
+                            barrierStunTurns: 1,
+                            barrierName: "Linen of the Ledger",
+                            adds: [
+                                EnemySpawn(blueprintID: "enemy_draugr", level: 55, stars: 5, statMultiplier: 0.9),
+                                EnemySpawn(blueprintID: "enemy_draugr", level: 55, stars: 5, statMultiplier: 0.9)
+                            ],
+                            addInterval: 3,
+                            addDrain: 0.025,
+                            summonName: "Raises the Filed Dead",
+                            drainName: "Reads the Ledger",
+                            enrageTurn: 55,
+                            enrageMultiplier: 1.9,
+                            enrageInterval: 10,
+                            // Umbra, so Radiance has the wheel on him.
+                            weaknesses: [.radiance, .ember],
+                            weaknessInterval: 2,
+                            weaknessMultiplier: 1.7,
+                            offElementMultiplier: 0.75
+                        )
+                    )
+                ],
+                rewards: StageRewards(
+                    drachma: 14_000, playerExperience: 320, unitExperience: 2_600,
+                    relicChance: 1.0, relicGrade: 6,
+                    // The Necropolis's own sets and the two that move first.
+                    relicSets: [.oracle, .wards, .styx, .nemesis, .chains, .zephyr],
+                    stoneChances: ["whetstone_hero": 0.7, "whetstone_legend": 0.25, "gem_hero": 0.35, "gem_legend": 0.12],
+                    qualityFloor: .rare,
+                    essenceChances: ["essence_umbra_high": 0.8, "essence_magic_high": 0.5],
+                    scrollChances: [ScrollType.pantheonic.rawValue: 0.5, ScrollType.divine.rawValue: 0.12],
+                    firstClearDivinity: 300
+                ),
+                environment: .necropolis,
                 isBoss: true
             )
         )

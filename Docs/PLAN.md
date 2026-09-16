@@ -3832,3 +3832,60 @@ the report holds between 1.05× (nobody bothers) and 1.40× (a new tier).
 Tour step 40 (`relic_awaken`) performs the awakening on the tour save's 6★
 +15 as the screen appears: the rite in one frame, the halo and the fifth
 sub's choice in the next.
+
+### Phase 3, built (2026-09-16): the five Titans, at no cost
+
+The plan priced phase 3 at 265 Meshy credits for five beast meshes, under the
+floor, and had it ship on stand-ins. It cost nothing, because **the three
+missing Titans were standing in the Labyrinth all along**: the Hydra (tide),
+the Colossus (radiance) and the Unwrapped King (umbra) — each a Labyrinth
+boss with its mesh in the bundle (`boss_hydra.usdz`, `boss_colossus.usdz`
+with its six clips, `boss_unwrapped_king.usdz` with its clips), its own
+`BattleEnvironment` and painting (`hydraLair`, `colossusVault`,
+`necropolis`), its portrait and its line. With the serpent (ember) and the
+Jötunn (gale) that is one Titan per element, so every colour of aether has a
+source and every set's fair price can be paid. Designing three NEW beasts to
+pay for later would have been the worse choice as well as the dearer one: a
+Titan a player has already fought ten levels down is a beast with a history.
+
+**Each is the boss fought as a RAID** — `RaidEncounter` on `StageDatabase.raids`
+with a `RaidBossProfile` — and each has a different shape, so the five are
+five fights rather than one repeated:
+
+| Titan | element | the fight | shell | guard | clock |
+|---|---|---|---|---|---|
+| The Serpent That Swallows the Sun | ember | the rhythm: burst the shell, take the window | 12% / 5 turns / stun 1 | 2 scarabs every 4, 2.2% each | 65 ×1.8 |
+| The King Under the Ice | gale | the defensive raid, fought in the windows | 14% / 5 / 1 | 2 trolls every 6, 3.5% | 60 ×1.9 |
+| The Marsh That Grows Back | tide | the GUARD: heads that grow back and feed it | 10% / 4 / 1 | 2 serpopards every 3, 3% | 80 ×1.7 |
+| The Statue That Stood Up | radiance | the SHELL: the thickest bronze, the longest stun when it cracks | 16% / 6 / stun 2 | 2 sentinels every 5, 3% | 82 ×1.8 |
+| The King Who Was Never Weighed | umbra | the CLOCK: thin linen, an early enrage — short or lost | 8% / 3 / 1 | 2 draugr every 3, 2.5% | 55 ×1.9 |
+
+Each opens to the wheel's counter first (gale on the Hydra, umbra on the
+Colossus, radiance on the King) and rotates on; each pays its own
+Labyrinth's sets plus the two that suit its fight, its element's high
+essence, the raids' stones, and aether in its colour.
+
+**The clocks are set by the rule phase 1 wrote: where the sim's best team's
+median kill falls.** `balance.py --grades` on the three (a maxed 6★ four, no
+sets, no skill-ups, no leader): the Hydra falls in 55–91 turns, median 82 →
+clock 80 (its first draft at 65 graded that team A 70% / B 22%, a wrong
+answer for the fair team, and was moved); the Colossus 73–89, median 84 →
+82; the King 49–77, median 54 → 55, right first time. With those the fair
+team sits at S 22% / A 68% on the Hydra, S 38% / A 62% on the Colossus and
+S 58% / A 40% on the King — the S/A line on all five, SS and SSS above it
+for the sets and the skill-ups to earn. Every wrong-element team is an F or
+a D, and every 5★ team an F.
+
+**The wing.** The Labyrinth's Raids wing is the **Titans** wing: five cards
+across the frame were each too narrow to carry a Titan's mechanics, so it is
+a rail of the five down the left — each in its element's colour with its
+best grade stamped on it and a seal once it has fallen — and the card of the
+one chosen filling the rest (`LabyrinthView.titansWing`): the painting, the
+words, the mechanics, the grade row with the mark to beat, the aether held,
+Enter. The shape the collection's Stage layout already uses. Tour step 39
+photographs it.
+
+**What the owner's word would still buy.** Nothing this phase needs. The
+Titans use the meshes the Labyrinth already shipped; `boss_hydra` is unrigged
+and moves procedurally like the Jötunn, which the Labyrinth already lives
+with. The Meshy balance stays at 1,891.

@@ -1143,6 +1143,17 @@ RAIDS = [
     ("The King Under the Ice", JOTUNN, 60, 6, 1.85,
      (E_TROLL, 55, 5, 0.8, 2), (0.14, 5, 1), (6, 0.035), (60, 1.9, 10),
      (["ember", "radiance"], 2, 1.7, 0.75), 45_000),
+    # The three Titans that stood in the Labyrinth (phase 3): the guard's
+    # raid, the shell's raid and the clock's raid.
+    ("The Marsh That Grows Back", HYDRA, 60, 6, 1.9,
+     (SERPOPARD, 55, 5, 1.0, 2), (0.10, 4, 1), (3, 0.03), (80, 1.7, 12),
+     (["gale", "radiance", "umbra"], 3, 1.7, 0.75), 40_000),
+    ("The Statue That Stood Up", COLOSSUS, 60, 6, 1.8,
+     (SENTINEL, 55, 5, 0.9, 2), (0.16, 6, 2), (5, 0.03), (82, 1.8, 12),
+     (["umbra", "tide"], 2, 1.7, 0.75), 48_000),
+    ("The King Who Was Never Weighed", UNWRAPPED, 60, 6, 1.85,
+     (E_DRAUGR, 55, 5, 0.9, 2), (0.08, 3, 1), (3, 0.025), (55, 1.9, 10),
+     (["radiance", "ember"], 2, 1.7, 0.75), 42_000),
 ]
 
 def simulate_raid(team_spec, raid, seed=0, kill_adds=True):

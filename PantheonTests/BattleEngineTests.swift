@@ -646,7 +646,10 @@ final class BattleEngineTests: XCTestCase {
     // MARK: - The raid content
 
     func testShippedRaidsAreWellFormed() {
-        XCTAssertEqual(StageDatabase.raids.count, 2)
+        // Five Titans, one per element — the five colours of aether.
+        XCTAssertEqual(StageDatabase.raids.count, Element.allCases.count)
+        XCTAssertEqual(Set(StageDatabase.raids.map { RaidGradeService.element(of: $0) }), Set(Element.allCases),
+                       "every element has its Titan")
         for raid in StageDatabase.raids {
             XCTAssertEqual(raid.stage.chapterID, raid.id, "A raid's clear is recorded under its own id")
             XCTAssertNotNil(StageDatabase.stage(raid.stage.id), "A raid stage must be findable by id")

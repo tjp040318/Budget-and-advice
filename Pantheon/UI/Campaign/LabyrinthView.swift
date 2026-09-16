@@ -48,8 +48,11 @@ struct LabyrinthView: View {
         (value: .dungeons, title: "Dungeons"),
         (value: .halls, title: "Halls"),
         (value: .tower, title: "Tower"),
-        (value: .raids, title: "Raids"),
+        (value: .raids, title: "Titans"),
     ]
+
+    /// The Titan whose card is open; nil until the wing is first shown.
+    @State private var selectedRaidID: String?
 
     private var subtitle: String {
         switch wing {
@@ -59,7 +62,7 @@ struct LabyrinthView: View {
             let cleared = TowerService.clearedFloor(player: store.player)
             return "\(cleared)/\(DungeonDatabase.towerFloors) floors · one battle each"
         case .raids:
-            return "\(StageDatabase.raids.count) bosses · barriers, guards and enrage"
+            return "\(StageDatabase.raids.count) Titans · graded F to SSS, paying aether"
         }
     }
 
@@ -86,11 +89,7 @@ struct LabyrinthView: View {
                     case .tower:
                         towerWing
                     case .raids:
-                        HStack(spacing: 8) {
-                            ForEach(StageDatabase.raids) { raid in
-                                raidCard(raid)
-                            }
-                        }
+                        titansWing
                     }
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
@@ -511,6 +510,84 @@ struct LabyrinthView: View {
     }
 
     // MARK: - Climbing
+
+    // MARK: - The Titans
+
+    /// Five beasts, one per element, the genre's Rift: a rail of the five
+    /// down the left with each one's best grade stamped on it, and the card
+    /// of the one chosen filling the rest. Five raid cards across the frame
+    /// were each too narrow to carry a Titan's mechanics; a rail and one
+    /// card is the shape the collection's Stage layout already uses.
+    private var titansWing: some View {
+        let raids = StageDatabase.raids
+        let chosen = raids.first(where: { $0.id == selectedRaidID }) ?? raids.first
+        return HStack(alignment: .top, spacing: 8) {
+            VStack(spacing: 6) {
+                ForEach(raids) { raid in
+                    titanTile(raid, isOn: raid.id == chosen?.id)
+                }
+                Spacer(minLength: 0)
+            }
+            .frame(width: 168)
+            if let chosen {
+                raidCard(chosen)
+                    .id(chosen.id)
+            }
+        }
+    }
+
+    /// One Titan on the rail: its element's colour, its name, the best grade
+    /// earned as a stamp, and Cleared once it has fallen.
+    private func titanTile(_ raid: RaidEncounter, isOn: Bool) -> some View {
+        let element = RaidGradeService.element(of: raid)
+        let best = RaidGradeService.bestGrade(for: raid, player: store.player)
+        let cleared = (store.player.campaignProgress[raid.stage.chapterID] ?? 0) > 0
+        return Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            selectedRaidID = raid.id
+        } label: {
+            HStack(spacing: 8) {
+                RaidGradeStamp(grade: best, size: 34)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 4) {
+                        Image(systemName: element.glyph)
+                            .font(.system(size: 9, weight: .black))
+                            .foregroundStyle(element.color)
+                        Text(element.displayName.uppercased())
+                            .font(Theme.body(8).weight(.black))
+                            .tracking(1.0)
+                            .foregroundStyle(element.color)
+                        if cleared {
+                            Image(systemName: "checkmark.seal.fill")
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundStyle(Theme.gold)
+                        }
+                    }
+                    Text(raid.name)
+                        .font(Theme.title(11))
+                        .foregroundStyle(isOn ? Theme.goldDeep : Theme.textPrimary)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(isOn ? Theme.surfaceHigh : Theme.surface.opacity(0.75))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .strokeBorder(isOn ? Theme.gold : Theme.stroke, lineWidth: isOn ? 1.5 : 0.5)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(raid.name), \(element.displayName) Titan\(best.map { ", best grade \($0.label)" } ?? "")")
+    }
 
     // MARK: - A raid
 
