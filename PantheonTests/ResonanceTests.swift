@@ -43,8 +43,8 @@ final class ResonanceTests: XCTestCase {
     /// three level-30 5★s with a healer among them it killed nobody in a
     /// whole fight (run 162), and a resonance that answers a fall cannot be
     /// seen in a fight with none.
-    private func titan() -> ResolvedUnit {
-        let spawn = EnemySpawn(blueprintID: "apep", level: 60, stars: 6, statMultiplier: 2.0)
+    private func titan(multiplier: Double = 2.0) -> ResolvedUnit {
+        let spawn = EnemySpawn(blueprintID: "apep", level: 60, stars: 6, statMultiplier: multiplier)
         return StageDatabase.buildEnemies(spawns: [spawn]).first!
     }
 
@@ -240,28 +240,54 @@ final class ResonanceTests: XCTestCase {
 
     func testTheWeighingLeavesItsKaOnceWhenTheFirstEgyptianFalls() throws {
         let egyptians = team(.egyptian, count: 3, level: 30, stars: 5)
-        let serpent = [titan()]
+        // The serpent at the raid's grade but its own stats. At twice them it
+        // opened by killing an Egyptian from full health while the other two
+        // stood untouched, and a Ka that heals the living has nothing to give
+        // a full unit — `applyHealing` logs no heal of nothing (run 164). Its
+        // ordinary blows wound the line before the first of it falls.
+        let serpent = [titan(multiplier: 1.0)]
         let (events, engine) = fight(player: egyptians, opponent: serpent, seed: 4)
         let ids = Set(engine.team(.player).map(\.id))
-        // Where each Egyptian fell. A unit's own heals before its death do
-        // not count; a heal SOURCED by a unit after its death can only be
-        // the Ka.
+        var maxHealth: [UUID: Double] = [:]
+        for combatant in engine.team(.player) { maxHealth[combatant.id] = combatant.maxHealth }
+
+        // Every Egyptian's health through the fight, so the moment of the
+        // first fall can be read: who was still standing, and wounded. A
+        // unit's own heals before its death do not count; a heal SOURCED by
+        // a unit after its death can only be the Ka.
+        var health = maxHealth
         var fallenAt: [UUID: Int] = [:]
+        var woundedAtFirstFall: Set<UUID> = []
         for (index, event) in events.enumerated() {
-            if case .defeated(let target) = event, ids.contains(target), fallenAt[target] == nil {
-                fallenAt[target] = index
+            switch event {
+            case .damage(_, let target, _, _, _, _, let remaining, _, _):
+                if ids.contains(target) { health[target] = remaining }
+            case .healed(_, let target, _, let remaining):
+                if ids.contains(target) { health[target] = remaining }
+            case .defeated(let target):
+                if ids.contains(target), fallenAt[target] == nil {
+                    if fallenAt.isEmpty {
+                        woundedAtFirstFall = Set(ids.filter { ally in
+                            ally != target && (health[ally] ?? 0) > 0 && (health[ally] ?? 0) < (maxHealth[ally] ?? 0)
+                        })
+                    }
+                    fallenAt[target] = index
+                }
+            default:
+                break
             }
         }
-        XCTAssertGreaterThanOrEqual(fallenAt.count, 2, "the whole line should fall to a serpent this size")
+        XCTAssertFalse(fallenAt.isEmpty, "the serpent should bring one down")
         let first = try XCTUnwrap(fallenAt.min(by: { $0.value < $1.value })).key
         let firstAt = fallenAt[first] ?? 0
-        let kaHeals = events.enumerated().filter { index, event in
-            if case .healed(let source, let target, _, _) = event {
-                return index > firstAt && source == first && ids.contains(target)
+        XCTAssertFalse(woundedAtFirstFall.isEmpty, "the serpent should wound the line before the first falls, or the Ka has nobody to heal")
+        for ally in woundedAtFirstFall {
+            let healed = events[(firstAt + 1)...].contains {
+                if case .healed(let source, let target, let amount, _) = $0 { return source == first && target == ally && amount > 0 }
+                return false
             }
-            return false
+            XCTAssertTrue(healed, "the first to fall leaves its Ka to a wounded ally")
         }
-        XCTAssertFalse(kaHeals.isEmpty, "the first to fall leaves its Ka")
         XCTAssertEqual(announcements(events, named: "The Weighing of Hearts II"), 1, "once a side")
         for (later, at) in fallenAt where later != first {
             XCTAssertFalse(events[(at + 1)...].contains {
