@@ -294,7 +294,7 @@ enum ItemArt {
         case .relic(let grade): return "\(grade)★"
         case .essences(_, let count): return "×\(count)"
         case .stones(_, let count): return "×\(count)"
-        case .unit: return nil
+        case .unit: return "×1"
         case .bundle(let parts): return "×\(parts.count)"
         }
     }

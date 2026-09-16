@@ -1321,6 +1321,144 @@ def check_lonely_identifiers(files, errors):
                               f"tree and read as a value here — nothing declares it")
 
 
+# ---------------------------------------------------------------------------
+# A switch identified by its LABELS, when the subject's type cannot be read
+# ---------------------------------------------------------------------------
+#
+# `check_switch_exhaustive` above resolves the subject from the enclosing
+# function's parameter list, which is exact and covers most switches. It
+# cannot see `for grant in granted { switch grant {`, where the type comes
+# from a call's return type — and that is the one that broke the build on
+# 2026-09-16 when `ShopService.Grant` grew a `unit` case.
+#
+# Matching on case NAMES alone was tried in 2026-09-10 and was far too noisy,
+# so this is the same idea held to a much higher bar: the labels must be a
+# subset of exactly ONE enum in the module, must cover at least four of its
+# cases and at least 70% of them, and that enum must have five or more cases.
+# A switch that lists three of eight is a deliberate partial match over some
+# other type; one that lists nine of ten is a switch that has drifted.
+
+def _case_pattern(stripped):
+    """`case .foo(let x): bar.baz` -> `case .foo(let x)`, on the first colon
+    that is not inside brackets."""
+    depth = 0
+    for i, ch in enumerate(stripped):
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == ":" and depth == 0:
+            return stripped[:i]
+    return stripped
+
+
+SWITCH_MIN_LABELS = 4
+SWITCH_MIN_COVERAGE = 0.7
+SWITCH_MIN_CASES = 5
+
+
+def check_switch_by_labels(files, errors):
+    enum_cases_all, _statics, enum_seen = collect_enum_labels(files)
+    candidates = {
+        name: cases for name, cases in enum_cases_all.items()
+        if len(cases) >= SWITCH_MIN_CASES and enum_seen.get(name, 0) == 1
+    }
+    if not candidates:
+        return
+    for path in files:
+        lines = strip_noise(open(path).read()).splitlines()
+        for i, line in enumerate(lines):
+            if not re.match(r"^\s*switch\s+[A-Za-z_][A-Za-z0-9_.]*\s*\{?\s*$", line):
+                continue
+            depth, labels, has_default, j = 0, set(), False, i
+            while j < len(lines):
+                depth += lines[j].count("{") - lines[j].count("}")
+                stripped = lines[j].strip()
+                if stripped.startswith("default"):
+                    has_default = True
+                if stripped.startswith("case "):
+                    # Only the PATTERN, up to the arm's colon. The body of a
+                    # one-line arm is full of dotted names — `outcome.drachma`,
+                    # `scroll.rawValue` — and collecting those put labels in
+                    # the set that no enum has, so the subset test below could
+                    # never match and this rule was silent on the very switch
+                    # it was written for.
+                    for cm in re.finditer(r"\.([A-Za-z_][A-Za-z0-9_]*)", _case_pattern(stripped)):
+                        labels.add(cm.group(1))
+                j += 1
+                if depth <= 0 and j > i:
+                    break
+            if has_default or len(labels) < SWITCH_MIN_LABELS:
+                continue
+            fits = [
+                name for name, cases in candidates.items()
+                if labels <= cases and len(labels) / len(cases) >= SWITCH_MIN_COVERAGE
+            ]
+            if len(fits) != 1:
+                continue
+            missing = sorted(candidates[fits[0]] - labels)
+            if missing:
+                errors.append(
+                    f"{path}:{i + 1}: switch reads as {fits[0]} ({len(labels)} of "
+                    f"{len(candidates[fits[0]])} cases) but does not handle "
+                    f"{', '.join('.' + x for x in missing)}, and has no default")
+
+
+# ---------------------------------------------------------------------------
+# `return nil` from a function that does not return an Optional
+# ---------------------------------------------------------------------------
+#
+# The other half of the same 2026-09-16 build: `ItemArt.amount(for:)` returns
+# a plain String, and the new `.unit` case was given `return nil`. Only a
+# switch ARM is checked — `case .foo: return nil` on one line — because a bare
+# `return nil` deeper in a body may belong to a closure, and this file would
+# rather miss one than cry wolf.
+
+FUNC_RETURN = re.compile(
+    r"\bfunc\s+[A-Za-z_][A-Za-z0-9_]*\s*(?:<[^>]*>)?\s*\(")
+CASE_RETURNS_NIL = re.compile(r"^\s*case\s[^:]*:\s*return\s+nil\s*$")
+OPTIONAL_RETURN = re.compile(r"[?!]\s*$|^Any$|^Optional<")
+
+
+def check_nil_returns(files, errors):
+    for path in files:
+        src = strip_noise(open(path).read(), mask_strings=True)
+        lines = src.splitlines()
+        # Line -> the return type of the innermost func whose body holds it.
+        owner = {}
+        for m in FUNC_RETURN.finditer(src):
+            close = _balanced(src, m.end())
+            if close < 0:
+                continue
+            brace = src.find("{", close)
+            if brace < 0:
+                continue
+            tail = src[close:brace]
+            if "\n\n" in tail:          # not a signature any more
+                continue
+            arrow = tail.rfind("->")
+            if arrow < 0:
+                continue
+            ret = tail[arrow + 2:].split(" where ")[0].strip()
+            if not ret or OPTIONAL_RETURN.search(ret):
+                continue
+            end = _balanced(src, brace + 1, "{", "}")
+            if end < 0:
+                continue
+            first = src[:brace].count("\n")
+            last = src[:end].count("\n")
+            for ln in range(first, last + 1):
+                owner[ln] = ret          # innermost wins: later, nested funcs overwrite
+        for index, line in enumerate(lines):
+            if not CASE_RETURNS_NIL.match(line):
+                continue
+            ret = owner.get(index)
+            if not ret:
+                continue
+            errors.append(f"{path}:{index + 1}: returns nil from a function "
+                          f"declared to return {ret}, which is not Optional")
+
+
 def main():
     files = []
     for r in ROOTS:
@@ -1347,6 +1485,8 @@ def main():
     check_redeclared_locals(files, errors)
     check_required_arguments(files, collect_inits(files), errors)
     check_lonely_identifiers(files, errors)
+    check_switch_by_labels(files, errors)
+    check_nil_returns(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 

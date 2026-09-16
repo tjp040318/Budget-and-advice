@@ -582,9 +582,10 @@ enum TowerService {
             case .scrolls(let scroll, let count): outcome.scrollsEarned[scroll.rawValue, default: 0] += count
             case .essences(let id, let count): outcome.essencesEarned[id, default: 0] += count
             case .stones(let id, let count): outcome.stonesEarned[id, default: 0] += count
-            // The relics are already on the receipt, and the tower pays no
-            // energy; `.bundle` cannot appear because `grant` flattens it.
-            case .relic, .energy, .energyRefill, .bundle: break
+            // The relics are already on the receipt, the tower pays no
+            // energy and sells no gods; `.bundle` cannot appear because
+            // `grant` flattens it.
+            case .relic, .energy, .energyRefill, .unit, .bundle: break
             }
         }
         return granted

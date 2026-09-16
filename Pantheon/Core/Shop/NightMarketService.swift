@@ -213,7 +213,7 @@ enum NightMarketService {
     }
 
     private static func ware(slot: Int, level: Int, rng: inout SeededRandom) -> Stall {
-        let kind = rng.pickWeighted(Kind.allCases.map { ($0, $0.weight) }) ?? .relic
+        let kind = rng.pickWeighted(Kind.allCases.map { (value: $0, weight: $0.weight) }) ?? .relic
         switch kind {
         case .relic: return relicStall(slot: slot, level: level, rng: &rng)
         case .scroll: return scrollStall(slot: slot, rng: &rng)
@@ -249,15 +249,17 @@ enum NightMarketService {
     }
 
     private static func scrollStall(slot: Int, rng: inout SeededRandom) -> Stall {
+        // Labelled, because `pickWeighted` takes `[(value:weight:)]` and every
+        // other caller in the game spells the labels out.
         let scroll = rng.pickWeighted([
-            (ScrollType.unknown, 26.0),
-            (ScrollType.mystical, 24.0),
-            (ScrollType.ember, 10.0),
-            (ScrollType.tide, 10.0),
-            (ScrollType.gale, 10.0),
-            (ScrollType.pantheonic, 12.0),
-            (ScrollType.lightDark, 5.0),
-            (ScrollType.divine, 3.0),
+            (value: ScrollType.unknown, weight: 26.0),
+            (value: ScrollType.mystical, weight: 24.0),
+            (value: ScrollType.ember, weight: 10.0),
+            (value: ScrollType.tide, weight: 10.0),
+            (value: ScrollType.gale, weight: 10.0),
+            (value: ScrollType.pantheonic, weight: 12.0),
+            (value: ScrollType.lightDark, weight: 5.0),
+            (value: ScrollType.divine, weight: 3.0),
         ]) ?? .mystical
         let count = scroll == .unknown || scroll == .mystical ? rng.int(in: 1...3) : 1
         return Stall(

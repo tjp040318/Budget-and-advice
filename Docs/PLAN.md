@@ -3084,3 +3084,35 @@ clean without it, and deleting the function again reports all seven call
 sites. The helper is restored and says in its own comment why it survives:
 nothing in the app calls it, and it is the one place the four first-hour
 tests are asserted in order against a real save.
+
+
+### The third red run, and two more rules (2026-09-16)
+
+Adding `Grant.unit` broke the build in two places `swiftcheck` should have
+seen, and both are rules now:
+
+1. **`DungeonDatabase` switches over a Grant inside `for grant in granted`.**
+   `check_switch_exhaustive` resolves the subject's type from the enclosing
+   function's PARAMETER list, which is exact but blind to a loop variable
+   whose type comes from a call's return. `check_switch_by_labels` covers
+   that case by identifying the enum from the case LABELS instead. Name-only
+   matching was tried on 2026-09-10 and was far too noisy, so it is held to a
+   high bar: the labels must be a subset of exactly ONE enum, cover at least
+   four of its cases and at least 70% of them, and that enum must have five
+   or more. Nine of ten is a switch that has drifted; three of eight is a
+   deliberate partial match over something else. Its first cut was silent on
+   the very switch it was written for, because it collected every dotted name
+   on a case LINE — `outcome.drachma`, `scroll.rawValue` — which put labels in
+   the set that no enum has; it reads the case PATTERN only, up to the arm's
+   colon.
+2. **`ItemArt.amount(for:)` returns a plain `String`** and the new case was
+   given `return nil`. `check_nil_returns` reads each function's declared
+   return type and flags `case ...: return nil` inside one that is not
+   Optional. Only a switch ARM, on one line: a bare `return nil` deeper in a
+   body may belong to a closure, and this file would rather miss one than cry
+   wolf.
+
+Both proven by putting the real error back. A third thing was caught by eye
+rather than by a rule and is worth writing down: `SeededRandom.pickWeighted`
+takes `[(value:weight:)]`, and every other caller spells those labels out —
+an unlabelled tuple literal is a conversion Swift does not always make.
