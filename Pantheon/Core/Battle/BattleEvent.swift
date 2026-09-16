@@ -98,4 +98,9 @@ struct BattleResult: Codable, Equatable, Sendable {
     var totalDamageTaken: Double
     /// Seed the battle ran on, stored with replays.
     var seed: UInt64
+    /// For a raid: the share of the boss's health the team took, 0…1 — a kill
+    /// reads 1, a wipe at half health 0.5. Nil in any fight without a raid
+    /// boss. It is how a run that did NOT end in a kill is graded
+    /// (`RaidGradeService`). Optional, so a replay written before it decodes.
+    var raidShare: Double? = nil
 }

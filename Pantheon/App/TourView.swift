@@ -43,6 +43,7 @@ struct TourView: View {
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
+        ("raid_grade", 4), ("raids", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -304,6 +305,17 @@ struct TourView: View {
             // for the camera.
             BattleResultView(summary: Self.demoVictory(relic: bestRelic), onDismiss: {}, autoplay: true, store: store)
                 .background(Color.black.ignoresSafeArea())
+        case "raid_grade":
+            // A raid's win: the same two acts with the grade stamped on the
+            // reckoning and the aether on the shelf. The grade and its line
+            // are computed by `RaidGradeService` from a 46-turn kill of the
+            // serpent, so the frame shows what the code writes, not a mock.
+            BattleResultView(summary: Self.demoRaidVictory(relic: bestRelic), onDismiss: {}, autoplay: true, store: store)
+                .background(Color.black.ignoresSafeArea())
+        case "raids":
+            // The Raids wing: the two cards with the tour save's best grade
+            // stamped on the serpent's, the mark to beat, and the aether held.
+            LabyrinthView(opening: .raids)
         default:
             SettingsView()
         }
@@ -465,6 +477,41 @@ struct TourView: View {
             loot: loot,
             isFirstClear: true
         )
+    }
+
+    /// The serpent's raid as its result screen reads it: the demo win's cast,
+    /// a kill on turn 46 graded by the real service, and the raid's own shelf
+    /// — its 6★ relic, the aether the grade pays, a whetstone, its essence.
+    private static func demoRaidVictory(relic: Relic? = nil) -> BattleSummary {
+        var summary = demoVictory(relic: relic)
+        summary.stars = 2
+        summary.turns = 46
+        summary.isFirstClear = false
+        guard let raid = StageDatabase.raids.first, let profile = raid.profile else { return summary }
+        let result = BattleResult(
+            outcome: .victory, turnsTaken: 46, survivorFraction: 0.75,
+            totalDamageDealt: summary.damageDealt, totalDamageTaken: summary.damageTaken,
+            seed: 0, raidShare: 1
+        )
+        let grade = RaidGradeService.grade(result: result, profile: profile)
+        let pay = RaidGradeService.aether(for: grade)
+        let elemental = Aether.id(for: RaidGradeService.element(of: raid))
+        summary.title = raid.name
+        summary.raidGrade = grade
+        summary.raidGradeLine = RaidGradeService.caption(grade: grade, result: result, profile: profile)
+        summary.loot = [
+            .init(glyph: "circle.hexagongrid.fill", title: "Drachma", amount: "+12,000", tint: .gold, key: "drachma"),
+            .init(glyph: "arrow.up.circle.fill", title: "Unit EXP", amount: "+2,400", tint: .verdigris, key: "unit_exp"),
+            .init(glyph: RelicSet.fury.glyph, title: relic?.displayName ?? "Legend Fury Relic", amount: "Slot \(relic?.slot ?? 2)",
+                  tint: .gold, stars: relic?.grade ?? 6, relic: relic),
+            .init(glyph: "circle.hexagonpath.fill", title: Aether.name(for: elemental), amount: "+\(pay.elemental)",
+                  tint: .element(RaidGradeService.element(of: raid)), key: elemental),
+            .init(glyph: "circle.hexagonpath.fill", title: Aether.name(for: Aether.pure), amount: "+\(pay.pure)",
+                  tint: .marble, key: Aether.pure),
+            .init(glyph: RelicStone.Kind.whetstone.glyph, title: "Hero Whetstone", amount: "+1", tint: .rarity(RelicQuality.hero.rarity), key: "whetstone_hero"),
+            .init(glyph: "drop.triangle.fill", title: "High Ember Essence", amount: "+2", tint: .element(.ember), key: "essence_ember_high"),
+        ]
+        return summary
     }
 }
 #endif

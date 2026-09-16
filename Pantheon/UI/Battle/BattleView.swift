@@ -851,7 +851,10 @@ struct BattleResultView: View {
     @State private var openedRelic: Relic?
 
     private var won: Bool { summary.outcome == .victory }
-    private var hasSpoils: Bool { won && !summary.loot.isEmpty }
+    /// A loss can have spoils now: a raid's grade pays its aether on a wipe
+    /// as well as a kill, and the model puts nothing else on a lost raid's
+    /// shelf. Every other defeat has an empty shelf, as it always did.
+    private var hasSpoils: Bool { !summary.loot.isEmpty }
 
     var body: some View {
         ZStack {
@@ -943,6 +946,25 @@ struct BattleResultView: View {
                     }
                 }
                 .padding(.top, 2)
+            }
+            // A raid's grade: the stamp and the one line that earned it. It
+            // stands on a loss as well, because a D is a thing to improve on
+            // and a bare DEFEAT is not.
+            if let grade = summary.raidGrade {
+                HStack(spacing: 10) {
+                    RaidGradeStamp(grade: grade, size: 52)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("RAID GRADE")
+                            .font(Theme.body(8).weight(.black))
+                            .tracking(1.4)
+                            .foregroundStyle(Theme.goldDim)
+                        Text(summary.raidGradeLine)
+                            .font(Theme.body(11))
+                            .foregroundStyle(Theme.marble)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .padding(.top, 4)
             }
             HStack(spacing: 8) {
                 statTile("TURNS", value: "\(summary.turns)")
@@ -1101,6 +1123,8 @@ struct BattleResultView: View {
                     title: summary.title,
                     stars: summary.stars,
                     isFirstClear: summary.isFirstClear,
+                    grade: summary.raidGrade,
+                    ribbonTitle: won ? "SPOILS OF VICTORY" : "SPOILS OF THE RAID",
                     loot: summary.loot,
                     shown: lootShown,
                     continueShown: continueShown,
@@ -1288,6 +1312,11 @@ struct SpoilsPanel: View {
     let title: String
     let stars: Int
     let isFirstClear: Bool
+    /// A raid's grade, stamped beside the stars. Nil everywhere else.
+    var grade: RaidGrade? = nil
+    /// The ribbon's words: a lost raid that still paid its aether is not a
+    /// victory, and the ribbon must not say it was.
+    var ribbonTitle: String = "SPOILS OF VICTORY"
     let loot: [BattleSummary.Loot]
     /// How many tiles have popped in so far.
     let shown: Int
@@ -1330,7 +1359,7 @@ struct SpoilsPanel: View {
     }
 
     private var ribbon: some View {
-        Text("SPOILS OF VICTORY")
+        Text(ribbonTitle)
             .font(Theme.title(13))
             .tracking(2)
             .foregroundStyle(Theme.ink)
@@ -1368,6 +1397,10 @@ struct SpoilsPanel: View {
                             .padding(.leading, 6)
                     }
                 }
+            }
+            if let grade {
+                RaidGradeStamp(grade: grade, size: 36)
+                    .padding(.leading, 4)
             }
             Spacer(minLength: 0)
             Text("\(loot.count) \(loot.count == 1 ? "spoil" : "spoils")")

@@ -422,7 +422,24 @@ environment can and cannot do. The short version:
   the barrier ON the health bar in the current weakness's colour, and reads
   the three values straight off the engine rather than a published mirror —
   they move on the boss's turn while `displayedCombatants` lags for the
-  animation. **The guided first hour** (`FirstHourStep`, `IslandView`): four
+  animation. **A raid is graded F→SSS and pays Aether (2026-09-16, phase 1
+  of the Titans; `RaidGradeService`, `Docs/PLAN.md` *Awakened relics and
+  the Titans*):** a kill on its PACE against `enrageTurn` (SSS inside 70%,
+  SS 85%, S before it enrages, A within 130%, any kill B), a run the boss
+  survived on `BattleResult.raidShare` (C from 60% of its health, D from
+  30%, F below — never a B, so a kill always outranks a non-kill); total
+  damage would run backwards on a killable boss (the barrier regenerates,
+  the guard heals). Aether by grade — F 0, D 2, C 4, B 5+1 pure, A 6+1,
+  S 8+2, SS 10+3, SSS 12+4 — in the boss's element (`aether_ember`,
+  `aether_gale`) plus `aether_pure` from a kill only; `Player.aether` and
+  `Player.raidGrades` (the best grade per raid), both Optional; S/SS lift
+  the raid's relic to Hero, SSS to Legend. The reckoning and the spoils
+  panel wear the stamp (`RaidGradeStamp`), a lost raid opens the chest on
+  its aether alone, the raid card shows the best grade and the mark to beat.
+  `balance.py --grades` grades the raid sim's ladders (the best team sits on
+  the serpent's S/A line by design) and asserts the shape; change a number
+  in both files and in `RaidGradeTests`. Tour steps 38 (`raid_grade`) and
+  39 (`raids`). **The guided first hour** (`FirstHourStep`, `IslandView`): four
   steps pointing at the landmark each wants, with a skip chip and a chapter
   intro card shown once. Five new save fields, every one Optional with a nil
   default.
@@ -965,7 +982,7 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is thirty-seven screens (steps 0–36): an arena battle
+  thousands of images. The CI tour is forty screens (steps 0–39): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,

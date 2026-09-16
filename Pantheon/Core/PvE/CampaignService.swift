@@ -16,6 +16,12 @@ struct StageOutcome: Sendable {
     /// Whetstones and gems by `RelicStone.id`. Defaulted, so the places
     /// that build an outcome with nothing of the kind need not say so.
     var stonesEarned: [String: Int] = [:]
+    /// A raid's aether by id (`Aether`), paid by the grade — on a kill and
+    /// on a loss alike, which is why it is not folded into the victory-only
+    /// fields above.
+    var aetherEarned: [String: Int] = [:]
+    /// The raid's grade, F to SSS; nil for every other stage.
+    var raidGrade: RaidGrade? = nil
 }
 
 /// PvE progression: which stages are open, and what a clear pays.
@@ -134,12 +140,27 @@ enum CampaignService {
         rng: inout SeededRandom
     ) -> StageOutcome {
         let stars = starRating(result: result, stage: stage)
+
+        // A raid is graded, kill or not, and the grade pays its aether before
+        // anything else is settled: a D that took a third of the serpent's
+        // health leaves with the elemental half of an awakening's price, so a
+        // summoner who cannot beat it yet is still building toward one. The
+        // pure half comes from a kill only (`RaidGradeService.aether`).
+        var grade: RaidGrade?
+        var aether: [String: Int] = [:]
+        if let raid = StageDatabase.raid(containing: stage), let profile = raid.profile {
+            let earned = RaidGradeService.grade(result: result, profile: profile)
+            grade = earned
+            aether = RaidGradeService.pay(earned, raid: raid, player: &player)
+        }
+
         guard result.outcome == .victory else {
             return StageOutcome(
                 result: result, stars: 0, drachma: 0, playerExperience: 0,
                 unitExperience: 0, relicsEarned: [], essencesEarned: [:],
                 scrollsEarned: [:], divinityEarned: 0, isFirstClear: false,
-                leveledUnits: [:]
+                leveledUnits: [:], stonesEarned: [:],
+                aetherEarned: aether, raidGrade: grade
             )
         }
 
@@ -176,9 +197,15 @@ enum CampaignService {
             // A dungeon drops its own sets; anywhere else, any set.
             var set: RelicSet?
             if let sets = rewards.relicSets, !sets.isEmpty { set = rng.pickMutating(sets) }
+            // The top of a raid's ladder lifts the quality floor over the
+            // raid's own: Hero from S, Legend at SSS.
+            let floor = max(
+                rewards.qualityFloor ?? .normal,
+                grade.flatMap(RaidGradeService.qualityFloor(for:)) ?? .normal
+            )
             let relic = RelicService.generate(
                 grade: rewards.relicGrade, set: set,
-                qualityFloor: rewards.qualityFloor ?? .normal, rng: &rng
+                qualityFloor: floor, rng: &rng
             )
             relics.append(relic)
             player.relics.append(relic)
@@ -222,7 +249,8 @@ enum CampaignService {
             relicsEarned: relics, essencesEarned: essences, scrollsEarned: scrolls,
             divinityEarned: divinity, isFirstClear: isFirstClear,
             leveledUnits: leveled,
-            stonesEarned: stones
+            stonesEarned: stones,
+            aetherEarned: aether, raidGrade: grade
         )
     }
 

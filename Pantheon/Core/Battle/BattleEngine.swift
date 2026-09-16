@@ -952,13 +952,23 @@ final class BattleEngine {
         awaitingActor = nil
         let playerTeam = team(.player)
         let survivors = playerTeam.filter(\.isAlive).count
+        // For a raid, how much of the boss's health the team took: the grade's
+        // measure of a run that did not end in a kill. A fallen boss reads 1.
+        // The barrier is not counted — it stands in front of the health and
+        // is not the health — and with more than one boss the least-hurt one
+        // is the mark.
+        let bosses = raidBossIDs.compactMap { combatant($0) }
+        let raidShare: Double? = bosses.isEmpty ? nil : bosses.map { boss in
+            boss.maxHealth > 0 ? 1 - max(0, boss.currentHealth) / boss.maxHealth : 1
+        }.min()
         let result = BattleResult(
             outcome: outcome,
             turnsTaken: turnNumber,
             survivorFraction: playerTeam.isEmpty ? 0 : Double(survivors) / Double(playerTeam.count),
             totalDamageDealt: damageDealt,
             totalDamageTaken: damageTaken,
-            seed: seed
+            seed: seed,
+            raidShare: raidShare
         )
         self.result = result
         return .battleEnded(result: result)

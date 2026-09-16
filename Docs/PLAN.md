@@ -3676,3 +3676,84 @@ that goes under. Phase 3 therefore ships with `ModelSpec.standInAsset`, which
 already lets a boss fight as a giant of its kind (the Colossus stands in as a
 4.5 m sentinel today), and the real meshes wait for either a top-up or his
 explicit go. Nothing in phases 1 or 2 costs a credit or a cent.
+
+### Phase 1, built (2026-09-16): the grade on the two raids, paying Aether
+
+The owner: *"I love it, go ahead."* Built the same evening, on the serpent and
+the Jötunn, with no new art and no new place. `RaidGradeService.swift` is the
+whole of it on the Core side; the numbers are mirrored in `balance.py --grades`
+and the shape is pinned by `RaidGradeTests`.
+
+**What is graded, and why not total damage.** The Rift grades total damage
+because its beasts do not die. Ours do, and total damage runs BACKWARDS on a
+killable boss: the barrier regenerates and the guard heals, so a slow kill
+deals *more* total damage than a fast one. So a kill is graded on its **pace**
+— the turns it took against the boss's own enrage turn, the line the raid's
+designer already drew between the good team and the slow one — and a run the
+boss survived on the **share of its health** the team took
+(`BattleResult.raidShare`, a new Optional on the result: a kill reads 1, a
+wipe at half health 0.5, and the barrier does not count because it stands in
+front of the health). The two ladders never overlap: a kill is B at worst and
+a non-kill C at best, so a kill always outranks a non-kill.
+
+| Grade | Earned by | Aether (elemental + pure) |
+|---|---|---|
+| SSS | kill inside 70% of the enrage turn (Apep by turn 45, Jötunn 42) | 12 + 4 |
+| SS | inside 85% (55 / 51) | 10 + 3 |
+| S | before it enrages (65 / 60) | 8 + 2 |
+| A | within 130% (84 / 78) | 6 + 1 |
+| B | any kill | 5 + 1 |
+| C | the boss survived; 60% of its health taken | 4 |
+| D | 30% taken | 2 |
+| F | less | nothing |
+
+The aether's element is the BOSS's (read off its blueprint: the serpent pays
+Ember Aether, the Jötunn Gale), and **pure aether comes from a kill only** —
+so a summoner who cannot beat a raid yet can build up the elemental half of
+an awakening on C and D runs but never finish one without the kill, which is
+the loop the Rift's D-grade runs create and the reason a lost raid is still
+worth entering. An F pays nothing, so a forfeit farms nothing. S and SS lift
+the raid's 6★ relic to a **Hero** floor and SSS to **Legend** (the raid's own
+floor is Rare), which gives the grade something to be worth before phase 2's
+awakening exists to spend the aether on.
+
+**Where the bars sit, measured.** `balance.py --grades` runs each raid's
+ladder teams through the raid sim and grades every trial:
+
+- The best ladder team — a maxed 6★ four with no sets, no skill-ups and no
+  leader — kills the serpent in about 60–90 turns with its median ON the
+  enrage turn (S 55%, A 40%, B 5%), which is where the enrage was tuned to
+  sit; on the Jötunn, the harder raid, it is an A every time (63–75 turns
+  against an enrage at 60). SS asks about a fifth more pace than that team
+  has and SSS a third — which is what the sets, the skill-ups, a leader and
+  a fifth unit are for, none of which the sim has. The first bars tried were
+  60% and 75%; at those the SS line was 48 turns against a team whose best
+  trial was 59, a rung nothing in the sim could reach, and were moved.
+- The lv55 team farms C and B (its wipes take 57–99% of the health; its
+  kills land at 92–112 turns). A 5★ team takes 0% — the 12% barrier that
+  regenerates every five boss turns eats everything it has — and is told so
+  by an F, which is the raid's 36,000-power line doing its job.
+- At a planned awakening price of **60 elemental + 15 pure** (phase 2's
+  number to tune): SSS every 5 runs, S every 8 (96 energy, about a day of
+  the bar), B every 15; the sim's best team on the serpent averages
+  7.0 + 1.6 a run and awakens a relic every 10 runs, 120 energy. The report
+  asserts the shape — pure only from a kill, F pays nothing, aether climbs
+  the ladder, a kill outranks a non-kill, an SSS awakening still takes days.
+
+**On the screen.** The reckoning stamps the grade beside the stars
+(`RaidGradeStamp`: the letters in Cinzel in a ring of the grade's metal —
+grey below a kill, teal for one, laurel for A, gold from S, SSS with a second
+ring) over one line that says what earned it ("Fell in 46 turns, 19 before
+the enrage" / "Took 63% of its health"); the spoils panel carries the stamp
+again beside the stars, and its ribbon reads SPOILS OF THE RAID on a loss,
+because a lost raid that paid a D opens the chest on its aether alone — the
+outcome then holds nothing else, so the shelf shows exactly what the D was
+worth. An ordinary defeat has no grade and no chest, as before. The raid's
+card in the Labyrinth's Raids wing wears the best grade earned, the mark the
+next one asks for ("SS inside 55 turns.") and the aether held. Tour step 38
+photographs the raid's result in three frames, step 39 the Raids wing.
+
+**In the save.** `Player.aether` (`[String: Int]`, `aether_<element>` and
+`aether_pure`) and `Player.raidGrades` (the best grade's raw value per raid
+id) — both Optional, per the standing rule; `BattleResult.raidShare` likewise,
+so a replay written before it decodes.

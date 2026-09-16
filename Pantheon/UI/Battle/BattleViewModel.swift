@@ -122,6 +122,7 @@ final class BattleViewModel: ObservableObject {
         var essences: [String: Int] = [:]
         var scrolls: [String: Int] = [:]
         var stones: [String: Int] = [:]
+        var aether: [String: Int] = [:]
         var stoppedBecause: String?
 
         var isFinished: Bool { completed >= requested || stoppedBecause != nil }
@@ -156,6 +157,7 @@ final class BattleViewModel: ObservableObject {
         for (id, count) in stageOutcome.essencesEarned { session.essences[id, default: 0] += count }
         for (id, count) in stageOutcome.scrollsEarned { session.scrolls[id, default: 0] += count }
         for (id, count) in stageOutcome.stonesEarned { session.stones[id, default: 0] += count }
+        for (id, count) in stageOutcome.aetherEarned { session.aether[id, default: 0] += count }
 
         if result.outcome != .victory {
             session.stoppedBecause = "Stopped after a defeat."
@@ -216,6 +218,9 @@ final class BattleViewModel: ObservableObject {
         for (id, count) in session.stones.sorted(by: { $0.key < $1.key }) {
             lines.append(.init(icon: "diamond.fill", label: RelicStone.from(id: id)?.displayName ?? id, value: "+\(count)"))
         }
+        for (id, count) in session.aether.sorted(by: { $0.key < $1.key }) {
+            lines.append(.init(icon: "circle.hexagonpath.fill", label: Aether.name(for: id), value: "+\(count)"))
+        }
         for (id, count) in session.essences.sorted(by: { $0.key < $1.key }) {
             lines.append(.init(icon: "drop.triangle.fill", label: EssenceCatalog.name(for: id), value: "+\(count)"))
         }
@@ -241,6 +246,10 @@ final class BattleViewModel: ObservableObject {
         for (id, count) in session.stones.sorted(by: { $0.key < $1.key }) {
             guard let stone = RelicStone.from(id: id) else { continue }
             loot.append(.init(glyph: stone.kind.glyph, title: stone.displayName, amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity)))
+        }
+        for (id, count) in session.aether.sorted(by: { $0.key < $1.key }) {
+            loot.append(.init(glyph: "circle.hexagonpath.fill", title: Aether.name(for: id), amount: "+\(count)",
+                              tint: Aether.element(of: id).map { .element($0) } ?? .marble, key: id))
         }
         for (id, count) in session.essences.sorted(by: { $0.key < $1.key }) {
             let element = Element(rawValue: id.split(separator: "_").dropFirst().first.map(String.init) ?? "")
@@ -588,6 +597,9 @@ final class BattleViewModel: ObservableObject {
             for (id, count) in stageOutcome.stonesEarned.sorted(by: { $0.key < $1.key }) {
                 lines.append(.init(icon: "diamond.fill", label: RelicStone.from(id: id)?.displayName ?? id, value: "+\(count)"))
             }
+            for (id, count) in stageOutcome.aetherEarned.sorted(by: { $0.key < $1.key }) {
+                lines.append(.init(icon: "circle.hexagonpath.fill", label: Aether.name(for: id), value: "+\(count)"))
+            }
             for (id, count) in stageOutcome.essencesEarned {
                 lines.append(.init(icon: "drop.triangle.fill", label: EssenceCatalog.name(for: id), value: "+\(count)"))
             }
@@ -599,13 +611,20 @@ final class BattleViewModel: ObservableObject {
                 let name = store.resolved(unitID)?.name ?? "Unit"
                 lines.append(.init(icon: "chevron.up.circle.fill", label: "\(name) levelled", value: "+\(levels)"))
             }
+            // A raid's chest opens on a loss too, when the grade paid aether:
+            // the outcome then holds nothing but the aether, so the shelf
+            // shows exactly what a D was worth. An ordinary defeat has no
+            // grade and no shelf, as before.
+            let graded = stageOutcome.raidGrade != nil
             return BattleSummary(
                 outcome: result.outcome, lines: lines, stars: stageOutcome.stars,
                 title: stage.name, turns: result.turnsTaken,
                 damageDealt: result.totalDamageDealt, damageTaken: result.totalDamageTaken,
                 unitStats: stats, mvpID: mvp,
-                loot: result.outcome == .victory ? loot(from: stageOutcome) : [],
-                isFirstClear: stageOutcome.isFirstClear
+                loot: result.outcome == .victory || graded ? loot(from: stageOutcome) : [],
+                isFirstClear: stageOutcome.isFirstClear,
+                raidGrade: stageOutcome.raidGrade,
+                raidGradeLine: RaidGradeService.caption(for: stage, result: result) ?? ""
             )
 
         case .arena(let opponent):
@@ -721,6 +740,10 @@ struct BattleSummary {
     var mvpID: UUID? = nil
     var loot: [Loot] = []
     var isFirstClear: Bool = false
+    /// A raid's grade and the line that says what earned it; nil and empty
+    /// for every other fight.
+    var raidGrade: RaidGrade? = nil
+    var raidGradeLine: String = ""
 
     /// The chest's contents for one settled stage, as tiles.
     ///
@@ -754,6 +777,11 @@ struct BattleSummary {
             guard let stone = RelicStone.from(id: id) else { continue }
             items.append(.init(glyph: stone.kind.glyph, title: stone.displayName,
                                amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity), key: id))
+        }
+        // Sorted by id, so the elemental aether stands before the pure.
+        for (id, count) in stageOutcome.aetherEarned.sorted(by: { $0.key < $1.key }) {
+            items.append(.init(glyph: "circle.hexagonpath.fill", title: Aether.name(for: id),
+                               amount: "+\(count)", tint: Aether.element(of: id).map { .element($0) } ?? .marble, key: id))
         }
         for (id, count) in stageOutcome.essencesEarned.sorted(by: { $0.key < $1.key }) {
             let element = Element(rawValue: id.split(separator: "_").dropFirst().first.map(String.init) ?? "")

@@ -29,6 +29,12 @@ struct LabyrinthView: View {
     @State private var openRaid: RaidEncounter?
     @State private var showTeamPicker = false
 
+    /// The island opens the building on its dungeons; the CI tour opens it
+    /// on the Raids wing so the grade stamp on a raid's card is photographed.
+    init(opening: Wing = .dungeons) {
+        _wing = State(initialValue: opening)
+    }
+
     /// The building's three rooms. A three-way choice, so it is `BarSegments`
     /// in the strip rather than a row of capsules above the content.
     enum Wing: Hashable {
@@ -571,6 +577,10 @@ struct LabyrinthView: View {
                 }
             }
 
+            if let profile = raid.profile {
+                raidGradeRow(raid, profile: profile)
+            }
+
             Spacer(minLength: 0)
 
             HStack(spacing: 6) {
@@ -592,6 +602,44 @@ struct LabyrinthView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(10)
         .panelBackground()
+    }
+
+    /// The grade: the best one earned as a stamp, the mark the next one asks
+    /// for, and the aether in hand — the raid is farmed for it, so the card
+    /// says what the player has and what the next grade would add.
+    private func raidGradeRow(_ raid: RaidEncounter, profile: RaidBossProfile) -> some View {
+        let best = RaidGradeService.bestGrade(for: raid, player: store.player)
+        let elemental = Aether.id(for: RaidGradeService.element(of: raid))
+        return HStack(alignment: .center, spacing: 8) {
+            RaidGradeStamp(grade: best, size: 34)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(best.map { "BEST GRADE \($0.label)" } ?? "NOT YET GRADED")
+                    .font(Theme.body(9).weight(.black))
+                    .tracking(1.0)
+                    .foregroundStyle(Theme.goldDim)
+                Text(RaidGradeService.target(after: best, profile: profile))
+                    .font(Theme.body(9))
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 4)
+            // What it pays, and how much of it the player holds.
+            VStack(alignment: .trailing, spacing: 2) {
+                aetherCount(elemental)
+                aetherCount(Aether.pure)
+            }
+        }
+        .padding(.top, 2)
+    }
+
+    private func aetherCount(_ id: String) -> some View {
+        HStack(spacing: 4) {
+            ItemIcon(key: id, size: 16, glow: false)
+            Text("\(Aether.count(id, player: store.player))")
+                .font(Theme.numeric(10))
+                .foregroundStyle(Theme.textPrimary)
+        }
+        .accessibilityLabel("\(Aether.name(for: id)) \(Aether.count(id, player: store.player))")
     }
 
     private func raidMechanic(_ symbol: String, _ name: String, _ detail: String) -> some View {

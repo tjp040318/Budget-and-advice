@@ -129,6 +129,13 @@ struct Player: Codable, Equatable, Sendable {
     /// summoner picks for himself. Optional, so a save written before it
     /// existed decodes; nil and false both mean "still owed".
     var selectorClaimed: Bool? = nil
+    /// The Titans' aether by id (`Aether`: `aether_ember` … `aether_pure`),
+    /// paid by a raid's grade and spent on a relic's awakening. Optional,
+    /// like every save field added since the first.
+    var aether: [String: Int]? = nil
+    /// The best `RaidGrade` earned per raid id, as its raw value ("ss"): the
+    /// mark the raid's card names to beat. Optional for the same reason.
+    var raidGrades: [String: String]? = nil
 
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }

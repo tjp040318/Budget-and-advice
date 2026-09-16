@@ -1170,10 +1170,14 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
     for f in team: f.side = "a"
     for f in [boss] + adds: f.side = "b"
 
+    # The share of the boss's health taken, BattleResult.raidShare: what
+    # grades a run the boss survived. The barrier soaks in front of the
+    # health and is not counted.
+    share = lambda: 1.0 if not boss.alive else 1.0 - max(0.0, boss.hp) / boss.maxhp
     while turns < MAX_TURNS:
         foes = [f for f in [boss] + adds if f.alive]
-        if not [f for f in team if f.alive]: return "b", turns, boss_turns
-        if not boss.alive: return "a", turns, boss_turns
+        if not [f for f in team if f.alive]: return "b", turns, boss_turns, share()
+        if not boss.alive: return "a", turns, boss_turns, 1.0
         alive = [f for f in team if f.alive] + foes
         step = min((1.0 - f.atb) / max(1e-6, f.spd * ATB_RATE) for f in alive)
         for f in alive: f.atb = min(1.0, f.atb + f.spd * ATB_RATE * step)
@@ -1252,15 +1256,131 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
                     shield, regen_left, stunned = 0, bregen, bstun
                 continue
             victim.hp -= dmg
-    return "draw", turns, boss_turns
+    return "draw", turns, boss_turns, share()
 
 def raid_result(team_spec, raid, trials=40, kill_adds=True):
     wins, lens = 0, []
     for s in range(trials):
-        r, turns, _ = simulate_raid(team_spec, raid, seed=s, kill_adds=kill_adds)
+        r, turns, _, _ = simulate_raid(team_spec, raid, seed=s, kill_adds=kill_adds)
         if r == "a": wins += 1
         lens.append(turns)
     return wins / trials, statistics.median(lens)
+
+# The raid's ladders, one unit on each element the boss opens to: what a
+# player brings to a raid, and what both raid reports measure.
+def raid_ladders(welems):
+    onel = (welems * 4)[:4]
+    return [
+        ("built for it, 6* max",    [(replace(ANUBIS, element=e), 60, 6, 1.55) for e in onel]),
+        ("built for it, 6* lv55",   [(replace(ANUBIS, element=e), 55, 6, 1.30) for e in onel]),
+        ("built for it, 5* +relic", [(replace(ANUBIS, element=e), 45, 5, 1.15) for e in onel]),
+        ("wrong element, 6* max",   [(replace(ANUBIS, element=(
+            "ember" if "ember" not in welems else "tide")), 60, 6, 1.55)] * 4),
+    ]
+
+# ---------------------------------------------------------------------------
+# The raid grade — Pantheon/Core/PvE/RaidGradeService.swift, mirrored.
+#
+# A kill is graded on its PACE against the boss's enrage turn; a run the boss
+# survived on the SHARE of its health the team took. The two never overlap: a
+# kill is B at worst and a non-kill C at best. Change a number in both files.
+GRADES = ["f", "d", "c", "b", "a", "s", "ss", "sss"]
+GRADE_PACE  = [("sss", 0.70), ("ss", 0.85), ("s", 1.00), ("a", 1.30)]   # kill inside this x enrageTurn, else "b"
+GRADE_SHARE = [("c", 0.60), ("d", 0.30)]                                # boss survived: share taken >= this, else "f"
+DEFAULT_ENRAGE = 60                                                      # a profile with no clock
+AETHER_BY_GRADE = {"f": (0, 0), "d": (2, 0), "c": (4, 0), "b": (5, 1), "a": (6, 1),
+                   "s": (8, 2), "ss": (10, 3), "sss": (12, 4)}          # (elemental, pure) per run
+GRADE_QUALITY_FLOOR = {"s": "hero", "ss": "hero", "sss": "legend"}      # the raid's relic; Rare below
+# Phase 2's planned price of one relic awakening (Docs/PLAN.md, *Awakened
+# relics and the Titans*): the target this report measures a raid against.
+# It is not in Swift until the awakening is.
+AWAKENING_AETHER = (60, 15)
+RAID_ENERGY = 12
+
+def turns_allowed(grade, enrage_turn):
+    """RaidGradeService.turnsAllowed: the last turn a kill earns the grade on."""
+    frac = dict(GRADE_PACE).get(grade)
+    if frac is None: return None
+    return math.floor((enrage_turn or DEFAULT_ENRAGE) * frac + 1e-9)
+
+def raid_grade(outcome, turns, share, enrage_turn):
+    if outcome == "a":
+        for g, _ in GRADE_PACE:
+            if max(1, turns) <= turns_allowed(g, enrage_turn): return g
+        return "b"
+    for g, frac in GRADE_SHARE:
+        if share >= frac: return g
+    return "f"
+
+def runs_per_awakening(elemental, pure):
+    """Raids at a steady per-run payout until one awakening is afforded; None
+    when the payout has no pure aether in it, which no number of runs fixes."""
+    need_e, need_p = AWAKENING_AETHER
+    if pure <= 0 or elemental <= 0: return None
+    return max(math.ceil(need_e / elemental), math.ceil(need_p / pure))
+
+def report_grades(trials=40):
+    print("\nRAID GRADES — F to SSS, and the Aether each pays")
+    print("a kill is graded on its PACE against the boss's enrage turn: SSS inside 70% of it, SS 85%,")
+    print("S 100% (before it enrages), A 130%, any kill a B. A run the boss survived is graded on the")
+    print("SHARE of its health taken: C from 60%, D from 30%, else F — never a B, so a kill always")
+    print("outranks a non-kill. Total damage cannot grade a kill here: the barrier regenerates and")
+    print("the guard heals, so a SLOW kill deals MORE damage than a fast one and the ladder would")
+    print("run backwards.\n")
+    print("  aether per run (elemental+pure):  " + "  ".join(
+        f"{g.upper()} {e}+{p}" for g, (e, p) in AETHER_BY_GRADE.items()))
+    print(f"  one awakening (phase 2, planned): {AWAKENING_AETHER[0]} elemental + {AWAKENING_AETHER[1]} pure")
+    print("  runs to one at a steady grade:    " + "  ".join(
+        f"{g.upper()} {runs_per_awakening(e, p) or '—'}" for g, (e, p) in AETHER_BY_GRADE.items()))
+    print("  relic quality floor: " + ", ".join(
+        f"{g.upper()} {q}" for g, q in GRADE_QUALITY_FLOOR.items()) + "; Rare below\n")
+
+    # The shape, asserted, whatever the numbers are.
+    for g in GRADES:
+        e, p = AETHER_BY_GRADE[g]
+        is_kill = GRADES.index(g) >= GRADES.index("b")
+        assert (p > 0) == is_kill, f"{g}: pure aether comes from a kill and only a kill"
+    assert AETHER_BY_GRADE["f"] == (0, 0), "an F pays nothing, so a forfeit farms nothing"
+    for lo, hi in zip(GRADES, GRADES[1:]):
+        assert AETHER_BY_GRADE[lo] <= AETHER_BY_GRADE[hi], f"aether must climb from {lo} to {hi}"
+    assert raid_grade("a", MAX_TURNS, 1.0, 65) == "b", "the slowest kill is still a B"
+    assert raid_grade("b", 1, 1.0, 65) == "c", "the best non-kill is a C"
+    assert GRADES.index(raid_grade("a", MAX_TURNS, 1.0, 65)) > GRADES.index(raid_grade("b", 1, 1.0, 65)), \
+        "a kill outranks a non-kill"
+    assert runs_per_awakening(*AETHER_BY_GRADE["sss"]) >= 4, "even SSS runs take days, not an afternoon"
+
+    for raid in RAIDS:
+        (name, _, lvl, stars, mult, add, barrier, guard, enrage, weak, power) = raid
+        eturn = enrage[0]
+        bars = ", ".join(f"{g.upper()} by turn {turns_allowed(g, eturn)}" for g, _ in GRADE_PACE)
+        print(f"  {name}  (enrages on turn {eturn}: {bars})")
+        for label, team in raid_ladders(weak[0]):
+            dist = {g: 0 for g in GRADES}
+            e_sum = p_sum = 0
+            kills, shares = [], []
+            for s in range(trials):
+                r, turns, _, share = simulate_raid(team, raid, seed=s)
+                g = raid_grade(r, turns, share, eturn)
+                dist[g] += 1
+                e, p = AETHER_BY_GRADE[g]
+                e_sum += e
+                p_sum += p
+                (kills if r == "a" else shares).append(turns if r == "a" else share)
+            e_avg, p_avg = e_sum / trials, p_sum / trials
+            spread = " ".join(f"{g.upper()} {dist[g] * 100 / trials:.0f}%" for g in reversed(GRADES) if dist[g])
+            runs = runs_per_awakening(e_avg, p_avg)
+            per = f"an awakening every {runs} runs ({runs * RAID_ENERGY} energy)" if runs else "no pure aether: no awakening"
+            how = (f"kills in {min(kills)}-{max(kills)}t, median {statistics.median(kills):.0f}" if kills else
+                   f"takes {min(shares) * 100:.0f}-{max(shares) * 100:.0f}% of its health")
+            print(f"      {label:>24}  {spread:<30} {e_avg:4.1f}+{p_avg:3.1f}/run  {per}")
+            print(f"      {'':>24}  {how}")
+        print()
+    print("  → intended: the best ladder team (a maxed 6* four with no sets, no skill-ups, no leader)")
+    print("    sits on the S/A line of the serpent — its median kill IS the enrage turn, which is how")
+    print("    the enrage was tuned — and at A on the Jötunn, the harder raid. SS wants about a fifth")
+    print("    more pace than that team has and SSS a third: the sets, the skill-ups, a leader and a")
+    print("    fifth unit, none of which the sim has. The lv55 team farms C/B; a 5* team cannot get")
+    print("    through the barrier and is told so by an F, which is the raid's power line doing its job.")
 
 def report_raids(trials=40):
     print("\nRAIDS — the two boss encounters")
@@ -1287,15 +1407,7 @@ def report_raids(trials=40):
         # measuring a mono-element team against a rotating weakness measures
         # the punishment rather than the fight. The wrong-element row is kept
         # to show that the punishment is real.
-        onel = (welems * 4)[:4]
-        ladders = [
-            ("built for it, 6* max",    [(replace(ANUBIS, element=e), 60, 6, 1.55) for e in onel]),
-            ("built for it, 6* lv55",   [(replace(ANUBIS, element=e), 55, 6, 1.30) for e in onel]),
-            ("built for it, 5* +relic", [(replace(ANUBIS, element=e), 45, 5, 1.15) for e in onel]),
-            ("wrong element, 6* max",   [(replace(ANUBIS, element=(
-                "ember" if "ember" not in welems else "tide")), 60, 6, 1.55)] * 4),
-        ]
-        for label, team in ladders:
+        for label, team in raid_ladders(welems):
             wr, med = raid_result(team, raid, trials=trials)
             wrx, _ = raid_result(team, raid, trials=trials, kill_adds=False)
             print(f"      {label:>24}  kill the guard {wr*100:>4.0f}% in {med:>4.0f}t   "
@@ -1984,6 +2096,7 @@ if __name__ == "__main__":
     elif "--labyrinths" in a: report_labyrinths()
     elif "--tower" in a: report_tower()
     elif "--raids" in a: report_raids()
+    elif "--grades" in a: report_grades()
     elif "--relics" in a: report_relics()
     elif "--tributes" in a: report_tributes()
     elif "--shop" in a: report_shop()
@@ -1994,7 +2107,7 @@ if __name__ == "__main__":
     elif "--drops" in a: report_drops()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
-        report_labyrinths(); report_tower(); report_raids()
+        report_labyrinths(); report_tower(); report_raids(); report_grades()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
         report_sweep(); report_mileage(); report_targeting()
         print()

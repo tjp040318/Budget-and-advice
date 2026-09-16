@@ -328,6 +328,7 @@ enum ItemArt {
         if key.hasPrefix("whetstone_") { return "seal.fill" }
         if key.hasPrefix("gem_") { return "diamond.fill" }
         if key.hasPrefix("awakening_cache_") { return "shippingbox.fill" }
+        if Aether.isAether(key) { return "circle.hexagonpath.fill" }
         switch key {
         case "drachma": return "circle.hexagongrid.fill"
         case "divinity": return "sparkles"
@@ -355,6 +356,9 @@ enum ItemArt {
         if key.hasPrefix("awakening_cache_") {
             return Element(rawValue: String(key.dropFirst("awakening_cache_".count)))?.color ?? Theme.gold
         }
+        // Elemental aether burns in its element; pure aether is amethyst, a
+        // shade brighter than divinity's violet so the two never read as one.
+        if Aether.isAether(key) { return Aether.element(of: key)?.color ?? Color(hex: "#9C6FD6") }
         if let stone = RelicStone.from(id: key) { return stone.tier.quality.rarity.glow }
         switch key {
         case "drachma", "relic_cache", "rank_points", "bundle": return Theme.gold
@@ -371,6 +375,61 @@ enum ItemArt {
     private static func scrollType(of key: String) -> ScrollType? {
         guard key.hasPrefix("scroll_") else { return nil }
         return ScrollType(rawValue: String(key.dropFirst("scroll_".count)))
+    }
+}
+
+// MARK: - The raid grade
+
+extension RaidGrade {
+    /// The stamp's metal: grey below a kill, teal for a kill, laurel for an
+    /// A, gold from S up — the genre's ladder reads the same way.
+    var tint: Color {
+        switch self {
+        case .f, .d: return Theme.textSecondary
+        case .c, .b: return Theme.info
+        case .a: return Theme.laurel
+        case .s, .ss, .sss: return Theme.gold
+        }
+    }
+}
+
+/// A raid's grade as a stamp: the letters in Cinzel inside a ring of the
+/// grade's metal, SSS with a second ring. Nil draws an empty ring with a dash,
+/// for a raid not yet graded. On the result screen, the spoils panel and the
+/// raid's card.
+struct RaidGradeStamp: View {
+    let grade: RaidGrade?
+    var size: CGFloat = 44
+
+    private var tint: Color { grade?.tint ?? Theme.stroke }
+    private var label: String { grade?.label ?? "–" }
+    /// Three letters need a smaller face than one.
+    private var pointSize: CGFloat {
+        switch label.count {
+        case 1: return size * 0.52
+        case 2: return size * 0.42
+        default: return size * 0.33
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Circle().fill(tint.opacity(grade == nil ? 0.06 : 0.16))
+            Circle().strokeBorder(tint, lineWidth: max(1.5, size * 0.05))
+            if grade == .sss {
+                Circle()
+                    .strokeBorder(tint.opacity(0.55), lineWidth: max(1, size * 0.025))
+                    .padding(size * 0.1)
+            }
+            Text(label)
+                .font(Theme.display(pointSize))
+                .foregroundStyle(tint)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: tint.opacity(grade == nil ? 0 : 0.45), radius: size * 0.14)
+        .accessibilityLabel(grade.map { "Grade \($0.label)" } ?? "Not graded")
     }
 }
 

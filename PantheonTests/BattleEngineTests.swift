@@ -615,6 +615,34 @@ final class BattleEngineTests: XCTestCase {
         XCTAssertTrue(rotated, "The cycle should move on as the boss takes its turns")
     }
 
+    /// The result of a raid carries the share of the boss's health the team
+    /// took, which is what grades a run the boss survived. A fight with no
+    /// raid boss carries nothing.
+    func testTheResultCarriesTheShareOfTheBossTaken() {
+        let plain = BattleEngine.simulate(playerTeam: [raidHero()], opponentTeam: [raidBoss()], seed: 3)
+        XCTAssertNil(plain.raidShare, "no raid boss, no share")
+
+        // A hero far above the boss: the kill reads as the whole of its health.
+        let rout = raidEngine(RaidBossProfile(barrierFraction: 0.1), seed: 3, heroLevel: 60, bossLevel: 20, mode: .simulation)
+        rout.autoBattle = true
+        _ = rout.start()
+        guard let won = rout.result else { return XCTFail("The rout should finish") }
+        XCTAssertEqual(won.outcome, .victory)
+        XCTAssertEqual(won.raidShare ?? 0, 1, accuracy: 0.0001)
+
+        // A hero far below it: however the fight ends, the share is what was
+        // taken off the health bar, and the barrier soaked in front of it
+        // does not count.
+        let stand = raidEngine(RaidBossProfile(barrierFraction: 0.5), seed: 3, heroLevel: 5, bossLevel: 60, mode: .simulation)
+        stand.autoBattle = true
+        _ = stand.start()
+        guard let lost = stand.result else { return XCTFail("The stand should finish") }
+        XCTAssertNotEqual(lost.outcome, .victory)
+        guard let share = lost.raidShare else { return XCTFail("A raid's result carries its share") }
+        XCTAssertGreaterThanOrEqual(share, 0)
+        XCTAssertLessThan(share, 1)
+    }
+
     // MARK: - The raid content
 
     func testShippedRaidsAreWellFormed() {

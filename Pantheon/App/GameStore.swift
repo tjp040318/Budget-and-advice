@@ -911,6 +911,11 @@ final class GameStore: ObservableObject {
             // time the summon screen appears — which would put the gift sheet
             // over tour step 4's summoning room. Step 36 presents it directly.
             player.selectorClaimed = true
+            // The serpent's raid graded once, so the Raids wing's card
+            // photographs the stamp and the mark to beat, and aether in hand
+            // for its count.
+            player.raidGrades = ["raid_apep": RaidGrade.s.rawValue]
+            player.aether = ["aether_ember": 34, "aether_pure": 6]
             for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {
                 player.essences[id, default: 0] += 12
             }
