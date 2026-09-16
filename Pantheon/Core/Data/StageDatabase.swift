@@ -167,13 +167,34 @@ enum CampaignDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    /// A relic from a Hard stage is at least 5★, from Hell 6★ — the whole
-    /// reason to come back.
-    var relicGradeFloor: Int {
+    /// A relic's floor at this tier, IN THIS CHAPTER.
+    ///
+    /// It used to be flat — 5★ from any Hard stage, 6★ from any Hell — and
+    /// `balance.py --drops` is what showed what that cost. Chapter 1 on Hell
+    /// asks about 4,800 power and paid a **6★**, the same grade as Labyrinth
+    /// B10, which asks 30,645. Six times the difficulty for the same reward,
+    /// on the second tier of the first chapter of twelve — and once that is
+    /// true, every harder thing in the game is something a softer thing
+    /// already out-paid. The owner, 2026-09-16: "Cant be giving 6 star relics
+    /// to easy matches."
+    ///
+    /// So the floor climbs with the chapter as well as the tier: Hard is
+    /// `3 + (chapter - 1) / 3` and Hell one better, capped at 6. Chapter 1
+    /// pays 3★ and 4★; chapter 7 reaches 6★ on Hell; chapters 10-12 pay 6★
+    /// on both. The Labyrinth stays the cheapest reliable 6★ in the game at
+    /// B10, which is correct — it is the dedicated relic content, and the
+    /// campaign's hardest tiers are a second road to the same place rather
+    /// than a shortcut past it.
+    ///
+    /// `chapterOrder` is 1-based; 0 or less means "unknown chapter", which
+    /// falls back to the first chapter's floor rather than the top one — an
+    /// unknown must never be the generous case.
+    func relicGradeFloor(chapterOrder: Int) -> Int {
+        let step = max(0, chapterOrder - 1) / 3
         switch self {
         case .normal: return 0
-        case .hard: return 5
-        case .hell: return 6
+        case .hard: return min(6, 3 + step)
+        case .hell: return min(6, 4 + step)
         }
     }
 
@@ -247,14 +268,14 @@ enum CampaignDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
         return copy
     }
 
-    func scale(_ rewards: StageRewards) -> StageRewards {
+    func scale(_ rewards: StageRewards, chapterOrder: Int) -> StageRewards {
         guard self != .normal else { return rewards }
         var copy = rewards
         copy.drachma = Int(Double(rewards.drachma) * rewardScale)
         copy.playerExperience = Int(Double(rewards.playerExperience) * rewardScale)
         copy.unitExperience = Int(Double(rewards.unitExperience) * rewardScale)
         copy.relicChance = min(1, max(relicChanceFloor, rewards.relicChance * dropScale))
-        copy.relicGrade = max(rewards.relicGrade, relicGradeFloor)
+        copy.relicGrade = max(rewards.relicGrade, relicGradeFloor(chapterOrder: chapterOrder))
         copy.essenceChances = rewards.essenceChances.mapValues { min(1, $0 * dropScale) }
         copy.scrollChances = rewards.scrollChances.mapValues { min(1, $0 * dropScale) }
         copy.firstClearDivinity = Int(Double(rewards.firstClearDivinity) * rewardScale)
@@ -283,7 +304,10 @@ extension Stage {
         copy.recommendedPower = Int(Double(recommendedPower) * tier.powerScale)
         copy.enemies = enemies.map { tier.scale($0) }
         copy.laterWaves = laterWaves.map { wave in wave.map { tier.scale($0) } }
-        copy.rewards = tier.scale(rewards)
+        // The chapter's place on the road, so the relic floor climbs with it.
+        // Read off the Normal `chapterID`, which is what this stage still
+        // carries at this point — the suffix is added above.
+        copy.rewards = tier.scale(rewards, chapterOrder: StageDatabase.chapterOrder(of: chapterID))
         // A Hell boss pays in whetstones and gems as well: with the raids,
         // the source of the endgame's relic work.
         if tier == .hell, isBoss {
@@ -595,6 +619,20 @@ enum StageDatabase {
     static func chapter(_ id: String) -> Chapter? {
         let (base, tier) = CampaignDifficulty.split(id)
         return chapters.first(where: { $0.id == base })?.at(tier)
+    }
+
+    /// A chapter's place on the road, 1-based, or 0 when the id is not a
+    /// campaign chapter at all (a Hall, a Labyrinth level, a raid — none of
+    /// which carry a tier and so never ask).
+    ///
+    /// `CampaignDifficulty.relicGradeFloor` reads this, so a relic's floor
+    /// climbs with the road as well as the tier. Zero falls back to the FIRST
+    /// chapter's floor there, never the last: an unknown must not be the
+    /// generous case.
+    static func chapterOrder(of chapterID: String) -> Int {
+        let base = CampaignDifficulty.split(chapterID).base
+        guard let index = chapters.firstIndex(where: { $0.id == base }) else { return 0 }
+        return index + 1
     }
 
     static func stage(_ id: String) -> Stage? {

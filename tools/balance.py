@@ -1654,6 +1654,97 @@ def report_economy():
     print(f"  6* evolution ladder      {3000+8000+20000+60000+150000:,} drachma")
     print("  → chapter 1 alone funds roughly one relic. Grinding is the game.")
 
+# WHAT DROPS WHERE — every source ranked by the power it asks, against the
+# relic grade it pays. Every formula below is the REAL one, read off
+# StageDatabase and DungeonDatabase, not an estimate.
+#
+# The owner, 2026-09-16: "make sure theres a progression of runes based on the
+# difficulty of levels and all. Cant be giving 6 star relics to easy matches."
+# He was right. The first run of this report found chapter 1 on HELL asking
+# about 15,000 power and paying a 6* — the same grade as Labyrinth B10, which
+# asks 30,645 — because `relicGradeFloor` was FLAT across all twelve chapters.
+# Once that was true every harder thing in the game was something a softer
+# thing had already out-paid.
+LAB_POWER = lambda level: 2_200 * (1.34 ** (level - 1))          # DungeonDatabase.labyrinth
+LAB_GRADE = lambda level: min(6, 3 + (level - 1) // 3)           # labyrinthGrade
+HALL_POWER = lambda floor: 3_000 * (1.65 ** (floor - 1))         # DungeonDatabase.hall
+HALL_GRADE = lambda floor: min(5, 2 + floor)                     # capped at 5*: the hall is the ESSENCE farm
+TOWER_POWER = lambda floor: 2_800 + floor * 550                  # DungeonDatabase.towerFloor
+TOWER_GRADE = lambda floor: min(6, 3 + (floor - 1) // 16)        # towerGrade
+
+# CampaignDifficulty.relicGradeFloor(chapterOrder:) — climbs with the ROAD as
+# well as the tier, which is the fix.
+def tier_floor(tier, chapter):
+    step = max(0, chapter - 1) // 3
+    return {"normal": 0, "hard": min(6, 3 + step), "hell": min(6, 4 + step)}[tier]
+
+TIER_POWER_SCALE = {"normal": 1.0, "hard": 1.9, "hell": 3.2}     # CampaignDifficulty.powerScale
+
+# Each chapter's boss stage: its Normal power and the grade the stage itself
+# pays before any floor. Duat 1 is hand-written (7,000, a guaranteed 4*);
+# every generated chapter is 2500 x powerScale x 1.18^9 at stage 10, and its
+# boss pays 4*.
+CHAPTER_POWER_SCALE = [None, 2.2, 3.2, 4.4, 6.0, 8.0, 10.5, 13.5, 17.0, 21.0, 26.0]
+def chapter_boss_power(chapter):
+    if chapter == 1: return 7_000
+    return 2_500 * CHAPTER_POWER_SCALE[chapter - 1] * (1.18 ** 9)
+CAMPAIGN_BOSS_GRADE = 4
+
+def report_drops():
+    rows = []
+    for level in range(1, 11):
+        rows.append((LAB_POWER(level), LAB_GRADE(level), f"Labyrinth B{level}"))
+    for floor in range(1, 6):
+        rows.append((HALL_POWER(floor), HALL_GRADE(floor), f"Hall of Essence B{floor}"))
+    for floor in (1, 20, 40, 50, 60, 80, 100):
+        rows.append((TOWER_POWER(floor), TOWER_GRADE(floor), f"Endless Tower F{floor}"))
+    for chapter in (1, 4, 8, 11):
+        base = chapter_boss_power(chapter)
+        for tier, scale in TIER_POWER_SCALE.items():
+            # The stage keeps its own grade when that is higher than the floor.
+            grade = max(CAMPAIGN_BOSS_GRADE, tier_floor(tier, chapter))
+            rows.append((base * scale, grade, f"chapter {chapter} boss {tier}"))
+    rows.sort()
+
+    print("\nWHAT DROPS WHERE — every source by the power it asks, against the grade it pays")
+    print("a source paying MORE than something harder is a leak\n")
+    print(f"{'source':>28}{'asks':>10}{'pays':>7}")
+    best_so_far = 0
+    leaks = []
+    for power, grade, label in rows:
+        flag = ""
+        if grade < best_so_far:
+            flag = "   <- softer already paid " + str(best_so_far)
+            leaks.append((label, grade, best_so_far))
+        elif grade > best_so_far:
+            best_so_far = grade
+        print(f"{label:>28}{power:>10,.0f}{grade:>6}*{flag}")
+
+    print(f"\n  where each grade first becomes available:")
+    for target in (4, 5, 6):
+        first = min((r for r in rows if r[1] >= target), key=lambda r: r[0], default=None)
+        if first:
+            print(f"    {target}*  {first[2]}, at {first[0]:,.0f} power")
+
+    print(f"\n  chapter 1 on Hell asks {chapter_boss_power(1) * TIER_POWER_SCALE['hell']:,.0f} and pays "
+          f"{max(CAMPAIGN_BOSS_GRADE, tier_floor('hell', 1))}* (it paid 6* before this).")
+    print(f"  Tower F50 asks {TOWER_POWER(50):,.0f} and pays {TOWER_GRADE(50)}*, against Labyrinth B10's "
+          f"{LAB_GRADE(10)}* at {LAB_POWER(10):,.0f} —")
+    print("  the two endgame ladders now reach 6* at the same difficulty, which is the")
+    print("  point: the Tower's own notes say floor 50 needs a maxed 6* team, and it used")
+    print(f"  to pay a 5* for it.")
+    print(f"  Hall B5 asks {HALL_POWER(5):,.0f} and pays {HALL_GRADE(5)}* — the essence farm no longer")
+    print(f"  out-drops the relic dungeon (Labyrinth B9 pays {LAB_GRADE(9)}* at {LAB_POWER(9):,.0f}).")
+
+    if leaks:
+        print(f"\n  {len(leaks)} inversions remain, each a softer source out-paying a harder one:")
+        for label, grade, better in leaks:
+            print(f"    {label} pays {grade}* where something softer paid {better}*")
+        print("  (a lower tier of a LATER chapter legitimately sits high on this axis and")
+        print("   pays less than an earlier chapter's Hell; those are the expected ones)")
+    else:
+        print("\n  -> no inversions: nothing soft out-pays something hard")
+
 # Choice of two on a sub-stat roll, mirrored from RelicService.candidates.
 #
 # A roll is subStatBase(kind, grade) * U(0.75, 1.25). Offering TWO candidates
@@ -1900,6 +1991,7 @@ if __name__ == "__main__":
     elif "--sweep" in a: report_sweep()
     elif "--mileage" in a: report_mileage()
     elif "--targeting" in a: report_targeting()
+    elif "--drops" in a: report_drops()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids()

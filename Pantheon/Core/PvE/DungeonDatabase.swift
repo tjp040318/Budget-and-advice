@@ -249,7 +249,14 @@ enum DungeonDatabase {
                     playerExperience: 40 + floor * 12,
                     unitExperience: 300 + floor * 120,
                     relicChance: min(1.0, 0.5 + Double(floor) * 0.1),
-                    relicGrade: min(6, 2 + floor),
+                    // Capped at 5★, not 6. A Hall is the ESSENCE farm — its
+                    // reason to exist is awakening material — and at `2 +
+                    // floor` its B4 paid a 6★ for 13,476 power where
+                    // Labyrinth B9 pays a 5★ for 22,870. `balance.py --drops`
+                    // caught it: the essence track was out-dropping the relic
+                    // dungeon by a full grade at half the difficulty. The
+                    // Labyrinth is where 6★s come from.
+                    relicGrade: min(5, 2 + floor),
                     essenceChances: [essence: min(1.0, 0.5 + Double(floor) * 0.1), high: Double(floor) * 0.1],
                     scrollChances: [scroll(for: element).rawValue: 0.12],
                     firstClearDivinity: 30
@@ -353,7 +360,18 @@ extension DungeonDatabase {
 
     /// The grade climbs a star every twenty floors, the way the later chapters
     /// field the same creatures at a higher grade rather than at absurd levels.
-    static func towerGrade(floor: Int) -> Int { min(6, 3 + (floor - 1) / 20) }
+    /// The Tower's relic grade, matched to what each floor actually DEMANDS.
+    ///
+    /// It was `3 + (floor - 1) / 20`, which put 6★ at floor 61 and paid a 5★
+    /// at floor 50 — a floor this file's own notes say "falls to a maxed 6★
+    /// team". The reward was a grade below the gear you had to be wearing to
+    /// get there, which is the one thing an endgame ladder must never do.
+    ///
+    /// Every sixteen floors now, so the curve lands on the calibration above:
+    /// 3★ from floor 1 (a team fresh off the campaign, Labyrinth B1's
+    /// equivalent), 4★ from 17, 5★ from 33 and 6★ from 49 — right where the
+    /// maxed 6★ team is needed, which is Labyrinth B10's mark.
+    static func towerGrade(floor: Int) -> Int { min(6, 3 + (floor - 1) / 16) }
 
     /// The flat multiplier on top: 0.81 on the first floor, 1.90 on the
     /// hundredth. The grade steps are cliffs and this is the slope between

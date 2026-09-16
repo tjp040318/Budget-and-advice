@@ -3469,3 +3469,102 @@ choice.
 Built after run 153 lands; the research is written first because the owner
 reads this file and because the seed-not-a-list decision is the one that
 needed making before any code.
+
+## More sub stats is the wrong lever; the drop table was the real bug (2026-09-16)
+
+The owner asked two things: "Shouldn't we have more substats?" and "How do we
+expand on the relics to be more like Summoners War (but with our own twist)?"
+Then, on the answer: "we need RNG for everything no? Something that keeps
+people playing and ALWAYS improving? also make sure theres a progression of
+runes based on the difficulty of levels and all. Cant be giving 6 star relics
+to easy matches."
+
+### More sub stats would make the grind worse, not deeper
+
+We already have **exactly Summoners War's eleven**: HP, HP%, ATK, ATK%, DEF,
+DEF%, SPD, CRIT Rate, CRIT DMG, Accuracy, Resistance — and exactly its
+main-stat rules, slots 1/3/5 fixed and 2/4/6 rolled. Summoners War has not
+added a twelfth in twelve years, and the arithmetic says why. A relic drops
+with at most four subs out of the ten left once the main stat is excluded:
+
+```
+11 sub stats (today)   one named sub 40.0%   a named PAIR 13.3%
+12 sub stats           one named sub 36.4%   a named PAIR 10.9%
+13 sub stats           one named sub 33.3%   a named PAIR  9.1%
+15 sub stats           one named sub 28.6%   a named PAIR  6.6%
+```
+
+Every stat added dilutes every roll. A twelfth would cut the odds of the pair
+a player is actually farming for by a fifth. The pool is not the gap.
+
+### The drop table WAS the gap, and the owner named it
+
+`balance.py --drops` is new and it ranks every source in the game by the power
+it asks against the relic grade it pays. Its first run:
+
+```
+      chapter 1 boss hell    22,400     6*
+     Hall of Essence B4      13,476     6*
+            Labyrinth B9     22,870     5*   <- softer already paid 6
+            Labyrinth B10    30,645     6*
+```
+
+Two real faults, both exactly what he described:
+
+1. **`relicGradeFloor` was FLAT across all twelve chapters** — Hard floored at
+   5★ and Hell at 6★ whether it was the Duat or the Dragon King's Gate. The
+   first chapter of twelve, on its second tier, paid the same grade as the
+   hardest content in the game. It is `relicGradeFloor(chapterOrder:)` now:
+   Hard is `3 + (chapter - 1) / 3` and Hell one better, capped at 6. Chapter 1
+   pays 3★ and 4★; chapter 7 reaches 6★ on Hell.
+2. **The Halls of Essence out-dropped the Labyrinth.** Hall B4 paid a 6★ for
+   13,476 power where Labyrinth B9 paid a 5★ for 22,870 — the *essence* farm
+   beating the *relic* dungeon by a full grade at half the difficulty. Capped
+   at 5★.
+
+And one the audit found that he had not asked about:
+
+3. **The Endless Tower under-paid at every floor.** `towerGrade` was
+   `3 + (floor - 1) / 20`, so floor 50 — which this file's own notes say
+   "falls to a maxed 6★ team" — paid a **5★**. The reward was a grade below
+   the gear you had to be wearing to reach it, which is the one thing an
+   endgame ladder must never do. It is `/16` now, which puts 6★ at floor 49.
+
+**The result, measured:** the earliest 6★ in the game moved from Hall B4 at
+**13,476** power to Tower F50 at **30,300** / Labyrinth B10 at **30,645** —
+the two endgame ladders reaching 6★ at the same difficulty, within 1% of each
+other, which is the shape that was wanted.
+
+The report keeps ten "inversions" on its list and says they are expected: the
+campaign's power curve (×26 by chapter 11) is on a different scale from the
+dungeons', so a late chapter sits far right on the axis while paying 4★. That
+is not a leak — the campaign is not the relic farm — but the numbers suggest
+the late chapters' `powerScale` is inflated, which is its own question for
+another day.
+
+### On "we need RNG for everything"
+
+He is right, and nothing here removes it. The relic system is already an
+endless RNG treadmill — grade, quality (0–4 subs at the drop), which subs,
+every roll's magnitude, the +15 gamble — and a better roll always exists.
+What today's choice-of-two removed is not the randomness but the *insult*:
+the dice still decide what is on the table, the player decides which of two.
+That is the 2026 standard, not a softening.
+
+What is genuinely missing for "ALWAYS improving" is a **ceiling above 6★**,
+which is what Summoners War added in 2023 with Ancient runes: a tier with a
+higher main-stat cap and better sub-stat ranges, from the hardest content
+only. That is the next thing to build, and it is what makes the fixed drop
+table above pay off — a progression that ends at 6★ for everyone eventually
+has no top.
+
+### The order the rest goes in
+
+1. **Primordial relics** — the tier above 6★. Only from Tower 50+, Labyrinth
+   B10, raids and chapter 8+ Hell. The answer to "always improving".
+2. **Epithets** — one earned socket in the centre of the relic ring, holding a
+   conditional line. The item is chosen; its magnitude still rolls and can be
+   pushed, so the RNG is inside a thing the player picked.
+3. **Pantheon resonance** — set bonuses that read the whole team.
+4. **Artifacts** — the full second gear layer, last, because it doubles the
+   inventory and that screen has been called overwhelming once already.

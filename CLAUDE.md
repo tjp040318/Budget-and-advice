@@ -354,10 +354,23 @@ environment can and cannot do. The short version:
   its own high-water mark under its own key in `campaignProgress` with no
   new save field, and `StageDatabase.stage/chapter` and
   `CampaignService.isUnlocked` read the tier back off the id. Hard is a
-  grade up, level ×1.15, stats ×1.2, every stage dropping a 5★+ relic,
-  ×1.7 drachma/EXP; Hell two grades up, ×1.25, ×1.5, 6★ relics, ×2.6. Hard
-  opens when Normal's boss falls, Hell when Hard's. `balance.py --tiers`
-  measures it; change the numbers in both files.
+  grade up, level ×1.15, stats ×1.2, ×1.7 drachma/EXP; Hell two grades up,
+  ×1.25, ×1.5, ×2.6. Hard opens when Normal's boss falls, Hell when Hard's.
+  **The relic floor climbs with the CHAPTER as well as the tier
+  (2026-09-16)** — `relicGradeFloor(chapterOrder:)`, Hard `3 + (chapter-1)/3`
+  and Hell one better, capped at 6, with `StageDatabase.chapterOrder(of:)`
+  reading a chapter's place off the road and an unknown falling back to the
+  FIRST chapter's floor, never the last. It was flat (Hard 5★, Hell 6★ on
+  every chapter), which had chapter 1 on Hell paying a 6★ for 22,400 power
+  where Labyrinth B10 asks 30,645 — and once that is true every harder thing
+  in the game is something a softer thing already out-paid. **`balance.py
+  --drops`** ranks every source by the power it asks against the grade it
+  pays and is what caught it; it also caught the Halls out-dropping the
+  Labyrinth (capped at 5★ now — they are the ESSENCE farm) and the Endless
+  Tower under-paying (`towerGrade` is `3 + (floor-1)/16`, so F50 pays the 6★
+  its own notes say needs a maxed 6★ team, where it used to pay 5★). The
+  earliest 6★ in the game went from 13,476 power to 30,300. `balance.py
+  --tiers` measures the rest; change the numbers in both files.
 - **The Labyrinth** (`DungeonDatabase.labyrinths`, `LabyrinthView`,
   `DungeonLevelsView`): the Vault of the Colossus (boss `boss_colossus`),
   the Lair of the Hydra (`boss_hydra`) and the Necropolis of the Unwrapped
