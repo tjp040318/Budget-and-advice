@@ -36,6 +36,18 @@ final class ResonanceTests: XCTestCase {
         return ProgressionService.resolve(Unit(blueprint: blueprint, level: level, stars: stars), blueprint: blueprint, equipped: [])
     }
 
+    /// The serpent at the raid's own strength — 6★, level 60, twice its
+    /// stats, built the way a stage builds it — for the tests that need a
+    /// team of three to FALL. A plain `fighter("apep", level: 60, stars: 5)`
+    /// is a level over a 5★'s cap and half the raid's serpent; against
+    /// three level-30 5★s with a healer among them it killed nobody in a
+    /// whole fight (run 162), and a resonance that answers a fall cannot be
+    /// seen in a fight with none.
+    private func titan() -> ResolvedUnit {
+        let spawn = EnemySpawn(blueprintID: "apep", level: 60, stars: 6, statMultiplier: 2.0)
+        return StageDatabase.buildEnemies(spawns: [spawn]).first!
+    }
+
     private func fight(player: [ResolvedUnit], opponent: [ResolvedUnit], seed: UInt64) -> (events: [BattleEvent], engine: BattleEngine) {
         let engine = BattleEngine(playerTeam: player, opponentTeam: opponent, mode: .campaign, seed: seed)
         engine.autoBattle = true
@@ -156,8 +168,14 @@ final class ResonanceTests: XCTestCase {
             let hpLift: Double = mine.baseStats.hp - theirs.baseStats.hp
             let hpDue: Double = resolved.stats.hp * 0.06
             let accuracyLift: Double = mine.baseStats.accuracy - theirs.baseStats.accuracy
-            XCTAssertEqual(atkLift, atkDue, accuracy: 1e-6)
-            XCTAssertEqual(hpLift, hpDue, accuracy: 1e-6)
+            // A combatant's HP, ATK, DEF and SPD are whole points
+            // (`Stats.clamped()` rounds them), so the lift the engine keeps
+            // is 6% rounded — 20 for 19.98 on run 162 — and can sit up to a
+            // point from the exact product. The rate stats are not rounded.
+            XCTAssertEqual(atkLift, atkDue, accuracy: 1.0)
+            XCTAssertEqual(hpLift, hpDue, accuracy: 1.0)
+            XCTAssertGreaterThan(atkLift, 0)
+            XCTAssertGreaterThan(hpLift, 0)
             XCTAssertEqual(accuracyLift, 0.05, accuracy: 1e-9)
         }
     }
@@ -203,7 +221,7 @@ final class ResonanceTests: XCTestCase {
 
     func testValhallaGivesTheOthersAttackUpWhenANorseAllyFalls() throws {
         let norse = team(.norse, count: 3, level: 30, stars: 5)
-        let serpent = [fighter("apep", level: 60, stars: 5)]
+        let serpent = [titan()]
         let (events, engine) = fight(player: norse, opponent: serpent, seed: 3)
         let norseIDs = Set(engine.team(.player).map(\.id))
         let firstFall = try XCTUnwrap(events.firstIndex(where: {
@@ -222,7 +240,7 @@ final class ResonanceTests: XCTestCase {
 
     func testTheWeighingLeavesItsKaOnceWhenTheFirstEgyptianFalls() throws {
         let egyptians = team(.egyptian, count: 3, level: 30, stars: 5)
-        let serpent = [fighter("apep", level: 60, stars: 5)]
+        let serpent = [titan()]
         let (events, engine) = fight(player: egyptians, opponent: serpent, seed: 4)
         let ids = Set(engine.team(.player).map(\.id))
         // Where each Egyptian fell. A unit's own heals before its death do

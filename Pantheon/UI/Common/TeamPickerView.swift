@@ -63,15 +63,14 @@ struct TeamPickerView: View {
 
     // MARK: - Rail
 
-    /// The lineup and the leader skill scroll together if a long leader skill
-    /// needs the room; the Save plate is pinned below them either way.
+    /// The lineup and the team's bonuses scroll together if a long leader
+    /// skill needs the room; the Save plate is pinned below them either way.
     private var rail: some View {
         VStack(spacing: 8) {
             ScrollView {
                 VStack(spacing: 8) {
                     lineup
-                    leaderPanel
-                    resonancePanel
+                    bonusesPanel
                 }
             }
             PrimaryButton(title: "Save team", isEnabled: !selected.isEmpty) {
@@ -110,56 +109,52 @@ struct TeamPickerView: View {
     }
 
     @ViewBuilder
-    private var leaderPanel: some View {
-        if let leader = selectedUnits.first {
-            SectionPanel(title: "Leader skill", accessory: nil) {
-                VStack(alignment: .leading, spacing: 5) {
-                    if let leaderSkill = leader.blueprint.leaderSkill {
-                        Text(leaderSkill.description)
-                            .font(Theme.body(12))
-                            .foregroundStyle(Theme.textPrimary)
-                        let affected = selectedUnits.filter { leaderSkill.applies(to: $0.blueprint) }.count
-                        Text("Applies to \(affected) of \(selectedUnits.count) units in this team.")
-                            .font(Theme.body(10))
-                            .foregroundStyle(affected > 1 ? Theme.success : Theme.textSecondary)
-                    } else {
-                        Text("\(leader.name) has no leader skill. Any unit can lead; only the bonus is lost.")
-                            .font(Theme.body(12))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-
-    /// What the lineup lights by who is in it (`ResonanceService`), and the
-    /// nearest thing one more unit would light: the screen that exists to
-    /// build a team says what the build does.
+    /// Everything the composition gives, in ONE panel: the leader's skill
+    /// and how many it reaches, what the lineup lights (`ResonanceService`)
+    /// with each line's words, and the nearest thing one more unit would
+    /// light. It was two panels, and on a phone the second sat below the
+    /// fold under the Save plate with only its title showing (run 162's
+    /// frame); one panel of rows fits above it with a resonance lit.
     @ViewBuilder
-    private var resonancePanel: some View {
+    private var bonusesPanel: some View {
         let blueprints = selectedUnits.map(\.blueprint)
         let lit = ResonanceService.active(for: blueprints)
         let hint = ResonanceService.hint(for: blueprints, maxSize: maxSize)
-        if !lit.isEmpty || hint != nil {
-            SectionPanel(title: "Resonance", accessory: lit.isEmpty ? nil : "\(lit.count) lit") {
+        if let leader = selectedUnits.first {
+            SectionPanel(title: "Team bonuses", accessory: lit.isEmpty ? nil : "\(lit.count) lit") {
                 VStack(alignment: .leading, spacing: 6) {
+                    bonusRow(glyph: "crown.fill") {
+                        if let leaderSkill = leader.blueprint.leaderSkill {
+                            let affected = selectedUnits.filter { leaderSkill.applies(to: $0.blueprint) }.count
+                            Text("LEADER · \(affected) OF \(selectedUnits.count)")
+                                .font(Theme.title(11))
+                                .tracking(0.8)
+                                .foregroundStyle(affected > 1 ? Theme.goldDeep : Theme.textSecondary)
+                            Text(leaderSkill.description)
+                                .font(Theme.body(10))
+                                .foregroundStyle(Theme.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            Text("LEADER")
+                                .font(Theme.title(11))
+                                .tracking(0.8)
+                                .foregroundStyle(Theme.textSecondary)
+                            Text("\(leader.name) has no leader skill. Any unit can lead; only the bonus is lost.")
+                                .font(Theme.body(10))
+                                .foregroundStyle(Theme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                     ForEach(lit) { resonance in
-                        HStack(alignment: .top, spacing: 6) {
-                            Image(systemName: resonance.kind.glyph)
-                                .font(.system(size: 11, weight: .black))
-                                .foregroundStyle(Theme.gold)
-                                .frame(width: 14)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(resonance.displayName.uppercased())
-                                    .font(Theme.title(11))
-                                    .tracking(0.8)
-                                    .foregroundStyle(Theme.goldDeep)
-                                Text(resonance.line)
-                                    .font(Theme.body(10))
-                                    .foregroundStyle(Theme.textPrimary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
+                        bonusRow(glyph: resonance.kind.glyph) {
+                            Text(resonance.displayName.uppercased())
+                                .font(Theme.title(11))
+                                .tracking(0.8)
+                                .foregroundStyle(Theme.goldDeep)
+                            Text(resonance.line)
+                                .font(Theme.body(10))
+                                .foregroundStyle(Theme.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     if let hint {
@@ -171,6 +166,17 @@ struct TeamPickerView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+        }
+    }
+
+    /// One bonus: its glyph in gold, and its name over its words.
+    private func bonusRow<Content: View>(glyph: String, @ViewBuilder content: () -> Content) -> some View {
+        HStack(alignment: .top, spacing: 6) {
+            Image(systemName: glyph)
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.gold)
+                .frame(width: 14)
+            VStack(alignment: .leading, spacing: 2, content: content)
         }
     }
 

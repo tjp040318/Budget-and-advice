@@ -940,16 +940,22 @@ struct UnitCard: View {
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                // One line, shrunk before it wraps: on the team picker's
+                // 58-point lineup cards "Lv.12 2,472" broke into "Lv.1 / 2"
+                // and "2,47 / 2" (run 162's frame).
                 HStack(spacing: 4) {
                     Text("Lv.\(unit.level)")
                         .font(Theme.numeric(9))
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
                     if showPower {
                         Text("\(unit.power)")
                             .font(Theme.numeric(9))
                             .foregroundStyle(Theme.gold)
+                            .lineLimit(1)
                     }
                 }
+                .minimumScaleFactor(0.7)
             }
             .padding(.top, 3)
             .padding(.horizontal, 3)
