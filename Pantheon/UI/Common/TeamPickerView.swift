@@ -108,7 +108,6 @@ struct TeamPickerView: View {
         }
     }
 
-    @ViewBuilder
     /// Everything the composition gives, in ONE panel: the leader's skill
     /// and how many it reaches, what the lineup lights (`ResonanceService`)
     /// with each line's words, and the nearest thing one more unit would

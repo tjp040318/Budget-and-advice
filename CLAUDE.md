@@ -78,6 +78,10 @@ function declared non-Optional is an error; and a `?:` whose two branches
 are design tokens of DIFFERENT types will not compile —
 `canReroll ? Theme.goldPlate : Theme.surface` mixes a LinearGradient with
 a Color, and every screen that needs that uses a `Group { if … else … }`.
+And a rewrite that replaces a declaration from its first line leaves the
+OLD `@ViewBuilder` above the new doc comment, so the declaration carries
+two ("only one result builder attribute can be attached", run 163): the
+checker reads a builder attribute followed, through comments, by another.
 Every rule in the checker was
 proven by reintroducing a real bug and watching it fail.
 

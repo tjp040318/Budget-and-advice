@@ -473,6 +473,30 @@ def check_orphan_attributes(files, errors):
                               f"— a declaration was inserted between the attribute and its function")
                 break
 
+    # Two result builders on one declaration. The same skipping of comments
+    # is how a rewrite doubles an attribute: the old panel's `@ViewBuilder`
+    # stayed on the line above the doc comment when the declaration under it
+    # was replaced by one that carried its own, and run 163 (2026-09-16)
+    # answered "only one result builder attribute can be attached to a
+    # declaration" — an hour after a five-second check would have.
+    BUILDERS = ("@ViewBuilder", "@ToolbarContentBuilder", "@SceneBuilder",
+                "@TableColumnBuilder", "@CommandsBuilder")
+    for path in files:
+        lines = open(path).read().splitlines()
+        for i, raw in enumerate(lines):
+            line = raw.strip()
+            if line not in BUILDERS:
+                continue
+            for j, follower in enumerate(lines[i + 1:], start=i + 2):
+                nxt = follower.strip()
+                if not nxt or nxt.startswith("//"):
+                    continue
+                if nxt in BUILDERS:
+                    errors.append(f"{path}:{j}: {nxt} under {line} at line {i + 1}: only one result "
+                                  f"builder attribute can be attached to a declaration — the first "
+                                  f"is the old declaration's, left above the comment")
+                break
+
 
 # ---------------------------------------------------------------------------
 # Rule 14: a member that landed in the wrong type
