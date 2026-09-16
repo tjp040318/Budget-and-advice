@@ -3302,3 +3302,95 @@ three-starred the stage — that is 0%. Against careless auto-repeat it is up to
 
 Tour step 34 photographs it: a real sweep of `duat_1_1` on the tour's save,
 the briefing behind and the chest in front.
+
+## Mileage, the selector, and a pity counter that counts down (2026-09-16)
+
+The market report's item 6 asked for four things. **Two of them were already
+built**, and saying so is more useful than pretending otherwise: the summon
+room's header has carried a live pity chip and a full published rate table
+(`RateTableView`: every grade's odds and every name in the pool, plus the
+Light & Dark discount, which is the one rate a player cannot work out from
+the pool in front of him) since the premium pass. The App Store 3.1.1
+compliance artefact the report asks for exists.
+
+What did not exist is the half that matters most.
+
+### The pity chip counts down now
+
+It read "5★ 12/90". That is a fact about the past. Every published pity
+tracker in the genre words it the other way — "guaranteed in 78" — because
+that is the number the player is actually deciding on. One line changed, and
+the detail behind the `?` leads with the same sentence.
+
+### Mileage: a point a pull, and a unit you NAME
+
+Pity stops a drought. It does not stop the WRONG five-star, which is the
+complaint a hard pity cannot answer, and 2026 is being called the
+guaranteed-banner era for exactly that reason: Blue Archive's 200
+Recruitment Points buy the featured character outright, Epic Seven's Mystic
+counter carries between banners without expiring, Genshin's Epitomized Path
+lets a player commit to one of two weapons.
+
+**Per banner, not one pool.** Blue Archive's points expire with the banner
+and Epic Seven's do not, and the difference is that Blue Archive runs limited
+banners. Every banner here is permanent, so per-banner points are never lost
+— and a banner's points buying from that banner's own pool is what closes the
+obvious hole: one global pool would let a player farm the cheap Unknown
+Scroll and cash out a 5★ god, which is the exchange this is meant to be a
+floor under, not a shortcut around. That exploit is closed by construction
+rather than by a rule.
+
+**And `balance.py --mileage` caught the price.** The first cut set a flat
+divinity target — 15,000 for any 5★ — divided by what a pull of that banner's
+scroll costs. On the pantheon banner that lands on 150, which is the genre's
+own number and plainly right. Then the report printed the ratio it exists to
+print: against the **hard pity**, that price was **0.62** on the Divine
+Scroll and **0.28** on Light & Dark. On those two banners mileage would not
+have been a floor under bad luck — it would have been the fast road, and the
+pity counter beside it would have meant nothing.
+
+The cause is that the divinity target is flat while the guarantee is not: a
+Divine Scroll guarantees a 5★ in 40 pulls because its 5★ rate is 12%, where
+Light & Dark takes 120. So the price is anchored to **the banner's own
+counter**, at 1.7 times what that guarantee costs, with the divinity target
+kept as a second floor underneath for the two banners that have no hard pity
+at all — `max` of the two, so a unit is never cheaper than 1.7 guarantees and
+never cheaper than its worth in divinity. Every banner now reads 1.70×, and
+the report asserts it in its own output rather than leaving it to be read:
+
+```
+ banner scroll   a pull   5* pts   4* pts   3* pts    5* costs  hard pity   ratio
+    pantheonic    100dv      153       61       21     15,300      9,000   1.70x
+        divine    600dv       68       27       10     40,800     24,000   1.70x
+    light_dark    450dv      204       82       28     91,800     54,000   1.70x
+  the cheapest ratio on any banner is 1.70x -> correct
+```
+
+The exchange is a chip beside the odds and the pity in the summon room's
+header, opening a board of the banner's own pool priced in points, dearest
+first, so the thing a player is saving for is the first row. It says what the
+rate is and how far off the target is, because a points system whose rate is
+not printed is a points system nobody believes in.
+
+### The selector: one 4★, chosen, on day one
+
+Epic Seven's **Selective Summon** at account creation is credited as one of
+its biggest free-to-play improvements. The point of it is not the unit — it
+is that the first thing a player does in a gacha is a CHOICE, so the first
+real face in his collection is one he wanted rather than one he was dealt.
+
+Five candidates, one per element, **derived** from the 4★ tier of the Duat
+rather than hand-written, so the shortlist cannot name a family whose cards
+have not been painted; and sorted by id rather than rolled, so the five are
+the same five every launch — a shortlist that changed under the player
+between one look and the next would read as a bug. It opens itself the first
+time he walks into the summoning circle, because a selector a player has to
+go looking for is a selector most players never find. Never a 5★, once ever
+(`Player.selectorClaimed`), worth 6,000 divinity-equivalent — about sixty
+pantheon summons.
+
+Tour steps 35 and 36 photograph both. The tour's save is given 118 points on
+the Duat banner, so the exchange shows a 4★ that can be taken (61) beside a
+5★ that cannot (153) rather than a board of identical refusals, and its
+selector is marked spent — an unspent one would otherwise pop the gift sheet
+over step 4's summoning room.

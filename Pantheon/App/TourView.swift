@@ -42,7 +42,7 @@ struct TourView: View {
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
-        ("sweep", 3),
+        ("sweep", 3), ("mileage", 2), ("selector", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -234,6 +234,17 @@ struct TourView: View {
             // frame still shows the button and the sentence that says why,
             // which is the other thing worth photographing.
             TourSweepScene()
+        case "mileage":
+            // The Duat banner's exchange, with the tour's save partway up it:
+            // the 4★ row can be taken and the 5★ row cannot, which is the
+            // difference the screen exists to show.
+            MileageSheet(banner: Banner.duatOpens) { _ in }
+        case "selector":
+            // The opening gift, presented directly. The tour's save has
+            // already spent it (a veteran's save would otherwise pop this
+            // over the summoning room at step 4), so it is put up here the
+            // way the guide plate is.
+            SelectorSheet { _ in }
         case "relic_sets":
             // The set reference, opened from a unit so its counts show.
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {

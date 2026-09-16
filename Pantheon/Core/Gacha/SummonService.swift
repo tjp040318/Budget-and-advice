@@ -289,6 +289,9 @@ enum SummonService {
 
         player.summonPity[banner.id] = pity
         player.totalSummons += count
+        // A point a pull, whatever the pull gave. Paid here rather than in
+        // `GameStore` so no path that spends a scroll can forget it.
+        MileageService.earn(count, on: banner, player: &player)
         return results
     }
 

@@ -178,6 +178,33 @@ final class GameStore: ObservableObject {
         return results ?? []
     }
 
+    /// Spends mileage on a unit the player named. Returns the reveal so the
+    /// summon screen can play it the way a rolled unit is played: this IS a
+    /// summon, it just had its result chosen in advance.
+    func redeemMileage(_ offer: MileageService.Offer, on banner: Banner) -> SummonResult? {
+        var rng = makeRandom()
+        let result = attempt { player in
+            try MileageService.redeem(offer, on: banner, player: &player, rng: &rng)
+        }
+        if let result {
+            update { player in
+                QuestService.record(.summoned(count: 1, bestStars: result.stars), player: &player)
+            }
+        }
+        return result
+    }
+
+    /// Takes the opening selector. Nil when it is not owed or the pick is not
+    /// on the shortlist — both of which mean a stale screen, not an error to
+    /// put in front of the player.
+    func claimSelector(_ blueprint: UnitBlueprint) -> SummonResult? {
+        var result: SummonResult?
+        update { player in
+            result = SelectorService.claim(blueprint, player: &player)
+        }
+        return result
+    }
+
     func buyScroll(_ scroll: ScrollType, count: Int = 1) {
         guard let price = scroll.divinityPrice else { return }
         let total = price * count
@@ -841,6 +868,15 @@ final class GameStore: ObservableObject {
             }
             player.stageStars = stars
             player.wallet.add(.pantheonic, 10)
+            // Mileage partway up the Duat banner: enough for a 4★ (61) and
+            // not for a 5★ (153), so the exchange photographs both states
+            // rather than a board of identical "NOT YET" tiles.
+            player.summonMileage = ["duat_opens": 118]
+            // The opening selector is SPENT on the tour's save. It is a
+            // veteran's save, and an unspent selector opens itself the first
+            // time the summon screen appears — which would put the gift sheet
+            // over tour step 4's summoning room. Step 36 presents it directly.
+            player.selectorClaimed = true
             for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {
                 player.essences[id, default: 0] += 12
             }

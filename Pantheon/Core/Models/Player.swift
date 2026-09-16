@@ -120,6 +120,15 @@ struct Player: Codable, Equatable, Sendable {
     /// one of them stays readable in the library for ever. Optional, like
     /// every save field added since the first.
     var lessonsRead: [String]? = nil
+    /// Mileage points per banner id: one for every summon made on that banner,
+    /// spent on a unit of the player's own choosing from that banner's pool
+    /// (`MileageService`). Optional, like every save field added since the
+    /// first.
+    var summonMileage: [String: Int]? = nil
+    /// True once the opening selector has been spent — the one 4★ a new
+    /// summoner picks for himself. Optional, so a save written before it
+    /// existed decodes; nil and false both mean "still owed".
+    var selectorClaimed: Bool? = nil
 
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }

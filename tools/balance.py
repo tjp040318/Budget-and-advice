@@ -1654,6 +1654,90 @@ def report_economy():
     print(f"  6* evolution ladder      {3000+8000+20000+60000+150000:,} drachma")
     print("  → chapter 1 alone funds roughly one relic. Grinding is the game.")
 
+# Mileage, mirrored from MileageService.swift.
+#
+# A point per summon on a banner, spent on a unit of the player's choosing
+# from that banner's pool. The price is anchored to the BANNER'S OWN hard
+# pity — 1.7x what the guarantee costs — with a flat divinity target as a
+# second floor for the two banners that have no hard pity.
+#
+# The first cut used the divinity target alone and this report is what caught
+# it: a flat 15,000-divinity 5* came out at 0.62 of the Divine Scroll's pity
+# and 0.28 of Light & Dark's, because those banners guarantee in 40 and 120
+# pulls where the pantheon banner takes 90. Mileage under the pity is not a
+# floor, it is the fast road.
+MILEAGE_TARGET = {3: 2_000, 4: 6_000, 5: 15_000}      # divinityTarget
+MILEAGE_PITY_MULTIPLE = 1.7                            # pityMultiple
+MILEAGE_GRADE_SHARE = {5: 1.0, 4: 0.40, 3: 0.135}      # gradeShare
+SCROLL_DIVINITY = {                                    # ScrollType.divinityPrice
+    "pantheonic": 100, "mystical": 75, "divine": 600,
+    "light_dark": 450, "ember": 200, "tide": 200, "gale": 200,
+    "unknown": 25,                                     # not sold for divinity; pullValue's fallback
+}
+# Banner.legendaryPity, and the odds of the best grade the scroll can give,
+# for the banners that have no hard pity (ScrollType.odds).
+MILEAGE_PITY = {
+    "pantheonic": 90, "mystical": None, "divine": 40,
+    "light_dark": 120, "ember": 120, "tide": 120, "gale": 120, "unknown": None,
+}
+MILEAGE_BEST_ODDS = {
+    "pantheonic": 0.030, "mystical": 0.015, "divine": 0.120,
+    "light_dark": 0.030, "ember": 0.030, "tide": 0.030, "gale": 0.030, "unknown": 1.0,
+}
+
+def mileage_anchor(scroll):
+    pity = MILEAGE_PITY[scroll]
+    if pity: return pity
+    return max(1, round(1.0 / max(0.0001, MILEAGE_BEST_ODDS[scroll])))
+
+def mileage_price(stars, scroll):
+    anchored = mileage_anchor(scroll) * MILEAGE_PITY_MULTIPLE * MILEAGE_GRADE_SHARE[stars]
+    target = MILEAGE_TARGET[stars] / SCROLL_DIVINITY[scroll]
+    return max(10, round(max(anchored, target)))
+
+def report_mileage():
+    print("\nMILEAGE — the floor under bad luck: a point a pull, a unit you NAME")
+    print("price = max(1.7 x the banner's own hard pity, a flat divinity target)\n")
+    print(f"{'banner scroll':>14}{'a pull':>9}{'5* pts':>9}{'4* pts':>9}{'3* pts':>9}"
+          f"{'5* costs':>12}{'hard pity':>11}{'ratio':>8}")
+    worst = None
+    for scroll in ("pantheonic", "mystical", "divine", "light_dark", "ember", "unknown"):
+        pull = SCROLL_DIVINITY[scroll]
+        five, four, three = (mileage_price(s, scroll) for s in (5, 4, 3))
+        spend = five * pull
+        pity = MILEAGE_PITY[scroll]
+        pity_spend = pity * pull if pity else None
+        if pity_spend:
+            ratio_value = spend / pity_spend
+            ratio = f"{ratio_value:.2f}x"
+            worst = ratio_value if worst is None else min(worst, ratio_value)
+        else:
+            ratio = "no pity"
+        print(f"{scroll:>14}{pull:>7}dv{five:>9}{four:>9}{three:>9}"
+              f"{spend:>11,}{(f'{pity_spend:,}' if pity_spend else '-'):>11}{ratio:>8}")
+
+    print("\n  read the last column as: naming the 5* you want costs this much more than")
+    print("  letting the hard pity hand you a RANDOM one.")
+    if worst is not None:
+        verdict = "correct" if worst >= 1.5 else "WRONG — mileage undercuts the pity counter"
+        print(f"  the cheapest ratio on any banner is {worst:.2f}x -> {verdict}")
+
+    # The thing that must not be true: farming a cheap banner to cash out a
+    # dear unit. It cannot be, because points are per banner and a banner's
+    # points only buy that banner's own pool.
+    print("\n  the exploit that is closed by construction: points are PER BANNER and buy")
+    print("  only that banner's pool, so the Unknown Scroll's 3*-only pool cannot be")
+    print("  farmed into a 5* god. One global pool would have been exactly that.")
+
+    # The selector.
+    print("\nSELECTOR — one 4* of the Duat, picked on day one")
+    print(f"  worth {MILEAGE_TARGET[4]:,} divinity-equivalent, about "
+          f"{MILEAGE_TARGET[4] // SCROLL_DIVINITY['pantheonic']} pantheon summons")
+    print("  Epic Seven gives a Selective Summon at account creation and it is credited")
+    print("  as one of its biggest free-to-play improvements. The point is not the unit:")
+    print("  it is that the first thing a player does in a gacha is a CHOICE.")
+    print("  Once, ever (Player.selectorClaimed), and never a 5*.")
+
 # The sweep, mirrored from SweepService.swift and GameStore.sweep.
 #
 # A sweep changes NO number in the economy: it costs the same energy and pays
@@ -1766,9 +1850,10 @@ if __name__ == "__main__":
     elif "--shop" in a: report_shop()
     elif "--counsel" in a: report_counsel()
     elif "--sweep" in a: report_sweep()
+    elif "--mileage" in a: report_mileage()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
-        report_sweep()
+        report_sweep(); report_mileage()
         print()

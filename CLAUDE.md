@@ -286,6 +286,21 @@ environment can and cannot do. The short version:
   screen opens from the scroll beside the wallet on the island and from
   More. Scrolls also drop from stages (unknown, mystical) and halls (the
   element's own).
+- **Mileage and the selector** (`MileageService`, `SelectorService`,
+  `MileageView.swift`): one point per summon on a banner, spent on a unit of
+  the player's own choosing from THAT banner's pool (per banner, so the cheap
+  Unknown Scroll cannot be farmed into a 5★ god). The price is anchored to
+  the banner's OWN hard pity at 1.7× what the guarantee costs, with a flat
+  divinity target (3★ 2,000, 4★ 6,000, 5★ 15,000) as a second floor for the
+  banners that have none — a flat target alone priced a Light & Dark 5★ at
+  0.28 of its pity, which `balance.py --mileage` caught and now asserts
+  ("the cheapest ratio on any banner is 1.70x -> correct"). The exchange is a
+  chip in the summon room's header. The **selector** is one 4★ of the Duat
+  picked on day one, five candidates derived one per element and sorted by id
+  so the list never changes under the player; it opens itself the first time
+  the summon screen appears and is spent once ever
+  (`Player.selectorClaimed`). The pity chip counts DOWN ("5★ in 78"), which
+  is how every published tracker in the genre words it. Tour steps 35 and 36.
 - **Scrolls are banners** (`Banner.scrollBanners`): Unknown (3★ commons),
   Divine (4★+), Light & Dark, Fire, Water, Wind, each spending its own
   `ScrollType` and drawing from `SummonService.pool(where:)`. The summon
@@ -927,7 +942,7 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is thirty-five screens (steps 0–34): an arena battle
+  thousands of images. The CI tour is thirty-seven screens (steps 0–36): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,

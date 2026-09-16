@@ -30,6 +30,9 @@ struct SummonView: View {
     /// True for the moment between the button and the reveal, so the circle
     /// can wind up before the unit arrives.
     @State private var isCharging = false
+    /// The banner's mileage exchange, and the opening selector.
+    @State private var showMileage = false
+    @State private var showSelector = false
 
     /// The side menu's width, and the same number the room is composed
     /// against: the painting is centred in what is left of the frame after
@@ -71,6 +74,25 @@ struct SummonView: View {
             }
             .sheet(isPresented: $showPool) {
                 RateTableView(banner: selectedBanner)
+            }
+            .sheet(isPresented: $showMileage) {
+                MileageSheet(banner: selectedBanner) { result in
+                    revealResults = [result]
+                }
+                .environmentObject(store)
+            }
+            .sheet(isPresented: $showSelector) {
+                SelectorSheet { result in
+                    revealResults = [result]
+                }
+                .environmentObject(store)
+            }
+            // The gift opens itself the first time the summoner walks into the
+            // circle. Epic Seven puts its Selective Summon at account creation
+            // for the same reason: a selector a player has to go looking for
+            // is a selector most players never find.
+            .onAppear {
+                if SelectorService.isOwed(store.player) { showSelector = true }
             }
         }
     }
@@ -280,7 +302,42 @@ struct SummonView: View {
             if showsPity {
                 pityChip
             }
+            mileageChip
         }
+    }
+
+    // MARK: - Mileage
+
+    /// Points on THIS banner and what they are worth, as a chip that opens the
+    /// exchange. It is beside the pity because it answers the question pity
+    /// cannot: a hard pity stops a drought, and this stops the WRONG five
+    /// star.
+    private var mileageChip: some View {
+        let points = MileageService.points(on: selectedBanner, player: store.player)
+        let best = MileageService.catalogue(for: selectedBanner).first
+        return Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            showMileage = true
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "ticket.fill")
+                    .font(.system(size: 9, weight: .black))
+                    .foregroundStyle(Theme.gold)
+                Text("\(points)")
+                    .font(Theme.numeric(11))
+                    .foregroundStyle(Theme.textPrimary)
+                if let best, points >= best.price {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 10, weight: .black))
+                        .foregroundStyle(Theme.success)
+                }
+            }
+            .padding(.horizontal, 9)
+            .frame(height: 28)
+            .background(chipPlate)
+        }
+        .buttonStyle(.plain)
     }
 
     /// A capsule for a reading and its question mark, translucent so the
@@ -360,12 +417,18 @@ struct SummonView: View {
         .background(chipPlate)
     }
 
+    /// The reading counts DOWN, not up.
+    ///
+    /// "5★ 12/90" is a fact about the past; "5★ in 78" is the thing the player
+    /// is actually deciding on, and it is how every published pity tracker in
+    /// the genre words it. The counter is bumped before it is tested, so the
+    /// number of summons still to make is `cap - value`.
     private func pityReading(label: String, value: Int, cap: Int, tint: Color) -> some View {
         HStack(spacing: 3) {
             Text(label)
                 .font(Theme.body(10).weight(.black))
                 .foregroundStyle(tint)
-            Text("\(value)/\(cap)")
+            Text("in \(max(1, cap - value))")
                 .font(Theme.numeric(11))
                 .foregroundStyle(Theme.textPrimary)
         }
@@ -380,7 +443,7 @@ struct SummonView: View {
         VStack(alignment: .leading, spacing: 9) {
             if let cap = selectedBanner.legendaryPity {
                 VStack(alignment: .leading, spacing: 5) {
-                    Text("\(pity.sinceLegendary) of \(cap) since your last 5★. The \(cap)th is a 5★ whatever the dice say, and from the \(Int(Double(cap) * 0.75))th the 5★ chance climbs steeply, so it rarely comes to that.")
+                    Text("Guaranteed 5★ in \(max(1, cap - pity.sinceLegendary)) more summons — \(pity.sinceLegendary) of \(cap) are behind you. From the \(Int(Double(cap) * 0.75))th the 5★ chance climbs steeply, so it rarely comes to the guarantee.")
                     StatBar(
                         value: Double(pity.sinceLegendary),
                         maximum: Double(cap),
