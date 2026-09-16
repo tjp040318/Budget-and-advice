@@ -3568,3 +3568,111 @@ has no top.
 3. **Pantheon resonance** — set bonuses that read the whole team.
 4. **Artifacts** — the full second gear layer, last, because it doubles the
    inventory and that screen has been called overwhelming once already.
+
+## Awakened relics and the Titans (2026-09-16, planned)
+
+The owner, on the tier above 6★: *"Like an 'Awakened' Rune essentially? (without
+having to awaken it)"* — and then: *"What about also adding some sort of beasts
+you fight like the rift beasts that give you something towards something new?
+(See summoners war rift beasts and the crystals they drop)."*
+
+Those are one system, and his framing is better than the one this file proposed
+an hour ago. Written up before any code, per the standing rule.
+
+### Why "awakened" beats a 7★ grade
+
+The earlier note here proposed **Primordial relics** as a new grade above 6★ —
+Summoners War's Ancient runes. The owner's word for it is better for three
+reasons, and the third is the one that decides it.
+
+1. **It is already this game's vocabulary.** Units awaken. There is a rite for
+   it in the Hall of Ka, a second card, a costume glow, an aura. A relic that
+   awakens is the same idea in the same building with the same word.
+2. **It costs almost no surface area.** A 7★ grade touches `Rarity`, every star
+   row, the inventory's filters and its eight sorts, the optimiser, the drop
+   tables and `balance.py --drops`. An awakened 6★ is a FLAG: same grade, same
+   set, same slot, drawn with the awakened sun the cards already use plus a
+   halo on the stone.
+3. **It does not make the gear you own into junk.** This is the whole argument.
+   A 7★ tier means every 6★ in the inventory is second-best the day it ships.
+   An awakening is something you do TO a 6★ you already have, so the relic you
+   spent a month getting to +15 becomes the INPUT rather than the casualty.
+
+### What an awakening actually gives
+
+- **A FIFTH SUB STAT.** Four is the cap today, here and in the whole genre —
+  `RelicService` enforces it in five places. A fifth is the most coveted thing
+  a relic could possibly gain and it needs no new grade to express.
+- The +15 main stat ceiling goes from 3× to **3.6×** (`Relic.effectiveMainStat`).
+- Nothing else changes: grade, set, slot, quality, the four subs it already has.
+
+### Both roads to one, which is the point
+
+The owner's "without having to awaken it" reads as *it drops that way*. Take
+BOTH roads, because each alone has a hole:
+
+- **It drops awakened**, rarely, from the hardest content. Lucky players get one.
+  Alone, this is a 7★ by another name and rule 3 above fails.
+- **You awaken one you own**, spending what the beasts drop. Patient players
+  build one. Alone, there is no thrill of the drop.
+
+Together: the drop is the dream, the awakening is the plan, and no 6★ is ever
+wasted. That is also how Summoners War runs Ancient runes beside its craft
+system.
+
+### The Titans — our Rift Beasts
+
+**What Summoners War's Rift of Worlds is.** Five elemental Rift Beasts, solo or
+three-player co-op. The thing that makes them different from every other fight
+is that you are **GRADED F to SSS on total damage dealt**, and the grade decides
+the payout — you do not merely win, you win *by how much*. They drop elemental
+**Crystals**, which gate the entire Craft Building, plus Grindstones and
+Enchanted Gems for rune sub stats. The Rift Raid (R1–R5) sits beside them.
+
+**What this game already has.** `RaidBossProfile` — a barrier that regenerates
+and stuns when broken, guard adds that come back and drain the boss while they
+live, enrage stacks on a clock, a rotating weakness — and raid stages
+deliberately kept out of `chapters` so they cannot appear on the campaign map.
+That is most of a beast fight already built.
+
+**What is missing, and it is the interesting part:**
+
+1. **A grade.** Every fight in this game is binary: cleared or not. A damage
+   grade is the first fight you can get BETTER at, and it is what makes a beast
+   worth farming after the first clear.
+2. **A currency that comes from nowhere else.** Drachma has the Night Market,
+   divinity has the bazaar; a crafting currency must have exactly one source or
+   it is just another wallet line.
+3. **Something to spend it on** — which the awakening above now is.
+
+**The design.** Five **Titans**, one per element, older than the pantheons: the
+things the gods put under the world. Each is fought on a clock, graded F→SSS on
+total damage, and drops **Aether** — Ember Aether, Tide Aether, Gale Aether,
+Radiant Aether, Umbral Aether, and a rare **Pure Aether** that any awakening
+will take. An awakening wants aether of the relic's own SET colour plus pure,
+so the five beasts are five different farms rather than one repeated.
+
+That closes the loop: **the Titan is the source, the awakened relic is the
+sink**, and neither exists without the other.
+
+### The order, and what each phase costs
+
+1. **The grade, on the raids that already exist** (~4 days). `RaidGrade` F→SSS
+   off total damage in the turn limit, shown on the victory screen, deciding
+   the payout. Aether drops here first. This tests the whole scoring loop
+   against content already built, with no new art and no new place.
+2. **Relic awakening in the Hall of Ka** (~1 week). The fifth sub stat, the
+   3.6× ceiling, the halo on the stone, the aether cost, the rite reusing
+   `AltarCeremony`. `balance.py --awakening` has to assert the one thing that
+   must not be true: that an awakened relic makes an ordinary 6★ worthless.
+   The target is that a well-rolled 6★ still beats a badly-rolled awakened one
+   — the same shape Ancient runes have.
+3. **The five Titans as their own place** (~1 week). New `BattleEnvironment`s,
+   the beasts on `RaidBossProfile`, a wing of the Labyrinth or a sixth landmark.
+
+**The cost that needs the owner's word.** Five beast meshes at 53 credits each
+is **265**, and the Meshy balance is **1,891** against a floor of **2,000** —
+that goes under. Phase 3 therefore ships with `ModelSpec.standInAsset`, which
+already lets a boss fight as a giant of its kind (the Colossus stands in as a
+4.5 m sentinel today), and the real meshes wait for either a top-up or his
+explicit go. Nothing in phases 1 or 2 costs a credit or a cent.
