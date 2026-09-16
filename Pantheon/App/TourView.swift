@@ -41,7 +41,7 @@ struct TourView: View {
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
-        ("guide", 2), ("lessons", 2), ("night_market", 2),
+        ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -222,6 +222,10 @@ struct TourView: View {
             // The rolled shelf. Opened straight on its stall, because nothing
             // in a pinned tour taps the bazaar's dropdown.
             ShopView(opening: .nightMarket)
+        case "counsel":
+            // Athena's road: the tier the tour's save is on, its steps and the
+            // tier's prize. Opened on that tab for the same reason.
+            MissionsView(opening: .counsel)
         case "relic_sets":
             // The set reference, opened from a unit so its counts show.
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {

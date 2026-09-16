@@ -12,11 +12,27 @@ struct MissionsView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
     @State private var receipt: String?
-    @State private var tab: Tab = .missions
+    @State private var tab: Tab
+
+    /// Which list the screen opens on. The island's scroll and More both want
+    /// Daily; the CI tour wants the Counsel, which is the only way to
+    /// photograph a tab nothing taps its way to.
+    init(opening: Tab = .missions) {
+        _tab = State(initialValue: opening)
+    }
 
     enum Tab: Hashable {
         case missions
+        case counsel
         case feats
+    }
+
+    /// Which list a row came from, and so which claim it takes. A Bool told
+    /// two lists apart; three need a name.
+    private enum Source {
+        case mission
+        case counsel
+        case feat
     }
 
     /// One row of a list, whichever list it came from.
@@ -30,13 +46,14 @@ struct MissionsView: View {
         let complete: Bool
         let claimed: Bool
         /// Feats claim through `claimFeat`, missions (and the all-missions
-        /// bonus) through `claimMission`.
-        let isFeat: Bool
+        /// bonus) through `claimMission`, the Counsel through `claimCounsel`.
+        let source: Source
     }
 
     /// The two lists, as the strip's segmented switch.
     private let tabs: [(value: Tab, title: String)] = [
         (value: .missions, title: "Daily"),
+        (value: .counsel, title: "Counsel"),
         (value: .feats, title: "Feats"),
     ]
 
@@ -68,6 +85,7 @@ struct MissionsView: View {
     private var subtitle: String {
         switch tab {
         case .missions: return "Missions reset at midnight"
+        case .counsel: return CounselService.currentTier(for: store.player).blurb
         case .feats: return "Feats of a lifetime"
         }
     }
@@ -78,6 +96,11 @@ struct MissionsView: View {
         case .missions:
             let claimed = QuestService.missions.filter { QuestService.isMissionClaimed($0.id, player: player) }.count
             return "\(claimed)/\(QuestService.missions.count)"
+        case .counsel:
+            let tier = CounselService.currentTier(for: player)
+            let steps = CounselService.steps(in: tier)
+            let claimed = steps.filter { CounselService.isClaimed($0.id, player: player) }.count
+            return "\(tier.title) \(claimed)/\(steps.count)"
         case .feats:
             let claimed = QuestService.feats.filter { QuestService.isFeatClaimed($0.id, player: player) }.count
             return "\(claimed)/\(QuestService.feats.count)"
@@ -171,6 +194,7 @@ struct MissionsView: View {
     private var entries: [Entry] {
         switch tab {
         case .missions: return missionEntries
+        case .counsel: return counselEntries
         case .feats: return featEntries
         }
     }
@@ -189,7 +213,7 @@ struct MissionsView: View {
                 goal: mission.goal,
                 complete: QuestService.isMissionComplete(mission, player: player),
                 claimed: QuestService.isMissionClaimed(mission.id, player: player),
-                isFeat: false
+                source: .mission
             )
         }
         rows.append(
@@ -202,7 +226,7 @@ struct MissionsView: View {
                 goal: QuestService.missions.count,
                 complete: QuestService.allMissionsClaimable(player) || bonusClaimed,
                 claimed: bonusClaimed,
-                isFeat: false
+                source: .mission
             )
         )
         return rows
@@ -222,9 +246,46 @@ struct MissionsView: View {
                 goal: feat.goal,
                 complete: QuestService.isFeatComplete(feat, player: player),
                 claimed: QuestService.isFeatClaimed(feat.id, player: player),
-                isFeat: true
+                source: .feat
             )
         }
+    }
+
+    /// The tier the player is on, its steps in the order Athena set them, and
+    /// the tier's own prize as the last row. Showing all thirty at once would
+    /// be the feats list again, which is the thing this exists to replace.
+    private var counselEntries: [Entry] {
+        let player = store.player
+        let tier = CounselService.currentTier(for: player)
+        var rows = CounselService.steps(in: tier).map { step in
+            Entry(
+                id: step.id,
+                icon: step.icon,
+                title: step.title,
+                reward: ShopService.describe(step.reward),
+                progress: CounselService.progress(of: step, player: player),
+                goal: step.goal,
+                complete: CounselService.isComplete(step, player: player),
+                claimed: CounselService.isClaimed(step.id, player: player),
+                source: .counsel
+            )
+        }
+        let claimedSteps = rows.filter(\.claimed).count
+        rows.append(
+            Entry(
+                id: tier.prizeID,
+                icon: "laurel.leading",
+                title: "\(tier.title): every counsel taken",
+                reward: ShopService.describe(tier.prize),
+                progress: claimedSteps,
+                goal: rows.count,
+                complete: CounselService.isPrizeReady(tier, player: player)
+                    || CounselService.isClaimed(tier.prizeID, player: player),
+                claimed: CounselService.isClaimed(tier.prizeID, player: player),
+                source: .counsel
+            )
+        )
+        return rows
     }
 
     private func rank(_ feat: QuestService.Feat, _ player: Player) -> Int {
@@ -275,7 +336,12 @@ struct MissionsView: View {
     }
 
     private func claim(_ entry: Entry) {
-        let grants = entry.isFeat ? store.claimFeat(entry.id) : store.claimMission(entry.id)
+        let grants: [ShopService.Grant]?
+        switch entry.source {
+        case .mission: grants = store.claimMission(entry.id)
+        case .counsel: grants = store.claimCounsel(entry.id)
+        case .feat: grants = store.claimFeat(entry.id)
+        }
         if let grants { paid(grants) }
     }
 

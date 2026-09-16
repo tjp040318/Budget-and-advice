@@ -82,6 +82,9 @@ struct Player: Codable, Equatable, Sendable {
     var quests: QuestProgress? = nil
     var lifetimeCounters: [String: Int]? = nil
     var featsClaimed: Set<String>? = nil
+    /// Athena's Counsel: the step ids and tier-prize ids already collected.
+    /// Optional, like every field added since the first.
+    var counselClaimed: Set<String>? = nil
     var loginStreak: LoginStreak? = nil
 
     /// How far up the Endless Tower the player has been, and which milestones

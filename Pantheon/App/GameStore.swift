@@ -562,8 +562,20 @@ final class GameStore: ObservableObject {
         }
     }
 
-    /// Rewards waiting to be claimed, for the badge beside the wallet.
-    var claimableRewards: Int { QuestService.claimableCount(player: player) }
+    /// Claims one step of Athena's Counsel, or a tier's prize.
+    func claimCounsel(_ id: String) -> [ShopService.Grant]? {
+        var rng = makeRandom()
+        return attempt { player in
+            try CounselService.claim(id, player: &player, rng: &rng)
+        }
+    }
+
+    /// Rewards waiting to be claimed, for the badge beside the wallet. The
+    /// Counsel counts here too: a road nobody is told about is a road nobody
+    /// walks.
+    var claimableRewards: Int {
+        QuestService.claimableCount(player: player) + CounselService.claimableCount(player: player)
+    }
 
     // MARK: - The first hour
 

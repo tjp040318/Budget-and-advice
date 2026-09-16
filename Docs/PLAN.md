@@ -3147,3 +3147,60 @@ and four times across the day. The job now writes `build-errors.txt` and
 `test-errors.txt` to the `ci/screens` branch whether or not there are
 frames, and `tools/ciframes.py` prints them before anything else. Four
 lines over a git fetch, instead of five hundred over the API.
+
+
+### Built: the rest of the Counsel (2026-09-16)
+
+Three things finish the tutorial work and the shop.
+
+**The first battle cannot be lost.** The owner's answer to the question was
+"No", so `BattleEngine` gained one flag: `unloseable`, which floors a
+PLAYER's combatant at 1 HP. It is checked before Endure, so a fight that
+cannot be lost does not also spend the buff that would have saved the unit,
+and `CampaignService.isTutorialFight` is the only thing that sets it — stage
+id exactly `duat_1_1`, at Normal (a tier suffix is a different stage), on a
+save that has never cleared it. Athena already says it out loud: "You cannot
+lose this one. I have seen to it."
+
+**Athena's Counsel, the road** (`CounselService`, the Counsel tab on the
+Missions screen). Three tiers of ten — Initiate the first evening, Adept the
+first week, Hierophant the long game — each step naming ONE next action in
+the order a good player would take it, each paying, the tier gating the next
+and ending in a prize of its own.
+
+Two shape decisions worth keeping:
+
+- It is deliberately NOT the feats list. Feats are forty unordered lifetime
+  entries sorted by whatever is claimable; the Counsel is a road, and the
+  screen shows **one tier at a time** with the tier's prize as its last row.
+  Showing all thirty at once would be the feats list again, which is the
+  thing this exists to replace.
+- A tier opens when every step of the one before is DONE, not claimed.
+  Gating on the claim would strand a player who cleared a tier and forgot to
+  collect it — a wall the road exists to remove. The tier's own prize is the
+  one thing that needs every step claimed, because it is the receipt for the
+  whole tier.
+
+Every step is `measure: (Player) -> Int`, read off the save, so nothing else
+in the game has to know the Counsel exists and a veteran's save lands on the
+right tier instead of at the beginning.
+
+**`balance.py --counsel` caught a real fault and both sides of it were
+wrong.** Its first run reported the road at **125% of the campaign** — and
+the tier that did it was Hierophant, which handed out three Divine Scrolls
+(600 divinity each in the bazaar) plus a Light & Dark: a checklist that is a
+second gacha. But the denominator was also too narrow: twelve chapters of
+FIRST CLEARS alone, leaving out the chests, the login gift and every tier
+above Normal. So the tier was cut (6,562 down from 10,597; one Divine Scroll
+on the whole road instead of four) AND the baseline now names everything it
+counts — first clears, Normal chests, half the chapters on Hard, a month of
+login gifts — and says in its own output that the daily missions are not in
+it, so the figure is a floor and can be argued with. The road is 47% of that
+now, which is a spine rather than a substitute.
+
+**And the shelf is one row.** Run 151's frames showed the Night Market's six
+slots drawn as five across and one alone beside a hole; the adaptive minimum
+is 116 instead of 132, so a new player's six are one clean row and a level-40
+summoner's ten are two. Tour step 33 photographs the Counsel, opened straight
+on its tab through `MissionsView(opening:)` — the same trick as the bazaar's,
+since nothing in a pinned tour taps a segmented control.

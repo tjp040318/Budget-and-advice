@@ -33,6 +33,12 @@ final class BattleEngine {
     static let maxCounterDepth: Int = 1
 
     let mode: BattleMode
+    /// The tutorial floor: no unit of the player's can be brought below 1 HP.
+    /// The owner settled it — asked whether the first battle could be lost, he
+    /// said "No" — and it is what the genre does with its opening fight.
+    /// `CampaignService` sets it for the very first stage of the Duat on a save
+    /// that has never cleared it, and for nothing else ever.
+    let unloseable: Bool
     private(set) var combatants: [Combatant]
     /// A dungeon run is one battle of several waves: when a wave is down the
     /// next takes the field, and the fight is won when the last one falls.
@@ -72,9 +78,11 @@ final class BattleEngine {
         mode: BattleMode,
         seed: UInt64,
         laterWaves: [[ResolvedUnit]] = [],
-        raidBosses: [Int: RaidBossProfile] = [:]
+        raidBosses: [Int: RaidBossProfile] = [:],
+        unloseable: Bool = false
     ) {
         self.mode = mode
+        self.unloseable = unloseable
         self.seed = seed
         self.rng = SeededRandom(seed: seed)
         self.pendingWaves = laterWaves
@@ -833,6 +841,13 @@ final class BattleEngine {
 
         let healthBefore = combatants[targetIndex].currentHealth
         combatants[targetIndex].currentHealth = max(0, healthBefore - remaining)
+
+        // The tutorial floor, before Endure, so a first fight that cannot be
+        // lost does not also spend the buff that would have saved the unit.
+        if combatants[targetIndex].currentHealth <= 0,
+           unloseable, combatants[targetIndex].side == .player {
+            combatants[targetIndex].currentHealth = 1
+        }
 
         // Endure keeps the unit at 1 HP once.
         if combatants[targetIndex].currentHealth <= 0, combatants[targetIndex].has(.endure) {

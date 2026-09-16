@@ -106,8 +106,17 @@ enum CampaignService {
             opponentTeam: StageDatabase.buildEnemies(for: stage),
             mode: .campaign,
             seed: seed,
-            laterWaves: stage.laterWaves.map { StageDatabase.buildEnemies(spawns: $0) }
+            laterWaves: stage.laterWaves.map { StageDatabase.buildEnemies(spawns: $0) },
+            unloseable: isTutorialFight(stage, player: player)
         )
+    }
+
+    /// The one fight in the game that cannot be lost: the FIRST stage of the
+    /// Duat, at Normal, on a save that has never cleared it. Every condition
+    /// matters — a tier suffix (`duat_1_1@hard`) is a different stage, and a
+    /// player who has cleared it once is no longer being taught.
+    static func isTutorialFight(_ stage: Stage, player: Player) -> Bool {
+        stage.id == "duat_1_1" && (player.campaignProgress["duat_1"] ?? 0) < 1
     }
 
     static func resolveTeam(_ preset: TeamPreset, player: Player) -> [ResolvedUnit] {

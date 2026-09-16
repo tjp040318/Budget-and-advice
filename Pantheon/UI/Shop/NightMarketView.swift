@@ -17,13 +17,17 @@ struct NightMarketBoard: View {
     @EnvironmentObject private var store: GameStore
     var onReceipt: (String) -> Void
 
-    /// Cards the width of a portrait tile: five across a landscape phone.
+    /// Six across a landscape phone, because six is the shelf a new player
+    /// gets: at a 132-point minimum the grid fitted five and drew the sixth
+    /// alone on a second row beside a hole (run 151's frames). At 116 the
+    /// starting shelf is one clean row, and the ten a level-40 summoner has
+    /// are two.
     ///
     /// STATIC on purpose: a private STORED property drags the memberwise
     /// initialiser down to private with it, and `ShopView` builds this from
     /// another file. `ShopView`'s own `columns` gets away with being stored
     /// because nothing ever passes it an argument.
-    private static let columns = [GridItem(.adaptive(minimum: 132, maximum: 190), spacing: 8)]
+    private static let columns = [GridItem(.adaptive(minimum: 116, maximum: 170), spacing: 8)]
 
     var body: some View {
         VStack(spacing: 6) {

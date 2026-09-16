@@ -1466,6 +1466,73 @@ MARKET_UNIT_PRICE = {3: 40_000, 4: 250_000}     # drachma; a 5* is never on the 
 MARKET_UNIT_FOUR_STAR_CHANCE = 0.28             # from level 12
 
 
+# ---------------------------------------------------------------------------
+# Athena's Counsel (CounselService.swift). Change a number in both files.
+# ---------------------------------------------------------------------------
+#
+# The road's job is to carry a new player through the first month, so the
+# question this answers is whether it pays enough to matter without paying so
+# much that the campaign stops being the way to earn. Divinity-equivalent, at
+# the rates the bazaar sells at: a pantheon scroll 100, a mystical 75, a divine
+# 600, a light & dark 450, an unknown 5,000 drachma.
+#
+# (tier, [step divinity-equivalents], tier prize divinity-equivalent)
+COUNSEL = {
+    "initiate": (
+        # mystical, 10k drachma, 3 unknown, 15k drachma, 30 energy, 25k drachma,
+        # 30 div, 2 mystical, 50 div, pantheon + 100 div
+        [75, 33, 51, 50, 30, 83, 30, 150, 50, 200], 600),
+    "adept": (
+        # 80 div, 40k drachma, 5 mid essence, 2 mystical, 100 div, 50k drachma,
+        # pantheon, 120 div, 5 unknown, 100 div + 2 high essence
+        [80, 133, 75, 150, 100, 167, 100, 120, 85, 160], 850),
+    "hierophant": (
+        # 200 div, pantheon, 200 div, hero whetstone, 150 div, 250 div, 150 div,
+        # pantheon, 300 div, pantheon + 200 div
+        [200, 100, 200, 90, 150, 250, 150, 100, 300, 300], 1_350),
+}
+COUNSEL_TIER_STEPS = 10
+
+
+def report_counsel():
+    """What Athena's road pays, against what the campaign pays for the same
+    month. A checklist that out-earns the game it is teaching is a checklist
+    the player does instead of playing."""
+    print("\nATHENA'S COUNSEL — the first month, in divinity-equivalent")
+    total = 0
+    for tier, (steps, prize) in COUNSEL.items():
+        assert len(steps) == COUNSEL_TIER_STEPS, tier
+        walk = sum(steps)
+        total += walk + prize
+        print(f"  {tier:<11} {len(steps)} steps {walk:>6,}  + tier prize {prize:>6,}"
+              f"  = {walk + prize:>6,}")
+    print(f"  {'the whole road':<11} {' ' * 9}{total:>6,} divinity-equivalent, "
+          f"about {total / 100:.0f} pantheon summons")
+
+    # Against what a first month actually pays. The first cut of this compared
+    # the road against TWELVE CHAPTERS OF FIRST CLEARS ALONE and reported 125%
+    # — a real finding about the hierophant tier (three Divine Scrolls on a
+    # checklist is a second gacha) but against a denominator that left out most
+    # of a month's income. Both were wrong and both are fixed: the tier was cut,
+    # and the baseline below names everything it counts so it can be argued
+    # with rather than trusted.
+    first_clears = 12 * (220 + 7_350 / 300)      # report_economy, per chapter
+    normal_chests = 12 * 460                      # report_tributes, Normal
+    hard_chests = 6 * 580                         # half the chapters, on Hard
+    login = 30 / 7 * 473                          # the seven-day gift, a month of it
+    campaign_month = first_clears + normal_chests + hard_chests + login
+    print(f"\n  a first month: {first_clears:,.0f} first clears + {normal_chests:,.0f} "
+          f"Normal chests + {hard_chests:,.0f} Hard chests + {login:,.0f} login gifts")
+    print(f"  {'':<14}= {campaign_month:,.0f} divinity-equivalent "
+          f"(the daily missions are NOT in this, so it is a floor)")
+    share = total / campaign_month
+    print(f"  the road is {share * 100:.0f}% of that")
+    verdict = ("a spine, not a substitute — correct" if share < 0.6
+               else "THE ROAD OUT-EARNS THE GAME — cut the step rewards")
+    print(f"  → {verdict}")
+    print("  (every step is measured off the save, so nothing here can be farmed twice)")
+
+
 def report_shop():
     """The Night Market: what a shelf holds, what it costs, and the one thing
     that must not be true — that re-rolling beats playing."""
@@ -1636,8 +1703,9 @@ if __name__ == "__main__":
     elif "--relics" in a: report_relics()
     elif "--tributes" in a: report_tributes()
     elif "--shop" in a: report_shop()
+    elif "--counsel" in a: report_counsel()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids()
-        report_gacha(); report_economy(); report_relics(); report_shop()
+        report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
         print()
