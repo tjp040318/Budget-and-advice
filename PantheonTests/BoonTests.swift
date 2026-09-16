@@ -36,6 +36,18 @@ final class BoonTests: XCTestCase {
         var targetID: UUID
         var attackerMax: Double
         var targetMax: Double
+        var engine: BattleEngine
+    }
+
+    /// The attacker's `index`th hit in `boosted` over the same hit in
+    /// `plain`, as one typed number. Two fights on one seed are identical up
+    /// to the first blow the boon changes, so the ratio THERE is exactly the
+    /// line; after it the serpent's health differs and so may every later
+    /// blow. Hoisted out of the asserts on purpose: an arithmetic autoclosure
+    /// with a literal in it is what the type checker spends seconds on, and
+    /// this file took the test target's compile from six minutes to ten.
+    private func ratio(_ boosted: Fight, over plain: Fight, hit index: Int = 0) -> Double {
+        boosted.hits[index].amount / plain.hits[index].amount
     }
 
     /// A one-on-one on auto from `start()`, the attacker's hits picked out.
@@ -66,7 +78,7 @@ final class BoonTests: XCTestCase {
             }
         }
         return Fight(hits: hits, events: events, attackerID: attackerID, targetID: targetID,
-                     attackerMax: attackerMax, targetMax: targetMax)
+                     attackerMax: attackerMax, targetMax: targetMax, engine: engine)
     }
 
     // MARK: - The cache's three doors
@@ -104,8 +116,10 @@ final class BoonTests: XCTestCase {
         XCTAssertEqual(boon.kind, doors[1])
         XCTAssertEqual(boon.grade, 6)
         let span = BoonService.rollSpan(boon.kind, grade: 6)
-        XCTAssertGreaterThanOrEqual(boon.magnitude, span.lowerBound - 1e-9)
-        XCTAssertLessThanOrEqual(boon.magnitude, span.upperBound + 1e-9)
+        let floor: Double = span.lowerBound - 1e-9
+        let ceiling: Double = span.upperBound + 1e-9
+        XCTAssertGreaterThanOrEqual(boon.magnitude, floor)
+        XCTAssertLessThanOrEqual(boon.magnitude, ceiling)
         XCTAssertEqual(boon.pushes, 0)
         XCTAssertEqual(player.boonCaches?.count, 0)
         XCTAssertEqual(player.boons?.count, 1)
@@ -122,9 +136,16 @@ final class BoonTests: XCTestCase {
         XCTAssertEqual(BoonService.base(kind, grade: 6), BoonFamily.giantSlayer.base, accuracy: 1e-9)
         XCTAssertLessThan(BoonService.base(kind, grade: 5), BoonService.base(kind, grade: 6))
         XCTAssertLessThan(BoonService.base(kind, grade: 4), BoonService.base(kind, grade: 5))
+        // A line, not a second character: nothing reaches the doubling a
+        // leader skill's ATK% can. The ceiling is set by Last Stand, whose
+        // +70% counts only under half health and measured 8% of a fight
+        // (`balance.py --boons`); everything unconditional sits under 0.5.
         for family in BoonFamily.allCases {
             XCTAssertGreaterThan(family.base, 0, family.rawValue)
-            XCTAssertLessThan(family.base, 0.5, "\(family.rawValue): a line, not a second character")
+            XCTAssertLessThan(family.base, 0.75, "\(family.rawValue): a line, not a second character")
+            if family != .lastStand {
+                XCTAssertLessThan(family.base, 0.5, "\(family.rawValue): only Last Stand's half-health line exceeds half")
+            }
         }
         // The words print the number the engine uses.
         XCTAssertEqual(BoonKind(.bane, element: .tide).line(0.183), "+18.3% damage against Tide")
@@ -158,11 +179,14 @@ final class BoonTests: XCTestCase {
         let offers = BoonService.pushCandidates(for: pushed)
         XCTAssertEqual(offers.count, 2)
         XCTAssertEqual(offers, BoonService.pushCandidates(for: pushed), "the same pair on every look")
-        let step = BoonService.base(boon.kind, grade: 6) * BoonService.pushStep
+        let step: Double = BoonService.base(boon.kind, grade: 6) * BoonService.pushStep
+        let smallest: Double = step * BoonService.pushRollRange.lowerBound - 1e-9
+        let largest: Double = step * BoonService.pushRollRange.upperBound + 1e-9
         for offer in offers {
-            XCTAssertGreaterThanOrEqual(offer.bump, step * BoonService.pushRollRange.lowerBound - 1e-9)
-            XCTAssertLessThanOrEqual(offer.bump, step * BoonService.pushRollRange.upperBound + 1e-9)
-            XCTAssertEqual(offer.after, pushed.magnitude + offer.bump, accuracy: 1e-9)
+            XCTAssertGreaterThanOrEqual(offer.bump, smallest)
+            XCTAssertLessThanOrEqual(offer.bump, largest)
+            let after: Double = pushed.magnitude + offer.bump
+            XCTAssertEqual(offer.after, after, accuracy: 1e-9)
         }
         XCTAssertEqual(BoonService.pushError(pushed, player: player), .choiceWaiting, "a second push waits on the first")
 
@@ -267,26 +291,34 @@ final class BoonTests: XCTestCase {
         let ember = fight(fighter("anubis_umbra", level: 50, stars: 6, boon: boon(.bane, .ember)), fighter("apep", level: 40, stars: 5))
         let tide = fight(fighter("anubis_umbra", level: 50, stars: 6, boon: boon(.bane, .tide)), fighter("apep", level: 40, stars: 5))
         XCTAssertFalse(plain.hits.isEmpty)
-        XCTAssertEqual(ember.hits[0].amount / plain.hits[0].amount, 1 + BoonFamily.bane.base, accuracy: 1e-6, "the serpent is ember")
-        XCTAssertEqual(tide.hits[0].amount / plain.hits[0].amount, 1, accuracy: 1e-6, "and not tide")
+        let bane: Double = 1 + BoonFamily.bane.base
+        XCTAssertEqual(ratio(ember, over: plain), bane, accuracy: 1e-6, "the serpent is ember")
+        XCTAssertEqual(ratio(tide, over: plain), 1.0, accuracy: 1e-6, "and not tide")
     }
 
     func testGiantSlayerMultipliesDamageAgainstABossOnly() {
         let plainBoss = fight(fighter("anubis_umbra", level: 50, stars: 6), fighter("apep", level: 40, stars: 5))
         let slayerBoss = fight(fighter("anubis_umbra", level: 50, stars: 6, boon: boon(.giantSlayer)), fighter("apep", level: 40, stars: 5))
-        XCTAssertEqual(slayerBoss.hits[0].amount / plainBoss.hits[0].amount, 1 + BoonFamily.giantSlayer.base, accuracy: 1e-6)
+        let slayer: Double = 1 + BoonFamily.giantSlayer.base
+        XCTAssertEqual(ratio(slayerBoss, over: plainBoss), slayer, accuracy: 1e-6)
         let plainGod = fight(fighter("anubis_umbra", level: 50, stars: 6), fighter("sekhmet_ember", level: 40, stars: 5))
         let slayerGod = fight(fighter("anubis_umbra", level: 50, stars: 6, boon: boon(.giantSlayer)), fighter("sekhmet_ember", level: 40, stars: 5))
-        XCTAssertEqual(slayerGod.hits[0].amount / plainGod.hits[0].amount, 1, accuracy: 1e-6, "a god is not a giant")
+        XCTAssertEqual(ratio(slayerGod, over: plainGod), 1.0, accuracy: 1e-6, "a god is not a giant")
     }
 
     func testFirstBloodLastsUntilTheFirstTurnEnds() {
         let plain = fight(fighter("anubis_umbra", level: 50, stars: 6), fighter("apep", level: 40, stars: 5))
         let first = fight(fighter("anubis_umbra", level: 50, stars: 6, boon: boon(.firstBlood)), fighter("apep", level: 40, stars: 5))
-        XCTAssertEqual(first.hits[0].amount / plain.hits[0].amount, 1 + BoonFamily.firstBlood.base, accuracy: 1e-6)
-        let ratios = zip(first.hits, plain.hits).map { $0.amount / $1.amount }
+        let firstBlood: Double = 1 + BoonFamily.firstBlood.base
+        XCTAssertEqual(ratio(first, over: plain), firstBlood, accuracy: 1e-6)
+        // The two fights part after that blow — the serpent's health differs,
+        // and a blow that grows with the health missing grows with it — so a
+        // later ratio is neither the line nor bounded by it (run 161 read
+        // 1.34 off one and failed on it). What does hold: the flag flips
+        // when the first turn ends, and a later blow lands with no boost.
+        XCTAssertTrue(first.engine.team(.player).first?.hasActed ?? false, "the first turn has ended")
+        let ratios: [Double] = zip(first.hits, plain.hits).map { $0.amount / $1.amount }
         XCTAssertTrue(ratios.dropFirst().contains { abs($0 - 1) < 1e-6 }, "a later turn's hit is unboosted")
-        XCTAssertFalse(ratios.contains { $0 > 1 + BoonFamily.firstBlood.base + 1e-6 })
     }
 
     func testExecutionerMultipliesDamageAgainstATargetUnderTheLine() throws {
@@ -296,8 +328,9 @@ final class BoonTests: XCTestCase {
         let index = try XCTUnwrap(plain.hits.firstIndex(where: {
             $0.targetHealthBefore / plain.targetMax < line && $0.targetHealthBefore > $0.amount * 1.5
         }), "the serpent should be brought under the line by a hit that does not kill it")
-        XCTAssertEqual(executioner.hits[index].amount / plain.hits[index].amount, 1 + BoonFamily.executioner.base, accuracy: 1e-6)
-        XCTAssertEqual(executioner.hits[0].amount / plain.hits[0].amount, 1, accuracy: 1e-6, "nothing at full health")
+        let executed: Double = 1 + BoonFamily.executioner.base
+        XCTAssertEqual(ratio(executioner, over: plain, hit: index), executed, accuracy: 1e-6)
+        XCTAssertEqual(ratio(executioner, over: plain), 1.0, accuracy: 1e-6, "nothing at full health")
     }
 
     func testLastStandMultipliesDamageWhileTheAttackerIsUnderTheLine() throws {
@@ -308,16 +341,18 @@ final class BoonTests: XCTestCase {
         let index = try XCTUnwrap(plain.hits.firstIndex(where: {
             $0.attackerHealthBefore / plain.attackerMax < line && $0.targetHealthBefore > $0.amount * 1.5
         }), "the attacker should be worn under the line while the serpent still stands")
-        XCTAssertEqual(stand.hits[index].amount / plain.hits[index].amount, 1 + BoonFamily.lastStand.base, accuracy: 1e-6)
-        XCTAssertEqual(stand.hits[0].amount / plain.hits[0].amount, 1, accuracy: 1e-6, "nothing at full health")
+        let standing: Double = 1 + BoonFamily.lastStand.base
+        XCTAssertEqual(ratio(stand, over: plain, hit: index), standing, accuracy: 1e-6)
+        XCTAssertEqual(ratio(stand, over: plain), 1.0, accuracy: 1e-6, "nothing at full health")
     }
 
     func testAWardOnTheDefenderTakesLessFromItsColourOnly() {
         let plain = fight(fighter("anubis_umbra", level: 50, stars: 6), fighter("apep", level: 40, stars: 5))
         let warded = fight(fighter("anubis_umbra", level: 50, stars: 6), fighter("apep", level: 40, stars: 5, boon: boon(.ward, .umbra)))
         let wrongColour = fight(fighter("anubis_umbra", level: 50, stars: 6), fighter("apep", level: 40, stars: 5, boon: boon(.ward, .ember)))
-        XCTAssertEqual(warded.hits[0].amount / plain.hits[0].amount, 1 - BoonFamily.ward.base, accuracy: 1e-6)
-        XCTAssertEqual(wrongColour.hits[0].amount / plain.hits[0].amount, 1, accuracy: 1e-6)
+        let warding: Double = 1 - BoonFamily.ward.base
+        XCTAssertEqual(ratio(warded, over: plain), warding, accuracy: 1e-6)
+        XCTAssertEqual(ratio(wrongColour, over: plain), 1.0, accuracy: 1e-6)
     }
 
     func testSwiftFootedFillsTheBarBeforeTheFirstTurn() throws {
@@ -364,9 +399,11 @@ final class BoonTests: XCTestCase {
         XCTAssertTrue(selfHeals(plain).isEmpty, "the lioness has no heal of her own")
         let heals = selfHeals(unfading)
         XCTAssertFalse(heals.isEmpty, "worn under half, she heals")
+        let most: Double = unfading.attackerMax * BoonFamily.unfading.base + 1e-6
         for heal in heals {
-            XCTAssertLessThan(heal.before / unfading.attackerMax, BoonFamily.unfadingBelow)
-            XCTAssertLessThanOrEqual(heal.amount, unfading.attackerMax * BoonFamily.unfading.base + 1e-6)
+            let fraction: Double = heal.before / unfading.attackerMax
+            XCTAssertLessThan(fraction, BoonFamily.unfadingBelow)
+            XCTAssertLessThanOrEqual(heal.amount, most)
             XCTAssertGreaterThan(heal.amount, 0)
         }
     }
@@ -396,7 +433,8 @@ final class BoonTests: XCTestCase {
         XCTAssertFalse(heals.isEmpty, "she recovers once she has something to recover")
         for heal in heals {
             XCTAssertGreaterThan(heal.healed, 0)
-            XCTAssertLessThanOrEqual(heal.healed, heal.dealt * BoonFamily.hydrasBlood.base + 1e-6, "never more than the share of what the skill dealt")
+            let share: Double = heal.dealt * BoonFamily.hydrasBlood.base + 1e-6
+            XCTAssertLessThanOrEqual(heal.healed, share, "never more than the share of what the skill dealt")
         }
     }
 

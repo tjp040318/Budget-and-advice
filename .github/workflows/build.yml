@@ -32,7 +32,10 @@ concurrency:
 jobs:
   simulator:
     runs-on: macos-15
-    timeout-minutes: 40
+    # The build is ~2 min, the test target ~6–10 (its compile, not its
+    # tests, which run in twenty seconds), the tour ~25–28: run 161 sat at
+    # 38–41 against a limit of 40.
+    timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
         with:

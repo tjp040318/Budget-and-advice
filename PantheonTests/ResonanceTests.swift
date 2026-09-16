@@ -120,12 +120,16 @@ final class ResonanceTests: XCTestCase {
         XCTAssertTrue(wave.activeResonances(.opponent).isEmpty, "a campaign wave never resonates")
         XCTAssertEqual(arena.activeResonances(.opponent).first?.kind, .olympianHubris, "an arena's defending team does")
 
+        // The differences are hoisted into typed lets: arithmetic inside an
+        // assert's autoclosure is what the type checker spends seconds on.
         for (mine, theirs) in zip(lit.team(.player), wave.team(.opponent)) {
-            XCTAssertEqual(mine.baseStats.critDamage - theirs.baseStats.critDamage, 0.20, accuracy: 1e-9)
+            let lift: Double = mine.baseStats.critDamage - theirs.baseStats.critDamage
+            XCTAssertEqual(lift, 0.20, accuracy: 1e-9)
             XCTAssertEqual(mine.baseStats.atk, theirs.baseStats.atk, accuracy: 1e-6, "Hubris touches crit damage and nothing else")
         }
         for (mine, theirs) in zip(arena.team(.opponent), wave.team(.opponent)) {
-            XCTAssertEqual(mine.baseStats.critDamage - theirs.baseStats.critDamage, 0.20, accuracy: 1e-9)
+            let lift: Double = mine.baseStats.critDamage - theirs.baseStats.critDamage
+            XCTAssertEqual(lift, 0.20, accuracy: 1e-9)
         }
 
         // Rank I is the smaller number, on the pantheon's own alone.
@@ -147,9 +151,14 @@ final class ResonanceTests: XCTestCase {
         let wave = BattleEngine(playerTeam: other, opponentTeam: four, mode: .campaign, seed: 2)
         XCTAssertEqual(lit.activeResonances(.player).map(\.kind), [.concord])
         for (mine, theirs, resolved) in zip3(lit.team(.player), wave.team(.opponent), four) {
-            XCTAssertEqual(mine.baseStats.atk - theirs.baseStats.atk, resolved.stats.atk * 0.06, accuracy: 1e-6)
-            XCTAssertEqual(mine.baseStats.hp - theirs.baseStats.hp, resolved.stats.hp * 0.06, accuracy: 1e-6)
-            XCTAssertEqual(mine.baseStats.accuracy - theirs.baseStats.accuracy, 0.05, accuracy: 1e-9)
+            let atkLift: Double = mine.baseStats.atk - theirs.baseStats.atk
+            let atkDue: Double = resolved.stats.atk * 0.06
+            let hpLift: Double = mine.baseStats.hp - theirs.baseStats.hp
+            let hpDue: Double = resolved.stats.hp * 0.06
+            let accuracyLift: Double = mine.baseStats.accuracy - theirs.baseStats.accuracy
+            XCTAssertEqual(atkLift, atkDue, accuracy: 1e-6)
+            XCTAssertEqual(hpLift, hpDue, accuracy: 1e-6)
+            XCTAssertEqual(accuracyLift, 0.05, accuracy: 1e-9)
         }
     }
 
@@ -183,11 +192,12 @@ final class ResonanceTests: XCTestCase {
         }
         let plain = hits(mode: .campaign)
         let judged = hits(mode: .arenaOffense)
-        let pairs = Array(zip(judged, plain))
-        let first = try XCTUnwrap(pairs.firstIndex(where: { abs($0.0 / $0.1 - 1) > 1e-9 }), "a burn should land and be judged")
-        XCTAssertEqual(judged[first] / plain[first], 1 + ResonanceService.weighingDamage(rank: .two), accuracy: 1e-6)
+        let ratios: [Double] = zip(judged, plain).map { $0 / $1 }
+        let first = try XCTUnwrap(ratios.firstIndex(where: { abs($0 - 1) > 1e-9 }), "a burn should land and be judged")
+        let line: Double = 1 + ResonanceService.weighingDamage(rank: .two)
+        XCTAssertEqual(ratios[first], line, accuracy: 1e-6)
         for index in 0..<first {
-            XCTAssertEqual(judged[index] / plain[index], 1, accuracy: 1e-9, "unjudged blows are the same blows")
+            XCTAssertEqual(ratios[index], 1.0, accuracy: 1e-9, "unjudged blows are the same blows")
         }
     }
 
@@ -253,9 +263,10 @@ final class ResonanceTests: XCTestCase {
             if case .defeated = $0 { return true }
             return false
         }))
+        let most: Double = ResonanceService.hubrisBar + 1e-9
         let fed = events[kill...].prefix(8).contains {
             if case .attackBarChanged(let target, let delta, _) = $0 {
-                return greekIDs.contains(target) && delta > 0 && delta <= ResonanceService.hubrisBar + 1e-9
+                return greekIDs.contains(target) && delta > 0 && delta <= most
             }
             return false
         }

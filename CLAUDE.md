@@ -94,6 +94,14 @@ should say the INTENT beside it (the Hall's floor is now asserted to be *below*
 `labyrinthGrade(level: 10)`, not merely equal to 5), so the next change to
 either number fails loudly instead of drifting.
 
+**And keep arithmetic out of an assert's parentheses.** `XCTAssertEqual(a.x
+/ b.x, 1 + Family.base, accuracy: 1e-6)` is an autoclosure the type checker
+solves with every numeric overload in play, seconds each; forty of them in
+`BoonTests` and `ResonanceTests` took the test target's compile from six
+minutes to ten on 2026-09-16 and put run 161 over the job's 40-minute limit
+(now 55). Hoist into typed lets — `let lift: Double = …` — and assert the
+names. The tests themselves run in twenty seconds.
+
 The 3D tools need packages that are not preinstalled. PyPI is reachable, so at
 the start of a session that will touch models:
 
