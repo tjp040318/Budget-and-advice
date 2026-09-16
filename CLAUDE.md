@@ -63,7 +63,14 @@ has no compiler here, so the checker reads it: a switch must handle every
 case of the enum its subject is declared as, and `: SomeEnum = .case` must
 name a real one (`var element: Element = .light` cost a CI run on
 2026-09-15 — the elements are `.ember`, `.tide`, `.gale`, `.radiance`,
-`.umbra`). Every rule in the checker was
+`.umbra`). Two more rules came out of 2026-09-16's red build: a call must
+fill every `init` parameter that has no default, counting trailing
+closures as well as parenthesised arguments (`GameScreen { ... }` filled
+one of three — every screen writes it `GameScreen("Title", subtitle:,
+dismiss:) { bar } content: { ... }`), and a lowerCamelCase name the whole
+tree spells exactly ONCE and reads as a value is a name nothing declares
+(`unseenIntroChapter`, left behind when the property it read was deleted
+with the code around it). Every rule in the checker was
 proven by reintroducing a real bug and watching it fail.
 
 If a tuning constant changes in Swift, change it in `tools/balance.py` too. They

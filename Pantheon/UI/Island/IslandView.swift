@@ -25,12 +25,6 @@ struct IslandView: View {
     /// gate and the campaign opening behind it.
     @State private var pendingIntro: Chapter?
 
-    /// The guided opening's pointer: a fixed box, so the plate can be placed
-    /// against the thing it points at without measuring the text first. A
-    /// wrapped second line would otherwise push the caret off the building.
-    static let guideWidth: CGFloat = 240
-    static let guidePlate: CGFloat = 48
-
     /// Where the team stands: open sand below the circle and the beach band
     /// in front of it, measured off the painting like the landmarks' anchors.
     /// Nothing goes below y 0.75. The painting is filled into the frame, so on
@@ -450,31 +444,34 @@ struct IslandView: View {
         onOpen(landmark.destination)
     }
 
+    /// The chapter whose intro card has not been shown yet, or nil.
+    private var unseenIntroChapter: Chapter? {
+        let chapter = CampaignView.currentChapter(for: store.player)
+        guard !chapter.intro.isEmpty, !store.hasSeenChapterIntro(chapter.id) else { return nil }
+        return chapter
+    }
 }
 
-// MARK: - The guided opening
+// MARK: - The first hour, as four tests
 
-/// The first hour, as four things to do in order: summon somebody, take them
-/// through the gate, put a relic on them, feed them.
+/// The four things the opening asks for — summon somebody, take them through
+/// the gate, put a relic on them, feed them — each as a question the SAVE can
+/// answer.
 ///
-/// There is no state machine and nothing to advance. `current(for:)` reads the
-/// save and answers what the player has not done yet, because a counter that
-/// has to be stepped from every screen in the game goes wrong the first time a
-/// call site forgets — and because a save made before any of this existed then
-/// lands on the right step instead of starting a veteran at the beginning.
-/// What `Player.firstHourStep` is for is the record and the ending: the island
-/// writes the step it is showing, and once the field holds `finished` the guide
-/// is over for good. That is what Skip writes.
+/// This used to be the guide itself, with a pointer of its own drawn over the
+/// island. Athena took the pointing over (`LessonBook`, `GuideOverlay`), and
+/// what was worth keeping is these four tests: `LessonBook.opening`'s steps
+/// call `isDone(for:)` and nothing else. The reason they are read off what the
+/// player owns and has cleared, rather than a flag written by the screen that
+/// did it, is that a counter stepped from every screen in the game goes wrong
+/// the first time a call site forgets — and that a save made before any of
+/// this existed lands on the right step instead of restarting a veteran at
+/// the beginning.
 enum FirstHourStep: String, CaseIterable, Sendable {
     case summon
     case fight
     case equip
     case powerUp
-
-    /// Written into `Player.firstHourStep` when the guide is skipped or has
-    /// been seen out. A sentinel rather than a fifth case, because it is not a
-    /// step and nothing should be able to point at it.
-    static let finished = "done"
 
     /// Whether the save says this has been done. Read off what the player
     /// actually owns and has cleared, never off a flag written by the screen
@@ -503,13 +500,6 @@ enum FirstHourStep: String, CaseIterable, Sendable {
             return (player.lifetimeCounters?["power_ups"] ?? 0) > 0
                 || player.units.contains { $0.level > 1 }
         }
-    }
-
-    /// The step the player is on, or nil when there is nothing left to point
-    /// at. The first one not done, so a relic that drops after the guide has
-    /// moved on brings the equip step back rather than losing it.
-    static func current(for player: Player) -> FirstHourStep? {
-        allCases.first { !$0.isDone(for: player) }
     }
 }
 

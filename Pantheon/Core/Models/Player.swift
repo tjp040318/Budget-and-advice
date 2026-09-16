@@ -95,9 +95,9 @@ struct Player: Codable, Equatable, Sendable {
     /// Whetstones and gems by `RelicStone.id` ("whetstone_hero"). Optional
     /// for the reason the fields above are.
     var relicStones: [String: Int]? = nil
-    /// How far the guided opening got: a `FirstHourStep` raw value, or
-    /// `FirstHourStep.finished` once it has been skipped or seen out. Nil means
-    /// nothing has ended it, so the step is worked out from the save itself.
+    /// RETIRED (2026-09-16), and kept only because saves carry it: how far
+    /// the island's own guided opening got before Athena replaced it. Nothing
+    /// writes or reads it now — `lessonsRead` below is the record.
     var firstHourStep: String? = nil
     /// Chapter ids whose intro card has been shown, so it is shown once.
     var seenChapterIntros: [String]? = nil

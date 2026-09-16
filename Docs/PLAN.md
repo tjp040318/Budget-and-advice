@@ -2977,3 +2977,34 @@ foreign read and is silent on a memberwise initialiser.
 Tour steps 30 (`guide`, her plate over the island) and 31 (`lessons`) are
 in the CI job. Still to come: the remaining pop-ins, the Counsel
 checklist on `QuestService`, and the first battle that cannot be lost.
+
+### The build it failed on, and the two rules that came out of it (2026-09-16)
+
+The first push of all this (83d010f) went red, and both errors were the
+kind this environment cannot see without a compiler:
+
+1. `GameScreen { … }` — the screen takes a title, a `bar:` builder and a
+   `content:` builder, and one bare trailing closure filled exactly one of
+   them. Every other screen in the game writes it
+   `GameScreen("More", subtitle: …, dismiss: …) { bar } content: { … }`;
+   this one did not, and `swiftcheck`'s memberwise-init check could not
+   see it, because a type with an explicit `init` is skipped there — which
+   is every type in this project that takes a view builder.
+2. `unseenIntroChapter` — the property was deleted along with the island's
+   old guide and the one line that READ it stayed behind.
+
+Both are now rules. **`check_required_arguments`** reads a single-init
+type's explicit signature, counts how many parameters have no default,
+and counts what a call actually supplies — parenthesised arguments plus
+trailing closures, labelled or not. It is deliberately conservative: a
+type with two inits is dropped, a type named in a return or annotation
+position (`-> StatusSpec {`, `var x: StatModifier {`) is not a call, and
+anything brace-shaped counts as supplied, so it under-reports rather than
+cries wolf. **`check_lonely_identifiers`** flags a lowerCamelCase name
+that the whole tree spells exactly once and reads as a value: a name a
+type owns is written at least twice, once to declare it and once to read
+it. Both were proven by putting the real bug back and watching them fire,
+and both are silent on the tree as it stands. `strip_noise` grew a
+`mask_strings` mode for the first of them — it deletes string literals by
+default, which turns `LessonBeat("a sentence")` into a call with no
+arguments at all.

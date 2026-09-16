@@ -49,11 +49,22 @@ ROOTS = ["Pantheon", "PantheonTests"]
 # Lexing helpers
 # ---------------------------------------------------------------------------
 
-def strip_noise(src):
-    """Remove comments and string literals so braces inside them do not count."""
+def strip_noise(src, mask_strings=False):
+    """Remove comments and string literals so braces inside them do not count.
+
+    `mask_strings` keeps a literal's PLACE instead of deleting it: every
+    character of it becomes an underscore, newlines excepted. Counting a call's
+    arguments needs that — `LessonBeat("a sentence")` collapses to
+    `LessonBeat()` under the default and reads as no arguments at all.
+    """
     out, i, n = [], 0, len(src)
     in_s = in_ml = in_lc = False
     bc = 0
+
+    def blank(chunk):
+        if mask_strings:
+            out.append("".join("\n" if ch == "\n" else "_" for ch in chunk))
+
     while i < n:
         c, nx = src[i], src[i+1] if i+1 < n else ""
         if in_lc:
@@ -64,14 +75,14 @@ def strip_noise(src):
             if c == "*" and nx == "/": bc -= 1; i += 2; continue
             i += 1; continue
         if in_ml:
-            if src[i:i+3] == '"""': in_ml = False; i += 3; continue
-            i += 1; continue
+            if src[i:i+3] == '"""': in_ml = False; blank(src[i:i+3]); i += 3; continue
+            blank(c); i += 1; continue
         if in_s:
-            if c == "\\": i += 2; continue
+            if c == "\\": blank(src[i:i+2]); i += 2; continue
             if c == '"': in_s = False
-            i += 1; continue
-        if src[i:i+3] == '"""': in_ml = True; i += 3; continue
-        if c == '"': in_s = True; i += 1; continue
+            blank(c); i += 1; continue
+        if src[i:i+3] == '"""': in_ml = True; blank(src[i:i+3]); i += 3; continue
+        if c == '"': in_s = True; blank(c); i += 1; continue
         if c == "/" and nx == "/": in_lc = True; i += 2; continue
         if c == "/" and nx == "*": bc = 1; i += 2; continue
         out.append(c); i += 1
@@ -1141,6 +1152,175 @@ def check_extension_stored_properties(files, errors):
             i = j
 
 
+# ---------------------------------------------------------------------------
+# Required arguments: a call that leaves a parameter with no default unfilled
+# ---------------------------------------------------------------------------
+#
+# `GameScreen { ... }` cost a CI run on 2026-09-16: the screen takes a title,
+# a `bar:` builder and a `content:` builder, and one bare trailing closure
+# filled exactly one of them. `check_calls` above could not see it — it only
+# reads MEMBERWISE inits, and a type with an explicit init is skipped there,
+# which is every type in this project that takes a view builder. So this reads
+# the explicit init instead, and counts what a call actually supplies:
+# parenthesised arguments plus trailing closures, labelled or not.
+#
+# It is deliberately conservative. A type with two inits is dropped (which one
+# a call meant is a type-checking question). Anything that looks like a
+# trailing closure is counted as one, so `if Foo(x) { ... }` over-counts and
+# stays quiet rather than crying wolf.
+
+# The type is being NAMED, not called: a return type, an annotation, or an
+# opaque/existential/cast position. Whatever brace follows is a body.
+TYPE_POSITION = re.compile(r"(->|:|\bsome|\bany|\bis|\bas[?!]?|\bwhere|\bthrows)\s*$")
+
+INIT_HEAD = re.compile(
+    r"^\s*(?:public\s+|private\s+|internal\s+|fileprivate\s+|"
+    r"required\s+|convenience\s+)*init\??\s*(?:<[^>]*>)?\s*\(")
+
+
+def _balanced(src, start, opener="(", closer=")"):
+    """Index just past the closer matching the opener at src[start - 1]."""
+    depth, i = 1, start
+    while i < len(src) and depth:
+        if src[i] == opener: depth += 1
+        elif src[i] == closer: depth -= 1
+        i += 1
+    return i if not depth else -1
+
+
+def _has_default(part):
+    """Is there a top-level '=' in this parameter declaration?"""
+    depth = 0
+    for i, ch in enumerate(part):
+        if ch in "([{": depth += 1
+        elif ch in ")]}": depth -= 1
+        elif ch == "=" and depth == 0:
+            before = part[i-1] if i else ""
+            after = part[i+1] if i + 1 < len(part) else ""
+            if before not in "=!<>" and after != "=":
+                return True
+    return False
+
+
+def collect_inits(files):
+    """type name -> number of init parameters with no default, for single-init types."""
+    required = {}
+    twice = set()
+    for path in files:
+        src = strip_noise(open(path).read(), mask_strings=True)
+        stack, offset = [], 0
+        for ln in src.split("\n"):
+            line_start, offset = offset, offset + len(ln) + 1
+            if not ln.strip(): continue
+            indent = len(ln) - len(ln.lstrip())
+            while stack and indent <= stack[-1][1]:
+                stack.pop()
+            m = DECL.match(ln)
+            if m:
+                stack.append((m.group(2), indent))
+                continue
+            if not stack: continue
+            head = INIT_HEAD.match(ln)
+            if not head: continue
+            owner = stack[-1][0]
+            end = _balanced(src, line_start + head.end())
+            if end < 0: continue
+            params = split_top_level(src[line_start + head.end():end - 1])
+            if owner in required: twice.add(owner)
+            required[owner] = sum(1 for p in params if p.strip() and not _has_default(p))
+    for name in twice:
+        required.pop(name, None)
+    return {n: k for n, k in required.items() if k}
+
+
+def check_required_arguments(files, required, errors):
+    for path in files:
+        src = strip_noise(open(path).read(), mask_strings=True)
+        for name, need in required.items():
+            for m in re.finditer(r"\b" + re.escape(name) + r"\s*(\(|\{)", src):
+                # Not the declaration itself, and not `case foo(Bar)`.
+                before = src[max(0, m.start() - 80):m.start()]
+                if re.search(r"\b(struct|class|enum|protocol|extension|case|func)\s+$", before):
+                    continue
+                if before.rstrip().endswith("."): continue
+                # `func f() -> StatusSpec {` and `var x: StatModifier {` name the
+                # type in a RETURN or ANNOTATION position, and the brace that
+                # follows is a body, not a trailing closure. Counting those bodies
+                # as arguments reported six good call sites on 2026-09-16.
+                if m.group(1) == "{" and TYPE_POSITION.search(before):
+                    continue
+                i = m.end()
+                supplied = 0
+                if m.group(1) == "(":
+                    end = _balanced(src, i)
+                    if end < 0: continue
+                    supplied += len(split_top_level(src[i:end - 1]))
+                    i = end
+                else:
+                    i = m.end() - 1          # sit on the brace
+                # Trailing closures, the first unlabelled and the rest named.
+                while True:
+                    j = i
+                    while j < len(src) and src[j] in " \t\n": j += 1
+                    if j < len(src) and src[j] == "{":
+                        end = _balanced(src, j + 1, "{", "}")
+                        if end < 0: break
+                        supplied += 1
+                        i = end
+                        continue
+                    lm = re.match(r"\s*([A-Za-z_][A-Za-z0-9_]*)\s*:\s*\{", src[i:])
+                    if lm:
+                        i = i + lm.end()
+                        end = _balanced(src, i, "{", "}")
+                        if end < 0: break
+                        supplied += 1
+                        i = end
+                        continue
+                    break
+                if supplied < need:
+                    line = src[:m.start()].count("\n") + 1
+                    errors.append(
+                        f"{path}:{line}: {name}(...) supplies {supplied} argument(s); "
+                        f"its init needs {need} with no default")
+
+
+# ---------------------------------------------------------------------------
+# A name the whole tree spells exactly once
+# ---------------------------------------------------------------------------
+#
+# `unseenIntroChapter` cost the same CI run: the property was deleted with the
+# guide it belonged to and the one line that READ it stayed behind, which the
+# compiler reported as "cannot find 'unseenIntroChapter' in scope". A name a
+# type actually owns is written at least twice — once to declare it, once to
+# read it — so a name written exactly once, in a slot where only a value can
+# stand, is a name nothing declares.
+
+# `let x = name`, wherever it stands — a statement, or a later clause of an
+# `if`/`guard` condition list, which is where the 2026-09-16 one stood.
+LONELY_SLOTS = [
+    re.compile(r"\b(?:var|let)\s+[A-Za-z_][A-Za-z0-9_]*\s*(?::\s*[^=\n]+?)?=\s*"
+               r"([a-z][A-Za-z0-9_]{3,})\s*(?=[,){\]]|$)", re.MULTILINE),
+    re.compile(r"^\s*return\s+([a-z][A-Za-z0-9_]{3,})\s*$", re.MULTILINE),
+]
+LONELY_SKIP = {"self", "true", "false", "super", "nil", "some", "none", "result"}
+
+
+def check_lonely_identifiers(files, errors):
+    sources = {path: strip_noise(open(path).read(), mask_strings=True) for path in files}
+    counts = defaultdict(int)
+    for src in sources.values():
+        for word in re.findall(r"\b[A-Za-z_][A-Za-z0-9_]*\b", src):
+            counts[word] += 1
+    for path, src in sources.items():
+        for pattern in LONELY_SLOTS:
+            for m in pattern.finditer(src):
+                name = m.group(1)
+                if name in LONELY_SKIP or counts[name] != 1: continue
+                line = src[:m.start()].count("\n") + 1
+                errors.append(f"{path}:{line}: '{name}' is written once in the whole "
+                              f"tree and read as a value here — nothing declares it")
+
+
 def main():
     files = []
     for r in ROOTS:
@@ -1165,6 +1345,8 @@ def main():
     check_model_members(files, errors)
     check_extension_stored_properties(files, errors)
     check_redeclared_locals(files, errors)
+    check_required_arguments(files, collect_inits(files), errors)
+    check_lonely_identifiers(files, errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 

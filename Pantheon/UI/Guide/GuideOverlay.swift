@@ -237,7 +237,7 @@ struct GuideOverlay: ViewModifier {
         }
         .animation(.easeOut(duration: 0.2), value: talking)
         .onAppear { open(lesson) }
-        .onChange(of: lesson.id) { _ in open(lesson) }
+        .onChange(of: lesson.id) { _, _ in open(lesson) }
     }
 
     /// A lesson whose words have not been read starts talking; one already
@@ -278,49 +278,33 @@ struct LessonsView: View {
     @State private var replaying: Lesson?
 
     var body: some View {
-        GameScreen {
-            VStack(spacing: 0) {
-                header
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 14) {
-                        ForEach(LessonTopic.allCases) { topic in
-                            let lessons = LessonBook.all.filter { $0.topic == topic }
-                            if !lessons.isEmpty {
-                                section(topic, lessons)
-                            }
+        // The screen strip, like every other menu in the game: the title and
+        // the count on the left behind a chevron, and her face at the right of
+        // the bar so it is plain whose words these are before one is opened.
+        GameScreen(
+            "Athena's Counsel",
+            subtitle: "\(read) of \(LessonBook.all.count) lessons given",
+            dismiss: { dismiss() }
+        ) {
+            BundleImage(name: GuideFace.calm.imageName, renderedAt: ScreenChrome.control)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: ScreenChrome.control, height: ScreenChrome.control)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Theme.goldDim.opacity(0.55), lineWidth: 0.5))
+        } content: {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    ForEach(LessonTopic.allCases) { topic in
+                        let lessons = LessonBook.all.filter { $0.topic == topic }
+                        if !lessons.isEmpty {
+                            section(topic, lessons)
                         }
                     }
-                    .padding(16)
                 }
+                .padding(16)
             }
             .overlay { if let replaying { card(replaying) } }
         }
-    }
-
-    private var header: some View {
-        HStack(spacing: 10) {
-            Button { dismiss() } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(Theme.gold)
-            }
-            .buttonStyle(.plain)
-            BundleImage(name: GuideFace.calm.imageName, renderedAt: 34)
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 34, height: 34)
-            VStack(alignment: .leading, spacing: 0) {
-                Text("ATHENA'S COUNSEL")
-                    .font(Theme.title(15))
-                    .foregroundStyle(Theme.gold)
-                Text("\(read) of \(LessonBook.all.count) lessons given")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .background(Theme.surfaceRaised)
     }
 
     private var read: Int {
