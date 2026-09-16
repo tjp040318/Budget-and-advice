@@ -161,6 +161,13 @@ class Fighter:
     acted: bool = False
     is_boss: bool = False
     seq: int = 0
+    # The lineup's resonance, (kind, rank) or None, and the state its hooks
+    # keep: a shield pool (the Legion), Attack Up turns (Valhalla), Recovery
+    # turns and whether the Mandate has given them (the Mandate of Heaven).
+    resonance: object = None
+    shield: float = 0.0
+    atk_up: int = 0
+    regen: int = 0
 
     def __post_init__(self):
         self.seq = next(_SEQ)
@@ -231,6 +238,59 @@ def boon_after_hit(actor, dealt):
     actor.hp += healed
     return healed
 
+# Pantheon resonance — Core/Models/Resonance.swift and
+# Core/Progression/ResonanceService.swift, mirrored. A pair of one pantheon
+# lights rank I, three or more rank II; four different pantheons the Concord.
+# Applied to a mono team here (every member qualifies), which is the fight
+# `--resonance` measures.
+RESONANCE = {  # kind: (pantheon, rank I, rank II, rank II hook)      ResonanceService.bonuses / weighingDamage
+    "weighingOfHearts": ("egyptian", {"dmg": 0.08}, {"dmg": 0.12}, "ka"),           # +N% damage against a debuffed enemy
+    "olympianHubris":   ("greek",    {"critdmg": 0.10}, {"critdmg": 0.20}, "hubris"),
+    "valhalla":         ("norse",    {"atk%": 0.05}, {"atk%": 0.08}, "valhalla"),
+    "theLegion":        ("roman",    {"def%": 0.10}, {"def%": 0.15}, "legion"),
+    "mandateOfHeaven":  ("chinese",  {"hp%": 0.08}, {"hp%": 0.12}, "mandate"),
+    "concord":          (None, {"atk%": 0.06, "hp%": 0.06, "def%": 0.06, "acc": 0.05, "res": 0.05}, None, None),
+}
+RESONANCE_COUNTS = {"pair": 2, "majority": 3, "concord": 4}                 # ResonanceService.pairCount / majorityCount / concordPantheons
+RESONANCE_HOOKS = {"ka": 0.15, "hubris": 0.25, "valhalla_turns": 1,          # kaHeal / hubrisBar / valhallaTurns
+                   "legion": 0.20, "mandate_turns": 3, "below": 0.5}         # legionShield / mandateTurns / lowHealthBelow
+ATTACK_UP_MULT = 1.50    # StatusKind.multiplier(for: .atkPercent) under Attack Up
+RECOVERY_HEAL = 0.15     # BattleEngine.applyTurnStartEffects: Recovery regenerates 15% of max
+
+def resonance_mult(att, dfn):
+    """BattleEngine.resonanceDamageMultiplier, and Attack Up: the Weighing of
+    Hearts against a judged — debuffed — enemy; Valhalla's fury after a fall."""
+    m = 1.0
+    r = att.resonance
+    if r and r[0] == "weighingOfHearts" and (dfn.defbreak > 0 or dfn.burn > 0 or dfn.stun > 0):
+        m *= 1 + RESONANCE["weighingOfHearts"][r[1]]["dmg"]
+    if att.atk_up > 0:
+        m *= ATTACK_UP_MULT
+    return m
+
+def land(t, dmg):
+    """Damage into a fighter, its shield first (BattleEngine.applyDamage).
+    Returns what reached the health."""
+    if t.shield > 0:
+        absorbed = min(t.shield, dmg)
+        t.shield -= absorbed
+        dmg -= absorbed
+    applied = min(max(0.0, t.hp), dmg)
+    t.hp -= dmg
+    return applied
+
+def apply_resonance(team, kind, rank):
+    """A mono team of the kind's pantheon at a rank: the stat bonuses in a
+    leader skill's terms (BattleEngine.buildSide), the hooks armed."""
+    _, one, two, _ = RESONANCE[kind]
+    bonuses = one if rank == 1 else (two or one)
+    for f in team:
+        f.resonance = (kind, rank)
+        f.maxhp *= 1 + bonuses.get("hp%", 0.0); f.hp = f.maxhp
+        f.atk *= 1 + bonuses.get("atk%", 0.0)
+        f.dfn *= 1 + bonuses.get("def%", 0.0)
+        f.critdmg += bonuses.get("critdmg", 0.0)
+
 def resolve_hit(att, dfn, mult, defign, missbonus, rng, sure=False):
     """`sure` is a skill that always crits — "(Crit)" in its name."""
     base = att.atk * mult
@@ -246,6 +306,7 @@ def resolve_hit(att, dfn, mult, defign, missbonus, rng, sure=False):
     elif glancing: base *= GLANCING_MULT
     base *= rng.uniform(*VARIANCE)
     base *= boon_mult(att, dfn)
+    base *= resonance_mult(att, dfn)
     return max(1.0, base)
 
 def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
@@ -259,9 +320,30 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
     for f in team_a: f.side = "a"
     for f in team_b: f.side = "b"
     all_f = team_a + team_b
+    ka_spent, mandate_spent, legion_spent = set(), set(), set()
     def note(key, side, amount):
         if stats is not None and amount:
             stats[key][side] = stats[key].get(side, 0.0) + amount
+    def allies_of(f):
+        return [x for x in (team_a if f.side == "a" else team_b) if x.alive and x is not f]
+    def fell(f):
+        """BattleEngine.resonanceOnFall: Valhalla's fury for the Norse who
+        remain, the Weighing's Ka once a side."""
+        r = f.resonance
+        if not r or r[1] < 2: return
+        if r[0] == "valhalla":
+            for x in allies_of(f): x.atk_up = RESONANCE_HOOKS["valhalla_turns"]
+        if r[0] == "weighingOfHearts" and f.side not in ka_spent:
+            ka_spent.add(f.side)
+            for x in allies_of(f):
+                healed = min(x.maxhp, x.hp + x.maxhp * RESONANCE_HOOKS["ka"]) - x.hp
+                x.hp += healed
+                note("healed", x.side, healed); note("boonHealed", x.side, healed)
+    def end_turn(actor):
+        """The turn ends: First Blood's clock, and Attack Up ticks down the
+        way a status does at the end of its holder's turn."""
+        actor.acted = True
+        if actor.atk_up > 0: actor.atk_up -= 1
     if first_wave:
         boon_battle_start(all_f)
     turns = 0
@@ -286,9 +368,17 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
             note("taken", actor.side, min(max(0.0, actor.hp), actor.maxhp * 0.05))
             actor.hp -= actor.maxhp * 0.05
             actor.burn -= 1
-            if not actor.alive: continue
-        # Unfading: a turn begun under half health opens with a heal —
+            if not actor.alive:
+                fell(actor)
+                continue
+        # Recovery regenerates (the Mandate's, here), then Unfading: a turn
+        # begun under half health opens with a heal —
         # BattleEngine.applyTurnStartEffects, before the stun is checked.
+        if actor.regen > 0:
+            healed = min(actor.maxhp, actor.hp + actor.maxhp * RECOVERY_HEAL) - actor.hp
+            actor.hp += healed
+            actor.regen -= 1
+            note("healed", actor.side, healed); note("boonHealed", actor.side, healed)
         opened = boon_turn_start(actor)
         note("healed", actor.side, opened); note("boonHealed", actor.side, opened)
         # Hard control consumes the turn: BattleEngine skips a stunned, frozen
@@ -296,7 +386,7 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
         # ENDS, which is what First Blood's clock reads.
         if actor.stun > 0:
             actor.stun -= 1
-            actor.acted = True
+            end_turn(actor)
             continue
 
         foes = [f for f in (team_b if actor.side == "a" else team_a) if f.alive]
@@ -314,12 +404,12 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
                 healed = min(f.maxhp, f.hp + f.maxhp * 0.25) - f.hp
                 f.hp += healed
                 note("healed", actor.side, healed)
-            actor.acted = True
+            end_turn(actor)
             continue
 
         dmg_ready = [i for i in ready if actor.bp.skills[i][1] > 0]
         if not dmg_ready:
-            actor.acted = True
+            end_turn(actor)
             continue
         # An AoE is worth its multiplier times the bodies it hits, which is
         # how AIController values it too; without this no ultimate that hits
@@ -334,18 +424,33 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
             for t in targets:
                 if not t.alive: continue
                 dmg = resolve_hit(actor, t, mult, defign, missbonus, rng, sure="(crit)" in name.lower())
-                applied = min(t.hp, dmg)
-                t.hp -= dmg
+                applied = land(t, dmg)
                 dealt += applied
                 note("dealt", actor.side, applied)
                 note("taken", t.side, applied)
                 if "break" in name.lower(): t.defbreak = 2
                 if "burn" in name.lower() and rng.random() < proc(name, "burn", 0.30): t.burn = 2
                 if "stun" in name.lower() and rng.random() < proc(name, "stun", 0.55): t.stun = 1
+                if not t.alive:
+                    fell(t)
+                    # Olympian Hubris: a Greek kill feeds the killer's bar.
+                    r = actor.resonance
+                    if r and r[0] == "olympianHubris" and r[1] >= 2:
+                        actor.atb = min(1.0, actor.atb + RESONANCE_HOOKS["hubris"])
+                elif t.resonance and t.resonance[1] >= 2 and t.hp / t.maxhp < RESONANCE_HOOKS["below"]:
+                    # BattleEngine.resonanceOnLowHealth, once a side each: the
+                    # Mandate's Recovery for the first to fall under half, the
+                    # Legion's shield for the first Roman.
+                    if t.resonance[0] == "mandateOfHeaven" and t.side not in mandate_spent:
+                        mandate_spent.add(t.side)
+                        t.regen = RESONANCE_HOOKS["mandate_turns"]
+                    elif t.resonance[0] == "theLegion" and t.side not in legion_spent:
+                        legion_spent.add(t.side)
+                        t.shield = t.maxhp * RESONANCE_HOOKS["legion"]
         # Hydra's Blood, after the hits; and the turn ends.
         drunk = boon_after_hit(actor, dealt)
         note("healed", actor.side, drunk); note("boonHealed", actor.side, drunk)
-        actor.acted = True
+        end_turn(actor)
     return "draw", turns
 
 # ---------------------------------------------------------------------------
@@ -1368,8 +1473,7 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True, boon=None, stats=None
             name, mult, hits, cd, defign, missbonus, aoe = actor.bp.skills[0]
             for _ in range(hits):
                 dmg = resolve_hit(actor, target, mult * factor, defign, missbonus, rng)
-                note("taken", "a", min(max(0.0, target.hp), dmg))
-                target.hp -= dmg
+                note("taken", "a", land(target, dmg))
             continue
 
         # A player turn. Adds first when the team is playing properly, because
@@ -1405,8 +1509,7 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True, boon=None, stats=None
                 continue
             # What lands on health is what is dealt; the barrier is not the
             # health, so Hydra's Blood recovers nothing off it.
-            applied = min(max(0.0, victim.hp), dmg)
-            victim.hp -= dmg
+            applied = land(victim, dmg)
             dealt += applied
             note("dealt", "a", applied)
         drunk = boon_after_hit(actor, dealt)
@@ -1821,6 +1924,86 @@ def report_boons(trials=24):
     for fam, n in tops.items():
         assert n <= 2, f"{fam} is the best boon on {n} of the five fights: a kind that is best everywhere is Epic Seven's mistake"
     print("  → every kind has a fight it is worth 6-18% on, and none is the best on more than two")
+
+# ---------------------------------------------------------------------------
+# Pantheon resonance, measured the way the boons are: a mono team of the
+# kind's pantheon at rank I and at rank II against the same fight with no
+# resonance, on the same seeds. A damage kind is read off damage dealt per
+# turn, the Legion off damage taken per turn, the Mandate off the share of
+# the damage taken its Recovery gave back. Docs/PLAN.md, *Pantheon resonance*.
+# ---------------------------------------------------------------------------
+
+def resonance_run(team_spec, waves, kind, rank, trials):
+    stats_list, turns_list, wins = [], [], 0
+    for s in range(trials):
+        team = [mk(*t) for t in team_spec]
+        if kind: apply_resonance(team, kind, rank)
+        stats = {"dealt": {}, "taken": {}, "healed": {}, "boonHealed": {}}
+        result, total = "a", 0
+        for w, spec in enumerate(waves):
+            result, t = simulate(team, build_stage(spec), seed=s * 7 + w, stats=stats, first_wave=(w == 0))
+            total += t
+            if result != "a": break
+        if result == "a": wins += 1
+        stats_list.append(stats); turns_list.append(total)
+    return boon_tally(stats_list, turns_list, wins, trials)
+
+def resonance_lift(kind, rank, base, run):
+    """A damage kind off damage dealt per turn; the Legion off damage taken
+    per turn; the Mandate as the health it adds plus the share of the damage
+    taken its Recovery gave back — more health IS taking less, per point."""
+    if kind == "theLegion":
+        return 1 - run["taken"] / base["taken"] if base["taken"] > 0 else 0.0
+    if kind == "mandateOfHeaven":
+        pool = RESONANCE[kind][rank].get("hp%", 0.0)
+        return pool + (run["boonHealed"] / run["taken"] if run["taken"] > 0 else 0.0)
+    return run["dps"] / base["dps"] - 1 if base["dps"] > 0 else 0.0
+
+def resonance_fights():
+    """Two fights of real lineups: four gods through a chapter's boss stage
+    (a kit that debuffs, heals and loses a unit now and then) and the
+    arena's nukers against a four-colour line. A resonance is a bonus the
+    whole lineup carries everywhere, so it is read on the MEAN of the two."""
+    gods = [(SEKHMET, 60, 6, 1.60), (ZEUS, 60, 6, 1.60), (ARES, 60, 6, 1.60), (ANUBIS, 60, 6, 1.60)]
+    arena = next(f for f in boon_fights() if f[0].startswith("Arena"))
+    return [("Olympus 3 boss stage, four gods", "waves", gods, generated_waves(CHAPTERS[3], 10)[0]), arena]
+
+def resonance_table(trials=24):
+    fights = resonance_fights()
+    lifts = {}
+    for label, _, team, spec in fights:
+        base = resonance_run(team, spec, None, 0, trials)
+        for kind in RESONANCE:
+            for rank in (1, 2):
+                if kind == "concord" and rank == 2: continue
+                run = resonance_run(team, spec, kind, rank, trials)
+                lifts[(kind, rank, label)] = resonance_lift(kind, rank, base, run)
+    return [f[0] for f in fights], lifts
+
+def report_resonance(trials=24):
+    print("\nPANTHEON RESONANCE — each kind at rank I and II on two fights, over %d seeded runs each" % trials)
+    print("a pair of one pantheon lights rank I, three or more rank II, four different pantheons the Concord;")
+    print("a damage kind is read off damage dealt per turn, the Legion off damage taken, the Mandate as the")
+    print("health it adds plus the share of the damage taken its Recovery gave back; each on the MEAN of the")
+    print("two fights. rule: rank I 3-8%, rank II 8-16%, the Concord between.\n")
+    labels, lifts = resonance_table(trials)
+    print(f"  {'kind':>18} {'rank':>4}" + "".join(f"{l[:30]:>32}" for l in labels) + f"{'mean':>8}")
+    misses = []
+    for kind in RESONANCE:
+        for rank in (1, 2):
+            if kind == "concord" and rank == 2: continue
+            row = f"  {kind:>18} {'I' if rank == 1 else 'II':>4}"
+            mean = sum(lifts[(kind, rank, l)] for l in labels) / len(labels)
+            for l in labels:
+                row += f"{lifts[(kind, rank, l)] * 100:>31.1f}%"
+            lo, hi = (0.03, 0.16) if kind == "concord" else ((0.03, 0.08) if rank == 1 else (0.08, 0.16))
+            inside = lo - 1e-9 <= mean <= hi + 1e-9
+            verdict = "ok" if inside else ("TOO SMALL" if mean < lo else "TOO BIG")
+            print(row + f"{mean * 100:>7.1f}%  {verdict}")
+            if not inside:
+                misses.append(f"{kind} rank {rank}: lifts {mean*100:.1f}% on the mean, outside {lo*100:.0f}-{hi*100:.0f}%")
+    assert not misses, "; ".join(misses)
+    print("  → every rank lands in its band: a reason to think about the roster, not a wall")
 
 def report_campaign(trials=200):
     print("\nCAMPAIGN — win rate over %d seeded battles" % trials)
@@ -2506,6 +2689,7 @@ if __name__ == "__main__":
     elif "--grades" in a: report_grades()
     elif "--awakening" in a: report_awakening()
     elif "--boons" in a: report_boons()
+    elif "--resonance" in a: report_resonance()
     elif "--relics" in a: report_relics()
     elif "--tributes" in a: report_tributes()
     elif "--shop" in a: report_shop()
@@ -2517,6 +2701,7 @@ if __name__ == "__main__":
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids(); report_grades(); report_awakening(); report_boons()
+        report_resonance()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
         report_sweep(); report_mileage(); report_targeting()
         print()

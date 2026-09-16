@@ -513,21 +513,44 @@ struct StageBriefingView: View {
     }
 
     private var teamPanel: some View {
-        SectionPanel(title: "Your team", accessory: "Power \(teamPower) / \(stage.recommendedPower)") {
-            Button {
-                showTeamPicker = true
-            } label: {
-                HStack(spacing: 6) {
-                    ForEach(team) { unit in
-                        UnitCard(unit: unit, size: 46)
+        // What the lineup lights by who is in it, as chips under the cards.
+        let lit = ResonanceService.active(for: team)
+        return SectionPanel(title: "Your team", accessory: "Power \(teamPower) / \(stage.recommendedPower)") {
+            VStack(alignment: .leading, spacing: 5) {
+                Button {
+                    showTeamPicker = true
+                } label: {
+                    HStack(spacing: 6) {
+                        ForEach(team) { unit in
+                            UnitCard(unit: unit, size: 46)
+                        }
+                        if team.count < 5 {
+                            EmptyTeamSlot(size: 46, label: "Add")
+                        }
+                        Spacer(minLength: 0)
                     }
-                    if team.count < 5 {
-                        EmptyTeamSlot(size: 46, label: "Add")
+                }
+                .buttonStyle(.plain)
+                if !lit.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(lit) { resonance in
+                            HStack(spacing: 3) {
+                                Image(systemName: resonance.kind.glyph)
+                                    .font(.system(size: 8, weight: .black))
+                                Text(resonance.displayName)
+                                    .font(Theme.body(9).weight(.semibold))
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.75)
+                            }
+                            .foregroundStyle(Theme.gold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(Theme.surfaceHigh))
+                        }
+                        Spacer(minLength: 0)
                     }
-                    Spacer(minLength: 0)
                 }
             }
-            .buttonStyle(.plain)
         }
     }
 

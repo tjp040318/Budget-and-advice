@@ -43,7 +43,7 @@ struct TourView: View {
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
-        ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2),
+        ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -341,6 +341,11 @@ struct TourView: View {
             } else {
                 BoonPickerView(openingCache: true)
             }
+        case "resonance":
+            // The team picker on the tour save's campaign team: its two
+            // Egyptians light The Weighing of Hearts I, and the hint names
+            // what one more Greek would light.
+            TeamPickerView(slot: .campaign, maxSize: 5)
         default:
             SettingsView()
         }

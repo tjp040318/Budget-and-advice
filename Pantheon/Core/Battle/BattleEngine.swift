@@ -69,6 +69,15 @@ final class BattleEngine {
     /// and only to tell a break landing on the boss's own turn from one landing
     /// on somebody else's — see `absorbBarrier`.
     private var actingCombatantID: UUID?
+    /// What each lineup lights (`ResonanceService.active`): the player's, and
+    /// the arena's defender's. Empty for every campaign wave, so the tuned
+    /// curves never move for a bonus nobody chose.
+    private var resonances: [BattleSide: [ActiveResonance]] = [:]
+    /// The Weighing of Hearts leaves its Ka once a side; the Mandate of
+    /// Heaven gives its Recovery and the Legion its shield once a side.
+    private var kaSpent: Set<BattleSide> = []
+    private var mandateSpent: Set<BattleSide> = []
+    private var legionSpent: Set<BattleSide> = []
 
     // MARK: - Setup
 
@@ -88,8 +97,19 @@ final class BattleEngine {
         self.pendingWaves = laterWaves
         self.waveCount = 1 + laterWaves.count
 
-        let playerCombatants = BattleEngine.buildSide(playerTeam, side: .player, mode: mode)
-        let opponentCombatants = BattleEngine.buildSide(opponentTeam, side: .opponent, mode: mode)
+        // Resonance reads the PLAYER's lineup and the arena's defending team
+        // — both teams a summoner built — and never a campaign wave, which
+        // is one realm's mobs and would light its rank II on every stage
+        // for nothing a player chose (`Docs/PLAN.md`, *Pantheon resonance*).
+        let playerResonances = ResonanceService.active(for: playerTeam)
+        let opponentResonances = mode == .arenaOffense ? ResonanceService.active(for: opponentTeam) : []
+        self.resonances = [.player: playerResonances, .opponent: opponentResonances]
+        let playerCombatants = BattleEngine.buildSide(
+            playerTeam, side: .player, mode: mode, resonances: playerResonances
+        )
+        let opponentCombatants = BattleEngine.buildSide(
+            opponentTeam, side: .opponent, mode: mode, resonances: opponentResonances
+        )
         self.combatants = playerCombatants + opponentCombatants
 
         // The content keys a profile to the boss's place in the opponent team,
@@ -106,7 +126,8 @@ final class BattleEngine {
     private static func buildSide(
         _ team: [ResolvedUnit],
         side: BattleSide,
-        mode: BattleMode
+        mode: BattleMode,
+        resonances: [ActiveResonance] = []
     ) -> [Combatant] {
         guard let leader = team.first else { return [] }
         let leaderSkill = leader.blueprint.leaderSkill
@@ -123,6 +144,13 @@ final class BattleEngine {
             if applies, let leaderSkill, leaderSkill.applies(to: resolved.blueprint) {
                 stats = BattleEngine.apply(leaderSkill, to: stats, base: resolved.stats)
             }
+            // A lit resonance is a leader skill the lineup itself casts: the
+            // same terms and the same arithmetic, on top of the leader's.
+            for resonance in resonances where ResonanceService.applies(resonance, to: resolved.blueprint) {
+                for bonus in ResonanceService.bonuses(resonance.kind, rank: resonance.rank) {
+                    stats = BattleEngine.apply(stat: bonus.stat, amount: bonus.amount, to: stats, base: resolved.stats)
+                }
+            }
             return Combatant(
                 resolved: resolved,
                 side: side,
@@ -134,18 +162,119 @@ final class BattleEngine {
     }
 
     private static func apply(_ leader: LeaderSkill, to stats: Stats, base: Stats) -> Stats {
+        apply(stat: leader.stat, amount: leader.amount, to: stats, base: base)
+    }
+
+    /// One bonus in a leader skill's terms: a percent stat as a fraction of
+    /// the BASE, a rate stat flat. A resonance's bonuses come through here too.
+    private static func apply(stat: StatKind, amount: Double, to stats: Stats, base: Stats) -> Stats {
         var result = stats
-        switch leader.stat {
-        case .hpFlat, .hpPercent: result.hp += base.hp * leader.amount
-        case .atkFlat, .atkPercent: result.atk += base.atk * leader.amount
-        case .defFlat, .defPercent: result.def += base.def * leader.amount
-        case .spd: result.spd += base.spd * leader.amount
-        case .critRate: result.critRate += leader.amount
-        case .critDamage: result.critDamage += leader.amount
-        case .accuracy: result.accuracy += leader.amount
-        case .resistance: result.resistance += leader.amount
+        switch stat {
+        case .hpFlat, .hpPercent: result.hp += base.hp * amount
+        case .atkFlat, .atkPercent: result.atk += base.atk * amount
+        case .defFlat, .defPercent: result.def += base.def * amount
+        case .spd: result.spd += base.spd * amount
+        case .critRate: result.critRate += amount
+        case .critDamage: result.critDamage += amount
+        case .accuracy: result.accuracy += amount
+        case .resistance: result.resistance += amount
         }
         return result.clamped()
+    }
+
+    // MARK: - Pantheon resonance
+
+    /// What a side's lineup lit, for the HUD's chips.
+    func activeResonances(_ side: BattleSide) -> [ActiveResonance] { resonances[side] ?? [] }
+
+    private func resonance(_ kind: ResonanceKind, on side: BattleSide, atLeast rank: ResonanceRank) -> ActiveResonance? {
+        resonances[side]?.first { $0.kind == kind && $0.rank >= rank }
+    }
+
+    /// The Weighing of Hearts at the damage roll: an Egyptian's blow against
+    /// a judged — debuffed — enemy. 1 for everything else.
+    private func resonanceDamageMultiplier(attackerIndex: Int, targetIndex: Int) -> Double {
+        let attacker = combatants[attackerIndex]
+        guard attacker.pantheon == .egyptian, combatants[targetIndex].debuffCount > 0,
+              let weighing = resonance(.weighingOfHearts, on: attacker.side, atLeast: .one) else { return 1 }
+        return 1 + ResonanceService.weighingDamage(rank: weighing.rank)
+    }
+
+    /// The Mandate of Heaven and the Legion, once a side each: the first
+    /// Jade Court ally to fall under half health is given Recovery, the
+    /// first Roman a shield — the wall closes over the wounded.
+    private func resonanceOnLowHealth(index: Int) -> [BattleEvent] {
+        let unit = combatants[index]
+        var events: [BattleEvent] = []
+        if unit.pantheon == .chinese, !mandateSpent.contains(unit.side),
+           let mandate = resonance(.mandateOfHeaven, on: unit.side, atLeast: .two) {
+            mandateSpent.insert(unit.side)
+            combatants[index].statuses.append(
+                ActiveStatus(kind: .recovery, turnsRemaining: ResonanceService.mandateTurns, sourceID: unit.id)
+            )
+            events.append(.passiveTriggered(actor: unit.id, name: mandate.displayName))
+            events.append(.statusApplied(
+                source: unit.id, target: unit.id, kind: .recovery, turns: ResonanceService.mandateTurns
+            ))
+        }
+        if unit.pantheon == .roman, !legionSpent.contains(unit.side),
+           let legion = resonance(.theLegion, on: unit.side, atLeast: .two) {
+            legionSpent.insert(unit.side)
+            let shield = unit.maxHealth * ResonanceService.legionShield
+            combatants[index].statuses.append(
+                ActiveStatus(kind: .shield, turnsRemaining: 3, sourceID: unit.id, magnitude: shield)
+            )
+            events.append(.passiveTriggered(actor: unit.id, name: legion.displayName))
+            events.append(.statusApplied(source: unit.id, target: unit.id, kind: .shield, turns: 3))
+        }
+        return events
+    }
+
+    /// Valhalla: the Norse who remain take up the fallen one's fury. The
+    /// Weighing of Hearts: the FIRST Egyptian to fall on a side leaves its
+    /// Ka, and the others heal. Read when a unit is defeated.
+    private func resonanceOnFall(fallenIndex: Int) -> [BattleEvent] {
+        var events: [BattleEvent] = []
+        let fallen = combatants[fallenIndex]
+        let allies = combatants.indices.filter {
+            combatants[$0].side == fallen.side && combatants[$0].isAlive && $0 != fallenIndex
+        }
+        if fallen.pantheon == .norse, let valhalla = resonance(.valhalla, on: fallen.side, atLeast: .two) {
+            let norse = allies.filter { combatants[$0].pantheon == .norse }
+            if let first = norse.first {
+                events.append(.passiveTriggered(actor: combatants[first].id, name: valhalla.displayName))
+            }
+            for idx in norse {
+                combatants[idx].statuses.append(
+                    ActiveStatus(kind: .attackUp, turnsRemaining: ResonanceService.valhallaTurns, sourceID: fallen.id)
+                )
+                events.append(.statusApplied(
+                    source: fallen.id, target: combatants[idx].id, kind: .attackUp, turns: ResonanceService.valhallaTurns
+                ))
+            }
+        }
+        if fallen.pantheon == .egyptian, !kaSpent.contains(fallen.side),
+           let weighing = resonance(.weighingOfHearts, on: fallen.side, atLeast: .two) {
+            kaSpent.insert(fallen.side)
+            if let first = allies.first {
+                events.append(.passiveTriggered(actor: combatants[first].id, name: weighing.displayName))
+            }
+            for idx in allies {
+                let amount = combatants[idx].maxHealth * ResonanceService.kaHeal
+                events += applyHealing(targetIndex: idx, amount: amount, sourceID: fallen.id)
+            }
+        }
+        return events
+    }
+
+    /// Olympian Hubris: a Greek kill feeds the killer's bar.
+    private func resonanceOnKill(killerIndex: Int) -> [BattleEvent] {
+        let killer = combatants[killerIndex]
+        guard killer.isAlive, killer.pantheon == .greek,
+              let hubris = resonance(.olympianHubris, on: killer.side, atLeast: .two) else { return [] }
+        var events: [BattleEvent] = [.passiveTriggered(actor: killer.id, name: hubris.displayName)]
+        events += changeAttackBar(index: killerIndex, delta: ResonanceService.hubrisBar)
+        return events
     }
 
     // MARK: - Lookups
@@ -571,7 +700,8 @@ final class BattleEngine {
                         targetIndex: targetIndex,
                         amount: hit.rawDamage *
                             raidDamageMultiplier(attackerIndex: actorIndex, targetIndex: targetIndex) *
-                            boonDamageMultiplier(attackerIndex: actorIndex, targetIndex: targetIndex),
+                            boonDamageMultiplier(attackerIndex: actorIndex, targetIndex: targetIndex) *
+                            resonanceDamageMultiplier(attackerIndex: actorIndex, targetIndex: targetIndex),
                         sourceID: actorID,
                         isCritical: hit.isCritical,
                         isGlancing: hit.isGlancing,
@@ -904,14 +1034,19 @@ final class BattleEngine {
             combatants[targetIndex].attackBar = 0
             events.append(.defeated(target: targetID))
             events += collapseGuard(of: targetID)
+            events += resonanceOnFall(fallenIndex: targetIndex)
             if let killerIndex = index(of: sourceID), combatants[killerIndex].side != combatants[targetIndex].side {
                 events += firePassive(.onKill, actorIndex: killerIndex)
+                events += resonanceOnKill(killerIndex: killerIndex)
             }
             return events
         }
 
         if combatants[targetIndex].healthFraction < 0.5 {
             events += firePassive(.onLowHealth, actorIndex: targetIndex)
+        }
+        if combatants[targetIndex].healthFraction < ResonanceService.lowHealthBelow {
+            events += resonanceOnLowHealth(index: targetIndex)
         }
 
         // Counterattack, once, with the basic skill.

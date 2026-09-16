@@ -4099,3 +4099,217 @@ item-icon list for the day that batch is authorised.
   and seeds nothing while a choice is already waiting.
 
 **Next on the order the owner took:** Pantheon resonance, then Artifacts.
+
+## Pantheon resonance — set bonuses that read the whole team (2026-09-16, designed)
+
+The third item on the order: *set bonuses that read the whole team*. A
+relic set reads six stones on one unit; a leader skill reads one unit and
+hands the rest a number; nothing yet reads WHO stands beside whom. Written
+up before any code, per the standing rule.
+
+### What the genre does
+
+- **Summoners War** has no composition bonus at all — leader skills, which
+  this game already has, and synergy that lives inside kits (a stripper
+  beside a nuker). Nothing to copy; the gap is real there too.
+- **AFK Arena's Faction Bonus** is the flat version: three heroes of one
+  faction give the team about +10% to attack and health, five about +25%.
+  Legible, and it pulls every team toward one faction — which in a game
+  whose banners are already one pantheon each is a bonus for what happens
+  anyway, and "more ATK%" is the criticism the boons were built to escape.
+- **Genshin's Elemental Resonance** is the named version, and the model:
+  two of an element give a NAMED effect — Fervent Flames +25% attack,
+  Soothing Water +25% health, Shattering Ice +15% crit against the frozen,
+  Enduring Rock stronger shields — and a party of four DIFFERENT elements
+  gets Protective Canopy, +15% to every resistance. Its lesson is that the
+  ones players talk about are the conditional, thematic ones (Shattering
+  Ice), and the flat ones are just numbers; and that the mixed-party
+  resonance is what keeps mono from being the only answer.
+- **Marvel Strike Force's** trait synergies ("if two or more Brotherhood
+  allies…") sit on individual kits: that is what leader skills already are.
+
+### The options, and the choice
+
+1. *AFK Arena's count bonus by pantheon.* Cheapest; boring; rewards the
+   mono-pantheon team the gacha hands out anyway.
+2. *Named resonances per pantheon, two ranks, plus a Concord for a mixed
+   team* — Genshin's shape on the pantheon axis, each pantheon's effect its
+   own myth's mechanic, built on statuses and hooks the engine already has.
+3. *Element resonance.* The elements already have the wheel, the ten kits
+   per family and the halls; a second layer there deepens what is deep,
+   while the pantheon is the axis nothing reads except a banner and a
+   leader skill.
+
+**Option 2.** A team of 5 (campaign) or 4 (arena) lights a pantheon's
+resonance at **rank I with a pair** and **rank II with three or more**, so
+a five can carry one pantheon's II and another's I at once, and no rank
+III — the mono team is not the only answer. Four or more DIFFERENT
+pantheons light the **Concord** instead. Read at battle start from the
+team's blueprints, applied like a leader skill (`BattleEngine.buildSide`
+for the numbers) and at the hooks the boons opened for the rest. It reads
+the PLAYER's team and the arena's defending team — both teams a summoner
+built — and never a campaign wave: a chapter's mobs are one realm's, so
+every wave would light its rank II and the whole tuned curve
+(`--chapters`, `--labyrinths`, `--tower`) would move a tenth for nothing
+a player chose.
+
+| pantheon | name | rank I (a pair) | rank II (three or more) |
+|---|---|---|---|
+| Egypt | The Weighing of Hearts | Egyptian allies deal +8% damage against a debuffed enemy — the judged | +12%, and the first Egyptian ally to fall leaves its Ka: the others heal 15% |
+| Greece | Olympian Hubris | Greek allies +10% crit damage | +20%, and a Greek ally that kills gains 25 attack bar |
+| Norse | Valhalla | Norse allies +5% attack | +8%, and when a Norse ally falls the others gain Attack Up for a turn |
+| Rome | The Legion | Roman allies +10% defence | +15%, and the first Roman ally to fall under half health gains a shield of 20% of max health |
+| Jade Court | The Mandate of Heaven | Jade allies +8% health | +12%, and a Jade ally that first falls under half health gains Recovery for 3 turns |
+| Concord of the Gods | four or more pantheons | every ally +6% attack, health and defence, +5% accuracy and resistance | — |
+
+**On the screen.** The team picker's rail gains a Resonance panel under the
+leader skill: the lit resonances with their rank and line, and the nearest
+unlit one ("one more Norse for Valhalla I"), so the screen that exists to
+build a team says what the build does. The briefing and the arena's team
+cards wear the lit names as chips. A tour step photographs the picker on
+the tour save's team.
+
+**What `balance.py --resonance` will hold.** Each rank II on a mono team of
+its pantheon against the same fight without: rank I 3–8% and rank II
+8–16% on the sim's own measure (damage per turn or damage taken per turn,
+as the boons are read), the Concord between the two, and a mono team's II
+never worth more than a good leader skill plus a boon — resonance is a
+reason to think about the roster, not a wall a mixed team cannot climb.
+
+**What it costs.** Nothing: names and numbers, chips in the picker and the
+briefing, and hooks the engine has.
+
+### Built (2026-09-16): the lineup's own leader skill
+
+- **The reading.** `Resonance.swift` (`ResonanceKind`, its pantheon, name,
+  glyph and the words of each rank — printed off the numbers the engine
+  uses, so the two cannot drift; `ResonanceRank`; `ActiveResonance`) and
+  `ResonanceService` (`active(for:)` reads a lineup: a pair lights rank I,
+  three or more rank II, four different pantheons the Concord; `bonuses`,
+  `applies`, and `hint` — "One more Greek ally lights Olympian Hubris I").
+  Nothing is saved; a resonance is recomputed wherever the lineup is.
+- **Into the battle.** `BattleEngine.init` reads the player's lineup and, in
+  the arena, the defender's — never a campaign wave — and `buildSide`
+  applies each rank's bonuses in a leader skill's own terms through the
+  same `apply(stat:amount:to:base:)` the leader's go through. The hooks:
+  the Weighing at the damage roll (`resonanceDamageMultiplier`, an Egyptian
+  against a debuffed enemy), Valhalla and the Ka when a unit falls
+  (`resonanceOnFall`), Hubris on a kill (`resonanceOnKill`), the Mandate's
+  Recovery and the Legion's shield the first time one of theirs falls under
+  half, once a side each (`resonanceOnLowHealth`). `activeResonances(_:)`
+  for the HUD. `ResonanceTests` pins the reading, the hint, the words, the
+  numbers on a rank II lineup against the same units as a campaign wave
+  (nothing) and as arena defenders (everything), the Weighing's exact
+  multiplier off the first judged blow, and every hook off a real fight's
+  events.
+- **On the screen.** The team picker's rail has a Resonance panel under the
+  leader skill: the lit ones with rank and line, and the nearest unlit
+  hint; the stage briefing's team panel wears the lit names as chips under
+  the cards. The arena's team row does not yet — it is a fixed-height
+  button the watchdog once timed, and a chip row there is the next pass.
+  Tour step 42 photographs the picker on the tour save's team.
+- **Measured, and what the measurement changed.** `balance.py --resonance`
+  plays each kind at each rank on a mono team on two fights of real
+  lineups — four gods through Olympus 3's boss stage, four nukers in the
+  arena against a four-colour line — against the same fights with no
+  resonance, and reads each on the MEAN of the two (a lineup carries it
+  everywhere, unlike a boon that has a home fight): a damage kind off
+  damage dealt per turn, the Legion off damage taken, the Mandate as the
+  health it adds plus the share of the damage taken its Recovery gave
+  back. Rank I 3–8%, rank II 8–16%, the Concord between, every one
+  asserted:
+
+  | kind | rank I | rank II |
+  |---|---|---|
+  | The Weighing of Hearts (+8% / +12% against a debuffed enemy) | 5.2 | 11.8 |
+  | Olympian Hubris (+10% / +20% crit damage, 25 bar on a kill) | 3.9 | 12.0 |
+  | Valhalla (+5% / +8% attack, Attack Up a turn on a fall) | 5.8 | 13.6 |
+  | The Legion (+10% / +15% defence, a 20% shield at half, once) | 6.2 | 10.2 |
+  | The Mandate of Heaven (+8% / +12% health, Recovery at half, once) | 8.0 | 14.3 |
+  | Concord of the Gods (+6% attack, health, defence; +5% accuracy, resistance) | 7.7 | — |
+
+  Four of the design's lines moved to get there. Egypt's "+12% accuracy"
+  measured nothing — the sim has no accuracy, and a stat nobody feels is
+  the flat line the boons were built to escape — so the Weighing is a
+  CONDITIONAL line, +8/12% against a debuffed enemy, the judged. The
+  Legion's opening shield of 12% measured 57% on the chapter fight: a flat
+  pool dwarfs a fight that takes little damage — so it is a 20% shield on
+  the first Roman to fall under half, once a battle, the wall closing over
+  the wounded. The Mandate's opening Recovery would have healed full units
+  for nothing — it is Recovery on the first Jade ally under half, once a
+  battle. And Valhalla at +8/12% with three turns of Attack Up on every
+  fall measured 35% in the arena; it is +5/8% and a single turn of fury.
+
+## Artifacts — the last item on the order, and a recommendation against its shape (2026-09-16, designed, NOT built)
+
+The order the owner took ends with *"Artifacts — the full second gear
+layer, last, because it doubles the inventory and that screen has been
+called overwhelming once already."* Written up before any code, per the
+standing rule — and this one ends in a recommendation the owner has to
+decide, because it departs from the item as he approved it.
+
+### What the genre does
+
+- **Summoners War's Artifacts (2020)** are the item the order names: two
+  more slots per monster, each a flat main stat and four rolled sub-lines
+  drawn from pools — the Attribute artifact's "damage dealt on Water +N%"
+  and "damage received from Fire −N%", the Type artifact's "additional
+  damage by N% of DEF", "recovery +N%", "damage taken −N% under 50%", "SPD
+  +N on the first turn". Powered up to +15 like runes, from the Rift and
+  the Dimension Hole. It is a SECOND rune system: its own inventory, its
+  own management screen, its own grind — and the sub-lines are the whole of
+  its worth.
+- **Epic Seven's Artifacts** are one slot, a NAMED item with a unique
+  passive, enhanced with copies of itself to +30. **Honkai: Star Rail's
+  Light Cones** are the same shape. **AFK Arena's Signature Items** are one
+  per hero, unlocked at an ascension tier and levelled with a currency, a
+  passive that grows at milestones. Three of the four gachas that shipped
+  after 2019 chose ONE named item per character over a second rolled
+  inventory, and every one of them takes the character's DUPLICATES as the
+  fuel — the summon that would otherwise be fodder is what sharpens the
+  item. That is the modern answer to "what is a fifth copy for".
+
+### Where this game already stands
+
+The Boons ARE Summoners War's artifact sub-lines, built on 2026-09-16: a
+conditional line, chosen, rolled, pushed. Pantheon resonance reads the
+team. What the genre's artifact layer adds beyond those two is nothing
+this game lacks — except the thing the modern games built instead: an item
+that is the character's OWN.
+
+### The options, and the recommendation
+
+1. *Summoners War's second inventory.* Two rolled slots per unit with their
+   own screen. Rejected: the owner has called one inventory overwhelming,
+   the Boons already carry the conditional lines, and the only thing a
+   second inventory adds is a second grind of the same shape.
+2. *A second boon socket* — an Attribute socket that takes a Bane or a
+   Ward, a Type socket that takes the rest, the genre's own two-slot
+   split. Cheap, since the boon system exists; one inventory; twice the
+   chase for the caches. Worth doing if the socket proves the thing
+   players farm for, and it is a week's work at most.
+3. *Regalia* — the god's own: one NAMED item per family, on the unit sheet
+   beside the boon socket, no inventory at all. Zeus's Thunderbolt,
+   Anubis's Scales, Thor's Hammer, the Colossus's Crown. A deterministic
+   passive from the family's kit (the eight `Kit`s give eight templates —
+   a striker's regalia sharpens the crit, a healer's the heal, an oracle's
+   the debuff's duration, a bruiser's the defence under half — and the
+   eleven hand-written families get theirs by hand, as their skills were),
+   NAMED per family in one table beside `elementalSkillNames`. Unlocked
+   by AWAKENING the family, and levelled I → V by the family's duplicates
+   beyond the skill-up cap: the fifth Zeus makes the Thunderbolt bite,
+   which is the value duplicates have in every game that shipped after
+   this one's model did. Measured by `balance.py --regalia` at a lift no
+   larger than a rank II resonance at V (8–16%), so a family's own item
+   is a reason to pull for it and never the wall a new family cannot
+   climb. No RNG in it on purpose: the boons and the relics are the dice;
+   the regalia is the one thing on a unit a player can PLAN.
+
+**Recommendation: 3, with 2 as a cheap follow-on if the Boons want a
+second socket.** But the order the owner approved says "the full second
+gear layer", and this is not that — it is the genre's post-2020 answer to
+the same want. It is written here so the owner can choose; nothing is
+built until he does. If he wants the inventory as named, option 1 is a
+`BoonService` with two more `RelicService`-shaped inventories and about
+two weeks; if he wants the Regalia, about a week, and the seventy-nine
+names are the one creative task in it.

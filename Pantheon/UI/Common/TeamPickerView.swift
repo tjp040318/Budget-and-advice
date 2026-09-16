@@ -71,6 +71,7 @@ struct TeamPickerView: View {
                 VStack(spacing: 8) {
                     lineup
                     leaderPanel
+                    resonancePanel
                 }
             }
             PrimaryButton(title: "Save team", isEnabled: !selected.isEmpty) {
@@ -125,6 +126,47 @@ struct TeamPickerView: View {
                         Text("\(leader.name) has no leader skill. Any unit can lead; only the bonus is lost.")
                             .font(Theme.body(12))
                             .foregroundStyle(Theme.textSecondary)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    /// What the lineup lights by who is in it (`ResonanceService`), and the
+    /// nearest thing one more unit would light: the screen that exists to
+    /// build a team says what the build does.
+    @ViewBuilder
+    private var resonancePanel: some View {
+        let blueprints = selectedUnits.map(\.blueprint)
+        let lit = ResonanceService.active(for: blueprints)
+        let hint = ResonanceService.hint(for: blueprints, maxSize: maxSize)
+        if !lit.isEmpty || hint != nil {
+            SectionPanel(title: "Resonance", accessory: lit.isEmpty ? nil : "\(lit.count) lit") {
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(lit) { resonance in
+                        HStack(alignment: .top, spacing: 6) {
+                            Image(systemName: resonance.kind.glyph)
+                                .font(.system(size: 11, weight: .black))
+                                .foregroundStyle(Theme.gold)
+                                .frame(width: 14)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(resonance.displayName.uppercased())
+                                    .font(Theme.title(11))
+                                    .tracking(0.8)
+                                    .foregroundStyle(Theme.goldDeep)
+                                Text(resonance.line)
+                                    .font(Theme.body(10))
+                                    .foregroundStyle(Theme.textPrimary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                    }
+                    if let hint {
+                        Text(hint)
+                            .font(Theme.body(10))
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

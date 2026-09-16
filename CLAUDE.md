@@ -494,6 +494,27 @@ environment can and cannot do. The short version:
   fighters at birth to break speed ties (`Fighter.seq`); it broke them
   on `id(f)` before, which made a report's numbers differ between
   processes.
+- **Pantheon resonance (2026-09-16): set bonuses that read the whole
+  lineup.** `Resonance.swift`/`ResonanceService`: a PAIR of one pantheon
+  lights its resonance at rank I, THREE or more at rank II, four
+  different pantheons the Concord — The Weighing of Hearts (Egypt, +8/12%
+  damage against a debuffed enemy; rank II's first fallen leaves its Ka,
+  the others heal 15%), Olympian Hubris (Greece, crit damage; a kill feeds
+  25 bar), Valhalla (Norse, attack; a fall gives the others Attack Up a
+  turn), The Legion (Rome, defence; the first under half gets a 20%
+  shield, once), The Mandate of Heaven (Jade Court, health; the first
+  under half gets Recovery, once), Concord (+6% attack/health/defence,
+  +5% accuracy/resistance). Read in `BattleEngine.init` for the PLAYER's
+  lineup and the arena's defender only — never a campaign wave, so the
+  tuned curves stand — and applied in `buildSide` in a leader skill's
+  terms; the hooks are `resonanceDamageMultiplier`, `resonanceOnFall`,
+  `resonanceOnKill`, `resonanceOnLowHealth`. The team picker's rail shows
+  the lit ones and the nearest unlit hint (tour step 42). Every rank is
+  measured by `balance.py --resonance` on the mean of two real-lineup
+  fights (rank I 3–8%, rank II 8–16%, asserted); change a number in
+  `ResonanceService` and `RESONANCE`/`RESONANCE_HOOKS` together. Four of
+  the design's lines were moved by the measurement (PLAN.md has which and
+  why): a flat opening shield or heal is never worth what it looks like.
 - **Rome and the Jade Court exist as data (2026-09-11).** Twenty families
   in `UnitDatabase+Families.swift` (`familyRowsRoman`: Mars, Minerva 5★;
   Neptune, Pluto, Diana, Mercury, Bellona 4★; Centurion, Gladiator, Vestal
@@ -798,7 +819,14 @@ environment can and cannot do. The short version:
   sibling** — a background is measured by its parent and can never do this;
   the same pattern is safe inside a card, and safe with a fixed
   `.frame(width:height:)` off a GeometryReader, which is what the island
-  does. And a camera node looks along its own −Z: orient it with
+  does. **A band of fixed height and flexible width is
+  `Color.clear.overlay { painting.aspectRatio(.fill) }.clipped()`**: the
+  Titan card's band had the painting under `.frame(maxWidth: .infinity,
+  maxHeight: .infinity)` inside `.frame(height: 104)`, the square painting's
+  fill size grew the ZStack to its own height, and the label aligned to the
+  stack's bottom was carried below the clip — a black slab with no name on
+  it for two runs of frames (2026-09-16). An overlay is never measured.
+  And a camera node looks along its own −Z: orient it with
   `SCNNode.look(at:)`, never `atan2(dx, dz)` (that was half a turn off and
   the orbit shot showed the empty side of the stage). And **a node with a
   one-shot particle system goes only after the system has finished**:
@@ -1033,7 +1061,7 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is forty-two screens (steps 0–41): an arena battle
+  thousands of images. The CI tour is forty-three screens (steps 0–42): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,
