@@ -93,6 +93,22 @@ def main():
     if os.path.exists(source):
         print(open(source).read().strip())
 
+    # A red build, first and in full. The GitHub log API serves only the TAIL
+    # of a job and a compiler error sits near its top, so reading one used to
+    # mean fetching the whole tail — three times over on 2026-09-16. The job
+    # publishes the error lines here instead, and they are four lines.
+    for name, title in (("build-errors.txt", "BUILD"), ("test-errors.txt", "TESTS")):
+        path = os.path.join(frames_dir, name)
+        if not os.path.exists(path):
+            continue
+        body = open(path, errors="replace").read().strip()
+        if not body or body == "no compiler errors":
+            continue
+        print(f"\n== {title} ==")
+        for line in body.splitlines()[:40]:
+            print("   " + line[:220])
+        print()
+
     # The job also publishes what the app printed during each step. The lines
     # that decide anything are the loader's and the frameworks' complaints;
     # the rest is there in the file for when they are not enough.
@@ -114,7 +130,10 @@ def main():
 
     files = sorted(f for f in glob.glob(os.path.join(frames_dir, "*")) if f.lower().endswith((".jpg", ".png")))
     if not files:
-        sys.exit("no frames on ci/screens")
+        # A build that never produced an app publishes its errors and nothing
+        # else, which is not a failure of this tool: they are printed above.
+        print("no frames on ci/screens — the build did not produce an app")
+        return 0
     thumbs = []
     for f in files:
         im = Image.open(f).convert("RGB")

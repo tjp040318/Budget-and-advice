@@ -70,7 +70,15 @@ one of three — every screen writes it `GameScreen("Title", subtitle:,
 dismiss:) { bar } content: { ... }`), and a lowerCamelCase name the whole
 tree spells exactly ONCE and reads as a value is a name nothing declares
 (`unseenIntroChapter`, left behind when the property it read was deleted
-with the code around it). Every rule in the checker was
+with the code around it). Three more came out of the same day's later
+runs: a switch whose subject type cannot be read off the enclosing
+function is identified by its case LABELS instead (nine of ten cases and
+no default is a switch that has drifted); `case ...: return nil` inside a
+function declared non-Optional is an error; and a `?:` whose two branches
+are design tokens of DIFFERENT types will not compile —
+`canReroll ? Theme.goldPlate : Theme.surface` mixes a LinearGradient with
+a Color, and every screen that needs that uses a `Group { if … else … }`.
+Every rule in the checker was
 proven by reintroducing a real bug and watching it fail.
 
 If a tuning constant changes in Swift, change it in `tools/balance.py` too. They
@@ -93,7 +101,13 @@ was visible in that render.
 simulator app and runs the unit tests on a macOS runner on every push, then
 launches the app once per screen with `-tour -tour-step N` (`TourView`,
 debug only) and photographs the simulator. Read the run with the GitHub
-tools (`actions_list`, `get_job_logs`), and look at the frames with
+tools (`actions_list`, `get_job_logs`) — but for a RED BUILD read
+`python3 tools/ciframes.py` FIRST: the log API serves only the TAIL of a
+job, a compiler error sits near the top of a 550-line job whose last 300
+lines are the simulator booting, and chasing one through the tail cost
+three whole-log fetches on 2026-09-16. The job now publishes its error
+lines to `ci/screens` as `build-errors.txt` and `test-errors.txt`, which
+`ciframes.py` prints before anything else, for nothing. Look at the frames with
 `python3 tools/ciframes.py`, which fetches the `ci/screens` branch the job
 force-pushes them to (the artifact store is on a host the network policy
 refuses) and prints the lines that matter from each step's console, which

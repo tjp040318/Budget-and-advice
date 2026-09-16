@@ -1459,6 +1459,71 @@ def check_nil_returns(files, errors):
                           f"declared to return {ret}, which is not Optional")
 
 
+# ---------------------------------------------------------------------------
+# A ternary that picks between two design tokens of DIFFERENT types
+# ---------------------------------------------------------------------------
+#
+# `fill(canReroll ? Theme.goldPlate : Theme.surface)` cost the fourth red run
+# of 2026-09-16: `goldPlate` is a LinearGradient and `surface` is a Color, and
+# Swift will not unify them. `ShopView`'s price plate has used a `Group { if
+# … } else { … }` for this since it was written — the shape was copied from it
+# without the reason. Both sides must be known and must differ, so the rule is
+# silent on the overwhelmingly common gold-or-grey Color ternary.
+
+STATIC_TYPED = re.compile(
+    r"^\s*(?:public\s+|private\s+|internal\s+|fileprivate\s+)?static\s+(?:let|var)\s+"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*(?::\s*([A-Za-z_][A-Za-z0-9_<>., ]*?)\s*(?:=|\{)|=\s*([A-Z][A-Za-z0-9_]*)\s*[({.])")
+TOKEN_TERNARY = re.compile(
+    r"\?\s*([A-Z][A-Za-z0-9_]*)\.([a-z][A-Za-z0-9_]*)\s*:\s*([A-Z][A-Za-z0-9_]*)\.([a-z][A-Za-z0-9_]*)\s*[),\]]")
+
+
+def collect_static_types(files):
+    """(Type, member) -> the member's Swift type, where it can be read.
+
+    From the annotation when there is one, and otherwise from the name of the
+    thing the initialiser calls — `static let surface = Color(hex:)` is a
+    Color. A member whose type cannot be read is simply absent, and the rule
+    below needs BOTH sides.
+    """
+    types = {}
+    for path in files:
+        src = strip_noise(open(path).read(), mask_strings=True)
+        stack = []
+        for ln in src.split("\n"):
+            if not ln.strip():
+                continue
+            indent = len(ln) - len(ln.lstrip())
+            while stack and indent <= stack[-1][1]:
+                stack.pop()
+            m = DECL.match(ln)
+            if m:
+                stack.append((m.group(2), indent))
+                continue
+            if not stack:
+                continue
+            sm = STATIC_TYPED.match(ln)
+            if sm:
+                declared = (sm.group(2) or sm.group(3) or "").strip()
+                if declared:
+                    types[(stack[-1][0], sm.group(1))] = declared
+    return types
+
+
+def check_token_ternaries(files, types, errors):
+    for path in files:
+        src = strip_noise(open(path).read(), mask_strings=True)
+        for m in TOKEN_TERNARY.finditer(src):
+            left = types.get((m.group(1), m.group(2)))
+            right = types.get((m.group(3), m.group(4)))
+            if not left or not right or left == right:
+                continue
+            line = src[:m.start()].count("\n") + 1
+            errors.append(
+                f"{path}:{line}: the branches of this '?:' are "
+                f"{m.group(1)}.{m.group(2)} ({left}) and {m.group(3)}.{m.group(4)} "
+                f"({right}); Swift will not unify them — use a Group with an if/else")
+
+
 def main():
     files = []
     for r in ROOTS:
@@ -1487,6 +1552,7 @@ def main():
     check_lonely_identifiers(files, errors)
     check_switch_by_labels(files, errors)
     check_nil_returns(files, errors)
+    check_token_ternaries(files, collect_static_types(files), errors)
     if "--types" in sys.argv:
         check_unknown_types(files, declared, errors)
 

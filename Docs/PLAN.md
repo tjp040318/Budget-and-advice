@@ -3116,3 +3116,34 @@ Both proven by putting the real error back. A third thing was caught by eye
 rather than by a rule and is worth writing down: `SeededRandom.pickWeighted`
 takes `[(value:weight:)]`, and every other caller spells those labels out —
 an unlabelled tuple literal is a conversion Swift does not always make.
+
+
+### The fourth red run, and reading one cheaply (2026-09-16)
+
+`fill(canReroll ? Theme.goldPlate : Theme.surface)` — `goldPlate` is a
+LinearGradient and `surface` is a Color, and Swift will not unify them.
+`ShopView`'s price plate has used a `Group { if … } else { … }` for exactly
+this since it was written; the Night Market copied its shape without the
+reason. `check_token_ternaries` reads each design token's type — off its
+annotation, or off the name of the thing its initialiser calls, so
+`static let surface = Color(hex:)` is a Color — and flags a `?:` whose two
+branches are tokens of different types. Both sides must be known and must
+differ, so it stays silent on the gold-or-grey Color ternary that is on
+every screen. Proven by putting the real one back.
+
+Also fixed by eye: `NightMarketBoard.columns` was a private STORED property,
+and a private stored property drags the memberwise initialiser down to
+private with it — `ShopView` builds the board from another file. It is a
+type property now. (`ShopView`'s own `columns` gets away with being stored
+because nothing ever passes it an argument: a struct whose every property
+has a default also gets a DEFAULT `init()`, whose access level follows the
+type rather than the properties.)
+
+**And reading a red build is cheap now.** The GitHub log API serves only the
+TAIL of a job. A compiler error sits near the top of a 550-line job whose
+last 300 lines are the simulator booting through its data migration, so
+finding one meant fetching the whole tail — three times over on this run,
+and four times across the day. The job now writes `build-errors.txt` and
+`test-errors.txt` to the `ci/screens` branch whether or not there are
+frames, and `tools/ciframes.py` prints them before anything else. Four
+lines over a git fetch, instead of five hundred over the API.

@@ -18,13 +18,18 @@ struct NightMarketBoard: View {
     var onReceipt: (String) -> Void
 
     /// Cards the width of a portrait tile: five across a landscape phone.
-    private let columns = [GridItem(.adaptive(minimum: 132, maximum: 190), spacing: 8)]
+    ///
+    /// STATIC on purpose: a private STORED property drags the memberwise
+    /// initialiser down to private with it, and `ShopView` builds this from
+    /// another file. `ShopView`'s own `columns` gets away with being stored
+    /// because nothing ever passes it an argument.
+    private static let columns = [GridItem(.adaptive(minimum: 132, maximum: 190), spacing: 8)]
 
     var body: some View {
         VStack(spacing: 6) {
             clockRow
             ScrollView {
-                LazyVGrid(columns: columns, spacing: 8) {
+                LazyVGrid(columns: Self.columns, spacing: 8) {
                     ForEach(store.nightMarketStalls) { stall in
                         tile(stall)
                     }
@@ -70,7 +75,17 @@ struct NightMarketBoard: View {
                 .padding(.horizontal, 10)
                 .frame(height: 24)
                 .background(
-                    Capsule().fill(canReroll ? Theme.goldPlate : Theme.surface)
+                    // A ternary cannot pick between `Theme.goldPlate`, which
+                    // is a LinearGradient, and `Theme.surface`, which is a
+                    // Color. ShopView's price plate uses a Group for the same
+                    // reason; copying its shape without this cost a CI run.
+                    Group {
+                        if canReroll {
+                            Capsule().fill(Theme.goldPlate)
+                        } else {
+                            Capsule().fill(Theme.surface)
+                        }
+                    }
                 )
                 .overlay(
                     Capsule().strokeBorder(canReroll ? Color.clear : Theme.stroke, lineWidth: 0.5)
@@ -145,8 +160,13 @@ struct NightMarketBoard: View {
                 .padding(.horizontal, 8)
                 .frame(maxWidth: .infinity, minHeight: 24)
                 .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(available ? Theme.goldPlate : Theme.surface)
+                    Group {
+                        if available {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.goldPlate)
+                        } else {
+                            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.surface)
+                        }
+                    }
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 6, style: .continuous)

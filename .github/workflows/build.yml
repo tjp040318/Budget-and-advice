@@ -215,12 +215,26 @@ jobs:
       # the artifact store can `git fetch origin ci/screens` and look at them
       # at full size for free. Artifacts keep the history; the branch is a
       # window.
+      #
+      # It publishes a RED build too, and that is the point of the
+      # `build-errors.txt` below. The GitHub log API only serves the TAIL of a
+      # job, and a compiler error sits near the top of a 550-line job whose
+      # last 300 lines are the simulator booting — so reading one cost three
+      # separate log fetches of the whole tail on 2026-09-16. The errors are
+      # four lines; they belong on the branch, where `ciframes.py` reads them
+      # for nothing.
       - name: Publish screenshots to the ci/screens branch
         if: ${{ !cancelled() }}
         run: |
-          test -d shots && ls shots/*.png >/dev/null 2>&1 || { echo "no frames to publish"; exit 0; }
           rm -rf /tmp/screens && mkdir -p /tmp/screens
-          cp small/*.jpg /tmp/screens/ 2>/dev/null || cp shots/*.png /tmp/screens/
+          if [ -f build.log ]; then
+            { grep -n "error:" build.log || echo "no compiler errors"; } | head -n 80 > /tmp/screens/build-errors.txt
+            grep -q "BUILD SUCCEEDED" build.log || echo "** BUILD FAILED **" >> /tmp/screens/build-errors.txt
+          fi
+          if [ -f test.log ]; then
+            grep -E "error:|failed|Executed|\*\* TEST" test.log | head -n 80 > /tmp/screens/test-errors.txt || true
+          fi
+          cp small/*.jpg /tmp/screens/ 2>/dev/null || cp shots/*.png /tmp/screens/ 2>/dev/null || true
           cp shots/*.txt /tmp/screens/ 2>/dev/null || true
           printf '%s\n' "commit ${GITHUB_SHA}" "branch ${GITHUB_REF_NAME}" "run ${GITHUB_RUN_ID}" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" > /tmp/screens/SOURCE.txt
           cd /tmp/screens
