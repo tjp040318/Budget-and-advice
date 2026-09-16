@@ -633,7 +633,7 @@ struct RelicInventoryView: View {
                         HStack(spacing: 6) {
                             EfficiencyDial(value: RelicService.efficiency(relic, for: role))
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("fit for a \(role.displayName.lowercased())")
+                                Text("fit for \(role.withArticle)")
                                     .font(Theme.body(10))
                                     .foregroundStyle(Theme.textSecondary)
                                 Text(wearer.map { "Worn by \($0.name)" } ?? "Not worn")
@@ -1013,7 +1013,7 @@ struct RelicDetailView: View {
         NavigationStack {
             GameScreen(
                 relic.map { "\($0.set.displayName) · Slot \($0.slot)" } ?? "Relic",
-                subtitle: relic.map { "+\($0.level) · fit for a \(role.displayName.lowercased())" },
+                subtitle: relic.map { "+\($0.level) · fit for \(role.withArticle)" },
                 dismiss: { dismiss() }
             ) {
                 BarButton(
@@ -1169,7 +1169,7 @@ struct RelicDetailView: View {
                 Spacer(minLength: 4)
                 VStack(spacing: 2) {
                     EfficiencyDial(value: RelicService.efficiency(relic, for: role))
-                    Text("fit for a \(role.displayName.lowercased())")
+                    Text("fit for \(role.withArticle)")
                         .font(Theme.body(8))
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -1890,7 +1890,7 @@ struct RelicPickerView: View {
         NavigationStack {
             GameScreen(
                 "Slot \(slot)",
-                subtitle: unit.map { "\($0.name) · best fit for a \(role.displayName.lowercased()) first" },
+                subtitle: unit.map { "\($0.name) · best fit for \(role.withArticle) first" },
                 dismiss: { dismiss() }
             ) {
                 BarCount(value: "\(candidates.count)", systemImage: "shield.lefthalf.filled")

@@ -69,4 +69,12 @@ enum CombatRole: String, Codable, CaseIterable, Identifiable, Sendable {
         case .hpTank: return "Vanguard"
         }
     }
+
+    /// The role in a sentence: "an attacker", "a defender". The relic
+    /// screens printed "a attacker" for a run of frames.
+    var withArticle: String {
+        let name = displayName.lowercased()
+        let vowel = name.first.map { "aeiou".contains($0) } ?? false
+        return (vowel ? "an " : "a ") + name
+    }
 }

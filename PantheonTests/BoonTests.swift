@@ -395,7 +395,7 @@ final class BoonTests: XCTestCase {
         let heals = lifesteal(hydra)
         XCTAssertFalse(heals.isEmpty, "she recovers once she has something to recover")
         for heal in heals {
-            XCTAssertGreaterThan(heal.amount, 0)
+            XCTAssertGreaterThan(heal.healed, 0)
             XCTAssertLessThanOrEqual(heal.healed, heal.dealt * BoonFamily.hydrasBlood.base + 1e-6, "never more than the share of what the skill dealt")
         }
     }

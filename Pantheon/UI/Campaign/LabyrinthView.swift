@@ -600,28 +600,52 @@ struct LabyrinthView: View {
         let team = store.team(store.player.campaignTeam)
         let power = team.reduce(0) { $0 + $1.power }
         let hasEnergy = store.player.wallet.energy >= raid.stage.energyCost
+        let element = RaidGradeService.element(of: raid)
+        // The Titan itself, as its card: the genre's beast panel leads with
+        // the beast, and three of the five places are painted at night, so
+        // the painting alone photographed as a black band (run 160).
+        let titan = raid.stage.enemies.first(where: { $0.raid != nil })
+            .flatMap { StageDatabase.buildEnemies(spawns: [$0]).first }
         return VStack(alignment: .leading, spacing: 6) {
             ZStack(alignment: .bottomLeading) {
-                if BundleImage.exists(raid.environment.backdropName) {
-                    BundleImage(name: raid.environment.backdropName)
-                        .aspectRatio(contentMode: .fill)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .clipped()
-                }
+                // `Color.clear` IS the band, and the painting is an overlay on
+                // it, so the `.fill` image's cover size can carry nothing out
+                // of the clip. Under a flexible frame it grew this stack to
+                // the painting's height and carried the label below the band
+                // (run 160's frame had no name on it) — the same overflow
+                // `UnitCard` bounds with a fixed frame.
+                Color.clear
+                    .overlay {
+                        if BundleImage.exists(raid.environment.backdropName) {
+                            BundleImage(name: raid.environment.backdropName)
+                                .aspectRatio(contentMode: .fill)
+                        } else {
+                            Rectangle().fill(Theme.surfaceHigh)
+                        }
+                    }
+                    .clipped()
                 LinearGradient(colors: [.clear, Theme.plate.opacity(0.92)], startPoint: .center, endPoint: .bottom)
-                VStack(alignment: .leading, spacing: 1) {
-                    Text("RAID")
-                        .font(Theme.body(9).weight(.bold))
-                        .tracking(1.4)
-                        .foregroundStyle(Theme.danger)
-                    Text(raid.name)
-                        .font(Theme.title(15))
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(2)
+                HStack(alignment: .bottom, spacing: 8) {
+                    if let titan {
+                        // A card is its square plus a 30-point name block.
+                        UnitCard(unit: titan, showPower: false, size: 66)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("TITAN OF \(element.displayName.uppercased())")
+                            .font(Theme.body(9).weight(.bold))
+                            .tracking(1.4)
+                            .foregroundStyle(element.color)
+                        Text(raid.name)
+                            .font(Theme.title(15))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
+                    }
+                    .padding(.bottom, 2)
                 }
                 .padding(8)
             }
-            .frame(height: 104)
+            .frame(height: 120)
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             // The painting fills, and a fill declines nothing on its own.
             .allowsHitTesting(false)
