@@ -46,6 +46,9 @@ enum ShopService {
         case essences(String, Int)
         /// Whetstones or gems by `RelicStone.id`.
         case stones(String, Int)
+        /// A boon cache of a grade (`BoonCache`): the Tower's milestones and
+        /// the Judgment on Hell pay one in the bundle.
+        case boonCache(grade: Int)
         /// A named family, by blueprint id. Only the Night Market pays in
         /// this: a duplicate becomes a skill-up, exactly as a summon's does,
         /// so a second copy is never clutter.
@@ -337,6 +340,9 @@ enum ShopService {
         case .stones(let id, let count):
             RelicService.addStones(id, count, player: &player)
             granted.append(grant)
+        case .boonCache(let grade):
+            BoonService.addCache(BoonCache(grade: grade, seed: rng.next(), source: "Chest"), player: &player)
+            granted.append(grant)
         case .unit(let blueprintID):
             if let blueprint = UnitDatabase.blueprint(blueprintID) {
                 let isNew = !player.codex.contains(blueprint.id)
@@ -365,6 +371,7 @@ enum ShopService {
         case .relic(let grade): return "\(grade)★ relic"
         case .essences(let id, let count): return "\(EssenceCatalog.name(for: id)) ×\(count)"
         case .stones(let id, let count): return "\(RelicStone.from(id: id)?.displayName ?? id) ×\(count)"
+        case .boonCache(let grade): return "\(grade)★ boon cache"
         case .unit(let id): return UnitDatabase.blueprint(id)?.name ?? id
         case .bundle(let parts): return parts.map(describe).joined(separator: ", ")
         }

@@ -123,6 +123,7 @@ final class BattleViewModel: ObservableObject {
         var scrolls: [String: Int] = [:]
         var stones: [String: Int] = [:]
         var aether: [String: Int] = [:]
+        var boonCaches: [BoonCache] = []
         var stoppedBecause: String?
 
         var isFinished: Bool { completed >= requested || stoppedBecause != nil }
@@ -158,6 +159,7 @@ final class BattleViewModel: ObservableObject {
         for (id, count) in stageOutcome.scrollsEarned { session.scrolls[id, default: 0] += count }
         for (id, count) in stageOutcome.stonesEarned { session.stones[id, default: 0] += count }
         for (id, count) in stageOutcome.aetherEarned { session.aether[id, default: 0] += count }
+        session.boonCaches += stageOutcome.boonCachesEarned
 
         if result.outcome != .victory {
             session.stoppedBecause = "Stopped after a defeat."
@@ -221,6 +223,9 @@ final class BattleViewModel: ObservableObject {
         for (id, count) in session.aether.sorted(by: { $0.key < $1.key }) {
             lines.append(.init(icon: "circle.hexagonpath.fill", label: Aether.name(for: id), value: "+\(count)"))
         }
+        if !session.boonCaches.isEmpty {
+            lines.append(.init(icon: "seal.fill", label: "Boon caches", value: "×\(session.boonCaches.count)"))
+        }
         for (id, count) in session.essences.sorted(by: { $0.key < $1.key }) {
             lines.append(.init(icon: "drop.triangle.fill", label: EssenceCatalog.name(for: id), value: "+\(count)"))
         }
@@ -246,6 +251,10 @@ final class BattleViewModel: ObservableObject {
         for (id, count) in session.stones.sorted(by: { $0.key < $1.key }) {
             guard let stone = RelicStone.from(id: id) else { continue }
             loot.append(.init(glyph: stone.kind.glyph, title: stone.displayName, amount: "+\(count)", tint: .rarity(stone.tier.quality.rarity)))
+        }
+        for cache in session.boonCaches {
+            loot.append(.init(glyph: "seal.fill", title: cache.displayName, amount: "×1", tint: .gold,
+                              stars: cache.grade, key: "boon_cache_\(cache.grade)"))
         }
         for (id, count) in session.aether.sorted(by: { $0.key < $1.key }) {
             loot.append(.init(glyph: "circle.hexagonpath.fill", title: Aether.name(for: id), amount: "+\(count)",
@@ -600,6 +609,9 @@ final class BattleViewModel: ObservableObject {
             for (id, count) in stageOutcome.aetherEarned.sorted(by: { $0.key < $1.key }) {
                 lines.append(.init(icon: "circle.hexagonpath.fill", label: Aether.name(for: id), value: "+\(count)"))
             }
+            for cache in stageOutcome.boonCachesEarned {
+                lines.append(.init(icon: "seal.fill", label: cache.displayName, value: "×1"))
+            }
             for (id, count) in stageOutcome.essencesEarned {
                 lines.append(.init(icon: "drop.triangle.fill", label: EssenceCatalog.name(for: id), value: "+\(count)"))
             }
@@ -782,6 +794,12 @@ struct BattleSummary {
         for (id, count) in stageOutcome.aetherEarned.sorted(by: { $0.key < $1.key }) {
             items.append(.init(glyph: "circle.hexagonpath.fill", title: Aether.name(for: id),
                                amount: "+\(count)", tint: Aether.element(of: id).map { .element($0) } ?? .marble, key: id))
+        }
+        // A boon cache: the shelf shows the sealed thing; it opens on the
+        // unit sheet's socket, where its three doors are a choice.
+        for cache in stageOutcome.boonCachesEarned {
+            items.append(.init(glyph: "seal.fill", title: cache.displayName, amount: "×1",
+                               tint: .gold, stars: cache.grade, key: "boon_cache_\(cache.grade)"))
         }
         for (id, count) in stageOutcome.essencesEarned.sorted(by: { $0.key < $1.key }) {
             let element = Element(rawValue: id.split(separator: "_").dropFirst().first.map(String.init) ?? "")

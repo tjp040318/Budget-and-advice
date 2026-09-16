@@ -43,7 +43,7 @@ struct TourView: View {
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
-        ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3),
+        ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -321,10 +321,25 @@ struct TourView: View {
             // save's 6★ +15 (the debug seed's, with the aether to pay for
             // it): the rite in the first frame, then the halo on the stone,
             // the Awakened chip and the fifth sub stat's choice of two.
-            if let relic = store.player.relics.first(where: { $0.grade >= 6 && $0.isMaxLevel && !$0.isAwakened }) {
-                RelicDetailView(relicID: relic.id, awakenOnAppear: true)
+            //
+            // Picked by a rule that still holds AFTER the awakening: the
+            // store changes the moment it lands, this `content` is
+            // re-evaluated, and a rule of "not yet awakened" swapped the
+            // sheet for the best climbing relic between the two frames —
+            // run 159 photographed the Vigil +12 twice and the rite never.
+            if let relic = store.player.relics.first(where: { $0.grade >= 6 && $0.isMaxLevel }) {
+                RelicDetailView(relicID: relic.id, awakenOnAppear: !relic.isAwakened)
             } else if let relic = bestRelic {
                 RelicDetailView(relicID: relic.id)
+            }
+        case "boons":
+            // The socket's picker, opened on the tour save's shut cache: its
+            // three doors on the right, the boons owned on the left, for
+            // Zeus's socket (the detail step shows the socket filled).
+            if let zeus = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) {
+                BoonPickerView(unitID: zeus.id, openingCache: true)
+            } else {
+                BoonPickerView(openingCache: true)
             }
         default:
             SettingsView()

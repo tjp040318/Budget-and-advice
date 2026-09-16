@@ -471,6 +471,29 @@ environment can and cannot do. The short version:
   steps pointing at the landmark each wants, with a skip chip and a chapter
   intro card shown once. Five new save fields, every one Optional with a nil
   default.
+- **Boons: the earned socket (2026-09-16).** The disc at the centre of a
+  unit's relic ring is a SOCKET holding ONE conditional line — a `Boon`
+  (`Boon.swift`: nine `BoonFamily`s, a Bane and a Ward in the five
+  colours, so seventeen `BoonKind`s; grade 4–6★; a rolled `magnitude`;
+  up to five `pushes`). A `BoonCache` opens as THREE DOORS derived from
+  its seed (`BoonService.offers`), the kind chosen rolls 0.75–1.25× the
+  grade's base, and a push (drachma + four aether of the colour, or two
+  pure) is a choice of two bumps through `pendingRoll`, five at most.
+  The engine reads the line at four hooks (`BattleEngine.
+  boonDamageMultiplier`, the battle start, the turn start, after the
+  hits) and it changes no stat. Caches come from a Titan at S+ (25%,
+  6★), Labyrinth B10 (10%, 5★), the Tower's milestones and Hell's
+  Judgment; never the Halls. `BoonPickerView` is the list and the panel
+  (tour step 41); the Relics menu opens it as the inventory. Every base
+  is MEASURED: `balance.py --boons` plays each kind on five fights and
+  asserts every kind's best fight lifts 6–18% and none tops more than
+  two — change a base in `BoonFamily.base` and `BOONS` together, and
+  `lastStandBelow` with `BOON_THRESHOLDS`. Last Stand is +70% under
+  HALF health (the design's "+30% under 40%" measured 0%), Hydra's
+  Blood 5% (10% gave back 30% of the damage taken). The sim numbers
+  fighters at birth to break speed ties (`Fighter.seq`); it broke them
+  on `id(f)` before, which made a report's numbers differ between
+  processes.
 - **Rome and the Jade Court exist as data (2026-09-11).** Twenty families
   in `UnitDatabase+Families.swift` (`familyRowsRoman`: Mars, Minerva 5★;
   Neptune, Pluto, Diana, Mercury, Bellona 4★; Centurion, Gladiator, Vestal
@@ -1010,7 +1033,7 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is forty-one screens (steps 0–40): an arena battle
+  thousands of images. The CI tour is forty-two screens (steps 0–41): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,

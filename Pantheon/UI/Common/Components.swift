@@ -278,6 +278,7 @@ enum ItemArt {
         case .relic: return "relic_cache"
         case .essences(let id, _): return id
         case .stones(let id, _): return id
+        case .boonCache(let grade): return "boon_cache_\(grade)"
         case .unit: return "unit"
         case .bundle: return "bundle"
         }
@@ -294,6 +295,7 @@ enum ItemArt {
         case .relic(let grade): return "\(grade)★"
         case .essences(_, let count): return "×\(count)"
         case .stones(_, let count): return "×\(count)"
+        case .boonCache(let grade): return "\(grade)★"
         case .unit: return "×1"
         case .bundle(let parts): return "×\(parts.count)"
         }
@@ -309,6 +311,7 @@ enum ItemArt {
         case .relic(let grade): return "\(grade)★ relic"
         case .essences(let id, _): return EssenceCatalog.name(for: id)
         case .stones(let id, _): return RelicStone.from(id: id)?.displayName ?? id
+        case .boonCache(let grade): return "\(grade)★ boon cache"
         case .unit(let id): return UnitDatabase.blueprint(id)?.name ?? id
         case .bundle: return "Bundle"
         }
@@ -317,6 +320,7 @@ enum ItemArt {
     /// The stars a grant's tile wears: a relic cache shows its grade.
     static func stars(for grant: ShopService.Grant) -> Int? {
         if case .relic(let grade) = grant { return grade }
+        if case .boonCache(let grade) = grant { return grade }
         if case .unit(let id) = grant { return UnitDatabase.blueprint(id)?.naturalStars }
         return nil
     }
@@ -328,6 +332,7 @@ enum ItemArt {
         if key.hasPrefix("whetstone_") { return "seal.fill" }
         if key.hasPrefix("gem_") { return "diamond.fill" }
         if key.hasPrefix("awakening_cache_") { return "shippingbox.fill" }
+        if key.hasPrefix("boon_cache_") { return "seal.fill" }
         if Aether.isAether(key) { return "circle.hexagonpath.fill" }
         switch key {
         case "drachma": return "circle.hexagongrid.fill"
@@ -356,6 +361,9 @@ enum ItemArt {
         if key.hasPrefix("awakening_cache_") {
             return Element(rawValue: String(key.dropFirst("awakening_cache_".count)))?.color ?? Theme.gold
         }
+        // A boon cache is a wax seal in gold, like the relic cache it stands
+        // beside on a shelf.
+        if key.hasPrefix("boon_cache_") { return Theme.gold }
         // Elemental aether burns in its element; pure aether is amethyst, a
         // shade brighter than divinity's violet so the two never read as one.
         if Aether.isAether(key) { return Aether.element(of: key)?.color ?? Color(hex: "#9C6FD6") }

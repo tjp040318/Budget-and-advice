@@ -136,6 +136,11 @@ struct Player: Codable, Equatable, Sendable {
     /// The best `RaidGrade` earned per raid id, as its raw value ("ss"): the
     /// mark the raid's card names to beat. Optional for the same reason.
     var raidGrades: [String: String]? = nil
+    /// Boons (`Boon`): the earned socket's items, socketed or not, and the
+    /// caches (`BoonCache`) not yet opened. Optional, like every save field
+    /// added since the first.
+    var boons: [Boon]? = nil
+    var boonCaches: [BoonCache]? = nil
 
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }

@@ -131,6 +131,10 @@ enum DungeonDatabase {
     static let labyrinthAwakenedChance = 0.04
     static let towerAwakenedChance = 0.06
     static let towerAwakenedFloor = 90
+    /// How often the Labyrinth's last level leaves a boon cache, and of what
+    /// grade. Mirrored in `tools/balance.py` as `BOON_SOURCES`.
+    static let labyrinthBoonChance = 0.10
+    static let labyrinthBoonGrade = 5
 
     /// Ten levels, each three waves: two of the roster's mobs and then the
     /// boss with two more, at a grade that climbs with the level and a
@@ -184,6 +188,10 @@ enum DungeonDatabase {
                     // twenty-five: the relic dungeon's own road to the tier
                     // above, beside the raids' (`balance.py --awakening`).
                     awakenedChance: level >= levelCount ? labyrinthAwakenedChance : nil,
+                    // And a 5★ boon cache one run in ten: the relic dungeon's
+                    // road to the socket, beside the Titans' (`balance.py --boons`).
+                    boonCacheChance: level >= levelCount ? labyrinthBoonChance : nil,
+                    boonCacheGrade: level >= levelCount ? labyrinthBoonGrade : nil,
                     scrollChances: level >= 7 ? [ScrollType.mystical.rawValue: 0.08] : [:],
                     firstClearDivinity: 20
                 ),
@@ -480,14 +488,16 @@ extension DungeonDatabase {
         switch floor {
         case 10:
             return .bundle([.divinity(150), .scrolls(.mystical, 2), .drachma(20_000)])
+        // A boon cache at every milestone from the twenty-fifth: a 4★, a 5★,
+        // then a 6★ twice — the climb's road to the socket.
         case 25:
-            return .bundle([.divinity(300), .scrolls(.pantheonic, 2), .relic(grade: 4)])
+            return .bundle([.divinity(300), .scrolls(.pantheonic, 2), .relic(grade: 4), .boonCache(grade: 4)])
         case 50:
-            return .bundle([.divinity(600), .scrolls(.divine, 1), .relic(grade: 5), .drachma(100_000), .stones("whetstone_legend", 1)])
+            return .bundle([.divinity(600), .scrolls(.divine, 1), .relic(grade: 5), .drachma(100_000), .stones("whetstone_legend", 1), .boonCache(grade: 5)])
         case 75:
-            return .bundle([.divinity(900), .scrolls(.divine, 2), .relic(grade: 6), .stones("gem_hero", 1)])
+            return .bundle([.divinity(900), .scrolls(.divine, 2), .relic(grade: 6), .stones("gem_hero", 1), .boonCache(grade: 6)])
         case 100:
-            return .bundle([.divinity(1_500), .scrolls(.divine, 3), .relic(grade: 6), .relic(grade: 6), .stones("gem_legend", 1)])
+            return .bundle([.divinity(1_500), .scrolls(.divine, 3), .relic(grade: 6), .relic(grade: 6), .stones("gem_legend", 1), .boonCache(grade: 6)])
         default:
             return nil
         }
@@ -604,8 +614,10 @@ enum TowerService {
         // back only its grade, so the ones it appended are taken off the end
         // of the bag to name them on the receipt.
         let relicsBefore = player.relics.count
+        let cachesBefore = player.boonCaches?.count ?? 0
         let granted = ShopService.grant(reward, to: &player, rng: &rng)
         outcome.relicsEarned.append(contentsOf: player.relics[relicsBefore...])
+        outcome.boonCachesEarned.append(contentsOf: (player.boonCaches ?? []).dropFirst(cachesBefore))
         for grant in granted {
             switch grant {
             case .drachma(let amount): outcome.drachma += amount
@@ -613,10 +625,10 @@ enum TowerService {
             case .scrolls(let scroll, let count): outcome.scrollsEarned[scroll.rawValue, default: 0] += count
             case .essences(let id, let count): outcome.essencesEarned[id, default: 0] += count
             case .stones(let id, let count): outcome.stonesEarned[id, default: 0] += count
-            // The relics are already on the receipt, the tower pays no
-            // energy and sells no gods; `.bundle` cannot appear because
-            // `grant` flattens it.
-            case .relic, .energy, .energyRefill, .unit, .bundle: break
+            // The relics and the boon caches are already on the receipt,
+            // the tower pays no energy and sells no gods; `.bundle` cannot
+            // appear because `grant` flattens it.
+            case .relic, .boonCache, .energy, .energyRefill, .unit, .bundle: break
             }
         }
         return granted

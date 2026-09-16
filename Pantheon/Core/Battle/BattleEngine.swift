@@ -212,6 +212,12 @@ final class BattleEngine {
             )
             events.append(.statusApplied(source: combatants[idx].id, target: combatants[idx].id, kind: .shield, turns: 3))
         }
+        // Swift-footed: a head start on the bar, before anyone's passive.
+        for idx in combatants.indices {
+            guard let boon = combatants[idx].boon, boon.kind.family == .swiftFooted else { continue }
+            events.append(.passiveTriggered(actor: combatants[idx].id, name: boon.displayName))
+            events += changeAttackBar(index: idx, delta: boon.magnitude)
+        }
         for idx in combatants.indices {
             events += firePassive(.onBattleStart, actorIndex: idx)
         }
@@ -427,6 +433,14 @@ final class BattleEngine {
             events += applyHealing(targetIndex: actorIndex, amount: amount, sourceID: actorID)
         }
 
+        // Unfading: a turn begun under half health opens with a heal.
+        if let boon = combatants[actorIndex].boon, boon.kind.family == .unfading,
+           combatants[actorIndex].healthFraction < BoonFamily.unfadingBelow {
+            events.append(.passiveTriggered(actor: actorID, name: boon.displayName))
+            let amount = combatants[actorIndex].maxHealth * boon.magnitude
+            events += applyHealing(targetIndex: actorIndex, amount: amount, sourceID: actorID)
+        }
+
         // Ichor tops up the bar for the *next* turn.
         let ichorStacks = combatants[actorIndex].relicSetStacks(.ichor)
         if ichorStacks > 0 {
@@ -447,6 +461,9 @@ final class BattleEngine {
         // The turn's own resolution — counterattacks included — is over by the
         // time this runs, so nothing after this point is "during" anyone's turn.
         actingCombatantID = nil
+        // First Blood's clock: the boon reads "until this unit's first turn
+        // ends", and a turn lost to a stun ends too.
+        combatants[actorIndex].hasActed = true
 
         for slot in combatants[actorIndex].cooldowns.indices where combatants[actorIndex].cooldowns[slot] > 0 {
             combatants[actorIndex].cooldowns[slot] -= 1
@@ -552,7 +569,9 @@ final class BattleEngine {
                     let before = combatants[targetIndex].currentHealth
                     events += applyDamage(
                         targetIndex: targetIndex,
-                        amount: hit.rawDamage * raidDamageMultiplier(attackerIndex: actorIndex, targetIndex: targetIndex),
+                        amount: hit.rawDamage *
+                            raidDamageMultiplier(attackerIndex: actorIndex, targetIndex: targetIndex) *
+                            boonDamageMultiplier(attackerIndex: actorIndex, targetIndex: targetIndex),
                         sourceID: actorID,
                         isCritical: hit.isCritical,
                         isGlancing: hit.isGlancing,
@@ -588,6 +607,12 @@ final class BattleEngine {
         // Styx lifesteal is a set effect rather than a skill effect.
         if combatants[actorIndex].hasRelicSet(.styx), dealtThisSkill > 0, combatants[actorIndex].isAlive {
             events += applyHealing(targetIndex: actorIndex, amount: dealtThisSkill * 0.35, sourceID: actorID)
+        }
+
+        // Hydra's Blood: the boon's lifesteal, beside the set's.
+        if let boon = combatants[actorIndex].boon, boon.kind.family == .hydrasBlood,
+           dealtThisSkill > 0, combatants[actorIndex].isAlive {
+            events += applyHealing(targetIndex: actorIndex, amount: dealtThisSkill * boon.magnitude, sourceID: actorID)
         }
 
         if !isCounter, skill.cooldown > 0, combatants[actorIndex].cooldowns.indices.contains(slot) {
@@ -1283,6 +1308,36 @@ final class BattleEngine {
             multiplier *= combatants[attackerIndex].element == weakness
                 ? defender.profile.weaknessMultiplier
                 : defender.profile.offElementMultiplier
+        }
+        return multiplier
+    }
+
+    // MARK: Boons at the damage roll
+
+    /// The attacker's boon on the way out and the defender's on the way in
+    /// (`Docs/PLAN.md`, *Boons — the earned socket*): a Bane against its
+    /// colour, Giant-slayer against a boss, First Blood until the first turn
+    /// ends, Last Stand under the health line, Executioner against a target
+    /// under its line; a Ward takes less from its colour. 1 for every fight
+    /// with no boon in it. The other four kinds have hooks of their own.
+    private func boonDamageMultiplier(attackerIndex: Int, targetIndex: Int) -> Double {
+        var multiplier = 1.0
+        let attacker = combatants[attackerIndex]
+        let target = combatants[targetIndex]
+        if let boon = attacker.boon {
+            let applies: Bool
+            switch boon.kind.family {
+            case .bane: applies = boon.kind.element == target.element
+            case .giantSlayer: applies = target.isBoss
+            case .firstBlood: applies = !attacker.hasActed
+            case .lastStand: applies = attacker.healthFraction < BoonFamily.lastStandBelow
+            case .executioner: applies = target.healthFraction < BoonFamily.executionerBelow
+            case .ward, .unfading, .swiftFooted, .hydrasBlood: applies = false
+            }
+            if applies { multiplier *= 1 + boon.magnitude }
+        }
+        if let ward = target.boon, ward.kind.family == .ward, ward.kind.element == attacker.element {
+            multiplier *= max(0, 1 - ward.magnitude)
         }
         return multiplier
     }

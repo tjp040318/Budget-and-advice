@@ -173,6 +173,17 @@ enum RaidGradeService {
         }
     }
 
+    /// The chance a Titan leaves a boon cache (`BoonCache`), and its grade:
+    /// one kill in four at S and above, always a 6★ — the socket's best
+    /// source, as it is the awakened relic's (`Docs/PLAN.md`, *Boons — the
+    /// earned socket*). Mirrored as `BOON_SOURCES`.
+    static let titanBoonChance = 0.25
+    static let titanBoonGrade = 6
+
+    static func boonCacheChance(for grade: RaidGrade) -> Double {
+        grade >= .s ? titanBoonChance : 0
+    }
+
     /// The element a raid's aether comes in: its boss's own — Apep is ember,
     /// the Jötunn gale. Read off the blueprint so it cannot drift from the
     /// fight the player just had.

@@ -281,6 +281,7 @@ struct RelicInventoryView: View {
     @State private var pickingWearerFor: Relic?
     @State private var showOptimiser = false
     @State private var showSets = false
+    @State private var showBoons = false
 
     enum Sort: String, CaseIterable, Identifiable {
         case efficiency, quality, grade, level, set, slot, mainStat, newest
@@ -393,6 +394,11 @@ struct RelicInventoryView: View {
                     } label: {
                         Label("Set effects", systemImage: "book.closed.fill")
                     }
+                    Button {
+                        showBoons = true
+                    } label: {
+                        Label("Boons", systemImage: "seal.fill")
+                    }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.system(size: 13, weight: .black))
@@ -449,6 +455,12 @@ struct RelicInventoryView: View {
             }
             .sheet(isPresented: $showSets) {
                 RelicSetsSheet()
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showBoons) {
+                // No unit: the inventory is not about one, so the picker is
+                // the list of every boon and cache.
+                BoonPickerView()
                     .environmentObject(store)
             }
             .onAppear {

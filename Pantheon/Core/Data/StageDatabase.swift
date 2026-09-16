@@ -38,6 +38,11 @@ struct StageRewards: Codable, Equatable, Sendable {
     /// (`RaidGradeService.awakenedChance`). Nil is never. Optional so the
     /// stage data's shape is unchanged for everything that pays none.
     var awakenedChance: Double? = nil
+    /// The chance a clear leaves a BOON CACHE (`BoonCache`) and the grade it
+    /// is: the Labyrinth's last level. A raid's is by its grade
+    /// (`RaidGradeService.boonCacheChance`). Nil is never.
+    var boonCacheChance: Double? = nil
+    var boonCacheGrade: Int? = nil
     /// Essence id to chance of dropping.
     var essenceChances: [String: Double] = [:]
     /// Scroll drops by type and chance.

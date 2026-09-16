@@ -22,6 +22,10 @@ struct Unit: Codable, Equatable, Identifiable, Sendable {
 
     /// Relic instance ids by slot (1...6). A missing key is an empty slot.
     var equippedRelics: [Int: UUID] = [:]
+    /// The boon in the socket at the centre of the ring (`Boon`), by id;
+    /// nil is an empty socket. Optional, like every save field added since
+    /// the first, so a save written before boons existed still decodes.
+    var boonID: UUID? = nil
 
     /// Locked units cannot be fed away or sold.
     var isLocked: Bool = false
@@ -51,6 +55,9 @@ struct ResolvedUnit: Identifiable, Sendable {
     var relics: [Relic]
     var stats: Stats
     var skills: [Skill]
+    /// The boon in the unit's socket, carried into battle for the engine's
+    /// hooks; it changes no stat, so it is not in `stats`.
+    var boon: Boon? = nil
 
     var id: UUID { unit.id }
     var name: String {

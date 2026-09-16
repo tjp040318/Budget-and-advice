@@ -19,11 +19,12 @@ the engine; it is the spreadsheet a designer would keep, made executable.
     python3 tools/balance.py --tiers    # the campaign's Hard and Hell against the ladders
     python3 tools/balance.py --raids    # the two raid bosses and their mechanics
     python3 tools/balance.py --relics   # quality odds, whetstone and gem ranges, the power-up bill
+    python3 tools/balance.py --boons    # the nine boons' lift on five fights, and the socket's sources
 
 If a constant changes in Swift, change it here and re-run.
 """
 
-import math, random, re, statistics, sys
+import itertools, math, random, re, statistics, sys
 from dataclasses import dataclass, field, replace
 
 # ---------------------------------------------------------------------------
@@ -62,6 +63,35 @@ STONE_COSTS     = {("whetstone", "rare"): 4_000, ("whetstone", "hero"): 9_000, (
                    ("gem", "rare"): 6_000, ("gem", "hero"): 14_000, ("gem", "legend"): 24_000}
 POWER_UP_CHANCES = [1.0, 1.0, 1.0, 0.95, 0.90, 0.85, 0.80, 0.75, 0.70, 0.65, 0.60, 0.55, 0.50, 0.45, 0.40]
 
+# Boons — must match Core/Models/Boon.swift and Core/Progression/BoonService.swift.
+# One CONDITIONAL line in the socket at the centre of the relic ring, read by
+# the engine at one of four hooks; never a flat stat. Each family's size at 6*
+# before the roll, and its hook; a Bane or a Ward is of one element.
+BOONS = {  # family: (base at 6*, hook)              BoonFamily.base / .hook
+    "bane":        (0.15, "damage"),       # +N% damage against <element>
+    "giantSlayer": (0.18, "damage"),       # +N% damage against a boss
+    "firstBlood":  (0.30, "damage"),       # +N% damage until this unit's first turn ends
+    "lastStand":   (0.70, "damage"),       # +N% damage while under half health
+    "executioner": (0.35, "damage"),       # +N% damage against a target under 30% health
+    "ward":        (0.14, "damageTaken"),  # N% less damage from <element>
+    "unfading":    (0.08, "turnStart"),    # heal N% of max health at the start of a turn begun under 50%
+    "swiftFooted": (0.40, "battleStart"),  # +N attack bar when the battle begins
+    "hydrasBlood": (0.05, "afterHit"),     # recover N% of the damage dealt
+}
+BOON_THRESHOLDS = {"lastStand": 0.50, "executioner": 0.30, "unfading": 0.50}   # BoonFamily.*Below
+BOON_GRADE_SCALE = {4: 0.6, 5: 0.8, 6: 1.0}                                     # BoonService.gradeScale
+BOON_ROLL = (0.75, 1.25)                                                        # BoonService.rollRange
+BOON_PUSH = {"step": 0.08, "roll": (0.5, 1.5), "max": 5,                        # BoonService.pushStep / pushRollRange / maxPushes
+             "aether": 4, "pure": 2, "drachma": {4: 8_000, 5: 16_000, 6: 30_000}}   # pushAether / pushPureAether / pushDrachma
+BOON_SOURCES = {"Titan at S and better": (0.25, "6*"),                          # RaidGradeService.titanBoonChance / titanBoonGrade
+                "Labyrinth B10": (0.10, "5*"),                                  # DungeonDatabase.labyrinthBoonChance / labyrinthBoonGrade
+                "Tower F25 / F50 / F75 / F100": (1.0, "4* / 5* / 6* / 6*"),     # towerMilestoneReward
+                "Judgment of the Realm on Hell": (1.0, "6*")}                   # TributeService.payout
+# The enemies the engine calls a boss (Combatant.isBoss: a primordial, or
+# anything three metres tall) — what Giant-slayer reads.
+BOSS_IDS = {"apep", "boss_hydra", "boss_jotunn", "boss_colossus", "boss_unwrapped_king",
+            "boss_bronze_colossus", "boss_longmen_dragon"}
+
 def sub_stat_base(kind, grade=6):
     return SUB_STAT_BASE[kind] * (1 + (grade - 1) * SUB_GRADE_SCALE)
 
@@ -97,6 +127,14 @@ class Blueprint:
     res: float = 0.15
     skills: list = field(default_factory=list)   # (name, mult, hits, cd, defign, missbonus, aoe)
 
+# Every fighter is numbered at birth, and a tie on speed goes to the earlier
+# number: the engine's own tie-break is its combatant order. Breaking ties on
+# `id(f)` — the object's address — made the sim's turn order differ from one
+# process to the next, which is a report whose asserts can pass on Monday
+# and fail on Tuesday (the boons' Swift-footed measured 5.4%, 6.2% and 7.3%
+# on three runs of one seed).
+_SEQ = itertools.count()
+
 @dataclass
 class Fighter:
     bp: Blueprint
@@ -116,8 +154,16 @@ class Fighter:
     defbreak: int = 0
     burn: int = 0
     stun: int = 0
+    # The socket: (family, element or None, magnitude), or None. `acted` is
+    # First Blood's clock (Combatant.hasActed); `is_boss` what Giant-slayer
+    # reads (Combatant.isBoss).
+    boon: object = None
+    acted: bool = False
+    is_boss: bool = False
+    seq: int = 0
 
     def __post_init__(self):
+        self.seq = next(_SEQ)
         s = grade_mult(self.stars) * level_mult(self.level)
         self.maxhp = self.bp.hp * s * self.relic_mult
         self.hp = self.maxhp
@@ -142,6 +188,49 @@ def proc(name, keyword, default):
     m = re.search(keyword + r"\s*(\d+)%", name, re.IGNORECASE)
     return int(m.group(1)) / 100 if m else default
 
+def boon_mult(att, dfn):
+    """BattleEngine.boonDamageMultiplier: the attacker's boon on the way out
+    and the defender's on the way in; 1 for a fight with none."""
+    m = 1.0
+    b = att.boon
+    if b:
+        fam, el, mag = b
+        if fam == "bane" and dfn.bp.element == el: m *= 1 + mag
+        elif fam == "giantSlayer" and dfn.is_boss: m *= 1 + mag
+        elif fam == "firstBlood" and not att.acted: m *= 1 + mag
+        elif fam == "lastStand" and att.hp / att.maxhp < BOON_THRESHOLDS["lastStand"]: m *= 1 + mag
+        elif fam == "executioner" and dfn.hp / dfn.maxhp < BOON_THRESHOLDS["executioner"]: m *= 1 + mag
+    w = dfn.boon
+    if w and w[0] == "ward" and att.bp.element == w[1]:
+        m *= max(0.0, 1 - w[2])
+    return m
+
+def boon_battle_start(fighters):
+    """Swift-footed: a head start on the bar — BattleEngine.applyBattleStartEffects."""
+    for f in fighters:
+        if f.boon and f.boon[0] == "swiftFooted":
+            f.atb = min(1.0, f.atb + f.boon[2])
+
+def boon_turn_start(actor):
+    """Unfading: the heal a turn begun under half health opens with
+    (BattleEngine.applyTurnStartEffects). Returns what was healed."""
+    b = actor.boon
+    if not (b and b[0] == "unfading" and actor.alive and actor.hp / actor.maxhp < BOON_THRESHOLDS["unfading"]):
+        return 0.0
+    healed = min(actor.maxhp, actor.hp + actor.maxhp * b[2]) - actor.hp
+    actor.hp += healed
+    return healed
+
+def boon_after_hit(actor, dealt):
+    """Hydra's Blood: a share of the damage dealt comes back — BattleEngine.cast,
+    after the hits, beside Styx. Returns what was healed."""
+    b = actor.boon
+    if not (b and b[0] == "hydrasBlood" and dealt > 0 and actor.alive):
+        return 0.0
+    healed = min(actor.maxhp, actor.hp + dealt * b[2]) - actor.hp
+    actor.hp += healed
+    return healed
+
 def resolve_hit(att, dfn, mult, defign, missbonus, rng, sure=False):
     """`sure` is a skill that always crits — "(Crit)" in its name."""
     base = att.atk * mult
@@ -156,14 +245,25 @@ def resolve_hit(att, dfn, mult, defign, missbonus, rng, sure=False):
     if crit:       base *= 1 + att.critdmg
     elif glancing: base *= GLANCING_MULT
     base *= rng.uniform(*VARIANCE)
+    base *= boon_mult(att, dfn)
     return max(1.0, base)
 
-def simulate(team_a, team_b, seed=0):
-    """One battle. Both sides use the highest-multiplier ready skill."""
+def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
+    """One battle. Both sides use the highest-multiplier ready skill.
+
+    `stats`, when given, collects each side's damage dealt, taken and healed
+    (`stats["dealt"]["a"]` …), which is what `--boons` measures. `first_wave`
+    is false for the later waves of a run, whose fighters already had their
+    battle start (Swift-footed fires once a run, like the engine's)."""
     rng = random.Random(seed)
     for f in team_a: f.side = "a"
     for f in team_b: f.side = "b"
     all_f = team_a + team_b
+    def note(key, side, amount):
+        if stats is not None and amount:
+            stats[key][side] = stats[key].get(side, 0.0) + amount
+    if first_wave:
+        boon_battle_start(all_f)
     turns = 0
     while turns < MAX_TURNS:
         alive = [f for f in all_f if f.alive]
@@ -172,7 +272,7 @@ def simulate(team_a, team_b, seed=0):
         step = min((1.0 - f.atb) / max(1e-6, f.spd * ATB_RATE) for f in alive)
         for f in alive: f.atb = min(1.0, f.atb + f.spd * ATB_RATE * step)
         actor = max((f for f in alive if f.atb >= 1 - 1e-9),
-                    key=lambda f: (f.spd, -id(f)), default=None)
+                    key=lambda f: (f.spd, -f.seq), default=None)
         if actor is None: continue
         actor.atb = 0.0
         turns += 1
@@ -183,13 +283,20 @@ def simulate(team_a, team_b, seed=0):
         # max HP, ignoring defence — BattleEngine.swift, "Burn ticks for a
         # flat share of max HP". Two turns per application.
         if actor.burn > 0:
+            note("taken", actor.side, min(max(0.0, actor.hp), actor.maxhp * 0.05))
             actor.hp -= actor.maxhp * 0.05
             actor.burn -= 1
             if not actor.alive: continue
+        # Unfading: a turn begun under half health opens with a heal —
+        # BattleEngine.applyTurnStartEffects, before the stun is checked.
+        opened = boon_turn_start(actor)
+        note("healed", actor.side, opened); note("boonHealed", actor.side, opened)
         # Hard control consumes the turn: BattleEngine skips a stunned, frozen
-        # or sleeping unit's action and ticks the status down.
+        # or sleeping unit's action and ticks the status down. The turn still
+        # ENDS, which is what First Blood's clock reads.
         if actor.stun > 0:
             actor.stun -= 1
+            actor.acted = True
             continue
 
         foes = [f for f in (team_b if actor.side == "a" else team_a) if f.alive]
@@ -204,11 +311,16 @@ def simulate(team_a, team_b, seed=0):
         if heal_idx is not None and neediest < 0.60:
             actor.cds[heal_idx] = actor.bp.skills[heal_idx][3]
             for f in allies:
-                f.hp = min(f.maxhp, f.hp + f.maxhp * 0.25)
+                healed = min(f.maxhp, f.hp + f.maxhp * 0.25) - f.hp
+                f.hp += healed
+                note("healed", actor.side, healed)
+            actor.acted = True
             continue
 
         dmg_ready = [i for i in ready if actor.bp.skills[i][1] > 0]
-        if not dmg_ready: continue
+        if not dmg_ready:
+            actor.acted = True
+            continue
         # An AoE is worth its multiplier times the bodies it hits, which is
         # how AIController values it too; without this no ultimate that hits
         # the line for less than the basic's total would ever be cast.
@@ -217,13 +329,23 @@ def simulate(team_a, team_b, seed=0):
         name, mult, hits, cd, defign, missbonus, aoe = actor.bp.skills[idx]
         actor.cds[idx] = cd
         targets = foes if aoe else [min(foes, key=lambda f: f.hp)]
+        dealt = 0.0
         for _ in range(hits):
             for t in targets:
                 if not t.alive: continue
-                t.hp -= resolve_hit(actor, t, mult, defign, missbonus, rng, sure="(crit)" in name.lower())
+                dmg = resolve_hit(actor, t, mult, defign, missbonus, rng, sure="(crit)" in name.lower())
+                applied = min(t.hp, dmg)
+                t.hp -= dmg
+                dealt += applied
+                note("dealt", actor.side, applied)
+                note("taken", t.side, applied)
                 if "break" in name.lower(): t.defbreak = 2
                 if "burn" in name.lower() and rng.random() < proc(name, "burn", 0.30): t.burn = 2
                 if "stun" in name.lower() and rng.random() < proc(name, "stun", 0.55): t.stun = 1
+        # Hydra's Blood, after the hits; and the turn ends.
+        drunk = boon_after_hit(actor, dealt)
+        note("healed", actor.side, drunk); note("boonHealed", actor.side, drunk)
+        actor.acted = True
     return "draw", turns
 
 # ---------------------------------------------------------------------------
@@ -641,6 +763,7 @@ def mk(bp, level, stars, relic=1.0, boss=1.0):
     f = Fighter(bp, level, stars, relic)
     if boss != 1.0:
         f.maxhp *= boss; f.hp = f.maxhp; f.atk *= boss; f.dfn *= boss
+    f.is_boss = bp.id in BOSS_IDS
     return f
 
 STAGES = [
@@ -1156,11 +1279,13 @@ RAIDS = [
      (["radiance", "ember"], 2, 1.7, 0.75), 42_000),
 ]
 
-def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
-    """One raid. Returns ("a"|"b"|"draw", battle turns, boss turns).
+def simulate_raid(team_spec, raid, seed=0, kill_adds=True, boon=None, stats=None):
+    """One raid. Returns ("a"|"b"|"draw", battle turns, boss turns, share).
 
     `kill_adds=False` models a team that ignores the guard, which is the
-    comparison the drain number exists to lose.
+    comparison the drain number exists to lose. `boon` goes in every socket
+    of the team and `stats` collects the team's damage dealt, taken and
+    healed, for `--boons`.
     """
     (_, bossbp, blvl, bstars, bmult, add, barrier, guard, enrage, weak, _) = raid
     addbp, addlvl, addstars, addmult, addcount = add
@@ -1171,8 +1296,12 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
 
     rng = random.Random(seed)
     team = [mk(*t) for t in team_spec]
+    for f in team: f.boon = boon
     boss = mk(bossbp, blvl, bstars, 1.0, bmult)
     adds = [mk(addbp, addlvl, addstars, 1.0, addmult) for _ in range(addcount)]
+    def note(key, side, amount):
+        if stats is not None and amount:
+            stats[key][side] = stats[key].get(side, 0.0) + amount
 
     pool = boss.maxhp * bfrac
     shield, regen_left = pool, 0
@@ -1180,6 +1309,7 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
     turns = 0
     for f in team: f.side = "a"
     for f in [boss] + adds: f.side = "b"
+    boon_battle_start(team)
 
     # The share of the boss's health taken, BattleResult.raidShare: what
     # grades a run the boss survived. The barrier soaks in front of the
@@ -1193,7 +1323,7 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
         step = min((1.0 - f.atb) / max(1e-6, f.spd * ATB_RATE) for f in alive)
         for f in alive: f.atb = min(1.0, f.atb + f.spd * ATB_RATE * step)
         actor = max((f for f in alive if f.atb >= 1 - 1e-9),
-                    key=lambda f: (f.spd, -id(f)), default=None)
+                    key=lambda f: (f.spd, -f.seq), default=None)
         if actor is None: continue
         actor.atb = 0.0
         turns += 1
@@ -1237,16 +1367,22 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
             target = min(live_team, key=lambda f: f.hp)
             name, mult, hits, cd, defign, missbonus, aoe = actor.bp.skills[0]
             for _ in range(hits):
-                target.hp -= resolve_hit(actor, target, mult * factor, defign, missbonus, rng)
+                dmg = resolve_hit(actor, target, mult * factor, defign, missbonus, rng)
+                note("taken", "a", min(max(0.0, target.hp), dmg))
+                target.hp -= dmg
             continue
 
         # A player turn. Adds first when the team is playing properly, because
         # a living guard is healing the boss faster than most teams can hurt it.
+        opened = boon_turn_start(actor)
+        note("healed", "a", opened); note("boonHealed", "a", opened)
         live_adds = [a for a in adds if a.alive]
         victim = live_adds[0] if (kill_adds and live_adds) else boss
         ready = [i for i, s in enumerate(actor.bp.skills) if actor.cds[i] == 0
                  and actor.bp.skills[i][1] > 0]
-        if not ready: continue
+        if not ready:
+            actor.acted = True
+            continue
         idx = max(ready, key=lambda i: actor.bp.skills[i][1] * actor.bp.skills[i][2])
         name, mult, hits, cd, defign, missbonus, aoe = actor.bp.skills[idx]
         actor.cds[idx] = cd
@@ -1254,6 +1390,7 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
         # is the raid's own wheel and it replaces the ordinary one.
         up = welems[wi] if welems else None
         ratio = won if (up and actor.bp.element == up) else woff
+        dealt = 0.0
         for _ in range(hits):
             if not victim.alive:
                 live_adds = [a for a in adds if a.alive]
@@ -1266,7 +1403,15 @@ def simulate_raid(team_spec, raid, seed=0, kill_adds=True):
                     # the overflow is lost: the reward is the free window.
                     shield, regen_left, stunned = 0, bregen, bstun
                 continue
+            # What lands on health is what is dealt; the barrier is not the
+            # health, so Hydra's Blood recovers nothing off it.
+            applied = min(max(0.0, victim.hp), dmg)
             victim.hp -= dmg
+            dealt += applied
+            note("dealt", "a", applied)
+        drunk = boon_after_hit(actor, dealt)
+        note("healed", "a", drunk); note("boonHealed", "a", drunk)
+        actor.acted = True
     return "draw", turns, boss_turns, share()
 
 def raid_result(team_spec, raid, trials=40, kill_adds=True):
@@ -1532,6 +1677,150 @@ def report_awakening(trials=20_000):
     print("  → intended: between 1.05x and 1.40x — worth a week of raids, and still a relic a")
     print("    good roll on an ordinary 6* can beat")
 
+
+# ---------------------------------------------------------------------------
+# Boons — Core/Models/Boon.swift, Core/Progression/BoonService.swift and the
+# four hooks in BattleEngine, mirrored. A boon is measured by what it DOES to
+# a fight the sim already plays: with the kind in every socket of the team
+# against without, on the same seeds. An offensive kind is read off damage
+# dealt per battle turn (the total dealt in a WIN is the foes' health and
+# cannot rise, so the pace is the number); a defensive kind off the net
+# damage taken per turn — taken less healed. The rule (Docs/PLAN.md, *Boons*)
+# is Epic Seven's lesson: every kind's BEST fight lifts 6-18% at 6*, and no
+# kind is the best on more than two of the five fights.
+# ---------------------------------------------------------------------------
+
+def boon_tally(stats_list, turns_list, wins, trials):
+    """Per-turn figures over a batch of runs: damage dealt, damage taken and
+    what the boon itself healed, plus the win rate and the length."""
+    dealt = sum(s["dealt"].get("a", 0.0) for s in stats_list)
+    taken = sum(s["taken"].get("a", 0.0) for s in stats_list)
+    healed = sum(s["boonHealed"].get("a", 0.0) for s in stats_list)
+    turns = max(1.0, float(sum(turns_list)))
+    return {"dps": dealt / turns, "taken": taken / turns, "boonHealed": healed / turns,
+            "wins": wins / trials, "turns": turns / trials}
+
+def boon_run(team_spec, waves, boon, trials):
+    """A run of waves with `boon` in every socket of the team."""
+    stats_list, turns_list, wins = [], [], 0
+    for s in range(trials):
+        team = [mk(*t) for t in team_spec]
+        for f in team: f.boon = boon
+        stats = {"dealt": {}, "taken": {}, "healed": {}, "boonHealed": {}}
+        result, total = "a", 0
+        for w, spec in enumerate(waves):
+            result, t = simulate(team, build_stage(spec), seed=s * 7 + w, stats=stats, first_wave=(w == 0))
+            total += t
+            if result != "a": break
+        if result == "a": wins += 1
+        stats_list.append(stats); turns_list.append(total)
+    return boon_tally(stats_list, turns_list, wins, trials)
+
+def boon_raid_run(team_spec, raid, boon, trials):
+    stats_list, turns_list, wins = [], [], 0
+    for s in range(trials):
+        stats = {"dealt": {}, "taken": {}, "healed": {}, "boonHealed": {}}
+        r, t, _, _ = simulate_raid(team_spec, raid, seed=s, boon=boon, stats=stats)
+        if r == "a": wins += 1
+        stats_list.append(stats); turns_list.append(t)
+    return boon_tally(stats_list, turns_list, wins, trials)
+
+def boon_lift(family, base, run):
+    """What the kind is worth on a fight, against the same fight with no boon:
+    an offensive kind (and Swift-footed) the rise in damage dealt per turn; a
+    Ward the fall in damage taken per turn; a heal the share of the damage
+    taken that the boon itself gave back. The sim's own heal AI (a 25% team
+    heal whenever anyone is under 60%) swamps a net-damage figure, which is
+    why the heals are read off their own number."""
+    hook = BOONS[family][1]
+    if hook == "damageTaken":
+        return 1 - run["taken"] / base["taken"] if base["taken"] > 0 else 0.0
+    if hook in ("turnStart", "afterHit"):
+        return run["boonHealed"] / run["taken"] if run["taken"] > 0 else 0.0
+    return run["dps"] / base["dps"] - 1 if base["dps"] > 0 else 0.0
+
+def boon_fights():
+    """The five fights every kind is measured on: a mono-element hall (the
+    Banes' and the Wards' home), a three-wave chapter boss stage, the
+    Labyrinth's last level, a Titan, and an arena fight of gods against
+    gods. Each is (label, kind, team, spec)."""
+    six = [(ANUBIS, 55, 6, 1.60)] * 4
+    # Four attackers and no heal between them: the arena's nuke team, the
+    # fight where a unit is worn down rather than topped up.
+    nukers = [(SEKHMET, 60, 6, 1.60), (ZEUS, 60, 6, 1.60), (PERSEUS, 60, 6, 1.60), (HARPY, 60, 6, 1.60)]
+    # The enemy line in four colours, as an arena's is: the reference forms
+    # are all ember, and a mono-ember mirror made a Bane of Ember a flat
+    # +15% on everything, which no real arena team is.
+    foes = [(SEKHMET, 60, 6, 1.6), (replace(ZEUS, element="tide"), 60, 6, 1.6),
+            (replace(PERSEUS, element="gale"), 60, 6, 1.6), (replace(HARPY, element="umbra"), 60, 6, 1.6)]
+    colossus = RAIDS[3]
+    return [
+        ("Hall of Embers B5",         "waves", six,    [hall_floor(HALLS[0], 5)]),
+        ("Olympus 3 boss stage",      "waves", six,    generated_waves(CHAPTERS[3], 10)[0]),
+        ("Necropolis B10",            "waves", six,    labyrinth_waves(LABYRINTHS[2], 10)),
+        ("The Statue That Stood Up",  "raid",  raid_ladders(colossus[9][0])[0][1], colossus),
+        ("Arena, nukers vs nukers",   "waves", nukers, [foes]),
+    ]
+
+def boon_dominant_element(fight):
+    """The colour a Bane or a Ward is measured in: the fight's most common."""
+    _, kind, _, spec = fight
+    if kind == "raid": return spec[1].element
+    from collections import Counter
+    return Counter(e[0].element for wave in spec for e in wave).most_common(1)[0][0]
+
+def report_boons(trials=24):
+    print("\nBOONS — the earned socket: each kind's lift on five fights, over %d seeded runs each" % trials)
+    print("a boon is one CONDITIONAL line in the socket at the centre of the ring, chosen from a cache's three,")
+    print("its size rolled %.2f-%.2fx the base and pushed up to %d times (+%.0f%% of the base a push, a choice of two)."
+          % (BOON_ROLL[0], BOON_ROLL[1], BOON_PUSH["max"], BOON_PUSH["step"] * 100))
+    print("an offensive kind is read off damage dealt per turn, a Ward off damage taken per turn, a heal off")
+    print("the share of the damage taken that it gives back.")
+    print("rule: every kind's BEST fight lifts 6-18% at 6*; no kind is the best on more than two of the five.\n")
+    print("  sources: " + "; ".join(f"{k} {v[0]*100:.0f}% ({v[1]})" for k, v in BOON_SOURCES.items()))
+    fights = boon_fights()
+    families = list(BOONS)
+    lifts = {}
+    elements = {}
+    for fight in fights:
+        label, kind, team, spec = fight
+        if kind == "raid":
+            run = lambda b, team=team, spec=spec: boon_raid_run(team, spec, b, trials)
+        else:
+            run = lambda b, team=team, spec=spec: boon_run(team, spec, b, trials)
+        base = run(None)
+        element = boon_dominant_element(fight)
+        elements[label] = element
+        for fam in families:
+            mag, _ = BOONS[fam]
+            b = (fam, element if fam in ("bane", "ward") else None, mag)
+            lifts[(fam, label)] = boon_lift(fam, base, run(b))
+    labels = [f[0] for f in fights]
+    print(f"\n  {'kind (6* base)':>22}" + "".join(f"{l[:22]:>24}" for l in labels) + f"{'best':>8}")
+    print(f"  {'':>22}" + "".join(f"{('vs ' + elements[l]):>24}" for l in labels))
+    best = {}
+    for fam in families:
+        row = f"  {fam + ' ' + str(BOONS[fam][0]):>22}"
+        for l in labels:
+            row += f"{lifts[(fam, l)] * 100:>23.1f}%"
+        best[fam] = max(labels, key=lambda l: lifts[(fam, l)])
+        row += f"{lifts[(fam, best[fam])] * 100:>7.1f}%"
+        print(row)
+    tops = {}
+    for l in labels:
+        top = max(families, key=lambda fam: lifts[(fam, l)])
+        tops[top] = tops.get(top, 0) + 1
+    print("\n  best on each fight: " + ", ".join(
+        f"{l[:22]}: {max(families, key=lambda fam: lifts[(fam, l)])}" for l in labels))
+    for fam in families:
+        lift = lifts[(fam, best[fam])]
+        verdict = "ok" if 0.06 <= lift <= 0.18 else ("NOBODY SOCKETS IT" if lift < 0.06 else "MANDATORY")
+        print(f"    {fam:>12}: best {lift*100:5.1f}% on {best[fam]} — {verdict}")
+        assert 0.06 <= lift <= 0.18, \
+            f"{fam}'s best fight lifts {lift*100:.1f}%: under 6 nobody sockets it, over 18 it is mandatory"
+    for fam, n in tops.items():
+        assert n <= 2, f"{fam} is the best boon on {n} of the five fights: a kind that is best everywhere is Epic Seven's mistake"
+    print("  → every kind has a fight it is worth 6-18% on, and none is the best on more than two")
 
 def report_campaign(trials=200):
     print("\nCAMPAIGN — win rate over %d seeded battles" % trials)
@@ -2216,6 +2505,7 @@ if __name__ == "__main__":
     elif "--raids" in a: report_raids()
     elif "--grades" in a: report_grades()
     elif "--awakening" in a: report_awakening()
+    elif "--boons" in a: report_boons()
     elif "--relics" in a: report_relics()
     elif "--tributes" in a: report_tributes()
     elif "--shop" in a: report_shop()
@@ -2226,7 +2516,7 @@ if __name__ == "__main__":
     elif "--drops" in a: report_drops()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
-        report_labyrinths(); report_tower(); report_raids(); report_grades(); report_awakening()
+        report_labyrinths(); report_tower(); report_raids(); report_grades(); report_awakening(); report_boons()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
         report_sweep(); report_mileage(); report_targeting()
         print()

@@ -129,6 +129,7 @@ enum SweepService {
             for (id, count) in outcome.scrollsEarned { summed.scrollsEarned[id, default: 0] += count }
             for (id, count) in outcome.stonesEarned { summed.stonesEarned[id, default: 0] += count }
             for (id, count) in outcome.aetherEarned { summed.aetherEarned[id, default: 0] += count }
+            summed.boonCachesEarned += outcome.boonCachesEarned
             for (id, levels) in outcome.leveledUnits { summed.leveledUnits[id, default: 0] += levels }
         }
         return summed

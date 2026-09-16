@@ -70,6 +70,7 @@ struct UnitDetailView: View {
     @State private var showAwakening = false
     @State private var showLore = false
     @State private var showSets = false
+    @State private var showBoons = false
     @State private var selectedSkill = 0
 
     /// A slot number that can drive a sheet.
@@ -164,6 +165,10 @@ struct UnitDetailView: View {
             }
             .sheet(isPresented: $showSets) {
                 RelicSetsSheet(unitID: unitID)
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showBoons) {
+                BoonPickerView(unitID: unitID)
                     .environmentObject(store)
             }
             .alert(unit?.blueprint.epithet ?? "", isPresented: $showLore) {
@@ -331,16 +336,11 @@ struct UnitDetailView: View {
                 }
                 .stroke(Theme.goldDim.opacity(0.35), lineWidth: 1)
                 // The largest clear space on the sheet carries the number the
-                // whole sheet exists to raise, not a second copy of the element.
+                // whole sheet exists to raise, and over it the BOON SOCKET —
+                // the one earned line a unit carries (`BoonPickerView`) —
+                // where a second copy of the element used to sit.
                 VStack(spacing: 2) {
-                    ZStack {
-                        Circle()
-                            .fill(unit.element.color.opacity(0.18))
-                            .frame(width: 34, height: 34)
-                        Image(systemName: unit.element.glyph)
-                            .font(.system(size: 15, weight: .black))
-                            .foregroundStyle(unit.element.color)
-                    }
+                    boonSocket(unit)
                     Text("\(unit.power)")
                         .font(Theme.numeric(16))
                         .foregroundStyle(Theme.gold)
@@ -367,6 +367,9 @@ struct UnitDetailView: View {
             }
             .frame(width: width, height: height)
             setsRow(unit)
+            if let boon = unit.boon {
+                boonLine(boon)
+            }
             // The footer takes what the ring and the sets row leave, and the
             // frame around it pins it to the panel's bottom rail rather than
             // letting it hang under the sets row with ninety-odd points of
@@ -419,6 +422,57 @@ struct UnitDetailView: View {
                 pickingSlot = SlotPick(id: slot)
             }
         }
+    }
+
+    /// The socket at the ring's centre: the boon's glyph in its colour on
+    /// the ring's own hexagon, or a ghost reading BOON. A tap opens the
+    /// picker (`BoonPickerView`), where the caches open and the boons are
+    /// pushed and socketed.
+    private func boonSocket(_ unit: ResolvedUnit) -> some View {
+        let boon = unit.boon
+        let socket: CGFloat = 36
+        return Button {
+            Juice.haptic(.light)
+            showBoons = true
+        } label: {
+            ZStack {
+                BoonHexagon()
+                    .fill(boon.map { $0.kind.tint.opacity(0.22) } ?? Theme.surface.opacity(0.9))
+                    .frame(width: socket, height: socket)
+                BoonHexagon()
+                    .stroke(boon != nil ? Theme.gold : Theme.goldDim.opacity(0.5), lineWidth: 1)
+                    .frame(width: socket, height: socket)
+                if let boon {
+                    Image(systemName: boon.kind.glyph)
+                        .font(.system(size: 14, weight: .black))
+                        .foregroundStyle(boon.kind.tint)
+                } else {
+                    Text("BOON")
+                        .font(Theme.body(8).weight(.black))
+                        .tracking(0.5)
+                        .foregroundStyle(Theme.goldDim.opacity(0.85))
+                }
+            }
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The boon's line under the sets row: "Bane of Tide · +18.3% vs Tide".
+    private func boonLine(_ boon: Boon) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: boon.kind.glyph)
+                .font(.system(size: 9, weight: .black))
+                .foregroundStyle(boon.kind.tint)
+            Text(boon.displayName)
+                .font(Theme.body(10).weight(.bold))
+                .foregroundStyle(Theme.textPrimary)
+            Text(boon.shortLine)
+                .font(Theme.numeric(10))
+                .foregroundStyle(Theme.gold)
+            Spacer(minLength: 0)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
     }
 
     /// Every set with a piece on the ring as a progress chip — "Fury 2/2"

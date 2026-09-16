@@ -22,6 +22,9 @@ struct StageOutcome: Sendable {
     var aetherEarned: [String: Int] = [:]
     /// The raid's grade, F to SSS; nil for every other stage.
     var raidGrade: RaidGrade? = nil
+    /// Boon caches (`BoonCache`) the clear left: a Titan at S and better, the
+    /// Labyrinth's last level, a Tower milestone. Defaulted like the stones.
+    var boonCachesEarned: [BoonCache] = []
 }
 
 /// PvE progression: which stages are open, and what a clear pays.
@@ -127,7 +130,7 @@ enum CampaignService {
 
     static func resolveTeam(_ preset: TeamPreset, player: Player) -> [ResolvedUnit] {
         preset.unitIDs.compactMap { id in
-            player.unit(id).flatMap { ProgressionService.resolve($0, relics: player.relics) }
+            player.unit(id).flatMap { ProgressionService.resolve($0, relics: player.relics, boons: player.boons ?? []) }
         }
     }
 
@@ -250,6 +253,22 @@ enum CampaignService {
             )
         }
 
+        // A boon cache, from the hardest content only: the stage's own chance
+        // (the Labyrinth's last level) or a Titan's by its grade, S and
+        // better. Rolled last, so nothing above it draws differently.
+        var caches: [BoonCache] = []
+        var cacheChance = rewards.boonCacheChance ?? 0
+        var cacheGrade = rewards.boonCacheGrade ?? RaidGradeService.titanBoonGrade
+        if let grade, RaidGradeService.boonCacheChance(for: grade) > 0 {
+            cacheChance = max(cacheChance, RaidGradeService.boonCacheChance(for: grade))
+            cacheGrade = RaidGradeService.titanBoonGrade
+        }
+        if cacheChance > 0, rng.chance(cacheChance) {
+            let cache = BoonCache(grade: cacheGrade, seed: rng.next(), source: grade != nil ? "Titan" : "Labyrinth")
+            BoonService.addCache(cache, player: &player)
+            caches.append(cache)
+        }
+
         return StageOutcome(
             result: result, stars: stars, drachma: drachma,
             playerExperience: rewards.playerExperience, unitExperience: unitXP,
@@ -257,7 +276,8 @@ enum CampaignService {
             divinityEarned: divinity, isFirstClear: isFirstClear,
             leveledUnits: leveled,
             stonesEarned: stones,
-            aetherEarned: aether, raidGrade: grade
+            aetherEarned: aether, raidGrade: grade,
+            boonCachesEarned: caches
         )
     }
 
@@ -375,6 +395,8 @@ enum TributeService {
         var stone: String?
         var relicGrade: Int?
         var relicQuality: RelicQuality?
+        /// A boon cache of this grade in the chest: the Judgment on Hell.
+        var boonCacheGrade: Int? = nil
     }
 
     static func payout(_ milestone: TributeMilestone, tier: CampaignDifficulty) -> Payout {
@@ -396,7 +418,7 @@ enum TributeService {
         case (.hell, .boss):
             return Payout(divinity: 150, pantheonScrolls: 0, mysticalScrolls: 0, essences: 5, stone: "gem_rare", relicGrade: 6, relicQuality: .hero)
         case (.hell, .flawless):
-            return Payout(divinity: 250, pantheonScrolls: 0, mysticalScrolls: 3, essences: 0, stone: "whetstone_hero", relicGrade: 6, relicQuality: .legend)
+            return Payout(divinity: 250, pantheonScrolls: 0, mysticalScrolls: 3, essences: 0, stone: "whetstone_hero", relicGrade: 6, relicQuality: .legend, boonCacheGrade: 6)
         }
     }
 
@@ -411,6 +433,7 @@ enum TributeService {
             if pay.mysticalScrolls > 0 { grants.append(.scrolls(.mystical, pay.mysticalScrolls)) }
             if pay.essences > 0, let essence { grants.append(.essences(essence, pay.essences)) }
             if let stone = pay.stone { grants.append(.stones(stone, 1)) }
+            if let cacheGrade = pay.boonCacheGrade { grants.append(.boonCache(grade: cacheGrade)) }
             return Tribute(
                 chapterID: chapter.id, milestone: milestone, grants: grants,
                 relicGrade: pay.relicGrade, relicQuality: pay.relicQuality

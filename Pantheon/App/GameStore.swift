@@ -148,11 +148,11 @@ final class GameStore: ObservableObject {
     // MARK: - Derived views of the roster
 
     var resolvedUnits: [ResolvedUnit] {
-        player.units.compactMap { ProgressionService.resolve($0, relics: player.relics) }
+        player.units.compactMap { ProgressionService.resolve($0, relics: player.relics, boons: player.boons ?? []) }
     }
 
     func resolved(_ unitID: UUID) -> ResolvedUnit? {
-        player.unit(unitID).flatMap { ProgressionService.resolve($0, relics: player.relics) }
+        player.unit(unitID).flatMap { ProgressionService.resolve($0, relics: player.relics, boons: player.boons ?? []) }
     }
 
     func team(_ preset: TeamPreset) -> [ResolvedUnit] {
@@ -483,6 +483,74 @@ final class GameStore: ObservableObject {
     func unequipAll(_ unitID: UUID) {
         update { player in
             RelicService.unequipAll(unitID: unitID, player: &player)
+        }
+    }
+
+    // MARK: - Boons
+
+    /// Opens a cache on one of its three doors: the boon, rolled. Nil, with
+    /// the reason shown, when the cache is gone or the door is not one of
+    /// its three.
+    @discardableResult
+    func openBoonCache(_ cacheID: UUID, choice: Int) -> Boon? {
+        var rng = makeRandom()
+        let result: Boon?? = attempt { player in
+            try BoonService.open(cacheID: cacheID, choice: choice, player: &player, rng: &rng)
+        }
+        return result ?? nil
+    }
+
+    /// Pays for a push and opens its choice of two. Nil, with the reason
+    /// shown, when the boon is fully pushed or the price is short.
+    @discardableResult
+    func pushBoon(_ boonID: UUID) -> Boon? {
+        var rng = makeRandom()
+        let result: Boon?? = attempt { player in
+            try BoonService.push(boonID: boonID, player: &player, rng: &rng)
+        }
+        return result ?? nil
+    }
+
+    /// Takes one of the two bumps a push offered. The candidates are derived
+    /// from the boon's own seed, so this spends the pair on the table and
+    /// cannot draw another.
+    @discardableResult
+    func takeBoonPush(_ boonID: UUID, candidate: Int) -> Double? {
+        var bump: Double?
+        update { player in
+            guard var boons = player.boons, let index = boons.firstIndex(where: { $0.id == boonID }) else { return }
+            bump = BoonService.takePush(&boons[index], candidate: candidate)
+            player.boons = boons
+        }
+        return bump
+    }
+
+    func equipBoon(_ boonID: UUID, on unitID: UUID) {
+        attempt { player in
+            try BoonService.equip(boonID: boonID, unitID: unitID, player: &player)
+        }
+    }
+
+    func unequipBoon(from unitID: UUID) {
+        update { player in
+            BoonService.unequip(unitID: unitID, player: &player)
+        }
+    }
+
+    func toggleBoonLock(_ boonID: UUID) {
+        update { player in
+            guard var boons = player.boons, let index = boons.firstIndex(where: { $0.id == boonID }) else { return }
+            boons[index].isLocked.toggle()
+            player.boons = boons
+        }
+    }
+
+    /// Sells boons, taking any out of its socket first. Nil, and an error
+    /// shown, if one of them is locked.
+    @discardableResult
+    func sellBoons(_ boonIDs: [UUID]) -> Int? {
+        attempt { player in
+            try BoonService.sell(boonIDs: boonIDs, player: &player)
         }
     }
 
@@ -886,11 +954,18 @@ final class GameStore: ObservableObject {
             // (`TourView.bestRelic`) to photograph the power-up panel, and a
             // pending choice blocks that panel — seeding the best one would
             // have quietly replaced an existing frame with this one.
-            let ranked = player.relics.indices.sorted {
+            //
+            // Only relics still climbing are ranked, and only while no relic
+            // has a choice waiting: the save persists between the tour's
+            // launches, and once the +15 relic below existed it ranked first
+            // and the pending roll landed on a THIRD relic — the one step 19
+            // opens, which then photographed "TAKE A ROLL FIRST" in place of
+            // its power-up panel (runs 158 and 159).
+            let ranked = player.relics.indices.filter { !player.relics[$0].isMaxLevel }.sorted {
                 (player.relics[$0].grade, player.relics[$0].level)
                     > (player.relics[$1].grade, player.relics[$1].level)
             }
-            if ranked.count > 1 {
+            if ranked.count > 1, !player.relics.contains(where: { $0.hasPendingRoll }) {
                 player.relics[ranked[1]].pendingRoll = 0xC0FFEE1234
             }
             // A 6★ Legend at +15, ready to be awakened, for tour step 40;
@@ -942,7 +1017,24 @@ final class GameStore: ObservableObject {
             // some over, so the Raids wing's count and the awakening panel
             // both photograph a real number.
             player.raidGrades = ["raid_apep": RaidGrade.s.rawValue]
-            player.aether = ["aether_ember": 74, "aether_pure": 21]
+            player.aether = ["aether_ember": 74, "aether_pure": 21, "aether_tide": 9]
+            // Boons, so the socket, the picker and the three doors all
+            // photograph: a 6★ Bane of Tide pushed twice in Zeus's socket
+            // (the detail step's unit, so the ring's centre shows one), a 5★
+            // Ward of Ember loose in the bag, and one 5★ cache still shut,
+            // its three doors fixed by the seed for tour step 41.
+            if (player.boons ?? []).isEmpty {
+                var bane = Boon(kind: BoonKind(.bane, element: .tide), grade: 6, magnitude: 0.183)
+                bane.pushes = 2
+                let ward = Boon(kind: BoonKind(.ward, element: .ember), grade: 5, magnitude: 0.121)
+                player.boons = [bane, ward]
+                if let zeus = player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) {
+                    try? BoonService.equip(boonID: bane.id, unitID: zeus.id, player: &player)
+                }
+            }
+            if (player.boonCaches ?? []).isEmpty {
+                BoonService.addCache(BoonCache(grade: 5, seed: 0xB0051, source: "Titan"), player: &player)
+            }
             for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {
                 player.essences[id, default: 0] += 12
             }

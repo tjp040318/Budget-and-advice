@@ -48,6 +48,11 @@ struct Combatant: Identifiable, Sendable {
     var relicSets: [RelicSet: Int] = [:]
     /// Passive triggers already spent this battle, for once-only passives.
     var firedPassives: Set<String> = []
+    /// The boon in the unit's socket, read by the engine at its hook
+    /// (`BattleEngine.boonDamageMultiplier` and the turn and battle starts).
+    let boon: Boon?
+    /// True once this unit's first turn has ended: First Blood's clock.
+    var hasActed: Bool = false
 
     var isAlive: Bool { currentHealth > 0 }
     /// A boss gets the big bar across the top of the HUD: an enemy that is
@@ -78,6 +83,7 @@ struct Combatant: Identifiable, Sendable {
         self.isLeader = isLeader
         self.isAwakened = resolved.unit.isAwakened
         self.level = resolved.unit.level
+        self.boon = resolved.boon
         let stats = (statsOverride ?? resolved.stats).clamped()
         self.baseStats = stats
         self.skills = resolved.skills

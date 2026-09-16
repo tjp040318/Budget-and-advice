@@ -3889,3 +3889,213 @@ photographs it.
 Titans use the meshes the Labyrinth already shipped; `boss_hydra` is unrigged
 and moves procedurally like the Jötunn, which the Labyrinth already lives
 with. The Meshy balance stays at 1,891.
+
+## Boons — the earned socket (2026-09-16, designed; the "Epithets" of the note above)
+
+The next item on the order the owner took ("I like it all"): *one earned
+socket in the centre of the relic ring, holding a conditional line. The item
+is chosen; its magnitude still rolls and can be pushed, so the RNG is inside
+a thing the player picked.* Written up before any code, per the standing
+rule; what the genre does, the options, and the choice.
+
+### What the genre does
+
+- **Summoners War's Artifacts (2020)** are the reference. Two per monster,
+  a flat main stat and four CONDITIONAL sub-lines drawn from pools —
+  "Damage dealt on Water +N%", "Damage dealt by counterattack +N%",
+  "Additional damage by N% of HP", "SPD +N% on the first turn", "CRIT Rate
+  +N% under 30% HP" — rolled like rune subs, from the Rift beasts, the
+  Dimension Hole and the Punisher's Crypt. Their genius is that the lines
+  make the SITUATION matter (the matchup, the first turn, low health, a
+  boss) rather than adding more of the same stat.
+- **Epic Seven's Artifacts** are a chosen item with a unique passive, levelled
+  to +30 with a deterministic magnitude; half of a character's identity, and
+  the cautionary tale — a few are best-in-slot on everyone.
+- **Raid's Masteries** are a chosen tree with no roll at all: the other
+  extreme, and nothing to farm.
+- **Hades' Boons** are the exact shape the owner asked for: a gift from a god,
+  chosen from three offered, a rarity, a rolled magnitude, and a Pom of Power
+  that pushes it. A roguelike, but the loop is the loop.
+
+### The name: Boons, not Epithets
+
+The note above called them Epithets, and the collision decided against it:
+every blueprint already carries an `epithet` — "King Under the Ice", "Nine
+Heads of the Marsh" — printed under the name on the unit sheet, and an
+earned item of the same name in the ring's centre would have two things
+called one thing on one screen. **Boon** is understood at once ("a boon from
+Zeus"), is native to the setting, and Hades made it mean precisely this: a
+chosen gift with a rolled strength. The idea is unchanged.
+
+### The design
+
+**A boon is an item** (`Boon`: kind, grade 4–6★, magnitude, pushes 0–5, a
+pending roll) kept in `Player.boons` (Optional); a unit holds ONE
+(`Unit.boonID`, Optional) in the socket at the centre of the relic ring —
+the disc that today repeats the element badge, which the sheet's own comment
+calls "a second copy of the element". The power figure stays; the disc
+becomes the socket.
+
+**The kinds are conditional lines the engine can read at four hooks** — the
+damage roll, a turn's start, the battle's start, the moment after a hit —
+and none of them is a flat stat, so no boon is "more ATK%":
+
+| boon | line | hook |
+|---|---|---|
+| Bane of ⟨element⟩ | +N% damage against ⟨element⟩ (five, one per element) | damage |
+| Giant-slayer | +N% damage against a boss | damage |
+| First Blood | +N% damage until this unit's first turn ends | damage |
+| Last Stand | +N% damage while under 40% health | damage |
+| Executioner | +N% damage against a target under 30% health | damage |
+| Ward of ⟨element⟩ | take N% less damage from ⟨element⟩ (five) | damage taken |
+| Unfading | heal N% of max health at the start of a turn begun under 50% | turn start |
+| Swift-footed | +N attack bar when the battle begins | battle start |
+| Hydra's Blood | recover N% of the damage dealt | after a hit |
+
+The E7 lesson is the balance rule: `balance.py --boons` measures each kind's
+damage or survival lift on the attacker sim and asserts every one lands in
+**6–18% at 6★** — under 6 nobody sockets it, over 18 it is mandatory — and
+that no kind is ever the best on more than two of the five ladders.
+
+**Chosen, then rolled, then pushed.** A boon DROPS as a cache of its grade
+(`boon_cache_<grade>`); opening it offers **three kinds** and the player
+takes one — Hades' three doors, the choice the owner asked for — and the
+magnitude then rolls 0.75–1.25 × the kind's base at that grade. A **push**
+(drachma, and four aether of the boon's colour — the Titans' currency again,
+so the Titans stay the source) rolls a bump as a **choice of two** through
+the same `pendingRoll` mechanic every relic roll uses, five pushes at most,
+each one lifting the floor. So: the item is chosen, the magnitude is RNG,
+the RNG is inside a thing the player picked, and a better one always exists.
+
+**Where they come from** — the hardest content, like an awakened relic: a
+Titan at S or better (25%, 6★), the Labyrinth's B10 (10%, 5★), the Tower's
+milestones (F25 a 4★, F50 a 5★, F75 and F100 a 6★ in the bundle) and the
+Judgment of the Realm on Hell (a 6★ cache in the chest). The Halls never.
+
+**On the screen.** The socket in the ring's centre (a hexagon with the
+boon's glyph and grade, or a ghost reading BOON); a tap opens the picker —
+owned boons best-fit-first with the line each would add, Equip. The line
+prints under the sets row ("Bane of Tide +18%"). A cache opens as the
+three-door choice over the unit sheet or the chest. Push lives on the
+boon's own card (the relic screen's power-up panel, one kind of number).
+The Collection's Relics rail gains a Boons chip for the list. Tour step 41.
+
+**What it is not.** Not a second inventory of six-per-unit gear — that is
+the Artifacts layer the order puts LAST, "because it doubles the inventory
+and that screen has been called overwhelming once already". One socket, one
+line, one number to push.
+
+### Built (2026-09-16): the socket, the three doors, the push
+
+Built whole, as designed above, with one number changed by the measurement
+(Last Stand's line, below) and nothing spent: the glyphs are the system's,
+the cache is a wax seal drawn in gold, and a painted cache icon joins the
+item-icon list for the day that batch is authorised.
+
+- **The item.** `Boon.swift`: `BoonFamily` (the nine, each with its hook,
+  its 6★ `base` and its words), `BoonKind` (a family and, for a Bane or a
+  Ward, its colour — seventeen kinds in all), `Boon` (kind, grade 4–6★,
+  the rolled `magnitude`, `pushes`, `equippedBy`, a lock, and a
+  `pendingRoll` seed exactly as a relic's), and `BoonCache` (grade, the
+  seed its three doors derive from, where it came from). `Unit.boonID`,
+  `Player.boons` and `Player.boonCaches`, all Optional per the standing
+  rule; `BoonTests.testTheFieldsAreOptionalSoAnOldSaveDecodes` pins it.
+- **The loop.** `BoonService`: `offers(for:)` derives three DIFFERENT
+  families from the cache's seed, a colour where the family has one, so
+  a closed sheet reopens on the same three; `open` rolls the chosen kind
+  at 0.75–1.25× the grade's base (a 4★ cache is 0.6 of a 6★'s, a 5★
+  0.8); `push` costs 8,000 / 16,000 / 30,000 drachma by grade plus four
+  aether of the boon's colour — or two pure for a kind of no colour — and
+  opens a choice of two bumps, each 8% of the base rolled 0.5–1.5×,
+  five pushes at most, so the floor only ever rises; `equip` keeps one
+  boon a socket and one socket a boon; `sell`, `fit` (the kind's weight
+  for the role times the roll's quality, the picker's order).
+- **The engine, at its four hooks.** `Combatant.boon` and `hasActed`;
+  `BattleEngine.boonDamageMultiplier` at the damage roll beside the raid's
+  (a Bane against its colour, Giant-slayer against `isBoss`, First Blood
+  while `!hasActed`, Last Stand under its line, Executioner against a
+  target under its line, and the DEFENDER's Ward against the attacker's
+  colour); Swift-footed moves the bar in `applyBattleStartEffects`
+  before anyone's passive; Unfading heals in `applyTurnStartEffects`
+  after Recovery and before the stun is read, so a stunned turn still
+  opens with it; Hydra's Blood drinks after the hits beside Styx; and
+  `finishTurn` closes First Blood, a stunned turn included. Every hook
+  is pinned by `BoonTests` off the damage a real fight deals with and
+  without the boon on one seed — a Bane of Ember multiplies the hit on
+  the serpent by exactly 1.15 and a Bane of Tide by exactly 1.
+- **Where they come from.** A Titan at S and better leaves a 6★ cache one
+  kill in four (`RaidGradeService.titanBoonChance`, rolled LAST in
+  `applyRewards` so nothing above it draws differently); the Labyrinth's
+  last level a 5★ one run in ten (`StageRewards.boonCacheChance`); the
+  Tower's 25th, 50th, 75th and 100th floors a 4★, a 5★ and two 6★ in
+  their bundles (`ShopService.Grant.boonCache`); the Judgment of the
+  Realm on Hell a 6★ in its chest. The Halls never, a stage never. The
+  cache rides the receipt (`StageOutcome.boonCachesEarned`, the sweep's
+  total, the repeat session) and the shelf shows it sealed
+  (`boon_cache_<grade>`, a seal in gold); it opens on the unit sheet.
+- **The screen.** The disc at the ring's centre that repeated the element
+  is the SOCKET now (`UnitDetailView.boonSocket`: the ring's own hexagon
+  with the boon's glyph in its colour, or a ghost reading BOON), the line
+  prints under the sets row ("Bane of Tide · +18.3% vs Tide"), and a tap
+  opens `BoonPickerView`: the list on the left — caches first, then the
+  boons best-fit-first for that unit — and the one panel on the right: a
+  cache's THREE DOORS, each printing the range its roll can land in, or
+  the boon's card with its line, its five push pips, the push and its
+  price, the choice of two when one is paid, Equip, Lock, Sell. The
+  Relics screen's menu opens the same picker with no unit, as the list.
+  Tour step 41 photographs the picker on the tour save's shut cache;
+  step 2 shows Zeus's socket filled.
+- **What `balance.py --boons` measures, and what it taught.** Each kind is
+  put in every socket of a team on five fights the sim already plays —
+  the Hall of Embers B5, Olympus 3's boss stage, the Necropolis B10, the
+  Colossus as a Titan, and an arena of four nukers against four in four
+  colours — and read against the same fight with no boon on the same
+  seeds: an offensive kind off damage dealt per battle turn (the total
+  dealt in a WIN is the foes' health and cannot rise; the pace is the
+  number), a Ward off damage taken per turn, a heal off the share of the
+  damage taken that it gives back. The rule holds on every kind and is
+  asserted:
+
+  | kind (6★ base) | Embers B5 | Olympus 3 | Necropolis | the Colossus | arena | best |
+  |---|---|---|---|---|---|---|
+  | Bane 0.15 | 11.6 | 2.3 | 13.8 | 11.9 | 3.5 | 13.8 |
+  | Giant-slayer 0.18 | 7.6 | 6.0 | 6.6 | 14.1 | 0 | 14.1 |
+  | First Blood 0.30 | 2.2 | 4.9 | 0.3 | 1.3 | 15.7 | 15.7 |
+  | Last Stand 0.70 | 0 | 0 | 0 | 0.5 | 8.1 | 8.1 |
+  | Executioner 0.35 | 5.6 | 4.5 | 6.3 | 5.3 | 10.8 | 10.8 |
+  | Ward 0.14 | 14.9 | 3.2 | 12.4 | 13.5 | 0.9 | 14.9 |
+  | Unfading 0.08 | 0.5 | 0.7 | 1.7 | 10.4 | 14.1 | 14.1 |
+  | Swift-footed 0.40 | 1.2 | 0 | 0 | 8.2 | 2.4 | 8.2 |
+  | Hydra's Blood 0.05 | 3.9 | 15.9 | 5.2 | 11.0 | 4.4 | 15.9 |
+
+  The best kind on each fight: a Ward in the hall, Hydra's Blood on the
+  chapter, a Bane in the Necropolis, Giant-slayer on the Titan, First
+  Blood in the arena — five fights, five different answers, which is the
+  whole point of a socket that is chosen. Four things the measurement
+  corrected before the table read like that: the first metric, NET damage
+  taken, was swamped by the sim's own heal AI (a 25% team heal whenever
+  anyone is under 60%), so a Ward that cut the damage read as −4%; the
+  arena mirror was mono-ember because the reference forms are all ember,
+  which made a Bane of Ember a flat +15% on everything and 18.4% on the
+  fight — a four-colour enemy line puts it at 3.5%; the sim broke speed
+  ties on `id(f)`, an object address, so Swift-footed measured 5.4%,
+  6.2% and 7.3% on three runs of one seed — every fighter is numbered at
+  birth now and the report is the same in every process; and Last Stand
+  at "+30% under 40%" lifted nothing anywhere, because a team the sim
+  keeps topped up is never under 40% and still acting — it is **+70%
+  under HALF health** now, which fires on the nuker arena's worn-down
+  turns for 8.1%. Hydra's Blood is 5% and not the 10% of the design
+  because an attacker deals many times what it takes: 10% gave back 30%
+  of the damage taken on the chapter fight, over the line.
+- **Two tour faults read off run 159's frames, fixed here.** Step 40
+  photographed the Vigil +12 twice and the awakening never: the rite ran
+  on appear, the store changed, the tour's `content` was re-evaluated and
+  its rule of "a 6★ +15 not yet awakened" no longer matched, so it swapped
+  in the best climbing relic — the rule is "a 6★ +15" now, awakened or
+  not. And step 19 showed "TAKE A ROLL FIRST" in place of its power-up
+  panel: the save persists between the tour's launches, so once the +15
+  relic existed it ranked first and the seeded pending roll landed on a
+  third relic, the one step 19 opens; the seed ranks climbing relics only
+  and seeds nothing while a choice is already waiting.
+
+**Next on the order the owner took:** Pantheon resonance, then Artifacts.
