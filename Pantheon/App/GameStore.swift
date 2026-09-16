@@ -523,32 +523,38 @@ final class GameStore: ObservableObject {
 
     // MARK: - The first hour
 
-    /// The step of the guided opening the island points at, or nil when there
-    /// is nothing left to point at.
-    ///
-    /// Derived from what the player owns and has cleared rather than from a
-    /// counter, so no screen has to remember to advance it and a save written
-    /// before the guide existed lands on the right step instead of restarting a
-    /// veteran at the beginning. The stored field only ever ends the guide.
-    var firstHourStep: FirstHourStep? {
-        guard player.firstHourStep != FirstHourStep.finished else { return nil }
-        return FirstHourStep.current(for: player)
+    // MARK: - Athena's Counsel
+
+    /// What she has already said. A lesson is read once and stays read: the
+    /// library replays it as often as the player likes without writing again.
+    func hasReadLesson(_ id: String) -> Bool {
+        player.lessonsRead?.contains(id) ?? false
     }
 
-    /// Keeps the save in step with the pointer on screen, and writes the
-    /// sentinel once the four are done so the guide cannot come back. The guard
-    /// is what stops the island's `onChange` from writing on every redraw.
-    func recordFirstHourStep(_ step: FirstHourStep?) {
-        let value = step?.rawValue ?? FirstHourStep.finished
-        guard player.firstHourStep != value else { return }
-        update { player in player.firstHourStep = value }
+    /// The lesson she should be giving, or nil for silence.
+    var currentLesson: Lesson? {
+        LessonBook.current(for: player, seen: Set(player.lessonsRead ?? []))
     }
 
-    /// Skip: the guide stops now and does not return. `resetAccount` replaces
-    /// the whole player, so a fresh account still gets it.
-    func skipFirstHour() {
-        guard player.firstHourStep != FirstHourStep.finished else { return }
-        update { player in player.firstHourStep = FirstHourStep.finished }
+    func markLessonRead(_ id: String) {
+        guard !hasReadLesson(id) else { return }
+        update { player in
+            var read = player.lessonsRead ?? []
+            read.append(id)
+            player.lessonsRead = read
+        }
+    }
+
+    /// Skip: the opening stops now, carets and all. Its lessons are marked
+    /// read so the library keeps every one of them, and the pop-ins carry on
+    /// — she is the manual, not a cutscene.
+    func silenceOpening() {
+        update { player in
+            var read = Set(player.lessonsRead ?? [])
+            read.formUnion(LessonBook.opening.map(\.id))
+            read.insert(LessonBook.openingSkipped)
+            player.lessonsRead = Array(read).sorted()
+        }
     }
 
     func hasSeenChapterIntro(_ chapterID: String) -> Bool {

@@ -41,6 +41,7 @@ struct TourView: View {
         ("labyrinth", 2), ("dungeon", 2), ("relic_picker", 2), ("dungeon_battle", 6), ("relic_powerup", 2),
         ("victory", 4), ("collection_stage", 2), ("relic_drop", 2), ("relic_filter", 2), ("launch", 2),
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
+        ("guide", 2), ("lessons", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -199,6 +200,24 @@ struct TourView: View {
             } else {
                 CampaignView(openingChapter: "duat_1")
             }
+        case "guide":
+            // Athena over the island, saying the first thing she says. The
+            // tour's save is a veteran's, so the opening would be silent on
+            // its own: the plate is put up directly, which is what a picture
+            // of it needs.
+            ZStack {
+                IslandView(isActive: false) { _ in }
+                GuidePlate(
+                    beat: LessonBook.opening.first?.beats.first
+                        ?? LessonBeat("The gods of five worlds are asleep under the stone."),
+                    title: LessonBook.opening.first?.title ?? "",
+                    isLast: false,
+                    onAdvance: {},
+                    onSkip: {}
+                )
+            }
+        case "lessons":
+            LessonsView()
         case "relic_sets":
             // The set reference, opened from a unit so its counts show.
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {

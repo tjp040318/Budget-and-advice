@@ -108,6 +108,11 @@ struct Player: Codable, Equatable, Sendable {
     /// Tribute ids claimed (`Tribute.id`: chapter id with its tier, and the
     /// milestone), so a chest pays once.
     var tributesClaimed: [String]? = nil
+    /// Lesson ids Athena has given (`LessonBook`), plus the sentinel
+    /// `LessonBook.openingSkipped` if the player skipped the opening. Every
+    /// one of them stays readable in the library for ever. Optional, like
+    /// every save field added since the first.
+    var lessonsRead: [String]? = nil
 
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }

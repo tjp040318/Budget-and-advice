@@ -481,11 +481,24 @@ def check_foreign_wrapped_properties(files, errors):
 
     Only wrapped properties are checked, because they are the ones that cannot
     legitimately be anything else. A bare identifier that matches one is
-    reported unless the type declares it too, or it appears after a dot."""
+    reported unless the type declares it too, or it appears after a dot.
+
+    Two things are NOT a foreign use, and both cost a false positive before
+    they were written down (2026-09-16, the guide overlay):
+
+    - An `extension` at column 0 belongs to NOBODY. The file is split by
+      top-level declarations, so an extension's lines used to be attributed
+      to whichever type happened to be declared above it — and an
+      `extension View` mentioning a `store` parameter was reported against
+      the unrelated struct before it. An extension cannot declare a stored
+      property anyway, so nothing is lost by skipping them.
+    - An argument LABEL. `GuideOverlay(store: game)` is a memberwise
+      initialiser, not a read of somebody else's property."""
     WRAPPED = re.compile(r"^\s*@(?:State|StateObject|Binding|EnvironmentObject|Environment|ObservedObject|"
                          r"FocusState|AppStorage|SceneStorage|GestureState)\b[^\n]*?\b(?:var|let)\s+"
                          r"([A-Za-z_][A-Za-z0-9_]*)")
     TYPE = re.compile(r"^(?:public\s+|private\s+|internal\s+|final\s+)*(struct|class|enum)\s+([A-Za-z_][A-Za-z0-9_]*)")
+    EXTENSION = re.compile(r"^(?:public\s+|private\s+|internal\s+)*extension\s+[A-Za-z_]")
     for path in files:
         text = strip_noise(open(path).read())
         lines = text.splitlines()
@@ -495,6 +508,10 @@ def check_foreign_wrapped_properties(files, errors):
             m = TYPE.match(line)
             if m:
                 bounds.append((i, m.group(2)))
+            elif EXTENSION.match(line):
+                # A boundary owned by nobody: the lines after it are checked
+                # against no type until the next declaration.
+                bounds.append((i, None))
         if len(bounds) < 2:
             continue
         bounds.append((len(lines), None))
@@ -512,7 +529,7 @@ def check_foreign_wrapped_properties(files, errors):
             for name, (start, body) in bodies.items():
                 if name in holders:
                     continue
-                pattern = re.compile(r"(?<![.$\w])" + re.escape(prop) + r"\b")
+                pattern = re.compile(r"(?<![.$\w])" + re.escape(prop) + r"\b(?!\s*:)")
                 for offset, line in enumerate(body):
                     if WRAPPED.match(line) or re.match(r"\s*(?:let|var)\s+" + re.escape(prop) + r"\b", line):
                         break
@@ -868,7 +885,7 @@ def check_unknown_types(files, declared, errors):
         "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",
         "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
-        "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64","Thread","DateFormatter","CFAbsoluteTime","CFAbsoluteTimeGetCurrent","CACurrentMediaTime","RunLoop","CAKeyframeAnimation","SCNParticleBlendMode","SCNParticlePropertyController",
+        "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64","Thread","DateFormatter","CFAbsoluteTime","CFAbsoluteTimeGetCurrent","CACurrentMediaTime","RunLoop","PreferenceKey","GeometryProxy","Anchor","CAKeyframeAnimation","SCNParticleBlendMode","SCNParticlePropertyController",
         "ClosedRange","Key","DEBUG","NONE","Menu","AnyView","EmptyView","Namespace",
         "Canvas","GraphicsContext","ScrollViewProxy","UnitCurve","CGVector","Ellipse", "ImageIO", "CFURL", "CFDictionary", "CFString",
         "CGImageSourceCreateWithURL", "CGImageSourceCreateThumbnailAtIndex",

@@ -94,6 +94,9 @@ struct IslandView: View {
 
                 ForEach(IslandDatabase.landmarks) { landmark in
                     plaque(landmark)
+                        // So Athena's caret can find this building by name
+                        // from anywhere (`GuideAnchorKey`).
+                        .guideAnchor("island_\(landmark.id)")
                         .position(
                             // Painting coordinates are in the full screen; the
                             // ZStack lives inside the safe area, hence the shift.
@@ -105,12 +108,12 @@ struct IslandView: View {
                 }
                 header
 
-                // The guided opening: one pointer at whatever the player has
-                // not done yet. It is drawn last so it sits over the plaques,
-                // and it is inert, so tapping "through" it opens the building.
-                if let step = store.firstHourStep, pendingIntro == nil {
-                    guide(step, frame: frame, full: full, insets: insets, size: geometry.size)
-                }
+                // The guided opening is Athena's now (`GuideOverlay`, put on
+                // the whole shell in RootView): she says the line, and her
+                // caret finds this island's buildings through the anchors the
+                // plaques above register. What stood here was a second
+                // pointer computed from the painting's own coordinates, which
+                // could only ever work on this one screen.
 
                 if let chapter = pendingIntro {
                     ChapterIntroCard(chapter: chapter) {
@@ -129,13 +132,6 @@ struct IslandView: View {
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
                 pulse = true
             }
-            // The save carries the step so a relaunch opens on the same
-            // pointer; a player who is past all four writes the sentinel here
-            // and is never asked again.
-            store.recordFirstHourStep(store.firstHourStep)
-        }
-        .onChange(of: store.firstHourStep) { _, step in
-            store.recordFirstHourStep(step)
         }
         .sheet(isPresented: $showShop) {
             ShopView()
@@ -454,132 +450,6 @@ struct IslandView: View {
         onOpen(landmark.destination)
     }
 
-    // MARK: - The guided opening
-
-    /// The chapter whose intro card has not been shown yet, or nil.
-    private var unseenIntroChapter: Chapter? {
-        let chapter = CampaignView.currentChapter(for: store.player)
-        guard !chapter.intro.isEmpty, !store.hasSeenChapterIntro(chapter.id) else { return nil }
-        return chapter
-    }
-
-    /// One step of the opening: a caret on the thing to press and a line under
-    /// it, plus the way out. There is no "next" — the caret moves when the
-    /// player does the thing, and nothing here is tappable except Skip.
-    @ViewBuilder
-    private func guide(
-        _ step: FirstHourStep,
-        frame: CGRect,
-        full: CGSize,
-        insets: EdgeInsets,
-        size: CGSize
-    ) -> some View {
-        let landmark = IslandDatabase.landmarks.first { $0.id == step.landmarkID }
-        // What the caret has to touch. A plaque is drawn from its anchor less
-        // 0.055 of the painting's height and stands 56pt of disc plus a name
-        // chip tall, so its edge is about 60pt from that centre.
-        let target: CGPoint = landmark.map { mark in
-            CGPoint(
-                x: frame.minX + mark.anchor.x * frame.width - insets.leading,
-                y: frame.minY + (mark.anchor.y - 0.055) * frame.height - insets.top
-            )
-        } ?? CGPoint(
-            // No building for this one: it is the Collection tab. An iPhone
-            // lays a landscape tab bar out as one centred row rather than five
-            // equal columns, so the fifth item sits a little right of centre
-            // instead of at 0.9 of the width. The caret is aimed at 0.78 and
-            // the line names the tab, which is what actually finds it.
-            x: 0.78 * full.width - insets.leading,
-            y: size.height
-        )
-        let reach: CGFloat = landmark == nil ? 0 : 60
-        let gap: CGFloat = 6
-        let caret: CGFloat = 13
-        // Under the plaque when the whole box fits under it, over it when it
-        // does not: the Gate sits low enough on the painting that its pointer
-        // would otherwise hang behind the tab bar.
-        let below = landmark != nil
-            && target.y + reach + gap + caret + 2 + Self.guidePlate <= size.height - 6
-        let caretY = below
-            ? target.y + reach + gap + caret / 2
-            : target.y - reach - gap - caret / 2
-        let plateY = below
-            ? target.y + reach + gap + caret + 2 + Self.guidePlate / 2
-            : target.y - reach - gap - caret - 2 - Self.guidePlate / 2
-        // The plate is 240 wide and the Hall of Ka stands close to the left
-        // edge, so the plate is kept on screen while the caret stays on the
-        // building.
-        let plateX = min(
-            max(target.x, Self.guideWidth / 2 + 8),
-            max(size.width - Self.guideWidth / 2 - 8, Self.guideWidth / 2 + 8)
-        )
-
-        Image(systemName: below ? "arrowtriangle.up.fill" : "arrowtriangle.down.fill")
-            .font(.system(size: caret, weight: .black))
-            .foregroundStyle(Theme.gold)
-            .shadow(color: .black.opacity(0.7), radius: 2, y: 1)
-            // Bobs toward what it points at, on the same repeating animation
-            // the active plaques glow with.
-            .offset(y: pulse ? (below ? 3 : -3) : 0)
-            .position(x: target.x, y: caretY)
-            .allowsHitTesting(false)
-
-        guideLine(step)
-            .frame(width: Self.guideWidth, height: Self.guidePlate)
-            .position(x: plateX, y: plateY)
-            // Inert, like every other painted thing on this screen: the plate
-            // floats over a plaque and neither `.clipShape` nor a capsule
-            // clips hit-testing, so a tap on it has to reach the building.
-            .allowsHitTesting(false)
-
-        skipChip
-            // Clear of the header: that plate is 60pt tall under a 6pt top
-            // padding, and a chip centred at 72 put its top edge inside the
-            // wallet button. This one is drawn after the header, so an overlap
-            // is the header losing its taps, not a cosmetic one.
-            .position(x: size.width - 52, y: 84)
-    }
-
-    private func guideLine(_ step: FirstHourStep) -> some View {
-        Text(step.line)
-            .font(Theme.body(11).weight(.semibold))
-            .foregroundStyle(Theme.textPrimary)
-            .multilineTextAlignment(.center)
-            .lineLimit(2)
-            .minimumScaleFactor(0.75)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 7)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(Theme.plate.opacity(0.88))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                            .strokeBorder(Theme.gold.opacity(0.7), lineWidth: 1)
-                    )
-                    .shadow(color: .black.opacity(0.35), radius: 4, y: 2)
-            )
-    }
-
-    /// Skip, under the header rather than on the pointer, because the pointer
-    /// has to stay inert for the building underneath it.
-    private var skipChip: some View {
-        Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
-            store.skipFirstHour()
-        } label: {
-            Text("Skip guide")
-                .font(Theme.body(10).weight(.bold))
-                .foregroundStyle(Theme.textSecondary)
-                .padding(.horizontal, 9)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule().fill(Theme.plate.opacity(0.88))
-                        .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
-                )
-        }
-        .buttonStyle(PlateButtonStyle())
-    }
 }
 
 // MARK: - The guided opening
@@ -605,35 +475,6 @@ enum FirstHourStep: String, CaseIterable, Sendable {
     /// been seen out. A sentinel rather than a fifth case, because it is not a
     /// step and nothing should be able to point at it.
     static let finished = "done"
-
-    /// The line under the caret. Each one names the building and the verb: the
-    /// test of the opening is whether somebody who has never seen the game
-    /// knows what to press, not whether the prose is nice.
-    var line: String {
-        switch self {
-        case .summon:
-            return "Start here. Open a scroll at the Summoning Circle and meet your first god."
-        case .fight:
-            return "Now the Gate of the Duat. The first stage is two shabti — your team can take them."
-        case .equip:
-            return "Your new god is wearing nothing. Open Collection, tap them, tap a relic slot."
-        case .powerUp:
-            return "Hall of Ka: feed the units you don't want to the one you do."
-        }
-    }
-
-    /// The landmark the caret sits on, or nil when the step's destination is a
-    /// tab rather than a building on the island.
-    var landmarkID: String? {
-        switch self {
-        case .summon: return "circle"
-        case .fight: return "gate"
-        // Relics go on from the unit sheet, and the collection is a tab: there
-        // is no building on the painting to point at.
-        case .equip: return nil
-        case .powerUp: return "hall"
-        }
-    }
 
     /// Whether the save says this has been done. Read off what the player
     /// actually owns and has cleared, never off a flag written by the screen

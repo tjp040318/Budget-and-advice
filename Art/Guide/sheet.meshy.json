@@ -1,0 +1,18 @@
+{
+  "id": "01a0a7c8-7cc0-778b-b1dc-d2a19e1774d0",
+  "kind": "picture",
+  "created": "2026-09-16T01:15:29Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "A 2 by 2 grid of four painted portrait busts of the SAME young woman \u2014 the same face, the same hair, the same costume in all four cells, only her expression changes. Painted in a rich classical Greek mythology video game style with warm rim light, painted brush detail and a luminous edge. She has grey eyes and dark hair bound up, a bronze war helmet pushed back off her forehead, a white chiton with a gold shoulder clasp, and a small owl perched at her shoulder. Each bust is shown from the chest up, turned slightly so she faces into the picture. The entire image background is solid pure black, edge to edge, and each bust floats on that black with black space around it. No frames, no borders, no panels, no plaques, no text, no letters, no captions, no signature, no background scenery. Top row, left to right: calm and composed, looking straight at the viewer; warm and pleased, a small proud smile. Bottom row, left to right: concerned, her brows drawn together; urgent and commanding, one hand raised with the index finger pointing. ",
+    "ai_model": "nano-banana-2"
+  },
+  "balance_before": 1867,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789521329359,
+  "started_at": 1789521329366,
+  "polled": "2026-09-16T01:15:59Z",
+  "consumed_credits": 6,
+  "finished_at": 1789521356715
+}

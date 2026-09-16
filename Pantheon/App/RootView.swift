@@ -70,13 +70,19 @@ struct RootView: View {
         // under a cream header.
         .tint(Theme.goldDim)
         .preferredColorScheme(.light)
+        // Athena over the whole shell. A full-screen cover is presented ABOVE
+        // this, so the two that matter to the opening carry her themselves —
+        // she has to be able to talk inside the Hall of Ka.
+        .guide(store)
         .fullScreenCover(isPresented: $showTraining) {
             TrainingView()
                 .environmentObject(store)
+                .guide(store)
         }
         .fullScreenCover(isPresented: $showLabyrinth) {
             LabyrinthView()
                 .environmentObject(store)
+                .guide(store)
         }
         .sheet(isPresented: $showSettings) {
             SettingsView()
@@ -205,6 +211,23 @@ struct SettingsView: View {
                     icon: "bag.fill",
                     tint: Theme.info,
                     badge: nil
+                )
+            }
+            .buttonStyle(PlateButtonStyle())
+
+            // Everything Athena has ever said, kept and replayable. The
+            // owner, on the opening being skippable: "that would be a good
+            // idea, let's expand on that" — so the tutorial is the manual.
+            NavigationLink {
+                LessonsView()
+                    .environmentObject(store)
+            } label: {
+                tileFace(
+                    title: "Lessons",
+                    caption: "Athena's Counsel · read any of them again",
+                    icon: "book.fill",
+                    tint: Theme.gold,
+                    badge: "\(LessonBook.all.filter { store.hasReadLesson($0.id) }.count)"
                 )
             }
             .buttonStyle(PlateButtonStyle())

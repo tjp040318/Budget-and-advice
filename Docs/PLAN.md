@@ -2914,3 +2914,66 @@ planned (task #79) plus a stall sign.
 This is a SEPARATE piece of work from the tutorial and should not be
 built inside it. Athena gets one lesson pointing at it, like every other
 system.
+
+
+### Built: the guide, the opening and the library (2026-09-16)
+
+Both names settled — **Athena's Counsel** for the lessons and the **Night
+Market** for the shop — and the first three of the five phases are in.
+
+**The art, 6 credits.** `tools/athena_art.py` paints FOUR expressions in
+ONE image as a 2 x 2 grid: calm, pleased, concerned, urging. One image and
+not four, because `meshy.py picture` takes a prompt and nothing else —
+there is no reference image on that endpoint, so two generations are two
+different women. A 1024 sheet gives 512-pixel cells, which is what a
+168-point bust wants on a 3x phone; a 3 x 3 would have given 341 and a
+softer face. Right at the first take: the same face, helmet, owl and
+chiton in all four, keyed off the black by a flood fill from each cell's
+border. Balance 1,867 → 1,861 against his 100-credit allowance.
+
+**The teacher.** `Lessons.swift` holds the data — a `Lesson` is an id, a
+title, a topic, its beats, the anchor its caret sits on, the one line
+under that caret, a `goal` read off the SAVE and an `unlock`. Two kinds,
+and `goal` is the difference: a STEP of the opening keeps its caret up
+until the save says the thing is done; a POP-IN has no goal and is over
+when it has been read. Eleven written: six of the opening and five
+system lessons, plus the Night Market's, which is deliberately locked
+(`unlock: { _ in false }`) so the library shows a player what the game
+still holds.
+
+**The caret is a preference, not a table of coordinates.** This is the
+part that had to be got right. `FirstHourStep`'s pointer was computed
+from the island painting's own landmark anchors, which works exactly
+once — on the island. A guide that must point at a tab, a button inside
+a sheet and a slot on the unit sheet cannot know where any of them are,
+so every control that can be pointed at now says where it is —
+`.guideAnchor("island_gate")` — and `GuideOverlay` reads the rect back
+out of a `PreferenceKey`. A lesson naming an anchor no view registered
+draws its line with no caret, which is the safe way for that to fail.
+
+**One guide, not two.** The island's own pointer, its line and its skip
+chip are gone (126 lines), with the store's three first-hour helpers and
+the two members of `FirstHourStep` that fed them. What survives of it is
+`isDone(for:)`, which the lessons' goals call: the goal logic was written
+against the save and proven, and a lesson must not grow a second opinion
+about what "done" means.
+
+**The library.** More → Lessons is `LessonsView`: every lesson by topic,
+the given ones with a seal and replayable for ever, the locked ones named
+and greyed. A replay is a CARD, never a pointer — the player may be
+standing on the island reading the lesson about a relic slot, and a caret
+aimed at a control that is not on this screen would be a caret that lies.
+Skip marks the opening's lessons read plus a sentinel, so the carets stop,
+the pop-ins carry on and the library keeps every word.
+
+**Two checker rules came out of building it**, both refined rather than
+silenced. The foreign-wrapped-property rule split the file by top-level
+declarations, so an `extension View` mentioning a `store` parameter was
+reported against whatever struct happened to be declared above it; an
+extension is owned by nobody now, and an argument LABEL is not a read of
+somebody else's property. Proven both ways: it still fires on a real
+foreign read and is silent on a memberwise initialiser.
+
+Tour steps 30 (`guide`, her plate over the island) and 31 (`lessons`) are
+in the CI job. Still to come: the remaining pop-ins, the Counsel
+checklist on `QuestService`, and the first battle that cannot be lost.
