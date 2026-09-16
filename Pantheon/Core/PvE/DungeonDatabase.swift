@@ -126,6 +126,12 @@ enum DungeonDatabase {
     /// 3★ on B1–3, 4★ on B4–6, 5★ on B7–9 and 6★ on B10, the genre's ladder.
     static func labyrinthGrade(level: Int) -> Int { min(6, 3 + (level - 1) / 3) }
 
+    /// How often the Labyrinth's last level and the Tower's last floors drop
+    /// an AWAKENED relic. Mirrored in `tools/balance.py` as `AWAKENED_DROP`.
+    static let labyrinthAwakenedChance = 0.04
+    static let towerAwakenedChance = 0.06
+    static let towerAwakenedFloor = 90
+
     /// Ten levels, each three waves: two of the roster's mobs and then the
     /// boss with two more, at a grade that climbs with the level and a
     /// multiplier that tightens the top. The numbers are in
@@ -174,6 +180,10 @@ enum DungeonDatabase {
                     // the raids are the source, the Labyrinth a taste.
                     stoneChances: level >= 10 ? ["whetstone_rare": 0.25, "whetstone_hero": 0.10]
                         : (level >= 7 ? ["whetstone_rare": 0.25] : nil),
+                    // The last level's relic is awakened one run in
+                    // twenty-five: the relic dungeon's own road to the tier
+                    // above, beside the raids' (`balance.py --awakening`).
+                    awakenedChance: level >= levelCount ? labyrinthAwakenedChance : nil,
                     scrollChances: level >= 7 ? [ScrollType.mystical.rawValue: 0.08] : [:],
                     firstClearDivinity: 20
                 ),
@@ -445,6 +455,9 @@ extension DungeonDatabase {
                 // where a relic dungeon's rewards are spent.
                 relicChance: floor % 5 == 0 ? 1.0 : 0.0,
                 relicGrade: stars,
+                // From floor 90, the relic floors' 6★ is awakened one time
+                // in sixteen: the climb's own road to the tier above.
+                awakenedChance: floor >= towerAwakenedFloor ? towerAwakenedChance : nil,
                 scrollChances: scrolls,
                 // Paid on the clear that opens the next floor, which for a
                 // tower floor is the only clear there will ever be.

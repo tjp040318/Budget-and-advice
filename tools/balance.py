@@ -1291,10 +1291,10 @@ DEFAULT_ENRAGE = 60                                                      # a pro
 AETHER_BY_GRADE = {"f": (0, 0), "d": (2, 0), "c": (4, 0), "b": (5, 1), "a": (6, 1),
                    "s": (8, 2), "ss": (10, 3), "sss": (12, 4)}          # (elemental, pure) per run
 GRADE_QUALITY_FLOOR = {"s": "hero", "ss": "hero", "sss": "legend"}      # the raid's relic; Rare below
-# Phase 2's planned price of one relic awakening (Docs/PLAN.md, *Awakened
-# relics and the Titans*): the target this report measures a raid against.
-# It is not in Swift until the awakening is.
-AWAKENING_AETHER = (60, 15)
+# What one relic awakening costs (RelicService.awakening*): the set's own
+# colour at the fair price, any other at half again, and the pure kind.
+AWAKENING_COST = {"matching": 60, "other": 90, "pure": 15}
+AWAKENING_AETHER = (AWAKENING_COST["matching"], AWAKENING_COST["pure"])
 RAID_ENERGY = 12
 
 def turns_allowed(grade, enrage_turn):
@@ -1413,6 +1413,113 @@ def report_raids(trials=40):
             print(f"      {label:>24}  kill the guard {wr*100:>4.0f}% in {med:>4.0f}t   "
                   f"ignore it {wrx*100:>4.0f}%")
         print()
+
+
+# ---------------------------------------------------------------------------
+# Relic awakening — phase 2 of the Titans (Relic.awakened, RelicService.awaken).
+#
+# A FLAG on a 6★, not a grade above it: a FIFTH sub stat (the cap is four
+# everywhere else), the +15 main stat at 3.6x instead of 3x, a halo. Done to
+# a 6★ +15 for aether, or dropped so from the hardest content. The one thing
+# this report exists to assert is that a well-rolled ordinary 6★ still beats
+# a badly-rolled awakened one — the flag is a step, not a new tier that makes
+# every 6★ in the bag junk.
+SET_AETHER = {"fury": "ember", "ichor": "ember", "wrath": "ember", "titanfall": "ember",
+              "aegis": "tide", "styx": "tide", "wards": "tide",
+              "bulwark": "gale", "zephyr": "gale", "chains": "gale",
+              "thunder": "radiance", "fates": "radiance", "vigil": "radiance",
+              "ruin": "umbra", "oracle": "umbra", "nemesis": "umbra"}      # RelicSet.aetherElement
+SUB_CAP, AWAKENED_SUB_CAP = 4, 5                                           # Relic.subStatCap
+MAIN_PEAK, AWAKENED_MAIN_PEAK = 3.0, 3.6                                    # Relic.peak / awakenedPeak
+AWAKENED_DROP = {"raid SS": 0.08, "raid SSS": 0.15,                         # RaidGradeService.awakenedChance
+                 "Labyrinth B10": 0.04,                                     # DungeonDatabase.labyrinthAwakenedChance
+                 "Endless Tower F90+ (relic floors)": 0.06,                 # towerAwakenedChance
+                 "Hell, chapter 7 on": 0.02}                                # CampaignDifficulty.hellAwakenedChance
+MAIN_STAT_BASE = {"critdmg": 0.05, "atk%": 0.05, "hp%": 0.05, "def%": 0.05, "spd": 5,
+                  "crit": 0.04, "acc": 0.04, "res": 0.04, "atk": 12, "def": 12, "hp": 180}
+MAIN_GRADE_SCALE = 0.32                                                     # RelicService.mainStatValue
+# RelicService.weight(for: .attacker) and normalized(): the score the
+# optimiser and the auto-equip use, so "better" here is the game's own word.
+ATTACKER_WEIGHT = {"atk%": 1.4, "atk": 1.4, "crit": 1.6, "critdmg": 1.5, "spd": 1.3}
+SUB_KINDS = ["hp", "hp%", "atk", "atk%", "def", "def%", "spd", "crit", "critdmg", "acc", "res"]
+
+def main_stat_base(kind, grade=6):
+    return MAIN_STAT_BASE[kind] * (1 + (grade - 1) * MAIN_GRADE_SCALE)
+
+def normalized_stat(kind, value):
+    if kind == "hp": return value / 180
+    if kind in ("atk", "def"): return value / 12
+    if kind == "spd": return value / 2
+    return value * 100 / 5
+
+def attacker_weight(kind):
+    return ATTACKER_WEIGHT.get(kind, 0.3)
+
+def relic_score(main_kind, main_mult, subs):
+    """subs: [(kind, value)]. The attacker's score of a slot-4 relic."""
+    score = attacker_weight(main_kind) * normalized_stat(main_kind, main_stat_base(main_kind) * main_mult)
+    for kind, value in subs:
+        score += attacker_weight(kind) * normalized_stat(kind, value)
+    return score
+
+def report_awakening(trials=20_000):
+    import random as _r
+    print("\nRELIC AWAKENING — the tier above 6*, as a flag")
+    print("a 6* at +15 awakens for aether: a FIFTH sub stat (chosen from two, like every roll),")
+    print(f"the +15 main stat at {AWAKENED_MAIN_PEAK}x instead of {MAIN_PEAK}x, a halo. Or it drops that way.\n")
+    print(f"  cost: {AWAKENING_COST['matching']} aether of the set's own colour, or {AWAKENING_COST['other']} of any other, "
+          f"plus {AWAKENING_COST['pure']} pure")
+    by_element = {}
+    for s, e in SET_AETHER.items(): by_element.setdefault(e, []).append(s)
+    for element, sets in by_element.items():
+        print(f"    {element:>9}: {', '.join(sets)}")
+    print("  awakened drops: " + ", ".join(f"{k} {v*100:.0f}%" for k, v in AWAKENED_DROP.items()))
+    print(f"    → a raid at SSS every {1 / AWAKENED_DROP['raid SSS']:.0f} kills ({RAID_ENERGY / AWAKENED_DROP['raid SSS']:.0f} energy), "
+          f"the Labyrinth's B10 every {1 / AWAKENED_DROP['Labyrinth B10']:.0f} runs")
+
+    # The comparison, in the game's own score for an attacker on a slot-4
+    # relic whose main stat is CRIT DMG.
+    main = "critdmg"
+    pool = [k for k in SUB_KINDS if k != main]
+    best_kinds = sorted(pool, key=lambda k: -attacker_weight(k) * normalized_stat(k, sub_stat_base(k)))
+    worst_kinds = list(reversed(best_kinds))
+    top = best_kinds[:SUB_CAP]
+    well = [(k, sub_stat_base(k) * 1.25) for k in top]
+    well[0] = (well[0][0], well[0][1] + 4 * sub_stat_base(well[0][0]) * 1.25)      # four grows on the best
+    well_ordinary = relic_score(main, MAIN_PEAK, well)
+    bad = [(k, sub_stat_base(k) * 0.75) for k in worst_kinds[:AWAKENED_SUB_CAP]]
+    bad[0] = (bad[0][0], bad[0][1] + 4 * sub_stat_base(bad[0][0]) * 0.75)          # four grows on the worst
+    bad_awakened = relic_score(main, AWAKENED_MAIN_PEAK, bad)
+    print(f"\n  a well-rolled ordinary 6* +15 (the best four kinds at the top of the range, the")
+    print(f"  best of them grown four times) scores {well_ordinary:6.1f}")
+    print(f"  a badly-rolled AWAKENED 6* +15 (the worst five kinds at the bottom, the worst")
+    print(f"  of them grown four times, the main at {AWAKENED_MAIN_PEAK}x) scores {bad_awakened:6.1f}")
+    verdict = "the flag is a step, not a tier: rolls still decide" if well_ordinary > bad_awakened else \
+        "AN AWAKENING BEATS EVERY ROLL — the ceiling or the fifth sub is too big"
+    print(f"  → {verdict}")
+    assert well_ordinary > bad_awakened, verdict
+
+    # And on average: the same relic, rolled at random, with and without.
+    rng = _r.Random(20260916)
+    def mean_score(cap, main_mult):
+        total = 0.0
+        for _ in range(trials):
+            kinds = rng.sample(pool, cap)
+            subs = [(k, sub_stat_base(k) * rng.uniform(0.75, 1.25)) for k in kinds]
+            for _ in range(4):
+                i = rng.randrange(cap)
+                k, v = subs[i]
+                subs[i] = (k, v + sub_stat_base(k) * rng.uniform(0.75, 1.25))
+            total += relic_score(main, main_mult, subs)
+        return total / trials
+    ordinary = mean_score(SUB_CAP, MAIN_PEAK)
+    awakened = mean_score(AWAKENED_SUB_CAP, AWAKENED_MAIN_PEAK)
+    lift = awakened / ordinary
+    print(f"\n  rolled at random, {trials:,} times each: an ordinary +15 averages {ordinary:.1f}, an awakened")
+    print(f"  one {awakened:.1f} — {lift:.2f}x, the awakening's premium")
+    assert 1.05 < lift < 1.40, f"the premium is {lift:.2f}x: under 1.05 nobody bothers, over 1.40 it is a new tier"
+    print("  → intended: between 1.05x and 1.40x — worth a week of raids, and still a relic a")
+    print("    good roll on an ordinary 6* can beat")
 
 
 def report_campaign(trials=200):
@@ -2097,6 +2204,7 @@ if __name__ == "__main__":
     elif "--tower" in a: report_tower()
     elif "--raids" in a: report_raids()
     elif "--grades" in a: report_grades()
+    elif "--awakening" in a: report_awakening()
     elif "--relics" in a: report_relics()
     elif "--tributes" in a: report_tributes()
     elif "--shop" in a: report_shop()
@@ -2107,7 +2215,7 @@ if __name__ == "__main__":
     elif "--drops" in a: report_drops()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
-        report_labyrinths(); report_tower(); report_raids(); report_grades()
+        report_labyrinths(); report_tower(); report_raids(); report_grades(); report_awakening()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
         report_sweep(); report_mileage(); report_targeting()
         print()

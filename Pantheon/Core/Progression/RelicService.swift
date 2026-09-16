@@ -65,6 +65,7 @@ enum RelicService {
         set: RelicSet? = nil,
         quality: RelicQuality? = nil,
         qualityFloor: RelicQuality = .normal,
+        awakened: Bool = false,
         rng: inout SeededRandom
     ) -> Relic {
         let clampedGrade = max(1, min(6, grade))
@@ -89,7 +90,11 @@ enum RelicService {
         }
         var available = subStatPool.filter { $0 != mainKind }
         var subs: [StatModifier] = []
-        for _ in 0..<rolledQuality.subStatCount {
+        // An awakened drop carries ONE MORE sub stat than its quality says,
+        // so it always reaches its five by +12 the way an ordinary relic
+        // reaches four: a Normal drops with one, a Legend with all five.
+        let dropped = min(awakened ? 5 : 4, rolledQuality.subStatCount + (awakened ? 1 : 0))
+        for _ in 0..<dropped {
             guard let kind = rng.pickMutating(available) else { break }
             available.removeAll { $0 == kind }
             subs.append(StatModifier(kind, subStatRoll(kind: kind, grade: clampedGrade, rng: &rng)))
@@ -97,6 +102,7 @@ enum RelicService {
 
         var relic = Relic(set: chosenSet, slot: chosenSlot, grade: clampedGrade, mainStat: main, subStats: subs)
         relic.quality = rolledQuality
+        if awakened { relic.awakened = true }
         return relic
     }
 
@@ -215,7 +221,7 @@ enum RelicService {
         var rng = SeededRandom(seed: seed)
         var offers: [RollCandidate] = []
 
-        if relic.subStats.count < 4 {
+        if relic.subStats.count < relic.subStatCap {
             var available = subStatPool.filter { kind in
                 kind != relic.mainStat.kind && !relic.subStats.contains(where: { $0.kind == kind })
             }
@@ -273,7 +279,7 @@ enum RelicService {
 
         guard levelRollsSubStat(relic.level) else { return nil }
 
-        if relic.subStats.count < 4 {
+        if relic.subStats.count < relic.subStatCap {
             let available = subStatPool.filter { kind in
                 kind != relic.mainStat.kind && !relic.subStats.contains(where: { $0.kind == kind })
             }
@@ -341,6 +347,96 @@ enum RelicService {
         return PowerUpOutcome(
             succeeded: true, level: relic.level, cost: cost, chance: chance, subStatChange: nil
         )
+    }
+
+    // MARK: - Awakening
+
+    /// What an awakening costs in the Titans' aether: the set's own colour
+    /// at the fair price, any other colour at half again, and the pure kind
+    /// either way. A 6★ at +15 and nothing less — the relic the player spent
+    /// a month on becomes the INPUT rather than the casualty, which is the
+    /// argument for a flag over a 7★ grade. Mirrored in `tools/balance.py`
+    /// as `AWAKENING_COST`.
+    static let awakeningMatching = 60
+    static let awakeningOffColour = 90
+    static let awakeningPure = 15
+
+    static func awakeningCost(for relic: Relic, paying element: Element) -> (elemental: Int, pure: Int) {
+        (element == relic.set.aetherElement ? awakeningMatching : awakeningOffColour, awakeningPure)
+    }
+
+    enum AwakeningError: Error, LocalizedError, Equatable {
+        case gone
+        case notSixStar
+        case notMaxLevel
+        case alreadyAwakened
+        case choiceWaiting
+        case notEnoughAether(id: String, needed: Int, held: Int)
+
+        var errorDescription: String? {
+            switch self {
+            case .gone: return "That relic is gone."
+            case .notSixStar: return "Only a 6★ relic can be awakened."
+            case .notMaxLevel: return "Reach +15 first."
+            case .alreadyAwakened: return "This relic is already awakened."
+            case .choiceWaiting: return "Take one of the two rolls on this relic first."
+            case .notEnoughAether(let id, let needed, let held):
+                return "\(Aether.name(for: id)): \(held) of \(needed)."
+            }
+        }
+    }
+
+    /// Why the relic cannot be awakened with that colour right now, or nil.
+    static func awakeningError(_ relic: Relic, paying element: Element, player: Player) -> AwakeningError? {
+        if relic.isAwakened { return .alreadyAwakened }
+        if relic.grade < 6 { return .notSixStar }
+        if !relic.isMaxLevel { return .notMaxLevel }
+        if relic.hasPendingRoll { return .choiceWaiting }
+        let cost = awakeningCost(for: relic, paying: element)
+        let elementalID = Aether.id(for: element)
+        let heldElemental = Aether.count(elementalID, player: player)
+        if heldElemental < cost.elemental {
+            return .notEnoughAether(id: elementalID, needed: cost.elemental, held: heldElemental)
+        }
+        let heldPure = Aether.count(Aether.pure, player: player)
+        if heldPure < cost.pure {
+            return .notEnoughAether(id: Aether.pure, needed: cost.pure, held: heldPure)
+        }
+        return nil
+    }
+
+    /// The same, in words for the button's caption.
+    static func awakeningRefusal(_ relic: Relic, paying element: Element, player: Player) -> String? {
+        awakeningError(relic, paying: element, player: player)?.errorDescription
+    }
+
+    /// What an awakening spent, for the screen.
+    struct AwakeningOutcome: Equatable, Sendable {
+        var spent: [String: Int]
+        var element: Element
+    }
+
+    /// Awakens a relic: the aether is spent, the flag set, and the FIFTH sub
+    /// stat opens as a choice of two (`pendingRoll`) exactly like a +3 — so
+    /// the awakening's roll is the same decision every other roll in the
+    /// game is, made on the same panel.
+    @discardableResult
+    static func awaken(
+        relicID: UUID, paying element: Element, player: inout Player, rng: inout SeededRandom
+    ) throws -> AwakeningOutcome {
+        guard let index = player.relics.firstIndex(where: { $0.id == relicID }) else { throw AwakeningError.gone }
+        var relic = player.relics[index]
+        if let refusal = awakeningError(relic, paying: element, player: player) { throw refusal }
+        let cost = awakeningCost(for: relic, paying: element)
+        let elementalID = Aether.id(for: element)
+        var held = player.aether ?? [:]
+        held[elementalID, default: 0] -= cost.elemental
+        held[Aether.pure, default: 0] -= cost.pure
+        player.aether = held
+        relic.awakened = true
+        relic.pendingRoll = rng.next()
+        player.relics[index] = relic
+        return AwakeningOutcome(spent: [elementalID: cost.elemental, Aether.pure: cost.pure], element: element)
     }
 
     // MARK: - Selling, reappraisal, efficiency
@@ -415,13 +511,16 @@ enum RelicService {
         let quality = relic.resolvedQuality
         var available = subStatPool.filter { $0 != relic.mainStat.kind }
         var subs: [StatModifier] = []
-        for _ in 0..<quality.subStatCount {
+        // An awakened relic's extra sub stat is part of its base, so it
+        // comes back with five the way it went in with five.
+        let base = min(relic.subStatCap, quality.subStatCount + (relic.isAwakened ? 1 : 0))
+        for _ in 0..<base {
             guard let kind = rng.pickMutating(available) else { break }
             available.removeAll { $0 == kind }
             subs.append(StatModifier(kind, subStatRoll(kind: kind, grade: relic.grade, rng: &rng)))
         }
         for _ in 0..<(min(relic.level, 12) / 3) {
-            if subs.count < 4, let kind = rng.pickMutating(available) {
+            if subs.count < relic.subStatCap, let kind = rng.pickMutating(available) {
                 available.removeAll { $0 == kind }
                 subs.append(StatModifier(kind, subStatRoll(kind: kind, grade: relic.grade, rng: &rng)))
             } else if !subs.isEmpty {
@@ -445,7 +544,7 @@ enum RelicService {
         func best(_ kind: StatKind) -> Double {
             weight(kind, for: role) * normalized(StatModifier(kind, subStatBase(kind: kind, grade: relic.grade) * 1.25))
         }
-        let top = subStatPool.filter { $0 != mainKind }.sorted { best($0) > best($1) }.prefix(4)
+        let top = subStatPool.filter { $0 != mainKind }.sorted { best($0) > best($1) }.prefix(relic.subStatCap)
         var ceiling = weight(mainKind, for: role) * normalized(relic.effectiveMainStat)
         for kind in top { ceiling += best(kind) }
         if let first = top.first { ceiling += Double(relic.level / 3) * best(first) }

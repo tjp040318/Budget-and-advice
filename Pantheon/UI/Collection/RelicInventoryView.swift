@@ -44,6 +44,22 @@ struct RelicIcon: View {
     var body: some View {
         VStack(spacing: max(1, size * 0.05)) {
             ZStack(alignment: .topTrailing) {
+                // The halo: an awakened relic wears a gold ring round the
+                // stone with a second, fainter one outside it — the tier
+                // above 6★ read at a glance in every grid, the way a card's
+                // awakened sun is. Drawn a little wider than the frame, so
+                // the hexagon's corners are not cut across.
+                if relic.isAwakened {
+                    Circle()
+                        .strokeBorder(Theme.gold.opacity(0.45), lineWidth: max(0.5, size * 0.02))
+                        .frame(width: size * 1.26, height: size * 1.26)
+                        .frame(width: size, height: size)
+                    Circle()
+                        .strokeBorder(Theme.gold, lineWidth: max(1, size * 0.035))
+                        .frame(width: size * 1.12, height: size * 1.12)
+                        .shadow(color: Theme.gold.opacity(0.7), radius: size * 0.08)
+                        .frame(width: size, height: size)
+                }
                 stone
                     .frame(width: size, height: size)
                     .shadow(color: rarity.glow.opacity(rarity >= .epic ? 0.45 : 0), radius: size * 0.1)
@@ -207,11 +223,12 @@ struct RelicFilter: Equatable {
     var sets: Set<RelicSet> = []
     var worn: Worn = .any
     var lockedOnly = false
+    var awakenedOnly = false
 
     /// How many axes are narrowing the list: the badge on the Filter button.
     var activeCount: Int {
         [!slots.isEmpty, !grades.isEmpty, !qualities.isEmpty, !mainKinds.isEmpty, !subKinds.isEmpty,
-         !sets.isEmpty, worn != .any, lockedOnly].filter { $0 }.count
+         !sets.isEmpty, worn != .any, lockedOnly, awakenedOnly].filter { $0 }.count
     }
 
     var isEmpty: Bool { activeCount == 0 }
@@ -229,6 +246,7 @@ struct RelicFilter: Equatable {
         case .equipped: if relic.equippedBy == nil { return false }
         }
         if lockedOnly, !relic.isLocked { return false }
+        if awakenedOnly, !relic.isAwakened { return false }
         return true
     }
 }
@@ -952,11 +970,20 @@ struct EfficiencyDial: View {
 struct RelicDetailView: View {
     let relicID: UUID
     var role: CombatRole = .attacker
+    /// The CI tour's `relic_awaken` step: perform the awakening as the screen
+    /// appears, so the rite and the fifth sub stat's choice are photographed
+    /// without a tap. Does nothing on a relic that cannot be awakened.
+    var awakenOnAppear: Bool = false
 
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
     @State private var showSellConfirm = false
     @State private var showReappraiseConfirm = false
+    @State private var showAwakenConfirm = false
+    /// The aether colour the player is paying with; nil is the set's own.
+    @State private var payingElement: Element?
+    /// The rite is up: the stone in its pillar of light, the halo drawing on.
+    @State private var riteShown = false
     @State private var showPicker = false
     @State private var showStones = false
     @State private var showWearerPicker = false
@@ -1000,15 +1027,51 @@ struct RelicDetailView: View {
                                     rollChoicePanel(relic)
                                 }
                                 powerUpPanel(relic)
+                                // The road past +15, on every 6★ from +0 so
+                                // the player knows where the drachma leads.
+                                if relic.grade >= 6 {
+                                    awakeningPanel(relic)
+                                }
                             }
                         }
                         .frame(width: 300)
                     }
                     .padding(.horizontal, ScreenChrome.contentPadding)
                     .padding(.top, 6)
+                    .overlay {
+                        if riteShown {
+                            RelicAwakeningRite(relic: relic) {
+                                withAnimation(.easeOut(duration: 0.35)) { riteShown = false }
+                            }
+                            .transition(.opacity)
+                        }
+                    }
                 } else {
                     EmptyState(icon: "shield.slash", title: "Sold", message: "This relic is gone.")
                         .onAppear { dismiss() }
+                }
+            }
+            .onAppear {
+                guard awakenOnAppear, let relic else { return }
+                let element = relic.set.aetherElement
+                if RelicService.awakeningRefusal(relic, paying: element, player: store.player) == nil {
+                    performAwakening(paying: element)
+                }
+            }
+            .confirmationDialog(
+                "Awaken this relic?",
+                isPresented: $showAwakenConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Awaken") {
+                    performAwakening(paying: payingElement ?? relic?.set.aetherElement ?? .ember)
+                }
+                Button("Not yet", role: .cancel) {}
+            } message: {
+                if let relic {
+                    let element = payingElement ?? relic.set.aetherElement
+                    let cost = RelicService.awakeningCost(for: relic, paying: element)
+                    Text("\(cost.elemental) \(Aether.name(for: Aether.id(for: element))) and \(cost.pure) Pure Aether are spent. A fifth sub stat opens as a choice of two, and the +15 main stat rises to 3.6×. There is no undo, and no reason to want one.")
                 }
             }
             .confirmationDialog(
@@ -1068,6 +1131,9 @@ struct RelicDetailView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         RelicQualityTag(quality: relic.resolvedQuality, size: 8)
+                        if relic.isAwakened {
+                            Chip(text: "Awakened", systemImage: "sun.max.fill", tint: Theme.gold, filled: true)
+                        }
                         Text("+\(relic.level)")
                             .font(Theme.numeric(15).weight(.bold))
                             .foregroundStyle(Theme.gold)
@@ -1177,7 +1243,7 @@ struct RelicDetailView: View {
                         )
                     }
                 }
-                if relic.subStats.count < 4, let at = nextSubStatLevel(relic) {
+                if relic.subStats.count < relic.subStatCap, let at = nextSubStatLevel(relic) {
                     HStack {
                         Text("A new sub stat at +\(at)")
                             .font(Theme.body(10))
@@ -1276,7 +1342,7 @@ struct RelicDetailView: View {
                         .foregroundStyle(affordable ? Theme.textPrimary : Theme.danger)
                 }
                 if RelicService.levelRollsSubStat(relic.level + 1) {
-                    Label(relic.subStats.count < 4 ? "This level adds a sub stat" : "This level grows a sub stat", systemImage: "sparkles")
+                    Label(relic.subStats.count < relic.subStatCap ? "This level adds a sub stat" : "This level grows a sub stat", systemImage: "sparkles")
                         .font(Theme.body(10).weight(.semibold))
                         .foregroundStyle(Theme.gold)
                 } else if relic.level + 1 == relic.maxLevel {
@@ -1344,6 +1410,108 @@ struct RelicDetailView: View {
         .panelBackground()
     }
 
+    // MARK: - Awakening
+
+    /// The road past +15 for a 6★: a fifth sub stat, the main stat at 3.6×,
+    /// the halo — paid in the Titans' aether, the set's own colour at the
+    /// fair price and any other at half again. Shown on every 6★ so the road
+    /// is visible from +0; the button lights at +15.
+    private func awakeningPanel(_ relic: Relic) -> some View {
+        let paying = payingElement ?? relic.set.aetherElement
+        let cost = RelicService.awakeningCost(for: relic, paying: paying)
+        let refusal = RelicService.awakeningRefusal(relic, paying: paying, player: store.player)
+        return VStack(alignment: .leading, spacing: 8) {
+            SectionHeader(title: "Awakening", accessory: relic.isAwakened ? "awakened" : "the road past +15")
+            if relic.isAwakened {
+                Label("A fifth sub stat, and the +15 main stat at 3.6×: the top of the ladder.", systemImage: "sun.max.fill")
+                    .font(Theme.body(10).weight(.semibold))
+                    .foregroundStyle(Theme.gold)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text("At +15, awaken it: a FIFTH sub stat, chosen from two, and the +15 main stat lifted from 3× to 3.6×. \(relic.set.displayName) takes \(relic.set.aetherElement.displayName) Aether at the fair price; any other colour costs half again.")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    Text("PAY WITH")
+                        .font(Theme.body(8).weight(.black))
+                        .tracking(1.0)
+                        .foregroundStyle(Theme.goldDim)
+                    ForEach(Element.allCases) { element in
+                        aetherChip(element, isOn: paying == element, fair: element == relic.set.aetherElement) {
+                            Juice.haptic(.light)
+                            payingElement = element
+                        }
+                    }
+                }
+                costRow(Aether.id(for: paying), needed: cost.elemental)
+                costRow(Aether.pure, needed: cost.pure)
+                PrimaryButton(
+                    title: relic.isMaxLevel ? "Awaken" : "Awaken at +15",
+                    systemImage: "sun.max.fill",
+                    isEnabled: refusal == nil
+                ) {
+                    showAwakenConfirm = true
+                }
+                if let refusal {
+                    Text(refusal)
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(10)
+        .panelBackground()
+    }
+
+    /// One colour of aether as a chip: its glyph and how much is held, filled
+    /// in the element's colour when it is the one being paid with, and
+    /// ringed in gold when it is the set's own — the fair price.
+    private func aetherChip(_ element: Element, isOn: Bool, fair: Bool, action: @escaping () -> Void) -> some View {
+        let held = Aether.count(Aether.id(for: element), player: store.player)
+        return Button(action: action) {
+            HStack(spacing: 3) {
+                Image(systemName: element.glyph)
+                    .font(.system(size: 8, weight: .black))
+                Text("\(held)")
+                    .font(Theme.numeric(10))
+            }
+            .foregroundStyle(isOn ? Theme.surfaceHigh : element.color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(isOn ? element.color : element.color.opacity(0.12)))
+            .overlay(Capsule().strokeBorder(fair ? Theme.gold : Color.clear, lineWidth: 1.5))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(element.displayName) Aether, \(held) held\(fair ? ", the fair colour" : "")")
+    }
+
+    private func costRow(_ id: String, needed: Int) -> some View {
+        let held = Aether.count(id, player: store.player)
+        return HStack(spacing: 6) {
+            ItemIcon(key: id, size: 16, glow: false)
+            Text(Aether.name(for: id))
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+            Spacer()
+            Text("\(held) / \(needed)")
+                .font(Theme.numeric(12))
+                .foregroundStyle(held >= needed ? Theme.textPrimary : Theme.danger)
+        }
+    }
+
+    /// The awakening itself, then the rite over the screen; the fifth sub
+    /// stat's choice of two stands on the panel once the rite fades.
+    private func performAwakening(paying element: Element) {
+        guard store.awakenRelic(relicID, paying: element) != nil else { return }
+        lastOutcome = nil
+        runSummary = nil
+        AudioLibrary.shared.play(.summonBurst, volume: 0.9)
+        Juice.haptic(.heavy)
+        withAnimation(.easeOut(duration: 0.3)) { riteShown = true }
+    }
+
     /// Change, unequip, reappraise and sell. These lived at the foot of the
     /// 300-point power-up column as four 7-point captions under glyphs — the
     /// wrong size for a control that permanently destroys a relic. In the wide
@@ -1407,9 +1575,11 @@ struct RelicDetailView: View {
                     .font(Theme.numeric(12).weight(.bold))
                     .foregroundStyle(Theme.gold)
             }
-            Text(relic.subStats.count < 4
-                 ? "This level adds a sub stat. Take either one."
-                 : "This level grows a sub stat. Take either one.")
+            Text(relic.isAwakened && relic.isMaxLevel
+                 ? "The awakening adds a fifth sub stat. Take either one."
+                 : (relic.subStats.count < relic.subStatCap
+                    ? "This level adds a sub stat. Take either one."
+                    : "This level grows a sub stat. Take either one."))
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1580,6 +1750,91 @@ struct RelicDetailView: View {
                 withAnimation(.default.speed(4)) { shakeOffset = 0 }
             }
         }
+    }
+}
+
+/// The rite: the stone stands up out of the screen in a pillar of gold
+/// light, the halo draws itself round it, and AWAKENED springs in over it —
+/// the Hall of Ka's awakening, done for a relic. In SwiftUI rather than on
+/// the altar's SceneKit stage, because a relic is a stone and not a figure:
+/// there is no model to stand on the dais, and the rays, the glow and the
+/// ring are the whole of what the moment needs. A tap ends it early.
+struct RelicAwakeningRite: View {
+    let relic: Relic
+    let onDone: () -> Void
+
+    @State private var lit = false
+    @State private var risen = false
+    @State private var haloed = false
+    @State private var stamped = false
+    @State private var rays: Double = 0
+
+    var body: some View {
+        ZStack {
+            Color.black.opacity(lit ? 0.74 : 0)
+                .ignoresSafeArea()
+            AngularGradient(
+                colors: [Theme.gold.opacity(0), Theme.gold.opacity(0.22), Theme.gold.opacity(0),
+                         Theme.gold.opacity(0.22), Theme.gold.opacity(0), Theme.gold.opacity(0.22),
+                         Theme.gold.opacity(0), Theme.gold.opacity(0.22), Theme.gold.opacity(0)],
+                center: .center
+            )
+            .scaleEffect(2.4)
+            .rotationEffect(.degrees(rays))
+            .opacity(lit ? 1 : 0)
+            .blendMode(.plusLighter)
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+            RadialGradient(
+                colors: [Theme.gold.opacity(lit ? 0.38 : 0), Theme.gold.opacity(lit ? 0.12 : 0), .clear],
+                center: .center, startRadius: 0, endRadius: lit ? 320 : 120
+            )
+            .ignoresSafeArea()
+            .allowsHitTesting(false)
+
+            VStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .trim(from: 0, to: haloed ? 1 : 0)
+                        .stroke(Theme.gold, style: StrokeStyle(lineWidth: 3, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 176, height: 176)
+                        .shadow(color: Theme.gold.opacity(0.8), radius: 10)
+                    RelicIcon(relic: relic, size: 120, showsStars: false, showsLevel: false, glow: lit)
+                        .scaleEffect(risen ? 1 : 0.55)
+                        .opacity(risen ? 1 : 0)
+                }
+                Text("AWAKENED")
+                    .font(Theme.display(34))
+                    .tracking(4)
+                    .foregroundStyle(Theme.gold)
+                    .shadow(color: Theme.gold.opacity(0.6), radius: 14)
+                    .scaleEffect(stamped ? 1 : 1.7)
+                    .opacity(stamped ? 1 : 0)
+                Text("A fifth sub stat opens. Take either one.")
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.marble)
+                    .opacity(stamped ? 1 : 0)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { onDone() }
+        .onAppear { play() }
+    }
+
+    private func play() {
+        withAnimation(.easeOut(duration: 0.35)) { lit = true }
+        withAnimation(.linear(duration: 18).repeatForever(autoreverses: false)) { rays = 360 }
+        withAnimation(.spring(response: 0.55, dampingFraction: 0.6).delay(0.1)) { risen = true }
+        withAnimation(.easeInOut(duration: 0.7).delay(0.5)) { haloed = true }
+        withAnimation(.spring(response: 0.4, dampingFraction: 0.55).delay(1.05)) { stamped = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55) {
+            AudioLibrary.shared.play(.starTick, volume: 0.8)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
+            Juice.haptic(.medium)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { onDone() }
     }
 }
 
@@ -2403,6 +2658,10 @@ struct RelicFilterSheet: View {
                             FilterChip(title: "Locked only", isOn: filter.lockedOnly) {
                                 Juice.haptic(.light)
                                 filter.lockedOnly.toggle()
+                            }
+                            FilterChip(title: "Awakened only", isOn: filter.awakenedOnly) {
+                                Juice.haptic(.light)
+                                filter.awakenedOnly.toggle()
                             }
                         }
                         section("Main stat") {

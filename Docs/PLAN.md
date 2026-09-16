@@ -3757,3 +3757,78 @@ photographs the raid's result in three frames, step 39 the Raids wing.
 `aether_pure`) and `Player.raidGrades` (the best grade's raw value per raid
 id) — both Optional, per the standing rule; `BattleResult.raidShare` likewise,
 so a replay written before it decodes.
+
+### Phase 2, built (2026-09-16): relic awakening
+
+Built the same evening as phase 1, on the same word. Three choices were open
+and each is decided below with its reason; the numbers are mirrored in
+`balance.py --awakening` and the shape pinned by `RelicAwakeningTests`.
+
+**1. Where it is done: the relic's own screen, not the Hall of Ka.** The plan
+above said the Hall of Ka, because the word is the Hall's. But the Hall's
+altar is a SceneKit stage for a FIGURE — the unit's model on the painted dais
+— and a relic is a stone, not a figure: there is nothing to stand on the
+dais. The genre puts a gear's capstone on the gear's own screen (Epic Seven's
+reforge is on the equipment sheet; Summoners War's whole rune life is in the
+rune screen), and that is also where a player IS the moment the relic hits
++15 and the next step should be in front of him. So: `RelicDetailView` gets
+an **Awakening** panel under the power-up panel, on every 6★ from +0 (the
+road is visible before the drachma is spent) with the button lit at +15, and
+the rite plays over that screen in SwiftUI — the stone in a pillar of gold
+light, the halo drawing itself round it, AWAKENED springing in
+(`RelicAwakeningRite`). The Hall of Ka keeps its units.
+
+**2. What it gives, exactly.** `Relic.awakened` (Optional, nil is ordinary):
+
+- `subStatCap` is 5 instead of 4, and EVERY place that adds a sub stat reads
+  it (`candidates`, `upgradeOnce`, `reappraise`, `efficiency`'s ceiling, the
+  three captions on the relic screen). The fifth sub opens as the SAME choice
+  of two every +3/+6/+9/+12 offers — `awaken` sets `pendingRoll`, the panel
+  the player already knows shows two new kinds, he takes one. No new
+  decision mechanic, no new screen.
+- The +15 main stat is `Relic.awakenedPeak` 3.6× instead of `peak` 3.0×;
+  below +15 the road is unchanged, so the card's "+15" figure simply prints
+  the higher number on an awakened drop.
+- A halo on the stone (`RelicIcon`: a gold ring round the hexagon with a
+  fainter one outside it, drawn a little wider than the frame so the corners
+  are not cut), an Awakened chip on the relic screen, an "Awakened only"
+  filter.
+- An awakened DROP carries one more sub stat than its quality says
+  (`generate(awakened:)`: a Normal drops with one, a Legend with all five),
+  so it reaches its five by +12 the way an ordinary relic reaches four; a
+  reappraisal rebuilds from that base, so it comes back with five.
+
+**3. What it costs, and why every set can be paid for today.** The plan said
+"aether of the relic's own SET colour plus pure" — but only two Titans exist
+until phase 3 (ember and gale), and a strict colour rule would have left the
+tide, radiance and umbra sets unawakenable for a week. So the colour is a
+PRICE, not a gate: `RelicSet.aetherElement` names each set's colour (the reds
+and browns burn, the blues run, the greens blow, the golds shine, the purples
+are the night's — 4/3/3/3/3 across the sixteen), and an awakening costs **60
+aether of that colour, or 90 of any other, plus 15 pure** either way. The
+player picks the colour on the panel (a chip per element with the count held;
+the fair one ringed in gold). When the five Titans stand, farming the right
+one is a third cheaper; until then nothing is locked. At the sim's best
+team's grades (phase 1) that is an awakening every 10 serpent runs at the
+fair price — about a day of energy for the capstone of one relic, against a
+team that wears thirty.
+
+**The dream beside the plan: awakened drops.** `StageRewards.awakenedChance`
+(Optional): Labyrinth B10 4%, the Tower's relic floors from F90 6%, Hell
+chapters 7 on 2% (where Hell pays a 6★ at all), and a raid's by its grade —
+SS 8%, SSS 15% (`RaidGradeService.awakenedChance`). Nothing else, and the
+Halls never: `RelicAwakeningTests` walks every source. An SSS every seven
+kills, then, is the fastest road to one; the Labyrinth's is one in
+twenty-five runs.
+
+**Measured (`balance.py --awakening`).** In the game's own attacker score for
+a slot-4 relic: a well-rolled ordinary 6★ +15 (the best four kinds at the top
+of the range, the best grown four times) scores **more** than a badly-rolled
+awakened one (the worst five at the bottom, the worst grown, the main at
+3.6×) — the report asserts it, because if that ever flips the flag has become
+a tier and every 6★ in the bag is junk. Rolled at random twenty thousand
+times, the awakened relic averages about 1.2× the ordinary one: the premium
+the report holds between 1.05× (nobody bothers) and 1.40× (a new tier).
+Tour step 40 (`relic_awaken`) performs the awakening on the tour save's 6★
++15 as the screen appears: the rite in one frame, the halo and the fifth
+sub's choice in the next.

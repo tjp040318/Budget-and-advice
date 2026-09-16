@@ -43,7 +43,7 @@ struct TourView: View {
         ("relic_sets", 2), ("tribute", 2), ("stage_popup", 2), ("chapter_maps", 2), ("realm_battle", 6),
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
-        ("raid_grade", 4), ("raids", 2),
+        ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -316,15 +316,29 @@ struct TourView: View {
             // The Raids wing: the two cards with the tour save's best grade
             // stamped on the serpent's, the mark to beat, and the aether held.
             LabyrinthView(opening: .raids)
+        case "relic_awaken":
+            // The awakening, performed as the screen appears on the tour
+            // save's 6★ +15 (the debug seed's, with the aether to pay for
+            // it): the rite in the first frame, then the halo on the stone,
+            // the Awakened chip and the fifth sub stat's choice of two.
+            if let relic = store.player.relics.first(where: { $0.grade >= 6 && $0.isMaxLevel && !$0.isAwakened }) {
+                RelicDetailView(relicID: relic.id, awakenOnAppear: true)
+            } else if let relic = bestRelic {
+                RelicDetailView(relicID: relic.id)
+            }
         default:
             SettingsView()
         }
     }
 
     /// The relic the relic steps photograph: the highest grade, and among
-    /// those the highest level, so the level track and the rim both show.
+    /// those the highest level, so the level track and the rim both show —
+    /// but never one already at +15, whose power-up panel has nothing to
+    /// photograph (the seed's awakening candidate is one, for step 40).
     private var bestRelic: Relic? {
-        store.player.relics.max(by: { ($0.grade, $0.level) < ($1.grade, $1.level) })
+        let climbing = store.player.relics.filter { !$0.isMaxLevel }
+        return (climbing.isEmpty ? store.player.relics : climbing)
+            .max(by: { ($0.grade, $0.level) < ($1.grade, $1.level) })
     }
 
     private func tick() {

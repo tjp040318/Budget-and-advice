@@ -468,6 +468,18 @@ final class GameStore: ObservableObject {
         RelicService.stoneCount(stone, player: player)
     }
 
+    /// Awakens a 6★ +15 relic for the Titans' aether: the flag, and the
+    /// choice of two for its fifth sub stat. Nil, with the reason shown,
+    /// when it is not eligible or the aether is short.
+    @discardableResult
+    func awakenRelic(_ relicID: UUID, paying element: Element) -> RelicService.AwakeningOutcome? {
+        var rng = makeRandom()
+        let result: RelicService.AwakeningOutcome?? = attempt { player in
+            try RelicService.awaken(relicID: relicID, paying: element, player: &player, rng: &rng)
+        }
+        return result ?? nil
+    }
+
     func unequipAll(_ unitID: UUID) {
         update { player in
             RelicService.unequipAll(unitID: unitID, player: &player)
@@ -881,6 +893,18 @@ final class GameStore: ObservableObject {
             if ranked.count > 1 {
                 player.relics[ranked[1]].pendingRoll = 0xC0FFEE1234
             }
+            // A 6★ Legend at +15, ready to be awakened, for tour step 40;
+            // appended AFTER the ranking above so it does not become the
+            // second-best relic the pending roll was just seeded on, and
+            // skipped by `TourView.bestRelic`, which prefers a relic with
+            // levels still to gain. Fury is an ember set, so the serpent's
+            // aether below is the fair colour.
+            if !player.relics.contains(where: { $0.grade == 6 && $0.isMaxLevel }) {
+                var rng = SeededRandom(seed: 1_040)
+                var relic = RelicService.generate(grade: 6, slot: 4, set: .fury, quality: .legend, rng: &rng)
+                for _ in 0..<15 { RelicService.upgradeOnce(&relic, rng: &rng) }
+                player.relics.append(relic)
+            }
             // Whetstones and gems, so the stone sheet has something to spend.
             for stone in RelicStone.all where RelicService.stoneCount(stone, player: player) < 3 {
                 RelicService.addStones(stone.id, 3, player: &player)
@@ -914,8 +938,11 @@ final class GameStore: ObservableObject {
             // The serpent's raid graded once, so the Raids wing's card
             // photographs the stamp and the mark to beat, and aether in hand
             // for its count.
+            // Enough ember aether for one awakening at the fair price with
+            // some over, so the Raids wing's count and the awakening panel
+            // both photograph a real number.
             player.raidGrades = ["raid_apep": RaidGrade.s.rawValue]
-            player.aether = ["aether_ember": 34, "aether_pure": 6]
+            player.aether = ["aether_ember": 74, "aether_pure": 21]
             for id in ["essence_magic_mid", "essence_magic_high", "essence_umbra_mid", "essence_umbra_high"] {
                 player.essences[id, default: 0] += 12
             }

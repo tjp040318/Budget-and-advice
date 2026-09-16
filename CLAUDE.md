@@ -439,7 +439,23 @@ environment can and cannot do. The short version:
   `balance.py --grades` grades the raid sim's ladders (the best team sits on
   the serpent's S/A line by design) and asserts the shape; change a number
   in both files and in `RaidGradeTests`. Tour steps 38 (`raid_grade`) and
-  39 (`raids`). **The guided first hour** (`FirstHourStep`, `IslandView`): four
+  39 (`raids`). **Relic awakening (2026-09-16, phase 2):** `Relic.awakened`
+  (Optional; `isAwakened`, `subStatCap` 5 instead of 4 — EVERY place that
+  adds a sub stat reads `subStatCap`, never a literal 4), the +15 main stat
+  at `Relic.awakenedPeak` 3.6× instead of `peak` 3.0×, a halo on
+  `RelicIcon`, an Awakened chip and filter. `RelicService.awaken` on a 6★
+  +15 only: 60 aether of the set's own colour (`RelicSet.aetherElement`) or
+  90 of any other, plus 15 pure — the colour is a PRICE, not a gate, so
+  every set is awakenable from the two Titans that exist — and the fifth
+  sub opens as the same choice of two a +3 offers (`pendingRoll`). An
+  awakened DROP (`generate(awakened:)`, one more sub than its quality;
+  `StageRewards.awakenedChance`: Labyrinth B10 4%, Tower F90+ 6%, Hell from
+  chapter 7 2%, raids SS 8% / SSS 15%). The panel and the rite
+  (`RelicAwakeningRite`) are on `RelicDetailView`, not the Hall of Ka — a
+  relic is a stone, not a figure for the dais; PLAN.md says why.
+  `balance.py --awakening` asserts a well-rolled ordinary 6★ still beats a
+  badly-rolled awakened one and the average premium sits in 1.05–1.40×.
+  Tour step 40 (`relic_awaken`, two frames). **The guided first hour** (`FirstHourStep`, `IslandView`): four
   steps pointing at the landmark each wants, with a skip chip and a chapter
   intro card shown once. Five new save fields, every one Optional with a nil
   default.
@@ -982,7 +998,7 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is forty screens (steps 0–39): an arena battle
+  thousands of images. The CI tour is forty-one screens (steps 0–40): an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,

@@ -203,9 +203,16 @@ enum CampaignService {
                 rewards.qualityFloor ?? .normal,
                 grade.flatMap(RaidGradeService.qualityFloor(for:)) ?? .normal
             )
+            // The dream: the hardest content drops the relic AWAKENED now
+            // and then — the stage's own chance, or a raid's by its grade.
+            let awakenedChance = max(
+                rewards.awakenedChance ?? 0,
+                grade.map(RaidGradeService.awakenedChance(for:)) ?? 0
+            )
+            let awakened = awakenedChance > 0 && rng.chance(awakenedChance)
             let relic = RelicService.generate(
                 grade: rewards.relicGrade, set: set,
-                qualityFloor: floor, rng: &rng
+                qualityFloor: floor, awakened: awakened, rng: &rng
             )
             relics.append(relic)
             player.relics.append(relic)

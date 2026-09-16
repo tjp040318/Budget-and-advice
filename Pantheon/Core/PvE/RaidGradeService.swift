@@ -162,6 +162,17 @@ enum RaidGradeService {
         }
     }
 
+    /// The chance the raid's relic drops AWAKENED, at the top of the ladder
+    /// only: SS one in twelve, SSS one in seven — the dream beside the
+    /// awakening the aether buys. Mirrored as `AWAKENED_DROP`.
+    static func awakenedChance(for grade: RaidGrade) -> Double {
+        switch grade {
+        case .sss: return 0.15
+        case .ss: return 0.08
+        case .f, .d, .c, .b, .a, .s: return 0
+        }
+    }
+
     /// The element a raid's aether comes in: its boss's own — Apep is ember,
     /// the Jötunn gale. Read off the blueprint so it cannot drift from the
     /// fight the player just had.

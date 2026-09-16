@@ -32,6 +32,12 @@ struct StageRewards: Codable, Equatable, Sendable {
     /// A dropped relic is at least this quality: Magic on a Hell tier, Rare
     /// from a raid. Nil is Normal, the genre's floor.
     var qualityFloor: RelicQuality? = nil
+    /// The chance a dropped relic is AWAKENED (`Relic.awakened`): the
+    /// hardest content only — Labyrinth B10, the Tower's last floors, the
+    /// late chapters on Hell — and a raid's by its grade
+    /// (`RaidGradeService.awakenedChance`). Nil is never. Optional so the
+    /// stage data's shape is unchanged for everything that pays none.
+    var awakenedChance: Double? = nil
     /// Essence id to chance of dropping.
     var essenceChances: [String: Double] = [:]
     /// Scroll drops by type and chance.
@@ -283,9 +289,18 @@ enum CampaignDifficulty: String, Codable, CaseIterable, Identifiable, Sendable {
         // the 6★s are in hand, and a 6★ with no sub stat is not a reward.
         if self == .hell {
             copy.qualityFloor = max(rewards.qualityFloor ?? .normal, .magic)
+            // And where Hell pays a 6★ — chapter 7 and on — one drop in
+            // fifty is awakened: the campaign's one road to the tier above,
+            // and the softest of them (`balance.py --awakening`).
+            if relicGradeFloor(chapterOrder: chapterOrder) >= 6 {
+                copy.awakenedChance = max(rewards.awakenedChance ?? 0, hellAwakenedChance)
+            }
         }
         return copy
     }
+
+    /// Mirrored in `tools/balance.py` as `AWAKENED_DROP`.
+    static let hellAwakenedChance = 0.02
 }
 
 extension Stage {

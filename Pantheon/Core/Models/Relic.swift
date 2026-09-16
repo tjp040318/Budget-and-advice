@@ -129,6 +129,23 @@ enum RelicSet: String, Codable, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    /// The Titan whose aether awakens a relic of this set at the fair price
+    /// (`RelicService.awakeningCost`): the set's own colour, read as an
+    /// element — the reds and browns burn, the blues run, the greens blow,
+    /// the golds shine, the purples and the dark reds are the night's. Any
+    /// other colour still works and costs half again, so every set can be
+    /// awakened from the two Titans that exist today. Mirrored in
+    /// `tools/balance.py` as `SET_AETHER`.
+    var aetherElement: Element {
+        switch self {
+        case .fury, .ichor, .wrath, .titanfall: return .ember
+        case .aegis, .styx, .wards: return .tide
+        case .bulwark, .zephyr, .chains: return .gale
+        case .thunder, .fates, .vigil: return .radiance
+        case .ruin, .oracle, .nemesis: return .umbra
+        }
+    }
+
     var effectDescription: String {
         switch self {
         case .ichor: return "Fills 25% of the attack bar at the start of each turn."
@@ -322,6 +339,20 @@ struct Relic: Codable, Equatable, Identifiable, Sendable {
     /// player walks away from is the offer he comes back to. Optional, like
     /// every save field added since the first.
     var pendingRoll: UInt64? = nil
+    /// AWAKENED: the tier above 6★ as a FLAG, not a grade (`Docs/PLAN.md`,
+    /// *Awakened relics and the Titans*). Same set, same slot, same stars;
+    /// a FIFTH sub stat (`subStatCap`), the +15 main stat at 3.6× instead of
+    /// 3× (`projectedMainStat`), a halo on the stone. Either dropped so from
+    /// the hardest content or done to a 6★ +15 for the Titans' aether
+    /// (`RelicService.awaken`). Optional, like every save field added since
+    /// the first; nil and false both mean an ordinary relic.
+    var awakened: Bool? = nil
+
+    var isAwakened: Bool { awakened ?? false }
+
+    /// How many sub stats this relic can hold: the genre's four, or five
+    /// once awakened. Every place that adds a sub stat reads this.
+    var subStatCap: Int { isAwakened ? 5 : 4 }
 
     /// True while a sub-stat choice is owed. The level is already up; the
     /// roll is not spent.
@@ -342,15 +373,22 @@ struct Relic: Codable, Equatable, Identifiable, Sendable {
 
     /// Main stat value at the current level: linear to +14, then the last
     /// level's jump to 3x the starting value — the genre's +15, which is
-    /// what makes the expensive last attempt worth the drachma.
+    /// what makes the expensive last attempt worth the drachma. An awakened
+    /// relic's +15 is 3.6x (`awakenedPeak`).
     var effectiveMainStat: StatModifier { projectedMainStat(atLevel: level) }
+
+    /// The +15 multiplier on the main stat, ordinary and awakened. Mirrored
+    /// in `tools/balance.py` as `MAIN_PEAK` and `AWAKENED_MAIN_PEAK`.
+    static let peak = 3.0
+    static let awakenedPeak = 3.6
 
     /// The main stat at any level, for the card's "at +15" figure — the
     /// number the genre prints beside a rune so a player knows what the
     /// drachma is buying before the first attempt.
     func projectedMainStat(atLevel target: Int) -> StatModifier {
         let clamped = max(0, min(maxLevel, target))
-        let growth = clamped >= maxLevel ? 3.0 : 1.0 + (Double(clamped) / Double(maxLevel)) * 1.8
+        let top = isAwakened ? Relic.awakenedPeak : Relic.peak
+        let growth = clamped >= maxLevel ? top : 1.0 + (Double(clamped) / Double(maxLevel)) * 1.8
         return StatModifier(mainStat.kind, mainStat.value * growth)
     }
 
