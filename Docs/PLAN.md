@@ -4202,12 +4202,17 @@ briefing, and hooks the engine has.
   (nothing) and as arena defenders (everything), the Weighing's exact
   multiplier off the first judged blow, and every hook off a real fight's
   events.
-- **On the screen.** The team picker's rail has a Resonance panel under the
-  leader skill: the lit ones with rank and line, and the nearest unlit
-  hint; the stage briefing's team panel wears the lit names as chips under
-  the cards. The arena's team row does not yet — it is a fixed-height
-  button the watchdog once timed, and a chip row there is the next pass.
-  Tour step 42 photographs the picker on the tour save's team.
+- **On the screen.** The team picker's rail has ONE panel under the lineup,
+  "Team bonuses": the leader's row (a crown, "LEADER · 2 OF 3", the skill's
+  words), a row per lit resonance (its glyph, name and line) and the
+  nearest unlit hint. It was two panels — the leader skill, then a
+  Resonance panel — and run 162's frame had the second below the fold
+  under the Save plate with only its title showing; one panel of rows fits
+  above the plate on a phone with a resonance lit. The stage briefing's
+  team panel wears the lit names as chips under the cards. The arena's
+  team row does not yet — it is a fixed-height button the watchdog once
+  timed, and a chip row there is the next pass. Tour step 42 photographs
+  the picker on the tour save's team.
 - **Measured, and what the measurement changed.** `balance.py --resonance`
   plays each kind at each rank on a mono team on two fights of real
   lineups — four gods through Olympus 3's boss stage, four nukers in the
