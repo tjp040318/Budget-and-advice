@@ -401,10 +401,10 @@ struct StageBriefingView: View {
     @ViewBuilder
     private var backdrop: some View {
         if BundleImage.exists(stage.environment.backdropName) {
-            BundleImage(name: stage.environment.backdropName)
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
+            // `PaintingFill`, never a fill image under a flexible frame: a
+            // background that reports the painting's own size spills over
+            // the strip above it (the dungeon levels screen, 2026-09-17).
+            PaintingFill(name: stage.environment.backdropName)
                 .overlay(
                     LinearGradient(
                         colors: [Theme.plate.opacity(0.72), Theme.plate.opacity(0.92)],

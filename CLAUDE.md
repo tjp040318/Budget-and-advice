@@ -827,17 +827,22 @@ environment can and cannot do. The short version:
   `DungeonLevelsView`'s content stack it pushed the strip and both panels'
   top-aligned contents off the top of the phone, and the CI tour
   photographed the Halls and a relic dungeon as two tall empty panel frames
-  (2026-09-10). **A full-screen painting is a `.background(...)`, never a
-  sibling** — a background is measured by its parent and can never do this;
-  the same pattern is safe inside a card, and safe with a fixed
-  `.frame(width:height:)` off a GeometryReader, which is what the island
-  does. **A band of fixed height and flexible width is
-  `Color.clear.overlay { painting.aspectRatio(.fill) }.clipped()`**: the
-  Titan card's band had the painting under `.frame(maxWidth: .infinity,
+  (2026-09-10). **A full-screen painting is `PaintingFill`
+  (Components.swift), never a fill image under a flexible frame** —
+  `Color.clear` at exactly the space it is given, with the painting as an
+  overlay, which is never measured. As a `.background` a fill image cannot
+  grow its host, but it still DRAWS at its own size, centred on it: behind
+  the dungeon levels it spilled over the strip and painted the title, the
+  wallet and the back button out of existence on that one screen for a
+  week (the owner, 2026-09-17: "There's no back button on this"; the CI
+  frames showed a strip-less screen all week and nobody read it). A fixed
+  `.frame(width:height:)` off a GeometryReader is also safe, which is what
+  the island and the Hall of Ka do. The same size overflow, in a band:
+  the Titan card's band had the painting under `.frame(maxWidth: .infinity,
   maxHeight: .infinity)` inside `.frame(height: 104)`, the square painting's
   fill size grew the ZStack to its own height, and the label aligned to the
   stack's bottom was carried below the clip — a black slab with no name on
-  it for two runs of frames (2026-09-16). An overlay is never measured.
+  it for two runs of frames (2026-09-16).
   And a camera node looks along its own −Z: orient it with
   `SCNNode.look(at:)`, never `atan2(dx, dz)` (that was half a turn off and
   the orbit shot showed the empty side of the stage). And **a node with a

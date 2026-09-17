@@ -296,10 +296,10 @@ struct LabyrinthView: View {
     @ViewBuilder
     private func towerBackdrop(_ stage: Stage?) -> some View {
         if let stage, BundleImage.exists(stage.environment.backdropName) {
-            BundleImage(name: stage.environment.backdropName)
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
+            // `PaintingFill`, never a fill image under a flexible frame: a
+            // background that reports the painting's own size spills over
+            // the strip above it (the dungeon levels screen, 2026-09-17).
+            PaintingFill(name: stage.environment.backdropName)
                 .overlay(
                     LinearGradient(
                         colors: [Theme.plate.opacity(0.74), Theme.plate.opacity(0.93)],
@@ -955,14 +955,20 @@ struct DungeonLevelsView: View {
 
     // MARK: - The place, behind everything
 
+    /// The place's painting, washed toward cream, exactly the size of the
+    /// content it sits behind. It was a fill image under a flexible frame,
+    /// which reports the painting's own cover size — as tall as the screen
+    /// is wide — and a background draws at its own size centred on its host:
+    /// it spilled over the strip above and painted the title, the wallet
+    /// and the BACK BUTTON out of existence, on this screen alone, since the
+    /// painting became a background on 2026-09-10 (the owner, 2026-09-17:
+    /// "There's no back button on this"). `PaintingFill` is the size it is
+    /// given and nothing more.
     private var backdrop: some View {
         let painting = environment?.backdropName ?? ""
         return ZStack {
+            PaintingFill(name: painting)
             if BundleImage.exists(painting) {
-                BundleImage(name: painting)
-                    .aspectRatio(contentMode: .fill)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .clipped()
                 LinearGradient(
                     colors: [Theme.plate.opacity(0.62), Theme.plate.opacity(0.88)],
                     startPoint: .top,
@@ -1012,7 +1018,7 @@ struct DungeonLevelsView: View {
                             .font(Theme.body(10))
                             .foregroundStyle(Theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text("Drops \(EssenceCatalog.name(for: "essence_\(hall.element.rawValue)_mid")) and relics up to \(hall.floors.last?.rewards.relicGrade ?? 6)★. Every clear pays.")
+                        Text(hallDrops(hall))
                             .font(Theme.body(10))
                             .foregroundStyle(Theme.gold)
                             .fixedSize(horizontal: false, vertical: true)
@@ -1024,6 +1030,25 @@ struct DungeonLevelsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(10)
         .panelBackground()
+    }
+
+    /// What a hall pays, read off its floors rather than written by hand:
+    /// its element's Mid essence on every floor and its High essence more
+    /// often the deeper the floor, and relics to the cap. It said "Drops
+    /// Mid Ember Essence" and nothing of the High, and the owner asked
+    /// whether Mid was all there was (2026-09-17).
+    private func hallDrops(_ hall: DungeonDatabase.Hall) -> String {
+        guard let first = hall.floors.first, let last = hall.floors.last else { return "" }
+        let mid = "essence_\(hall.element.rawValue)_mid"
+        let high = "essence_\(hall.element.rawValue)_high"
+        func odds(_ id: String, on floor: Stage) -> String {
+            let chance = floor.rewards.essenceChances[id] ?? 0
+            return chance >= 1 ? "sure" : "\(Int((chance * 100).rounded()))%"
+        }
+        let top = "B\(hall.floors.count)"
+        return "Every floor drops \(EssenceCatalog.name(for: mid)) (\(odds(mid, on: first)) on B1, \(odds(mid, on: last)) on \(top)) "
+            + "and \(EssenceCatalog.name(for: high)) (\(odds(high, on: first)) on B1, \(odds(high, on: last)) on \(top)); "
+            + "relics up to \(last.rewards.relicGrade)★. Awakening spends the Mid, with Magic essence from the campaign. Every clear pays."
     }
 
     // MARK: - The levels

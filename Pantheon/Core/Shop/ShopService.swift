@@ -67,6 +67,21 @@ enum ShopService {
     /// that is the whole removal. Nothing else in the game refers to them.
     static let testingPacksEnabled = true
 
+    /// Every essence in the catalogue, `count` of each: the three tiers of
+    /// the five elements and of Magic, eighteen grants.
+    static func everyEssence(_ count: Int) -> [Grant] {
+        var grants: [Grant] = []
+        for element in Element.allCases {
+            for tier in ["low", "mid", "high"] {
+                grants.append(.essences("essence_\(element.rawValue)_\(tier)", count))
+            }
+        }
+        for tier in ["low", "mid", "high"] {
+            grants.append(.essences("essence_magic_\(tier)", count))
+        }
+        return grants
+    }
+
     enum Section: String, CaseIterable, Identifiable, Sendable {
         case daily = "Daily"
         /// The rolled shelf. Its wares are not in `items` — they are derived
@@ -117,13 +132,16 @@ enum ShopService {
              icon: "bolt.fill", price: .free,
              grant: .bundle([.energyRefill, .energy(200)]),
              section: .testing),
+        // Every essence there is — Low, Mid and High of the five elements and
+        // of Magic, sixty each — so any awakening in the game can be tested
+        // from one tap (the owner, 2026-09-17: "a pack of ALL essence for
+        // ALL types"). It was the five Mids, twenty magic Mid and ten magic
+        // High: two awakenings' worth of magic High, and none of the Low
+        // and High the campaign and the Halls drop.
         Item(id: "test_essences", title: "Every essence",
-             subtitle: "Twenty of each element's essence, twenty mid and ten high magic essence: enough to awaken a team.",
+             subtitle: "Sixty of every essence: Low, Mid and High of all five elements and of Magic. Enough to awaken a whole roster; free, as often as you like.",
              icon: "drop.triangle.fill", price: .free,
-             grant: .bundle([.essences("essence_ember_mid", 20), .essences("essence_tide_mid", 20),
-                             .essences("essence_gale_mid", 20), .essences("essence_radiance_mid", 20),
-                             .essences("essence_umbra_mid", 20), .essences("essence_magic_mid", 20),
-                             .essences("essence_magic_high", 10)]),
+             grant: .bundle(ShopService.everyEssence(60)),
              section: .testing),
         Item(id: "test_relics", title: "A crate of relics",
              subtitle: "Six of the highest grade, to see what a built unit looks like.",

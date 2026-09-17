@@ -252,6 +252,39 @@ struct BundleImage: View {
 
     static func exists(_ name: String) -> Bool { BundleArt.exists(name) }
 }
+
+/// A painting that covers exactly the space it is given and REPORTS exactly
+/// that size — the one way to put a painting behind a screen or across a
+/// band. `BundleImage(...).aspectRatio(contentMode: .fill)` reports the size
+/// it needs to COVER the proposal (a square painting behind a landscape
+/// screen reports itself as tall as it is wide), a flexible
+/// `.frame(maxWidth: .infinity, maxHeight: .infinity)` passes that size on,
+/// and `.clipped()` clips the drawing, not the size. As a `.background` such
+/// a painting cannot grow its host, but it still draws at its own size,
+/// centred on it: on the dungeon levels screen it spilled over the strip
+/// above and painted the title and the back button out of existence for a
+/// week (the owner, 2026-09-17: "There's no back button on this"); as a
+/// sibling it grew every ancestor (2026-09-10); on the Titan card's band it
+/// carried the label below the clip (2026-09-16). `Color.clear` is the
+/// size; the painting is an overlay on it, and an overlay is never
+/// measured. A missing painting draws nothing.
+struct PaintingFill: View {
+    let name: String
+
+    var body: some View {
+        Color.clear
+            .overlay {
+                if BundleImage.exists(name) {
+                    BundleImage(name: name)
+                        .aspectRatio(contentMode: .fill)
+                }
+            }
+            .clipped()
+            // `.clipped()` does not clip hit-testing: a painting never takes
+            // a tap, or it would swallow the buttons around it.
+            .allowsHitTesting(false)
+    }
+}
 // MARK: - Items and rewards
 
 /// The painted item icons: one `Portraits/item_<key>.png` per thing the

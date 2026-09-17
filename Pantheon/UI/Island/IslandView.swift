@@ -569,10 +569,9 @@ struct ChapterIntroCard: View {
     @ViewBuilder
     private var painted: some View {
         if BundleImage.exists(painting) {
-            BundleImage(name: painting)
-                .aspectRatio(contentMode: .fill)
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .clipped()
+            // `PaintingFill` reports exactly the card's size; a fill image
+            // under a flexible frame reports the painting's own.
+            PaintingFill(name: painting)
                 .overlay(
                     // The words sit on the left, so the cream runs that way
                     // and the painting keeps its right-hand side. The words
