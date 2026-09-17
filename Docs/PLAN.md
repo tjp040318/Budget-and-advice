@@ -4570,3 +4570,98 @@ No wandering (no walk clips; a bespoke walk is 3 credits a family through
 No island skins or seasons (a repaint each; option 2's territory). No
 buildings that grow with the player beyond the tier diamonds (option 2's
 cut-outs). No friends, guild, mail or chat: this game has no server.
+
+## Graphics: what "more detail" costs, and what is free (2026-09-17, researched; the free half building)
+
+The owner, on the day's frames: "That artwork/models are not detailed
+enough. I want better graphic."
+
+### What the phone actually draws, measured
+
+- **A battle draws the `_lod` file** (`ModelLibrary.DetailLevel`: "a
+  battle always renders the `_lod` file"): **3,500 triangles at a 1,024
+  texture**, standing about 330 px tall on a 3× phone. The menus — the
+  summon reveal, the altar, the collection's Stage, the unit sheet — draw
+  the full shipped file: **9,000 triangles at 2,048**. Meshy's own file
+  for the same character is **~56,000 triangles at 2,048** (Zeus's remake:
+  55,839; every family's raw export is 54–61k). So the fight, which is
+  where the owner looks most, shows a sixteenth of the geometry that was
+  paid for and a quarter of the texture.
+- **Only the base colour ships.** Every rigged GLB Meshy returns from its
+  animation endpoint carries ONE image (the base colour, plus an emissive
+  copy of it the reader drops); the refine task's own file carries three
+  — base colour, **metallic-roughness** and **normal** — at 2,048. Zeus's
+  refine file was fetched again (free; the URL is signed for a century)
+  and read: the metallic-roughness map is real (gold metallic, linen
+  rough — today `MaterialTuner` clamps metalness to 0.25 flat and sets
+  roughness to a constant 0.55), the normal map is nearly flat (standard
+  deviation 4/255: Meshy puts the relief in the mesh, not the map). So
+  the metal-vs-cloth map is worth shipping and the normal map is not.
+- **The renderer flattens on purpose.** The lighting ramp is
+  `smoothstep(0.16, 0.86)` over 0.30 + 0.70 with a 36-power specular at
+  0.42 and a rim — the "drawn" look chosen on 2026-09-09 against a
+  photoreal clay. It reads as flat where the texture's own painted
+  shading is subtle; a slightly wider band and a specular that follows
+  the roughness map would let engraved metal catch the key light.
+- **The paintings**: the twenty-one backdrops are 2,048² (three at
+  2,048 × 1,152, the island among them), the cards 1,024². A 3× phone is
+  2,556 px across, so the island at rest is already upscaled 1.25× and at
+  the diorama's 1.6× zoom, 2×; a card on the reveal at ~700 pt is
+  2,100 px from a 1,024 source. Gemini 3 Pro Image paints at 2K and 4K
+  (about 24 cents an image at 4K, against 13 at 1K) — Gemini is paused,
+  so that is the owner's word; a local super-resolution pass
+  (Real-ESRGAN) needs PyTorch, whose CPU wheels are on a host the network
+  policy refuses (`download.pytorch.org`, 403) and whose PyPI wheel is a
+  2 GB CUDA build — not tried.
+- **The generator.** Meshy's models are `meshy-4`, `meshy-5`, `meshy-6`,
+  `meshy-6-lite`, `meshy-7` and `latest` (read off a validation error, no
+  task created); every family here was launched as `latest`, so the
+  September-9 wave and the September-11 wave may not be the same
+  generation. The retexture endpoint (`/openapi/v1/retexture`: a task id
+  or a model URL, an `ai_model`, a prompt or a reference image) repaints
+  an existing mesh; its price is unknown until one is made. The balance
+  is **1,861 credits under a floor of 2,000**: nothing on Meshy can be
+  spent without the owner's word.
+
+### The options
+
+1. **Free, engine only — the fight draws the mesh that was paid for.**
+   Raise the battle file to 6,000 triangles at 2,048 and the menus' to
+   20,000 at 2,048 for the families the owner sees close (the eleven
+   hand-written, the five bespoke-clip gods, the eight bosses; the
+   commons stay), ship the metallic-roughness map beside the base
+   colour, let `MaterialTuner` keep a map when there is one, and open
+   the ramp a touch. The cost is memory and bundle: the 2,048 RGBA
+   texture is 16 MB decoded, which is the hitch the LOD was made to
+   cure (six of them, 100 MB, decoded on the main thread as a 3v3
+   built); the answer the genre uses is compressed textures — ASTC in a
+   `.ktx`, 4 MB in memory and no decode — which SceneKit accepts as a
+   material's contents, and `astcenc` runs here. Bundle: about +2.5 MB a
+   family for the twenty-four at 20k, +1.5 MB for the MR map each.
+2. **Cheap, on the owner's word — the paintings at 4K.** The island and
+   the twenty backdrops repainted at 4K by Gemini: 21 × 24 cents ≈ $5,
+   the same prompts (`Docs/ART_2D.md`), the same anchors (a repaint from
+   the same prompt is a NEW painting, so every measured anchor, footprint,
+   stand and slot would be re-measured; the island alone is 25 numbers).
+   Or the same painting upscaled: an edit pass ("the same image, sharper")
+   keeps the composition and the anchors, at the same price.
+3. **Credits, on the owner's word — regenerate the heroes on `meshy-7`.**
+   53 credits a family (30 image-to-3D, 5 rig, 3 a clip × 6) from the
+   same concepts: the five gods with bespoke clips are 5 × 53 + their
+   fourteen bespoke clips again (3 each to re-apply, 42) ≈ 310 credits;
+   the eleven hand-written, 583; all seventy-nine, 4,200. Nothing of it
+   is possible under the floor. And a re-generation is a new mesh, so
+   every per-god contact fraction and every clip is re-measured.
+4. **Money, the honest ceiling.** Summoners War's monsters are sculpted,
+   retopologised and hand-painted by artists; an image-to-3D mesh at any
+   budget is a generator's guess at the concept's back and its hands. The
+   step past option 3 is a modeller per hero family (a few hundred
+   dollars each on the freelance market for a rigged, animated, painted
+   mobile character), which is a decision about the budget of the whole
+   game rather than a task here.
+
+**Choice: 1 now, since it spends nothing; 2 and 3 as one line each for
+the owner to say yes to; 4 named so it is not forgotten.** Option 1 is
+built on Zeus first and judged on the reveal's, the altar's and a
+battle's frames before the other twenty-three families are re-shipped
+(each is a minute of decimation here).
