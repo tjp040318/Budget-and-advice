@@ -819,3 +819,66 @@ enum MaterialTuner {
         #endif
     }
 }
+
+/// A renderer delegate that reports, in the tour's console, whether a stage
+/// renders at all, whether its idle player advances, and whether the
+/// figure's joints move — one line a second for six seconds, under `-tour`
+/// only. The Hall of Ka's figure stood in its bind pose through four runs
+/// of frames while the collection's Stage animated the same figure on the
+/// same code, and nothing in the logs said WHICH link of the chain broke:
+/// the view not rendering, the player not advancing, or the skinner not
+/// following its bones. This says which.
+final class StageDoctor: NSObject, SCNSceneRendererDelegate {
+    let label: String
+    weak var figure: SCNNode?
+    weak var view: SCNView?
+    private var frames = 0
+    private var firstTime: TimeInterval = 0
+    private var lastReport: TimeInterval = 0
+    private var reports = 0
+    private let enabled = ProcessInfo.processInfo.arguments.contains("-tour")
+
+    init(label: String) {
+        self.label = label
+        super.init()
+    }
+
+    func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+        guard enabled else { return }
+        frames += 1
+        if firstTime == 0 { firstTime = time; lastReport = time }
+        guard reports < 6, time - lastReport >= 1.0 else { return }
+        lastReport = time
+        reports += 1
+        // The scene graph is read here, on the render thread, where the
+        // presentation nodes are; the view's own properties are UIKit's
+        // and are read on the main thread below.
+        var line = String(format: "[StageDoctor] %@ t=%.1f frames=%d", label, time - firstTime, frames)
+        if let figure {
+            let keys = figure.animationKeys
+            line += " keys=\(keys)"
+            if let key = keys.first, let player = figure.animationPlayer(forKey: key) {
+                line += String(format: " player(paused=%@ speed=%.2f blend=%.2f duration=%.2f)",
+                               player.paused ? "yes" : "no", player.speed, player.blendFactor, player.animation.duration)
+            }
+            for name in ["Hips", "Hand"] {
+                let matches = figure.childNodes { node, _ in node.name?.localizedCaseInsensitiveContains(name) == true }
+                if let joint = matches.first {
+                    let p = joint.presentation.worldPosition
+                    line += String(format: " %@=(%.3f,%.3f,%.3f)", joint.name ?? name, p.x, p.y, p.z)
+                }
+            }
+        } else {
+            line += " figure=nil"
+        }
+        DispatchQueue.main.async { [weak self] in
+            var full = line
+            if let view = self?.view {
+                full += " playing=\(view.isPlaying) continuous=\(view.rendersContinuously)"
+                full += " scenePaused=\(view.scene?.isPaused ?? false) inWindow=\(view.window != nil)"
+                full += " size=\(Int(view.bounds.width))x\(Int(view.bounds.height))"
+            }
+            print(full)
+        }
+    }
+}

@@ -830,6 +830,7 @@ struct CollectionStageView: UIViewRepresentable {
         var shadow: SCNNode?
         var cameraNode: SCNNode?
         var framedFor: Float = 0
+        let doctor = StageDoctor(label: "collection")
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -849,6 +850,8 @@ struct CollectionStageView: UIViewRepresentable {
         // The drag is a SwiftUI gesture over the view, not the view's own.
         view.isUserInteractionEnabled = false
         let coordinator = context.coordinator
+        view.delegate = coordinator.doctor
+        coordinator.doctor.view = view
         coordinator.scene = scene
 
         let camera = SCNCamera()
@@ -953,6 +956,7 @@ struct CollectionStageView: UIViewRepresentable {
         }
         node.runAction(.fadeIn(duration: 0.35))
         coordinator.figure = node
+        coordinator.doctor.figure = node
         coordinator.figureHeight = height
 
         let ring = StageBuilder.runeRing(radius: CGFloat(max(1.2, height * 0.7)), tint: tint)

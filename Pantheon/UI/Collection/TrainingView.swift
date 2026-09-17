@@ -968,6 +968,7 @@ struct AltarStageView: UIViewRepresentable {
         var cameraNode: SCNNode?
         var framedFor: Float = 0
         var playedStamp = 0
+        let doctor = StageDoctor(label: "altar")
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -989,6 +990,8 @@ struct AltarStageView: UIViewRepresentable {
         view.isUserInteractionEnabled = false
         let coordinator = context.coordinator
         coordinator.scene = scene
+        view.delegate = coordinator.doctor
+        coordinator.doctor.view = view
 
         let camera = SCNCamera()
         camera.fieldOfView = CGFloat(Self.lens)
@@ -1093,6 +1096,7 @@ struct AltarStageView: UIViewRepresentable {
         }
         node.runAction(.fadeIn(duration: 0.35))
         coordinator.figure = node
+        coordinator.doctor.figure = node
         coordinator.figureHeight = height
 
         let ring = StageBuilder.runeRing(radius: CGFloat(max(1.2, height * 0.7)), tint: tint)
