@@ -932,6 +932,13 @@ final class GameStore: ObservableObject {
             }
             player.wallet.drachma = max(player.wallet.drachma, 200_000)
             player.wallet.energy = max(player.wallet.energy, 40)
+            // Fifteen of every essence, whatever the recipe asks, so tour
+            // step 43 photographs the Awaken panel with its bill met and the
+            // button live rather than three red rows. Idempotent: a save
+            // that has more keeps it.
+            for id in EssenceCatalog.names.keys {
+                player.essences[id] = max(player.essences[id] ?? 0, 15)
+            }
             // A relic bag worth photographing: the inventory's sets, the
             // efficiency dials and a few upgrades.
             if player.relics.count < 12 {

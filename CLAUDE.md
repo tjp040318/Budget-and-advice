@@ -1078,7 +1078,9 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is forty-three screens (steps 0–42): an arena battle
+  thousands of images. The CI tour is forty-four screens (steps 0–43): the Hall of Ka's
+  Awaken panel (43, `awaken`: the seed's strongest unawakened unit with
+  the bill met, since the training step opens on Power up), an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
   levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
   four frames, so the waves are seen walking on), the power-up screen,

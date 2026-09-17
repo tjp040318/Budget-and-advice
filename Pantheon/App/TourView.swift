@@ -44,6 +44,7 @@ struct TourView: View {
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
         ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
+        ("awaken", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -129,6 +130,15 @@ struct TourView: View {
             }
         case "training":
             TrainingView()
+        case "awaken":
+            // The Hall of Ka's Awaken panel — the two forms, the bill with
+            // every line met (the seed grants the essences), the hint that
+            // says where each essence comes from, and the button live — on
+            // the strongest unit of the seed that has an awakened form and
+            // has not taken it. The training step (3) opens on Power up, so
+            // this panel had never been photographed while the owner was
+            // testing exactly it (2026-09-17).
+            TrainingView(initialMode: .awaken, selectedUnitID: awakeningCandidate?.id)
         case "summon":
             SummonView()
         case "reveal":
@@ -349,6 +359,14 @@ struct TourView: View {
         default:
             SettingsView()
         }
+    }
+
+    /// The unit the awaken step opens on: not yet awakened, with an awakened
+    /// form to take, the highest grade and level first.
+    private var awakeningCandidate: Unit? {
+        store.player.units
+            .filter { !$0.isAwakened && UnitDatabase.blueprint($0.blueprintID)?.awakening != nil }
+            .max { ($0.stars, $0.level) < ($1.stars, $1.level) }
     }
 
     /// The relic the relic steps photograph: the highest grade, and among
