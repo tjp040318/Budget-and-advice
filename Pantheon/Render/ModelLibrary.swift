@@ -379,7 +379,7 @@ final class ModelLibrary {
             wrapper.addChildNode(child)
         }
         MaterialTuner.tune(wrapper)
-        Self.predecodeTextures(in: wrapper)
+        Self.predecodeTextures(in: wrapper, label: name)
         describe(wrapper, label: name)
         return wrapper
     }
@@ -394,27 +394,45 @@ final class ModelLibrary {
     /// texture from 2026-09-09 to 2026-09-17. The warm pass parses on its
     /// own queue while the briefing is up, and `preparingForDisplay` decodes
     /// there too; a cold load on the main thread pays the same decode it
-    /// would have paid at first render, no more. SceneKit takes a `UIImage`
-    /// as a material's contents whatever the importer left there.
-    private static func predecodeTextures(in root: SCNNode) {
+    /// would have paid at first render, no more.
+    ///
+    /// SceneKit's USDZ importer leaves a texture as a URL INTO the archive
+    /// — `file:///…/zeus.usdz#textures/base_color.png` — and `URL.path`
+    /// drops the fragment, so the first cut of this read the whole 5 MB
+    /// zip as an image and logged twelve CoreGraphics errors per screen
+    /// (run 174). The member is read out of the archive by name instead:
+    /// a USDZ is a zip with every member stored uncompressed, so the bytes
+    /// are a slice of the file (`USDZArchive`).
+    private static func predecodeTextures(in root: SCNNode, label: String) {
+        var decoded = 0
+        var archives: [String: USDZArchive] = [:]
         root.enumerateHierarchy { child, _ in
             for material in child.geometry?.materials ?? [] {
                 for property in [material.diffuse, material.emission, material.normal, material.roughness, material.metalness] {
-                    let image: UIImage?
+                    var image: UIImage?
                     if let existing = property.contents as? UIImage {
                         image = existing
-                    } else if let path = property.contents as? String {
-                        image = UIImage(contentsOfFile: path)
                     } else if let url = property.contents as? URL, url.isFileURL {
-                        image = UIImage(contentsOfFile: url.path)
-                    } else {
-                        image = nil
+                        if url.pathExtension.lowercased() == "usdz", let member = url.fragment {
+                            let archive = archives[url.path] ?? USDZArchive(url: url)
+                            archives[url.path] = archive
+                            if let data = archive?.member(named: member) { image = UIImage(data: data) }
+                        } else if url.fragment == nil {
+                            image = UIImage(contentsOfFile: url.path)
+                        }
+                    } else if let path = property.contents as? String, !path.contains("#"),
+                              FileManager.default.fileExists(atPath: path) {
+                        image = UIImage(contentsOfFile: path)
                     }
-                    if let image, let decoded = image.preparingForDisplay() {
-                        property.contents = decoded
+                    if let image, let ready = image.preparingForDisplay() {
+                        property.contents = ready
+                        decoded += 1
                     }
                 }
             }
+        }
+        if decoded > 0 {
+            shared.log("'\(label)': \(decoded) texture(s) decoded ahead of the first frame")
         }
     }
 
@@ -944,5 +962,88 @@ final class StageDoctor: NSObject, SCNSceneRendererDelegate {
             }
             print(full)
         }
+    }
+}
+
+
+// MARK: - Reading a texture out of a USDZ
+
+/// A USDZ is a zip whose members are stored uncompressed and aligned, so a
+/// texture inside it is a contiguous slice of the file: this reads the
+/// central directory once and hands the slice back by name. Nothing here
+/// inflates — a member that is not stored (method 0) is refused, and the
+/// caller leaves that texture to SceneKit.
+final class USDZArchive {
+    private let data: Data
+    /// Member name → (offset of the local header, size).
+    private var entries: [String: (offset: Int, size: Int)] = [:]
+
+    init?(url: URL) {
+        guard let mapped = try? Data(contentsOf: url, options: .alwaysMapped) else { return nil }
+        data = mapped
+        guard readCentralDirectory() else { return nil }
+    }
+
+    /// The bytes of a stored member, or nil.
+    func member(named name: String) -> Data? {
+        guard let entry = entries[name] else { return nil }
+        // Local file header: signature (4), version (2), flags (2), method
+        // (2), time (2), date (2), crc (4), compressed (4), uncompressed
+        // (4), name length (2), extra length (2), then the name, the extra
+        // field and the bytes.
+        let base = entry.offset
+        guard base + 30 <= data.count, u32(base) == 0x0403_4B50 else { return nil }
+        let method = u16(base + 8)
+        guard method == 0 else { return nil }
+        let nameLength = u16(base + 26)
+        let extraLength = u16(base + 28)
+        let start = base + 30 + nameLength + extraLength
+        let end = start + entry.size
+        guard end <= data.count else { return nil }
+        return data.subdata(in: start..<end)
+    }
+
+    /// Finds the end-of-central-directory record from the tail and walks
+    /// the directory's entries.
+    private func readCentralDirectory() -> Bool {
+        let count = data.count
+        guard count >= 22 else { return false }
+        var eocd = -1
+        var probe = count - 22
+        let floor = max(0, count - 22 - 65_535)
+        while probe >= floor {
+            if u32(probe) == 0x0605_4B50 { eocd = probe; break }
+            probe -= 1
+        }
+        guard eocd >= 0 else { return false }
+        let total = u16(eocd + 10)
+        var cursor = Int(u32(eocd + 16))
+        for _ in 0..<total {
+            // Central directory entry: signature (4) … method at 10,
+            // compressed size at 20, uncompressed at 24, name length at 28,
+            // extra length at 30, comment length at 32, local header offset
+            // at 42, then the name.
+            guard cursor + 46 <= count, u32(cursor) == 0x0201_4B50 else { return false }
+            let compressed = Int(u32(cursor + 20))
+            let nameLength = u16(cursor + 28)
+            let extraLength = u16(cursor + 30)
+            let commentLength = u16(cursor + 32)
+            let offset = Int(u32(cursor + 42))
+            let nameStart = cursor + 46
+            guard nameStart + nameLength <= count else { return false }
+            if let name = String(data: data.subdata(in: nameStart..<nameStart + nameLength), encoding: .utf8) {
+                entries[name] = (offset, compressed)
+            }
+            cursor = nameStart + nameLength + extraLength + commentLength
+        }
+        return true
+    }
+
+    private func u16(_ at: Int) -> Int {
+        Int(data[at]) | (Int(data[at + 1]) << 8)
+    }
+
+    private func u32(_ at: Int) -> UInt32 {
+        UInt32(data[at]) | (UInt32(data[at + 1]) << 8) | (UInt32(data[at + 2]) << 16) | (UInt32(data[at + 3]) << 24)
     }
 }

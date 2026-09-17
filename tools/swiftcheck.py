@@ -907,7 +907,7 @@ def check_unknown_types(files, declared, errors):
         "SCNHitTestSearchMode","SCNMatrix4MakeTranslation","SCNVector3Zero","AnimationImportPolicy",
         # SCNSceneSource.LoadingOption: the importer's options dictionary,
         # typed since every parse goes through ModelLibrary.parseScene.
-        "Gesture", "MagnifyGesture", "LoadingOption",
+        "UInt32", "Gesture", "MagnifyGesture", "LoadingOption",
         # The idle is started through a player since 2026-09-17 (SCNNode.startLoop).
         "SCNAnimation","SCNAnimationPlayer",
         "SIMD3","simd_quatf","simd_float3",
