@@ -189,6 +189,10 @@ def run_family(name, args):
     transform = character.canonicalise(base, height=height, lock_root=not args.keep_root_motion)
     if base.anim and not args.keep_base_animation:
         base.anim = None     # the clips carry the motion; the base is the bind pose
+    # The serious proportions (2026-09-17): head, hands and feet scaled at
+    # their joints and baked, the same on every clip carrier below.
+    scales = character.PROPORTIONS[args.proportions] if args.proportions else None
+    fit = character.reproportion(base, scales, height=height) if scales else None
     problems = []
     base.name = out_name
     only = {c.strip() for c in args.only_clips.split(",") if c.strip()} if args.only_clips else None
@@ -227,6 +231,8 @@ def run_family(name, args):
             problems.append(f"{clip.name}: different skeleton")
         print("  canonical (base model's transform):")
         character.canonicalise(c, transform=transform, lock_root=not args.keep_root_motion)
+        if scales:
+            character.reproportion(c, scales, fit=fit)
         dev = abs(c.bind - base.bind).max() if len(c.bind) == len(base.bind) else float("inf")
         if dev > 1e-3:
             print(f"    PROBLEM: bind pose differs from the base by {dev:.4f}")
@@ -288,6 +294,7 @@ def main():
     ap.add_argument("--texture", type=int, default=2048, help="max texture edge for the shipped model")
     ap.add_argument("--lod-texture", type=int, default=0, help="max texture edge for the LOD (default: half of --texture, 512 at least)")
     ap.add_argument("--no-clips", action="store_true", help="ship the base and the LOD only; leave the clip files as they are")
+    ap.add_argument("--proportions", choices=sorted(character.PROPORTIONS), help="scale the head, hands and feet at their joints and bake it (character.PROPORTIONS)")
     ap.add_argument("--maps-from", help="a textured stage file (.glb/.usdz) to take the metallic-roughness and normal maps from; "
                                         "default: <name>_image or <name>_refine beside the source")
     ap.add_argument("--clip-tris", type=int, default=1500, help="triangle target for per-clip files")

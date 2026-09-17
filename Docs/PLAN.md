@@ -4872,3 +4872,77 @@ Lessons kept: a Meshy task of any kind is gone within about a week — a
 rig, a motion, a mesh — so anything that will be re-applied later (a
 bespoke motion onto a better rig) has to happen inside the week or be
 bought again; and a batch's "cost" field is still noise.
+
+## The serious look (2026-09-17, evening): away from the chibi proportions
+
+The owner, with the day's boards in front of him: "I honestly don't like
+the big hands and cartoony look. I want it a little more serious feeling
+and look." The look is not an accident of Meshy: every concept since the
+first remake was painted from one sentence — "about five heads tall with a
+slightly large head, big hands and feet, chunky simplified shapes" — and
+image-to-3D reproduced it faithfully. So the fix is in the concept style,
+and the cost is the roster.
+
+### What the serious end of the genre does
+
+- **Raid: Shadow Legends** — the reference for "serious": realistic
+  heroic proportions (seven and a half to eight heads), true hands, PBR
+  materials, muted palettes, mature faces; the champions read as
+  miniatures, not toys.
+- **Epic Seven** — anime, not chibi: seven heads, slim, hands in
+  proportion, the cartoon in the LINE and the colour rather than the body.
+- **Watcher of Realms, Diablo Immortal** — realistic with painted
+  texture; the same proportions as Raid with warmer light.
+- **Summoners War, AFK Arena** — the chibi end: four to five heads, big
+  hands, big feet. Summoners War's MONSTERS are this; it is what our
+  prompt copied, and it is what the owner is now reacting to.
+
+"A little more serious" reads as the Epic Seven / Raid band: real
+proportions and a mature face, the painted texture kept (not
+photorealism), the rich colour toned a step down.
+
+### The options
+
+1. **The renderer alone** — free, every family at once: a plain Lambert
+   roll-off instead of the painted band (`smoothstep(0.04, 0.96)`, was
+   0.12–0.90), a narrower and quieter rim (3.6 / 0.30, was 3.2 / 0.42).
+   Reads less like a cel; does nothing about a five-head body.
+2. **A proportion pass in the pipeline** — free, every family in an hour:
+   the head, the hands and the feet scaled DOWN at their own joints
+   (0.85, 0.74, 0.88), the thighs and shins lengthened along their bones
+   (+10%, +8%), the deformation baked into the mesh and the skeleton
+   rebuilt with no scale in it, so every clip plays as before (its
+   translation channels follow the moved joints; the clip carriers are
+   re-shipped through the same pass). `character.reproportion`,
+   `mesh.py --proportions serious`, `tools/batch/proportions.sh`. Measured
+   on Zeus: five heads to about six, the hands a hand's size, the legs a
+   third of the height; the idle still fits. It cannot change the face,
+   the chunky torso or the short arms — those are the concept's.
+3. **New concepts and new meshes** — the real answer, at Meshy's price:
+   a from-scratch concept in the serious style (a new `STYLE` block:
+   seven and a half heads, true hands, a mature stern face, restrained
+   colour; the design sentence kept so the god is the same god) and an
+   image-to-3D remake with the clip set and the walk, 59 credits a
+   family. The roster is 79 families + 12 awakened forms + 2 bosses = 93
+   remakes ≈ 5,500 credits, plus the five gods' bespoke motions again
+   (14 × 13) — about 5,700; the balance is 564 with a floor of 500. The
+   cards would then be a second decision: a bust shows the face's style,
+   not the proportions, so they can wait, but a serious body under a
+   cartoon face on the card will show; 79 × 10 cards ≈ 790 Gemini images
+   ≈ $100 at the pro model, or ~$30 on flash.
+4. **Retexture only** — Meshy's retexture keeps the mesh; the mesh is the
+   problem. Rejected.
+
+### The choice
+
+All three of the first three, in that order, today: 1 and 2 are free and
+land on every screen at once (the CI frames judge them; the pass is one
+flag and reversible — re-ship without it), and 3 is proven on ONE god
+before a credit is planned for the rest: Zeus, from a from-scratch serious
+concept (an EDIT of the chibi concept kept its proportions — Gemini anchors
+hard to a reference's body, so the serious concept is painted without one
+and the design sentence carries the identity), 59 credits, the balance
+ending at 505 — the last spend inside the owner's floor. The board of the
+three Zeuses (shipped, the pass, the remake) is the owner's decision
+point; the bill for the roster is above, and none of it is spent without
+his word.

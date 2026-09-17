@@ -892,6 +892,109 @@ def canonicalise(char, height=None, transform=None, lock_root=True, influences=4
     return transform
 
 
+PROPORTIONS = {
+    # The owner, 2026-09-17: "I honestly don't like the big hands and
+    # cartoony look. I want it a little more serious feeling and look."
+    # Every concept was painted "about five heads tall with a slightly
+    # large head, big hands and feet", and the meshes followed. This is
+    # the free half of the answer: the head, the hands and the feet scaled
+    # down at their own joints, the thigh and the shin bones lengthened
+    # (everything below a lengthened bone moves down rigidly), and the
+    # deformation BAKED into the mesh, so the skeleton keeps no scale and
+    # every clip plays as before. A number is a uniform scale about the
+    # joint that its children inherit; {"length": L} stretches the bone
+    # toward its first child by L.
+    "serious": {"Head": 0.85, "LeftHand": 0.74, "RightHand": 0.74, "LeftFoot": 0.88, "RightFoot": 0.88,
+                "LeftUpLeg": {"length": 1.10}, "RightUpLeg": {"length": 1.10},
+                "LeftLeg": {"length": 1.08}, "RightLeg": {"length": 1.08}},
+}
+
+
+def reproportion(char, scales, height=None, fit=None):
+    """Scales named joints (by their leaf name) about their own origins or
+    along their bones, bakes the skinned result into the points, and
+    rebuilds the skeleton WITHOUT the scale: every joint keeps its
+    rotation, a scaled joint's children move to where the scale put them,
+    and the clips' translation channels for those children follow. Then
+    the figure is stood back on the origin at `height` (or moved by the
+    base model's `fit`, so a clip carrier lands exactly where its base
+    did). Returns the fit applied."""
+    if not char.skinned:
+        return fit
+    J = len(char.joints)
+    leaf = [j.split("/")[-1] for j in char.joints]
+    spec = {i: scales[name] for i, name in enumerate(leaf) if name in scales}
+    if not spec:
+        return fit
+    children = {i: [c for c in range(J) if char.parents[c] == i] for i in range(J)}
+    local = local_from_world(char.bind, char.parents)
+    # Two transforms per joint: the one its OWN vertices are skinned with
+    # (the scale included) and the one its children hang from (a uniform
+    # scale is inherited; a lengthening is not - the subtree below a longer
+    # bone is only moved along it).
+    skin_world = np.empty_like(char.bind)
+    hang_world = np.empty_like(char.bind)
+    local_new = local.copy()
+    t_factor = np.ones((J, 3))     # per joint: what its local translation was multiplied by
+    for i in range(J):
+        parent_hang = np.eye(4) if char.parents[i] < 0 else hang_world[char.parents[i]]
+        li = local[i].copy()
+        if char.parents[i] >= 0 and isinstance(spec.get(char.parents[i]), dict):
+            # A child of a lengthened bone: moved out along it.
+            L = spec[char.parents[i]]["length"]
+            li[3, :3] = local[i][3, :3] * L
+            t_factor[i] = L
+        local_new[i] = li
+        plain = li @ parent_hang
+        sc = spec.get(i)
+        if sc is None:
+            skin_world[i] = plain
+            hang_world[i] = plain
+        elif isinstance(sc, dict):
+            kids = children[i]
+            u = local[kids[0]][3, :3] if kids else np.array([0.0, 1.0, 0.0])
+            u = u / max(np.linalg.norm(u), 1e-9)
+            L = sc["length"]
+            stretch = np.eye(4)
+            stretch[:3, :3] = np.eye(3) + (L - 1.0) * np.outer(u, u)
+            skin_world[i] = stretch @ plain
+            hang_world[i] = plain
+        else:
+            scaled = np.diag([sc, sc, sc, 1.0]) @ li @ parent_hang
+            skin_world[i] = scaled
+            hang_world[i] = scaled      # a uniform scale is inherited by the children
+    baked = skin(char.points.astype(np.float64), char.joint_indices, char.joint_weights.astype(np.float64),
+                 char.bind, skin_world)
+    # The skeleton without any scale: the old rotation, the new position.
+    bind_new = char.bind.copy()
+    for i in range(J):
+        bind_new[i][3, :3] = hang_world[i][3, :3]
+    char.points = baked.astype(np.float32)
+    char.bind = bind_new
+    char.rest_local = local_from_world(bind_new, char.parents)
+    if char.anim:
+        a = char.anim
+        for i in range(J):
+            p = char.parents[i]
+            if p >= 0 and isinstance(spec.get(p), (int, float)):
+                a["T"][:, i, :] *= spec[p]
+            elif not np.allclose(t_factor[i], 1.0):
+                a["T"][:, i, :] *= t_factor[i]
+    # Back on the ground at the asked height (the head shrank, the legs
+    # grew, the feet lifted the soles), or exactly as the base went.
+    if fit is None:
+        lo, hi = bounds(char.points.astype(np.float64))
+        h = hi[1] - lo[1]
+        s2 = (height / h) if height else 1.0
+        t2 = np.array([-(lo[0] + hi[0]) * 0.5 * s2, -lo[1] * s2, -(lo[2] + hi[2]) * 0.5 * s2])
+        fit = {"s": float(s2), "t": t2}
+        words = ", ".join(f"{k} x{v}" if not isinstance(v, dict) else f"{k} +{int(round((v['length'] - 1) * 100))}% long"
+                          for k, v in scales.items() if k in leaf)
+        print(f"    proportions: {words}; height {h:.3f} -> {h * s2:.3f}")
+    apply_similarity(char, np.eye(3), fit["s"], fit["t"])
+    return fit
+
+
 def ground_animation(char, tolerance=0.005):
     """Shifts a clip vertically so its typical frame stands on y = 0.
     Retargeted library clips float or sink by a few centimetres because the

@@ -755,7 +755,11 @@ enum MaterialTuner {
     // and a cheek. Wider, so the normal map's engraving and folds shade
     // through the turn, and a tighter, brighter specular so metal reads as
     // metal.
-    float band = smoothstep(0.12, 0.90, wrap);
+    // 0.04-0.96 since 2026-09-17 (was 0.12-0.90; before that a two-tone
+    // 0.28-0.72): the owner asked for "a little more serious feeling and
+    // look", and a band this wide is a plain Lambert roll-off with the
+    // faintest painted lift - the form shades like a sculpture, not a cel.
+    float band = smoothstep(0.04, 0.96, wrap);
     // A metal's colour is in its highlight, not its diffuse: the surface
     // modifier marks the painted gold metallic and smooth, and here that
     // dims the flat fill a little and turns the specular from one 36-power
@@ -829,8 +833,10 @@ enum MaterialTuner {
                 material.setValue(NSValue(scnVector3: SCNVector3(1, 1, 1)), forKey: "rimColor")
                 // A narrower, quieter rim than the first build's 2.6 / 0.55:
                 // that one drew a white outline round every figure.
-                material.setValue(NSNumber(value: Float(3.2)), forKey: "rimPower")
-                material.setValue(NSNumber(value: Float(0.42)), forKey: "rimStrength")
+                // Narrower and quieter again on 2026-09-17 (3.2 / 0.42): a
+                // bright rim is a cartoon's outline in light.
+                material.setValue(NSNumber(value: Float(3.6)), forKey: "rimPower")
+                material.setValue(NSNumber(value: Float(0.30)), forKey: "rimStrength")
             }
         }
     }
