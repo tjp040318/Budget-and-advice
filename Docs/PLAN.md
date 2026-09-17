@@ -4318,3 +4318,79 @@ built until he does. If he wants the inventory as named, option 1 is a
 `BoonService` with two more `RelicService`-shaped inventories and about
 two weeks; if he wants the Regalia, about a week, and the seventy-nine
 names are the one creative task in it.
+
+## Essence tiers — the ladder an awakening should climb (2026-09-17, designed, NOT built)
+
+The owner, on a Hall's levels screen: "the 'halls' say mid essence? Is
+that only mid? What if I need others?" The honest answer exposed a gap.
+
+**What exists.** Six essence lines in `EssenceCatalog` — Low, Mid and
+High of the five elements and of Magic, eighteen ids. What DROPS them:
+the campaign's first chapters drop Low Magic (35%) and Duat 2 Low Umbra
+(20%); the generated chapters drop Mid Magic (a boss 60%, a mob 20%);
+every Hall floor drops its element's Mid (60% on B1, sure on B5) AND its
+High (10% on B1, 50% on B5); every Titan drops its element's High (80%)
+and High Magic (50%). What SPENDS them: an awakening asks the element's
+Mid plus Mid and High Magic (a 5★: 15 + 10 + 5; a 3★ or 4★: 10 + 8 + 3),
+and nothing else in the game asks for an essence. So Low elemental
+essence and High elemental essence have no use at all: a Hall B5 run pays
+a High Ember Essence one time in two into a purse nothing opens, and the
+Titans' 80% High drop is the same. The Night Market buys and sells them,
+which is a sink for a thing nobody needs.
+
+**What the genre does.** Summoners War's awakening asks for the element's
+essence at the tiers the natural grade calls for, with magic essence
+alongside at every grade: the low tier is spent on the small monsters,
+the mid on the middle, the HIGH on the natural 5★s, and the element's
+Hall is farmed at its top floors for the High essence a 5★ awakening
+cannot do without. That is what makes a Hall's floors a ladder: the first
+floor is for a new account's 3★s, the last is where a 5★ is awakened.
+(The published tables are on sites this environment's network policy
+refuses; the shape is what is copied, and every number below is ours.)
+
+**Options.**
+
+1. *Drop the tiers nothing spends.* Remove Low and High elemental essence
+   from every drop table and keep the Mid. Simplest; it throws away two of
+   the three tiers a hall could pay and flattens five floors into one drop
+   at rising odds.
+2. *A ladder by natural grade.* Every tier is spent somewhere, and the
+   floor a player farms follows the grade of the unit being awakened.
+3. *A ladder by natural grade, and the Halls re-tiered to match.* As 2,
+   with the Halls' floors paying the tier their power asks for — Low on
+   B1–2, Mid on B3–4, High on B5 — instead of Mid everywhere with a High
+   chance that merely rises.
+
+**Choice: 3.** The recipe by natural grade:
+
+| natural | element | magic |
+|---|---|---|
+| 3★ | 10 Low + 5 Mid | 5 Low + 5 Mid |
+| 4★ | 10 Mid + 5 High | 8 Mid + 3 High |
+| 5★ | 15 Mid + 10 High | 10 Mid + 5 High |
+
+and the Halls' floors: B1 and B2 pay Low (sure) and Mid (40%, 50%); B3
+and B4 pay Mid (sure) and High (25%, 35%); B5 pays Mid (sure) and High
+(50%). The campaign keeps its Low and Mid Magic, the Titans their High;
+the Essences stall's caches and the Testing pack carry the new recipe. A
+5★ awakening then asks ten High essences: twenty B5 runs at 10 energy —
+the same "days, not an afternoon" the aether economy was tuned to — or
+about a dozen Titan kills; a 3★'s ten Low is ten runs of B1 at 6 energy,
+a new account's day.
+
+**What it touches.** `UnitDatabase.awakeningCost(element:naturalStars:)`
+as ONE function the eleven hand-written awakenings and the table's
+`FamilyRow`s both call (today each hand-written blueprint carries its own
+dictionary and the table has a two-way choice); `DungeonDatabase.hall` for
+the floors' `essenceChances`; the `awakening_cache_<element>` items and
+`everyEssence`; the Hall's drop line reads its floors and follows.
+`ProgressionTests.testAwakeningConsumesEssenceExactlyOnce` reads the
+recipe off the blueprint and does not pin it; a new test pins the
+ladder's INTENT (a 5★ asks for High and a 3★ does not). `balance.py` has
+no essence economy — its halls report is win rates — so an `--essences`
+report printing runs-per-awakening by grade and floor is the mirror, the
+way `--grades` prints the aether's.
+
+**Held for the owner's word (2026-09-17)**, because it changes the price
+of the thing he is testing tonight; the Testing pack already carries every
+tier, so his tests will not stall either way.
