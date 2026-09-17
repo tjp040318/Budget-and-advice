@@ -446,10 +446,12 @@ struct SettingsView: View {
                 // The key's tail, in capitals: what a support request quotes,
                 // and the tail of the save's record name in CloudKit.
                 row("Player ID", session.accounts.account?.playerCode ?? "—")
-                row("Demigod", store.player.displayName)
-                row("Level", "\(store.player.level)")
-                row("Units", "\(store.player.units.count)")
-                row("Relics", "\(store.player.relics.count)")
+                row("Name", store.player.displayName)
+                // The level is the panel's accessory; units and relics are
+                // the collection's own counts. Run 179's frame had the
+                // guest's Bind button cut off under eight rows and a
+                // three-line caption, so the panel keeps the rows only it
+                // can say.
                 row("Total summons", "\(store.player.totalSummons)")
                 row("Codex", "\(store.player.codex.count) / \(UnitDatabase.collectiblePool.count)")
                 Spacer(minLength: 0)
@@ -480,7 +482,7 @@ struct SettingsView: View {
             }
         }
         if session.accounts.account?.isGuest ?? true {
-            caption("A guest cannot sign back in, so there is no sign-out here: bind this phone's progress to your Apple ID first.")
+            caption("A guest cannot sign back in; bind this phone's progress to your Apple ID.")
             PrimaryButton(title: "Bind to Apple ID", systemImage: "person.crop.circle.badge.checkmark") {
                 showBind = true
             }

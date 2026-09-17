@@ -129,7 +129,14 @@ jobs:
               --stderr="$PWD/shots/$step-${names[$step]}-err.txt" \
               "$UDID" com.pantheon.game -tour -tour-step $step >/dev/null
             case ${names[$step]} in
-              reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 4; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
+              # Three frames of the reveal, then relaunched with -tour-reveal
+              # awakened for an awakened light Ares on the beam (the owner's
+              # frame of 2026-09-17: "If awakened characters look like this
+              # we have a HUGE problem"), shot at the b moment, seven seconds
+              # in, so the figure has turned and the words are up.
+              reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 4; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened >/dev/null
+                sleep 7; shoot "$step-${names[$step]}-awakened" ;;
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
               arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
@@ -173,14 +180,6 @@ jobs:
                   xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-social-tab $tab >/dev/null
                   sleep 5; shoot "$step-${names[$step]}-$tab"
                 done ;;
-              # The reveal twice: a 5★ fire Sekhmet, then relaunched with
-              # -tour-reveal awakened for an awakened light Ares on the beam
-              # (the owner's frame of 2026-09-17), six seconds in so the
-              # figure has turned and the words are up.
-              reveal)
-                sleep 6; shoot "$step-${names[$step]}"
-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened >/dev/null
-                sleep 6; shoot "$step-${names[$step]}-awakened" ;;
               # The island at rest, then relaunched with its camera zoomed
               # onto the summoning circle (-tour-island-zoom 1.5), so the
               # diorama is seen close: the buildings as targets, the
