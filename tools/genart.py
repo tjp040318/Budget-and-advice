@@ -38,7 +38,7 @@ def load_key(path):
     sys.exit("no API key: set GEMINI_API_KEY or pass --key-file")
 
 
-def build_request(prompt, ref_path, aspect):
+def build_request(prompt, ref_path, aspect, resolution=None):
     parts = [{"text": f"{prompt}. {ALWAYS_AVOID}."}]
     if ref_path:
         data = base64.b64encode(Path(ref_path).read_bytes()).decode()
@@ -51,6 +51,10 @@ def build_request(prompt, ref_path, aspect):
             "imageConfig": {"aspectRatio": aspect},
         },
     }
+    if resolution:
+        # gemini-3-pro-image paints at 1K, 2K or 4K (about 13, 13 and 24
+        # cents); the backdrops went to 4K on 2026-09-17 on the owner's word.
+        body["generationConfig"]["imageConfig"]["imageSize"] = resolution
     return body
 
 
@@ -112,6 +116,7 @@ def main():
     ap.add_argument("--prompt", required=True)
     ap.add_argument("--out", required=True)
     ap.add_argument("--size", default="1024x1024", help="WxH")
+    ap.add_argument("--resolution", choices=["1K", "2K", "4K"], help="the painter's own output size (gemini-3-pro-image); the file is then fitted to --size")
     ap.add_argument("--ref", help="reference image to edit from")
     ap.add_argument("--model", default="gemini-3-pro-image")
     ap.add_argument("--key-file")
@@ -125,7 +130,7 @@ def main():
     aspect_str = min(aspect.items(), key=lambda kv: abs(kv[0] - ratio))[1]
 
     key = load_key(args.key_file)
-    body = build_request(args.prompt, args.ref, aspect_str)
+    body = build_request(args.prompt, args.ref, aspect_str, resolution=args.resolution)
 
     print(f"{args.model}  {aspect_str}  -> {args.out}" + (f"  (ref: {Path(args.ref).name})" if args.ref else ""))
     t0 = time.time()
