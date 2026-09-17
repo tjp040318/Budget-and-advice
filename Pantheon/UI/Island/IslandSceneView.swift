@@ -20,6 +20,27 @@ struct IslandReaction: Equatable {
     }
 }
 
+/// A decoration standing in the living layer: the prop, its shadow and,
+/// for a brazier, its flame, its light and the glow on the sand.
+private struct IslandDecorEntry {
+    let placement: IslandDecorPlacement
+    let holder: SCNNode
+    let shadow: SCNNode
+    let flame: SCNNode?
+    let lamp: SCNNode?
+    let glow: SCNNode?
+    /// The prop's own height and width, in metres.
+    let metres: Float
+    let width: Float
+}
+
+/// A particle system placed at a point of the painting.
+private struct IslandWeatherEntry {
+    let node: SCNNode
+    let point: CGPoint
+    let depth: Float
+}
+
 /// The island's living layer: the player's team standing about on the
 /// painting in their idle clips, the decorations the player has stood on
 /// the sand, sparks over the summoning pool, a flame at the obelisk's tip,
@@ -128,27 +149,11 @@ struct IslandSceneView: UIViewRepresentable {
         private var figureBases: [SCNVector3] = []
         private var figuresKey = ""
 
-        private struct DecorEntry {
-            let placement: IslandDecorPlacement
-            let holder: SCNNode
-            let shadow: SCNNode
-            let flame: SCNNode?
-            let lamp: SCNNode?
-            let glow: SCNNode?
-            /// The prop's own height and width, in metres.
-            let metres: Float
-            let width: Float
-        }
-        private var decorEntries: [DecorEntry] = []
+        private var decorEntries: [IslandDecorEntry] = []
         private var decorKey = ""
         private var flameScales: [String: Float] = [:]
 
-        private struct WeatherEntry {
-            let node: SCNNode
-            let point: CGPoint
-            let depth: Float
-        }
-        private var weatherEntries: [WeatherEntry] = []
+        private var weatherEntries: [IslandWeatherEntry] = []
         private var weatherKey = ""
 
         private var lastReaction: UUID?
@@ -264,7 +269,7 @@ struct IslandSceneView: UIViewRepresentable {
                 // the figure was in it never starts (the Hall of Ka's frozen
                 // Zeus, 2026-09-17): started again from inside the scene.
                 if live { node.restartIdle() }
-                let shadow = Self.shadow()
+                let shadow = shadow()
                 figures.addChildNode(shadow)
                 figureNodes.append(node)
                 figureShadows.append(shadow)
@@ -352,7 +357,7 @@ struct IslandSceneView: UIViewRepresentable {
             flameScales = [:]
             for placement in placements {
                 guard let prop = StageBuilder.loadProp(placement.decoration.asset) else { continue }
-                let box = Self.bounds(of: prop)
+                let box = bounds(of: prop)
                 let metres = max(0.2, box.max.y - box.min.y)
                 // Centred on its footprint with its feet on the holder's
                 // origin, so the holder's position is where the piece stands.
@@ -360,7 +365,7 @@ struct IslandSceneView: UIViewRepresentable {
                 prop.position = SCNVector3(-(box.min.x + box.max.x) / 2, -box.min.y, -(box.min.z + box.max.z) / 2)
                 holder.addChildNode(prop)
                 decor.addChildNode(holder)
-                let shadow = Self.shadow()
+                let shadow = shadow()
                 decor.addChildNode(shadow)
 
                 var flame: SCNNode?
@@ -403,7 +408,7 @@ struct IslandSceneView: UIViewRepresentable {
                     decor.addChildNode(host)
                     glow = host
                 }
-                decorEntries.append(DecorEntry(
+                decorEntries.append(IslandDecorEntry(
                     placement: placement, holder: holder, shadow: shadow, flame: flame, lamp: lamp, glow: glow,
                     metres: metres, width: max(0.2, box.max.x - box.min.x)
                 ))
@@ -433,7 +438,7 @@ struct IslandSceneView: UIViewRepresentable {
                     flameScales[key] = scale
                     flame.removeAllParticleSystems()
                     let tint = UIColor(hex: entry.placement.decoration.flameHex) ?? UIColor.orange
-                    flame.addParticleSystem(Self.fire(tint: tint, pointsPerMetre: scale))
+                    flame.addParticleSystem(fire(tint: tint, pointsPerMetre: scale))
                 }
                 if let lamp = entry.lamp {
                     lamp.position = SCNVector3(Float(point.x), rim + target * 0.2, depth + 8)
@@ -452,7 +457,7 @@ struct IslandSceneView: UIViewRepresentable {
         /// A brazier's fire in a world where a metre is `scale` points:
         /// `VFXLibrary.flame` sizes its emitter and motes in metres and its
         /// speed in metres a second, so the speed is scaled here too.
-        private static func fire(tint: UIColor, pointsPerMetre scale: Float) -> SCNParticleSystem {
+        private func fire(tint: UIColor, pointsPerMetre scale: Float) -> SCNParticleSystem {
             let system = VFXLibrary.flame(tint: tint, scale: scale)
             system.particleVelocity = CGFloat(1.3 * scale)
             system.particleVelocityVariation = CGFloat(0.5 * scale)
@@ -463,7 +468,7 @@ struct IslandSceneView: UIViewRepresentable {
         /// The box round everything under `node`, in `node`'s own space. A
         /// prop is a wrapper round the file's nodes, so its own bounding box
         /// says nothing; the children's are gathered corner by corner.
-        private static func bounds(of node: SCNNode) -> (min: SCNVector3, max: SCNVector3) {
+        private func bounds(of node: SCNNode) -> (min: SCNVector3, max: SCNVector3) {
             var lo = SCNVector3(Float.greatestFiniteMagnitude, Float.greatestFiniteMagnitude, Float.greatestFiniteMagnitude)
             var hi = SCNVector3(-Float.greatestFiniteMagnitude, -Float.greatestFiniteMagnitude, -Float.greatestFiniteMagnitude)
             var found = false
@@ -496,35 +501,35 @@ struct IslandSceneView: UIViewRepresentable {
                 let node = SCNNode()
                 node.addParticleSystem(system)
                 weather.addChildNode(node)
-                weatherEntries.append(WeatherEntry(node: node, point: point, depth: depth))
+                weatherEntries.append(IslandWeatherEntry(node: node, point: point, depth: depth))
             }
 
             // Sparks rising off the summoning pool.
-            add(CGPoint(x: 0.44, y: 0.50), depth: 7, Self.sparkle(
+            add(CGPoint(x: 0.44, y: 0.50), depth: 7, sparkle(
                 tint: UIColor(hex: "#7FE0FF") ?? UIColor.cyan,
                 size: unit * 1.1, spread: paintingFrame.width * 0.055, rise: unit * 9, rate: 14
             ))
             // The flame at the obelisk's tip.
-            add(CGPoint(x: 0.888, y: 0.235), depth: 4, Self.sparkle(
+            add(CGPoint(x: 0.888, y: 0.235), depth: 4, sparkle(
                 tint: UIColor(hex: "#FFD27A") ?? UIColor.orange,
                 size: unit * 1.6, spread: unit * 1.2, rise: unit * 6, rate: 22
             ))
             // The sun's glitter on the sea, in the band of its reflection;
             // the moon's after dark.
-            add(CGPoint(x: 0.72, y: 0.26), depth: -9, Self.glitter(
+            add(CGPoint(x: 0.72, y: 0.26), depth: -9, glitter(
                 tint: UIColor(hex: isNight ? "#CFE2FF" : "#FFE9A6") ?? UIColor.white,
                 size: unit * 0.9, spread: paintingFrame.width * 0.24, band: paintingFrame.height * 0.05
             ))
             if isNight {
                 for patch in IslandSceneView.fireflyPatches {
-                    add(patch, depth: IslandSceneView.depth(patch.y) + 2, Self.fireflies(
+                    add(patch, depth: IslandSceneView.depth(patch.y) + 2, fireflies(
                         size: unit * 0.7, spread: paintingFrame.width * 0.06, band: paintingFrame.height * 0.05, drift: unit * 1.2
                     ))
                 }
             }
         }
 
-        private static func sparkle(tint: UIColor, size: CGFloat, spread: CGFloat, rise: CGFloat, rate: CGFloat) -> SCNParticleSystem {
+        private func sparkle(tint: UIColor, size: CGFloat, spread: CGFloat, rise: CGFloat, rate: CGFloat) -> SCNParticleSystem {
             let system = SCNParticleSystem()
             system.birthRate = rate
             system.particleLifeSpan = 2.0
@@ -545,7 +550,7 @@ struct IslandSceneView: UIViewRepresentable {
         }
 
         /// Slow points of light that twinkle in a flat band and barely move.
-        private static func glitter(tint: UIColor, size: CGFloat, spread: CGFloat, band: CGFloat) -> SCNParticleSystem {
+        private func glitter(tint: UIColor, size: CGFloat, spread: CGFloat, band: CGFloat) -> SCNParticleSystem {
             let system = SCNParticleSystem()
             system.birthRate = 9
             system.particleLifeSpan = 1.6
@@ -566,7 +571,7 @@ struct IslandSceneView: UIViewRepresentable {
         }
 
         /// Few, small, long-lived, drifting through the scrub and blinking.
-        private static func fireflies(size: CGFloat, spread: CGFloat, band: CGFloat, drift: CGFloat) -> SCNParticleSystem {
+        private func fireflies(size: CGFloat, spread: CGFloat, band: CGFloat, drift: CGFloat) -> SCNParticleSystem {
             let system = SCNParticleSystem()
             system.birthRate = 2.5
             system.particleLifeSpan = 5
@@ -587,7 +592,7 @@ struct IslandSceneView: UIViewRepresentable {
         }
 
         /// An opacity curve over a particle's life.
-        private static func twinkle(_ values: [Float], times: [Float]) -> SCNParticlePropertyController {
+        private func twinkle(_ values: [Float], times: [Float]) -> SCNParticlePropertyController {
             let animation = CAKeyframeAnimation(keyPath: "opacity")
             animation.values = values.map { NSNumber(value: $0) }
             animation.keyTimes = times.map { NSNumber(value: $0) }
@@ -607,7 +612,7 @@ struct IslandSceneView: UIViewRepresentable {
 
         /// A soft dark pill under the feet, a unit wide, scaled to the figure
         /// when it is placed, so it sits on the sand instead of floating.
-        private static func shadow() -> SCNNode {
+        private func shadow() -> SCNNode {
             let plane = SCNPlane(width: 1, height: 0.3)
             plane.cornerRadius = 0.15
             let material = SCNMaterial()
