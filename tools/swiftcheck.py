@@ -908,6 +908,8 @@ def check_unknown_types(files, declared, errors):
         # SCNSceneSource.LoadingOption: the importer's options dictionary,
         # typed since every parse goes through ModelLibrary.parseScene.
         "LoadingOption",
+        # The idle is started through a player since 2026-09-17 (SCNNode.startLoop).
+        "SCNAnimation","SCNAnimationPlayer",
         "SIMD3","simd_quatf","simd_float3",
         # SpriteKit, since the unit plates went screen-space (2026-09-11),
         # and the renderer delegate and Core Graphics names they use.

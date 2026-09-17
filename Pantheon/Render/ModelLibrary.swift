@@ -58,18 +58,19 @@ final class ModelLibrary {
     /// that figure's clip — on the main thread, and on the Hall of Ka the two
     /// overlapped: the tour's step 3 logged the USD library's "TBB Global TLS
     /// count is not == 1, instead it is: 2" the instant the altar's idle clip
-    /// was read while the rail's meshes were parsing on the other thread,
-    /// and the clip came back as a group whose tracks moved nothing — Zeus
-    /// stood on the dais in his bind pose, arms out, while the same clip on
-    /// the same code path animated on the collection's Stage in the same
-    /// run, where the figure's parse happened to finish before the warm
-    /// pass began (the owner, 2026-09-17: "Why are the characters stuck in
-    /// this position"). Every parse in the app goes through `withImporter`
-    /// — the loader's meshes and clips, the stage's props, the chest — so a
-    /// background parse can never overlap a foreground one. The lock is held
-    /// around a PARSE only, never around the caches: the warm pass still
-    /// does its work, and the foreground waits for at most the one file
-    /// being read.
+    /// was read while the rail's meshes were parsing on the other thread, and
+    /// 'zeus' was parsed twice, once by each thread. Every parse in the app
+    /// goes through `withImporter` — the loader's meshes and clips, the
+    /// stage's props, the chest — so a background parse can never overlap a
+    /// foreground one. The lock is held around a PARSE only, never around
+    /// the caches: the warm pass still does its work, and the foreground
+    /// waits for at most the one file being read.
+    ///
+    /// It was found while chasing the frozen figure on the dais (the owner,
+    /// 2026-09-17: "Why are the characters stuck in this position") and is
+    /// NOT what froze it: run 170 serialised every parse and Zeus stood in
+    /// his bind pose all the same. That was the order of attach and animate
+    /// — `SCNNode.startLoop`, at the end of this file.
     private static let importerLock = NSLock()
 
     /// Runs one use of SceneKit's importer with the importer to itself.
@@ -551,6 +552,31 @@ final class ModelLibrary {
         let shape = (best as? CAAnimationGroup).map { "a group of \($0.animations?.count ?? 0) tracks" } ?? "a single track"
         log(String(format: "clip animation taken from %@, %.2f s, %@", origin, best.duration, shape))
         return best
+    }
+}
+
+extension SCNNode {
+    /// Starts a looping clip on a figure that is ALREADY in its scene, through
+    /// a player told to play.
+    ///
+    /// The stage views used to `addAnimation` the idle to the figure and THEN
+    /// add the figure to the scene. Built inside `makeUIView`, before the
+    /// view's first frame, that played; built inside `updateUIView`, into a
+    /// scene already rendering, the figure stood in its bind pose for good —
+    /// the Hall of Ka opened from the island picks its unit a beat after it
+    /// appears and photographed Zeus frozen on the dais in three runs of
+    /// frames (168–170), while the Awaken step, which names its unit up
+    /// front, animated on the same code (the owner, 2026-09-17: "Why are the
+    /// characters stuck in this position"). A clip added to a detached node
+    /// and carried into a live scene is the one order SceneKit did not start.
+    /// So: into the scene first, then a player, then `play()` — the three
+    /// things the paths that worked had and the frozen one lacked.
+    func startLoop(_ clip: CAAnimation, key: String) {
+        let animation = SCNAnimation(caAnimation: clip)
+        animation.usesSceneTimeBase = false
+        let player = SCNAnimationPlayer(animation: animation)
+        addAnimationPlayer(player, forKey: key)
+        player.play()
     }
 }
 

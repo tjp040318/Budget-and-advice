@@ -845,6 +845,7 @@ struct CollectionStageView: UIViewRepresentable {
         view.antialiasingMode = .multisampling2X
         view.allowsCameraControl = false
         view.rendersContinuously = true
+        view.isPlaying = true
         // The drag is a SwiftUI gesture over the view, not the view's own.
         view.isUserInteractionEnabled = false
         let coordinator = context.coordinator
@@ -937,14 +938,19 @@ struct CollectionStageView: UIViewRepresentable {
         if unit.unit.isAwakened {
             node.addParticleSystem(VFXLibrary.aura(tint: tint, scale: height / 1.9))
         }
-        let assetName = blueprint.model.assetName
-        if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
-            ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
-            node.addAnimation(idle, forKey: "idle")
-        }
         node.eulerAngles.y = Self.stance + spin
         node.opacity = 0
         scene.rootNode.addChildNode(node)
+        // The idle AFTER the figure is in the scene, through a player told
+        // to play (`SCNNode.startLoop`): the first unit, placed before the
+        // view's first frame, animated either way; a unit picked from the
+        // rail afterwards is placed into a live scene, the case that froze
+        // the Hall of Ka's figure (2026-09-17).
+        let assetName = blueprint.model.assetName
+        if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
+            ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
+            node.startLoop(idle, key: "idle")
+        }
         node.runAction(.fadeIn(duration: 0.35))
         coordinator.figure = node
         coordinator.figureHeight = height

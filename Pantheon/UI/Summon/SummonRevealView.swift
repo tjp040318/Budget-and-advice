@@ -498,6 +498,7 @@ struct SummonStageView: UIViewRepresentable {
         view.antialiasingMode = .multisampling2X
         view.allowsCameraControl = false
         view.rendersContinuously = true
+        view.isPlaying = true
 
         let tint = UIColor(hex: result.blueprint.model.auraHex) ?? .white
         let height = result.blueprint.model.height
@@ -524,7 +525,7 @@ struct SummonStageView: UIViewRepresentable {
         let assetName = result.blueprint.model.assetName
         if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
             ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
-            node.addAnimation(idle, forKey: "idle")
+            node.startLoop(idle, key: "idle")
         }
         // A three-quarter stance to open on. The turn itself waits for the
         // reveal (see `show`), and it is no longer a perpetual full spin: a

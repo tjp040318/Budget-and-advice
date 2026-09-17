@@ -74,8 +74,14 @@ struct TrainingView: View {
         store.resolvedUnits.sorted { $0.power > $1.power }
     }
 
+    /// The unit on the dais: the one picked, or the top of the rail until
+    /// one is. The fallback is HERE and not only in `.onAppear`, so the hall
+    /// opened from the island builds its figure in the stage's `makeUIView`,
+    /// before the view's first frame, like every other stage — with the
+    /// pick landing a beat later, the figure went into a live scene, which
+    /// is where its idle never started (2026-09-17).
     private var target: ResolvedUnit? {
-        guard let targetID else { return nil }
+        guard let targetID else { return units.first }
         return units.first { $0.id == targetID }
     }
 
@@ -977,6 +983,9 @@ struct AltarStageView: UIViewRepresentable {
         view.antialiasingMode = .multisampling2X
         view.allowsCameraControl = false
         view.rendersContinuously = true
+        // Playing from the first frame, whatever the scene holds at that
+        // moment: the figure arrives a beat later when no unit was picked.
+        view.isPlaying = true
         view.isUserInteractionEnabled = false
         let coordinator = context.coordinator
         coordinator.scene = scene
@@ -1069,15 +1078,19 @@ struct AltarStageView: UIViewRepresentable {
         if unit.unit.isAwakened {
             node.addParticleSystem(VFXLibrary.aura(tint: tint, scale: height / 1.9))
         }
-        let assetName = blueprint.model.assetName
-        if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
-            ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
-            node.addAnimation(idle, forKey: "idle")
-        }
         // A three-quarter stance, turned a little toward the panel.
         node.eulerAngles.y = -0.3
         node.opacity = 0
         scene.rootNode.addChildNode(node)
+        // The idle AFTER the figure is in the scene, through a player told
+        // to play (`SCNNode.startLoop`): added before, to a detached node
+        // carried into this already-rendering scene, it never started and
+        // the figure stood in its bind pose (2026-09-17).
+        let assetName = blueprint.model.assetName
+        if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
+            ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
+            node.startLoop(idle, key: "idle")
+        }
         node.runAction(.fadeIn(duration: 0.35))
         coordinator.figure = node
         coordinator.figureHeight = height
