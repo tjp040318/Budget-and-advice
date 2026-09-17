@@ -139,7 +139,10 @@ struct TourView: View {
             // carries no iCloud entitlement): the Guild tab by default, and
             // `-tour-social-tab friends|inbox|ranks` for the others, which
             // the CI job relaunches for.
-            SocialView(social: SocialService(backend: LocalSocialBackend(seed: 7, persisting: false)),
+            // ONE service for the step: built inside `body` it was rebuilt
+            // on every tick of the tour, and each fresh instance had refreshed
+            // nothing yet, so run 176 photographed four empty tabs.
+            SocialView(social: Self.tourSocial,
                        opening: SocialTab.pinnedFromArguments ?? .guild, onAttack: { _ in }, onClaim: { _ in })
         case "regalia":
             // The Regalia sheet of the seed's awakened unit, whose item the
@@ -399,6 +402,9 @@ struct TourView: View {
 
     /// The unit the awaken step opens on: not yet awakened, with an awakened
     /// form to take, the highest grade and level first.
+    /// The Summoners step's service on the seeded offline world, made once.
+    private static let tourSocial = SocialService(backend: LocalSocialBackend(seed: 7, persisting: false))
+
     /// A Monday of a Festival week, for the events step.
     private static var festivalMonday: Date {
         EventCalendar.calendar.date(from: DateComponents(year: 2026, month: 9, day: 28, hour: 12)) ?? Date()

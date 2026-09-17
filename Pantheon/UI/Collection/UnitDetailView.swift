@@ -505,11 +505,20 @@ struct UnitDetailView: View {
                         .minimumScaleFactor(0.7)
                     RegaliaPips(level: regalia.level, lit: unlocked, size: 5)
                     Spacer(minLength: 0)
-                    Text(unlocked ? regalia.shortLine : RegaliaService.unlockLine(for: unit.blueprint))
-                        .font(Theme.numeric(10))
-                        .foregroundStyle(unlocked ? Theme.gold : Theme.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                    // The column is narrow: the line's short form only, and a
+                    // locked item says just that (the sheet has the words).
+                    // Run 176 photographed "Thunderbolt of… Awaken to u…".
+                    if unlocked {
+                        Text(regalia.shortLine)
+                            .font(Theme.numeric(10))
+                            .foregroundStyle(Theme.gold)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                    } else {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
                 .padding(.horizontal, 6)
                 .frame(height: 20)

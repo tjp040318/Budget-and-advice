@@ -18,6 +18,10 @@ final class EventTests: XCTestCase {
     /// week (142 % 4 = 2); the week after it is a Labyrinth and Festival week.
     private var monday: Date { date(2026, 9, 21) }
     private func weekday(_ offset: Int) -> Date { EventCalendar.day(offset, after: monday) }
+    /// Midnight at the start of the offset's day: an event's own edge (a
+    /// `weekday` is noon, a moment INSIDE a day; run 176 compared four
+    /// edges to noons and failed them).
+    private func dayStart(_ offset: Int) -> Date { EventCalendar.day(offset, after: EventCalendar.weekStart(at: monday)) }
     private let hallWeek = 142
     private let festivalWeek = 143
 
@@ -52,7 +56,7 @@ final class EventTests: XCTestCase {
         let week = EventCalendar.events(at: weekday(3))
         XCTAssertEqual(week.count, EventCalendar.weekdayRota.count + 1, "four weekdays and the headline")
         XCTAssertEqual(week.first?.start, EventCalendar.weekStart(at: weekday(3)))
-        XCTAssertEqual(week.last?.end, weekday(7))
+        XCTAssertEqual(week.last?.end, dayStart(7))
         for (index, event) in week.enumerated() {
             XCTAssertLessThan(event.start, event.end, event.id)
             if index > 0 { XCTAssertEqual(week[index - 1].end, event.start, "no gap before \(event.id)") }
@@ -63,9 +67,9 @@ final class EventTests: XCTestCase {
         let festival = EventCalendar.events(at: weekday(7))
         XCTAssertEqual(festival.count, EventCalendar.weekdayRota.count + 2)
         XCTAssertEqual(festival.first?.kind, .loginGift)
-        XCTAssertEqual(festival.first?.start, weekday(7))
-        XCTAssertEqual(festival.first?.end, weekday(14))
-        XCTAssertEqual(EventCalendar.nextFestival(after: monday).start, weekday(7))
+        XCTAssertEqual(festival.first?.start, dayStart(7))
+        XCTAssertEqual(festival.first?.end, dayStart(14))
+        XCTAssertEqual(EventCalendar.nextFestival(after: monday).start, dayStart(7))
         XCTAssertEqual(EventCalendar.nextHeadline(after: monday).kind, EventCalendar.headline(week: festivalWeek))
         XCTAssertEqual(EventCalendar.upcoming(at: weekday(3)).count, 1, "Thursday noon: only the weekend is still to come")
     }

@@ -82,6 +82,12 @@ def source_for(name):
     return None
 
 
+# The clips the game plays (AnimationClip's raw values), the only stems a
+# family's clip file may carry after its name.
+CLIP_NAMES = {"idle", "idle_combat", "attack_basic", "attack_heavy", "cast_loop", "cast_release",
+              "ultimate", "hit_react", "death", "victory", "summon_reveal", "walk"}
+
+
 def clip_sources(name):
     out = {}
     for p in sorted(SOURCE_DIR.glob(f"{name}_*.*")):
@@ -90,6 +96,12 @@ def clip_sources(name):
         # `download --include-unrigged` leaves the unrigged stages beside the
         # clips as <asset>_image / _preview / _refine; they carry no skeleton.
         if p.stem.endswith(("_lod", "_image", "_preview", "_refine")):
+            continue
+        # Another family whose name starts with this one — `ra_awakened` and
+        # its clips beside `ra` (2026-09-17: three families read their new
+        # awakened forms' files as their own clips and failed the bind check).
+        # A clip is <name>_<clip> where <clip> is a clip the game knows.
+        if p.stem[len(name) + 1:] not in CLIP_NAMES:
             continue
         out.setdefault(p.stem, p)          # .usdz wins over .glb for the same clip
     return list(out.values())

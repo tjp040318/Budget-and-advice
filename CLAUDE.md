@@ -1004,7 +1004,9 @@ environment can and cannot do. The short version:
   remake at 59 credits a family (PLAN.md, *The serious look*: about
   5,700 for the roster); `zeus_serious` is the one paid test, judged on a
   board of the three Zeuses. A mesh made in the new style must NOT go
-  through the pass.
+  through the pass. `mesh.py`'s clip finder accepts only `<name>_<clip>`
+  for a clip the game knows (`CLIP_NAMES`): `ra_awakened`'s files beside
+  `ra` were read as Ra's clips and failed the bind check for three families.
 - **Five tabs.** An iPhone folds a sixth tab into a system "More" list, so
   Settings opens over the island from the Obelisk (and Missions, the
   bazaar from the header); `RootView.Tab(destination)` is failable for the

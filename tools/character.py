@@ -1309,12 +1309,17 @@ def decimate(char, target_tris, texture_size=1024, method=None):
     if texture_size:
         for tex in char.textures:
             img = Image.open(io.BytesIO(tex.data))
+            # Always written out again through PIL, pixels only: a texture
+            # that was small enough used to ship as Meshy's own bytes, and
+            # UIKit logs "Error -17102 decompressing image -- possibly
+            # corrupt" for two of them per model on the simulator (run 176)
+            # - it decodes them still, but a clean PNG says nothing.
+            img = img.convert("RGBA" if tex.ext == "png" and img.mode in ("RGBA", "LA", "P") else "RGB")
             if max(img.size) > texture_size:
-                img = img.convert("RGBA" if tex.ext == "png" and img.mode in ("RGBA", "LA", "P") else "RGB")
                 img.thumbnail((texture_size, texture_size), Image.LANCZOS)
-                buf = io.BytesIO()
-                img.save(buf, "PNG", optimize=True)
-                tex.data, tex.ext = buf.getvalue(), "png"
+            buf = io.BytesIO()
+            img.save(buf, "PNG", optimize=True)
+            tex.data, tex.ext = buf.getvalue(), "png"
 
 
 # ---------------------------------------------------------------------------
