@@ -90,6 +90,14 @@ SHEETS = {
         ("awakening_cache_umbra", "a small ornate gold reliquary box with a dark violet moon gem set in its lid"),
         ("chest_gold", "a small closed gold treasure chest with a bronze lock"),
     ]),
+    "essences_c": (3, 2, [
+        ("essence_ember_low", "one small red-orange crystal shard with fire inside it"),
+        ("essence_tide_low", "one small deep blue crystal shard with water light inside it"),
+        ("essence_gale_low", "one small green crystal shard with a wind swirl inside it"),
+        ("essence_ember_high", "a large glowing red-orange crystal cluster on a gold base, fire pouring out"),
+        ("essence_tide_high", "a large glowing deep blue crystal cluster on a gold base, water light pouring out"),
+        ("essence_gale_high", "a large glowing green crystal cluster on a gold base, wind swirling out"),
+    ]),
     "stones": (3, 2, [
         ("whetstone_rare", "a flat grey-blue whetstone with a faint blue rune glowing on it"),
         ("whetstone_hero", "a flat violet whetstone with a violet rune glowing on it"),
@@ -133,6 +141,21 @@ def key(cell_rgb):
     border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]])))
     border.discard(0)
     ground = np.isin(lab, list(border))
+    # A sheet the painter put on WHITE with a black square per cell (the
+    # essences sheet of 2026-09-17 came back that way): when the cell's
+    # border is mostly white, the white margin is ground, and so is every
+    # black piece that touches the margin - the square the icon sits in. A
+    # white highlight inside the icon is never reached from there.
+    bright = (a.min(-1) > 225) & ((a.max(-1) - a.min(-1)) < 18)
+    edge = np.concatenate([bright[0], bright[-1], bright[:, 0], bright[:, -1]])
+    if edge.mean() > 0.5:
+        blab, _ = ndimage.label(bright)
+        bborder = set(np.unique(np.concatenate([blab[0], blab[-1], blab[:, 0], blab[:, -1]])))
+        bborder.discard(0)
+        margin = np.isin(blab, list(bborder))
+        touching = set(np.unique(lab[ndimage.binary_dilation(margin, iterations=2) & dark]))
+        touching.discard(0)
+        ground = margin | np.isin(lab, list(touching))
     icon = ~ground
     lab, n = ndimage.label(icon)
     if n == 0:
