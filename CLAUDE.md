@@ -989,6 +989,22 @@ environment can and cannot do. The short version:
   the call site had dropped it. **A Meshy task expires within about a
   week, rigs and motions included**: re-apply within the week or buy
   again; `tools/batch/build_asset.sh` ships at the hero budgets.
+- **The serious look (2026-09-17, evening; the owner: "I honestly don't
+  like the big hands and cartoony look. I want it a little more serious
+  feeling and look").** Every concept was painted "five heads tall, big
+  hands and feet", so the meshes were. The free half is in the pipeline:
+  `character.reproportion` (`mesh.py --proportions serious`,
+  `tools/batch/proportions.sh` over every rigged family) scales the head,
+  hands and feet down at their joints, lengthens the thighs and shins,
+  BAKES it into the mesh and rebuilds the skeleton with no scale in it,
+  the clip carriers re-shipped through the same pass (their translation
+  channels follow); the ramp is near-Lambert (0.04–0.96) with a quieter
+  rim (3.6 / 0.30). The real answer is a new concept style — from scratch,
+  never a `--ref` edit of a chibi concept, which keeps its body — and a
+  remake at 59 credits a family (PLAN.md, *The serious look*: about
+  5,700 for the roster); `zeus_serious` is the one paid test, judged on a
+  board of the three Zeuses. A mesh made in the new style must NOT go
+  through the pass.
 - **Five tabs.** An iPhone folds a sixth tab into a system "More" list, so
   Settings opens over the island from the Obelisk (and Missions, the
   bazaar from the header); `RootView.Tab(destination)` is failable for the
