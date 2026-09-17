@@ -53,3 +53,8 @@ Art/Models/*_ultimate.glb
 Art/Models/*_victory.glb
 Art/Models/*_idle.glb
 Art/Models/*_summon_reveal.glb
+
+# Re-ships of a test model at other budgets: made in one command from the raw
+# beside them (Docs/PLAN.md, the serious look), never shipped.
+Art/Models/tests/*_hi.usdz
+Art/Models/tests/*_hi_lod.usdz
