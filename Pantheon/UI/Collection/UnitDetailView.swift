@@ -994,7 +994,7 @@ struct AwakeningSheet: View {
                                         store.awaken(unit.id)
                                         dismiss()
                                     }
-                                    Text("Essences drop in the Halls of Essence, in the Labyrinth on the island.")
+                                    Text("The element's essence drops in its Hall of Essence, in the Labyrinth; Magic essence in the campaign.")
                                         .font(Theme.body(10))
                                         .foregroundStyle(Theme.textSecondary)
                                 }

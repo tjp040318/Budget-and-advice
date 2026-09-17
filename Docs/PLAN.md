@@ -4386,10 +4386,32 @@ the floors' `essenceChances`; the `awakening_cache_<element>` items and
 `everyEssence`; the Hall's drop line reads its floors and follows.
 `ProgressionTests.testAwakeningConsumesEssenceExactlyOnce` reads the
 recipe off the blueprint and does not pin it; a new test pins the
-ladder's INTENT (a 5★ asks for High and a 3★ does not). `balance.py` has
-no essence economy — its halls report is win rates — so an `--essences`
-report printing runs-per-awakening by grade and floor is the mirror, the
-way `--grades` prints the aether's.
+ladder's INTENT (a 5★ asks for High and a 3★ does not). `balance.py
+--essences` is the mirror, the way `--grades` prints the aether's: every
+drop table that pays an essence against every recipe that spends one, the
+shipped recipe and the ladder side by side.
+
+**Measured (2026-09-17, `balance.py --essences`, built the same day as
+research; the game is unchanged).** Energy regenerates 288 a day.
+
+- *As shipped, the Hall's five floors are five prices for one good.* A
+  floor drops Mid at `0.5 + 0.1 × floor` for `5 + floor` energy — a tenth
+  of an essence per energy on EVERY floor — so a 5★'s fifteen Mid cost
+  150 energy on B1 and 150 on B5, and the High whose odds climb with the
+  floor is spent nowhere. Seven of the eighteen essences drop with
+  nothing to spend them on (the five Highs, Low Umbra, Low Magic) and
+  four exist only in the catalogue (the other Lows never drop). A 5★
+  awakening is 365 energy (1.3 days), a 3★ or 4★ 248 (0.9).
+- *Under the ladder every essence has a source and a sink*, and the
+  price climbs with the grade: a 3★ 180 energy (0.6 days), a 4★ 308
+  (1.1), a 5★ 415 (1.4). B5 is the cheapest road to a 5★'s ten High
+  (200 energy for the elemental part, against B4's 257 and B3's 320; B1
+  and B2 cannot pay it at all), the Low floors are the 3★'s (B2 at 70
+  beats B1 at 75 — the first cut asserted B1 the cheapest and the
+  measurement said no, so the rule is now "the higher floor is never the
+  dearer road", which is what makes climbing worth it), and Magic High
+  comes only from the Titans (24 energy each) or the bazaar (2 for 80
+  divinity), under both designs. The report asserts all of it.
 
 **Held for the owner's word (2026-09-17)**, because it changes the price
 of the thing he is testing tonight; the Testing pack already carries every

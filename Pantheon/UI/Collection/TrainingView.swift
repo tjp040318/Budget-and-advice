@@ -560,7 +560,12 @@ struct TrainingView: View {
                             let have = store.player.essences[id] ?? 0
                             requirement(EssenceCatalog.name(for: id), met: have >= needed, detail: "\(have) / \(needed)")
                         }
-                        Text("Essences drop in the campaign; the element's own essence from its stages, magic essence from any.")
+                        // Where each line of the bill comes from, read the way
+                        // the tables actually pay: the element's essence from
+                        // its Hall in the Labyrinth (and its Titan), Magic from
+                        // the campaign's stages. It said "the element's own
+                        // essence from its stages", which no stage drops.
+                        Text("The element's essence drops in its Hall of Essence, in the Labyrinth; Magic essence in the campaign.")
                             .font(Theme.body(11))
                             .foregroundStyle(Theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)

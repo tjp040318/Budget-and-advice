@@ -2673,6 +2673,226 @@ def report_tune(trials=140):
         flag = "" if abs(best[1] - target) < 0.12 else "   <- level alone cannot reach this; change the composition"
         print(f"{name:>22}{LADDERS[li][0]:>22}{target*100:>7.0f}%{best[0]:>7}{best[1]*100:>7.0f}%{flag}")
 
+# ---------------------------------------------------------------------------
+# THE ESSENCE ECONOMY — every table that pays an essence against every recipe
+# that spends one (2026-09-17). The owner, on a Hall's levels screen: "the
+# 'halls' say mid essence? Is that only mid? What if I need others?" This is
+# the measurement behind the answer in Docs/PLAN.md (*Essence tiers — the
+# ladder an awakening should climb*). Every source below is read off
+# StageDatabase and DungeonDatabase, not estimated; the SHIPPED recipe mirrors
+# UnitDatabase (the three files, one dictionary each) and the LADDER is the
+# PLAN.md proposal, printed beside it and NOT built until the owner says so.
+ENERGY_PER_DAY = 24 * 60 // 5       # GameStore: one energy every five minutes
+ELEMENTS = ["ember", "tide", "gale", "radiance", "umbra"]
+ESSENCE_TIERS = ["low", "mid", "high"]
+ESSENCE_IDS = ([f"essence_{e}_{t}" for e in ELEMENTS for t in ESSENCE_TIERS]
+               + [f"essence_magic_{t}" for t in ESSENCE_TIERS])
+
+TIER_DROP_SCALE = {"normal": 1.0, "hard": 1.4, "hell": 1.8}      # CampaignDifficulty.dropScale
+TIER_ENERGY_EXTRA = {"normal": 0, "hard": 2, "hell": 4}         # CampaignDifficulty.energyExtra
+HALL_ENERGY = lambda floor: 5 + floor                            # DungeonDatabase.hall
+TITAN_ENERGY = 12                                                # StageDatabase.raids
+
+# DungeonDatabase.hall, per floor, for the hall's own element: Mid at
+# min(1, 0.5 + 0.1f) and High at 0.1f, on every floor.
+HALL_ESSENCE_SHIPPED = {f: {"mid": min(1.0, 0.5 + 0.1 * f), "high": 0.1 * f} for f in range(1, 6)}
+# PLAN.md's re-tiering: Low on B1-2, Mid on B3-4, High on B5.
+HALL_ESSENCE_LADDER = {1: {"low": 1.0, "mid": 0.40}, 2: {"low": 1.0, "mid": 0.50},
+                       3: {"mid": 1.0, "high": 0.25}, 4: {"mid": 1.0, "high": 0.35},
+                       5: {"mid": 1.0, "high": 0.50}}
+# The Hall floor a grade is meant to farm: the report reads each recipe at it.
+GRADE_FLOOR = {3: 1, 4: 3, 5: 5}
+
+
+def recipe_shipped(element, stars):
+    """UnitDatabase: a 5* asks 15 Mid of its element, 10 Mid and 5 High Magic;
+    a 3* or 4* asks 10, 8 and 3. Nothing asks for Low or High of an element."""
+    if stars >= 5:
+        return {f"essence_{element}_mid": 15, "essence_magic_mid": 10, "essence_magic_high": 5}
+    return {f"essence_{element}_mid": 10, "essence_magic_mid": 8, "essence_magic_high": 3}
+
+
+def recipe_ladder(element, stars):
+    """PLAN.md's ladder by natural grade (proposed, not built)."""
+    e = lambda t: f"essence_{element}_{t}"
+    if stars >= 5:
+        return {e("mid"): 15, e("high"): 10, "essence_magic_mid": 10, "essence_magic_high": 5}
+    if stars == 4:
+        return {e("mid"): 10, e("high"): 5, "essence_magic_mid": 8, "essence_magic_high": 3}
+    return {e("low"): 10, e("mid"): 5, "essence_magic_low": 5, "essence_magic_mid": 5}
+
+
+def essence_sources(halls):
+    """Every FARMABLE source as (label, energy, {essence id: chance}). The
+    tribute chests pay Mid Magic once per chapter tier and the bazaar sells
+    Magic essence for drachma and divinity; both are listed by the report and
+    neither is a farm, so neither is a row here."""
+    rows = []
+    for tier, scale in TIER_DROP_SCALE.items():
+        extra = TIER_ENERGY_EXTRA[tier]
+        # StageDatabase.duat1, hand-written: the game's only Low drops and the
+        # boss's Mids; scaled by the tier like every generated stage.
+        rows.append((f"Duat 1-3 {tier}", 4 + extra, {"essence_magic_low": min(1.0, 0.35 * scale)}))
+        rows.append((f"Duat 1-4 {tier}", 4 + extra, {"essence_magic_low": min(1.0, 0.35 * scale),
+                                                       "essence_umbra_low": min(1.0, 0.20 * scale)}))
+        rows.append((f"Duat 1-5 {tier}", 6 + extra, {"essence_magic_mid": min(1.0, 0.50 * scale),
+                                                       "essence_umbra_mid": min(1.0, 0.35 * scale)}))
+        # generatedChapter: every other chapter drops Mid Magic, 20% a stage
+        # and 60% at the boss, at 4 and 6 energy plus the tier's extra.
+        rows.append((f"a chapter stage, {tier}", 4 + extra, {"essence_magic_mid": min(1.0, 0.2 * scale)}))
+        rows.append((f"a chapter boss, {tier}", 6 + extra, {"essence_magic_mid": min(1.0, 0.6 * scale)}))
+    for element in ELEMENTS:
+        for floor, tiers in halls.items():
+            rows.append((f"Hall of {element} B{floor}", HALL_ENERGY(floor),
+                         {f"essence_{element}_{t}": c for t, c in tiers.items()}))
+        # StageDatabase.raids: each Titan pays its element's High and High Magic.
+        rows.append((f"Titan of {element}", TITAN_ENERGY,
+                     {f"essence_{element}_high": 0.8, "essence_magic_high": 0.5}))
+    return rows
+
+
+def cheapest_sources(rows):
+    """Per essence id: (energy per expected essence, source label), farming
+    the one source that pays it cheapest, one essence at a time."""
+    best = {}
+    for label, energy, drops in rows:
+        for essence, chance in drops.items():
+            if chance <= 0:
+                continue
+            cost = energy / chance
+            if essence not in best or cost < best[essence][0]:
+                best[essence] = (cost, label)
+    return best
+
+
+def bill(recipe, best):
+    """Expected energy to farm a recipe, every essence at its cheapest source."""
+    return sum(needed * best[essence][0] for essence, needed in recipe.items() if essence in best)
+
+
+def hall_road(recipe, element, halls, floor):
+    """The element's own Hall at ONE floor: the runs that pay the recipe's
+    elemental part (a run pays every tier it drops at once, so the runs are
+    set by the slowest of them), or None where a needed tier never drops there."""
+    runs = 0.0
+    for essence, needed in recipe.items():
+        if not essence.startswith(f"essence_{element}_"):
+            continue
+        tier = essence.rsplit("_", 1)[1]
+        chance = halls[floor].get(tier, 0.0)
+        if chance <= 0:
+            return None
+        runs = max(runs, needed / chance)
+    return runs
+
+
+def report_essences():
+    print("\nTHE ESSENCE ECONOMY — what pays each essence, against what spends it")
+    print(f"energy regenerates one every five minutes, {ENERGY_PER_DAY} a day; a bazaar refill is on top\n")
+
+    designs = [
+        ("AS SHIPPED", HALL_ESSENCE_SHIPPED, recipe_shipped),
+        ("THE LADDER (PLAN.md, proposed)", HALL_ESSENCE_LADDER, recipe_ladder),
+    ]
+    results = {}
+    for title, halls, recipe in designs:
+        rows = essence_sources(halls)
+        best = cheapest_sources(rows)
+        spent = set()
+        for element in ELEMENTS:
+            for stars in (3, 4, 5):
+                spent.update(recipe(element, stars).keys())
+        dropped = set(best)
+        orphans = sorted(dropped - spent)          # paid out, spent nowhere
+        unsourced = sorted(spent - dropped)        # asked for, dropped nowhere
+        idle = sorted(set(ESSENCE_IDS) - dropped - spent)   # in the catalogue only
+
+        print(f"== {title} ==")
+        print(f"  {'essence':<24}{'cheapest farm':>28}{'energy each':>13}   spent by")
+        for essence in ESSENCE_IDS:
+            sinks = sorted({f"{s}*" for e in ELEMENTS for s in (3, 4, 5) if essence in recipe(e, s)})
+            farm = f"{best[essence][1]:>28}{best[essence][0]:>12.1f}" if essence in best else f"{'never drops':>28}{'':>12}"
+            print(f"  {essence:<24}{farm}   {', '.join(sinks) or 'nothing'}")
+        print(f"  dropped but never spent: {', '.join(orphans) or 'none'}")
+        print(f"  spent but never dropped: {', '.join(unsourced) or 'none'}")
+        print(f"  in the catalogue only:   {', '.join(idle) or 'none'}")
+
+        print(f"\n  {'awakening':<12}{'cheapest, per essence':>24}{'the element at its own floor':>34}{'in days':>9}   cheapest floor")
+        per_grade = {}
+        floor_prices = {}
+        for stars in (3, 4, 5):
+            # Ember stands for every element: the five Halls are one recipe.
+            r = recipe("ember", stars)
+            cheapest = bill(r, best)
+            floor = GRADE_FLOOR[stars]
+            runs = hall_road(r, "ember", halls, floor)
+            magic = sum(n * best[e][0] for e, n in r.items() if e.startswith("essence_magic_") and e in best)
+            road = None if runs is None else runs * HALL_ENERGY(floor) + magic
+            road_text = "-" if road is None else f"{runs:>5.1f} runs of B{floor} + magic = {road:>5.0f}"
+            days = "-" if road is None else f"{road / ENERGY_PER_DAY:>7.2f}"
+            # Every floor's price for the elemental part alone: which floor a
+            # player who can clear them all should farm for this grade.
+            prices = {}
+            for f in range(1, 6):
+                fr = hall_road(r, "ember", halls, f)
+                if fr is not None:
+                    prices[f] = fr * HALL_ENERGY(f)
+            floor_prices[stars] = prices
+            cheapest_floor = min(prices, key=prices.get)
+            print(f"  {f'natural {stars}*':<12}{cheapest:>19.0f} energy{road_text:>34}{days:>9}   "
+                  f"B{cheapest_floor} at {prices[cheapest_floor]:.0f}")
+            per_grade[stars] = (cheapest, road, runs)
+        # The five floors as five prices for a 5*'s elemental bill.
+        p5 = floor_prices[5]
+        print(f"  a 5*'s elemental bill, floor by floor (B1..B5): "
+              + "  ".join(f"{p5[f]:>6.0f}" if f in p5 else "   -  " for f in range(1, 6)) + " energy")
+        results[title] = (per_grade, orphans, unsourced, idle, floor_prices)
+        print()
+
+    shipped, ladder = results[designs[0][0]], results[designs[1][0]]
+    # As shipped, every floor of a Hall is the same price for the essence a
+    # 5* needs: Mid drops at 0.1 x (5 + floor) for 5 + floor energy, so a
+    # floor pays a tenth of a Mid per energy whatever its number, and High,
+    # which climbs, is spent nowhere. The floors are five prices for one good.
+    flat = len({round(p) for p in shipped[4][5].values()}) == 1
+    print("  as shipped: the Hall's five floors " + ("all cost the SAME per 5* awakening — the "
+          "floors are not a ladder,\n  because Mid drops at a tenth of an essence per energy on every one "
+          "and the High that climbs is spent nowhere" if flat else "differ in price"))
+    print(f"  as shipped: {len(shipped[1])} essences drop with nothing to spend them on "
+          f"({', '.join(shipped[1])}) and {len(shipped[2])} are asked for but never drop; "
+          f"{len(shipped[3])} exist in the catalogue only")
+    l3, l4, l5 = (ladder[0][s] for s in (3, 4, 5))
+    s3 = shipped[0][3]
+    print(f"  the ladder: a 3* {l3[1]:.0f} energy ({l3[1] / ENERGY_PER_DAY:.1f} days), "
+          f"a 4* {l4[1]:.0f} ({l4[1] / ENERGY_PER_DAY:.1f}), a 5* {l5[1]:.0f} ({l5[1] / ENERGY_PER_DAY:.1f}); "
+          f"the 3* was {s3[1]:.0f} as shipped")
+
+    # The ladder is asserted, the shipped state is only described: it is the
+    # thing the report exists to show.
+    assert not ladder[1] and not ladder[2] and not ladder[3], "the ladder must give every essence a source and a sink"
+    assert l3[1] < s3[1], "a 3* awakening should get CHEAPER under the ladder (Low is the first floor's)"
+    assert l3[1] < l4[1] < l5[1], "the ladder must climb with the grade"
+    assert 0.8 <= l5[1] / ENERGY_PER_DAY <= 2.5, "a 5* awakening is days, not an afternoon and not a fortnight"
+    assert l3[1] / ENERGY_PER_DAY <= 1.0, "a 3* awakening is a new account's day"
+    # The floors are a ladder: a 3* is farmed on the Low floors (B1-2) and a
+    # 5* on B5, and on the floors that pay a grade at all, the HIGHER floor is
+    # the cheaper road — the climb pays, so a player who can clear B2 has a
+    # reason to (B2 pays a 3*'s Mid at 50% for 7 energy against B1's 40% for
+    # 6: 70 energy to 75; the first cut of this asserted B1 the cheapest and
+    # the measurement said no).
+    cost3, cost5 = ladder[4][3], ladder[4][5]
+    assert min(cost3, key=cost3.get) in (1, 2), "a 3*'s cheapest floor must be a Low floor"
+    assert min(cost5, key=cost5.get) == 5, "B5 must be the cheapest road to a 5*'s High"
+    assert 1 not in cost5 and 2 not in cost5, "the Low floors must not pay a 5*'s bill at all"
+    for prices in (cost3, cost5):
+        floors = sorted(prices)
+        assert all(prices[a] >= prices[b] for a, b in zip(floors, floors[1:])), \
+            f"climbing must never cost more per awakening: {prices}"
+    print("  -> the ladder: every essence has a source and a sink, the price climbs with the grade,")
+    print("     a 3* farms the Low floors and a 5* farms B5, the higher floor is always the cheaper")
+    print("     road, a 5* is days and a 3* is a day  -> correct")
+
+
 if __name__ == "__main__":
     a = sys.argv[1:]
     if "--tune" in a: report_tune()
@@ -2698,10 +2918,11 @@ if __name__ == "__main__":
     elif "--mileage" in a: report_mileage()
     elif "--targeting" in a: report_targeting()
     elif "--drops" in a: report_drops()
+    elif "--essences" in a: report_essences()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids(); report_grades(); report_awakening(); report_boons()
         report_resonance()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
-        report_sweep(); report_mileage(); report_targeting()
+        report_sweep(); report_mileage(); report_targeting(); report_essences()
         print()
