@@ -379,8 +379,43 @@ final class ModelLibrary {
             wrapper.addChildNode(child)
         }
         MaterialTuner.tune(wrapper)
+        Self.predecodeTextures(in: wrapper)
         describe(wrapper, label: name)
         return wrapper
+    }
+
+    /// Decodes every texture on the model's materials on the thread that
+    /// parsed it, so a stage built afterwards uploads pixels instead of
+    /// decoding JPEGs on the main thread.
+    ///
+    /// A 2,048-square texture is 16 MB of pixels and the decode is what
+    /// made a 3v3 hitch as it built (six of them, about 100 MB, on the main
+    /// thread) — the reason the battle's `_lod` file carried a 1,024
+    /// texture from 2026-09-09 to 2026-09-17. The warm pass parses on its
+    /// own queue while the briefing is up, and `preparingForDisplay` decodes
+    /// there too; a cold load on the main thread pays the same decode it
+    /// would have paid at first render, no more. SceneKit takes a `UIImage`
+    /// as a material's contents whatever the importer left there.
+    private static func predecodeTextures(in root: SCNNode) {
+        root.enumerateHierarchy { child, _ in
+            for material in child.geometry?.materials ?? [] {
+                for property in [material.diffuse, material.emission, material.normal, material.roughness, material.metalness] {
+                    let image: UIImage?
+                    if let existing = property.contents as? UIImage {
+                        image = existing
+                    } else if let path = property.contents as? String {
+                        image = UIImage(contentsOfFile: path)
+                    } else if let url = property.contents as? URL, url.isFileURL {
+                        image = UIImage(contentsOfFile: url.path)
+                    } else {
+                        image = nil
+                    }
+                    if let image, let decoded = image.preparingForDisplay() {
+                        property.contents = decoded
+                    }
+                }
+            }
+        }
     }
 
     /// Points every skinner in a cloned hierarchy at the clone's own bones.
@@ -635,13 +670,31 @@ enum MaterialTuner {
     float maxC = max(c.r, max(c.g, c.b));
     float minC = min(c.r, min(c.g, c.b));
     float delta = maxC - minC;
-    if (costumeMix > 0.0 && maxC > 0.12 && delta > 0.001 && delta / maxC > 0.5) {
-        float h;
+    float h = 0.0;
+    float s = 0.0;
+    if (delta > 0.001) {
         if (maxC == c.r) { h = (c.g - c.b) / delta; if (h < 0.0) { h += 6.0; } }
         else if (maxC == c.g) { h = (c.b - c.r) / delta + 2.0; }
         else { h = (c.r - c.g) / delta + 4.0; }
         h /= 6.0;
-        float s = delta / maxC;
+        s = delta / maxC;
+    }
+    // The metal, read off the painting (2026-09-17): the generator's
+    // metal-vs-cloth map never reached the bundle (the animated exports
+    // carry the base colour alone and the tasks are gone), so a pixel
+    // painted as gold — bright, saturated, within a few degrees of gold's
+    // hue, which no skin tone reaches — is marked metallic and smooth
+    // here, and the lighting modifier gives it a tight bright pop where
+    // linen gets a soft broad one. Read BEFORE the element recolour, so a
+    // water unit's blue armour is still armour.
+    float goldAway = abs(h - 0.125);
+    goldAway = min(goldAway, 1.0 - goldAway);
+    float metal = (delta > 0.001 && maxC > 0.35)
+        ? smoothstep(0.45, 0.65, s) * (1.0 - smoothstep(0.035, 0.07, goldAway))
+        : 0.0;
+    _surface.metalness = max(_surface.metalness, 0.85 * metal);
+    _surface.roughness = mix(_surface.roughness, 0.28, metal);
+    if (costumeMix > 0.0 && maxC > 0.12 && delta > 0.001 && s > 0.5) {
         float away = abs(h - costumeSourceHue);
         away = min(away, 1.0 - away);
         if (away < costumeBand) {
@@ -669,10 +722,21 @@ enum MaterialTuner {
     // and a cheek. Wider, so the normal map's engraving and folds shade
     // through the turn, and a tighter, brighter specular so metal reads as
     // metal.
-    float band = smoothstep(0.16, 0.86, wrap);
-    _lightingContribution.diffuse += _light.intensity.rgb * (0.30 + 0.70 * band);
+    float band = smoothstep(0.12, 0.90, wrap);
+    // A metal's colour is in its highlight, not its diffuse: the surface
+    // modifier marks the painted gold metallic and smooth, and here that
+    // dims the flat fill a little and turns the specular from one 36-power
+    // pop for everything into one that follows roughness — 70-power and
+    // bright on smooth metal, 16-power and faint on rough linen (the
+    // owner, 2026-09-17: "not detailed enough"; the engraving was lit like
+    // the cloth beside it).
+    float rough = saturate(_surface.roughness);
+    float metal = saturate(_surface.metalness);
+    _lightingContribution.diffuse += _light.intensity.rgb * (0.30 + 0.70 * band) * (1.0 - 0.30 * metal);
     float3 h = normalize(_light.direction + _surface.view);
-    float spec = pow(saturate(dot(_surface.normal, h)), 36.0) * 0.42;
+    float specPower = mix(70.0, 16.0, rough);
+    float specStrength = mix(0.90, 0.22, rough) * (0.55 + 0.75 * metal);
+    float spec = pow(saturate(dot(_surface.normal, h)), specPower) * specStrength;
     _lightingContribution.specular += _light.intensity.rgb * spec;
     """
 

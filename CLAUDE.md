@@ -802,8 +802,24 @@ environment can and cannot do. The short version:
   in one place each: the Meshy texture prompt in `tools/batch/wave_launch.sh`
   asks for painted detail (engraved metal, woven cloth, hair in strands)
   instead of "cel-shaded with crisp baked highlights"; `tools/mesh.py` ships
-  9,000 triangles at 2048 px (was 5,000 at 1024; the LOD is 3,500 at 1024);
-  `ModelLibrary`'s lighting ramp is `smoothstep(0.16, 0.86)` over
+  9,000 triangles at 2048 px (was 5,000 at 1024; the LOD is 3,500 at 1024)
+  — **and since 2026-09-17 a hero family ships 16,000 with a 6,000 LOD at
+  2048 (`--tris 16000 --lod 6000 --lod-texture 2048 --no-clips`; Zeus
+  first, the owner: "not detailed enough"), because a BATTLE draws the LOD
+  and nothing else and the fight was showing a sixteenth of the geometry
+  Meshy delivers (~56k); `ModelLibrary.predecodeTextures` decodes every
+  texture on the parsing thread so a 2048 battle texture no longer hitches
+  the main thread (the reason the LOD's texture was 1024). Meshy deletes a
+  finished task within about a week, and the animated exports carry the
+  base colour alone, so the metallic-roughness maps are gone for every
+  family made so far: the surface modifier reads the METAL off the
+  painting instead (bright, saturated, within a few degrees of gold's hue
+  → metalness 0.85, roughness 0.28) and the lighting modifier's specular
+  follows roughness and metalness (70-power and bright on gold, 16-power
+  and faint on linen; the band opened to 0.12–0.90). The next wave's
+  `download` must save the image or refine stage's own `model.glb` the day
+  it finishes — the three maps are inside it (`Docs/PLAN.md`, *Graphics*).**
+  `ModelLibrary`'s lighting ramp was `smoothstep(0.16, 0.86)` over
   0.30 + 0.70 with a 36-power specular and a 3.2 / 0.42 rim (was a two-tone
   0.28–0.72 band and a 2.6 / 0.55 rim that outlined every figure in white);
   and `tools/meshy.py` cuts sword clips by default (219 Right-hand Sword
@@ -936,8 +952,8 @@ environment can and cannot do. The short version:
   prints the bounding box and skinner it built, and **More → Diagnostics**
   on the phone holds every line with Copy and Share. Two on-device facts so
   far: a 3v2 battle used the `_lod` files, whose texture was smeared by the
-  decimation (fixed; the threshold is now eight combatants and the LOD is
-  2,499 triangles), and the units stood in the bind pose, which the loader
+  decimation (fixed; a battle always draws the LOD now, 3,500 triangles at
+  1024 for a common family and 6,000 at 2048 for a hero since 2026-09-17), and the units stood in the bind pose, which the loader
   now treats by gathering per-joint tracks into one animation.
 - **The app opens on the island, and the island is Summoners War's Isle
   (2026-09-17; the owner: "I want it upgraded to be more like summoners

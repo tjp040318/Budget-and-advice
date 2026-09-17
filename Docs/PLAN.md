@@ -4597,6 +4597,15 @@ enough. I want better graphic."
   roughness to a constant 0.55), the normal map is nearly flat (standard
   deviation 4/255: Meshy puts the relief in the mesh, not the map). So
   the metal-vs-cloth map is worth shipping and the normal map is not.
+  **But the maps are gone with the tasks:** Meshy deletes a finished task
+  within about a week — five probes (image-to-3D and text-to-3D, September
+  9 and 11) all came back "Task not found" on 2026-09-17 — and the
+  `download` step only ever saved the rigged and animated GLBs, which
+  carry the base colour alone; the text-to-3D Zeus was fetchable only
+  because its signed URL happens to run to 2126. So for every family
+  already made, the metallic-roughness map exists nowhere. Lesson for
+  the next wave: `download` must save the image or refine stage's own
+  `model.glb` (the three maps inside it) the day the task finishes.
 - **The renderer flattens on purpose.** The lighting ramp is
   `smoothstep(0.16, 0.86)` over 0.30 + 0.70 with a 36-power specular at
   0.42 and a rim — the "drawn" look chosen on 2026-09-09 against a
@@ -4627,17 +4636,24 @@ enough. I want better graphic."
 
 1. **Free, engine only — the fight draws the mesh that was paid for.**
    Raise the battle file to 6,000 triangles at 2,048 and the menus' to
-   20,000 at 2,048 for the families the owner sees close (the eleven
-   hand-written, the five bespoke-clip gods, the eight bosses; the
-   commons stay), ship the metallic-roughness map beside the base
-   colour, let `MaterialTuner` keep a map when there is one, and open
-   the ramp a touch. The cost is memory and bundle: the 2,048 RGBA
-   texture is 16 MB decoded, which is the hitch the LOD was made to
-   cure (six of them, 100 MB, decoded on the main thread as a 3v3
-   built); the answer the genre uses is compressed textures — ASTC in a
-   `.ktx`, 4 MB in memory and no decode — which SceneKit accepts as a
-   material's contents, and `astcenc` runs here. Bundle: about +2.5 MB a
-   family for the twenty-four at 20k, +1.5 MB for the MR map each.
+   16,000 at 2,048 for the families the owner sees close (the eleven
+   hand-written, the five bespoke-clip gods, the bosses; the commons
+   stay), and since the metal-vs-cloth map is gone, read the metal off
+   the painting itself: the surface modifier already finds the costume's
+   gold by hue and saturation for the element tint, and the same test
+   marks those pixels metallic (0.85) and smooth (0.28) so the lighting
+   modifier's specular follows `_surface.roughness` and `metalness` —
+   a tight bright pop on the gold, a soft broad one on linen — with the
+   diffuse band opened a touch (0.12–0.90). The cost is memory and
+   bundle: a 2,048 RGBA texture is 16 MB decoded, which is the hitch the
+   LOD was made to cure (six of them, 100 MB, decoded on the main thread
+   as a 3v3 built), so the warm pass now decodes every texture it parses
+   (`preparingForDisplay`) on its own queue before the stage asks; the
+   genre's answer past that is compressed textures (ASTC in a `.ktx`,
+   4 MB in memory, no decode), which SceneKit takes as an `MTLTexture`
+   and `astcenc` can make here — the next step if the phone still
+   hitches. Bundle: about +2.5 MB a family at 16k and +2.5 MB for the
+   LOD's full texture, +5 MB × 24 ≈ 120 MB on 829.
 2. **Cheap, on the owner's word — the paintings at 4K.** The island and
    the twenty backdrops repainted at 4K by Gemini: 21 × 24 cents ≈ $5,
    the same prompts (`Docs/ART_2D.md`), the same anchors (a repaint from

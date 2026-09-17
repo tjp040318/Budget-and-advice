@@ -149,7 +149,12 @@ def run_family(name, args):
     if only is None:
         problems += build(base, BUNDLE_DIR / f"{out_name}.usdz", args.tris, args.texture, height)["problems"]
         if args.lod:
-            problems += build(base, BUNDLE_DIR / f"{out_name}_lod.usdz", args.lod, max(512, args.texture // 2), height)["problems"]
+            # The LOD's texture was always half the base's (1,024 for 2,048)
+            # until 2026-09-17, when the fight — which draws the LOD and
+            # nothing else — was measured against the file that was paid
+            # for; --lod-texture 2048 keeps the painting whole.
+            lod_texture = args.lod_texture or max(512, args.texture // 2)
+            problems += build(base, BUNDLE_DIR / f"{out_name}_lod.usdz", args.lod, lod_texture, height)["problems"]
     else:
         # One clip re-shipped on its own - a bespoke motion replacing a preset
         # - leaves the base, the LOD and the other clips' files untouched, so
@@ -160,6 +165,12 @@ def run_family(name, args):
 
     clips = {}
     for clip in clip_sources(name):
+        if args.no_clips:
+            # A budget change to the base and the LOD alone: the clip files
+            # are 1,500-triangle carriers whose content does not depend on
+            # the base's budget, and rewriting them would only churn the
+            # bundle.
+            break
         if only is not None and clip.stem[len(name) + 1:] not in only:
             continue
         print(f"\n  reading {clip.name}")
@@ -183,6 +194,8 @@ def run_family(name, args):
     # knockdown, ship a synthesised flinch built from the combat idle instead;
     # the export stays in Art/Models for the day a real flinch replaces it.
     hit = clips.get("hit_react")
+    if args.no_clips:
+        hit = None
     if only is not None and only - set(clips):
         sys.exit(f"no source for clip(s) {', '.join(sorted(only - set(clips)))} beside {src.name}")
     if hit is not None and not args.keep_hit_react and character.looks_like_a_fall(hit):
@@ -227,6 +240,8 @@ def main():
     ap.add_argument("--tris", type=int, default=9000, help="triangle target for the shipped model")
     ap.add_argument("--lod", type=int, default=3500, help="also emit <name>_lod at this target (0 = skip)")
     ap.add_argument("--texture", type=int, default=2048, help="max texture edge for the shipped model")
+    ap.add_argument("--lod-texture", type=int, default=0, help="max texture edge for the LOD (default: half of --texture, 512 at least)")
+    ap.add_argument("--no-clips", action="store_true", help="ship the base and the LOD only; leave the clip files as they are")
     ap.add_argument("--clip-tris", type=int, default=1500, help="triangle target for per-clip files")
     ap.add_argument("--clip-texture", type=int, default=128, help="max texture edge for per-clip files")
     ap.add_argument("--keep-root-motion", action="store_true", help="keep horizontal root motion in clips")
