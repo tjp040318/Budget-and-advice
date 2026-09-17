@@ -905,6 +905,9 @@ def check_unknown_types(files, declared, errors):
         "ViewThatFits",
         "ButtonStyle","Environment","Configuration","Content","Context","Self","Never",
         "SCNHitTestSearchMode","SCNMatrix4MakeTranslation","SCNVector3Zero","AnimationImportPolicy",
+        # SCNSceneSource.LoadingOption: the importer's options dictionary,
+        # typed since every parse goes through ModelLibrary.parseScene.
+        "LoadingOption",
         "SIMD3","simd_quatf","simd_float3",
         # SpriteKit, since the unit plates went screen-space (2026-09-11),
         # and the renderer delegate and Core Graphics names they use.

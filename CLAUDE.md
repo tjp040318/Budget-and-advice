@@ -845,7 +845,19 @@ environment can and cannot do. The short version:
   it for two runs of frames (2026-09-16).
   And a camera node looks along its own −Z: orient it with
   `SCNNode.look(at:)`, never `atan2(dx, dz)` (that was half a turn off and
-  the orbit shot showed the empty side of the stage). And **a node with a
+  the orbit shot showed the empty side of the stage). **And SceneKit's
+  importer is driven from ONE thread at a time (2026-09-17):** the Hall of
+  Ka warmed its rail's meshes on a background queue while the main thread
+  parsed the altar's figure and its idle clip, the USD library logged "TBB
+  Global TLS count is not == 1, instead it is: 2", and the clip came back
+  as a group that moved nothing — Zeus stood on the dais in his bind pose
+  (the owner: "Why are the characters stuck in this position") while the
+  same clip on the same code animated on the collection's Stage, whose
+  parse happened to finish first. Every `SCNScene(url:)` and
+  `SCNSceneSource` in the app goes through `ModelLibrary.parseScene` /
+  `withImporter` (one lock held around the parse only, never the caches),
+  and `loadOrCached` parses a mesh ONCE when two threads ask at the same
+  moment. Never call the importer directly. And **a node with a
   one-shot particle system goes only after the system has finished**:
   SceneKit's particle manager keeps a finished instance and looks its
   node up when it dies, and a host removed while its motes still lived

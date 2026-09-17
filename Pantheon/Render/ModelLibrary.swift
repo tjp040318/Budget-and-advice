@@ -51,6 +51,53 @@ final class ModelLibrary {
         cacheLock.lock(); cache[name] = node; cacheLock.unlock()
     }
 
+    /// SceneKit's importer is driven from ONE thread at a time.
+    ///
+    /// The warm pass parses a rail's meshes on a background queue while the
+    /// screen it is warming for parses the figure it is about to show — and
+    /// that figure's clip — on the main thread, and on the Hall of Ka the two
+    /// overlapped: the tour's step 3 logged the USD library's "TBB Global TLS
+    /// count is not == 1, instead it is: 2" the instant the altar's idle clip
+    /// was read while the rail's meshes were parsing on the other thread,
+    /// and the clip came back as a group whose tracks moved nothing — Zeus
+    /// stood on the dais in his bind pose, arms out, while the same clip on
+    /// the same code path animated on the collection's Stage in the same
+    /// run, where the figure's parse happened to finish before the warm
+    /// pass began (the owner, 2026-09-17: "Why are the characters stuck in
+    /// this position"). Every parse in the app goes through `withImporter`
+    /// — the loader's meshes and clips, the stage's props, the chest — so a
+    /// background parse can never overlap a foreground one. The lock is held
+    /// around a PARSE only, never around the caches: the warm pass still
+    /// does its work, and the foreground waits for at most the one file
+    /// being read.
+    private static let importerLock = NSLock()
+
+    /// Runs one use of SceneKit's importer with the importer to itself.
+    static func withImporter<T>(_ body: () throws -> T) rethrows -> T {
+        importerLock.lock(); defer { importerLock.unlock() }
+        return try body()
+    }
+
+    /// Parses a model file, one parse at a time (see `importerLock`).
+    static func parseScene(at url: URL, options: [SCNSceneSource.LoadingOption: Any]? = nil) throws -> SCNScene {
+        try withImporter { try SCNScene(url: url, options: options) }
+    }
+
+    /// The cached prototype, or the file parsed and cached — parsed ONCE even
+    /// when two threads ask at the same moment, which the warm pass and the
+    /// screen it is warming for do: the second asker waits on the importer
+    /// and then finds the first's result in the cache instead of parsing the
+    /// same file again (the Hall of Ka's log showed Zeus built twice).
+    private func loadOrCached(_ name: String) -> SCNNode? {
+        if let cached = cachedNode(name) { return cached }
+        return Self.withImporter { () -> SCNNode? in
+            if let cached = cachedNode(name) { return cached }
+            guard let loaded = loadFromBundle(name) else { return nil }
+            store(loaded, as: name)
+            return loaded
+        }
+    }
+
     private init() {}
 
     // MARK: - Public API
@@ -121,20 +168,15 @@ final class ModelLibrary {
         var isStandIn = false
         /// A stand-in that is a portrait sprite rather than the primitive rig.
         var isPortraitSprite = false
-        if let cached = cachedNode(assetName) {
-            model = cached.clone()
-            MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
-        } else if let loaded = loadFromBundle(assetName) {
-            store(loaded, as: assetName)
+        if let loaded = loadOrCached(assetName) {
             model = loaded.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
         } else if let standIn = spec.standInAsset,
-                  let loaded = cachedNode(standIn) ?? loadFromBundle(standIn) {
+                  let loaded = loadOrCached(standIn) {
             // A named stand-in: a shipped mesh of the right kind, stood up
             // and scaled to this spec's height like a real export, so a boss
             // whose own mesh is still on the way fights as a giant of its
             // kind rather than as the primitive rig.
-            store(loaded, as: standIn)
             model = loaded.clone()
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
             if !orientationLogged.contains(assetName) {
@@ -216,19 +258,22 @@ final class ModelLibrary {
 
         var found: CAAnimation?
 
-        // Layout A: separate file per clip.
+        // Layout A: separate file per clip. Parsed with the importer to
+        // itself (`importerLock`): read while a warm pass parsed meshes on
+        // another thread, a clip came back as a group that moved nothing.
         if let url = bundleURL(for: "\(assetName)_\(clip.rawValue)"),
-           let scene = try? SCNScene(url: url, options: [.animationImportPolicy: SCNSceneSource.AnimationImportPolicy.playRepeatedly]) {
+           let scene = try? Self.parseScene(at: url, options: [.animationImportPolicy: SCNSceneSource.AnimationImportPolicy.playRepeatedly]) {
             found = firstAnimation(in: scene.rootNode)
         }
 
         // Layout B: one file, many animation players.
-        if found == nil, let url = bundleURL(for: assetName),
-           let source = SCNSceneSource(url: url, options: nil) {
-            let identifiers = source.identifiersOfEntries(withClass: CAAnimation.self)
-            let match = identifiers.first { $0.lowercased().contains(clip.rawValue) }
-            if let match, let animation = source.entryWithIdentifier(match, withClass: CAAnimation.self) {
-                found = animation
+        if found == nil, let url = bundleURL(for: assetName) {
+            found = Self.withImporter { () -> CAAnimation? in
+                guard let source = SCNSceneSource(url: url, options: nil) else { return nil }
+                let identifiers = source.identifiersOfEntries(withClass: CAAnimation.self)
+                let match = identifiers.first { $0.lowercased().contains(clip.rawValue) }
+                guard let match else { return nil }
+                return source.entryWithIdentifier(match, withClass: CAAnimation.self)
             }
         }
 
@@ -279,10 +324,7 @@ final class ModelLibrary {
             let started = Perf.begin()
             var loaded = 0
             for name in meshes where cachedNode(name) == nil {
-                if let node = loadFromBundle(name) {
-                    store(node, as: name)
-                    loaded += 1
-                }
+                if loadOrCached(name) != nil { loaded += 1 }
             }
             if clips {
                 for name in clipAssets {
@@ -307,6 +349,9 @@ final class ModelLibrary {
         return nil
     }
 
+    /// Parses a mesh file. Called under `importerLock` by `loadOrCached`,
+    /// which is the only caller: the lock is not re-entrant, so this must
+    /// never take it itself.
     private func loadFromBundle(_ name: String) -> SCNNode? {
         guard let url = bundleURL(for: name) else {
             log("no file in the bundle for '\(name)' — falling back to a placeholder")
@@ -500,8 +545,11 @@ final class ModelLibrary {
                        tracks.count, duration, origin))
             return group
         }
-        log(String(format: "clip animation taken from %@, %.2f s, %@",
-                   origin, best.duration, best is CAAnimationGroup ? "a group" : "a single track"))
+        // The track count is in the line so a clip that parsed into an empty
+        // group — the shape of the Hall of Ka's frozen figure — can be read
+        // off the console rather than guessed from a screenshot.
+        let shape = (best as? CAAnimationGroup).map { "a group of \($0.animations?.count ?? 0) tracks" } ?? "a single track"
+        log(String(format: "clip animation taken from %@, %.2f s, %@", origin, best.duration, shape))
         return best
     }
 }

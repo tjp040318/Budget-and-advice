@@ -957,9 +957,12 @@ enum StageBuilder {
     /// the rim, cached and cloned. Nil when it has not shipped.
     static func loadProp(_ name: String) -> SCNNode? {
         if let cached = propCache[name] { return cached.clone() }
+        // Through the loader's importer lock: a prop parsed on the main thread
+        // while a warm pass parsed a figure on another came out wrong once
+        // (the Hall of Ka's frozen idle, 2026-09-17).
         guard let url = Bundle.main.url(forResource: name, withExtension: "usdz", subdirectory: ModelLibrary.modelDirectory)
                 ?? Bundle.main.url(forResource: name, withExtension: "usdz"),
-              let scene = try? SCNScene(url: url, options: [.createNormalsIfAbsent: true]) else {
+              let scene = try? ModelLibrary.parseScene(at: url, options: [.createNormalsIfAbsent: true]) else {
             return nil
         }
         let wrapper = SCNNode()

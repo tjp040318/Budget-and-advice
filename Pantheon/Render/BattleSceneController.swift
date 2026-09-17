@@ -170,7 +170,7 @@ final class BattleSceneController: NSObject {
         if let url = Bundle.main.url(
             forResource: environment.sceneName, withExtension: "scn", subdirectory: "Environments"
         ) ?? Bundle.main.url(forResource: environment.sceneName, withExtension: "scn"),
-           let loaded = try? SCNScene(url: url, options: nil) {
+           let loaded = try? ModelLibrary.parseScene(at: url) {
             for child in loaded.rootNode.childNodes {
                 scene.rootNode.addChildNode(child)
             }
