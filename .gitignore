@@ -28,6 +28,7 @@ Art/Models/*_attack_basic.glb
 Art/Models/*_attack_heavy.glb
 Art/Models/*_hit_react.glb
 Art/Models/*_death.glb
+Art/Models/*_walk.glb
 Art/Models/*_ultimate.glb
 Art/Models/*_idle.glb
 Art/Models/*_victory.glb

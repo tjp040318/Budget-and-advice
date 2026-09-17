@@ -1,0 +1,7 @@
+# Neptune and the Terracotta Soldier remade for the rigger (2026-09-17): the
+# pole weapons that read as a third leg are gone, a short sword lies flat
+# against the thigh, no cloak. Concepts are edits of the originals so the
+# face matches the cards. Ships over the stand-ins with mesh.py --as.
+#   AI_MODEL=meshy-7 bash tools/batch/wave_run.sh tools/batch/wave5_rigfix.txt 500
+neptune_v2:Art/Concepts/neptune_v2_sw.png:2.20:sea teal, bronze, deep blue:blade:neptune
+terracotta_soldier_v2:Art/Concepts/terracotta_soldier_v2_sw.png:1.95:terracotta brown, faded red, bronze:blade:terracotta_soldier

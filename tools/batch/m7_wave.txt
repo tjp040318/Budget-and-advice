@@ -1,0 +1,9 @@
+# The five bespoke-clip gods regenerated on meshy-7 (the owner's word,
+# 2026-09-17: the Meshy floor lowered to 500), from the same concepts as
+# their _hd remakes; judged on preview sheets before shipping over them.
+# AI_MODEL=meshy-7 bash tools/batch/wave_run.sh tools/batch/m7_wave.txt 500
+zeus_m7:Art/Concepts/zeus_sw.png:2.15:white and burnished gold and storm blue, white hair and beard, white himation with gold meander, gold scale armour:blade:zeus
+sekhmet_m7:Art/Concepts/sekhmet_sw.png:2.00:crimson and burnished gold and near-black, black lioness fur, gold sun-disc crown, lapis and carnelian inlays:blade:sekhmet
+anubis_m7:Art/Concepts/anubis_sw.png:2.05:black and burnished gold and lapis blue, black jackal fur, striped nemes, gold and lapis armour:blade:anubis
+ares_m7:Art/Concepts/ares_sw.png:2.10:bronze, crimson, black:blade:ares
+thoth_m7:Art/Concepts/thoth_sw.png:2.05:white, gold, lapis blue:caster:thoth

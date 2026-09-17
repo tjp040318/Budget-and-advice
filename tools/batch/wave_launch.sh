@@ -14,6 +14,7 @@ TEXTURE="hand-painted stylised mobile game character textures with fine detail: 
 for spec in "$@"; do
   IFS=: read -r asset concept height palette kit family <<< "$spec"   # family: the roster name, used by ship_wave.sh
   nohup python3 tools/meshy.py generate "$asset" --image "$concept" --height "$height" --clips "${kit:-blade}" \
+    --ai-model "${AI_MODEL:-latest}" \
     --texture-prompt "$TEXTURE, $palette palette" \
     > "$S/meshy_$asset.log" 2>&1 &
   echo "launched $asset (${kit:-blade})"

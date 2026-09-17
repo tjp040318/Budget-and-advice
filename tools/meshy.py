@@ -67,6 +67,7 @@ DEFAULT_CLIPS = {
     "victory":       412,   # "Victory"
     "idle":            0,   # "Idle" - relaxed breathing
     "summon_reveal": 377,   # "Relax Arms, Then Strike Battle Pose"
+    "walk":           30,   # "Casual Walk" - the island's wander, loops (2026-09-17)
 }
 # Per-kit overrides of the attack clips. `--clips <set>` (optionally followed
 # by ",name=id" overrides) picks one; wave_launch.sh passes the spec's fifth
@@ -89,7 +90,7 @@ CLIP_SETS = {
 # (BattleSceneController, on `.battleEnded`), but no character shipped the
 # file, so a win ended with the team standing still. Seven clips is 21 credits
 # of the 53 a character costs.
-BATTLE_CLIPS = ["idle_combat", "attack_basic", "attack_heavy", "hit_react", "death", "ultimate", "victory"]
+BATTLE_CLIPS = ["idle_combat", "attack_basic", "attack_heavy", "hit_react", "death", "ultimate", "victory", "walk"]
 
 POLL_SECONDS = 10
 TASK_TIMEOUT = 4 * 60 * 60   # a big wave queues behind itself for hours

@@ -6,7 +6,7 @@
 # for the rig and 3 per clip as those stages run, so every launch of this run
 # still has 23 to charge when the next balance is read - that is counted.
 cd /home/user/Budget-and-advice
-list=$1; floor=${2:-2000}; per=53; later=23; launched=0
+list=$1; floor=${2:-2000}; per=59; later=29; launched=0   # 59 since 2026-09-17: the walk clip joined the set
 [ -s "$list" ] || { echo "no list $list"; exit 1; }
 while IFS= read -r line; do
   [[ -z "$line" || "$line" == \#* ]] && continue

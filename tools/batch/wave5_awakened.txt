@@ -1,0 +1,18 @@
+# The awakened forms of the 5-star table gods as their own meshes (the
+# owner, 2026-09-17: Meshy down to a 500 floor), each from an edit of the
+# family's own concept so the face matches; the clip set is the base mesh's.
+# Loki's concept was refused twice by the painter and waits. wave_run's guard
+# stops the list where the floor says.
+#   AI_MODEL=meshy-7 bash tools/batch/wave_run.sh tools/batch/wave5_awakened.txt 500
+odin_awakened:Art/Concepts/odin_awakened_sw.png:2.10:midnight blue, pale gold, black raven:caster:odin_awakened
+thor_awakened:Art/Concepts/thor_awakened_sw.png:2.20:steel, crimson, storm blue:heavy:thor_awakened
+ra_awakened:Art/Concepts/ra_awakened_sw.png:2.15:blazing gold, white, carnelian:caster:ra_awakened
+isis_awakened:Art/Concepts/isis_awakened_sw.png:2.00:white, gold, turquoise:caster:isis_awakened
+athena_awakened:Art/Concepts/athena_awakened_sw.png:2.05:silver, white, bronze:blade:athena_awakened
+hades_awakened:Art/Concepts/hades_awakened_sw.png:2.10:black, gold, amethyst violet:caster:hades_awakened
+poseidon_awakened:Art/Concepts/poseidon_awakened_sw.png:2.15:sea green, bronze, pearl:heavy:poseidon_awakened
+horus_awakened:Art/Concepts/horus_awakened_sw.png:2.10:gold, lapis blue, white:blade:horus_awakened
+osiris_awakened:Art/Concepts/osiris_awakened_sw.png:2.10:white, gold, jade green:caster:osiris_awakened
+freya_awakened:Art/Concepts/freya_awakened_sw.png:2.00:rose gold, cream, brown:caster:freya_awakened
+mars_awakened:Art/Concepts/mars_awakened_sw.png:2.25:engraved bronze, crimson, gold:blade:mars_awakened
+hera_awakened:Art/Concepts/hera_awakened_sw.png:2.10:royal purple, gold, peacock blue:caster:hera_awakened
