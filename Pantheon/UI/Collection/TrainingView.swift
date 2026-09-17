@@ -423,6 +423,11 @@ struct TrainingView: View {
         if after.level > before.level { parts.append("Lv.\(before.level) → Lv.\(after.level)") }
         let skillUps = zip(after.skillLevels, before.skillLevels).filter { $0 > $1 }.count
         if skillUps > 0 { parts.append("skill-up ×\(skillUps)") }
+        // A duplicate fed past the skill cap raises the family's regalia.
+        let regaliaBefore = before.regaliaLevel ?? 1
+        let regaliaAfter = after.regaliaLevel ?? 1
+        let regaliaRose = regaliaAfter > regaliaBefore
+        if regaliaRose { parts.append("regalia → \(Regalia.numeral(regaliaAfter))") }
         if parts.isEmpty {
             outcome = after.level == before.level ? "Experience banked" : "Powered up"
         } else {
@@ -433,10 +438,13 @@ struct TrainingView: View {
         // The rite: the fed units fly into the figure and it flares; the
         // words land as the orbs do.
         play(.feed(count: chosen.count), tint: target.blueprint.element.accentHex)
-        let title = after.level > before.level ? "LEVEL UP!" : (skillUps > 0 ? "SKILL UP!" : "POWERED UP")
+        let regaliaName = RegaliaService.regalia(forBlueprint: target.blueprint.id, level: regaliaAfter)?.name ?? "Regalia"
+        let title = after.level > before.level ? "LEVEL UP!"
+            : (skillUps > 0 ? "SKILL UP!" : (regaliaRose ? "REGALIA \(Regalia.numeral(regaliaAfter))" : "POWERED UP"))
         let detail = after.level > before.level
             ? "Lv.\(before.level) → Lv.\(after.level)" + (skillUps > 0 ? "  ·  skill-up ×\(skillUps)" : "")
-            : (skillUps > 0 ? "skill-up ×\(skillUps)" : "+\(after.experience - before.experience) experience")
+            : (skillUps > 0 ? "skill-up ×\(skillUps)"
+               : (regaliaRose ? "\(regaliaName) → \(Regalia.numeral(regaliaAfter))" : "+\(after.experience - before.experience) experience"))
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.55 + 0.06 * Double(min(12, chosen.count))) {
             show(title, detail)
         }

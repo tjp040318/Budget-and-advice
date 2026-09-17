@@ -4245,7 +4245,7 @@ briefing, and hooks the engine has.
   battle. And Valhalla at +8/12% with three turns of Attack Up on every
   fall measured 35% in the arena; it is +5/8% and a single turn of fury.
 
-## Artifacts — the last item on the order, and a recommendation against its shape (2026-09-16, designed, NOT built)
+## Artifacts — the last item on the order, and a recommendation against its shape (2026-09-16, designed; the owner chose the Regalia on 2026-09-17, built below)
 
 The order the owner took ends with *"Artifacts — the full second gear
 layer, last, because it doubles the inventory and that screen has been
@@ -4319,7 +4319,7 @@ built until he does. If he wants the inventory as named, option 1 is a
 two weeks; if he wants the Regalia, about a week, and the seventy-nine
 names are the one creative task in it.
 
-## Essence tiers — the ladder an awakening should climb (2026-09-17, designed, NOT built)
+## Essence tiers — the ladder an awakening should climb (2026-09-17, designed in the morning, BUILT that afternoon)
 
 The owner, on a Hall's levels screen: "the 'halls' say mid essence? Is
 that only mid? What if I need others?" The honest answer exposed a gap.
@@ -4413,9 +4413,16 @@ research; the game is unchanged).** Energy regenerates 288 a day.
   comes only from the Titans (24 energy each) or the bazaar (2 for 80
   divinity), under both designs. The report asserts all of it.
 
-**Held for the owner's word (2026-09-17)**, because it changes the price
-of the thing he is testing tonight; the Testing pack already carries every
-tier, so his tests will not stall either way.
+**Built the same afternoon** on the owner's "Build the essence ladder and
+all of the other stuff": `UnitDatabase.awakeningCost(element:naturalStars:)`
+is the one recipe every `Awakening` reads (5★ Mid 15 + High 10 + Magic Mid
+10 + Magic High 5; 4★ 10/5/8/3; 3★ Low 10 + Mid 5 + Magic Low 5 + Magic Mid
+5), `DungeonDatabase.hallEssenceChances(element:floor:)` pays the ladder
+(B1–2 Low sure and Mid 40–50%, B3–5 Mid sure and High 25–50%), the five
+awakening caches grant exactly the 5★ bill and say so, the Hall's drop line
+reads the floors, and `balance.py --essences` asserts shipped == this table
+(a 3★ is 180 energy, a 4★ 308, a 5★ 415; before the ladder 248/248/365).
+Anubis, a natural 4★, pays the 4★ bill now — he carried the 5★ one.
 
 ## The home island as Summoners War's (2026-09-17, designed; phase 1 built the same day)
 
@@ -4697,3 +4704,171 @@ texture as a URL into the archive with a `#member` fragment, and
 `URL.path` drops it, so the pre-decode reads the stored member out of
 the zip itself (`USDZArchive`). What the free half cannot give: the
 generator's own detail (option 3) and the paintings' pixels (option 2).
+
+## The Regalia — one named item per family (2026-09-17, built)
+
+The owner chose it over the genre's random artifact rolls ("Regalia
+(Recommended)"). `Regalia.swift` and `RegaliaService.swift`: every family
+has ONE named item (`regaliaNames`/`regaliaBlurbs` beside
+`elementalSkillNames`; the eleven hand-written ones by hand — Anubis the
+Scales of the Duat, Zeus the Thunderbolt of Olympus, Ares the Spear of
+Ares…), its template by the family's kit, levelled I–V by DUPLICATES: a
+copy of the same family fed in the Hall of Ka skills up first if it is the
+exact blueprint and every skill is below its cap, and otherwise raises the
+regalia a level (`GameStore.levelUp`; the level banks while the item is
+still locked, so a fifth copy fed early is never wasted). It unlocks at
+the awakening, or at 6★ for a family without an awakened form (29 families
+have none; a strict gate would have left their items dead forever).
+
+| template | kit | I → V | what it does |
+|---|---|---|---|
+| Keen Edge | striker | 4 → 12% | flat crit rate at build |
+| Heavy Hand | duelist | 6 → 18% | flat crit damage at build |
+| First Off the Mark | marksman | 10 → 30% | attack bar at battle start and as each wave walks on |
+| Unbowed | bruiser | 15 → 40% | DEF × (1+m) while under half health |
+| Bulwark | warden | 10 → 35% | the shields it casts × (1+m) |
+| Wellspring | healer | 6 → 20% | the heals it casts × (1+m) |
+| Lasting Word | oracle | 5 → 15% | flat accuracy; from III its debuffs hold a turn longer (never a stun, freeze or sleep) |
+| Thief of Turns | trickster | 15 → 40% | its attack-bar drains and gains × (1+m) |
+
+Read in `BattleEngine` at `buildSide` (the flat stats, a leader skill's
+terms), `applyBattleStartEffects` and `spawnWaveIfNeeded` (the marksman's
+bar), `applyStatus` (the held debuff, the shield scale), `applyUtility`
+(heals, bar changes), and `DamageCalculator.resolve` (Unbowed) — for the
+PLAYER's units and the arena's defender only; a campaign wave carries
+none. `balance.py --regalia` measures every template at I and V on three
+fights (24 seeded runs): Heavy Hand V is the best at 15.3%, under the
+16% rank-II resonance cap by design (0.25 measured 16.1% and was cut to
+0.18); Unbowed V 3.4%, Keen Edge V 10.3%, Bulwark V 12.5%, Wellspring V
+9.0%, First Off the Mark V 6.4% (per wave; once a battle measured 1.7%),
+Thief V 6.2%, Lasting Word V 13.2% on the umbra oracle. The unit sheet
+wears a plate under the sets row (glyph, name, five pips, the line — or
+"Awaken to unlock"), `RegaliaSheet` is the ladder with NOW and BANKED and
+what raises it; tour step 46. `RegaliaTests` (8), `Unit.regaliaLevel`
+Optional. The Hall's stamp says REGALIA III when a feed raises it.
+
+## Events — the week's calendar (2026-09-17, built; Docs/EVENTS.md)
+
+A fixed weekday rota plus a weekend headline seeded by the ISO week, and
+every fourth week the Festival of the Gods (a gift a day), all DERIVED
+from the date so the save holds only the claimed gift ids
+(`Player.eventGiftsClaimed`, Optional). Monday drachma ×2, Tuesday
+experience ×2, Wednesday campaign stages at half energy (rounded up, never
+0; the Halls, Labyrinth, Tower and Titans keep their price so nothing
+stacks with the weekend), Thursday arena laurels ×2, Friday–Sunday a Hall
+of Essence's amount ×2 three weeks of four (Ember, Tide, Gale, Radiance,
+Umbra in turn) or a Labyrinth's relic roll made TWICE the fourth week (a
+"double chance" would double nothing: every level already drops one).
+`EventCalendar` reads the player's local day through an ISO-8601 calendar
+(Monday first), the week counted continuously from 2024-01-01 so a year's
+end never repeats a Hall; one line switches it to UTC. The hooks are one
+line each: `CampaignService.settle` reads `EventCalendar.boosts(for:at:)`
+once and passes them to `applyRewards`, which never reads a clock (so the
+tests' "exactly one relic" holds whatever weekday CI runs on);
+`startBattle`/`spendSweptRun`/`refund` charge the event price; the sweep
+counts at it; `ArenaService.applyResult` scales the laurels. Every energy
+label in the UI prints `EventCalendar.energyCost(for:)`. `EventsView`
+opens from the calendar beside the missions scroll and from More;
+`balance.py --events` prints the week and asserts the rota covers seven
+days, nothing stacks, no weekly mean tops 2×, the wheel visits every Hall
+and Labyrinth. Tour step 45 photographs a Festival Monday (2026-09-28).
+Not built, and where it would go: event missions with a reward shop, a
+seasons table, a banner rate bump (the rates are printed and asserted).
+
+## Summoners — the social layer on CloudKit (2026-09-17, built; Docs/SOCIAL.md)
+
+The owner's choices: "Build a real backend" → "CloudKit" → "Friends, mail,
+guilds, leaderboards" (no live PvP; he has an Apple Developer account).
+`SocialBackend` is a protocol; `CloudKitSocialBackend` is the real one on
+`iCloud.com.pantheon.game`'s public database (the user record is the
+identity; deterministic record ids enforce one profile per account, one
+guild per player, one request per pair, three war attacks a day; every
+`CKError` becomes a plain sentence), `LocalSocialBackend` is the offline
+world (twelve rivals with real defence teams rolled through the arena's
+recipe, four guilds with boards, a welcome mail with a gift, a waiting
+request, one friend; seeded from one number, persisted in UserDefaults)
+that the app uses when the build is not entitled or the device has no
+account — which is every CI build, since CI signs nothing and touching
+`CKContainer` unentitled is an uncatchable exception (`isEntitled` reads
+the binary's entitlements blob first). `SocialService` is the
+`@MainActor` face of it; `SocialView` ("Summoners": Friends, Inbox, Guild,
+Ranks) opens from the island header and More; a guild war attack is
+`BattleContext.guildWar` — the rival's snapshotted defence fought as an
+arena attack, settled through `GameStore.finishWarAttack`, never through
+`.arena`'s path, which moves rank points. The war: ISO week in UTC, the
+three nearest guilds by points and one chosen by a hash of the week,
+three attacks a member a day, a win 10 (+5 over a stronger target), a
+target beaten this week pays 0 again. `SocialTests` (10). The owner's
+Xcode and CloudKit Dashboard steps are in SOCIAL.md and in the report:
+add the iCloud capability with CloudKit and the container
+`iCloud.com.pantheon.game`, run once on a device, create the nine record
+types' indexes (recordName QUERYABLE on every queried type first), set
+Authenticated Create/Read/Write on FriendRequest, Mail and Guild, deploy
+the schema to Production before TestFlight. Tour step 47 photographs the
+seeded world's four tabs.
+
+## The paid programme of 2026-09-17: bought, made, and what is left
+
+The owner's answers to the morning's questions: Gemini "All", Meshy
+"Spend down to 500", every family at the hero budgets. What it made:
+
+- **The five gods on meshy-7** (`tools/batch/m7_wave.txt`, from the same
+  concepts as their `_hd` remakes): judged on preview boards against the
+  shipped meshy-5 LODs and better in every one — Zeus's beard in strands,
+  Sekhmet's jewellery, Anubis's hands, Ares's cloak folds, Thoth's
+  feathers — so all five shipped over the old files at 16,000/6,000/2048
+  with the maps from their `_image.usdz`. The fourteen bespoke motions of
+  2026-09-15 were still at Meshy and were re-applied to the new rigs at 3
+  credits each; Zeus's ultimate of 2026-09-11 was NOT (a motion task
+  expires with the rest after about a week), so it was made again from its
+  sentence and its blow re-read off the frames: 0.78, where the first take
+  hurled at 0.68 (`contactFraction`). **A walk clip** (preset 30, "Casual
+  Walk", `AnimationClip.walk`, loops) joined `BATTLE_CLIPS`, so every
+  character made from now on has one; the eleven hand-written families'
+  rigs of 2026-09-09 are gone from Meshy (a rig task expires too; probed,
+  404), so only the five gods, Neptune, the Terracotta Soldier and the ten
+  awakened forms walk. **The island wander** plays it: a figure with a
+  walk clip strolls to a new spot within 2.8% of the painting's width of
+  its stand when it stirs (`IslandSceneView.wander`: a turn to the heading,
+  a custom action that reads the LATEST layout every frame so a pan mid-
+  stroll carries the walker with the sand, a turn back to the viewer and
+  the idle on arrival; a tap stops it where it stands), the others hop as
+  before.
+- **Neptune and the Terracotta Soldier** rigged first time from edits of
+  their own concepts (the trident and the halberd gone, a short sword flat
+  against the thigh, no cloak; the faces the cards were painted from kept)
+  and fight in their own meshes; the `standIn` rows are gone.
+- **Six Labyrinth props** from Gemini concepts on grey (30 credits each):
+  the Vault's bronze door, a fallen pharaoh's head, a sarcophagus, the
+  canopic altar, a dead marsh tree, a bone pile — placed on the sets' own
+  marks in `StageBuilder` (`vaultSet`, `lairSet`, `necropolisSet`).
+- **Ten awakened meshes** (`tools/batch/wave5_awakened.txt`, each an edit
+  of the family's own concept with everything attached and flat — no halo,
+  no floating crown; 59 credits each with the walk): Odin, Thor, Ra, Isis,
+  Athena, Hades, Poseidon, Horus, Osiris, Freya, shipped as
+  `<family>_awakened` by `build_asset.sh` at the hero budgets. Mars and
+  Hera are painted and wait on credits (the guard stopped the list at
+  ten; the balance ended at 623); Loki's concept was refused twice by the
+  painter and waits on a reworded prompt.
+- **Gemini:** the 48 item icons (`tools/item_icons.py`, six sheets; the
+  essences sheet came back on WHITE with a black square per cell and the
+  keyer now floods the white margin and then the black touching it; the
+  six Low/High icons of Ember, Tide and Gale were painted when the ladder
+  gave them a use), batch 4's 70 awakened cards (every family has both
+  cards now), and **nineteen backdrops repainted at 4K** from their own
+  files — `genart.py --resolution 4K` never reached the request until
+  today (the call site dropped the flag; two probes at 1376×768 were
+  blamed on the API), the raw 4096² or 5504×3072 is kept as
+  `Art/Backdrops/<name>_4k.jpg`, and the bundle ships the same 2048 it
+  always did, fitted down (a phone never shows more; a 4K texture is 67 MB
+  of GPU memory). Measured on the Duat gate: mean abs diff 4.8/255 against
+  the old file, the composition kept, the ruins beyond the gate that the
+  first painting left as fog now painted. The island and the Hall of Ka
+  were left alone: their anchors were measured on the paintings.
+- **Every other family re-shipped** at 16,000/6,000/2048
+  (`tools/batch/all_budget.sh`, 82 families, clip carriers untouched).
+
+Lessons kept: a Meshy task of any kind is gone within about a week — a
+rig, a motion, a mesh — so anything that will be re-applied later (a
+bespoke motion onto a better rig) has to happen inside the week or be
+bought again; and a batch's "cost" field is still noise.

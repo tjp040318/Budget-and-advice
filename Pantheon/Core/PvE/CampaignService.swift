@@ -25,6 +25,9 @@ struct StageOutcome: Sendable {
     /// Boon caches (`BoonCache`) the clear left: a Titan at S and better, the
     /// Labyrinth's last level, a Tower milestone. Defaulted like the stones.
     var boonCachesEarned: [BoonCache] = []
+    /// The calendar's multipliers this clear took (`EventCalendar`), so a
+    /// receipt can say why a number is twice its usual. Flat by default.
+    var eventBoosts: EventBoosts = .flat
 }
 
 /// PvE progression: which stages are open, and what a clear pays.
@@ -98,17 +101,20 @@ enum CampaignService {
     static func startBattle(
         stage: Stage,
         player: inout Player,
-        seed: UInt64
+        seed: UInt64,
+        now: Date = Date()
     ) throws -> BattleEngine {
         guard isUnlocked(stage, player: player) else { throw CampaignError.locked }
-        guard player.wallet.energy >= stage.energyCost else {
-            throw CampaignError.notEnoughEnergy(needed: stage.energyCost)
+        // event: half on the campaign's half-energy day, the base otherwise.
+        let cost = EventCalendar.energyCost(for: stage, at: now)
+        guard player.wallet.energy >= cost else {
+            throw CampaignError.notEnoughEnergy(needed: cost)
         }
 
         let team = resolveTeam(player.campaignTeam, player: player)
         guard !team.isEmpty else { throw CampaignError.emptyTeam }
 
-        player.wallet.energy -= stage.energyCost
+        player.wallet.energy -= cost
 
         return BattleEngine(
             playerTeam: team,
@@ -135,12 +141,17 @@ enum CampaignService {
     }
 
     /// Grants rewards for a finished stage and writes progress back.
+    ///
+    /// `boosts` are the calendar's multipliers (`EventCalendar.boosts`),
+    /// resolved by `settle` — this function never reads a clock, so a test
+    /// that asserts a payout holds whatever day it runs on.
     @discardableResult
     static func applyRewards(
         stage: Stage,
         result: BattleResult,
         player: inout Player,
-        rng: inout SeededRandom
+        rng: inout SeededRandom,
+        boosts: EventBoosts = .flat
     ) -> StageOutcome {
         let stars = starRating(result: result, stage: stage)
 
@@ -173,11 +184,13 @@ enum CampaignService {
         // Three stars pays a 25% bonus. Nothing else scales with performance,
         // so a clean clear is worth chasing without making a sloppy one useless.
         let bonus = stars == 3 ? 1.25 : 1.0
-        let drachma = Int(Double(rewards.drachma) * bonus)
-        let unitXP = Int(Double(rewards.unitExperience) * bonus)
+        // event: Monday's drachma and Tuesday's experience, from the boosts.
+        let drachma = Int(Double(rewards.drachma) * bonus * boosts.drachma)
+        let unitXP = Int(Double(rewards.unitExperience) * bonus * boosts.experience)
+        let playerXP = Int(Double(rewards.playerExperience) * boosts.experience)
 
         player.wallet.drachma += drachma
-        player.experience += rewards.playerExperience
+        player.experience += playerXP
         var levelsGained = 0
         while player.experience >= player.experienceToNextLevel {
             player.experience -= player.experienceToNextLevel
@@ -196,7 +209,10 @@ enum CampaignService {
         }
 
         var relics: [Relic] = []
-        if rewards.relicChance > 0, rng.chance(rewards.relicChance) {
+        // event: the weekend's Labyrinth makes the roll twice — two relics on
+        // a level that drops one every run. One roll draws exactly as before.
+        for _ in 0..<max(1, boosts.relicRolls) {
+            guard rewards.relicChance > 0, rng.chance(rewards.relicChance) else { continue }
             // A dungeon drops its own sets; anywhere else, any set.
             var set: RelicSet?
             if let sets = rewards.relicSets, !sets.isEmpty { set = rng.pickMutating(sets) }
@@ -230,7 +246,8 @@ enum CampaignService {
 
         var essences: [String: Int] = [:]
         for (id, chance) in rewards.essenceChances where rng.chance(chance) {
-            let amount = rng.int(in: 1...2)
+            // event: the weekend's Hall pays twice the amount, not the chance.
+            let amount = rng.int(in: 1...2) * max(1, boosts.essence)
             essences[id, default: 0] += amount
             player.essences[id, default: 0] += amount
         }
@@ -271,13 +288,14 @@ enum CampaignService {
 
         return StageOutcome(
             result: result, stars: stars, drachma: drachma,
-            playerExperience: rewards.playerExperience, unitExperience: unitXP,
+            playerExperience: playerXP, unitExperience: unitXP,
             relicsEarned: relics, essencesEarned: essences, scrollsEarned: scrolls,
             divinityEarned: divinity, isFirstClear: isFirstClear,
             leveledUnits: leveled,
             stonesEarned: stones,
             aetherEarned: aether, raidGrade: grade,
-            boonCachesEarned: caches
+            boonCachesEarned: caches,
+            eventBoosts: boosts
         )
     }
 
@@ -293,9 +311,14 @@ enum CampaignService {
         stage: Stage,
         result: BattleResult,
         player: inout Player,
-        rng: inout SeededRandom
+        rng: inout SeededRandom,
+        now: Date = Date()
     ) -> StageOutcome {
-        var outcome = applyRewards(stage: stage, result: result, player: &player, rng: &rng)
+        // event: the calendar's multipliers for this stage today, read ONCE
+        // here — the one path a fought and a swept run share — so
+        // `applyRewards` stays a pure function of its arguments.
+        let boosts = EventCalendar.boosts(for: stage, at: now)
+        var outcome = applyRewards(stage: stage, result: result, player: &player, rng: &rng, boosts: boosts)
 
         // The stars the clear earned, kept as a high-water mark for the map's
         // pips, the realm's judgment (`TributeService`) and the sweep's gate.
@@ -319,24 +342,31 @@ enum CampaignService {
                 : .stageCleared(stage)
             QuestService.record(event, player: &player)
         }
-        QuestService.record(.energySpent(stage.energyCost), player: &player)
+        // event: the mission counts what was actually charged.
+        QuestService.record(.energySpent(EventCalendar.energyCost(for: stage, at: now)), player: &player)
         return outcome
     }
 
-    /// Spends one swept run's energy, or refuses. The sweep's own gates —
-    /// three stars and a team that still meets the stage — are
-    /// `SweepService.canSweep`, checked once before the loop; this is only
-    /// the wallet.
-    static func spendSweptRun(stage: Stage, player: inout Player) throws {
-        guard player.wallet.energy >= stage.energyCost else {
-            throw CampaignError.notEnoughEnergy(needed: stage.energyCost)
+    /// Spends one swept run's energy, or refuses, and returns what it charged
+    /// so a receipt can add the runs up. The sweep's own gates — three stars
+    /// and a team that still meets the stage — are `SweepService.canSweep`,
+    /// checked once before the loop; this is only the wallet.
+    @discardableResult
+    static func spendSweptRun(stage: Stage, player: inout Player, now: Date = Date()) throws -> Int {
+        // event: the same half price a fought run pays on the half-energy day.
+        let cost = EventCalendar.energyCost(for: stage, at: now)
+        guard player.wallet.energy >= cost else {
+            throw CampaignError.notEnoughEnergy(needed: cost)
         }
-        player.wallet.energy -= stage.energyCost
+        player.wallet.energy -= cost
+        return cost
     }
 
     /// Refunds the energy when a run is abandoned before the first turn resolves.
-    static func refund(stage: Stage, player: inout Player) {
-        player.wallet.energy = min(player.wallet.maxEnergy, player.wallet.energy + stage.energyCost)
+    static func refund(stage: Stage, player: inout Player, now: Date = Date()) {
+        // event: gives back what the day charged, not the base.
+        let cost = EventCalendar.energyCost(for: stage, at: now)
+        player.wallet.energy = min(player.wallet.maxEnergy, player.wallet.energy + cost)
     }
 }
 

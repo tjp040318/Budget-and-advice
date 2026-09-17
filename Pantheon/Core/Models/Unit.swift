@@ -26,6 +26,10 @@ struct Unit: Codable, Equatable, Identifiable, Sendable {
     /// nil is an empty socket. Optional, like every save field added since
     /// the first, so a save written before boons existed still decodes.
     var boonID: UUID? = nil
+    /// The family's regalia's level, 1...5 (`Regalia`, `RegaliaService`):
+    /// raised by a duplicate fed past the skill-up cap. Optional, like every
+    /// save field added since the first; nil is level I.
+    var regaliaLevel: Int? = nil
 
     /// Locked units cannot be fed away or sold.
     var isLocked: Bool = false
@@ -58,6 +62,11 @@ struct ResolvedUnit: Identifiable, Sendable {
     /// The boon in the unit's socket, carried into battle for the engine's
     /// hooks; it changes no stat, so it is not in `stats`.
     var boon: Boon? = nil
+    /// The family's regalia (`Regalia`), carried into battle for the
+    /// engine's hooks once the unit has unlocked it; nil until then. It
+    /// changes no stat here — the two rate templates are added at
+    /// `BattleEngine.buildSide`, as a leader skill is.
+    var regalia: Regalia? = nil
 
     var id: UUID { unit.id }
     var name: String {

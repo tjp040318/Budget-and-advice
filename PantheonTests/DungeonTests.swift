@@ -30,6 +30,12 @@ final class DungeonTests: XCTestCase {
                 XCTAssertGreaterThanOrEqual(floor.rewards.relicGrade, previous.rewards.relicGrade, floor.id)
                 XCTAssertGreaterThan(floor.energyCost, previous.energyCost, floor.id)
             }
+            // Mid drops on EVERY floor, whatever the floor is sure of: it is
+            // the one tier every grade's recipe asks (a 3★'s second line, a
+            // 4★'s and a 5★'s first — `UnitDatabase.awakeningCost`), so no
+            // floor is useless to anyone. The ladder's shape — Low sure on
+            // the first floors, High on the top — is
+            // `testHallFloorsPayTheEssenceLadder`.
             let essence = "essence_\(hall.element.rawValue)_mid"
             for floor in floors {
                 XCTAssertNotNil(floor.rewards.essenceChances[essence], "\(floor.id) does not drop \(essence)")
@@ -44,6 +50,71 @@ final class DungeonTests: XCTestCase {
                 DungeonDatabase.labyrinthGrade(level: 10),
                 "\(hall.id): a Hall floor must never pay what the Labyrinth's last level pays"
             )
+        }
+    }
+
+    /// The Halls' floors are a LADDER (Docs/PLAN.md, *Essence tiers*,
+    /// 2026-09-17): the tier a floor is sure of climbs with the floor — Low
+    /// on the first floors for a new account's 3★s, Mid in the middle, High
+    /// at the top where a 5★'s awakening is farmed — and the next tier's
+    /// chance climbs across the floors that share a sure tier, so the higher
+    /// floor is never the dearer road. B1 pays Low and never High, B5 pays
+    /// High and never Low, and the floor a grade farms pays every tier of the
+    /// element its recipe asks. The odds themselves are `balance.py
+    /// --essences`'s to measure (`HALL_ESSENCE_SHIPPED`), not this test's.
+    func testHallFloorsPayTheEssenceLadder() {
+        let tiers = ["low", "mid", "high"]
+        for hall in DungeonDatabase.halls {
+            let prefix = "essence_\(hall.element.rawValue)_"
+            let low = prefix + "low"
+            let high = prefix + "high"
+            guard let first = hall.floors.first, let last = hall.floors.last else { return XCTFail(hall.id) }
+
+            let firstLow: Double = first.rewards.essenceChances[low] ?? 0
+            let lastHigh: Double = last.rewards.essenceChances[high] ?? 0
+            XCTAssertEqual(firstLow, 1.0, accuracy: 1e-9, "\(first.id): the first floor is sure of Low")
+            XCTAssertNil(first.rewards.essenceChances[high], "\(first.id): the first floor never pays High")
+            XCTAssertGreaterThan(lastHigh, 0, "\(last.id): the top floor pays High")
+            XCTAssertNil(last.rewards.essenceChances[low], "\(last.id): the top floor has no Low")
+
+            // Every floor is sure of exactly one tier, the sure tier never
+            // falls from one floor to the next, at most one tier climbs
+            // beside it — the one above — and a climbing chance never falls
+            // while the same tier climbs.
+            var previousSure = -1
+            var previousClimb: (tier: Int, chance: Double)? = nil
+            for floor in hall.floors {
+                let chances = floor.rewards.essenceChances
+                let sure = tiers.indices.filter { (chances[prefix + tiers[$0]] ?? 0) >= 1 }
+                XCTAssertEqual(sure.count, 1, "\(floor.id): one tier is sure")
+                let sureTier: Int = sure.first ?? -1
+                XCTAssertGreaterThanOrEqual(sureTier, previousSure, "\(floor.id): the sure tier never falls")
+                previousSure = sureTier
+                let climbing = tiers.indices.filter { index in
+                    let chance = chances[prefix + tiers[index]] ?? 0
+                    return chance > 0 && chance < 1
+                }
+                XCTAssertLessThanOrEqual(climbing.count, 1, "\(floor.id): at most one tier climbs")
+                if let climb = climbing.first {
+                    let chance: Double = chances[prefix + tiers[climb]] ?? 0
+                    XCTAssertGreaterThan(climb, sureTier, "\(floor.id): the climbing tier is the one above the sure tier")
+                    if let previous = previousClimb, previous.tier == climb {
+                        XCTAssertGreaterThanOrEqual(chance, previous.chance, "\(floor.id): a climbing chance never falls")
+                    }
+                    previousClimb = (tier: climb, chance: chance)
+                }
+            }
+
+            // The floor a grade farms pays every tier of the element its
+            // recipe asks: a 3★'s on the first floor, a 5★'s on the top.
+            let commonRecipe = UnitDatabase.awakeningCost(element: hall.element, naturalStars: 3)
+            let legendRecipe = UnitDatabase.awakeningCost(element: hall.element, naturalStars: 5)
+            for id in commonRecipe.keys where id.hasPrefix(prefix) {
+                XCTAssertNotNil(first.rewards.essenceChances[id], "\(first.id) does not pay \(id), which a 3★ asks")
+            }
+            for id in legendRecipe.keys where id.hasPrefix(prefix) {
+                XCTAssertNotNil(last.rewards.essenceChances[id], "\(last.id) does not pay \(id), which a 5★ asks")
+            }
         }
     }
 

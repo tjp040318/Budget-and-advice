@@ -258,7 +258,7 @@ struct StageBriefingView: View {
         ([stage.enemies] + stage.laterWaves).map { StageDatabase.buildEnemies(spawns: $0) }
     }
     private var waveCount: Int { 1 + stage.laterWaves.count }
-    private var hasEnergy: Bool { store.player.wallet.energy >= stage.energyCost }
+    private var hasEnergy: Bool { store.player.wallet.energy >= EventCalendar.energyCost(for: stage) }
     private var teamPower: Int { team.reduce(0) { $0 + $1.power } }
     private var meetsRecommended: Bool { teamPower >= stage.recommendedPower }
 
@@ -357,7 +357,7 @@ struct StageBriefingView: View {
                 dismiss: { dismiss() }
             ) {
                 BarCount(
-                    value: "Cost \(stage.energyCost)",
+                    value: "Cost \(EventCalendar.energyCost(for: stage))",
                     systemImage: "bolt.fill",
                     tint: hasEnergy ? Theme.info : Theme.danger
                 )
@@ -579,7 +579,7 @@ struct StageBriefingView: View {
             }
 
             if !hasEnergy {
-                Text("Not enough energy — this stage costs \(stage.energyCost).")
+                Text("Not enough energy — this stage costs \(EventCalendar.energyCost(for: stage)).")
                     .font(Theme.body(11))
                     .foregroundStyle(Theme.danger)
                     .lineLimit(2)
@@ -596,8 +596,8 @@ struct StageBriefingView: View {
 
             PrimaryButton(
                 title: runs > 1
-                    ? "Begin ×\(runs) — \(stage.energyCost) energy each"
-                    : "Begin — \(stage.energyCost) energy",
+                    ? "Begin ×\(runs) — \(EventCalendar.energyCost(for: stage)) energy each"
+                    : "Begin — \(EventCalendar.energyCost(for: stage)) energy",
                 systemImage: runs > 1 ? "repeat" : "play.fill",
                 isEnabled: hasEnergy && !team.isEmpty
             ) {
@@ -631,7 +631,7 @@ struct StagePopup: View {
 
     private var team: [ResolvedUnit] { store.team(store.player.campaignTeam) }
     private var teamPower: Int { team.reduce(0) { $0 + $1.power } }
-    private var hasEnergy: Bool { store.player.wallet.energy >= stage.energyCost }
+    private var hasEnergy: Bool { store.player.wallet.energy >= EventCalendar.energyCost(for: stage) }
     private var enemies: [ResolvedUnit] { StageDatabase.buildEnemies(for: stage) }
     private var waveCount: Int { 1 + stage.laterWaves.count }
 
@@ -664,7 +664,7 @@ struct StagePopup: View {
                 HStack(spacing: 4) {
                     Image(systemName: "bolt.fill")
                         .font(.system(size: 10, weight: .black))
-                    Text("\(stage.energyCost)")
+                    Text("\(EventCalendar.energyCost(for: stage))")
                         .font(Theme.numeric(12))
                 }
                 .foregroundStyle(hasEnergy ? Theme.info : Theme.danger)
@@ -728,7 +728,7 @@ struct StagePopup: View {
                     SweepButton(stage: stage, runs: SweepService.maximumRuns, onSweep: onSweep)
                 }
                 PrimaryButton(
-                    title: "Fight — \(stage.energyCost) energy",
+                    title: "Fight — \(EventCalendar.energyCost(for: stage)) energy",
                     systemImage: "play.fill",
                     isEnabled: hasEnergy && !team.isEmpty
                 ) {

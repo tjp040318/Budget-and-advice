@@ -260,10 +260,16 @@ final class GameStore: ObservableObject {
             player.wallet.drachma -= cost
             ProgressionService.grantExperience(experience, to: &player.units[index])
             // Feeding a duplicate of the same character is a skill-up on top
-            // of its experience, the way the genre does it.
-            let duplicates = fodder.filter { $0.blueprintID == player.units[index].blueprintID }.count
-            for _ in 0..<duplicates {
-                _ = ProgressionService.applySkillUp(to: &player.units[index], using: &rng)
+            // of its experience, the way the genre does it — and once every
+            // skill is capped (or for a copy of another element of the same
+            // family), the copy raises the family's regalia a level instead
+            // (2026-09-17; `RegaliaService.feed` banks it while locked).
+            let target = player.units[index]
+            let kin = fodder.filter { RegaliaService.isSameFamily($0, as: target) }
+            for copy in kin {
+                let skilled = copy.blueprintID == target.blueprintID
+                    && ProgressionService.applySkillUp(to: &player.units[index], using: &rng) != nil
+                if !skilled { RegaliaService.feed(duplicate: copy, into: &player.units[index]) }   // regalia
             }
             QuestService.record(.unitPoweredUp, player: &player)
             // Unequip the fodder before it disappears, so relics come back.
@@ -806,15 +812,27 @@ final class GameStore: ObservableObject {
     ///
     /// Nil when the stage is not sweepable at all; a short haul when the
     /// energy ran out partway, which the receipt says out loud.
+    /// The Festival's gift of the day (`EventCalendar.claimGift`): the
+    /// grants paid, or nil when there is none today or it is claimed.
+    func claimEventGift() -> [ShopService.Grant]? {
+        var rng = makeRandom()
+        var paid: [ShopService.Grant]?
+        attempt { player in
+            paid = try EventCalendar.claimGift(player: &player, rng: &rng)
+        }
+        return paid
+    }
+
     func sweep(stage: Stage, runs: Int) -> SweepReceipt? {
         guard SweepService.canSweep(stage, player: player) else { return nil }
         var rng = makeRandom()
         var receipt: SweepReceipt?
         update { player in
             var outcomes: [StageOutcome] = []
+            var energySpent = 0
             for _ in 0..<max(1, runs) {
                 do {
-                    try CampaignService.spendSweptRun(stage: stage, player: &player)
+                    energySpent += try CampaignService.spendSweptRun(stage: stage, player: &player)   // event price
                 } catch {
                     break
                 }
@@ -827,7 +845,7 @@ final class GameStore: ObservableObject {
                 stage: stage,
                 runs: outcomes.count,
                 requested: max(1, runs),
-                energySpent: outcomes.count * stage.energyCost,
+                energySpent: energySpent,
                 outcome: SweepService.total(outcomes, stage: stage)
             )
         }
@@ -921,10 +939,45 @@ final class GameStore: ObservableObject {
     /// Used by the settings screen. Destroys the account, so the caller confirms.
     func resetAccount() {
         SaveStore.deleteSave()
+        LocalSocialBackend.wipe()   // the offline world's doings go with the save
         let fresh = NewGame.create()
         player = fresh.player
         seedStream = SeededRandom(seed: fresh.rngSeed)
         markDirty()
+    }
+
+    // MARK: - Summoners (the social layer, 2026-09-17)
+
+    /// Friends, mail, guilds and the boards: CloudKit when the build is
+    /// entitled and the device has an account, the seeded offline world
+    /// otherwise (`SocialService`, Docs/SOCIAL.md).
+    let social = SocialService()
+
+    /// What a mail or a greeting paid, taken into the save.
+    @discardableResult
+    func receive(_ grants: [ShopService.Grant]) -> [ShopService.Grant] {
+        var rng = makeRandom()
+        var paid: [ShopService.Grant] = []
+        update { player in
+            for grant in grants {
+                paid += ShopService.grant(grant, to: &player, rng: &rng)
+            }
+        }
+        return paid
+    }
+
+    /// A guild war attack on a rival's defence: the engine, or nil when the
+    /// offence team is empty.
+    func startWarAttack(_ target: WarTarget) -> BattleEngine? {
+        social.warBattle(against: target, player: player, seed: nextSeed())
+    }
+
+    /// The attack reported to the war (the points land on the guild's
+    /// week); the reckoning has already shown what a win was worth.
+    func finishWarAttack(_ target: WarTarget, result: BattleResult) {
+        Task { @MainActor in
+            _ = await social.reportWarAttack(against: target, result: result)
+        }
     }
 
     #if DEBUG
@@ -948,6 +1001,9 @@ final class GameStore: ObservableObject {
             // frames show the awakened card, name and look.
             if let starter = player.units.firstIndex(where: { $0.blueprintID == "anubis_umbra" }) {
                 player.units[starter].isAwakened = true
+                // Its regalia at III, so the tour's sheet (step 46) shows a
+                // ladder part-climbed.
+                player.units[starter].regaliaLevel = 3
             }
             player.wallet.drachma = max(player.wallet.drachma, 200_000)
             player.wallet.energy = max(player.wallet.energy, 40)

@@ -887,7 +887,7 @@ def check_unknown_types(files, declared, errors):
         "Codable","Encodable","Decodable","Equatable","Hashable","Identifiable","Sendable",
         "CaseIterable","Comparable","RandomNumberGenerator","LocalizedError","ObservableObject",
         "View","Scene","App","Color","Font","Image","Text","VStack","HStack","ZStack","Button",
-        "ScrollView","LazyVGrid","GridItem","NavigationStack", "NavigationLink", "ShareLink", "ProcessInfo", "UIPasteboard", "UInt8", "UnicodeScalar", "Int8", "Mirror", "CAPropertyAnimation", "CGContext", "CGImage", "CGImageAlphaInfo", "CGBitmapInfo", "CGColorSpaceCreateDeviceRGB", "NSValue", "Calendar", "TimelineView", "AppStorage", "UserDefaults", "LongPressGesture", "DragGesture", "NSShadow", "SymbolConfiguration", "UIBezierPath", "CFArray", "CGGradient", "NavigationPath", "Path", "StrokeStyle", "SCNPlane", "SCNParticleSystem", "SCNCamera", "SCNLight", "SCNMaterial", "SCNVector4", "SCNTransaction", "SCNMatrix4MakeScale", "SCNMatrix4MakeRotation", "SCNMatrix4Mult", "SCNGeometrySource", "SCNGeometryElement", "MemoryLayout", "Int32", "SCNPyramid", "SCNSphere", "SCNBox","TabView","Picker","Toggle","Spacer",
+        "ScrollView","LazyVGrid","GridItem","NavigationStack", "NavigationLink", "ShareLink", "ProcessInfo", "UIPasteboard", "UInt8", "UnicodeScalar", "Int8", "Mirror", "CAPropertyAnimation", "CGContext", "CGImage", "CGImageAlphaInfo", "CGBitmapInfo", "CGColorSpaceCreateDeviceRGB", "NSValue", "Calendar", "TimeZone", "Locale", "DateComponents", "CodingKey", "Decoder", "Encoder", "TimelineView", "AppStorage", "UserDefaults", "LongPressGesture", "DragGesture", "NSShadow", "SymbolConfiguration", "UIBezierPath", "CFArray", "CGGradient", "NavigationPath", "Path", "StrokeStyle", "SCNPlane", "SCNParticleSystem", "SCNCamera", "SCNLight", "SCNMaterial", "SCNVector4", "SCNTransaction", "SCNMatrix4MakeScale", "SCNMatrix4MakeRotation", "SCNMatrix4Mult", "SCNGeometrySource", "SCNGeometryElement", "MemoryLayout", "Int32", "SCNPyramid", "SCNSphere", "SCNBox","TabView","Picker","Toggle","Spacer",
         "Divider","Circle","Capsule","Rectangle","RoundedRectangle","LinearGradient","GeometryReader",
         "ForEach","Binding","State","StateObject","EnvironmentObject","Published","MainActor",
         "SCNNode","SCNScene","SCNView","SCNVector3","SCNVector4","SCNMatrix4","SCNCamera","SCNLight",
@@ -937,6 +937,13 @@ def check_unknown_types(files, declared, errors):
         "XCTAssertGreaterThanOrEqual","XCTAssertLessThan","XCTAssertLessThanOrEqual",
         "XCTAssertThrowsError","XCTAssertNoThrow","XCTFail","XCTUnwrap",
         "XCTestCase","DispatchQueue","NSNumber","Combine","SwiftUI","Foundation","SceneKit","UIKit",
+        # CloudKit, since the social layer went on its public database
+        # (2026-09-17, Docs/SOCIAL.md), the Foundation query types it takes,
+        # the hand-written Codable a grant needed to ride in a mail, the
+        # calendar's zone the war's week is computed in, and the text field
+        # the friend search and the guild board type into.
+        "CloudKit","CKContainer","CKDatabase","CKRecord","CKQuery","CKError","NSPredicate","NSSortDescriptor",
+        "Encoder","Decoder","CodingKey","TimeZone","TextField",
     }
     used = defaultdict(list)
     for path in files:

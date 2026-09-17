@@ -82,6 +82,10 @@ And a rewrite that replaces a declaration from its first line leaves the
 OLD `@ViewBuilder` above the new doc comment, so the declaration carries
 two ("only one result builder attribute can be attached", run 163): the
 checker reads a builder attribute followed, through comments, by another.
+And a STATIC member on a class named `Coordinator` makes the checker read
+every `Coordinator.x` in the tree as that class's — the battle view's
+`#selector(Coordinator.handleTap(_:))` is another class of the name — so the
+island's coordinator keeps its constants as instance lets (2026-09-17, twice).
 Every rule in the checker was
 proven by reintroducing a real bug and watching it fail.
 
@@ -923,6 +927,68 @@ environment can and cannot do. The short version:
   `ItemIcon`. **The paintings are NOT made yet:** `tools/item_icons.py`
   paints forty-two icons as five 3×3 sheets on black (about $0.70), keys
   them off the ground and ships them; it runs on the owner's word only.
+- **The essence ladder (2026-09-17).** `UnitDatabase.awakeningCost(element:
+  naturalStars:)` is the ONE recipe every `Awakening` reads (5★ Mid 15 +
+  High 10 + Magic Mid 10 + Magic High 5; 4★ 10/5/8/3; 3★ Low 10 + Mid 5 +
+  Magic Low 5 + Magic Mid 5), `DungeonDatabase.hallEssenceChances(element:
+  floor:)` pays it (B1–2 Low sure + Mid 40–50%, B3–5 Mid sure + High
+  25–50%), the awakening caches grant the 5★ bill, and `balance.py
+  --essences` asserts shipped == PLAN.md's table. Change a number in both
+  files and grep `ProgressionTests`/`DungeonTests`.
+- **The Regalia (2026-09-17): one named item per family**, levelled I–V by
+  duplicates fed in the Hall of Ka once the skills are capped (`GameStore.
+  levelUp` → `RegaliaService.feed`; it banks while locked), unlocked by the
+  awakening or at 6★ for a family without one. `Regalia.swift` (eight
+  templates by kit, `RegaliaTemplate.magnitudes`), `RegaliaService`,
+  `Unit.regaliaLevel` (Optional), the names and blurbs beside
+  `elementalSkillNames`, hooks in `BattleEngine` and `DamageCalculator`
+  for the player's units and the arena defender only, the plate on the
+  unit sheet and `RegaliaSheet` (tour step 46). `balance.py --regalia`
+  measures every template (Heavy Hand V 15.3%, under the 16% rank-II cap);
+  change a magnitude in `RegaliaTemplate.magnitudes`, `REGALIA` and
+  `RegaliaTests` together.
+- **Events (2026-09-17; `Docs/EVENTS.md`).** `EventCalendar` derives the
+  week from the date: Mon drachma ×2, Tue XP ×2, Wed campaign energy ×0.5
+  (rounded up), Thu laurels ×2, Fri–Sun a Hall's essence ×2 or, every
+  fourth week, a Labyrinth's relic roll twice; every fourth week the
+  Festival's gift a day (`Player.eventGiftsClaimed`, Optional). The hooks
+  are one line each (`CampaignService.settle` → `boosts(for:at:)`, the
+  energy charges, `ArenaService.applyResult`), every energy label prints
+  `EventCalendar.energyCost(for:)`, and `applyRewards` never reads a
+  clock, so a test's relic count holds on any weekday. `EventsView` is
+  the calendar beside the missions scroll and on More; `balance.py
+  --events`; tour step 45.
+- **Summoners — the social layer (2026-09-17; `Docs/SOCIAL.md`).**
+  `SocialBackend` (protocol), `CloudKitSocialBackend` (the public database
+  of `iCloud.com.pantheon.game`, used only when the binary is entitled AND
+  the device has an account — `isEntitled` reads the code-signature
+  entitlements first, because an unentitled `CKContainer` is an uncatchable
+  exception and CI signs nothing), `LocalSocialBackend` (the seeded offline
+  world every CI frame shows), `SocialService` (`GameStore.social`),
+  `SocialView` from the island header and More: friends, mail with grants
+  (`GameStore.receive`), guilds with a board and an async war fought as
+  `BattleContext.guildWar` (settled by `finishWarAttack`, never through
+  `.arena`), two leaderboards. `Pantheon/Pantheon.entitlements` is the
+  app target's `CODE_SIGN_ENTITLEMENTS` (pbxproj and project.yml). The
+  owner's Xcode/Dashboard steps are in SOCIAL.md. Tour step 47.
+- **The paid programme of 2026-09-17** (PLAN.md, *The paid programme*):
+  the five gods are meshy-7 now (`_m7`, judged on boards, better in every
+  one), their bespoke motions re-applied, Zeus's ultimate remade (blow at
+  0.78); a **walk clip** (preset 30, `AnimationClip.walk`, in
+  `BATTLE_CLIPS`) and **the island wander** (`IslandSceneView.wander`: a
+  figure with a walk clip strolls near its stand when it stirs, placed by
+  a custom action off the latest layout; the others hop) — only families
+  rigged from today walk, the rigs of 2026-09-09 are gone from Meshy;
+  Neptune and the Terracotta Soldier in their own meshes (a short sword
+  flat on the thigh rigs first time); six Labyrinth props on the sets
+  (`vaultSet`, `lairSet`, `necropolisSet`); ten awakened meshes (Mars and
+  Hera painted and waiting on credits, Loki's concept refused twice); 48
+  item icons; batch 4's awakened cards; nineteen backdrops repainted at 4K
+  and shipped at 2048 (`tools/batch/backdrops_4k.sh`; the raws in
+  `Art/Backdrops/`). `genart.py --resolution` reaches the request now —
+  the call site had dropped it. **A Meshy task expires within about a
+  week, rigs and motions included**: re-apply within the week or buy
+  again; `tools/batch/build_asset.sh` ships at the hero budgets.
 - **Five tabs.** An iPhone folds a sixth tab into a system "More" list, so
   Settings opens over the island from the Obelisk (and Missions, the
   bazaar from the header); `RootView.Tab(destination)` is failable for the
@@ -1150,7 +1216,9 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is forty-five screens (steps 0–44): the island's decoration
+  thousands of images. The CI tour is forty-eight screens (steps 0–47): the Summoners screen (47,
+  `summoners`, four frames, one per tab by `-tour-social-tab`), the Regalia
+  sheet (46), the events calendar on a Festival Monday (45), the island's decoration
   sheet (44, `island_decor`; step 0 is photographed twice, at rest and
   relaunched with `-tour-island-zoom 1.5` onto the circle), the Hall of Ka's
   Awaken panel (43, `awaken`: the seed's strongest unawakened unit with

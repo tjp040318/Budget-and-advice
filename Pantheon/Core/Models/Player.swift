@@ -146,6 +146,11 @@ struct Player: Codable, Equatable, Sendable {
     /// added since the first.
     var boons: [Boon]? = nil
     var boonCaches: [BoonCache]? = nil
+    /// The event calendar's Festival gifts claimed, one id per date
+    /// (`EventCalendar.giftID`), trimmed to the last few weeks — a past date
+    /// can never be claimed again. Optional, like every save field added
+    /// since the first.
+    var eventGiftsClaimed: [String]? = nil
 
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }

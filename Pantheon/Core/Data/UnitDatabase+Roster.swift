@@ -53,10 +53,6 @@ extension UnitDatabase {
         }
     }
 
-    static func essence(_ element: Element) -> String {
-        "essence_\(element.rawValue)_mid"
-    }
-
     /// The basic attack's ladder, shared by every family: five skill-ups.
     static let basicLadder: [SkillUpgrade] = [
         SkillUpgrade(kind: .damageMultiplier, amount: 0.05, label: "Damage +5%"),
@@ -200,6 +196,9 @@ extension UnitDatabase {
 
     private static func aresVariant(_ element: Element) -> UnitBlueprint {
         let k = aresKit(element)
+        // The family's natural grade: what the gacha rolls, and what its
+        // awakening's bill is read off (`UnitDatabase.awakeningCost`).
+        let naturalStars = 5
         let id = "ares_\(element.rawValue)"
         let sig = signature(element)
         let strike = StatusSpec(sig, chance: 0.30, turns: 2, target: .singleEnemy)
@@ -275,7 +274,7 @@ extension UnitDatabase {
             element: element,
             archetype: .god,
             role: .attacker,
-            naturalStars: 5,
+            naturalStars: naturalStars,
             baseStats: Stats(
                 hp: k.hp, atk: k.atk, def: k.def, spd: k.spd,
                 critRate: 0.20, critDamage: 0.50,
@@ -323,7 +322,7 @@ extension UnitDatabase {
                 bonusDescription: "Attack +10%, Critical Rate +10%, and the Blood of War passive is unlocked.",
                 statBonus: Stats(atk: 4, critRate: 0.10),
                 skillOverrides: [:],
-                essenceCost: [essence(element): 15, "essence_magic_mid": 10, "essence_magic_high": 5]
+                essenceCost: awakeningCost(element: element, naturalStars: naturalStars)
             ),
             model: ModelSpec(
                 assetName: "ares",
@@ -381,6 +380,9 @@ extension UnitDatabase {
 
     private static func heraclesVariant(_ element: Element) -> UnitBlueprint {
         let k = heraclesKit(element)
+        // The family's natural grade: what the gacha rolls, and what its
+        // awakening's bill is read off (`UnitDatabase.awakeningCost`).
+        let naturalStars = 4
         let id = "heracles_\(element.rawValue)"
         let sig = signature(element)
         let strike = StatusSpec(sig, chance: 0.30, turns: 2, target: .singleEnemy)
@@ -451,7 +453,7 @@ extension UnitDatabase {
             element: element,
             archetype: .demigod,
             role: .defender,
-            naturalStars: 4,
+            naturalStars: naturalStars,
             baseStats: Stats(
                 hp: k.hp, atk: k.atk, def: k.def, spd: k.spd,
                 critRate: 0.15, critDamage: 0.50,
@@ -501,7 +503,7 @@ extension UnitDatabase {
                 bonusDescription: "Health +8%, Defence +8%, and the Lion's Hide passive is unlocked.",
                 statBonus: Stats(hp: 45, def: 3),
                 skillOverrides: [:],
-                essenceCost: [essence(element): 10, "essence_magic_mid": 8, "essence_magic_high": 3]
+                essenceCost: awakeningCost(element: element, naturalStars: naturalStars)
             ),
             model: ModelSpec(
                 assetName: "heracles",
@@ -559,6 +561,9 @@ extension UnitDatabase {
 
     private static func perseusVariant(_ element: Element) -> UnitBlueprint {
         let k = perseusKit(element)
+        // The family's natural grade: what the gacha rolls, and what its
+        // awakening's bill is read off (`UnitDatabase.awakeningCost`).
+        let naturalStars = 4
         let id = "perseus_\(element.rawValue)"
         let sig = signature(element)
         let cut = StatusSpec(sig, chance: 0.25, turns: 2, target: .singleEnemy)
@@ -630,7 +635,7 @@ extension UnitDatabase {
             element: element,
             archetype: .hero,
             role: .attacker,
-            naturalStars: 4,
+            naturalStars: naturalStars,
             baseStats: Stats(
                 hp: k.hp, atk: k.atk, def: k.def, spd: k.spd,
                 critRate: 0.15, critDamage: 0.50,
@@ -678,7 +683,7 @@ extension UnitDatabase {
                 bonusDescription: "Speed +8, Accuracy +15%, and the Winged Sandals passive is unlocked.",
                 statBonus: Stats(spd: 8, accuracy: 0.15),
                 skillOverrides: [:],
-                essenceCost: [essence(element): 10, "essence_magic_mid": 8, "essence_magic_high": 3]
+                essenceCost: awakeningCost(element: element, naturalStars: naturalStars)
             ),
             model: ModelSpec(
                 assetName: "perseus",
@@ -737,6 +742,9 @@ extension UnitDatabase {
 
     private static func thothVariant(_ element: Element) -> UnitBlueprint {
         let k = thothKit(element)
+        // The family's natural grade: what the gacha rolls, and what its
+        // awakening's bill is read off (`UnitDatabase.awakeningCost`).
+        let naturalStars = 5
         let id = "thoth_\(element.rawValue)"
         let sig = signature(element)
         let stroke = StatusSpec(sig, chance: 0.35, turns: 2, target: .singleEnemy)
@@ -804,7 +812,7 @@ extension UnitDatabase {
             element: element,
             archetype: .god,
             role: .support,
-            naturalStars: 5,
+            naturalStars: naturalStars,
             baseStats: Stats(
                 hp: k.hp, atk: k.atk, def: k.def, spd: k.spd,
                 critRate: 0.15, critDamage: 0.50,
@@ -851,7 +859,7 @@ extension UnitDatabase {
                 bonusDescription: "Health +8%, Resistance +15%, and the Scribe of Ma'at passive is unlocked.",
                 statBonus: Stats(hp: 42, resistance: 0.15),
                 skillOverrides: [:],
-                essenceCost: [essence(element): 15, "essence_magic_mid": 10, "essence_magic_high": 5]
+                essenceCost: awakeningCost(element: element, naturalStars: naturalStars)
             ),
             model: ModelSpec(
                 assetName: "thoth",

@@ -80,6 +80,45 @@ enum UnitDatabase {
         summonPool.compactMap { blueprint($0) }.filter { $0.naturalStars == stars }
     }
 
+    // MARK: - The awakening recipe
+
+    /// What an awakening costs, by the family's NATURAL grade: the ladder of
+    /// `Docs/PLAN.md` (*Essence tiers — the ladder an awakening should
+    /// climb*, 2026-09-17, the owner's word the same day). A 3★ spends the
+    /// element's Low and Mid, a 4★ its Mid and High, a 5★ more of the same,
+    /// with Magic essence alongside at the same tiers — so every tier the
+    /// Halls, the campaign and the Titans drop is spent somewhere, and the
+    /// Hall floor a player farms follows the grade of the unit on the dais
+    /// (Low is sure on B1–2, Mid on B3–4, High at half on B5:
+    /// `DungeonDatabase.hallEssenceChances`). A 5★'s ten High essences are
+    /// twenty B5 runs or a dozen Titan kills; a 3★'s ten Low is ten runs of
+    /// B1, a new account's day.
+    ///
+    /// The ONE place a recipe is written. The seven hand-written families
+    /// with an awakening and every table `FamilyRow` call it, so a change
+    /// here moves the Hall of Ka's bill, the unit sheet's, the bazaar's
+    /// awakening caches and the Hall's drop line together. `tools/balance.py`
+    /// mirrors it as `recipe_shipped(element, stars)` — `--essences` measures
+    /// every recipe against every drop table — and
+    /// `ProgressionTests.testAwakeningRecipeClimbsTheEssenceLadder` pins the
+    /// intent, `testEveryAwakeningReadsTheOneRecipe` that nothing carries a
+    /// bill of its own. Before it each hand-written blueprint held its own
+    /// dictionary and the table a two-way choice (a 5★ 15 Mid, 10 Mid Magic
+    /// and 5 High Magic; anything else 10, 8 and 3), nothing asked for a Low
+    /// or a High of an element, and Anubis, a natural 4★, paid a 5★'s bill.
+    static func awakeningCost(element: Element, naturalStars: Int) -> [String: Int] {
+        func own(_ tier: String) -> String { "essence_\(element.rawValue)_\(tier)" }
+        if naturalStars >= 5 {
+            return [own("mid"): 15, own("high"): 10, "essence_magic_mid": 10, "essence_magic_high": 5]
+        }
+        if naturalStars == 4 {
+            return [own("mid"): 10, own("high"): 5, "essence_magic_mid": 8, "essence_magic_high": 3]
+        }
+        // 3★ and below: the Low floors' tier, so the first Hall floor a new
+        // account can clear is the one its first awakening needs.
+        return [own("low"): 10, own("mid"): 5, "essence_magic_low": 5, "essence_magic_mid": 5]
+    }
+
     // MARK: - THE SHABTI FAMILY
     //
     // The gacha's common tier and the Hall of Ka's fodder: tomb servants,
@@ -245,7 +284,6 @@ enum UnitDatabase {
         var auraHex: String
         var leader: LeaderSkill
         var strikeStatus: StatusSpec
-        var essence: String
     }
 
     private static func anubisFlavour(_ element: Element) -> AnubisFlavour {
@@ -259,8 +297,7 @@ enum UnitDatabase {
                 hp: 422, atk: 32, def: 25, spd: 104,
                 auraHex: "#F2703C",
                 leader: LeaderSkill(stat: .atkPercent, amount: 0.33, scope: .pantheon(.egyptian)),
-                strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_ember_mid"
+                strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         case .tide:
             return AnubisFlavour(
@@ -271,8 +308,7 @@ enum UnitDatabase {
                 hp: 566, atk: 24, def: 32, spd: 101,
                 auraHex: "#3C9BF2",
                 leader: LeaderSkill(stat: .hpPercent, amount: 0.40, scope: .pantheon(.egyptian)),
-                strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_tide_mid"
+                strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         case .gale:
             return AnubisFlavour(
@@ -283,8 +319,7 @@ enum UnitDatabase {
                 hp: 442, atk: 27, def: 26, spd: 116,
                 auraHex: "#4FC98A",
                 leader: LeaderSkill(stat: .spd, amount: 0.23, scope: .pantheon(.egyptian)),
-                strikeStatus: StatusSpec(.speedDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_gale_mid"
+                strikeStatus: StatusSpec(.speedDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         case .radiance:
             return AnubisFlavour(
@@ -295,8 +330,7 @@ enum UnitDatabase {
                 hp: 504, atk: 26, def: 29, spd: 105,
                 auraHex: "#F5D96B",
                 leader: LeaderSkill(stat: .resistance, amount: 0.40, scope: .allAllies),
-                strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_radiance_mid"
+                strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         case .umbra:
             return AnubisFlavour(
@@ -307,8 +341,7 @@ enum UnitDatabase {
                 hp: 480, atk: 27, def: 28, spd: 107,
                 auraHex: "#7FE0C8",
                 leader: LeaderSkill(stat: .critRate, amount: 0.25, scope: .pantheon(.egyptian)),
-                strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_umbra_mid"
+                strikeStatus: StatusSpec(.brand, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         }
     }
@@ -317,6 +350,9 @@ enum UnitDatabase {
     /// everything that differs comes out of `anubisFlavour`.
     private static func anubisVariant(_ element: Element) -> UnitBlueprint {
         let f = anubisFlavour(element)
+        // The family's natural grade: what the gacha rolls, and what its
+        // awakening's bill is read off (`awakeningCost`).
+        let naturalStars = 4
 
         // The judge's five ways. Every form weighs one heart and every form's
         // rite brings a fallen ally back — that is what Anubis IS — and dark,
@@ -384,7 +420,7 @@ enum UnitDatabase {
             element: element,
             archetype: .god,
             role: f.role,
-            naturalStars: 4,
+            naturalStars: naturalStars,
             baseStats: Stats(
                 hp: f.hp, atk: f.atk, def: f.def, spd: f.spd,
                 critRate: 0.15, critDamage: 0.50,
@@ -448,11 +484,7 @@ enum UnitDatabase {
                 bonusDescription: "Speed +15, Accuracy +15%, and the Scales of Ma'at passive is unlocked.",
                 statBonus: Stats(spd: 15, accuracy: 0.15),
                 skillOverrides: [:],
-                essenceCost: [
-                    f.essence: 15,
-                    "essence_magic_mid": 10,
-                    "essence_magic_high": 5
-                ]
+                essenceCost: awakeningCost(element: element, naturalStars: naturalStars)
             ),
             // One mesh, five tints. Every variant loads the same `anubis` model.
             model: ModelSpec(
@@ -517,7 +549,6 @@ enum UnitDatabase {
         var auraHex: String
         var leader: LeaderSkill
         var rakeStatus: StatusSpec
-        var essence: String
     }
 
     private static func sekhmetFlavour(_ element: Element) -> SekhmetFlavour {
@@ -534,8 +565,7 @@ enum UnitDatabase {
                 hp: 410, atk: 38, def: 23, spd: 106,
                 auraHex: "#F25A3C",
                 leader: LeaderSkill(stat: .atkPercent, amount: 0.38, scope: .element(.ember)),
-                rakeStatus: StatusSpec(.burn, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_ember_mid"
+                rakeStatus: StatusSpec(.burn, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         case .tide:
             return SekhmetFlavour(
@@ -546,8 +576,7 @@ enum UnitDatabase {
                 hp: 480, atk: 32, def: 28, spd: 102,
                 auraHex: "#3CA8F2",
                 leader: LeaderSkill(stat: .defPercent, amount: 0.38, scope: .pantheon(.egyptian)),
-                rakeStatus: StatusSpec(.attackDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_tide_mid"
+                rakeStatus: StatusSpec(.attackDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         case .gale:
             return SekhmetFlavour(
@@ -558,8 +587,7 @@ enum UnitDatabase {
                 hp: 416, atk: 34, def: 24, spd: 114,
                 auraHex: "#5FD98A",
                 leader: LeaderSkill(stat: .accuracy, amount: 0.40, scope: .allAllies),
-                rakeStatus: StatusSpec(.speedDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_gale_mid"
+                rakeStatus: StatusSpec(.speedDown, chance: 0.25, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         case .radiance:
             // The Eye of Ra is literally her: the Radiance Eye never misses its
@@ -572,8 +600,7 @@ enum UnitDatabase {
                 hp: 440, atk: 35, def: 26, spd: 107,
                 auraHex: "#FFD94F",
                 leader: LeaderSkill(stat: .critDamage, amount: 0.35, scope: .pantheon(.egyptian)),
-                rakeStatus: StatusSpec(.glancing, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_radiance_mid"
+                rakeStatus: StatusSpec(.glancing, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         case .umbra:
             // The plague-bringer. Her third skill is a plague on the enemy
@@ -587,8 +614,7 @@ enum UnitDatabase {
                 hp: 450, atk: 34, def: 26, spd: 105,
                 auraHex: "#9B5FD9",
                 leader: LeaderSkill(stat: .hpPercent, amount: 0.33, scope: .allAllies),
-                rakeStatus: StatusSpec(.unrecoverable, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true),
-                essence: "essence_umbra_mid"
+                rakeStatus: StatusSpec(.unrecoverable, chance: 0.30, turns: 2, target: .singleEnemy, rollsPerHit: true)
             )
         }
     }
@@ -597,6 +623,9 @@ enum UnitDatabase {
     /// everything that differs comes out of `sekhmetFlavour`.
     private static func sekhmetVariant(_ element: Element) -> UnitBlueprint {
         let f = sekhmetFlavour(element)
+        // The family's natural grade: what the gacha rolls, and what its
+        // awakening's bill is read off (`awakeningCost`).
+        let naturalStars = 5
 
         // The lioness's five ways. Every form breaks a defence somewhere and
         // every third skill is unleashed on the whole line; fire, the
@@ -664,7 +693,7 @@ enum UnitDatabase {
             element: element,
             archetype: .god,
             role: f.role,
-            naturalStars: 5,
+            naturalStars: naturalStars,
             baseStats: Stats(
                 hp: f.hp, atk: f.atk, def: f.def, spd: f.spd,
                 critRate: 0.15, critDamage: 0.50,
@@ -727,11 +756,7 @@ enum UnitDatabase {
                 bonusDescription: "CRIT Rate +15%, Accuracy +15%, and the Thirst of the Lioness passive is unlocked.",
                 statBonus: Stats(critRate: 0.15, accuracy: 0.15),
                 skillOverrides: [:],
-                essenceCost: [
-                    f.essence: 15,
-                    "essence_magic_mid": 10,
-                    "essence_magic_high": 5
-                ]
+                essenceCost: awakeningCost(element: element, naturalStars: naturalStars)
             ),
             // One mesh, five tints. Every variant loads the same `sekhmet` model.
             model: ModelSpec(
@@ -800,7 +825,6 @@ enum UnitDatabase {
         var auraHex: String
         var leader: LeaderSkill
         var boltStatus: StatusSpec
-        var essence: String
     }
 
     private static func zeusFlavour(_ element: Element) -> ZeusFlavour {
@@ -816,8 +840,7 @@ enum UnitDatabase {
                 hp: 445, atk: 36, def: 25, spd: 105,
                 auraHex: "#FF9A3C",
                 leader: LeaderSkill(stat: .atkPercent, amount: 0.33, scope: .pantheon(.greek)),
-                boltStatus: StatusSpec(.burn, chance: 0.35, turns: 2, target: .singleEnemy),
-                essence: "essence_ember_mid"
+                boltStatus: StatusSpec(.burn, chance: 0.35, turns: 2, target: .singleEnemy)
             )
         case .tide:
             // The rain-bringer. The sturdiest Zeus: one freezing bolt that
@@ -831,8 +854,7 @@ enum UnitDatabase {
                 hp: 505, atk: 31, def: 29, spd: 103,
                 auraHex: "#4FC3F7",
                 leader: LeaderSkill(stat: .hpPercent, amount: 0.33, scope: .pantheon(.greek)),
-                boltStatus: StatusSpec(.speedDown, chance: 0.35, turns: 2, target: .singleEnemy),
-                essence: "essence_tide_mid"
+                boltStatus: StatusSpec(.speedDown, chance: 0.35, turns: 2, target: .singleEnemy)
             )
         case .gale:
             // The turn-thief. No hard control at all: four scattered bolts
@@ -846,8 +868,7 @@ enum UnitDatabase {
                 hp: 450, atk: 33, def: 25, spd: 112,
                 auraHex: "#8AE68A",
                 leader: LeaderSkill(stat: .spd, amount: 0.24, scope: .pantheon(.greek)),
-                boltStatus: StatusSpec(.glancing, chance: 0.35, turns: 2, target: .singleEnemy),
-                essence: "essence_gale_mid"
+                boltStatus: StatusSpec(.glancing, chance: 0.35, turns: 2, target: .singleEnemy)
             )
         case .radiance:
             // All eyes on the king. The Eye of Panoptes provokes the enemy
@@ -862,8 +883,7 @@ enum UnitDatabase {
                 hp: 480, atk: 32, def: 28, spd: 106,
                 auraHex: "#FFE680",
                 leader: LeaderSkill(stat: .accuracy, amount: 0.35, scope: .pantheon(.greek)),
-                boltStatus: StatusSpec(.brand, chance: 0.35, turns: 2, target: .singleEnemy),
-                essence: "essence_radiance_mid"
+                boltStatus: StatusSpec(.brand, chance: 0.35, turns: 2, target: .singleEnemy)
             )
         case .umbra:
             // The Zeus beneath the earth. The black cloud puts the line to
@@ -877,8 +897,7 @@ enum UnitDatabase {
                 hp: 470, atk: 34, def: 26, spd: 104,
                 auraHex: "#A07CFF",
                 leader: LeaderSkill(stat: .critRate, amount: 0.24, scope: .allAllies),
-                boltStatus: StatusSpec(.attackDown, chance: 0.35, turns: 2, target: .singleEnemy),
-                essence: "essence_umbra_mid"
+                boltStatus: StatusSpec(.attackDown, chance: 0.35, turns: 2, target: .singleEnemy)
             )
         }
     }
@@ -887,6 +906,9 @@ enum UnitDatabase {
     /// everything that differs comes out of `zeusFlavour`.
     private static func zeusVariant(_ element: Element) -> UnitBlueprint {
         let f = zeusFlavour(element)
+        // The family's natural grade: what the gacha rolls, and what its
+        // awakening's bill is read off (`awakeningCost`).
+        let naturalStars = 5
 
         // The stormlord's five ways. Every form hits the whole line somewhere
         // and every form decides who gets to act; fire, the Scorching Sky, is
@@ -955,7 +977,7 @@ enum UnitDatabase {
             element: element,
             archetype: .god,
             role: f.role,
-            naturalStars: 5,
+            naturalStars: naturalStars,
             baseStats: Stats(
                 hp: f.hp, atk: f.atk, def: f.def, spd: f.spd,
                 critRate: 0.15, critDamage: 0.50,
@@ -1020,11 +1042,7 @@ enum UnitDatabase {
                 bonusDescription: "Accuracy +20%, Resistance +10%, and the King of Olympus passive is unlocked.",
                 statBonus: Stats(accuracy: 0.20, resistance: 0.10),
                 skillOverrides: [:],
-                essenceCost: [
-                    f.essence: 15,
-                    "essence_magic_mid": 10,
-                    "essence_magic_high": 5
-                ]
+                essenceCost: awakeningCost(element: element, naturalStars: naturalStars)
             ),
             // One mesh, five tints. Every variant loads the same `zeus` model.
             model: ModelSpec(

@@ -128,6 +128,9 @@ struct SettingsView: View {
     @State private var showResetConfirm = false
     @State private var showShop = false
     @State private var showMissions = false
+    @State private var showEvents = false
+    @State private var showSocial = false
+    @State private var warBattle: BattleContext?
     @State private var soundOn = !AudioLibrary.shared.isMuted
     @State private var musicOn = !AudioLibrary.shared.isMusicMuted
     @AppStorage(CameraDirector.cinematicKey) private var cinematicCamera = false
@@ -157,6 +160,30 @@ struct SettingsView: View {
             .sheet(isPresented: $showMissions) {
                 MissionsView()
                     .environmentObject(store)
+            }
+            .sheet(isPresented: $showEvents) {
+                EventsView(onClaim: { _ in store.claimEventGift() })
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showSocial) {
+                SocialView(
+                    social: store.social,
+                    onAttack: { target in
+                        showSocial = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { warBattle = .guildWar(target) }
+                    },
+                    onClaim: { grants in _ = store.receive(grants) }
+                )
+                .environmentObject(store)
+            }
+            .fullScreenCover(item: $warBattle) { context in
+                if case .guildWar(let target) = context, let engine = store.startWarAttack(target) {
+                    BattleView(model: BattleViewModel(engine: engine, context: context, store: store))
+                        .environmentObject(store)
+                } else {
+                    EmptyState(icon: "person.3", title: "No team", message: "Set an offence team in the Arena first.")
+                        .onTapGesture { warBattle = nil }
+                }
             }
             .sheet(isPresented: $showShop) {
                 ShopView()
@@ -196,6 +223,38 @@ struct SettingsView: View {
                     icon: "scroll.fill",
                     tint: Theme.gold,
                     badge: store.claimableRewards > 0 ? "\(store.claimableRewards)" : nil
+                )
+            }
+            .buttonStyle(PlateButtonStyle())
+
+            Button {
+                Juice.haptic(.light)
+                AudioLibrary.shared.play(.uiTap)
+                showEvents = true
+            } label: {
+                let gifts = EventCalendar.claimableCount(player: store.player)
+                tileFace(
+                    title: "Events",
+                    caption: "The week's boosts, the weekend's Hall, the Festival",
+                    icon: "calendar",
+                    tint: Theme.gold,
+                    badge: gifts > 0 ? "\(gifts)" : nil
+                )
+            }
+            .buttonStyle(PlateButtonStyle())
+
+            Button {
+                Juice.haptic(.light)
+                AudioLibrary.shared.play(.uiTap)
+                showSocial = true
+            } label: {
+                let pending = store.social.pendingCount
+                tileFace(
+                    title: "Summoners",
+                    caption: "Friends, mail, your guild and its war, the ranks",
+                    icon: "person.2.fill",
+                    tint: Theme.gold,
+                    badge: pending > 0 ? "\(pending)" : nil
                 )
             }
             .buttonStyle(PlateButtonStyle())

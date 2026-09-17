@@ -412,16 +412,31 @@ final class ModelLibrary {
                     var image: UIImage?
                     if let existing = property.contents as? UIImage {
                         image = existing
-                    } else if let url = property.contents as? URL, url.isFileURL {
-                        if url.pathExtension.lowercased() == "usdz", let member = url.fragment {
-                            let archive = archives[url.path] ?? USDZArchive(url: url)
-                            archives[url.path] = archive
-                            if let data = archive?.member(named: member) { image = UIImage(data: data) }
-                        } else if url.fragment == nil {
-                            image = UIImage(contentsOfFile: url.path)
+                    } else if let url = property.contents as? URL, url.isFileURL, url.pathExtension.lowercased() == "usdz" {
+                        // Run 175 showed the URL carries NO fragment: SceneKit
+                        // keeps the member's name to itself. The writer
+                        // (tools/character.py) names every texture by its
+                        // role, so the member is looked up by the role this
+                        // property plays; a file that lacks it is left to
+                        // SceneKit, and the archive is never handed to UIImage.
+                        let archive = archives[url.path] ?? USDZArchive(url: url)
+                        archives[url.path] = archive
+                        let role: String
+                        switch property {
+                        case material.diffuse: role = "base_color"
+                        case material.normal: role = "normal"
+                        case material.emission: role = "emissive"
+                        default: role = "metallic_roughness"
+                        }
+                        let candidates = url.fragment.map { [$0] } ?? ["textures/\(role).png", "textures/\(role).jpg"]
+                        for name in candidates {
+                            if let data = archive?.member(named: name), let read = UIImage(data: data) {
+                                image = read
+                                break
+                            }
                         }
                     } else if let path = property.contents as? String, !path.contains("#"),
-                              FileManager.default.fileExists(atPath: path) {
+                              !path.lowercased().hasSuffix(".usdz"), FileManager.default.fileExists(atPath: path) {
                         image = UIImage(contentsOfFile: path)
                     }
                     if let image, let ready = image.preparingForDisplay() {

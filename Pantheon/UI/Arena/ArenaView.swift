@@ -374,7 +374,7 @@ struct ArenaView: View {
                         .foregroundStyle(Theme.danger.opacity(0.9))
                     Text("·")
                         .foregroundStyle(Theme.textSecondary)
-                    Label("\(ArenaService.laurelsForWin(tier: record.tier))", systemImage: "laurel.leading")
+                    Label("\(Int((Double(ArenaService.laurelsForWin(tier: record.tier)) * EventCalendar.multiplier(for: .arenaLaurelsBoost)).rounded()))", systemImage: "laurel.leading")   // event
                         .foregroundStyle(Theme.success)
                 }
                 .font(Theme.numeric(10))

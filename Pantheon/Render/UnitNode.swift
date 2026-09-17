@@ -458,7 +458,7 @@ final class UnitNode: SCNNode {
 
         let action: SCNAction
         switch clip {
-        case .idle, .idleCombat:
+        case .idle, .idleCombat, .walk:
             // A `moveBy` that is interrupted half way leaves the container
             // where it stood, and over a battle of interruptions the bob
             // drifts, so the rest height is restored before it starts again.

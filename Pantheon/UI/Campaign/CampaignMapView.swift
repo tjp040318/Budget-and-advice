@@ -612,7 +612,7 @@ struct ChapterMapView: View {
                         Text("BOSS")
                     } else {
                         Image(systemName: "bolt.fill")
-                        Text("\(stage.energyCost)")
+                        Text("\(EventCalendar.energyCost(for: stage))")
                     }
                 }
                 .font(Theme.body(9).weight(.black))

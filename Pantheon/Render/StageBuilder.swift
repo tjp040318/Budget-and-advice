@@ -133,6 +133,33 @@ enum StageBuilder {
             Placement(asset: "prop_broken_column", position: SCNVector3(-6.0, 0, -0.4), standIn: .block),
             Placement(asset: "prop_broken_column", position: SCNVector3(-6.4, 0, -4.2), standIn: .block),
         ]
+        // The Labyrinth's own pieces (Meshy image-to-3D from Gemini concepts,
+        // 2026-09-17, 30 credits each): the Vault's bronze door stands at the
+        // back-left corner turned to the field, with a fallen pharaoh's head
+        // in the right wing and the canopic altar low in the near-left; the
+        // Lair grows dead trees at the back corners and one in the right
+        // wing over a bone pile; the Necropolis stands two sarcophagi at
+        // the back corners, the head behind the left column, the altar and
+        // the bones in the wings. Every mark is one the sets already use
+        // (wings at z −1.4 and beyond, nothing tall nearer than the rows).
+        let vaultSet = [
+            Placement(asset: "prop_vault_door", position: SCNVector3(-5.0, 0, -7.8), yaw: 20, scale: 0.9, standIn: .block),
+            Placement(asset: "prop_pharaoh_head", position: SCNVector3(6.4, 0, -3.8), yaw: -30, scale: 0.9, standIn: .block),
+            Placement(asset: "prop_canopic_jars", position: SCNVector3(-6.8, 0, 1.2), scale: 0.8, standIn: .block),
+        ]
+        let lairSet = [
+            Placement(asset: "prop_dead_tree", position: SCNVector3(-5.3, 0, -6.3), scale: 0.9, standIn: .block),
+            Placement(asset: "prop_dead_tree", position: SCNVector3(5.3, 0, -6.3), yaw: 140, scale: 0.9, standIn: .block),
+            Placement(asset: "prop_dead_tree", position: SCNVector3(6.6, 0, -1.4), yaw: 60, scale: 0.7, standIn: .block),
+            Placement(asset: "prop_bone_pile", position: SCNVector3(-6.6, 0, 1.0), scale: 0.9, standIn: .block),
+        ]
+        let necropolisSet = [
+            Placement(asset: "prop_sarcophagus", position: SCNVector3(-5.3, 0, -6.3), yaw: 15, standIn: .block),
+            Placement(asset: "prop_sarcophagus", position: SCNVector3(5.3, 0, -6.3), yaw: -15, standIn: .block),
+            Placement(asset: "prop_pharaoh_head", position: SCNVector3(-4.0, 0, -7.4), yaw: 40, scale: 0.9, standIn: .block),
+            Placement(asset: "prop_canopic_jars", position: SCNVector3(6.6, 0, -1.4), scale: 0.9, standIn: .block),
+            Placement(asset: "prop_bone_pile", position: SCNVector3(-6.6, 0, 1.0), scale: 0.8, standIn: .block),
+        ]
         // The Norse set: rune stones at the sides, a longship prow and the
         // world tree's roots at the back corners, hall pillars closing the
         // back, braziers on dragon-headed posts.
@@ -224,17 +251,17 @@ enum StageBuilder {
         // until theirs lands — `backdropName`).
         case .colossusVault:
             return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#8A7A64", rock: "rock_cliff",
-                          backdrop: environment.backdropName, props: colossi + columns + sphinxes,
+                          backdrop: environment.backdropName, props: colossi + columns + sphinxes + vaultSet,
                           braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#FFB050",
                           mistHex: "#B0A088", mistCount: 5, dustHex: "#E0C898")
         case .hydraLair:
             return Recipe(floor: "floor_moss", floorRepeats: 5, floorTint: "#7E9068", rock: "rock_cliff",
-                          backdrop: environment.backdropName, props: broken + [doric[2], doric[3]],
+                          backdrop: environment.backdropName, props: broken + [doric[2], doric[3]] + lairSet,
                           braziers: [braziers[0], braziers[1]], brazierAsset: "prop_tripod_brazier", flameHex: "#90FF90",
                           mistHex: "#98B088", mistCount: 14, dustHex: "#B8E0A0")
         case .necropolis:
             return Recipe(floor: "floor_sandstone", floorRepeats: 5, floorTint: "#8A7A80", rock: "rock_cliff",
-                          backdrop: environment.backdropName, props: obelisks + columns + sphinxes,
+                          backdrop: environment.backdropName, props: obelisks + columns + sphinxes + necropolisSet,
                           braziers: braziers, brazierAsset: "prop_brazier", flameHex: "#9C80FF",
                           mistHex: "#9C8CB0", mistCount: 9, dustHex: "#C8B0FF")
         // Rome: the Greek marble and props under Roman paintings until Rome's

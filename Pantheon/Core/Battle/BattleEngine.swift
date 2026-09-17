@@ -151,6 +151,13 @@ final class BattleEngine {
                     stats = BattleEngine.apply(stat: bonus.stat, amount: bonus.amount, to: stats, base: resolved.stats)
                 }
             }
+            // Regalia: the family's own item (`Regalia`). The three rate
+            // templates — Keen Edge's crit rate, Heavy Hand's crit damage, a
+            // Lasting Word's accuracy — are one flat stat each, added in a
+            // leader skill's terms; the other five are read at their hooks.
+            if let regalia = resolved.regalia, let stat = regalia.template.buildStat {
+                stats = BattleEngine.apply(stat: stat, amount: regalia.magnitude, to: stats, base: resolved.stats)
+            }
             return Combatant(
                 resolved: resolved,
                 side: side,
@@ -347,6 +354,9 @@ final class BattleEngine {
             events.append(.passiveTriggered(actor: combatants[idx].id, name: boon.displayName))
             events += changeAttackBar(index: idx, delta: boon.magnitude)
         }
+        // Regalia: First Off the Mark — the marksman's head start on the bar,
+        // announced under the item's own name; again as each wave walks on.
+        events += regaliaWaveStart()
         for idx in combatants.indices {
             events += firePassive(.onBattleStart, actorIndex: idx)
         }
@@ -822,13 +832,16 @@ final class BattleEngine {
                 continue
             }
 
-            let turns = spec.turns > 0 ? spec.turns : spec.kind.defaultDuration
+            // Regalia: a Lasting Word holds the debuffs it lands a turn longer
+            // from level III (never a stun, a freeze or a sleep).
+            let held = regaliaExtraTurns(actorIndex: actorIndex, kind: spec.kind)
+            let turns = (spec.turns > 0 ? spec.turns : spec.kind.defaultDuration) + held
             let magnitude: Double = {
                 switch spec.kind {
                 case .shield:
-                    return spec.magnitude > 0
-                        ? combatants[actorIndex].maxHealth * spec.magnitude
-                        : combatants[actorIndex].maxHealth * 0.15
+                    // Regalia: a Bulwark's shields are larger.
+                    let fraction = spec.magnitude > 0 ? spec.magnitude : 0.15
+                    return combatants[actorIndex].maxHealth * fraction * regaliaShieldScale(actorIndex: actorIndex)
                 case .bomb:
                     return combatants[actorIndex].currentStats.atk * max(spec.magnitude, 4.0)
                 default:
@@ -865,17 +878,21 @@ final class BattleEngine {
 
         switch utility {
         case .healTargetMaxHealth(let fraction, let selector):
+            // Regalia: a Wellspring's heals are larger.
+            let scale = regaliaHealScale(actorIndex: actorIndex)
             for idx in resolveTargets(selector, actorIndex: actorIndex, explicit: explicit) {
-                events += applyHealing(targetIndex: idx, amount: combatants[idx].maxHealth * fraction, sourceID: actorID)
+                events += applyHealing(targetIndex: idx, amount: combatants[idx].maxHealth * fraction * scale, sourceID: actorID)
             }
 
         case .healFromAttack(let multiplier, let selector):
-            let amount = combatants[actorIndex].currentStats.atk * multiplier
+            let amount = combatants[actorIndex].currentStats.atk * multiplier * regaliaHealScale(actorIndex: actorIndex)
             for idx in resolveTargets(selector, actorIndex: actorIndex, explicit: explicit) {
                 events += applyHealing(targetIndex: idx, amount: amount, sourceID: actorID)
             }
 
-        case .attackBarChange(let delta, let chance, let selector):
+        case .attackBarChange(let rawDelta, let chance, let selector):
+            // Regalia: a Thief of Turns' drains and gains are larger.
+            let delta = rawDelta * regaliaBarScale(actorIndex: actorIndex)
             for idx in resolveTargets(selector, actorIndex: actorIndex, explicit: explicit) {
                 if delta < 0 {
                     let landed = DamageCalculator.landsDebuff(
@@ -1104,7 +1121,24 @@ final class BattleEngine {
         waveIndex += 1
         let arrivals = BattleEngine.buildSide(wave, side: .opponent, mode: mode)
         combatants.append(contentsOf: arrivals)
-        return [.waveStarted(wave: waveIndex, count: waveCount, opponents: arrivals)]
+        var events: [BattleEvent] = [.waveStarted(wave: waveIndex, count: waveCount, opponents: arrivals)]
+        // Regalia: First Off the Mark is first against every fresh line, not
+        // only the first — a head start spent once on a three-wave stage
+        // measured nothing (`balance.py --regalia`).
+        events += regaliaWaveStart()
+        return events
+    }
+
+    /// The marksman's head start on the bar, at the battle's start and as
+    /// each later wave walks on.
+    private func regaliaWaveStart() -> [BattleEvent] {
+        var events: [BattleEvent] = []
+        for idx in combatants.indices where combatants[idx].isAlive {
+            guard let regalia = combatants[idx].regalia, regalia.template == .firstOffTheMark else { continue }
+            events.append(.passiveTriggered(actor: combatants[idx].id, name: regalia.name))
+            events += changeAttackBar(index: idx, delta: regalia.magnitude)
+        }
+        return events
     }
 
     private func finishBattle(outcome: BattleOutcome) -> BattleEvent {
@@ -1445,6 +1479,37 @@ final class BattleEngine {
                 : defender.profile.offElementMultiplier
         }
         return multiplier
+    }
+
+    // MARK: Regalia at the hooks
+
+    /// The family's own item (`Regalia`; `Docs/PLAN.md`, *Artifacts — the
+    /// last item on the order*). The three rate templates are already in
+    /// `baseStats` from `buildSide`, Unbowed is read in `DamageCalculator`
+    /// and First Off the Mark at the battle's start; the three below scale
+    /// the thing the kit does where it is done. 1 (or 0 turns) for every
+    /// unit with none, so a fight without a regalia in it never moves.
+    private func regaliaShieldScale(actorIndex: Int) -> Double {
+        guard let regalia = combatants[actorIndex].regalia, regalia.template == .bulwark else { return 1 }
+        return 1 + regalia.magnitude
+    }
+
+    private func regaliaHealScale(actorIndex: Int) -> Double {
+        guard let regalia = combatants[actorIndex].regalia, regalia.template == .wellspring else { return 1 }
+        return 1 + regalia.magnitude
+    }
+
+    private func regaliaBarScale(actorIndex: Int) -> Double {
+        guard let regalia = combatants[actorIndex].regalia, regalia.template == .thiefOfTurns else { return 1 }
+        return 1 + regalia.magnitude
+    }
+
+    /// A Lasting Word's extra turn on a debuff, from level III: never on a
+    /// stun, a freeze or a sleep, which would double every hard control.
+    private func regaliaExtraTurns(actorIndex: Int, kind: StatusKind) -> Int {
+        guard kind.isDebuff, !kind.isHardCC,
+              let regalia = combatants[actorIndex].regalia, regalia.extendsDebuffs else { return 0 }
+        return 1
     }
 
     // MARK: Boons at the damage roll

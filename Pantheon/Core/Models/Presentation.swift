@@ -170,11 +170,15 @@ enum AnimationClip: String, Codable, CaseIterable, Sendable {
     case death
     case victory
     case summonReveal = "summon_reveal"
+    /// The island's wander (Meshy preset 30, "Casual Walk"): a loop the
+    /// figures stroll the sand on. Families rigged before 2026-09-17 have
+    /// none — their rig tasks are gone from Meshy — and stand instead.
+    case walk
 
     /// Clips that must loop rather than play once.
     var loops: Bool {
         switch self {
-        case .idle, .idleCombat, .castLoop: return true
+        case .idle, .idleCombat, .castLoop, .walk: return true
         default: return false
         }
     }

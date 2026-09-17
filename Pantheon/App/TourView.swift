@@ -44,7 +44,7 @@ struct TourView: View {
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
         ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
-        ("awaken", 2), ("island_decor", 2),
+        ("awaken", 2), ("island_decor", 2), ("events", 2), ("regalia", 2), ("summoners", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -128,6 +128,28 @@ struct TourView: View {
             // The island's decoration sheet: the catalogue with the tour's
             // brazier and sphinx owned and standing, the rest priced.
             IslandDecorView()
+        case "events":
+            // The events calendar on a Festival Monday (2026-09-28, week
+            // 143 from the calendar's epoch): the gift band, the TODAY card
+            // and the weekend's headline all on one frame, whatever day CI
+            // runs on.
+            EventsView(now: Self.festivalMonday, onClaim: { _ in nil })
+        case "summoners":
+            // The social screen on the seeded offline world (the CI build
+            // carries no iCloud entitlement): the Guild tab by default, and
+            // `-tour-social-tab friends|inbox|ranks` for the others, which
+            // the CI job relaunches for.
+            SocialView(social: SocialService(backend: LocalSocialBackend(seed: 7, persisting: false)),
+                       opening: SocialTab.pinnedFromArguments ?? .guild, onAttack: { _ in }, onClaim: { _ in })
+        case "regalia":
+            // The Regalia sheet of the seed's awakened unit, whose item the
+            // seed sets to level III so the ladder shows a rung climbed and
+            // rungs to go.
+            if let unit = store.player.units.first(where: { $0.isAwakened }) ?? store.player.units.first {
+                RegaliaSheet(unitID: unit.id)
+            } else {
+                CollectionView()
+            }
         case "collection":
             CollectionView()
         case "collection_stage":
@@ -377,6 +399,11 @@ struct TourView: View {
 
     /// The unit the awaken step opens on: not yet awakened, with an awakened
     /// form to take, the highest grade and level first.
+    /// A Monday of a Festival week, for the events step.
+    private static var festivalMonday: Date {
+        EventCalendar.calendar.date(from: DateComponents(year: 2026, month: 9, day: 28, hour: 12)) ?? Date()
+    }
+
     private var awakeningCandidate: Unit? {
         store.player.units
             .filter { !$0.isAwakened && UnitDatabase.blueprint($0.blueprintID)?.awakening != nil }

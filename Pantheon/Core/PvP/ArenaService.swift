@@ -240,12 +240,14 @@ enum ArenaService {
         )
     }
 
-    /// Applies the result of an arena attack.
+    /// Applies the result of an arena attack. `now` is the calendar's day for
+    /// the laurels; a test pins it, the game reads the clock.
     @discardableResult
     static func applyResult(
         _ result: BattleResult,
         against opponent: ArenaOpponent,
-        player: inout Player
+        player: inout Player,
+        now: Date = Date()
     ) -> (pointsDelta: Int, laurels: Int) {
         let won = result.outcome == .victory
         let delta = won
@@ -270,7 +272,9 @@ enum ArenaService {
             player.arena.losses += 1
         }
 
-        let laurels = won ? laurelsForWin(tier: player.arena.tier) : 3
+        // event: Thursday's Double Laurels, won or lost.
+        let base = won ? laurelsForWin(tier: player.arena.tier) : 3
+        let laurels = Int(Double(base) * EventCalendar.multiplier(for: .arenaLaurelsBoost, at: now))
         player.wallet.laurels += laurels
         return (delta, laurels)
     }

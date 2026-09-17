@@ -82,6 +82,45 @@ enum ShopService {
         return grants
     }
 
+    /// One awakening in a box: exactly what `UnitDatabase.awakeningCost`
+    /// asks of the element at the 5★ recipe — the dearest bill, so the box
+    /// covers a 4★'s as well with essence over. The caches exist so an
+    /// awakening can be tested without a week of Halls (2026-09-11), and
+    /// they READ the recipe rather than restate it: when the ladder moved
+    /// the numbers on 2026-09-17 the boxes moved with it, and the subtitle
+    /// (`awakeningCacheSubtitle`) is written off the same lines.
+    static func awakeningCache(_ element: Element) -> [Grant] {
+        awakeningBill(element).map { Grant.essences($0.id, $0.count) }
+    }
+
+    /// "Everything one fire awakening asks for at the 5★ recipe: 15 Mid
+    /// Ember Essence, 10 High Ember Essence, 10 Mid Magic Essence and 5 High
+    /// Magic Essence. A 4★ asks for less and keeps the rest." The bill in
+    /// words, so the shelf can never promise a recipe the dais no longer asks.
+    static func awakeningCacheSubtitle(_ element: Element, word: String) -> String {
+        let lines = awakeningBill(element).map { "\($0.count) \(EssenceCatalog.name(for: $0.id))" }
+        let listed: String
+        if lines.count > 1 {
+            listed = lines.dropLast().joined(separator: ", ") + " and " + lines[lines.count - 1]
+        } else {
+            listed = lines.joined()
+        }
+        return "Everything one \(word) awakening asks for at the 5★ recipe: \(listed). A 4★ asks for less and keeps the rest."
+    }
+
+    /// The 5★ recipe of an element as (id, count) lines in reading order:
+    /// the element's essence before Magic, Low before Mid before High.
+    private static func awakeningBill(_ element: Element) -> [(id: String, count: Int)] {
+        let tiers = ["low", "mid", "high"]
+        func rank(_ id: String) -> Int {
+            let tier = tiers.firstIndex { id.hasSuffix("_\($0)") } ?? tiers.count
+            return (id.hasPrefix("essence_magic_") ? 10 : 0) + tier
+        }
+        return UnitDatabase.awakeningCost(element: element, naturalStars: 5)
+            .map { (id: $0.key, count: $0.value) }
+            .sorted { rank($0.id) < rank($1.id) }
+    }
+
     enum Section: String, CaseIterable, Identifiable, Sendable {
         case daily = "Daily"
         /// The rolled shelf. Its wares are not in `items` — they are derived
@@ -213,27 +252,30 @@ enum ShopService {
         Item(id: "essence_magic_high_2", title: "High Magic Essence ×2", subtitle: "The rare awakening material.",
              icon: "drop.triangle.fill", price: Price(currency: .divinity, amount: 80),
              grant: .essences("essence_magic_high", 2), section: .essences),
-        // One awakening in a box: a 5★'s bill of its element's essence and the
-        // magic ones (`UnitDatabase.family`: 15 element, 10 mid magic, 5 high).
-        Item(id: "awakening_cache_ember", title: "Cache of Embers", subtitle: "Everything one fire awakening asks for.",
+        // One awakening in a box, read off the recipe itself at the 5★ grade
+        // (`awakeningCache`): the element's Mid and High and the Magic Mid and
+        // High in the counts `UnitDatabase.awakeningCost` asks, the subtitle
+        // written off the same lines; a 4★ needs less of each and keeps the
+        // rest. The Testing stall's `test_essences` pack is the other road.
+        Item(id: "awakening_cache_ember", title: "Cache of Embers", subtitle: ShopService.awakeningCacheSubtitle(.ember, word: "fire"),
              icon: "flame.fill", price: Price(currency: .drachma, amount: 60_000),
-             grant: .bundle([.essences("essence_ember_mid", 15), .essences("essence_magic_mid", 10), .essences("essence_magic_high", 5)]),
+             grant: .bundle(ShopService.awakeningCache(.ember)),
              section: .essences),
-        Item(id: "awakening_cache_tide", title: "Cache of the Tide", subtitle: "Everything one water awakening asks for.",
+        Item(id: "awakening_cache_tide", title: "Cache of the Tide", subtitle: ShopService.awakeningCacheSubtitle(.tide, word: "water"),
              icon: "drop.fill", price: Price(currency: .drachma, amount: 60_000),
-             grant: .bundle([.essences("essence_tide_mid", 15), .essences("essence_magic_mid", 10), .essences("essence_magic_high", 5)]),
+             grant: .bundle(ShopService.awakeningCache(.tide)),
              section: .essences),
-        Item(id: "awakening_cache_gale", title: "Cache of the Gale", subtitle: "Everything one wind awakening asks for.",
+        Item(id: "awakening_cache_gale", title: "Cache of the Gale", subtitle: ShopService.awakeningCacheSubtitle(.gale, word: "wind"),
              icon: "wind", price: Price(currency: .drachma, amount: 60_000),
-             grant: .bundle([.essences("essence_gale_mid", 15), .essences("essence_magic_mid", 10), .essences("essence_magic_high", 5)]),
+             grant: .bundle(ShopService.awakeningCache(.gale)),
              section: .essences),
-        Item(id: "awakening_cache_radiance", title: "Cache of Radiance", subtitle: "Everything one light awakening asks for.",
+        Item(id: "awakening_cache_radiance", title: "Cache of Radiance", subtitle: ShopService.awakeningCacheSubtitle(.radiance, word: "light"),
              icon: "sun.max.fill", price: Price(currency: .divinity, amount: 300),
-             grant: .bundle([.essences("essence_radiance_mid", 15), .essences("essence_magic_mid", 10), .essences("essence_magic_high", 5)]),
+             grant: .bundle(ShopService.awakeningCache(.radiance)),
              section: .essences),
-        Item(id: "awakening_cache_umbra", title: "Cache of Umbra", subtitle: "Everything one dark awakening asks for.",
+        Item(id: "awakening_cache_umbra", title: "Cache of Umbra", subtitle: ShopService.awakeningCacheSubtitle(.umbra, word: "dark"),
              icon: "moon.fill", price: Price(currency: .divinity, amount: 300),
-             grant: .bundle([.essences("essence_umbra_mid", 15), .essences("essence_magic_mid", 10), .essences("essence_magic_high", 5)]),
+             grant: .bundle(ShopService.awakeningCache(.umbra)),
              section: .essences),
 
         Item(id: "relic_laurels_6", title: "Champion's relic, 6★", subtitle: "One random 6★ relic, for arena laurels.",

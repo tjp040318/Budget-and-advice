@@ -99,6 +99,60 @@ final class ProgressionTests: XCTestCase {
         XCTAssertThrowsError(try ProgressionService.awaken(&unit, essences: &essences))
     }
 
+    /// The ladder's INTENT (Docs/PLAN.md, *Essence tiers*, 2026-09-17): the
+    /// tier an awakening spends climbs with the family's NATURAL grade, so
+    /// the Hall floor a player farms follows the unit on the dais. A 3★
+    /// spends the element's Low and never its High, a 5★ its High and never
+    /// its Low, a 4★ sits between, Magic essence rides alongside at every
+    /// grade, and every line names a real essence. The counts are
+    /// `balance.py --essences`'s to measure (`recipe_shipped`), not this
+    /// test's to pin.
+    func testAwakeningRecipeClimbsTheEssenceLadder() {
+        for element in Element.allCases {
+            let low = "essence_\(element.rawValue)_low"
+            let high = "essence_\(element.rawValue)_high"
+            let common = UnitDatabase.awakeningCost(element: element, naturalStars: 3)
+            let hero = UnitDatabase.awakeningCost(element: element, naturalStars: 4)
+            let legend = UnitDatabase.awakeningCost(element: element, naturalStars: 5)
+
+            XCTAssertNotNil(common[low], "\(element.rawValue): a 3★ awakens on the first floors' Low")
+            XCTAssertNil(common[high], "\(element.rawValue): a 3★ never asks for the High only B5 farms")
+            XCTAssertNotNil(legend[high], "\(element.rawValue): a 5★ is awakened on B5's High")
+            XCTAssertNil(legend[low], "\(element.rawValue): a 5★ has no use for Low")
+            XCTAssertNotNil(hero[high], "\(element.rawValue): a 4★ spends the Mid floors' tier and some High")
+            XCTAssertNil(hero[low], "\(element.rawValue): a 4★ is past the Low floors")
+
+            // The High climbs with the grade: a 5★ asks more of it than a 4★.
+            let heroHigh: Int = hero[high] ?? 0
+            let legendHigh: Int = legend[high] ?? 0
+            XCTAssertLessThan(heroHigh, legendHigh, element.rawValue)
+
+            for recipe in [common, hero, legend] {
+                let magic = recipe.keys.filter { $0.hasPrefix("essence_magic_") }
+                XCTAssertFalse(magic.isEmpty, "\(element.rawValue): Magic essence at every grade")
+                for (id, count) in recipe {
+                    XCTAssertNotNil(EssenceCatalog.names[id], "\(id) is not in the catalogue")
+                    XCTAssertGreaterThan(count, 0, id)
+                }
+            }
+        }
+    }
+
+    /// ONE recipe feeds every blueprint: the seven hand-written families and
+    /// the table's rows all read `UnitDatabase.awakeningCost` off their
+    /// element and natural grade, so no family can carry a bill of its own
+    /// (Anubis, a natural 4★, paid a 5★'s for a week before the ladder).
+    func testEveryAwakeningReadsTheOneRecipe() {
+        var awakenable = 0
+        for blueprint in UnitDatabase.all {
+            guard let awakening = blueprint.awakening else { continue }
+            awakenable += 1
+            let expected = UnitDatabase.awakeningCost(element: blueprint.element, naturalStars: blueprint.naturalStars)
+            XCTAssertEqual(awakening.essenceCost, expected, blueprint.id)
+        }
+        XCTAssertGreaterThan(awakenable, 0, "nothing in the roster awakens")
+    }
+
     // MARK: - Fusion
     //
     // The recipe table is thirty blueprint ids typed by hand, and a wrong one

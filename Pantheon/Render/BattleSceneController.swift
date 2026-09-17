@@ -73,7 +73,10 @@ final class BattleSceneController: NSObject {
         let bespoke: [String: [AnimationClip: Double]] = [
             "anubis":  [.attackBasic: 0.38, .attackHeavy: 0.50, .ultimate: 0.55],
             "sekhmet": [.attackBasic: 0.45, .attackHeavy: 0.42, .ultimate: 0.45],
-            "zeus":    [.attackBasic: 0.47, .attackHeavy: 0.40, .ultimate: 0.68],
+            // Zeus's ultimate is the 2026-09-17 take (the first one's motion
+            // task had expired at Meshy before the meshy-7 rig could use it):
+            // arms overhead to 0.3, a crouched lunge, the hurl at 0.78.
+            "zeus":    [.attackBasic: 0.47, .attackHeavy: 0.40, .ultimate: 0.78],
             "ares":    [.attackBasic: 0.47, .attackHeavy: 0.50, .ultimate: 0.45],
             "thoth":   [.attackBasic: 0.55, .attackHeavy: 0.60, .ultimate: 0.65],
         ]

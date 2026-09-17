@@ -59,7 +59,7 @@ enum SweepService {
     /// it at the moment he wanted something to happen: "Three-star this stage
     /// first" tells him what to do, where "requirements not met" tells him
     /// nothing.
-    static func refusal(_ stage: Stage, player: Player) -> String? {
+    static func refusal(_ stage: Stage, player: Player, now: Date = Date()) -> String? {
         if !isMastered(stage, player: player) {
             let pips = player.stageStars?[stage.id] ?? 0
             return "Three-star this stage first — you have \(pips) of 3."
@@ -67,16 +67,20 @@ enum SweepService {
         if !isPowered(stage, player: player) {
             return "Your team is \(teamPower(player)) power against this stage's \(stage.recommendedPower)."
         }
-        if player.wallet.energy < stage.energyCost {
-            return "A sweep costs the same energy as a fight: \(stage.energyCost) a run."
+        // event: a run costs what the day charges a fought one.
+        let cost = EventCalendar.energyCost(for: stage, at: now)
+        if player.wallet.energy < cost {
+            return "A sweep costs the same energy as a fight: \(cost) a run."
         }
         return nil
     }
 
     /// How many runs the energy in the wallet pays for, capped at the maximum.
-    static func affordableRuns(_ stage: Stage, player: Player) -> Int {
-        guard stage.energyCost > 0 else { return maximumRuns }
-        return min(maximumRuns, player.wallet.energy / stage.energyCost)
+    static func affordableRuns(_ stage: Stage, player: Player, now: Date = Date()) -> Int {
+        // event: the half-energy day pays for twice the runs.
+        let cost = EventCalendar.energyCost(for: stage, at: now)
+        guard cost > 0 else { return maximumRuns }
+        return min(maximumRuns, player.wallet.energy / cost)
     }
 
     /// What a swept run is paid as: the clean three-star clear the player has
@@ -132,6 +136,8 @@ enum SweepService {
             summed.boonCachesEarned += outcome.boonCachesEarned
             for (id, levels) in outcome.leveledUnits { summed.leveledUnits[id, default: 0] += levels }
         }
+        // event: the batch wears the boosts its runs took, for the receipt.
+        summed.eventBoosts = outcomes.first?.eventBoosts ?? .flat
         return summed
     }
 }

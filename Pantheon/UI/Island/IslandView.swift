@@ -27,6 +27,11 @@ struct IslandView: View {
     @State private var pressed: String?
     @State private var showShop = false
     @State private var showMissions = false
+    @State private var showEvents = false
+    @State private var showSocial = false
+    /// A guild war attack chosen on the Summoners sheet: the sheet closes,
+    /// then the fight opens over the island the way the arena's does.
+    @State private var warBattle: BattleContext?
     @State private var showDecor = false
     /// The chapter whose story card is up, held here between the tap on the
     /// gate and the campaign opening behind it.
@@ -211,6 +216,30 @@ struct IslandView: View {
             MissionsView()
                 .environmentObject(store)
         }
+        .sheet(isPresented: $showEvents) {
+            EventsView(onClaim: { _ in store.claimEventGift() })
+                .environmentObject(store)
+        }
+        .sheet(isPresented: $showSocial) {
+            SocialView(
+                social: store.social,
+                onAttack: { target in
+                    showSocial = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { warBattle = .guildWar(target) }
+                },
+                onClaim: { grants in _ = store.receive(grants) }
+            )
+            .environmentObject(store)
+        }
+        .fullScreenCover(item: $warBattle) { context in
+            if case .guildWar(let target) = context, let engine = store.startWarAttack(target) {
+                BattleView(model: BattleViewModel(engine: engine, context: context, store: store))
+                    .environmentObject(store)
+            } else {
+                EmptyState(icon: "person.3", title: "No team", message: "Set an offence team in the Arena first.")
+                    .onTapGesture { warBattle = nil }
+            }
+        }
         .sheet(isPresented: $showDecor) {
             IslandDecorView()
                 .environmentObject(store)
@@ -383,6 +412,58 @@ struct IslandView: View {
                     }
                 }
                 // The 36pt disc is the look; the target is 44.
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+            }
+            .buttonStyle(PlateButtonStyle())
+            // Summoners: friends, mail, the guild and the ranks; requests
+            // and unclaimed mail counted in red like the missions.
+            Button {
+                Juice.haptic(.light)
+                AudioLibrary.shared.play(.uiTap)
+                showSocial = true
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    roundGlyph("person.2.fill")
+                    let pending = store.social.pendingCount
+                    if pending > 0 {
+                        Text("\(pending)")
+                            .font(Theme.numeric(10).weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .frame(minWidth: 16)
+                            .background(Capsule().fill(Theme.danger))
+                            .overlay(Capsule().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
+                            .offset(x: 6, y: -4)
+                    }
+                }
+                .frame(width: 44, height: 44)
+                .contentShape(Circle())
+            }
+            .buttonStyle(PlateButtonStyle())
+            // Events: the week's calendar beside the missions, with the
+            // Festival's unclaimed gifts counted the same red way.
+            Button {
+                Juice.haptic(.light)
+                AudioLibrary.shared.play(.uiTap)
+                showEvents = true
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    roundGlyph("calendar")
+                    let gifts = EventCalendar.claimableCount(player: player)
+                    if gifts > 0 {
+                        Text("\(gifts)")
+                            .font(Theme.numeric(10).weight(.bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .frame(minWidth: 16)
+                            .background(Capsule().fill(Theme.danger))
+                            .overlay(Capsule().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
+                            .offset(x: 6, y: -4)
+                    }
+                }
                 .frame(width: 44, height: 44)
                 .contentShape(Circle())
             }

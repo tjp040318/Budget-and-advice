@@ -75,7 +75,7 @@ struct SweepButton: View {
                     .font(Theme.body(10))
                     .foregroundStyle(Theme.danger)
             } else {
-                Text("No battle — \(stage.energyCost * effectiveRuns) energy")
+                Text("No battle — \(EventCalendar.energyCost(for: stage) * effectiveRuns) energy")
                     .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
             }

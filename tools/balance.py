@@ -20,6 +20,8 @@ the engine; it is the spreadsheet a designer would keep, made executable.
     python3 tools/balance.py --raids    # the two raid bosses and their mechanics
     python3 tools/balance.py --relics   # quality odds, whetstone and gem ranges, the power-up bill
     python3 tools/balance.py --boons    # the nine boons' lift on five fights, and the socket's sources
+    python3 tools/balance.py --events   # the event calendar: the week, the wheel, the multiplier matrix
+    python3 tools/balance.py --regalia  # the eight regalia templates at I, III and V on two fights
 
 If a constant changes in Swift, change it here and re-run.
 """
@@ -91,6 +93,29 @@ BOON_SOURCES = {"Titan at S and better": (0.25, "6*"),                          
 # anything three metres tall) — what Giant-slayer reads.
 BOSS_IDS = {"apep", "boss_hydra", "boss_jotunn", "boss_colossus", "boss_unwrapped_king",
             "boss_bronze_colossus", "boss_longmen_dragon"}
+
+# The Regalia — must match Core/Models/Regalia.swift and Core/Progression/RegaliaService.swift.
+# ONE named item per family, unlocked by awakening, levelled I-V by duplicates
+# fed past the skill-up cap; its passive is the kit's template. No RNG in it.
+REGALIA = {  # template: the five magnitudes, level I first        RegaliaTemplate.magnitudes
+    "keenEdge":        [0.04, 0.06, 0.08, 0.10, 0.12],   # striker: crit rate, flat
+    "heavyHand":       [0.06, 0.09, 0.12, 0.15, 0.18],   # duelist: crit damage, flat
+    "firstOffTheMark": [0.10, 0.15, 0.20, 0.25, 0.30],   # marksman: attack bar as the battle begins and as each wave walks on
+    "unbowed":         [0.15, 0.20, 0.25, 0.30, 0.40],   # bruiser: +N% defence while under half health
+    "bulwark":         [0.10, 0.15, 0.20, 0.25, 0.35],   # warden: the shields it casts are N% larger
+    "wellspring":      [0.06, 0.09, 0.12, 0.15, 0.20],   # healer: the heals it casts are N% larger
+    "lastingWord":     [0.05, 0.08, 0.10, 0.12, 0.15],   # oracle: accuracy, flat; debuffs held a turn longer from III
+    "thiefOfTurns":    [0.15, 0.20, 0.25, 0.30, 0.40],   # trickster: attack-bar drains and gains N% larger
+}
+REGALIA_KITS = {"striker": "keenEdge", "duelist": "heavyHand", "marksman": "firstOffTheMark",   # RegaliaTemplate.template(for:)
+                "bruiser": "unbowed", "warden": "bulwark", "healer": "wellspring",
+                "oracle": "lastingWord", "trickster": "thiefOfTurns"}
+REGALIA_RULES = {"levels": 5, "unbowedBelow": 0.5, "lastingWordFrom": 3}   # RegaliaTemplate.levels / unbowedBelow / lastingWordExtendsFrom
+REGALIA_HANDWRITTEN = {  # UnitDatabase.handwrittenRegaliaTemplates
+    "anubis": "lastingWord", "sekhmet": "heavyHand", "thoth": "wellspring", "shabti": "keenEdge",
+    "zeus": "keenEdge", "ares": "thiefOfTurns", "heracles": "unbowed", "perseus": "firstOffTheMark",
+    "hoplite": "bulwark", "satyr": "wellspring", "harpy": "thiefOfTurns",
+}
 
 def sub_stat_base(kind, grade=6):
     return SUB_STAT_BASE[kind] * (1 + (grade - 1) * SUB_GRADE_SCALE)
@@ -168,6 +193,13 @@ class Fighter:
     shield: float = 0.0
     atk_up: int = 0
     regen: int = 0
+    # The family's regalia, (template, magnitude, level) or None. `knock` is
+    # the trickster's bar knock on its second skill, (delta, chance), and
+    # `shield_cast` the warden's wall as a fraction of max health — both None
+    # unless `--regalia` arms them, so no other report's fight moves.
+    regalia: object = None
+    knock: object = None
+    shield_cast: object = None
 
     def __post_init__(self):
         self.seq = next(_SEQ)
@@ -238,6 +270,41 @@ def boon_after_hit(actor, dealt):
     actor.hp += healed
     return healed
 
+def regalia_scale(f, template):
+    """1 + the magnitude when the fighter's regalia is the template, else 1:
+    BattleEngine.regaliaShieldScale / regaliaHealScale / regaliaBarScale."""
+    r = f.regalia
+    return 1 + r[1] if r and r[0] == template else 1.0
+
+def regalia_def(f):
+    """Unbowed: the bruiser's defence while under half health (DamageCalculator)."""
+    r = f.regalia
+    if r and r[0] == "unbowed" and f.hp / f.maxhp < REGALIA_RULES["unbowedBelow"]:
+        return 1 + r[1]
+    return 1.0
+
+def regalia_hold(f):
+    """A Lasting Word from level III: a debuff it lands holds a turn longer
+    (BattleEngine.regaliaExtraTurns) — never a stun, which the sim keeps at one."""
+    r = f.regalia
+    return 1 if r and r[0] == "lastingWord" and r[2] >= REGALIA_RULES["lastingWordFrom"] else 0
+
+def regalia_battle_start(fighters):
+    """First Off the Mark: the marksman's head start on the bar, at the
+    battle's start and as each wave walks on — BattleEngine.regaliaWaveStart."""
+    for f in fighters:
+        if f.alive and f.regalia and f.regalia[0] == "firstOffTheMark":
+            f.atb = min(1.0, f.atb + f.regalia[1])
+
+def apply_regalia(team, template, level):
+    """A team wearing one template at a level: the two flat rate templates go
+    on the stats (BattleEngine.buildSide); the rest are read at the hooks."""
+    mag = REGALIA[template][level - 1]
+    for f in team:
+        f.regalia = (template, mag, level)
+        if template == "keenEdge": f.crit = min(1.0, f.crit + mag)
+        elif template == "heavyHand": f.critdmg += mag
+
 # Pantheon resonance — Core/Models/Resonance.swift and
 # Core/Progression/ResonanceService.swift, mirrored. A pair of one pantheon
 # lights rank I, three or more rank II; four different pantheons the Concord.
@@ -296,7 +363,7 @@ def resolve_hit(att, dfn, mult, defign, missbonus, rng, sure=False):
     base = att.atk * mult
     if missbonus:
         base *= 1 + missbonus * (1 - dfn.hp / dfn.maxhp)
-    d = dfn.dfn * (0.30 if dfn.defbreak > 0 else 1.0)
+    d = dfn.dfn * (0.30 if dfn.defbreak > 0 else 1.0) * regalia_def(dfn)
     base *= mitigation(d, defign)
     m = matchup(att.bp.element, dfn.bp.element)
     base *= {"advantage": ADVANTAGE_MULT, "neutral": 1.0, "disadvantage": DISADVANTAGE_MULT}[m]
@@ -323,7 +390,8 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
     ka_spent, mandate_spent, legion_spent = set(), set(), set()
     def note(key, side, amount):
         if stats is not None and amount:
-            stats[key][side] = stats[key].get(side, 0.0) + amount
+            bucket = stats.setdefault(key, {})
+            bucket[side] = bucket.get(side, 0.0) + amount
     def allies_of(f):
         return [x for x in (team_a if f.side == "a" else team_b) if x.alive and x is not f]
     def fell(f):
@@ -346,6 +414,9 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
         if actor.atk_up > 0: actor.atk_up -= 1
     if first_wave:
         boon_battle_start(all_f)
+    # First Off the Mark fires against every wave, not the first alone
+    # (BattleEngine.regaliaWaveStart).
+    regalia_battle_start(all_f)
     turns = 0
     while turns < MAX_TURNS:
         alive = [f for f in all_f if f.alive]
@@ -358,6 +429,9 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
         if actor is None: continue
         actor.atb = 0.0
         turns += 1
+        # Each side's own actions, for the tempo readings (`--regalia`): a
+        # head start or a knock buys actions, which a per-turn figure hides.
+        note("turns", actor.side, 1)
         for i in range(len(actor.cds)):
             actor.cds[i] = max(0, actor.cds[i] - 1)
         if actor.defbreak > 0: actor.defbreak -= 1
@@ -394,16 +468,41 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
         ready = [i for i, s in enumerate(actor.bp.skills) if actor.cds[i] == 0]
         allies = [f for f in (team_a if actor.side == "a" else team_b) if f.alive]
 
+        # A skill of no damage named for a break — the umbra oracle's and
+        # trickster's "Line Break (Def Break 60%)" — is a line-wide break,
+        # cast when a foe stands unbroken; it was read as a heal before
+        # 2026-09-17, which is what left the oracle's regalia unmeasurable.
+        break_idx = next((i for i in ready if actor.bp.skills[i][1] == 0.0 and "break" in actor.bp.skills[i][0].lower()), None)
+        if break_idx is not None and any(f.defbreak == 0 for f in foes):
+            bname = actor.bp.skills[break_idx][0]
+            actor.cds[break_idx] = actor.bp.skills[break_idx][3]
+            for t in foes:
+                if rng.random() < proc(bname, "def break", 0.60): t.defbreak = 2 + regalia_hold(actor)
+            end_turn(actor)
+            continue
         # Heal when someone actually needs it, damage otherwise. Without this the
         # model cannot see what a support kit is for.
-        heal_idx = next((i for i in ready if actor.bp.skills[i][1] == 0.0), None)
+        heal_idx = next((i for i in ready if actor.bp.skills[i][1] == 0.0 and "break" not in actor.bp.skills[i][0].lower()), None)
         neediest = min((f.hp / f.maxhp for f in allies), default=1.0)
         if heal_idx is not None and neediest < 0.60:
             actor.cds[heal_idx] = actor.bp.skills[heal_idx][3]
-            for f in allies:
-                healed = min(f.maxhp, f.hp + f.maxhp * 0.25) - f.hp
-                f.hp += healed
-                note("healed", actor.side, healed)
+            if actor.shield_cast:
+                # A warden's wall (`--regalia` arms it): every ally shielded
+                # for a share of max health, a Bulwark's larger —
+                # BattleEngine.applyStatus, the shield magnitude.
+                for f in allies:
+                    f.shield = max(f.shield, f.maxhp * actor.shield_cast * regalia_scale(actor, "bulwark"))
+            else:
+                # A Wellspring's heals are larger — BattleEngine.applyUtility.
+                # What the item itself gave back over the plain heal is noted
+                # apart, the way a boon's own healing is.
+                scale = regalia_scale(actor, "wellspring")
+                for f in allies:
+                    plain = min(f.maxhp, f.hp + f.maxhp * 0.25) - f.hp
+                    healed = min(f.maxhp, f.hp + f.maxhp * 0.25 * scale) - f.hp
+                    f.hp += healed
+                    note("healed", actor.side, healed)
+                    note("boonHealed", actor.side, healed - plain)
             end_turn(actor)
             continue
 
@@ -428,8 +527,9 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
                 dealt += applied
                 note("dealt", actor.side, applied)
                 note("taken", t.side, applied)
-                if "break" in name.lower(): t.defbreak = 2
-                if "burn" in name.lower() and rng.random() < proc(name, "burn", 0.30): t.burn = 2
+                # A Lasting Word holds a break or a burn a turn longer; a stun never.
+                if "break" in name.lower(): t.defbreak = 2 + regalia_hold(actor)
+                if "burn" in name.lower() and rng.random() < proc(name, "burn", 0.30): t.burn = 2 + regalia_hold(actor)
                 if "stun" in name.lower() and rng.random() < proc(name, "stun", 0.55): t.stun = 1
                 if not t.alive:
                     fell(t)
@@ -447,6 +547,13 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
                     elif t.resonance[0] == "theLegion" and t.side not in legion_spent:
                         legion_spent.add(t.side)
                         t.shield = t.maxhp * RESONANCE_HOOKS["legion"]
+        # The trickster's bar knock on its second skill (`--regalia` arms it),
+        # a Thief of Turns' larger — BattleEngine.applyUtility, attackBarChange.
+        if actor.knock and idx == 1:
+            delta, chance = actor.knock
+            for t in targets:
+                if t.alive and rng.random() < chance:
+                    t.atb = max(0.0, t.atb - delta * regalia_scale(actor, "thiefOfTurns"))
         # Hydra's Blood, after the hits; and the turn ends.
         drunk = boon_after_hit(actor, dealt)
         note("healed", actor.side, drunk); note("boonHealed", actor.side, drunk)
@@ -2005,6 +2112,146 @@ def report_resonance(trials=24):
     assert not misses, "; ".join(misses)
     print("  → every rank lands in its band: a reason to think about the roster, not a wall")
 
+# ---------------------------------------------------------------------------
+# The Regalia, measured the way the resonance is: a mono team of four of a
+# family of the template's kit at level I, III and V against the same three
+# fights with no regalia, on the same seeds; the mean of the three. The
+# readings are TEMPO-aware, because two templates buy actions (a head start,
+# a knock) and a per-turn figure cancels an action bought — more of our
+# actions is more turns, so damage per turn stood still while the fight
+# shortened (the first cut measured the marksman's V at 1.7%). An offensive
+# template is read off the damage the FOES took per action THEY got (burn
+# ticks included, which is what a Lasting Word lengthens); Unbowed, a
+# Bulwark and a Thief of Turns off the damage the team took per action IT
+# got; a Wellspring off the share of the damage taken that its own extra
+# healing gave back (a bigger heal is FEWER casts, not more healing, so the
+# net figure reads nothing). Docs/PLAN.md, *Artifacts — the last item on
+# the order*, option 3.
+# ---------------------------------------------------------------------------
+
+REGALIA_FAMILIES = {  # the family each template is measured on: a 5* of its kit, and its colour
+    "keenEdge": ("thor", "ember"), "heavyHand": ("horus", "ember"), "firstOffTheMark": ("artemis", "ember"),
+    "unbowed": ("poseidon", "ember"), "bulwark": ("athena", "ember"), "wellspring": ("isis", "ember"),
+    # The oracle in its dark form: the sim reads a burn, a stun and a break
+    # off a skill's name and nothing else, and the dark oracle's third skill
+    # is the line-wide break — the one debuff of the five forms' lines the
+    # sim can see held a turn longer. The fire form measured 0.5%.
+    "lastingWord": ("odin", "umbra"), "thiefOfTurns": ("loki", "ember"),
+}
+
+def regalia_family(template):
+    key, element = REGALIA_FAMILIES[template]
+    if element == "ember": return FAMILIES[key]
+    _, name, stars, kit, hp, atk, dfn, spd = next(r for r in FAMILY_ROWS if r[0] == key)
+    return Blueprint(f"{key}_{element}", f"{name} ({element})", element, stars, hp=hp, atk=atk, dfn=dfn, spd=spd,
+                     skills=kit_skills(kit, stars, hp, atk, element=element))
+
+REGALIA_OFFENSIVE = ("keenEdge", "heavyHand", "firstOffTheMark", "lastingWord")
+REGALIA_DEFENSIVE = ("unbowed", "bulwark", "thiefOfTurns")
+# What `--regalia` arms on the team so the template has something to scale:
+# the warden's wall as the data has it (Shield Wall, 15% of max health, and
+# the sim otherwise plays that skill as a heal) and the trickster's knock (a
+# strip with a 30% bar knock at 70%, the second skill's).
+REGALIA_ARMS = {"bulwark": ("shield_cast", 0.15), "thiefOfTurns": ("knock", (0.30, 0.70))}
+
+def regalia_run(team_spec, waves, template, level, trials):
+    dealt = taken = foe_taken = healed = extra = 0.0
+    turns_total, wins = 0, 0
+    own_turns = foe_turns = 0.0
+    for s in range(trials):
+        team = [mk(*t) for t in team_spec]
+        arm = REGALIA_ARMS.get(template)
+        if arm:
+            for f in team: setattr(f, arm[0], arm[1])
+        if level: apply_regalia(team, template, level)
+        stats = {"dealt": {}, "taken": {}, "healed": {}, "boonHealed": {}}
+        result, total = "a", 0
+        for w, spec in enumerate(waves):
+            result, t = simulate(team, build_stage(spec), seed=s * 7 + w, stats=stats, first_wave=(w == 0))
+            total += t
+            if result != "a": break
+        if result == "a": wins += 1
+        dealt += stats["dealt"].get("a", 0.0); taken += stats["taken"].get("a", 0.0)
+        foe_taken += stats["taken"].get("b", 0.0); healed += stats["healed"].get("a", 0.0)
+        extra += stats["boonHealed"].get("a", 0.0)
+        own_turns += stats.get("turns", {}).get("a", 0.0); foe_turns += stats.get("turns", {}).get("b", 0.0)
+        turns_total += total
+    turns = max(1.0, float(turns_total))
+    return {"dps": dealt / turns, "taken": taken / turns, "foe": foe_taken / turns,
+            "healed": healed / turns, "extra": extra / turns, "wins": wins / trials, "turns": turns / trials,
+            # The tempo readings: what the foes took per action THEY got, and
+            # what the team took per action IT got.
+            "foePerFoeTurn": foe_taken / max(1.0, foe_turns), "takenPerOwnTurn": taken / max(1.0, own_turns)}
+
+def regalia_lift(template, base, run):
+    if template in REGALIA_DEFENSIVE:
+        return 1 - run["takenPerOwnTurn"] / base["takenPerOwnTurn"] if base["takenPerOwnTurn"] > 0 else 0.0
+    if template == "wellspring":
+        return run["extra"] / base["taken"] if base["taken"] > 0 else 0.0
+    return run["foePerFoeTurn"] / base["foePerFoeTurn"] - 1 if base["foePerFoeTurn"] > 0 else 0.0
+
+def regalia_fights():
+    """Three fights: a chapter's boss stage in three waves, the Labyrinth's
+    last level (three waves, the boss at x1.6: the one with pressure in it)
+    and the arena's four-colour line."""
+    arena = next(f for f in boon_fights() if f[0].startswith("Arena"))
+    return [("Olympus 3 boss stage", generated_waves(CHAPTERS[3], 10)[0]),
+            ("Necropolis B10", labyrinth_waves(LABYRINTHS[2], 10)),
+            ("Arena, four colours", arena[3])]
+
+def report_regalia(trials=24):
+    print("\nTHE REGALIA — each template at I, III and V on a mono team of its kit, three fights, %d seeded runs each" % trials)
+    print("one NAMED item per family, unlocked by awakening, levelled I-V by duplicates fed past the skill-up cap;")
+    print("a striker's is crit rate, a duelist's crit damage, a marksman's the bar as each wave walks on, a bruiser's")
+    print("the defence under half, a warden's the shields, a healer's the heals, an oracle's accuracy and the debuffs'")
+    print("hold (from III), a trickster's the bar it moves. an offensive template is read off the damage the foes")
+    print("took per action they got, Unbowed, Bulwark and a Thief of Turns off the damage the team took per action")
+    print("it got, a Wellspring off the share of the damage taken its own extra healing gave back; each on the MEAN")
+    print("of the three fights.")
+    print("rule: no template's V tops the rank II resonance (16%%); the best V is 8-16%%, a reason to pull for the")
+    print("family and never the wall a new family cannot climb; every V beats its I and is worth at least 2%%.\n")
+    fights = regalia_fights()
+    levels = (1, 3, 5)
+    lifts = {}
+    for label, waves in fights:
+        for template in REGALIA_FAMILIES:
+            team = [(regalia_family(template), 55, 6, 1.60)] * 4
+            base = regalia_run(team, waves, template, 0, trials)
+            for level in levels:
+                lifts[(template, level, label)] = regalia_lift(template, base, regalia_run(team, waves, template, level, trials))
+    labels = [f[0] for f in fights]
+    print(f"  {'template (family)':>30} {'lvl':>4}" + "".join(f"{l[:22]:>24}" for l in labels) + f"{'mean':>8}")
+    means = {}
+    for template, (key, element) in REGALIA_FAMILIES.items():
+        for level in levels:
+            family = key if element == "ember" else f"{key}, {element}"
+            row = f"  {(template + ' (' + family + ')') if level == 1 else '':>30} {'I' if level == 1 else ('III' if level == 3 else 'V'):>4}"
+            mean = sum(lifts[(template, level, l)] for l in labels) / len(labels)
+            means[(template, level)] = mean
+            for l in labels:
+                row += f"{lifts[(template, level, l)] * 100:>23.1f}%"
+            print(row + f"{mean * 100:>7.1f}%")
+    best = max(REGALIA, key=lambda t: means[(t, 5)])
+    print(f"\n  the best V: {best} at {means[(best, 5)] * 100:.1f}%; the smallest: "
+          + f"{min(REGALIA, key=lambda t: means[(t, 5)])} at {min(means[(t, 5)] for t in REGALIA) * 100:.1f}%")
+    print("  the sim cannot see a Lasting Word's accuracy (its I and II read 0) nor the longer slows, silences and")
+    print("  brands, only the burn and the break it holds, so the oracle's number is a floor; Unbowed reads small")
+    print("  because a mono team of four bruisers with relics is seldom under half — the tank the item is for is;")
+    print("  the warden's wall and the trickster's knock are armed for this report alone (REGALIA_ARMS), so no")
+    print("  other report's fight moves.")
+    for t in REGALIA:
+        assert means[(t, 5)] <= 0.16 + 1e-9, f"{t}'s V lifts {means[(t, 5)]*100:.1f}%: over the rank II resonance's 16%, a family's own item has become a wall"
+        assert means[(t, 5)] >= 0.02 - 1e-9, f"{t}'s V lifts {means[(t, 5)]*100:.1f}%: under 2% nobody feeds a fifth copy for it"
+        assert means[(t, 5)] > means[(t, 1)], f"{t}: V ({means[(t, 5)]*100:.1f}%) should beat I ({means[(t, 1)]*100:.1f}%)"
+    assert 0.08 - 1e-9 <= means[(best, 5)] <= 0.16 + 1e-9, f"the best V ({best}, {means[(best, 5)]*100:.1f}%) should sit in 8-16%"
+    for kit, template in REGALIA_KITS.items():
+        assert template in REGALIA, f"{kit}'s template {template} has no magnitudes"
+    for key, template in REGALIA_HANDWRITTEN.items():
+        assert template in REGALIA, f"{key}'s template {template} has no magnitudes"
+    for template, table in REGALIA.items():
+        assert len(table) == REGALIA_RULES["levels"] and all(a < b for a, b in zip(table, table[1:])), f"{template}'s table must rise I-V"
+    print("  → every V beats its I, none tops the rank II resonance, and the best sits in 8-16%  -> correct")
+
 def report_campaign(trials=200):
     print("\nCAMPAIGN — win rate over %d seeded battles" % trials)
     print("target: the intended team sits at 60-85%; the one below it should struggle\n")
@@ -2678,10 +2925,16 @@ def report_tune(trials=140):
 # that spends one (2026-09-17). The owner, on a Hall's levels screen: "the
 # 'halls' say mid essence? Is that only mid? What if I need others?" This is
 # the measurement behind the answer in Docs/PLAN.md (*Essence tiers — the
-# ladder an awakening should climb*). Every source below is read off
-# StageDatabase and DungeonDatabase, not estimated; the SHIPPED recipe mirrors
-# UnitDatabase (the three files, one dictionary each) and the LADDER is the
-# PLAN.md proposal, printed beside it and NOT built until the owner says so.
+# ladder an awakening should climb*), and since the evening of the same day,
+# on the owner's word, the mirror of what ships: `recipe_shipped` is
+# `UnitDatabase.awakeningCost(element:naturalStars:)`, the ONE function every
+# awakening reads, and `HALL_ESSENCE_SHIPPED` is
+# `DungeonDatabase.hallEssenceChances`. PLAN.md's own table (`recipe_ladder`,
+# `HALL_ESSENCE_LADDER`) is kept as it was designed and the report ASSERTS
+# what ships equals it; what the game paid before the ladder (`recipe_flat`,
+# `HALL_ESSENCE_FLAT`) is kept as the "before", because the measurement
+# against it is the reason the ladder exists. Every source below is read off
+# StageDatabase and DungeonDatabase, not estimated.
 ENERGY_PER_DAY = 24 * 60 // 5       # GameStore: one energy every five minutes
 ELEMENTS = ["ember", "tide", "gale", "radiance", "umbra"]
 ESSENCE_TIERS = ["low", "mid", "high"]
@@ -2693,33 +2946,53 @@ TIER_ENERGY_EXTRA = {"normal": 0, "hard": 2, "hell": 4}         # CampaignDiffic
 HALL_ENERGY = lambda floor: 5 + floor                            # DungeonDatabase.hall
 TITAN_ENERGY = 12                                                # StageDatabase.raids
 
-# DungeonDatabase.hall, per floor, for the hall's own element: Mid at
-# min(1, 0.5 + 0.1f) and High at 0.1f, on every floor.
-HALL_ESSENCE_SHIPPED = {f: {"mid": min(1.0, 0.5 + 0.1 * f), "high": 0.1 * f} for f in range(1, 6)}
-# PLAN.md's re-tiering: Low on B1-2, Mid on B3-4, High on B5.
+# DungeonDatabase.hallEssenceChances, per floor, for the hall's own element:
+# Low sure on B1-2 with Mid climbing, Mid sure on B3-4 with High climbing,
+# B5 Mid sure and High at half. Change a chance there and here together.
+HALL_ESSENCE_SHIPPED = {1: {"low": 1.0, "mid": 0.40}, 2: {"low": 1.0, "mid": 0.50},
+                        3: {"mid": 1.0, "high": 0.25}, 4: {"mid": 1.0, "high": 0.35},
+                        5: {"mid": 1.0, "high": 0.50}}
+# PLAN.md's re-tiering as designed: Low on B1-2, Mid on B3-4, High on B5.
 HALL_ESSENCE_LADDER = {1: {"low": 1.0, "mid": 0.40}, 2: {"low": 1.0, "mid": 0.50},
                        3: {"mid": 1.0, "high": 0.25}, 4: {"mid": 1.0, "high": 0.35},
                        5: {"mid": 1.0, "high": 0.50}}
+# Before the ladder (to 2026-09-17): DungeonDatabase.hall paid Mid at
+# min(1, 0.5 + 0.1f) and High at 0.1f, on every floor.
+HALL_ESSENCE_FLAT = {f: {"mid": min(1.0, 0.5 + 0.1 * f), "high": 0.1 * f} for f in range(1, 6)}
 # The Hall floor a grade is meant to farm: the report reads each recipe at it.
 GRADE_FLOOR = {3: 1, 4: 3, 5: 5}
 
 
 def recipe_shipped(element, stars):
-    """UnitDatabase: a 5* asks 15 Mid of its element, 10 Mid and 5 High Magic;
-    a 3* or 4* asks 10, 8 and 3. Nothing asks for Low or High of an element."""
-    if stars >= 5:
-        return {f"essence_{element}_mid": 15, "essence_magic_mid": 10, "essence_magic_high": 5}
-    return {f"essence_{element}_mid": 10, "essence_magic_mid": 8, "essence_magic_high": 3}
-
-
-def recipe_ladder(element, stars):
-    """PLAN.md's ladder by natural grade (proposed, not built)."""
+    """UnitDatabase.awakeningCost(element:naturalStars:), by NATURAL grade: a
+    5* asks 15 Mid and 10 High of its element with 10 Mid and 5 High Magic; a
+    4* 10 Mid and 5 High with 8 and 3; a 3* 10 Low and 5 Mid with 5 Low and 5
+    Mid Magic. Change a count there and here together."""
     e = lambda t: f"essence_{element}_{t}"
     if stars >= 5:
         return {e("mid"): 15, e("high"): 10, "essence_magic_mid": 10, "essence_magic_high": 5}
     if stars == 4:
         return {e("mid"): 10, e("high"): 5, "essence_magic_mid": 8, "essence_magic_high": 3}
     return {e("low"): 10, e("mid"): 5, "essence_magic_low": 5, "essence_magic_mid": 5}
+
+
+def recipe_ladder(element, stars):
+    """PLAN.md's ladder by natural grade, as designed."""
+    e = lambda t: f"essence_{element}_{t}"
+    if stars >= 5:
+        return {e("mid"): 15, e("high"): 10, "essence_magic_mid": 10, "essence_magic_high": 5}
+    if stars == 4:
+        return {e("mid"): 10, e("high"): 5, "essence_magic_mid": 8, "essence_magic_high": 3}
+    return {e("low"): 10, e("mid"): 5, "essence_magic_low": 5, "essence_magic_mid": 5}
+
+
+def recipe_flat(element, stars):
+    """Before the ladder: a 5* asked 15 Mid of its element, 10 Mid and 5 High
+    Magic; anything else 10, 8 and 3. Nothing asked for Low or High of an
+    element, and each hand-written blueprint carried its own dictionary."""
+    if stars >= 5:
+        return {f"essence_{element}_mid": 15, "essence_magic_mid": 10, "essence_magic_high": 5}
+    return {f"essence_{element}_mid": 10, "essence_magic_mid": 8, "essence_magic_high": 3}
 
 
 def essence_sources(halls):
@@ -2790,9 +3063,18 @@ def report_essences():
     print("\nTHE ESSENCE ECONOMY — what pays each essence, against what spends it")
     print(f"energy regenerates one every five minutes, {ENERGY_PER_DAY} a day; a bazaar refill is on top\n")
 
+    # The mirror IS the design: what ships is asserted equal to PLAN.md's
+    # table before anything is measured, so a drift in either file shows here.
+    assert HALL_ESSENCE_SHIPPED == HALL_ESSENCE_LADDER, "the Halls do not pay PLAN.md's ladder"
+    for element in ELEMENTS:
+        for stars in (3, 4, 5):
+            assert recipe_shipped(element, stars) == recipe_ladder(element, stars), \
+                f"{element} {stars}*: the recipe is not PLAN.md's ladder"
+    print("  as shipped == the ladder: the Halls' floors and every recipe are PLAN.md's table  -> correct\n")
+
     designs = [
-        ("AS SHIPPED", HALL_ESSENCE_SHIPPED, recipe_shipped),
-        ("THE LADDER (PLAN.md, proposed)", HALL_ESSENCE_LADDER, recipe_ladder),
+        ("BEFORE THE LADDER (to 2026-09-17)", HALL_ESSENCE_FLAT, recipe_flat),
+        ("AS SHIPPED — THE LADDER", HALL_ESSENCE_SHIPPED, recipe_shipped),
     ]
     results = {}
     for title, halls, recipe in designs:
@@ -2849,28 +3131,28 @@ def report_essences():
         results[title] = (per_grade, orphans, unsourced, idle, floor_prices)
         print()
 
-    shipped, ladder = results[designs[0][0]], results[designs[1][0]]
-    # As shipped, every floor of a Hall is the same price for the essence a
-    # 5* needs: Mid drops at 0.1 x (5 + floor) for 5 + floor energy, so a
-    # floor pays a tenth of a Mid per energy whatever its number, and High,
-    # which climbs, is spent nowhere. The floors are five prices for one good.
-    flat = len({round(p) for p in shipped[4][5].values()}) == 1
-    print("  as shipped: the Hall's five floors " + ("all cost the SAME per 5* awakening — the "
-          "floors are not a ladder,\n  because Mid drops at a tenth of an essence per energy on every one "
-          "and the High that climbs is spent nowhere" if flat else "differ in price"))
-    print(f"  as shipped: {len(shipped[1])} essences drop with nothing to spend them on "
-          f"({', '.join(shipped[1])}) and {len(shipped[2])} are asked for but never drop; "
-          f"{len(shipped[3])} exist in the catalogue only")
+    before, ladder = results[designs[0][0]], results[designs[1][0]]
+    # Before the ladder, every floor of a Hall was the same price for the
+    # essence a 5* needed: Mid dropped at 0.1 x (5 + floor) for 5 + floor
+    # energy, so a floor paid a tenth of a Mid per energy whatever its number,
+    # and High, which climbed, was spent nowhere: five prices for one good.
+    flat = len({round(p) for p in before[4][5].values()}) == 1
+    print("  before the ladder: the Hall's five floors " + ("all cost the SAME per 5* awakening — the "
+          "floors were not a ladder,\n  because Mid dropped at a tenth of an essence per energy on every one "
+          "and the High that climbed was spent nowhere" if flat else "differed in price"))
+    print(f"  before the ladder: {len(before[1])} essences dropped with nothing to spend them on "
+          f"({', '.join(before[1])}) and {len(before[2])} were asked for but never dropped; "
+          f"{len(before[3])} existed in the catalogue only")
     l3, l4, l5 = (ladder[0][s] for s in (3, 4, 5))
-    s3 = shipped[0][3]
-    print(f"  the ladder: a 3* {l3[1]:.0f} energy ({l3[1] / ENERGY_PER_DAY:.1f} days), "
+    s3 = before[0][3]
+    print(f"  as shipped: a 3* {l3[1]:.0f} energy ({l3[1] / ENERGY_PER_DAY:.1f} days), "
           f"a 4* {l4[1]:.0f} ({l4[1] / ENERGY_PER_DAY:.1f}), a 5* {l5[1]:.0f} ({l5[1] / ENERGY_PER_DAY:.1f}); "
-          f"the 3* was {s3[1]:.0f} as shipped")
+          f"the 3* was {s3[1]:.0f} before the ladder")
 
-    # The ladder is asserted, the shipped state is only described: it is the
-    # thing the report exists to show.
+    # What ships is asserted; the state before it is only described, as the
+    # reason the ladder exists.
     assert not ladder[1] and not ladder[2] and not ladder[3], "the ladder must give every essence a source and a sink"
-    assert l3[1] < s3[1], "a 3* awakening should get CHEAPER under the ladder (Low is the first floor's)"
+    assert l3[1] < s3[1], "a 3* awakening must be CHEAPER under the ladder than before it (Low is the first floor's)"
     assert l3[1] < l4[1] < l5[1], "the ladder must climb with the grade"
     assert 0.8 <= l5[1] / ENERGY_PER_DAY <= 2.5, "a 5* awakening is days, not an afternoon and not a fortnight"
     assert l3[1] / ENERGY_PER_DAY <= 1.0, "a 3* awakening is a new account's day"
@@ -2888,9 +3170,190 @@ def report_essences():
         floors = sorted(prices)
         assert all(prices[a] >= prices[b] for a, b in zip(floors, floors[1:])), \
             f"climbing must never cost more per awakening: {prices}"
-    print("  -> the ladder: every essence has a source and a sink, the price climbs with the grade,")
+    print("  -> as shipped: every essence has a source and a sink, the price climbs with the grade,")
     print("     a 3* farms the Low floors and a 5* farms B5, the higher floor is always the cheaper")
     print("     road, a 5* is days and a 3* is a day  -> correct")
+
+
+# ---------------------------------------------------------------------------
+# The event calendar (Core/Progression/EventCalendar.swift). Change a number
+# in both files.
+# ---------------------------------------------------------------------------
+#
+# A fixed weekday rota, a weekend headline seeded by the ISO week (counted
+# continuously from Monday 1 January 2024, so the year's end never repeats a
+# Hall), and every fourth week the Festival with a gift a day. Docs/EVENTS.md
+# has the options and the choice; the point of the report is that a calendar
+# is a set of multipliers on income, and multipliers that STACK are how a
+# generous day becomes a broken one.
+import datetime
+
+EVENTS = {                       # EventTuning
+    "drachma": 2.0,              # Monday: every settled clear's drachma
+    "experience": 2.0,           # Tuesday: unit and summoner experience
+    "energy": 0.5,               # Wednesday: a campaign stage's energy, rounded up
+    "laurels": 2.0,              # Thursday: arena laurels, won or lost
+    "essence": 2,                # the weekend's Hall: the AMOUNT of every essence roll
+    "relics": 2,                 # the weekend's Labyrinth: the relic roll made this many times
+}
+EVENT_WEEKDAY_ROTA = ["drachma", "experience", "energy", "laurels"]   # EventCalendar.weekdayRota, Monday first
+EVENT_WEEKEND_START = 4                                                # EventCalendar.weekendStart: Friday
+EVENT_LABYRINTH_EVERY = 4                                              # EventCalendar.labyrinthEvery
+EVENT_FESTIVAL_EVERY = 4                                               # EventCalendar.festivalEvery
+EVENT_EPOCH = datetime.date(2024, 1, 1)                                # EventCalendar.epoch, a Monday
+EVENT_HALLS = ELEMENTS                                                 # Element.allCases order
+EVENT_LABYRINTHS = ["lab_colossus", "lab_hydra", "lab_necropolis"]     # DungeonDatabase.labyrinths order
+EVENT_LABYRINTH_NAMES = {"lab_colossus": "the Vault of the Colossus", "lab_hydra": "the Lair of the Hydra",
+                         "lab_necropolis": "the Necropolis of the Unwrapped King"}
+# EventCalendar.festivalGifts, Monday to Sunday, priced in divinity-equivalent
+# at the rates report_counsel uses: a pantheon scroll 100, a mystical 75, a
+# 5* relic 150 (the bazaar's pack), drachma at DIVINITY_IN_DRACHMA, energy 1
+# each.
+EVENT_FESTIVAL_GIFTS = [
+    ("15,000 drachma", 15_000 / DIVINITY_IN_DRACHMA), ("2 mystical scrolls", 150), ("40 energy", 40),
+    ("100 divinity", 100), ("a pantheon scroll", 100), ("a 5* relic", 150),
+    ("2 pantheon scrolls + 100 divinity", 300),
+]
+LOGIN_WEEK_VALUE = 473           # QuestService.loginGifts, the seven days, as report_counsel counts them
+CAMPAIGN_ENERGY = 4              # generatedChapter: an ordinary stage's energy (a boss is 6)
+CAMPAIGN_DRACHMA = lambda index: 900 + index * 220   # generatedChapter's drachma per clear
+
+
+def event_week_index(day):
+    """EventCalendar.weekIndex(at:): whole weeks since the epoch's Monday."""
+    return (day - EVENT_EPOCH).days // 7
+
+
+def event_headline(week):
+    """EventCalendar.headline(week:): ('essence', element) or ('relics', labyrinth id)."""
+    cycle = EVENT_LABYRINTH_EVERY
+    if week % cycle == cycle - 1:
+        return ("relics", EVENT_LABYRINTHS[(week // cycle) % len(EVENT_LABYRINTHS)])
+    hall_weeks = week - week // cycle
+    return ("essence", EVENT_HALLS[hall_weeks % len(EVENT_HALLS)])
+
+
+def event_income_rows(week):
+    """What each income pays PER ENERGY (per battle, for laurels) on each day
+    of a week, Monday first, the way the game applies the rota: the campaign's
+    half-energy day is twice the runs, so its drachma and experience per
+    energy double that day too; the Halls and the Labyrinth keep their price
+    and take only their own weekend."""
+    headline = event_headline(week)
+    runs = [1.0] * 7
+    rows = {"campaign drachma / energy": [1.0] * 7, "campaign experience / energy": [1.0] * 7,
+            "campaign drops / energy": [1.0] * 7, "arena laurels / battle": [1.0] * 7,
+            "the weekend Hall's essence / energy": [1.0] * 7,
+            "the weekend Labyrinth's relics / energy": [1.0] * 7}
+    for day, kind in enumerate(EVENT_WEEKDAY_ROTA):
+        if kind == "energy": runs[day] *= 1 / EVENTS["energy"]
+        elif kind == "drachma": rows["campaign drachma / energy"][day] *= EVENTS["drachma"]
+        elif kind == "experience": rows["campaign experience / energy"][day] *= EVENTS["experience"]
+        elif kind == "laurels": rows["arena laurels / battle"][day] *= EVENTS["laurels"]
+    for day in range(7):
+        for key in ("campaign drachma / energy", "campaign experience / energy", "campaign drops / energy"):
+            rows[key][day] *= runs[day]
+    for day in range(EVENT_WEEKEND_START, 7):
+        if headline[0] == "essence": rows["the weekend Hall's essence / energy"][day] *= EVENTS["essence"]
+        else: rows["the weekend Labyrinth's relics / energy"][day] *= EVENTS["relics"]
+    return rows
+
+
+def report_events():
+    """A week of the calendar, the multiplier matrix, and the two rules: no
+    day stacks two events on one income, and no income's weekly mean exceeds
+    2x — the lead's rule, "a full week of events never more than doubles a
+    day's income on average"."""
+    print("\nEVENTS — the calendar, deterministic from the date (EventCalendar.swift)")
+    today = datetime.date.today()
+    week = event_week_index(today)
+    monday = today - datetime.timedelta(days=today.weekday())
+    days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+    print(f"the week of {monday:%d %b %Y} (week {week} since the epoch's Monday), today {days[today.weekday()]}:")
+    for day, kind in enumerate(EVENT_WEEKDAY_ROTA):
+        what = {"drachma": f"drachma x{EVENTS['drachma']:g} on every settled clear",
+                "experience": f"unit and summoner experience x{EVENTS['experience']:g}",
+                "energy": f"campaign stages at x{EVENTS['energy']:g} energy, rounded up (3 -> 2, 4 -> 2, 6 -> 3)",
+                "laurels": f"arena laurels x{EVENTS['laurels']:g}, won or lost"}[kind]
+        print(f"  {days[day]:<4}{'*' if day == today.weekday() else ' '} {what}")
+    kind, where = event_headline(week)
+    span = f"{days[EVENT_WEEKEND_START]}-{days[6]}"
+    what = (f"the Hall of {where} drops x{EVENTS['essence']} essence" if kind == "essence"
+            else f"{EVENT_LABYRINTH_NAMES[where]} drops {EVENTS['relics']} relics a level")
+    print(f"  {span:<4}{'*' if today.weekday() >= EVENT_WEEKEND_START else ' '} {what}")
+    festival = week % EVENT_FESTIVAL_EVERY == EVENT_FESTIVAL_EVERY - 1
+    print(f"  {'week':<4}  " + ("the FESTIVAL: a gift a day" if festival else
+          f"no Festival; the next is in {EVENT_FESTIVAL_EVERY - 1 - week % EVENT_FESTIVAL_EVERY} week(s)"))
+
+    print("\nthe next eight weekends:")
+    seen_halls, seen_labs = set(), set()
+    headlines = []
+    for offset in range(1, 9):
+        w = week + offset
+        kind, where = event_headline(w)
+        headlines.append((kind, where))
+        (seen_halls if kind == "essence" else seen_labs).add(where)
+        start = monday + datetime.timedelta(days=7 * offset + EVENT_WEEKEND_START)
+        tag = " + Festival" if w % EVENT_FESTIVAL_EVERY == EVENT_FESTIVAL_EVERY - 1 else ""
+        print(f"  {start:%d %b}  {'Hall of ' + where if kind == 'essence' else EVENT_LABYRINTH_NAMES[where]}{tag}")
+    # The wheel: every Hall and every Labyrinth in turn, none twice running.
+    full_cycle = [event_headline(week + o) for o in range(len(EVENT_HALLS) * EVENT_LABYRINTH_EVERY)]
+    assert {h[1] for h in full_cycle if h[0] == "essence"} == set(EVENT_HALLS), "every Hall must get its weekend"
+    assert {h[1] for h in full_cycle if h[0] == "relics"} == set(EVENT_LABYRINTHS), "every Labyrinth must get its weekend"
+    assert all(a != b for a, b in zip(full_cycle, full_cycle[1:])), "no weekend repeats the one before"
+    labyrinth_weeks = [o for o in range(EVENT_LABYRINTH_EVERY * 3) if event_headline(week + o)[0] == "relics"]
+    assert len(labyrinth_weeks) == 3 and all(b - a == EVENT_LABYRINTH_EVERY for a, b in zip(labyrinth_weeks, labyrinth_weeks[1:])), \
+        "a Labyrinth weekend every fourth week, on the beat"
+    # The year's end does not repeat a Hall: week 52/53 into week 1 is a step
+    # on the wheel like any other, because the index is counted, not read.
+    for year in (2025, 2026, 2027):
+        last = event_week_index(datetime.date(year, 12, 28))
+        assert event_headline(last) != event_headline(last + 1), f"the wheel must not stall over {year}'s end"
+
+    # The multiplier matrix, over a Hall week and a Labyrinth week: the
+    # weekend's target is the one row that differs between them.
+    print("\nwhat each income pays, per energy (laurels per battle):")
+    print(f"  {'':<40}" + "".join(f"{d:>6}" for d in days) + f"{'mean':>8}")
+    ceiling = max(EVENTS["drachma"], EVENTS["experience"], EVENTS["laurels"], EVENTS["essence"], EVENTS["relics"],
+                  1 / EVENTS["energy"])
+    hall_week = next(week + o for o in range(EVENT_LABYRINTH_EVERY) if event_headline(week + o)[0] == "essence")
+    lab_week = next(week + o for o in range(EVENT_LABYRINTH_EVERY) if event_headline(week + o)[0] == "relics")
+    lifted = {}
+    for label, probe_week in (("a Hall week", hall_week), ("a Labyrinth week", lab_week)):
+        print(f"  {label}:")
+        for name, cells in event_income_rows(probe_week).items():
+            mean = sum(cells) / 7
+            print(f"  {name:<40}" + "".join(f"{c:>6.2f}" for c in cells) + f"{mean:>8.2f}")
+            assert max(cells) <= ceiling + 1e-9, f"{name}: a day stacks two events ({max(cells):.2f}x)"
+            assert mean <= 2.0, f"{name}: a week of events more than doubles the income on average ({mean:.2f}x)"
+            lifted[name] = max(lifted.get(name, 1.0), mean)
+    for name, best in lifted.items():
+        assert best > 1.0, f"{name}: nothing on the calendar ever lifts it"
+    # Every income has exactly ONE day-span: the rota names each kind once.
+    assert sorted(EVENT_WEEKDAY_ROTA) == sorted(set(EVENT_WEEKDAY_ROTA)), "a kind twice in the rota is a stacked day"
+    assert len(EVENT_WEEKDAY_ROTA) == EVENT_WEEKEND_START, "the weekdays hand over to the weekend where the rota ends"
+    assert len(EVENT_WEEKDAY_ROTA) + (7 - EVENT_WEEKEND_START) == 7, "the rota must cover seven days"
+
+    # In drachma: a mid-chapter stage at Normal, three-starred (the sweep's
+    # gate, and what a farmer earns), on a flat day and on Monday.
+    per_energy = CAMPAIGN_DRACHMA(5) * STAR_BONUS / CAMPAIGN_ENERGY
+    flat_day = per_energy * ENERGY_PER_DAY
+    print(f"\n  a chapter's fifth stage pays {CAMPAIGN_DRACHMA(5):,} drachma for {CAMPAIGN_ENERGY} energy,")
+    print(f"  x{STAR_BONUS} three-starred: {per_energy:,.0f} a point of energy, {flat_day:,.0f} a day of {ENERGY_PER_DAY};")
+    print(f"  Monday pays {flat_day * EVENTS['drachma']:,.0f}, Wednesday's half energy the same {flat_day * (1 / EVENTS['energy']):,.0f}"
+          f" in twice the runs, and the week averages x{(5 + EVENTS['drachma'] + 1 / EVENTS['energy']) / 7:.2f}")
+
+    # The Festival against the ordinary login week.
+    total = sum(v for _, v in EVENT_FESTIVAL_GIFTS)
+    print(f"\n  the Festival's seven gifts: " + ", ".join(f"{name} ({v:.0f})" for name, v in EVENT_FESTIVAL_GIFTS))
+    print(f"  = {total:,.0f} divinity-equivalent, about {total / 100:.1f} pantheon summons, once every {EVENT_FESTIVAL_EVERY} weeks")
+    print(f"  the ordinary login week is {LOGIN_WEEK_VALUE}; the Festival is x{total / LOGIN_WEEK_VALUE:.2f} of it, "
+          f"{total / EVENT_FESTIVAL_EVERY:,.0f} a week averaged — {total / EVENT_FESTIVAL_EVERY / LOGIN_WEEK_VALUE * 100:.0f}% on top of the login gift")
+    assert len(EVENT_FESTIVAL_GIFTS) == 7, "a gift a day for the week"
+    assert total > LOGIN_WEEK_VALUE, "a special login week must beat the ordinary one, or it is not special"
+    assert total / EVENT_FESTIVAL_EVERY < LOGIN_WEEK_VALUE, "averaged, the Festival must stay under a second login gift"
+    print("  -> the rota covers seven days, every income has one day, nothing stacks, no weekly mean tops 2x,")
+    print("     the wheel visits every Hall and every Labyrinth and never stalls over a year's end  -> correct")
 
 
 if __name__ == "__main__":
@@ -2910,6 +3373,7 @@ if __name__ == "__main__":
     elif "--awakening" in a: report_awakening()
     elif "--boons" in a: report_boons()
     elif "--resonance" in a: report_resonance()
+    elif "--regalia" in a: report_regalia()
     elif "--relics" in a: report_relics()
     elif "--tributes" in a: report_tributes()
     elif "--shop" in a: report_shop()
@@ -2919,10 +3383,11 @@ if __name__ == "__main__":
     elif "--targeting" in a: report_targeting()
     elif "--drops" in a: report_drops()
     elif "--essences" in a: report_essences()
+    elif "--events" in a: report_events()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids(); report_grades(); report_awakening(); report_boons()
-        report_resonance()
+        report_resonance(); report_regalia()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
-        report_sweep(); report_mileage(); report_targeting(); report_essences()
+        report_sweep(); report_mileage(); report_targeting(); report_essences(); report_events()
         print()

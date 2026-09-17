@@ -56,19 +56,24 @@ enum ProgressionService {
         return stats
     }
 
-    /// Joins a unit to its blueprint, its equipped relics and the boon in
-    /// its socket, and computes finals. The boon changes no stat; it rides
-    /// along for the engine.
+    /// Joins a unit to its blueprint, its equipped relics, the boon in its
+    /// socket and its family's regalia, and computes finals. The boon and
+    /// the regalia change no stat here; they ride along for the engine. The
+    /// regalia is the player's path only — an enemy is resolved by the
+    /// overload below with none, so a campaign wave never carries one.
     static func resolve(_ unit: Unit, relics allRelics: [Relic], boons: [Boon] = []) -> ResolvedUnit? {
         guard let blueprint = UnitDatabase.blueprint(unit.blueprintID) else { return nil }
         let equipped = unit.equippedRelics.values.compactMap { id in
             allRelics.first(where: { $0.id == id })
         }
         let boon = unit.boonID.flatMap { id in boons.first(where: { $0.id == id }) }
-        return resolve(unit, blueprint: blueprint, equipped: equipped, boon: boon)
+        let regalia = RegaliaService.regalia(for: unit, blueprint: blueprint)
+        return resolve(unit, blueprint: blueprint, equipped: equipped, boon: boon, regalia: regalia)
     }
 
-    static func resolve(_ unit: Unit, blueprint: UnitBlueprint, equipped: [Relic], boon: Boon? = nil) -> ResolvedUnit {
+    static func resolve(
+        _ unit: Unit, blueprint: UnitBlueprint, equipped: [Relic], boon: Boon? = nil, regalia: Regalia? = nil
+    ) -> ResolvedUnit {
         let base = baseStats(for: unit, blueprint: blueprint)
         var flat = Stats.zero
         var percent: [StatKind: Double] = [:]
@@ -111,7 +116,8 @@ enum ProgressionService {
             relics: equipped,
             stats: final.clamped(),
             skills: skills,
-            boon: boon
+            boon: boon,
+            regalia: regalia
         )
     }
 

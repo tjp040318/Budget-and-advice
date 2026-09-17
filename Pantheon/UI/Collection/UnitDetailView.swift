@@ -71,6 +71,7 @@ struct UnitDetailView: View {
     @State private var showLore = false
     @State private var showSets = false
     @State private var showBoons = false
+    @State private var showRegalia = false
     @State private var selectedSkill = 0
 
     /// A slot number that can drive a sheet.
@@ -169,6 +170,10 @@ struct UnitDetailView: View {
             }
             .sheet(isPresented: $showBoons) {
                 BoonPickerView(unitID: unitID)
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showRegalia) {
+                RegaliaSheet(unitID: unitID)
                     .environmentObject(store)
             }
             .alert(unit?.blueprint.epithet ?? "", isPresented: $showLore) {
@@ -367,6 +372,7 @@ struct UnitDetailView: View {
             }
             .frame(width: width, height: height)
             setsRow(unit)
+            regaliaLine(unit)
             if let boon = unit.boon {
                 boonLine(boon)
             }
@@ -473,6 +479,51 @@ struct UnitDetailView: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.8)
+    }
+
+    /// The family's regalia under the sets row, beside the boon socket's line
+    /// (`Regalia`, `RegaliaSheet`): the item's glyph and name, its level as
+    /// five pips, and its line at that level — or what unlocks it, dimmed.
+    /// One row, so the busiest ring still clears the panel's bottom
+    /// ornament; the sheet has the rest. A tap opens it.
+    @ViewBuilder
+    private func regaliaLine(_ unit: ResolvedUnit) -> some View {
+        if let regalia = RegaliaService.regalia(forBlueprint: unit.blueprint.id, level: RegaliaService.level(of: unit.unit)) {
+            let unlocked = unit.regalia != nil
+            Button {
+                Juice.haptic(.light)
+                showRegalia = true
+            } label: {
+                HStack(spacing: 5) {
+                    Image(systemName: regalia.template.glyph)
+                        .font(.system(size: 9, weight: .black))
+                        .foregroundStyle(unlocked ? Theme.gold : Theme.textSecondary)
+                    Text(regalia.name)
+                        .font(Theme.body(10).weight(.bold))
+                        .foregroundStyle(unlocked ? Theme.textPrimary : Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    RegaliaPips(level: regalia.level, lit: unlocked, size: 5)
+                    Spacer(minLength: 0)
+                    Text(unlocked ? regalia.shortLine : RegaliaService.unlockLine(for: unit.blueprint))
+                        .font(Theme.numeric(10))
+                        .foregroundStyle(unlocked ? Theme.gold : Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .padding(.horizontal, 6)
+                .frame(height: 20)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                        .fill(unlocked ? Theme.gold.opacity(0.12) : Theme.surface)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                        .strokeBorder(unlocked ? Theme.gold.opacity(0.6) : Theme.stroke.opacity(0.6), lineWidth: 0.5)
+                )
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     /// Every set with a piece on the ring as a progress chip — "Fury 2/2"

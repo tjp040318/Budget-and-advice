@@ -6,18 +6,23 @@ import Combine
 enum BattleContext: Identifiable {
     case campaign(Stage)
     case arena(ArenaOpponent)
+    /// A guild war attack (2026-09-17): a friend-list rival's defence,
+    /// fought as an arena attack but settled through the social layer —
+    /// never through `.arena`, whose settle path moves rank points.
+    case guildWar(WarTarget)
 
     var id: String {
         switch self {
         case .campaign(let stage): return "campaign_\(stage.id)"
         case .arena(let opponent): return "arena_\(opponent.id)"
+        case .guildWar(let target): return "war_\(target.id)"
         }
     }
 
     var environment: BattleEnvironment {
         switch self {
         case .campaign(let stage): return stage.environment
-        case .arena: return .arenaOfSouls
+        case .arena, .guildWar: return .arenaOfSouls
         }
     }
 
@@ -25,6 +30,7 @@ enum BattleContext: Identifiable {
         switch self {
         case .campaign(let stage): return stage.name
         case .arena(let opponent): return "vs \(opponent.name)"
+        case .guildWar(let target): return "vs \(target.profile.name)"
         }
     }
 }
@@ -163,7 +169,7 @@ final class BattleViewModel: ObservableObject {
 
         if result.outcome != .victory {
             session.stoppedBecause = "Stopped after a defeat."
-        } else if session.completed < session.requested, store.player.wallet.energy < stage.energyCost {
+        } else if session.completed < session.requested, store.player.wallet.energy < EventCalendar.energyCost(for: stage) {
             session.stoppedBecause = "Out of energy."
         }
         repeatSession = session
@@ -656,6 +662,28 @@ final class BattleViewModel: ObservableObject {
                 lines: lines,
                 stars: result.outcome == .victory ? 3 : 0,
                 title: "vs \(opponent.name)", turns: result.turnsTaken,
+                damageDealt: result.totalDamageDealt, damageTaken: result.totalDamageTaken,
+                unitStats: stats, mvpID: mvp, loot: loot
+            )
+
+        case .guildWar(let target):
+            // The points a win is worth are known before the report comes
+            // back (the war's rules are the client's as well as the
+            // backend's); the report itself goes up in the background.
+            let points = result.outcome == .victory && !target.beaten ? target.pointsForWin : 0
+            store.finishWarAttack(target, result: result)
+            let lines: [BattleSummary.Line] = [
+                .init(icon: "shield.lefthalf.filled", label: "War Points", value: "+\(points)")
+            ]
+            var loot: [BattleSummary.Loot] = []
+            if points > 0 {
+                loot.append(.init(glyph: "shield.lefthalf.filled", title: "War Points", amount: "+\(points)", tint: .gold, key: "rank_points"))
+            }
+            return BattleSummary(
+                outcome: result.outcome,
+                lines: lines,
+                stars: result.outcome == .victory ? 3 : 0,
+                title: "vs \(target.profile.name)", turns: result.turnsTaken,
                 damageDealt: result.totalDamageDealt, damageTaken: result.totalDamageTaken,
                 unitStats: stats, mvpID: mvp, loot: loot
             )

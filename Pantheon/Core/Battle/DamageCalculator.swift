@@ -50,8 +50,15 @@ enum DamageCalculator {
             base *= 1 + spec.bonusPerMissingHealth * defender.missingHealthFraction
         }
 
-        // Defence.
-        base *= mitigation(defense: defenderStats.def, ignore: spec.defenseIgnore)
+        // Defence. Regalia: Unbowed — the bruiser's defence while under half
+        // health (`RegaliaTemplate.unbowed`), read here and nowhere else so
+        // a defence-scaling blow of his own is not lifted with it.
+        var defense = defenderStats.def
+        if let regalia = defender.regalia, regalia.template == .unbowed,
+           defender.healthFraction < RegaliaTemplate.unbowedBelow {
+            defense *= 1 + regalia.magnitude
+        }
+        base *= mitigation(defense: defense, ignore: spec.defenseIgnore)
 
         // Element.
         base *= matchup.damageMultiplier

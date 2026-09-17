@@ -148,6 +148,36 @@ struct IslandSceneView: UIViewRepresentable {
         private var figureHasVictory: [Bool] = []
         private var figureBases: [SCNVector3] = []
         private var figuresKey = ""
+        /// The wander (2026-09-17): a family that shipped a walk clip strolls
+        /// the sand around its stand instead of hopping when it stirs. The
+        /// offset is where the figure stands now, in fractions of the
+        /// painting from its stand; a walk in progress is a `Walk`, moved by
+        /// a custom action that reads the LATEST layout every frame, so a
+        /// pan or a zoom during the stroll carries the walker with the sand.
+        private var figureHasWalk: [Bool] = []
+        private var figureOffsets: [CGPoint] = []
+        private var walks: [Int: Walk] = [:]
+        private var layout: (paintingFrame: CGRect, viewSize: CGSize, zoom: CGFloat)?
+        /// How far from its stand a figure ever strolls, in fractions of the
+        /// painting: the stands are on the sand, and a radius this small
+        /// stays there (about 50 pt on the phone at zoom 1).
+        /// (Instance constants, not statics: a static on a class named
+        /// `Coordinator` makes the checker read every `Coordinator.x` in the
+        /// tree, and the battle view's `#selector(Coordinator.handleTap)`
+        /// is another class of that name.)
+        private let wanderRadius = CGPoint(x: 0.028, y: 0.018)
+        /// Metres a second, in the figure's own metres; the walk clip is a
+        /// casual stroll and a little foot-slide at this size is invisible.
+        private let wanderSpeed: CGFloat = 1.05
+
+        private struct Walk {
+            let from: CGPoint
+            let to: CGPoint
+            var progress: CGFloat = 0
+            var offset: CGPoint {
+                CGPoint(x: from.x + (to.x - from.x) * progress, y: from.y + (to.y - from.y) * progress)
+            }
+        }
 
         private var decorEntries: [IslandDecorEntry] = []
         private var decorKey = ""
@@ -259,6 +289,9 @@ struct IslandSceneView: UIViewRepresentable {
             figureMetres = []
             figureHasVictory = []
             figureBases = []
+            figureHasWalk = []
+            figureOffsets = []
+            walks = [:]
             for (index, unit) in units.enumerated() {
                 let combatant = Combatant(resolved: unit, side: .player, slot: index, isLeader: index == 0)
                 let node = UnitNode(combatant: combatant, detail: .high)
@@ -279,18 +312,27 @@ struct IslandSceneView: UIViewRepresentable {
                 figureHasVictory.append(
                     Bundle.main.url(forResource: "\(asset)_victory", withExtension: "usdz", subdirectory: ModelLibrary.modelDirectory) != nil
                 )
+                figureHasWalk.append(
+                    Bundle.main.url(forResource: "\(asset)_walk", withExtension: "usdz", subdirectory: ModelLibrary.modelDirectory) != nil
+                )
+                figureOffsets.append(.zero)
                 figureBases.append(SCNVector3(0, 0, 0))
             }
         }
 
         private func layoutFigures(paintingFrame: CGRect, viewSize: CGSize, zoom: CGFloat) {
+            layout = (paintingFrame, viewSize, zoom)
             for (index, node) in figureNodes.enumerated() {
-                let stand = figureStands[index]
-                let point = screenPoint(stand, paintingFrame: paintingFrame, viewSize: viewSize)
                 let scale = Float(viewSize.height * IslandSceneView.figureHeight * zoom) / figureMetres[index]
-                let depth = IslandSceneView.depth(stand.y)
-                let base = SCNVector3(Float(point.x), Float(point.y), depth)
                 node.scale = SCNVector3(scale, scale, scale)
+                let width = CGFloat(scale) * 1.1
+                figureShadows[index].scale = SCNVector3(Float(width), Float(width), 1)
+                // A walker is placed every frame by its own action, from the
+                // layout just stored.
+                if walks[index] != nil { continue }
+                let spot = standingPoint(index, offset: figureOffsets[index])
+                let point = spot.point
+                let base = SCNVector3(Float(point.x), Float(point.y), spot.depth)
                 // Set only when it moved: a hop in progress is a relative
                 // move from wherever the figure stands, and re-setting the
                 // same position under it every update would stall it.
@@ -300,11 +342,23 @@ struct IslandSceneView: UIViewRepresentable {
                     node.removeAction(forKey: "hop")
                     node.position = base
                 }
-                let width = CGFloat(scale) * 1.1
-                let shadow = figureShadows[index]
-                shadow.scale = SCNVector3(Float(width), Float(width), 1)
-                shadow.position = SCNVector3(Float(point.x), Float(point.y) + Float(width * 0.03), depth - 1.5)
+                placeShadow(index, at: point, depth: spot.depth)
             }
+        }
+
+        /// Where a figure stands, its stand plus an offset, in the view's
+        /// world, with the depth its height on the painting gives it.
+        private func standingPoint(_ index: Int, offset: CGPoint) -> (point: CGPoint, depth: Float) {
+            guard let layout else { return (.zero, 0) }
+            let spot = CGPoint(x: figureStands[index].x + offset.x, y: figureStands[index].y + offset.y)
+            return (screenPoint(spot, paintingFrame: layout.paintingFrame, viewSize: layout.viewSize),
+                    IslandSceneView.depth(spot.y))
+        }
+
+        private func placeShadow(_ index: Int, at point: CGPoint, depth: Float) {
+            let shadow = figureShadows[index]
+            let width = CGFloat(shadow.scale.x)
+            shadow.position = SCNVector3(Float(point.x), Float(point.y) + Float(width * 0.03), depth - 1.5)
         }
 
         /// A tap on a figure: acted on once per token.
@@ -320,6 +374,7 @@ struct IslandSceneView: UIViewRepresentable {
         private func hop(_ index: Int) {
             guard figureNodes.indices.contains(index) else { return }
             let node = figureNodes[index]
+            stopWalk(index)
             let rise = CGFloat(node.scale.y * figureMetres[index]) * 0.14
             node.removeAction(forKey: "hop")
             node.position = figureBases[index]
@@ -343,10 +398,85 @@ struct IslandSceneView: UIViewRepresentable {
                 self.stirTimer = nil
                 guard self.active, !self.figureNodes.isEmpty else { return }
                 let index = Int.random(in: 0..<self.figureNodes.count)
-                self.hop(index)
-                self.onStir?(index)
+                if self.figureHasWalk[index], self.walks[index] == nil, self.layout != nil {
+                    self.wander(index)
+                } else {
+                    self.hop(index)
+                    self.onStir?(index)
+                }
                 self.armStir()
             }
+        }
+
+        /// A stroll to a new spot on the sand near the stand: the figure
+        /// turns to face the way it goes, plays its walk clip along a custom
+        /// action that reads the latest layout every frame, and turns back
+        /// to the viewer with its idle when it arrives.
+        private func wander(_ index: Int) {
+            guard figureNodes.indices.contains(index), let layout else { return }
+            let node = figureNodes[index]
+            let from = figureOffsets[index]
+            var to = from
+            // Somewhere at least a stride away, inside the wander radius.
+            for _ in 0..<8 {
+                let candidate = CGPoint(x: CGFloat.random(in: -wanderRadius.x...wanderRadius.x),
+                                        y: CGFloat.random(in: -wanderRadius.y...wanderRadius.y))
+                if hypot(candidate.x - from.x, (candidate.y - from.y) * 1.6) > 0.012 { to = candidate; break }
+            }
+            if to == from { return }
+            let start = standingPoint(index, offset: from).point
+            let end = standingPoint(index, offset: to).point
+            let distance = hypot(end.x - start.x, end.y - start.y)
+            let pointsPerMetre = CGFloat(node.scale.y)
+            let duration = max(0.8, Double(distance / (pointsPerMetre * wanderSpeed)))
+            // A model is authored facing +Z, toward the viewer; up the
+            // painting is away, so the heading is atan2(dx, -dy).
+            let yaw = atan2(to.x - from.x, -(to.y - from.y) * (layout.paintingFrame.height / layout.paintingFrame.width))
+            walks[index] = Walk(from: from, to: to)
+            node.removeAction(forKey: "hop")
+            node.removeAction(forKey: "walk")
+            let turn = SCNAction.rotateTo(x: 0, y: CGFloat(yaw), z: 0, duration: 0.25, usesShortestUnitArc: true)
+            let stroll = SCNAction.customAction(duration: duration) { [weak self] node, elapsed in
+                guard let self, var walk = self.walks[index] else { return }
+                let t = min(1, max(0, CGFloat(elapsed) / CGFloat(duration)))
+                // Ease at both ends so the figure sets off and arrives
+                // rather than starting at full stride.
+                walk.progress = t * t * (3 - 2 * t)
+                self.walks[index] = walk
+                let spot = self.standingPoint(index, offset: walk.offset)
+                node.position = SCNVector3(Float(spot.point.x), Float(spot.point.y), spot.depth)
+                self.placeShadow(index, at: spot.point, depth: spot.depth)
+            }
+            let face = SCNAction.rotateTo(x: 0, y: 0, z: 0, duration: 0.3, usesShortestUnitArc: true)
+            node.runAction(.sequence([turn, stroll, face]), forKey: "walk") { [weak self] in
+                DispatchQueue.main.async {
+                    guard let self, self.walks[index]?.to == to else { return }
+                    self.settleWalk(index, at: to)
+                    node.play(.idleCombat)
+                }
+            }
+            node.play(.walk)
+        }
+
+        /// The walk is over, or cut short by a tap: the figure stands where
+        /// it is and that spot is its place until the next stroll.
+        private func settleWalk(_ index: Int, at offset: CGPoint) {
+            guard figureNodes.indices.contains(index) else { return }
+            walks[index] = nil
+            figureOffsets[index] = offset
+            let spot = standingPoint(index, offset: offset)
+            let base = SCNVector3(Float(spot.point.x), Float(spot.point.y), spot.depth)
+            figureBases[index] = base
+            figureNodes[index].position = base
+            placeShadow(index, at: spot.point, depth: spot.depth)
+        }
+
+        private func stopWalk(_ index: Int) {
+            guard let walk = walks[index] else { return }
+            let node = figureNodes[index]
+            node.removeAction(forKey: "walk")
+            node.eulerAngles = SCNVector3Zero
+            settleWalk(index, at: walk.offset)
         }
 
         // MARK: - Decorations

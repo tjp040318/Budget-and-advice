@@ -371,7 +371,7 @@ struct LabyrinthView: View {
         let cleared = TowerService.clearedFloor(player: store.player)
         let team = store.team(store.player.campaignTeam)
         let power = team.reduce(0) { $0 + $1.power }
-        let hasEnergy = stage.map { store.player.wallet.energy >= $0.energyCost } ?? false
+        let hasEnergy = stage.map { store.player.wallet.energy >= EventCalendar.energyCost(for: $0) } ?? false
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline, spacing: 6) {
                 Text(stage.map { "F\($0.index)" } ?? "DONE")
@@ -449,13 +449,13 @@ struct LabyrinthView: View {
                         .foregroundStyle(Theme.danger)
                         .fixedSize(horizontal: false, vertical: true)
                 } else if !hasEnergy {
-                    Text("Not enough energy — this floor costs \(stage.energyCost).")
+                    Text("Not enough energy — this floor costs \(EventCalendar.energyCost(for: stage)).")
                         .font(Theme.body(10))
                         .foregroundStyle(Theme.danger)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 PrimaryButton(
-                    title: "Climb — \(stage.energyCost) energy",
+                    title: "Climb — \(EventCalendar.energyCost(for: stage)) energy",
                     systemImage: "arrow.up.to.line",
                     isEnabled: hasEnergy && !team.isEmpty
                 ) {
@@ -599,7 +599,7 @@ struct LabyrinthView: View {
         let cleared = (store.player.campaignProgress[raid.stage.chapterID] ?? 0) > 0
         let team = store.team(store.player.campaignTeam)
         let power = team.reduce(0) { $0 + $1.power }
-        let hasEnergy = store.player.wallet.energy >= raid.stage.energyCost
+        let hasEnergy = store.player.wallet.energy >= EventCalendar.energyCost(for: raid.stage)
         let element = RaidGradeService.element(of: raid)
         // The Titan itself, as its card: the genre's beast panel leads with
         // the beast, and three of the five places are painted at night, so
@@ -693,7 +693,7 @@ struct LabyrinthView: View {
                 }
             }
             PrimaryButton(
-                title: "Enter — \(raid.stage.energyCost) energy",
+                title: "Enter — \(EventCalendar.energyCost(for: raid.stage)) energy",
                 systemImage: "bolt.horizontal.fill",
                 isEnabled: hasEnergy && !team.isEmpty
             ) {
@@ -1032,23 +1032,64 @@ struct DungeonLevelsView: View {
         .panelBackground()
     }
 
-    /// What a hall pays, read off its floors rather than written by hand:
-    /// its element's Mid essence on every floor and its High essence more
-    /// often the deeper the floor, and relics to the cap. It said "Drops
-    /// Mid Ember Essence" and nothing of the High, and the owner asked
-    /// whether Mid was all there was (2026-09-17).
+    /// What a hall pays, read off its floors rather than written by hand,
+    /// so the words follow the tables: the floors grouped by the tiers they
+    /// drop — Low on the first floors, Mid, then High on the top — each tier
+    /// with its odds (sure, or the span a chance climbs across the group),
+    /// the relic cap, and which grade's awakening spends which tier, read off
+    /// `UnitDatabase.awakeningCost`. It said "Drops Mid Ember Essence" and
+    /// nothing of the High, and the owner asked whether Mid was all there
+    /// was (2026-09-17); the ladder that answered him is
+    /// `DungeonDatabase.hallEssenceChances`, and this line is its mirror.
     private func hallDrops(_ hall: DungeonDatabase.Hall) -> String {
-        guard let first = hall.floors.first, let last = hall.floors.last else { return "" }
-        let mid = "essence_\(hall.element.rawValue)_mid"
-        let high = "essence_\(hall.element.rawValue)_high"
-        func odds(_ id: String, on floor: Stage) -> String {
-            let chance = floor.rewards.essenceChances[id] ?? 0
-            return chance >= 1 ? "sure" : "\(Int((chance * 100).rounded()))%"
+        guard let last = hall.floors.last else { return "" }
+        let prefix = "essence_\(hall.element.rawValue)_"
+        let tiers: [(id: String, word: String)] = [("low", "Low"), ("mid", "Mid"), ("high", "High")]
+        func chance(_ tier: String, on floor: Stage) -> Double {
+            floor.rewards.essenceChances[prefix + tier] ?? 0
         }
-        let top = "B\(hall.floors.count)"
-        return "Every floor drops \(EssenceCatalog.name(for: mid)) (\(odds(mid, on: first)) on B1, \(odds(mid, on: last)) on \(top)) "
-            + "and \(EssenceCatalog.name(for: high)) (\(odds(high, on: first)) on B1, \(odds(high, on: last)) on \(top)); "
-            + "relics up to \(last.rewards.relicGrade)★. Awakening spends the Mid, with Magic essence from the campaign. Every clear pays."
+        func percent(_ value: Double) -> String {
+            "\(Int((value * 100).rounded()))%"
+        }
+        // The odds across a group of floors: sure, one figure, or a span.
+        func odds(_ from: Double, _ to: Double) -> String {
+            if from >= 1 && to >= 1 { return "sure" }
+            if from == to { return percent(from) }
+            if from < 1 && to < 1 { return "\(Int((from * 100).rounded()))–\(percent(to))" }
+            return "\(from >= 1 ? "sure" : percent(from))–\(to >= 1 ? "sure" : percent(to))"
+        }
+        // The tiers a floor drops, in ladder order.
+        func dropped(_ floor: Stage) -> [String] {
+            tiers.map { $0.id }.filter { chance($0, on: floor) > 0 }
+        }
+        // Consecutive floors that drop the same tiers are one group: "B1–2".
+        var groups: [(first: Stage, last: Stage)] = []
+        for floor in hall.floors {
+            if let group = groups.last, dropped(group.last) == dropped(floor) {
+                groups[groups.count - 1].last = floor
+            } else {
+                groups.append((first: floor, last: floor))
+            }
+        }
+        let byFloor = groups.map { group -> String in
+            let span = group.first.index == group.last.index
+                ? "B\(group.first.index)"
+                : "B\(group.first.index)–\(group.last.index)"
+            let paid = dropped(group.first)
+            let lines = tiers.filter { paid.contains($0.id) }.map { tier -> String in
+                "\(tier.word) (\(odds(chance(tier.id, on: group.first), chance(tier.id, on: group.last))))"
+            }
+            return "\(span) \(lines.joined(separator: " and "))"
+        }
+        // Which grade spends which tier of this element, off the recipe.
+        let byGrade = [3, 4, 5].map { stars -> String in
+            let asked = UnitDatabase.awakeningCost(element: hall.element, naturalStars: stars)
+            let words = tiers.filter { asked[prefix + $0.id] != nil }.map { $0.word }
+            return "a \(stars)★ \(words.joined(separator: " and "))"
+        }
+        return "\(hall.element.displayName) Essence by floor — \(byFloor.joined(separator: "; ")). "
+            + "Relics up to \(last.rewards.relicGrade)★. An awakening spends it by natural grade — "
+            + "\(byGrade.joined(separator: ", ")) — with Magic essence from the campaign and the Titans. Every clear pays."
     }
 
     // MARK: - The levels
@@ -1122,7 +1163,7 @@ struct DungeonLevelsView: View {
                 }
                 HStack(spacing: 2) {
                     Image(systemName: "bolt.fill")
-                    Text("\(stage.energyCost)")
+                    Text("\(EventCalendar.energyCost(for: stage))")
                 }
                 .font(Theme.body(9).weight(.black))
                 .foregroundStyle(Theme.info)

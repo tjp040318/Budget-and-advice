@@ -51,6 +51,11 @@ struct Combatant: Identifiable, Sendable {
     /// The boon in the unit's socket, read by the engine at its hook
     /// (`BattleEngine.boonDamageMultiplier` and the turn and battle starts).
     let boon: Boon?
+    /// The family's regalia (`Regalia`), read by the engine at its hooks:
+    /// the two rate templates are already in `baseStats` (`buildSide`), the
+    /// rest are read where the shield, the heal, the bar or the debuff is
+    /// applied, and Unbowed in `DamageCalculator`.
+    let regalia: Regalia?
     /// True once this unit's first turn has ended: First Blood's clock.
     var hasActed: Bool = false
 
@@ -84,6 +89,7 @@ struct Combatant: Identifiable, Sendable {
         self.isAwakened = resolved.unit.isAwakened
         self.level = resolved.unit.level
         self.boon = resolved.boon
+        self.regalia = resolved.regalia
         let stats = (statsOverride ?? resolved.stats).clamped()
         self.baseStats = stats
         self.skills = resolved.skills

@@ -252,8 +252,6 @@ enum DungeonDatabase {
                 statMultiplier: difficulty * 1.4
             ))
 
-            let essence = "essence_\(element.rawValue)_mid"
-            let high = "essence_\(element.rawValue)_high"
             stages.append(Stage(
                 id: "\(id)_\(floor)",
                 chapterID: id,
@@ -275,7 +273,7 @@ enum DungeonDatabase {
                     // dungeon by a full grade at half the difficulty. The
                     // Labyrinth is where 6★s come from.
                     relicGrade: min(5, 2 + floor),
-                    essenceChances: [essence: min(1.0, 0.5 + Double(floor) * 0.1), high: Double(floor) * 0.1],
+                    essenceChances: hallEssenceChances(element: element, floor: floor),
                     scrollChances: [scroll(for: element).rawValue: 0.12],
                     firstClearDivinity: 30
                 ),
@@ -285,6 +283,33 @@ enum DungeonDatabase {
         }
         let chapter = Chapter(id: id, pantheon: environment.pantheon, name: name, summary: summary, stages: stages)
         return Hall(id: id, element: element, name: name, summary: summary, environment: environment, chapter: chapter)
+    }
+
+    /// What a Hall floor pays in its element's essence: the ladder of
+    /// `Docs/PLAN.md` (*Essence tiers — the ladder an awakening should
+    /// climb*, 2026-09-17). B1 and B2 are sure of the LOW with a Mid chance
+    /// that climbs (40%, 50%); B3 and B4 sure of the MID with a High chance
+    /// that climbs (25%, 35%); B5 sure of the Mid with the HIGH at half.
+    /// The tier a floor is sure of is the tier its power asks for — B1 for
+    /// a new account's 3★s, whose awakening spends Low, B5 for the 5★
+    /// whose ten High essences nothing else farms (`UnitDatabase.
+    /// awakeningCost`) — so the five floors are a ladder rather than five
+    /// prices for one good. They were Mid at `0.5 + 0.1 × floor` and High
+    /// at `0.1 × floor` on EVERY floor: a tenth of a Mid per energy
+    /// whatever the floor, and a High that nothing spent, which
+    /// `balance.py --essences` measured and mirrors as
+    /// `HALL_ESSENCE_SHIPPED`; `DungeonTests.testHallFloorsPayTheEssenceLadder`
+    /// pins the shape. Mid drops on every floor on purpose: it is the one
+    /// tier every grade's recipe asks, so no floor is useless to anyone.
+    static func hallEssenceChances(element: Element, floor: Int) -> [String: Double] {
+        func own(_ tier: String) -> String { "essence_\(element.rawValue)_\(tier)" }
+        switch floor {
+        case 1: return [own("low"): 1.0, own("mid"): 0.40]
+        case 2: return [own("low"): 1.0, own("mid"): 0.50]
+        case 3: return [own("mid"): 1.0, own("high"): 0.25]
+        case 4: return [own("mid"): 1.0, own("high"): 0.35]
+        default: return [own("mid"): 1.0, own("high"): 0.50]
+        }
     }
 }
 
