@@ -138,7 +138,7 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         ensureLoaded()
         guard let rival = state.rivals.first(where: { $0.id == profileID }) else {
-            throw SocialError.notFound("That summoner")
+            throw SocialError.notFound("That demigod")
         }
         if state.friendships.contains(where: { $0.friend.id == profileID }) {
             throw SocialError.conflict("\(rival.name) is already a friend.")
@@ -147,7 +147,7 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
             throw SocialError.conflict("A request to \(rival.name) is already waiting.")
         }
         let now = clock()
-        let me = state.profile?.name ?? "Summoner"
+        let me = state.profile?.name ?? "Demigod"
         var request = FriendRequest(
             id: FriendRequest.id(from: LocalSocialBackend.me, to: profileID),
             fromID: LocalSocialBackend.me,
@@ -191,7 +191,7 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
         lock.lock(); defer { lock.unlock() }
         ensureLoaded()
         guard let rival = state.rivals.first(where: { $0.id == mail.toID }) else {
-            throw SocialError.notFound("That summoner")
+            throw SocialError.notFound("That demigod")
         }
         // Nobody reads a rival's inbox here, so the greeting comes straight
         // back: the genre's friendship points, both ways.
@@ -332,7 +332,7 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
             id: "post_\(UUID().uuidString.lowercased())",
             guildID: guild.id,
             authorID: LocalSocialBackend.me,
-            authorName: state.profile?.name ?? "Summoner",
+            authorName: state.profile?.name ?? "Demigod",
             text: trimmed,
             postedAt: clock()
         )
@@ -368,7 +368,7 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
         }
         guard result.targetGuildID == war.opponent.id,
               war.targets.contains(where: { $0.id == result.targetID }) else {
-            throw SocialError.invalid("That summoner is not in the opposing guild.")
+            throw SocialError.invalid("That demigod is not in the opposing guild.")
         }
         guard war.attacksLeftToday > 0 else {
             throw SocialError.conflict("No war attacks left today. They return at midnight UTC.")
@@ -471,7 +471,7 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
             id: GuildMember.id(userID: LocalSocialBackend.me),
             userID: LocalSocialBackend.me,
             guildID: guild.id,
-            name: state.profile?.name ?? "Summoner",
+            name: state.profile?.name ?? "Demigod",
             level: state.profile?.level ?? 1,
             power: state.profile?.power ?? 0,
             role: role,
@@ -735,8 +735,8 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
                 toID: me,
                 fromID: systemSender,
                 fromName: "The Island",
-                subject: "Welcome, Summoner",
-                body: "The other summoners will find you once you sign in to iCloud. Until then, a gift for the road.",
+                subject: "Welcome, Demigod",
+                body: "The other demigods will find you once you sign in to iCloud. Until then, a gift for the road.",
                 grants: [.scrolls(.mystical, 3), .drachma(5_000)],
                 claimed: false,
                 sentAt: now.addingTimeInterval(-7_200)

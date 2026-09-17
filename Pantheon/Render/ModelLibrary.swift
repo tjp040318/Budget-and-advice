@@ -900,17 +900,35 @@ enum MaterialTuner {
     /// `applyElementTint`, on the instance's own materials. When a family
     /// ships an `_awakened` mesh, this runs on that mesh instead, so the
     /// glow is the constant and the costume is the upgrade.
+    ///
+    /// Quiet since 2026-09-17 (evening). It was a 2.0-power rim at 0.95 and
+    /// a costume glow of 0.55: at mid-facing that rim is nine times the base
+    /// rim (3.6 / 0.30), in the element's colour, over every pixel of the
+    /// figure, and the glow pushed lit gold past the bloom threshold — on the
+    /// reveal's four lights the owner's Ares Aureate photographed as a pale
+    /// smear over the temple ("If awakened characters look like this we have
+    /// a HUGE problem"), while `preview.py` drew the same mesh as a bronze
+    /// hoplite with a crimson cape. The aura rising from the feet and the
+    /// glow on the accents say "awakened"; the silhouette does not need to.
     static func applyAwakenedLook(_ node: SCNNode) {
         node.enumerateHierarchy { child, _ in
             guard let materials = child.geometry?.materials else { return }
             for material in materials {
-                material.setValue(NSNumber(value: Float(0.55)), forKey: "costumeGlow")
-                material.setValue(NSNumber(value: Float(2.0)), forKey: "rimPower")
-                material.setValue(NSNumber(value: Float(0.95)), forKey: "rimStrength")
+                material.setValue(NSNumber(value: Float(awakenedCostumeGlow)), forKey: "costumeGlow")
+                material.setValue(NSNumber(value: Float(awakenedRimPower)), forKey: "rimPower")
+                material.setValue(NSNumber(value: Float(awakenedRimStrength)), forKey: "rimStrength")
             }
         }
-        report(node, "awakened look: costume glow 0.55, rim 0.95")
+        report(node, "awakened look: costume glow \(awakenedCostumeGlow), rim \(awakenedRimStrength) at power \(awakenedRimPower)")
     }
+
+    /// The awakened look's three numbers, beside each other so the next
+    /// frame that reads wrong changes them together (the base rim is 3.6 at
+    /// 0.30 in `tune`; an awakened figure's is a little wider and a little
+    /// brighter, never an outline).
+    static let awakenedCostumeGlow: Double = 0.20
+    static let awakenedRimPower: Double = 3.2
+    static let awakenedRimStrength: Double = 0.42
 
     private static func report(_ node: SCNNode, _ message: String) {
         #if DEBUG

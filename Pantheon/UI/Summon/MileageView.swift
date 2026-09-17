@@ -205,7 +205,7 @@ struct SelectorSheet: View {
                 BarCount(value: "\(candidates.count)", systemImage: "person.3.fill", tint: Theme.gold)
             } content: {
                 VStack(spacing: 8) {
-                    Text("The circle owes every summoner one soul it did not choose for him. Pick the one you want; the rest of the roster is still out there.")
+                    Text("The circle owes every demigod one soul it did not choose for him. Pick the one you want; the rest of the roster is still out there.")
                         .font(Theme.body(12))
                         .foregroundStyle(Theme.textPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)

@@ -958,7 +958,10 @@ environment can and cannot do. The short version:
   clock, so a test's relic count holds on any weekday. `EventsView` is
   the calendar beside the missions scroll and on More; `balance.py
   --events`; tour step 45.
-- **Summoners — the social layer (2026-09-17; `Docs/SOCIAL.md`).**
+- **Allies — the social layer (2026-09-17; `Docs/SOCIAL.md`; it was called
+  "Summoners" for a day — the owner: "we shouldnt use that name" — and
+  the player is a DEMIGOD everywhere the game names him, never a
+  summoner; the tour step is `allies`).**
   `SocialBackend` (protocol), `CloudKitSocialBackend` (the public database
   of `iCloud.com.pantheon.game`, used only when the binary is entitled AND
   the device has an account — `isEntitled` reads the code-signature
@@ -1468,6 +1471,29 @@ environment can and cannot do. The short version:
   2026-09-09, then 2,000 on 2026-09-11 to afford Rome and the Jade Court's
   twenty): check `python3 tools/meshy.py balance` before every launch and
   never plan past it. A character is 53: 30 image-to-3D, 5 rig, 3 a clip.
+- **The scrolls are pictures, and the awakened look is quiet (2026-09-17,
+  evening).** The owner, with the summon screen: "I really want my scrolls
+  designed to have distinct looks … and then use that artwork IN the
+  summoning circle. I just feel like this whole UI is sloppy/not the
+  easiest to understand without that artwork." The eight scroll icons
+  painted that afternoon (`item_scroll_<type>.png`) were already distinct;
+  the screen never drew them. Now the menu rows, the strip's count chip,
+  both summon plates and the rates popup carry the painting (`BarCount`
+  and `PrimaryButton` take an `itemKey`; the glyph is the fallback) and
+  the scroll itself hangs over the ring in `SummoningCircle`
+  (`scrollOverTheRing`: a disc of its light, a breath, a drop and a flare
+  when charging). The nine cells of `Art/Items/sheet_scrolls.png` were
+  repainted at 2K as a `--ref` edit of the sheet (every design kept; 24
+  cents) and ship at 512 (`sheet_scrolls_2k.png`; `item_icons.py --px 512
+  --sheet scrolls_2k`). And the owner's phone frame of Ares Aureate on the
+  reveal — "If awakened characters look like this we have a HUGE problem"
+  — was the RENDER, not the mesh (`preview.py` draws a bronze hoplite):
+  `MaterialTuner.applyAwakenedLook` put a 2.0-power rim at 0.95 (nine
+  times the base at mid-facing, in the element colour) and a 0.55 costume
+  glow on a camera with no white point. It is 3.2 / 0.42 and 0.20 now
+  (`awakenedRimPower`, `awakenedRimStrength`, `awakenedCostumeGlow`), and
+  every HDR stage camera — the reveal, the altar, the collection's Stage,
+  the chest — wears the battle's `whitePoint` 1.85 shoulder.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 

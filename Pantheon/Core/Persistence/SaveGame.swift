@@ -123,7 +123,7 @@ enum SaveStore {
 enum NewGame {
     /// A fresh player: one Anubis at 4★ level 1, a starter relic set, and enough
     /// scrolls to see the summon screen do something on day one.
-    static func create(displayName: String = "Summoner") -> SaveGame {
+    static func create(displayName: String = "Demigod") -> SaveGame {
         var rng = SeededRandom(seed: UInt64(Date().timeIntervalSince1970.bitPattern))
         var player = Player(displayName: displayName)
 

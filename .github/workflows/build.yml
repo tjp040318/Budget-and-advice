@@ -115,7 +115,7 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
-          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter launch relic_sets tribute stage_popup chapter_maps realm_battle guide lessons night_market counsel sweep mileage selector relic_roll raid_grade raids relic_awaken boons resonance awaken island_decor events regalia summoners)
+          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter launch relic_sets tribute stage_popup chapter_maps realm_battle guide lessons night_market counsel sweep mileage selector relic_roll raid_grade raids relic_awaken boons resonance awaken island_decor events regalia allies)
           # Each launch also writes what the app prints — the [ModelLibrary]
           # block, SceneKit's own errors — to shots/<step>-console.txt, so a
           # frame that came out wrong can be read as well as looked at.
@@ -170,7 +170,7 @@ jobs:
               # onto the summoning circle (-tour-island-zoom 1.5), so the
               # diorama is seen close: the buildings as targets, the
               # bubbles, the figures and the decorations at the larger size.
-              summoners)
+              allies)
                 sleep 5; shoot "$step-${names[$step]}-guild"
                 for tab in friends inbox ranks; do
                   xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-social-tab $tab >/dev/null

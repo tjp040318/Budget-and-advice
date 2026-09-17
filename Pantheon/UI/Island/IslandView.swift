@@ -29,7 +29,7 @@ struct IslandView: View {
     @State private var showMissions = false
     @State private var showEvents = false
     @State private var showSocial = false
-    /// A guild war attack chosen on the Summoners sheet: the sheet closes,
+    /// A guild war attack chosen on the Allies sheet: the sheet closes,
     /// then the fight opens over the island the way the arena's does.
     @State private var warBattle: BattleContext?
     @State private var showDecor = false
@@ -416,7 +416,7 @@ struct IslandView: View {
                 .contentShape(Circle())
             }
             .buttonStyle(PlateButtonStyle())
-            // Summoners: friends, mail, the guild and the ranks; requests
+            // Allies: friends, mail, the guild and the ranks; requests
             // and unclaimed mail counted in red like the missions.
             Button {
                 Juice.haptic(.light)

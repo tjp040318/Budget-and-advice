@@ -46,7 +46,7 @@ struct TeamPreset: Codable, Equatable, Identifiable, Sendable {
 /// The complete player save. One of these is the whole game state; everything
 /// else is derived. `SaveGame` encodes it verbatim.
 struct Player: Codable, Equatable, Sendable {
-    var displayName: String = "Summoner"
+    var displayName: String = "Demigod"
     var level: Int = 1
     var experience: Int = 0
     var wallet = Wallet()

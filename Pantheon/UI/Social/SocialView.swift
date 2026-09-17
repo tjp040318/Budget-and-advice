@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Summoners: friends, the inbox, the guild and its war, the rankings — the
+/// Allies: friends, the inbox, the guild and its war, the rankings — the
 /// social layer (`Docs/SOCIAL.md`) in the shape of the app's other screens:
 /// one strip with the four tabs as its segmented switch, the content to the
 /// edges, two columns on a landscape phone.
@@ -44,7 +44,7 @@ struct SocialView: View {
 
     var body: some View {
         NavigationStack {
-            GameScreen("Summoners", subtitle: subtitle, dismiss: { dismiss() }) {
+            GameScreen("Allies", subtitle: subtitle, dismiss: { dismiss() }) {
                 BarSegments(options: tabs, selection: $tab)
                 BarCount(
                     value: social.availability.isOnline ? "Online" : "Offline",
@@ -105,9 +105,9 @@ struct SocialView: View {
     private var friendsTab: some View {
         HStack(alignment: .top, spacing: 8) {
             VStack(spacing: 8) {
-                SectionPanel(title: "Find summoners") {
+                SectionPanel(title: "Find demigods") {
                     VStack(spacing: 6) {
-                        SocialField(placeholder: "A summoner's name", draft: $friendQuery, submitLabel: "Search") {
+                        SocialField(placeholder: "A demigod's name", draft: $friendQuery, submitLabel: "Search") {
                             Task { await social.search(name: friendQuery) }
                         }
                         if social.searchResults.isEmpty {
@@ -147,7 +147,7 @@ struct SocialView: View {
                     EmptyState(
                         icon: "person.2",
                         title: "No friends yet",
-                        message: "Find a summoner by name and send a request; a friend's row greets them with a gift."
+                        message: "Find a demigod by name and send a request; a friend's row greets them with a gift."
                     )
                 } else {
                     ScrollView {
@@ -258,7 +258,7 @@ struct SocialView: View {
                             Task { await social.createGuild(name: newGuildName, crest: newGuildCrest) }
                         }
                         SocialCrestPicker(chosen: newGuildCrest) { newGuildCrest = $0 }
-                        Text("Up to \(Guild.capacity) summoners. The guild is paired against a rival every week; each member fights \(WarRules.attacksPerDay) times a day.")
+                        Text("Up to \(Guild.capacity) demigods. The guild is paired against a rival every week; each member fights \(WarRules.attacksPerDay) times a day.")
                             .font(Theme.body(10))
                             .foregroundStyle(Theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
@@ -891,7 +891,7 @@ private struct SocialRankTable: View {
                 EmptyState(
                     icon: "list.number",
                     title: "No ranks yet",
-                    message: "The table fills as summoners publish their standing."
+                    message: "The table fills as demigods publish their standing."
                 )
             } else {
                 ScrollView {

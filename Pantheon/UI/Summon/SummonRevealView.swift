@@ -591,6 +591,13 @@ struct SummonStageView: UIViewRepresentable {
         camera.zNear = 1
         camera.zFar = 200
         camera.wantsHDR = true
+        // THE SHOULDER (2026-09-17, evening): `whitePoint` at SceneKit's
+        // default 1.0 clips every lit surface at or over 1.0 flat to paper —
+        // the battle learned it on 2026-09-15 (BattleSceneController) and
+        // this camera never got it, which is half of why the owner's awakened
+        // Ares photographed as a pale smear on the reveal. Same number as the
+        // battle's so the figure looks the same on every stage.
+        camera.whitePoint = 1.85
         // No exposure adaptation: on a black stage it meters the dark and
         // pushes the exposure up, and a gold character (Sekhmet) went white.
         camera.wantsExposureAdaptation = false

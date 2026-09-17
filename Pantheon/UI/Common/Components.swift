@@ -1149,6 +1149,9 @@ struct PrimaryButton: View {
     var systemImage: String? = nil
     var tint: Color = Theme.gold
     var isEnabled: Bool = true
+    /// A painted item (`ItemArt` key) in place of the glyph — the summon
+    /// plates carry the scroll they spend. The glyph is the fallback.
+    var itemKey: String? = nil
     let action: () -> Void
 
     var body: some View {
@@ -1157,7 +1160,9 @@ struct PrimaryButton: View {
             action()
         } label: {
             HStack(spacing: 6) {
-                if let systemImage {
+                if let itemKey, ItemArt.hasPainting(itemKey) {
+                    ItemIcon(key: itemKey, size: 24, glow: false)
+                } else if let systemImage {
                     Image(systemName: systemImage)
                         .font(.system(size: 13, weight: .black))
                 }
@@ -1619,10 +1624,18 @@ struct BarCount: View {
     let value: String
     var systemImage: String?
     var tint: Color = Theme.textSecondary
+    /// A painted item (`ItemArt` key) in place of the glyph: the summon
+    /// strip's scroll count shows the scroll itself (2026-09-17, evening; the
+    /// owner: "use that artwork IN the summoning circle … this whole UI is
+    /// sloppy/not the easiest to understand without that artwork"). The glyph
+    /// still draws when the painting has not shipped.
+    var itemKey: String? = nil
 
     var body: some View {
         HStack(spacing: 4) {
-            if let systemImage {
+            if let itemKey, ItemArt.hasPainting(itemKey) {
+                ItemIcon(key: itemKey, size: 18, glow: false)
+            } else if let systemImage {
                 Image(systemName: systemImage)
                     .font(.system(size: 10, weight: .black))
                     .foregroundStyle(tint)

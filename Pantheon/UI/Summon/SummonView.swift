@@ -50,7 +50,8 @@ struct SummonView: View {
                 BarCount(
                     value: "\(store.player.wallet.count(of: selectedBanner.scroll))",
                     systemImage: selectedBanner.scroll.glyph,
-                    tint: Theme.gold
+                    tint: Theme.gold,
+                    itemKey: ItemArt.key(scroll: selectedBanner.scroll)
                 )
                 BarWallet(wallet: store.player.wallet)
             } content: {
@@ -191,23 +192,35 @@ struct SummonView: View {
         }
     }
 
-    /// One banner: its scroll's glyph in the scroll's own colour, its name, and
-    /// how many of that scroll are left. A row with none left is dimmed but
-    /// still selectable, because wanting to read the odds for a scroll you have
-    /// run out of is normal.
+    /// One banner: its scroll — the painted scroll itself since 2026-09-17
+    /// (evening), the same picture the bazaar, the chest and the circle
+    /// show, so a row is told apart by the object it spends and not by a
+    /// glyph in a colour (the owner: "I really want my scrolls designed to
+    /// have distinct looks … I just feel like this whole UI is sloppy/not
+    /// the easiest to understand without that artwork") — its name, and how
+    /// many of that scroll are left. A row with none left is dimmed but
+    /// still selectable, because wanting to read the odds for a scroll you
+    /// have run out of is normal. The glyph draws only for a scroll whose
+    /// painting has not shipped.
     private func menuRow(_ banner: Banner, short: Bool) -> some View {
         let owned = store.player.wallet.count(of: banner.scroll)
         let isOn = banner.id == selectedBanner.id
+        let key = ItemArt.key(scroll: banner.scroll)
         return Button {
             Juice.haptic(.light)
             AudioLibrary.shared.play(.uiTap)
             selectedBanner = banner
         } label: {
             HStack(spacing: 7) {
-                Image(systemName: banner.scroll.glyph)
-                    .font(.system(size: 12, weight: .black))
-                    .foregroundStyle(isOn ? Theme.ink : banner.scroll.tint)
-                    .frame(width: 17)
+                if ItemArt.hasPainting(key) {
+                    ItemIcon(key: key, size: 24, glow: false)
+                        .frame(width: 24)
+                } else {
+                    Image(systemName: banner.scroll.glyph)
+                        .font(.system(size: 12, weight: .black))
+                        .foregroundStyle(isOn ? Theme.ink : banner.scroll.tint)
+                        .frame(width: 24)
+                }
                 Text(short ? shortName(banner) : banner.title)
                     .font(Theme.body(11).weight(.semibold))
                     .foregroundStyle(isOn ? Theme.ink : Theme.textPrimary)
@@ -549,7 +562,8 @@ struct SummonView: View {
                     title: "Summon ×1",
                     systemImage: scroll.glyph,
                     tint: Theme.surfaceHigh,
-                    isEnabled: owned >= 1
+                    isEnabled: owned >= 1,
+                    itemKey: ItemArt.key(scroll: scroll)
                 ) {
                     perform(count: 1)
                 }
@@ -558,7 +572,8 @@ struct SummonView: View {
                 PrimaryButton(
                     title: "Summon ×10",
                     systemImage: scroll.glyph,
-                    isEnabled: owned >= 10
+                    isEnabled: owned >= 10,
+                    itemKey: ItemArt.key(scroll: scroll)
                 ) {
                     perform(count: 10)
                 }
@@ -719,7 +734,8 @@ struct RateTableView: View {
         NavigationStack {
             GameScreen("Rates", subtitle: banner.title, dismiss: { dismiss() }) {
                 BarCount(value: "\(poolCount)", systemImage: "person.3.fill")
-                BarCount(value: banner.scroll.displayName, systemImage: banner.scroll.glyph, tint: Theme.gold)
+                BarCount(value: banner.scroll.displayName, systemImage: banner.scroll.glyph, tint: Theme.gold,
+                         itemKey: ItemArt.key(scroll: banner.scroll))
             } content: {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 10) {
@@ -876,14 +892,14 @@ struct SummoningCircle: View {
                 ring(size: ringSize * 0.62, opacity: 0.55, angle: -spin * 1.6)
                     .position(centre)
 
-                // The scroll's mark, hanging over the ring where the unit will
-                // step out of it.
-                Image(systemName: banner.scroll.glyph)
-                    .font(.system(size: charging ? 44 : 34, weight: .black))
-                    .foregroundStyle(tint)
-                    .shadow(color: tint.opacity(0.9), radius: charging ? 24 : 12)
-                    .scaleEffect(pulse)
-                    .position(x: centre.x, y: centre.y - ringSize * 0.42)
+                // The scroll itself, standing over the ring where the unit
+                // will step out of it: the painted scroll the menu row and
+                // the plates carry, not a mark (2026-09-17, evening; the
+                // owner: "use that artwork IN the summoning circle"). At
+                // rest it hangs above the ring, tilted, and breathes; when
+                // the summon is coming it drops toward the ring's centre,
+                // swells and flares, and the reveal takes over.
+                scrollOverTheRing(centre: centre, ringSize: ringSize)
 
                 // The banner's name used to hang above the altar here, on a
                 // marble plaque. It is in the header now: this whole view is a
@@ -906,10 +922,42 @@ struct SummoningCircle: View {
                 spin = 360
             }
             withAnimation(.easeInOut(duration: 1.7).repeatForever(autoreverses: true)) {
-                pulse = 1.12
+                pulse = 1.06
             }
         }
         .animation(.easeOut(duration: 0.35), value: charging)
+    }
+
+    /// The scroll over the ring (see `body`): a disc of its own light behind
+    /// it so it reads against the painted floor and the marble alike, the
+    /// painting at two fifths of the ring at rest and half of it charging,
+    /// a slow breath (`pulse`) as a bob and a swell. The glyph remains the
+    /// fallback for a scroll whose painting has not shipped.
+    private func scrollOverTheRing(centre: CGPoint, ringSize: CGFloat) -> some View {
+        let key = ItemArt.key(scroll: banner.scroll)
+        let size = ringSize * (charging ? 0.50 : 0.40)
+        return ZStack {
+            RadialGradient(
+                colors: [tint.opacity(charging ? 0.9 : 0.5), tint.opacity(0)],
+                center: .center, startRadius: 0, endRadius: size * 0.72
+            )
+            .frame(width: size * 1.6, height: size * 1.6)
+            .blendMode(.screen)
+            if ItemArt.hasPainting(key) {
+                ItemIcon(key: key, size: size, glow: false)
+                    .rotationEffect(.degrees(charging ? 0 : -12))
+                    .shadow(color: tint.opacity(0.85), radius: charging ? size * 0.22 : size * 0.10)
+                    .shadow(color: .black.opacity(0.35), radius: 6, y: 8)
+            } else {
+                Image(systemName: banner.scroll.glyph)
+                    .font(.system(size: size * 0.4, weight: .black))
+                    .foregroundStyle(tint)
+                    .shadow(color: tint.opacity(0.9), radius: charging ? 24 : 12)
+            }
+        }
+        .scaleEffect(pulse)
+        .offset(y: (1 - pulse) * 90)
+        .position(x: centre.x, y: charging ? centre.y - ringSize * 0.18 : centre.y - ringSize * 0.44)
     }
 
     /// Something for the overlaid controls to sit on. The lettering over the

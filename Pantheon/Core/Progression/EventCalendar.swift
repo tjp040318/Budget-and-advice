@@ -103,7 +103,7 @@ enum EventKind: Hashable, Sendable {
         case .doubleDrachma:
             return "Every stage clear pays twice the drachma, fought or swept."
         case .doubleExperience:
-            return "Your units and your summoner level gain twice the experience from every clear."
+            return "Your units and your demigod level gain twice the experience from every clear."
         case .halfEnergyCampaign:
             return "Campaign stages cost half their energy, rounded up. The Halls, the Labyrinth and the Tower keep their price."
         case .arenaLaurelsBoost:

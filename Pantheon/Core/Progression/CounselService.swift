@@ -120,7 +120,7 @@ enum CounselService {
              reward: .divinity(30),
              measure: { player in player.lastDailyPackClaim == nil ? 0 : 1 }),
         Step(id: "counsel_level_5", tier: .initiate,
-             title: "Reach summoner level 5", icon: "crown.fill", goal: 5,
+             title: "Reach demigod level 5", icon: "crown.fill", goal: 5,
              reward: .scrolls(.mystical, 2),
              measure: { player in min(5, player.level) }),
         Step(id: "counsel_arena", tier: .initiate,
@@ -139,7 +139,7 @@ enum CounselService {
     /// The first week.
     private static let adeptSteps: [Step] = [
         Step(id: "counsel_level_12", tier: .adept,
-             title: "Reach summoner level 12", icon: "crown.fill", goal: 12,
+             title: "Reach demigod level 12", icon: "crown.fill", goal: 12,
              reward: .divinity(80),
              measure: { player in min(12, player.level) }),
         Step(id: "counsel_evolve_4", tier: .adept,
@@ -185,7 +185,7 @@ enum CounselService {
     /// The long game.
     private static let hierophantSteps: [Step] = [
         Step(id: "counsel_level_25", tier: .hierophant,
-             title: "Reach summoner level 25", icon: "crown.fill", goal: 25,
+             title: "Reach demigod level 25", icon: "crown.fill", goal: 25,
              reward: .divinity(200),
              measure: { player in min(25, player.level) }),
         Step(id: "counsel_evolve_6", tier: .hierophant,

@@ -498,7 +498,7 @@ struct LabyrinthView: View {
     private var summitPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionHeader(title: "The tower is climbed")
-            Text("A hundred floors, and the last of them is behind you. Nothing above the Coil answers to a summoner.")
+            Text("A hundred floors, and the last of them is behind you. Nothing above the Coil answers to a demigod.")
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

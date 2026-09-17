@@ -1007,6 +1007,13 @@ struct AltarStageView: UIViewRepresentable {
         camera.zNear = 0.5
         camera.zFar = 100
         camera.wantsHDR = true
+        // THE SHOULDER (2026-09-17, evening): `whitePoint` at SceneKit's
+        // default 1.0 clips every lit surface at or over 1.0 flat to paper —
+        // the battle learned it on 2026-09-15 (BattleSceneController) and
+        // this camera never got it, which is half of why the owner's awakened
+        // Ares photographed as a pale smear on the reveal. Same number as the
+        // battle's so the figure looks the same on every stage.
+        camera.whitePoint = 1.85
         camera.wantsExposureAdaptation = false
         camera.bloomIntensity = 0.3
         camera.bloomThreshold = 0.93

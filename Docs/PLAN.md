@@ -4775,7 +4775,7 @@ and Labyrinth. Tour step 45 photographs a Festival Monday (2026-09-28).
 Not built, and where it would go: event missions with a reward shop, a
 seasons table, a banner rate bump (the rates are printed and asserted).
 
-## Summoners — the social layer on CloudKit (2026-09-17, built; Docs/SOCIAL.md)
+## Allies — the social layer on CloudKit (2026-09-17, built; Docs/SOCIAL.md; the screen was "Summoners" for a day)
 
 The owner's choices: "Build a real backend" → "CloudKit" → "Friends, mail,
 guilds, leaderboards" (no live PvP; he has an Apple Developer account).
@@ -4946,3 +4946,89 @@ ending at 505 — the last spend inside the owner's floor. The board of the
 three Zeuses (shipped, the pass, the remake) is the owner's decision
 point; the bill for the roster is above, and none of it is spent without
 his word.
+
+## The scrolls as pictures, and the awakened look (2026-09-17, evening; built)
+
+The owner, with the summon screen on his phone: "I really want my scrolls
+designed to have distinct looks (similar to how every other game like
+summoners does it) and then use that artwork IN the summoning circle. I
+just feel like this whole UI is sloppy/not the easiest to understand
+without that artwork." And, a minute later, with the reveal of an awakened
+Ares: "If awakened characters look like this we have a HUGE problem."
+
+### What the genre does
+
+Summoners War's scrolls are the most recognisable items in the game: one
+silhouette (a rolled scroll with two rods) in a colour and a seal per kind
+— the Unknown Scroll plain and grey-brown, the Mystical Scroll blue with a
+gem, the Legendary Scroll gold and red, the Light & Dark Scroll half white
+and half black, the elemental scrolls in their element's colour with its
+mark — and the SAME picture is the item in the inventory, the row in the
+summon menu, the button, and the object that lands on the summoning circle
+and bursts open. Epic Seven's covenant and mystic bookmarks and Raid's
+shards do the same: the currency is a picture the player learns in the
+first hour, and every screen that spends it shows it.
+
+### What we had
+
+The eight scroll icons painted in the afternoon's item batch
+(`item_scroll_<type>.png`, `tools/item_icons.py`, the `scrolls` sheet) were
+already that: one silhouette, eight colours and seals, judged good on their
+contact sheet. The summon screen never drew them — the menu rows, the
+strip's count, both plates and the mark over the ring were SF glyphs in a
+tint, and the ring's mark was a blue rounded blob the owner read as "sloppy".
+
+### The options
+
+1. **Draw the paintings that exist, everywhere on the screen, and stand
+   the scroll over the ring** — free, one evening, consistent with the
+   bazaar, the chests and the reward tiles that already show them. Chosen.
+2. Re-design the scrolls from scratch as a new sheet — a second look for
+   the same items when the first was judged good; only worth it if the
+   owner dislikes the shipped ones (he has not seen them large yet — this
+   pass shows them to him).
+3. A 3D scroll on the circle (a Meshy prop per kind, 30 credits each ×
+   8 = 240 over a 500 floor with 505 in hand; or one prop recoloured) —
+   the genre's own scroll on the circle is a 2D/3D hybrid; a painted card
+   with a glow, a breath and a drop reads the same at a phone's size and
+   costs nothing. Later, if the credits are there.
+
+### As built
+
+- `BarCount` and `PrimaryButton` (Components.swift) take an `itemKey`
+  and draw `ItemIcon` in place of the glyph when the painting has
+  shipped; the glyph stays as the fallback.
+- `SummonView`: the strip's count chip, every menu row (the painting at
+  24 pt where the 12-pt glyph was), the ×1 and ×10 plates and the rates
+  popup's chip carry the scroll in hand.
+- `SummoningCircle.scrollOverTheRing`: the painting at two fifths of the
+  ring's width at rest, tilted −12°, over a disc of the scroll's light,
+  breathing (the `pulse` state, 1.0–1.06, as a bob of up to 5 pt and a
+  swell); charging, it drops from 0.44 to 0.18 of the ring above the
+  centre, grows to half the ring, straightens and its glow doubles.
+- The icons at 256 were painted for a 50-pt reward tile; the circle draws
+  one at ~95 pt on a 3× screen. The `scrolls` sheet was repainted at 2K as
+  a `--ref` edit of itself ("the same nine objects in the same nine
+  cells … only the rendering is finer"; 24 cents, one take, every design
+  kept — the board `scrolls_2k_vs_256` shows them side by side) and the
+  nine ship at 512 (`python3 tools/item_icons.py --split scrolls --sheet
+  scrolls_2k --px 512`; 2.0 MB). `Art/Items/sheet_scrolls_2k.png` is the
+  raw.
+
+### The awakened look
+
+The reveal frame was the RENDER, not the mesh: `preview.py` draws the
+shipped `ares_awakened.usdz` as a bronze hoplite with a crimson cape and
+pink runes. `MaterialTuner.applyAwakenedLook` set the rim to power 2.0 at
+0.95 — at mid-facing that is (0.5)^2 × 0.95 = 0.24 of the element colour
+added to every pixel, nine times the base rim's (0.5)^3.6 × 0.30 = 0.025
+— and a 0.55 costume glow as emission on the accents; on the reveal's
+four lights (key 780, fill 300, rim 520, ambient 175) and a camera whose
+`whitePoint` was still SceneKit's 1.0 (the battle got its 1.85 shoulder
+on 2026-09-15; the reveal, the altar, the collection's Stage and the chest
+never did), a lit bronze figure went to paper. Now: rim 3.2 at 0.42, glow
+0.20 (`awakenedRimPower`, `awakenedRimStrength`, `awakenedCostumeGlow` in
+ModelLibrary.swift, beside each other), the aura from the feet unchanged
+as the awakened signal, and `whitePoint = 1.85` on all four cameras. The
+proof is the next run's reveal frame with an awakened result
+(`-tour-reveal awakened`), judged against the phone frame.

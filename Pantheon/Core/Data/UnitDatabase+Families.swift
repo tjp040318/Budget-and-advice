@@ -127,7 +127,7 @@ extension UnitDatabase {
                   hp: 320, atk: 23, def: 21, spd: 92, height: 1.90, melee: true, costumeHue: 45, motif: "Wrappings",
                   skills: ["Grasping Bandage", "Curse of the Tomb", "", ""],
                   awakened: nil,
-                  lore: "Wrapped, sealed and forgotten; woken by a summoner who did not read the warning on the door."),
+                  lore: "Wrapped, sealed and forgotten; woken by a demigod who did not read the warning on the door."),
         FamilyRow(key: "jackal_warrior", name: "Jackal Warrior", pantheon: .egyptian, stars: 3, archetype: .hero, role: .attacker, kit: .striker,
                   hp: 300, atk: 26, def: 19, spd: 104, height: 1.90, melee: true, costumeHue: 45, motif: "Necropolis",
                   skills: ["Jackal Cut", "Duat Lunge", "", ""],

@@ -89,9 +89,9 @@ enum QuestService {
         Feat(id: "evolve_6", title: "Evolve a unit to 6★", reward: .scrolls(.divine, 1), icon: "star.circle.fill", counter: "six_stars", goal: 1),
         Feat(id: "units_20", title: "Own twenty units", reward: .scrolls(.mystical, 3), icon: "person.3.fill", counter: nil, goal: 20),
         Feat(id: "units_40", title: "Own forty units", reward: .scrolls(.divine, 1), icon: "person.3.fill", counter: nil, goal: 40),
-        Feat(id: "level_10", title: "Reach summoner level 10", reward: .divinity(100), icon: "crown.fill", counter: nil, goal: 10),
-        Feat(id: "level_20", title: "Reach summoner level 20", reward: .divinity(200), icon: "crown.fill", counter: nil, goal: 20),
-        Feat(id: "level_30", title: "Reach summoner level 30", reward: .divinity(300), icon: "crown.fill", counter: nil, goal: 30),
+        Feat(id: "level_10", title: "Reach demigod level 10", reward: .divinity(100), icon: "crown.fill", counter: nil, goal: 10),
+        Feat(id: "level_20", title: "Reach demigod level 20", reward: .divinity(200), icon: "crown.fill", counter: nil, goal: 20),
+        Feat(id: "level_30", title: "Reach demigod level 30", reward: .divinity(300), icon: "crown.fill", counter: nil, goal: 30),
     ] + StageDatabase.chapters.map { chapter in
         Feat(id: "clear_\(chapter.id)", title: "Clear \(chapter.name)", reward: .bundle([.divinity(100), .scrolls(.pantheonic, 1)]),
              icon: "checkmark.seal.fill", counter: nil, goal: chapter.stages.count)

@@ -216,7 +216,7 @@ final class CloudKitSocialBackend: SocialBackend, @unchecked Sendable {
         let request = FriendRequest(
             id: FriendRequest.id(from: me, to: profileID),
             fromID: me,
-            fromName: myName ?? "Summoner",
+            fromName: myName ?? "Demigod",
             toID: profileID,
             status: .pending,
             sentAt: Date()
@@ -230,7 +230,7 @@ final class CloudKitSocialBackend: SocialBackend, @unchecked Sendable {
         do {
             _ = try await save(record)
         } catch SocialError.conflict {
-            throw SocialError.conflict("A request to that summoner is already waiting.")
+            throw SocialError.conflict("A request to that demigod is already waiting.")
         }
         return request
     }
@@ -540,7 +540,7 @@ final class CloudKitSocialBackend: SocialBackend, @unchecked Sendable {
         attack["week"] = week
         attack["day"] = day
         attack["attackerID"] = me
-        attack["attackerName"] = knownProfile()?.name ?? "Summoner"
+        attack["attackerName"] = knownProfile()?.name ?? "Demigod"
         attack["guildID"] = mine.id
         attack["targetID"] = result.targetID
         attack["targetGuildID"] = result.targetGuildID
@@ -622,7 +622,7 @@ final class CloudKitSocialBackend: SocialBackend, @unchecked Sendable {
         let record = CKRecord(recordType: "GuildMember", recordID: CKRecord.ID(recordName: GuildMember.id(userID: me)))
         record["userID"] = me
         record["guildID"] = guild.id
-        record["name"] = profile?.name ?? "Summoner"
+        record["name"] = profile?.name ?? "Demigod"
         record["level"] = profile?.level ?? 1
         record["power"] = profile?.power ?? 0
         record["role"] = role.rawValue

@@ -113,7 +113,7 @@ enum IslandDatabase {
         Landmark(
             id: "arena",
             title: "Arena of Souls",
-            subtitle: "Other summoners' defences",
+            subtitle: "Other demigods' defences",
             systemImage: "trophy.fill",
             destination: .arena,
             anchor: CGPoint(x: 0.74, y: 0.63),
@@ -239,7 +239,7 @@ enum IslandDecorService {
             switch self {
             case .unknown: return "No such decoration."
             case .alreadyOwned: return "You already own that piece."
-            case .locked(let level): return "Reach summoner level \(level) first."
+            case .locked(let level): return "Reach demigod level \(level) first."
             case .notEnoughDrachma(let needed): return "Needs \(needed) drachma."
             case .notOwned: return "Buy the piece before placing it."
             case .unknownSlot: return "No such place on the island."

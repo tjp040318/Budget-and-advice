@@ -44,7 +44,7 @@ struct TourView: View {
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
         ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
-        ("awaken", 2), ("island_decor", 2), ("events", 2), ("regalia", 2), ("summoners", 2),
+        ("awaken", 2), ("island_decor", 2), ("events", 2), ("regalia", 2), ("demigods", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -134,7 +134,7 @@ struct TourView: View {
             // and the weekend's headline all on one frame, whatever day CI
             // runs on.
             EventsView(now: Self.festivalMonday, onClaim: { _ in nil })
-        case "summoners":
+        case "demigods":
             // The social screen on the seeded offline world (the CI build
             // carries no iCloud entitlement): the Guild tab by default, and
             // `-tour-social-tab friends|inbox|ranks` for the others, which
@@ -402,7 +402,7 @@ struct TourView: View {
 
     /// The unit the awaken step opens on: not yet awakened, with an awakened
     /// form to take, the highest grade and level first.
-    /// The Summoners step's service on the seeded offline world, made once.
+    /// The Allies step's service on the seeded offline world, made once.
     private static let tourSocial = SocialService(backend: LocalSocialBackend(seed: 7, persisting: false))
 
     /// A Monday of a Festival week, for the events step.

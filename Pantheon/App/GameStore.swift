@@ -946,7 +946,7 @@ final class GameStore: ObservableObject {
         markDirty()
     }
 
-    // MARK: - Summoners (the social layer, 2026-09-17)
+    // MARK: - Allies (the social layer, 2026-09-17)
 
     /// Friends, mail, guilds and the boards: CloudKit when the build is
     /// entitled and the device has an account, the seeded offline world

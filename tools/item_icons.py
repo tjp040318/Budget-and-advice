@@ -191,9 +191,14 @@ def ship_cell(cell, path, px=256, margin=0.08):
     return True
 
 
-def split(name):
+def split(name, px=256, sheet_name=None):
+    """Ships every cell of `sheet_<name>.png` (or of `sheet_<sheet_name>.png`
+    laid out as `name` — the scrolls' 2K repaint, `sheet_scrolls_2k.png`, is
+    the scrolls sheet's own nine cells painted again as a `--ref` edit of it,
+    2026-09-17) at `px` pixels. The scrolls ship at 512 because the summoning
+    circle draws one at a quarter of the ring; everything else at 256."""
     cols, rows, items = SHEETS[name]
-    src = ART / f"sheet_{name}.png"
+    src = ART / f"sheet_{sheet_name or name}.png"
     if not src.exists():
         sys.exit(f"no {src}; paint it first")
     sheet = Image.open(src).convert("RGB")
@@ -203,7 +208,7 @@ def split(name):
     for i, (item_key, _) in enumerate(items):
         r, c = divmod(i, cols)
         cell = sheet.crop((int(c * cw), int(r * ch), int((c + 1) * cw), int((r + 1) * ch)))
-        ship_cell(cell, OUT / f"item_{item_key}.png")
+        ship_cell(cell, OUT / f"item_{item_key}.png", px=px)
 
 
 def preview(out):
@@ -235,6 +240,8 @@ def main():
     ap.add_argument("--paint", help="a sheet name, or all")
     ap.add_argument("--split", help="a sheet name, or all")
     ap.add_argument("--preview", help="write a contact sheet of the shipped icons here")
+    ap.add_argument("--px", type=int, default=256, help="the shipped size (the scrolls ship at 512)")
+    ap.add_argument("--sheet", help="split this painted sheet instead (e.g. scrolls_2k for --split scrolls)")
     args = ap.parse_args()
     if args.list:
         for name, (cols, rows, items) in SHEETS.items():
@@ -246,7 +253,7 @@ def main():
     if args.split:
         for name in (SHEETS if args.split == "all" else [args.split]):
             print(name)
-            split(name)
+            split(name, px=args.px, sheet_name=args.sheet)
     if args.preview:
         preview(args.preview)
 

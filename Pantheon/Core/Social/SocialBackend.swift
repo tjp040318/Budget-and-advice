@@ -86,7 +86,7 @@ enum SocialAvailability: Equatable, Sendable {
     var isOnline: Bool { self == .online }
 
     /// The notices, in one place so the screens and the tests agree.
-    static let noAccount = "Offline: sign in to iCloud in Settings to see other summoners."
+    static let noAccount = "Offline: sign in to iCloud in Settings to see other demigods."
     static let notEntitled = "Offline: this build is not signed for iCloud; showing the practice roster."
     static let restricted = "Offline: iCloud is restricted on this device; showing the practice roster."
     static let unreachable = "Offline: iCloud could not be reached; showing the practice roster."

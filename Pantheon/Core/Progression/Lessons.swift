@@ -254,7 +254,7 @@ enum LessonBook {
         ),
         Lesson(
             id: "arena",
-            title: "Other summoners",
+            title: "Other demigods",
             topic: .places,
             beats: [
                 LessonBeat("The arena puts your four against somebody else's. They do not play; their gods do."),

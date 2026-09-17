@@ -273,7 +273,7 @@ signed for iCloud; showing the practice roster.")
    entitlements file must NOT carry `aps-environment` (the CI build is
    unsigned and the app sends no push).
 5. Run on a device signed in to iCloud (or on a simulator whose Settings
-   app is signed in to iCloud). Open **Summoners** (the island's header, or
+   app is signed in to iCloud). Open **Allies** (the island's header, or
    More) and do one of each: it publishes your profile on opening; search a
    name; send a request; create a guild; post to the board; send a friend
    a greeting; fight a war target. Each first save creates the record type
@@ -310,7 +310,7 @@ signed for iCloud; showing the practice roster.")
 - **SettingsView's account reset** (the lead's file): `LocalSocialBackend.wipe()`
   beside `SaveStore.deleteSave()`, so the offline world's claimed mail and
   joined guild go with the account.
-- **RootView / IslandView / More**: a Summoners button (icon
+- **RootView / IslandView / More**: an Allies button (icon
   `person.2.fill`) beside the missions scroll in the island's header and a
   tile on More, presenting `SocialView(social: store.social, onAttack:
   { target in ... }, onClaim: { grants in store.receive(grants) })` as a

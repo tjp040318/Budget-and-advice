@@ -250,7 +250,7 @@ struct SettingsView: View {
             } label: {
                 let pending = store.social.pendingCount
                 tileFace(
-                    title: "Summoners",
+                    title: "Allies",
                     caption: "Friends, mail, your guild and its war, the ranks",
                     icon: "person.2.fill",
                     tint: Theme.gold,
@@ -390,7 +390,7 @@ struct SettingsView: View {
     private var accountPanel: some View {
         SectionPanel(title: "Account", accessory: "Lv.\(store.player.level)") {
             VStack(spacing: 5) {
-                row("Summoner", store.player.displayName)
+                row("Demigod", store.player.displayName)
                 row("Level", "\(store.player.level)")
                 row("Units", "\(store.player.units.count)")
                 row("Relics", "\(store.player.relics.count)")
