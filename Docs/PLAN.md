@@ -4681,3 +4681,19 @@ the owner to say yes to; 4 named so it is not forgotten.** Option 1 is
 built on Zeus first and judged on the reveal's, the altar's and a
 battle's frames before the other twenty-three families are re-shipped
 (each is a minute of decimation here).
+
+**Measured (run 174, 2026-09-17):** Zeus at 16,000 with the 6,000/2,048
+LOD, the painted-gold metal mask and the roughness-driven specular. The
+altar and the collection's Stage show the gold catching the key as a
+tight highlight where run 172 lit it like the linen beside it; the fight
+draws the 6,000 mesh with its beard, scales and meander intact where the
+3,500/1,024 file blurred them; and `framelight.py` came out BETTER than
+the run before (worst band 0.5% clipped against 2.9%, worst patch 22%
+against 54%), so the brighter specular blew nothing. The hero tier
+(`tools/batch/hero_budget.sh`: the eleven hand-written, the three
+awakened meshes with a source, the Colossus and the Unwrapped King) is
+re-shipped the same way. Found on the way: SceneKit leaves a USDZ
+texture as a URL into the archive with a `#member` fragment, and
+`URL.path` drops it, so the pre-decode reads the stored member out of
+the zip itself (`USDZArchive`). What the free half cannot give: the
+generator's own detail (option 3) and the paintings' pixels (option 2).
