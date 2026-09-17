@@ -152,6 +152,8 @@ struct WalletBar: View {
                         Text(countdown(at: context.date))
                             .font(Theme.numeric(10))
                             .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                 }
             }
@@ -187,9 +189,15 @@ struct WalletBar: View {
                 .font(.system(size: 11, weight: .black))
                 .foregroundStyle(tint)
                 .shadow(color: tint.opacity(0.8), radius: 3)
+            // A number never wraps: run 179's island header, with four
+            // buttons beside the wallet, broke "80/80" into "80/8" over "0"
+            // and "200K" into "20" over "0K". The name beside it truncates
+            // instead (`layoutPriority` on the wallet, and this).
             Text(value)
                 .font(Theme.numeric(12))
                 .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
         }
     }
 
