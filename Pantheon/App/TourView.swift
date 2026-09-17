@@ -44,7 +44,7 @@ struct TourView: View {
         ("guide", 2), ("lessons", 2), ("night_market", 2), ("counsel", 2),
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
         ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
-        ("awaken", 2),
+        ("awaken", 2), ("island_decor", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -65,6 +65,16 @@ struct TourView: View {
         let args = ProcessInfo.processInfo.arguments
         guard let at = args.firstIndex(of: "-tour-environment"), at + 1 < args.count else { return nil }
         return BattleEnvironment(rawValue: args[at + 1])
+    }
+
+    /// `-tour-island-zoom Z` opens the island's camera zoomed onto the
+    /// summoning circle; the CI job relaunches step 0 with it so the
+    /// diorama is photographed close as well as at rest.
+    static var pinnedIslandZoom: CGFloat? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-island-zoom"), at + 1 < args.count,
+              let zoom = Double(args[at + 1]) else { return nil }
+        return CGFloat(zoom)
     }
 
     /// Seconds per tick. The runner screenshots on the same period, so every
@@ -113,7 +123,11 @@ struct TourView: View {
     private var content: some View {
         switch current {
         case "island":
-            IslandView { _ in }
+            IslandView(pinnedZoom: Self.pinnedIslandZoom) { _ in }
+        case "island_decor":
+            // The island's decoration sheet: the catalogue with the tour's
+            // brazier and sphinx owned and standing, the rest priced.
+            IslandDecorView()
         case "collection":
             CollectionView()
         case "collection_stage":

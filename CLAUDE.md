@@ -939,11 +939,44 @@ environment can and cannot do. The short version:
   decimation (fixed; the threshold is now eight combatants and the LOD is
   2,499 triangles), and the units stood in the bind pose, which the loader
   now treats by gathering per-joint tracks into one animation.
-- The app opens on the island (`IslandView`): five landmarks over the real
-  painting. It was generated at 9:16 and its sea extended to 3:4, because a
-  phone shows only the central 62% of the painting's width; the anchors were
-  measured off it (`Docs/ART_2D.md` §6). `tools/island.py` is the stand-in
-  painter, kept for reference.
+- **The app opens on the island, and the island is Summoners War's Isle
+  (2026-09-17; the owner: "I want it upgraded to be more like summoners
+  war. The home island I mean").** `IslandView` is a diorama on the
+  painting: a pinch zooms 1.0–1.6× within the painting's pixels and a drag
+  pans, the painting always covering the screen (`IslandCamera`: zoom and
+  pan, clamped; a double tap on the sand resets; every anchor, footprint,
+  stand and slot is a point of the painting, so the whole island moves as
+  one); the BUILDINGS are the buttons (`Landmark.footprint`, measured off
+  the painting — the tap target, a pulsing light on the sand under one
+  with something to do, a bobbing bubble over it with the glyph and count
+  of what it wants (`IslandBubble`), a small name chip under it, a pop on
+  the press before the screen opens); the figures react to a tap
+  (`IslandReaction`: a hop, the victory clip where the family shipped one
+  and the basic swing where not, "Zeus · Lv.12" over the head for 1.6 s)
+  and one stirs by itself every 9–15 s; the daily offering is a gold
+  bubble over the pool that claims through `GameStore.buy` of the same
+  item the bazaar sells, with the grants as `RewardTile`s in a toast; the
+  header is the player's card (the campaign leader's face in a ring, name,
+  level, experience) with the missions scroll, a chisel and the wallet;
+  and the living layer (`IslandSceneView`, orthographic, one point per
+  unit, depth by height on the painting) draws the team, the pool's sparks,
+  the obelisk's flame, sun glitter on the sea, fireflies in the scrub after
+  20:00 and the **decorations**: eleven props already in the bundle as a
+  catalogue priced in drachma (`IslandDatabase.decorations`, a brazier at
+  4,000 to the colossus at 60,000, level-gated), bought once for good and
+  stood in one of six sand patches (`decorSlots`) or moved for nothing
+  (`IslandDecorService`; `Player.decorationsOwned`, `Player.islandDecor`,
+  both Optional; `GameStore.buyDecoration/placeDecoration/clearDecoration`;
+  the sheet is `IslandDecorView` from the chisel; the thumbnails are
+  `decor_<id>.png` from `tools/decor_thumbs.py`), a brazier burning with a
+  flame, a light and a glow on the sand. The tour seeds a brazier and the
+  sphinx. `UnitNode.restartIdle()` restarts a figure rebuilt into the live
+  scene. The painting was generated at 9:16 and its sea extended to 3:4,
+  because a phone shows only the central 62% of the painting's width; the
+  anchors were measured off it (`Docs/ART_2D.md` §6). `tools/island.py` is
+  the stand-in painter, kept for reference. `Docs/PLAN.md` *The home island
+  as Summoners War's* has the three options (this, a wider painting for
+  under a dollar on the owner's word, a 3D island when the credits exist).
 - **Awakened forms.** Two cards per awakenable character (`portrait_<id>.png`
   and `portrait_<id>_awakened.png`); `ModelSpec.portraitName(awakened:)`
   picks. On the stage an awakened unit gets the awakened look (costume glow,
@@ -1101,7 +1134,9 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is forty-four screens (steps 0–43): the Hall of Ka's
+  thousands of images. The CI tour is forty-five screens (steps 0–44): the island's decoration
+  sheet (44, `island_decor`; step 0 is photographed twice, at rest and
+  relaunched with `-tour-island-zoom 1.5` onto the circle), the Hall of Ka's
   Awaken panel (43, `awaken`: the seed's strongest unawakened unit with
   the bill met, since the training step opens on Power up), an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's

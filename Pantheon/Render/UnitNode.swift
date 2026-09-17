@@ -280,6 +280,19 @@ final class UnitNode: SCNNode {
         selectionRing.isHidden = true
     }
 
+    /// Starts the idle again from nothing, for a figure built before it was
+    /// in a live scene: an idle attached to a detached node and carried
+    /// into a scene that is already rendering never starts (the Hall of
+    /// Ka's frozen Zeus, 2026-09-17), and the island rebuilds its figures
+    /// into a live scene whenever the team changes.
+    func restartIdle() {
+        guard !isDefeated else { return }
+        currentClip = nil
+        modelContainer.removeAllAnimations()
+        modelContainer.removeAllActions()
+        play(.idleCombat)
+    }
+
     // MARK: - Animation
 
     /// Plays a clip. Falls back to a procedural motion when the export has no

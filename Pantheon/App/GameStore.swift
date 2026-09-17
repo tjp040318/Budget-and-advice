@@ -625,6 +625,25 @@ final class GameStore: ObservableObject {
         return grants
     }
 
+    // MARK: - The island's decorations
+
+    /// Buys a piece for the island for good; false, with the reason shown,
+    /// when it cannot be paid for, is locked, or is already owned.
+    @discardableResult
+    func buyDecoration(_ id: String) -> Bool {
+        attempt { player in try IslandDecorService.buy(id, player: &player) } != nil
+    }
+
+    /// Stands an owned piece in a slot; a piece standing elsewhere moves.
+    func placeDecoration(_ id: String, in slot: String) {
+        _ = attempt { player in try IslandDecorService.place(id, in: slot, player: &player) }
+    }
+
+    /// Empties a slot; the piece stays owned.
+    func clearDecoration(in slot: String) {
+        update { player in IslandDecorService.clear(slot: slot, player: &player) }
+    }
+
     // MARK: - The Night Market
 
     /// Tonight's shelf. Empty only in the instant before the first tick rolls
@@ -938,6 +957,14 @@ final class GameStore: ObservableObject {
             // that has more keeps it.
             for id in EssenceCatalog.names.keys {
                 player.essences[id] = max(player.essences[id] ?? 0, 15)
+            }
+            // Two pieces on the sand, so the island's frame shows the
+            // decorations: a brazier burning west of the circle, the sphinx
+            // east of it. Once, so a run of the tour that moved them keeps
+            // its own arrangement.
+            if player.decorationsOwned == nil {
+                player.decorationsOwned = ["brazier", "sphinx"]
+                player.islandDecor = ["west": "brazier", "east": "sphinx"]
             }
             // A relic bag worth photographing: the inventory's sets, the
             // efficiency dials and a few upgrades.

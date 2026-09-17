@@ -4416,3 +4416,157 @@ research; the game is unchanged).** Energy regenerates 288 a day.
 **Held for the owner's word (2026-09-17)**, because it changes the price
 of the thing he is testing tonight; the Testing pack already carries every
 tier, so his tests will not stall either way.
+
+## The home island as Summoners War's (2026-09-17, designed; phase 1 built the same day)
+
+The owner: "Can we work on the main map? I want it upgraded to be more like
+summoners war. The home island I mean."
+
+### What Summoners War's island is
+
+Not a picture with buttons on it. The Isle is a large diorama the player
+DRAGS to pan and PINCHES to zoom, painted ground with rendered buildings and
+monsters, and everything the player does there is a thing on the island:
+
+- **Every system is a building, and the building is the button.** No labels
+  over them; a tap presses the building (a scale pop and a sound) and opens
+  the screen; a locked one says the level it wants.
+- **Floating bubbles, not badges.** A small icon hovers and bobs over a
+  building when there is something to do there — the shop restocked, mail,
+  a guild thing — and the resource buildings (the Mana Fountain, the Crystal
+  Mine, the Wind Mill) grow a bubble as they fill; the player taps it and
+  the number flies to the wallet. The "come back and tap" loop is the
+  island's reason to be looked at between fights.
+- **Monsters live on it.** The player chooses which to show; they idle about
+  and react when tapped — a hop, a sound, the name for a second.
+- **Decorating it is a system of its own.** Trees, statues, lanterns,
+  fountains, flags and seasonal sets bought with mana and crystals and
+  placed by hand in an edit mode; islands are shown off.
+- **The HUD is a card and two columns.** The player's card at the top left
+  (avatar, name, level, the experience bar), the wallet at the top right
+  with energy counting down to its next point, round buttons down the sides
+  with red badges (quests, events, friends, guild, mail), the big Battle
+  button at the bottom right.
+- **It breathes.** Birds cross the sky, waves lap, smoke rises, the
+  Summonhenge glows.
+
+### Where ours stands
+
+`IslandView` is a 16:9 painting shown at fill (no room to pan; a zoom of
+more than about 1.6× is past the painting's pixels), six plaques — a 56-pt
+disc with an SF symbol and a name chip — as the targets, a header with the
+name, level, experience, the missions scroll and the wallet, four figures
+of the campaign team idling in place (`IslandSceneView`, phase A), sparks
+over the pool, a flame on the obelisk, and the hour's colour over the
+whole. It reads as a map screen. The Labyrinth plaque stands over a palm
+grove: the painting predates the building.
+
+### The options
+
+1. **The diorama on the painting we have — free, code only.** Pan and zoom
+   over the painting within its pixels (1.0–1.6×); the buildings themselves
+   as the targets, pressed with a pop, with a soft light on the ground under
+   one that has something to do and a floating bubble above it that bobs (the
+   glyph and the count: energy, scrolls, arena attacks; a lock and a level
+   on a locked one); the figures react to a tap (a hop, the victory clip
+   where a family has one, the name and level for a breath) and one of them
+   stirs on its own every so often; the daily offering as a bubble over the
+   summoning pool that pops into the wallet where it stands; sun glitter on
+   the sea's reflection and fireflies in the scrub at night; a player card
+   with the leader's face; and **decorations** — a catalogue of the props
+   already shipped (braziers that burn, columns, the sphinx, the statues,
+   the obelisk, the colossus) bought with drachma and placed in six sand
+   patches measured off the painting, kept in the save. Everything the
+   Isle DOES, on the painting the owner already likes.
+2. **A wider island painted (Gemini, one image at 21:9 or two tiles, about
+   30–60 cents; the owner's word, since Gemini is paused).** Real room to
+   pan, and the structures the game has grown since the painting — a
+   Labyrinth entrance, the bazaar's tents, a Titans' shore, a mission board,
+   a wishing fountain for the daily offering — painted in their places; the
+   anchors, footprints and decor slots re-measured. Upgrade states of the
+   buildings would be cut-outs on top (two tiers × ten buildings ≈ $2.80),
+   not repaints of the whole.
+3. **A 3D island (SceneKit terrain and water, buildings as props).** The
+   Isle's actual construction, with a camera that turns. Five buildings could
+   be assembled from parts today (the summoning circle exists, the obelisk is
+   a prop, a hall from columns and a slab, a gate from two textured pylons,
+   an arena from stacked rings), but no palms, no scrub, no shoreline exist
+   as assets, so the island would come out barer than the painting, and real
+   buildings are Meshy props at 30 credits each — over the 2,000-credit
+   floor with 1,891 in hand. Later, when the balance allows.
+
+**Choice: 1 now, 2 on the owner's word, 3 when the credits exist.** The
+Isle is loved for what it DOES — things to tap, things that move, things to
+collect, things to place — more than for its geometry; option 1 gives the
+whole of that at no cost; the one thing the painting cannot give is room
+to pan, and option 2 buys that for under a dollar the day Gemini is
+allowed one image.
+
+### Phase 1, as built
+
+- **The camera** (`IslandView.camera`: `zoom` 1.0–1.6, `pan`): a pinch
+  zooms about its centre and a drag pans, the painting always covering the
+  screen; a double tap resets; every plaque, bubble, figure, decoration and
+  particle is placed off the same painting frame, so the whole island moves
+  as one. The tour photographs the island twice, at rest and zoomed onto
+  the circle (`-tour-island-zoom`).
+- **The buildings are the targets** (`Landmark.footprint`, measured off the
+  painting): the tap area is the building's own footprint; a tap presses
+  the building (a spring pop of its bubble and chip, the tap sound) before
+  the screen opens; the ground under an actionable building carries a
+  slow-pulsing light in the building's colour, additive over the sand; the
+  56-pt icon discs are gone. The name chip stays, small, under the
+  building — the owner's players are new to it and the painting names
+  nothing.
+- **Bubbles** (`IslandBubble`): the glyph and count of what the building
+  wants, bobbing 3 pt over 1.6 s; the daily offering's bubble over the pool
+  claims it where it stands (a burst of sparks, the grants as `RewardTile`s
+  in a toast, `GameStore.buy` on the same item the bazaar sells, so the two
+  cannot pay differently); energy full is a bubble on the gate.
+- **The figures react** (`IslandSceneView.Coordinator.react(at:)`): a tap on
+  a figure's screen rect hops it, plays its victory clip where the family
+  shipped one and its basic swing where not, and floats "Zeus · Lv.12" over
+  it for 1.6 s; every 9–15 s one figure stirs by itself the same way. No
+  family ships a walk clip, so nobody wanders: a figure sliding across the
+  sand in its idle would be worse than one that stays put.
+- **Ambient life**: sun glitter in the reflection band (additive gold
+  sparks, slow), fireflies in the scrub after dark (the night hours already
+  tint the painting), the obelisk's flame kept.
+- **The player card**: the campaign leader's portrait in a ring beside the
+  name, level and experience bar — the Isle's avatar, in our own face.
+- **Decorations** (`IslandDecoration`, `IslandDatabase.decorations`, six
+  `decorSlots` measured off the painting; `Player.decorationsOwned`,
+  `Player.islandDecor` — both Optional; `IslandDecorView` from the chisel
+  button; `GameStore.buyDecoration`, `placeDecoration`, `clearDecoration`):
+  eleven props already in the bundle as a catalogue priced in drachma
+  (a brazier that burns at 4,000 up to the Anubis colossus at 60,000), a
+  slot holds one, a bought piece is owned for good and can be moved between
+  slots for nothing. Rendered in the living layer at a fraction of the
+  screen's height with a contact shadow, a brazier with its flame and
+  light. The tour seeds a brazier and the sphinx so the frame shows them,
+  and photographs the sheet (step 44, `island_decor`).
+
+**Measured off the painting** (2048 × 1152, fractions of width and height):
+
+| landmark | anchor | footprint centre | footprint size |
+|---|---|---|---|
+| Hall of Ka | 0.16, 0.36 | 0.16, 0.35 | 0.12 × 0.14 |
+| Gate of the Duat | 0.26, 0.64 | 0.255, 0.63 | 0.18 × 0.26 |
+| Summoning Circle | 0.44, 0.48 | 0.445, 0.47 | 0.17 × 0.19 |
+| Labyrinth (the grove) | 0.62, 0.42 | 0.64, 0.42 | 0.14 × 0.14 |
+| Arena of Souls | 0.74, 0.63 | 0.745, 0.63 | 0.22 × 0.24 |
+| Obelisk | 0.89, 0.47 | 0.885, 0.34 | 0.07 × 0.28 |
+
+Decor slots, on open sand: west (0.375, 0.545), north shore (0.35, 0.335),
+east (0.56, 0.56), south (0.53, 0.64), shore (0.88, 0.58), grove (0.79,
+0.44). The first west (0.33, 0.47) and north (0.31, 0.40) dots stood on the
+palms beside the circle when the grid was drawn over the painting and
+looked at; a piece there would have grown out of a tree.
+
+### What it does not do, and why
+
+No wandering (no walk clips; a bespoke walk is 3 credits a family through
+`meshy.py motion` and worth doing for the five gods on the island first).
+No island skins or seasons (a repaint each; option 2's territory). No
+buildings that grow with the player beyond the tier diamonds (option 2's
+cut-outs). No friends, guild, mail or chat: this game has no server.

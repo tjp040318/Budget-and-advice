@@ -108,6 +108,11 @@ struct Player: Codable, Equatable, Sendable {
     /// the slots already emptied. Optional, like every field added since the
     /// first; nil simply means the market has not opened yet.
     var nightMarket: NightMarketStock? = nil
+    /// The island's decorations (2026-09-17): the pieces bought, for good,
+    /// and which stands in which slot (`DecorSlot.id` → `IslandDecoration.id`).
+    /// Optional, like every field added since the first.
+    var decorationsOwned: [String]? = nil
+    var islandDecor: [String: String]? = nil
     /// The best star rating per stage id (a tier's suffix included): the
     /// map's pips, and the realm's judgment wants every stage at three.
     /// Optional, like every save field added since the first.

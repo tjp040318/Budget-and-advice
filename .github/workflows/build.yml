@@ -115,7 +115,7 @@ jobs:
           xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
-          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter launch relic_sets tribute stage_popup chapter_maps realm_battle guide lessons night_market counsel sweep mileage selector relic_roll raid_grade raids relic_awaken boons resonance awaken)
+          names=(island collection detail training summon reveal battle arena arena_battle more halls relics shop chapter_map missions labyrinth dungeon relic_picker dungeon_battle relic_powerup victory collection_stage relic_drop relic_filter launch relic_sets tribute stage_popup chapter_maps realm_battle guide lessons night_market counsel sweep mileage selector relic_roll raid_grade raids relic_awaken boons resonance awaken island_decor)
           # Each launch also writes what the app prints — the [ModelLibrary]
           # block, SceneKit's own errors — to shots/<step>-console.txt, so a
           # frame that came out wrong can be read as well as looked at.
@@ -123,7 +123,7 @@ jobs:
           # the way Xcode's console does.
           TOUR_START="$(date +'%Y-%m-%d %H:%M:%S')"
           touch /tmp/tour-start
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44; do
             SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
               --stdout="$PWD/shots/$step-${names[$step]}-out.txt" \
               --stderr="$PWD/shots/$step-${names[$step]}-err.txt" \
@@ -166,6 +166,14 @@ jobs:
                   sleep 9; shoot "$step-${names[$step]}-${letters[$i]}"
                   i=$((i+1))
                 done ;;
+              # The island at rest, then relaunched with its camera zoomed
+              # onto the summoning circle (-tour-island-zoom 1.5), so the
+              # diorama is seen close: the buildings as targets, the
+              # bubbles, the figures and the decorations at the larger size.
+              island)
+                sleep 5; shoot "$step-${names[$step]}"
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-island-zoom 1.5 >/dev/null
+                sleep 6; shoot "$step-${names[$step]}-zoomed" ;;
               *)      sleep 5; shoot "$step-${names[$step]}" ;;
             esac
             echo "$(date -u +%T) ${names[$step]}"
@@ -192,7 +200,7 @@ jobs:
               -exec sh -c 'cp "$1" "shots/crash-$(basename "$1").txt"' _ {} \;
           done
           echo "crash reports: $(ls shots/crash-*.txt 2>/dev/null | wc -l | tr -d ' ')"
-          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43; do
+          for step in 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40 41 42 43 44; do
             base="shots/$step-${names[$step]}"
             { echo "== stdout"; cat "$base-out.txt" 2>/dev/null; echo; echo "== stderr"; cat "$base-err.txt" 2>/dev/null; } \
               | head -c 120000 > "$base-console.txt"
