@@ -93,6 +93,29 @@ final class SummonTests: XCTestCase {
         XCTAssertEqual(run(), run())
     }
 
+    /// Mileage's third floor (2026-09-17): on a banner with NO hard pity the
+    /// 5★ is anchored to 1.3 times its expected pull count, rounded up. With
+    /// the Light & Dark banner's guarantee gone, the flat 15,000-divinity
+    /// target alone priced a 5★ Light or Dark at 33 scrolls against the 125
+    /// an expected one costs. The pantheon banner keeps the genre's number:
+    /// 1.7 guarantees.
+    func testMileagePricesTheLightAndDarkFiveStarOffItsExpectedPulls() {
+        let rate: Double = ScrollType.lightDark.odds[5] ?? 1
+        let expectedPulls: Double = 1 / rate
+        let due: Double = ceil(MileageService.expectedMultiple / rate)
+        let price: Double = Double(MileageService.price(stars: 5, on: .lightAndDark))
+        let atLeast: Double = expectedPulls * 1.3 - 1
+        XCTAssertNil(Banner.lightAndDark.legendaryPity, "this test is about a banner without a guarantee")
+        XCTAssertEqual(price, due, accuracy: 0.5)
+        XCTAssertGreaterThanOrEqual(price, atLeast, "naming a premium 5★ must cost more than the average road to one")
+
+        let cap: Double = Double(Banner.duatOpens.legendaryPity ?? 0)
+        let anchored: Double = cap * MileageService.pityMultiple
+        let pantheonPrice: Double = Double(MileageService.price(stars: 5, on: .duatOpens))
+        XCTAssertGreaterThan(cap, 0)
+        XCTAssertEqual(pantheonPrice, anchored, accuracy: 0.5, "the pantheon banner's 5★ is still 1.7 guarantees")
+    }
+
     func testSummonPoolNeverProducesCampaignEnemies() {
         var subject = player(scrolls: 100)
         var rng = SeededRandom(seed: 21)

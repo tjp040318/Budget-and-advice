@@ -363,9 +363,12 @@ enum NightMarketService {
     }
 
     /// Only families whose cards are in the bundle, so the shelf can never
-    /// offer a god with no portrait — the same gate the gacha uses.
+    /// offer a god with no portrait — the same gate the gacha uses — and
+    /// never a Radiance or an Umbra, which are the Light & Dark scroll's
+    /// alone (`Banner.excludingLightDark`, 2026-09-17): a 4★ dark god for
+    /// 250,000 drachma would have been a second road to the premium.
     static func marketUnits(stars: Int) -> [String] {
-        UnitDatabase.summonPool.filter { id in
+        Banner.excludingLightDark(UnitDatabase.summonPool).filter { id in
             guard let blueprint = UnitDatabase.blueprint(id) else { return false }
             return blueprint.naturalStars == stars && blueprint.hasShippedArt
         }

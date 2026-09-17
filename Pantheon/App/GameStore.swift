@@ -13,6 +13,20 @@ final class GameStore: ObservableObject {
     @Published var lastError: String?
     @Published private(set) var isSaving = false
 
+    /// The account this store plays as. Its save goes under
+    /// `account.storageKey` and nowhere else, so a store retired at sign-out
+    /// cannot write the old player into the next account's file
+    /// (`Docs/PLAN.md`, *Accounts — Sign in with Apple*).
+    let account: Account
+    /// The iCloud mirror of the save: an Apple account on a build signed for
+    /// iCloud, nil otherwise (a guest, CI, an unentitled dev build).
+    let cloudSave: CloudSaveStore?
+    /// What the app does once `signOut()` has saved and retired this store:
+    /// drop it and show the sign-in screen. Set by `AppSession`.
+    var onSignedOut: (() -> Void)?
+    /// Set by `retire()`: no save, no timer, no cloud upload from here on.
+    private(set) var retired = false
+
     /// Rolling seed. Every operation that needs randomness takes a fresh stream
     /// from here so two summons in the same second cannot share a result.
     private var seedStream: SeededRandom
@@ -21,26 +35,37 @@ final class GameStore: ObservableObject {
 
     // MARK: - Lifecycle
 
-    init(save: SaveGame) {
+    init(save: SaveGame, account: Account, cloudSave: CloudSaveStore? = nil) {
         self.player = save.player
+        self.account = account
+        self.cloudSave = cloudSave
         self.seedStream = SeededRandom(seed: save.rngSeed)
+        cloudSave?.onChange = { [weak self] in self?.objectWillChange.send() }
         startEnergyTimer()
         refreshTimedResources()
     }
 
-    static func bootstrap() -> GameStore {
+    /// The store for an account: its save from disk, or a new game named for
+    /// the player Apple sent. The legacy save and the cloud copy have been
+    /// dealt with by the caller (`AppSession.open`) before this runs.
+    static func bootstrap(account: Account, cloudSave: CloudSaveStore? = nil) -> GameStore {
+        let key = account.storageKey
         do {
-            if let existing = try SaveStore.load() {
-                return GameStore(save: existing)
+            if let existing = try SaveStore.load(key: key) {
+                return GameStore(save: existing, account: account, cloudSave: cloudSave)
             }
         } catch {
             // A corrupt save has already been quarantined by the store; start
             // fresh rather than refusing to launch.
-            let store = GameStore(save: NewGame.create())
+            let store = GameStore(save: NewGame.create(displayName: account.demigodName), account: account, cloudSave: cloudSave)
             store.lastError = error.localizedDescription
             return store
         }
-        return GameStore(save: NewGame.create())
+        // A new account's file exists from its first minute, so a second
+        // launch finds it and the cloud copy is made before the first fight.
+        let store = GameStore(save: NewGame.create(displayName: account.demigodName), account: account, cloudSave: cloudSave)
+        store.markDirty()
+        return store
     }
 
     /// A fresh random stream for one operation.
@@ -52,6 +77,7 @@ final class GameStore: ObservableObject {
 
     /// Coalesces rapid mutations into one write a moment later.
     func markDirty() {
+        guard !retired else { return }
         saveTask?.cancel()
         saveTask = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 400_000_000)
@@ -61,6 +87,7 @@ final class GameStore: ObservableObject {
     }
 
     func saveNow() async {
+        guard !retired else { return }
         isSaving = true
         defer { isSaving = false }
         var snapshot = player
@@ -68,11 +95,42 @@ final class GameStore: ObservableObject {
         player = snapshot
         let started = Perf.begin()
         do {
-            try SaveStore.save(SaveGame(player: snapshot, rngSeed: seedStream.next()))
+            let written = try SaveStore.save(SaveGame(player: snapshot, rngSeed: seedStream.next()), key: account.storageKey)
+            // The cloud copy follows the file, at most once a minute; the
+            // player's `createdAt` is the save's lineage, which is what keeps
+            // a fresh game from burying a veteran's copy.
+            cloudSave?.schedule(written.data, savedAt: written.savedAt, lineage: snapshot.createdAt)
         } catch {
             lastError = error.localizedDescription
         }
         Perf.end(started, "save (\(snapshot.units.count) units, \(snapshot.relics.count) relics)", over: 30)
+    }
+
+    /// The cloud copy brought up to date now — on the way to the background.
+    func flushCloud() async {
+        await cloudSave?.flush()
+    }
+
+    /// Saves, retires this store and tells the app to show the sign-in
+    /// screen (`onSignedOut`). The file stays on disk under this account's
+    /// key, and the same account signs back in to it.
+    func signOut() async {
+        await saveNow()
+        await flushCloud()
+        retire()
+        onSignedOut?()
+    }
+
+    /// No more writes from this store: the coalesced save and the energy
+    /// timer are cancelled and `markDirty` becomes a no-op. Called before an
+    /// account swap, so a save pending across the swap cannot land in the
+    /// next account's file.
+    func retire() {
+        retired = true
+        saveTask?.cancel()
+        saveTask = nil
+        energyTimer?.cancel()
+        energyTimer = nil
     }
 
     /// Mutates the player and schedules a save. The only mutation path.
@@ -938,9 +996,9 @@ final class GameStore: ObservableObject {
 
     /// Used by the settings screen. Destroys the account, so the caller confirms.
     func resetAccount() {
-        SaveStore.deleteSave()
+        SaveStore.deleteSave(key: account.storageKey)
         LocalSocialBackend.wipe()   // the offline world's doings go with the save
-        let fresh = NewGame.create()
+        let fresh = NewGame.create(displayName: account.demigodName)
         player = fresh.player
         seedStream = SeededRandom(seed: fresh.rngSeed)
         markDirty()

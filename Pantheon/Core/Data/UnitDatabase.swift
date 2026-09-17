@@ -17,7 +17,16 @@ enum UnitDatabase {
 
     // MARK: - Registry
 
-    static let all: [UnitBlueprint] = anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster + thirdRoster + [
+    /// Everything a player can summon or fuse — the six family arrays — with
+    /// the Light and Dark premium applied on the way in
+    /// (`withLightDarkPremium`, below). The enemies are appended after it,
+    /// untouched: a campaign wave's Radiance unit is an `enemy(...)` of its
+    /// own, with its own tuned numbers.
+    static let roster: [UnitBlueprint] =
+        (anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster + thirdRoster)
+            .map(withLightDarkPremium)
+
+    static let all: [UnitBlueprint] = roster + [
         shabti,
         serpopard,
         sunScarab,
@@ -54,6 +63,53 @@ enum UnitDatabase {
 
     static func blueprint(_ id: String) -> UnitBlueprint? { index[id] }
 
+    // MARK: - The Light and Dark premium
+
+    /// Radiance and Umbra are the premium forms. The owner, 2026-09-17: "it
+    /// should ONLY be availble at like a 1% or less rate through the LD
+    /// scrolls (like summoners war). They are PREMIUM PREMIUM mons that need
+    /// to be better than the rest". So they are drawn by the Light & Dark
+    /// scroll alone (`Banner.excludingLightDark`), at 0.8% for a 5★ with no
+    /// guarantee, and carry this much more attack, health and defence than
+    /// the family's numbers give the other three forms — the genre's light
+    /// and dark are a little stronger than the elemental forms of the same
+    /// monster, and a lot rarer.
+    ///
+    /// Applied ONCE, here, to every roster blueprint on its way into the
+    /// registry (`roster`): the hand-written builders and the table's
+    /// `family(_:element:)` write the family's numbers and never know about
+    /// it, so no family can miss it and no enemy can catch it. Speed and the
+    /// rate stats are untouched — a premium on speed would move the turn
+    /// order, which is a different design. `tools/balance.py` mirrors it as
+    /// `LIGHT_DARK_PREMIUM` and `--variants` measures what it buys: about
+    /// 8% more damage dealt and 8–12% longer standing, one on one, with the
+    /// element's own skills on top. `ProgressionTests` pins that the dark
+    /// Anubis in the registry is the builder's numbers times this.
+    static let lightDarkPremium = 1.08
+
+    /// The registered form of a roster blueprint: the family's numbers, or
+    /// those numbers lifted for a Radiance or Umbra form.
+    static func withLightDarkPremium(_ blueprint: UnitBlueprint) -> UnitBlueprint {
+        guard blueprint.element.isLightOrDark else { return blueprint }
+        var lifted = blueprint
+        lifted.baseStats = lift(blueprint.baseStats)
+        lifted.growthPerLevel = lift(blueprint.growthPerLevel)
+        if var awakening = blueprint.awakening {
+            awakening.statBonus = lift(awakening.statBonus)
+            lifted.awakening = awakening
+        }
+        return lifted
+    }
+
+    /// Attack, health and defence by the premium; everything else as it was.
+    private static func lift(_ stats: Stats) -> Stats {
+        var lifted = stats
+        lifted.hp = stats.hp * lightDarkPremium
+        lifted.atk = stats.atk * lightDarkPremium
+        lifted.def = stats.def * lightDarkPremium
+        return lifted
+    }
+
     /// Unit ids the gacha is allowed to produce. Enemies are deliberately
     /// absent, and so is any family whose portraits have not shipped yet —
     /// Sekhmet and Zeus joined the pool the moment their five files were in the
@@ -67,7 +123,11 @@ enum UnitDatabase {
     /// derives `fusionOnlyIDs` from its own recipe table, so the exclusion
     /// list cannot drift from the prizes — there is only one list. Reading it
     /// here cannot re-enter this file, because that table is literals.
-    static let summonPool: [String] = (anubisFamily + sekhmetFamily + zeusFamily + shabtiFamily + secondRoster + thirdRoster)
+    ///
+    /// Radiance and Umbra ids ARE in it: this is the full summonable set,
+    /// and the banners filter it (`Banner.excludingLightDark`) so the codex,
+    /// the collection and the art gate keep reading one list.
+    static let summonPool: [String] = roster
         .filter { $0.hasShippedArt && !FusionService.isFusionOnly($0.id) }
         .map { $0.id }
 
@@ -262,8 +322,14 @@ enum UnitDatabase {
     static let anubisRadiance = anubisVariant(.radiance)
     static let anubisUmbra    = anubisVariant(.umbra)
 
-    /// The unit a new account starts with.
-    static var starter: UnitBlueprint { anubisUmbra }
+    /// The unit a new account starts with: the FIRE Anubis as registered —
+    /// the same blueprint `blueprint("anubis_ember")` gives, so a save's
+    /// first unit and the registry cannot differ. It was the dark one from
+    /// the first build to 2026-09-17 (evening), when light and dark became
+    /// the Light & Dark scroll's alone and every L/D form took the premium:
+    /// a premium unit handed to every account on day one is not a premium,
+    /// and the genre's starter is a common (Summoners War's water Fairy).
+    static var starter: UnitBlueprint { blueprint(anubisEmber.id) ?? anubisEmber }
 
     /// Everything in the Anubis family, in wheel order.
     static let anubisFamily: [UnitBlueprint] =

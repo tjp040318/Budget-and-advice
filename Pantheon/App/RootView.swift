@@ -3,6 +3,7 @@ import SwiftUI
 /// The app's tab shell.
 struct RootView: View {
     @EnvironmentObject private var store: GameStore
+    @EnvironmentObject private var session: AppSession
     @State private var tab: Tab = .island
     @State private var showTraining = false
     @State private var showSettings = false
@@ -105,7 +106,17 @@ struct RootView: View {
             case .active:
                 store.refreshTimedResources()
                 AudioLibrary.shared.resumeMusic()
-            case .background, .inactive:
+                // Apple is asked whether the sign-in still stands; a revoked
+                // one drops the account and the sign-in screen returns.
+                session.sceneBecameActive()
+            case .background:
+                // The file, then the cloud copy: the one moment the upload
+                // does not wait for its minute.
+                Task {
+                    await store.saveNow()
+                    await store.flushCloud()
+                }
+            case .inactive:
                 Task { await store.saveNow() }
             @unknown default:
                 break
@@ -124,8 +135,12 @@ struct RootView: View {
 /// navigation bar and scrolled the lot.
 struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
+    @EnvironmentObject private var session: AppSession
     @Environment(\.dismiss) private var dismiss
     @State private var showResetConfirm = false
+    @State private var showSignOutConfirm = false
+    @State private var showRestoreConfirm = false
+    @State private var showBind = false
     @State private var showShop = false
     @State private var showMissions = false
     @State private var showEvents = false
@@ -197,7 +212,44 @@ struct SettingsView: View {
                 Button("Delete everything", role: .destructive) { store.resetAccount() }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Every unit, relic and clear is erased. There is no undo and no cloud backup yet.")
+                Text("Every unit, relic and clear is erased — on this phone, and in iCloud at the next upload. There is no undo.")
+            }
+            .confirmationDialog(
+                "Sign out of Pantheon?",
+                isPresented: $showSignOutConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Sign out", role: .destructive) {
+                    // The sheet goes first, then the store: the sign-in
+                    // screen replaces the whole shell under it.
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        Task { await session.signOut() }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Your progress stays on this phone and in iCloud. Sign in again with the same Apple ID to pick up where you left off.")
+            }
+            .confirmationDialog(
+                "Restore the iCloud save?",
+                isPresented: $showRestoreConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("Restore from iCloud", role: .destructive) {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        Task { await session.restoreFromCloud() }
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This phone's save is replaced by the one in iCloud. The replaced save is kept aside on this phone, not deleted.")
+            }
+            .sheet(isPresented: $showBind) {
+                BindAppleSheet { credential in
+                    Task { await session.bindGuestToApple(credential) }
+                }
             }
         }
     }
@@ -390,6 +442,10 @@ struct SettingsView: View {
     private var accountPanel: some View {
         SectionPanel(title: "Account", accessory: "Lv.\(store.player.level)") {
             VStack(spacing: 5) {
+                row("Account", accountLine)
+                // The key's tail, in capitals: what a support request quotes,
+                // and the tail of the save's record name in CloudKit.
+                row("Player ID", session.accounts.account?.playerCode ?? "—")
                 row("Demigod", store.player.displayName)
                 row("Level", "\(store.player.level)")
                 row("Units", "\(store.player.units.count)")
@@ -397,10 +453,50 @@ struct SettingsView: View {
                 row("Total summons", "\(store.player.totalSummons)")
                 row("Codex", "\(store.player.codex.count) / \(UnitDatabase.collectiblePool.count)")
                 Spacer(minLength: 0)
+                accountActions
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+
+    /// The Apple name, "Apple ID" when Apple sent none, or the guest's line.
+    private var accountLine: String {
+        guard let account = session.accounts.account else { return "—" }
+        switch account.provider {
+        case .apple: return account.displayName ?? "Apple ID"
+        case .guest: return "Guest — this phone only"
+        }
+    }
+
+    /// Sign out for an Apple account; Bind to Apple ID for a guest, who could
+    /// not sign back in; Restore from iCloud when the cloud holds a save of
+    /// another lineage that this store will never overwrite.
+    @ViewBuilder
+    private var accountActions: some View {
+        if let foreign = store.cloudSave?.foreign {
+            caption("iCloud holds a different save, from \(SettingsView.dayFormatter.string(from: foreign.modifiedAt)).")
+            PrimaryButton(title: "Restore from iCloud", systemImage: "icloud.and.arrow.down", tint: Theme.info) {
+                showRestoreConfirm = true
+            }
+        }
+        if session.accounts.account?.isGuest ?? true {
+            caption("A guest cannot sign back in, so there is no sign-out here: bind this phone's progress to your Apple ID first.")
+            PrimaryButton(title: "Bind to Apple ID", systemImage: "person.crop.circle.badge.checkmark") {
+                showBind = true
+            }
+        } else {
+            PrimaryButton(title: "Sign out", systemImage: "rectangle.portrait.and.arrow.right", tint: Theme.goldDim) {
+                showSignOutConfirm = true
+            }
+        }
+    }
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter
+    }()
 
     private var soundPanel: some View {
         SectionPanel(title: "Sound & camera", accessory: nil) {

@@ -5032,3 +5032,395 @@ ModelLibrary.swift, beside each other), the aura from the feet unchanged
 as the awakened signal, and `whitePoint = 1.85` on all four cameras. The
 proof is the next run's reveal frame with an awakened result
 (`-tour-reveal awakened`), judged against the phone frame.
+
+## Accounts — Sign in with Apple (2026-09-17, evening; built)
+
+The owner: "Also we should have accounts that need to be created using an
+apple id or email. That way users are separate."
+
+### What the genre does
+
+- **Summoners War** opens as a GUEST (a Com2uS "HIVE" guest account made
+  silently on the first launch) and asks later, from the settings, to
+  bind that guest to a HIVE ID, Apple, Google or Facebook; the bind is
+  what carries the account to a second phone, and support asks for the
+  HIVE ID or the in-game player id. [recall]
+- **Epic Seven**: guest first, then "link account" (Apple, Google, the
+  publisher's own) from the settings; an unlinked guest who deletes the
+  app is gone, and the game says so in a red sentence. [recall]
+- **Raid: Shadow Legends**: a Plarium ID (email) or a guest, the same
+  link-later shape; the Plarium ID moves the account between devices and
+  stores. [recall]
+- **Genshin Impact**: no guest on iOS at all — a HoYoverse account with an
+  email (or Apple/Google through it) before the first screen. [recall]
+
+The reason is the same in all four: ONE identity per player across
+devices (a lost phone is not a lost account), a restore, and something
+support can look a player up by. The split is where the account lands in
+the player's path — before the first screen (Genshin) or after the first
+hour (the rest) — and the genre's answer is "later, and never lose a
+guest's progress when he binds".
+
+### Apple's rules (from memory; the guideline's page is closed to this environment)
+
+- **App Store Review Guideline 4.8, Login Services**: an app that uses a
+  third-party or social login (Google, Facebook; an email/password of its
+  own that SETS UP an account counts) must also offer a login option that
+  limits data collection to name and email, lets the user keep the email
+  private and collects no interaction data without consent. Sign in with
+  Apple satisfies it; an app using ONLY its own account system or ONLY
+  Sign in with Apple needs nothing more.
+- Sign in with Apple needs an Apple ID with two-factor authentication.
+  The credential's `user` identifier is stable per developer team and
+  never changes; the name and the email are handed over ONCE, at the
+  first authorisation, and never again (a revoked sign-in followed by a
+  new authorisation counts as a first time); a "Hide My Email" relay
+  address must be accepted as the email.
+- The credential's state is asked of `ASAuthorizationAppleIDProvider` on
+  every launch (`credentialState(forUserID:)`): `.revoked` or `.notFound`
+  means the user cut the app off in Settings → Apple ID → Sign-In &
+  Security → Sign in with Apple, and the app must not keep him signed in.
+- The capability must be ON in three places or the button answers error
+  1000: the App ID in the Developer portal, the target's Signing &
+  Capabilities in Xcode, and the entitlements file
+  (`com.apple.developer.applesignin` = `[Default]`). A Simulator whose
+  Settings app is signed in to an Apple ID can run the whole flow; CI,
+  which signs nothing, cannot.
+- The button must be Apple's own (`SignInWithAppleButton`): a custom one
+  is a rejection.
+
+### The options
+
+A. **Sign in with Apple as THE account** — CHOSEN. Apple's stable user id
+   is the account id; the save file is keyed by a hash of it; a copy of
+   the save goes to the container's PRIVATE CloudKit database (the social
+   layer's container, `iCloud.com.pantheon.game`, already in the
+   entitlements; one record per account, the JSON as a `CKAsset` since a
+   veteran's save passes a megabyte); a guest is offered under the button
+   and can bind later. No server, no password, no email verifier, free at
+   this scale, and 4.8 is satisfied by construction. Cost: iOS only (which
+   the game is), and a player who refuses Apple sign-in is a guest on one
+   phone (which the button's caption says).
+B. **Apple + email/password** through Firebase Auth or a backend of our
+   own: a second service to run and pay for, password reset, an email
+   verifier, a privacy-policy line for the email, and 4.8 then REQUIRES
+   the Apple button anyway. The day the game goes to Android or the web
+   this is the road, and `AccountProvider` is the door it comes through:
+   an `.email` case, a second sign-in method on `AccountService`, the
+   same `storageKey`, the same cloud record.
+C. **Game Center only**: silent, no email, the player never sees an
+   account — and never knows which one he is on; a household with two
+   Game Center players on one phone is one save; the restore is Game
+   Center's opaque iCloud save. Rejected on the owner's own words:
+   accounts that need to be CREATED.
+
+### What was built
+
+- `Account` (`Pantheon/Core/Account/Account.swift`): `id` (Apple's user
+  identifier, or `guest-<uuid>`), `provider` (`.apple`, `.guest`),
+  `displayName`, `email`, `createdAt`. `storageKey` is the first sixteen
+  hex characters of SHA-256 of the id (CryptoKit): stable, filesystem-safe
+  (an Apple id carries dots, a guest's a UUID) and never the id itself.
+  `playerCode` — the "Player ID" on the Account panel — is the key's last
+  six hex characters in capitals, which is also the tail of the CloudKit
+  record's name (`save_<storageKey>`), so a support request quoting it
+  finds the record in the Dashboard. The raw id's tail was considered and
+  dropped: an Apple id ends `.1234` for every user of one team, and a
+  guest's ends in a UUID's hex — neither reads.
+- `AccountService` (`Pantheon/Core/Account/AccountService.swift`,
+  `@MainActor ObservableObject`): the current account and every account
+  ever signed in on the device, as `account.json` beside the saves in
+  Application Support/Pantheon (a file, not UserDefaults: the export and a
+  support script can read it). `signInWithApple(_:)` keeps the name and
+  the email from the FIRST authorisation (the ledger's `known` row gives
+  them back on a later sign-in, which carries none), `continueAsGuest()`,
+  `bindGuestToApple(_:)` (the guest's save file is renamed to the Apple
+  key when that key has no save yet, so a guest keeps his hour; when it
+  does, the Apple save wins and the guest's file stays on disk under its
+  own key), `signOut()` (the account is dropped; the file stays), and
+  `verifyCredentialState()` on launch and on every return to the
+  foreground (`.revoked` and `.notFound` drop the account with a sentence
+  on the sign-in screen; a network error keeps it). `tourAccount` is a
+  fixed guest for CI, held in memory and never written.
+- **Saves keyed by account** (`SaveStore`): `pantheon_save_<key>.json`,
+  and a `baseURL` a test can point at a temporary folder. The legacy
+  `pantheon_save.json` — every save that exists today, the owner's
+  included — is RENAMED to the first account that signs in on the phone
+  (`migrateLegacySave(to:)`, before the cloud is asked anything; once,
+  because the rename removes it), so nobody loses progress to the sign-in
+  screen. A cloud restore writes through `importData(_:key:)`, which
+  decodes the bytes before it replaces anything and moves the older local
+  file aside as `replaced_<stamp>_…` rather than deleting it.
+- **The store is REBUILT per account, never reloaded in place**
+  (`AppSession` in `PantheonApp.swift`). A `GameStore` holds its `Account`
+  and saves under that key and no other, so a store retired at sign-out —
+  `retire()` cancels its coalesced 400 ms save and its energy timer and
+  makes `markDirty` a no-op — cannot write the old player into the next
+  account's file, which a "current account" global and a reload in place
+  would have allowed the moment a pending save fired across the swap. The
+  shell wears `.id(account.id)`, so every `@State` and every cached model
+  under it is rebuilt with the store. When there is no store the root IS
+  the sign-in screen; when a store exists it is the game; the loading
+  screen plays over whichever is under it, once per process. Under
+  `-tour` the store is built synchronously in the app's init (a guest has
+  nothing to fetch), so the tour's first frame has it.
+- **The cloud copy** (`CloudSaveStore`,
+  `Pantheon/Core/Account/CloudSaveStore.swift`): one `Save` record per
+  account in the PRIVATE database, the JSON as a `CKAsset`, `modifiedAt`
+  = the save's own `savedAt`, `createdAt` = the player's `createdAt` (the
+  save's LINEAGE). Written at most once every 60 s after a change
+  (`schedule` coalesces, `flush` on `scenePhase == .background`), fetched
+  at sign-in with no local save ("Restoring…" on the sign-in screen, ten
+  seconds at most) and checked at every launch of an Apple account under a
+  four-second cap, under the loading screen. Last-writer-wins by
+  `modifiedAt` within one lineage, with one asymmetry: an older cloud copy
+  never replaces a newer local save, and an older local save never
+  overwrites a newer cloud copy (the upload is skipped; the next launch
+  pulls the newer one). A DIFFERENT lineage is never overwritten at all:
+  a fresh game started on a new phone while iCloud was unreachable would
+  otherwise be the newest save in the world and would bury the veteran's;
+  instead the upload is refused, the cloud copy is remembered as
+  `foreign`, and the Account panel offers "Restore from iCloud", which
+  keeps the phone's own save aside and reopens the store on the restored
+  one. The gate is the social layer's: `CloudKitSocialBackend.isEntitled`
+  (the code signature's entitlements blob) and then `accountStatus ==
+  .available`; the initialiser is failable and returns nil unentitled, so
+  CI, which signs nothing, never constructs a `CKContainer`. A timed fetch
+  is a race of two tasks on a latch, because CloudKit's async calls do not
+  honour cancellation and a bad network would otherwise hold the launch.
+- `SignInView` (`Pantheon/UI/Account/SignInView.swift`): the key art
+  full-bleed and anchored top as the loading screen has it, PANTHEON in
+  Cinzel on the summit's base, one sentence ("Your gods, your progress, on
+  every iPhone you own."), Apple's black `SignInWithAppleButton` (the
+  system button; `requestedScopes` name and email; error 1000 is worded
+  as the capability switch it is), "Continue without an account" with its
+  one-line warning, and the Restoring… veil. `AppleSignInButton` is the
+  same button reused by the Account panel's "Bind to Apple ID" sheet.
+- The Account panel on More: Account (the Apple name, "Apple ID", or
+  "Guest — this phone only"), Player ID, and Sign out with a confirmation
+  (the progress stays on the phone and in iCloud) — or, for a guest, Bind
+  to Apple ID instead, since a guest who signs out cannot sign back in.
+- CI: under `-tour` the app is the fixed guest `tourAccount` (no dialog,
+  no CloudKit), and tour step 48 `sign_in` photographs `SignInView` the
+  way step 24 photographs the loading screen. `com.apple.developer.
+  applesignin` is in `Pantheon.entitlements`; the CI build signs nothing,
+  so the button on the frame is inert. The owner's Developer-portal and
+  Xcode steps are in `Docs/SOCIAL.md` (*Sign in with Apple*).
+- `AccountTests` (7): the key is stable, hex and sixteen long (pinned to
+  SHA-256's published vector for "hello"); a legacy save migrates once and
+  only to the first account; two accounts load two saves; a guest's bind
+  carries the file; signing out keeps it, and a second Apple sign-in
+  without a name keeps the first one's; the tour account is a guest held
+  in memory; a retired store writes nothing.
+
+### What is NOT built, said plainly
+
+No email/password (option B's door is `AccountProvider`); no merge of two
+saves (a guest who binds to an Apple ID that already has a save on the
+phone keeps the Apple save, and his guest file stays under its own key);
+no delete-from-iCloud on Reset (the fresh save is the same lineage and
+newer, so it overwrites the cloud copy at the next upload); no server, so
+a save is trusted exactly as before; and `Sign in with Apple` cannot be
+exercised by CI — the owner's Simulator, signed in to an Apple ID, is the
+first place the button is pressed.
+
+## Light and Dark are the premium (2026-09-17, evening; built)
+
+The owner, with the Hall of Ka's Fuse board in front of him offering "The
+Burnished Shield" (a 5★ Ares of Radiance) and "The Dark Moon Eye" (a 5★
+Horus of Umbra), verbatim: **"ALSO we should NEVER offer a 5 star Light or
+dark mon like this. it should ONLY be availble at like a 1% or less rate
+through the LD scrolls (like summoners war). They are PREMIUM PREMIUM mons
+that need to be better than the rest".**
+
+### What the genre does
+
+- **Summoners War** — light and dark monsters come from the Light & Dark
+  scroll and nowhere else on the summon screen (the Secret Dungeons drop
+  2★ and 3★ light and dark pieces, never a nat 5); the L&D scroll's 5★
+  rate is **0.5%** with **no pity of any kind**; a Legendary Scroll is 5★
+  guaranteed but never light or dark. That is why a nat-5 light or dark
+  is the trophy of a Summoners War account: the elemental 5★ is rare, the
+  light and dark one is a story you tell.
+- **Epic Seven** — Moonlight heroes come from the Moonlight summon on its
+  own currency (galaxy bookmarks), **0.5%** at 5★, with a 200-pull mileage
+  counter; the covenant summon never gives one.
+- **Raid: Shadow Legends** — Void champions come from Void shards alone;
+  the ancient and sacred shards never give a Void.
+
+The pattern is one road, well under one per cent, and the road's own
+floor.
+
+### What was true here until tonight
+
+Every pool held all five elements. A pantheon banner featured its god "in
+every element", so the featured 50/50 could hand over his Umbra; the
+mystical, divine, fire, water and wind pools held every Radiance and Umbra
+of their slice; the Light & Dark scroll was 3% at 5★ with a hard pity at
+120 and a soft pity from 90; and the only thing that made a light or dark
+form rare was `lightDarkWeight` — a 0.25 / 0.12 cut inside the grade
+(2026-09-10) — which made a 5★ dark god one pantheon pull in ~400 rather
+than one in ~80, and the Fuse board's six prizes were all light or dark 5★s
+at four raised commons and 40–120k drachma. The selector and the night
+market read the same pools. Nothing about a light or dark unit was better;
+it was a colour.
+
+### The three options weighed
+
+1. **An exclusive scroll with no pity — chosen.** Radiance and Umbra come
+   from the Light & Dark scroll and nowhere else; the scroll is 0.8% at
+   5★ with no hard pity and no soft pity; mileage is the floor. This is
+   Summoners War's shape exactly, which is what the owner asked for by
+   name, and it makes the light and dark 5★ a real trophy: on average 125
+   scrolls (56,250 divinity) against a pantheon banner's mean 2,950 for a
+   random 5★. The cost is the drought: a player with no 5★ after 200
+   scrolls (20% of them) has nothing to show but 4★s — which is why the 4★
+   guarantee at 15 stays and mileage is re-anchored (below).
+2. **An exclusive scroll with a 200-pull hard pity** (Epic Seven's
+   shape). Kinder, but a hard pity is a price — 200 × 450 = 90,000
+   divinity buys a random light or dark 5★ — and once a guarantee exists
+   the exchange must sit above it (1.7×, as on every other banner), so
+   the NAMED unit lands at 340 scrolls, which is out of anyone's reach.
+   Rejected: the owner's words were Summoners War's, and the mileage
+   floor does the kind part without a guarantee under it.
+3. **Keep the pools and cut the weight further** (0.12 → 0.03, say).
+   Nothing changes on any screen; a pantheon 5★ pull is still sometimes a
+   dark god and the player never knows why he is lucky; the fusion board
+   still hands the same forms out for commons. Rejected: "NEVER offer" is
+   a rule about roads, not a rate.
+
+### Built
+
+**Exclusivity.** `Banner.excludingLightDark(_:)` is the ONE place the rule
+is spelled: every pantheon banner's pool and featured list (`pool(of:)`,
+`featuredFamily(_:)`), every scroll banner's pool (`pool(where:)`), and —
+so no banner can disagree with its own pool — `SummonService.eligibleIDs`
+itself runs every draw through it unless the banner spends the Light &
+Dark scroll. The odds table, the mileage board, the selector and the
+night market all read `eligible(for:)` or the pools it made, so they
+follow; `NightMarketService.marketUnits` filters as well (a 4★ dark god
+for 250,000 drachma was a second road). `lightDarkWeight` is gone: one
+weight rule, the featured family at double. `Element.isLightOrDark` is
+the predicate. `UnitDatabase.summonPool` stays the full summonable set —
+the codex, the collection and the art gate read it — and
+`Banner.lightDarkPool` is the one pool built without the filter. The
+banner subtitles say "in fire, in water and in wind"; the rate table's
+`lightDarkLine` still exists and now never prints, on purpose: the day a
+light or dark unit leaks into another pool the table says so in violet.
+
+**The scroll.** `ScrollType.lightDark.odds` 3★ 0.902 / 4★ 0.090 / 5★
+0.008 (was .85 / .12 / .03); `Banner.lightAndDark.legendaryPity` nil
+(was 120; the soft pity keys off the same number and is off with it),
+`rarePity` 15 kept. `balance.py --gacha` plays 200,000 scrolls: effective
+5★ 0.77% (the published rate IS the rate), mean 129 scrolls to a 5★
+(expected 125), median 92, 90th percentile 306, no 5★ in 100 / 200 / 300
+scrolls 44.8% / 20.1% / 9.0%, 56,250 divinity a 5★ on average — 19× the
+pantheon banner's mean; the 4★ guarantee lifts the 4★ rate from 9% to
+11.7%.
+
+**Mileage.** With no guarantee the flat 15,000-divinity target became
+the price — 33 scrolls for a 5★ that costs 125 on average, the fast road
+that `--mileage` was written to catch, back on the one banner that now
+needs the floor most. A banner WITHOUT a hard pity anchors its best grade
+to **1.3 × the expected pull count, rounded up**
+(`MileageService.expectedMultiple`, `anchorPoints(for:)`): the Light &
+Dark 5★ is **163 points** (73,350 divinity, 1.30× the average), a 4★ 65,
+a 3★ 22. Every banner with a pity is untouched (the pantheon banner's 5★
+is still 153, 1.7 guarantees), and the mystical and unknown scrolls, which
+never had a pity, keep their targets as the higher floor (200 and 80).
+`--mileage` asserts both: "the cheapest ratio on any banner with a pity
+is 1.70x" and "the Light & Dark 5★ costs 1.30x its expected pull count".
+
+**The premium.** `UnitDatabase.lightDarkPremium` = **1.08** on attack,
+health and defence, applied ONCE — `UnitDatabase.roster` maps every
+roster blueprint through `withLightDarkPremium` on its way into the
+registry — so the eleven hand-written builders and the table's
+`family(_:element:)` write the family's numbers and cannot miss it, and
+no enemy blueprint can catch it (a campaign wave's Radiance unit is an
+`enemy(...)` of its own). Speed and the rate stats are untouched: a
+premium on speed would move the turn order, which is a different design.
+The awakening's stat bonus is lifted with the base so an awakened form
+keeps the same 8%. The starter (`UnitDatabase.starter`) now reads the
+registered dark Anubis, so a save's first unit and the registry agree.
+
+Measured (`balance.py --variants`, the PREMIUM block: one family per kit
+and the hand-written 4★+ families, each light and dark form with and
+without the premium, skills held still, 1v1 at 5★ Lv.30 with relics,
+120 seeded fights): **damage per action ×1.068, damage per fight ×1.073,
+damage absorbed before falling ×1.089** (the health, plus the heals and
+shields that scale with it: Perseus's Mirror Shield +19%, Thoth's Silver
+Disc +16%), **win rate against the form's own fire, water and wind
+siblings 49% → 68%**, against the Anubis benchmark 54% → 80%. The bands
+the report asserts are 6–20% on the isolated lifts and a sibling win
+rate above the plain form's by five points and under 85%: a clear lead,
+nothing like a grade (a 5★ over a 4★ is ×1.3 on every stat). 1.08 sits
+in the band on every measure, so it stands; a 1v1 is knife-edge, which
+is why 8% of stat is +19 points of win rate, and in a four-a-side the
+same premium reads smaller.
+
+A rule for the sim came out of it, written at `LIGHT_DARK_PREMIUM`: the
+premium is applied only where the sim mirrors a SPECIFIC shipped light or
+dark blueprint — the Tower rosters that name one (`ANUBIS_DARK`,
+`SHABTI3_DARK`, `form(...)` in `TOWER_TIERS`, so the Sand Stair's Horus and
+the Coil's Anubis fight on the game's numbers) and the variants report —
+and the benchmark and every stand-in team (the ladders, the boons' "four
+maxed 6★", the raids' "a unit on each element", the arena's four-colour
+line) stay on the family's numbers. A calibrated band is an instrument:
+with the premium on the stand-ins, Hydra's Blood measured 20.3% (band
+6–18) and Olympian Hubris I 2.8% (band 3–8) on fights no design had
+touched. Every verdict of the default run is identical to before the
+change; the only rows that moved are the Tower's (its light and dark
+enemies are stronger by the premium, as the game's are: F50 the Coil for
+a 5★ relic team 32% → 22%).
+
+**Fusion.** The six hexagrams keep their shape (four corners, the grades,
+the levels, 40 / 80 / 120k) and now give fire, water and wind 5★s, one
+family each, with no light or dark corner anywhere (a premium form fed
+into a hexagram is the wrong direction for it to travel), renamed where
+the old name was the light or the dark idea:
+
+| was | now | result |
+|---|---|---|
+| The Red Beer → sekhmet_radiance | **The Red Beer** (the flood is water) | sekhmet_tide |
+| The Burnished Shield → ares_radiance | **The Screaming Charge** | ares_gale |
+| The Dark Moon Eye → horus_umbra | **The Falcon's Noon** (the right eye, the sun) | horus_ember |
+| The Storm Below → zeus_umbra | **The Storm at Sea** (Zeus Ombrios) | zeus_tide |
+| The Sealed Book → thoth_umbra | **The Five Stolen Days** (the draughts game with the moon) | thoth_gale |
+| The Unseen Helm → hades_umbra | **The River of Fire** (Phlegethon) | hades_ember |
+
+`fusionOnlyIDs` takes those six out of the pools as before, so the Water
+Scroll no longer gives Sekhmet's or Zeus's water form and the Fire Scroll
+no longer Horus's or Hades's fire form; each family's home element (fire
+for Sekhmet, Zeus and Ares, water for Thoth) stays summonable.
+
+**Tests.** `ScrollTests`: every banner but the Light & Dark one draws no
+Radiance or Umbra (the empty-pool "everything" banner included), the
+scroll is ≤1% with no `legendaryPity` and a 5★ is never `fromPity`, the
+selector and the night market offer none. `SummonTests`: the L&D 5★'s
+mileage is `ceil(1.3 / rate)` and the pantheon banner's still 1.7
+guarantees. `ProgressionTests`: no prize or corner is light or dark, one
+family a prize, no corner is another hexagram's prize; the registered
+dark Anubis is the builder's numbers × `lightDarkPremium` on health,
+attack and defence and nothing else, the fire form is the builder's
+numbers as written, Horus's umbra row is the lean × the premium and his
+awakening bonus with it, and every light or dark roster form beats its
+fire sibling in health and attack together by less than a grade.
+
+### Still true, and worth knowing
+
+- The **starter is the dark Anubis** (`UnitDatabase.starter`,
+  `NewGame.create`): every account begins with one premium unit, given,
+  not drawn. The whole tour, the CI frames and the tests key on him; moving
+  the starter to `anubis_ember` is a one-line change in `UnitDatabase` and
+  a day of frames, and the owner's call.
+- The tour's debug roster (`GameStore.grantTourRoster`) seeds
+  `sekhmet_umbra` and `shabti_umbra` by id, so the screenshot collection
+  shows a 5★ dark Sekhmet the gacha cannot give. Harmless in a tour; not
+  a player path.
+- The Tower's and the Halls' rosters that name light or dark roster ids
+  (`DungeonDatabase`: `horus_radiance`, `hoplite_radiance`,
+  `sekhmet_umbra`, `shabti_umbra`, `anubis_umbra`) field the premium'd
+  forms as enemies now — the same blueprints the player would own.
+- Rivals' arena teams (`LocalSocialBackend.rivalDefence`) draw from the
+  full `summonPool`, light and dark included: a rival can show off what
+  the scroll gives, which is the point of a rival.

@@ -323,13 +323,19 @@ enum EssenceCatalog {
 /// something the gacha is quietly still handing out. The two cannot drift
 /// because there is only one list.
 ///
-/// Every prize is the light or the dark variant of a family whose other three
-/// elements stay summonable, which is the genre's convention: the light and
-/// the dark of a family are the ones you cannot pull. Hades was the wind form
-/// while only three of his five cards had been painted — a prize whose card is
-/// a letter on a gradient is not a prize — and moved to the dark one the day
-/// the batch finished him, which is also the form the helm belongs to. Six ids
-/// out of the seventy-eight in the pool: a banner still has plenty to give.
+/// Every prize is a fire, water or wind form of a 5★ family whose other forms
+/// stay summonable — Summoners War's fusion monsters are likewise one element
+/// of a family the scrolls give in the others. They WERE the light and the
+/// dark forms until 2026-09-17, when the owner, with this board offering a 5★
+/// light Ares and a 5★ dark Horus, ruled that Radiance and Umbra are the
+/// Light & Dark scroll's alone (`Banner.excludingLightDark`) — "PREMIUM
+/// PREMIUM mons" no hexagram may hand over — and the six were retargeted the
+/// same evening, renamed where the old name was the light or the dark idea:
+/// the Dark Moon Eye is the Falcon's Noon, the Storm Below the Storm at Sea,
+/// the Sealed Book the Five Stolen Days, the Unseen Helm the River of Fire.
+/// No corner names a Radiance or Umbra unit either: a premium form fed into a
+/// hexagram is the wrong direction for it to travel. Six ids out of the
+/// pool's hundreds: a banner still has plenty to give.
 enum FusionService {
 
     // MARK: Table types
@@ -492,79 +498,79 @@ enum FusionService {
         Recipe(
             id: "red_beer",
             name: "The Red Beer",
-            resultID: "sekhmet_radiance",
+            resultID: "sekhmet_tide",
             drachmaCost: 40_000,
-            lore: "Ra sent his Eye out to punish humanity and then could not call her back. The gods dyed seven thousand jars of beer red, flooded a field with it, and let her drink the ground dry; she woke gentle, and has been the sun's own lioness since. The circle needs the field, the jars, and somebody to pour.",
+            lore: "Ra sent his Eye out to punish humanity and then could not call her back. The gods dyed seven thousand jars of beer red, flooded a field with it, and let her drink the ground dry; she woke gentle, and has been the sun's own lioness since. The circle needs the field, the jars, and somebody to pour — and what steps out of it is the flood.",
             ingredients: [
-                Ingredient(blueprintID: "shabti_radiance", stars: 4, level: 30),
+                Ingredient(blueprintID: "shabti_tide", stars: 4, level: 30),
                 Ingredient(blueprintID: "jackal_warrior_ember", stars: 4, level: 30),
                 Ingredient(blueprintID: "satyr_ember", stars: 4, level: 30),
-                Ingredient(blueprintID: "anubis_radiance", stars: 4, level: 45)
+                Ingredient(blueprintID: "anubis_ember", stars: 4, level: 45)
             ]
         ),
         Recipe(
-            id: "burnished_shield",
-            name: "The Burnished Shield",
-            resultID: "ares_radiance",
+            id: "screaming_charge",
+            name: "The Screaming Charge",
+            resultID: "ares_gale",
             drachmaCost: 40_000,
-            lore: "War the way a city means it: the line at the gate at dawn, shields overlapping, nobody enjoying himself. Greece never much liked Ares — but the men on the wall prayed to him anyway, and it is their bronze that polishes him bright.",
+            lore: "War the way the plain means it: the dust seen before the line is, the shout the men make so their own knees stop shaking, and the lance that comes out of it. Greece never much liked Ares — but the men who ran at the enemy prayed to him anyway, at the run, and it is their wind he arrives on.",
             ingredients: [
-                Ingredient(blueprintID: "hoplite_radiance", stars: 4, level: 30),
+                Ingredient(blueprintID: "hoplite_gale", stars: 4, level: 30),
                 Ingredient(blueprintID: "shabti_ember", stars: 4, level: 30),
                 Ingredient(blueprintID: "harpy_gale", stars: 4, level: 30),
-                Ingredient(blueprintID: "heracles_radiance", stars: 4, level: 45)
+                Ingredient(blueprintID: "heracles_gale", stars: 4, level: 45)
             ]
         ),
         Recipe(
-            id: "dark_moon_eye",
-            name: "The Dark Moon Eye",
-            resultID: "horus_umbra",
+            id: "falcons_noon",
+            name: "The Falcon's Noon",
+            resultID: "horus_ember",
             drachmaCost: 80_000,
-            lore: "Set tore out the falcon's left eye and stamped the pieces into the sand; Thoth found them and put the eye back together, all but a sixty-fourth part. That missing piece is why the moon wanes, and why this eye opens in the dark.",
+            lore: "Set tore out the falcon's left eye and stamped the pieces into the sand, and Thoth put it back together all but a sixty-fourth part. The right eye was never touched. That one is the sun, and at noon, when nothing on the ground has a shadow left to hide in, the falcon stoops.",
             ingredients: [
-                Ingredient(blueprintID: "shabti_umbra", stars: 4, level: 45),
-                Ingredient(blueprintID: "harpy_umbra", stars: 4, level: 45),
+                Ingredient(blueprintID: "shabti_ember", stars: 4, level: 45),
+                Ingredient(blueprintID: "harpy_ember", stars: 4, level: 45),
                 Ingredient(blueprintID: "anubis_tide", stars: 5, level: 30),
                 Ingredient(blueprintID: "perseus_gale", stars: 5, level: 30)
             ]
         ),
         Recipe(
-            id: "storm_below",
-            name: "The Storm Below",
-            resultID: "zeus_umbra",
+            id: "storm_at_sea",
+            name: "The Storm at Sea",
+            resultID: "zeus_tide",
             drachmaCost: 80_000,
-            lore: "Before the first ploughing a farmer prays to Zeus Under-the-Earth and to Demeter, and means the rain that stays in the ground rather than the bolt that splits the oak. He answers to that name too. Same god, darker coat, and the harvest is his.",
+            lore: "The sailors of the old country did not pray to Poseidon in a storm; they prayed to Zeus, who sends it — Zeus Ombrios, the rain-bringer, Zeus of the deluge that once covered every mountain but one. Same god, wet through, and the harbour is his.",
             ingredients: [
-                Ingredient(blueprintID: "hoplite_umbra", stars: 4, level: 45),
-                Ingredient(blueprintID: "satyr_umbra", stars: 4, level: 45),
+                Ingredient(blueprintID: "hoplite_tide", stars: 4, level: 45),
+                Ingredient(blueprintID: "satyr_tide", stars: 4, level: 45),
                 Ingredient(blueprintID: "heracles_ember", stars: 5, level: 30),
                 Ingredient(blueprintID: "heimdall_tide", stars: 5, level: 30)
             ]
         ),
         Recipe(
-            id: "sealed_book",
-            name: "The Sealed Book",
-            resultID: "thoth_umbra",
+            id: "five_stolen_days",
+            name: "The Five Stolen Days",
+            resultID: "thoth_gale",
             drachmaCost: 120_000,
-            lore: "The book that holds every word the god knows was sunk in the river in a box of iron, in a box of bronze, in a box of ivory, in a box of silver, in a box of gold, with a serpent coiled round it that came back each time it was killed. The prince who finally took it read it, and had buried his children by morning.",
+            lore: "The sky was forbidden to bear children on any day of the year, so Thoth played draughts with the moon and won a seventy-second part of its light: enough for five days that belong to no month. Osiris, Horus, Set, Isis and Nephthys were born in them. He measured the year, and the wind that turns it is his.",
             ingredients: [
                 Ingredient(blueprintID: "shabti_gale", stars: 5, level: 30),
-                Ingredient(blueprintID: "jackal_warrior_radiance", stars: 5, level: 30),
-                Ingredient(blueprintID: "anubis_umbra", stars: 5, level: 40),
-                Ingredient(blueprintID: "heimdall_radiance", stars: 5, level: 40)
+                Ingredient(blueprintID: "jackal_warrior_tide", stars: 5, level: 30),
+                Ingredient(blueprintID: "anubis_gale", stars: 5, level: 40),
+                Ingredient(blueprintID: "heimdall_ember", stars: 5, level: 40)
             ]
         ),
         Recipe(
-            id: "unseen_helm",
-            name: "The Unseen Helm",
-            resultID: "hades_umbra",
+            id: "river_of_fire",
+            name: "The River of Fire",
+            resultID: "hades_ember",
             drachmaCost: 120_000,
-            lore: "The cyclopes made him a helm that takes its wearer out of sight, and he lends it out: to the hero who wanted the gorgon's head, to the gods when they fought the giants. It always comes back. What comes back wearing it is not always what borrowed it.",
+            lore: "Five rivers ring the underworld, and one of them burns: Phlegethon, whose flames give no light, circling Tartarus and pouring down into it. The eldest brother keeps the ledger by its glow. What comes up out of it has been counted, and is not owed to anyone.",
             ingredients: [
                 Ingredient(blueprintID: "satyr_gale", stars: 5, level: 30),
                 Ingredient(blueprintID: "harpy_gale", stars: 5, level: 40),
-                Ingredient(blueprintID: "perseus_umbra", stars: 5, level: 40),
-                Ingredient(blueprintID: "heracles_umbra", stars: 5, level: 40)
+                Ingredient(blueprintID: "perseus_ember", stars: 5, level: 40),
+                Ingredient(blueprintID: "heracles_tide", stars: 5, level: 40)
             ]
         )
     ]

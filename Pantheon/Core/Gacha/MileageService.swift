@@ -51,12 +51,30 @@ enum MileageService {
     ///
     /// `max` of the two, so a unit is never cheaper than 1.7 guarantees AND
     /// never cheaper than its worth in divinity.
+    ///
+    /// And a THIRD floor for a banner with no guarantee at all, since
+    /// 2026-09-17: see `expectedMultiple`.
     static let divinityTarget: [Int: Int] = [3: 2_000, 4: 6_000, 5: 15_000]
 
     /// How much dearer naming the unit you want is than letting the counter
     /// hand you a random one. Under 1.0 mileage replaces pity; far over it,
     /// nobody ever reaches it.
     static let pityMultiple = 1.7
+
+    /// The same idea on a banner WITHOUT a hard pity, where there is no
+    /// guarantee to be dearer than: the anchor is the EXPECTED pull count —
+    /// one over the best grade's rate — and the multiple is 1.3, so naming
+    /// the 5★ you want costs about a third more than the average road to a
+    /// random one. Written for the Light & Dark scroll the evening it lost
+    /// its pity (2026-09-17, the premium): at 0.8% with no guarantee the flat
+    /// 15,000-divinity target came to 33 scrolls, a QUARTER of the 125 an
+    /// expected 5★ costs — the fast road, worse than the one `--mileage`
+    /// first caught. `ceil(1.3 / 0.008)` is 163 points, 73,350 divinity,
+    /// against 56,250 for the average 5★. The mystical and unknown scrolls
+    /// have no hard pity either and are untouched by this: their divinity
+    /// targets (200 and 80 points) are the higher floor, as before.
+    /// `balance.py --mileage` asserts the L&D 5★ sits at 1.3× or more.
+    static let expectedMultiple = 1.3
 
     /// What a grade is worth against the banner's best. Proportional to the
     /// divinity targets above, so the three prices keep their shape on every
@@ -71,21 +89,22 @@ enum MileageService {
         scroll.divinityPrice ?? 25
     }
 
-    /// The number of pulls the price is anchored to: the banner's hard pity
-    /// where it has one, and otherwise the pulls it takes on average to reach
-    /// the best grade the banner can give.
-    static func anchorPulls(for banner: Banner) -> Int {
-        if let pity = banner.legendaryPity { return pity }
+    /// The points a banner's BEST grade is anchored to: 1.7 hard pities
+    /// where the banner has one, and otherwise 1.3 times the pulls it takes
+    /// on average to reach the best grade the scroll can give, rounded up.
+    /// Mirrored in `tools/balance.py` as `mileage_anchor`.
+    static func anchorPoints(for banner: Banner) -> Double {
+        if let pity = banner.legendaryPity { return Double(pity) * pityMultiple }
         let odds = banner.scroll.odds
         let best = odds.keys.max() ?? 3
         let chance = max(0.0001, odds[best] ?? 1.0)
-        return max(1, Int((1.0 / chance).rounded()))
+        return ceil(expectedMultiple / chance)
     }
 
     /// Points needed for one unit of a grade on a banner. Never less than
     /// ten, so no banner can hand out a unit for a handful of pulls.
     static func price(stars: Int, on banner: Banner) -> Int {
-        let anchored = Double(anchorPulls(for: banner)) * pityMultiple * (gradeShare[stars] ?? 1.0)
+        let anchored = anchorPoints(for: banner) * (gradeShare[stars] ?? 1.0)
         let target = Double(divinityTarget[stars] ?? 15_000) / Double(pullValue(banner.scroll))
         return max(10, Int(max(anchored, target).rounded()))
     }
@@ -201,6 +220,11 @@ enum SelectorService {
     /// dark. Every rule was satisfied and the screen was worthless — a player
     /// choosing his first god was being offered an element picker. A family
     /// is the id without its element suffix (`anhur_ember` → `anhur`).
+    ///
+    /// Never a Radiance or an Umbra, since 2026-09-17: the Duat banner's
+    /// pool is fire, water and wind (`Banner.excludingLightDark`), so the
+    /// first pass finds three colours and the second fills the last two
+    /// families. The premium is not a gift on day one.
     static func candidates() -> [UnitBlueprint] {
         let pool = SummonService.eligible(for: Banner.duatOpens)
             .filter { $0.naturalStars == 4 && $0.hasShippedArt }

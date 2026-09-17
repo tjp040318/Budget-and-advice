@@ -22,7 +22,7 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
     static let standard = Banner(
         id: "standard",
         title: "The Endless Scroll",
-        subtitle: "Every soul the summoning circle has ever known.",
+        subtitle: "Every soul of every pantheon, in fire, in water and in wind.",
         scroll: .mystical,
         pool: [],
         featured: [],
@@ -32,9 +32,37 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
         pantheon: nil
     )
 
-    /// Every summonable of one pantheon, for a banner that promises it.
+    /// The one rule of the pools: Radiance and Umbra are the Light & Dark
+    /// scroll's ALONE. Every other banner's pool and featured list is built
+    /// through here, `SummonService.eligibleIDs` runs every draw through it
+    /// again, and the selector, the mileage board and the night market read
+    /// what it made — so nothing but that scroll can hand one over.
+    ///
+    /// The owner, 2026-09-17, with the Fuse board offering a 5★ light Ares
+    /// and a 5★ dark Horus: "we should NEVER offer a 5 star Light or dark mon
+    /// like this. it should ONLY be availble at like a 1% or less rate
+    /// through the LD scrolls (like summoners war). They are PREMIUM PREMIUM
+    /// mons that need to be better than the rest". Summoners War's Light &
+    /// Dark scroll is the only road to its light and dark monsters, at 0.5%
+    /// for a 5★ with no guarantee; this is that.
+    ///
+    /// `UnitDatabase.summonPool` stays the FULL summonable set — the codex,
+    /// the collection and the art gate read it — and the filter is at the
+    /// banners. The premium itself is `UnitDatabase.lightDarkPremium`.
+    static func excludingLightDark(_ ids: [String]) -> [String] {
+        ids.filter { !(UnitDatabase.blueprint($0)?.element.isLightOrDark ?? false) }
+    }
+
+    /// Every summonable of one pantheon in fire, water and wind, for a banner
+    /// that promises it.
     static func pool(of pantheon: Pantheon) -> [String] {
-        UnitDatabase.summonPool.filter { UnitDatabase.blueprint($0)?.pantheon == pantheon }
+        excludingLightDark(UnitDatabase.summonPool.filter { UnitDatabase.blueprint($0)?.pantheon == pantheon })
+    }
+
+    /// A pantheon banner's featured family: the god in his three summonable
+    /// elements. His Radiance and his Umbra are not on the banner at all.
+    static func featuredFamily(_ prefix: String) -> [String] {
+        excludingLightDark(UnitDatabase.summonPool.filter { $0.hasPrefix(prefix) })
     }
 
     /// The launch banner: Egypt only. The pool is the whole Egyptian roster, so
@@ -45,61 +73,62 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
     static let duatOpens = Banner(
         id: "duat_opens",
         title: "The Duat Opens",
-        subtitle: "The scales are unattended. Egypt answers the circle — Anubis first, in fire, in water, in wind, in light and in shadow.",
+        subtitle: "The scales are unattended. Egypt answers the circle — Anubis first, in fire, in water and in wind.",
         scroll: .pantheonic,
         pool: pool(of: .egyptian),
-        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("anubis_") },
+        featured: featuredFamily("anubis_"),
         legendaryPity: 90,
         rarePity: 12,
         artName: "banner_duat_opens",
         pantheon: .egyptian
     )
 
-    /// The Greek banner: Greece only. Zeus is featured in all five elements;
-    /// the rest of Olympus — Ares, the heroes, the creatures and the hoplite —
-    /// fills the grades beneath and beside him. It is offered once at least
-    /// one Greek unit has its portraits in the bundle.
+    /// The Greek banner: Greece only. Zeus is featured in fire, water and
+    /// wind; the rest of Olympus — Ares, the heroes, the creatures and the
+    /// hoplite — fills the grades beneath and beside him. It is offered once
+    /// at least one Greek unit has its portraits in the bundle.
     static let olympusStirs = Banner(
         id: "olympus_stirs",
         title: "Olympus Stirs",
-        subtitle: "The sky opens over Greece. Gods, heroes and the creatures of the old country answer — Zeus first, in every element.",
+        subtitle: "The sky opens over Greece. Gods, heroes and the creatures of the old country answer — Zeus first, in fire, in water and in wind.",
         scroll: .pantheonic,
         pool: pool(of: .greek),
-        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("zeus_") },
+        featured: featuredFamily("zeus_"),
         legendaryPity: 90,
         rarePity: 10,
         artName: "banner_olympus_stirs",
         pantheon: .greek
     )
 
-    /// The Norse banner: Yggdrasil only. Odin is featured in every element;
-    /// Thor, Freya and Loki share his grade, the Æsir and the giant's daughter
-    /// fill the one beneath, and the barrow-dead, the trolls, the valkyries
-    /// and the dwarves are its commons. Offered once a Norse unit has cards.
+    /// The Norse banner: Yggdrasil only. Odin is featured in fire, water and
+    /// wind; Thor, Freya and Loki share his grade, the Æsir and the giant's
+    /// daughter fill the one beneath, and the barrow-dead, the trolls, the
+    /// valkyries and the dwarves are its commons. Offered once a Norse unit
+    /// has cards.
     static let ravensGather = Banner(
         id: "ravens_gather",
         title: "The Ravens Gather",
-        subtitle: "Two ravens leave the tree at dawn. Yggdrasil answers the circle — Odin first, in every element.",
+        subtitle: "Two ravens leave the tree at dawn. Yggdrasil answers the circle — Odin first, in fire, in water and in wind.",
         scroll: .pantheonic,
         pool: pool(of: .norse),
-        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("odin_") },
+        featured: featuredFamily("odin_"),
         legendaryPity: 90,
         rarePity: 10,
         artName: "banner_ravens_gather",
         pantheon: .norse
     )
 
-    /// The Roman banner: the Seven Hills only. Mars is featured in every
-    /// element; Minerva shares his grade, the gods of the Forum fill the one
-    /// beneath, and the centurion, the gladiator and the Vestal are its
-    /// commons. Offered once a Roman unit has cards (batch 4).
+    /// The Roman banner: the Seven Hills only. Mars is featured in fire,
+    /// water and wind; Minerva shares his grade, the gods of the Forum fill
+    /// the one beneath, and the centurion, the gladiator and the Vestal are
+    /// its commons. Offered once a Roman unit has cards (batch 4).
     static let eagleRises = Banner(
         id: "eagle_rises",
         title: "The Eagle Rises",
-        subtitle: "The standards go up on the Capitol. Rome answers the circle — Mars first, in every element.",
+        subtitle: "The standards go up on the Capitol. Rome answers the circle — Mars first, in fire, in water and in wind.",
         scroll: .pantheonic,
         pool: pool(of: .roman),
-        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("mars_") },
+        featured: featuredFamily("mars_"),
         legendaryPity: 90,
         rarePity: 10,
         artName: "banner_eagle_rises",
@@ -107,26 +136,33 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
     )
 
     /// The Chinese banner: the Jade Court only. The Monkey King is featured
-    /// in every element; the Azure Dragon shares his grade, the court fills
-    /// the one beneath, and the fox, the hopping dead and the clay soldier
-    /// are its commons. Offered once a Jade Court unit has cards.
+    /// in fire, water and wind; the Azure Dragon shares his grade, the court
+    /// fills the one beneath, and the fox, the hopping dead and the clay
+    /// soldier are its commons. Offered once a Jade Court unit has cards.
     static let jadeCourtOpens = Banner(
         id: "jade_court_opens",
         title: "The Jade Court Opens",
-        subtitle: "The gates of Heaven stand open and the Monkey King is first through them. The Jade Court answers the circle — Sun Wukong in every element.",
+        subtitle: "The gates of Heaven stand open and the Monkey King is first through them. The Jade Court answers the circle — Sun Wukong in fire, in water and in wind.",
         scroll: .pantheonic,
         pool: pool(of: .chinese),
-        featured: UnitDatabase.summonPool.filter { $0.hasPrefix("sun_wukong_") },
+        featured: featuredFamily("sun_wukong_"),
         legendaryPity: 90,
         rarePity: 10,
         artName: "banner_jade_court",
         pantheon: .chinese
     )
 
-    /// The summon pool filtered by a rule: what the scroll banners are made of.
+    /// The summon pool filtered by a rule, in fire, water and wind: what the
+    /// scroll banners are made of.
     static func pool(where keep: (UnitBlueprint) -> Bool) -> [String] {
-        UnitDatabase.summonPool.filter { id in UnitDatabase.blueprint(id).map(keep) ?? false }
+        excludingLightDark(UnitDatabase.summonPool.filter { id in UnitDatabase.blueprint(id).map(keep) ?? false })
     }
+
+    /// The Light & Dark scroll's pool: every Radiance and Umbra unit of every
+    /// pantheon, which is every one there is. The only pool in the game
+    /// built without `excludingLightDark`.
+    static let lightDarkPool: [String] =
+        UnitDatabase.summonPool.filter { UnitDatabase.blueprint($0)?.element.isLightOrDark ?? false }
 
     /// The scroll banners, the way the genre sells them: the scroll is the
     /// rule. Each spends its own scroll and draws from the slice of the
@@ -147,7 +183,7 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
     static let divineScroll = Banner(
         id: "divine_scroll",
         title: "Divine Scroll",
-        subtitle: "Never less than a 4★, from every pantheon. The rarest scroll there is.",
+        subtitle: "Never less than a 4★, from every pantheon, in fire, water and wind. The surest scroll there is.",
         scroll: .divine,
         pool: pool(where: { $0.naturalStars >= 4 }),
         featured: [],
@@ -157,14 +193,24 @@ struct Banner: Identifiable, Codable, Equatable, Sendable {
         pantheon: nil
     )
 
+    /// The premium banner, and the only road to the premium units: every
+    /// Radiance and Umbra of every pantheon, at the scroll's 0.8% for a 5★,
+    /// with NO hard pity and so no soft pity either — `SummonService.single`
+    /// keys both off `legendaryPity`, and nil switches both off. The 4★
+    /// guarantee stays: fifteen scrolls (6,750 divinity) without a 4★ Light
+    /// or Dark would be a drought with nothing at the end of it. Summoners
+    /// War's L&D scroll has no pity at all; Epic Seven's Moonlight summon is
+    /// 0.5% at 5★ on its own currency with a 200-pull counter; this sits
+    /// between them with mileage (`MileageService`) as the floor —
+    /// `Docs/PLAN.md`, *Light and Dark are the premium*.
     static let lightAndDark = Banner(
         id: "light_dark_scroll",
         title: "Light & Dark",
-        subtitle: "Only the sun's and the night's: every Radiance and Umbra unit of every pantheon.",
+        subtitle: "Only the sun's and the night's: every Radiance and Umbra unit of every pantheon, and the only scroll that gives them.",
         scroll: .lightDark,
-        pool: pool(where: { $0.element == .radiance || $0.element == .umbra }),
+        pool: lightDarkPool,
         featured: [],
-        legendaryPity: 120,
+        legendaryPity: nil,
         rarePity: 15,
         artName: "banner_light_dark",
         pantheon: nil
@@ -362,46 +408,25 @@ enum SummonService {
         return rng.pickWeighted(entries) ?? 3
     }
 
-    /// How much rarer a Light or Dark unit is than the same grade in fire,
-    /// water or wind, inside a pool that holds all five.
-    ///
-    /// The owner: "Summon rates for LD 4 and 5 star need to be turned down. I
-    /// want those to be the strongest and coolest to collect." Every unit of a
-    /// grade used to be equally likely, and with five elements that made two
-    /// of every five pulls of a grade Light or Dark — forty per cent. Nothing
-    /// a player sees two-fifths of the time is a trophy.
-    ///
-    /// At 0.12, a five-star roll lands Light or Dark about seven per cent of
-    /// the time rather than forty, so on a pantheon scroll's 3% five-star rate
-    /// that is roughly one pull in four hundred and fifty. At 0.25 a four-star
-    /// is about fourteen per cent. Three-star commons are untouched: the Hall
-    /// of Ka needs its fodder in every element, and the owner asked for four
-    /// and five.
-    ///
-    /// The Light & Dark scroll is deliberately NOT special-cased. Its pool is
-    /// nothing but Radiance and Umbra, so a factor applied to every candidate
-    /// alike cancels out and the scroll keeps the rate it always had. That is
-    /// the point of it: it becomes the only reliable road to these units
-    /// rather than one road among five.
-    static let lightDarkWeight: [Int: Double] = [4: 0.25, 5: 0.12]
-
     /// One weight, used everywhere a unit is drawn, so no path can quietly
-    /// ignore it. The featured family is doubled as before; a Light or Dark
-    /// unit of a gated grade is cut by the table above. Both apply at once:
-    /// the featured god's dark form is twice as likely as another dark unit
-    /// and still far rarer than his fire form, which is exactly the shape
-    /// wanted.
+    /// ignore it: the featured family at double, and nothing else.
+    ///
+    /// There WAS a second rule here. From 2026-09-10 a Light or Dark unit
+    /// was cut to 0.25 (4★) or 0.12 (5★) of its grade's weight inside a pool
+    /// that held all five elements (`lightDarkWeight`; the owner: "Summon
+    /// rates for LD 4 and 5 star need to be turned down"), which made a 5★
+    /// dark god one pantheon pull in four hundred and fifty rather than one
+    /// in eighty. It went with the pools that needed it: since 2026-09-17 no
+    /// pool but the Light & Dark scroll's holds a Radiance or Umbra unit at
+    /// all (`Banner.excludingLightDark`), so a discount would have nothing
+    /// left to discount, and that scroll's own pool is all one side of the
+    /// line, where a factor on every candidate alike cancels out.
     static func weight(of blueprint: UnitBlueprint, on banner: Banner) -> Double {
-        var weight = banner.featured.contains(blueprint.id) ? 2.0 : 1.0
-        if blueprint.element == .radiance || blueprint.element == .umbra {
-            weight *= lightDarkWeight[blueprint.naturalStars] ?? 1.0
-        }
-        return weight
+        banner.featured.contains(blueprint.id) ? 2.0 : 1.0
     }
 
-    /// Picks a unit of the given grade, honouring the featured double-weight,
-    /// the Light and Dark discount, and the 50/50-then-guaranteed rule on the
-    /// featured slot.
+    /// Picks a unit of the given grade, honouring the featured double-weight
+    /// and the 50/50-then-guaranteed rule on the featured slot.
     private static func pick(
         stars: Int,
         banner: Banner,
@@ -429,10 +454,11 @@ enum SummonService {
         let featuredHere = candidates.filter { banner.featured.contains($0.id) }
 
         if stars >= 5, !featuredHere.isEmpty {
-            // WEIGHTED, not uniform. A banner features a god in all five of
-            // his elements, so an even draw here handed out his Radiance and
-            // his Umbra two times in five — the featured slot was the widest
-            // hole in the discount, and the one a player uses most.
+            // Drawn through `weight(of:on:)` like every other candidate, so
+            // there is one place a rule about who comes out lives. (It was
+            // uniform once, and when a banner featured a god in all five of
+            // his elements that handed out his Radiance and his Umbra two
+            // times in five — the widest hole in the discount of the day.)
             let featuredWeighted = featuredHere.map { (value: $0, weight: weight(of: $0, on: banner)) }
             if pity.featuredGuaranteed {
                 pity.featuredGuaranteed = false
@@ -455,8 +481,14 @@ enum SummonService {
         return rng.pickWeighted(weighted) ?? candidates[0]
     }
 
+    /// What a banner can draw. The Light & Dark rule is applied HERE as well
+    /// as when the pools were built: a banner that spends any scroll but the
+    /// Light & Dark one never sees a Radiance or Umbra id, whatever its pool
+    /// says — so the draw, the odds table, the mileage board and the
+    /// selector, which all read `eligible(for:)`, cannot disagree.
     private static func eligibleIDs(for banner: Banner) -> [String] {
-        banner.pool.isEmpty ? UnitDatabase.summonPool : banner.pool
+        let ids = banner.pool.isEmpty ? UnitDatabase.summonPool : banner.pool
+        return banner.scroll == .lightDark ? ids : Banner.excludingLightDark(ids)
     }
 
     static func eligible(for banner: Banner) -> [UnitBlueprint] {
@@ -482,36 +514,23 @@ struct BannerOdds: Identifiable, Sendable {
 
     var id: Int { stars }
 
-    /// What share of this grade's rolls comes out Radiance or Umbra, and what
-    /// that is of every pull. A discount the player cannot see is worse than a
-    /// generous rate: he would only ever learn it by pulling for a week and
-    /// feeling cheated. The table says the number.
-    ///
-    /// Computed from the same weights the roll uses, so the two cannot drift.
-    /// The featured double is left out of it — a banner doubles a god in all
-    /// five of his elements at once, so it very nearly cancels — which makes
-    /// this the honest shape of the rate rather than a figure to the last
-    /// decimal.
+    /// What share of this grade's pool is Radiance or Umbra. Since 2026-09-17
+    /// that is all of it on the Light & Dark scroll and none of it anywhere
+    /// else (`Banner.excludingLightDark`), so the line below never prints —
+    /// and that is the reason to keep it: the rate table reads it, and the
+    /// day a Radiance or Umbra unit leaks into another banner's pool the
+    /// table says so in violet, under the grade's odds, rather than hiding
+    /// a rate the player cannot work out from the names in front of him.
+    /// (Until then it was the discount's own line — "Light & Dark 7% of
+    /// these · 0.2% a pull" — from the weights the roll used.)
     var lightDarkShare: Double {
-        let factor = SummonService.lightDarkWeight[stars] ?? 1.0
-        var lightDark = 0.0
-        var rest = 0.0
-        for unit in units {
-            if unit.element == .radiance || unit.element == .umbra {
-                lightDark += factor
-            } else {
-                rest += 1
-            }
-        }
-        let total = lightDark + rest
-        return total > 0 ? lightDark / total : 0
+        guard !units.isEmpty else { return 0 }
+        let lightDark = units.filter { $0.element.isLightOrDark }.count
+        return Double(lightDark) / Double(units.count)
     }
 
-    /// Nil when this grade is not discounted, or when the pool is all one
-    /// side of the line — the Light & Dark scroll, where every unit is
-    /// Radiance or Umbra and the share is a meaningless 100%.
+    /// Nil when the pool is all one side of the line, which every pool now is.
     var lightDarkLine: String? {
-        guard SummonService.lightDarkWeight[stars] != nil else { return nil }
         let share = lightDarkShare
         guard share > 0, share < 0.999 else { return nil }
         return String(format: "Light & Dark %.0f%% of these · %.3f%% a pull",

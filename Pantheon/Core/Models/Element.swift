@@ -15,6 +15,14 @@ enum Element: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
+    /// The premium pair. Radiance and Umbra sit outside the wheel and counter
+    /// each other, and since 2026-09-17 they are the Light & Dark scroll's
+    /// alone (`Banner.excludingLightDark`) and carry
+    /// `UnitDatabase.lightDarkPremium` on their attack, health and defence
+    /// for it. The owner: "PREMIUM PREMIUM mons that need to be better than
+    /// the rest."
+    var isLightOrDark: Bool { self == .radiance || self == .umbra }
+
     var displayName: String {
         switch self {
         case .ember: return "Ember"

@@ -944,6 +944,15 @@ def check_unknown_types(files, declared, errors):
         # the friend search and the guild board type into.
         "CloudKit","CKContainer","CKDatabase","CKRecord","CKQuery","CKError","NSPredicate","NSSortDescriptor",
         "Encoder","Decoder","CodingKey","TimeZone","TextField",
+        # Sign in with Apple and the cloud save (2026-09-17, evening; the
+        # accounts): AuthenticationServices' credential, provider, request,
+        # controller and error types and SwiftUI's system button, CryptoKit's
+        # SHA-256 for the save's storage key, and CloudKit's asset for a save
+        # too big for a record field.
+        "AuthenticationServices","ASAuthorization","ASAuthorizationAppleIDCredential",
+        "ASAuthorizationAppleIDProvider","ASAuthorizationAppleIDRequest","ASAuthorizationController",
+        "ASAuthorizationError","ASAuthorizationRequest","ASPresentationAnchor","SignInWithAppleButton",
+        "CryptoKit","SHA256","CKAsset","CKRecordZone","CKAccountStatus",
     }
     used = defaultdict(list)
     for path in files:

@@ -208,6 +208,87 @@ final class ProgressionTests: XCTestCase {
         }
     }
 
+    /// The owner, 2026-09-17, of the board offering a 5★ light Ares and a
+    /// 5★ dark Horus: the premium is the Light & Dark scroll's alone. A
+    /// hexagram's prize is a fire, water or wind 5★, one family per prize,
+    /// and no corner asks for a premium form or another hexagram's prize.
+    func testFusionPrizesAndCornersAreNeverLightOrDark() throws {
+        var families: Set<String> = []
+        for recipe in FusionService.recipes {
+            let result = try XCTUnwrap(recipe.result, recipe.resultID)
+            XCTAssertFalse(result.element.isLightOrDark, "\(recipe.name) hands over a premium form")
+            XCTAssertEqual(result.naturalStars, 5, "\(recipe.name): a hexagram's prize is a 5★ god")
+            XCTAssertTrue(families.insert(SelectorService.familyID(of: result)).inserted,
+                          "\(recipe.name) promises a family another hexagram already gives")
+            for ingredient in recipe.ingredients {
+                let corner = try XCTUnwrap(ingredient.blueprint, ingredient.blueprintID)
+                XCTAssertFalse(corner.element.isLightOrDark, "\(recipe.name) eats a premium form")
+                XCTAssertFalse(FusionService.isFusionOnly(ingredient.blueprintID),
+                               "\(recipe.name) asks for another hexagram's prize")
+            }
+        }
+    }
+
+    // MARK: - The Light and Dark premium (2026-09-17)
+
+    /// The registry lifts a light or dark form's attack, health and defence
+    /// by `lightDarkPremium` over what its builder wrote — once, on the way
+    /// in — and touches nothing else: speed and the rates stay, a fire form
+    /// is the builder's numbers as written, and the starter is the
+    /// registered FIRE Anubis with no premium on him — a light or dark
+    /// form is never given away (2026-09-17, evening). A premium, not a
+    /// grade.
+    func testRadianceAndUmbraFormsCarryThePremiumAndNothingElseDoes() throws {
+        let premium: Double = UnitDatabase.lightDarkPremium
+        XCTAssertGreaterThan(premium, 1.0)
+        XCTAssertLessThan(premium, 1.20, "a premium, not a grade: a 5★ over a 4★ is 1.3 on every stat")
+
+        let built = UnitDatabase.anubisUmbra
+        let shipped = try XCTUnwrap(UnitDatabase.blueprint(built.id))
+        let hpDue: Double = built.baseStats.hp * premium
+        let atkDue: Double = built.baseStats.atk * premium
+        let defDue: Double = built.baseStats.def * premium
+        XCTAssertEqual(shipped.baseStats.hp, hpDue, accuracy: 1e-9)
+        XCTAssertEqual(shipped.baseStats.atk, atkDue, accuracy: 1e-9)
+        XCTAssertEqual(shipped.baseStats.def, defDue, accuracy: 1e-9)
+        XCTAssertEqual(shipped.baseStats.spd, built.baseStats.spd, accuracy: 1e-9, "speed is not in the premium")
+        XCTAssertEqual(shipped.baseStats.critRate, built.baseStats.critRate, accuracy: 1e-9)
+        XCTAssertEqual(shipped.baseStats.resistance, built.baseStats.resistance, accuracy: 1e-9)
+        XCTAssertEqual(shipped.skills.map(\.id), built.skills.map(\.id), "the premium is stats, not skills")
+
+        let ember = UnitDatabase.anubisEmber
+        let shippedEmber = try XCTUnwrap(UnitDatabase.blueprint(ember.id))
+        XCTAssertEqual(shippedEmber.baseStats, ember.baseStats, "a fire form is the builder's numbers as written")
+        XCTAssertEqual(UnitDatabase.starter.id, ember.id, "the starter is the fire Anubis, never a light or dark form")
+        XCTAssertFalse(UnitDatabase.starter.element.isLightOrDark, "a premium unit is never handed out on day one")
+        XCTAssertEqual(UnitDatabase.starter.baseStats, shippedEmber.baseStats, "the starter is the registered form")
+
+        // A table family the same way: the row's lean, lifted for the light
+        // and the dark forms only, the awakening's bonus with it.
+        let row = try XCTUnwrap(UnitDatabase.familyRows.first { $0.key == "horus" })
+        let umbraLean = UnitDatabase.lean(row, .umbra)
+        let umbraHealthDue: Double = umbraLean.hp.rounded() * premium
+        let umbraBonusDue: Double = (umbraLean.hp * 0.08).rounded() * premium
+        let horusUmbra = try XCTUnwrap(UnitDatabase.blueprint("horus_umbra"))
+        XCTAssertEqual(horusUmbra.baseStats.hp, umbraHealthDue, accuracy: 1e-9)
+        XCTAssertEqual(horusUmbra.awakening?.statBonus.hp ?? 0, umbraBonusDue, accuracy: 1e-9)
+        let emberLean = UnitDatabase.lean(row, .ember)
+        let emberAttackDue: Double = emberLean.atk.rounded()
+        let horusEmber = try XCTUnwrap(UnitDatabase.blueprint("horus_ember"))
+        XCTAssertEqual(horusEmber.baseStats.atk, emberAttackDue, accuracy: 1e-9)
+
+        // Every registered light or dark form is dearer than the fire form of
+        // its family in health and attack together, and never by a grade.
+        for blueprint in UnitDatabase.roster where blueprint.element.isLightOrDark {
+            let family = SelectorService.familyID(of: blueprint)
+            guard let fire = UnitDatabase.blueprint("\(family)_ember") else { continue }
+            let mine: Double = blueprint.baseStats.hp + blueprint.baseStats.atk * 10
+            let theirs: Double = fire.baseStats.hp + fire.baseStats.atk * 10
+            XCTAssertGreaterThan(mine, theirs, "\(blueprint.id) is no better than \(fire.id)")
+            XCTAssertLessThan(mine, theirs * 1.25, "\(blueprint.id) is a grade over \(fire.id), not a premium")
+        }
+    }
+
     func testFusionSpendsExactlyTheFourCornersAndTheDrachma() throws {
         let recipe = FusionService.recipes[0]
         var player = Player()

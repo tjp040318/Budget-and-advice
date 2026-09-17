@@ -45,6 +45,7 @@ struct TourView: View {
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
         ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
         ("awaken", 2), ("island_decor", 2), ("events", 2), ("regalia", 2), ("demigods", 2),
+        ("sign_in", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -181,7 +182,11 @@ struct TourView: View {
         case "summon":
             SummonView()
         case "reveal":
-            SummonRevealView(results: Self.demoReveal()) {}
+            // A second launch with `-tour-reveal awakened` shows an awakened
+            // 5★ on the beam — the frame the owner sent back on 2026-09-17
+            // ("If awakened characters look like this we have a HUGE
+            // problem"), so the awakened look is judged here every run.
+            SummonRevealView(results: Self.demoReveal(awakened: Self.revealAwakened)) {}
         case "battle":
             if let battleModel {
                 BattleView(model: battleModel)
@@ -243,6 +248,12 @@ struct TourView: View {
                 preview: 0.62, step: "Raising the stages",
                 art: BundleArt.exists(LaunchProgress.keyArt) ? LaunchProgress.keyArt : "banner_olympus_stirs"
             ))
+        case "sign_in":
+            // The account door, as a first launch shows it once the loading
+            // screen has dissolved: the key art, the wordmark, Apple's button
+            // and the guest link. Inert here — the CI build signs nothing and
+            // the tour plays as a fixed guest — so nothing is tapped.
+            SignInView(isOpening: false, notice: nil, onApple: { _ in }, onGuest: {})
         case "tribute":
             // A tribute chest's card: the road's, earned by the tour's player
             // (three stages of the Duat walked) and waiting to be claimed.
@@ -514,18 +525,30 @@ struct TourView: View {
 
     /// A 5★ reveal without spending a scroll, so the stage is caught with a
     /// real model on it.
-    private static func demoReveal() -> [SummonResult] {
-        guard let blueprint = UnitDatabase.blueprint("sekhmet_ember") ?? UnitDatabase.summonPool.first.flatMap(UnitDatabase.blueprint) else {
+    private static func demoReveal(awakened: Bool = false) -> [SummonResult] {
+        // Awakened: Ares in light, the owner's own frame, on the shipped
+        // `ares_awakened` mesh; otherwise the fire Sekhmet as before.
+        let wanted = awakened ? "ares_radiance" : "sekhmet_ember"
+        guard let blueprint = UnitDatabase.blueprint(wanted) ?? UnitDatabase.summonPool.first.flatMap(UnitDatabase.blueprint) else {
             return []
         }
+        var unit = Unit(blueprint: blueprint)
+        if awakened { unit.isAwakened = true }
         return [SummonResult(
-            unit: Unit(blueprint: blueprint),
+            unit: unit,
             blueprint: blueprint,
             stars: blueprint.naturalStars,
             isNew: true,
             isFeatured: true,
             fromPity: false
         )]
+    }
+
+    /// `-tour-reveal awakened` asks the reveal step for an awakened result.
+    private static var revealAwakened: Bool {
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-reveal"), at + 1 < args.count else { return false }
+        return args[at + 1] == "awakened"
     }
 
     /// A won stage as the result screen reads it: three of the first

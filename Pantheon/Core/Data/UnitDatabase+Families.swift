@@ -577,10 +577,11 @@ extension UnitDatabase {
         familyRows.flatMap { row in Element.allCases.map { family(row, element: $0) } }
     }()
 
-    /// The families by key, for the tour and the stages.
+    /// The families by key, for the tour and the stages — as registered, so
+    /// the light and dark forms carry the premium here as everywhere.
     static func family(named key: String) -> [UnitBlueprint] {
         guard let row = familyRows.first(where: { $0.key == key }) else { return [] }
-        return Element.allCases.map { family(row, element: $0) }
+        return Element.allCases.map { withLightDarkPremium(family(row, element: $0)) }
     }
 
     // MARK: - The builder

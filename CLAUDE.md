@@ -1237,8 +1237,11 @@ environment can and cannot do. The short version:
   `tools/skill_icons.py --paint --ship` paints the three 3x3 sheets
   through Meshy (6 credits each) and keys them off the black by a flood
   fill from the cell's border. A painted icon per skill would be
-  thousands of images. The CI tour is forty-eight screens (steps 0–47): the Summoners screen (47,
-  `summoners`, four frames, one per tab by `-tour-social-tab`), the Regalia
+  thousands of images. The CI tour is forty-nine screens (steps 0–48): the sign-in screen (48,
+  `sign_in`), the reveal twice (5, `reveal`: a fire Sekhmet, then relaunched
+  with `-tour-reveal awakened` for an awakened light Ares on the beam — the
+  frame that judges the awakened look every run), the Allies screen (47,
+  `allies`, four frames, one per tab by `-tour-social-tab`), the Regalia
   sheet (46), the events calendar on a Festival Monday (45), the island's decoration
   sheet (44, `island_decor`; step 0 is photographed twice, at rest and
   relaunched with `-tour-island-zoom 1.5` onto the circle), the Hall of Ka's
@@ -1494,6 +1497,69 @@ environment can and cannot do. The short version:
   (`awakenedRimPower`, `awakenedRimStrength`, `awakenedCostumeGlow`), and
   every HDR stage camera — the reveal, the altar, the collection's Stage,
   the chest — wears the battle's `whitePoint` 1.85 shoulder.
+- **Light and Dark are the premium (2026-09-17, evening).** The owner, of
+  the Fuse board offering a 5★ light Ares and a 5★ dark Horus: "we should
+  NEVER offer a 5 star Light or dark mon like this. it should ONLY be
+  availble at like a 1% or less rate through the LD scrolls (like summoners
+  war). They are PREMIUM PREMIUM mons that need to be better than the
+  rest". So Radiance and Umbra come from the **Light & Dark scroll alone**
+  — `Banner.excludingLightDark` is the one place the rule is spelled, every
+  pool and featured list is built through it and `SummonService.eligibleIDs`
+  filters every draw again, so the selector, the mileage board and the
+  night market follow; `lightDarkWeight` is gone (featured ×2 is the only
+  weight); `UnitDatabase.summonPool` stays the full set. The scroll is
+  **0.8% / 9% / 90.2% with NO hard or soft pity** (`legendaryPity` nil; the
+  4★ guarantee at 15 stays), so a 5★ is about 125 scrolls (56,250 divinity)
+  and mileage is the floor: a banner without a pity anchors its 5★ to
+  `ceil(1.3 / rate)` (`MileageService.expectedMultiple`, 163 points on L&D;
+  every other price unchanged). Every light or dark roster form carries
+  **`UnitDatabase.lightDarkPremium` ×1.08 on attack, health and defence**,
+  applied ONCE in `UnitDatabase.roster` on the way into the registry (the
+  builders never know), measured by `balance.py --variants` at ×1.07
+  damage, ×1.09 survival and a sibling win rate 49% → 68%; the sim applies
+  it only where it mirrors a shipped L/D blueprint (`ANUBIS_DARK`,
+  `form()`), never on a stand-in team. The six fusion prizes are fire,
+  water and wind 5★s now (The Red Beer → sekhmet_tide, The Screaming
+  Charge → ares_gale, The Falcon's Noon → horus_ember, The Storm at Sea →
+  zeus_tide, The Five Stolen Days → thoth_gale, The River of Fire →
+  hades_ember) with no L/D corner. Change a rate, the premium or a mileage
+  number in Swift, `balance.py` (`SCROLL_ODDS`, `LIGHT_DARK_PREMIUM`,
+  `MILEAGE_*`) and `ScrollTests`/`SummonTests`/`ProgressionTests` together.
+- **Accounts (2026-09-17, evening; `Docs/PLAN.md` *Accounts — Sign in with
+  Apple*, `Docs/SOCIAL.md` *Sign in with Apple*).** The owner: "accounts
+  that need to be created using an apple id or email. That way users are
+  separate." Sign in with Apple IS the account (`Pantheon/Core/Account/`:
+  `Account`, `AccountService`, `CloudSaveStore`; `SignInView`): Apple's
+  stable user id, or `guest-<uuid>` for "Continue without an account"; the
+  save is `pantheon_save_<key>.json` with `key` the first 16 hex of
+  SHA-256(id), and the old `pantheon_save.json` is RENAMED to the first
+  account that signs in on the phone (`SaveStore.migrateLegacySave`, once),
+  so the owner's save survives the sign-in screen. A guest binds later from
+  More → Account (his file renamed to the Apple key if that key has none);
+  sign-out keeps the file; Apple's `credentialState` is checked on launch
+  and every foreground, and `.revoked`/`.notFound` drop the account.
+  `SignInView` (the key art, PANTHEON, the SYSTEM `SignInWithAppleButton` —
+  a custom one is a rejection) is the root while no account exists;
+  `AppSession` (PantheonApp.swift) REBUILDS `GameStore` per account and
+  `retire()`s the old one so a pending 400 ms save cannot land in the next
+  account's file. **The cloud copy:** an Apple account on an ENTITLED build
+  mirrors its save to the container's PRIVATE database as one `Save`
+  record (`save_<key>`, the JSON as a `CKAsset`, `modifiedAt`, and
+  `createdAt` as the LINEAGE), at most once per 60 s and on `.background`;
+  a new phone restores it at sign-in ("RESTORING"); never an older copy
+  over a newer one and never ANOTHER lineage overwritten — that one is
+  offered as "Restore from iCloud" on the Account panel. Gated like the
+  social layer (`CloudKitSocialBackend.isEntitled`, then `accountStatus`).
+  The entitlement `com.apple.developer.applesignin` is in
+  `Pantheon.entitlements`; the owner must tick Sign in with Apple on the
+  App ID and in Xcode's Signing & Capabilities or the button answers error
+  1000 (worded on the screen); a Simulator signed in to an Apple ID tests
+  the flow, CI cannot. Under `-tour` the app is the fixed guest
+  `AccountService.tourAccount`; tour step 48 `sign_in` photographs the
+  screen and step 9's Account panel shows the guest's rows and his six-hex
+  "Player ID" (the tail of the CloudKit record name — how a support
+  request finds the record). `AccountTests` (9). No email/password yet
+  (option B in PLAN.md; `AccountProvider` is the door).
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 

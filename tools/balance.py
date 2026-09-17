@@ -564,10 +564,56 @@ def simulate(team_a, team_b, seed=0, stats=None, first_wave=True):
 # The roster under test
 # ---------------------------------------------------------------------------
 
+# THE LIGHT AND DARK PREMIUM — UnitDatabase.lightDarkPremium, mirrored. Since
+# 2026-09-17 a Radiance or Umbra form of a ROSTER family carries x1.08 on its
+# attack, health and defence over the family's numbers (the owner: "PREMIUM
+# PREMIUM mons that need to be better than the rest"), and is drawn by the
+# Light & Dark scroll alone. The Swift applies it once, to every roster
+# blueprint on its way into the registry; here `premium` is that step and
+# `form` builds one elemental form of a family through it.
+#
+# WHERE the sim applies it: only where it mirrors a SPECIFIC shipped light or
+# dark blueprint — an enemy roster that names one (the Tower's Sand Stair
+# Horus, the Weighing Floor's Sekhmet and Shabti, the Coil's Anubis:
+# ANUBIS_DARK, SHABTI3_DARK, `form`) and the variants report, which measures
+# the shipped forms. The reference blueprints (ANUBIS, SHABTI3, SEKHMET ...)
+# hold the FAMILY's numbers and stand for all five forms; the benchmark and
+# every stand-in team (the ladders, the boons' "four maxed 6*", the raids'
+# "a unit on each element the boss opens to", the arena's four-colour line)
+# stay on them, because a calibrated band is an instrument and a team of
+# four premium copies is a team nobody fields — with the premium on the
+# stand-ins, Hydra's Blood read 20.3% (band 6-18) and Olympian Hubris I 2.8%
+# (band 3-8) the day it landed, on fights no design had changed. Enemies
+# (E_*, the bosses, the campaign's shabti, scarab and ammit) never pass
+# through it: a campaign wave's Radiance unit is an enemy blueprint of its
+# own in the Swift too. `--variants` measures what the premium buys.
+LIGHT_DARK_PREMIUM = 1.08
+LIGHT_DARK = ("radiance", "umbra")
+
+def premium(bp):
+    """The registered form of a roster blueprint: the family's numbers, or
+    those numbers lifted for a Radiance or Umbra form (UnitDatabase.withLightDarkPremium)."""
+    if bp.element not in LIGHT_DARK:
+        return bp
+    return replace(bp, hp=bp.hp * LIGHT_DARK_PREMIUM, atk=bp.atk * LIGHT_DARK_PREMIUM,
+                   dfn=bp.dfn * LIGHT_DARK_PREMIUM)
+
+def form(bp, element, **changes):
+    """One SHIPPED elemental form of a roster family from its reference
+    blueprint, premium included where the element earns it — for a site that
+    mirrors a blueprint the game names, or the sim's Horus of the Sand Stair
+    fights on numbers the game's does not. A stand-in uses `replace`."""
+    return premium(replace(bp, element=element, **changes))
+
+# The family's numbers (the dark form is the archetype the others are within
+# a few points of): the benchmark every report fights, and the stand-in.
 ANUBIS = Blueprint("anubis_umbra", "Anubis (Dark)", "umbra", 4, hp=480, atk=27, dfn=28, spd=107,
     skills=[("Jackal's Due", 1.50, 2, 0, 0.0, 0.0, False),
             ("Weighing of the Heart", 4.10, 1, 3, 0.0, 1.10, False),
             ("Opening of the Mouth", 0.0, 0, 5, 0.0, 0.0, False)])
+# The SHIPPED dark Anubis, premium on, for the one roster that names him as
+# an enemy (the Tower's Coil).
+ANUBIS_DARK = premium(ANUBIS)
 
 SHABTI    = Blueprint("shabti",    "Shabti",            "umbra",    2, 250, 25, 15,  96,
     skills=[("Grasp", 1.60, 1, 0, 0, 0, False)])
@@ -576,6 +622,7 @@ SHABTI    = Blueprint("shabti",    "Shabti",            "umbra",    2, 250, 25, 
 # archetype and the other four are within ten percent of it.
 SHABTI3   = Blueprint("shabti_umbra", "Shabti (Dark)",   "umbra",    3, 300, 25, 20,  98,
     skills=[("Clay Grasp", 1.60, 1, 0, 0, 0, False), ("Answer the Call", 2.30, 1, 3, 0, 0, False)])
+SHABTI3_DARK = premium(SHABTI3)      # the shipped dark Shabti, where a roster names it (the Weighing Floor)
 SERPOPARD = Blueprint("serpopard", "Serpopard",         "gale",     3, 300, 31, 17, 118,
     skills=[("Rake", 0.95, 2, 0, 0, 0, False), ("Pounce", 3.10, 1, 3, 0, 0, False)])
 SCARAB    = Blueprint("scarab",    "Sun-Scarab Swarm",  "radiance", 3, 285, 30, 16, 112,
@@ -727,7 +774,7 @@ HANDWRITTEN_VARIANTS = {
         "umbra":    [("Carrion Dive (Def Break 50%)", 2.50, 1, 3, 0, 0, False)],
     },
 }
-HANDWRITTEN = [  # key, the reference blueprint: its stats stand for all five forms
+HANDWRITTEN = [  # key, the reference blueprint: its stats stand for all five forms (`form` adds the premium)
     ("anubis", ANUBIS), ("shabti", SHABTI3), ("sekhmet", SEKHMET), ("zeus", ZEUS), ("ares", ARES),
     ("heracles", HERACLES), ("perseus", PERSEUS), ("thoth", THOTH), ("hoplite", HOPLITE),
     ("satyr", SATYR), ("harpy", HARPY),
@@ -1220,8 +1267,8 @@ def report_variants(trials=120):
     for kit, (key, name, stars, hp, atk, dfn, spd) in firsts.items():
         rates = []
         for element in ELEMENTS:
-            bp = Blueprint(f"{key}_{element}", name, element, stars, hp=hp, atk=atk, dfn=dfn, spd=spd,
-                           skills=kit_skills(kit, stars, hp, atk, element))
+            bp = premium(Blueprint(f"{key}_{element}", name, element, stars, hp=hp, atk=atk, dfn=dfn, spd=spd,
+                                   skills=kit_skills(kit, stars, hp, atk, element)))
             rates.append(winrate_bp(bp, ANUBIS, trials))
         print(f"  {name:<14}{kit:>10}" + "".join(f"{r*100:>7.0f}%" for r in rates) + f"{(max(rates)-min(rates))*100:>8.0f}%")
 
@@ -1229,16 +1276,104 @@ def report_variants(trials=120):
     # duel report uses, because a 3* never beats a 4* on the same grade and
     # level and a row of zeros measures nothing.
     print("\n  the hand-written families, five forms each on the family's own numbers (HANDWRITTEN_VARIANTS);")
-    print("  a 4*+ family vs. Anubis, a 3* family vs. the dark Shabti")
+    print("  a 4*+ family vs. Anubis, a 3* family vs. the dark Shabti; the light and dark columns carry the premium")
     print(f"  {'family':<14}{'grade':>10}" + "".join(f"{e[:4]:>8}" for e in ELEMENTS) + f"{'spread':>9}")
     for key, bp in HANDWRITTEN:
         foe = ANUBIS if bp.stars >= 4 else SHABTI3
         rates = []
         for element in ELEMENTS:
-            form = replace(bp, id=f"{key}_{element}", element=element, skills=handwritten_skills(key, element, bp))
-            rates.append(winrate_bp(form, foe, trials))
+            shape = form(bp, element, id=f"{key}_{element}", skills=handwritten_skills(key, element, bp))
+            rates.append(winrate_bp(shape, foe, trials))
         name = bp.name.split(" (")[0]
         print(f"  {name:<14}{bp.stars:>9}*" + "".join(f"{r*100:>7.0f}%" for r in rates) + f"{(max(rates)-min(rates))*100:>8.0f}%")
+
+    report_premium(trials)
+
+def premium_measure(bp, trials):
+    """One form against the benchmark, seeded: mean damage dealt per action it
+    takes, its win rate, and — against a wall it cannot beat (the benchmark at
+    6* Lv.60 with relics 1.6) — the damage it absorbs before it falls, which
+    is its survival with the skills held still."""
+    dealt, actions, wins = 0.0, 0.0, 0
+    for t in range(trials):
+        st = {}
+        result, _ = simulate([mk(bp, 30, 5, 1.25)], [mk(ANUBIS, 30, 5, 1.25)], seed=t, stats=st)
+        dealt += st.get("dealt", {}).get("a", 0.0)
+        actions += st.get("turns", {}).get("a", 0.0)
+        wins += result == "a"
+    absorbed = 0.0
+    wall_trials = max(20, trials // 3)
+    for t in range(wall_trials):
+        st = {}
+        simulate([mk(bp, 30, 5, 1.25)], [mk(ANUBIS, 60, 6, 1.60)], seed=1000 + t, stats=st)
+        absorbed += st.get("taken", {}).get("a", 0.0)
+    # Damage per action is the attack's own lift through the defence formula,
+    # diluted by the rites and heals in the mix; damage per FIGHT is what the
+    # premium buys on the field, the longer life included.
+    return dealt / max(1.0, actions), dealt / trials, wins / trials, absorbed / wall_trials
+
+def report_premium(trials=120):
+    """What the Light and Dark premium buys, with the skills held still: the
+    same Radiance or Umbra form with and without x1.08 on attack, health and
+    defence (LIGHT_DARK_PREMIUM), on one family per kit and the hand-written
+    4*+ families. Offence is damage per action against the benchmark;
+    survival is damage absorbed before falling to a wall; and the win rate
+    against the form's own fire, water and wind siblings says whether the
+    premium form is the one to have. The band the owner asked for is a clear
+    lead that is not a second grade: 6-20% on the isolated lifts."""
+    print(f"\n  THE LIGHT AND DARK PREMIUM (UnitDatabase.lightDarkPremium x{LIGHT_DARK_PREMIUM:.2f} on attack, health, defence)")
+    print("  the same form with and without it, skills held still, 1v1 at 5* Lv.30 +relics: damage per action and per fight")
+    print("  vs. Anubis, damage absorbed before falling to a 6* Lv.60 wall, win rate vs. Anubis, and mean win rate vs. its own")
+    print("  three fire, water and wind siblings")
+    print(f"  {'form':<22}{'dmg/action':>11}{'dmg/fight':>10}{'absorbed':>10}{'vs Anubis':>16}{'vs siblings':>16}")
+    samples = []
+    seen = set()
+    for key, name, stars, kit, hp, atk, dfn, spd in FAMILY_ROWS:
+        if kit not in seen and stars >= 4:
+            seen.add(kit)
+            def table_form(element, key=key, name=name, stars=stars, kit=kit, hp=hp, atk=atk, dfn=dfn, spd=spd):
+                return Blueprint(f"{key}_{element}", name, element, stars, hp=hp, atk=atk, dfn=dfn, spd=spd,
+                                 skills=kit_skills(kit, stars, hp, atk, element))
+            samples.append((name, table_form))
+    for key, bp in HANDWRITTEN:
+        if bp.stars >= 4:
+            def hand_form(element, key=key, bp=bp):
+                return replace(bp, id=f"{key}_{element}", element=element, skills=handwritten_skills(key, element, bp))
+            samples.append((bp.name.split(" (")[0], hand_form))
+    action_lifts, fight_lifts, survival_lifts, sibling_plain, sibling_lifted = [], [], [], [], []
+    anubis_plain, anubis_lifted = [], []
+    sibling_trials = max(20, trials // 2)
+    for name, build in samples:
+        for element in LIGHT_DARK:
+            plain = build(element)
+            lifted = premium(plain)
+            assert lifted.hp > plain.hp, "a light or dark form must carry the premium"
+            pa, pf, pw, ps = premium_measure(plain, trials)
+            la, lf, lw, ls = premium_measure(lifted, trials)
+            siblings = [build(e) for e in ("ember", "tide", "gale")]
+            sp = statistics.mean(winrate_bp(plain, s, sibling_trials) for s in siblings)
+            sl = statistics.mean(winrate_bp(lifted, s, sibling_trials) for s in siblings)
+            action_lifts.append(la / pa if pa else 1.0)
+            fight_lifts.append(lf / pf if pf else 1.0)
+            survival_lifts.append(ls / ps if ps else 1.0)
+            sibling_plain.append(sp); sibling_lifted.append(sl)
+            anubis_plain.append(pw); anubis_lifted.append(lw)
+            print(f"  {name + ' (' + element[:4] + ')':<22}{(la / pa - 1) * 100 if pa else 0:>+10.1f}%"
+                  f"{(lf / pf - 1) * 100 if pf else 0:>+9.1f}%"
+                  f"{(ls / ps - 1) * 100 if ps else 0:>+9.1f}%"
+                  f"{pw * 100:>8.0f}% -> {lw * 100:>3.0f}%{sp * 100:>8.0f}% -> {sl * 100:>3.0f}%")
+    per_action = statistics.mean(action_lifts)
+    per_fight = statistics.mean(fight_lifts)
+    survival = statistics.mean(survival_lifts)
+    print(f"\n  mean lift: damage per action x{per_action:.3f}, damage per fight x{per_fight:.3f}, damage absorbed x{survival:.3f};")
+    print(f"  win rate vs. own siblings {statistics.mean(sibling_plain) * 100:.0f}% -> {statistics.mean(sibling_lifted) * 100:.0f}%, "
+          f"vs. Anubis {statistics.mean(anubis_plain) * 100:.0f}% -> {statistics.mean(anubis_lifted) * 100:.0f}%")
+    band = (1.06, 1.20)
+    assert band[0] <= per_fight <= band[1], f"the premium's damage-per-fight lift is {per_fight:.3f}: outside 6-20%, change LIGHT_DARK_PREMIUM and lightDarkPremium together"
+    assert band[0] <= survival <= band[1], f"the premium's survival lift is {survival:.3f}: outside 6-20%, change LIGHT_DARK_PREMIUM and lightDarkPremium together"
+    assert statistics.mean(sibling_lifted) > statistics.mean(sibling_plain) + 0.05, "the premium form should be the one to have"
+    assert statistics.mean(sibling_lifted) < 0.85, "a premium form that beats its siblings almost always is a grade, not a premium"
+    print("  -> a clear lead over the family's other forms and nothing like a grade (a 5* over a 4* is x1.3 on every stat)  -> correct")
 
 def winrate_bp(bp, foe, trials):
     wins = 0
@@ -1364,12 +1499,12 @@ def report_labyrinths(trials=60):
 TOWER_FLOORS = 100
 TOWER_MILESTONES = (10, 25, 50, 75, 100)
 TOWER_TIERS = [  # name, roster, warden
-    ("Sand Stair",     [SENTINEL, replace(FAMILIES["horus"], element="radiance"), SCARAB], COLOSSUS),
-    ("Marsh Landing",  [replace(HERACLES, element="tide"), replace(HOPLITE, element="radiance"),
-                        replace(HARPY, element="tide")], HYDRA),
-    ("Frozen Gallery", [replace(FAMILIES["heimdall"], element="tide"), E_TROLL, E_VALKYRIE], JOTUNN),
-    ("Weighing Floor", [AMMIT, replace(SEKHMET, element="umbra"), SHABTI3], UNWRAPPED),
-    ("The Coil",       [ANUBIS, ARES, ZEUS], APEP),
+    ("Sand Stair",     [SENTINEL, form(FAMILIES["horus"], "radiance"), SCARAB], COLOSSUS),
+    ("Marsh Landing",  [form(HERACLES, "tide"), form(HOPLITE, "radiance"),
+                        form(HARPY, "tide")], HYDRA),
+    ("Frozen Gallery", [form(FAMILIES["heimdall"], "tide"), E_TROLL, E_VALKYRIE], JOTUNN),
+    ("Weighing Floor", [AMMIT, form(SEKHMET, "umbra"), SHABTI3_DARK], UNWRAPPED),
+    ("The Coil",       [ANUBIS_DARK, ARES, ZEUS], APEP),
 ]
 
 def tower_level(floor):      return 20 + floor // 2          # 20 at the door, 70 at the top
@@ -1637,6 +1772,8 @@ def raid_result(team_spec, raid, trials=40, kill_adds=True):
 def raid_ladders(welems):
     onel = (welems * 4)[:4]
     return [
+        # Stand-ins on the family's numbers (`replace`, not `form`): "a unit
+        # on each element", not four premium Anubis.
         ("built for it, 6* max",    [(replace(ANUBIS, element=e), 60, 6, 1.55) for e in onel]),
         ("built for it, 6* lv55",   [(replace(ANUBIS, element=e), 55, 6, 1.30) for e in onel]),
         ("built for it, 5* +relic", [(replace(ANUBIS, element=e), 45, 5, 1.15) for e in onel]),
@@ -1954,13 +2091,17 @@ def boon_fights():
     Banes' and the Wards' home), a three-wave chapter boss stage, the
     Labyrinth's last level, a Titan, and an arena fight of gods against
     gods. Each is (label, kind, team, spec)."""
+    # Four maxed 6* units on the family's numbers: a line's lift is
+    # calibrated on a generic team, and four premium copies is a team nobody
+    # fields (the note at LIGHT_DARK_PREMIUM).
     six = [(ANUBIS, 55, 6, 1.60)] * 4
     # Four attackers and no heal between them: the arena's nuke team, the
     # fight where a unit is worn down rather than topped up.
     nukers = [(SEKHMET, 60, 6, 1.60), (ZEUS, 60, 6, 1.60), (PERSEUS, 60, 6, 1.60), (HARPY, 60, 6, 1.60)]
     # The enemy line in four colours, as an arena's is: the reference forms
     # are all ember, and a mono-ember mirror made a Bane of Ember a flat
-    # +15% on everything, which no real arena team is.
+    # +15% on everything, which no real arena team is. Stand-in colours on
+    # the family's numbers (`replace`), the dark Harpy's included.
     foes = [(SEKHMET, 60, 6, 1.6), (replace(ZEUS, element="tide"), 60, 6, 1.6),
             (replace(PERSEUS, element="gale"), 60, 6, 1.6), (replace(HARPY, element="umbra"), 60, 6, 1.6)]
     colossus = RAIDS[3]
@@ -2142,6 +2283,8 @@ REGALIA_FAMILIES = {  # the family each template is measured on: a 5* of its kit
 def regalia_family(template):
     key, element = REGALIA_FAMILIES[template]
     if element == "ember": return FAMILIES[key]
+    # A stand-in for the kit on the family's numbers, no premium: the dark
+    # oracle is here for its break, not for what its dark form carries.
     _, name, stars, kit, hp, atk, dfn, spd = next(r for r in FAMILY_ROWS if r[0] == key)
     return Blueprint(f"{key}_{element}", f"{name} ({element})", element, stars, hp=hp, atk=atk, dfn=dfn, spd=spd,
                      skills=kit_skills(kit, stars, hp, atk, element=element))
@@ -2267,10 +2410,26 @@ def report_campaign(trials=200):
     print(f"\n{'team power':>22}{'':>9}  " + "".join(
         f"{sum(mk(*t).power() for t in team):>17,}" for _, team in LADDERS))
 
+# ScrollType.odds, grade -> chance, mirrored. Change a number in both files.
+# The Light & Dark scroll is the premium scroll (2026-09-17): the only pool
+# that holds a Radiance or Umbra unit, 0.8% for a 5* with no guarantee.
+SCROLL_ODDS = {
+    "mystical":   {3: 0.885, 4: 0.100, 5: 0.015},
+    "pantheonic": {3: 0.790, 4: 0.180, 5: 0.030},
+    "divine":     {4: 0.880, 5: 0.120},
+    "unknown":    {3: 1.0},
+    "light_dark": {3: 0.902, 4: 0.090, 5: 0.008},
+    "ember":      {3: 0.820, 4: 0.150, 5: 0.030},
+    "tide":       {3: 0.820, 4: 0.150, 5: 0.030},
+    "gale":       {3: 0.820, 4: 0.150, 5: 0.030},
+}
+for _scroll, _odds in SCROLL_ODDS.items():
+    assert abs(sum(_odds.values()) - 1.0) < 1e-9, f"{_scroll}: published odds must sum to 1"
+LIGHT_DARK_RARE_PITY = 15          # Banner.lightAndDark.rarePity; its legendaryPity is nil
+
 def report_gacha():
     print("\nSUMMON — 200,000 pulls on the featured banner")
-    odds = {3: 0.790, 4: 0.180, 5: 0.030}
-    assert abs(sum(odds.values()) - 1.0) < 1e-9, "published odds must sum to 1"
+    odds = SCROLL_ODDS["pantheonic"]
     hard, soft_start, soft_step = 90, 67, 0.06
     rng = random.Random(7)
     since, pulls, fives, gaps = 0, 200_000, 0, []
@@ -2292,31 +2451,46 @@ def report_gacha():
     scroll_cost = 100
     print(f"  divinity per 5* (mean) {statistics.mean(gaps)*scroll_cost:,.0f}")
 
-    # LIGHT AND DARK. Mirrors SummonService.lightDarkWeight — change it in both
-    # files or they drift, which is the one rule this file exists for.
-    #
-    # Every unit of a grade used to be equally likely and there are five
-    # elements, so two pulls in five of any grade came out Radiance or Umbra.
-    # The owner wants those to be the trophy of the collection, so a Light or
-    # Dark unit of a gated grade is weighted down inside its grade rather than
-    # the grade's own rate being touched.
-    LIGHT_DARK_WEIGHT = {4: 0.25, 5: 0.12}
-    print("\n  Light & Dark, in a pool of all five elements")
-    effective_five = fives / pulls
-    for stars in (5, 4):
-        w = LIGHT_DARK_WEIGHT[stars]
-        # Two of the five elements are Light and Dark; the other three are not.
-        was = 2 / 5
-        now = (2 * w) / (2 * w + 3)
-        grade_rate = effective_five if stars == 5 else odds[4]
-        per_pull = now * grade_rate
-        one_in = 1 / per_pull if per_pull > 0 else float("inf")
-        print(f"    {stars}*  weight {w:.2f}   share of the grade "
-              f"{was*100:.0f}% -> {now*100:.1f}%   "
-              f"{per_pull*100:.3f}% a pull, about 1 in {one_in:,.0f}")
-    print("    the Light & Dark scroll is unchanged: every unit in it is "
-          "Radiance or Umbra, so a")
-    print("    factor applied to all of them alike cancels out")
+    pantheon_mean = statistics.mean(gaps)
+
+    # LIGHT AND DARK: the premium scroll (2026-09-17). Radiance and Umbra are
+    # in no pool but this one (Banner.excludingLightDark; the 0.25 / 0.12
+    # weight that discounted them inside the other pools is gone with the
+    # pools), the scroll's 5* rate is under one per cent, and its banner has
+    # NO hard pity and so no soft pity (SummonService.single keys both off
+    # Banner.legendaryPity, which is nil). The 4* guarantee at 15 stays.
+    # Summoners War's L&D scroll is 0.5% with no pity; the owner asked for
+    # "1% or less". Mileage (MileageService, --mileage) is the only floor.
+    ld = SCROLL_ODDS["light_dark"]
+    assert ld[5] <= 0.01, "the owner: a 5* Light or Dark at 1% or less"
+    assert MILEAGE_PITY["light_dark"] is None, "the Light & Dark banner has no hard pity"
+    rng = random.Random(11)
+    since, rare_since, ld_fives, ld_gaps, ld_fours = 0, 0, 0, [], 0
+    for _ in range(pulls):
+        since += 1; rare_since += 1
+        r = rng.random()
+        stars = 5 if r < ld[5] else (4 if r < ld[5] + ld[4] else 3)
+        if rare_since >= LIGHT_DARK_RARE_PITY: stars = max(4, stars)
+        if stars >= 4: rare_since = 0
+        if stars == 4: ld_fours += 1
+        if stars == 5:
+            ld_fives += 1; ld_gaps.append(since); since = 0
+    ld_cost = SCROLL_DIVINITY["light_dark"]
+    expected = 1 / ld[5]
+    print(f"\n  LIGHT & DARK — {pulls:,} pulls on the premium scroll ({ld_cost} divinity each), the only road to Radiance and Umbra")
+    print(f"  published 5* rate      {ld[5]*100:.1f}%   (4* {ld[4]*100:.0f}%, 3* {ld[3]*100:.1f}%)")
+    print(f"  effective 5* rate      {ld_fives/pulls*100:.2f}%  (no hard pity, no soft pity: the published rate IS the rate)")
+    print(f"  effective 4* rate      {ld_fours/pulls*100:.2f}%  (the 4* guarantee at {LIGHT_DARK_RARE_PITY} lifts it from {ld[4]*100:.0f}%)")
+    print(f"  mean pulls per 5*      {statistics.mean(ld_gaps):.1f}  (expected {expected:.0f})")
+    print(f"  median                 {statistics.median(ld_gaps):.0f}")
+    print(f"  90th percentile        {sorted(ld_gaps)[int(len(ld_gaps)*0.9)]}")
+    print(f"  worst case seen        {max(ld_gaps)}")
+    for n in (100, 200, 300):
+        print(f"  no 5* in {n} pulls       {(1 - ld[5]) ** n * 100:.1f}%")
+    print(f"  divinity per 5* (mean) {expected * ld_cost:,.0f}  — {expected * ld_cost / (pantheon_mean * scroll_cost):.1f}x a pantheon banner's mean 5*")
+    ld_mileage = mileage_price(5, "light_dark")
+    print(f"  the mileage floor      {ld_mileage} scrolls ({ld_mileage * ld_cost:,} divinity), "
+          f"{ld_mileage / expected:.2f}x the expected pull count — the one guarantee the scroll has")
 
 # The campaign's tributes (Swift: `TributeService.payout`, `Chapter.relicSets`).
 # Each chapter drops two sets, one stat set and one effect set of its realm's
@@ -2747,68 +2921,86 @@ def report_targeting(trials=200_000):
 # A point per summon on a banner, spent on a unit of the player's choosing
 # from that banner's pool. The price is anchored to the BANNER'S OWN hard
 # pity — 1.7x what the guarantee costs — with a flat divinity target as a
-# second floor for the two banners that have no hard pity.
+# second floor for the banners that have no hard pity.
 #
 # The first cut used the divinity target alone and this report is what caught
 # it: a flat 15,000-divinity 5* came out at 0.62 of the Divine Scroll's pity
 # and 0.28 of Light & Dark's, because those banners guarantee in 40 and 120
 # pulls where the pantheon banner takes 90. Mileage under the pity is not a
 # floor, it is the fast road.
+#
+# And a THIRD floor since 2026-09-17, when the Light & Dark banner lost its
+# hard pity (the premium): on a banner with NO guarantee the anchor is the
+# EXPECTED pull count of the best grade — one over its rate — at 1.3x,
+# rounded up (MileageService.expectedMultiple, anchorPoints). Without it the
+# flat target priced a 5* Light or Dark at 33 scrolls against the 125 an
+# expected one costs; with it 163. The mystical and unknown scrolls have no
+# hard pity either and are untouched: their targets are the higher floor.
 MILEAGE_TARGET = {3: 2_000, 4: 6_000, 5: 15_000}      # divinityTarget
 MILEAGE_PITY_MULTIPLE = 1.7                            # pityMultiple
+MILEAGE_EXPECTED_MULTIPLE = 1.3                        # expectedMultiple
 MILEAGE_GRADE_SHARE = {5: 1.0, 4: 0.40, 3: 0.135}      # gradeShare
 SCROLL_DIVINITY = {                                    # ScrollType.divinityPrice
     "pantheonic": 100, "mystical": 75, "divine": 600,
     "light_dark": 450, "ember": 200, "tide": 200, "gale": 200,
     "unknown": 25,                                     # not sold for divinity; pullValue's fallback
 }
-# Banner.legendaryPity, and the odds of the best grade the scroll can give,
-# for the banners that have no hard pity (ScrollType.odds).
+# Banner.legendaryPity; the Light & Dark banner has none since 2026-09-17.
 MILEAGE_PITY = {
     "pantheonic": 90, "mystical": None, "divine": 40,
-    "light_dark": 120, "ember": 120, "tide": 120, "gale": 120, "unknown": None,
+    "light_dark": None, "ember": 120, "tide": 120, "gale": 120, "unknown": None,
 }
-MILEAGE_BEST_ODDS = {
-    "pantheonic": 0.030, "mystical": 0.015, "divine": 0.120,
-    "light_dark": 0.030, "ember": 0.030, "tide": 0.030, "gale": 0.030, "unknown": 1.0,
-}
+# The odds of the best grade each scroll can give, off SCROLL_ODDS.
+MILEAGE_BEST_ODDS = {scroll: odds[max(odds)] for scroll, odds in SCROLL_ODDS.items()}
 
 def mileage_anchor(scroll):
+    """MileageService.anchorPoints: 1.7 hard pities, or, with no hard pity,
+    1.3 expected pulls of the best grade, rounded up."""
     pity = MILEAGE_PITY[scroll]
-    if pity: return pity
-    return max(1, round(1.0 / max(0.0001, MILEAGE_BEST_ODDS[scroll])))
+    if pity: return pity * MILEAGE_PITY_MULTIPLE
+    return math.ceil(MILEAGE_EXPECTED_MULTIPLE / max(0.0001, MILEAGE_BEST_ODDS[scroll]))
 
 def mileage_price(stars, scroll):
-    anchored = mileage_anchor(scroll) * MILEAGE_PITY_MULTIPLE * MILEAGE_GRADE_SHARE[stars]
+    anchored = mileage_anchor(scroll) * MILEAGE_GRADE_SHARE[stars]
     target = MILEAGE_TARGET[stars] / SCROLL_DIVINITY[scroll]
     return max(10, round(max(anchored, target)))
 
 def report_mileage():
     print("\nMILEAGE — the floor under bad luck: a point a pull, a unit you NAME")
-    print("price = max(1.7 x the banner's own hard pity, a flat divinity target)\n")
+    print("price = max(1.7 x the banner's own hard pity — or, with no hard pity, 1.3 x the expected pulls — and a flat divinity target)\n")
     print(f"{'banner scroll':>14}{'a pull':>9}{'5* pts':>9}{'4* pts':>9}{'3* pts':>9}"
-          f"{'5* costs':>12}{'hard pity':>11}{'ratio':>8}")
+          f"{'5* costs':>12}{'hard pity':>11}{'expected':>10}{'ratio':>10}")
     worst = None
+    ld_ratio = None
     for scroll in ("pantheonic", "mystical", "divine", "light_dark", "ember", "unknown"):
         pull = SCROLL_DIVINITY[scroll]
         five, four, three = (mileage_price(s, scroll) for s in (5, 4, 3))
         spend = five * pull
         pity = MILEAGE_PITY[scroll]
         pity_spend = pity * pull if pity else None
+        expected = 1 / MILEAGE_BEST_ODDS[scroll]
         if pity_spend:
             ratio_value = spend / pity_spend
-            ratio = f"{ratio_value:.2f}x"
+            ratio = f"{ratio_value:.2f}x pity"
             worst = ratio_value if worst is None else min(worst, ratio_value)
         else:
-            ratio = "no pity"
+            ratio_value = five / expected
+            ratio = f"{ratio_value:.2f}x avg"
+            if scroll == "light_dark": ld_ratio = ratio_value
         print(f"{scroll:>14}{pull:>7}dv{five:>9}{four:>9}{three:>9}"
-              f"{spend:>11,}{(f'{pity_spend:,}' if pity_spend else '-'):>11}{ratio:>8}")
+              f"{spend:>11,}{(f'{pity_spend:,}' if pity_spend else '-'):>11}{expected:>10.0f}{ratio:>10}")
 
     print("\n  read the last column as: naming the 5* you want costs this much more than")
-    print("  letting the hard pity hand you a RANDOM one.")
+    print("  letting the hard pity hand you a RANDOM one — or, on a banner with no pity,")
+    print("  than the average road to one.")
     if worst is not None:
         verdict = "correct" if worst >= 1.5 else "WRONG — mileage undercuts the pity counter"
-        print(f"  the cheapest ratio on any banner is {worst:.2f}x -> {verdict}")
+        print(f"  the cheapest ratio on any banner with a pity is {worst:.2f}x -> {verdict}")
+    if ld_ratio is not None:
+        verdict = "correct" if ld_ratio >= MILEAGE_EXPECTED_MULTIPLE - 1e-9 else "WRONG — the premium's only floor is under its average"
+        print(f"  the Light & Dark 5* costs {ld_ratio:.2f}x its expected pull count "
+              f"(floor {MILEAGE_EXPECTED_MULTIPLE}x) -> {verdict}")
+        assert ld_ratio >= MILEAGE_EXPECTED_MULTIPLE - 1e-9, verdict
 
     # The thing that must not be true: farming a cheap banner to cash out a
     # dear unit. It cannot be, because points are per banner and a banner's

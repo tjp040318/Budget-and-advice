@@ -27,8 +27,13 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.pantheon.game
-        # iCloud container + CloudKit for the social layer (Docs/SOCIAL.md);
-        # the file carries no aps-environment, so an unsigned CI build is fine.
+        # iCloud container + CloudKit for the social layer and the save's
+        # cloud copy (Docs/SOCIAL.md), and Sign in with Apple for accounts
+        # (com.apple.developer.applesignin = Default; the capability must
+        # also be ticked on the App ID and in Xcode's Signing & Capabilities,
+        # Docs/SOCIAL.md *Sign in with Apple*, or the button fails with
+        # error 1000). The file carries no aps-environment, so an unsigned
+        # CI build is fine.
         CODE_SIGN_ENTITLEMENTS: Pantheon/Pantheon.entitlements
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor

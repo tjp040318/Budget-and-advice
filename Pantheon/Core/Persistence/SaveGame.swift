@@ -14,11 +14,18 @@ struct SaveGame: Codable, Sendable {
     var rngSeed: UInt64
 }
 
-/// Reads and writes the save file.
+/// Reads and writes the save files — one per account since 2026-09-17
+/// (`Docs/PLAN.md`, *Accounts — Sign in with Apple*): `pantheon_save_<key>.json`
+/// under Application Support/Pantheon, keyed by `Account.storageKey`. The one
+/// file every save was before, `pantheon_save.json`, is renamed to the first
+/// account that signs in on the phone (`migrateLegacySave(to:)`), so nobody
+/// loses progress to the sign-in screen.
 ///
 /// Writes are atomic (temp file plus replace) so a crash mid-save cannot leave a
 /// truncated file, and a corrupt save is moved aside rather than deleted — a
-/// player who loses an account to a parse bug should still have the bytes.
+/// player who loses an account to a parse bug should still have the bytes. A
+/// cloud restore goes through `importData(_:key:)`, which decodes the bytes
+/// before it replaces anything and keeps the replaced file aside the same way.
 enum SaveStore {
 
     enum StoreError: Error, LocalizedError {
@@ -33,20 +40,43 @@ enum SaveStore {
         }
     }
 
-    static let filename = "pantheon_save.json"
+    /// The name every save had before accounts.
+    static let legacyFilename = "pantheon_save.json"
 
-    static var saveURL: URL? {
-        guard let directory = try? FileManager.default.url(
-            for: .applicationSupportDirectory,
-            in: .userDomainMask,
-            appropriateFor: nil,
-            create: true
-        ) else { return nil }
-        let folder = directory.appendingPathComponent("Pantheon", isDirectory: true)
+    /// A folder to use instead of Application Support — a test's temporary
+    /// directory. Nil in the app.
+    static var baseURL: URL? = nil
+
+    static func filename(for key: String) -> String { "pantheon_save_\(key).json" }
+
+    /// The save folder, created on first use: `<base>/Pantheon`.
+    static var directory: URL? {
+        let base: URL
+        if let baseURL {
+            base = baseURL
+        } else {
+            guard let support = try? FileManager.default.url(
+                for: .applicationSupportDirectory,
+                in: .userDomainMask,
+                appropriateFor: nil,
+                create: true
+            ) else { return nil }
+            base = support
+        }
+        let folder = base.appendingPathComponent("Pantheon", isDirectory: true)
         if !FileManager.default.fileExists(atPath: folder.path) {
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         }
-        return folder.appendingPathComponent(filename)
+        return folder
+    }
+
+    static var legacySaveURL: URL? { directory?.appendingPathComponent(legacyFilename) }
+
+    static func saveURL(for key: String) -> URL? { directory?.appendingPathComponent(filename(for: key)) }
+
+    static func hasSave(key: String) -> Bool {
+        guard let url = saveURL(for: key) else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
     }
 
     private static var encoder: JSONEncoder {
@@ -62,13 +92,26 @@ enum SaveStore {
         return decoder
     }
 
-    static func save(_ game: SaveGame) throws {
-        guard let url = saveURL else { throw StoreError.noDocumentsDirectory }
+    /// The bytes a save is written as — for a test that plants a file.
+    static func encode(_ game: SaveGame) throws -> Data {
+        try encoder.encode(game)
+    }
+
+    /// Writes the account's save and returns the bytes and the stamp they
+    /// carry, which the cloud copy is made from.
+    @discardableResult
+    static func save(_ game: SaveGame, key: String) throws -> (data: Data, savedAt: Date) {
+        guard let url = saveURL(for: key) else { throw StoreError.noDocumentsDirectory }
         var payload = game
         payload.savedAt = Date()
         payload.version = SaveGame.currentVersion
         let data = try encoder.encode(payload)
+        try write(data, to: url)
+        return (data, payload.savedAt)
+    }
 
+    /// A temp file beside the target, then a replace.
+    private static func write(_ data: Data, to url: URL) throws {
         let temporary = url.appendingPathExtension("tmp")
         try data.write(to: temporary, options: .atomic)
         if FileManager.default.fileExists(atPath: url.path) {
@@ -78,8 +121,8 @@ enum SaveStore {
         }
     }
 
-    static func load() throws -> SaveGame? {
-        guard let url = saveURL, FileManager.default.fileExists(atPath: url.path) else { return nil }
+    static func load(key: String) throws -> SaveGame? {
+        guard let url = saveURL(for: key), FileManager.default.fileExists(atPath: url.path) else { return nil }
         let data = try Data(contentsOf: url)
         do {
             let decoded = try decoder.decode(SaveGame.self, from: data)
@@ -90,11 +133,58 @@ enum SaveStore {
         }
     }
 
+    /// The one save every phone had before accounts, renamed to the first
+    /// account that signs in there. Once, because the rename removes it; an
+    /// account that already has a save leaves it where it is. True when it
+    /// moved.
+    @discardableResult
+    static func migrateLegacySave(to key: String) -> Bool {
+        guard let legacy = legacySaveURL, let target = saveURL(for: key),
+              FileManager.default.fileExists(atPath: legacy.path),
+              !FileManager.default.fileExists(atPath: target.path) else { return false }
+        do {
+            try FileManager.default.moveItem(at: legacy, to: target)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// A guest's save renamed to the Apple account he bound it to — only
+    /// when that account has no save yet. True when it moved.
+    @discardableResult
+    static func adopt(from oldKey: String, to newKey: String) -> Bool {
+        guard oldKey != newKey, let source = saveURL(for: oldKey), let target = saveURL(for: newKey),
+              FileManager.default.fileExists(atPath: source.path),
+              !FileManager.default.fileExists(atPath: target.path) else { return false }
+        do {
+            try FileManager.default.moveItem(at: source, to: target)
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Bytes from the cloud written as the account's save — after they have
+    /// proved they decode. A save already on disk is moved aside as
+    /// `replaced_<stamp>_…`, never deleted.
+    static func importData(_ data: Data, key: String) throws {
+        _ = try decoder.decode(SaveGame.self, from: data)
+        guard let url = saveURL(for: key) else { throw StoreError.noDocumentsDirectory }
+        if FileManager.default.fileExists(atPath: url.path) {
+            let stamp = Int(Date().timeIntervalSince1970)
+            let backup = url.deletingLastPathComponent()
+                .appendingPathComponent("replaced_\(stamp)_\(filename(for: key))")
+            try? FileManager.default.moveItem(at: url, to: backup)
+        }
+        try write(data, to: url)
+    }
+
     /// Moves an unreadable save aside instead of losing it.
     private static func quarantine(_ url: URL) {
         let stamp = Int(Date().timeIntervalSince1970)
         let backup = url.deletingLastPathComponent()
-            .appendingPathComponent("corrupt_\(stamp)_\(filename)")
+            .appendingPathComponent("corrupt_\(stamp)_\(url.lastPathComponent)")
         try? FileManager.default.moveItem(at: url, to: backup)
     }
 
@@ -107,14 +197,14 @@ enum SaveStore {
         return result
     }
 
-    static func deleteSave() {
-        guard let url = saveURL else { return }
+    static func deleteSave(key: String) {
+        guard let url = saveURL(for: key) else { return }
         try? FileManager.default.removeItem(at: url)
     }
 
     /// Exports the raw save for support and for moving between devices.
-    static func exportData() throws -> Data? {
-        guard let url = saveURL, FileManager.default.fileExists(atPath: url.path) else { return nil }
+    static func exportData(key: String) throws -> Data? {
+        guard let url = saveURL(for: key), FileManager.default.fileExists(atPath: url.path) else { return nil }
         return try Data(contentsOf: url)
     }
 }
@@ -127,9 +217,10 @@ enum NewGame {
         var rng = SeededRandom(seed: UInt64(Date().timeIntervalSince1970.bitPattern))
         var player = Player(displayName: displayName)
 
-        // The Dark variant, which is the one whose kit reads as the family's
-        // default: a judgement that punishes anything already hurt, and a rite
-        // that brings somebody back.
+        // The fire Anubis (`UnitDatabase.starter`): a jackal-headed judge
+        // with the family's kit in the element the first chapter's mobs are
+        // weak to. Never a light or dark form — those are the Light & Dark
+        // scroll's alone (2026-09-17, evening).
         let blueprint = UnitDatabase.starter
         var starter = Unit(blueprint: blueprint)
         starter.isLocked = true

@@ -329,3 +329,68 @@ out deletes it), no war reward (the lead's wiring), no read-only mode for a
 device without an iCloud account (the public database can be READ without
 an account, so the live leaderboards could show there; a later refinement),
 no server verification of anything a client reports.
+
+## Sign in with Apple (2026-09-17, evening)
+
+Accounts (`Docs/PLAN.md`, *Accounts — Sign in with Apple*) use Apple's
+sign-in for the identity and the SAME container for the save's cloud copy —
+the PRIVATE database this time, one `Save` record per account named
+`save_<key>`, the JSON as an Asset. The entitlement is checked in
+(`com.apple.developer.applesignin` = `Default` in `Pantheon/Pantheon.entitlements`);
+two switches must be on or the button answers **error 1000**.
+
+### The owner's steps
+
+1. developer.apple.com → **Account** → **Certificates, Identifiers &
+   Profiles** → **Identifiers** → the App ID **com.pantheon.game** →
+   under **Capabilities** tick **Sign in with Apple** → **Edit** → leave
+   **Enable as a primary App ID** selected → **Save** → **Confirm**.
+2. Open `Pantheon.xcodeproj`, select the **Pantheon** target, open
+   **Signing & Capabilities**, press **+ Capability** and add **Sign in
+   with Apple**. Xcode writes `com.apple.developer.applesignin` into
+   `Pantheon/Pantheon.entitlements`, which already carries it; if it asks
+   to create a new entitlements file, cancel and point it at the existing
+   one. Automatic signing regenerates the provisioning profile with the
+   capability; if the profile is managed by hand, regenerate it in the
+   portal after step 1.
+3. Test on a device signed in to an Apple ID with two-factor
+   authentication on — or on a Simulator whose **Settings → Apple ID** is
+   signed in, which runs the whole flow. CI cannot: the job builds with
+   `CODE_SIGNING_ALLOWED=NO`, so its frame of the screen (tour step 48,
+   `sign_in`) shows the button and never presses it.
+4. Launch: the loading screen dissolves onto the sign-in screen. Press
+   **Sign in with Apple**, choose **Share My Email** or **Hide My Email**,
+   confirm with Face ID. The game opens on the island; **More → Account**
+   shows the name Apple sent and a six-character **Player ID**.
+5. A phone that already had a save (yours): the old `pantheon_save.json`
+   is renamed to the first account that signs in, so the island is the one
+   you left. Check it before anything else.
+6. Play a minute, then background the app. In the CloudKit Dashboard
+   (icloud.developer.apple.com/dashboard) choose the container, **Data**,
+   database **Private Database**, record type **Save**: one record named
+   `save_<key>` whose last six characters are the Player ID. The Dashboard
+   shows the private database of the iCloud account it is signed in with,
+   so sign in there with the same Apple ID as the phone.
+7. **Schema → Record Types**: `Save` appears after the first upload with
+   `payload` (Asset), `modifiedAt` and `createdAt` (Date/Time), `bytes`
+   and `version` (Int64). It is fetched by id, so it needs NO index.
+   **Deploy Schema Changes…** to **Production** before TestFlight, as for
+   the social types.
+8. The restore: delete the app from a second device (or Erase Content on
+   a Simulator), install, sign in with the same Apple ID — the sign-in
+   screen says **RESTORING** for a moment and the island comes back.
+9. A revoked sign-in: iPhone **Settings → [your name] → Sign-In &
+   Security → Sign in with Apple → Pantheon → Stop Using Apple ID**. The
+   next launch (or the next return to the foreground) drops the account
+   and shows the sign-in screen with the sentence saying why; the save
+   stays on the phone and comes back with the next sign-in of the same
+   Apple ID. That next sign-in is a "first" one again: Apple asks about
+   the name and the email once more.
+10. A guest: **Continue without an account** under the button plays on
+    this phone only; **More → Account → Bind to Apple ID** later carries
+    that progress to the Apple ID (the guest's file is renamed, once, to
+    the Apple account's key).
+11. Nothing changes in CI: the tour plays as a fixed guest
+    (`AccountService.tourAccount`), no Apple call is made, and
+    `CloudKitSocialBackend.isEntitled` keeps CloudKit out of an unsigned
+    binary.

@@ -1,9 +1,143 @@
 import SwiftUI
+import Combine
 import UIKit
+
+/// Who is playing, and the store that plays as them.
+///
+/// The store is REBUILT per account, never reloaded in place: a `GameStore`
+/// holds its `Account` and saves under that key and no other, so a store
+/// retired at sign-out cannot write the old player into the next account's
+/// file — which a "current account" global and a reload in place would have
+/// allowed the moment a pending 400 ms save fired across the swap. When there
+/// is no store the root is the sign-in screen; when one exists it is the game
+/// (`Docs/PLAN.md`, *Accounts — Sign in with Apple*).
+@MainActor
+final class AppSession: ObservableObject {
+    @Published private(set) var store: GameStore?
+    /// True from a sign-in until its store exists: the credential is being
+    /// verified and the cloud copy fetched.
+    @Published private(set) var isOpening = false
+
+    let accounts: AccountService
+    private var forwarding: AnyCancellable?
+    private var opening: Task<Void, Never>?
+
+    init(accounts: AccountService) {
+        self.accounts = accounts
+        // The service's changes (a dropped sign-in, a notice) re-render
+        // through this object, which is the one the views hold.
+        forwarding = accounts.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        accounts.onDropped = { [weak self] in self?.dropStore() }
+        if let account = accounts.account { open(account) }
+    }
+
+    /// Builds the store for an account: synchronously when nothing has to be
+    /// fetched (a guest, an unentitled build, the tour — so the first frame
+    /// has its store), through Apple and iCloud otherwise.
+    func open(_ account: Account) {
+        opening?.cancel()
+        store?.retire()
+        store = nil
+        // Every save that exists today is `pantheon_save.json`: the first
+        // account to sign in on the phone takes it, before the cloud is asked
+        // anything.
+        SaveStore.migrateLegacySave(to: account.storageKey)
+        guard account.provider == .apple, let cloud = CloudSaveStore(key: account.storageKey) else {
+            install(GameStore.bootstrap(account: account, cloudSave: nil))
+            isOpening = false
+            if account.provider == .apple {
+                Task { [weak self] in
+                    await self?.accounts.verifyCredentialState()
+                }
+            }
+            return
+        }
+        isOpening = true
+        opening = Task { [weak self] in
+            guard let self else { return }
+            // Apple first: a revoked sign-in never opens a store.
+            let valid = await self.accounts.verifyCredentialState()
+            guard valid, !Task.isCancelled else {
+                self.isOpening = false
+                return
+            }
+            // Then iCloud: ten seconds for a phone with no save of this
+            // account (the restore is the point), four under the loading
+            // screen when there is one. A corrupt local file is quarantined
+            // by the load, which leaves no local save and lets the cloud copy
+            // stand in for it.
+            let local = try? SaveStore.load(key: account.storageKey)
+            _ = await cloud.restoreIfNewer(than: local, within: local == nil ? 10 : 4)
+            guard !Task.isCancelled else { return }
+            self.install(GameStore.bootstrap(account: account, cloudSave: cloud))
+            self.isOpening = false
+        }
+    }
+
+    private func install(_ newStore: GameStore) {
+        newStore.onSignedOut = { [weak self] in
+            guard let self else { return }
+            self.store = nil
+            self.accounts.signOut()
+        }
+        store = newStore
+    }
+
+    /// Apple said the sign-in is gone while the game was open: the store is
+    /// saved, retired and dropped, and the sign-in screen returns.
+    private func dropStore() {
+        guard let current = store else { return }
+        Task { await current.signOut() }
+    }
+
+    func signInWithApple(_ credential: AppleCredential) {
+        accounts.notice = nil
+        open(accounts.signInWithApple(credential))
+    }
+
+    func continueAsGuest() {
+        accounts.notice = nil
+        open(accounts.continueAsGuest())
+    }
+
+    /// A guest binding this phone's progress to his Apple ID: the store is
+    /// saved and retired, the file renamed, and a store for the Apple account
+    /// opened over it.
+    func bindGuestToApple(_ credential: AppleCredential) async {
+        if let current = store {
+            await current.saveNow()
+            current.retire()
+        }
+        accounts.bindGuestToApple(credential)
+        if let account = accounts.account { open(account) }
+    }
+
+    func signOut() async {
+        await store?.signOut()
+    }
+
+    /// "Restore from iCloud" on the Account panel: the other lineage's copy
+    /// written over this phone's save (kept aside by the import), and the
+    /// store reopened on it.
+    func restoreFromCloud() async {
+        guard let current = store, let cloud = current.cloudSave else { return }
+        current.retire()
+        _ = cloud.restoreForeign()
+        open(current.account)
+    }
+
+    /// On every return to the foreground: Apple is asked whether the sign-in
+    /// still stands (`onDropped` retires the store when it does not).
+    func sceneBecameActive() {
+        Task { [weak self] in
+            await self?.accounts.verifyCredentialState()
+        }
+    }
+}
 
 @main
 struct PantheonApp: App {
-    @StateObject private var store: GameStore
+    @StateObject private var session: AppSession
     @StateObject private var launch: LaunchProgress
 
     /// Explicitly main-actor isolated: `GameStore` is `@MainActor`, and building
@@ -13,7 +147,15 @@ struct PantheonApp: App {
         // The two bundled faces, before any view asks `Theme` for a font.
         FontLibrary.registerBundledFonts()
 
-        _store = StateObject(wrappedValue: GameStore.bootstrap())
+        // The CI tour never signs in: it plays as a fixed guest, held in
+        // memory, so every launch of the tour opens the same save and no
+        // dialog, no Apple and no CloudKit stand between it and its screen.
+        var touring = false
+        #if DEBUG
+        touring = ProcessInfo.processInfo.arguments.contains("-tour")
+        #endif
+        let accounts = AccountService(preset: touring ? AccountService.tourAccount : nil)
+        _session = StateObject(wrappedValue: AppSession(accounts: accounts))
         _launch = StateObject(wrappedValue: LaunchProgress())
 
         // The whole app is cream and gold, the tab bar included; setting it
@@ -70,10 +212,14 @@ struct PantheonApp: App {
         WindowGroup {
             #if DEBUG
             // `-tour` is the CI screenshot job: the app drives itself through
-            // its screens while the runner photographs the simulator.
+            // its screens while the runner photographs the simulator. The
+            // tour's guest has no cloud, so its store is built in `init`.
             if ProcessInfo.processInfo.arguments.contains("-tour") {
-                TourView()
-                    .environmentObject(store)
+                if let store = session.store {
+                    TourView()
+                        .environmentObject(store)
+                        .environmentObject(session)
+                }
             } else {
                 gate
             }
@@ -83,12 +229,26 @@ struct PantheonApp: App {
         }
     }
 
-    /// The loading screen over the game until the launch has warmed what
-    /// it warms and the painting has had its moment; then it dissolves.
+    /// The sign-in screen while no account is signed in, the game once its
+    /// store exists — the shell keyed by the account, so a sign-in rebuilds
+    /// every screen under it — and the loading screen over whichever is
+    /// under it until the launch has warmed what it warms and the painting
+    /// has had its moment; then it dissolves.
     private var gate: some View {
         ZStack {
-            RootView()
-                .environmentObject(store)
+            if let store = session.store {
+                RootView()
+                    .environmentObject(store)
+                    .environmentObject(session)
+                    .id(store.account.id)
+            } else {
+                SignInView(
+                    isOpening: session.isOpening,
+                    notice: session.accounts.notice,
+                    onApple: { credential in session.signInWithApple(credential) },
+                    onGuest: { session.continueAsGuest() }
+                )
+            }
             if !launch.finished {
                 LaunchView(progress: launch)
                     .transition(.opacity)
