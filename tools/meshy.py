@@ -642,11 +642,19 @@ def cmd_download(a):
     for key, st in m["stages"].items():
         if key.startswith("clip:") and st.get("status") == "SUCCEEDED":
             jobs.append((st, "animation", f"{a.asset}_{st['clip']}"))
-    if a.include_unrigged:
-        for stage in ("refine", "preview", "image"):
-            st = m["stages"].get(stage)
-            if st and st.get("status") == "SUCCEEDED":
-                jobs.append((st, "model_urls", f"{a.asset}_{stage}"))
+    # The TEXTURED stage's own model — the refine of a text-to-3D, the one
+    # stage of an image-to-3D — always comes down beside the rig, because
+    # it is the only file that carries the metallic-roughness and normal
+    # maps: the rigged and animated exports carry the base colour alone,
+    # and Meshy deletes a finished task within about a week (2026-09-17,
+    # when every family's maps turned out to exist nowhere). `mesh.py`
+    # takes the maps from `<asset>_refine.glb` / `<asset>_image.glb` when
+    # the rigged file has none. --include-unrigged adds the preview too.
+    textured = [stage for stage in ("refine", "image") if m["stages"].get(stage, {}).get("status") == "SUCCEEDED"]
+    for stage in textured + (["preview"] if a.include_unrigged else []):
+        st = m["stages"].get(stage)
+        if st and st.get("status") == "SUCCEEDED":
+            jobs.append((st, "model_urls", f"{a.asset}_{stage}"))
     if not jobs:
         sys.exit("nothing finished to download yet - run `status` or `generate`")
 

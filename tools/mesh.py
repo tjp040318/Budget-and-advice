@@ -48,7 +48,9 @@ prints what it measures):
    phone explodes here first.
 """
 
-import argparse, copy, re, sys
+import argparse, copy, io, re, sys
+
+from PIL import Image
 from pathlib import Path
 
 import numpy as np
@@ -121,6 +123,49 @@ def build(char, out, tris, texture, expect_height, carrier=False):
     return facts
 
 
+def merge_material_maps(base, name, explicit=None):
+    """Takes the metallic-roughness and normal maps from the generator's
+    textured stage file when the rigged export has none.
+
+    Meshy's rigged and animated GLBs carry the base colour alone; the maps
+    are in the refine (text-to-3D) or image (image-to-3D) stage's own
+    model, which `meshy.py download` saves as `<asset>_refine.glb` or
+    `<asset>_image.glb` since 2026-09-17 (the props' `_refine.usdz` carry
+    them too). The rig keeps the atlas, so a map from that file fits the
+    rigged mesh's UVs (Zeus: 43,070 vertices before the rig, 43,152 after,
+    the same layout). A normal map that is nearly flat — Meshy puts the
+    relief in the mesh; the text-to-3D Zeus's measured 6/255 on its
+    busiest channel — is left out below 8/255, since it would cost the
+    bundle two megabytes and show nothing."""
+    have = {t.role for t in base.textures}
+    if "metallic_roughness" in have or ("roughness" in have and "metallic" in have):
+        return
+    candidates = [Path(explicit)] if explicit else [
+        SOURCE_DIR / f"{name}_{stage}.{ext}" for stage in ("image", "refine") for ext in ("glb", "usdz")
+    ]
+    sibling = next((c for c in candidates if c.exists()), None)
+    if sibling is None:
+        return
+    print(f"  material maps from {sibling.name}")
+    try:
+        textured = character.read(sibling)
+    except Exception as e:      # noqa: BLE001 - a stage file that will not read is a note, not a failure
+        print(f"    could not read it ({e}); shipping the base colour alone")
+        return
+    for tex in textured.textures:
+        if tex.role in have or tex.role not in ("metallic_roughness", "roughness", "metallic", "normal"):
+            continue
+        if tex.role == "normal":
+            arr = np.asarray(Image.open(io.BytesIO(tex.data)).convert("RGB"), dtype=np.float32)
+            relief = float(arr.reshape(-1, 3).std(axis=0).max())
+            if relief < 8.0:
+                print(f"    normal map is nearly flat (std {relief:.1f}/255); left out")
+                continue
+        base.textures.append(tex)
+        have.add(tex.role)
+        print(f"    + {tex.role} ({tex.size[0]}x{tex.size[1]} {tex.ext})")
+
+
 def run_family(name, args):
     src = source_for(name)
     if src is None:
@@ -139,6 +184,7 @@ def run_family(name, args):
     print(f"  reading {src.name}")
     base = character.read(src)
     character.describe(base)
+    merge_material_maps(base, name, args.maps_from)
     print("  canonical:")
     transform = character.canonicalise(base, height=height, lock_root=not args.keep_root_motion)
     if base.anim and not args.keep_base_animation:
@@ -242,6 +288,8 @@ def main():
     ap.add_argument("--texture", type=int, default=2048, help="max texture edge for the shipped model")
     ap.add_argument("--lod-texture", type=int, default=0, help="max texture edge for the LOD (default: half of --texture, 512 at least)")
     ap.add_argument("--no-clips", action="store_true", help="ship the base and the LOD only; leave the clip files as they are")
+    ap.add_argument("--maps-from", help="a textured stage file (.glb/.usdz) to take the metallic-roughness and normal maps from; "
+                                        "default: <name>_image or <name>_refine beside the source")
     ap.add_argument("--clip-tris", type=int, default=1500, help="triangle target for per-clip files")
     ap.add_argument("--clip-texture", type=int, default=128, help="max texture edge for per-clip files")
     ap.add_argument("--keep-root-motion", action="store_true", help="keep horizontal root motion in clips")
