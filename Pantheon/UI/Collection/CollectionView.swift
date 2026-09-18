@@ -960,7 +960,9 @@ struct CollectionStageView: UIViewRepresentable {
         // view's first frame, animated either way; a unit picked from the
         // rail afterwards is placed into a live scene, the case that froze
         // the Hall of Ka's figure (2026-09-17).
-        let assetName = blueprint.model.assetName
+        // The clips of the mesh on the stage (`ModelLibrary.clipAsset`): an
+        // awakened figure plays its own rig's idle, never the base rig's.
+        let assetName = ModelLibrary.shared.clipAsset(for: blueprint.model, awakened: unit.unit.isAwakened)
         if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
             ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
             node.startLoop(idle, key: "idle")

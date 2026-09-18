@@ -5835,3 +5835,32 @@ buttocks, flares behind the lunge and settles. Not yet: hair and tails
 (the excluded families), two chains across a cloak wider than it is
 long, wind on the island.
 
+**Run 188's frame, and what it was (2026-09-18, 17:00).** The awakened
+Ares's reveal frame had the cape hanging down his FRONT, over the cuirass
+and between the legs (the owner: "Still fucked"), while a literal
+column-convention replica of the Swift fed the shipped file hung it behind
+him. Run 189 printed the chain's numbers from the reveal itself: at attach
+every value matched Python to three decimals; at the first step (the
+figure not yet posed) the plane's back vector pointed backward; from the
+second step on it pointed FORWARD and down, while the anchor, the belly
+joint the chain hangs from, kept its rest direction — a child consistent
+with the rest and its parent 150° off it, which no rigid hierarchy does
+under one animation. It was not one animation: the reveal, the altar and
+the collection's Stage started the idle by the BASE mesh's name
+(`result.blueprint.model.assetName`) whatever mesh `node(for:awakened:)`
+had loaded, so the awakened Ares — his own rig, his own clips in the
+bundle — was posed by the base Ares's clip. The two Meshy rigs share
+their joint names and nothing else (the base carries its 0.009 scale on
+every joint, the awakened on the root alone; the pelvis frames differ by
+that 150°), the body came out standing because every joint's track is an
+absolute local pose, and the pelvis, which no vertex is skinned to alone,
+showed it only through the cape's back plane, which turns with the pelvis
+and pushed the hem round to the front. `ModelLibrary.clipAsset(for:
+awakened:)` is now the one rule for whose clips a figure plays (the
+awakened export when shipped and the unit is awakened, else the base,
+else the stand-in — what `UnitNode` already did in the battles and the
+island), and the three stages go through it. The plane and the spheres are
+unchanged; the phone's chain agreed with SceneKit's own placement of every
+joint to a millimetre (`mine` beside `presented` in the console), so the
+Swift and the Python are one sum.
+

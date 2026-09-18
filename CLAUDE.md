@@ -1628,7 +1628,12 @@ environment can and cannot do. The short version:
   0,20,37,55,72 --source`; `--no-sim` is the chain held rigid) before
   shipping. A clip carrier NEVER carries the chain — a rest track would
   pin the cape — so `mesh.py` matches carriers against
-  `character.body_joints`. The spine binding it replaced was a rigid board
+  `character.body_joints`. And a figure plays the clips of the MESH on
+  the stage, chosen by `ModelLibrary.clipAsset(for:awakened:)` in every
+  stage: the reveal, the altar and the collection's Stage played the base
+  rig's idle on the awakened mesh until 2026-09-18, which posed the
+  awakened Ares's pelvis 150° off and sent his cape round to the front
+  (PLAN.md, *Run 188's frame*). The spine binding it replaced was a rigid board
   that stood in front of Ares's legs in every reveal frame (the owner:
   "ares is STILL broken"). The rules for FINDING a cape and why each
   exists are in `Docs/PLAN.md` *The cape pass* and *Cape bones and a

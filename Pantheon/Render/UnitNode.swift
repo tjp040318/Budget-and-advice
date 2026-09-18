@@ -226,14 +226,7 @@ final class UnitNode: SCNNode {
         // The clips come from the mesh on the stage: the awakened export when
         // it shipped, the base one, or the stand-in's own when the base is
         // still on the way.
-        let library = ModelLibrary.shared
-        if combatant.isAwakened && library.hasModel(combatant.model.awakenedAssetName) {
-            self.clipAsset = combatant.model.awakenedAssetName
-        } else if library.hasModel(combatant.model.assetName) {
-            self.clipAsset = combatant.model.assetName
-        } else {
-            self.clipAsset = combatant.model.standInAsset ?? combatant.model.assetName
-        }
+        self.clipAsset = ModelLibrary.shared.clipAsset(for: combatant.model, awakened: combatant.isAwakened)
         self.elementTint = tint
         self.modelContainer = container
         self.containerRest = container.position

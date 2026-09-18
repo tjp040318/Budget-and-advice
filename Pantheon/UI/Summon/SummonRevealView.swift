@@ -552,7 +552,9 @@ struct SummonStageView: UIViewRepresentable {
         // A canonical export's rest pose is its bind pose, an A-pose, so the
         // figure gets the idle clip when one is in the bundle and stands
         // still only when there is nothing to play.
-        let assetName = result.blueprint.model.assetName
+        // The clips of the mesh on the stage (`ModelLibrary.clipAsset`): an
+        // awakened figure plays its own rig's idle, never the base rig's.
+        let assetName = ModelLibrary.shared.clipAsset(for: result.blueprint.model, awakened: awakened)
         if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
             ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
             node.startLoop(idle, key: "idle")

@@ -300,6 +300,23 @@ final class ModelLibrary {
     /// so an awakened mesh, when one has shipped, plays its own clips.
     func hasModel(_ name: String) -> Bool { bundleURL(for: name) != nil }
 
+    /// The asset whose CLIPS a figure plays: the awakened export when it
+    /// shipped and the unit is awakened, else the base one, else the
+    /// stand-in's own — the same choice `node(for:)` makes for the MESH, so
+    /// a clip is never played on another family's rig. Every stage that
+    /// starts an idle goes through this. The reveal, the altar and the
+    /// collection's Stage played the BASE mesh's idle on the awakened mesh
+    /// until 2026-09-18: the two rigs share their joint names and nothing
+    /// else, the base Ares's idle put the awakened Ares's pelvis 150° off
+    /// its rest, and the cape simulation, which keeps the hem behind a plane
+    /// through the pelvis, pushed his cape round to the front (run 189's
+    /// console beside tools/cape_sim.py's numbers).
+    func clipAsset(for spec: ModelSpec, awakened: Bool) -> String {
+        if awakened && hasModel(spec.awakenedAssetName) { return spec.awakenedAssetName }
+        if hasModel(spec.assetName) { return spec.assetName }
+        return spec.standInAsset ?? spec.assetName
+    }
+
     /// Loads a set of specs' meshes and their clips into the caches on a
     /// background queue, so a stage built afterwards clones from the cache
     /// instead of parsing USDZ on the main thread.

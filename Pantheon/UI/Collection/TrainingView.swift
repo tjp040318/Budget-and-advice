@@ -1108,7 +1108,9 @@ struct AltarStageView: UIViewRepresentable {
         // to play (`SCNNode.startLoop`): added before, to a detached node
         // carried into this already-rendering scene, it never started and
         // the figure stood in its bind pose (2026-09-17).
-        let assetName = blueprint.model.assetName
+        // The clips of the mesh on the stage (`ModelLibrary.clipAsset`): an
+        // awakened figure plays its own rig's idle, never the base rig's.
+        let assetName = ModelLibrary.shared.clipAsset(for: blueprint.model, awakened: unit.unit.isAwakened)
         if let idle = ModelLibrary.shared.animation(.idle, for: assetName)
             ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
             node.startLoop(idle, key: "idle")
