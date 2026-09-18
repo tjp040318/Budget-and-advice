@@ -477,6 +477,8 @@ struct SummonStageView: UIViewRepresentable {
 
     final class Coordinator {
         var figure: SCNNode?
+        /// Steps the figure's cape each frame; the view's delegate is weak.
+        let cloth = ClothStepper()
         var spinnerStarted = false
         var shown = false
         var tint: UIColor = .white
@@ -526,6 +528,7 @@ struct SummonStageView: UIViewRepresentable {
         view.allowsCameraControl = false
         view.rendersContinuously = true
         view.isPlaying = true
+        view.delegate = context.coordinator.cloth
 
         let tint = UIColor(hex: result.blueprint.model.auraHex) ?? .white
         let height = result.blueprint.model.height

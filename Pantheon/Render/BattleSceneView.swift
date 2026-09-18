@@ -86,6 +86,12 @@ struct BattleSceneView: UIViewRepresentable {
             }
         }
 
+        /// The clips have been applied for this frame: swing every cape on
+        /// the field from the pose its figure now holds.
+        func renderer(_ renderer: SCNSceneRenderer, didApplyAnimationsAtTime time: TimeInterval) {
+            ClothSimulation.shared.step(in: renderer.scene, at: time)
+        }
+
         /// The frame is about to be drawn with the camera where it now
         /// stands: put every plate under its unit's feet for it.
         func renderer(_ renderer: SCNSceneRenderer, willRenderScene scene: SCNScene, atTime time: TimeInterval) {

@@ -1612,9 +1612,27 @@ environment can and cannot do. The short version:
   `mesh.py` after the proportions (`--no-cape` skips it; `CAPE_EXCLUDE`
   names the winged and tailed families): a cape Meshy's auto-rig gave to
   the shins and the upper arms (Ares's lifted with his arms like a bat's
-  wing; the owner: "fucked") is re-bound to the spine chain by height and
-  its seam blended over four rings. The rules and why each exists are in
-  `Docs/PLAN.md` *The cape pass*: behind the spine's plane, outside every
+  wing; the owner: "fucked") is hung on FOUR JOINTS OF ITS OWN, `cape_0`
+  at the sheet's top down to `cape_3` above the hem, children of the spine
+  joint it hangs from (a belt cloth's is `Hips`), the sheet skinned to them
+  by height with its seam blended over four rings, and the game swings
+  them every frame with a spring simulation — `Render/ClothChain.swift`
+  (VRM's spring bone: tails with velocity, a pull toward the rest
+  direction, gravity, the bone's length, eight spheres and a back plane
+  through the hips, a fixed 1/60 s step), attached in `ModelLibrary.node`
+  after `repairSkinners` and stepped from every stage's
+  `didApplyAnimationsAtTime` (the battle coordinator, `StageDoctor`, a
+  `ClothStepper` on the reveal and the island). `tools/cape_sim.py` is the
+  SAME sum in Python: change a constant in both files, and judge it on
+  its board (`python3 tools/cape_sim.py ares_m7 attack_heavy --frames
+  0,20,37,55,72 --source`; `--no-sim` is the chain held rigid) before
+  shipping. A clip carrier NEVER carries the chain — a rest track would
+  pin the cape — so `mesh.py` matches carriers against
+  `character.body_joints`. The spine binding it replaced was a rigid board
+  that stood in front of Ares's legs in every reveal frame (the owner:
+  "ares is STILL broken"). The rules for FINDING a cape and why each
+  exists are in `Docs/PLAN.md` *The cape pass* and *Cape bones and a
+  spring simulation*: behind the spine's plane, outside every
   limb's own measured surface (`_limb_surface`: the layer up to the first
   gap, inward face or 1.8× the innermost, so a cyclops keeps his arms and
   Sekhmet her arm bands), one connected SHEET by shape from the shoulder

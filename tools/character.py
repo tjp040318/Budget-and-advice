@@ -948,6 +948,44 @@ LIMB_BONES = ("upleg", "leg", "foot", "toebase", "shoulder", "arm", "forearm", "
 SURFACE_BONES = ("upleg", "leg", "foot", "toebase", "arm", "forearm", "hand")   # a clavicle is where a cape hangs from
 HELD_BONES = ("head", "neck", "eye", "jaw")
 
+# The cape chain (2026-09-18, evening): a cape hangs from its OWN joints,
+# `cape_0` at the shoulder line down to `cape_3` above the hem, children of
+# the spine joint it hangs from, and the game swings them with a spring
+# simulation every frame (Pantheon/Render/ClothChain.swift; tools/cape_sim.py
+# is the same sum in Python, for the boards). A clip carrier's skeleton does
+# NOT carry them: a clip's tracks reach a joint by name, and a joint with no
+# track keeps whatever the simulation set — a rest track on the chain would
+# pin the cape to its bind pose. `body_joints` is what a carrier must match.
+CAPE_CHAIN = 4
+
+
+def cape_joint_count(char):
+    return sum(1 for j in char.joints if j.split("/")[-1].startswith("cape_"))
+
+
+def body_joints(char):
+    """The joint list without the cape chain: a clip carrier's whole skeleton."""
+    return [j for j in char.joints if not j.split("/")[-1].startswith("cape_")]
+
+
+def _append_joint(char, name, parent, position):
+    """Adds a joint at a world position, unrotated, as the LAST joint of the
+    skeleton (parents-first order holds: its parent is already there). A
+    base that still carries an animation gets a rest track for it."""
+    bind = np.eye(4)
+    bind[3, :3] = position
+    char.joints = list(char.joints) + [f"{char.joints[parent]}/{name}"]
+    char.parents = np.append(np.asarray(char.parents), parent)
+    char.bind = np.concatenate([char.bind, bind[None]])
+    char.rest_local = np.concatenate([char.rest_local, (bind @ np.linalg.inv(char.bind[parent]))[None]])
+    if char.anim is not None:
+        a = char.anim
+        frames = len(a["T"])
+        a["T"] = np.concatenate([a["T"], np.repeat(char.rest_local[-1][3, :3][None, None], frames, 0)], axis=1)
+        a["R"] = np.concatenate([a["R"], np.tile(np.array([0.0, 0.0, 0.0, 1.0]), (frames, 1, 1))], axis=1)
+        a["S"] = np.concatenate([a["S"], np.ones((frames, 1, 3))], axis=1)
+    return len(char.joints) - 1
+
 
 def _bone_kind(leaf_name):
     """'RightForeArm' -> 'forearm', 'neck' -> 'neck' (Meshy's rigs mix cases)."""
@@ -1237,19 +1275,74 @@ def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
     # left exactly as Meshy rigged it.
     if int((cloth & limb[owner]).sum()) < min_share * len(P):
         return 0
-    # Dense weights, the cloth rows replaced by the height blend.
+    # --- the cape chain ---------------------------------------------------
+    # The cloth is not re-bound to the spine any more: on the spine a cape
+    # is a rigid board, and in a twisted stance it stood in front of Ares's
+    # legs in every reveal frame (the owner, 2026-09-18: "ares is STILL
+    # broken"). It hangs from `CAPE_CHAIN` joints of its own down its centre
+    # line, the game's spring simulation swings them, and what hangs from
+    # them is EVERY sheet vertex outside the torso's own surface, whoever
+    # Meshy gave it to — the spine-owned half of a cape swinging on the
+    # chain while the limb-owned half hung still would tear it down the
+    # middle. The torso's own surface is `_limb_surface` round the spine
+    # chain and the pelvis with the inward stop on: a cape's inner face is
+    # the first thing behind the back that faces it, and where a cape lies
+    # fused against the back with no gap and no inner face it stays the
+    # back's, which is what the eye expects of the top of a cape.
+    torso = np.zeros(len(P), bool)
+    torso_kinds = ("spine", "spine01", "spine1", "spine02", "spine2", "spine03", "spine3", "neck")
+    for j, p in enumerate(char.parents):
+        if p >= 0 and kind[j] in torso_kinds:
+            torso |= _limb_surface(P, normals, jw[p], jw[j], reach=0.25 * height, gap=0.012 * height, inward_stop=True)
+    uplegs = [i for i, k in enumerate(kind) if k == "upleg"]
+    hips_at = jw[idx[chain[0]]]
+    crotch = np.array([hips_at[0], float(np.mean([jw[i][1] for i in uplegs])) if uplegs else hips_at[1] - 0.1 * height, hips_at[2]])
+    torso |= _limb_surface(P, normals, crotch, hips_at, reach=0.25 * height, gap=0.012 * height, inward_stop=True)
+    hang = (sheet & ~torso) | cloth
+    n = int(hang.sum())
+    if n < 100:
+        return 0
+    # The joints: `CAPE_CHAIN` of them down the sheet's centre line from its
+    # top to a step above its hem, under the spine joint the top hangs from.
+    y_top = min(float(np.percentile(P[hang, 1], 97)), neck_y)
+    y_hem = float(np.percentile(P[hang, 1], 3))
+    anchor = int(np.clip(np.searchsorted(chain_y, y_top + 0.02 * height) - 1, 0, len(chain) - 1))
+    levels = np.array([y_top - k * (y_top - y_hem) / CAPE_CHAIN for k in range(CAPE_CHAIN)])
+    first = len(char.joints)
+    parent = idx[chain[anchor]]
+    # One x for the whole chain (a cape's centre line is vertical; a clasp on
+    # one shoulder put cape_0 half a metre out to the side on Ares) and each
+    # level's own depth, since a cape flares away from the legs toward the hem.
+    x_mid = float(np.median(P[hang, 0]))
+    for yk in levels:
+        band_k = hang & (np.abs(P[:, 1] - yk) < 0.06 * height)
+        if band_k.sum() < 5:
+            band_k = hang
+        parent = _append_joint(char, f"cape_{len(char.joints) - first}", parent,
+                               np.array([x_mid, yk, float(np.median(P[band_k, 2]))]))
+    J = len(char.joints)
+    # Dense weights, the hanging rows replaced by the height blend between
+    # the two cape joints bracketing each vertex; over the shoulder line the
+    # collar blends from cape_0 up into the spine joint it hangs from, and
+    # under the last joint the hem is that joint's alone.
     W = np.zeros((len(P), J), dtype=np.float64)
     rows = np.arange(len(P))[:, None]
     np.add.at(W, (np.broadcast_to(rows, char.joint_indices.shape), char.joint_indices), char.joint_weights.astype(np.float64))
-    y = P[cloth, 1]
-    upper = np.clip(np.searchsorted(chain_y, y), 1, len(chain) - 1)
-    lower = upper - 1
-    span = np.maximum(chain_y[upper] - chain_y[lower], 1e-6)
-    t_up = np.clip((y - chain_y[lower]) / span, 0.0, 1.0)
-    W[cloth] = 0.0
-    W[np.flatnonzero(cloth), [idx[chain[i]] for i in lower]] = 1.0 - t_up
-    W[np.flatnonzero(cloth), [idx[chain[i]] for i in upper]] += t_up
-    # The seam: average each cloth vertex's weights with its mesh neighbours
+    rows = np.flatnonzero(hang)
+    yv = P[rows, 1]
+    above = yv >= levels[0]
+    below = yv <= levels[-1]
+    mid = ~above & ~below
+    upper = np.clip(np.searchsorted(-levels, -yv, side="right") - 1, 0, CAPE_CHAIN - 2)
+    t = np.clip((levels[upper] - yv) / np.maximum(levels[upper] - levels[upper + 1], 1e-6), 0.0, 1.0)
+    W[rows] = 0.0
+    W[rows[mid], first + upper[mid]] = 1.0 - t[mid]
+    W[rows[mid], first + upper[mid] + 1] += t[mid]
+    W[rows[below], first + CAPE_CHAIN - 1] = 1.0
+    collar = np.clip((yv - levels[0]) / max(float(P[hang, 1].max()) - levels[0], 1e-6), 0.0, 1.0)
+    W[rows[above], first] = 1.0 - collar[above]
+    W[rows[above], idx[chain[anchor]]] += collar[above]
+    # The seam: average each hanging vertex's weights with its mesh neighbours
     # (across UV seams, by position) for a few rings, the body's rows fixed.
     if rings > 0 and len(char.faces):
         key, canon = np.unique(np.round(P, 5), axis=0, return_inverse=True)
@@ -1262,27 +1355,28 @@ def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
         Wc = np.zeros((C, J)); cnt = np.zeros(C)
         np.add.at(Wc, canon, W); np.add.at(cnt, canon, 1.0)
         Wc /= np.maximum(cnt, 1.0)[:, None]
-        cloth_c = np.zeros(C, bool); cloth_c[canon[cloth]] = True
+        hang_c = np.zeros(C, bool); hang_c[canon[hang]] = True
         deg = np.zeros(C); np.add.at(deg, e[:, 0], 1.0); np.add.at(deg, e[:, 1], 1.0)
         for _ in range(rings):
             acc = Wc.copy()
             np.add.at(acc, e[:, 0], Wc[e[:, 1]]); np.add.at(acc, e[:, 1], Wc[e[:, 0]])
             acc /= (deg + 1.0)[:, None]
-            Wc[cloth_c] = acc[cloth_c]
-        W[cloth] = Wc[canon[cloth]]
+            Wc[hang_c] = acc[hang_c]
+        W[hang] = Wc[canon[hang]]
     K = char.joint_indices.shape[1]
-    top = np.argsort(-W[cloth], axis=1)[:, :K]
-    wt = np.take_along_axis(W[cloth], top, axis=1)
+    top = np.argsort(-W[hang], axis=1)[:, :K]
+    wt = np.take_along_axis(W[hang], top, axis=1)
     wt /= np.maximum(wt.sum(axis=1, keepdims=True), 1e-9)
     top[wt <= 0] = 0
-    char.joint_indices[cloth] = top.astype(char.joint_indices.dtype)
-    char.joint_weights[cloth] = wt.astype(char.joint_weights.dtype)
+    char.joint_indices[hang] = top.astype(char.joint_indices.dtype)
+    char.joint_weights[hang] = wt.astype(char.joint_weights.dtype)
     was = {}
-    for o in owner[cloth]:
+    for o in owner[hang]:
         was[leaf[o]] = was.get(leaf[o], 0) + 1
     was = ", ".join(f"{k} {v:,}" for k, v in sorted(was.items(), key=lambda kv: -kv[1])[:4])
-    print(f"    cape: {n:,} of {len(P):,} vertices hang clear of every bone behind the back "
-          f"(were {was}); re-bound to {' > '.join(leaf[idx[n]] for n in chain)} by height, the seam blended over {rings} rings")
+    print(f"    cape: {n:,} of {len(P):,} vertices hang clear of the body behind the back (were {was}); "
+          f"hung on cape_0..cape_{CAPE_CHAIN - 1} under {leaf[idx[chain[anchor]]]}, "
+          f"{levels[0]:.2f} m down to {levels[-1]:.2f} m, the seam blended over {rings} rings")
     return n
 
 

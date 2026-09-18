@@ -106,6 +106,7 @@ struct IslandSceneView: UIViewRepresentable {
         view.allowsCameraControl = false
         view.autoenablesDefaultLighting = false
         view.isUserInteractionEnabled = false
+        view.delegate = context.coordinator.cloth
         return view
     }
 
@@ -130,6 +131,8 @@ struct IslandSceneView: UIViewRepresentable {
 
     final class Coordinator {
         let scene = SCNScene()
+        /// Steps the figures' capes each frame; the view's delegate is weak.
+        let cloth = ClothStepper()
         var onStir: ((Int) -> Void)?
 
         private let cameraNode = SCNNode()

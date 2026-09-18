@@ -196,6 +196,10 @@ final class ModelLibrary {
 
         if !isStandIn {
             repairSkinners(in: model, label: assetName)
+            // A cape's chain of joints (the cape pass, tools/character.py)
+            // is found here, before the model is scaled and placed, and
+            // stepped by the simulation from every stage's render delegate.
+            ClothChain.attach(to: model, label: assetName)
             if awakened { MaterialTuner.applyAwakenedLook(model) }
         }
         model.name = "model"
@@ -1005,6 +1009,12 @@ final class StageDoctor: NSObject, SCNSceneRendererDelegate {
     init(label: String) {
         self.label = label
         super.init()
+    }
+
+    /// The cloth chains are stepped here on every stage this doctor watches
+    /// (the Hall of Ka's altar, the collection's Stage), tour or not.
+    func renderer(_ renderer: SCNSceneRenderer, didApplyAnimationsAtTime time: TimeInterval) {
+        ClothSimulation.shared.step(in: renderer.scene, at: time)
     }
 
     func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {

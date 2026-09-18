@@ -5723,3 +5723,115 @@ other thirty-two are cloaks, capes, pelts and loose robes.
 A cape still bends only with the spine: in a lunge it flares straight back,
 which is a cape in a game with no cloth. Cape bones and baked cloth are the
 paid answer, per family, when the credits exist.
+
+### Cape bones and a spring simulation (2026-09-18, 14:30; the owner: "ares is STILL broken. If its the cape, find a design that you dont NEED a cape")
+
+Run 186's reveal frame, read at full size: the awakened Ares's cape is a
+stiff crimson board swung round in front of his legs. A cape bound to the
+spine chain by height is rigid, and the standing idle turns the hips, so
+the hem, bound to the pelvis, turns with them and stands out like a door.
+No weighting rule fixes that: cloth that is part of the skeleton moves
+like the skeleton.
+
+**What the genre does.** Summoners War's capes, tails and hair sit on
+their own bone chains, hand-animated per clip by Com2uS's animators; Raid
+runs cloth simulation on Unity; the mobile standard for content that is
+not hand-animated is SPRING BONES — a chain of extra joints driven every
+frame by a small pendulum simulation (Unity's Dynamic Bone and VRM's
+SpringBone, Unreal's AnimDynamics): the chain hangs under gravity, swings
+with the body's motion, is pulled back toward its rest shape by a
+stiffness, damped, and pushed out of a few collision spheres. Every
+capeless-looking mobile game that has hair moving is doing this.
+
+**The options.**
+1. *A capeless Ares* — a new concept and a Meshy remake, 68 credits;
+   the balance is 505 on a 500 floor, so not today, and it leaves the
+   other thirty-one capes, every tail and every head of hair as they are.
+2. *Cut the cape off the mesh* — the mask knows its triangles, but Meshy's
+   shell has no back under a cape that touches the body and no paint for
+   it: a hole, then a repaint. Not a quality answer.
+3. *Cape bones plus a spring simulation in the game* — free, one pass
+   over the same thirty-two families, and the same system later drives
+   hair (the nymph), tails (the fox spirit) and pelts. Built.
+
+**As built (2026-09-18, 15:00).** `character.reweight_cape` keeps every
+rule of the pass above for FINDING a cape (the band, the limb surfaces,
+the sheet, the wrap test, the 4% guard) and changes what it does with
+one: instead of binding the sheet to the spine it appends four joints of
+its own to the skeleton, `cape_0` at the sheet's top down to `cape_3` a
+step above its hem (`CAPE_CHAIN`), children of the spine joint at or
+below the top (`Spine` on Ares — Meshy numbers the chain downward, so
+`Spine` is the CHEST and `Spine02` the belly; a cloth from the belt, Ra's
+tail, Loki's, hangs from `Hips`), on ONE x for the whole chain (a clasp
+on one shoulder put cape_0 half a metre out to the side at first, and the
+first segment ran sideways) with each level's own depth, and skins the
+sheet to them by height, the collar blending from cape_0 up into the
+spine joint, the hem cape_3's alone, the same four-ring seam blend. What
+hangs from the chain is EVERY sheet vertex outside the torso's own
+surface (`_limb_surface` round the spine chain and the pelvis, inward
+stop on: a cape's inner face is the first thing behind the back that
+faces it; a cape fused flat against the back stays the back's), plus
+whatever a limb held, whoever Meshy gave it to — a spine-owned half
+swinging on the chain beside a limb-owned half held still would tear.
+Thirty families take a chain; Hera and the awakened Mars, re-bound by an
+earlier rule, have no cape under the final ones (their sheets are robe
+backs the wrap test keeps) and go back to Meshy's rig. The clip carriers
+never carry the joints: a clip reaches a joint by name, a joint with no
+track keeps what the simulation set, and a rest track on the chain would
+pin the cape to its bind pose (`mesh.py` matches a carrier against
+`body_joints`, the base without its chain). The LOD inherits the chain.
+
+In the game `ClothChain` (Render/ClothChain.swift) is VRM's spring bone
+on those joints, and `tools/cape_sim.py` is the SAME sum in Python,
+constant for constant, rendering a clip through the pipeline's own
+output so a change is judged on a board before anything ships (`python3
+tools/cape_sim.py ares_m7 attack_heavy --frames 0,20,37,55,72 --source`;
+`--no-sim` holds the chain at rest, which is what the spine binding
+looked like). Each joint keeps a tail particle in world space that
+carries its velocity (Verlet, 15% lost a step), is drawn toward the
+bone's rest direction in its parent's current frame (0.25 at the
+shoulders falling to 0.12 at the hem), pulled down by gravity (0.35),
+held at the bone's length, pushed out of eight spheres (the pelvis 0.085
+of the height, the chest 0.09, two on each thigh 0.06, one on each shin
+0.045, every radius capped at 0.97 of its rest clearance so nothing
+pushes at rest) and kept behind a plane through the hips facing backward
+(offset the rest clearance, at most 0.06 of the height) so the hem cannot
+swing forward between the legs when the figure stops; the joint's
+rotation is whatever turns the rest direction onto the tail, the
+parent's rotation kept, so the cape twists with the back. The step is a
+fixed 1/60 s, at most four a frame, so the phone at 60 Hz, the island at
+30 and the board agree. A pull is a velocity added each step and
+re-normalised, so it reads as an acceleration of pull ÷ step: gravity
+0.35 is 21 m/s², twice the real thing, a 26 cm segment swinging with a
+0.7 s period — a heavy cloth — and the drag is about half-critical
+damping at that period. Three lessons from the first boards: (1) a
+sphere's push must carry NO velocity into the next step — the tail's
+history moves with it — or a thigh swinging through the hem flings the
+cape at ten times the speed of anything the figure does; (2) every joint
+of a Meshy rig carries a SCALE (0.009 on Ares, the armature's own unit,
+cancelled by the bind), so `cape_0`'s rest transform under the spine is
+that scale's inverse and the spine's inverse rotation — the simulation
+replaces the local ORIENTATION alone, keeps the rest position and scale,
+reads the chain's world transform back off the node, measures lengths and
+forces in the mesh's metres and maps them to the scene with the MODEL
+node's world scale (1 in a battle, the island's points per metre there),
+and the first version, which rebuilt the local transform as a pure
+rotation, collapsed the chain to a centimetre and pointed it anywhere;
+(3) a board rendered from the wrong source is nonsense — `ares.glb` is
+the old mesh, the bundle's clips are `ares_m7`'s, and skinning one with
+the other put the chain a metre from the legs. The simulation runs from
+every stage's render delegate after the clips are applied
+(`renderer(_:didApplyAnimationsAtTime:)`: the battle's coordinator, the
+stage doctor on the altar and the collection's Stage, and a
+`ClothStepper` the reveal's and the island's coordinators hold), on the
+chains standing under that renderer's scene (`ClothSimulation`, chains
+dropped as their figures go), and the attach point is
+`ModelLibrary.node` after `repairSkinners`, before the model is scaled
+and placed. Judged on the boards in the report: Ares's heavy attack at
+five frames and his standing idle, the chain at rest beside it
+simulated — at rest the cape's foot stands out behind the calf like a
+board in every stance, simulated it hangs from the shoulders past the
+buttocks, flares behind the lunge and settles. Not yet: hair and tails
+(the excluded families), two chains across a cloak wider than it is
+long, wind on the island.
+

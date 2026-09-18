@@ -242,14 +242,17 @@ def run_family(name, args):
         print(f"\n  reading {clip.name}")
         c = character.read(clip)
         character.describe(c)
-        if len(c.joints) != len(base.joints) or c.joints != base.joints:
+        # The base may carry a cape chain by now (character.reweight_cape);
+        # a carrier never does, so it is matched against the body's joints.
+        body = character.body_joints(base)
+        if len(c.joints) != len(body) or list(c.joints) != body:
             print(f"    PROBLEM: joint list differs from the base model; the animation will not retarget")
             problems.append(f"{clip.name}: different skeleton")
         print("  canonical (base model's transform):")
         character.canonicalise(c, transform=transform, lock_root=not args.keep_root_motion)
         if scales:
             character.reproportion(c, scales, fit=fit)
-        dev = abs(c.bind - base.bind).max() if len(c.bind) == len(base.bind) else float("inf")
+        dev = abs(c.bind - base.bind[:len(body)]).max() if len(c.bind) == len(body) else float("inf")
         if dev > 1e-3:
             print(f"    PROBLEM: bind pose differs from the base by {dev:.4f}")
             problems.append(f"{clip.name}: bind pose differs")
