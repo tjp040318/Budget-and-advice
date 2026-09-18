@@ -1277,7 +1277,83 @@ def _decimate_fast(char, target_tris):
     char.points, char.faces = pts.astype(np.float32), faces.astype(np.int32)
 
 
-def decimate(char, target_tris, texture_size=1024, method=None):
+# ---------------------------------------------------------------------------
+# Texture grades
+# ---------------------------------------------------------------------------
+
+# A colour correction on a family's textures at shipping time (2026-09-18).
+# Meshy's texturing does not always land the palette the cards were painted
+# in: the awakened Ares — "Ares Aureate", gold on both his cards — came back
+# olive-khaki with pink runes, and no light can turn olive into gold. A grade
+# is a set of HSV moves on bands of hue, named so a family's ship command
+# says which (`mesh.py <asset> --grade gold`), applied to the base colour and
+# the emissive map alike, and never to a normal or a roughness map.
+#
+#   band: (hue lo, hue hi) in degrees, inclusive, wrapping past 360;
+#   sat / val: the range of pixels the move touches;
+#   hue: the hue moved toward, and `pull` how far (0 stays, 1 lands on it);
+#   sat_mul / val_mul: multipliers, clamped to 1; val_gamma: a curve on the
+#   value (0.6 lifts 0.43 to 0.60 and 0.80 to 0.87 — a burnish that brightens
+#   the dark metal without clipping what is already bright).
+GRADES = {
+    # Olive and khaki to the cards' burnished gold; the magenta runes to the
+    # cards' ember glow. The crimson cape (hue 350°, value under 0.6) and the
+    # skin (hue 20–30°) are outside both bands. The first take (sat ×1.45,
+    # val ×1.12) moved 18% of the atlas and changed nothing visible: the
+    # armour's own values sit at 0.4, and a tenth more of 0.4 is still 0.4.
+    "gold": [
+        dict(band=(36, 82), sat=(0.14, 0.85), val=(0.16, 1.0), hue=40, pull=0.8, sat_mul=1.8, val_mul=1.0, val_gamma=0.6),
+        dict(band=(300, 348), sat=(0.35, 1.0), val=(0.66, 1.0), hue=28, pull=1.0, sat_mul=1.15, val_mul=1.0),
+    ],
+}
+
+
+def grade_texture(img, grade):
+    """Applies one named grade to a PIL image (RGB or RGBA), returning a new
+    image; pixels outside every band are untouched."""
+    moves = GRADES[grade]
+    mode = img.mode
+    rgba = np.asarray(img.convert("RGBA")).astype(np.float32) / 255.0
+    rgb = rgba[..., :3]
+    mx = rgb.max(-1); mn = rgb.min(-1); delta = mx - mn
+    sat = np.where(mx > 1e-6, delta / np.maximum(mx, 1e-6), 0.0)
+    val = mx
+    hue = np.zeros_like(mx)
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    nz = delta > 1e-6
+    rm = nz & (mx == r); gm = nz & (mx == g) & ~rm; bm = nz & ~rm & ~gm
+    hue[rm] = ((g[rm] - b[rm]) / delta[rm]) % 6.0
+    hue[gm] = (b[gm] - r[gm]) / delta[gm] + 2.0
+    hue[bm] = (r[bm] - g[bm]) / delta[bm] + 4.0
+    hue = (hue * 60.0) % 360.0
+    touched = 0
+    for m in moves:
+        lo, hi = m["band"]
+        inband = (hue >= lo) & (hue <= hi) if lo <= hi else (hue >= lo) | (hue <= hi)
+        sel = inband & (sat >= m["sat"][0]) & (sat <= m["sat"][1]) & (val >= m["val"][0]) & (val <= m["val"][1]) & nz
+        touched += int(sel.sum())
+        # Move the hue the short way round toward the target.
+        d = ((m["hue"] - hue[sel] + 180.0) % 360.0) - 180.0
+        hue[sel] = (hue[sel] + d * m["pull"]) % 360.0
+        sat[sel] = np.clip(sat[sel] * m["sat_mul"], 0.0, 1.0)
+        val[sel] = np.clip(np.power(np.clip(val[sel], 0.0, 1.0), m.get("val_gamma", 1.0)) * m["val_mul"], 0.0, 1.0)
+    # HSV back to RGB.
+    h6 = hue / 60.0
+    c = val * sat
+    x = c * (1.0 - np.abs((h6 % 2.0) - 1.0))
+    z = np.zeros_like(c)
+    idx = np.floor(h6).astype(int) % 6
+    r2 = np.select([idx == 0, idx == 1, idx == 2, idx == 3, idx == 4, idx == 5], [c, x, z, z, x, c])
+    g2 = np.select([idx == 0, idx == 1, idx == 2, idx == 3, idx == 4, idx == 5], [x, c, c, x, z, z])
+    b2 = np.select([idx == 0, idx == 1, idx == 2, idx == 3, idx == 4, idx == 5], [z, z, x, c, c, x])
+    mm = val - c
+    out = np.stack([r2 + mm, g2 + mm, b2 + mm, rgba[..., 3]], -1)
+    result = Image.fromarray((np.clip(out, 0, 1) * 255 + 0.5).astype(np.uint8), "RGBA")
+    print(f"    graded '{grade}': {touched:,} of {mx.size:,} texels moved")
+    return result.convert(mode) if mode != "RGBA" else result
+
+
+def decimate(char, target_tris, texture_size=1024, method=None, grade=None):
     """Reduces the mesh to about `target_tris` triangles and the textures to
     `texture_size` on their long edge. The UVs go through the reduction, not
     around it: MeshLab's quadric edge collapse with texture carries the corner
@@ -1315,6 +1391,10 @@ def decimate(char, target_tris, texture_size=1024, method=None):
             # corrupt" for two of them per model on the simulator (run 176)
             # - it decodes them still, but a clean PNG says nothing.
             img = img.convert("RGBA" if tex.ext == "png" and img.mode in ("RGBA", "LA", "P") else "RGB")
+            # A named grade on the colour and the glow, never on a normal or
+            # a roughness map (their pixels are not colours).
+            if grade and getattr(tex, "role", "base_color") in ("base_color", "emissive", "diffuse", None):
+                img = grade_texture(img, grade)
             if max(img.size) > texture_size:
                 img.thumbnail((texture_size, texture_size), Image.LANCZOS)
             buf = io.BytesIO()

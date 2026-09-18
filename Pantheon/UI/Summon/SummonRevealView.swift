@@ -67,7 +67,7 @@ struct SummonRevealView: View {
                         if showAll { onFinish() } else { sequence += 1; showAll = true }
                     }
                     .font(Theme.body(14).weight(.semibold))
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(Self.duskInk)
                     .padding(12)
                 }
                 Spacer()
@@ -81,7 +81,25 @@ struct SummonRevealView: View {
 
     private var backdrop: some View {
         ZStack {
-            Theme.backdrop
+            // DUSK since 2026-09-18. The reveal stood on the interface's cream
+            // (`Theme.backdrop`) and every figure on it read pale — a figure is
+            // judged against what is behind it, and the genre knows it: every
+            // summon in the genre happens against a dark sky with a shaft of
+            // light (Summoners War's night circle, Raid's portal room). The
+            // temple keeps its marble, lit by the same key as the figure; the
+            // sky between the columns is this — deep indigo over a violet dusk
+            // and an ember horizon — and the corners fall to ink, so the words
+            // on the right are cream and gold on dark, the way a reveal's are.
+            LinearGradient(
+                stops: [
+                    .init(color: Self.duskZenith, location: 0.0),
+                    .init(color: Self.duskViolet, location: 0.45),
+                    .init(color: Self.duskEmber, location: 0.72),
+                    .init(color: Self.duskGround, location: 1.0),
+                ],
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
 
             if let current {
                 let tint = tint(for: current)
@@ -160,7 +178,7 @@ struct SummonRevealView: View {
                 // and the words on the right are ink, and an ink corner stood
                 // the name and the epithet on the one dark patch of the frame.
                 RadialGradient(
-                    colors: [.clear, Theme.plate.opacity(0.10), Theme.plate.opacity(0.42), Theme.plate.opacity(0.82)],
+                    colors: [.clear, Self.duskGround.opacity(0.10), Self.duskGround.opacity(0.42), Self.duskGround.opacity(0.82)],
                     center: .init(x: 0.30, y: 0.52),
                     startRadius: 0,
                     endRadius: 560
@@ -174,6 +192,14 @@ struct SummonRevealView: View {
     private func tint(for result: SummonResult) -> Color {
         Rarity(stars: result.stars).glow
     }
+
+    /// The dusk the reveal stands in (see `backdrop`), and the cream its
+    /// words are set in.
+    private static let duskZenith = Color(hex: "#12162B")
+    private static let duskViolet = Color(hex: "#3A2C4E")
+    private static let duskEmber = Color(hex: "#9C5F33")
+    private static let duskGround = Color(hex: "#15110F")
+    private static let duskInk = Color(hex: "#D9CDB3")
 
     // MARK: - One at a time
 
@@ -209,9 +235,10 @@ struct SummonRevealView: View {
                 Text(result.isAwakening ? (result.blueprint.awakening?.awakenedName ?? result.blueprint.name) : result.blueprint.name)
                     .font(Theme.display(38))
                     .foregroundStyle(
-                        LinearGradient(colors: [Theme.textPrimary, Theme.textPrimary.opacity(0.75)],
+                        LinearGradient(colors: [Color(hex: "#FFF3C4"), Color(hex: "#E2C15E")],
                                        startPoint: .top, endPoint: .bottom)
                     )
+                    .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
                     .shadow(color: tint(for: result).opacity(0.9), radius: 14)
                     .scaleEffect(nameSlam ? 1 : 1.9)
                     .opacity(nameSlam ? 1 : 0)
@@ -220,7 +247,7 @@ struct SummonRevealView: View {
                 VStack(spacing: 6) {
                     Text(result.blueprint.epithet)
                         .font(Theme.body(14))
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(Self.duskInk)
 
                     HStack(spacing: 8) {
                         ElementBadge(element: result.blueprint.element)
@@ -616,8 +643,8 @@ struct SummonStageView: UIViewRepresentable {
         // the same job the SwiftUI vignette does behind this view, done here
         // for the parts of the frame the set covers. All three need
         // `wantsHDR`, which is on.
-        camera.contrast = 0.12
-        camera.saturation = 1.08
+        camera.contrast = 0.16
+        camera.saturation = 1.12
         camera.vignettingIntensity = 0.32
         camera.vignettingPower = 1.15
         camera.colorFringeStrength = 0.25

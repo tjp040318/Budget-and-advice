@@ -107,7 +107,7 @@ def clip_sources(name):
     return list(out.values())
 
 
-def build(char, out, tris, texture, expect_height, carrier=False):
+def build(char, out, tris, texture, expect_height, carrier=False, grade=None):
     """Writes one bundle file from a canonical model and verifies it.
     `carrier` marks a per-clip file: its 1,500-triangle mesh only carries
     the skeleton and the clip (the game reads the mesh once and discards
@@ -119,7 +119,7 @@ def build(char, out, tris, texture, expect_height, carrier=False):
     work = copy.deepcopy(char)
     character.ground_animation(work)
     lo, hi = character.bounds(work.points.astype(np.float64))
-    character.decimate(work, tris, texture)
+    character.decimate(work, tris, texture, grade=grade)
     size = character.write_usdz(work, out)
     print(f"  -> {out.relative_to(REPO)}   {work.tris:,} tris  {texture}px  {size / 1048576:.2f} MB")
     facts = character.verify(out, expect_height=None if carrier else expect_height, check_bounds=not carrier)
@@ -209,14 +209,14 @@ def run_family(name, args):
     base.name = out_name
     only = {c.strip() for c in args.only_clips.split(",") if c.strip()} if args.only_clips else None
     if only is None:
-        problems += build(base, BUNDLE_DIR / f"{out_name}.usdz", args.tris, args.texture, height)["problems"]
+        problems += build(base, BUNDLE_DIR / f"{out_name}.usdz", args.tris, args.texture, height, grade=args.grade)["problems"]
         if args.lod:
             # The LOD's texture was always half the base's (1,024 for 2,048)
             # until 2026-09-17, when the fight — which draws the LOD and
             # nothing else — was measured against the file that was paid
             # for; --lod-texture 2048 keeps the painting whole.
             lod_texture = args.lod_texture or max(512, args.texture // 2)
-            problems += build(base, BUNDLE_DIR / f"{out_name}_lod.usdz", args.lod, lod_texture, height)["problems"]
+            problems += build(base, BUNDLE_DIR / f"{out_name}_lod.usdz", args.lod, lod_texture, height, grade=args.grade)["problems"]
     else:
         # One clip re-shipped on its own - a bespoke motion replacing a preset
         # - leaves the base, the LOD and the other clips' files untouched, so
@@ -307,6 +307,7 @@ def main():
     ap.add_argument("--lod-texture", type=int, default=0, help="max texture edge for the LOD (default: half of --texture, 512 at least)")
     ap.add_argument("--no-clips", action="store_true", help="ship the base and the LOD only; leave the clip files as they are")
     ap.add_argument("--proportions", choices=sorted(character.PROPORTIONS), help="scale the head, hands and feet at their joints and bake it (character.PROPORTIONS)")
+    ap.add_argument("--grade", choices=sorted(character.GRADES), help="a colour grade on the textures at shipping (character.GRADES; gold: olive to burnished gold, magenta runes to ember)")
     ap.add_argument("--maps-from", help="a textured stage file (.glb/.usdz) to take the metallic-roughness and normal maps from; "
                                         "default: <name>_image or <name>_refine beside the source")
     ap.add_argument("--clip-tris", type=int, default=1500, help="triangle target for per-clip files")

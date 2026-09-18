@@ -5511,3 +5511,40 @@ figure.
   side by side and measured (`tools/framelight.py`'s method on the figure's
   crop: mean, saturation, clipped share); whichever wins becomes the
   default and the lab stays for the next lighting change.
+
+### The lab's verdict, the dusk, and the Ares grade (2026-09-18, later)
+
+Run 182 photographed the four variants (`lab_run182`): the control (old
+ramp, bare) at a figure mean of 131, the Lambert alone at 114, the new rig
+at 125 and the new rig under at 116, all at the same saturation. The new
+rig is the one with form — a terminator on the pauldron, a shadow under the
+arm, folds in the cape — and it is the default; Sekhmet on the beam and on
+the altar reads as a lit figure for the first time. The environment's
+strength came down from 0.6 to 0.5 and the ambient from 120 to 100, and the
+reveal's grade went to contrast 0.16, saturation 1.12.
+
+Two more things the frames showed, one at a time:
+
+- **The reveal stood on cream, and no figure looks lit against cream.**
+  Every summon in the genre happens against a dark sky with a shaft of
+  light. The reveal's ground is a DUSK now — deep indigo at the zenith, a
+  violet dusk, an ember horizon and ink at the corners (`backdrop` in
+  SummonRevealView; the rays and the glow are unchanged and read as light
+  now) — and the words on the right are cream and gold on it (the name's
+  gradient, the epithet and the Skip in `duskInk`). The interface stays
+  cream; a reveal is a stage, not a menu. If the owner wants the cream back
+  it is the five `dusk*` tokens and two `foregroundStyle`s.
+- **The awakened Ares's texture was olive.** Both of his cards are burnished
+  gold with ember runes; Meshy's texturing of the awakened concept came back
+  olive-khaki with magenta runes, and no light turns olive into gold. The
+  pipeline has a **texture grade** now: `character.GRADES` names sets of HSV
+  moves on hue bands (`gold`: the olive band pulled to 40°, saturation ×1.8,
+  value through a 0.6 gamma; the magenta band to 28°), applied to the base
+  colour and the emissive at shipping and never to a normal or a roughness
+  map; `mesh.py <asset> --grade gold`. The first take (×1.45, ×1.12) moved
+  18% of the atlas and changed nothing visible — the armour's own value sat
+  at 0.4 — hence the gamma. `ares_awakened` and `ares` (from `ares_hd`) are
+  re-shipped with it, base and LOD only, the clips untouched; the board
+  `ares_grade_board2` has before, after and the card. A family whose mesh
+  came back off its cards is a grade away now, not a re-texture (which is
+  credits and a week's expiry).

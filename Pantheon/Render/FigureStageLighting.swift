@@ -22,7 +22,7 @@ import SceneKit
 enum FigureStageLighting {
     /// The studio map's strength: enough to lift the shadow side and give
     /// gold a reflection, not enough to flatten the key.
-    static let environmentIntensity: CGFloat = 0.6
+    static let environmentIntensity: CGFloat = 0.5
 
     /// The rig's numbers, shared so the three stages light a figure the same.
     /// The Lambert ramp gives away the half-Lambert's free 30%, so the key is
@@ -31,7 +31,7 @@ enum FigureStageLighting {
     static let keyIntensity: CGFloat = 900
     static let fillIntensity: CGFloat = 240
     static let rimIntensity: CGFloat = 400
-    static let ambientIntensity: CGFloat = 120
+    static let ambientIntensity: CGFloat = 100
 
     /// `scene.lightingEnvironment` from the studio map, unless the lab asks
     /// for the bare rig.

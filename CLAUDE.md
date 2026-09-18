@@ -1560,6 +1560,26 @@ environment can and cannot do. The short version:
   "Player ID" (the tail of the CloudKit record name — how a support
   request finds the record). `AccountTests` (9). No email/password yet
   (option B in PLAN.md; `AccountProvider` is the door).
+- **The figure stages are lit properly (2026-09-18; PLAN.md *The figure
+  stages' light*).** The owner, of the reveal frames: "the renders all
+  fucked up." Three causes, none in the meshes: the shading ramp was a
+  half-Lambert over a 30% floor (`MaterialTuner.lightingModifier` is TRUE
+  Lambert now, `saturate((ndl + 0.15) / 1.15)`, the specular gated to the
+  lit side; the old ramp is `legacyLightingModifier` for the lab only); the
+  reveal, the altar and the collection's Stage had no environment and no
+  shadow (`FigureStageLighting`: one rig — key 900, fill 240, rim 400,
+  ambient 100 — the studio map `Stage/studio_ibl.png` from
+  `tools/studio_ibl.py` at 0.5, a deferred shadow from the key with ONLY
+  the figure casting via `restrictShadows(in:to:)`, called after the figure
+  is placed and again after the reveal's beam and shadow patch arrive,
+  because those quads would throw solid black shapes); and the reveal stood
+  on cream (a dusk now, `dusk*` in SummonRevealView, cream words). The
+  reveal step photographs the awakened Ares four ways every run (the rig,
+  `-tour-reveal-lab dark`, `-tour-reveal-lab bare`, `-tour-shading legacy`)
+  so a lighting change is judged against its control. And a mesh whose
+  texture came back off its cards is graded at shipping, not re-textured:
+  `mesh.py <asset> --grade gold` (`character.GRADES`; the Ares family was
+  olive with magenta runes against two gold cards).
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 
