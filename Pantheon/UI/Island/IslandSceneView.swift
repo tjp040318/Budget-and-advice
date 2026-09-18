@@ -301,7 +301,7 @@ struct IslandSceneView: UIViewRepresentable {
                 // that is already rendering, where an idle attached before
                 // the figure was in it never starts (the Hall of Ka's frozen
                 // Zeus, 2026-09-17): started again from inside the scene.
-                if live { node.restartIdle() }
+                if live { node.restartIdle() } else { node.play(node.restingIdle) }
                 let shadow = shadow()
                 figures.addChildNode(shadow)
                 figureNodes.append(node)
@@ -384,7 +384,8 @@ struct IslandSceneView: UIViewRepresentable {
             down.timingMode = .easeIn
             node.runAction(.sequence([up, down]), forKey: "hop")
             node.play(figureHasVictory[index] ? .victory : .attackBasic) { [weak node] in
-                node?.play(.idleCombat)
+                guard let node else { return }
+                node.play(node.restingIdle)
             }
         }
 
@@ -452,7 +453,7 @@ struct IslandSceneView: UIViewRepresentable {
                 DispatchQueue.main.async {
                     guard let self, self.walks[index]?.to == to else { return }
                     self.settleWalk(index, at: to)
-                    node.play(.idleCombat)
+                    node.play(node.restingIdle)
                 }
             }
             node.play(.walk)

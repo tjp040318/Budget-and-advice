@@ -1580,6 +1580,22 @@ environment can and cannot do. The short version:
   texture came back off its cards is graded at shipping, not re-textured:
   `mesh.py <asset> --grade gold` (`character.GRADES`; the Ares family was
   olive with magenta runes against two gold cards).
+- **Every family has a standing idle now, and the stages play it
+  (2026-09-18).** No family shipped a plain `idle` (0 of 116), so the
+  reveal, the altar, the collection's Stage and the island had always
+  played Meshy's *combat idle* preset — a crouched guard stance, knees bent
+  and spine folded — and on the Ares family it photographed as a hunch seen
+  from behind (the owner: "the screenshot is still fucked"). Skinning the
+  shipped base with its shipped clip offline (`scratchpad/base_plus_clip.py`,
+  joints matched by name as the game does) reproduced the frame exactly and
+  the raw Meshy clip has the same pose: the clip, not the pipeline.
+  `tools/stand_idle.py` derives `<name>_idle.usdz` from the combat idle for
+  every family (rotations slerped toward rest — spine 35%, legs 45%, arms
+  85% kept — the hips' dip halved, every frame re-grounded on the FOOT
+  JOINTS), `UnitNode.restingIdle` prefers it on the island and in
+  `restartIdle`, and the three stages already preferred `.idle`; the battle
+  keeps the crouch. `build_asset.sh` and `proportions.sh` derive it after
+  every ship — a re-shipped combat idle leaves a stale standing one.
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 

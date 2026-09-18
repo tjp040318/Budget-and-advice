@@ -38,7 +38,7 @@ for name in "${names[@]}"; do
   src=$(source_for "$name")
   [ -z "$src" ] && { echo "$name: no source; skipped"; continue; }
   echo "$(date -u +%T) $name <- $src"
-  if python3 tools/mesh.py "$src" --as "$name" --tris 16000 --lod 6000 --lod-texture 2048 --proportions serious > "$S/$name.log" 2>&1; then
+  if python3 tools/mesh.py "$src" --as "$name" --tris 16000 --lod 6000 --lod-texture 2048 --proportions serious > "$S/$name.log" 2>&1 && python3 tools/stand_idle.py "$name" >> "$S/$name.log" 2>&1; then
     touch "$S/$name.done"; done_n=$((done_n + 1)); grep -E "proportions:|every file verified" "$S/$name.log" | tail -2
   else
     echo "  FAILED: $(grep -E 'PROBLEM|Error|Traceback' "$S/$name.log" | head -2 | tr '\n' ' ')"

@@ -5548,3 +5548,36 @@ Two more things the frames showed, one at a time:
   `ares_grade_board2` has before, after and the card. A family whose mesh
   came back off its cards is a grade away now, not a re-texture (which is
   credits and a week's expiry).
+
+### The crouch: no family had a standing idle (2026-09-18, later still)
+
+The frames at 2× (`run183_figures_2x`) showed the awakened Ares's geometry
+folded — a seam through the torso, the shield stretched — where Sekhmet was
+whole. Skinning the shipped base with its shipped combat idle offline
+(`scratchpad/base_plus_clip.py`, the way the game does it, joints matched by
+name) reproduced it exactly, and the RAW Meshy clip has the same pose: not a
+pipeline fault, the clip. Meshy's *combat idle* preset is a crouched guard
+stance, knees bent and the spine folded forward, and on a wide armoured
+figure it photographs as a hunch seen from behind. And `ls` said the rest:
+**0 of 116 families ship a plain `idle`**, so every stage that shows a
+figure at rest — the reveal, the altar, the collection's Stage, the island —
+has always played the crouch; Zeus and Sekhmet only looked right because
+their meshy-7 combat idles happen to stand tall.
+
+`tools/stand_idle.py` derives `<name>_idle.usdz` from `<name>_idle_combat.usdz`
+for every family: each joint's animated rotation slerped toward its rest
+rotation (the spine chain and hips keep 35% of the crouch, the legs 45%,
+the arms 85% so the guard stays), the hips' dip below rest halved, and every
+frame re-grounded on the FOOT JOINTS so the feet stay where the combat idle's
+were — the clip carrier's 1,500-triangle mesh is no reference for a floor.
+The breathing survives because it is the clip's own deviation, scaled. The
+four test families on their base meshes (`standing_idles`): the awakened
+Ares upright with shield and sword out, the base Ares upright, Sekhmet and
+Zeus unchanged in all but the knees. 116 families, about 200 KB each; the
+stages already prefer `.idle`; the island's rest and `UnitNode.restartIdle`
+now prefer it too (`UnitNode.restingIdle`); the battle keeps the crouch,
+which is right there. `build_asset.sh` and `proportions.sh` derive it after
+every ship, because a re-shipped combat idle leaves a stale standing one.
+Against Meshy's own *idle* preset (3 credits × 116 = 348, above the floor):
+a derived idle is free, breathes like its source, and can be tuned in one
+table (`KEEP`).

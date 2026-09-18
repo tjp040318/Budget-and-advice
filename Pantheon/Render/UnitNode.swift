@@ -280,6 +280,16 @@ final class UnitNode: SCNNode {
         selectionRing.isHidden = true
     }
 
+    /// The clip a figure AT REST plays on a stage — the island, and a
+    /// figure restarted there: the family's standing `idle` when it ships
+    /// one (`tools/stand_idle.py` derives one from the combat idle for every
+    /// family, 2026-09-18), the combat idle otherwise. No family shipped a
+    /// plain idle before that day, so every stage played Meshy's crouched
+    /// guard stance; the battle keeps the crouch, which is right there.
+    var restingIdle: AnimationClip {
+        ModelLibrary.shared.animation(.idle, for: clipAsset) != nil ? .idle : .idleCombat
+    }
+
     /// Starts the idle again from nothing, for a figure built before it was
     /// in a live scene: an idle attached to a detached node and carried
     /// into a scene that is already rendering never starts (the Hall of
@@ -870,7 +880,7 @@ final class UnitNode: SCNNode {
         plate?.setDefeated(false)
         healthBarRoot.runAction(.fadeIn(duration: 0.3))
         setHealth(fraction: healthFraction, animated: false)
-        play(.idleCombat)
+        play(restingIdle)
     }
 
     /// World position for spawning a VFX or a damage number on this unit.
