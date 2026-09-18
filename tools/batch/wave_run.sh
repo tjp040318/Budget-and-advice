@@ -11,6 +11,9 @@ list=$1; floor=${2:-2000}; per=59; later=29; launched=0   # 59 since 2026-09-17:
 while IFS= read -r line; do
   [[ -z "$line" || "$line" == \#* ]] && continue
   asset=${line%%:*}
+  # ONLY="a_serious b_serious" launches those alone: a painter running beside this loop would otherwise
+  # hand it unjudged concepts (freya and the fox spirit went up unjudged on 2026-09-18).
+  if [ -n "$ONLY" ]; then case " $ONLY " in *" $asset "*) ;; *) continue;; esac; fi
   IFS=: read -r _ concept height _ <<< "$line"
   [ -s "Art/Models/$asset.meshy.json" ] && { echo "have $asset (manifest exists)"; continue; }
   [ -s "$concept" ] || { echo "no concept for $asset ($concept)"; continue; }

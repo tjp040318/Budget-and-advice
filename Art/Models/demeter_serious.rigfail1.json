@@ -50,12 +50,8 @@
       "finished_at": 1789755604826,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T18:20:08Z",
-      "downloaded": {
-        "usdz": "Art/Models/demeter_rigfail_image.usdz"
-      }
+      "polled": "2026-09-18T18:20:08Z"
     }
   },
-  "history": [],
-  "refreshed": "2026-09-18T18:28:04Z"
+  "history": []
 }

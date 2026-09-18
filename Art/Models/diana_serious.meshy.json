@@ -50,7 +50,10 @@
       "finished_at": 1789755604224,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T18:20:07Z"
+      "polled": "2026-09-18T18:20:07Z",
+      "downloaded": {
+        "usdz": "Art/Models/diana_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b5bf-4973-76d0-8cc5-91efedf6e839",
@@ -77,7 +80,10 @@
       "started_at": 1789755612997,
       "finished_at": 1789755662857,
       "name": "",
-      "polled": "2026-09-18T18:21:03Z"
+      "polled": "2026-09-18T18:21:03Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b5c0-2693-771c-bc55-3c1ec52b2731",
@@ -100,7 +106,10 @@
       "started_at": 1789755664386,
       "finished_at": 1789755676283,
       "name": "",
-      "polled": "2026-09-18T18:21:20Z"
+      "polled": "2026-09-18T18:21:20Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b5c0-2946-73c0-ab0b-552fa7854b93",
@@ -123,7 +132,10 @@
       "started_at": 1789755665100,
       "finished_at": 1789755683815,
       "name": "",
-      "polled": "2026-09-18T18:21:31Z"
+      "polled": "2026-09-18T18:21:31Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b5c0-2c0d-70b3-b58c-ef57ca4e7da3",
@@ -146,7 +158,10 @@
       "started_at": 1789755665752,
       "finished_at": 1789755681458,
       "name": "",
-      "polled": "2026-09-18T18:21:32Z"
+      "polled": "2026-09-18T18:21:32Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b5c0-2e99-75cc-92fc-8379e75681fd",
@@ -169,7 +184,10 @@
       "started_at": 1789755666383,
       "finished_at": 1789755678560,
       "name": "",
-      "polled": "2026-09-18T18:21:20Z"
+      "polled": "2026-09-18T18:21:20Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b5c0-3118-74c7-8daf-658baf436ff7",
@@ -192,7 +210,10 @@
       "started_at": 1789755667066,
       "finished_at": 1789755691742,
       "name": "",
-      "polled": "2026-09-18T18:21:32Z"
+      "polled": "2026-09-18T18:21:32Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b5c0-33be-7668-88bc-d328e6648568",
@@ -215,7 +236,10 @@
       "started_at": 1789755667673,
       "finished_at": 1789755692247,
       "name": "",
-      "polled": "2026-09-18T18:21:32Z"
+      "polled": "2026-09-18T18:21:32Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b5c0-3638-7625-bdde-853fc593c2aa",
@@ -238,7 +262,10 @@
       "started_at": 1789755668378,
       "finished_at": 1789755694546,
       "name": "",
-      "polled": "2026-09-18T18:21:44Z"
+      "polled": "2026-09-18T18:21:44Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b5c0-38df-70b2-b48a-82ca754b1246",
@@ -261,8 +288,12 @@
       "started_at": 1789755669168,
       "finished_at": 1789755686180,
       "name": "",
-      "polled": "2026-09-18T18:21:34Z"
+      "polled": "2026-09-18T18:21:34Z",
+      "downloaded": {
+        "glb": "Art/Models/diana_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T18:27:55Z"
 }

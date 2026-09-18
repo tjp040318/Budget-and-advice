@@ -5011,8 +5011,11 @@ Jade Court), then the awakened forms, then the bosses. Concepts are
 painted eight at a time (`serious_concepts.sh`) and looked at on a sheet
 (`serious_sheet.py`) before their meshes are launched — the proportions
 and the rigger's four faults are visible on the concept and cost 9 to
-re-roll, 39 after the mesh — then `AI_MODEL=meshy-7 wave_run.sh` launches
-what has a concept, `ship_wave.sh` ships what has finished through
+re-roll, 39 after the mesh — then `AI_MODEL=meshy-7 ONLY="a_serious b_serious" wave_run.sh` launches
+the judged ones by name — a launch without `ONLY` takes every concept on
+disk, and a painter running beside it hands it unjudged ones (the fox
+spirit and Freya went up that way on 2026-09-18, 18:25, while Dionysus
+was being launched alone) — `ship_wave.sh` ships what has finished through
 `build_asset.sh` (the hero budgets, the cape pass, the standing idle, a
 preview sheet), NEVER through the proportion pass. The CI frames and a
 roster board judge the shipped ones; the owner sees the sheets.
@@ -5056,6 +5059,15 @@ the asset from the new concept; retrying the rig on the same mesh is
 pointless (Neptune, twice, 2026-09-11). Sheet 3's eight, judged again
 with the rule: the centurion's vine-stick and the cyclops's club end at
 the knee, Anhur's line, and all eight were launched.
+
+The fourth refusal, an hour later, was Demeter — and her mesh, fetched
+and rendered, is Bastet's fault in a floor-length peplos: the feet nearly
+touching under the hem, with the wheat sheaf hanging beside the shin for
+good measure. The Cobra Priestess's ankle-length sheath rigged the same
+afternoon with her feet a shoulder-width apart, so the hem is not the
+fault, the stance is; Demeter's sentence has a knee-length peplos slit
+at the sides, the feet apart and everything held above the knee, and the
+second concept costs 9.
 
 ### The bespoke motions were gone at Meshy in three days, and are retargeted here now (2026-09-18, 18:40)
 
