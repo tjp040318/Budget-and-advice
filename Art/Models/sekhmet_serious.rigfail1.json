@@ -50,8 +50,12 @@
       "finished_at": 1789753196416,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T17:40:05Z"
+      "polled": "2026-09-18T17:40:05Z",
+      "downloaded": {
+        "usdz": "Art/Models/sekhmet_serious_image.usdz"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T17:59:54Z"
 }

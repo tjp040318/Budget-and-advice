@@ -50,7 +50,10 @@
       "finished_at": 1789753302843,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T17:41:49Z"
+      "polled": "2026-09-18T17:41:49Z",
+      "downloaded": {
+        "usdz": "Art/Models/aphrodite_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b59c-3b2f-77fa-ab11-1b4ba4b22eaf",
@@ -77,7 +80,10 @@
       "started_at": 1789753329867,
       "finished_at": 1789753378667,
       "name": "",
-      "polled": "2026-09-18T17:43:00Z"
+      "polled": "2026-09-18T17:43:00Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b59d-5029-7630-81e1-c6322a18a216",
@@ -100,7 +106,10 @@
       "started_at": 1789753381316,
       "finished_at": 1789753392752,
       "name": "",
-      "polled": "2026-09-18T17:43:17Z"
+      "polled": "2026-09-18T17:43:17Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b59d-5311-7713-b670-947dbc250c2c",
@@ -123,7 +132,10 @@
       "started_at": 1789753381893,
       "finished_at": 1789753395032,
       "name": "",
-      "polled": "2026-09-18T17:43:17Z"
+      "polled": "2026-09-18T17:43:17Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b59d-555d-769d-8958-cdf15e8323ae",
@@ -146,7 +158,10 @@
       "started_at": 1789753382456,
       "finished_at": 1789753396582,
       "name": "",
-      "polled": "2026-09-18T17:43:17Z"
+      "polled": "2026-09-18T17:43:17Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b59d-5784-71c6-b6df-8a7649056063",
@@ -169,7 +184,10 @@
       "started_at": 1789753383680,
       "finished_at": 1789753395591,
       "name": "",
-      "polled": "2026-09-18T17:43:17Z"
+      "polled": "2026-09-18T17:43:17Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b59d-5c47-7607-9f4f-20f235f3bd84",
@@ -192,7 +210,10 @@
       "started_at": 1789753384267,
       "finished_at": 1789753408743,
       "name": "",
-      "polled": "2026-09-18T17:43:38Z"
+      "polled": "2026-09-18T17:43:38Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b59d-5e96-7311-97d0-f3f10e774b7a",
@@ -215,7 +236,10 @@
       "started_at": 1789753384905,
       "finished_at": 1789753401893,
       "name": "",
-      "polled": "2026-09-18T17:43:28Z"
+      "polled": "2026-09-18T17:43:28Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b59d-6112-70f2-9fa8-f48f7592379d",
@@ -238,7 +262,10 @@
       "started_at": 1789753385556,
       "finished_at": 1789753412068,
       "name": "",
-      "polled": "2026-09-18T17:43:38Z"
+      "polled": "2026-09-18T17:43:38Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b59d-63a8-7252-ba9c-72d033f75bd7",
@@ -261,8 +288,12 @@
       "started_at": 1789753386190,
       "finished_at": 1789753403001,
       "name": "",
-      "polled": "2026-09-18T17:43:28Z"
+      "polled": "2026-09-18T17:43:28Z",
+      "downloaded": {
+        "glb": "Art/Models/aphrodite_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T17:56:48Z"
 }

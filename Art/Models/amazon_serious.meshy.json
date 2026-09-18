@@ -50,26 +50,250 @@
       "finished_at": 1789753880329,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T17:51:22Z"
+      "polled": "2026-09-18T17:51:22Z",
+      "downloaded": {
+        "usdz": "Art/Models/amazon_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
       "kind": "rig",
       "created": "2026-09-18T17:51:34Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "input_task_id": "01a0b5a2-1da6-767f-ad8f-8d3a02d5b309",
         "height_meters": 1.9
       },
       "cost": 10,
-      "progress": 1,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.rigged_character_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07/output/Character_output.fbx?Expires=1790013132&Signature=gBHeYQ5ZSTfU9t6hF2g8m~gnjKJ7Y5qrVTzITrcElPXBgb5vLESdjU8YIqAQcJy3KqohzkVFT-BHS1cb-oIjPxxhGbTF~amxjpt510d0Ne4ZCy8SrZNSE5hpY36uL-rf3YrM8oEQYbDdIDGCEwbBtJJmNzxuomXavgcYNNCS3LPFEf56qdsZd9vli9VXrYQuz8LA67U7reioWKmkK0mkIISlj3a7lnGv-SQFNr345i7bqnhEhCnXAiTLY06tHp~roylMw1w-vRPoTtsRYGIhybNizk9X1RwALt1keLRqq~ZuxeKzdLeLBsn7BLq4tg38tCECJsqXDxYdiyYJeBWm7Q__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.rigged_character_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07/output/Character_output.glb?Expires=1790013132&Signature=Wd9oXmJpDmiHbBHrK4BVGGz-zIxw1j3j-vG1vjRbVbT15oQaikHGp6Q36KB8luGFObK57uWgd5xrLvNEdn7JPBvnGjowa-y6ZR0dXPsbPpqf7J~gZVtyxoivG0mYa3mnj7TXq8rMYMHo7Eq6Hni~mhN6z4CxcN-FQY7XimmD4tBGUX9pSYzdjOhle1neK3MCDinpc6fLe75dfBIJSq9AT~4DSQ4cPjgEtpnOh13HKcf794he4h~Jwccqr9AgcdEyyAPU0r-thWGX2F5zsc62t3k2lb6ackT5VXQ~uGCwUMLLsHTiBVCb4tteFqnFwx15fb4TzvizcZEcE2fkqLskpw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.walking_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07/output/Animation_Walking_withSkin.glb?Expires=1790013132&Signature=JThB00IX3Lg2RTmalLehZn9wrr7Quand39vvlbitTZeq0dSamq9yVoAVK1XuAmV8jGYYyELX-k3FcInLE-v01DHuGAhEIJrU4iHnd7t3vIZVlm9vVLZI7BvbGJqB-ZaUlV9ogZRARJoKPmYGNfnHA2Ne8haivhHCoykgCzqJ6XMezGH6o9hXxrRoKvqtCGMd~4sv2h7sF4Xy8DnPBafsailY0HHxEMWFuL6pkM19HAg-1cbPQRo~1JrXD3cn~Wq-L2Vbol1Gn49GYu3QpbugaROqDRfCN7NPc7n24dPpqlkax492NfhMpLsKeS-KLr6H~I3dSAqGvWegHv7PHY7oXQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.walking_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07/output/Animation_Walking_withSkin.fbx?Expires=1790013132&Signature=lw4N6civ7GH-eX1Jy9mQIQmOtz-V39fV-gBvZodwpYsJnMH9HGUYqtwAwak2YH0jahjS0k-zxvnDsPiTEhWXYSmrjgNvZ2ft7Sf3GcAJEurg5rMjoz77pzZ8u2KA9NZUOrd1WgzIQk0Y6jUdizQTSKB~8bSmBrqIviNqWl8CPUVhElyEZUYboGiQ0kfDNzuW30CEy98Gm9lsLu2QMQ-JopVkIx6Tg48Yo2v9amwcu9qDR8l3VXB9Hxmrf2H6KEsI04yU3~2bExbn5U7r-iX5V3D8JPXMsuWQv-HYN8gmY8knu8eAQ6jme3QINqq7~SB~987L-5mcp6iDsTWIW3dubA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.walking_armature_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07/output/Animation_Walking_withSkin_armature.glb?Expires=1790013132&Signature=qDxKz7oB08BpRf3sJWx0PRcrjeVHKbqx3ByA37HGidcCMhovERCUZsJf5cfguq~v8nSSRUsGNlf82HGs1NJMwSKm-ayZ-zgOEdSpOIP4gx-tSlgo2GkJ6K6bFyxpDz24kZrK2rgC3~201kohBBl4WKY1KUpADbyAfVRA5JmNUlLsmLlNmIwEu8xubRwVsgZMvEFKDe5E1A-ewKeYd8~yICDMqFr9a6KtqZvWlmsECw5HfI9YtDIIBe7CJ9694LUihNhx5AwFiGi8-JHcKrCFCQ0CR~akdb4zbQv7wtAPBsoAHbw26lJgi5VhBvQ8PhT7yhhkCP781scrCdfTWUBxpA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.running_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07/output/Animation_Running_withSkin.glb?Expires=1790013132&Signature=kuYUFGgnlZKOSvWWCQTQeklxVgO4qDjQe0jH7Ysae3d8J-ebshONG~RzooQWAjavexvzFAS6nn4yI42UAanfACMFzlEhE5VOBMkmbQsArXcDw5Ovln8LhGqlNZrKC-ho1OvbC5a9wgWWZgU~vLHmwwiKV4eyD72IucjI65sB4bWJMqluQmgMqvo7eXwVN-TkVWifMUTx2XtKoMWQitzANI0xVSr4rBwJs-d3qnm29attkUeI-XDqaIj-HGHCepfyJAVOkXt8r1GA8wM0y0a8Y7yM3CItaxXtpea964KPDblmmiha76f6oK1ffvEpbFBfNNw1QpvRcy3hF0iNmM8p3Q__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.running_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07/output/Animation_Running_withSkin.fbx?Expires=1790013132&Signature=FaCP9tPWKecoi8rGD~o2KfUA5f~EPJT8T6DU5E2vbq7aCKqOAZWKXDUIS0e0SRSnEUOT3piK8tPaCDZD37omo-q2ZaayvnJMQqEz8BCH6EcGcth6cFoi2j5tx4sdqc3VgM7fvulM1s9WYyNWtOS~Km1zHIjeNIpjBIK0Nk7InBFszA0ozieJxVj9rC0kAZvLSUrY5~q5zExr0MM8bcCFi9l0KtJQS08cXwlD81SicXS5KY47MjBMrNW2lQ9lciif-VdtULIqyolriCeYFk1B-EW6Rz92s5Xo55OyXpEY~JUa3pmr5CWAbZF-~E0S-f417D7LeXUTpd8LYn9GUGSPFw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.running_armature_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07/output/Animation_Running_withSkin_armature.glb?Expires=1790013132&Signature=Lj-3q1ApUS2in8~4Ag2TXPOqvPGTXyupRHaYDtKWd8iGzkL4HiB70NFoO9nScJ15pFw~PTKrVwWoitxcz8vKvEy7mfRSy1bRPrYvd4Hj9zKPaDNUxBRzR0~oqD5uowL~lj8gtcGohd75-qOrVr6hVCr2dbik1~xI57Iz7PCdzkQyM2QCjx71jG-c-YGCMhQtEP-XqTJkhF0Z0itoNan5YP16tVwL3nWhnO3cdV~wOTX2BqzUtIjculLU0y3qb26H6TdhikQ8zsMMnOYjviqytIYMaP4gmqVWndQwnz77Y2OKxoTAFN6nazFfrVsH-fZ0~J0i2VDalUNW5z67Q-m9eg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1789753894439,
       "started_at": 1789753894448,
-      "finished_at": 0,
+      "finished_at": 1789753932812,
       "name": "",
-      "polled": "2026-09-18T17:51:34Z"
+      "polled": "2026-09-18T17:52:15Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious.glb"
+      }
+    },
+    "clip:idle_combat": {
+      "id": "01a0b5a5-c675-718e-a5fc-e276aa7eb9a7",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:16Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
+        "action_id": 89
+      },
+      "cost": 3,
+      "clip": "idle_combat",
+      "action_id": 89,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-c675-718e-a5fc-e276aa7eb9a7/output/Animation_Combat_Stance_withSkin.glb?Expires=1790013147&Signature=RjaGfXPxN2Bk-6drvuvmsEGAESyNAd7PdwkRLLbWejobn2JisWjeUzLGt0VIYrZbR~m41ANOVGIDK12EtZhxTEnAkbpJdKvDXBM~KKIiPD2~hDw5lDj7jawKp6SS1L7bh8RBNQ01vWzEPGXBPRSZT2I0AjEmGTRwSPs7DczK~EV4uubcfU4ntbKDJomddVbGNpEBHkMQjDDiufq4ZNi5k40Kk3dQ5BR0ktmvNEfQQFOBsgs6Qe7~KBbiklOM0glnfCMuj0NrG2uqn3jG-L-ZLmcxJFp2vxjFB6PjN-oEz-0IXrUUm5DaDf~zwWjQ4xDI-IASo3aNY8wMaptvHPWFOg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-c675-718e-a5fc-e276aa7eb9a7/output/Animation_Combat_Stance_withSkin.fbx?Expires=1790013147&Signature=KY6~MyOqMHYjKNWx80gs4cL7d7mm97GN6Pwe4RCloX2Y5BAMb7v~UgELc9P46cEX7rYx1koF-IYXJiLat70jO~8R-NdNoMlBpb~1kYo6-q9Xx36hYbzuKv4Aceo~ezW1kpDBSSa824o-bfPPIuMts2ypBJ2sowWuvjsYtAU7X5Rxxrp5zBasEQpq77yrr07z~LzEohQKDyyRPxWkJOkxQyKWdpRcZM0-rCny5kbXqcLfReMgUJpBBVEc-CIYX6LoD1qdpPjh1IrqXzesm9Bg99HwDs4FL51K70s7zrt--8epde0uyP6csFOAEP5Fr6PcTvbG55U-VR0AMpDg~8OW8A__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753935899,
+      "started_at": 1789753935908,
+      "finished_at": 1789753947198,
+      "name": "",
+      "polled": "2026-09-18T17:52:32Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious_idle_combat.glb"
+      }
+    },
+    "clip:attack_basic": {
+      "id": "01a0b5a5-c978-76dd-91e5-44da2f923414",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:16Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
+        "action_id": 219
+      },
+      "cost": 3,
+      "clip": "attack_basic",
+      "action_id": 219,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-c978-76dd-91e5-44da2f923414/output/Animation_Right_Hand_Sword_Slash_withSkin.glb?Expires=1790013147&Signature=mPlCZcMauZf4rcClq7DqDV-IX00nDQ3F6AeGSmiVK~V1cidrKMz9KPnwIWohl4-X7VOReAVpneTHLfGA34YYariei5ra87FRtupntN~mK1jIPfO8ymnQXtdN5S8Id8InVeGStL2jnOrfPhpjh-TO2MwPWM~nFPgImBb5cVb~-w8igEpQLXMprcm5DywP9d08T6qiyWM2vSvWsF~oSag7msi5u3~p0kW5bELyEhc-b9Wo0Bd1DXhrnfHYqXXtKk~H5Ymn4y9~bjGHbVuY2zv8rLSP6mPudMve4ZxF6AKPAnTJplPiiY0rFvc6TxDTLAhMqL7OCkBPYdVg4wFeoxgcSA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-c978-76dd-91e5-44da2f923414/output/Animation_Right_Hand_Sword_Slash_withSkin.fbx?Expires=1790013147&Signature=eCUDpTQdyXChhylENjkV2olw1cX2~Upm19r4P0cuDGOb3MWhD8kSkmjrumF95yonAMTPArNbp~-CK4E37I4bWZ3x3rINjFMbXytx8JhZYH~JY-o0Ag-0H3uzUcTf1E-pit5h3yb0K5g~-O8Yx9-rp9bz-IzZITf~oNFzaobqKSnuFAALvCY2B9hGDa1Fcg2Z6b5ZFr1iQThBcHU8L7izhz8hetpjEcjXyiEm9GfZMYJ5o9kls1fQ4J0QsbvAfk3qWeEL7nu~AmeilZNXCFFJZM8D9-TZS0Xb5Af4qLNyRtAgwp8zhnABOQLOFx-HMnV821PKZ~TGnNNjij5GiocGcw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753936585,
+      "started_at": 1789753936595,
+      "finished_at": 1789753947932,
+      "name": "",
+      "polled": "2026-09-18T17:52:31Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious_attack_basic.glb"
+      }
+    },
+    "clip:attack_heavy": {
+      "id": "01a0b5a5-cc20-718f-9b79-c271c37fefbb",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:17Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
+        "action_id": 242
+      },
+      "cost": 3,
+      "clip": "attack_heavy",
+      "action_id": 242,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-cc20-718f-9b79-c271c37fefbb/output/Animation_Charged_Slash_withSkin.glb?Expires=1790013150&Signature=KngMmz7M5RVJEqFRbjlNgWOrFhWeh5ldFLQKtxYq6Cx09FUXA5Ity5VTcuyaVK42FHPPkC7aSrmyeOUkKqFV-GzQYD2vl~9oTXI7cKH3AzgmTBNAwodiQaax-bLx52RFg03V37SDE4jmnep-g8RNLfjP1xfewxtXEMvoxaB3eRxQDNo9m0GRJoY5WYF5WzVECuMkGXNXG42UTCQBFJ8D3GyhyYdgHrHOiT6AG31tHVOXSQZ3Mj3hz1BTIf7zkF7rkxlsY96JvLrvRVEqIB9XOaKhYkul9eScegZb6epncT9aAd1Z2INuSyzwu16ilh-m5NKN8o197aRoZCMNVj2bnw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-cc20-718f-9b79-c271c37fefbb/output/Animation_Charged_Slash_withSkin.fbx?Expires=1790013150&Signature=Ki5elD68E8K2LqSCXYlNdGos3NuIAi3VJrBho599LkD5rUlV-hSiTNZAdZKHp33DqW7obMuY02R3Eok-stVWPhO4ea5X5paoJt-NptbrLKkxgrAbpCJlnZ28bCdJkuh7tiDEQS5bwqin986nZ-ECsHaZ-ixopTRHSDRuVepCD2GatD5mwLE889ftj1oz5oURCGJgbvz80GFsBeXxN0lshhmsVJz4J0l9NjXu3L2z5Rp5hKQ0cL18f5AV6c0ozWO0t4Nw20mmfcWATNQITc6Ac-6xP~J5x0vzWmVXkE4ump3eyOgscsPuya5u7coZ2-Dk0stO4l3tp6cqJN906kNHMw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753937229,
+      "started_at": 1789753937237,
+      "finished_at": 1789753950569,
+      "name": "",
+      "polled": "2026-09-18T17:52:31Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious_attack_heavy.glb"
+      }
+    },
+    "clip:hit_react": {
+      "id": "01a0b5a5-cea0-7158-b099-259b878731e6",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:17Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
+        "action_id": 178
+      },
+      "cost": 6,
+      "clip": "hit_react",
+      "action_id": 178,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-cea0-7158-b099-259b878731e6/output/Animation_Hit_Reaction_withSkin.glb?Expires=1790013149&Signature=JaUHrWEDuxeqftRTCTxeBZyi95BTKMR6BvMY3iXGrKwmyKnDrVx4Hhoe19vwHt3f-5kek19ko-D90pJjQ-3K3G1BWRIVTBVs3hvuyp3sYJ92dQhJWOFp6MvxHlHsD9wpvoLlCkzRspjarfi1tdpg99n0~xKRRCEknlj00ou-KYGytMrAIfhvSi9sBHAFXME6HTNDWvJ7C3s82PIUHENrxJH26aLekqjiRQ092gPG2GyWGooahU~zo9lbozvQ3gGfsOGwhiGrvJGS2-oL023OKvpc5OnSPbPCTxmGIT5jpWIeBX4PjBl3Q1kh9rYJe0q~v6GDAaXInEPoKHDRxre16g__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-cea0-7158-b099-259b878731e6/output/Animation_Hit_Reaction_withSkin.fbx?Expires=1790013149&Signature=AtnC6SP71wBxXtxp1ebohR-1SiFEMj27WaVdsVGM1MdN4MMYSqNCtgO8DZ9LzYDsFVA98gKDf9pAkOVX2o-4Q3HzGle2alwfrKUIa3T~L4BDPjDGccGIZNkj-OGiOdKB32N1Y38jyJfCVaW5H~u-Ey-of8fiH4lu3wT4Ye4-0HoDqIn9q3mYGzbU-moAzXaBZPabEccdvsfN64~7w1NhVHiUWdCDbxxrKiCUuVz2xPn1L-hGKHygbfbspAwsGeTS-1dTsdtfqp3ct0auH~dmV-Jlby9GLbi8oTIxT52j7DHl15ngdOf21ECTma6SioGzEl49c6y2YdFbqIvgd11BeQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753937861,
+      "started_at": 1789753937871,
+      "finished_at": 1789753949523,
+      "name": "",
+      "polled": "2026-09-18T17:52:32Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious_hit_react.glb"
+      }
+    },
+    "clip:death": {
+      "id": "01a0b5a5-d121-73f3-8745-d70d86aa9fcb",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:18Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
+        "action_id": 8
+      },
+      "cost": 6,
+      "clip": "death",
+      "action_id": 8,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-d121-73f3-8745-d70d86aa9fcb/output/Animation_Dead_withSkin.glb?Expires=1790013163&Signature=LsGZCFuU4DJx02mpAGLm9ktoFjnZiC5ptCSHNRn-N8smOml6df~g-b8944mG7ccdwcamtd1koB0IGHJTY~7nqEUnC8R6OOnwJejU4eMJdRWS8aFR7bR8FqZe872dQfWQ7A25QPAToBM6s7XAblO7LGcFNZd41uIcLIZEcSzVSZGNknBBWCzzKrKFncep1NWscKtYr42XgVUK-5YZD5E5CZKNQC1F-G8dXwmaSOVwH3Ajh9HMFASFv6QMGqu~yFIugH0rW-ZGcHSNstboOSgD-yUrI3LV3cOt6YLaj026yml6yltRZ~ORinvBWJSmyU8pwgULvxuuDd1eflPkCZCAlw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-d121-73f3-8745-d70d86aa9fcb/output/Animation_Dead_withSkin.fbx?Expires=1790013163&Signature=DYHOV66NbXfQO15xeyL8hT49l9sGeZf-AVGD~F6WkK0rm9MWaoybyYsYMLTcJFMjOd2nvqPYVtmlzATRlBuaMf~kUo067-Z-P35B9En1~zohIqh9~xqLUhYYDl1nw3Zaebc6ov~OchitBkgxEoDhIy6jszlDbxY-1A0WkbErCY7iY23S6WpIV2i9faKYj3R7tQi9Adok~IJUSmXUirPZsmV4QKivtlwGPC2d9brt1HKitxwzzAL1ZvjFDlBYGQYchLyeHBWk2japvrGJX8xOEwkJlHNkZrifhRlYhpvHX9GzIrbvoXxUy2NMvSoqS9v02E-b~oJo3sycyDUx-Oy4Mw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753938524,
+      "started_at": 1789753938534,
+      "finished_at": 1789753963137,
+      "name": "",
+      "polled": "2026-09-18T17:52:53Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious_death.glb"
+      }
+    },
+    "clip:ultimate": {
+      "id": "01a0b5a5-d3b7-70e5-8ef5-0cbba6f1a2ac",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:19Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
+        "action_id": 102
+      },
+      "cost": 6,
+      "clip": "ultimate",
+      "action_id": 102,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-d3b7-70e5-8ef5-0cbba6f1a2ac/output/Animation_Sword_Judgment_withSkin.glb?Expires=1790013158&Signature=Ndge~yncm1wbzGA0eBEeI2-SDe1wmN8mevgh0IKnbwMc3ugQUaXyJVThm1S3iludHBjOsMKprX666mOeBBQ6m872FRNDN8oZhXZQfD2rqYL38Txbv2n-vE054d4QJ9c7qjOZwJCYEnkgdM5xwKkox9qgMO0J0BiTEBBo5cNYJi28BZEd7qGAQ4C~I0s7lHXC1kMwYWNcYaSHuLqowEbBxA2Ah1okLoXDdjJG0HPt4Dv6p6kicpKJ-Ju4yLV5Bb7b8hVzw3ylSJZsSSqWmxAvPK~2n3ym~cE03iTy0GmBEx-r66HXXXSsu2VlsqUKHUZml5kfpmK1Lh6bzZSjUgjMXw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-d3b7-70e5-8ef5-0cbba6f1a2ac/output/Animation_Sword_Judgment_withSkin.fbx?Expires=1790013158&Signature=PBRIPyaTcDE~KsUevsBpKV5QkGCZlXEGL4x9B-QdOqOZ1HKoTzOny16BuxH2~4h5ibM3jwhWJ796BJZ28jgEabJsarluj5cx2M2Pb4hLU7c99Lb4QD9Xw~BFD~DplVF4631O1kzP2onMpK4eg5hg0D65Tp22P7kErqQxRJkJKdJtlrCpOUz1W9mDa~cnwO13V9~4O2~KXkrvCyPofqiIX-yo97KoyPJHcbX-yK7l0EC~cO6yWFjYbs9aFMRJE-uELamIOxpVfSqOnIqLSarA5NzH3BTBbndBJxHfd-HqdXKJukIN~KnPr6cF-tRJINac3iGgRT8pVUwHVj6qO~vZ8Q__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753939154,
+      "started_at": 1789753939167,
+      "finished_at": 1789753958155,
+      "name": "",
+      "polled": "2026-09-18T17:52:42Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious_ultimate.glb"
+      }
+    },
+    "clip:victory": {
+      "id": "01a0b5a5-d6a9-73a1-bd94-bd4668ae4ea4",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:20Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
+        "action_id": 412
+      },
+      "cost": 6,
+      "clip": "victory",
+      "action_id": 412,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-d6a9-73a1-bd94-bd4668ae4ea4/output/Animation_victory_withSkin.glb?Expires=1790013169&Signature=e1~4uy~72ddL77GIdxwNzIeKXgJ8k8DcUaYq5xsy5m~dGT1AjynhEZ4YP7j--N7RYuLDgyKmIFSLGfhJ6VoGMQ5OAGIbyoDPM2pFeU16rvkvOZ4173t5wtf--K9Wrj-ZcJd6DEGdnLdX5vJjchnro5J2DkqbihPH87iovWGGYrMNAjl-bqiZaHNhBkCQLNeAzc~4oUSiMewP2ho3hfS2TaHh5I-OeCLJOtY9W6SsrghKXzLYqbFOSK7bf1oaWN-eFeSgukbGfnnKhv52vwwZK19cgN8RmjDC03ShRM5VRtlnoypwpKeZ51qeMCrWLPOIU5EZrG5Vy6bdzlBlWpQslQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-d6a9-73a1-bd94-bd4668ae4ea4/output/Animation_victory_withSkin.fbx?Expires=1790013169&Signature=L7NtrJaNcI3LY0ZscnHCpc0MRepTAKO~pq0Zoew-sA5JaOPmW3K1pBF6TvhHptgRlWOa7ZhGqQ-k5W~NiZ2hJxgqASAXQSQspGst7VndPxxsbqk5FuoEr6jx~8~GomkK18gUY1GAeguIJyup-Zz3dwh~NNAvDGNHO~bnJXgdUcvVlPMVsRVfEsOvibRbAppyJ681fgmBrvXmRatuE8KQ8gTle~M0ebih6CFziT8upukIQS~RvkQdnNxgVZTuktRuUhYJ0dJKrR5rt2odOj95bzyi3Dpo8OliHSEv4QtoarUGabfe-FMWspXQSxJJO9AUlLXw5WPg~R9DKROg85HVTg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753939898,
+      "started_at": 1789753939907,
+      "finished_at": 1789753969476,
+      "name": "",
+      "polled": "2026-09-18T17:52:53Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious_victory.glb"
+      }
+    },
+    "clip:walk": {
+      "id": "01a0b5a5-d926-767f-8c64-43a86f4d1436",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:20Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f78c-71d9-a9e5-bc5287fe6e07",
+        "action_id": 30
+      },
+      "cost": 6,
+      "clip": "walk",
+      "action_id": 30,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-d926-767f-8c64-43a86f4d1436/output/Animation_Casual_Walk_withSkin.glb?Expires=1790013162&Signature=fOdNVVNA-DGsExEL075ezK3H5UYhd06ew7vFaB-Y2yOwkFH85IbcXV0GywVFM8AR8jvU8rTCHb6vQMpo8~tI6s9jzKh8Om~atowdEqIbQ~6jHWGthfTO2W4GVaM2o9bRkHqtT7JuGB~SuNP~KAza6V1gDXp4QTt2DQihEpamrIdX06PN-CyceV78kmcgVKrG8RaQ1yi8ouYmdbgA8Ad1ZqQsrz0yBcpyne-~LF-gMJLMHfZpmo59o3s1M6cFeWa6DkUUymNaopZKZJaEwyjo9k4oAi7vMF3Dj2fvfYrKnLdoke02pnWc2tWMzIXV0j10yvcfEuwx~hcIkBfOVISVcA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-d926-767f-8c64-43a86f4d1436/output/Animation_Casual_Walk_withSkin.fbx?Expires=1790013162&Signature=gcsQmNTSttukJa9lZn2mB0YxzJNMQsCyQ-ZEZqZUNGEjjRUac67dm6XRuU6zQXLmYmDX8G-rtY9fLTgGMzCFpBNwDxTM12YG~NtWYWPO9vHlf43gnQyzl2gZorh7GVjjvKikMRncVFo49qek8-n9fIbDwn18jFli0-cqvZOhTg960KgCRkqoGRpUBainhoLX710X~~BdLQ99pGKiMvLbpAaSXvBPZh-CLdq~mzC1wM7xbvaw2Z9GNVy-iT445l4Mp3gXapjY~-ictAqXU0CAWggagWnLity9lAR7HLfDyDucrIij6cAXC6Zxkqub~DLkdrwdHWaZ6HSjoiP4LTvfqg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753940552,
+      "started_at": 1789753940563,
+      "finished_at": 1789753962785,
+      "name": "",
+      "polled": "2026-09-18T17:52:42Z",
+      "downloaded": {
+        "glb": "Art/Models/amazon_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T17:54:21Z"
 }

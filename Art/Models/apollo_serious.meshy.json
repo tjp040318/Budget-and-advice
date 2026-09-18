@@ -50,7 +50,10 @@
       "finished_at": 1789753275811,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T17:41:20Z"
+      "polled": "2026-09-18T17:41:20Z",
+      "downloaded": {
+        "usdz": "Art/Models/apollo_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b59b-c7ef-7284-9305-ae51fb3cc0cd",
@@ -77,7 +80,10 @@
       "started_at": 1789753283585,
       "finished_at": 1789753330468,
       "name": "",
-      "polled": "2026-09-18T17:42:14Z"
+      "polled": "2026-09-18T17:42:14Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b59c-9ba8-7027-8ae0-4c0b2f8756cf",
@@ -100,7 +106,10 @@
       "started_at": 1789753335102,
       "finished_at": 1789753346833,
       "name": "",
-      "polled": "2026-09-18T17:42:31Z"
+      "polled": "2026-09-18T17:42:31Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b59c-9e98-763f-ab39-59824a2e26ae",
@@ -123,7 +132,10 @@
       "started_at": 1789753335794,
       "finished_at": 1789753348187,
       "name": "",
-      "polled": "2026-09-18T17:42:31Z"
+      "polled": "2026-09-18T17:42:31Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b59c-a14d-775b-9157-b74fcf273568",
@@ -146,7 +158,10 @@
       "started_at": 1789753336380,
       "finished_at": 1789753350129,
       "name": "",
-      "polled": "2026-09-18T17:42:31Z"
+      "polled": "2026-09-18T17:42:31Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b59c-a390-70ea-ae76-cb03f2614425",
@@ -169,7 +184,10 @@
       "started_at": 1789753337130,
       "finished_at": 1789753348061,
       "name": "",
-      "polled": "2026-09-18T17:42:31Z"
+      "polled": "2026-09-18T17:42:31Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b59c-a67e-7344-a66d-55a0d436c331",
@@ -192,7 +210,10 @@
       "started_at": 1789753337887,
       "finished_at": 1789753361945,
       "name": "",
-      "polled": "2026-09-18T17:42:42Z"
+      "polled": "2026-09-18T17:42:42Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b59c-a9ad-7036-bf9a-711be8d8c727",
@@ -215,7 +236,10 @@
       "started_at": 1789753338630,
       "finished_at": 1789753355939,
       "name": "",
-      "polled": "2026-09-18T17:42:42Z"
+      "polled": "2026-09-18T17:42:42Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b59c-ac58-71c0-84ed-cac929c973c3",
@@ -238,7 +262,10 @@
       "started_at": 1789753339224,
       "finished_at": 1789753366041,
       "name": "",
-      "polled": "2026-09-18T17:42:52Z"
+      "polled": "2026-09-18T17:42:52Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b59c-aec4-73ac-9db8-07b76e4129fd",
@@ -261,8 +288,12 @@
       "started_at": 1789753339891,
       "finished_at": 1789753356206,
       "name": "",
-      "polled": "2026-09-18T17:42:42Z"
+      "polled": "2026-09-18T17:42:42Z",
+      "downloaded": {
+        "glb": "Art/Models/apollo_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T17:58:03Z"
 }

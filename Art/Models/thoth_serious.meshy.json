@@ -50,7 +50,10 @@
       "finished_at": 1789753229759,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T17:40:36Z"
+      "polled": "2026-09-18T17:40:36Z",
+      "downloaded": {
+        "usdz": "Art/Models/thoth_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b59b-1db0-756d-ae1d-1792c1ebe106",
@@ -77,7 +80,10 @@
       "started_at": 1789753239978,
       "finished_at": 1789753280596,
       "name": "",
-      "polled": "2026-09-18T17:41:20Z"
+      "polled": "2026-09-18T17:41:20Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b59b-c98f-7431-ba38-55f91fce9507",
@@ -100,7 +106,10 @@
       "started_at": 1789753281315,
       "finished_at": 1789753292401,
       "name": "",
-      "polled": "2026-09-18T17:41:37Z"
+      "polled": "2026-09-18T17:41:37Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b59b-cc90-71b6-a93c-adc032bfb646",
@@ -123,7 +132,10 @@
       "started_at": 1789753282056,
       "finished_at": 1789753294824,
       "name": "",
-      "polled": "2026-09-18T17:41:37Z"
+      "polled": "2026-09-18T17:41:37Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b59b-cf54-7055-b4d6-5819ac476a36",
@@ -146,7 +158,10 @@
       "started_at": 1789753282657,
       "finished_at": 1789753296558,
       "name": "",
-      "polled": "2026-09-18T17:41:37Z"
+      "polled": "2026-09-18T17:41:37Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b59b-d1a7-750d-96b5-cc5d4a02ed35",
@@ -169,7 +184,10 @@
       "started_at": 1789753283280,
       "finished_at": 1789753295292,
       "name": "",
-      "polled": "2026-09-18T17:41:37Z"
+      "polled": "2026-09-18T17:41:37Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b59b-d41b-776c-be0b-8355293c2abf",
@@ -192,7 +210,10 @@
       "started_at": 1789753283900,
       "finished_at": 1789753307591,
       "name": "",
-      "polled": "2026-09-18T17:41:47Z"
+      "polled": "2026-09-18T17:41:47Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b59b-d67f-728c-94fb-df8e1a25ff83",
@@ -215,7 +236,10 @@
       "started_at": 1789753284530,
       "finished_at": 1789753300873,
       "name": "",
-      "polled": "2026-09-18T17:41:48Z"
+      "polled": "2026-09-18T17:41:48Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b59b-d8fb-7126-b689-e33fd2753fdf",
@@ -238,7 +262,10 @@
       "started_at": 1789753285215,
       "finished_at": 1789753310015,
       "name": "",
-      "polled": "2026-09-18T17:41:58Z"
+      "polled": "2026-09-18T17:41:58Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b59b-dbad-76db-aa31-89c4543cdcdd",
@@ -261,8 +288,78 @@
       "started_at": 1789753285846,
       "finished_at": 1789753302365,
       "name": "",
-      "polled": "2026-09-18T17:41:48Z"
+      "polled": "2026-09-18T17:41:48Z",
+      "downloaded": {
+        "glb": "Art/Models/thoth_serious_walk.glb"
+      }
+    },
+    "motion:attack_basic": {
+      "id": "01a0a4ee-8039-7199-93d4-ef826d2e7671",
+      "kind": "motion",
+      "created": "2026-09-15T11:58:09Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "A standing scholar's pose, the right hand sweeps across in front of the body as if writing in the air, then the arm thrusts forward with the palm open toward the target, and relaxes back to standing. In place.",
+        "duration": 2.0,
+        "mode": "prime"
+      },
+      "cost": 30,
+      "clip": "attack_basic",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ee-8039-7199-93d4-ef826d2e7671/output/clip.fbx?Expires=1789732717&Signature=TK2mi0p1p6VK592ItTg7g2X3E9G88llbpfffNsLYpyldrv-Mt7pp5wCllY4LAShhL3NlPKGUJvFQOAIJ2NwmJI~nOcfv~LmhWdT1VQEE6WQ43v4FXQ6PAGNnYZZ-Hgisf6AGYxa59gAizaKa~QCUNAvttaYfAYJklacpQBh-Y81Kcb4WwOnSHjVXRwqAtwI9WQPG6~MGSRAybkNgZ2Q2NYYysvEhvPMmv-HP1dBErL1ImpXOUXDxsAQuwjBX3TmqW~pkg26jT54lNbuLtTgg-FvkGhUL1Fj~9rYi-k769e~zo~Sbz4VXXYS1FITWgQKr4u8KJsgrw1UKBtYkITwObg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473489743,
+      "started_at": 1789473489746,
+      "finished_at": 1789473517683,
+      "name": "",
+      "polled": "2026-09-17T15:46:58Z"
+    },
+    "motion:attack_heavy": {
+      "id": "01a0a4ef-2ac2-762f-b8d3-cb223b02a921",
+      "kind": "motion",
+      "created": "2026-09-15T11:58:53Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "Both hands rise together in front of the chest as if opening a scroll, a slow gather with the head bowed, then both arms sweep outward and forward in a wide releasing gesture, and settle back to standing. In place.",
+        "duration": 2.5,
+        "mode": "prime"
+      },
+      "cost": 20,
+      "clip": "attack_heavy",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ef-2ac2-762f-b8d3-cb223b02a921/output/clip.fbx?Expires=1789732754&Signature=RypYptZlk5BOwSS5edKbaJeNx4C2OYnTLMneez1vy68RfORD6HM3GqykNXQTrwl~Bdto5jCxARrvSJD43cbPBlLirc84QRHmyWZ33pL~vvQSjINh8LpaCYKjFxIkFQ6jev6ztm2iK~qvBIyPzRulAQ5zhYIANsYduWWBUiUdRixgKA2yYKDrX4hr47weCapOuZh--w-eDORl3iLOLQzFrpSF7sakNyTI-jWHCvZ~fF5h7VhidlhbPInNcceyZjcf70~BuQvKKBkstasRcpg9AIPMIXOQnyOGGVsyuRHqUQIiSWKc6u~ALBPazooJq-khAN0B0-ynD9zOm37aF2Djkw__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473533340,
+      "started_at": 1789473533343,
+      "finished_at": 1789473554898,
+      "name": "",
+      "polled": "2026-09-17T15:47:31Z"
+    },
+    "motion:ultimate": {
+      "id": "01a0a4ef-d54c-74ff-b30f-90dfb9fe5e3b",
+      "kind": "motion",
+      "created": "2026-09-15T11:59:37Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "Both arms rise slowly overhead with the head tilted up as the hands draw a large circle in the air, a held moment, then both palms push forward and down with a firm step, and a slow settle back to standing. In place.",
+        "duration": 3.0,
+        "mode": "prime"
+      },
+      "cost": 23,
+      "clip": "ultimate",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ef-d54c-74ff-b30f-90dfb9fe5e3b/output/clip.fbx?Expires=1789732795&Signature=Y-erx8h66tpDsbaSV~NBwyGSIyGK6Y0LU4Y92j8E3lIjAjT6hBsqHHoQ21JKMGEz4YfL4bXeI9fCJLTjBtvr~EsozLLPNsqOyrRcNJ2d579HGC0W3DAMAeC-zOJ7WJRl2aI8UqxjCjIWxmZfVzkhLQK5y6hKGpnNg8yC3aQYAGMrhVzR6OxC2ec0zroNXmCCv6QeGs5AUlEjh6R-~7lt7cx4wF6EfTIPh1mFTVjlP6KxKiYFG3qg5XxyVqYFQ4cQWK-eHNQM5CQR4T7Df9dxztjHyvjoVOvaoguJ~UKvEKFrNFh34sme02mlpS5Xnohs-Mt4e-mf-cNWM5f2ON0qig__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473577427,
+      "started_at": 1789473577430,
+      "finished_at": 1789473595788,
+      "name": "",
+      "polled": "2026-09-17T15:47:43Z"
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T18:03:42Z"
 }

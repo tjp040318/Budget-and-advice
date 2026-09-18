@@ -1630,7 +1630,7 @@ environment can and cannot do. The short version:
   <family>` re-applies a god's bespoke motions to the new rig at 3 a clip
   while the motion tasks live (about a week). The serious Zeus shipped
   first for nothing (`Art/Models/tests` since the test). The cards stay
-  chibi busts until the owner decides (PLAN.md, *The serious roster*).
+  chibi busts until the owner decides (PLAN.md, *The serious roster*). **The rigger's two rules (18:10):** nothing held reaches the ground or below the knee, and the feet stand a shoulder-width apart — Artemis's bow on the floor, Sekhmet's khopesh swept out to the ankle and Bastet's feet together under a knee-length dress were refused ("Pose estimation failed", 90 credits unrigged); a refused attempt is kept as `.rigfail1` beside its family and the wave relaunches the asset from the repainted concept.
 - **The cape pass (2026-09-18, 03:00).** `character.reweight_cape` runs in
   `mesh.py` after the proportions (`--no-cape` skips it; `CAPE_EXCLUDE`
   names the winged and tailed families): a cape Meshy's auto-rig gave to

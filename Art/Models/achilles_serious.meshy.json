@@ -50,26 +50,250 @@
       "finished_at": 1789753878800,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T17:51:22Z"
+      "polled": "2026-09-18T17:51:22Z",
+      "downloaded": {
+        "usdz": "Art/Models/achilles_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
       "kind": "rig",
       "created": "2026-09-18T17:51:25Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "input_task_id": "01a0b5a1-cc8b-7436-abc6-4b9ea6bac002",
         "height_meters": 2.05
       },
       "cost": 5,
-      "progress": 31,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.rigged_character_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f6f6-7351-ba31-481325bae389/output/Character_output.fbx?Expires=1790013124&Signature=ZhN47n~fATweX08mLVYYoPbeEn8pGCw9ZkRkyMwLjres2Hpq98veG9690ysIWIixb2dDBVr-4XIgwQl9OmfTWOE0rx0Qy2Vnh2FHhCKB8lFrCi-800Ei8PthPCFCwipY-ymbJOPsLb6skvuIkfptc~FZIbBfphCZwNHtbcRoPvgAhiFUwGzEV-XWLdhvyFhniSpZxmpKgvcGbj7reVsVtVrUsg1yoVWTQocGptCdGdWSSPD03BB7UCHfDKd9BGSRzMObRssGn0XzOsheBOQRP0YKD0POMXJTz0r1O36lrXqwCufWZXSJeBYDeSHksZKwqmgKzS963BiSSMlec1pPhg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.rigged_character_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f6f6-7351-ba31-481325bae389/output/Character_output.glb?Expires=1790013124&Signature=l13EC~ye68-zzo3RLroX7plqeUjE-Bf~32Zg~AWW3-~gF~~qylYnJuNhjS7jUuGhlm8~5JIXU8ayjdcCX2RD~rmIQBP~XBSgzACXldB5ciCOC7NTN1uWnoQybRiKuQ0jdrIlFR-vLdByhVPzJVaTyX-WwCnQL4Cuj0wpOOWQJ3JDZB-cjNWLNLKQovAEWL90AIpJWQYe951oBrhFyEkGIBAFy-IE4yfKOhP8LakFdfz3VtV9bNDN5fvR~qJFiZXaYEpeQvwS0P7G570YpaDRlXa6QnyUAwSpjPaV1DXqlKvZfFu9h1GFwf6C26ip9DDkA0Fnr2GqreC-k9LLKypaTQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.walking_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f6f6-7351-ba31-481325bae389/output/Animation_Walking_withSkin.glb?Expires=1790013124&Signature=hlXmMWLGU4mbU67zWMA22D1cNSe~kC~AVfSqMI0dXFJkPCwjMkSS2md~ygWyADtLQXZHcZVXaXGt~lllp17HoGVpy8~GYCB0hrXfo-xDG5FAa1stOZLkA-Z7Km-kd5VchdHR6NcNenuK6qwunIibb7cupNJE4b85jKxvpore7ZSZcmDG3fkot-XR7UcRluaYUF2PiJAPl7i0q9vRdJm1TVXc09b1UsY~2eB5nUKCtHrdCwYyICnJ2SSfZ2-zEJFRdgRw2voAqe5fuy2B0JS7IFz2~nywq0MDED0PsKD2UG3dxogrRVktV9aLIBuff7Oy~EwXNRyIpyOlTTV68hESZQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.walking_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f6f6-7351-ba31-481325bae389/output/Animation_Walking_withSkin.fbx?Expires=1790013124&Signature=f7E4K1CSrT2hBf4sl-vzJTb40bf~F4kFUHNLbERrUCq1X1tO~9zuIu1rU5LsmvjqUTF-rl0vp1XD~Uidjozr6oCTh4nOslu6jfa7STeuhjW6Sdgrl9bydxSH2rHhzZS9Mi0j9ScjNGHunI8jByN-a-DIoToL-CFyKBUJaaLM5jWmxCTCRTVoMCeKgX0vZkUeD6hjSnQoq~loBSyBdg6fymB3dTJhz38~HjQq2~uf9kpvHThT0ZK~x2ULhKSgw5ROqKPvWWSh4PHFtxdgOfxIchKp4O6U6bY6zC7IPU-RJtWgdMNS9DqSXrO3K1UwF-XJaREwicaqAuvAmpY8h~hhyw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.walking_armature_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f6f6-7351-ba31-481325bae389/output/Animation_Walking_withSkin_armature.glb?Expires=1790013124&Signature=C1hokl1LEUI0b-WsJBpktuXY4zfepzXgUS-cXnPmLKVvDVKr9tjLY8dNN8AVrYCaSHmSIaGX4fyOrQsj6Mkmck1IeMCP3rPFDdZgAR6LQjSpBPrL84qw~gh96XLenJx9ovhUZ3F7NilebPOmjAglO9vC-e0cTOToU2~PaYefJnUkJ7KtGO9zJ3DxHWq2dDVS-Ytd2LBrdWrAnkViZ6UZbAICvvSCzjBAmDRmhEoyDSkrqaCaCOijPkMmvZsuQUDyMG7cy46xoalwQoSccYgLFhLewRiOaIdKMafJAe-jjA5nD~Bf0zVGa33E5r9RcxObetYUrw~6Y66SfRRcfbJ1jA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.running_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f6f6-7351-ba31-481325bae389/output/Animation_Running_withSkin.glb?Expires=1790013124&Signature=bCj4wzWdfKuL~T4hh2OL~YF3vk~Xt2yStid8q85ZBT8PqL2~Y-Nk3GbS-61YwWsBUAefsHLbrK7cpd8oAomn556A1JyJmcMljkWyoZlKz917OU5eSff~lCLvqC07s9-lF2~-z0C573ILAHAsv4~HqFd3QOsVEXkWSeMkoax2ASAarTSGNM~eMRlKAVTcZ0D9MsK82bMqTqikXZIZZ-M7dmWSD1t7KQ3vi1LeKdVq9liKcXbTOCQKf29naUPp3QM9DE8tQle6GpTu7-ha8eEeLjZ0GjkFG5SqZ5PPSXtZQq8RhP6ZX~90vfJY8Ovlql5C67WDY3amFxaEKLa85zq~Pw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.running_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f6f6-7351-ba31-481325bae389/output/Animation_Running_withSkin.fbx?Expires=1790013124&Signature=qfpFNEbH70v98ybO83vykkZa5P4esitCh2PfoFX8Hp8fT3S6K1BHOPJFNSTpwDFn2ztpJVZd-CHg9Z4IQXC5-8gfEN~TSn2Os~OaKh1KCCJwHfbacyghP9OTqlglhf5raD-wQqAB-LVcyNSlrylLkXkRpgakmIievobOdKnWtfnuG64Efr9D-LzdAD8ri5aTLYO1XEG-BwtX783A1p0rvmn5MVpMGob1Mhc6Gtqu4~DtC4vPKlaMpxojn38IIFkqieuMYk5WwWbUG~Lb32BommMep1f9SYSsTFbq0B6xXF1f8QZ6d693T1lvlBvBocf7DqAd4~H3oW7Kdww6meq2AQ__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.basic_animations.running_armature_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a4-f6f6-7351-ba31-481325bae389/output/Animation_Running_withSkin_armature.glb?Expires=1790013124&Signature=ZarKLFTG9iUzmD3THly1S0H~plgPzR8-mKERsX6GEPijgJ81JzUnv2x7RKSYhECBE-gX9bwoQcIEi0hk0VANERvN6bo~jbR73mX0XHFG6XLjg-1gel7W0F9zIHRYZb7f97MU5KzHEpzunyagICdVmZHsM~NNZVAnUCoeqAbnATyXMFcK6zhK2ppjImrENvfKIy3iLAOztBcGStJ54qNP1xPss-NlUT1rJpbPcs1NwR4v2AmGiq3KeG8GDHe0WTOYEc7Rs1xo-bYp-lMPeNb9-M1Li3dXHpZ6TfKEnhB-QT3gRQVbKaFWHl54uVOyjrLRzddwzSzUZEFdmBczF~qFpg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1789753885372,
       "started_at": 1789753885381,
-      "finished_at": 0,
+      "finished_at": 1789753924283,
       "name": "",
-      "polled": "2026-09-18T17:51:35Z"
+      "polled": "2026-09-18T17:52:06Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious.glb"
+      }
+    },
+    "clip:idle_combat": {
+      "id": "01a0b5a5-a35f-706c-b1ad-cdb1d2d1b795",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:06Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
+        "action_id": 89
+      },
+      "cost": 3,
+      "clip": "idle_combat",
+      "action_id": 89,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-a35f-706c-b1ad-cdb1d2d1b795/output/Animation_Combat_Stance_withSkin.glb?Expires=1790013138&Signature=KPTKQMis~MeOGPwIDybTBpCY3w1okjKLXb4jYOBXSaaSOtJHzWy7gLnzVuaXYREFncrN7X4bnp1VDTiPXO4i3r-KxvDjFJR9nLjK6wiTdKjC9g~2nXZFM5qc8t-FR6FOQDj3V7F~V0H9NC7dLPXHgNjx0FXkxnnSbu88ypYzaAMOC3eovzEM7RYzcD5BYxBUm~w8jaC7QEgyYXAkc089~3HHbaE7SLxA1QjQUQ942MiFrsP7-pGi74U7yh2~uNfCjGEznvVeYYNE8nr5kZHulIcQ8rMKjwQEtZxgxg50rD2HmoBl2plPYQ75suspXaoBX8TJ1~PasJRimaUGAGLUUg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-a35f-706c-b1ad-cdb1d2d1b795/output/Animation_Combat_Stance_withSkin.fbx?Expires=1790013138&Signature=Zve43LLwqgUbic7zQk-f673xFycGq4BKyfaklZFJ0KLY1LH3WGGXrDA2IChrAhkiwwaN8~~AjtRw0aizv0bdzSzwBYnN40PjFZAPS2ulvR81v1ks2CU9SQbJwpiYl82Ep8lX-EmbJfUnOOmbStj6a1IDistmijFTjvKs638xoFIP1nXH6UNX7VwQxaYuKZU4U1WmTi2tQ7zQsif2Jw2ks00YG4jend11g3ggSD7YMFOlVHGzQtkBB9FsfVyRfXagj63g14z5kvYBqdVNobs0kEZkwe15qllsGHDCN5aAHmn3coRcjAIcNkcebqI09Qx7GH6yiBCbXYE2ZWDKHFvjYA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753926859,
+      "started_at": 1789753926867,
+      "finished_at": 1789753938756,
+      "name": "",
+      "polled": "2026-09-18T17:52:23Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious_idle_combat.glb"
+      }
+    },
+    "clip:attack_basic": {
+      "id": "01a0b5a5-a627-7286-8149-0d19ff6b2fdd",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:07Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
+        "action_id": 240
+      },
+      "cost": 3,
+      "clip": "attack_basic",
+      "action_id": 240,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-a627-7286-8149-0d19ff6b2fdd/output/Animation_Thrust_Slash_withSkin.glb?Expires=1790013142&Signature=HsTknnRtDC5v~~TWyQrNbumuTHdv3dHd4-4xCSU5wNeIiTfv04BWIHjeyp4-A-JoSUUkC7CxQixYH-ltK6B0LcA8rKQ~m9qEpVk8FlPuJHdSwTIscZpN5nZ5X8e9rt1h7J5ljUMgW1KoKOq4QbrNEFO1ou-KIpN6jHQ0xl76TQHVSrsDjWK44hKed5DedpuQSYk8~6nH~ypX4Z3XLYravgv2~XId4894la6NfHC253I1anjiy-q0zZUCEGcQpNwulYsBjtlvWRGG6oGV4R0RHceDa0TFQRt2S1hphlisQYfmUrxEkiMHTHtqKBm5tOHSqV11T7J9GT6t~fz6jRmolw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-a627-7286-8149-0d19ff6b2fdd/output/Animation_Thrust_Slash_withSkin.fbx?Expires=1790013142&Signature=YBbwrgFvLBsEu5o9T54j2lqAY~a-BVqrRdwaHuesOvHHXt4b92xFgYO1hozbzbBsHlISw9WVR~SqzcrIz3ZTcWH9U55NAIIqz6XetJRYmXHvGYst3ih8emJ8ZxpreKruyRK62exGv4Uq6ZPIQplQi3IUIBoZAkmoYZ0-HzI8UeXaerH5dI1W2fGvhPQDcg9LSqVgWX~sNw97efFl-5kwMwZvkp2qYe3NTA2mezQcxPi5aepNiAH8-HhB1K-uAl3P1LHJkUM71u6TA7o-3HYu70wtU4Huj1e4JTC1QlPSHAzRqsUIncpeB3YrZjSBp~VPXojdlBdr8ukaC59HKj1Ucg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753927609,
+      "started_at": 1789753927617,
+      "finished_at": 1789753942555,
+      "name": "",
+      "polled": "2026-09-18T17:52:33Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious_attack_basic.glb"
+      }
+    },
+    "clip:attack_heavy": {
+      "id": "01a0b5a5-a90f-7280-a2ab-0b6e2bb3bca2",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:08Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
+        "action_id": 242
+      },
+      "cost": 3,
+      "clip": "attack_heavy",
+      "action_id": 242,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-a90f-7280-a2ab-0b6e2bb3bca2/output/Animation_Charged_Slash_withSkin.glb?Expires=1790013141&Signature=N1XzugfdHVhiJpZ-IjUokZ2mHkHSOJjqNoYqkJNFP4oNb7jzCFYkx-7AAzP0iCsbypcpml3b1aJhP~hy1joJftVy86Spt3Ia7vYV7V0gQN6MdbTnmDKCoYXdeCUuXSVABcAXK2UosXGUfijGEra7vBCbUsIAmjqA-HEOFHJaqDrbxsP6TCkw5bZ1u0--a0Ok-qm89TIP-9RKHpwy4cwYmEdXekVEJ-YBKM-OGj7mIUGvcGvOA2Rtn5pNFY-7coICxytzxmBvwMzzhduFVFethsA9WhyxRi7yXjz2ODqZCg~7qJyEbZ8SYD8v41K7xd5H~yNQf~3XY1ntUw3-Ud4JHw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-a90f-7280-a2ab-0b6e2bb3bca2/output/Animation_Charged_Slash_withSkin.fbx?Expires=1790013141&Signature=gT3fPJbNszo9XHgaN8W4jkif4S~HS7Ql5ZfcVv4QV78daYlNgWVjoDcd8ATSafSTvwqJo3DTSeMMOpybwaY6eoliG83cJTHixDFW1IOEu2SFXrLoAlopioGQh-fIrs0wD~Npn4VPqLDH2bQ-gr9BIZfF6m8XAkOJJqtVD4ASUdFwFQMXpb~VEDhoSB5poXBAwUV2kDyr68nOpTPh8xeO1OCkCDmcrlMoFnrhMywFQoukyXjLUZpt-Ma-DBB07DzEymz6tuK~rR8wFsjmO-~xn8EoADzgtahCls8Qr6lq66-rBuuuvVU0eqZrKuzRwXUCLewOtRDnUJEKkl5LksAmYA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753928279,
+      "started_at": 1789753928290,
+      "finished_at": 1789753941543,
+      "name": "",
+      "polled": "2026-09-18T17:52:22Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious_attack_heavy.glb"
+      }
+    },
+    "clip:hit_react": {
+      "id": "01a0b5a5-abb1-74de-8214-57ce0da823a7",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:09Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
+        "action_id": 178
+      },
+      "cost": 3,
+      "clip": "hit_react",
+      "action_id": 178,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-abb1-74de-8214-57ce0da823a7/output/Animation_Hit_Reaction_withSkin.glb?Expires=1790013140&Signature=DK-~~36hTHy-TCUP0rD8UuYQ-WVPwSiIWj7FkwlKntPnzL~-Nb9ANZDpn2tAoEOWa86WeEZvtjIcb60Ej7vW9JbKQZHASixQcAdPCeJIGD3PrgBRiFvsPIZFkp7CFk-tob4pFlwoV1juFD9VcEB5zn~ESr0mtMTaHLr2HmsdW9E56UaV~OUt81CkN7q6-j95iIPIb3etTOu~MxIgMw3qjBlgXINn2aJTAtQxps4P2MToCLOTuVovsn6Y0LkXVqQqhPCMe4GD-cwNfQKZDVsutSXD7PdD5b4qvakXkFk7Fx9bIKerNjoUxvGWed3sbmUrBeg6Qoe-VWDk-jihHoWxJw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-abb1-74de-8214-57ce0da823a7/output/Animation_Hit_Reaction_withSkin.fbx?Expires=1790013140&Signature=mkSuePY-8E~2-Sf0MmdwHoBVeVbucvCySe0bN~RENydQfHD4VbPlsj0AIQ6CQNOPvEB11OI0sDdOn~0YK2Ivnkj2eCTR-2MhYmWVfTU02RTxapmwFdzXx8-3Eq5mF5c0f81~snz2gT4Zg9nqObLz6tdTMJUhqEHYl3rPm-AMZcLlzU6bTVWY3~UwJaGYsG6xUSnhY9Yj38JsFtL~j19T7RpHyMwcedF3GD~SQxeAQ0KSq8ekClgtpERHVffTpVSUP1I-bLFFjSkkpn5aBLlPXuqq0AQyWc0z1xf8j9NSiUF5SA2R4QuvX2DE3qnrMVYjq3p~8RXh4AXyBdCPO7K3qg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753928927,
+      "started_at": 1789753928936,
+      "finished_at": 1789753940527,
+      "name": "",
+      "polled": "2026-09-18T17:52:22Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious_hit_react.glb"
+      }
+    },
+    "clip:death": {
+      "id": "01a0b5a5-ae44-7515-b020-9346521d240c",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:09Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
+        "action_id": 8
+      },
+      "cost": 3,
+      "clip": "death",
+      "action_id": 8,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-ae44-7515-b020-9346521d240c/output/Animation_Dead_withSkin.glb?Expires=1790013153&Signature=JqJCOGS6Oha8ilEW4HvuH~DqNv9iRKpaAHXXDru6EazRCN8OGpN89wCtWx123vtQVjywEs2bwcXJ~CH5-k-ImpF-6zOMy~wYzmUqRlzjUICY8PiYW7FOff401SdNpwiMhHCPwOPaqt07QTtRfnMA4CXXwxVeks1-x2gaw5B1boAtzKVR3bmAYvVUwnzsPfSFHK78h-T~I88Psv6sBHouq68nQKpEeWklWDXfM1ugJj53f5YEj7j6HAWwrQ~VAlDweo-0qpfq4yYI~Iika8bqK5N~TL4b1jcCSu-4WWFhLc75Dq3UzcBezdAt5SzIBoi0Ybr9iRJXc8RBU8k-laN5DA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-ae44-7515-b020-9346521d240c/output/Animation_Dead_withSkin.fbx?Expires=1790013153&Signature=bjYe-lpYmOb8zZTt8vDeFW8nTDfeO3GBHokS1KsXYnakyizMGkgloo90zu1~tflYr9Hp~oc67ZXPMJR7cqzX1U8NaSm3NwfK0dF4rDC~I6edADQx5trcQetaKZUBlnEw-6V~h9dtsOQ7akNfdZHyMziTyJmyKcmjfOEralMYeuooZ0PlTCi7jAJEcbGATKZKzcfEUQk9UaL09q2p0Bey1TAbOGxw8Ilr67q1s2a1vhiA1Ehh2YZ4fwvPiJ1L90vV~FdJpGiloke9uTwht0~yY3x2wcOmX8xnELs0BxR7N3vcCgjpLy~tU8F~0XKEZ8LGjiSWO7Q5DrXq83AVk7vsbQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753929583,
+      "started_at": 1789753929592,
+      "finished_at": 1789753953834,
+      "name": "",
+      "polled": "2026-09-18T17:52:44Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious_death.glb"
+      }
+    },
+    "clip:ultimate": {
+      "id": "01a0b5a5-b0cb-76df-a87c-4232fa62070a",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:10Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
+        "action_id": 102
+      },
+      "cost": 3,
+      "clip": "ultimate",
+      "action_id": 102,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-b0cb-76df-a87c-4232fa62070a/output/Animation_Sword_Judgment_withSkin.glb?Expires=1790013147&Signature=OBcBRgVpNnLPGwqtLatY0htoVSC07QLD75IGuYCkz5wLEfEAZHz7Bja0mVl9xeP-7ZEHcmG78ZjiwKciHZanpqsIKrg0lX4ja3U6VYrcsZgY3Y1p-iu4r4mbzI1uP75-XKmAtJbGgdN~6XZuwQayh4bIDzdYjYubu0PXXJH2-HHQZwyTh7qvhWNMHjnGEpb5Ifq1DQv4L2YD8DZHd2nZO7op0vwiy-5dDBiDuAviav1nFfSZ80069mQKY19z3rnxLAMR297UdUGkM0a9zcesubcdEhfWGR1hUKVE3I2LFa2NLicZTSa2653w41vrxXCnZU5KYq58LF4fgo8fINi6TA__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-b0cb-76df-a87c-4232fa62070a/output/Animation_Sword_Judgment_withSkin.fbx?Expires=1790013147&Signature=NyPq~ttXXi4Yz4QeSymfahu1cHt0-uQi63hqcgUmpQbY8pN4o42trApARATx1EfH-hSeQAW62~DBIGqYVK2L3lxw9OVkTW34mpfBIo8LV11cB4uz9-~cTDDcvFQ4b2SzBlFt2g3iIEUYV2lAsDiSd3AkSNOyvPSSS61rkkU0T6BkuigoXdZG9wny1IDonvDulkX5oK2P16ruhFLAhJMHJFVpN2qKCT0LdqAN3znfFk4zZCU6RJW~j8~gboj3iXKBl8EcZSOQfGdOCgHbcwtl~ZM21bPcm-vXx-UQUvSKhvoNal-Rl8ge93TYAF6z~Qb7~46yCU3TqeJ8gWlk6dShxQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753930213,
+      "started_at": 1789753930220,
+      "finished_at": 1789753947501,
+      "name": "",
+      "polled": "2026-09-18T17:52:33Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious_ultimate.glb"
+      }
+    },
+    "clip:victory": {
+      "id": "01a0b5a5-b33f-731b-8bd8-582832da8850",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:10Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
+        "action_id": 412
+      },
+      "cost": 3,
+      "clip": "victory",
+      "action_id": 412,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-b33f-731b-8bd8-582832da8850/output/Animation_victory_withSkin.glb?Expires=1790013157&Signature=EK92XHHZcg~DCOHxQa6Gs8rq45rQUkcPse-n~4MPFbdPeCCdnblIaZMBq66Zkg9UH1YJLmMNalzNNEns87SVKlOPkiaP6O5qXIRe99cXtIcTcHxaX6jQcVlpzYrhP3uosSzRFp9Pha6ZvCcxE65BcKMvGvGyubdR7wzm2rQm-oqTpO8mr0z3GSgBNrAMhKw6cxqH8VhwuseEGP7Rx~VMR97853-TsEa0aacITROP58YoULU-A24nYsBuMBqcbCWgSERLn-HUt9yv4tnh4wOeBeAbPERhpVbFJpxCkOD9k2xeV7WsPZUAyLQk-wJif4jCUuEU7U5PX2oTZ-UMirHPhg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-b33f-731b-8bd8-582832da8850/output/Animation_victory_withSkin.fbx?Expires=1790013157&Signature=ikYAWLXBmG6S3mQtE~-1OobeM2~BSmUqwFCh5g7tote0~dg0ZIMw40YLkhhJohvYbfd8SpjlXz7JffkYk~nn6UX1ej8BPyXo0kDnGFTK0LnKGvMv5J7afnjboaUFwgS8stmSkx3z7qZURsY7O1XTAMP1qUU9uUWYyAijscHvvIGIaJy3sZSKNl7yTOV-6BhWDklKeW8NV~pqxYjiKigynrQvXtg8AsbKP2r8F8aWsYURNj2RzT7AsErdjyxrCBoQK2A1qtWLqUXxvox0fs5NqyPWxgO7BfrWUZo5QE-jmbOk4L9VNyOvX9~6teNGoV-iZT6FSzuUXiyZlDNPK1JxvA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753930829,
+      "started_at": 1789753930838,
+      "finished_at": 1789753957064,
+      "name": "",
+      "polled": "2026-09-18T17:52:44Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious_victory.glb"
+      }
+    },
+    "clip:walk": {
+      "id": "01a0b5a5-b5c2-76e8-820b-7dd3db779eeb",
+      "kind": "clip",
+      "created": "2026-09-18T17:52:11Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b5a4-f6f6-7351-ba31-481325bae389",
+        "action_id": 30
+      },
+      "cost": 3,
+      "clip": "walk",
+      "action_id": 30,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-b5c2-76e8-820b-7dd3db779eeb/output/Animation_Casual_Walk_withSkin.glb?Expires=1790013148&Signature=ZxdY-01DUwVfeMgG7sfJ1vi20cXEBZhY1PtsNu~tyTVzu~z~SE4PqMTS4vnegxpBovTeC~mUMTdtaWR7EgcsYk40sMhs2bwKm~g~NYkFUUE3Rxz9PLiQrNgzJWZYNsWAEqSL3o5EGvT1f1XHS9bMWRXBMadynIv25sVgR7Va9Oiu9MLwn-gSKKVwuLlYGmpd96719ni6ZwrwM0O14LsumEj~KXHGf8WFsRdT1lDY~iL8YEevYddI18qa~P5642blJJN9sXo632Yo~kkVZUmGGBJUwzBYD6m1HtbTjtn3Y3fGUJuW85nBi3m-EDQHRKM9axVp4jvHwGJnYGjQQtg-Sw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b5a5-b5c2-76e8-820b-7dd3db779eeb/output/Animation_Casual_Walk_withSkin.fbx?Expires=1790013148&Signature=hQ1J3nWHJrpKlOSe4u1QVACp5X5tp0ql03ywvPZLayZT6HrfJD2P2C6t-TEnCzBowUXI8SdYgCPFPU1cWYH-E94ep~qwkEgmsRW8PyU9Nq197D-ywmf2vNTWgIHcHyznI6ybXd~WppO3PhDU4aXQRZBniCpmL~pc8rCKigwJGn0hyFtG0A2wFt5pGgUK-xfacKOrv977fTXouc~knZqxeLVA6k0e1EqrwBTPM9WDocRNvMFVq7LSi1yCEyi-Rcm2q14ovoUZbOIvQKEUiEeeoTcG2e8Y3LOVKvndNEz5V5IK1i0A3ula6R7OOeZK6jAoahbVB24WyIyKKAZLlYrgwA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789753931406,
+      "started_at": 1789753931412,
+      "finished_at": 1789753948671,
+      "name": "",
+      "polled": "2026-09-18T17:52:33Z",
+      "downloaded": {
+        "glb": "Art/Models/achilles_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T17:53:10Z"
 }

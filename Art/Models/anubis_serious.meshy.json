@@ -292,8 +292,74 @@
       "downloaded": {
         "glb": "Art/Models/anubis_serious_walk.glb"
       }
+    },
+    "motion:attack_basic": {
+      "id": "01a0a4ee-8039-719b-843c-05cabc71fc3b",
+      "kind": "motion",
+      "created": "2026-09-15T11:58:09Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "Fighting stance, then a fast lunging right-hand clawed strike swiping across the target at chest height, the left arm back for balance, and a snap back to the fighting stance. In place.",
+        "duration": 2.0,
+        "mode": "prime"
+      },
+      "cost": 30,
+      "clip": "attack_basic",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ee-8039-719b-843c-05cabc71fc3b/output/clip.fbx?Expires=1789732705&Signature=Ll-Qsi9L7--oprcfT~CM4yYYYySzuHANmoZ~GBCzbCKDPdqmwGpDjUpCIMO-sFL9oInXRJR~8IH3YPm6Sva~xsITXOZBmxx96JoZltQO0~9uqffG~zbl5ukuz7kZMo5~vm2fyB-3gz-Uim13ln~Bxp~3~aAqNtIzKgyvsdoBICJ0DUKjn-MTqAmru5I8qkyiGiHofuqvV-681h~8kZDGhWJZ0nNdMRJ4CQGyb8YSDKFp0JUMpy3DkqWpEswg9zGEywSMi8AZh4RQezrNzeC4zaM2HMZwxy9YOl4yhE-TzhNETg87M0UB1tGKSz-iTkqj3-J9BJVHnjbX78mCTXRQxA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473489669,
+      "started_at": 1789473489673,
+      "finished_at": 1789473505012,
+      "name": "",
+      "polled": "2026-09-17T15:46:58Z"
+    },
+    "motion:attack_heavy": {
+      "id": "01a0a4ef-033e-71f4-b169-7d090061d993",
+      "kind": "motion",
+      "created": "2026-09-15T11:58:43Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "From a fighting stance, a crouch, then a leap upward with both fists raised and a heavy two-fisted overhead slam down onto the ground in front, landing hard on one knee, then rising back to the fighting stance. In place.",
+        "duration": 2.5,
+        "mode": "prime"
+      },
+      "cost": 20,
+      "clip": "attack_heavy",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ef-033e-71f4-b169-7d090061d993/output/clip.fbx?Expires=1789732740&Signature=e1uAwUJX~beWQ8svC8ecKakVyC-JW~wlqEZD3SbQYY-BFPMow9uSLKkclV~ikz9cp9wRi~HJuxD2wmAUHixU~tawb90Y645Q~QIJq~71gE8PY82A~eTfqk5wmm3R8ZHOByaL4P9-ymtEH2DKDq7~PkiGCspveFbPVrxEFxYwggQ4D6GzS1m4T5G-qOLnYB-55otwsmwnNf3~hoy2JamZ0s4sPHSKu8Ev3JThSiDFGU8Cg669OfjiA3OQPA0tkqLEu6~zR4aPCN11UA9EAj67y3nlhi0DQe1ZJtmHVTO7Cdus0nDiVkGpwe7SytLIugv3mWXswM47TSme5YfWzapkIg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473523266,
+      "started_at": 1789473523269,
+      "finished_at": 1789473540589,
+      "name": "",
+      "polled": "2026-09-17T15:47:31Z"
+    },
+    "motion:ultimate": {
+      "id": "01a0a4ef-860e-77e1-af2d-05a04bbbde48",
+      "kind": "motion",
+      "created": "2026-09-15T11:59:17Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "A ritual of judgment: both arms rise slowly overhead with the palms up as the head tips back, a held pose, then both hands sweep sharply down and forward as if weighing scales, the chest lifted, and a slow settle into a fighting stance. In place.",
+        "duration": 3.0,
+        "mode": "prime"
+      },
+      "cost": 10,
+      "clip": "ultimate",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ef-860e-77e1-af2d-05a04bbbde48/output/clip.fbx?Expires=1789732772&Signature=p6AJDPbLTBciFNNWci~1Re7y4KLMSEYz8TvE15-qkmCeOhjBX-MkfuNtgp1R~8vsgvkwuFuVG-81sRJYgqJb6LVizufiuAIN7~MlA8hCVEkpxJiZiLhe9WZ402I2ysSAJCktGQPNDXiYr6IbtQovYxwImdugPEptIfguOm-ToUQhu2S2vW6nJ-EZPYlEsRhibMsxIynNNHy4p~iWvGONXEsDzDl4q0GEVQm8DmllXvm2uySnlG5ZTF4T5FSSTY~IKzSn9fbKK-kYeSXCKdv~nuRSjzi4OX6QLmHPCIStHjWZQpxLtSm4XulLjCd-s2lkmGg6gGinf3poO5yCGjQdIQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473557119,
+      "started_at": 1789473557121,
+      "finished_at": 1789473572455,
+      "name": "",
+      "polled": "2026-09-17T15:47:43Z"
     }
   },
   "history": [],
-  "refreshed": "2026-09-18T17:50:39Z"
+  "refreshed": "2026-09-18T18:03:22Z"
 }

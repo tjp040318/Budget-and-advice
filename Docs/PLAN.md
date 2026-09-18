@@ -5017,6 +5017,46 @@ what has a concept, `ship_wave.sh` ships what has finished through
 preview sheet), NEVER through the proportion pass. The CI frames and a
 roster board judge the shipped ones; the owner sees the sheets.
 
+### The rigger's refusals, and the rule they wrote (2026-09-18, 18:10)
+
+Fourteen meshes went to the rigger from the first three sheets and three
+came back "Pose estimation failed" — Sekhmet, Artemis, Bastet: 90 credits
+of image-to-3D with no rig, while the eleven that rigged are in the
+bundle. The unrigged meshes were fetched (`meshy.py download
+--include-unrigged`) and rendered beside the concepts of four that rigged
+(Atalanta, Apollo, Ares, Achilles), and the line is legible:
+
+- **Artemis:** the bow held out beside the body with its lower limb ON
+  THE GROUND beside the foot — a third leg, the pole fault in a bow.
+  Atalanta's bow, gripped at its middle with the lower tip at the knee,
+  rigged.
+- **Sekhmet:** the khopesh held out from the hip with its curve sweeping
+  outward and the tip at the ankle, a hand clear of the leg. Anhur's
+  khopesh, angled out but ending at the shin, rigged; Ares's and
+  Achilles's straight swords along the thigh rigged.
+- **Bastet:** no weapon at all — the feet a hand's width apart under a
+  knee-length dress, so the two legs read as one sheath from the hip to
+  the knee (the fault Thoth's first attempt taught on 2026-09-10). Every
+  figure that rigged stands with its feet a shoulder-width apart.
+
+So the style carries two more rules from here (`serious_style.sh`):
+anything held hangs straight down along the leg and reaches neither the
+ground nor below the knee; the feet stand a shoulder-width apart with
+clear space between the knees. The three sentences were rewritten to
+them (a short khopesh no longer than the forearm, its curve turned in
+against the leg; a short recurve bow gripped at its middle, the lower
+tip at the knee; Bastet in a mid-thigh kilt slit at the sides, feet
+apart) and painted again at 9 each. A refusal costs 48 beyond the
+family's 68 — the first concept, the unrigged mesh and the second
+concept — so a rule that saves one refusal in ten pays for itself. The
+refused manifests and concepts are kept beside their families as
+`.rigfail1` (`Art/Models/<asset>_serious.rigfail1.json`,
+`Art/Concepts/<family>_serious_sw.rigfail1.png`) so the wave relaunches
+the asset from the new concept; retrying the rig on the same mesh is
+pointless (Neptune, twice, 2026-09-11). Sheet 3's eight, judged again
+with the rule: the centurion's vine-stick and the cyclops's club end at
+the knee, Anhur's line, and all eight were launched.
+
 ### What this does not buy
 
 The cards. Every card is a bust painted from the chibi concept, and a
