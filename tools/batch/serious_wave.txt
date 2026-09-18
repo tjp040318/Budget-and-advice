@@ -1,0 +1,115 @@
+# The serious remakes, one per line: asset:concept:height:palette:kit:family (tools/batch/serious_roster.py).
+# AI_MODEL=meshy-7 bash tools/batch/wave_run.sh tools/batch/serious_wave.txt 500
+ares_serious:Art/Concepts/ares_serious_sw.png:2.10:bronze, crimson, black:blade:ares
+sekhmet_serious:Art/Concepts/sekhmet_serious_sw.png:2.00:crimson and burnished gold and near-black, black lioness fur, gold sun-disc crown, lapis and carnelian inlays:blade:sekhmet
+anubis_serious:Art/Concepts/anubis_serious_sw.png:2.05:black and burnished gold and lapis blue, black jackal fur, striped nemes, gold and lapis armour:blade:anubis
+thoth_serious:Art/Concepts/thoth_serious_sw.png:2.05:white, gold, lapis blue:caster:thoth
+achilles_serious:Art/Concepts/achilles_serious_sw.png:2.05:bronze, red, gold:blade,attack_basic=240:achilles
+amazon_serious:Art/Concepts/amazon_serious_sw.png:1.90:bronze, red, tan:blade:amazon
+anhur_serious:Art/Concepts/anhur_serious_sw.png:2.10:red, gold, white:blade,attack_basic=240:anhur
+aphrodite_serious:Art/Concepts/aphrodite_serious_sw.png:1.95:rose pink, white, gold:caster:aphrodite
+apollo_serious:Art/Concepts/apollo_serious_sw.png:2.00:gold, white, sun orange:caster:apollo
+artemis_serious:Art/Concepts/artemis_serious_sw.png:1.95:silver, forest green, white:archer:artemis
+atalanta_serious:Art/Concepts/atalanta_serious_sw.png:1.90:forest green, leather brown, bronze:archer:atalanta
+athena_serious:Art/Concepts/athena_serious_sw.png:2.05:bronze, white, olive green:blade:athena
+baldr_serious:Art/Concepts/baldr_serious_sw.png:2.10:white, gold, sky blue:caster:baldr
+bastet_serious:Art/Concepts/bastet_serious_sw.png:1.95:black, emerald green, gold:blade:bastet
+bellona_serious:Art/Concepts/bellona_serious_sw.png:2.05:blood red, bronze, black:heavy:bellona
+berserker_serious:Art/Concepts/berserker_serious_sw.png:2.00:fur brown, iron, red:heavy:berserker
+bes_serious:Art/Concepts/bes_serious_sw.png:1.40:gold, red, leopard tan:blade:bes
+bragi_serious:Art/Concepts/bragi_serious_sw.png:2.05:dark red, gold, grey:caster:bragi
+centurion_serious:Art/Concepts/centurion_serious_sw.png:1.95:red, iron, bronze:blade:centurion
+chang_e_serious:Art/Concepts/chang_e_serious_sw.png:1.95:moon silver, pale blue, white:caster:chang_e
+cobra_priestess_serious:Art/Concepts/cobra_priestess_serious_sw.png:1.90:green, gold, black:caster:cobra_priestess
+cyclops_serious:Art/Concepts/cyclops_serious_sw.png:2.60:tan, bronze, brown:heavy:cyclops
+dark_elf_serious:Art/Concepts/dark_elf_serious_sw.png:1.85:black, violet, silver:blade:dark_elf
+demeter_serious:Art/Concepts/demeter_serious_sw.png:2.00:wheat gold, green, cream:caster:demeter
+diana_serious:Art/Concepts/diana_serious_sw.png:1.95:white, silver, forest green:archer:diana
+dionysus_serious:Art/Concepts/dionysus_serious_sw.png:2.00:purple, gold, ivy green:caster:dionysus
+draugr_serious:Art/Concepts/draugr_serious_sw.png:1.95:blue-grey, rust, bone:blade:draugr
+dwarf_smith_serious:Art/Concepts/dwarf_smith_serious_sw.png:1.40:iron, brown, gold:heavy:dwarf_smith
+einherjar_serious:Art/Concepts/einherjar_serious_sw.png:1.95:iron, blue, pale gold:blade:einherjar
+fenrir_serious:Art/Concepts/fenrir_serious_sw.png:2.30:grey, steel blue, black:blade:fenrir
+fox_spirit_serious:Art/Concepts/fox_spirit_serious_sw.png:1.85:red, white, silver:caster:fox_spirit
+freya_serious:Art/Concepts/freya_serious_sw.png:2.00:gold, amber, white:caster:freya
+frigg_serious:Art/Concepts/frigg_serious_sw.png:2.05:blue, cream, gold:caster:frigg
+frost_troll_serious:Art/Concepts/frost_troll_serious_sw.png:2.50:ice blue, grey, white:heavy:frost_troll
+gladiator_serious:Art/Concepts/gladiator_serious_sw.png:1.95:bronze, sand, white:blade:gladiator
+guan_yu_serious:Art/Concepts/guan_yu_serious_sw.png:2.30:jade green, gold, black:heavy:guan_yu
+hades_serious:Art/Concepts/hades_serious_sw.png:2.10:black, violet, dull gold:caster:hades
+harpy_serious:Art/Concepts/harpy_serious_sw.png:1.75:grey-brown feathers, bone white, dark grey:blade:harpy
+hathor_serious:Art/Concepts/hathor_serious_sw.png:1.90:gold, turquoise, white:caster:hathor
+heimdall_serious:Art/Concepts/heimdall_serious_sw.png:2.10:gold, white, deep blue:blade:heimdall
+hel_serious:Art/Concepts/hel_serious_sw.png:2.00:black, bone white, teal:caster:hel
+hephaestus_serious:Art/Concepts/hephaestus_serious_sw.png:2.05:bronze, leather brown, ember orange:heavy:hephaestus
+hera_serious:Art/Concepts/hera_serious_sw.png:2.10:white, gold, peacock blue:caster:hera
+heracles_serious:Art/Concepts/heracles_serious_sw.png:2.10:tawny lion pelt, bronze, olive brown:heavy:heracles
+hermes_serious:Art/Concepts/hermes_serious_sw.png:1.95:gold, white, sky blue:caster:hermes
+hoplite_serious:Art/Concepts/hoplite_serious_sw.png:1.85:bronze, crimson, white:blade:hoplite
+horus_serious:Art/Concepts/horus_serious_sw.png:2.10:gold, white, sky blue:blade:horus
+idunn_serious:Art/Concepts/idunn_serious_sw.png:1.95:green, cream, gold:caster:idunn
+isis_serious:Art/Concepts/isis_serious_sw.png:2.00:gold, white, lapis blue:caster:isis
+jackal_warrior_serious:Art/Concepts/jackal_warrior_serious_sw.png:1.90:black, gold, tan:blade:jackal_warrior
+jiangshi_serious:Art/Concepts/jiangshi_serious_sw.png:1.90:faded blue, grey-green, talisman yellow:blade:jiangshi
+khnum_serious:Art/Concepts/khnum_serious_sw.png:2.20:gold, white, river green:heavy:khnum
+light_elf_serious:Art/Concepts/light_elf_serious_sw.png:1.85:white, pale gold, leaf green:caster:light_elf
+loki_serious:Art/Concepts/loki_serious_sw.png:2.00:green, gold, black:blade:loki
+maat_serious:Art/Concepts/maat_serious_sw.png:1.95:white, gold, turquoise:caster:maat
+mars_serious:Art/Concepts/mars_serious_sw.png:2.25:bronze, legion red, gold:blade:mars
+medjay_serious:Art/Concepts/medjay_serious_sw.png:1.90:copper, white, red:archer:medjay
+medusa_serious:Art/Concepts/medusa_serious_sw.png:1.95:green, gold, bronze:caster:medusa
+mercury_serious:Art/Concepts/mercury_serious_sw.png:1.95:orange, gold, white:blade:mercury
+minerva_serious:Art/Concepts/minerva_serious_sw.png:2.05:white, gold, imperial purple:caster:minerva
+minotaur_serious:Art/Concepts/minotaur_serious_sw.png:2.40:brown, bronze, black:heavy:minotaur
+mummy_serious:Art/Concepts/mummy_serious_sw.png:1.90:linen, gold, black:blade:mummy
+nephthys_serious:Art/Concepts/nephthys_serious_sw.png:2.00:black, gold, dusk violet:caster:nephthys
+neptune_serious:Art/Concepts/neptune_serious_sw.png:2.20:sea teal, bronze, deep blue:blade:neptune
+nezha_serious:Art/Concepts/nezha_serious_sw.png:1.80:red, gold, white:blade:nezha
+nike_serious:Art/Concepts/nike_serious_sw.png:1.95:white, gold, laurel green:blade:nike
+njord_serious:Art/Concepts/njord_serious_sw.png:2.10:sea green, blue, gold:blade:njord
+nuwa_serious:Art/Concepts/nuwa_serious_sw.png:2.05:yellow, jade green, five-colour:caster:nuwa
+nymph_serious:Art/Concepts/nymph_serious_sw.png:1.85:sea green, white, silver:caster:nymph
+odin_serious:Art/Concepts/odin_serious_sw.png:2.10:dark blue, grey, gold:caster:odin
+osiris_serious:Art/Concepts/osiris_serious_sw.png:2.10:white, gold, green:caster:osiris
+perseus_serious:Art/Concepts/perseus_serious_sw.png:1.90:bronze, white, sky blue:blade:perseus
+pluto_serious:Art/Concepts/pluto_serious_sw.png:2.10:black, old gold, silver:caster:pluto
+poseidon_serious:Art/Concepts/poseidon_serious_sw.png:2.15:sea green, bronze, white:heavy,attack_basic=240:poseidon
+ptah_serious:Art/Concepts/ptah_serious_sw.png:2.05:white, lapis blue, gold:caster:ptah
+ra_serious:Art/Concepts/ra_serious_sw.png:2.15:gold, white, carnelian red:caster:ra
+satyr_serious:Art/Concepts/satyr_serious_sw.png:1.70:brown fur, tan skin, ivy green:caster:satyr
+scarab_knight_serious:Art/Concepts/scarab_knight_serious_sw.png:1.90:teal, bronze, black:blade:scarab_knight
+serqet_serious:Art/Concepts/serqet_serious_sw.png:1.95:black, gold, venom green:blade:serqet
+set_serious:Art/Concepts/set_serious_sw.png:2.20:red-brown, gold, black:blade:set
+shabti_serious:Art/Concepts/shabti_serious_sw.png:1.70:faience blue, black, gold:blade:shabti
+shield_maiden_serious:Art/Concepts/shield_maiden_serious_sw.png:1.90:steel, dark blue, red:blade:shield_maiden
+sif_serious:Art/Concepts/sif_serious_sw.png:2.00:gold, red, green:blade:sif
+siren_serious:Art/Concepts/siren_serious_sw.png:1.90:teal, silver, dark green:caster:siren
+skadi_serious:Art/Concepts/skadi_serious_sw.png:2.05:white, ice blue, silver:archer:skadi
+sobek_serious:Art/Concepts/sobek_serious_sw.png:2.30:green, gold, bronze:heavy:sobek
+sun_wukong_serious:Art/Concepts/sun_wukong_serious_sw.png:1.90:gold, red, tiger orange:blade:sun_wukong
+surtr_serious:Art/Concepts/surtr_serious_sw.png:2.60:black, ember orange, iron:blade:surtr
+taweret_serious:Art/Concepts/taweret_serious_sw.png:2.30:river green, gold, red:heavy:taweret
+terracotta_soldier_serious:Art/Concepts/terracotta_soldier_serious_sw.png:1.95:terracotta brown, faded red, bronze:blade:terracotta_soldier
+thor_serious:Art/Concepts/thor_serious_sw.png:2.20:iron, red, gold:heavy:thor
+tyr_serious:Art/Concepts/tyr_serious_sw.png:2.05:steel blue, silver, white:blade:tyr
+ullr_serious:Art/Concepts/ullr_serious_sw.png:2.05:white, ice blue, silver:archer:ullr
+valkyrie_serious:Art/Concepts/valkyrie_serious_sw.png:1.95:silver, white, steel blue:blade:valkyrie
+vestal_serious:Art/Concepts/vestal_serious_sw.png:1.85:white, hearth red, bronze:caster:vestal
+vidar_serious:Art/Concepts/vidar_serious_sw.png:2.20:iron, dark green, leather brown:heavy:vidar
+ares_awakened_serious:Art/Concepts/ares_awakened_serious_sw.png:2.10:burnished gold, crimson, black:blade:ares_awakened
+athena_awakened_serious:Art/Concepts/athena_awakened_serious_sw.png:2.05:silver, white, bronze:blade:athena_awakened
+freya_awakened_serious:Art/Concepts/freya_awakened_serious_sw.png:2.00:rose gold, cream, brown:caster:freya_awakened
+hades_awakened_serious:Art/Concepts/hades_awakened_serious_sw.png:2.10:black, gold, amethyst violet:caster:hades_awakened
+horus_awakened_serious:Art/Concepts/horus_awakened_serious_sw.png:2.10:gold, lapis blue, white:blade:horus_awakened
+isis_awakened_serious:Art/Concepts/isis_awakened_serious_sw.png:2.00:white, gold, turquoise:caster:isis_awakened
+mars_awakened_serious:Art/Concepts/mars_awakened_serious_sw.png:2.25:engraved bronze, crimson, gold:blade:mars_awakened
+odin_awakened_serious:Art/Concepts/odin_awakened_serious_sw.png:2.10:midnight blue, pale gold, black raven:caster:odin_awakened
+osiris_awakened_serious:Art/Concepts/osiris_awakened_serious_sw.png:2.10:white, gold, jade green:caster:osiris_awakened
+poseidon_awakened_serious:Art/Concepts/poseidon_awakened_serious_sw.png:2.15:sea green, bronze, pearl:heavy:poseidon_awakened
+ra_awakened_serious:Art/Concepts/ra_awakened_serious_sw.png:2.15:blazing gold, white, carnelian:caster:ra_awakened
+sekhmet_awakened_serious:Art/Concepts/sekhmet_awakened_serious_sw.png:2.00:burnished gold, crimson, near-black lioness fur:blade:sekhmet_awakened
+thor_awakened_serious:Art/Concepts/thor_awakened_serious_sw.png:2.20:steel, crimson, storm blue:heavy:thor_awakened
+thoth_awakened_serious:Art/Concepts/thoth_awakened_serious_sw.png:2.05:white, burnished gold, lapis blue:caster:thoth_awakened
+zeus_awakened_serious:Art/Concepts/zeus_awakened_serious_sw.png:2.15:white, burnished gold, storm blue:blade:zeus_awakened
+boss_colossus_serious:Art/Concepts/boss_colossus_serious_sw.png:8.00:patina green, bronze, gold:heavy:boss_colossus
+boss_unwrapped_king_serious:Art/Concepts/boss_unwrapped_king_serious_sw.png:6.00:tarnished gold, linen, dust grey:caster:boss_unwrapped_king

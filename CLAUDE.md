@@ -1608,6 +1608,29 @@ environment can and cannot do. The short version:
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 
+- **The serious roster (2026-09-18, 17:30; the owner, with 6,505 credits:
+  "Go ahead and work on the upgrades for the characters … I DONT want the
+  cartoony, Chibi Stlye. I want more serious, more detailed work").** Every
+  rigged family is remade from a from-scratch SERIOUS concept
+  (`tools/batch/serious_style.sh`: seven and a half heads, true hands, a
+  mature face, the painted detail kept; the design sentences of
+  `concepts_*.sh` with "cartoon" read out, the first roster's and the
+  awakened forms' written in `serious_roster.py`), painted through
+  MESHY's painter — `meshy.py picture --model nano-banana-pro`, the same
+  Google pro model as every chibi concept, 9 credits a picture, in the
+  credits he bought, never through Gemini's own key — and remade on
+  meshy-7 with the eight clips: 68 a family. `serious_roster.py` writes
+  `serious_wave.txt` (the spending order: the four gods, the roster as
+  made, the awakened forms, the bosses) and `serious_concepts.tsv`;
+  `serious_concepts.sh N` paints the next N; `serious_sheet.py` makes the
+  sheet a batch is JUDGED on before `AI_MODEL=meshy-7 wave_run.sh
+  serious_wave.txt 500` buys its meshes; `ship_wave.sh` ships through
+  `build_asset.sh` (the hero budgets, the cape pass, the standing idle) —
+  NEVER through the proportion pass; `reapply_motions.sh <asset> <donor>
+  <family>` re-applies a god's bespoke motions to the new rig at 3 a clip
+  while the motion tasks live (about a week). The serious Zeus shipped
+  first for nothing (`Art/Models/tests` since the test). The cards stay
+  chibi busts until the owner decides (PLAN.md, *The serious roster*).
 - **The cape pass (2026-09-18, 03:00).** `character.reweight_cape` runs in
   `mesh.py` after the proportions (`--no-cape` skips it; `CAPE_EXCLUDE`
   names the winged and tailed families): a cape Meshy's auto-rig gave to

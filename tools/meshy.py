@@ -550,7 +550,7 @@ def cmd_picture(a):
     owner's Meshy floor covers it. The task id is kept beside the file so a
     re-run resumes rather than paying twice."""
     api = Meshy(load_key(a.key_file))
-    out = Path(a.out) if a.out else REPO / "Art" / "VFX" / f"{a.name}.png"
+    out = (Path(a.out) if a.out else REPO / "Art" / "VFX" / f"{a.name}.png").resolve()
     side = out.with_suffix(".meshy.json")
     st = json.loads(side.read_text()) if side.exists() else None
     if st and st.get("request", {}).get("prompt") == a.prompt and st.get("status") not in ("FAILED", "CANCELED", "EXPIRED"):

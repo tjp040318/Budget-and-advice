@@ -1,0 +1,11 @@
+# The serious concept style (2026-09-18; the owner: "I DONT want the cartoony,
+# Chibi Stlye. I want more serious, more detailed work"): the Epic Seven /
+# Raid band — real heroic proportions, true hands, a mature face, the painted
+# texture kept. Painted WITHOUT a reference image: Gemini anchors hard to a
+# reference's body, and an edit of a chibi concept kept its five heads. The
+# design sentence carries the identity (tools/batch/concepts_*.sh, "as an
+# original cartoon character" read as "as an original character"). The
+# A-pose, the plain grey ground and the held-against-the-thigh rules are the
+# rigger's (Docs/PLAN.md, the four faults Meshy's rigger cannot read).
+SERIOUS_STYLE="Full-body character concept for a serious, richly detailed mobile RPG in the manner of Epic Seven and Raid Shadow Legends: realistic heroic proportions about seven and a half heads tall, a normal-sized head, hands and feet in true proportion, a mature face with a stern composed expression, an athletic believable body, hand-painted textures with fine detail - engraved and embossed metal with worn bright edges, cloth with a visible weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth - soft natural shading with painted highlights, a restrained palette of three main colours plus black and skin, a painted illustration rather than a photograph. Standing in a relaxed A-pose facing the viewer, feet apart and both feet fully visible, arms lowered a little away from the body with a clear gap between each arm and the torso, anything held kept in one hand tight against the outside of the leg. The whole figure is visible head to toe and centred on a plain flat light-grey background with a plain light-grey floor, soft even studio light, no cast shadows, no text, no frame, one character only."
+SERIOUS_AVOID="Avoid: chibi or cartoon proportions, a large head, big hands or feet, a childlike face, photorealism, a real person or actor, anything standing beside the figure, arms crossed or held in front of the body, a weapon held out away from the body, a cape or cloth flying away from the body, a floor-length robe hiding the feet, wings spread wide, multiple characters, cropping, a dramatic background, text, watermark."

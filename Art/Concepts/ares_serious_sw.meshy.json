@@ -1,0 +1,18 @@
+{
+  "id": "01a0b58d-89fb-7725-bf88-3092fa7f57f1",
+  "kind": "picture",
+  "created": "2026-09-18T17:25:47Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Full-body character concept for a serious, richly detailed mobile RPG in the manner of Epic Seven and Raid Shadow Legends: realistic heroic proportions about seven and a half heads tall, a normal-sized head, hands and feet in true proportion, a mature face with a stern composed expression, an athletic believable body, hand-painted textures with fine detail - engraved and embossed metal with worn bright edges, cloth with a visible weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth - soft natural shading with painted highlights, a restrained palette of three main colours plus black and skin, a painted illustration rather than a photograph. Standing in a relaxed A-pose facing the viewer, feet apart and both feet fully visible, arms lowered a little away from the body with a clear gap between each arm and the torso, anything held kept in one hand tight against the outside of the leg. The whole figure is visible head to toe and centred on a plain flat light-grey background with a plain light-grey floor, soft even studio light, no cast shadows, no text, no frame, one character only. The Greek god of war as an original character: a towering broad-shouldered warrior with a hard bearded face and short dark hair under a bronze Corinthian helmet with a tall crimson horsehair crest, a bronze muscled cuirass engraved with a boar and crossed spears, a crimson tunic under a skirt of leather pteruges, bronze greaves and vambraces, leather sandals, a short bronze xiphos sword held down at his right side flat against the thigh, no cape and no cloak, no shield. Avoid: chibi or cartoon proportions, a large head, big hands or feet, a childlike face, photorealism, a real person or actor, anything standing beside the figure, arms crossed or held in front of the body, a weapon held out away from the body, a cape or cloth flying away from the body, a floor-length robe hiding the feet, wings spread wide, multiple characters, cropping, a dramatic background, text, watermark.",
+    "ai_model": "nano-banana-pro"
+  },
+  "balance_before": 6505,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789752347145,
+  "started_at": 1789752347156,
+  "polled": "2026-09-18T17:26:07Z",
+  "consumed_credits": 9,
+  "finished_at": 1789752365544
+}

@@ -292,8 +292,74 @@
       "downloaded": {
         "glb": "Art/Models/zeus_serious_walk.glb"
       }
+    },
+    "motion:attack_basic": {
+      "id": "01a0a4ee-7fad-7155-9698-a3fec479b2d5",
+      "kind": "motion",
+      "created": "2026-09-15T11:58:09Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "Fighting stance, the right hand holding a short spear, a quick overhand throw like hurling a javelin with the left arm pointing at the target and the weight following through, then back to the fighting stance. In place.",
+        "duration": 2.0,
+        "mode": "prime"
+      },
+      "cost": 50,
+      "clip": "attack_basic",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ee-7fad-7155-9698-a3fec479b2d5/output/clip.fbx?Expires=1789732705&Signature=eYwnuDHNj7ikX96WAhyyX1MjmoKDASVc4865Zrjd46F8eUrzsNwm2OM-knQb~YeT79fuIuqcapvX-td4y3hKmurwra~gFHZezfAw2vIyW6yc3CgKg7owAM7VUGRFocy1sOuEkkiT~YahcZxJkheWcnlUyvts5cvb1Ekiy3dDe3PP6YPfkjhWSHp32PZeor-3vyBpxImffjY2XxqvWbf0hzqFJVCAqsyeOrWTl-h615KNBlq8zm9tOJapnIZHqPHJPiIdTWZn2VU8YAjQchFK6II3Skg21mvTyDapX~ruzLjyNblZ4BUFgohKzYNMLZKxC1pwx2pVUEfFngV9lqCBmA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473489898,
+      "started_at": 1789473489902,
+      "finished_at": 1789473505426,
+      "name": "",
+      "polled": "2026-09-17T15:47:32Z"
+    },
+    "motion:attack_heavy": {
+      "id": "01a0a4ef-039b-70cd-8cb0-fb2b9fc8b3fe",
+      "kind": "motion",
+      "created": "2026-09-15T11:58:43Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "The right arm raises a short spear high overhead with the body stretched tall, a stomp forward and a mighty downward strike driving the spear into the ground with both hands, a crouched hold, then rising back to the fighting stance. In place.",
+        "duration": 2.5,
+        "mode": "prime"
+      },
+      "cost": 20,
+      "clip": "attack_heavy",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0a4ef-039b-70cd-8cb0-fb2b9fc8b3fe/output/clip.fbx?Expires=1789732745&Signature=GTc4qwxYrzM4v6Adcm6GvA2SZ8QMpfkTeIzkpRQvwz6jEFgslAZMjvIiRyuzLuZCAmONE~f5vUcDDLedXDfAHT6FPQ0veMlS13OpdU~aUE5RdB6lPF7rDL2ixjV~6qLs2Crcd1QkwQhJg~oSBEmdUnfmQc73oEd5NMyZ4q7NmiS6LbXGFaos9eaYZf-XhR5XT8VFvs45yTg8Pg2eSklQpoY9dJAWbr6GM~TpADI8z0gWszY~4fXdBgXw~EuiMLFQFnrsbPsBpfuuEQaphQXYuUbjiWsqf6KC31zmiA5YkQAdruvnMT79TMTLe90FpCYM7B2DvOFkZNCkAV9Xg9xu6Q__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789473523406,
+      "started_at": 1789473523408,
+      "finished_at": 1789473545273,
+      "name": "",
+      "polled": "2026-09-17T15:47:45Z"
+    },
+    "motion:ultimate": {
+      "id": "01a0b00c-b91c-72e0-a36f-c1137537b5da",
+      "kind": "motion",
+      "created": "2026-09-17T15:47:00Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "prompt": "A tall warrior god stands with feet planted shoulder-width apart. He raises both arms high overhead and gathers power for one second, his whole body tensing, then steps forward with the left foot and hurls a lightning bolt with his right arm in one explosive overhand throw, holds the follow-through for a moment, and settles back upright into a ready stance. In place, no travel.",
+        "duration": 3.0,
+        "mode": "prime"
+      },
+      "cost": 22,
+      "clip": "ultimate",
+      "progress": 100,
+      "urls": {
+        "result.motion_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b00c-b91c-72e0-a36f-c1137537b5da/output/clip.fbx?Expires=1789919237&Signature=nJmb-duOHbngZRINpJLaJFVbJkFrA-Dmccqpqf1YH7Dnhl7bY5pA-mz5sajLyB3V2BYrO46iBiJPUVGhO2mhabZC2RJdBgX438r7CObHMAlnbY8RyJAl-lY2~Ij6S30fNRsSdGdqWKosIvfZ8qmbcvQDT65XIVRVaO3XJIHnwVz41bEYPpDMMEfPga5cS0XqWXHcKQhsTo5EFca~xVsz8DXMidAHkgKOvnF8xcCLCC6QDbDWzcMA1KFZB2ScYuHIvPHdpK~6J42qHLqWoJcYwn~isDgujDrF70t387-oyvJcwyTvi9lhTgS76ir2rW9cHiEdwXMCs6DyKPuYmqk0ZQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789660020185,
+      "started_at": 1789660020192,
+      "finished_at": 1789660037734,
+      "name": "",
+      "polled": "2026-09-17T15:47:20Z"
     }
   },
   "history": [],
-  "refreshed": "2026-09-17T16:40:10Z"
+  "refreshed": "2026-09-18T17:32:11Z"
 }

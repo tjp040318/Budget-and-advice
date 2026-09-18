@@ -4947,6 +4947,85 @@ three Zeuses (shipped, the pass, the remake) is the owner's decision
 point; the bill for the roster is above, and none of it is spent without
 his word.
 
+## The serious roster (2026-09-18, 17:30; the owner: "I bought 6000 more credits, bringing the total to 6505. Go ahead and work on the upgrades for the characters … I DONT want the cartoony, Chibi Stlye. I want more serious, more detailed work")
+
+The decision point of *The serious look* was the board of the three
+Zeuses, and the owner's answer is the credits: option 3, the roster
+remade from from-scratch serious concepts. The serious Zeus is the proof
+(`zeus_serious`, meshy-7 from `zeus_serious2_sw.png`: seven and a half
+heads, a mature face, the beard in strands, the meander border legible)
+and ships over the chibi one today for nothing — its files were in
+`Art/Models/tests` since the test.
+
+### The painter
+
+The concept sets the look, and a serious concept is painted WITHOUT a
+reference (an edit of a chibi concept keeps its five heads; Gemini
+anchors to a reference's body). The options for the ninety-odd pictures:
+
+1. **Gemini's own key, the pro model** — the painter of every concept so
+   far; about $12 for the roster, over the owner's $10 a month, and
+   Gemini is paused without his word for the batch.
+2. **Gemini's flash model** — about $4, quality unjudged, the same pause.
+3. **Meshy's painter, `nano-banana-pro`** (`meshy.py picture`) — the SAME
+   Google pro model, billed in the credits the owner just bought: 9
+   credits a picture, measured on Ares. Chosen: nothing leaves the Meshy
+   account he authorised, and the picture is the one every chibi concept
+   was painted with.
+4. **Text-to-3D from the sentence alone** — no concept, 30 credits the
+   same; Rome and the Jade Court went this way when Gemini was capped and
+   the meshes are the roster's weakest. Rejected.
+
+The style (`tools/batch/serious_style.sh`) is the Epic Seven / Raid band
+the section above chose — seven and a half heads, true hands, a mature
+stern face, the painted detail kept, three colours plus black and skin —
+with the rigger's rules unchanged (A-pose, the weapon flat against the
+thigh, a plain grey ground); the design sentences are the ones every
+chibi concept was painted from (`tools/batch/serious_roster.py` harvests
+`concepts_*.sh`, reads "as an original cartoon character" as "as an
+original character", and writes the first roster's, the awakened forms'
+and the bosses' by hand). The first picture, Ares, came back exactly the
+board's Zeus: a bearded Spartan in an engraved bronze cuirass with the
+sword against his thigh and no cape — the owner asked for a design that
+does not need one, and the serious Ares has none.
+
+### The bill
+
+A family is 9 (the concept) + 30 (image-to-3D, meshy-7) + 5 (the rig)
++ 24 (eight clips: the combat idle, basic, heavy, ultimate, hit, death,
+victory, walk) = **68 credits**; the four gods with bespoke motions
+(Anubis, Sekhmet, Ares, Thoth; Zeus's re-applied to his serious rig)
+re-apply theirs at 3 a clip, the motion tasks of the 15th and 17th being
+alive until about the 22nd. 6,496 in hand over the 500 floor is 5,996:
+the **78 base families** (5,300) fit with room for a rig refusal or two
+(a refused rig is the 30 for the mesh and 9 for a new concept); the
+**16 awakened forms and the 2 bosses** (1,224) wait for the next credits,
+in `serious_wave.txt`'s order behind the base families. `wave_run.sh`
+stops at the floor by itself.
+
+### The order and the judging
+
+`serious_wave.txt` is the spending order: Ares, Sekhmet, Anubis, Thoth,
+then the roster as it was made (batch 2's gods, batch 3, Rome and the
+Jade Court), then the awakened forms, then the bosses. Concepts are
+painted eight at a time (`serious_concepts.sh`) and looked at on a sheet
+(`serious_sheet.py`) before their meshes are launched — the proportions
+and the rigger's four faults are visible on the concept and cost 9 to
+re-roll, 39 after the mesh — then `AI_MODEL=meshy-7 wave_run.sh` launches
+what has a concept, `ship_wave.sh` ships what has finished through
+`build_asset.sh` (the hero budgets, the cape pass, the standing idle, a
+preview sheet), NEVER through the proportion pass. The CI frames and a
+roster board judge the shipped ones; the owner sees the sheets.
+
+### What this does not buy
+
+The cards. Every card is a bust painted from the chibi concept, and a
+serious body under a chibi face on the card will show; 79 families × 10
+cards is 790 Gemini images, about $100 at the pro model or $30 on flash,
+or about 7,100 credits through Meshy's painter — a decision for the owner
+once the meshes are seen. The two beasts (the Hydra, the Jötunn) and the
+sandstone sentinel are unrigged and untouched.
+
 ## The scrolls as pictures, and the awakened look (2026-09-17, evening; built)
 
 The owner, with the summon screen on his phone: "I really want my scrolls
