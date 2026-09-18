@@ -50,7 +50,10 @@
       "finished_at": 1789756633210,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T18:37:14Z"
+      "polled": "2026-09-18T18:37:14Z",
+      "downloaded": {
+        "usdz": "Art/Models/frigg_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b5ce-f69a-733d-af4b-10fe54ae4989",
@@ -77,7 +80,10 @@
       "started_at": 1789756640553,
       "finished_at": 1789756703743,
       "name": "",
-      "polled": "2026-09-18T18:38:31Z"
+      "polled": "2026-09-18T18:38:31Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b5d0-256f-72db-a36a-8f886d30b978",
@@ -100,7 +106,10 @@
       "started_at": 1789756713068,
       "finished_at": 1789756727861,
       "name": "",
-      "polled": "2026-09-18T18:38:49Z"
+      "polled": "2026-09-18T18:38:49Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b5d0-29fc-717b-9552-5688fec4f1da",
@@ -123,7 +132,10 @@
       "started_at": 1789756713767,
       "finished_at": 1789756726589,
       "name": "",
-      "polled": "2026-09-18T18:38:49Z"
+      "polled": "2026-09-18T18:38:49Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b5d0-2cf1-7130-835b-a17c54614f41",
@@ -146,7 +158,10 @@
       "started_at": 1789756714582,
       "finished_at": 1789756729883,
       "name": "",
-      "polled": "2026-09-18T18:39:00Z"
+      "polled": "2026-09-18T18:39:00Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b5d0-2fd2-72fd-a4bf-94ac58d241b5",
@@ -169,7 +184,10 @@
       "started_at": 1789756715321,
       "finished_at": 1789756728389,
       "name": "",
-      "polled": "2026-09-18T18:38:49Z"
+      "polled": "2026-09-18T18:38:49Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b5d0-32cb-7040-831d-53593d9e9ee3",
@@ -192,7 +210,10 @@
       "started_at": 1789756716025,
       "finished_at": 1789756742066,
       "name": "",
-      "polled": "2026-09-18T18:39:11Z"
+      "polled": "2026-09-18T18:39:11Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b5d0-357a-70af-992e-a125f17e3a7f",
@@ -215,7 +236,10 @@
       "started_at": 1789756716671,
       "finished_at": 1789756735827,
       "name": "",
-      "polled": "2026-09-18T18:39:00Z"
+      "polled": "2026-09-18T18:39:00Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b5d0-37fb-75b7-9af3-3e894aaba74c",
@@ -238,7 +262,10 @@
       "started_at": 1789756717321,
       "finished_at": 1789756746811,
       "name": "",
-      "polled": "2026-09-18T18:39:11Z"
+      "polled": "2026-09-18T18:39:11Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b5d0-3aa6-71ce-a521-025b20badced",
@@ -261,8 +288,12 @@
       "started_at": 1789756718002,
       "finished_at": 1789756743737,
       "name": "",
-      "polled": "2026-09-18T18:39:11Z"
+      "polled": "2026-09-18T18:39:11Z",
+      "downloaded": {
+        "glb": "Art/Models/frigg_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T18:40:34Z"
 }
