@@ -50,7 +50,10 @@
       "finished_at": 1789756615767,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T18:37:05Z"
+      "polled": "2026-09-18T18:37:05Z",
+      "downloaded": {
+        "usdz": "Art/Models/gladiator_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b5ce-d339-74c4-be05-8243be8c35f6",
@@ -77,7 +80,10 @@
       "started_at": 1789756639965,
       "finished_at": 1789756680287,
       "name": "",
-      "polled": "2026-09-18T18:38:00Z"
+      "polled": "2026-09-18T18:38:00Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b5cf-aaa4-72c7-874f-909b18d35ffa",
@@ -100,7 +106,10 @@
       "started_at": 1789756681245,
       "finished_at": 1789756693016,
       "name": "",
-      "polled": "2026-09-18T18:38:17Z"
+      "polled": "2026-09-18T18:38:17Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b5cf-ad5e-752e-acd4-6674f1dc0b87",
@@ -123,7 +132,10 @@
       "started_at": 1789756682101,
       "finished_at": 1789756693040,
       "name": "",
-      "polled": "2026-09-18T18:38:17Z"
+      "polled": "2026-09-18T18:38:17Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b5cf-b0ad-7350-8027-886d08afac26",
@@ -146,7 +158,10 @@
       "started_at": 1789756682701,
       "finished_at": 1789756695630,
       "name": "",
-      "polled": "2026-09-18T18:38:17Z"
+      "polled": "2026-09-18T18:38:17Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b5cf-b311-7430-8362-1a792c289ba2",
@@ -169,7 +184,10 @@
       "started_at": 1789756683431,
       "finished_at": 1789756695264,
       "name": "",
-      "polled": "2026-09-18T18:38:17Z"
+      "polled": "2026-09-18T18:38:17Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b5cf-b5ec-769c-b88c-422ffd0a1822",
@@ -192,7 +210,10 @@
       "started_at": 1789756684041,
       "finished_at": 1789756709504,
       "name": "",
-      "polled": "2026-09-18T18:38:38Z"
+      "polled": "2026-09-18T18:38:38Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b5cf-b847-7170-8d2f-72da041691c4",
@@ -215,7 +236,10 @@
       "started_at": 1789756684650,
       "finished_at": 1789756701322,
       "name": "",
-      "polled": "2026-09-18T18:38:28Z"
+      "polled": "2026-09-18T18:38:28Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b5cf-baaa-70d3-aa12-7018fba75510",
@@ -238,7 +262,10 @@
       "started_at": 1789756685240,
       "finished_at": 1789756712299,
       "name": "",
-      "polled": "2026-09-18T18:38:38Z"
+      "polled": "2026-09-18T18:38:38Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b5cf-bd03-77b3-b1ef-5923911f4743",
@@ -261,8 +288,12 @@
       "started_at": 1789756686137,
       "finished_at": 1789756708089,
       "name": "",
-      "polled": "2026-09-18T18:38:28Z"
+      "polled": "2026-09-18T18:38:28Z",
+      "downloaded": {
+        "glb": "Art/Models/gladiator_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T18:41:57Z"
 }

@@ -16,6 +16,8 @@ mapfile -t TABLE < tools/batch/serious_concepts.tsv
 for row in "${TABLE[@]}"; do
   family=${row%%$'\t'*}; sentence=${row#*$'\t'}
   [ -z "$family" ] && continue
+  # The commons the player sees least wait for the end of the credits (tools/batch/serious_defer.txt).
+  grep -qx "$family" tools/batch/serious_defer.txt 2>/dev/null && continue
   out="Art/Concepts/${family}_serious_sw.png"
   [ -s "$out" ] && continue
   [ "$done_n" -ge "$n" ] && break

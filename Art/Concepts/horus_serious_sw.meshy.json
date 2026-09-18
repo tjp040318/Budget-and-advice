@@ -1,0 +1,18 @@
+{
+  "id": "01a0b5d4-98e3-71b1-8d10-e7acd4cf0ac5",
+  "kind": "picture",
+  "created": "2026-09-18T18:43:24Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Full-body character concept for a serious, richly detailed mobile RPG in the manner of Epic Seven and Raid Shadow Legends: realistic heroic proportions about seven and a half heads tall, a normal-sized head, hands and feet in true proportion, a mature face with a stern composed expression, an athletic believable body, hand-painted textures with fine detail - engraved and embossed metal with worn bright edges, cloth with a visible weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth - soft natural shading with painted highlights, a restrained palette of three main colours plus black and skin, a painted illustration rather than a photograph. Standing in a relaxed A-pose facing the viewer, feet apart and both feet fully visible, arms lowered a little away from the body with a clear gap between each arm and the torso, anything held is kept in one hand hanging straight down along the outside of the leg and is short enough that no part of it reaches below the knee or touches the ground; a spear, staff or other long weapon is short enough to stay within the figure's height and is held upright close against the body, gripped at its middle with its butt clear of the ground at knee height; no shield. The feet stand a shoulder-width apart with clear space between the knees, so the two legs read as two. The whole figure is visible head to toe and centred on a plain flat light-grey background with a plain light-grey floor, soft even studio light, no cast shadows, no text, no frame, one character only. Horus, falcon-headed Egyptian god of the sky: a falcon head with sharp golden eyes and the double crown, a bronze and gold pectoral, a white kilt with gold and turquoise panels, gold bracers, a khopesh held down against his right leg. Palette gold, white, turquoise. Avoid: chibi or cartoon proportions, a large head, big hands or feet, a childlike face, photorealism, a real person or actor, anything standing beside the figure, arms crossed or held in front of the body, a weapon held out away from the body, anything held reaching the ground or hanging below the knee, a spear or staff planted on the ground beside the body, a shield, feet close together, a cape or cloth flying away from the body, a floor-length robe hiding the feet, wings spread wide, multiple characters, cropping, a dramatic background, text, watermark.",
+    "ai_model": "nano-banana-pro"
+  },
+  "balance_before": 3671,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789757004011,
+  "started_at": 1789757004018,
+  "polled": "2026-09-18T18:43:54Z",
+  "consumed_credits": 9,
+  "finished_at": 1789757029895
+}
