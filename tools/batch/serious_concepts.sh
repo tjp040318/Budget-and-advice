@@ -9,7 +9,12 @@
 cd "$(dirname "$0")/../.."
 source tools/batch/serious_style.sh
 n=${1:-8}; done_n=0
-while IFS=$'\t' read -r family sentence; do
+# The table is read into memory first: a `while read` over the file keeps a byte offset into it, and a
+# rewrite of a sentence while the painter sleeps in a picture shifted that offset into the middle of the
+# next line (2026-09-18, 18:27: "painting hin the silhouette, a red silk sash ...").
+mapfile -t TABLE < tools/batch/serious_concepts.tsv
+for row in "${TABLE[@]}"; do
+  family=${row%%$'\t'*}; sentence=${row#*$'\t'}
   [ -z "$family" ] && continue
   out="Art/Concepts/${family}_serious_sw.png"
   [ -s "$out" ] && continue
@@ -22,5 +27,5 @@ while IFS=$'\t' read -r family sentence; do
     echo "  FAILED $family: $(grep -m1 -iE 'error|balance|floor' "/tmp/pantheon-batch/picture_$family.log")"
     grep -q "floor" "/tmp/pantheon-batch/picture_$family.log" && break
   fi
-done < tools/batch/serious_concepts.tsv
+done
 echo "$(date -u +%T) painted $done_n; balance $(python3 tools/meshy.py balance | tail -1)"

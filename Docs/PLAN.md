@@ -4994,14 +4994,22 @@ does not need one, and the serious Ares has none.
 A family is 9 (the concept) + 30 (image-to-3D, meshy-7) + 5 (the rig)
 + 24 (eight clips: the combat idle, basic, heavy, ultimate, hit, death,
 victory, walk) = **68 credits**; the four gods with bespoke motions
-(Anubis, Sekhmet, Ares, Thoth; Zeus's re-applied to his serious rig)
-re-apply theirs at 3 a clip, the motion tasks of the 15th and 17th being
-alive until about the 22nd. 6,496 in hand over the 500 floor is 5,996:
-the **78 base families** (5,300) fit with room for a rig refusal or two
-(a refused rig is the 30 for the mesh and 9 for a new concept); the
-**16 awakened forms and the 2 bosses** (1,224) wait for the next credits,
-in `serious_wave.txt`'s order behind the base families. `wave_run.sh`
-stops at the floor by itself.
+(Anubis, Sekhmet, Ares, Thoth; Zeus's basic and heavy) get theirs back
+for nothing (`tools/retarget.py`, below — Meshy's own re-application
+turned out to have three days, not the week this paragraph first
+assumed). The roster is **96 base families** (`serious_roster.py` counts
+every `*_idle_combat.usdz` in the bundle less the three it skips — the
+"78" written here at 17:30 was a miscount), 6,528 at 68 each, and 6,496
+in hand over the 500 floor was 5,996: so the base roster does NOT quite
+fit. The tally at 18:45: 27 shipped, 9 generating, 60 to go at 68 (4,080)
+against 4,129 in hand less the 260 the nine still owe — about 3,870 over
+the floor, or 56 of the 60, and every refusal (four so far: 48 each) is
+another family left for the next credits. The last ones to go up are the
+commons the player sees least (`tools/batch/serious_defer.txt`: the
+Mummy, the Jackal Warrior, the Scarab Knight, the Medjay, the Shabti, the
+Vestal, the Terracotta Soldier, the Light Elf), then the **16 awakened
+forms and the 2 bosses** (1,224), in `serious_wave.txt`'s order.
+`wave_run.sh` stops at the floor by itself.
 
 ### The order and the judging
 
