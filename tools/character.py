@@ -1167,19 +1167,21 @@ def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
     kind = [_bone_kind(n) for n in leaf]
     held_bone = np.array([k in HELD_BONES for k in kind])
     held_w = (held_bone[char.joint_indices] * char.joint_weights).sum(axis=1)
-    sheet = ((P[:, 2] < spine_z - back * height) & (P[:, 1] > floor * height) & (P[:, 1] < neck_y)
-             & (held_w <= 0.5))
-    uncut = sheet.copy()
+    band = (P[:, 1] > floor * height) & (P[:, 1] < neck_y) & (held_w <= 0.5)
+    behind = band & (P[:, 2] < spine_z - back * height)
+    uncut = behind.copy()
     # Clear of every limb's own surface (_limb_surface); the spine, hips
     # and head block nothing — what hangs behind them is the cloth. Cut
     # FIRST, so a weapon in a hand behind the hip is not bridged to the
     # shoulders through the arm's own back (Sekhmet's khopesh was).
     normals = vertex_normals(P, char.faces).astype(np.float64) if len(char.faces) else np.zeros_like(P)
+    limb_layer = np.zeros(len(P), bool)
     for j, p in enumerate(char.parents):
         if p < 0 or kind[j] not in SURFACE_BONES:
             continue
-        sheet &= ~_limb_surface(P, normals, jw[p], jw[j], reach=0.25 * height, gap=0.012 * height,
-                                inward_stop=kind[j] in ("upleg", "leg", "foot"))
+        limb_layer |= _limb_surface(P, normals, jw[p], jw[j], reach=0.25 * height, gap=0.012 * height,
+                                    inward_stop=kind[j] in ("upleg", "leg", "foot"))
+    sheet = behind & ~limb_layer
     # One large sheet hanging from the shoulders (its uncut piece above the
     # second spine joint) a good way down the back, not a scatter of
     # patches at the shoulders (a figure with no cape has those), a
@@ -1187,6 +1189,30 @@ def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
     # (a rod or a lump, not a sheet).
     sheet = _big_sheets(P, char.faces, sheet, uncut, min_count=max(300, len(P) // 150), min_span=0.20 * height,
                         top_at=chain_y[-2] - 0.02 * height, min_width=0.12 * height, merge_gap=0.03 * height)
+    # A skirt, a robe, a tunic is not a cape: it WRAPS the legs, so the
+    # same free-hanging cloth exists in FRONT of the figure over the same
+    # heights, and re-bound to the hips it holds still while the legs
+    # inside it move — the gladiator's knee-length tunic and his leg
+    # wrappings tore off his legs in every attack (2026-09-18). A cape has
+    # no front: Ares's pteruges hang over a third of his cape's height,
+    # Diana's tunic under her cloak over 73%, the gladiator's tunic 86%,
+    # Guan Yu's robe 91%, the centurion's 94%, the troll's loincloth 100%;
+    # the line is 80%. The awakened Ares's shield is the hand's, not counted.
+    if sheet.any():
+        body = np.array([k in ("hips", "spine", "spine01", "spine1", "spine02", "spine2", "spine03", "spine3",
+                               "upleg", "leg", "foot", "toebase") for k in kind])[owner]
+        front = band & (P[:, 2] > spine_z + back * height) & ~limb_layer & body
+        front = _big_sheets(P, char.faces, front, front, min_count=40, min_span=0.0, top_at=-np.inf,
+                            min_width=0.06 * height, merge_gap=0.0)
+        lo, hi = float(P[sheet, 1].min()), float(P[sheet, 1].max())
+        edges = np.arange(lo, hi + 1e-6, 0.02 * height)
+        if len(edges) > 2 and front.any():
+            counts = np.histogram(P[front, 1], bins=edges)[0]
+            covered = float((counts >= 5).mean())
+            if covered >= 0.8:
+                print(f"    cape: a skirt or a robe — free-hanging cloth in front over {100 * covered:.0f}% of the "
+                      f"back sheet's height; left as rigged")
+                return 0
     # Only what a limb has a hold on moves: a vertex the spine already owns
     # outright is left exactly as it is.
     limb = np.array([k in LIMB_BONES for k in kind])

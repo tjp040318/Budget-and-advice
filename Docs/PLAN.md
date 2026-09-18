@@ -5670,7 +5670,17 @@ families). A vertex is cloth when it is
   Hades's bident is a rod, Zeus's bolt a lump, Sekhmet's khopesh and
   Diana's bow too narrow, a pauldron's back edge and a loincloth's tail
   too short — all of them stay with the hand;
-- held by a limb at all (a vertex the spine owns outright is left as is).
+- held by a limb at all (a vertex the spine owns outright is left as is);
+- and NOT a wrap: a skirt, a robe, a tunic hangs free in FRONT of the
+  figure over the same heights, and re-bound to the hips it holds still
+  while the legs inside it move — the gladiator's knee-length tunic and
+  his leg wrappings tore off his legs in every attack of the first
+  batch. When free-hanging cloth of the body's own (never a hand's: the
+  awakened Ares's shield) covers 80% or more of the back sheet's height
+  in front, the whole figure is left as rigged. Measured: Ares's
+  pteruges a third of his cape, Diana's tunic under her cloak 73%, the
+  gladiator's tunic 86%, Guan Yu's robe 91%, the centurion's 94%, the
+  troll's loincloth 100%.
 
 It takes its weight from the two spine joints bracketing its height (all
 Hips below the pelvis), then the weights are averaged over four rings of
@@ -5690,10 +5700,14 @@ at rest. Meshy's rigs name the neck `neck` and the upper spine
 `Spine01`/`Spine02`, so every bone lookup in the pass is case blind.
 
 **Known limits.** A cape flush against the legs with no gap, no fold and
-no inward face stays the legs'; a floor-length dress's back (Chang'e's) is
-re-bound to the hips
-like a cape, which stops it swinging with one leg and lets a knee bent far
-back poke through it in a walk — about equal, and invisible on a caster.
+no inward face stays the legs'. The wrap test reads the FRONT, so a dress
+whose front hugs the legs (no gap: it IS the legs' layer) and whose back
+hangs loose reads as a cape (Chang'e, Freya, Frigg): its back is re-bound
+to the hips, which stops it swinging with one leg and lets a knee bent
+far back poke through it — the casters' clips barely move the legs, and
+a walk would show it. A tunic that hangs free in front is caught (the
+gladiator, Guan Yu), and so is the centurion's cloak over his (94%): it
+stays as Meshy rigged it, no worse than before.
 A cape still bends only with the spine: in a lunge it flares straight back,
 which is a cape in a game with no cloth. Cape bones and baked cloth are the
 paid answer, per family, when the credits exist.

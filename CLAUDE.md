@@ -1620,9 +1620,11 @@ environment can and cannot do. The short version:
   Sekhmet her arm bands), one connected SHEET by shape from the shoulder
   line (`_big_sheets`: thin one way, a foot across the other; a bident is
   a rod, a bolt a lump, a bow too narrow — never by who owns it, since
-  the awakened Ares's cape was skinned to his hand), and only when a limb
-  dominates 4% of the mesh out there — under that a family is left as
-  rigged. Judge a change on `tools/cape_board.py` (the mask
+  the awakened Ares's cape was skinned to his hand), not a WRAP (free
+  cloth in front over 80% of the sheet's height is a skirt or a robe:
+  the gladiator's tunic re-bound to the hips tore off his legs), and only
+  when a limb dominates 4% of the mesh out there — under that a family is
+  left as rigged. Judge a change on `tools/cape_board.py` (the mask
   drawn on the figure) and `tools/cape_check.py` (how far the cape moves at a
   clip's frame), never on the count alone: the first cut's count looked
   right and had warped the torso. Bone lookups are case blind (`neck`).
