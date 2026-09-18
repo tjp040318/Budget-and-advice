@@ -135,7 +135,10 @@ jobs:
               # we have a HUGE problem"), shot at the b moment, seven seconds
               # in, so the figure has turned and the words are up.
               reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 4; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened >/dev/null
+                SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
+                  --stdout="$PWD/shots/$step-${names[$step]}-awakened-out.txt" \
+                  --stderr="$PWD/shots/$step-${names[$step]}-awakened-err.txt" \
+                  "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened >/dev/null
                 sleep 7; shoot "$step-${names[$step]}-awakened"
                 # The lighting lab (2026-09-18): the same awakened Ares two
                 # thirds of a stop under, with the bare rig (Lambert, no
@@ -231,6 +234,13 @@ jobs:
               | head -c 120000 > "$base-console.txt"
             rm -f "$base-out.txt" "$base-err.txt"
           done
+          # The awakened reveal is a relaunch of its own, and its console —
+          # the [ClothChain] lines for the awakened Ares — is kept beside it.
+          if [ -f shots/5-reveal-awakened-out.txt ]; then
+            { echo "== stdout"; cat shots/5-reveal-awakened-out.txt; echo; echo "== stderr"; cat shots/5-reveal-awakened-err.txt 2>/dev/null; } \
+              | head -c 120000 > shots/5-reveal-awakened-console.txt
+            rm -f shots/5-reveal-awakened-out.txt shots/5-reveal-awakened-err.txt
+          fi
           echo "console lines: $(cat shots/*-console.txt | wc -l | tr -d ' ')"
           # Small copies for the ci/screens branch, made with the built-in
           # sips (the runner's Python refuses pip installs). The full-size

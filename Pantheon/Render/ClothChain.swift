@@ -112,6 +112,12 @@ final class ClothChain {
 
     /// The joint `cape_0` hangs from.
     let anchor: SCNNode
+    /// The asset's name, for the console.
+    let label: String
+    /// Steps taken, for the console's samples.
+    private var steps = 0
+    /// Where the last substep put each joint, to check against SceneKit's own placement.
+    private var computed: [SIMD3<Float>] = []
     /// The node whose world scale maps the mesh's metres to the scene.
     private weak var model: SCNNode?
     private var links: [Link]
@@ -141,18 +147,20 @@ final class ClothChain {
             nodes.append(next)
         }
         guard nodes.count >= 2 else { return nil }
-        let chain = ClothChain(model: model, anchor: anchor, nodes: nodes)
+        let chain = ClothChain(model: model, anchor: anchor, nodes: nodes, label: label)
         ClothSimulation.shared.register(chain)
         #if DEBUG
         print("[ClothChain] '\(label)': \(nodes.count) cape joints under \(anchor.name ?? "?"), "
               + "\(chain.spheres.count) spheres\(chain.plane == nil ? "" : " and the back plane")")
+        chain.describeAttach(nodes: nodes)
         #endif
         return chain
     }
 
-    private init(model: SCNNode, anchor: SCNNode, nodes: [SCNNode]) {
+    private init(model: SCNNode, anchor: SCNNode, nodes: [SCNNode], label: String) {
         self.model = model
         self.anchor = anchor
+        self.label = label
         let height = Self.height(of: model)
         unit = height / Cloth.referenceHeight
         // The bone axis: toward the child in this joint's own frame, which is
@@ -240,7 +248,69 @@ final class ClothChain {
             }
         }
         SCNTransaction.commit()
+        steps += 1
+        #if DEBUG
+        if steps <= 3 || steps == 60 || steps == 180 || steps == 300 {
+            describeStep(anchorWorld: anchorWorld, scale: worldScale, time: time)
+        }
+        #endif
     }
+
+    // MARK: - The console
+
+    #if DEBUG
+    private static func f3(_ v: SIMD3<Float>) -> String { String(format: "(%.3f, %.3f, %.3f)", v.x, v.y, v.z) }
+    private static func f4(_ q: simd_quatf) -> String {
+        String(format: "q(%.3f, %.3f, %.3f, %.3f)", q.vector.x, q.vector.y, q.vector.z, q.vector.w)
+    }
+
+    /// What SceneKit handed the chain at attach: the joints' own rest data,
+    /// the anchor's and the hips' frames, the particles, the colliders. Read
+    /// beside `tools/cape_sim.py`'s numbers for the same file.
+    func describeAttach(nodes: [SCNNode]) {
+        guard let model else { return }
+        var lines: [String] = []
+        for (k, node) in nodes.enumerated() {
+            lines.append("    \(node.name ?? "?"): pos \(Self.f3(node.simdPosition)) scale \(Self.f3(node.simdScale)) "
+                         + "orientation \(Self.f4(node.simdOrientation)) fromTransform \(Self.f4(Self.rotation(of: node.simdTransform))) "
+                         + "axis \(Self.f3(links[k].axis)) length \(String(format: "%.3f", links[k].length))")
+        }
+        let anchorWorld = anchor.simdWorldTransform
+        lines.append("    anchor \(anchor.name ?? "?"): world pos \(Self.f3(anchorWorld.columns.3.xyz)) rot \(Self.f4(Self.rotation(of: anchorWorld))) "
+                     + "scale \(String(format: "%.4f", simd_length(anchorWorld.columns.0.xyz)))")
+        if let plane {
+            let hipsWorld = plane.hips.simdWorldTransform
+            lines.append("    hips: world pos \(Self.f3(hipsWorld.columns.3.xyz)) rot \(Self.f4(Self.rotation(of: hipsWorld))) "
+                         + "backLocal \(Self.f3(plane.backLocal)) offset \(String(format: "%.3f", plane.offset))")
+        }
+        lines.append("    model transform pos \(Self.f3(model.simdWorldTransform.columns.3.xyz)) rot \(Self.f4(Self.rotation(of: model.simdWorldTransform))) "
+                     + "unit \(String(format: "%.3f", unit)); spheres \(spheres.map { String(format: "%.3f", $0.radius) })")
+        print("[ClothChain] '\(label)' at attach:\n" + lines.joined(separator: "\n"))
+    }
+
+    /// One sample of the running chain: the anchor as presented, the rest
+    /// direction, the plane, every tail's direction, and where the chain put
+    /// each joint against where SceneKit presents it a frame later.
+    private func describeStep(anchorWorld: simd_float4x4, scale: Float, time: TimeInterval) {
+        var line = "[ClothChain] '\(label)' step \(steps) t=\(String(format: "%.2f", time)): anchor pos \(Self.f3(anchorWorld.columns.3.xyz)) "
+            + "rot \(Self.f4(Self.rotation(of: anchorWorld))) worldScale \(String(format: "%.3f", scale))"
+        if !links.isEmpty {
+            let (position, _, restRotation) = joint(0, under: anchorWorld)
+            line += "; cape_0 at \(Self.f3(position)) rest dir \(Self.f3(restRotation.act(links[0].axis)))"
+        }
+        if let plane {
+            let hipsWorld = plane.hips.presentation.simdWorldTransform
+            line += "; plane back \(Self.f3(Self.rotation(of: hipsWorld).act(plane.backLocal))) at hips \(Self.f3(hipsWorld.columns.3.xyz))"
+        }
+        for k in links.indices {
+            let presented = links[k].node.presentation.simdWorldPosition
+            let mine = k < computed.count ? computed[k] : SIMD3<Float>(repeating: 0)
+            let direction = simd_length(links[k].tail - mine) > 1e-6 ? Self.normalised(links[k].tail - mine) : SIMD3<Float>(repeating: 0)
+            line += "; \(links[k].node.name ?? "?") mine \(Self.f3(mine)) presented \(Self.f3(presented)) tail dir \(Self.f3(direction))"
+        }
+        print(line)
+    }
+    #endif
 
     /// The tails at rest under the anchor as it stands: where the chain
     /// starts, and where it returns to when a figure is rebuilt into a scene.
@@ -271,7 +341,7 @@ final class ClothChain {
         if k < restLocal.count { return restLocal[k] }
         return simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
     }
-    private lazy var restLocal: [simd_quatf] = self.links.map { $0.node.simdOrientation }
+    private lazy var restLocal: [simd_quatf] = self.links.map { Self.rotation(of: $0.node.simdTransform) }
 
     private func substep(h: Float, anchorWorld: simd_float4x4, scale: Float) {
         let centres: [(SIMD3<Float>, Float)] = spheres.map { sphere in
@@ -315,6 +385,7 @@ final class ClothChain {
             let worldRotation = Self.swing(from: restDirection, to: Self.normalised(next - position)) * restRotation
             links[k].node.simdOrientation = simd_normalize(parentRotation.inverse * worldRotation)
             parentWorld = parentWorld * links[k].node.simdTransform
+            if computed.count <= k { computed.append(position) } else { computed[k] = position }
         }
     }
 
