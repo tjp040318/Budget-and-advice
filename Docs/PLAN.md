@@ -5581,3 +5581,23 @@ every ship, because a re-shipped combat idle leaves a stale standing one.
 Against Meshy's own *idle* preset (3 credits × 116 = 348, above the floor):
 a derived idle is free, breathes like its source, and can be tuned in one
 table (`KEEP`).
+
+### The stronger pass: serious2 (2026-09-18, 02:00)
+
+Raw against shipped (`raw_vs_passed`): the first pass moved a five-head
+chibi to five and a half and the owner still saw "cartoony" — the body's
+WIDTH is the chibi as much as the head is, and short legs under a wide
+torso read as a toy whatever the head does. `reproportion` learned a
+`{"width": W}` operation (a bone's own vertices squashed in the two axes
+across it, its children moved in with it, the clips' translation channels
+scaled per axis to follow) and `PROPORTIONS["serious2"]`: head 0.80, hands
+0.70, feet 0.82, hips and spine ×0.90 wide, thighs +28% long ×0.90 wide,
+shins +22% ×0.92, upper arms and forearms +6% ×0.88 — about six and a half
+heads tall. Judged on `proportions_board` (Ares, Sekhmet, Anubis: raw,
+first pass, serious2) and on the clips (`ares_serious2_clips`: the standing
+idle and the heavy attack skinned on the re-shipped base, clean). The
+batch (`tools/batch/proportions.sh`, `PROPORTIONS_RECIPE=serious2`, markers
+in `/tmp/proportions2`, the Ares family graded gold on the way) re-ships
+every rigged family and derives its standing idle; about two hours. The
+paid answer — a new concept style and a remake at 68 credits a family —
+stands, and this is what the roster looks like until the credits exist.

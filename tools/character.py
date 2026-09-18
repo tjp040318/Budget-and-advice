@@ -907,6 +907,19 @@ PROPORTIONS = {
     "serious": {"Head": 0.85, "LeftHand": 0.74, "RightHand": 0.74, "LeftFoot": 0.88, "RightFoot": 0.88,
                 "LeftUpLeg": {"length": 1.10}, "RightUpLeg": {"length": 1.10},
                 "LeftLeg": {"length": 1.08}, "RightLeg": {"length": 1.08}},
+    # The stronger recipe (2026-09-18): the first one moved a five-head
+    # chibi to five and a half and the owner still saw "cartoony" — the
+    # body's WIDTH is the chibi as much as the head is. {"width": W}
+    # squashes a bone's own vertices in the two axes across it and moves its
+    # children in with it: the torso and hips a tenth narrower, the limbs
+    # slimmer, the legs a quarter longer, the head at four fifths — about
+    # six and a half heads tall, the genre's "serious" hero.
+    "serious2": {"Head": 0.80, "LeftHand": 0.70, "RightHand": 0.70, "LeftFoot": 0.82, "RightFoot": 0.82,
+                 "Hips": {"width": 0.90}, "Spine": {"width": 0.90}, "Spine1": {"width": 0.92}, "Spine2": {"width": 0.94},
+                 "LeftUpLeg": {"length": 1.28, "width": 0.90}, "RightUpLeg": {"length": 1.28, "width": 0.90},
+                 "LeftLeg": {"length": 1.22, "width": 0.92}, "RightLeg": {"length": 1.22, "width": 0.92},
+                 "LeftArm": {"length": 1.06, "width": 0.88}, "RightArm": {"length": 1.06, "width": 0.88},
+                 "LeftForeArm": {"length": 1.06, "width": 0.88}, "RightForeArm": {"length": 1.06, "width": 0.88}},
 }
 
 
@@ -940,10 +953,18 @@ def reproportion(char, scales, height=None, fit=None):
         parent_hang = np.eye(4) if char.parents[i] < 0 else hang_world[char.parents[i]]
         li = local[i].copy()
         if char.parents[i] >= 0 and isinstance(spec.get(char.parents[i]), dict):
-            # A child of a lengthened bone: moved out along it.
-            L = spec[char.parents[i]]["length"]
-            li[3, :3] = local[i][3, :3] * L
-            t_factor[i] = L
+            # A child of a lengthened bone is moved out along it; of a
+            # narrowed one, in across it.
+            pspec = spec[char.parents[i]]
+            pk = children[char.parents[i]]
+            u = local[pk[0]][3, :3] if pk else np.array([0.0, 1.0, 0.0])
+            u = u / max(np.linalg.norm(u), 1e-9)
+            t = local[i][3, :3]
+            tp = np.dot(t, u) * u
+            new_t = pspec.get("length", 1.0) * tp + pspec.get("width", 1.0) * (t - tp)
+            li[3, :3] = new_t
+            safe = np.abs(t) > 1e-6
+            t_factor[i] = np.where(safe, new_t / np.where(safe, t, 1.0), 1.0)
         local_new[i] = li
         plain = li @ parent_hang
         sc = spec.get(i)
@@ -954,9 +975,11 @@ def reproportion(char, scales, height=None, fit=None):
             kids = children[i]
             u = local[kids[0]][3, :3] if kids else np.array([0.0, 1.0, 0.0])
             u = u / max(np.linalg.norm(u), 1e-9)
-            L = sc["length"]
+            L = sc.get("length", 1.0)
+            W = sc.get("width", 1.0)
             stretch = np.eye(4)
-            stretch[:3, :3] = np.eye(3) + (L - 1.0) * np.outer(u, u)
+            # Along the bone by L, across it by W, in the joint's own space.
+            stretch[:3, :3] = np.eye(3) + (L - 1.0) * np.outer(u, u) + (W - 1.0) * (np.eye(3) - np.outer(u, u))
             skin_world[i] = stretch @ plain
             hang_world[i] = plain
         else:
@@ -988,8 +1011,16 @@ def reproportion(char, scales, height=None, fit=None):
         s2 = (height / h) if height else 1.0
         t2 = np.array([-(lo[0] + hi[0]) * 0.5 * s2, -lo[1] * s2, -(lo[2] + hi[2]) * 0.5 * s2])
         fit = {"s": float(s2), "t": t2}
-        words = ", ".join(f"{k} x{v}" if not isinstance(v, dict) else f"{k} +{int(round((v['length'] - 1) * 100))}% long"
-                          for k, v in scales.items() if k in leaf)
+        def word(k, v):
+            if not isinstance(v, dict):
+                return f"{k} x{v}"
+            parts = []
+            if "length" in v:
+                parts.append(f"+{int(round((v['length'] - 1) * 100))}% long")
+            if "width" in v:
+                parts.append(f"x{v['width']} wide")
+            return f"{k} " + " ".join(parts)
+        words = ", ".join(word(k, v) for k, v in scales.items() if k in leaf)
         print(f"    proportions: {words}; height {h:.3f} -> {h * s2:.3f}")
     apply_similarity(char, np.eye(3), fit["s"], fit["t"])
     return fit

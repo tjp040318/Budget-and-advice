@@ -1007,7 +1007,16 @@ environment can and cannot do. The short version:
   remake at 59 credits a family (PLAN.md, *The serious look*: about
   5,700 for the roster); `zeus_serious` is the one paid test, judged on a
   board of the three Zeuses. A mesh made in the new style must NOT go
-  through the pass. `mesh.py`'s clip finder accepts only `<name>_<clip>`
+  through the pass. **The pass is `serious2` since 2026-09-18** (PLAN.md,
+  *The stronger pass*): `reproportion` has a `{"width": W}` operation
+  beside `length`, and the recipe narrows the hips, spine and limbs a
+  tenth, lengthens the thighs 28% and the shins 22%, the head at 0.80 —
+  the first recipe left the chibi WIDTH and the owner still saw cartoons;
+  `tools/batch/proportions.sh` (`PROPORTIONS_RECIPE`, markers in
+  `/tmp/proportions2`, the Ares family `--grade gold` on the way) re-ships
+  every family and derives its standing idle. A remake is 68 credits a
+  family now (the walk clip and the bespoke motions), about 6,400 for
+  the roster. `mesh.py`'s clip finder accepts only `<name>_<clip>`
   for a clip the game knows (`CLIP_NAMES`): `ra_awakened`'s files beside
   `ra` were read as Ra's clips and failed the bind check for three families.
 - **Five tabs.** An iPhone folds a sixth tab into a system "More" list, so
