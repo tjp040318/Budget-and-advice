@@ -796,11 +796,18 @@ struct SummonStageView: UIViewRepresentable {
         // without ever turning the face away. A reveal is the most-looked-at
         // second in the game and a dead-still model is the tell that it is a
         // prop rather than a character.
-        let settle = SCNAction.rotateTo(x: 0, y: 0, z: 0, duration: 1.5, usesShortestUnitArc: true)
+        // "Face the player" is read off the FEET, not assumed (2026-09-18):
+        // a family with no `idle` plays its combat idle here, a guard stance
+        // whose feet point off the mesh's forward — Sekhmet showed her
+        // profile and the awakened Ares his back on three runs of frames,
+        // lit by the cool fill on the side the camera saw. The correction
+        // turns the feet toward the lens and the sway swings about it.
+        let facing = Self.facingCorrection(for: figure)
+        let settle = SCNAction.rotateTo(x: 0, y: CGFloat(facing), z: 0, duration: 1.5, usesShortestUnitArc: true)
         settle.timingMode = .easeOut
-        let swayRight = SCNAction.rotateTo(x: 0, y: 0.20, z: 0, duration: 4.5, usesShortestUnitArc: true)
+        let swayRight = SCNAction.rotateTo(x: 0, y: CGFloat(facing + 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
         swayRight.timingMode = .easeInEaseOut
-        let swayLeft = SCNAction.rotateTo(x: 0, y: -0.20, z: 0, duration: 4.5, usesShortestUnitArc: true)
+        let swayLeft = SCNAction.rotateTo(x: 0, y: CGFloat(facing - 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
         swayLeft.timingMode = .easeInEaseOut
         figure.runAction(.sequence([settle, .repeatForever(.sequence([swayRight, swayLeft]))]), forKey: "turn")
 
@@ -820,6 +827,35 @@ struct SummonStageView: UIViewRepresentable {
             push.timingMode = .easeOut
             cameraNode.runAction(push, forKey: "push")
         }
+    }
+
+    /// The yaw that turns the figure's feet toward the camera (+Z), read off
+    /// the animated pose at the moment of the reveal: the heel-to-toe
+    /// direction of both feet, averaged, in world space (the rigs are
+    /// Mixamo-named, `LeftFoot` → `LeftToeBase`; the older exports end in
+    /// `_End`). Zero when the joints are not found, which leaves the stance
+    /// as it was; the correction is printed once so a run's console says
+    /// what it read.
+    private static func facingCorrection(for figure: SCNNode) -> Float {
+        func point(_ name: String) -> SCNVector3? {
+            figure.childNode(withName: name, recursively: true)?.presentation.worldPosition
+        }
+        var dx: Float = 0, dz: Float = 0, found = 0
+        for (heel, toe) in [("LeftFoot", "LeftToeBase"), ("RightFoot", "RightToeBase"),
+                            ("LeftFoot", "LeftToe_End"), ("RightFoot", "RightToe_End")] {
+            guard let h = point(heel), let t = point(toe) else { continue }
+            dx += t.x - h.x
+            dz += t.z - h.z
+            found += 1
+        }
+        guard found > 0, dx * dx + dz * dz > 1e-6 else {
+            print("[Reveal] facing: no foot joints found; stance kept")
+            return 0
+        }
+        let yaw = atan2(dx, dz)
+        let correction = figure.eulerAngles.y - yaw
+        print("[Reveal] facing: feet at \(Int(yaw * 180 / .pi))°, figure turned to \(Int(correction * 180 / .pi))° from \(found) feet")
+        return correction
     }
 
     /// A soft patch of shade under the feet.
