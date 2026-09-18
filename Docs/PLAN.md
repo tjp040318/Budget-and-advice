@@ -5567,7 +5567,7 @@ Two more things the frames showed, one at a time:
 The frames at 2× (`run183_figures_2x`) showed the awakened Ares's geometry
 folded — a seam through the torso, the shield stretched — where Sekhmet was
 whole. Skinning the shipped base with its shipped combat idle offline
-(`scratchpad/base_plus_clip.py`, the way the game does it, joints matched by
+(`tools/base_plus_clip.py`, the way the game does it, joints matched by
 name) reproduced it exactly, and the RAW Meshy clip has the same pose: not a
 pipeline fault, the clip. Meshy's *combat idle* preset is a crouched guard
 stance, knees bent and the spine folded forward, and on a wide armoured
@@ -5681,10 +5681,10 @@ Bellona 15%, Diana 9%, the centurion 17%, Baldr 14%, Bragi 8%; Sekhmet,
 Zeus, Anubis, Thoth, Hades, Demeter, the cyclops and the cobra priestess
 0 and left exactly as Meshy rigged them. Every rule was checked on a
 board of the mask drawn over the figure from behind and the side
-(`scratchpad/cape_mask_board.py`, ten families at a time, the false
+(`tools/cape_board.py`, ten families at a time, the false
 positives read off it one by one: the cyclops's arms, Sekhmet's arm
 bands, Zeus's bolt, Hades's bident, Diana's bow) and Ares on the heavy
-attack's blow frame, the basic and the idle (`ares_cape_v3`): the cape
+attack's blow frame, the basic and the idle (`tools/base_plus_clip.py`): the cape
 hangs from the shoulders while the arms rise, trails in the lunge, drapes
 at rest. Meshy's rigs name the neck `neck` and the upper spine
 `Spine01`/`Spine02`, so every bone lookup in the pass is case blind.

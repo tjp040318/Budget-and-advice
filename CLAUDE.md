@@ -1595,7 +1595,7 @@ environment can and cannot do. The short version:
   played Meshy's *combat idle* preset — a crouched guard stance, knees bent
   and spine folded — and on the Ares family it photographed as a hunch seen
   from behind (the owner: "the screenshot is still fucked"). Skinning the
-  shipped base with its shipped clip offline (`scratchpad/base_plus_clip.py`,
+  shipped base with its shipped clip offline (`tools/base_plus_clip.py`,
   joints matched by name as the game does) reproduced the frame exactly and
   the raw Meshy clip has the same pose: the clip, not the pipeline.
   `tools/stand_idle.py` derives `<name>_idle.usdz` from the combat idle for
@@ -1622,8 +1622,8 @@ environment can and cannot do. The short version:
   a rod, a bolt a lump, a bow too narrow — never by who owns it, since
   the awakened Ares's cape was skinned to his hand), and only when a limb
   dominates 4% of the mesh out there — under that a family is left as
-  rigged. Judge a change on `scratchpad/cape_mask_board.py` (the mask
-  drawn on the figure) and `cape_check.py` (how far the cape moves at a
+  rigged. Judge a change on `tools/cape_board.py` (the mask
+  drawn on the figure) and `tools/cape_check.py` (how far the cape moves at a
   clip's frame), never on the count alone: the first cut's count looked
   right and had warped the torso. Bone lookups are case blind (`neck`).
 
