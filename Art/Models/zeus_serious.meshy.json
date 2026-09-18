@@ -215,32 +215,6 @@
         "glb": "Art/Models/zeus_serious_death.glb"
       }
     },
-    "clip:ultimate": {
-      "id": "01a0b03c-35e9-75ad-8633-a7b81c58e488",
-      "kind": "clip",
-      "created": "2026-09-17T16:38:51Z",
-      "status": "SUCCEEDED",
-      "request": {
-        "rig_task_id": "01a0b03b-1f1b-7481-b347-ad7fde34a7be",
-        "action_id": 102
-      },
-      "cost": 3,
-      "clip": "ultimate",
-      "action_id": 102,
-      "progress": 100,
-      "urls": {
-        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b03c-35e9-75ad-8633-a7b81c58e488/output/Animation_Sword_Judgment_withSkin.glb?Expires=1789922351&Signature=LGukncJN726q-RPm4PGlxmjhaTCl~hB9GuMUSjLZ~XdvBqT~LjrO7EqT9ogahjgFXCuetD8lbtpcp0I0acH3FVJQZRGryoTrSSQRgyP2uS9ZgAtDoRnugrYzVAfpYJjOYoiEOVm-Q47h-3HUm~r3kOHbEIka40ZsWAggU1I8u3oThSh0QjirhEBQKzugLyjOPbZ7bpD2jiYAwf4aHnYcc2AzDncofUKCmBIL5z~64D3gG6urMDxBSkHteOVHzl5blAeEPn2LhltaTuuZwU~vLo3LCjgU3drdbD6xqVKIXQUONHOnjB-W1rx0pwZVx5jE6mYIOItDO4usgGNzRAxiog__&Key-Pair-Id=K1VGYTHIYLM9UM",
-        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b03c-35e9-75ad-8633-a7b81c58e488/output/Animation_Sword_Judgment_withSkin.fbx?Expires=1789922351&Signature=SgPNKp3KDzi0f3H~dFT9mQVFgz6Gjg-NY3JbNd6~nXfFTyFFlCigYXCFri~FcMRVm0goEImBZQTHnMwwjLFXrvc1dtFIpaedpQm-TY1Dn5P1EFanATYNh0OTx~Tk8CvFHCAb4y2a2NxlXuPhzBVbMhn0UNRpzviZbBoFiCLKgSlFUTA1w4eUjgtn7~tnPv3wAfV75f7lRCPFoRUYMJFyrPIxY5MGTlZRSvdUY1L1oaNxzm8Xm-aSD5wBb-3E04cwfTlDt0HVAp8KJQ3kcQIb191lE9AO-K9VacDCVVgw4qusAuxs2me5~mG9qICeZ-ttL238daWKwTdUSncyT4aTEA__&Key-Pair-Id=K1VGYTHIYLM9UM"
-      },
-      "created_at": 1789663131320,
-      "started_at": 1789663131327,
-      "finished_at": 1789663151415,
-      "name": "",
-      "polled": "2026-09-17T16:39:16Z",
-      "downloaded": {
-        "glb": "Art/Models/zeus_serious_ultimate.glb"
-      }
-    },
     "clip:victory": {
       "id": "01a0b03c-3809-75e9-9f17-444f791a67d8",
       "kind": "clip",
@@ -357,9 +331,62 @@
       "started_at": 1789660020192,
       "finished_at": 1789660037734,
       "name": "",
-      "polled": "2026-09-17T15:47:20Z"
+      "polled": "2026-09-18T17:33:56Z"
+    },
+    "clip:ultimate": {
+      "id": "01a0b595-0444-77ac-91c3-c3637e0d0656",
+      "kind": "clip",
+      "created": "2026-09-18T17:33:57Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b03b-1f1b-7481-b347-ad7fde34a7be",
+        "motion_task_id": "01a0b00c-b91c-72e0-a36f-c1137537b5da"
+      },
+      "cost": 3,
+      "clip": "ultimate",
+      "motion_task_id": "01a0b00c-b91c-72e0-a36f-c1137537b5da",
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b595-0444-77ac-91c3-c3637e0d0656/output/Animation_01a0b00c-b91c-72e0-a36f-c1137537b5da_withSkin.glb?Expires=1790012043&Signature=fuq0vvRKWLZPZ6pSh1wKKsEFElz9QLGbXfe~D~~v9wb10Sk0PdiDkzkEpkYUDx98z9KI1W0jnFilWzIqTuY7G6a9ArIoaq~MbPqcm2zavu~4Dykmxo01IJqVachfI-irhDBTrib3~rwozCst7LvimP~qHfH4yRue8SzxTnuFcpI2SnQwJYfNnGab6hzaiq8RHEGapk3NsGkUD2rcWinfm54DX31SSe3pC5gyZZ3TXV8tthO3ynCsY9D1s3D0xQE~S5oya8WHBhVOVF5euOESw0jbgwJo-KXJRm8duYKGdKTd6hgzyQTLTsH7BAI8wkeNx2ShLoIjcrgsUCxnonLyMg__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b595-0444-77ac-91c3-c3637e0d0656/output/Animation_01a0b00c-b91c-72e0-a36f-c1137537b5da_withSkin.fbx?Expires=1790012043&Signature=YAPv3fscaVPTvkvmo0xSpIccZ-YBNj4JchafdpVDtNzr3tl9Qj1x30wkEeGS~u67aUHF9MIey3kWGXM3c~vLebpTv9ELIX2CD0iMep6x17GY19aBaRsE4xCQRu~zDQu8QaJF9EbZ~c5gmI9GKDHHnJu~yU-n-Ja2M6uQ~uj8jeFVSuTIAfWDV-ua1u-VbjicfPhBhrk1oj-On9nIMxl7EB7~Wxl3XPkCggj9gMzq4O0PZSM9NBm3EONt1FN-dIwgAQDt5zkRhWKyhMSNjPnPzEs43NabGsPP~32cKcxcLmP~9j2wbFiCn4yjhYeeJCm2ewLu-GlgDvPvxaJspd5Tpg__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789752837774,
+      "started_at": 1789752837783,
+      "finished_at": 1789752843952,
+      "name": "",
+      "polled": "2026-09-18T17:34:08Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_serious_ultimate.glb"
+      }
     }
   },
-  "history": [],
-  "refreshed": "2026-09-18T17:32:11Z"
+  "history": [
+    {
+      "id": "01a0b03c-35e9-75ad-8633-a7b81c58e488",
+      "kind": "clip",
+      "created": "2026-09-17T16:38:51Z",
+      "status": "SUCCEEDED",
+      "request": {
+        "rig_task_id": "01a0b03b-1f1b-7481-b347-ad7fde34a7be",
+        "action_id": 102
+      },
+      "cost": 3,
+      "clip": "ultimate",
+      "action_id": 102,
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b03c-35e9-75ad-8633-a7b81c58e488/output/Animation_Sword_Judgment_withSkin.glb?Expires=1789922351&Signature=LGukncJN726q-RPm4PGlxmjhaTCl~hB9GuMUSjLZ~XdvBqT~LjrO7EqT9ogahjgFXCuetD8lbtpcp0I0acH3FVJQZRGryoTrSSQRgyP2uS9ZgAtDoRnugrYzVAfpYJjOYoiEOVm-Q47h-3HUm~r3kOHbEIka40ZsWAggU1I8u3oThSh0QjirhEBQKzugLyjOPbZ7bpD2jiYAwf4aHnYcc2AzDncofUKCmBIL5z~64D3gG6urMDxBSkHteOVHzl5blAeEPn2LhltaTuuZwU~vLo3LCjgU3drdbD6xqVKIXQUONHOnjB-W1rx0pwZVx5jE6mYIOItDO4usgGNzRAxiog__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b03c-35e9-75ad-8633-a7b81c58e488/output/Animation_Sword_Judgment_withSkin.fbx?Expires=1789922351&Signature=SgPNKp3KDzi0f3H~dFT9mQVFgz6Gjg-NY3JbNd6~nXfFTyFFlCigYXCFri~FcMRVm0goEImBZQTHnMwwjLFXrvc1dtFIpaedpQm-TY1Dn5P1EFanATYNh0OTx~Tk8CvFHCAb4y2a2NxlXuPhzBVbMhn0UNRpzviZbBoFiCLKgSlFUTA1w4eUjgtn7~tnPv3wAfV75f7lRCPFoRUYMJFyrPIxY5MGTlZRSvdUY1L1oaNxzm8Xm-aSD5wBb-3E04cwfTlDt0HVAp8KJQ3kcQIb191lE9AO-K9VacDCVVgw4qusAuxs2me5~mG9qICeZ-ttL238daWKwTdUSncyT4aTEA__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
+      "created_at": 1789663131320,
+      "started_at": 1789663131327,
+      "finished_at": 1789663151415,
+      "name": "",
+      "polled": "2026-09-17T16:39:16Z",
+      "downloaded": {
+        "glb": "Art/Models/zeus_serious_ultimate.glb"
+      }
+    }
+  ],
+  "refreshed": "2026-09-18T17:34:08Z"
 }

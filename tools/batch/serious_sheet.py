@@ -4,8 +4,8 @@ name, to judge proportions and the rigger's rules before a mesh is bought.
 import sys, glob, os
 from PIL import Image, ImageDraw, ImageFont
 REPO = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
-args = [a for a in sys.argv[1:] if not a.startswith("--")]
 prefix = sys.argv[sys.argv.index("--out") + 1] if "--out" in sys.argv else "/tmp/pantheon-batch/serious_sheet"
+args = [a for a in sys.argv[1:] if not a.startswith("--") and a != prefix]
 files = sorted(glob.glob(os.path.join(REPO, "Art/Concepts/*_serious_sw.png")), key=os.path.getmtime)
 if args:
     files = [f for f in files if os.path.basename(f)[:-len("_serious_sw.png")] in args]

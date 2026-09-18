@@ -20,10 +20,10 @@ json.dump(m, open(f"Art/Models/{asset}.meshy.json", "w"), indent=1)
 print(f"{asset}: {n} motion stage(s) copied from {donor}")
 PY
 for clip in attack_basic attack_heavy ultimate; do
-  read -r prompt duration mode < <(python3 -c "
-import json,sys; st=json.load(open('Art/Models/$donor.meshy.json'))['stages'].get('motion:$clip',{}).get('request',{})
-print(json.dumps(st.get('prompt','')), st.get('duration',3.0), st.get('mode','prime'))")
-  prompt=$(python3 -c "import json,sys; print(json.loads(sys.argv[1]))" "$prompt")
+  # Tab-separated: the sentence has spaces, and a plain read split it at the first one.
+  IFS=$'\t' read -r prompt duration mode < <(python3 -c "
+import json; st=json.load(open('Art/Models/$donor.meshy.json'))['stages'].get('motion:$clip',{}).get('request',{})
+print(st.get('prompt','').replace('\t',' ') + '\t' + str(st.get('duration',3.0)) + '\t' + st.get('mode','prime'))")
   [ -z "$prompt" ] && { echo "no motion for $clip in $donor"; continue; }
   echo "== $asset $clip"
   python3 tools/meshy.py motion "$asset" "$clip" --prompt "$prompt" --duration "$duration" --mode "$mode" --floor 500 2>&1 | tail -3
