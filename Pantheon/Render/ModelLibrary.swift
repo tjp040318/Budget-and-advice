@@ -746,20 +746,45 @@ enum MaterialTuner {
 
     /// Metal. `_surface.normal` and `_surface.view` are in view space;
     /// `_light.direction` points at the light.
-    static let lightingModifier = """
+    ///
+    /// LAMBERT since 2026-09-18. Every ramp before it was a half-Lambert —
+    /// `ndl * 0.5 + 0.5` through a band, over a floor of 0.30 — so a face
+    /// turned fully away from a light still took 30% of it, and the four
+    /// lights of the reveal, the altar and the collection's Stage summed to
+    /// a figure with no shadow side at all: the owner's frames of the
+    /// awakened Ares and of Sekhmet on the beam were "the renders all
+    /// fucked up", and `preview.py`, which draws plain Lambert, drew the
+    /// same meshes as sculpture. The half-Lambert was the cartoon; the
+    /// 0.04–0.96 band of 2026-09-17 widened it but kept the wrap and the
+    /// floor. This is `saturate((ndl + 0.15) / 1.15)`: a real terminator with
+    /// a hair of wrap so a normal map's engraving shades through the turn,
+    /// and the shadow side is what the fill, the ambient and the environment
+    /// map give it — which is how the genre's real-time figures (Raid, the
+    /// 3D reveals) are lit. The old ramp survives as `legacyLightingModifier`
+    /// for the CI lab (`-tour-shading legacy`), so a frame can be judged
+    /// against it; it is not for the game.
+    static var lightingModifier: String {
+        legacyShading ? legacyLightingModifier : lambertLightingModifier
+    }
+
+    /// `-tour-shading legacy` (DEBUG, the CI lab) lights every figure with
+    /// the half-Lambert ramp of 2026-09-17, so one run photographs both.
+    static var legacyShading: Bool {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-shading"), at + 1 < args.count else { return false }
+        return args[at + 1] == "legacy"
+        #else
+        return false
+        #endif
+    }
+
+    static let lambertLightingModifier = """
     #pragma body
     float ndl = dot(_surface.normal, _light.direction);
-    float wrap = ndl * 0.5 + 0.5;
-    // The band was 0.28-0.72 (two tones and a hard step between them), which
-    // is what made the figures read as cartoons: a face was one flat tone
-    // and a cheek. Wider, so the normal map's engraving and folds shade
-    // through the turn, and a tighter, brighter specular so metal reads as
-    // metal.
-    // 0.04-0.96 since 2026-09-17 (was 0.12-0.90; before that a two-tone
-    // 0.28-0.72): the owner asked for "a little more serious feeling and
-    // look", and a band this wide is a plain Lambert roll-off with the
-    // faintest painted lift - the form shades like a sculpture, not a cel.
-    float band = smoothstep(0.04, 0.96, wrap);
+    // A real terminator with a hair of wrap (0.15): the shadow side is the
+    // fill's, the ambient's and the environment's, not this light's.
+    float lam = saturate((ndl + 0.15) / 1.15);
     // A metal's colour is in its highlight, not its diffuse: the surface
     // modifier marks the painted gold metallic and smooth, and here that
     // dims the flat fill a little and turns the specular from one 36-power
@@ -767,6 +792,24 @@ enum MaterialTuner {
     // bright on smooth metal, 16-power and faint on rough linen (the
     // owner, 2026-09-17: "not detailed enough"; the engraving was lit like
     // the cloth beside it).
+    float rough = saturate(_surface.roughness);
+    float metal = saturate(_surface.metalness);
+    _lightingContribution.diffuse += _light.intensity.rgb * lam * (1.0 - 0.30 * metal);
+    float3 h = normalize(_light.direction + _surface.view);
+    float specPower = mix(70.0, 16.0, rough);
+    float specStrength = mix(0.90, 0.22, rough) * (0.55 + 0.75 * metal);
+    float spec = pow(saturate(dot(_surface.normal, h)), specPower) * specStrength * saturate(ndl * 4.0);
+    _lightingContribution.specular += _light.intensity.rgb * spec;
+    """
+
+    /// The half-Lambert ramp the game shipped with until 2026-09-18, kept
+    /// only so the CI lab can photograph it beside the Lambert (see
+    /// `lightingModifier`).
+    static let legacyLightingModifier = """
+    #pragma body
+    float ndl = dot(_surface.normal, _light.direction);
+    float wrap = ndl * 0.5 + 0.5;
+    float band = smoothstep(0.04, 0.96, wrap);
     float rough = saturate(_surface.roughness);
     float metal = saturate(_surface.metalness);
     _lightingContribution.diffuse += _light.intensity.rgb * (0.30 + 0.70 * band) * (1.0 - 0.30 * metal);
@@ -926,9 +969,9 @@ enum MaterialTuner {
     /// frame that reads wrong changes them together (the base rim is 3.6 at
     /// 0.30 in `tune`; an awakened figure's is a little wider and a little
     /// brighter, never an outline).
-    static let awakenedCostumeGlow: Double = 0.20
-    static let awakenedRimPower: Double = 3.2
-    static let awakenedRimStrength: Double = 0.42
+    static let awakenedCostumeGlow: Double = 0.12
+    static let awakenedRimPower: Double = 3.4
+    static let awakenedRimStrength: Double = 0.36
 
     private static func report(_ node: SCNNode, _ message: String) {
         #if DEBUG

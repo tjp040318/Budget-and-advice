@@ -653,8 +653,11 @@ struct SummonStageView: UIViewRepresentable {
         // the design.
         let key = SCNLight()
         key.type = .directional
-        key.intensity = 780
+        key.intensity = FigureStageLighting.keyIntensity
         key.color = tint.mixed(with: .white, amount: 0.82)
+        // The one shadow in the scene: the figure's, deferred and soft; the
+        // quads never cast (`restrictShadows`, below and in `show`).
+        FigureStageLighting.castShadows(from: key)
         let keyNode = SCNNode()
         keyNode.light = key
         keyNode.position = SCNVector3(-3, 5, 4)
@@ -668,7 +671,7 @@ struct SummonStageView: UIViewRepresentable {
         // and it keeps the costume readable.
         let fillLight = SCNLight()
         fillLight.type = .directional
-        fillLight.intensity = 300
+        fillLight.intensity = FigureStageLighting.fillIntensity
         fillLight.color = UIColor(hex: "#7C93D6") ?? .white
         let fillNode = SCNNode()
         fillNode.light = fillLight
@@ -681,7 +684,7 @@ struct SummonStageView: UIViewRepresentable {
         // not enough to light a wall.
         let rim = SCNLight()
         rim.type = .directional
-        rim.intensity = 520
+        rim.intensity = FigureStageLighting.rimIntensity
         rim.color = tint
         let rimNode = SCNNode()
         rimNode.light = rim
@@ -694,10 +697,17 @@ struct SummonStageView: UIViewRepresentable {
         // paying for the rim's over-exposure everywhere.
         let ambient = SCNLight()
         ambient.type = .ambient
-        ambient.intensity = 175
+        ambient.intensity = FigureStageLighting.ambientIntensity
         let ambientNode = SCNNode()
         ambientNode.light = ambient
         scene.rootNode.addChildNode(ambientNode)
+
+        // The studio environment, so gold reflects something and the shadow
+        // side is lit by a sky and a ground rather than a flat ambient; and
+        // the figure the only caster (2026-09-18).
+        FigureStageLighting.applyEnvironment(to: scene)
+        FigureStageLighting.restrictShadows(in: scene, to: node)
+        camera.exposureOffset = FigureStageLighting.exposureOffset
 
         if revealed { show(context.coordinator) }
         return view
@@ -749,6 +759,9 @@ struct SummonStageView: UIViewRepresentable {
         figure.runAction(.sequence([.wait(duration: 0.05), .fadeIn(duration: 0.35)]))
         VFXLibrary.summonBeam(at: SCNVector3(0, 0, 0), in: scene, tint: coordinator.tint)
         addContactShadow(to: scene)
+        // The beam's quads and the shadow patch arrived after the figure:
+        // they cast nothing.
+        FigureStageLighting.restrictShadows(in: scene, to: figure)
 
         // The figure settles out of its three-quarter stance to face the player
         // as the stars tick in, then breathes: a slow sway of a fifth of a

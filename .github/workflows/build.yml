@@ -136,7 +136,18 @@ jobs:
               # in, so the figure has turned and the words are up.
               reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 4; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened" ;;
+                sleep 7; shoot "$step-${names[$step]}-awakened"
+                # The lighting lab (2026-09-18): the same awakened Ares two
+                # thirds of a stop under, with the bare rig (Lambert, no
+                # environment, no shadow), and with the ramp of 2026-09-17
+                # on the bare rig — the control every other frame is judged
+                # against. Docs/PLAN.md, "The figure stages' light".
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab dark >/dev/null
+                sleep 7; shoot "$step-${names[$step]}-awakened-dark"
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab bare >/dev/null
+                sleep 7; shoot "$step-${names[$step]}-awakened-bare"
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab bare -tour-shading legacy >/dev/null
+                sleep 7; shoot "$step-${names[$step]}-awakened-legacy" ;;
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
               arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;

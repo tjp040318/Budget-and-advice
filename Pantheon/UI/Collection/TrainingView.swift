@@ -1026,17 +1026,20 @@ struct AltarStageView: UIViewRepresentable {
         // Lit as the painting is: a warm key from the shaft of light above and
         // in front, a cool fill from the hall, a gold rim from behind, and an
         // ambient floor so the shadow side keeps its costume.
+        // The rig's numbers, the studio environment and the figure's shadow are
+        // `FigureStageLighting`, shared with the reveal (2026-09-18).
         let key = SCNLight()
         key.type = .directional
-        key.intensity = 820
+        key.intensity = FigureStageLighting.keyIntensity
         key.color = UIColor(hex: "#FFE8C2") ?? .white
+        FigureStageLighting.castShadows(from: key)
         let keyNode = SCNNode()
         keyNode.light = key
         keyNode.eulerAngles = SCNVector3(-1.0, -0.3, 0)
         scene.rootNode.addChildNode(keyNode)
         let fill = SCNLight()
         fill.type = .directional
-        fill.intensity = 280
+        fill.intensity = FigureStageLighting.fillIntensity
         fill.color = UIColor(hex: "#7C93D6") ?? .white
         let fillNode = SCNNode()
         fillNode.light = fill
@@ -1044,7 +1047,7 @@ struct AltarStageView: UIViewRepresentable {
         scene.rootNode.addChildNode(fillNode)
         let rim = SCNLight()
         rim.type = .directional
-        rim.intensity = 480
+        rim.intensity = FigureStageLighting.rimIntensity
         rim.color = UIColor(hex: "#FFD36A") ?? .yellow
         let rimNode = SCNNode()
         rimNode.light = rim
@@ -1052,10 +1055,11 @@ struct AltarStageView: UIViewRepresentable {
         scene.rootNode.addChildNode(rimNode)
         let ambient = SCNLight()
         ambient.type = .ambient
-        ambient.intensity = 190
+        ambient.intensity = FigureStageLighting.ambientIntensity
         let ambientNode = SCNNode()
         ambientNode.light = ambient
         scene.rootNode.addChildNode(ambientNode)
+        FigureStageLighting.applyEnvironment(to: scene)
 
         place(unit, in: coordinator)
         frameCamera(view, coordinator)
@@ -1110,6 +1114,9 @@ struct AltarStageView: UIViewRepresentable {
             node.startLoop(idle, key: "idle")
         }
         node.runAction(.fadeIn(duration: 0.35))
+        // The figure is the scene's one shadow caster; the ring, the shadow
+        // patch and the set never cast (2026-09-18).
+        FigureStageLighting.restrictShadows(in: scene, to: node)
         coordinator.figure = node
         coordinator.doctor.figure = node
         coordinator.figureHeight = height

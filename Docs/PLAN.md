@@ -5424,3 +5424,90 @@ fire sibling in health and attack together by less than a grade.
 - Rivals' arena teams (`LocalSocialBackend.rivalDefence`) draw from the
   full `summonPool`, light and dark included: a rival can show off what
   the scroll gives, which is the point of a rival.
+
+## The figure stages' light (2026-09-18, built; the lab frames judge it)
+
+The owner, of run 180's reveal frames — the awakened Ares and the fire
+Sekhmet on the beam — "Your screenshot still has the renders all fucked
+up." Measured against `preview.py`'s Lambert render of the same mesh, the
+frame's figure sat at a mean luminance of 135 against the render's 56 with
+the same saturation: two and a half times as bright, and flat.
+
+### What was wrong, in three parts
+
+1. **The ramp was a half-Lambert with a floor.** `MaterialTuner`'s lighting
+   modifier computed `wrap = ndl × 0.5 + 0.5`, a band over it, and
+   `0.30 + 0.70 × band`: a face turned fully away from a light still took
+   30% of it, and a face at the terminator took 65%. The 2026-09-17 change
+   widened the band to 0.04–0.96 and called it near-Lambert; it kept the
+   wrap and the floor, and that is the flatness. Four lights on that ramp
+   (key, fill, rim, ambient) sum to no shadow side at all.
+2. **No environment.** The reveal, the Hall of Ka's altar and the
+   collection's Stage set no `lightingEnvironment`. The surface shader
+   marks painted gold metallic (0.85) and smooth; a metal with nothing to
+   reflect is a dull flat colour, and the shadow side of every figure was
+   the ambient alone.
+3. **No shadow.** Only the battle's key casts. A helmet did not shade a
+   face, an arm a torso, a cape a back: nothing on the figure said which
+   way the light came from.
+
+### What the genre does
+
+Summoners War's 3D monsters are hand-painted with the lighting baked in and
+lit by one key plus a rim, in scenes designed dark behind the reveal so the
+figure is the brightest thing. Raid: Shadow Legends lights PBR figures with
+an image-based environment, a shadow-casting key and a fill, and its summon
+portal is a dark room with a shaft of light. Epic Seven is 2D. The common
+ground for a PBR figure is: a real Lambert terminator, an environment for
+the metals and the shadow side, a shadow for form, and a set darker than the
+figure.
+
+### The options
+
+1. **Keep the half-Lambert and re-light** (lower every light by a third).
+   Darker, still flat: a ramp with a floor has no terminator to find,
+   whatever the intensity. Rejected.
+2. **True Lambert (`saturate((ndl + 0.15) / 1.15)`), a studio environment
+   map, and a shadow-casting key with only the figure casting.** The form
+   comes from the shading, the shadow side from the environment and the
+   fill, gold from the map's softboxes. Free. **Chosen.**
+3. **A toon ramp with an ink outline** — Summoners War's actual look.
+   Rejected: the owner asked for "a little more serious feeling and look"
+   the day before, and the meshes are painted PBR, not cel.
+4. **A darker set behind the reveal** (the temple in dusk, a shaft of
+   light). Right, and the next step once the figure itself is right; it is
+   a painting and a grade, not a shader, and it should be judged after this
+   one so the two are not confused.
+
+### As built
+
+- `MaterialTuner.lambertLightingModifier` (ModelLibrary.swift): the
+  Lambert with a 0.15 wrap; the specular is also gated by `saturate(ndl ×
+  4)` so a highlight cannot appear on the shadow side. The old ramp is
+  `legacyLightingModifier`, selected only by `-tour-shading legacy`
+  (DEBUG) for the lab.
+- `FigureStageLighting` (Render/FigureStageLighting.swift): the shared
+  rig — key 900, fill 240, rim 400, ambient 120 (the Lambert gives away the
+  wrap's free 30%, so the key is up and the ambient down), the studio map
+  at 0.6, the deferred shadow settings the battle uses, and
+  `restrictShadows(in:to:)`, which turns casting off on every node and on
+  again for the figure — the beam, the mist planes, the rune ring and the
+  contact shadow are additive or painted quads that would throw solid
+  black shapes across the dais, which is why the reveal never had a shadow
+  before. It is called after the figure is placed and again after the
+  beam and the shadow patch arrive at the reveal.
+- `tools/studio_ibl.py` → `Stage/studio_ibl.png`, a 512 × 256 equirect: a
+  cool sky, a cream horizon, warm dark ground, two warm softboxes high left
+  and right so a bracer reflects a shape. LDR, which SceneKit accepts.
+- The awakened look is 3.4 / 0.36 with a 0.12 costume glow (from 3.2 /
+  0.42 and 0.20 the evening before): under a real terminator the rim
+  reads twice as strong.
+- **The lab.** The reveal step photographs the awakened Ares four times in
+  one run: the new rig; the new rig two thirds of a stop under
+  (`-tour-reveal-lab dark`, `exposureOffset −0.4`); the Lambert alone with
+  no environment and no shadow (`-tour-reveal-lab bare`); and the bare rig
+  on the old ramp (`-tour-shading legacy`), which is exactly the render the
+  owner sent back — the control. The next run's four frames are judged
+  side by side and measured (`tools/framelight.py`'s method on the figure's
+  crop: mean, saturation, clipped share); whichever wins becomes the
+  default and the lab stays for the next lighting change.
