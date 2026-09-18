@@ -802,14 +802,22 @@ struct SummonStageView: UIViewRepresentable {
         // profile and the awakened Ares his back on three runs of frames,
         // lit by the cool fill on the side the camera saw. The correction
         // turns the feet toward the lens and the sway swings about it.
-        let facing = Self.facingCorrection(for: figure)
-        let settle = SCNAction.rotateTo(x: 0, y: CGFloat(facing), z: 0, duration: 1.5, usesShortestUnitArc: true)
-        settle.timingMode = .easeOut
-        let swayRight = SCNAction.rotateTo(x: 0, y: CGFloat(facing + 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
-        swayRight.timingMode = .easeInEaseOut
-        let swayLeft = SCNAction.rotateTo(x: 0, y: CGFloat(facing - 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
-        swayLeft.timingMode = .easeInEaseOut
-        figure.runAction(.sequence([settle, .repeatForever(.sequence([swayRight, swayLeft]))]), forKey: "turn")
+        // Read a beat AFTER the first frame: the joints' presentation
+        // positions are all zero until the renderer has posed the figure
+        // once, and run 186 read a zero heel-to-toe vector off joints it had
+        // found by name ("no foot joints found" was the wrong message for it).
+        // The settle takes 1.5 s; starting it 0.15 s late is invisible.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak figure] in
+            guard let figure else { return }
+            let facing = Self.facingCorrection(for: figure)
+            let settle = SCNAction.rotateTo(x: 0, y: CGFloat(facing), z: 0, duration: 1.5, usesShortestUnitArc: true)
+            settle.timingMode = .easeOut
+            let swayRight = SCNAction.rotateTo(x: 0, y: CGFloat(facing + 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
+            swayRight.timingMode = .easeInEaseOut
+            let swayLeft = SCNAction.rotateTo(x: 0, y: CGFloat(facing - 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
+            swayLeft.timingMode = .easeInEaseOut
+            figure.runAction(.sequence([settle, .repeatForever(.sequence([swayRight, swayLeft]))]), forKey: "turn")
+        }
 
         // A slow push toward the figure over the beat the name lands on. It is
         // small — a twelfth of the distance — and it eases out, so it reads as
@@ -859,9 +867,13 @@ struct SummonStageView: UIViewRepresentable {
             dz += t.z - h.z
             found += 1
         }
-        guard found > 0, dx * dx + dz * dz > 1e-6 else {
+        guard found > 0 else {
             let names = figure.childNodes(passingTest: { _, _ in true }).compactMap(\.name).prefix(12)
             print("[Reveal] facing: no foot joints found; stance kept (nodes: \(names.joined(separator: ", ")))")
+            return 0
+        }
+        guard dx * dx + dz * dz > 1e-6 else {
+            print("[Reveal] facing: \(found) feet found but not yet posed (a zero heel-to-toe vector); stance kept")
             return 0
         }
         let yaw = atan2(dx, dz)
