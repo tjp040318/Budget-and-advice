@@ -1056,9 +1056,15 @@ final class GameStore: ObservableObject {
                 player.units.append(unit)
             }
             // One awakened unit, so the tour's collection, detail and battle
-            // frames show the awakened card, name and look.
-            if let starter = player.units.firstIndex(where: { $0.blueprintID == "anubis_umbra" }) {
+            // frames show the awakened card, name and look: the STARTER,
+            // whichever family and element that is (`UnitDatabase.starter`;
+            // keyed on "anubis_umbra" until 2026-09-18, the day after the
+            // starter became the fire Anubis, which left the tour with no
+            // awakened unit, a level-1 campaign team and a 1v4 arena defeat
+            // in run 185's frames), levelled with the rest of the roster.
+            if let starter = player.units.firstIndex(where: { $0.blueprintID == UnitDatabase.starter.id }) {
                 player.units[starter].isAwakened = true
+                player.units[starter].level = max(player.units[starter].level, 12)
                 // Its regalia at III, so the tour's sheet (step 46) shows a
                 // ladder part-climbed.
                 player.units[starter].regaliaLevel = 3
@@ -1187,15 +1193,15 @@ final class GameStore: ObservableObject {
                 player.essences[id, default: 0] += 12
             }
             // The battle shows one of each family: the starter plus Sekhmet and Zeus.
-            let team = ["anubis_umbra", "sekhmet_umbra", "zeus_ember"].compactMap { id in
+            let team = [UnitDatabase.starter.id, "sekhmet_umbra", "zeus_ember"].compactMap { id in
                 player.units.first { $0.blueprintID == id }?.id
             }
             if team.count == 3 {
                 player.campaignTeam = TeamPreset(name: "Campaign", unitIDs: team)
             }
             // The arena step fights a full four, so the offence team is the
-            // three plus a second Anubis rather than the starter alone.
-            let offence = ["anubis_umbra", "sekhmet_umbra", "zeus_ember", "anubis_ember"].compactMap { id in
+            // three plus the water Anubis rather than the starter alone.
+            let offence = [UnitDatabase.starter.id, "sekhmet_umbra", "zeus_ember", "anubis_tide"].compactMap { id in
                 player.units.first { $0.blueprintID == id }?.id
             }
             if offence.count == 4 {

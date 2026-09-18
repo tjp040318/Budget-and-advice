@@ -5406,6 +5406,19 @@ numbers as written, Horus's umbra row is the lean × the premium and his
 awakening bonus with it, and every light or dark roster form beats its
 fire sibling in health and attack together by less than a grade.
 
+### The tour followed the old starter (2026-09-18, 03:00)
+
+`GameStore.grantTourRoster` keyed the tour's awakened unit, its campaign
+team and its arena offence on `"anubis_umbra"`, the starter until the
+evening before. With the fire Anubis as starter the lookups found
+nothing: run 185 photographed a level-4 unawakened Anubis on the Regalia
+sheet ("Awaken to unlock"), a lone level-1 starter in the campaign fight
+and a 1v4 arena defeat — a regression nobody read in the frames until the
+run after. The seed now names `UnitDatabase.starter.id`, levels the
+starter to 12 with the rest, awakens it, and fields the water Anubis as
+the arena's fourth. A tour seed must never spell a blueprint id the
+game's own rules can change.
+
 ### Still true, and worth knowing
 
 - The **starter is the dark Anubis** (`UnitDatabase.starter`,
@@ -5601,3 +5614,86 @@ in `/tmp/proportions2`, the Ares family graded gold on the way) re-ships
 every rigged family and derives its standing idle; about two hours. The
 paid answer — a new concept style and a remake at 68 credits a family —
 stands, and this is what the roster looks like until the credits exist.
+
+### The cape pass: what hangs behind the back is the spine's (2026-09-18, 03:00)
+
+The owner, of a zoomed heavy-attack frame of the re-shipped Ares: "fucked".
+The frame was the pipeline's preview, not the game, but what it showed was
+real and had been in every build since Ares shipped: his cape lifted with
+his arms like a bat's wing and swung with one leg. Meshy's auto-rig weights
+by proximity, and a cape sheet is nearer the shins and the upper arms than
+the spine — 4,778 of its vertices belonged to the RIGHT SHIN, 2,100 to the
+left upper arm, 1,400 to the right.
+
+**What the genre does.** Summoners War, Epic Seven and Raid rig capes on
+their own bone chains (two to four "tail" bones off the upper spine) with
+the cloth animated by hand or simulated and baked per clip; no auto-rig
+does this, and Meshy's Animation API has no cape bones to animate. Without
+credits for hand rigging, the honest floor is a cape that HANGS from the
+back and bends with the spine — stiff, but a cape.
+
+**The options.**
+1. *One radius for every bone* (a vertex farther than 13 cm from any
+   bone is cloth): took the cyclops's arms (a brute's arm is as thick as a
+   cape is far), left the cape's foot on Ares's shin and its top on his arm.
+2. *The back plane alone* (anything 10 cm behind the spine): re-bound
+   three quarters of Ares — the whole back of a thick armoured torso is
+   "10 cm behind the spine" — and the first shipped attempt turned his
+   cape into a board and warped his torso.
+3. *Measure each limb's own surface and re-bind only what lies beyond
+   it, as one sheet.* Built.
+
+**As built** (`character.reweight_cape`, in `mesh.py` after the
+proportions, `--no-cape` to skip, `CAPE_EXCLUDE` for the winged and tailed
+families). A vertex is cloth when it is
+- behind the spine's plane by 3% of the height (6 cm; 10 cm cut Diana's
+  belted cloak in two at the waist), between the knees and the neck, and
+  not the head's (hair, a hood, a plume move with the head; the cobra
+  priestess's hood was "cloth" until the neck was matched case blind);
+- outside every LIMB's own surface: a limb is a closed tube round its
+  bone, so per cell of angle and station along the bone the sorted
+  distances give the limb's layer — up to the first empty gap, the first
+  face turned INWARD toward the bone (legs only: beside an upper arm the
+  torso's flank faces the bone too, and read as one it gave Sekhmet's arms
+  to the cape), or 1.8× the innermost distance — whatever the limb's
+  size, so a cyclops keeps his arms, Sekhmet her gold arm bands, and a
+  shin gives up the cape lying against it (`_limb_surface`);
+- part of a SHEET (`_big_sheets`): a connected piece of what is left
+  whose principal-axis fit is thin one way and wide the other two, a foot
+  or more across, pieces within 6 cm of one another taken as one (the
+  arm's cut splits a cloak where it brushes the arm); the sheet at least
+  300 welded vertices, spanning a fifth of the height, and hanging from
+  the shoulders — its piece of the UNCUT band reaches above the second
+  spine joint. Not by who owns it: the awakened Ares's whole cape was
+  skinned to his LEFT HAND (5,185 vertices), so a rule that trusted the
+  hands missed the very figure in the owner's reveal frame. By shape,
+  Hades's bident is a rod, Zeus's bolt a lump, Sekhmet's khopesh and
+  Diana's bow too narrow, a pauldron's back edge and a loincloth's tail
+  too short — all of them stay with the hand;
+- held by a limb at all (a vertex the spine owns outright is left as is).
+
+It takes its weight from the two spine joints bracketing its height (all
+Hips below the pelvis), then the weights are averaged over four rings of
+mesh neighbours, across UV seams, so the sheet's top blends into the
+shoulders instead of tearing off them. And nothing happens unless a limb
+DOMINATES 4% of the mesh out there: Ares 19%, the awakened Ares 14%,
+Bellona 15%, Diana 9%, the centurion 17%, Baldr 14%, Bragi 8%; Sekhmet,
+Zeus, Anubis, Thoth, Hades, Demeter, the cyclops and the cobra priestess
+0 and left exactly as Meshy rigged them. Every rule was checked on a
+board of the mask drawn over the figure from behind and the side
+(`scratchpad/cape_mask_board.py`, ten families at a time, the false
+positives read off it one by one: the cyclops's arms, Sekhmet's arm
+bands, Zeus's bolt, Hades's bident, Diana's bow) and Ares on the heavy
+attack's blow frame, the basic and the idle (`ares_cape_v3`): the cape
+hangs from the shoulders while the arms rise, trails in the lunge, drapes
+at rest. Meshy's rigs name the neck `neck` and the upper spine
+`Spine01`/`Spine02`, so every bone lookup in the pass is case blind.
+
+**Known limits.** A cape flush against the legs with no gap, no fold and
+no inward face stays the legs'; a floor-length dress's back (Chang'e's) is
+re-bound to the hips
+like a cape, which stops it swinging with one leg and lets a knee bent far
+back poke through it in a walk — about equal, and invisible on a caster.
+A cape still bends only with the spine: in a lunge it flares straight back,
+which is a cape in a game with no cloth. Cape bones and baked cloth are the
+paid answer, per family, when the credits exist.

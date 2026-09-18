@@ -1608,6 +1608,25 @@ environment can and cannot do. The short version:
 - Sound is 14 synthesised effects (`tools/sfx.py`, thunder for Zeus) and two synthesised music
   loops (`tools/music.py`, island and battle), crossfaded by `AudioLibrary`.
 
+- **The cape pass (2026-09-18, 03:00).** `character.reweight_cape` runs in
+  `mesh.py` after the proportions (`--no-cape` skips it; `CAPE_EXCLUDE`
+  names the winged and tailed families): a cape Meshy's auto-rig gave to
+  the shins and the upper arms (Ares's lifted with his arms like a bat's
+  wing; the owner: "fucked") is re-bound to the spine chain by height and
+  its seam blended over four rings. The rules and why each exists are in
+  `Docs/PLAN.md` *The cape pass*: behind the spine's plane, outside every
+  limb's own measured surface (`_limb_surface`: the layer up to the first
+  gap, inward face or 1.8× the innermost, so a cyclops keeps his arms and
+  Sekhmet her arm bands), one connected SHEET by shape from the shoulder
+  line (`_big_sheets`: thin one way, a foot across the other; a bident is
+  a rod, a bolt a lump, a bow too narrow — never by who owns it, since
+  the awakened Ares's cape was skinned to his hand), and only when a limb
+  dominates 4% of the mesh out there — under that a family is left as
+  rigged. Judge a change on `scratchpad/cape_mask_board.py` (the mask
+  drawn on the figure) and `cape_check.py` (how far the cape moves at a
+  clip's frame), never on the count alone: the first cut's count looked
+  right and had warped the torso. Bone lookups are case blind (`neck`).
+
 ### What this environment can reach
 
 `api.meshy.ai` (with `MESHY_API_KEY` provisioned; task creation and polling

@@ -835,10 +835,21 @@ struct SummonStageView: UIViewRepresentable {
     /// Mixamo-named, `LeftFoot` → `LeftToeBase`; the older exports end in
     /// `_End`). Zero when the joints are not found, which leaves the stance
     /// as it was; the correction is printed once so a run's console says
-    /// what it read.
+    /// what it read. The joints are matched by the END of the node's name,
+    /// case blind: an exact `childNode(withName: "LeftFoot")` found nothing
+    /// on runs 184 and 185 — SceneKit names a USD joint node by more than
+    /// its last path component — and the whole correction sat idle.
     private static func facingCorrection(for figure: SCNNode) -> Float {
-        func point(_ name: String) -> SCNVector3? {
-            figure.childNode(withName: name, recursively: true)?.presentation.worldPosition
+        var seen: [String] = []
+        func point(_ suffix: String) -> SCNVector3? {
+            let wanted = suffix.lowercased()
+            let hit = figure.childNodes(passingTest: { node, stop in
+                guard let name = node.name?.lowercased(), name.hasSuffix(wanted) else { return false }
+                stop.pointee = true
+                return true
+            }).first
+            if let name = hit?.name { seen.append(name) }
+            return hit?.presentation.worldPosition
         }
         var dx: Float = 0, dz: Float = 0, found = 0
         for (heel, toe) in [("LeftFoot", "LeftToeBase"), ("RightFoot", "RightToeBase"),
@@ -849,12 +860,13 @@ struct SummonStageView: UIViewRepresentable {
             found += 1
         }
         guard found > 0, dx * dx + dz * dz > 1e-6 else {
-            print("[Reveal] facing: no foot joints found; stance kept")
+            let names = figure.childNodes(passingTest: { _, _ in true }).compactMap(\.name).prefix(12)
+            print("[Reveal] facing: no foot joints found; stance kept (nodes: \(names.joined(separator: ", ")))")
             return 0
         }
         let yaw = atan2(dx, dz)
         let correction = figure.eulerAngles.y - yaw
-        print("[Reveal] facing: feet at \(Int(yaw * 180 / .pi))°, figure turned to \(Int(correction * 180 / .pi))° from \(found) feet")
+        print("[Reveal] facing: feet at \(Int(yaw * 180 / .pi))°, figure turned to \(Int(correction * 180 / .pi))° from \(found) feet (\(seen.joined(separator: ", ")))")
         return correction
     }
 

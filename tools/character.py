@@ -915,12 +915,337 @@ PROPORTIONS = {
     # slimmer, the legs a quarter longer, the head at four fifths — about
     # six and a half heads tall, the genre's "serious" hero.
     "serious2": {"Head": 0.80, "LeftHand": 0.70, "RightHand": 0.70, "LeftFoot": 0.82, "RightFoot": 0.82,
-                 "Hips": {"width": 0.90}, "Spine": {"width": 0.90}, "Spine1": {"width": 0.92}, "Spine2": {"width": 0.94},
+                 "Hips": {"width": 0.90}, "Spine": {"width": 0.90},
+                 "Spine1": {"width": 0.92}, "Spine2": {"width": 0.94}, "Spine01": {"width": 0.92}, "Spine02": {"width": 0.94},
                  "LeftUpLeg": {"length": 1.28, "width": 0.90}, "RightUpLeg": {"length": 1.28, "width": 0.90},
                  "LeftLeg": {"length": 1.22, "width": 0.92}, "RightLeg": {"length": 1.22, "width": 0.92},
                  "LeftArm": {"length": 1.06, "width": 0.88}, "RightArm": {"length": 1.06, "width": 0.88},
                  "LeftForeArm": {"length": 1.06, "width": 0.88}, "RightForeArm": {"length": 1.06, "width": 0.88}},
 }
+
+
+# Families whose geometry behind the back is meant to move with the limbs:
+# wings on arms, tails on a thigh. The cape pass leaves them alone.
+CAPE_EXCLUDE = ("harpy", "fox", "nike", "valkyr", "sphinx", "pegasus", "griffin", "dragon", "hydra",
+                "phoenix", "raven", "eagle", "wing", "apep", "serpent", "jotunn", "colossus", "unwrapped")
+
+
+# The bones whose geometry a cape must NOT follow (the limbs), and the
+# owners whose geometry is left alone whatever it looks like: hair, a hood,
+# a plume hang from the head and move with it. The hands are NOT here: a
+# weapon is skinned to the hand that holds it, but so was the awakened
+# Ares's whole cape (5,185 vertices on his LeftHand, the bat's wing of the
+# owner's reveal frame), so a weapon is told from a cape by its SHAPE
+# (`_big_sheets`), never by who owns it.
+LIMB_BONES = ("upleg", "leg", "foot", "toebase", "shoulder", "arm", "forearm", "hand")
+SURFACE_BONES = ("upleg", "leg", "foot", "toebase", "arm", "forearm", "hand")   # a clavicle is where a cape hangs from
+HELD_BONES = ("head", "neck", "eye", "jaw")
+
+
+def _bone_kind(leaf_name):
+    """'RightForeArm' -> 'forearm', 'neck' -> 'neck' (Meshy's rigs mix cases)."""
+    n = leaf_name.lower()
+    for side in ("left", "right", "l_", "r_"):
+        if n.startswith(side):
+            n = n[len(side):]
+            break
+    return n.strip("_")
+
+
+def _limb_surface(P, normals, pa, pb, reach, gap, t_bins=4, angle_bins=16, slack=1.8, inward_stop=True):
+    """True for the points that are the limb's OWN surface around the bone
+    pa->pb: a limb is a closed tube round its bone, so at every angle and
+    station along it the mesh nearest the bone is the limb — skin, band,
+    pauldron and all, one continuous layer facing OUTWARD — and a hanging
+    cape is a separate layer beyond it. Per cell of angle and station the
+    distances are sorted, and the limb's layer ends at the first of: an
+    empty `gap`, the first face turned INWARD toward the bone (a tube has
+    none; a cape lying against the calf shows its inner face first), or
+    `slack` times the innermost distance. Whatever its size, then: a
+    cyclops's arm is as thick as a cape is far, Sekhmet's gold arm bands
+    bulge a half again past her skin with no gap, and Ares's cape hugging
+    his calf is cut where it turns to face the leg. The inward stop is for
+    the LEGS (`inward_stop`): beside an upper arm the torso's flank faces
+    the bone too, and read as one it gave Sekhmet's arms to the cape."""
+    ab = pb - pa
+    length = float(np.linalg.norm(ab))
+    if length < 1e-6:
+        return np.zeros(len(P), bool)
+    u = ab / length
+    rel = P - pa
+    t = rel @ u
+    radial = rel - t[:, None] * u
+    d = np.linalg.norm(radial, axis=1)
+    helper = np.array([1.0, 0.0, 0.0]) if abs(u[0]) < 0.9 else np.array([0.0, 1.0, 0.0])
+    e1 = np.cross(u, helper); e1 /= np.linalg.norm(e1)
+    e2 = np.cross(u, e1)
+    angle = np.arctan2(radial @ e2, radial @ e1)
+    near = (t > -0.1 * length) & (t < 1.1 * length) & (d < reach)
+    tb = np.clip(np.floor(t / length * t_bins), 0, t_bins - 1).astype(int)
+    an = (np.floor((angle + np.pi) / (2 * np.pi) * angle_bins)).astype(int) % angle_bins
+    cell = tb * angle_bins + an
+    inward = (np.einsum("ij,ij->i", normals, radial) / np.maximum(d, 1e-9)) < -0.35
+    cells = t_bins * angle_bins
+    idx = np.flatnonzero(near)
+    order = idx[np.lexsort((d[idx], cell[idx]))]
+    cs, ds = cell[order], d[order]
+    limit = np.full(cells, np.inf)
+    innermost = np.full(cells, np.inf)
+    np.minimum.at(innermost, cs, ds)
+    limit = np.minimum(limit, slack * innermost)
+    same = cs[1:] == cs[:-1]
+    for k in np.flatnonzero(same & (ds[1:] - ds[:-1] > gap))[::-1]:   # walking back, a cell's FIRST gap wins
+        limit[cs[k]] = min(limit[cs[k]], ds[k])
+    if inward_stop:
+        first_in = np.full(cells, np.inf)
+        np.minimum.at(first_in, cs[inward[order]], ds[inward[order]])
+        limit = np.minimum(limit, first_in - 0.005)
+    return near & (d <= limit[cell])
+
+
+def _sheet_shape(points, min_width):
+    """A principal-axis fit: thin one way, wide the other two, at least
+    `min_width` across the second axis. The third axis may reach three
+    tenths of the second: a cloak wraps the body's side (Diana's, at
+    0.27) where a flat cape is under a tenth."""
+    centred = points - points.mean(axis=0)
+    lam = np.sort(np.linalg.eigvalsh(centred.T @ centred / len(points)))[::-1]   # descending
+    width = 2.0 * np.sqrt(3.0 * max(lam[1], 0.0))          # a uniform slab's extent along its second axis
+    return lam[1] >= 0.04 * lam[0] and lam[2] <= 0.30 * max(lam[1], 1e-12) and width >= min_width
+
+
+def _big_sheets(P, faces, mask, uncut, min_count, min_span, top_at, min_width, merge_gap):
+    """Keeps the connected pieces of `mask` (over the mesh's edges, across UV
+    seams) that are SHEETS (`_sheet_shape`: thin in one direction, wide in
+    the other two, at least `min_width` across), taking sheet-shaped pieces
+    within `merge_gap` of one another as one sheet — the limbs' surfaces
+    are cut out of the mask before this, and the cut splits a cloak where
+    it brushes an arm (Diana's) — and keeping a sheet that is at least
+    `min_count` welded vertices, spans `min_span` in height and hangs from
+    the shoulders: its piece of the UNCUT band (`uncut`, the same mask
+    before the limbs were cut out) reaches up to `top_at`, the shoulder
+    line, which the cut piece itself seldom does once the arms have taken
+    the cloak's top. A cape is one large sheet hanging from
+    the shoulders most of the way down the back; a pauldron's back edge and
+    a loincloth's tail are too short, a bident carried behind the hip is a
+    rod, a thunderbolt is a lump, and an axe head is too narrow."""
+    if not mask.any() or len(faces) == 0:
+        return mask
+    key, canon = np.unique(np.round(P, 5), axis=0, return_inverse=True)
+    canon = canon.reshape(-1)
+    f = canon[faces]
+    edges = np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
+    edges = edges[edges[:, 0] != edges[:, 1]]
+
+    def components(vertex_mask):
+        inside = np.zeros(len(key), bool)
+        inside[canon[vertex_mask]] = True
+        e = edges[inside[edges[:, 0]] & inside[edges[:, 1]]]
+        labels = np.arange(len(key))
+        try:
+            from scipy.sparse import coo_matrix
+            from scipy.sparse.csgraph import connected_components
+            graph = coo_matrix((np.ones(len(e)), (e[:, 0], e[:, 1])), shape=(len(key), len(key)))
+            labels = connected_components(graph, directed=False)[1]
+        except ImportError:          # label propagation: the smallest label wins along every edge
+            for _ in range(10000):
+                low = np.minimum(labels[e[:, 0]], labels[e[:, 1]])
+                before = labels.copy()
+                np.minimum.at(labels, e[:, 0], low)
+                np.minimum.at(labels, e[:, 1], low)
+                if np.array_equal(before, labels):
+                    break
+        return inside, labels
+
+    ys = key[:, 1]
+    # Which uncut pieces reach the shoulder line; a cut piece inherits it.
+    in_uncut, uncut_labels = components(uncut)
+    reaches = np.zeros(len(key), bool)
+    for lab in np.unique(uncut_labels[in_uncut]):
+        members = np.flatnonzero((uncut_labels == lab) & in_uncut)
+        if ys[members].max() >= top_at:
+            reaches[members] = True
+    in_mask, labels = components(mask)
+    # The sheet-shaped pieces, then the ones within reach of each other
+    # joined (union-find over the pieces).
+    pieces = []
+    for lab in np.unique(labels[in_mask]):
+        members = np.flatnonzero((labels == lab) & in_mask)
+        if len(members) >= 40 and reaches[members].any() and _sheet_shape(key[members], min_width):
+            pieces.append(members)
+    parent = list(range(len(pieces)))
+    def find(i):
+        while parent[i] != i:
+            parent[i] = parent[parent[i]]
+            i = parent[i]
+        return i
+    if len(pieces) > 1:
+        try:
+            from scipy.spatial import cKDTree
+            trees = [cKDTree(key[m]) for m in pieces]
+            for i in range(len(pieces)):
+                for j in range(i + 1, len(pieces)):
+                    d, _ = trees[j].query(key[pieces[i]], distance_upper_bound=merge_gap)
+                    if np.isfinite(d).any():
+                        parent[find(i)] = find(j)
+        except ImportError:
+            for i in range(len(pieces)):
+                for j in range(i + 1, len(pieces)):
+                    a = key[pieces[i]][::max(1, len(pieces[i]) // 400)]
+                    b = key[pieces[j]][::max(1, len(pieces[j]) // 400)]
+                    if np.min(np.linalg.norm(a[:, None, :] - b[None, :, :], axis=2)) < merge_gap:
+                        parent[find(i)] = find(j)
+    keep = np.zeros(len(key), bool)
+    groups = {}
+    for i, m in enumerate(pieces):
+        groups.setdefault(find(i), []).append(m)
+    for parts in groups.values():
+        members = np.concatenate(parts)
+        if len(members) >= min_count and ys[members].max() - ys[members].min() >= min_span \
+                and _sheet_shape(key[members], min_width):
+            keep[members] = True
+    return mask & keep[canon]
+
+
+def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
+    """Binds whatever hangs behind the back — a cape, a cloak, a lion skin —
+    to the spine chain by height, instead of to the arms and the shins Meshy's
+    auto-rig chose (2026-09-18). The shipped Ares had thousands of cape
+    vertices owned by the RIGHT SHIN and the two upper arms: his cape swung
+    with one leg and lifted with the arms like a bat's wing on every attack
+    (the owner: "fucked").
+
+    A cape is the geometry that is FAR FROM EVERY BONE: the body's own
+    surface lies within a limb's thickness of its bone, a hanging sheet does
+    not. So a vertex is cloth when it is behind the spine's plane by `back`
+    of the figure's height (6 cm on a 1.9 m figure; a belted cloak hugs the
+    waist, and 10 cm cut Diana's in two there), above the knees
+    (`floor`), below the neck, outside every LIMB's own surface
+    (`_limb_surface`: the outward-facing layer of mesh round the bone up
+    to the first gap or inward face, measured, so a cyclops's arm keeps
+    its arm, Sekhmet keeps her arm bands and a shin gives up the cape
+    lying against it; the first cut used the back plane
+    alone and re-bound three quarters of Ares — the whole back of a thick
+    armoured torso is "10 cm behind the spine" — and one radius for every
+    bone then left the cape's foot on the shin, its top on the arm, and
+    took the cyclops's arms), part of ONE large sheet hanging from the
+    shoulders a fifth of the height or more, and shaped like one — thin
+    one way, a foot or more across the other (`_big_sheets`; a pauldron's
+    back edge and a loincloth's tail are too short, Hades's bident is a
+    rod, Zeus's bolt a lump, and they stay with the hand — while the
+    awakened Ares's cape, which the auto-rig gave to his LEFT HAND, is a
+    sheet and comes off it), not the head's (hair, a hood, a plume move
+    with the head), and held by a limb at all (a vertex the spine owns
+    outright is left alone).
+    Each takes its weight from the two spine joints bracketing its height,
+    blended by height, so the cloth bends with the back and hangs from the
+    hips; then the weights are averaged over `rings` rings of mesh
+    neighbours across the seam, so the sheet's top blends into the shoulders
+    it hangs from instead of tearing off them when an arm rises. Nothing
+    happens unless a limb OWNS `min_share` of the mesh out there — a figure
+    with no cape has a few hundred back-plate vertices sharing a little
+    weight with a shoulder, and is left as rigged. Returns the count."""
+    if not char.skinned:
+        return 0
+    leaf = [j.split("/")[-1] for j in char.joints]
+    idx = {n.lower(): i for i, n in enumerate(leaf)}
+    chain = [n for n in ("hips", "spine", "spine01", "spine1", "spine02", "spine2", "spine03", "spine3") if n in idx]
+    neck = next((n for n in ("neck", "head") if n in idx), None)
+    if len(chain) < 2 or neck is None:
+        return 0
+    J = len(leaf)
+    jw = np.array([char.bind[i][3, :3] for i in range(J)], dtype=np.float64)
+    chain_y = np.array([jw[idx[n]][1] for n in chain])
+    order = np.argsort(chain_y)
+    chain = [chain[i] for i in order]
+    chain_y = chain_y[order]
+    spine_z = float(np.mean([jw[idx[n]][2] for n in chain]))
+    neck_y = float(jw[idx[neck]][1])
+    P = char.points.astype(np.float64)
+    height = float(P[:, 1].max() - P[:, 1].min())
+    owner = np.asarray(char.joint_indices)[np.arange(len(P)), np.argmax(char.joint_weights, axis=1)]
+    kind = [_bone_kind(n) for n in leaf]
+    held_bone = np.array([k in HELD_BONES for k in kind])
+    held_w = (held_bone[char.joint_indices] * char.joint_weights).sum(axis=1)
+    sheet = ((P[:, 2] < spine_z - back * height) & (P[:, 1] > floor * height) & (P[:, 1] < neck_y)
+             & (held_w <= 0.5))
+    uncut = sheet.copy()
+    # Clear of every limb's own surface (_limb_surface); the spine, hips
+    # and head block nothing — what hangs behind them is the cloth. Cut
+    # FIRST, so a weapon in a hand behind the hip is not bridged to the
+    # shoulders through the arm's own back (Sekhmet's khopesh was).
+    normals = vertex_normals(P, char.faces).astype(np.float64) if len(char.faces) else np.zeros_like(P)
+    for j, p in enumerate(char.parents):
+        if p < 0 or kind[j] not in SURFACE_BONES:
+            continue
+        sheet &= ~_limb_surface(P, normals, jw[p], jw[j], reach=0.25 * height, gap=0.012 * height,
+                                inward_stop=kind[j] in ("upleg", "leg", "foot"))
+    # One large sheet hanging from the shoulders (its uncut piece above the
+    # second spine joint) a good way down the back, not a scatter of
+    # patches at the shoulders (a figure with no cape has those), a
+    # loincloth's tail from the belt, nor a weapon carried behind the hip
+    # (a rod or a lump, not a sheet).
+    sheet = _big_sheets(P, char.faces, sheet, uncut, min_count=max(300, len(P) // 150), min_span=0.20 * height,
+                        top_at=chain_y[-2] - 0.02 * height, min_width=0.12 * height, merge_gap=0.03 * height)
+    # Only what a limb has a hold on moves: a vertex the spine already owns
+    # outright is left exactly as it is.
+    limb = np.array([k in LIMB_BONES for k in kind])
+    limb_weight = (limb[char.joint_indices] * char.joint_weights).sum(axis=1)
+    cloth = sheet & (limb_weight > 0.15)
+    n = int(cloth.sum())
+    # A cape is a sheet a limb OWNS by the thousand — 8-13% of the mesh on
+    # Ares, Diana and the centurion; a figure with no cape has under 3% of
+    # its back plates and shoulder lumps sharing weight with a limb, and is
+    # left exactly as Meshy rigged it.
+    if int((cloth & limb[owner]).sum()) < min_share * len(P):
+        return 0
+    # Dense weights, the cloth rows replaced by the height blend.
+    W = np.zeros((len(P), J), dtype=np.float64)
+    rows = np.arange(len(P))[:, None]
+    np.add.at(W, (np.broadcast_to(rows, char.joint_indices.shape), char.joint_indices), char.joint_weights.astype(np.float64))
+    y = P[cloth, 1]
+    upper = np.clip(np.searchsorted(chain_y, y), 1, len(chain) - 1)
+    lower = upper - 1
+    span = np.maximum(chain_y[upper] - chain_y[lower], 1e-6)
+    t_up = np.clip((y - chain_y[lower]) / span, 0.0, 1.0)
+    W[cloth] = 0.0
+    W[np.flatnonzero(cloth), [idx[chain[i]] for i in lower]] = 1.0 - t_up
+    W[np.flatnonzero(cloth), [idx[chain[i]] for i in upper]] += t_up
+    # The seam: average each cloth vertex's weights with its mesh neighbours
+    # (across UV seams, by position) for a few rings, the body's rows fixed.
+    if rings > 0 and len(char.faces):
+        key, canon = np.unique(np.round(P, 5), axis=0, return_inverse=True)
+        canon = canon.reshape(-1)
+        f = canon[char.faces]
+        e = np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
+        e = np.unique(np.sort(e, axis=1), axis=0)
+        e = e[e[:, 0] != e[:, 1]]
+        C = len(key)
+        Wc = np.zeros((C, J)); cnt = np.zeros(C)
+        np.add.at(Wc, canon, W); np.add.at(cnt, canon, 1.0)
+        Wc /= np.maximum(cnt, 1.0)[:, None]
+        cloth_c = np.zeros(C, bool); cloth_c[canon[cloth]] = True
+        deg = np.zeros(C); np.add.at(deg, e[:, 0], 1.0); np.add.at(deg, e[:, 1], 1.0)
+        for _ in range(rings):
+            acc = Wc.copy()
+            np.add.at(acc, e[:, 0], Wc[e[:, 1]]); np.add.at(acc, e[:, 1], Wc[e[:, 0]])
+            acc /= (deg + 1.0)[:, None]
+            Wc[cloth_c] = acc[cloth_c]
+        W[cloth] = Wc[canon[cloth]]
+    K = char.joint_indices.shape[1]
+    top = np.argsort(-W[cloth], axis=1)[:, :K]
+    wt = np.take_along_axis(W[cloth], top, axis=1)
+    wt /= np.maximum(wt.sum(axis=1, keepdims=True), 1e-9)
+    top[wt <= 0] = 0
+    char.joint_indices[cloth] = top.astype(char.joint_indices.dtype)
+    char.joint_weights[cloth] = wt.astype(char.joint_weights.dtype)
+    was = {}
+    for o in owner[cloth]:
+        was[leaf[o]] = was.get(leaf[o], 0) + 1
+    was = ", ".join(f"{k} {v:,}" for k, v in sorted(was.items(), key=lambda kv: -kv[1])[:4])
+    print(f"    cape: {n:,} of {len(P):,} vertices hang clear of every bone behind the back "
+          f"(were {was}); re-bound to {' > '.join(leaf[idx[n]] for n in chain)} by height, the seam blended over {rings} rings")
+    return n
 
 
 def reproportion(char, scales, height=None, fit=None):

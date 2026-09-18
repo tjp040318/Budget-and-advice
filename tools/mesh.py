@@ -205,6 +205,10 @@ def run_family(name, args):
     # their joints and baked, the same on every clip carrier below.
     scales = character.PROPORTIONS[args.proportions] if args.proportions else None
     fit = character.reproportion(base, scales, height=height) if scales else None
+    # A cape bound to the arms and a shin by the auto-rig is re-bound to the
+    # spine (2026-09-18); the winged and tailed families are left alone.
+    if not args.no_cape and not any(k in out_name.lower() for k in character.CAPE_EXCLUDE):
+        character.reweight_cape(base)
     problems = []
     base.name = out_name
     only = {c.strip() for c in args.only_clips.split(",") if c.strip()} if args.only_clips else None
@@ -308,6 +312,7 @@ def main():
     ap.add_argument("--no-clips", action="store_true", help="ship the base and the LOD only; leave the clip files as they are")
     ap.add_argument("--proportions", choices=sorted(character.PROPORTIONS), help="scale the head, hands and feet at their joints and bake it (character.PROPORTIONS)")
     ap.add_argument("--grade", choices=sorted(character.GRADES), help="a colour grade on the textures at shipping (character.GRADES; gold: olive to burnished gold, magenta runes to ember)")
+    ap.add_argument("--no-cape", action="store_true", help="skip the cape re-bind (character.reweight_cape)")
     ap.add_argument("--maps-from", help="a textured stage file (.glb/.usdz) to take the metallic-roughness and normal maps from; "
                                         "default: <name>_image or <name>_refine beside the source")
     ap.add_argument("--clip-tris", type=int, default=1500, help="triangle target for per-clip files")
