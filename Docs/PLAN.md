@@ -5707,7 +5707,19 @@ to the hips, which stops it swinging with one leg and lets a knee bent
 far back poke through it — the casters' clips barely move the legs, and
 a walk would show it. A tunic that hangs free in front is caught (the
 gladiator, Guan Yu), and so is the centurion's cloak over his (94%): it
-stays as Meshy rigged it, no worse than before.
+stays as Meshy rigged it, no worse than before. Read off the boards of
+the thirty-six families the batch re-bound: WINGS along the arms are a
+sheet behind the back by every rule (Nephthys's, the siren's feathered
+arms), and they must follow the arms, so the winged goddesses and the
+bird-woman are on `CAPE_EXCLUDE` by name (with Isis and Ma'at); a round
+SHIELD carried behind the hip is a sheet too (Khnum's), so a sheet must
+hang longer than it is wide (the second axis under 0.8 of the first — at
+0.5 the awakened Ares's broad cloak went with it, and at 0.8 Khnum's
+shield, merged with his arm, still passes, so he is excluded by name);
+and the nymph's water
+jar hangs from her hand against her long hair, joined to it in the mesh,
+and would have left the hand with the hair, so she is excluded too. The
+other thirty-two are cloaks, capes, pelts and loose robes.
 A cape still bends only with the spine: in a lunge it flares straight back,
 which is a cape in a game with no cloth. Cape bones and baked cloth are the
 paid answer, per family, when the credits exist.

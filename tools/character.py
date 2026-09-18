@@ -927,7 +927,14 @@ PROPORTIONS = {
 # Families whose geometry behind the back is meant to move with the limbs:
 # wings on arms, tails on a thigh. The cape pass leaves them alone.
 CAPE_EXCLUDE = ("harpy", "fox", "nike", "valkyr", "sphinx", "pegasus", "griffin", "dragon", "hydra",
-                "phoenix", "raven", "eagle", "wing", "apep", "serpent", "jotunn", "colossus", "unwrapped")
+                "phoenix", "raven", "eagle", "wing", "apep", "serpent", "jotunn", "colossus", "unwrapped",
+                # wings along the ARMS, which the pass read as a cape (2026-09-18): the winged
+                # goddesses and the bird-woman; and the nymph, whose water jar hangs from the
+                # hand against her hair and would have left the hand with it
+                "nephthys", "isis", "maat", "siren", "nymph",
+                # a round shield carried behind the hip, a sheet by every rule but roundness,
+                # and merged with the arm it is not round enough
+                "khnum")
 
 
 # The bones whose geometry a cape must NOT follow (the limbs), and the
@@ -1005,13 +1012,18 @@ def _limb_surface(P, normals, pa, pb, reach, gap, t_bins=4, angle_bins=16, slack
 
 def _sheet_shape(points, min_width):
     """A principal-axis fit: thin one way, wide the other two, at least
-    `min_width` across the second axis. The third axis may reach three
-    tenths of the second: a cloak wraps the body's side (Diana's, at
-    0.27) where a flat cape is under a tenth."""
+    `min_width` across the second axis, and longer than wide (a disc is a
+    shield). The third axis may reach three tenths of the second: a cloak
+    wraps the body's side (Diana's, at 0.27) where a flat cape is under a
+    tenth."""
     centred = points - points.mean(axis=0)
     lam = np.sort(np.linalg.eigvalsh(centred.T @ centred / len(points)))[::-1]   # descending
     width = 2.0 * np.sqrt(3.0 * max(lam[1], 0.0))          # a uniform slab's extent along its second axis
-    return lam[1] >= 0.04 * lam[0] and lam[2] <= 0.30 * max(lam[1], 1e-12) and width >= min_width
+    # A cape hangs longer than it is wide; a sheet whose two large axes are
+    # near equal is a DISC — Khnum's round shield, carried behind his hip,
+    # passed every other test (2026-09-18). The line is 0.8: at 0.5 the
+    # awakened Ares's broad cloak went with the shield.
+    return 0.04 * lam[0] <= lam[1] <= 0.8 * lam[0] and lam[2] <= 0.30 * max(lam[1], 1e-12) and width >= min_width
 
 
 def _big_sheets(P, faces, mask, uncut, min_count, min_span, top_at, min_width, merge_gap):

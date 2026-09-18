@@ -1622,9 +1622,12 @@ environment can and cannot do. The short version:
   a rod, a bolt a lump, a bow too narrow — never by who owns it, since
   the awakened Ares's cape was skinned to his hand), not a WRAP (free
   cloth in front over 80% of the sheet's height is a skirt or a robe:
-  the gladiator's tunic re-bound to the hips tore off his legs), and only
-  when a limb dominates 4% of the mesh out there — under that a family is
-  left as rigged. Judge a change on `tools/cape_board.py` (the mask
+  the gladiator's tunic re-bound to the hips tore off his legs), longer
+  than wide (Khnum's round shield is a sheet), and only when a limb
+  dominates 4% of the mesh out there — under that a family is left as
+  rigged; the winged (Nephthys, Isis, Ma'at, the siren: wings along the
+  arms ARE a sheet), Khnum (a shield behind the hip) and the nymph (a jar
+  in the hand against her hair) are excluded by name. Judge a change on `tools/cape_board.py` (the mask
   drawn on the figure) and `tools/cape_check.py` (how far the cape moves at a
   clip's frame), never on the count alone: the first cut's count looked
   right and had warped the torso. Bone lookups are case blind (`neck`).
