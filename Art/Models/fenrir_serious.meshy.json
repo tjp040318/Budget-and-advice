@@ -50,7 +50,10 @@
       "finished_at": 1789755745202,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T18:22:33Z"
+      "polled": "2026-09-18T18:22:33Z",
+      "downloaded": {
+        "usdz": "Art/Models/fenrir_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b5c1-84e2-73d5-8f01-5cf931e75fe5",
@@ -77,7 +80,10 @@
       "started_at": 1789755771463,
       "finished_at": 1789755827771,
       "name": "",
-      "polled": "2026-09-18T18:23:52Z"
+      "polled": "2026-09-18T18:23:52Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b5c2-b930-7658-beea-0cf70158a2df",
@@ -100,7 +106,10 @@
       "started_at": 1789755832994,
       "finished_at": 1789755844190,
       "name": "",
-      "polled": "2026-09-18T18:24:09Z"
+      "polled": "2026-09-18T18:24:09Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b5c2-bbd4-76f2-adce-32ad85869630",
@@ -123,7 +132,10 @@
       "started_at": 1789755833647,
       "finished_at": 1789755845231,
       "name": "",
-      "polled": "2026-09-18T18:24:08Z"
+      "polled": "2026-09-18T18:24:08Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b5c2-be7e-73b3-be8e-7309c62f2047",
@@ -146,7 +158,10 @@
       "started_at": 1789755834301,
       "finished_at": 1789755847272,
       "name": "",
-      "polled": "2026-09-18T18:24:08Z"
+      "polled": "2026-09-18T18:24:08Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b5c2-c0fc-76b0-ba48-51bcfca6edc9",
@@ -169,7 +184,10 @@
       "started_at": 1789755834986,
       "finished_at": 1789755846888,
       "name": "",
-      "polled": "2026-09-18T18:24:09Z"
+      "polled": "2026-09-18T18:24:09Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b5c2-c3a1-766b-bf67-3cf8ba5cb6e5",
@@ -192,7 +210,10 @@
       "started_at": 1789755835762,
       "finished_at": 1789755859962,
       "name": "",
-      "polled": "2026-09-18T18:24:30Z"
+      "polled": "2026-09-18T18:24:30Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b5c2-c6ae-75a0-b3a7-d0d7a5384c43",
@@ -215,7 +236,10 @@
       "started_at": 1789755836367,
       "finished_at": 1789755853329,
       "name": "",
-      "polled": "2026-09-18T18:24:19Z"
+      "polled": "2026-09-18T18:24:19Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b5c2-c904-72de-b248-b69798932d0c",
@@ -238,7 +262,10 @@
       "started_at": 1789755837111,
       "finished_at": 1789755863438,
       "name": "",
-      "polled": "2026-09-18T18:24:30Z"
+      "polled": "2026-09-18T18:24:30Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b5c2-cbf4-7222-9b9d-c918e4b05400",
@@ -261,8 +288,12 @@
       "started_at": 1789755837773,
       "finished_at": 1789755854024,
       "name": "",
-      "polled": "2026-09-18T18:24:20Z"
+      "polled": "2026-09-18T18:24:20Z",
+      "downloaded": {
+        "glb": "Art/Models/fenrir_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T18:32:58Z"
 }
