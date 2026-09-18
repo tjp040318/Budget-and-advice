@@ -1,33 +1,31 @@
 #!/bin/bash
-# Re-applies a god's bespoke motions (text-to-motion tasks that still live at
-# Meshy, in the <donor> manifest's motion:<clip> stages) to a NEW rig, at the
-# 3 credits the application costs rather than the 13 a new motion would:
-# the stages are copied into the new asset's manifest, meshy.py motion finds
-# each one finished under the same sentence and only applies it, then the
-# clips are downloaded and shipped alone under the family's name.
-#   bash tools/batch/reapply_motions.sh zeus_serious zeus_m7 zeus
+# Carries a god's bespoke motions onto a NEW rig without Meshy (2026-09-18,
+# 18:20): Meshy keeps a text-to-motion task about three days, so the 15th's
+# fourteen were gone by the 18th and the Animation API had nothing to apply
+# (the first version of this script found every task 404 and re-shipped the
+# presets in silence). tools/retarget.py reads the motion off the ARCHIVE -
+# Art/Motions/<family>_<clip>.motion.npz, written from the rigged clip GLB
+# the day it was fetched - or, failing that, off the donor's clip GLB
+# (Art/Models/<donor>_<clip>.glb), and puts it on the new rig's clip file;
+# mesh.py then ships the three clips alone under the family's name.
+#   bash tools/batch/reapply_motions.sh anubis_serious anubis_m7 anubis
+#   CLIPS="attack_basic attack_heavy" bash tools/batch/reapply_motions.sh zeus_serious zeus_m7 zeus   # Zeus's ultimate is Meshy's own (its task lives)
 cd "$(dirname "$0")/../.."
 asset=$1; donor=$2; family=$3; S=${S:-/tmp/pantheon-batch}; mkdir -p "$S"
-python3 - "$asset" "$donor" <<'PY'
-import json, sys
-asset, donor = sys.argv[1], sys.argv[2]
-m = json.load(open(f"Art/Models/{asset}.meshy.json")); d = json.load(open(f"Art/Models/{donor}.meshy.json"))
-n = 0
-for k, st in d["stages"].items():
-    if k.startswith("motion:") and st.get("status") == "SUCCEEDED" and k not in m["stages"]:
-        m["stages"][k] = st; n += 1
-json.dump(m, open(f"Art/Models/{asset}.meshy.json", "w"), indent=1)
-print(f"{asset}: {n} motion stage(s) copied from {donor}")
-PY
-for clip in attack_basic attack_heavy ultimate; do
-  # Tab-separated: the sentence has spaces, and a plain read split it at the first one.
-  IFS=$'\t' read -r prompt duration mode < <(python3 -c "
-import json; st=json.load(open('Art/Models/$donor.meshy.json'))['stages'].get('motion:$clip',{}).get('request',{})
-print(st.get('prompt','').replace('\t',' ') + '\t' + str(st.get('duration',3.0)) + '\t' + st.get('mode','prime'))")
-  [ -z "$prompt" ] && { echo "no motion for $clip in $donor"; continue; }
-  echo "== $asset $clip"
-  python3 tools/meshy.py motion "$asset" "$clip" --prompt "$prompt" --duration "$duration" --mode "$mode" --floor 500 2>&1 | tail -3
+clips=${CLIPS:-attack_basic attack_heavy ultimate}; done_clips=""; failed=0
+for clip in $clips; do
+  archive="Art/Motions/${family}_${clip}.motion.npz"
+  if [ -s "$archive" ]; then source="$archive"; elif [ -s "Art/Models/${donor}_${clip}.glb" ]; then source="Art/Models/${donor}_${clip}.glb"; else echo "no motion for $clip: neither $archive nor Art/Models/${donor}_${clip}.glb"; failed=1; continue; fi
+  target="Art/Models/${asset}_${clip}.glb"
+  [ -s "$target" ] || { echo "no clip file to write into: $target (download the asset first)"; failed=1; continue; }
+  echo "== $asset $clip <- $source"
+  if python3 tools/retarget.py "$source" "$target" --board "$S/retarget_${family}_${clip}.jpg" 2>&1 | grep -E "^  [0-9]|matched|wrote|archived|kept|board|joints|Error|error|not the same" ; then
+    done_clips="$done_clips,$clip"
+  else
+    echo "  RETARGET FAILED $asset $clip"; failed=1
+  fi
 done
-python3 tools/meshy.py download "$asset" --force 2>&1 | tail -2
-python3 tools/mesh.py "$asset" --as "$family" --only-clips attack_basic,attack_heavy,ultimate 2>&1 | tail -3
-echo "== motions done $asset -> $family"
+done_clips=${done_clips#,}
+[ -n "$done_clips" ] && python3 tools/mesh.py "$asset" --as "$family" --only-clips "$done_clips" 2>&1 | tail -3
+echo "== motions done $asset -> $family ($done_clips)$( [ $failed = 1 ] && echo '  WITH FAILURES')"
+exit $failed

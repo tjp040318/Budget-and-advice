@@ -5057,6 +5057,50 @@ pointless (Neptune, twice, 2026-09-11). Sheet 3's eight, judged again
 with the rule: the centurion's vine-stick and the cyclops's club end at
 the knee, Anhur's line, and all eight were launched.
 
+### The bespoke motions were gone at Meshy in three days, and are retargeted here now (2026-09-18, 18:40)
+
+Anubis and Thoth shipped at 17:51 and `reapply_motions.sh` ran at 18:03
+exactly as it had on the 17th — and every motion task of the 15th
+answered 404 ("Task not found"). The script, finding nothing to apply,
+downloaded the preset clips again and shipped them in silence, so Anubis,
+Thoth and Ares were fighting with Meshy's 219/242/102 presets: the clip
+files' own durations said so (1.53 / 2.27 / 4.40 s against the bespoke
+2.03 / 2.53 / 3.03), and Meshy's text-to-motion list held ONE task, Zeus's
+ultimate, remade on the 17th. A motion task lives about three days, not
+the week a mesh task does, and the 182 credits of the 15th existed only
+as the rigged clip GLBs `download` had fetched on the 17th
+(`Art/Models/<god>_m7_<clip>.glb`, untracked, in an ephemeral container).
+
+Two ways back. (1) Buy the fourteen again at 13 each (10 for the motion,
+3 to apply), 182 credits: new takes, every blow frame in
+`BattleSceneController.contactFraction` measured again, and the same
+loss at the next re-rig. (2) Carry the archived clips over offline — a
+motion is only rotations, and Meshy's own "apply" is a retarget of a
+motion made on a generic skeleton. Chosen: (2), `tools/retarget.py`.
+Both rigs are read with `character.read_glb`, the joints matched by name
+(Meshy names its 24 the same on every body), and for every joint the
+change of its WORLD rotation between the source's rest pose and its
+animated pose is applied to the target's rest world rotation — a
+world-space delta, indifferent to the local joint frames Meshy does not
+keep consistent between rigs (the base Ares's pelvis sat 150° from the
+awakened one's, run 190); a facing difference over 15° is turned out
+first, the hips' travel is scaled by the two hips' rest heights, every
+other joint keeps the target's bone lengths, and one sign is kept along
+each quaternion track. The animation is written back into the target's
+own clip GLB (the wave's preset clip, kept beside it as `.preset.glb`),
+so `mesh.py --only-clips` ships it through the usual path and the blow
+frames hold because the frame count and rate are the source's. Read back
+from the written file, the worst joint is 0.00° from the intended pose;
+the boards (`/tmp/pantheon-batch/retarget_<family>_<clip>.jpg`, source
+and result at five fractions of the clip) show the serious Anubis, Thoth,
+Ares and Zeus performing the m7 clips pose for pose. Fourteen clips, no
+credits. The source motion is archived as
+`Art/Motions/<family>_<clip>.motion.npz` (joint names, rest, tracks; about
+35 KB) and accepted as a source in place of the GLB, so the paid motions
+now outlive Meshy's retention and this container; `reapply_motions.sh`
+retargets from the archive (or the donor's GLB) and ships, and Meshy's
+apply is used only where a motion task still lives (Zeus's ultimate).
+
 ### What this does not buy
 
 The cards. Every card is a bust painted from the chibi concept, and a

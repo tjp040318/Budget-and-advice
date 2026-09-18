@@ -989,9 +989,7 @@ environment can and cannot do. The short version:
   item icons; batch 4's awakened cards; nineteen backdrops repainted at 4K
   and shipped at 2048 (`tools/batch/backdrops_4k.sh`; the raws in
   `Art/Backdrops/`). `genart.py --resolution` reaches the request now —
-  the call site had dropped it. **A Meshy task expires within about a
-  week, rigs and motions included**: re-apply within the week or buy
-  again; `tools/batch/build_asset.sh` ships at the hero budgets.
+  the call site had dropped it. **A Meshy MESH task expires within about a week and a MOTION task in about three days (2026-09-18: every motion of the 15th was 404 on the 18th and the first re-application shipped presets in silence)**: the bespoke clips live in `Art/Motions/<family>_<clip>.motion.npz` and `tools/retarget.py` puts them on any new rig for nothing (`reapply_motions.sh`), a world-space delta per joint judged on its board; `tools/batch/build_asset.sh` ships at the hero budgets.
 - **The serious look (2026-09-17, evening; the owner: "I honestly don't
   like the big hands and cartoony look. I want it a little more serious
   feeling and look").** Every concept was painted "five heads tall, big
