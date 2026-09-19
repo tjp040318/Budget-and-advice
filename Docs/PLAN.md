@@ -5147,12 +5147,12 @@ at their spaces and started "generate blue," seven times over (no task
 was created, the concept argument being empty) and gave the seven the
 default blade clip set until they were launched again line by line.
 
-### Where the serious roster stands (2026-09-19, 03:30)
+### Where the serious roster stands (2026-09-19, 03:45)
 
-**Seventy-four of the ninety-six base families are in the bundle in the
-serious style.** Ptah, Serqet and Set, the last three the credits
-covered, shipped at 03:17, and the balance settled at 674 over the 500
-floor. Every one was judged on its concept sheet before its mesh was
+**Seventy-five of the ninety-six base families are in the bundle in the
+serious style.** Ptah, Serqet and Set shipped at 03:17 and the balance
+stood at 674 over the 500 floor; Sif was bought from that headroom (the
+paragraph below) and the balance rests at 579. Every one was judged on its concept sheet before its mesh was
 bought and on a roster board after it shipped (boards 1–6 went to the
 owner as they came), and CI runs 191–194 photographed them on the
 island, the dais, the collection stage and in the campaign, arena, realm
@@ -5174,12 +5174,12 @@ beyond the family's 68; the refusals and re-rolls came to about 560
 credits, which is eight families.
 
 Waiting for the next credits, in `tools/batch/serious_order.txt`'s grade
-order: the fourteen base families never launched (Sif, Skadi, Sobek,
+order: the thirteen base families never launched (Skadi, Sobek,
 Taweret, Tyr, Ullr, Vidar; Medusa, the Minotaur, the Nymph, the Satyr,
 the Shield Maiden, the Siren, the Valkyrie), Khnum's repaint, the eight
 deferred commons (`serious_defer.txt`), the sixteen awakened forms and
-the two bosses: forty-one families, about 2,800 credits at 68 with the
-refusal rate seen. Three of the fourteen already have their concept:
+the two bosses: forty families, about 2,700 credits at 68 with the
+refusal rate seen. Three of the thirteen already have their concept:
 Medusa, the Minotaur and the Nymph were painted on the 18th and their
 files were lost to the full disk before they were saved, but Meshy still
 held the pictures (a picture task keeps its image for about a week, like
@@ -5209,7 +5209,10 @@ front, so 647 fell 12 short of its own margin while every branch
 (launch 59, a refusal 48, a repaint 9) still ends above 500. The mesh
 was launched at 03:31 on meshy-7 (`ONLY="sif_serious"`), the balance
 608 after the Minotaur's repaint and about 579 once the rig and the
-eight clips are charged; the shipper loop is waiting for it.
+eight clips are charged. **She rigged first time and shipped at 03:40** —
+image, rig and eight clips in six minutes end to end, the shipper loop
+building her as the download landed — the seventy-fifth serious family,
+carried by run 196. The balance is 579.
 
 ### What this does not buy
 
