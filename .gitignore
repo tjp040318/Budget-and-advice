@@ -58,3 +58,7 @@ Art/Models/*_summon_reveal.glb
 # beside them (Docs/PLAN.md, the serious look), never shipped.
 Art/Models/tests/*_hi.usdz
 Art/Models/tests/*_hi_lod.usdz
+
+# A serious family's image-stage export (its unrigged mesh) is inside its rig GLB
+# (<asset>_serious.glb, tracked beside the manifest); the copy is 12 MB a family.
+Art/Models/*_serious_image.usdz
