@@ -5147,17 +5147,18 @@ at their spaces and started "generate blue," seven times over (no task
 was created, the concept argument being empty) and gave the seven the
 default blade clip set until they were launched again line by line.
 
-### Where the serious roster stands (2026-09-19, 03:15)
+### Where the serious roster stands (2026-09-19, 03:30)
 
-**Seventy-one of the ninety-six base families are in the bundle in the
-serious style**, Ptah, Serqet and Set are generating as the last three the
-credits cover, and the balance will settle near 590 over the 500 floor.
-Every one was judged on its concept sheet before its mesh was bought and
-on a roster board after it shipped (boards 1–5 went to the owner as they
-came), and CI runs 191–194 photographed them on the island, the dais, the
-collection stage and in the campaign, arena, realm and Labyrinth
-battles — green, 231 tests, no crash report. The five gods fight with
-their bespoke motions retargeted onto the new rigs.
+**Seventy-four of the ninety-six base families are in the bundle in the
+serious style.** Ptah, Serqet and Set, the last three the credits
+covered, shipped at 03:17, and the balance settled at 674 over the 500
+floor. Every one was judged on its concept sheet before its mesh was
+bought and on a roster board after it shipped (boards 1–6 went to the
+owner as they came), and CI runs 191–194 photographed them on the
+island, the dais, the collection stage and in the campaign, arena, realm
+and Labyrinth battles — green, 231 tests, no crash report; run 195 is
+the push that carries the last three. The five gods fight with their
+bespoke motions retargeted onto the new rigs.
 
 The ledger. Eight rig refusals in all (Sekhmet, Artemis, Bastet,
 Demeter, Dionysus, Khnum, Guan Yu twice): a bow or a pole on the ground,
@@ -5178,9 +5179,15 @@ Taweret, Tyr, Ullr, Vidar; Medusa, the Minotaur, the Nymph, the Satyr,
 the Shield Maiden, the Siren, the Valkyrie), Khnum's repaint, the eight
 deferred commons (`serious_defer.txt`), the sixteen awakened forms and
 the two bosses: forty-one families, about 2,800 credits at 68 with the
-refusal rate seen. Everything else in this section — the painter, the
-judging sheets, the launcher's allow-list, the shipper, the retargeter,
-the disk rule — is ready to run the moment the balance allows.
+refusal rate seen. Three of the fourteen already have their concept:
+Medusa, the Minotaur and the Nymph were painted on the 18th and their
+files were lost to the full disk before they were saved, but Meshy still
+held the pictures (a picture task keeps its image for about a week, like
+a mesh) and they were downloaded on the 19th and are in `Art/Concepts/`,
+unjudged — the next wave starts by putting them on a sheet. Everything
+else in this section — the painter, the judging sheets, the launcher's
+allow-list, the shipper, the retargeter, the disk rule — is ready to run
+the moment the balance allows.
 
 ### What this does not buy
 
