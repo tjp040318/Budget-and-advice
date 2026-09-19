@@ -50,7 +50,10 @@
       "finished_at": 1789783065228,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-19T01:57:45Z"
+      "polled": "2026-09-19T01:57:45Z",
+      "downloaded": {
+        "usdz": "Art/Models/osiris_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b762-45ec-7303-8136-a2dc43d634ff",
@@ -77,7 +80,10 @@
       "started_at": 1789783077730,
       "finished_at": 1789783113150,
       "name": "",
-      "polled": "2026-09-19T01:58:38Z"
+      "polled": "2026-09-19T01:58:38Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b763-12fe-75b6-9cdc-2cb1c71c0bc8",
@@ -100,7 +106,10 @@
       "started_at": 1789783118912,
       "finished_at": 1789783129628,
       "name": "",
-      "polled": "2026-09-19T01:58:54Z"
+      "polled": "2026-09-19T01:58:54Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b763-156f-7058-96fb-e16c4ceb1246",
@@ -123,7 +132,10 @@
       "started_at": 1789783119476,
       "finished_at": 1789783132076,
       "name": "",
-      "polled": "2026-09-19T01:58:53Z"
+      "polled": "2026-09-19T01:58:53Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b763-17ae-774a-b492-46ddf71de1bd",
@@ -146,7 +158,10 @@
       "started_at": 1789783120040,
       "finished_at": 1789783132978,
       "name": "",
-      "polled": "2026-09-19T01:58:53Z"
+      "polled": "2026-09-19T01:58:53Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b763-19db-740f-a1cc-34f03295f983",
@@ -169,7 +184,10 @@
       "started_at": 1789783120590,
       "finished_at": 1789783131502,
       "name": "",
-      "polled": "2026-09-19T01:58:54Z"
+      "polled": "2026-09-19T01:58:54Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b763-1c03-733a-af84-b958cdb75dd6",
@@ -192,7 +210,10 @@
       "started_at": 1789783121102,
       "finished_at": 1789783144958,
       "name": "",
-      "polled": "2026-09-19T01:59:15Z"
+      "polled": "2026-09-19T01:59:15Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b763-1e02-7622-a10e-9980fb2ba694",
@@ -215,7 +236,10 @@
       "started_at": 1789783121675,
       "finished_at": 1789783138363,
       "name": "",
-      "polled": "2026-09-19T01:59:04Z"
+      "polled": "2026-09-19T01:59:04Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b763-203d-7427-9372-d330667219c8",
@@ -238,7 +262,10 @@
       "started_at": 1789783122264,
       "finished_at": 1789783147290,
       "name": "",
-      "polled": "2026-09-19T01:59:15Z"
+      "polled": "2026-09-19T01:59:15Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b763-2282-727b-88ee-bc792cb8ba33",
@@ -261,8 +288,12 @@
       "started_at": 1789783122861,
       "finished_at": 1789783138758,
       "name": "",
-      "polled": "2026-09-19T01:59:04Z"
+      "polled": "2026-09-19T01:59:04Z",
+      "downloaded": {
+        "glb": "Art/Models/osiris_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-19T02:32:15Z"
 }

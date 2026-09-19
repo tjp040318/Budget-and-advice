@@ -50,7 +50,10 @@
       "finished_at": 1789783421498,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-19T02:03:46Z"
+      "polled": "2026-09-19T02:03:46Z",
+      "downloaded": {
+        "usdz": "Art/Models/dionysus_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b767-c825-77fd-bd88-8a58a77d5d2f",
@@ -77,7 +80,10 @@
       "started_at": 1789783438708,
       "finished_at": 1789783480617,
       "name": "",
-      "polled": "2026-09-19T02:04:49Z"
+      "polled": "2026-09-19T02:04:49Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b768-bcf1-7384-868e-9a6bb92973ec",
@@ -100,7 +106,10 @@
       "started_at": 1789783490319,
       "finished_at": 1789783501947,
       "name": "",
-      "polled": "2026-09-19T02:05:06Z"
+      "polled": "2026-09-19T02:05:06Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b768-c054-70ee-b7cc-244ec1dd7bad",
@@ -123,7 +132,10 @@
       "started_at": 1789783490940,
       "finished_at": 1789783503884,
       "name": "",
-      "polled": "2026-09-19T02:05:05Z"
+      "polled": "2026-09-19T02:05:05Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b768-c2c1-71c4-b1cf-2ea984b20263",
@@ -146,7 +158,10 @@
       "started_at": 1789783491563,
       "finished_at": 1789783505502,
       "name": "",
-      "polled": "2026-09-19T02:05:06Z"
+      "polled": "2026-09-19T02:05:06Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b768-c529-70e0-8f42-ec7e9942aae0",
@@ -169,7 +184,10 @@
       "started_at": 1789783492262,
       "finished_at": 1789783504055,
       "name": "",
-      "polled": "2026-09-19T02:05:06Z"
+      "polled": "2026-09-19T02:05:06Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b768-c7e6-703b-ae0d-a0933cde0ebc",
@@ -192,7 +210,10 @@
       "started_at": 1789783492853,
       "finished_at": 1789783517667,
       "name": "",
-      "polled": "2026-09-19T02:05:17Z"
+      "polled": "2026-09-19T02:05:17Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b768-ca3a-7094-80b7-b8f2ec091123",
@@ -215,13 +236,16 @@
       "started_at": 1789783493494,
       "finished_at": 1789783511419,
       "name": "",
-      "polled": "2026-09-19T02:05:18Z"
+      "polled": "2026-09-19T02:05:18Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b768-ccbb-7358-9439-190af7636e8d",
       "kind": "clip",
       "created": "2026-09-19T02:04:54Z",
-      "status": "IN_PROGRESS",
+      "status": "SUCCEEDED",
       "request": {
         "rig_task_id": "01a0b767-c825-77fd-bd88-8a58a77d5d2f",
         "action_id": 412
@@ -229,13 +253,19 @@
       "cost": 3,
       "clip": "victory",
       "action_id": 412,
-      "progress": 68,
-      "urls": {},
+      "progress": 100,
+      "urls": {
+        "result.animation_glb_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b768-ccbb-7358-9439-190af7636e8d/output/Animation_victory_withSkin.glb?Expires=1790042721&Signature=BudDlO1xL8OMJtRErj~zbmjHC8EixT3UuT1l68WvZL0N4g-cs5ZuFy99JJFL5F8MqTn7OMLTN2511Ir954gdghVnlvLPiyQq2M7HXcSGgvzVqUEMTtVrPhAKMIuBYtAVfqh0aiOkxQDu2EQ-2zMqqRaowWeXU26i2pOYxgVTOTcgDb8q6FH~VI4k1v2nwl7-DnWQ9wFTzkxl1qEg9c5I4TNZTq5DH~UaUEBNwQdnVjuvylFYn25j7Ox0aKndoSB04UaLcz0mcyV18TU2Yf7~oKkx54h2kNqhxzo5ZVB83fcUFM0MUG2B9HWmgQ9vYrM70309fLqEuEkZtkchOJVLmw__&Key-Pair-Id=K1VGYTHIYLM9UM",
+        "result.animation_fbx_url": "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/tasks/01a0b768-ccbb-7358-9439-190af7636e8d/output/Animation_victory_withSkin.fbx?Expires=1790042721&Signature=da9EOWzVljIL2W~tkOgFaCwcmnEVvxhxzb4htu-V0kqecV4NLiDcOs9P7vJeog19HUrKUeLt8IcN5k~inpi47ODAwPq5O5SKlR~OkFRdhAXFAEsasaGESV7vDX5WE7ykKdPZq9iRwI8zYnVhXwucjEe9uM4qblug2zCgNEQRQI~Tc9ErO9-0qE1inSLywOeJbzTonxq9rqbMkc549CIg3qaoQX8Qo8ObojEBOFcOC4wLCbo5sdzjd-9pnyzHZ6MeBCmp~zAu9G1weAieww8tTXnzYpVNymFoo2sbO4sZYWeyE3EYcSNBUKNt0CZaT6dH8swHlMXdv3ElfU7Ok5twSQ__&Key-Pair-Id=K1VGYTHIYLM9UM"
+      },
       "created_at": 1789783494112,
       "started_at": 1789783494118,
-      "finished_at": 0,
+      "finished_at": 1789783521707,
       "name": "",
-      "polled": "2026-09-19T02:05:18Z"
+      "polled": "2026-09-19T02:05:28Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b768-cf24-700e-801b-471235083763",
@@ -258,8 +288,12 @@
       "started_at": 1789783494758,
       "finished_at": 1789783511887,
       "name": "",
-      "polled": "2026-09-19T02:05:18Z"
+      "polled": "2026-09-19T02:05:18Z",
+      "downloaded": {
+        "glb": "Art/Models/dionysus_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-19T02:48:54Z"
 }

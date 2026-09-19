@@ -50,7 +50,10 @@
       "finished_at": 1789784162992,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-19T02:16:06Z"
+      "polled": "2026-09-19T02:16:06Z",
+      "downloaded": {
+        "usdz": "Art/Models/pluto_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b773-1222-73d5-8d58-de301a070024",
@@ -77,7 +80,10 @@
       "started_at": 1789784178582,
       "finished_at": 1789784225071,
       "name": "",
-      "polled": "2026-09-19T02:17:09Z"
+      "polled": "2026-09-19T02:17:09Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b774-06e7-7010-bdae-e5ad5714ebde",
@@ -100,7 +106,10 @@
       "started_at": 1789784230046,
       "finished_at": 1789784244243,
       "name": "",
-      "polled": "2026-09-19T02:17:25Z"
+      "polled": "2026-09-19T02:17:25Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b774-09d8-7040-91f7-0811b38e9736",
@@ -123,7 +132,10 @@
       "started_at": 1789784230678,
       "finished_at": 1789784245615,
       "name": "",
-      "polled": "2026-09-19T02:17:25Z"
+      "polled": "2026-09-19T02:17:25Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b774-0c4c-7269-87d8-eb6ac2759daa",
@@ -146,7 +158,10 @@
       "started_at": 1789784231335,
       "finished_at": 1789784246616,
       "name": "",
-      "polled": "2026-09-19T02:17:36Z"
+      "polled": "2026-09-19T02:17:36Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b774-0ee3-76b0-8849-bd182f6fc5a8",
@@ -169,7 +184,10 @@
       "started_at": 1789784231952,
       "finished_at": 1789784243955,
       "name": "",
-      "polled": "2026-09-19T02:17:25Z"
+      "polled": "2026-09-19T02:17:25Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b774-114e-74ba-b282-93b3adbad68c",
@@ -192,7 +210,10 @@
       "started_at": 1789784232597,
       "finished_at": 1789784258354,
       "name": "",
-      "polled": "2026-09-19T02:17:46Z"
+      "polled": "2026-09-19T02:17:46Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b774-13d5-73b5-a273-2a1f66365990",
@@ -215,7 +236,10 @@
       "started_at": 1789784233231,
       "finished_at": 1789784251190,
       "name": "",
-      "polled": "2026-09-19T02:17:36Z"
+      "polled": "2026-09-19T02:17:36Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b774-1649-7490-8cdc-239330f58ffd",
@@ -238,7 +262,10 @@
       "started_at": 1789784233921,
       "finished_at": 1789784261416,
       "name": "",
-      "polled": "2026-09-19T02:17:47Z"
+      "polled": "2026-09-19T02:17:47Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b774-1917-7226-81ff-4e23269b3fcf",
@@ -261,8 +288,12 @@
       "started_at": 1789784234571,
       "finished_at": 1789784252421,
       "name": "",
-      "polled": "2026-09-19T02:17:36Z"
+      "polled": "2026-09-19T02:17:36Z",
+      "downloaded": {
+        "glb": "Art/Models/pluto_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-19T02:35:35Z"
 }
