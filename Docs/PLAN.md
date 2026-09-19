@@ -5147,6 +5147,41 @@ at their spaces and started "generate blue," seven times over (no task
 was created, the concept argument being empty) and gave the seven the
 default blade clip set until they were launched again line by line.
 
+### Where the serious roster stands (2026-09-19, 03:15)
+
+**Seventy-one of the ninety-six base families are in the bundle in the
+serious style**, Ptah, Serqet and Set are generating as the last three the
+credits cover, and the balance will settle near 590 over the 500 floor.
+Every one was judged on its concept sheet before its mesh was bought and
+on a roster board after it shipped (boards 1–5 went to the owner as they
+came), and CI runs 191–194 photographed them on the island, the dais, the
+collection stage and in the campaign, arena, realm and Labyrinth
+battles — green, 231 tests, no crash report. The five gods fight with
+their bespoke motions retargeted onto the new rigs.
+
+The ledger. Eight rig refusals in all (Sekhmet, Artemis, Bastet,
+Demeter, Dionysus, Khnum, Guan Yu twice): a bow or a pole on the ground,
+a khopesh swept out to the ankle, feet together under a dress, a pelt
+hanging in front of the legs, a thyrsus or a guandao across the body,
+and Khnum's ram, unrigged and waiting. Twenty-five concept rejections
+before the mesh was bought, most of them the same pole fault the painter
+kept returning to for anything long — a spear, a trident, a sceptre, a
+caduceus, an oar, a guandao — until the sentence made the weapon
+forearm-long or put it away (the Monkey King's staff is the needle
+behind his ear from the legend). A concept costs 9, a refused mesh 48
+beyond the family's 68; the refusals and re-rolls came to about 560
+credits, which is eight families.
+
+Waiting for the next credits, in `tools/batch/serious_order.txt`'s grade
+order: the fourteen base families never launched (Sif, Skadi, Sobek,
+Taweret, Tyr, Ullr, Vidar; Medusa, the Minotaur, the Nymph, the Satyr,
+the Shield Maiden, the Siren, the Valkyrie), Khnum's repaint, the eight
+deferred commons (`serious_defer.txt`), the sixteen awakened forms and
+the two bosses: forty-one families, about 2,800 credits at 68 with the
+refusal rate seen. Everything else in this section — the painter, the
+judging sheets, the launcher's allow-list, the shipper, the retargeter,
+the disk rule — is ready to run the moment the balance allows.
+
 ### What this does not buy
 
 The cards. Every card is a bust painted from the chibi concept, and a

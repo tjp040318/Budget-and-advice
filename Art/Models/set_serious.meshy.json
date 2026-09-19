@@ -1,0 +1,18 @@
+{
+  "asset": "set_serious",
+  "created": "2026-09-19T03:09:46Z",
+  "prompt": "",
+  "negative_prompt": "",
+  "image": "Art/Concepts/set_serious_sw.png",
+  "texture_prompt": "hand-painted stylised mobile game character textures with fine detail: engraved and embossed metal with worn bright edges, layered cloth with a woven weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth, clear contrast between metal, cloth, leather and skin, soft natural shading with painted highlights, rich saturated colour, stylised rather than photoreal, red-brown, gold, black palette",
+  "settings": {
+    "ai_model": "meshy-7",
+    "art_style": "realistic",
+    "topology": "quad",
+    "target_polycount": 30000,
+    "symmetry_mode": "on",
+    "height_meters": 2.2
+  },
+  "stages": {},
+  "history": []
+}
