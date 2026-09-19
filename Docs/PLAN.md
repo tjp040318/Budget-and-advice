@@ -5184,10 +5184,32 @@ Medusa, the Minotaur and the Nymph were painted on the 18th and their
 files were lost to the full disk before they were saved, but Meshy still
 held the pictures (a picture task keeps its image for about a week, like
 a mesh) and they were downloaded on the 19th and are in `Art/Concepts/`,
-unjudged — the next wave starts by putting them on a sheet. Everything
-else in this section — the painter, the judging sheets, the launcher's
-allow-list, the shipper, the retargeter, the disk rule — is ready to run
-the moment the balance allows.
+judged (03:30): Medusa and the nymph pass — a sceptre and a jar hanging
+above the knee, the legs two — and the Minotaur's great axe reached the
+ankle beside his leg, the rigger's own fault, so his sentence became a
+short-hafted hand axe held against the thigh with its head at hip
+height and he was repainted (9) and passes. Everything else in this
+section — the painter, the judging sheets, the launcher's allow-list,
+the shipper, the retargeter, the disk rule — is ready to run the moment
+the balance allows.
+
+**One more, from the headroom (03:31).** 674 over a 500 floor is 174,
+which is one family with its concept and a refusal in hand, so the
+next in the grade order was bought: Sif, first of the seven 4★s never
+launched. Her concept took three rolls (27): the first hung a straight
+sword beside her leg to mid-shin — the "swept to the ankle" class the
+rigger refused Sekhmet for — the second, told "flat against the thigh,
+tip above the knee", put the sword ACROSS her body instead, and the
+third, told a seax knife no longer than her forearm, is the one taken:
+the knife point-down at the thigh, its scabbard on the hip, no cloak,
+the boots a shoulder-width apart. The launcher's floor argument was 480
+for this one launch, not 500: its formula keeps 100 over the floor for
+a re-roll and a refusal, and the re-rolls had already been spent up
+front, so 647 fell 12 short of its own margin while every branch
+(launch 59, a refusal 48, a repaint 9) still ends above 500. The mesh
+was launched at 03:31 on meshy-7 (`ONLY="sif_serious"`), the balance
+608 after the Minotaur's repaint and about 579 once the rig and the
+eight clips are charged; the shipper loop is waiting for it.
 
 ### What this does not buy
 

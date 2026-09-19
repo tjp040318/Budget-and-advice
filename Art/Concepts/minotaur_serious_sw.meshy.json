@@ -1,21 +1,18 @@
 {
- "id": "01a0b5db-1901-72e6-bca5-76fece8490d9",
- "kind": "picture",
- "created": "2026-09-18T18:50:30Z",
- "status": "SUCCEEDED",
- "request": {
-  "prompt": "Full-body character concept for a serious, richly detailed mobile RPG in the manner of Epic Seven and Raid Shadow Legends: realistic heroic proportions about seven and a half heads tall, a normal-sized head, hands and feet in true proportion, a mature face with a stern composed expression, an athletic believable body, hand-painted textures with fine detail - engraved and embossed metal with worn bright edges, cloth with a visible weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth - soft natural shading with painted highlights, a restrained palette of three main colours plus black and skin, a painted illustration rather than a photograph. Standing in a relaxed A-pose facing the viewer, feet apart and both feet fully visible, arms lowered a little away from the body with a clear gap between each arm and the torso, anything held is kept in one hand hanging straight down along the outside of the leg and is short enough that no part of it reaches below the knee or touches the ground; a spear, staff or other long weapon is short enough to stay within the figure's height and is held upright close against the body, gripped at its middle with its butt clear of the ground at knee height; no shield. The feet stand a shoulder-width apart with clear space between the knees, so the two legs read as two. The whole figure is visible head to toe and centred on a plain flat light-grey background with a plain light-grey floor, soft even studio light, no cast shadows, no text, no frame, one character only. Minotaur, Greek creature: a huge bull-headed man with wide horns and a nose ring, a massive muscular torso, dark fur on the legs, iron manacles on the wrists, a leather loincloth, a great double axe held against his leg. Palette dark brown, iron, blood red. Avoid: chibi or cartoon proportions, a large head, big hands or feet, a childlike face, photorealism, a real person or actor, anything standing beside the figure, arms crossed or held in front of the body, a weapon held out away from the body, anything held reaching the ground or hanging below the knee, a spear or staff planted on the ground beside the body, a shield, feet close together, a cape or cloth flying away from the body, a floor-length robe hiding the feet, wings spread wide, multiple characters, cropping, a dramatic background, text, watermark.",
-  "ai_model": "nano-banana-pro"
- },
- "balance_before": 3226,
- "progress": 100,
- "urls": [
-  "https://assets.meshy.ai/90f17877-f36f-4dfd-8d93-3a71035f0e94/uploads/image_01a0b5db-1901-72e6-bca5-76fece8490d9_0.png"
- ],
- "created_at": 1789757430042,
- "started_at": 1789757430063,
- "polled": "2026-09-18T18:50:50Z",
- "consumed_credits": 9,
- "finished_at": 1789757449377,
- "expires_at": 1790016649377
+  "id": "01a0b7b8-0dae-73e8-9b80-4da969dfe8ab",
+  "kind": "picture",
+  "created": "2026-09-19T03:31:27Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "Full-body character concept for a serious, richly detailed mobile RPG in the manner of Epic Seven and Raid Shadow Legends: realistic heroic proportions about seven and a half heads tall, a normal-sized head, hands and feet in true proportion, a mature face with a stern composed expression, an athletic believable body, hand-painted textures with fine detail - engraved and embossed metal with worn bright edges, cloth with a visible weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth - soft natural shading with painted highlights, a restrained palette of three main colours plus black and skin, a painted illustration rather than a photograph. Standing in a relaxed A-pose facing the viewer, feet apart and both feet fully visible, arms lowered a little away from the body with a clear gap between each arm and the torso, anything held is kept in one hand hanging straight down along the outside of the leg and is short enough that no part of it reaches below the knee or touches the ground; a spear, staff or other long weapon is short enough to stay within the figure's height and is held upright close against the body, gripped at its middle with its butt clear of the ground at knee height; no shield. The feet stand a shoulder-width apart with clear space between the knees, so the two legs read as two. The whole figure is visible head to toe and centred on a plain flat light-grey background with a plain light-grey floor, soft even studio light, no cast shadows, no text, no frame, one character only. The Minotaur of the labyrinth as an original character: a huge bull-headed man with wide curved horns and an iron nose ring, a massive muscular torso, dark fur on the legs ending in hooves, iron manacles on the wrists, a leather loincloth with a bronze-studded belt, standing upright with the hooves a shoulder-width apart and clear space between the knees, a short-hafted hand axe no longer than his forearm held in his right hand hanging straight down against the outside of his right thigh with its head at hip height, nothing reaching the ground or below the knee, no great axe. Palette dark brown, iron, blood red. Avoid: chibi or cartoon proportions, a large head, big hands or feet, a childlike face, photorealism, a real person or actor, anything standing beside the figure, arms crossed or held in front of the body, a weapon held out away from the body, anything held reaching the ground or hanging below the knee, a spear or staff planted on the ground beside the body, a shield, feet close together, a cape or cloth flying away from the body, a floor-length robe hiding the feet, wings spread wide, multiple characters, cropping, a dramatic background, text, watermark.",
+    "ai_model": "nano-banana-pro"
+  },
+  "balance_before": 617,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1789788687802,
+  "started_at": 1789788687809,
+  "polled": "2026-09-19T03:31:57Z",
+  "consumed_credits": 9,
+  "finished_at": 1789788710311
 }
