@@ -13,6 +13,9 @@ n=${1:-8}; done_n=0
 # rewrite of a sentence while the painter sleeps in a picture shifted that offset into the middle of the
 # next line (2026-09-18, 18:27: "painting hin the silhouette, a red silk sash ...").
 mapfile -t TABLE < tools/batch/serious_concepts.tsv
+# FAMILIES="odin thor ..." paints those in that order instead of the table's (the grade order, once the
+# credits no longer cover the whole roster - 2026-09-19).
+if [ -n "$FAMILIES" ]; then ORDERED=(); for f in $FAMILIES; do for row in "${TABLE[@]}"; do [ "${row%%$'\t'*}" = "$f" ] && ORDERED+=("$row"); done; done; TABLE=("${ORDERED[@]}"); fi
 for row in "${TABLE[@]}"; do
   family=${row%%$'\t'*}; sentence=${row#*$'\t'}
   [ -z "$family" ] && continue

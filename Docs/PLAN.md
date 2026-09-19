@@ -5121,6 +5121,32 @@ now outlive Meshy's retention and this container; `reapply_motions.sh`
 retargets from the archive (or the donor's GLB) and ships, and Meshy's
 apply is used only where a motion task still lives (Zeus's ultimate).
 
+### The container's disk ran out, and the session was restarted (2026-09-19, 01:45)
+
+At about 19:00 on the 18th the session's disk allowance ran out: the
+painter wrote thirteen empty concept files from Medusa on, seven of the
+last eight launches died mid-pipeline ("No space left on device" in their
+pollers; Meshy went on generating without them, and `generate` resumed
+each from its manifest for nothing but the rig and clips it had not yet
+made), Hera's download came back truncated ("buffer is smaller than
+requested size" at her build; fetched again with `--force`), and the
+container was restarted at 01:40, which killed the shipper, the painter
+and every watcher — the repo and the scratch logs survived, the six
+local commits with them. What had filled the allowance: the raw exports
+`download` keeps beside each manifest (a family is a 7 MB rig, eight 7 MB
+clips and a 12 MB image usdz, 232 clip files for the thirty families
+shipped that afternoon), the harness's `bash-edit-diff` cache (1.9 GB)
+and a `scratchpad/clean` from an earlier session (1.5 GB). The rule
+from it: once a family's bundle files are committed its raw CLIP files
+go (`Art/Models/<asset>_serious_<clip>.glb`; the rig and the image usdz
+stay, a clip is fetched again in a minute), and the five gods' `_m7_`
+clips stay because they are the motion archive's source — the
+`.motion.npz` files carry them now in any case. A launch resumed by
+hand must quote its wave line: an unquoted `$lines` split the palettes
+at their spaces and started "generate blue," seven times over (no task
+was created, the concept argument being empty) and gave the seven the
+default blade clip set until they were launched again line by line.
+
 ### What this does not buy
 
 The cards. Every card is a bust painted from the chibi concept, and a

@@ -50,7 +50,10 @@
       "finished_at": 1789756740927,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-18T18:39:09Z"
+      "polled": "2026-09-18T18:39:09Z",
+      "downloaded": {
+        "usdz": "Art/Models/harpy_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b5d0-b6b7-7269-ab76-3d564c6d3b0d",
@@ -77,7 +80,10 @@
       "started_at": 1789756761957,
       "finished_at": 1789756825590,
       "name": "",
-      "polled": "2026-09-18T18:40:33Z"
+      "polled": "2026-09-18T18:40:33Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b5d1-fed0-7031-a658-fecd3f37f034",
@@ -100,7 +106,10 @@
       "started_at": 1789756833959,
       "finished_at": 1789756846852,
       "name": "",
-      "polled": "2026-09-18T18:40:50Z"
+      "polled": "2026-09-18T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b5d2-0214-7166-bbf1-07ac364db9a2",
@@ -123,7 +132,10 @@
       "started_at": 1789756834727,
       "finished_at": 1789756847334,
       "name": "",
-      "polled": "2026-09-18T18:40:50Z"
+      "polled": "2026-09-18T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b5d2-050d-71b7-8d8a-d9b09173f2b3",
@@ -146,7 +158,10 @@
       "started_at": 1789756835423,
       "finished_at": 1789756849134,
       "name": "",
-      "polled": "2026-09-18T18:40:50Z"
+      "polled": "2026-09-18T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b5d2-07c3-7158-93c6-7d153c3742d4",
@@ -169,7 +184,10 @@
       "started_at": 1789756836179,
       "finished_at": 1789756848079,
       "name": "",
-      "polled": "2026-09-18T18:40:50Z"
+      "polled": "2026-09-18T18:40:50Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b5d2-0ab2-76bb-b79f-156195cbb42b",
@@ -192,7 +210,10 @@
       "started_at": 1789756836820,
       "finished_at": 1789756862471,
       "name": "",
-      "polled": "2026-09-18T18:41:11Z"
+      "polled": "2026-09-18T18:41:11Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b5d2-0d62-7090-b571-8a1734146e2d",
@@ -215,7 +236,10 @@
       "started_at": 1789756837735,
       "finished_at": 1789756856119,
       "name": "",
-      "polled": "2026-09-18T18:41:01Z"
+      "polled": "2026-09-18T18:41:01Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b5d2-10c8-77a8-813f-85b853ffd1d6",
@@ -238,7 +262,10 @@
       "started_at": 1789756838530,
       "finished_at": 1789756867448,
       "name": "",
-      "polled": "2026-09-18T18:41:11Z"
+      "polled": "2026-09-18T18:41:11Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b5d2-1401-74e0-9f9d-876e5d60caa5",
@@ -261,8 +288,12 @@
       "started_at": 1789756839137,
       "finished_at": 1789756857680,
       "name": "",
-      "polled": "2026-09-18T18:41:01Z"
+      "polled": "2026-09-18T18:41:01Z",
+      "downloaded": {
+        "glb": "Art/Models/harpy_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-18T18:44:39Z"
 }
