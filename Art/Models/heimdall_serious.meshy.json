@@ -50,7 +50,10 @@
       "finished_at": 1789757342697,
       "art_style": "",
       "name": "",
-      "polled": "2026-09-19T01:51:55Z"
+      "polled": "2026-09-19T01:51:55Z",
+      "downloaded": {
+        "usdz": "Art/Models/heimdall_serious_image.usdz"
+      }
     },
     "rig": {
       "id": "01a0b75b-d7dc-7194-897d-ad1c94079f36",
@@ -77,7 +80,10 @@
       "started_at": 1789782663302,
       "finished_at": 1789782722698,
       "name": "",
-      "polled": "2026-09-19T01:52:07Z"
+      "polled": "2026-09-19T01:52:07Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious.glb"
+      }
     },
     "clip:idle_combat": {
       "id": "01a0b75d-1db1-7450-8507-425d385443c8",
@@ -100,7 +106,10 @@
       "started_at": 1789782728603,
       "finished_at": 1789782742831,
       "name": "",
-      "polled": "2026-09-19T01:52:26Z"
+      "polled": "2026-09-19T01:52:26Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious_idle_combat.glb"
+      }
     },
     "clip:attack_basic": {
       "id": "01a0b75d-2697-7308-835e-20d5448e476f",
@@ -123,7 +132,10 @@
       "started_at": 1789782730681,
       "finished_at": 1789782745475,
       "name": "",
-      "polled": "2026-09-19T01:52:25Z"
+      "polled": "2026-09-19T01:52:25Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious_attack_basic.glb"
+      }
     },
     "clip:attack_heavy": {
       "id": "01a0b75d-2b13-7240-9281-fbf12c9cc285",
@@ -146,7 +158,10 @@
       "started_at": 1789782731866,
       "finished_at": 1789782754747,
       "name": "",
-      "polled": "2026-09-19T01:52:37Z"
+      "polled": "2026-09-19T01:52:37Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious_attack_heavy.glb"
+      }
     },
     "clip:hit_react": {
       "id": "01a0b75d-334e-7699-97a7-a7608489b0e5",
@@ -169,7 +184,10 @@
       "started_at": 1789782733962,
       "finished_at": 1789782753718,
       "name": "",
-      "polled": "2026-09-19T01:52:37Z"
+      "polled": "2026-09-19T01:52:37Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious_hit_react.glb"
+      }
     },
     "clip:death": {
       "id": "01a0b75d-3da7-756e-8102-0abb7506f58c",
@@ -192,7 +210,10 @@
       "started_at": 1789782736593,
       "finished_at": 1789782769757,
       "name": "",
-      "polled": "2026-09-19T01:52:59Z"
+      "polled": "2026-09-19T01:52:59Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious_death.glb"
+      }
     },
     "clip:ultimate": {
       "id": "01a0b75d-4a8b-75d6-bf4b-f6957ec5c23f",
@@ -215,7 +236,10 @@
       "started_at": 1789782739946,
       "finished_at": 1789782762835,
       "name": "",
-      "polled": "2026-09-19T01:52:49Z"
+      "polled": "2026-09-19T01:52:49Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious_ultimate.glb"
+      }
     },
     "clip:victory": {
       "id": "01a0b75d-5a43-763d-bce2-a7892b52e7b7",
@@ -238,7 +262,10 @@
       "started_at": 1789782743983,
       "finished_at": 1789782773970,
       "name": "",
-      "polled": "2026-09-19T01:52:59Z"
+      "polled": "2026-09-19T01:52:59Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious_victory.glb"
+      }
     },
     "clip:walk": {
       "id": "01a0b75d-603c-7712-82e3-ff975d47704c",
@@ -261,8 +288,12 @@
       "started_at": 1789782745493,
       "finished_at": 1789782764831,
       "name": "",
-      "polled": "2026-09-19T01:52:49Z"
+      "polled": "2026-09-19T01:52:49Z",
+      "downloaded": {
+        "glb": "Art/Models/heimdall_serious_walk.glb"
+      }
     }
   },
-  "history": []
+  "history": [],
+  "refreshed": "2026-09-19T01:54:21Z"
 }
