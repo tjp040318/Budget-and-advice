@@ -1591,7 +1591,7 @@ environment can and cannot do. The short version:
   camera at 0.10 / 1.0, colour fringe 0.10–0.12. The texture prompt for
   every future wave asks for a natural restrained palette (`wave_launch.sh`,
   `beast_wave.sh`); a retexture of the shipped serious families is about
-  10 credits each, on the owner's word. The boards are a flat software
+  10 credits each, on the owner's word. Run 198 judged it: every battle frame's mean saturation fell 7–37 points (the Duat 205 → 176) and brightened 10–15, no band over 2% clipped; the lab's five frames show the metal in the physically based figure and flat paint in the ramps. The boards are a flat software
   render and never show the light; judge a lighting change on the CI
   frames and `framelight.py`.
 - **The figure stages are lit properly (2026-09-18; PLAN.md *The figure

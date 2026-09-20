@@ -5597,6 +5597,39 @@ Option 3, with option 1 built today.
   ramp` on the full rig, so run 198 shows the physically based figure
   beside yesterday's on the same lights.
 
+### Run 198 judged it (20:10)
+
+Green, 231 tests, no crash. The same frames before and after, measured
+as mean HSV saturation of the whole frame (0–255):
+
+| frame | before (run 197) | after (run 198) |
+|---|---|---|
+| Duat battle | 205 | 176 |
+| Arena | 200 | 170 |
+| Vault of the Colossus | 193 | 162 |
+| Olympus | 73 | 57 |
+| Marsh of Lerna | 138 | 117 |
+| Midgard fjord | 96 | 89 |
+| Jötunheim | 131 | 116 |
+| Forum | 57 | 48 |
+| Peach Garden | 203 | 166 |
+| Reveal, Sekhmet | 115 | 111 |
+
+The battle frames also brightened by 10–15 on the mean (114 → 129 on
+the Duat): the doubled contrast had been crushing the floors' shade.
+`framelight.py` has no band over 2% clipped (the worst 1.8%, the
+Vault's second wave) and no patch past 49%. The lab's five frames of
+the awakened Ares on one rig: the physically based figure's bronze
+breastplate, greaves and shield rim read as METAL with the studio
+map's reflections in them and the cape as cloth; the ramp beside it is
+flat painted gold; the half-Lambert flatter still; the bare rig (no
+environment) shows that the map is what the metal reflects. Main is
+at 27129da. The warm sets (the Duat, the arena, the Peach Garden) are
+still the most saturated frames in the game by a distance, and that is
+their floor tile and their key light, not the grade — the next knob if
+the owner wants them calmer is `grade(for:)`'s saturation for those
+three (0.94), or the tiles themselves.
+
 ### What this does not change
 
 The meshes and their paint are the generator's; the saturation is
