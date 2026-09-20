@@ -10,7 +10,7 @@ S=${S:-/tmp/pantheon-batch}; mkdir -p "$S"
 # The texture prompt asks for painted detail rather than flat cel shading:
 # the first roster's "cel-shaded with crisp baked highlights" came back as
 # three flat tones per part and read as cartoony on the phone.
-TEXTURE="hand-painted stylised mobile game character textures with fine detail: engraved and embossed metal with worn bright edges, layered cloth with a woven weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth, clear contrast between metal, cloth, leather and skin, soft natural shading with painted highlights, rich saturated colour, stylised rather than photoreal"
+TEXTURE="hand-painted stylised mobile game character textures with fine detail: engraved and embossed metal with worn bright edges, layered cloth with a woven weave and stitched trim, hair and fur in defined strands, leather with grain, skin with subtle warmth, clear contrast between metal, cloth, leather and skin, soft natural shading with painted highlights, a natural restrained palette true to the concept's own colours, physically based materials with real metal and cloth, no cel shading, no outlines, painted realism rather than a cartoon"
 for spec in "$@"; do
   IFS=: read -r asset concept height palette kit family <<< "$spec"   # family: the roster name, used by ship_wave.sh
   nohup python3 tools/meshy.py generate "$asset" --image "$concept" --height "$height" --clips "${kit:-blade}" \

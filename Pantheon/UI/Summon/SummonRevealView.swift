@@ -648,11 +648,15 @@ struct SummonStageView: UIViewRepresentable {
         // the same job the SwiftUI vignette does behind this view, done here
         // for the parts of the frame the set covers. All three need
         // `wantsHDR`, which is on.
-        camera.contrast = 0.16
-        camera.saturation = 1.12
+        // Eased 2026-09-20 (from 0.16, 1.12 and 0.25): the figure is lit by
+        // the physically based model now and the paint's saturation is
+        // tempered in the surface shader; a grade that pushed both back up
+        // put the cartoon back. The saturation is the painting's own.
+        camera.contrast = 0.10
+        camera.saturation = 1.0
         camera.vignettingIntensity = 0.32
         camera.vignettingPower = 1.15
-        camera.colorFringeStrength = 0.25
+        camera.colorFringeStrength = 0.10
 
         let cameraNode = SCNNode()
         cameraNode.camera = camera

@@ -407,7 +407,10 @@ enum StageBuilder {
         // haze is light and starts beyond the far parapet: the floor is
         // never fogged, the painting takes about a tenth of the horizon
         // colour at 70 m, enough to sit in the same air.
-        let palette = painting.flatMap { PaintingPalette(image: $0) } ?? .neutral
+        var palette = painting.flatMap { PaintingPalette(image: $0) } ?? .neutral
+        if let painting {
+            palette.environment = environmentMap(from: painting, palette: palette)
+        }
         let hand = UIColor(hex: environment.fogHex) ?? .darkGray
         let fog = palette.horizon.mixed(with: hand, amount: 0.35)
         scene.background.contents = palette.sky.mixed(with: fog, amount: 0.3)
@@ -617,6 +620,10 @@ enum StageBuilder {
         /// it), so the camera takes its exposure off this — see
         /// `PaintingPalette.exposureCompensation`.
         var luminance: Double = 0.45
+        /// A lighting environment made from the painting itself
+        /// (2026-09-20; `StageBuilder.environmentMap`): nil for the
+        /// procedural fallback, which has no painting.
+        var environment: UIImage? = nil
 
         static let neutral = PaintingPalette(sky: UIColor(white: 0.5, alpha: 1),
                                              horizon: UIColor(white: 0.35, alpha: 1),
@@ -681,10 +688,72 @@ enum StageBuilder {
         }
     }
 
+    /// A lighting environment made from the painting (2026-09-20): a 256 ×
+    /// 128 equirectangular map with the painting's own sky above, the
+    /// painting wrapped twice round the horizon band (mirrored, so the seam
+    /// is a fold and not a cut), and its ground colour below, drawn at
+    /// 32 × 16 and stretched, which blurs it into the soft reflection a
+    /// lighting environment wants. No battle set ever shipped an .hdr, so
+    /// every figure had reflected ONE FLAT COLOUR (the key's hex at 0.35),
+    /// which is why a metal could not be let go metallic and the ramp had
+    /// to fake its highlight; with the set's own colours to reflect, the
+    /// physically based model lights a figure and its floor as one place.
+    /// `BattleSceneController` hands it to `scene.lightingEnvironment` at
+    /// `environmentIntensity`.
+    static let environmentIntensity: CGFloat = 0.7
+
+    static func environmentMap(from painting: UIImage, palette: PaintingPalette) -> UIImage? {
+        let coarseSize = CGSize(width: 32, height: 16)
+        let fineSize = CGSize(width: 256, height: 128)
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        let coarse = UIGraphicsImageRenderer(size: coarseSize, format: format).image { context in
+            let cg = context.cgContext
+            // Sky at the top, blending to the horizon by the band's edge.
+            let skyBand = CGRect(x: 0, y: 0, width: coarseSize.width, height: 5)
+            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                                         colors: [palette.sky.cgColor, palette.horizon.cgColor] as CFArray,
+                                         locations: [0, 1]) {
+                cg.saveGState()
+                cg.clip(to: skyBand)
+                cg.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 0, y: 5), options: [])
+                cg.restoreGState()
+            } else {
+                cg.setFillColor(palette.sky.cgColor)
+                cg.fill(skyBand)
+            }
+            // Ground below the band.
+            cg.setFillColor(palette.ground.cgColor)
+            cg.fill(CGRect(x: 0, y: 11, width: coarseSize.width, height: 5))
+            // The painting twice across the horizon band, the second mirrored.
+            let band = CGRect(x: 0, y: 5, width: 16, height: 6)
+            painting.draw(in: band)
+            cg.saveGState()
+            cg.translateBy(x: 32, y: 0)
+            cg.scaleBy(x: -1, y: 1)
+            painting.draw(in: band)
+            cg.restoreGState()
+        }
+        return UIGraphicsImageRenderer(size: fineSize, format: format).image { context in
+            context.cgContext.interpolationQuality = .high
+            coarse.draw(in: CGRect(origin: .zero, size: fineSize))
+        }
+    }
+
     /// The camera's grade for a place: the genre's sets are each ONE hue,
     /// pushed — warm stone in the sun, cold blue in the ice, a violet dark
     /// in the deep. Saturation and contrast on the camera, an exposure
     /// nudge, and how far the corners fall off.
+    ///
+    /// EASED (2026-09-20). `SCNCamera.contrast` is an ADDITION to the
+    /// default of 0 — the reveal's camera grades at 0.16 — and these sat
+    /// at 1.03–1.12 from 2026-09-15, a doubling of the contrast on every
+    /// battle set, which crushed the floor's shade and pushed every colour
+    /// on it; the saturation pushes of 1.04–1.08 came on top. The Duat's
+    /// battle frame measured a mean saturation of 202 of 255 against 115
+    /// on the reveal. Contrast is on the reveal's scale now (0.06–0.14)
+    /// and saturation at or under 1.0: a set keeps its one hue from its
+    /// painting and its lights, not from the grade.
     struct Grade {
         var saturation: CGFloat
         var contrast: CGFloat
@@ -698,25 +767,25 @@ enum StageBuilder {
         // light on a mottled sandstone floor the first frames were a sheet
         // of orange, so the push is gentler there.
         case .duatGate, .hallOfTwoTruths, .arenaOfSouls, .colosseumSands:
-            return Grade(saturation: 1.06, contrast: 1.06, exposure: 0.0, vignette: 0.32)
+            return Grade(saturation: 1.0, contrast: 0.10, exposure: 0.0, vignette: 0.32)
         case .reedFields, .peachGarden:
-            return Grade(saturation: 1.08, contrast: 1.03, exposure: 0.05, vignette: 0.26)
+            return Grade(saturation: 1.0, contrast: 0.06, exposure: 0.05, vignette: 0.26)
         case .serpentDeep, .necropolis:
-            return Grade(saturation: 1.05, contrast: 1.12, exposure: -0.1, vignette: 0.42)
+            return Grade(saturation: 0.98, contrast: 0.14, exposure: -0.1, vignette: 0.42)
         case .colossusVault:
-            return Grade(saturation: 1.05, contrast: 1.1, exposure: -0.05, vignette: 0.4)
+            return Grade(saturation: 0.98, contrast: 0.12, exposure: -0.05, vignette: 0.4)
         case .olympusGate, .aegeanCliffs:
-            return Grade(saturation: 1.04, contrast: 1.04, exposure: 0.05, vignette: 0.24)
+            return Grade(saturation: 0.98, contrast: 0.08, exposure: 0.05, vignette: 0.24)
         case .lernaMarsh, .hydraLair, .yggdrasilRoots:
-            return Grade(saturation: 0.98, contrast: 1.1, exposure: -0.05, vignette: 0.38)
+            return Grade(saturation: 0.94, contrast: 0.12, exposure: -0.05, vignette: 0.38)
         case .midgardFjord:
             // A night fjord under a grey sky: lifted a little, or the floor
             // is only what the braziers reach.
-            return Grade(saturation: 1.0, contrast: 1.08, exposure: 0.08, vignette: 0.32)
+            return Grade(saturation: 0.96, contrast: 0.10, exposure: 0.08, vignette: 0.32)
         case .jotunheimHall, .dragonGate:
-            return Grade(saturation: 1.0, contrast: 1.08, exposure: 0.0, vignette: 0.32)
+            return Grade(saturation: 0.96, contrast: 0.10, exposure: 0.0, vignette: 0.32)
         case .forumRome:
-            return Grade(saturation: 0.96, contrast: 1.1, exposure: -0.08, vignette: 0.4)
+            return Grade(saturation: 0.92, contrast: 0.12, exposure: -0.08, vignette: 0.4)
         }
     }
 

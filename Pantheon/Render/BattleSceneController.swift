@@ -190,12 +190,19 @@ final class BattleSceneController: NSObject {
             ?? Bundle.main.url(forResource: environment.environmentMap, withExtension: "exr") {
             scene.lightingEnvironment.contents = iblURL
             scene.lightingEnvironment.intensity = 1.15
+        } else if let map = palette.environment {
+            // The painting's own environment (2026-09-20; `StageBuilder.
+            // environmentMap`): the set's sky, painting and ground wrapped
+            // round the figures, so a metal reflects the place it stands in
+            // and the physically based model has a world to light from.
+            scene.lightingEnvironment.contents = map
+            scene.lightingEnvironment.intensity = StageBuilder.environmentIntensity
         } else {
             // A flat colour as the lighting environment lights every surface
             // uniformly in that colour, which is what washed the whole stage
-            // green. It is a stand-in until a real .hdr ships, so keep it weak
-            // enough to be ambient fill and let the three real lights shape the
-            // figure.
+            // green. It is a stand-in for the procedural fallback, which has
+            // no painting to wrap, so keep it weak enough to be ambient fill
+            // and let the three real lights shape the figure.
             scene.lightingEnvironment.contents = UIColor(hex: environment.keyLightHex)
             scene.lightingEnvironment.intensity = 0.35
         }
@@ -282,7 +289,9 @@ final class BattleSceneController: NSObject {
         ambient.type = .ambient
         let hand = UIColor(hex: environment.fogHex) ?? .darkGray
         ambient.color = palette.horizon.mixed(with: hand, amount: 0.35).mixed(with: .white, amount: 0.5)
-        ambient.intensity = 240
+        // Lower where the painting's environment map now fills the shadow
+        // side (2026-09-20); the flat-colour fallback keeps the old floor.
+        ambient.intensity = palette.environment != nil ? 150 : 240
         let ambientNode = SCNNode()
         ambientNode.light = ambient
         scene.rootNode.addChildNode(ambientNode)
@@ -322,7 +331,8 @@ final class BattleSceneController: NSObject {
         camera.bloomIntensity = 0.22
         camera.bloomThreshold = 0.975
         camera.bloomBlurRadius = 10
-        camera.colorFringeStrength = 0.35
+        // Chromatic aberration at 0.35 read as a filter (2026-09-20): a trace.
+        camera.colorFringeStrength = 0.12
         // One grade per place (2026-09-15): the genre's sets are each one
         // hue, pushed. `StageBuilder.grade(for:)` holds the numbers.
         let grade = StageBuilder.grade(for: environment)

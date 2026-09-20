@@ -150,7 +150,12 @@ jobs:
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab bare >/dev/null
                 sleep 7; shoot "$step-${names[$step]}-awakened-bare"
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab bare -tour-shading legacy >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened-legacy" ;;
+                sleep 7; shoot "$step-${names[$step]}-awakened-legacy"
+                # And the Lambert ramp of 2026-09-18 on the full rig
+                # (2026-09-20): the frame the physically based figure is
+                # judged against. Docs/PLAN.md, "The serious look in the light".
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-shading ramp >/dev/null
+                sleep 7; shoot "$step-${names[$step]}-awakened-ramp" ;;
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
               arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;

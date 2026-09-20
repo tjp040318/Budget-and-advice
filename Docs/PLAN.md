@@ -5500,6 +5500,112 @@ a save is trusted exactly as before; and `Sign in with Apple` cannot be
 exercised by CI — the owner's Simulator, signed in to an Apple ID, is the
 first place the button is pressed.
 
+## The serious look in the light (2026-09-20; the owner: "why do the renders make the colors and the look of the characters, even the redesigned, look more cartoony? you may need to adjust the colors and lighting")
+
+The meshes were remade serious and the owner still read a cartoon in the
+frames. The frames were measured and the renderer read before anything
+was changed, and the cartoon turned out to be four things, none of them
+in the meshes.
+
+### What was measured
+
+- **Meshy's texturing doubles the concept's saturation.** Sif's shipped
+  base colour has a mean HSV saturation of 118 of 255 over its lit
+  texels; her concept's figure measures 60. The texture prompt every wave
+  sent (`wave_launch.sh`) asked for "rich saturated colour, stylised
+  rather than photoreal" — written for the chibi roster on 2026-09-09 and
+  never revisited when the concepts turned serious.
+- **The shipped maps are real and were barely used.** Every serious
+  family carries the generator's normal, metallic and roughness maps
+  (`textures/*.png` in the usdz: a normal map with a standard deviation
+  of 30 in red, a metallic map that marks the armour, roughness near
+  0.5). The figure shader replaced SceneKit's physically based lighting
+  with a Lambert ramp and a Blinn-Phong highlight at a hand-mixed 16- to
+  70-power (`MaterialTuner.lambertLightingModifier`): the roughness map
+  only chose a Phong exponent, the metallic map only dimmed a fill, and
+  no surface ever reflected anything — no battle set has ever shipped an
+  `.hdr`, so `scene.lightingEnvironment` was ONE FLAT COLOUR (the key's
+  hex at 0.35). The set's floors and props, meanwhile, had SceneKit's own
+  physically based model all along: a Phong-shaded figure on a GGX floor
+  is a cartoon standing on a set.
+- **The grade doubled the contrast.** `SCNCamera.contrast` adds to a
+  default of 0 (the reveal grades at 0.16); the battle grades sat at
+  1.03–1.12 since 2026-09-15 — twice the contrast on every set — with
+  saturation pushes of 1.04–1.08 on top, chromatic aberration at 0.35,
+  and the reveal pushing saturation 1.12 and contrast 0.16 on a figure
+  whose paint was already twice the concept's. The Duat's battle frame
+  measured a mean saturation of 202 of 255; the reveal's 115; the
+  concept paintings 27–32 over the whole image.
+- **The rim and the recolour.** A 3.6-power rim at 0.30 in the element's
+  colour on every figure (a cartoon's outline in light, quieter twice
+  already), and the element recolour lifting the costume accent to 0.8 of
+  a fully saturated element colour, so every ember accent was neon.
+
+### What the genre does
+
+Raid's and the 3D reveals' figures are lit with a physically based model
+(GGX speculars shaped by a roughness map, Fresnel on every edge,
+reflections from the place they stand in weighted by roughness and
+metalness), a restrained palette, real shadows and ambient occlusion, no
+rim outlines, and a tone curve that holds highlights. Summoners War's
+stylisation is in its shapes and its paint, not in a lighting ramp.
+
+### The options
+
+1. **Free, in the renderer, every family at once (built):** let SceneKit's
+   physically based model light the figures (drop the lighting modifier;
+   the maps finally do their work), give every battle a lighting
+   environment made from its own painting, temper the paint's saturation
+   in the surface shader, quiet the rim, keep the paint's own saturation
+   through the element recolour, and ease every grade. Measured on the
+   frames and on the lab.
+2. **Credits, per family:** retexture the serious families through Meshy
+   with a natural-palette prompt — about 10 credits a family, 750 for the
+   roster, later and on the owner's word; the prompt for every FUTURE
+   wave is fixed now for nothing (`wave_launch.sh`, `beast_wave.sh`).
+3. **Both,** option 1 now and option 2 when the balance allows.
+
+Option 3, with option 1 built today.
+
+### What changed (the numbers)
+
+- `MaterialTuner.tune`: no `.lightingModel` modifier — SceneKit's
+  physically based model lights every figure. The Lambert ramp of
+  2026-09-18 survives as `-tour-shading ramp` and the half-Lambert of
+  2026-09-17 as `-tour-shading legacy`, for the CI lab only.
+- `surfaceModifier`: the paint is pulled toward its own luminance by
+  `paintSaturation` 0.85 before the hue test; the painted-gold guess
+  runs only for a family with no metalness map (`hasMetalMap`, set from
+  the material); the recolour's accent keeps the paint's saturation,
+  lifted no higher than 0.6 of the element's and never past 0.85 (was
+  0.8 of the element's).
+- The rim: 4.2-power at 0.12 (was 3.6 at 0.30); awakened 4.0 at 0.18
+  (was 3.4 at 0.36), the costume glow 0.12 unchanged.
+- `StageBuilder.environmentMap(from:palette:)`: a 256 × 128 equirect
+  built from the painting — its sky above, the painting wrapped twice
+  round the horizon band (mirrored), its ground colour below, drawn at
+  32 × 16 and stretched into a soft reflection — carried on
+  `PaintingPalette.environment` and set as `scene.lightingEnvironment`
+  at `environmentIntensity` 0.7 (the flat colour at 0.35 stays for the
+  procedural fallback, which has no painting). The ambient drops from
+  240 to 150 where the map fills the shadow side.
+- The grades: contrast on the reveal's scale (0.06–0.14, was 1.03–1.12),
+  saturation 0.92–1.0 (was 0.96–1.08), colour fringe 0.12 (was 0.35);
+  the reveal's camera contrast 0.10, saturation 1.0, fringe 0.10 (was
+  0.16, 1.12, 0.25).
+- The CI lab photographs the awakened Ares a fifth way, `-tour-shading
+  ramp` on the full rig, so run 198 shows the physically based figure
+  beside yesterday's on the same lights.
+
+### What this does not change
+
+The meshes and their paint are the generator's; the saturation is
+tempered in the shader, not repainted, so a retexture (option 2) is
+still the better paint when the credits exist. The boards
+(`roster_board.py`, `preview.py`) are a software renderer with a flat
+Lambert and no environment — a checking tool for the mesh, never the
+game's look; only a CI frame or the phone shows the light.
+
 ## Light and Dark are the premium (2026-09-17, evening; built)
 
 The owner, with the Hall of Ka's Fuse board in front of him offering "The

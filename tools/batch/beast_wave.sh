@@ -9,7 +9,7 @@ cd /home/user/Budget-and-advice
 S=${S:-/tmp/pantheon-batch}; mkdir -p "$S"
 list=$1; floor=${2:-2000}; per=30; launched=0; shipped=0
 [ -s "$list" ] || { echo "no list $list"; exit 1; }
-TEXTURE="hand-painted stylised mobile game creature textures with fine detail: scales with worn bright edges, layered fins and whiskers, horn and claw with grain, soft natural shading with painted highlights, rich saturated colour, stylised rather than photoreal"
+TEXTURE="hand-painted stylised mobile game creature textures with fine detail: scales with worn bright edges, layered fins and whiskers, horn and claw with grain, soft natural shading with painted highlights, a natural restrained palette true to the concept's own colours, physically based materials, no cel shading, no outlines, painted realism rather than a cartoon"
 while IFS= read -r line; do
   [[ -z "$line" || "$line" == \#* ]] && continue
   IFS=: read -r asset concept height palette <<< "$line"

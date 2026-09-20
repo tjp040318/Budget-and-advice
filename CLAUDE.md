@@ -1567,6 +1567,33 @@ environment can and cannot do. The short version:
   "Player ID" (the tail of the CloudKit record name — how a support
   request finds the record). `AccountTests` (9). No email/password yet
   (option B in PLAN.md; `AccountProvider` is the door).
+- **The figures are lit physically, and the paint is tempered (2026-09-20;
+  PLAN.md *The serious look in the light*; the owner: "why do the renders
+  make the colors and the look of the characters, even the redesigned,
+  look more cartoony?").** Four causes, none in the meshes, all measured
+  first: Meshy's texturing doubles a concept's saturation (Sif's base
+  colour 118 of 255 against her concept's 60; the old texture prompt
+  asked for "rich saturated colour"), the figure shader replaced
+  SceneKit's physically based model with a Lambert ramp and a Blinn-Phong
+  pop while the floors had the real model, no battle ever had an
+  environment to reflect (one flat colour at 0.35), and the battle grades
+  had `SCNCamera.contrast` at 1.03–1.12 — an ADDITION to a default of 0,
+  so double the contrast — with saturation pushed on top. Now: NO
+  `.lightingModel` modifier (`MaterialTuner.lightingModifier` is nil; the
+  ramp and the half-Lambert are `-tour-shading ramp|legacy` for the CI
+  lab, which photographs the awakened Ares five ways), `paintSaturation`
+  0.85 in the surface shader, the painted-gold guess only without a real
+  metalness map (`hasMetalMap`), the rim 4.2 / 0.12 (awakened 4.0 /
+  0.18), the recolour capped at 0.85 saturation, a lighting environment
+  made from each battle's painting (`StageBuilder.environmentMap`,
+  `PaintingPalette.environment`, intensity 0.7, the ambient 150 with it),
+  the grades at contrast 0.06–0.14 and saturation 0.92–1.0, the reveal's
+  camera at 0.10 / 1.0, colour fringe 0.10–0.12. The texture prompt for
+  every future wave asks for a natural restrained palette (`wave_launch.sh`,
+  `beast_wave.sh`); a retexture of the shipped serious families is about
+  10 credits each, on the owner's word. The boards are a flat software
+  render and never show the light; judge a lighting change on the CI
+  frames and `framelight.py`.
 - **The figure stages are lit properly (2026-09-18; PLAN.md *The figure
   stages' light*).** The owner, of the reveal frames: "the renders all
   fucked up." Three causes, none in the meshes: the shading ramp was a

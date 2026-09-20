@@ -719,8 +719,19 @@ enum MaterialTuner {
     float costumeSourceHue;
     float costumeBand;
     float costumeGlow;
+    float paintSaturation;
+    float hasMetalMap;
     #pragma body
     float3 c = pow(max(_surface.diffuse.rgb, float3(0.0)), float3(1.0 / 2.2));
+    // THE PAINT'S SATURATION (2026-09-20). Meshy's texturing doubles the
+    // concept's saturation (Sif's shipped base colour measures 118 of 255
+    // against her concept's 60; the prompt asked for "rich saturated
+    // colour"), and the owner read the result as a cartoon on every stage.
+    // Pulled toward its own luminance here, one number for every family,
+    // before the hue test so the recolour reads the tempered paint.
+    float luma = dot(c, float3(0.299, 0.587, 0.114));
+    c = mix(float3(luma), c, paintSaturation);
+    _surface.diffuse.rgb = pow(c, float3(2.2));
     float maxC = max(c.r, max(c.g, c.b));
     float minC = min(c.r, min(c.g, c.b));
     float delta = maxC - minC;
@@ -741,9 +752,13 @@ enum MaterialTuner {
     // here, and the lighting modifier gives it a tight bright pop where
     // linen gets a soft broad one. Read BEFORE the element recolour, so a
     // water unit's blue armour is still armour.
+    // Only for a family with NO metalness map (2026-09-20): the serious
+    // families ship the generator's own metallic and roughness maps, and
+    // a painted-gold guess on top of a real map marked every warm cloth
+    // as metal.
     float goldAway = abs(h - 0.125);
     goldAway = min(goldAway, 1.0 - goldAway);
-    float metal = (delta > 0.001 && maxC > 0.35)
+    float metal = (hasMetalMap < 0.5 && delta > 0.001 && maxC > 0.35)
         ? smoothstep(0.45, 0.65, s) * (1.0 - smoothstep(0.035, 0.07, goldAway))
         : 0.0;
     _surface.metalness = max(_surface.metalness, 0.85 * metal);
@@ -752,7 +767,11 @@ enum MaterialTuner {
         float away = abs(h - costumeSourceHue);
         away = min(away, 1.0 - away);
         if (away < costumeBand) {
-            float ns = max(s, costumeSaturation * 0.8);
+            // The accent keeps the paint's own saturation, lifted no higher
+            // than 0.6 of the element's and never past 0.85 (2026-09-20): at
+            // 0.8 of a fully saturated element colour every ember accent
+            // was neon.
+            float ns = min(max(s, costumeSaturation * 0.6), 0.85);
             float3 k = fract(float3(costumeHue) + float3(1.0, 2.0 / 3.0, 1.0 / 3.0));
             float3 p = abs(k * 6.0 - 3.0);
             float3 recoloured = maxC * mix(float3(1.0), saturate(p - 1.0), ns);
@@ -784,19 +803,41 @@ enum MaterialTuner {
     /// 3D reveals) are lit. The old ramp survives as `legacyLightingModifier`
     /// for the CI lab (`-tour-shading legacy`), so a frame can be judged
     /// against it; it is not for the game.
-    static var lightingModifier: String {
-        legacyShading ? legacyLightingModifier : lambertLightingModifier
+    ///
+    /// NONE since 2026-09-20: the figures are lit by SceneKit's own
+    /// physically based model — GGX speculars shaped by the shipped
+    /// roughness map, Fresnel, and the environment map's reflections
+    /// weighted by roughness and metalness — which is what the set's floors
+    /// and props have had all along (`StageBuilder` never had a modifier),
+    /// and what the genre's real-time figures are lit with. The Lambert
+    /// ramp with its 16- to 70-power Blinn-Phong pop was the last of the
+    /// cartoon: a hand-shaped highlight that ignored the maps' fine grain.
+    /// The ramp (`-tour-shading ramp`) and the half-Lambert of 2026-09-17
+    /// (`-tour-shading legacy`) survive for the CI lab, so a run photographs
+    /// the same figure under all three.
+    static var lightingModifier: String? {
+        switch shadingLab {
+        case .physical: return nil
+        case .ramp: return lambertLightingModifier
+        case .legacy: return legacyLightingModifier
+        }
     }
 
-    /// `-tour-shading legacy` (DEBUG, the CI lab) lights every figure with
-    /// the half-Lambert ramp of 2026-09-17, so one run photographs both.
-    static var legacyShading: Bool {
+    /// `-tour-shading ramp|legacy` (DEBUG, the CI lab) lights every figure
+    /// with an older ramp, so one run photographs the physically based
+    /// figure beside its two predecessors.
+    enum ShadingLab { case physical, ramp, legacy }
+    static var shadingLab: ShadingLab {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
-        guard let at = args.firstIndex(of: "-tour-shading"), at + 1 < args.count else { return false }
-        return args[at + 1] == "legacy"
+        guard let at = args.firstIndex(of: "-tour-shading"), at + 1 < args.count else { return .physical }
+        switch args[at + 1] {
+        case "ramp": return .ramp
+        case "legacy": return .legacy
+        default: return .physical
+        }
         #else
-        return false
+        return .physical
         #endif
     }
 
@@ -882,9 +923,16 @@ enum MaterialTuner {
 
                 material.shaderModifiers = [
                     .surface: surfaceModifier,
-                    .lightingModel: lightingModifier,
                     .fragment: fragmentModifier,
                 ]
+                if let lighting = lightingModifier {
+                    material.shaderModifiers?[.lightingModel] = lighting
+                }
+                // A real metalness map (the serious families) switches the
+                // surface shader's painted-gold guess off.
+                let hasMetalMap = material.metalness.contents != nil && !(material.metalness.contents is NSNumber)
+                material.setValue(NSNumber(value: Float(hasMetalMap ? 1 : 0)), forKey: "hasMetalMap")
+                material.setValue(NSNumber(value: Float(paintSaturation)), forKey: "paintSaturation")
                 // Float, and Float again when `applyElementTint` sets them:
                 // SceneKit logs an error and animates wrongly when a key
                 // switches between Double and Float.
@@ -898,9 +946,11 @@ enum MaterialTuner {
                 // A narrower, quieter rim than the first build's 2.6 / 0.55:
                 // that one drew a white outline round every figure.
                 // Narrower and quieter again on 2026-09-17 (3.2 / 0.42): a
-                // bright rim is a cartoon's outline in light.
-                material.setValue(NSNumber(value: Float(3.6)), forKey: "rimPower")
-                material.setValue(NSNumber(value: Float(0.30)), forKey: "rimStrength")
+                // bright rim is a cartoon's outline in light. And again on
+                // 2026-09-20 (4.2 / 0.12): with the physically based model's
+                // own Fresnel on every edge, the rim is a hint, never a line.
+                material.setValue(NSNumber(value: Float(rimPower)), forKey: "rimPower")
+                material.setValue(NSNumber(value: Float(rimStrength)), forKey: "rimStrength")
             }
         }
     }
@@ -991,8 +1041,15 @@ enum MaterialTuner {
     /// 0.30 in `tune`; an awakened figure's is a little wider and a little
     /// brighter, never an outline).
     static let awakenedCostumeGlow: Double = 0.12
-    static let awakenedRimPower: Double = 3.4
-    static let awakenedRimStrength: Double = 0.36
+    static let awakenedRimPower: Double = 4.0
+    static let awakenedRimStrength: Double = 0.18
+
+    /// The base rim (`tune`) and the paint's saturation, beside the awakened
+    /// look's numbers so the next frame that reads as a cartoon changes them
+    /// together (2026-09-20; Docs/PLAN.md, *The serious look in the light*).
+    static let rimPower: Double = 4.2
+    static let rimStrength: Double = 0.12
+    static let paintSaturation: Double = 0.85
 
     private static func report(_ node: SCNNode, _ message: String) {
         #if DEBUG
