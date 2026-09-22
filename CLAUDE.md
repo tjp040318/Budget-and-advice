@@ -1593,7 +1593,14 @@ environment can and cannot do. The short version:
   foreign save the panel offers. `GameStore.resetAccount()` is gone.
   Turso was weighed and kept out: no auth, no RLS, no functions, so it
   would need an API of our own in front of it. `BackendTests` (11) run
-  every path against a canned transport.
+  every path against a canned transport. **A `static func` on a
+  `@MainActor` class is isolated too** (run 200: nine "call to main
+  actor-isolated static method … in a synchronous nonisolated context"
+  errors from the tests): a pure helper a test calls from plain code is
+  `nonisolated static`, and a non-Sendable stored static it needs (a
+  formatter) lives in a private enum beside the class. And a test of a
+  store that saves under `account.storageKey` plants its file under
+  that key, not a literal (run 201).
 - **The figures are lit physically, and the paint is tempered (2026-09-20;
   PLAN.md *The serious look in the light*; the owner: "why do the renders
   make the colors and the look of the characters, even the redesigned,

@@ -6402,3 +6402,23 @@ before, with "Pantheon Cloud" appearing only on a phone whose plist is
 filled. `supabase.com` is closed to this environment, so the migration is
 applied by the owner in the dashboard's SQL editor (BACKEND.md §1, eight
 steps) and the dashboard's labels there are from memory.
+
+### Runs 200–202: two lessons from the test target (03:45)
+
+Run 200 did not compile the tests: a `static func` on a `@MainActor`
+class is main-actor-isolated too, and the synchronous tests called
+`SupabaseClient.request`, the save store's row builders and its clock
+from plain code ("call to main actor-isolated static method … in a
+synchronous nonisolated context", nine sites). The pure helpers are
+`nonisolated static` now and the ISO-8601 formatter lives in a private
+enum beside the store, since a non-Sendable stored static cannot be
+nonisolated; `swiftcheck` reads the modifier in its three declaration
+patterns (it flagged `SupabaseSaveStore.date` as undeclared until it
+did). Run 201 compiled and one test failed: the restore test had planted
+its local game under the key `"abc"` while the store imports under the
+ACCOUNT's storage key, as the app saves — the import landed in another
+file and the assertions read the old one. The store was right; the test
+derives its key from the account. Run 202: 242 tests, 0 failures, and
+the More screen's Account panel and the sign-in screen photograph as
+before (the "Pantheon Cloud" wording appears only on a phone whose plist
+is filled).
