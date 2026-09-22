@@ -215,6 +215,13 @@ def run_family(name, args):
     # since cloth welded along a sleeve shreds when cut free of it.
     if not args.no_skirt and out_name.lower() in character.SKIRT_FAMILIES:
         character.reweight_skirt(base)
+    # A robe, a floor-length cloak or a coat's skirts the rigger gave to the
+    # hands resting on it hangs from joints of its own round the hips, the
+    # robe ring (2026-09-22) — for the families judged on their boards and
+    # named in ROBE_FAMILIES. The LOD below is decimated from this base, so
+    # it carries the same robe joints.
+    if not args.no_robe and out_name.lower() in character.ROBE_FAMILIES:
+        character.reweight_robe(base)
     problems = []
     base.name = out_name
     only = {c.strip() for c in args.only_clips.split(",") if c.strip()} if args.only_clips else None
@@ -248,8 +255,9 @@ def run_family(name, args):
         print(f"\n  reading {clip.name}")
         c = character.read(clip)
         character.describe(c)
-        # The base may carry a cape chain by now (character.reweight_cape);
-        # a carrier never does, so it is matched against the body's joints.
+        # The base may carry a cape chain or a robe ring by now
+        # (character.reweight_cape, reweight_robe); a carrier never does, so
+        # it is matched against the body's joints (body_joints drops both).
         body = character.body_joints(base)
         if len(c.joints) != len(body) or list(c.joints) != body:
             print(f"    PROBLEM: joint list differs from the base model; the animation will not retarget")
@@ -323,6 +331,7 @@ def main():
     ap.add_argument("--grade", choices=sorted(character.GRADES), help="a colour grade on the textures at shipping (character.GRADES; gold: olive to burnished gold, magenta runes to ember)")
     ap.add_argument("--no-cape", action="store_true", help="skip the cape re-bind (character.reweight_cape)")
     ap.add_argument("--no-skirt", action="store_true", help="skip the skirt re-bind (character.reweight_skirt)")
+    ap.add_argument("--no-robe", action="store_true", help="skip the robe ring (character.reweight_robe)")
     ap.add_argument("--maps-from", help="a textured stage file (.glb/.usdz) to take the metallic-roughness and normal maps from; "
                                         "default: <name>_image or <name>_refine beside the source")
     ap.add_argument("--clip-tris", type=int, default=1500, help="triangle target for per-clip files")

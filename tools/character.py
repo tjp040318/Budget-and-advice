@@ -959,13 +959,30 @@ HELD_BONES = ("head", "neck", "eye", "jaw")
 CAPE_CHAIN = 4
 
 
+# Every joint the game SIMULATES rather than animates: the cape chain and,
+# since 2026-09-22, the robe ring (`reweight_robe`: robe_<sector>_<k>). A
+# clip carrier never carries one of them — a rest track on a robe joint
+# would pin the robe to its bind pose exactly as it would a cape.
+CLOTH_PREFIXES = ("cape_", "robe_")
+
+
+def _is_cloth_joint(path):
+    return path.split("/")[-1].startswith(CLOTH_PREFIXES)
+
+
 def cape_joint_count(char):
     return sum(1 for j in char.joints if j.split("/")[-1].startswith("cape_"))
 
 
+def cloth_joint_count(char):
+    """The simulated joints of either kind, cape and robe."""
+    return sum(1 for j in char.joints if _is_cloth_joint(j))
+
+
 def body_joints(char):
-    """The joint list without the cape chain: a clip carrier's whole skeleton."""
-    return [j for j in char.joints if not j.split("/")[-1].startswith("cape_")]
+    """The joint list without the simulated cloth (the cape chain and the
+    robe ring): a clip carrier's whole skeleton."""
+    return [j for j in char.joints if not _is_cloth_joint(j)]
 
 
 def _append_joint(char, name, parent, position):
@@ -1397,7 +1414,7 @@ def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
 SKIRT_FAMILIES = ("anhur", "atalanta", "sekhmet_awakened")
 
 
-def cut_seam(char, moved, ji_before, jw_before):
+def cut_seam(char, moved, ji_before, jw_before, against=None):
     """Opens the mesh along the seam between the vertices `moved` to another
     bone and the rest: every face with vertices on both sides goes to the
     side that holds two of its three, and the third vertex is DOUBLED — the
@@ -1410,11 +1427,20 @@ def cut_seam(char, moved, ji_before, jw_before):
     tunic flared toward his khopesh at the blow frame with the panel on his
     legs (2026-09-22). Cut, the hand leaves the corner where it hangs and
     the crack between two things that only touched in the concept opens
-    instead. Returns the number of vertices doubled."""
+    instead. Returns the number of vertices doubled.
+
+    `against` (the robe ring, 2026-09-22) narrows the cut to faces that hold
+    a moved vertex AND an `against` vertex — the hand's own skin — so a robe
+    is cut from the hand and nowhere else; its seams with the legs and the
+    torso are the seam blend's. Without it every mixed face is cut, as the
+    skirt pass has it."""
     faces = char.faces
     side = moved[faces]
     n_in = side.sum(axis=1)
-    mixed = np.flatnonzero((n_in > 0) & (n_in < 3))
+    touch = (n_in > 0) & (n_in < 3)
+    if against is not None:
+        touch &= np.asarray(against, bool)[faces].any(axis=1)
+    mixed = np.flatnonzero(touch)
     if len(mixed) == 0:
         return 0
     J = len(char.joints)
@@ -1470,6 +1496,143 @@ def cut_seam(char, moved, ji_before, jw_before):
     char.joint_weights = np.vstack([char.joint_weights, np.array(new_jw, dtype=char.joint_weights.dtype)])
     char.faces = new_faces.astype(faces.dtype)
     return len(new_points)
+
+
+def _welded_edges(P, faces):
+    """The mesh welded by position (across UV seams): the unique points, each
+    vertex's index into them, and every edge between two different ones."""
+    key, canon = np.unique(np.round(P, 5), axis=0, return_inverse=True)
+    canon = canon.reshape(-1)
+    f = canon[faces]
+    e = np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
+    e = e[e[:, 0] != e[:, 1]]
+    return key, canon, e
+
+
+def _held_objects(P, faces, normals, mask, owner, kind, jw, parents, height, arm_surface, min_count, reach=0.22,
+                  rod_width=None, weld_min=0.4, arm_owned=None, arm_share=None, cape_is_body=False):
+    """The skirt pass's "a thing held, not cloth" rules, in one place for
+    `reweight_skirt` and `reweight_robe` (factored out 2026-09-22 without
+    changing a count: `tools/skirt_pass.py --survey` before and after).
+    The connected pieces of `mask` over the welded mesh are judged one by
+    one; a piece is HELD — stays with the hand — when it is a rod (the
+    second principal extent under a tenth of the first), carried far from
+    every body bone (median over `reach` of the height), a solid (median
+    thickness over 2.5% of the height), welded to the arm alone (under two
+    fifths of its edge on body-owned mesh), held at its middle (centre
+    within 7.5% of the height of a wrist) or lying on the arm (three fifths
+    within 2% of the height of `arm_surface`). A piece under `min_count`
+    is neither: it stays where it is and is not reported. Returns (held,
+    cloth, refused): the two vertex masks and the words for what was held.
+    Why each rule exists is in `reweight_skirt`'s docstring.
+
+    The robe ring judges a wider mask — everything hanging below the hips,
+    whoever owns it — and its measurements moved four of the rules
+    (2026-09-22), each by a keyword the skirt pass leaves at its default:
+    a ROD must also be narrower than `rod_width` (Freya's cloak edges are
+    0.056 and 0.073 h across and read as rods; the bident, the spear and
+    the Centurion's blade are 0.030–0.039 h); the solid, weld, grip and
+    on-the-arm rules apply only to a piece the arm owns at least
+    `arm_share` of (`arm_owned`, per vertex: the smith's thick leather coat
+    skirt and Loki's coat tail are the legs' and read as solids); a weld
+    counts the cape's rows as the body's (`cape_is_body`: Freya's edges are
+    sewn to her caped back); and the weld line is `weld_min`."""
+    from scipy.spatial import cKDTree
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+    bodykind = np.array([k in ("hips", "spine", "spine01", "spine1", "spine02", "spine2", "spine03", "spine3",
+                               "neck", "upleg", "leg") for k in kind])
+    weldkind = bodykind | np.array([k.startswith("cape_") for k in kind]) if cape_is_body else bodykind
+    # The distance of every point to the nearest BODY bone segment.
+    body_near = np.full(len(P), np.inf)
+    for j, p in enumerate(parents):
+        if p >= 0 and (bodykind[j] or bodykind[p]):
+            a, b = jw[p], jw[j]
+            ab = b - a
+            t = np.clip(((P - a) @ ab) / max(float(ab @ ab), 1e-9), 0.0, 1.0)
+            body_near = np.minimum(body_near, np.linalg.norm(P - (a + t[:, None] * ab), axis=1))
+    # Where a thing is held: the wrists.
+    grips = [jw[j] for j, k in enumerate(kind) if k == "hand"]
+    arm_tree = cKDTree(P[arm_surface]) if arm_surface.any() else None
+    # The connected pieces of the mask over the welded mesh.
+    key, canon, e = _welded_edges(P, faces)
+    mask_c = np.zeros(len(key), bool)
+    mask_c[canon[mask]] = True
+    e_in = e[mask_c[e[:, 0]] & mask_c[e[:, 1]]]
+    graph = coo_matrix((np.ones(len(e_in)), (e_in[:, 0], e_in[:, 1])), shape=(len(key), len(key)))
+    _, label = connected_components(graph, directed=False)
+    labels = label[canon]
+    body_c = np.zeros(len(key), bool)
+    np.logical_or.at(body_c, canon, weldkind[owner])
+    sheet = np.zeros(len(P), bool)
+    held = np.zeros(len(P), bool)
+    refused = []
+    for lab in np.unique(labels[mask]):
+        piece = mask & (labels == lab)
+        count = int(piece.sum())
+        if count < min_count:
+            continue
+        Q = P[piece]
+        centre = Q.mean(axis=0)
+        q = Q - centre
+        cov = q.T @ q / max(len(q), 1)
+        ev, vec = np.linalg.eigh(cov)
+        order = np.argsort(ev)[::-1]
+        ev, vec = ev[order], vec[:, order]
+        if ev[0] <= 1e-12 or (ev[1] / ev[0] < 0.10
+                              and (rod_width is None or 2.0 * np.sqrt(3.0 * ev[1]) < rod_width * height)):
+            refused.append(f"a rod of {count:,}")
+            held |= piece
+            continue
+        body_d = float(np.median(body_near[piece]))
+        if body_d > reach * height:
+            refused.append(f"a piece of {count:,} carried {body_d / height:.2f} h from the body")
+            held |= piece
+            continue
+        if arm_share is not None and float(arm_owned[piece].mean()) < arm_share:
+            sheet |= piece          # the body's own garment: the hand's rules do not apply
+            continue
+        # Thickness: the distance to the nearest neighbour whose face is turned the other way.
+        N = normals[piece]
+        k = min(40, len(Q))
+        d, nb = cKDTree(Q).query(Q, k=k)
+        opposed = np.einsum("ij,ikj->ik", N, N[nb]) < -0.5
+        has = opposed.any(axis=1)
+        first = np.argmax(opposed, axis=1)
+        thick = d[np.arange(len(Q)), first][has]
+        if has.mean() > 0.3 and float(np.median(thick)) > 0.025 * height:
+            refused.append(f"a solid of {count:,} ({float(np.median(thick)) / height:.3f} h thick)")
+            held |= piece
+            continue
+        # Welded to the arm alone: a thing held touches nothing but the hand,
+        # a garment's panel is sewn to the rest of the garment.
+        in_piece = np.zeros(len(key), bool)
+        in_piece[canon[piece]] = True
+        touching = e[in_piece[e[:, 0]] != in_piece[e[:, 1]]]
+        outside = np.unique(np.concatenate([touching[:, 0][~in_piece[touching[:, 0]]],
+                                            touching[:, 1][~in_piece[touching[:, 1]]]]))
+        weld = float(body_c[outside].mean()) if len(outside) else 0.0
+        if weld < weld_min:
+            refused.append(f"a thing of {count:,} welded to the arm alone ({100 * weld:.0f}% of its edge on the body)")
+            held |= piece
+            continue
+        grip_d = min((float(np.linalg.norm(centre - g)) for g in grips), default=np.inf)
+        if grip_d < 0.075 * height:
+            refused.append(f"a thing of {count:,} held at its middle ({grip_d / height:.2f} h from the wrist)")
+            held |= piece
+            continue
+        # On the arm: its vertices within 2% of the height of the arm's own surface.
+        if arm_tree is not None:
+            da, _ = arm_tree.query(Q)
+            on_arm = float((da < 0.02 * height).mean())
+        else:
+            on_arm = 0.0
+        if on_arm > 0.6:
+            refused.append(f"a piece of {count:,} lying on the arm")
+            held |= piece
+            continue
+        sheet |= piece
+    return held, sheet, refused
 
 
 def reweight_skirt(char, min_count=None, rings=3, reach=0.22):
@@ -1573,91 +1736,10 @@ def reweight_skirt(char, min_count=None, rings=3, reach=0.22):
     if int(mask.sum()) < min_count:
         return 0
     from scipy.spatial import cKDTree
-    from scipy.sparse import coo_matrix
-    from scipy.sparse.csgraph import connected_components
-    # The distance of every point to the nearest BODY bone segment.
-    body_near = np.full(len(P), np.inf)
-    for j, p in enumerate(char.parents):
-        if p >= 0 and (bodykind[j] or bodykind[p]):
-            a, b = jw[p], jw[j]
-            ab = b - a
-            t = np.clip(((P - a) @ ab) / max(float(ab @ ab), 1e-9), 0.0, 1.0)
-            body_near = np.minimum(body_near, np.linalg.norm(P - (a + t[:, None] * ab), axis=1))
-    # Where a thing is held: the wrists.
-    grips = [jw[j] for j, k in enumerate(kind) if k == "hand"]
     arm_surface = candidates & arm_layer
-    arm_tree = cKDTree(P[arm_surface]) if arm_surface.any() else None
-    # The connected pieces of the mask over the welded mesh.
-    key, canon = np.unique(np.round(P, 5), axis=0, return_inverse=True)
-    canon = canon.reshape(-1)
-    f = canon[char.faces]
-    e = np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
-    e = e[e[:, 0] != e[:, 1]]
-    mask_c = np.zeros(len(key), bool)
-    mask_c[canon[mask]] = True
-    e_in = e[mask_c[e[:, 0]] & mask_c[e[:, 1]]]
-    graph = coo_matrix((np.ones(len(e_in)), (e_in[:, 0], e_in[:, 1])), shape=(len(key), len(key)))
-    _, label = connected_components(graph, directed=False)
-    labels = label[canon]
-    body_c = np.zeros(len(key), bool)
-    np.logical_or.at(body_c, canon, bodykind[owner])
-    sheet = np.zeros(len(P), bool)
-    refused = []
-    for lab in np.unique(labels[mask]):
-        piece = mask & (labels == lab)
-        count = int(piece.sum())
-        if count < min_count:
-            continue
-        Q = P[piece]
-        centre = Q.mean(axis=0)
-        q = Q - centre
-        cov = q.T @ q / max(len(q), 1)
-        ev, vec = np.linalg.eigh(cov)
-        order = np.argsort(ev)[::-1]
-        ev, vec = ev[order], vec[:, order]
-        if ev[0] <= 1e-12 or ev[1] / ev[0] < 0.10:
-            refused.append(f"a rod of {count:,}")
-            continue
-        body_d = float(np.median(body_near[piece]))
-        if body_d > reach * height:
-            refused.append(f"a piece of {count:,} carried {body_d / height:.2f} h from the body")
-            continue
-        # Thickness: the distance to the nearest neighbour whose face is turned the other way.
-        N = normals[piece]
-        k = min(40, len(Q))
-        d, nb = cKDTree(Q).query(Q, k=k)
-        opposed = np.einsum("ij,ikj->ik", N, N[nb]) < -0.5
-        has = opposed.any(axis=1)
-        first = np.argmax(opposed, axis=1)
-        thick = d[np.arange(len(Q)), first][has]
-        if has.mean() > 0.3 and float(np.median(thick)) > 0.025 * height:
-            refused.append(f"a solid of {count:,} ({float(np.median(thick)) / height:.3f} h thick)")
-            continue
-        # Welded to the arm alone: a thing held touches nothing but the hand,
-        # a garment's panel is sewn to the rest of the garment.
-        in_piece = np.zeros(len(key), bool)
-        in_piece[canon[piece]] = True
-        touching = e[in_piece[e[:, 0]] != in_piece[e[:, 1]]]
-        outside = np.unique(np.concatenate([touching[:, 0][~in_piece[touching[:, 0]]],
-                                            touching[:, 1][~in_piece[touching[:, 1]]]]))
-        weld = float(body_c[outside].mean()) if len(outside) else 0.0
-        if weld < 0.4:
-            refused.append(f"a thing of {count:,} welded to the arm alone ({100 * weld:.0f}% of its edge on the body)")
-            continue
-        grip_d = min((float(np.linalg.norm(centre - g)) for g in grips), default=np.inf)
-        if grip_d < 0.075 * height:
-            refused.append(f"a thing of {count:,} held at its middle ({grip_d / height:.2f} h from the wrist)")
-            continue
-        # On the arm: its vertices within 2% of the height of the arm's own surface.
-        if arm_tree is not None:
-            da, _ = arm_tree.query(Q)
-            on_arm = float((da < 0.02 * height).mean())
-        else:
-            on_arm = 0.0
-        if on_arm > 0.6:
-            refused.append(f"a piece of {count:,} lying on the arm")
-            continue
-        sheet |= piece
+    held, sheet, refused = _held_objects(P, char.faces, normals, mask, owner, kind, jw, char.parents, height,
+                                         arm_surface, min_count, reach=reach)
+    key, canon, e = _welded_edges(P, char.faces)
     if refused:
         print(f"    skirt: left with the arm — {'; '.join(refused)}")
     if not sheet.any():
@@ -1787,6 +1869,556 @@ def reweight_skirt(char, min_count=None, rings=3, reach=0.22):
     print(f"    skirt: {n:,} of {len(P):,} vertices of cloth were an arm's ({was}); "
           f"now the body's ({now}), the seam blended over {rings} rings")
     return n
+
+
+# --- the robe ring (2026-09-22) ---------------------------------------------
+# A LOWER garment — a robe, a floor-length cloak, a coat's skirts — that
+# Meshy's rigger gave to the hands resting on it in the A-pose hangs from
+# joints of its OWN: up to eight chains round the hips, one per 45° sector,
+# `ROBE_CHAIN` joints each (robe_<sector>_0 under Hips down to
+# robe_<sector>_3 a step above the hem), which the game swings with a spring
+# ring (Pantheon/Render/ClothChain.swift `ClothRing`; tools/cape_sim.py
+# `RingSim` is the same sum in Python). The azimuth is atan2(x - hips_x,
+# z - hips_z) in degrees: a canonical figure faces +Z, so +X — 90° — is
+# the figure's LEFT. The fixed order below is the order the Swift walks.
+ROBE_SECTORS = (("f", 0.0), ("fl", 45.0), ("l", 90.0), ("bl", 135.0),
+                ("b", 180.0), ("br", -135.0), ("r", -90.0), ("fr", -45.0))
+ROBE_CHAIN = 4
+# The held-object rules as the ring reads them (`_held_objects`): a rod is
+# under 0.045 h across, and a piece the arm owns is the hand's when under a
+# fifth of its edge is sewn to the body or the cape.
+ROBE_ROD_WIDTH = 0.045
+ROBE_WELD_MIN = 0.2
+# How far from its bone a leg's own surface can lie, by the joint that ends
+# the segment ("leg" is the thigh, "foot" the shin). A floor-length robe with
+# no legs modelled inside it IS the innermost surface round the thigh, and
+# `_limb_surface` alone gave Pluto's whole robe to his legs (the ring took a
+# fringe at the hem and tore from it). Measured on the roster, 2026-09-22:
+# a real thigh's surface lies at 0.05-0.08 h (the 90th percentile; Diana,
+# Loki, Njord, Baldr, Anhur), a shin's under 0.07 h with the boot; the robed
+# thighs run to 0.15-0.22 h (Pluto, Freya, Aphrodite, the smith, the
+# Centurion's tunic).
+ROBE_LEG_RADIUS = {"upleg": 0.09, "leg": 0.09, "foot": 0.07, "toebase": 0.07}
+# The same cap on the arm's own surface (`_arm_masks`), by the joint that
+# ends the segment: "forearm" ends the upper arm, "hand" the forearm, "grip"
+# is the hand's 0.12 h past the wrist. Uncapped, the upper arm's surface is
+# the torso flank too (0.18-0.23 h, every family, controls included) and the
+# cloak on Heimdall's back stayed with his arms; at 0.08 the smith's mail
+# sleeves and Aphrodite's sleeves went to the spine; 0.10 is the design's
+# own measured sleeve line (no arm-owned vertex outside the skin within
+# 0.09 h of the bone, on all ten). The hand's own skin: 0.03-0.07 h.
+ROBE_ARM_RADIUS = {"arm": 0.10, "forearm": 0.10, "hand": 0.06, "grip": 0.06}
+# Above the hip line the arm-held cloth goes to the spine and is CUT from the
+# arm (0, the design's rule), or — per family, ROBE_OVERRIDES {"upper_blend":
+# N} — hands over from the arm to the spine across N rings of mesh, uncut.
+# Measured both ways on the ten (2026-09-22): the cut leaves the cloak lying
+# on the forearm as shards at the blow frame and opens holes where a coat's
+# back was the arm's (the smith, Loki, Pluto's mantle); the blend tents the
+# cloak from the raised hand instead (Heimdall at 8 rings). Neither saves a
+# garment whose top IS the arm's surface; the cut is the lesser on Heimdall.
+ROBE_UPPER_BLEND = 0
+# The families the ring is APPLIED to, by name — each admitted only when its
+# boards pass (tools/cloth_metrics.py: the flying cloth down 80% on the heavy
+# attack, the ring's own triangles under 2x at the 99.9th percentile, its
+# seams no worse than the shipped file's, the settled ring within half a
+# percent of the height of its bind pose; and on the render boards no tear,
+# spike or shard, no leg through the robe, no garment stuck to the hips like
+# a board; Docs/PLAN.md *The robe ring*). mesh.py and tools/robe_pass.py
+# --all read it.
+#
+# EMPTY on 2026-09-22, every one of the ten judged and refused. The ring
+# does what it was built for below the hips — Pluto's robe, Heimdall's and
+# Baldr's cloaks, Aphrodite's skirt panels and Freya's cloak edges stop
+# flying (the flying cloth down 81-99% on the heavy attack for eight of
+# the nine that take a ring; the Centurion's 10% and Njord's 46%) — but on every board the garment's TOP, lying on the arm's own
+# surface, still tears: shards on the raised arm (Heimdall, Baldr, Freya,
+# Aphrodite's himation), tattered wings at Pluto's shoulders and his rear
+# foot through the back of the robe, holes where the smith's coat and the
+# Centurion's tunic were welded to the hand; the Satyr has no lower garment
+# and his pelt is held at the hand's middle. The per-family verdicts and
+# numbers belong in Docs/PLAN.md *The robe ring*. What would admit one is option D (a concept
+# with the hands clear of the cloth) or the design's named second step, a
+# clavicle-hung cloak-edge chain with arm capsules.
+ROBE_FAMILIES = ()
+# Per family: {"sectors_off": ["fl", ...], "upper_blend": rings}. The safety valve.
+ROBE_OVERRIDES = {}
+assert not set(ROBE_FAMILIES) & set(SKIRT_FAMILIES), "a family is either the skirt pass's or the robe ring's"
+
+
+def _arm_masks(char, P=None, normals=None, radius=None):
+    """The arm's own LAYER (1.8x the innermost surface, a 1.2% gap) and its
+    tighter SKIN (1.2x, a 0.6% gap) round the upper arm, the forearm and the
+    hand — the hand a segment continued 0.12 h past the wrist, since Meshy's
+    rigs have no finger bones — exactly as `reweight_skirt` measures them.
+    Returns (layer, skin, armkind) with armkind a per-joint bool.
+
+    `radius` ({"arm": h-share, "forearm": …, "hand": …, "grip": …}, keyed by
+    the kind of the joint that ENDS the segment, "grip" the hand's segment
+    past the wrist) caps how far from its bone the arm's own surface can lie.
+    Uncapped, the upper arm's layer is the torso flank as well — its 90th
+    percentile lies 0.18-0.23 h from the bone on every family measured, the
+    controls included — which is harmless to the skirt pass and gave the
+    cloak lying on Heimdall's back to his arms in the robe ring's first cut."""
+    leaf = [j.split("/")[-1] for j in char.joints]
+    kind = [_bone_kind(l) for l in leaf]
+    J = len(leaf)
+    jw = np.array([char.bind[i][3, :3] for i in range(J)], dtype=np.float64)
+    if P is None:
+        P = char.points.astype(np.float64)
+    height = float(P[:, 1].max() - P[:, 1].min())
+    if normals is None:
+        normals = vertex_normals(P, char.faces).astype(np.float64)
+    armkind = np.array([k in ("arm", "forearm") or k.startswith("hand") for k in kind])
+    segments, hand_segments = [], []
+    for j, p in enumerate(char.parents):
+        if p >= 0 and armkind[j]:
+            segments.append((jw[p], jw[j], "hand" if kind[j].startswith("hand") else kind[j]))
+            if kind[j] == "hand":
+                u = jw[j] - jw[p]
+                norm = float(np.linalg.norm(u))
+                if norm > 1e-6:
+                    hand_segments.append((jw[j], jw[j] + u / norm * 0.12 * height, "grip"))
+    segments += hand_segments
+    layer = np.zeros(len(P), bool)
+    skin = np.zeros(len(P), bool)
+    for a, b, k in segments:
+        near = np.ones(len(P), bool)
+        if radius is not None and k in radius:
+            ab = b - a
+            t = np.clip(((P - a) @ ab) / max(float(ab @ ab), 1e-12), 0.0, 1.0)
+            near = np.linalg.norm(P - (a + t[:, None] * ab), axis=1) <= radius[k] * height
+        layer |= near & _limb_surface(P, normals, a, b, reach=0.25 * height, gap=0.012 * height, inward_stop=False)
+        skin |= near & _limb_surface(P, normals, a, b, reach=0.25 * height, gap=0.006 * height, slack=1.2,
+                                     inward_stop=False)
+    return layer, skin, armkind
+
+
+def robe_joint_plan(char):
+    """The robe joints a char carries, in skeleton order, as (leaf, parent
+    leaf, bind position) — what the LOD must append, the same names in the
+    same order at the same places, before it can take the base's weights."""
+    leaf = [j.split("/")[-1] for j in char.joints]
+    out = []
+    for i, n in enumerate(leaf):
+        if n.startswith("robe_"):
+            out.append((n, leaf[int(char.parents[i])], char.bind[i][3, :3].astype(np.float64).copy()))
+    return out
+
+
+def append_robe_joints(char, plan):
+    """Appends `robe_joint_plan`'s joints to another file of the same family
+    (the LOD), parents by leaf name. Returns the count appended."""
+    leaf = {j.split("/")[-1]: i for i, j in enumerate(char.joints)}
+    n = 0
+    for name, parent, position in plan:
+        if name in leaf:
+            continue
+        leaf[name] = _append_joint(char, name, leaf[parent], position)
+        n += 1
+    return n
+
+
+def reweight_robe(char, rings=14, min_sector=80, overrides=None, report=None):
+    """Hangs the garment below the hips on the ROBE RING (2026-09-22): the
+    lower cloth the resting hands touched in the A-pose, which Meshy's
+    rigger bound to those hands — Heimdall's floor-length cloak, Pluto's
+    robe, Freya's cloak edges, Baldr's cloak front, the Centurion's tunic —
+    and which flew out with every swing (995 to 3,928 vertices more than
+    0.3 of the height from where the pelvis alone would carry them at the
+    heavy attack). The skirt pass re-bound such cloth to the nearest body
+    bone, which for floor-length cloth is ONE LEG, and a robe tore between
+    the legs; held rigid to the hips, the legs stab through it. So it gets
+    joints of its own, the cape's way.
+
+    (1) The HANG set: below the hip line (hips - 0.02 h), above 0.04 h,
+    outside the legs' own surface (`_limb_surface` with the inward stop,
+    CAPPED at `ROBE_LEG_RADIUS` from the bone, since a robe with no legs
+    modelled inside it is itself the innermost surface), outside the
+    pelvis's own surface, outside the arm's layer (capped at
+    `ROBE_ARM_RADIUS`, since uncapped it is the torso flank as well), off
+    the cape. With it, the arm-held cloth ABOVE the hip line (arm-owned,
+    below the neck, outside the arm's layer). The connected pieces of the
+    two together are judged by `_held_objects` in the ring's terms (a rod
+    under `ROBE_ROD_WIDTH` across, the hand's rules only on a piece the arm
+    owns, the cape counted as the body, `ROBE_WELD_MIN`) — a spear, a
+    bident, a hammer stays with the hand, a crumb under 0.8% of the mesh
+    stays as it was — and what survives grows back through the arm's layer
+    (never its skin), as the skirt pass grows. (2) SECTORS: each hanging
+    vertex falls in its nearest `ROBE_SECTORS` sector; a sector under
+    `min_sector` vertices is dropped, as is every sector `ROBE_OVERRIDES`
+    turns off; with fewer than two there is no ring, and the arm-held cloth
+    above the hips alone goes to the spine when there is enough of it.
+    (3) JOINTS: per sector, `ROBE_CHAIN` levels evenly from its top (the
+    hip line or the 97th percentile of its height, the lower) to a step
+    above its hem (the 3rd percentile), each at the sector's azimuth and at
+    the MEDIAN radial distance of its hanging vertices within 0.06 h of the
+    level. (4) WEIGHTS: bilinear — by angle between the two neighbouring
+    present chains (never across a forward gap over 90°: there the nearer
+    chain alone) and by height between the two levels bracketing the
+    vertex — so four; above a chain's first level the collar blends into
+    Hips, below its last the last joint alone. The arm-held cloth above the
+    hip line goes to the two spine joints bracketing its height with no arm
+    in it (or, per family, hands over from the arm across `upper_blend`
+    rings, uncut). Every arm-owned row below the hips outside the arm's
+    skin that is not a thing held (the ORPHANS: Heimdall's hem on his shin)
+    takes its nearest non-arm row's weights. (5) The body-owned rows within
+    14 rings lose their arm share, the seam is averaged over `rings` rings
+    (14: at 4 the ring-to-thigh seam of Loki's coat stretched 37x) with the
+    arm's own rows left out, ISLANDS of arm-held rows cut off from every arm
+    joint's own stretch of mesh go with the cloth, and the weld with every
+    row the arm still holds — and nothing else — is cut (`cut_seam(...,
+    against=)`). Returns the number of vertices re-bound; the masks are
+    left on `char._robe_sets` for the boards and the metrics."""
+    if not char.skinned or not len(char.faces):
+        return 0
+    say = report if report is not None else print
+    ov = dict((overrides if overrides is not None else ROBE_OVERRIDES.get(char.name.lower(), {})) or {})
+    leaf = [j.split("/")[-1] for j in char.joints]
+    kind = [_bone_kind(l) for l in leaf]
+    if any(l.startswith("robe_") for l in leaf):
+        say("    robe: the ring is already there; left as it is")
+        return 0
+    lower = {n.lower(): i for i, n in enumerate(leaf)}
+    if "hips" not in lower:
+        return 0
+    hips = lower["hips"]
+    upper_blend = int(ov.get("upper_blend", ROBE_UPPER_BLEND))
+    J = len(leaf)
+    jw = np.array([char.bind[i][3, :3] for i in range(J)], dtype=np.float64)
+    P = char.points.astype(np.float64)
+    N = len(P)
+    height = float(P[:, 1].max() - P[:, 1].min())
+    hx, hy, hz = jw[hips]
+    hip_line = hy - 0.02 * height
+    neck = next((lower[n] for n in ("neck", "head") if n in lower), None)
+    neck_y = float(jw[neck][1]) if neck is not None else float(P[:, 1].max())
+    owner = np.asarray(char.joint_indices)[np.arange(N), np.argmax(char.joint_weights, axis=1)]
+    normals = vertex_normals(P, char.faces).astype(np.float64)
+    W = np.zeros((N, J), dtype=np.float64)
+    rows = np.arange(N)[:, None]
+    np.add.at(W, (np.broadcast_to(rows, char.joint_indices.shape), char.joint_indices), char.joint_weights.astype(np.float64))
+    # (1) The masks.
+    legs = np.zeros(N, bool)
+    for j, p in enumerate(char.parents):
+        if p >= 0 and kind[j] in ROBE_LEG_RADIUS:
+            a, b = jw[p], jw[j]
+            ab = b - a
+            t = np.clip(((P - a) @ ab) / max(float(ab @ ab), 1e-12), 0.0, 1.0)
+            near = np.linalg.norm(P - (a + t[:, None] * ab), axis=1) <= ROBE_LEG_RADIUS[kind[j]] * height
+            legs |= near & _limb_surface(P, normals, a, b, reach=0.25 * height, gap=0.012 * height, inward_stop=True)
+    uplegs = [i for i, k in enumerate(kind) if k == "upleg"]
+    crotch = np.array([hx, float(np.mean([jw[i][1] for i in uplegs])) if uplegs else hy - 0.1 * height, hz])
+    pelvis = _limb_surface(P, normals, crotch, jw[hips], reach=0.25 * height, gap=0.012 * height, inward_stop=True)
+    arm_layer, arm_skin, armkind = _arm_masks(char, P, normals, radius=ROBE_ARM_RADIUS)
+    capek = np.array([l.startswith("cape_") for l in leaf])
+    cape_w = W[:, capek].sum(axis=1) if capek.any() else np.zeros(N)
+    below = (P[:, 1] < hip_line) & (P[:, 1] > 0.04 * height)
+    hang0 = below & ~legs & ~pelvis & ~arm_layer & (cape_w < 0.2)
+    upper0 = armkind[owner] & (P[:, 1] >= hip_line) & (P[:, 1] < neck_y) & ~arm_layer & (cape_w < 0.2)
+    min_count = max(40, int(round(0.008 * N)))
+    held, cloth, refused = _held_objects(P, char.faces, normals, hang0 | upper0, owner, kind, jw, char.parents,
+                                         height, armkind[owner] & arm_layer, min_count, rod_width=ROBE_ROD_WIDTH,
+                                         weld_min=ROBE_WELD_MIN, arm_owned=armkind[owner], arm_share=0.5,
+                                         cape_is_body=True)
+    if refused:
+        say(f"    robe: left with the hand — {'; '.join(refused)}")
+    key, canon, e = _welded_edges(P, char.faces)
+    C = len(key)
+    e_u = np.unique(np.sort(e, axis=1), axis=0)
+    # Grown back through the arm's layer, never its skin: the cloth's own
+    # rows nearest the hand (as the skirt pass grows).
+    pool = arm_layer & ~arm_skin & ~held & (cape_w < 0.2) & (
+        (armkind[owner] & (P[:, 1] < neck_y)) | (below & ~legs & ~pelvis))
+    if cloth.any() and pool.any():
+        pool_c = np.zeros(C, bool); pool_c[canon[pool]] = True
+        seen = np.zeros(C, bool); seen[canon[cloth]] = True
+        frontier = seen.copy()
+        for _ in range(60):
+            hit = frontier[e_u[:, 0]] | frontier[e_u[:, 1]]
+            step = np.zeros(C, bool)
+            step[e_u[hit, 0]] = True; step[e_u[hit, 1]] = True
+            step &= pool_c & ~seen
+            if not step.any():
+                break
+            seen |= step
+            frontier = step
+        grown = pool & seen[canon] & ~cloth
+        if grown.any():
+            say(f"    robe: {int(grown.sum()):,} rows of the cloth inside the hand's layer go with it")
+            cloth |= grown
+    hang = cloth & below
+    spine_set = cloth & (P[:, 1] >= hip_line)
+    if int(hang.sum()) < min_count and int(spine_set.sum()) < min_count:
+        return 0
+    # (2) Sectors.
+    names = [n for n, _ in ROBE_SECTORS]
+    az = np.array([a for _, a in ROBE_SECTORS])
+    theta = np.degrees(np.arctan2(P[:, 0] - hx, P[:, 2] - hz))
+    diff = (theta[:, None] - az[None, :] + 180.0) % 360.0 - 180.0
+    nearest = np.argmin(np.abs(diff), axis=1)
+    counts = np.bincount(nearest[hang], minlength=len(names))
+    off = set(ov.get("sectors_off", ()))
+    present = [s for s in range(len(names)) if counts[s] >= min_sector and names[s] not in off]
+    say("    robe: sectors " + ", ".join(f"{names[s]} {int(counts[s]):,}" for s in range(len(names)))
+        + f" (kept {' '.join(names[s] for s in present) or 'none'})")
+    ringless = len(present) < 2
+    if ringless:
+        # No lower garment to hang (the Satyr's goat legs carry a pelt across
+        # the belly, above the hip line): the arm-held cloth above the hips
+        # still goes to the spine when there is enough of it; the rows below
+        # the hips are left to the orphan rule.
+        if int(spine_set.sum()) < min_count:
+            say("    robe: fewer than two sectors hang and too little arm-held cloth above the hips; left as rigged")
+            return 0
+        say("    robe: fewer than two sectors hang — no ring; the arm-held cloth above the hips goes to the spine")
+        hang = np.zeros(N, bool)
+        present = []
+    # (3) The joints, sector by sector in the fixed order.
+    theta_h = theta[hang]
+    # Each hanging vertex's two neighbouring present chains, by FORWARD
+    # azimuth in the sector order (0, 45, … 315).
+    fwd = np.array([az[s] % 360.0 for s in present])
+    t360 = theta_h % 360.0
+    after = np.searchsorted(fwd, t360, side="right")          # the first present sector past the vertex
+    a_i = (after - 1) % max(len(present), 1)
+    b_i = after % max(len(present), 1)
+    gap = (fwd[b_i] - fwd[a_i]) % 360.0
+    into = (t360 - fwd[a_i]) % 360.0
+    w_theta = np.where(gap > 1e-6, into / np.maximum(gap, 1e-6), 0.0)
+    wide = gap > 90.0 + 1e-6
+    # Across a gap wider than 90° the nearer chain alone.
+    w_theta = np.where(wide, (into > gap - into).astype(float), w_theta)
+    # Which vertices each chain carries at all (its share > 0), for its levels.
+    first = len(char.joints)
+    chains = {}
+    Ph = P[hang]
+    radial = np.hypot(Ph[:, 0] - hx, Ph[:, 2] - hz)
+    for ci, s in enumerate(present):
+        members = ((a_i == ci) & (w_theta < 1.0)) | ((b_i == ci) & (w_theta > 0.0))
+        near = nearest[hang] == s
+        pick = near if near.sum() >= 5 else members
+        ys = Ph[pick, 1]
+        y_top = min(hip_line, float(np.percentile(ys, 97)))
+        y_hem = float(np.percentile(ys, 3))
+        levels = np.array([y_top - k * (y_top - y_hem) / ROBE_CHAIN for k in range(ROBE_CHAIN)])
+        phi = np.radians(az[s])
+        parent = hips
+        ids = []
+        for k, yk in enumerate(levels):
+            band_k = pick & (np.abs(Ph[:, 1] - yk) < 0.06 * height)
+            r = float(np.median(radial[band_k])) if band_k.sum() >= 5 else float(np.median(radial[pick]))
+            pos = np.array([hx + r * np.sin(phi), yk, hz + r * np.cos(phi)])
+            parent = _append_joint(char, f"robe_{names[s]}_{k}", parent, pos)
+            ids.append(parent)
+        chains[ci] = (levels, ids, float(Ph[pick, 1].max()))
+    J2 = len(char.joints)
+    W = np.concatenate([W, np.zeros((N, J2 - J))], axis=1)
+    W0 = W.copy()
+    # (4) The weights.
+    rows_h = np.flatnonzero(hang)
+    yv = P[rows_h, 1]
+    W[rows_h] = 0.0
+
+    def height_share(ci, share, sel):
+        levels, ids, top = chains[ci]
+        r = rows_h[sel]; y = yv[sel]; w = share[sel]
+        above = y >= levels[0]
+        under = y <= levels[-1]
+        mid = ~above & ~under
+        upper = np.clip(np.searchsorted(-levels, -y, side="right") - 1, 0, ROBE_CHAIN - 2)
+        t = np.clip((levels[upper] - y) / np.maximum(levels[upper] - levels[upper + 1], 1e-6), 0.0, 1.0)
+        ids_a = np.array(ids)
+        np.add.at(W, (r[mid], ids_a[upper[mid]]), w[mid] * (1.0 - t[mid]))
+        np.add.at(W, (r[mid], ids_a[upper[mid] + 1]), w[mid] * t[mid])
+        np.add.at(W, (r[under], np.full(int(under.sum()), ids[-1])), w[under])
+        collar = np.clip((y - levels[0]) / max(max(top, hip_line) - levels[0], 1e-6), 0.0, 1.0)
+        np.add.at(W, (r[above], np.full(int(above.sum()), ids[0])), w[above] * (1.0 - collar[above]))
+        np.add.at(W, (r[above], np.full(int(above.sum()), hips)), w[above] * collar[above])
+
+    everyone = np.ones(len(rows_h), bool)
+    for ci in range(len(present)):
+        share_a = np.where(a_i == ci, 1.0 - w_theta, 0.0)
+        share_b = np.where(b_i == ci, w_theta, 0.0)
+        share = share_a + share_b
+        height_share(ci, share, everyone & (share > 0))
+    # The arm-held cloth above the hip line: the spine joints bracketing its
+    # height, blended by height, no arm in it.
+    spine_names = [n for n in ("hips", "spine", "spine01", "spine1", "spine02", "spine2", "spine03", "spine3", "neck")
+                   if n in lower]
+    if spine_set.any() and len(spine_names) >= 2:
+        sp = np.array([lower[n] for n in spine_names])
+        sy = jw[sp, 1]
+        o = np.argsort(sy); sp, sy = sp[o], sy[o]
+        rows_s = np.flatnonzero(spine_set)
+        y = P[rows_s, 1]
+        lo = np.clip(np.searchsorted(sy, y, side="right") - 1, 0, len(sp) - 2)
+        t = np.clip((y - sy[lo]) / np.maximum(sy[lo + 1] - sy[lo], 1e-6), 0.0, 1.0)
+        W[rows_s] = 0.0
+        np.add.at(W, (rows_s, sp[lo]), 1.0 - t)
+        np.add.at(W, (rows_s, sp[lo + 1]), t)
+    sheet = hang | spine_set
+    # Nothing below the hips stays the arm's unless it is the arm's own skin
+    # or a thing the hand holds: the hem rows Meshy gave to a hand that lie
+    # in the legs' own surface (Heimdall's cloak at the shin, 0.21 h, the
+    # worst edges of the first cut at 146x their length) and the crumbs too
+    # small to judge take their nearest non-arm row's weights, the arm out.
+    orphans = armkind[owner] & below & ~arm_skin & ~held & ~sheet
+    if orphans.any():
+        from scipy.spatial import cKDTree
+        donors = np.flatnonzero((sheet | ~armkind[owner]) & ~orphans)
+        _, near = cKDTree(P[donors]).query(P[orphans], k=1)
+        W[orphans] = W[donors[near]]
+        wo = W[orphans]
+        wo[:, np.flatnonzero(armkind)] = 0.0
+        wo /= np.maximum(wo.sum(axis=1, keepdims=True), 1e-9)
+        W[orphans] = wo
+        say(f"    robe: {int(orphans.sum()):,} arm-owned rows below the hips, outside the hand, take their "
+            f"nearest non-arm neighbour's weights")
+        sheet = sheet | orphans
+    # (5) The garment's body-owned rows beside the sheet lose their arm share
+    # (the rigger's blend zone, as the skirt pass), never the arm's skin.
+    arm_cols = np.flatnonzero(np.concatenate([armkind, np.zeros(J2 - J, bool)]))
+    body_cols = np.setdiff1d(np.arange(J2), arm_cols)
+    bodykind = np.array([k in ("hips", "spine", "spine01", "spine1", "spine02", "spine2", "spine03", "spine3",
+                               "neck", "upleg", "leg") for k in kind])
+
+    def strip_arm(rws):
+        w = W[rws]
+        keep = w[:, body_cols].sum(axis=1) > 1e-6
+        w[np.ix_(keep, arm_cols)] = 0.0
+        w[keep] /= w[keep].sum(axis=1, keepdims=True)
+        W[rws] = w
+
+    zone_ok = np.zeros(C, bool)
+    np.logical_or.at(zone_ok, canon, bodykind[owner] & ~arm_skin & ~sheet)
+    seen = np.zeros(C, bool); seen[canon[sheet]] = True
+    frontier = seen.copy()
+    reached = np.zeros(C, bool)
+    for _ in range(14):
+        hit = frontier[e_u[:, 0]] | frontier[e_u[:, 1]]
+        step = np.zeros(C, bool)
+        step[e_u[hit, 0]] = True; step[e_u[hit, 1]] = True
+        step &= zone_ok & ~seen
+        if not step.any():
+            break
+        seen |= step; reached |= step
+        frontier = step
+    stripped = reached[canon] & (W[:, arm_cols].sum(axis=1) > 0.02)
+    if upper_blend:
+        stripped &= below
+    if stripped.any():
+        strip_arm(stripped)
+        say(f"    robe: {int(stripped.sum()):,} rows of the garment beside it lose their share of the arm")
+    # The seam: averaged over `rings` rings of the welded mesh, the arm's own
+    # rows left out of the averaging and the body's rows fixed.
+    if rings > 0:
+        arm_c = np.zeros(C, bool)
+        np.logical_or.at(arm_c, canon, armkind[owner] & ~sheet)
+        e_b = e_u[~arm_c[e_u[:, 0]] & ~arm_c[e_u[:, 1]]]
+        Wc = np.zeros((C, J2)); cnt = np.zeros(C)
+        np.add.at(Wc, canon, W); np.add.at(cnt, canon, 1.0)
+        Wc /= np.maximum(cnt, 1.0)[:, None]
+        sheet_c = np.zeros(C, bool); sheet_c[canon[sheet]] = True
+        deg = np.zeros(C); np.add.at(deg, e_b[:, 0], 1.0); np.add.at(deg, e_b[:, 1], 1.0)
+        for _ in range(rings):
+            acc = Wc.copy()
+            np.add.at(acc, e_b[:, 0], Wc[e_b[:, 1]]); np.add.at(acc, e_b[:, 1], Wc[e_b[:, 0]])
+            acc /= (deg + 1.0)[:, None]
+            Wc[sheet_c] = acc[sheet_c]
+        W[sheet] = Wc[canon[sheet]]
+    # Above the hip line the cloth is NOT cut from the arm: it hands over
+    # from the arm to the spine across `ROBE_UPPER_BLEND` rings of mesh from
+    # the rows the arm keeps. A hard spine binding with the weld cut punched
+    # holes in the smith's back, Loki's coat and Pluto's mantle and left
+    # shards on Heimdall's shoulders at the blow frame (2026-09-22); a cloak
+    # lying on the upper arm lifts a little with it, as cloth does.
+    if spine_set.any() and upper_blend > 0:
+        kept_c = np.zeros(C, bool)
+        np.logical_or.at(kept_c, canon, armkind[owner] & ~sheet)
+        spine_c = np.zeros(C, bool); spine_c[canon[spine_set]] = True
+        dist = np.full(C, np.inf); dist[kept_c] = 0.0
+        frontier = kept_c.copy()
+        for ring in range(1, upper_blend + 1):
+            hit = frontier[e_u[:, 0]] | frontier[e_u[:, 1]]
+            step = np.zeros(C, bool)
+            step[e_u[hit, 0]] = True; step[e_u[hit, 1]] = True
+            step &= spine_c & ~np.isfinite(dist)
+            if not step.any():
+                break
+            dist[step] = ring
+            frontier = step
+        share = np.clip(dist[canon[spine_set]] / (upper_blend + 1.0), 0.0, 1.0)[:, None]
+        W[spine_set] = share * W[spine_set] + (1.0 - share) * W0[spine_set]
+    # Islands: rows the arm still holds that are NOT the arm — cut off from
+    # every arm joint's own stretch of mesh, bordering the re-bound cloth,
+    # not a thing held — are cloth the capped masks left behind (a strip of
+    # Pluto's mantle over the shoulder, 76 and 72 rows); cut, each would be
+    # a shard riding the arm. They take their nearest re-bound row's weights.
+    arm_now0 = (W * np.concatenate([armkind, np.zeros(J2 - J, bool)])[None, :]).sum(axis=1)
+    kept = ((arm_now0 > 0.5) | armkind[owner]) & ~sheet & ~held
+    if kept.any() and sheet.any():
+        from scipy.sparse import coo_matrix
+        from scipy.sparse.csgraph import connected_components
+        from scipy.spatial import cKDTree
+        kept_c = np.zeros(C, bool); np.logical_or.at(kept_c, canon, kept)
+        sheet_c2 = np.zeros(C, bool); np.logical_or.at(sheet_c2, canon, sheet)
+        e_k = e_u[kept_c[e_u[:, 0]] & kept_c[e_u[:, 1]]]
+        lab = connected_components(coo_matrix((np.ones(len(e_k)), (e_k[:, 0], e_k[:, 1])), shape=(C, C)),
+                                   directed=False)[1]
+        rows_k = np.flatnonzero(kept_c)
+        tree = cKDTree(key[rows_k])
+        anchors = set()
+        for j in np.flatnonzero(armkind):
+            p = int(char.parents[j])
+            for at in (jw[j], 0.5 * (jw[j] + jw[p])):
+                _, q = tree.query(at)
+                anchors.add(int(lab[rows_k[q]]))
+        border = e_u[kept_c[e_u[:, 0]] ^ kept_c[e_u[:, 1]]]
+        inner = np.where(kept_c[border[:, 0]], border[:, 0], border[:, 1])
+        outer = np.where(kept_c[border[:, 0]], border[:, 1], border[:, 0])
+        touches = np.zeros(C, bool)
+        touches[inner[sheet_c2[outer]]] = True
+        island_labels = set(np.unique(lab[touches & kept_c]).tolist()) - anchors
+        if island_labels:
+            island = kept & np.isin(lab[canon], list(island_labels))
+            donors = np.flatnonzero(sheet)
+            _, near = cKDTree(P[donors]).query(P[island], k=1)
+            W[island] = W[donors[near]]
+            say(f"    robe: {int(island.sum()):,} rows of cloth in {len(island_labels)} islands the arm held go with it")
+            sheet = sheet | island
+    K = char.joint_indices.shape[1]
+    ji_before, jw_before = char.joint_indices.copy(), char.joint_weights.copy()
+    changed = sheet | stripped
+    top = np.argsort(-W[changed], axis=1)[:, :K]
+    wt = np.take_along_axis(W[changed], top, axis=1)
+    wt /= np.maximum(wt.sum(axis=1, keepdims=True), 1e-9)
+    top[wt <= 0] = 0
+    char.joint_indices[changed] = top.astype(char.joint_indices.dtype)
+    char.joint_weights[changed] = wt.astype(char.joint_weights.dtype)
+    # The cut runs wherever the re-bound cloth meets a row the ARM still
+    # holds — its skin, a thing held, a sleeve left on the forearm — and
+    # nowhere else (the legs and the torso are the seam blend's). The first
+    # cut ran against the hand's skin alone and left the welds to the held
+    # pieces whole: the Satyr's pelt end, the smith's tongs, Loki's knives
+    # stretched to 40-170 times their length with the ring or without it.
+    arm_now = (np.asarray(char.joint_weights, np.float64)
+               * np.concatenate([armkind, np.zeros(J2 - J, bool)])[char.joint_indices]).sum(axis=1)
+    arm_cols2 = np.concatenate([armkind, np.zeros(J2 - J, bool)])
+    owner_now = char.joint_indices[np.arange(N), np.argmax(char.joint_weights[:N], axis=1)]
+    against = ((arm_now > 0.5) | arm_cols2[owner_now]) & ~changed
+    cut = cut_seam(char, (changed & below) if upper_blend else changed, ji_before, jw_before, against=against)
+    if cut:
+        say(f"    robe: the weld with what the arm keeps cut, {cut:,} vertices doubled")
+    was = {}
+    for o in owner[sheet]:
+        was[leaf[o]] = was.get(leaf[o], 0) + 1
+    was = ", ".join(f"{k} {v:,}" for k, v in sorted(was.items(), key=lambda kv: -kv[1])[:4])
+    say(f"    robe: {int(hang.sum()):,} of {N:,} vertices hang on {len(present)} chains "
+        f"({', '.join('robe_' + names[s] for s in present)}), {int(spine_set.sum()):,} arm-held above the hips "
+        f"to the spine (were {was}), the seam blended over {rings} rings")
+    char._robe_sets = dict(hang=hang, spine=spine_set, stripped=stripped, held=held, orphans=orphans,
+                           changed=changed, n0=N)
+    return int(sheet.sum())
 
 
 def reproportion(char, scales, height=None, fit=None):

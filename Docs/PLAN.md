@@ -6935,3 +6935,56 @@ reward cards as modal boxes, the victory's reckoning over the frozen
 battle, and the data screens' leftovers (the painted ribbon headers, the
 clipped panel feet). The robe ring runs beside both and ships family by
 family as its boards pass.
+
+### The robe ring's verdict (2026-09-22, night): built, measured, and no family admitted
+
+The Python half is built and kept (`character.reweight_robe`,
+`robe_pass.py`, `robe_board.py`, `cloth_metrics.py`, `cape_sim.RingSim`,
+`mesh.py --no-robe`); `ROBE_FAMILIES` is EMPTY, so it changes nothing that
+ships. Proven inert: the skirt survey's 167 lines are identical before
+and after `_held_objects` was factored out, the cape's self-test differs
+from the old one by 0.0 m, and the five controls (Anhur, Atalanta, Ares,
+Diana, Sekhmet) show no robe colour. The Swift half (`ClothRing` beside
+`ClothChain`, every constant mirrored) was written and is kept as
+`tools/patches/robe_ring_swift.patch`, NOT in the build: with no family
+admitted it would be dormant code never compiled, and it lands with the
+first family that passes.
+
+What the boards showed, on the heavy attack's blow and the walk and the
+death, base and LOD, every board looked at and every number re-measured
+on the shipped files by a second agent:
+
+| Family | Flying cloth before → after | Why refused |
+|---|---|---|
+| Pluto | 2,199 → 13 | the mantle on his arms tatters into wings; a foot through the robe's back |
+| Aphrodite | 2,484 → 23 | the himation over her arms shreds; a spike behind the hip |
+| Freya | 1,391 → 178 | the cloak's left edge stands out; holes at the left front |
+| Heimdall | 3,764 → 470 | shards of the upper cloak ride the raised arm |
+| Baldr | 2,168 → 409 | his forearm is inside the cloak front: it shreds over the raised arm |
+| Loki | 716 → 125 | the closest: a shard by the hand and holes in the coat's back |
+| the smith | 1,016 → 129 | holes in the coat's back and chest; welded along whole edges |
+| Njord | 1,437 → 773 | his flying cloth is the cloak's side, not a lower garment |
+| Centurion | 449 → 404 | nothing below the hips for the ring to take |
+| Satyr | — | goat legs, no garment; the rig gave his torso to the left arm |
+
+So the ring does what it was built for — the lower garment stops flying
+on seven of nine — and every family then fails ABOVE the hips, where the
+garment lies on the arm itself and no re-weighting can part the two
+without tearing. Four measurements moved the design and are in the code:
+gravity is rest-relative (plain gravity sagged a flared robe up to a
+tenth of the height at rest); the leg and arm surfaces are capped by
+radius (the arm's measured "skin" included the torso's flank); the seam
+blends over fourteen rings, not four; and the stretch rule is the ring's
+INTERIOR under 2.0 with the whole garment no worse than shipped, since
+the shipped controls themselves score 3.4 to 21.8 at the hip crease. The
+second agent found one more thing worth knowing before anyone tries
+again: the spring simulation adds nothing on the attack (eight of nine
+fly the same held rigid) and makes the death WORSE (Heimdall 237 → 1,000
+flying held rigid against simulated), so every gain was the re-weighting.
+
+What is left for these ten is option D: a new serious concept with the
+hands clear of the garment, and a remake at 68 credits plus a 9-credit
+concept, about 770 for the ten — or accepting them as rigged. Pluto is
+the one where the ring's version (shoulder shards) is arguably less
+broken than what ships (a full-height wing); that swap is the owner's
+call, not made here.

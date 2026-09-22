@@ -1,0 +1,970 @@
+diff --git a/Pantheon/Render/ClothChain.swift b/Pantheon/Render/ClothChain.swift
+index 1ea3bfa..56ac562 100644
+--- a/Pantheon/Render/ClothChain.swift
++++ b/Pantheon/Render/ClothChain.swift
+@@ -161,7 +161,7 @@ final class ClothChain {
+         self.model = model
+         self.anchor = anchor
+         self.label = label
+-        let height = Self.height(of: model)
++        let height = ClothMath.height(of: model, fallback: Cloth.referenceHeight)
+         unit = height / Cloth.referenceHeight
+         // The bone axis: toward the child in this joint's own frame, which is
+         // world-aligned at rest (the chain's bind transforms are translations);
+@@ -185,7 +185,7 @@ final class ClothChain {
+         // The chain's particles at rest, in the model's frame: each joint's
+         // origin plus its bone; the last one repeats the segment above it.
+         var particles: [SIMD3<Float>] = []
+-        let origins = nodes.map { Self.vector($0.convertPosition(SCNVector3Zero, to: model)) }
++        let origins = nodes.map { ClothMath.vector($0.convertPosition(SCNVector3Zero, to: model)) }
+         for k in origins.indices {
+             if k + 1 < origins.count {
+                 particles.append(origins[k + 1])
+@@ -197,20 +197,20 @@ final class ClothChain {
+         }
+         // The colliders in the bind pose, each radius capped at its rest clearance.
+         for spec in Cloth.colliders {
+-            guard let a = Self.joint(named: spec.a, in: model), let b = Self.joint(named: spec.b, in: model) else { continue }
+-            let pa = Self.vector(a.convertPosition(SCNVector3Zero, to: model))
+-            let pb = Self.vector(b.convertPosition(SCNVector3Zero, to: model))
++            guard let a = ClothMath.joint(named: spec.a, in: model), let b = ClothMath.joint(named: spec.b, in: model) else { continue }
++            let pa = ClothMath.vector(a.convertPosition(SCNVector3Zero, to: model))
++            let pb = ClothMath.vector(b.convertPosition(SCNVector3Zero, to: model))
+             let centre = pa * (1 - spec.fraction) + pb * spec.fraction
+             let clearance = particles.map { simd_length($0 - centre) }.min() ?? 0
+             spheres.append(Sphere(a: a, b: b, fraction: spec.fraction, radius: min(spec.share * height, 0.97 * clearance)))
+         }
+         // The back plane: the hips' backward direction in the hips' own
+         // frame, so it turns with the pelvis, and its offset from the hips.
+-        if let hips = Self.joint(named: Cloth.backPlaneJoint, in: model) {
++        if let hips = ClothMath.joint(named: Cloth.backPlaneJoint, in: model) {
+             let back = SIMD3<Float>(0, 0, -1)                       // a canonical figure faces +Z
+-            let hipsAt = Self.vector(hips.convertPosition(SCNVector3Zero, to: model))
++            let hipsAt = ClothMath.vector(hips.convertPosition(SCNVector3Zero, to: model))
+             let depth = particles.map { simd_dot($0 - hipsAt, back) }.min() ?? 0
+-            let hipsRotation = Self.rotation(of: hips.simdWorldTransform)
++            let hipsRotation = ClothMath.rotation(of: hips.simdWorldTransform)
+             plane = Plane(hips: hips, backLocal: hipsRotation.inverse.act(back),
+                           offset: min(Cloth.backPlaneShare * height, 0.97 * depth))
+         }
+@@ -259,11 +259,6 @@ final class ClothChain {
+     // MARK: - The console
+ 
+     #if DEBUG
+-    private static func f3(_ v: SIMD3<Float>) -> String { String(format: "(%.3f, %.3f, %.3f)", v.x, v.y, v.z) }
+-    private static func f4(_ q: simd_quatf) -> String {
+-        String(format: "q(%.3f, %.3f, %.3f, %.3f)", q.vector.x, q.vector.y, q.vector.z, q.vector.w)
+-    }
+-
+     /// What SceneKit handed the chain at attach: the joints' own rest data,
+     /// the anchor's and the hips' frames, the particles, the colliders. Read
+     /// beside `tools/cape_sim.py`'s numbers for the same file.
+@@ -271,19 +266,19 @@ final class ClothChain {
+         guard let model else { return }
+         var lines: [String] = []
+         for (k, node) in nodes.enumerated() {
+-            lines.append("    \(node.name ?? "?"): pos \(Self.f3(node.simdPosition)) scale \(Self.f3(node.simdScale)) "
+-                         + "orientation \(Self.f4(node.simdOrientation)) fromTransform \(Self.f4(Self.rotation(of: node.simdTransform))) "
+-                         + "axis \(Self.f3(links[k].axis)) length \(String(format: "%.3f", links[k].length))")
++            lines.append("    \(node.name ?? "?"): pos \(ClothMath.f3(node.simdPosition)) scale \(ClothMath.f3(node.simdScale)) "
++                         + "orientation \(ClothMath.f4(node.simdOrientation)) fromTransform \(ClothMath.f4(ClothMath.rotation(of: node.simdTransform))) "
++                         + "axis \(ClothMath.f3(links[k].axis)) length \(String(format: "%.3f", links[k].length))")
+         }
+         let anchorWorld = anchor.simdWorldTransform
+-        lines.append("    anchor \(anchor.name ?? "?"): world pos \(Self.f3(anchorWorld.columns.3.xyz)) rot \(Self.f4(Self.rotation(of: anchorWorld))) "
++        lines.append("    anchor \(anchor.name ?? "?"): world pos \(ClothMath.f3(anchorWorld.columns.3.xyz)) rot \(ClothMath.f4(ClothMath.rotation(of: anchorWorld))) "
+                      + "scale \(String(format: "%.4f", simd_length(anchorWorld.columns.0.xyz)))")
+         if let plane {
+             let hipsWorld = plane.hips.simdWorldTransform
+-            lines.append("    hips: world pos \(Self.f3(hipsWorld.columns.3.xyz)) rot \(Self.f4(Self.rotation(of: hipsWorld))) "
+-                         + "backLocal \(Self.f3(plane.backLocal)) offset \(String(format: "%.3f", plane.offset))")
++            lines.append("    hips: world pos \(ClothMath.f3(hipsWorld.columns.3.xyz)) rot \(ClothMath.f4(ClothMath.rotation(of: hipsWorld))) "
++                         + "backLocal \(ClothMath.f3(plane.backLocal)) offset \(String(format: "%.3f", plane.offset))")
+         }
+-        lines.append("    model transform pos \(Self.f3(model.simdWorldTransform.columns.3.xyz)) rot \(Self.f4(Self.rotation(of: model.simdWorldTransform))) "
++        lines.append("    model transform pos \(ClothMath.f3(model.simdWorldTransform.columns.3.xyz)) rot \(ClothMath.f4(ClothMath.rotation(of: model.simdWorldTransform))) "
+                      + "unit \(String(format: "%.3f", unit)); spheres \(spheres.map { String(format: "%.3f", $0.radius) })")
+         print("[ClothChain] '\(label)' at attach:\n" + lines.joined(separator: "\n"))
+     }
+@@ -292,21 +287,21 @@ final class ClothChain {
+     /// direction, the plane, every tail's direction, and where the chain put
+     /// each joint against where SceneKit presents it a frame later.
+     private func describeStep(anchorWorld: simd_float4x4, scale: Float, time: TimeInterval) {
+-        var line = "[ClothChain] '\(label)' step \(steps) t=\(String(format: "%.2f", time)): anchor pos \(Self.f3(anchorWorld.columns.3.xyz)) "
+-            + "rot \(Self.f4(Self.rotation(of: anchorWorld))) worldScale \(String(format: "%.3f", scale))"
++        var line = "[ClothChain] '\(label)' step \(steps) t=\(String(format: "%.2f", time)): anchor pos \(ClothMath.f3(anchorWorld.columns.3.xyz)) "
++            + "rot \(ClothMath.f4(ClothMath.rotation(of: anchorWorld))) worldScale \(String(format: "%.3f", scale))"
+         if !links.isEmpty {
+             let (position, _, restRotation) = joint(0, under: anchorWorld)
+-            line += "; cape_0 at \(Self.f3(position)) rest dir \(Self.f3(restRotation.act(links[0].axis)))"
++            line += "; cape_0 at \(ClothMath.f3(position)) rest dir \(ClothMath.f3(restRotation.act(links[0].axis)))"
+         }
+         if let plane {
+             let hipsWorld = plane.hips.presentation.simdWorldTransform
+-            line += "; plane back \(Self.f3(Self.rotation(of: hipsWorld).act(plane.backLocal))) at hips \(Self.f3(hipsWorld.columns.3.xyz))"
++            line += "; plane back \(ClothMath.f3(ClothMath.rotation(of: hipsWorld).act(plane.backLocal))) at hips \(ClothMath.f3(hipsWorld.columns.3.xyz))"
+         }
+         for k in links.indices {
+             let presented = links[k].node.presentation.simdWorldPosition
+             let mine = k < computed.count ? computed[k] : SIMD3<Float>(repeating: 0)
+-            let direction = simd_length(links[k].tail - mine) > 1e-6 ? Self.normalised(links[k].tail - mine) : SIMD3<Float>(repeating: 0)
+-            line += "; \(links[k].node.name ?? "?") mine \(Self.f3(mine)) presented \(Self.f3(presented)) tail dir \(Self.f3(direction))"
++            let direction = simd_length(links[k].tail - mine) > 1e-6 ? ClothMath.normalised(links[k].tail - mine) : SIMD3<Float>(repeating: 0)
++            line += "; \(links[k].node.name ?? "?") mine \(ClothMath.f3(mine)) presented \(ClothMath.f3(presented)) tail dir \(ClothMath.f3(direction))"
+         }
+         print(line)
+     }
+@@ -329,7 +324,7 @@ final class ClothChain {
+     /// A link's world position, its parent's world rotation and its own REST
+     /// world rotation under a parent world transform.
+     private func joint(_ k: Int, under parentWorld: simd_float4x4) -> (SIMD3<Float>, simd_quatf, simd_quatf) {
+-        let parentRotation = Self.rotation(of: parentWorld)
++        let parentRotation = ClothMath.rotation(of: parentWorld)
+         let local = links[k].node.simdPosition
+         let position = (parentWorld * SIMD4<Float>(local.x, local.y, local.z, 1)).xyz
+         return (position, parentRotation, parentRotation * restLocalRotation(k))
+@@ -341,7 +336,7 @@ final class ClothChain {
+         if k < restLocal.count { return restLocal[k] }
+         return simd_quatf(angle: 0, axis: SIMD3<Float>(0, 1, 0))
+     }
+-    private lazy var restLocal: [simd_quatf] = self.links.map { Self.rotation(of: $0.node.simdTransform) }
++    private lazy var restLocal: [simd_quatf] = self.links.map { ClothMath.rotation(of: $0.node.simdTransform) }
+ 
+     private func substep(h: Float, anchorWorld: simd_float4x4, scale: Float) {
+         let centres: [(SIMD3<Float>, Float)] = spheres.map { sphere in
+@@ -352,7 +347,7 @@ final class ClothChain {
+         var planeNow: (point: SIMD3<Float>, back: SIMD3<Float>, offset: Float)?
+         if let plane {
+             let hipsWorld = plane.hips.presentation.simdWorldTransform
+-            planeNow = (hipsWorld.columns.3.xyz, Self.rotation(of: hipsWorld).act(plane.backLocal), plane.offset * scale)
++            planeNow = (hipsWorld.columns.3.xyz, ClothMath.rotation(of: hipsWorld).act(plane.backLocal), plane.offset * scale)
+         }
+         var parentWorld = anchorWorld
+         for k in links.indices {
+@@ -363,26 +358,26 @@ final class ClothChain {
+             var next = tail + (tail - links[k].previous) * (1 - Cloth.drag)
+                 + restDirection * (links[k].stiffness * unit * scale * h)
+                 + SIMD3<Float>(0, -Cloth.gravity * unit * scale * h, 0)
+-            next = position + Self.normalised(next - position) * length
++            next = position + ClothMath.normalised(next - position) * length
+             let free = next
+             for (centre, radius) in centres {
+                 let away = next - centre
+                 let distance = simd_length(away)
+                 if distance < radius {
+-                    next = centre + Self.normalised(away) * radius
+-                    next = position + Self.normalised(next - position) * length
++                    next = centre + ClothMath.normalised(away) * radius
++                    next = position + ClothMath.normalised(next - position) * length
+                 }
+             }
+             if let planeNow {
+                 let depth = simd_dot(next - planeNow.point, planeNow.back)
+                 if depth < planeNow.offset {
+                     next += planeNow.back * (planeNow.offset - depth)
+-                    next = position + Self.normalised(next - position) * length
++                    next = position + ClothMath.normalised(next - position) * length
+                 }
+             }
+             links[k].previous = tail + (next - free)
+             links[k].tail = next
+-            let worldRotation = Self.swing(from: restDirection, to: Self.normalised(next - position)) * restRotation
++            let worldRotation = ClothMath.swing(from: restDirection, to: ClothMath.normalised(next - position)) * restRotation
+             links[k].node.simdOrientation = simd_normalize(parentRotation.inverse * worldRotation)
+             parentWorld = parentWorld * links[k].node.simdTransform
+             if computed.count <= k { computed.append(position) } else { computed[k] = position }
+@@ -395,26 +390,98 @@ final class ClothChain {
+         for k in links.indices {
+             let (position, parentRotation, restRotation) = joint(k, under: parentWorld)
+             let restDirection = restRotation.act(links[k].axis)
+-            let worldRotation = Self.swing(from: restDirection, to: Self.normalised(links[k].tail - position)) * restRotation
++            let worldRotation = ClothMath.swing(from: restDirection, to: ClothMath.normalised(links[k].tail - position)) * restRotation
+             links[k].node.simdOrientation = simd_normalize(parentRotation.inverse * worldRotation)
+             parentWorld = parentWorld * links[k].node.simdTransform
+         }
+     }
++}
+ 
+-    // MARK: - Small sums
+ 
+-    private static func vector(_ v: SCNVector3) -> SIMD3<Float> {
++/// What the simulation steps: a cape's chain (`ClothChain`) or a robe's ring
++/// (`ClothRing`). Each keeps its own state and writes only its own joints.
++protocol ClothStepping: AnyObject {
++    /// Whether the figure the cloth belongs to is still alive.
++    var isAlive: Bool { get }
++    /// Advances the cloth to `time` and writes its joints' orientations.
++    func step(at time: TimeInterval)
++    /// Whether the cloth's figure hangs somewhere under `root`.
++    func stands(under root: SCNNode) -> Bool
++}
++
++/// Every live chain and ring, stepped from whichever render delegate is
++/// drawing the scene its figure stands in. They are dropped as their figures
++/// go. A figure with a cape AND a ring registers the chain first, so the
++/// chain steps first, as `tools/cape_sim.py`'s `play` runs CapeSim before
++/// RingSim; the two never touch each other's joints.
++final class ClothSimulation {
++    static let shared = ClothSimulation()
++    private let lock = NSLock()
++    private var chains: [ClothStepping] = []
++
++    private init() {}
++
++    func register(_ chain: ClothStepping) {
++        lock.lock()
++        chains.removeAll { !$0.isAlive }
++        chains.append(chain)
++        lock.unlock()
++    }
++
++    /// Steps the chains whose figures stand in `scene`. Call from
++    /// `renderer(_:didApplyAnimationsAtTime:)`: the anchors' presentation
++    /// transforms carry this frame's pose there, and what the chains set on
++    /// the model tree is drawn in the same frame.
++    func step(in scene: SCNScene?, at time: TimeInterval) {
++        guard let root = scene?.rootNode else { return }
++        lock.lock()
++        chains.removeAll { !$0.isAlive }
++        let live = chains
++        lock.unlock()
++        for chain in live where chain.stands(under: root) {
++            chain.step(at: time)
++        }
++    }
++}
++
++extension ClothChain: ClothStepping {
++    /// Whether the chain's anchor hangs somewhere under `root`.
++    func stands(under root: SCNNode) -> Bool {
++        var node: SCNNode? = anchor
++        while let current = node {
++            if current === root { return true }
++            node = current.parent
++        }
++        return false
++    }
++}
++
++/// A render delegate for a stage that has none of its own — the reveal and
++/// the island — whose one job is to step the cloth each frame. The view's
++/// `delegate` is weak, so the coordinator holds this.
++final class ClothStepper: NSObject, SCNSceneRendererDelegate {
++    func renderer(_ renderer: SCNSceneRenderer, didApplyAnimationsAtTime time: TimeInterval) {
++        ClothSimulation.shared.step(in: renderer.scene, at: time)
++    }
++}
++
++// MARK: - Small sums
++
++/// The small sums the cape's chain and the robe's ring share (moved out of
++/// `ClothChain` unchanged on 2026-09-22, when the ring arrived).
++private enum ClothMath {
++    static func vector(_ v: SCNVector3) -> SIMD3<Float> {
+         SIMD3<Float>(Float(v.x), Float(v.y), Float(v.z))
+     }
+ 
+-    private static func normalised(_ v: SIMD3<Float>) -> SIMD3<Float> {
++    static func normalised(_ v: SIMD3<Float>) -> SIMD3<Float> {
+         let n = simd_length(v)
+         return n > 1e-9 ? v / n : SIMD3<Float>(0, -1, 0)
+     }
+ 
+     /// The rotation taking unit vector `a` onto unit vector `b`; a half turn
+     /// about any perpendicular when they are opposed.
+-    private static func swing(from a: SIMD3<Float>, to b: SIMD3<Float>) -> simd_quatf {
++    static func swing(from a: SIMD3<Float>, to b: SIMD3<Float>) -> simd_quatf {
+         let c = simd_dot(a, b)
+         if c < -0.9999 {
+             var helper = SIMD3<Float>(1, 0, 0)
+@@ -425,7 +492,7 @@ final class ClothChain {
+     }
+ 
+     /// The rotation of a world transform, its scale stripped.
+-    private static func rotation(of m: simd_float4x4) -> simd_quatf {
++    static func rotation(of m: simd_float4x4) -> simd_quatf {
+         let c0 = normalised(m.columns.0.xyz)
+         let c1 = normalised(m.columns.1.xyz)
+         let c2 = normalised(m.columns.2.xyz)
+@@ -433,8 +500,8 @@ final class ClothChain {
+     }
+ 
+     /// The figure's bind-pose height in the model's frame: every geometry's
+-    /// box, its corners carried into that frame.
+-    private static func height(of model: SCNNode) -> Float {
++    /// box, its corners carried into that frame; `fallback` when it has none.
++    static func height(of model: SCNNode, fallback: Float) -> Float {
+         var low = Float.greatestFiniteMagnitude
+         var high = -Float.greatestFiniteMagnitude
+         model.enumerateHierarchy { node, _ in
+@@ -446,70 +513,619 @@ final class ClothChain {
+                 high = max(high, y)
+             }
+         }
+-        return high > low ? high - low : Cloth.referenceHeight
++        return high > low ? high - low : fallback
+     }
+ 
+     /// A joint by its lowercased name (Meshy's rigs mix cases: `neck`, `Spine01`).
+-    private static func joint(named key: String, in model: SCNNode) -> SCNNode? {
++    static func joint(named key: String, in model: SCNNode) -> SCNNode? {
+         let matches = model.childNodes { node, stop in
+             if node.name?.lowercased() == key { stop.pointee = true; return true }
+             return false
+         }
+         return matches.first
+     }
++
++    #if DEBUG
++    static func f3(_ v: SIMD3<Float>) -> String { String(format: "(%.3f, %.3f, %.3f)", v.x, v.y, v.z) }
++    static func f4(_ q: simd_quatf) -> String {
++        String(format: "q(%.3f, %.3f, %.3f, %.3f)", q.vector.x, q.vector.y, q.vector.z, q.vector.w)
++    }
++    #endif
+ }
+ 
+-/// Every live chain, stepped from whichever render delegate is drawing the
+-/// scene its figure stands in. Chains are dropped as their figures go.
+-final class ClothSimulation {
+-    static let shared = ClothSimulation()
+-    private let lock = NSLock()
+-    private var chains: [ClothChain] = []
++// MARK: - The robe ring
+ 
+-    private init() {}
++/// A robe's ring of spring chains round the hips, swung every frame
++/// (2026-09-22, the robe ring; `Docs/PLAN.md`, *Phase B of the premium
++/// pass*).
++///
++/// The cloth a figure's resting hands touched in the A-pose — Heimdall's
++/// floor-length cloak, Pluto's robe, Freya's cloak edges — was bound by
++/// Meshy's rigger to those hands and flew out with every swing; bound to a
++/// leg instead (the skirt pass) it tore between the legs. The genre's long
++/// skirt (VRM's eight chains with thigh capsules, KawaiiPhysics' skirt with
++/// its adjacent-chain constraints, Magica's horizontal links) hangs the
++/// garment on joints of its own, and that is what this is:
++/// `character.reweight_robe` gives a named family up to eight chains,
++/// `robe_<sector>_0` under Hips down to `robe_<sector>_3`, one per 45° sector
++/// (f, fl, l, bl, b, br, r, fr — +X is the figure's LEFT), and skins the
++/// garment below the hips to them.
++///
++/// The sum is `tools/cape_sim.py`'s `RingSim`, constant for constant and
++/// step for step — change a number in both files. Each joint keeps a TAIL
++/// particle with Verlet velocity, as the cape's; a substep runs LEVEL-MAJOR:
++/// every chain's joint at level k (inertia, a pull toward the rest direction
++/// in the parent's current frame, gravity measured FROM THE BIND POSE, the
++/// bone's length, the push out of capsules on the thighs, the shins, the
++/// swinging hands and a sphere on the pelvis, the floor, then the CONE: no
++/// joint more than 55° off its rest direction, so a robe can never become a
++/// wing), then two passes of ties between neighbouring chains' tails at
++/// that level, then the rotations written before level k + 1 reads them as
++/// parents. Every correction after the free step carries no velocity.
++///
++/// `ROBE_FAMILIES` is empty on the day this shipped, so no bundled file has
++/// a `robe_` joint and `attach` returns nil for every figure: the ring is
++/// dormant until a family passes its boards.
++final class ClothRing: ClothStepping {
+ 
+-    func register(_ chain: ClothChain) {
+-        lock.lock()
+-        chains.removeAll { !$0.isAlive }
+-        chains.append(chain)
+-        lock.unlock()
++    /// The constants, each mirrored from `tools/cape_sim.py` (named beside it).
++    enum Robe {
++        /// Mirror: STEP (shared with the cape).
++        static let step: Float = 1.0 / 60.0
++        /// Mirror: MAX_SUBSTEPS (shared with the cape).
++        static let maxSubsteps = 4
++        /// Mirror: REFERENCE_HEIGHT (shared with the cape); unit = height / 1.9.
++        static let referenceHeight: Float = 1.9
++        /// Mirror: ROBE_DRAG — of the tail's velocity lost per step.
++        static let drag: Float = 0.20
++        /// Mirror: ROBE_GRAVITY — per step at 1.9 m, REST-RELATIVE: the pull
++        /// is this × (down − the parent's bind-pose down carried by its
++        /// current rotation), zero while the parent stands as bound. Plain
++        /// gravity sagged every flared robe 0.017–0.105 h at rest.
++        static let gravity: Float = 0.35
++        /// Mirror: ROBE_STIFF_ROOT and ROBE_STIFF_HEM — toward the rest
++        /// direction, at the hip line and at the hem, a line between.
++        static let stiffnessRoot: Float = 0.40
++        static let stiffnessHem: Float = 0.20
++        /// Mirror: ROBE_CONE_DEG — the most a joint may swing off its rest direction.
++        static let coneDegrees: Float = 55
++        /// Mirror: ROBE_TIE — a neighbour tie acts outside 0.70–1.30 of its rest length.
++        static let tieShort: Float = 0.70
++        static let tieLong: Float = 1.30
++        /// Mirror: ROBE_TIE_ITER.
++        static let tieIterations = 2
++        /// Mirror: ROBE_NEIGHBOUR_DEG — chains are tied when the FORWARD
++        /// azimuth gap between them is at most this.
++        static let neighbourDegrees: Float = 90
++        /// Mirror: ROBE_HAND_SEGMENT — a hand capsule runs this share of the
++        /// height on from the hand, away from the forearm (no finger bones).
++        static let handSegment: Float = 0.12
++        /// Mirror: ROBE_FLOOR — no tail below the feet plane plus this share.
++        static let floorShare: Float = 0.01
++        /// Mirror: character.ROBE_SECTORS (cape_sim's ROBE_SECTORS, ROBE_AZIMUTH),
++        /// in its fixed order. Degrees; +X is the figure's left.
++        static let sectors: [(name: String, azimuth: Float)] = [
++            ("f", 0), ("fl", 45), ("l", 90), ("bl", 135),
++            ("b", 180), ("br", -135), ("r", -90), ("fr", -45)
++        ]
++        /// Mirror: ROBE_CAPSULES — joint a, joint b (unused for a hand: its
++        /// forearm is the hand's parent), the radius as a share of the
++        /// height, whether it is a hand segment. Every radius is capped at
++        /// 0.97 of its rest clearance to the ring's tails.
++        static let capsules: [(a: String, b: String, share: Float, handSegment: Bool)] = [
++            ("leftupleg", "leftleg", 0.070, false), ("rightupleg", "rightleg", 0.070, false),
++            ("leftleg", "leftfoot", 0.050, false), ("rightleg", "rightfoot", 0.050, false),
++            ("lefthand", "", 0.035, true), ("righthand", "", 0.035, true),
++            ("hips", "hips", 0.085, false)
++        ]
++        /// The prefix the robe pass names the joints with.
++        static let jointPrefix = "robe_"
+     }
+ 
+-    /// Steps the chains whose figures stand in `scene`. Call from
+-    /// `renderer(_:didApplyAnimationsAtTime:)`: the anchors' presentation
+-    /// transforms carry this frame's pose there, and what the chains set on
+-    /// the model tree is drawn in the same frame.
+-    func step(in scene: SCNScene?, at time: TimeInterval) {
+-        guard let root = scene?.rootNode else { return }
+-        lock.lock()
+-        chains.removeAll { !$0.isAlive }
+-        let live = chains
+-        lock.unlock()
+-        for chain in live where chain.stands(under: root) {
+-            chain.step(at: time)
++    private struct RobeLink {
++        let node: SCNNode
++        /// Unit, toward the child in this joint's own frame.
++        let axis: SIMD3<Float>
++        /// Metres of the mesh.
++        let length: Float
++        let stiffness: Float
++        /// The joint's rest orientation in its parent's frame.
++        let restLocal: simd_quatf
++        /// The model's down in the parent's bind-pose frame (cape_sim's down_rest).
++        let downRest: SIMD3<Float>
++        var tail: SIMD3<Float>
++        var previous: SIMD3<Float>
++    }
++
++    private struct RobeChain {
++        let sector: String
++        let azimuth: Float
++        /// The joint the chain hangs from (Hips).
++        let root: SCNNode
++        var links: [RobeLink]
++    }
++
++    private struct RobeCapsule {
++        let a: SCNNode
++        /// The far end; for a hand, the forearm it points away from.
++        let b: SCNNode
++        let handSegment: Bool
++        /// Metres of the mesh.
++        let radius: Float
++        /// For the console, as cape_sim prints it.
++        let name: String
++    }
++
++    private struct RobeTie {
++        let chainA: Int
++        let chainB: Int
++        /// Metres of the mesh, per level.
++        let restLengths: [Float]
++    }
++
++    /// A capsule's ends and radius in the scene this substep.
++    private struct RobeSegment {
++        let a: SIMD3<Float>
++        let b: SIMD3<Float>
++        let radius: Float
++    }
++
++    /// One tail's working state inside a level of a substep.
++    private struct RobeWork {
++        let position: SIMD3<Float>
++        let parentRotation: simd_quatf
++        let restRotation: simd_quatf
++        let restDirection: SIMD3<Float>
++        let length: Float
++        let tail: SIMD3<Float>
++        let free: SIMD3<Float>
++        var next: SIMD3<Float>
++    }
++
++    /// A joint placed under its parent: its world origin, the parent's world
++    /// rotation, its own REST world rotation.
++    private struct RobePlacement {
++        let position: SIMD3<Float>
++        let parentRotation: simd_quatf
++        let restRotation: simd_quatf
++    }
++
++    /// The asset's name, for the console.
++    let label: String
++    /// The node whose world scale maps the mesh's metres to the scene.
++    private weak var model: SCNNode?
++    private var chains: [RobeChain]
++    private var capsules: [RobeCapsule] = []
++    private var ties: [RobeTie] = []
++    /// The figure's bind-pose height in metres of the mesh.
++    private let height: Float
++    /// The height over 1.9 m: gravity and stiffness scale with it.
++    private let unit: Float
++    /// The longest chain's joint count.
++    private let levels: Int
++    private var carry: Float = 0
++    private var lastTime: TimeInterval?
++    private var primed = false
++    private var steps = 0
++
++    var isAlive: Bool { model != nil }
++
++    // MARK: - Attaching
++
++    /// Finds a robe ring in a freshly cloned figure and, if there is one,
++    /// registers it with the simulation. `model` is the node the mesh hangs
++    /// under, NOT yet placed: the rest geometry is measured in its frame.
++    /// Nil for fewer than two chains, as cape_sim's RingSim refuses.
++    @discardableResult
++    static func attach(to model: SCNNode, label: String) -> ClothRing? {
++        var sectors: [String] = []
++        var azimuths: [Float] = []
++        var found: [[SCNNode]] = []
++        for sector in Robe.sectors {
++            let stem = Robe.jointPrefix + sector.name + "_"
++            guard let first = ClothMath.joint(named: stem + "0", in: model), first.parent != nil else { continue }
++            var nodes = [first]
++            while let last = nodes.last {
++                let key = stem + String(nodes.count)
++                guard let next = last.childNodes.first(where: { $0.name?.lowercased() == key }) else { break }
++                nodes.append(next)
++            }
++            sectors.append(sector.name)
++            azimuths.append(sector.azimuth)
++            found.append(nodes)
+         }
++        guard found.count >= 2 else { return nil }
++        let ring = ClothRing(model: model, sectors: sectors, azimuths: azimuths, nodes: found, label: label)
++        ClothSimulation.shared.register(ring)
++        #if DEBUG
++        print("[ClothRing] '\(label)' at attach:\n" + ring.describeAttach())
++        #endif
++        return ring
++    }
++
++    private init(model: SCNNode, sectors: [String], azimuths: [Float], nodes: [[SCNNode]], label: String) {
++        self.model = model
++        self.label = label
++        let height = ClothMath.height(of: model, fallback: Robe.referenceHeight)
++        self.height = height
++        unit = height / Robe.referenceHeight
++        // Everything at attach is measured in the MODEL's frame, as the
++        // Python measures in the mesh's: the figure is not placed yet.
++        let toModel = simd_inverse(model.simdWorldTransform)
++        let down = SIMD3<Float>(0, -1, 0)
++        var chains: [RobeChain] = []
++        for c in nodes.indices {
++            let chainNodes = nodes[c]
++            let count = chainNodes.count
++            var links: [RobeLink] = []
++            for (k, node) in chainNodes.enumerated() {
++                // The bone axis: toward the child in this joint's own frame;
++                // the last joint repeats the segment above it.
++                let offset: SIMD3<Float>
++                if k + 1 < count {
++                    offset = chainNodes[k + 1].simdPosition
++                } else if k > 0 {
++                    offset = node.simdPosition
++                } else {
++                    offset = SIMD3<Float>(0, -0.1, 0)
++                }
++                let length: Float = simd_length(offset)
++                let axis = offset / max(length, 1e-9)
++                let t = Float(k) / Float(max(count - 1, 1))
++                let stiffness: Float = Robe.stiffnessRoot + (Robe.stiffnessHem - Robe.stiffnessRoot) * t
++                let parentWorld = node.parent?.simdWorldTransform ?? model.simdWorldTransform
++                let parentInModel = toModel * parentWorld
++                let downRest = ClothMath.rotation(of: parentInModel).inverse.act(down)
++                links.append(RobeLink(node: node, axis: axis, length: length, stiffness: stiffness,
++                                      restLocal: ClothMath.rotation(of: node.simdTransform), downRest: downRest,
++                                      tail: SIMD3<Float>(repeating: 0), previous: SIMD3<Float>(repeating: 0)))
++            }
++            let root = chainNodes[0].parent ?? model
++            chains.append(RobeChain(sector: sectors[c], azimuth: azimuths[c], root: root, links: links))
++        }
++        self.chains = chains
++        levels = chains.map { $0.links.count }.max() ?? 0
++        // The tails at rest in the model's frame (cape_sim's _rest_particles).
++        var restTails: [[SIMD3<Float>]] = []
++        for chain in chains {
++            var tails: [SIMD3<Float>] = []
++            var parentWorld = toModel * chain.root.simdWorldTransform
++            for link in chain.links {
++                let placed = Self.place(link, under: parentWorld)
++                let bone = placed.restRotation.act(link.axis) * link.length
++                tails.append(placed.position + bone)
++                parentWorld = parentWorld * link.node.simdTransform
++            }
++            restTails.append(tails)
++        }
++        // Neighbours: adjacent chains in the sector order whose FORWARD
++        // azimuth gap is at most 90°; two chains are one pair, never two.
++        let chainCount = chains.count
++        for a in 0..<chainCount {
++            let b = (a + 1) % chainCount
++            if b == a || (chainCount == 2 && a == 1) { continue }
++            var gap: Float = (chains[b].azimuth - chains[a].azimuth).truncatingRemainder(dividingBy: 360)
++            if gap < 0 { gap += 360 }
++            guard gap <= Robe.neighbourDegrees + 1e-6 else { continue }
++            let shared = min(restTails[a].count, restTails[b].count)
++            let rests: [Float] = (0..<shared).map { simd_length(restTails[a][$0] - restTails[b][$0]) }
++            ties.append(RobeTie(chainA: a, chainB: b, restLengths: rests))
++        }
++        // The capsules in the bind pose, each radius capped at its rest clearance.
++        let allTails = restTails.flatMap { $0 }
++        let handReach: Float = Robe.handSegment * height
++        for spec in Robe.capsules {
++            guard let a = ClothMath.joint(named: spec.a, in: model) else { continue }
++            let far: SCNNode?
++            if spec.handSegment {
++                far = a.parent
++            } else {
++                far = ClothMath.joint(named: spec.b, in: model)
++            }
++            guard let b = far else { continue }
++            let pa = ClothMath.vector(a.convertPosition(SCNVector3Zero, to: model))
++            let pb = ClothMath.vector(b.convertPosition(SCNVector3Zero, to: model))
++            let ends = Self.segment(pa, pb, hand: spec.handSegment, reach: handReach)
++            var clearance = Float.greatestFiniteMagnitude
++            for p in allTails {
++                let gapToBone: Float = simd_length(p - Self.closest(p, ends.a, ends.b))
++                clearance = min(clearance, gapToBone)
++            }
++            let wanted: Float = spec.share * height
++            let allowed: Float = 0.97 * clearance
++            let name = spec.handSegment ? spec.a + "-hand+0.12h" : spec.a + "-" + spec.b
++            capsules.append(RobeCapsule(a: a, b: b, handSegment: spec.handSegment,
++                                        radius: min(wanted, allowed), name: name))
++        }
++    }
++
++    // MARK: - Stepping
++
++    /// Advances the ring to `time` and writes the joints' orientations.
++    /// Called from a render delegate after the animations have been applied,
++    /// so the hips' presentation transform is this frame's pose.
++    func step(at time: TimeInterval) {
++        guard let model else { return }
++        var dt = Robe.step
++        if let lastTime {
++            dt = min(max(Float(time - lastTime), 0), 0.1)
++        }
++        lastTime = time
++        let modelWorld = model.presentation.simdWorldTransform
++        let worldScale = max(simd_length(modelWorld.columns.0.xyz), 1e-6)
++        if !primed {
++            prime(scale: worldScale)
++            primed = true
++        }
++        carry += dt
++        var substeps = Int(carry / Robe.step)
++        substeps = min(substeps, Robe.maxSubsteps)
++        let spent: Float = Float(substeps) * Robe.step
++        carry -= spent
++        SCNTransaction.begin()
++        SCNTransaction.animationDuration = 0
++        if substeps == 0 {
++            pose()
++        } else {
++            for _ in 0..<substeps {
++                substep(h: Robe.step, scale: worldScale, modelWorld: modelWorld)
++            }
++        }
++        SCNTransaction.commit()
++        steps += 1
++        #if DEBUG
++        if steps == 1 || steps == 60 || steps == 300 {
++            print(describeStep(time: time, scale: worldScale))
++        }
++        #endif
+     }
+-}
+ 
+-extension ClothChain {
+-    /// Whether the chain's anchor hangs somewhere under `root`.
+     func stands(under root: SCNNode) -> Bool {
+-        var node: SCNNode? = anchor
++        guard let first = chains.first else { return false }
++        var node: SCNNode? = first.root
+         while let current = node {
+             if current === root { return true }
+             node = current.parent
+         }
+         return false
+     }
+-}
+ 
+-/// A render delegate for a stage that has none of its own — the reveal and
+-/// the island — whose one job is to step the cloth each frame. The view's
+-/// `delegate` is weak, so the coordinator holds this.
+-final class ClothStepper: NSObject, SCNSceneRendererDelegate {
+-    func renderer(_ renderer: SCNSceneRenderer, didApplyAnimationsAtTime time: TimeInterval) {
+-        ClothSimulation.shared.step(in: renderer.scene, at: time)
++    /// The tails at rest under the hips as they stand: where the ring
++    /// starts (cape_sim's reset).
++    private func prime(scale: Float) {
++        for c in chains.indices {
++            var parentWorld = chains[c].root.presentation.simdWorldTransform
++            for k in chains[c].links.indices {
++                let link = chains[c].links[k]
++                link.node.simdOrientation = link.restLocal
++                let placed = Self.place(link, under: parentWorld)
++                let reach: Float = link.length * scale
++                let tail = placed.position + placed.restRotation.act(link.axis) * reach
++                chains[c].links[k].tail = tail
++                chains[c].links[k].previous = tail
++                parentWorld = parentWorld * link.node.simdTransform
++            }
++        }
++    }
++
++    /// One fixed step, LEVEL-MAJOR (cape_sim's RingSim._substep).
++    private func substep(h: Float, scale: Float, modelWorld: simd_float4x4) {
++        let handReach: Float = Robe.handSegment * height * scale
++        var segments: [RobeSegment] = []
++        for capsule in capsules {
++            let pa = capsule.a.presentation.simdWorldPosition
++            let pb = capsule.b.presentation.simdWorldPosition
++            let ends = Self.segment(pa, pb, hand: capsule.handSegment, reach: handReach)
++            let radius: Float = capsule.radius * scale
++            segments.append(RobeSegment(a: ends.a, b: ends.b, radius: radius))
++        }
++        // The model's own down and its feet plane in the scene: the Python's
++        // world IS the model's frame, where down is -Y and the feet are y = 0.
++        let modelRotation = ClothMath.rotation(of: modelWorld)
++        let modelDown = modelRotation.act(SIMD3<Float>(0, -1, 0))
++        let modelUp = -modelDown
++        let feet = modelWorld.columns.3.xyz
++        let floorHeight: Float = Robe.floorShare * height * scale
++        let pull: Float = Robe.gravity * unit * scale * h
++        let coneRadians: Float = Robe.coneDegrees * .pi / 180
++        let cosCone: Float = cos(coneRadians)
++        let sinCone: Float = sin(coneRadians)
++        var parentWorlds = chains.map { $0.root.presentation.simdWorldTransform }
++        for k in 0..<levels {
++            var work = [RobeWork?](repeating: nil, count: chains.count)
++            // 1. Every chain's joint at this level: the free step, then the corrections.
++            for c in chains.indices where k < chains[c].links.count {
++                let link = chains[c].links[k]
++                let placed = Self.place(link, under: parentWorlds[c])
++                let restDirection = placed.restRotation.act(link.axis)
++                let length: Float = link.length * scale
++                let tail = link.tail
++                let inertia = (tail - link.previous) * (1 - Robe.drag)
++                let springShare: Float = link.stiffness * unit * scale * h
++                let spring = restDirection * springShare
++                let gravity = (modelDown - placed.parentRotation.act(link.downRest)) * pull
++                let moved = tail + inertia + spring + gravity
++                var next = Self.toLength(placed.position, moved, length)
++                let free = next
++                for segment in segments {
++                    let nearest = Self.closest(next, segment.a, segment.b)
++                    let away = next - nearest
++                    let distance: Float = simd_length(away)
++                    if distance < segment.radius {
++                        let pushed = nearest + away / max(distance, 1e-9) * segment.radius
++                        next = Self.toLength(placed.position, pushed, length)
++                    }
++                }
++                let above: Float = simd_dot(next - feet, modelUp)
++                if above < floorHeight {
++                    next += modelUp * (floorHeight - above)
++                    next = Self.toLength(placed.position, next, length)
++                }
++                let direction = (next - placed.position) / max(length, 1e-9)
++                let cosAngle: Float = simd_dot(direction, restDirection)
++                if cosAngle < cosCone {
++                    var perpendicular = direction - restDirection * cosAngle
++                    var across: Float = simd_length(perpendicular)
++                    if across < 1e-9 {
++                        var helper = SIMD3<Float>(1, 0, 0)
++                        if abs(restDirection.x) >= 0.9 { helper = SIMD3<Float>(0, 1, 0) }
++                        perpendicular = simd_cross(restDirection, helper)
++                        across = simd_length(perpendicular)
++                    }
++                    let onCone = restDirection * cosCone + perpendicular / across * sinCone
++                    next = placed.position + onCone * length
++                }
++                work[c] = RobeWork(position: placed.position, parentRotation: placed.parentRotation,
++                                   restRotation: placed.restRotation, restDirection: restDirection,
++                                   length: length, tail: tail, free: free, next: next)
++            }
++            // 2. The ties between neighbouring chains at this level.
++            for _ in 0..<Robe.tieIterations {
++                for tie in ties {
++                    guard k < tie.restLengths.count,
++                          let a = work[tie.chainA], let b = work[tie.chainB] else { continue }
++                    let apart = b.next - a.next
++                    let distance: Float = simd_length(apart)
++                    if distance < 1e-9 { continue }
++                    let rest: Float = tie.restLengths[k] * scale
++                    let shortest: Float = Robe.tieShort * rest
++                    let longest: Float = Robe.tieLong * rest
++                    let excess: Float
++                    if distance < shortest {
++                        excess = distance - shortest
++                    } else if distance > longest {
++                        excess = distance - longest
++                    } else {
++                        continue
++                    }
++                    let move = apart / distance * (0.5 * excess)
++                    work[tie.chainA]?.next = Self.toLength(a.position, a.next + move, a.length)
++                    work[tie.chainB]?.next = Self.toLength(b.position, b.next - move, b.length)
++                }
++            }
++            // 3. Commit: the corrections carry no velocity; the rotation that
++            //    turns the rest direction onto the tail, before level k + 1.
++            for c in chains.indices {
++                guard let done = work[c] else { continue }
++                let correction = done.next - done.free
++                chains[c].links[k].previous = done.tail + correction
++                chains[c].links[k].tail = done.next
++                let pointing = (done.next - done.position) / max(done.length, 1e-9)
++                let worldRotation = ClothMath.swing(from: done.restDirection, to: ClothMath.normalised(pointing)) * done.restRotation
++                let node = chains[c].links[k].node
++                node.simdOrientation = simd_normalize(done.parentRotation.inverse * worldRotation)
++                parentWorlds[c] = parentWorlds[c] * node.simdTransform
++            }
++        }
++    }
++
++    /// No substep this frame: re-derive the pose from the tails as they stand.
++    private func pose() {
++        for c in chains.indices {
++            var parentWorld = chains[c].root.presentation.simdWorldTransform
++            for link in chains[c].links {
++                let placed = Self.place(link, under: parentWorld)
++                let restDirection = placed.restRotation.act(link.axis)
++                let pointing = ClothMath.normalised(link.tail - placed.position)
++                let worldRotation = ClothMath.swing(from: restDirection, to: pointing) * placed.restRotation
++                link.node.simdOrientation = simd_normalize(placed.parentRotation.inverse * worldRotation)
++                parentWorld = parentWorld * link.node.simdTransform
++            }
++        }
++    }
++
++    // MARK: - Small sums of the ring
++
++    /// A link's world origin, its parent's world rotation and its own REST
++    /// world rotation under a parent world transform (cape_sim's _joint).
++    private static func place(_ link: RobeLink, under parentWorld: simd_float4x4) -> RobePlacement {
++        let parentRotation = ClothMath.rotation(of: parentWorld)
++        let local = link.node.simdPosition
++        let position = (parentWorld * SIMD4<Float>(local.x, local.y, local.z, 1)).xyz
++        return RobePlacement(position: position, parentRotation: parentRotation,
++                             restRotation: parentRotation * link.restLocal)
++    }
++
++    /// A capsule's two ends: a to b, or for a hand, from the hand `reach` on
++    /// away from its forearm `b` (cape_sim's _segment).
++    private static func segment(_ a: SIMD3<Float>, _ b: SIMD3<Float>, hand: Bool, reach: Float) -> (a: SIMD3<Float>, b: SIMD3<Float>) {
++        guard hand else { return (a, b) }
++        let outward = a - b
++        let span: Float = max(simd_length(outward), 1e-9)
++        let far = a + outward / span * reach
++        return (a, far)
++    }
++
++    /// The closest point to `p` on the segment a–b (cape_sim's _closest_on_segment).
++    private static func closest(_ p: SIMD3<Float>, _ a: SIMD3<Float>, _ b: SIMD3<Float>) -> SIMD3<Float> {
++        let ab = b - a
++        let squared: Float = simd_length_squared(ab)
++        if squared < 1e-12 { return a }
++        let along: Float = simd_dot(p - a, ab) / squared
++        let t: Float = min(max(along, 0), 1)
++        return a + ab * t
++    }
++
++    /// `p` carried onto the sphere of `length` round `position` (cape_sim's _to_length).
++    private static func toLength(_ position: SIMD3<Float>, _ p: SIMD3<Float>, _ length: Float) -> SIMD3<Float> {
++        let d = p - position
++        let n: Float = max(simd_length(d), 1e-9)
++        return position + d / n * length
+     }
++
++    // MARK: - The console
++
++    #if DEBUG
++    /// What `python3 tools/cape_sim.py --selftest <family>` prints for the
++    /// same file, line for line after the label: the chains, their
++    /// azimuths, bone lengths and stiffness per level, the ties' rest
++    /// lengths and the capped collider radii.
++    func describeAttach() -> String {
++        var lines: [String] = []
++        lines.append("[ClothRing] \(chains.count) chains, \(levels) levels, h \(String(format: "%.3f", height)) m, "
++                     + "unit \(String(format: "%.4f", unit))")
++        for chain in chains {
++            let lengths = chain.links.map { String(format: "%.4f", $0.length) }.joined(separator: " ")
++            let stiffness = chain.links.map { String(format: "%.3f", $0.stiffness) }.joined(separator: " ")
++            lines.append("  robe_\(chain.sector): az \(String(format: "%+.0f", chain.azimuth)), lengths \(lengths), stiffness \(stiffness)")
++        }
++        for tie in ties {
++            let rests = tie.restLengths.map { String(format: "%.4f", $0) }.joined(separator: " ")
++            lines.append("  tie robe_\(chains[tie.chainA].sector)~robe_\(chains[tie.chainB].sector): rest \(rests)")
++        }
++        for capsule in capsules {
++            let share: Float = capsule.radius / max(height, 1e-9)
++            lines.append("  collider \(capsule.name): radius \(String(format: "%.4f", capsule.radius)) m "
++                         + "(\(String(format: "%.4f", share)) h)")
++        }
++        return lines.joined(separator: "\n")
++    }
++
++    /// One sample of the running ring: each joint's angle off its rest
++    /// direction in degrees (the cone holds every one at or under 55), per
++    /// chain, and the largest.
++    private func describeStep(time: TimeInterval, scale: Float) -> String {
++        var worst: Float = 0
++        var parts: [String] = []
++        for chain in chains {
++            var parentWorld = chain.root.presentation.simdWorldTransform
++            var angles: [String] = []
++            for link in chain.links {
++                let placed = Self.place(link, under: parentWorld)
++                let restDirection = placed.restRotation.act(link.axis)
++                let pointing = ClothMath.normalised(link.tail - placed.position)
++                let cosAngle: Float = min(max(simd_dot(pointing, restDirection), -1), 1)
++                let degrees: Float = acos(cosAngle) * 180 / .pi
++                worst = max(worst, degrees)
++                angles.append(String(format: "%.1f", degrees))
++                parentWorld = parentWorld * link.node.simdTransform
++            }
++            parts.append("robe_\(chain.sector) " + angles.joined(separator: "/"))
++        }
++        return "[ClothRing] '\(label)' step \(steps) t=\(String(format: "%.2f", time)) worldScale \(String(format: "%.3f", scale)): "
++            + "off rest (deg) " + parts.joined(separator: ", ") + "; worst \(String(format: "%.1f", worst))"
++    }
++    #endif
+ }
+ 
+ private extension SIMD4 where Scalar == Float {
+diff --git a/Pantheon/Render/ModelLibrary.swift b/Pantheon/Render/ModelLibrary.swift
+index bbb9e6d..7c4522e 100644
+--- a/Pantheon/Render/ModelLibrary.swift
++++ b/Pantheon/Render/ModelLibrary.swift
+@@ -200,6 +200,9 @@ final class ModelLibrary {
+             // is found here, before the model is scaled and placed, and
+             // stepped by the simulation from every stage's render delegate.
+             ClothChain.attach(to: model, label: assetName)
++            // A robe's ring of chains round the hips (the robe ring,
++            // character.reweight_robe) the same way; nil for a figure without.
++            ClothRing.attach(to: model, label: assetName)
+             if awakened { MaterialTuner.applyAwakenedLook(model) }
+         }
+         model.name = "model"

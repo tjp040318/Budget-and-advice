@@ -1701,6 +1701,16 @@ environment can and cannot do. The short version:
   nothing a frame shows. A robe the arms pass through is the cape pass's
   next problem (cloth bones through the sheet), not this one's; a new
   family is judged on its board and added to the list.
+  **The robe ring (2026-09-22, night) was built and admitted NOTHING**
+  (PLAN.md, *The robe ring's verdict*): `character.reweight_robe` hangs the
+  lower garment on up to eight spring chains round the hips
+  (`robe_pass.py`, `robe_board.py`, `cloth_metrics.py`, `cape_sim.RingSim`),
+  gated by name on `ROBE_FAMILIES`, which is empty; it stopped the lower
+  garment flying on seven of the ten arm-welded families and every one
+  still tore ABOVE the hips, where the cloth lies on the arm. The Swift
+  `ClothRing` is `tools/patches/robe_ring_swift.patch`, out of the build
+  until a family passes. The fix left is a remake (about 77 credits a
+  family); the simulation added nothing on the attack and hurt the death.
 - **The figure stages are exposed and coloured (2026-09-22).**
   `FigureStageLighting`: key 1,150, fill 320, rim 420, ambient 140, the
   studio map at 1.0 (brighter softboxes; the old map is `studio_ibl_v1`),
