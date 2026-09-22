@@ -666,7 +666,7 @@ struct ChapterMapView: View {
             Text(chapter.summary)
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textPrimary)
-                .lineLimit(3)
+                .lineLimit(4)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 6) {
                 StatBar(

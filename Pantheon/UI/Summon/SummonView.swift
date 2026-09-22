@@ -331,6 +331,8 @@ struct SummonView: View {
             Text(best.map { "\($0.stars)★ \(String(format: "%.1f%%", $0.chance * 100))" } ?? "—")
                 .font(Theme.numeric(11))
                 .foregroundStyle(Theme.onGlass)
+                .lineLimit(1)
+                .fixedSize()
             // This ? opens the full table rather than a paragraph: every
             // grade's odds AND every name in the pool are already a screen
             // (`RateTableView`), and two summaries of one table is the fault

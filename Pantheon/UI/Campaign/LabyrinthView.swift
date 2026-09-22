@@ -171,7 +171,7 @@ struct LabyrinthView: View {
                 Text(labyrinth.summary)
                     .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(3)
+                    .lineLimit(4)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

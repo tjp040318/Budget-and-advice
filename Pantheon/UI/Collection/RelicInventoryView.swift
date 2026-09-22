@@ -402,10 +402,9 @@ struct RelicInventoryView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                         .font(.system(size: 13, weight: .black))
-                        .foregroundStyle(Theme.textPrimary)
-                        .frame(width: ScreenChrome.control + 2, height: ScreenChrome.control)
-                        .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
-                        .overlay(ScreenChrome.controlShape.strokeBorder(Theme.goldDim.opacity(0.55), lineWidth: 0.5))
+                        .foregroundStyle(Color(hex: "#F3DFA6"))
+                        .frame(width: ScreenChrome.control + 4, height: ScreenChrome.control)
+                        .background(ScreenChrome.well)
                 }
             } content: {
                 VStack(spacing: 6) {

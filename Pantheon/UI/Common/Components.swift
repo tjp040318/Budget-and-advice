@@ -1584,7 +1584,7 @@ struct BarButton: View {
                         .fixedSize()
                 }
             }
-            .foregroundStyle(tint == Theme.gold ? Color(hex: "#F3DFA6") : tint)
+            .foregroundStyle(Self.onWell(tint))
             .padding(.horizontal, showsTitle ? 11 : 0)
             .frame(minWidth: ScreenChrome.control)
             .frame(height: ScreenChrome.control)
@@ -1593,6 +1593,17 @@ struct BarButton: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel(title)
+    }
+
+    /// The colour a tint reads as ON the dark well. Gold is the wallet's
+    /// pale gold; the two ink tints (a button that is "off", a quiet one)
+    /// are the cream every word on glass wears — run 209 drew Filter,
+    /// Select, Lock and Free in ink-brown on the dark capsule, which read
+    /// as disabled. Any other tint (danger, info, success) is itself.
+    static func onWell(_ tint: Color) -> Color {
+        if tint == Theme.gold { return Color(hex: "#F3DFA6") }
+        if tint == Theme.textPrimary || tint == Theme.textSecondary { return Theme.onGlass }
+        return tint
     }
 }
 
@@ -1662,6 +1673,8 @@ struct BarMenu<Content: View>: View {
                     .font(Theme.body(9).weight(.black))
                     .tracking(0.5)
                     .foregroundStyle(Theme.onGlassDim)
+                    .lineLimit(1)
+                    .fixedSize()
                 Text(value)
                     .font(Theme.body(11).weight(.bold))
                     .foregroundStyle(Color(hex: "#F3DFA6"))

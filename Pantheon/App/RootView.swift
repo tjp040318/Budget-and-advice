@@ -291,7 +291,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Missions",
-                    caption: "Dailies, feats, the gift",
+                    caption: "Dailies & feats",
                     icon: "scroll.fill",
                     tint: Theme.gold,
                     badge: store.claimableRewards > 0 ? "\(store.claimableRewards)" : nil
@@ -307,7 +307,7 @@ struct SettingsView: View {
                 let gifts = EventCalendar.claimableCount(player: store.player)
                 tileFace(
                     title: "Events",
-                    caption: "This week's boosts",
+                    caption: "Weekly boosts",
                     icon: "calendar",
                     tint: Theme.gold,
                     badge: gifts > 0 ? "\(gifts)" : nil
@@ -323,7 +323,7 @@ struct SettingsView: View {
                 let pending = store.social.pendingCount
                 tileFace(
                     title: "Allies",
-                    caption: "Friends, mail, your guild",
+                    caption: "Friends & guild",
                     icon: "person.2.fill",
                     tint: Theme.gold,
                     badge: pending > 0 ? "\(pending)" : nil
@@ -338,7 +338,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Bazaar",
-                    caption: "Scrolls, energy, relics",
+                    caption: "Scrolls & relics",
                     icon: "bag.fill",
                     tint: Theme.info,
                     badge: nil
@@ -355,7 +355,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Lessons",
-                    caption: "Athena's Counsel, kept",
+                    caption: "Athena's Counsel",
                     icon: "book.fill",
                     tint: Theme.gold,
                     badge: "\(LessonBook.all.filter { store.hasReadLesson($0.id) }.count)"
@@ -368,7 +368,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Console",
-                    caption: "Copy or share the log",
+                    caption: "Copy or share",
                     icon: "terminal.fill",
                     tint: Theme.success,
                     badge: "\(DiagnosticsLog.shared.count)"
@@ -383,7 +383,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Reset account",
-                    caption: "Start over from nothing",
+                    caption: "Start over",
                     icon: "trash.fill",
                     tint: Theme.danger,
                     badge: nil

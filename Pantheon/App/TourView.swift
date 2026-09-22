@@ -99,7 +99,9 @@ struct TourView: View {
                 .padding(.vertical, 4)
                 .background(Color.black.opacity(0.7), in: Capsule())
                 .padding(.leading, 10)
-                .padding(.top, ScreenChrome.height + 8)
+                // Under the strip on a GameScreen and under the island's
+                // header card (62 points) alike; at 60 it sat on the card.
+                .padding(.top, ScreenChrome.height + 20)
         }
         .preferredColorScheme(.light)
         .onAppear {
