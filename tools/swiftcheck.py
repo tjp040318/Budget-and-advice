@@ -113,7 +113,7 @@ STORED = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
                     r"(?:public\s+|private\s+|internal\s+|fileprivate\s+)?"
                     r"(?:static\s+)?(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:")
 COMPUTED_HINT = re.compile(r"\{")
-FUNC = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|static\s+|mutating\s+)*func\s")
+FUNC = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|static\s+|mutating\s+|nonisolated\s+)*func\s")
 DECL = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|final\s+)*"
                   r"(struct|class|actor|enum|protocol|extension)\s+([A-Za-z_][A-Za-z0-9_]*)")
 # A typealias names a type too (`typealias Transport = …`, the backend client's
@@ -124,7 +124,7 @@ INIT = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?init\s*\(")
 
 FUNC_SIG = re.compile(
     r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|fileprivate\s+|"
-    r"static\s+|mutating\s+|final\s+|@discardableResult\s+)*func\s+"
+    r"static\s+|mutating\s+|final\s+|nonisolated\s+|@discardableResult\s+)*func\s+"
     r"([A-Za-z_][A-Za-z0-9_]*)\s*(?:<[^>]*>)?\s*\(", re.MULTILINE)
 
 def parse_params(sig_body):
@@ -340,7 +340,7 @@ def check_patterns(files, enum_cases, errors):
                 errors.append(f"{path}:{line}: pattern .{cname}(...) binds {got} value(s); "
                               f"the case declares {sorted(arity[cname])}")
 
-STATIC_MEMBER = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|fileprivate\s+)?"
+STATIC_MEMBER = re.compile(r"^\s*(?:@\w+\s+)*(?:nonisolated\s+)?(?:public\s+|private\s+|internal\s+|fileprivate\s+)?(?:nonisolated\s+)?"
                            r"static\s+(?:let|var|func)\s+([A-Za-z_][A-Za-z0-9_]*)")
 ENUM_CASE_ANY = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*)")
 
@@ -596,7 +596,10 @@ def collect_enum_labels(files):
     cases, statics, seen = {}, {}, {}
     enum_start = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?enum\s+([A-Za-z_][A-Za-z0-9_]*)")
     case_line = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)")
-    static_line = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?static\s+(?:let|var|func)\s+([A-Za-z_][A-Za-z0-9_]*)")
+    # `nonisolated static func` is a static too (a pure helper on a
+    # @MainActor class, 2026-09-22): the modifier may come before or after
+    # the access level.
+    static_line = re.compile(r"^\s*(?:nonisolated\s+)?(?:public\s+|private\s+|internal\s+)?(?:nonisolated\s+)?static\s+(?:let|var|func)\s+([A-Za-z_][A-Za-z0-9_]*)")
     for path in files:
         lines = strip_noise(open(path).read()).splitlines()
         current, indent = None, 0

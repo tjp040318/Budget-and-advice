@@ -96,7 +96,7 @@ final class SupabaseSaveStore: CloudSaveSyncing {
     }
 
     /// The one row PostgREST answers with, as a snapshot; nil for none.
-    static func snapshot(fromRows data: Data) throws -> CloudSnapshot? {
+    nonisolated static func snapshot(fromRows data: Data) throws -> CloudSnapshot? {
         guard let rows = try JSONSerialization.jsonObject(with: data) as? [[String: Any]] else {
             throw BackendError.decoding("the saves rows")
         }
@@ -208,7 +208,7 @@ final class SupabaseSaveStore: CloudSaveSyncing {
 
     /// The row an upsert sends: the save as one JSON string, its stamp, its
     /// lineage and its size.
-    static func upsertBody(playerID: String, snapshot: CloudSnapshot) throws -> Data {
+    nonisolated static func upsertBody(playerID: String, snapshot: CloudSnapshot) throws -> Data {
         let row: [String: Any] = [
             "player_id": playerID,
             "payload": String(decoding: snapshot.data, as: UTF8.self),
@@ -245,26 +245,33 @@ final class SupabaseSaveStore: CloudSaveSyncing {
 
     // MARK: - Helpers
 
-    private static let isoFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime]
-        return formatter
-    }()
-
-    static func iso(_ date: Date) -> String { isoFormatter.string(from: date) }
+    /// The pure helpers are `nonisolated` (a static on a `@MainActor` class
+    /// is isolated too, and the tests and the row builders call these from
+    /// plain code); the formatter lives outside the class for the same
+    /// reason, since a non-Sendable stored static cannot be nonisolated.
+    nonisolated static func iso(_ date: Date) -> String { BackendClock.formatter.string(from: date) }
 
     /// Postgres writes `2026-09-22T10:11:12.123456+00:00`; the formatter
     /// reads whole seconds, so the fraction is cut before it is parsed.
-    static func date(_ text: String) -> Date? {
-        if let whole = isoFormatter.date(from: text) { return whole }
+    nonisolated static func date(_ text: String) -> Date? {
+        if let whole = BackendClock.formatter.date(from: text) { return whole }
         guard let dot = text.firstIndex(of: ".") else { return nil }
         var tail = text[text.index(after: dot)...]
         while let first = tail.first, first.isNumber { tail = tail.dropFirst() }
         let trimmed = String(text[..<dot]) + String(tail)
-        return isoFormatter.date(from: trimmed)
+        return BackendClock.formatter.date(from: trimmed)
     }
 
     private func note(_ line: String) {
         print("[Backend] \(line)")
     }
+}
+
+/// The ISO-8601 clock the rows are stamped with, outside the actor.
+private enum BackendClock {
+    static let formatter: ISO8601DateFormatter = {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter
+    }()
 }

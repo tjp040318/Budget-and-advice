@@ -94,7 +94,9 @@ final class SupabaseClient {
     private let transport: Transport
     private let directory: URL?
 
-    static func filename(for key: String) -> String { "backend_session_\(key).json" }
+    /// Pure helpers are `nonisolated`: a static on a `@MainActor` class is
+    /// main-actor-isolated too, and the tests read these from plain code.
+    nonisolated static func filename(for key: String) -> String { "backend_session_\(key).json" }
 
     /// `transport` is the network; a test hands in canned answers.
     init(config: BackendConfig, storageKey: String, directory: URL? = SaveStore.directory, transport: Transport? = nil) {
@@ -118,7 +120,7 @@ final class SupabaseClient {
 
     private var sessionURL: URL? { directory?.appendingPathComponent(SupabaseClient.filename(for: storageKey)) }
 
-    private static func readSession(from directory: URL?, key: String) -> BackendSession? {
+    nonisolated private static func readSession(from directory: URL?, key: String) -> BackendSession? {
         guard let url = directory?.appendingPathComponent(filename(for: key)),
               let data = try? Data(contentsOf: url) else { return nil }
         let decoder = JSONDecoder()
@@ -260,7 +262,7 @@ final class SupabaseClient {
     /// the anon key on every call, the bearer token when signed in (the anon
     /// key itself otherwise, which is what the auth endpoints expect), JSON
     /// both ways.
-    static func request(config: BackendConfig, method: String, path: String, query: [URLQueryItem],
+    nonisolated static func request(config: BackendConfig, method: String, path: String, query: [URLQueryItem],
                         body: Data?, bearer: String?, headers: [String: String]) -> URLRequest {
         var components = URLComponents(url: config.url.appendingPathComponent(path), resolvingAgainstBaseURL: false)
         components?.queryItems = query.isEmpty ? nil : query
