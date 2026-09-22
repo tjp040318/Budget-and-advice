@@ -31,17 +31,27 @@ final class AppSession: ObservableObject {
         if let account = accounts.account { open(account) }
     }
 
-    /// Builds the store for an account: synchronously when nothing has to be
-    /// fetched (a guest, an unentitled build, the tour — so the first frame
-    /// has its store), through Apple and iCloud otherwise.
-    func open(_ account: Account) {
+    /// Builds the store for an account: through the backend when one is
+    /// configured (`Docs/BACKEND.md`; a guest and an Apple ID alike, the
+    /// guest as an anonymous user), otherwise synchronously when nothing has
+    /// to be fetched (a guest, an unentitled build, the tour — so the first
+    /// frame has its store) and through Apple and iCloud for an Apple ID.
+    /// `appleIdentityToken` is the token of a sign-in this launch, for the
+    /// backend; `freshStart` skips every restore, for a player starting over.
+    func open(_ account: Account, appleIdentityToken: String? = nil, freshStart: Bool = false) {
         opening?.cancel()
         store?.retire()
         store = nil
         // Every save that exists today is `pantheon_save.json`: the first
         // account to sign in on the phone takes it, before the cloud is asked
         // anything.
-        SaveStore.migrateLegacySave(to: account.storageKey)
+        if !freshStart {
+            SaveStore.migrateLegacySave(to: account.storageKey)
+        }
+        if BackendConfig.isConfigured, let config = BackendConfig.shared {
+            openThroughBackend(account, config: config, appleIdentityToken: appleIdentityToken, freshStart: freshStart)
+            return
+        }
         guard account.provider == .apple, let cloud = CloudSaveStore(key: account.storageKey) else {
             install(GameStore.bootstrap(account: account, cloudSave: nil))
             isOpening = false
@@ -66,12 +76,65 @@ final class AppSession: ObservableObject {
             // screen when there is one. A corrupt local file is quarantined
             // by the load, which leaves no local save and lets the cloud copy
             // stand in for it.
-            let local = try? SaveStore.load(key: account.storageKey)
-            _ = await cloud.restoreIfNewer(than: local, within: local == nil ? 10 : 4)
+            if !freshStart {
+                let local = try? SaveStore.load(key: account.storageKey)
+                _ = await cloud.restoreIfNewer(than: local, within: local == nil ? 10 : 4)
+            }
             guard !Task.isCancelled else { return }
             self.install(GameStore.bootstrap(account: account, cloudSave: cloud))
             self.isOpening = false
         }
+    }
+
+    /// The backend's path (2026-09-22): Apple verified first for an Apple
+    /// ID, then the Supabase session (saved, Apple's token, or an anonymous
+    /// user for a guest), then the cloud row pulled when it is newer — ten
+    /// seconds for a phone with no save of this account, four under the
+    /// loading screen when there is one. A backend out of reach opens the
+    /// local save as it is; the uploads retry at the next flush.
+    private func openThroughBackend(_ account: Account, config: BackendConfig, appleIdentityToken: String?, freshStart: Bool) {
+        isOpening = true
+        opening = Task { [weak self] in
+            guard let self else { return }
+            if account.provider == .apple {
+                let valid = await self.accounts.verifyCredentialState()
+                guard valid, !Task.isCancelled else {
+                    self.isOpening = false
+                    return
+                }
+            }
+            let client = SupabaseClient(config: config, storageKey: account.storageKey)
+            let cloud = SupabaseSaveStore(client: client, account: account, appleIdentityToken: appleIdentityToken)
+            let reached = await cloud.prepare()
+            if reached, !freshStart {
+                let local = try? SaveStore.load(key: account.storageKey)
+                _ = await cloud.restoreIfNewer(than: local, within: local == nil ? 10 : 4)
+            }
+            guard !Task.isCancelled else { return }
+            self.install(GameStore.bootstrap(account: account, cloudSave: cloud))
+            self.isOpening = false
+        }
+    }
+
+    /// "Reset account" on the Settings screen (2026-09-22): the store is
+    /// retired, this phone's save kept aside as `reset_<stamp>_…`, the
+    /// offline world wiped, the cloud copy erased, and a new game opened for
+    /// the same account with no restore. When the cloud could not be
+    /// reached, its old copy stays and comes back as a foreign save the
+    /// Account panel offers — never silently over the new game.
+    func startOver() async {
+        guard let current = store, let account = accounts.account else { return }
+        opening?.cancel()
+        current.retire()
+        let cloud = current.cloudSave
+        store = nil
+        isOpening = true
+        SaveStore.archive(key: account.storageKey)
+        LocalSocialBackend.wipe()
+        if let cloud {
+            _ = await cloud.erase()
+        }
+        open(account, freshStart: true)
     }
 
     private func install(_ newStore: GameStore) {
@@ -92,7 +155,7 @@ final class AppSession: ObservableObject {
 
     func signInWithApple(_ credential: AppleCredential) {
         accounts.notice = nil
-        open(accounts.signInWithApple(credential))
+        open(accounts.signInWithApple(credential), appleIdentityToken: credential.identityToken)
     }
 
     func continueAsGuest() {
@@ -109,7 +172,7 @@ final class AppSession: ObservableObject {
             current.retire()
         }
         accounts.bindGuestToApple(credential)
-        if let account = accounts.account { open(account) }
+        if let account = accounts.account { open(account, appleIdentityToken: credential.identityToken) }
     }
 
     func signOut() async {

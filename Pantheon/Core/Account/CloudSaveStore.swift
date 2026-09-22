@@ -264,3 +264,28 @@ final class CloudSaveStore {
         print("[CloudSave] \(line)")
     }
 }
+
+extension CloudSaveStore: CloudSaveSyncing {
+    var serviceName: String { "iCloud" }
+
+    /// The record deleted, for a player starting over (2026-09-22). A record
+    /// that is not there counts as erased.
+    func erase() async -> Bool {
+        waiter?.cancel()
+        waiter = nil
+        pending = nil
+        do {
+            _ = try await database.deleteRecord(withID: recordID)
+            foreign = nil
+            note("the cloud copy is erased")
+            return true
+        } catch let error as CKError where error.code == .unknownItem {
+            foreign = nil
+            return true
+        } catch {
+            lastError = error.localizedDescription
+            note("erase failed: \(error.localizedDescription)")
+            return false
+        }
+    }
+}

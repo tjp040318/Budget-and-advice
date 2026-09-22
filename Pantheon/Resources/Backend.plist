@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- The Supabase project (Docs/BACKEND.md). Both empty = no backend:
+	     the game plays offline exactly as before, with iCloud for an Apple
+	     account's cloud copy. The anon key is public by design; row-level
+	     security keeps every player to his own rows. -->
+	<key>SupabaseURL</key>
+	<string></string>
+	<key>SupabaseAnonKey</key>
+	<string></string>
+</dict>
+</plist>

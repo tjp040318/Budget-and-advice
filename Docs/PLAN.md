@@ -6279,3 +6279,126 @@ unchanged; the phone's chain agreed with SceneKit's own placement of every
 joint to a millimetre (`mine` beside `presented` in the console), so the
 Swift and the Python are one sum.
 
+
+## The backend — Supabase, and starting over (2026-09-22; built, phase 1)
+
+The owner: "How can we reset my account on it so I can start as if im
+starting from 0? Also lets get the database for it going. I have supabase
+or turso so maybe we can add a new database thats needed." Two asks, one
+answer: the reset must reach the cloud copy or the old game comes straight
+back at the next launch, and the cloud copy must exist for a GUEST too —
+the owner plays as one on his phone today, and iCloud's private database
+never held a guest's save. `Docs/BACKEND.md` is the owner's manual.
+
+### What the genre does
+
+Every gacha the game is measured against is server-authoritative from its
+first day: the account is a server account (Summoners War's Hive, Epic
+Seven's Smilegate ID, Raid's Plarium ID; each also takes Apple, Google or
+Facebook as a sign-in), the summon is ROLLED ON THE SERVER and the phone
+only shows the reveal, energy runs on the server's clock, a purchase is
+granted only once the store's receipt is validated, and "reset" is a
+support ticket or a deliberate "start over" that wipes the account's server
+rows. The phone holds a cache of the account, never the account. Two of
+those four things (accounts, the save's cloud copy) are what phase 1 does;
+the other two (summons and purchases on the server) are phase 2 and need
+the economy settled first — a server that rolls a banner has to know the
+banner's final rates.
+
+### The options
+
+1. **Stay offline, CloudKit only** (what was built on 2026-09-17). Free,
+   zero infrastructure, Apple's own — and no path to a server-side summon,
+   no guest cloud copy, no Android or web ever, and every anti-cheat is
+   trust in the phone. The owner asked for a database, and the honesty
+   note of 2026-09-21 said the server is the next thing the game needs.
+2. **Supabase** — Postgres with row-level security, an auth service that
+   takes Sign in with Apple's identity token AND anonymous users (a guest's
+   cloud copy for free), a REST layer on every table (PostgREST), Edge
+   Functions (Deno/TypeScript) for the server-side summon and receipt
+   checks to come, a dashboard the owner can read rows in, a free tier
+   that covers a launch (about 500 MB of database and fifty thousand
+   monthly active users on auth at the time of writing; the paid tier is
+   about $25 a month). The owner has an account. Reachable from the phone
+   over plain HTTPS — no SDK needed, which matters here: the project has
+   no package dependencies and the checker reads plain Swift.
+3. **Turso** (libSQL/SQLite at the edge). The owner has an account. It is
+   a database and nothing else: no auth service, no row-level security, no
+   functions — a phone talking to Turso directly would carry a token that
+   can read every row, so a server of our own (an API on Vercel, Fly or
+   Cloudflare Workers, with its own auth, its own Apple token check, its
+   own deploys) would have to stand between the phone and the database.
+   That is a second project to build and run before the first row lands.
+4. **Firebase** (Firestore + Firebase Auth + Cloud Functions). Equivalent
+   to 2 in shape; the owner has no account there; its iOS SDK is a large
+   Swift package (gRPC, and a `-ObjC` linker flag) that would be the
+   project's first dependency and the CI job's slowest step; Firestore's
+   document model fits a save less well than one Postgres row does.
+5. **A game backend service** (PlayFab, Nakama, GameSparks-style). Made
+   for this, with leaderboards and a virtual economy built in; a different
+   account model that would replace the accounts built on 2026-09-17, a
+   second vendor with its own console, and none of it the owner already
+   has.
+
+**The choice is 2, Supabase.** It is the one the owner already holds an
+account for that also does the three things the game needs from a server
+(auth with Apple and anonymous users, rows behind row-level security,
+functions for phase 2), with no SDK and no server of our own. Turso is
+kept out with reasons rather than dismissed: it would be a fine store
+UNDER an API, and the game has no API.
+
+### What was built (phase 1)
+
+- `Pantheon/Core/Backend/`: `CloudSaveSyncing` (the protocol the CloudKit
+  store and the Supabase store both implement, so `GameStore`, `AppSession`
+  and the Account panel speak one language and print the service's own
+  name — "iCloud" or "Pantheon Cloud"), `BackendConfig` (reads
+  `Resources/Backend.plist`; both values empty = no backend, and never
+  under `-tour`), `SupabaseClient` (URLSession; anonymous sign-up, Apple's
+  `id_token` grant, refresh a minute before expiry and once on a 401; the
+  session in `backend_session_<key>.json` beside the saves with complete
+  file protection; `rest` and `function`), `SupabaseSaveStore` (one row of
+  `saves` per player, the JSON as text so it round-trips byte for byte;
+  the same restore rules as CloudKit's; `erase`).
+- `Backend/supabase/migrations/20260922000000_players_saves.sql`:
+  `players` and `saves`, RLS policies on `auth.uid()`, the `saves_guard`
+  BEFORE UPDATE trigger that raises `lineage` (another game's row) or
+  `stale` (an older save over a newer) and bumps `revision` — the rules
+  the phone had, enforced where a modified phone cannot skip them.
+- `AppSession.open` goes through the backend when it is configured, for a
+  guest and an Apple ID alike (Apple's credential still verified first for
+  an Apple ID); `AppleCredential` carries Apple's identity token for the
+  exchange. A backend out of reach opens the local save as it is and the
+  uploads retry at the next flush.
+- **Starting over** (`AppSession.startOver`, from Settings → Reset
+  account → Delete everything): the store retired, this phone's save moved
+  aside as `reset_<stamp>_pantheon_save_<key>.json` (kept, like a replaced
+  or a corrupt one — never deleted), the seeded offline social world wiped,
+  the cloud copy ERASED (the Supabase row, or the CloudKit record), and a
+  new game opened for the same account with `freshStart`, which skips the
+  legacy-save migration and every restore. When the cloud could not be
+  reached the old copy stays; it is of the old lineage, so it neither
+  overwrites the new game nor is overwritten by it, and the Account panel
+  offers it as "Restore from Pantheon Cloud". The 2026-09-17 note "no
+  delete-from-iCloud on Reset" is no longer true.
+- `BackendTests` (11): the config's rules, the bundled plist shipping
+  empty, the request's headers and URL, a session read off an auth
+  answer, the guard's messages mapped, an anonymous sign-in persisted and
+  reused, a refused token refreshed once and the call retried, the save
+  row's byte-for-byte round trip, Postgres's fractional timestamps, the
+  restore rules against a canned backend (newer pulled, same kept, foreign
+  offered, erase by the user's id), and the archive.
+
+### What is NOT built, said plainly
+
+The save is still trusted as the phone wrote it — the same trust iCloud
+had — until phase 2 (server-side summons, StoreKit 2 receipt validation,
+the energy clock). Phase 3 moves the social layer from CloudKit's public
+database onto these tables. A guest who binds to an Apple ID leaves his
+anonymous user's row behind (harmless; a sweep or a user link is a later
+migration). CI never touches the backend: the tour is the fixed guest with
+the plist ignored, so run 199's frames show the same Account panel as
+before, with "Pantheon Cloud" appearing only on a phone whose plist is
+filled. `supabase.com` is closed to this environment, so the migration is
+applied by the owner in the dashboard's SQL editor (BACKEND.md §1, eight
+steps) and the dashboard's labels there are from memory.

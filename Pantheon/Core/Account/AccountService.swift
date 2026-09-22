@@ -8,6 +8,10 @@ struct AppleCredential: Equatable, Sendable {
     var givenName: String?
     var familyName: String?
     var email: String?
+    /// Apple's identity token (a JWT), which the backend exchanges for its
+    /// own session (`SupabaseClient.signInWithApple`; 2026-09-22). Present
+    /// at a sign-in, never stored: the ledger keeps the account, not this.
+    var identityToken: String? = nil
 
     /// The name as one string, or nil when Apple sent none — which is every
     /// authorisation after the first.
@@ -21,7 +25,8 @@ struct AppleCredential: Equatable, Sendable {
             user: credential.user,
             givenName: credential.fullName?.givenName,
             familyName: credential.fullName?.familyName,
-            email: credential.email
+            email: credential.email,
+            identityToken: credential.identityToken.flatMap { String(data: $0, encoding: .utf8) }
         )
     }
 }

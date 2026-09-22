@@ -209,10 +209,17 @@ struct SettingsView: View {
                 isPresented: $showResetConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Delete everything", role: .destructive) { store.resetAccount() }
+                Button("Delete everything", role: .destructive) {
+                    // The sheet goes first, then the store: the new game's
+                    // shell replaces the whole screen under it.
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                        Task { await session.startOver() }
+                    }
+                }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Every unit, relic and clear is erased — on this phone, and in iCloud at the next upload. There is no undo.")
+                Text("Every unit, relic and clear is erased on this phone and in \(cloudName), and the game starts over from the first summon. The old save is kept aside on this phone, not deleted.")
             }
             .confirmationDialog(
                 "Sign out of Pantheon?",
@@ -229,14 +236,14 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Your progress stays on this phone and in iCloud. Sign in again with the same Apple ID to pick up where you left off.")
+                Text("Your progress stays on this phone and in \(cloudName). Sign in again with the same Apple ID to pick up where you left off.")
             }
             .confirmationDialog(
-                "Restore the iCloud save?",
+                "Restore the \(cloudName) save?",
                 isPresented: $showRestoreConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Restore from iCloud", role: .destructive) {
+                Button("Restore from \(cloudName)", role: .destructive) {
                     dismiss()
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                         Task { await session.restoreFromCloud() }
@@ -244,7 +251,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This phone's save is replaced by the one in iCloud. The replaced save is kept aside on this phone, not deleted.")
+                Text("This phone's save is replaced by the one in \(cloudName). The replaced save is kept aside on this phone, not deleted.")
             }
             .sheet(isPresented: $showBind) {
                 BindAppleSheet { credential in
@@ -476,8 +483,8 @@ struct SettingsView: View {
     @ViewBuilder
     private var accountActions: some View {
         if let foreign = store.cloudSave?.foreign {
-            caption("iCloud holds a different save, from \(SettingsView.dayFormatter.string(from: foreign.modifiedAt)).")
-            PrimaryButton(title: "Restore from iCloud", systemImage: "icloud.and.arrow.down", tint: Theme.info) {
+            caption("\(cloudName) holds a different save, from \(SettingsView.dayFormatter.string(from: foreign.modifiedAt)).")
+            PrimaryButton(title: "Restore from \(cloudName)", systemImage: "icloud.and.arrow.down", tint: Theme.info) {
                 showRestoreConfirm = true
             }
         }
@@ -492,6 +499,9 @@ struct SettingsView: View {
             }
         }
     }
+
+    /// "iCloud" or "Pantheon Cloud": whichever keeps this account's copy.
+    private var cloudName: String { store.cloudSave?.serviceName ?? "iCloud" }
 
     private static let dayFormatter: DateFormatter = {
         let formatter = DateFormatter()

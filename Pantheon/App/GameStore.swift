@@ -20,7 +20,7 @@ final class GameStore: ObservableObject {
     let account: Account
     /// The iCloud mirror of the save: an Apple account on a build signed for
     /// iCloud, nil otherwise (a guest, CI, an unentitled dev build).
-    let cloudSave: CloudSaveStore?
+    let cloudSave: CloudSaveSyncing?
     /// What the app does once `signOut()` has saved and retired this store:
     /// drop it and show the sign-in screen. Set by `AppSession`.
     var onSignedOut: (() -> Void)?
@@ -35,7 +35,7 @@ final class GameStore: ObservableObject {
 
     // MARK: - Lifecycle
 
-    init(save: SaveGame, account: Account, cloudSave: CloudSaveStore? = nil) {
+    init(save: SaveGame, account: Account, cloudSave: CloudSaveSyncing? = nil) {
         self.player = save.player
         self.account = account
         self.cloudSave = cloudSave
@@ -48,7 +48,7 @@ final class GameStore: ObservableObject {
     /// The store for an account: its save from disk, or a new game named for
     /// the player Apple sent. The legacy save and the cloud copy have been
     /// dealt with by the caller (`AppSession.open`) before this runs.
-    static func bootstrap(account: Account, cloudSave: CloudSaveStore? = nil) -> GameStore {
+    static func bootstrap(account: Account, cloudSave: CloudSaveSyncing? = nil) -> GameStore {
         let key = account.storageKey
         do {
             if let existing = try SaveStore.load(key: key) {
@@ -990,18 +990,6 @@ final class GameStore: ObservableObject {
         let day = Int(Date().timeIntervalSince1970 / 86_400)
         return ArenaService.pool(for: player.arena, day: day)
             .filter { !player.arena.defeatedOpponentIDs.contains($0.id) }
-    }
-
-    // MARK: - Debug helpers
-
-    /// Used by the settings screen. Destroys the account, so the caller confirms.
-    func resetAccount() {
-        SaveStore.deleteSave(key: account.storageKey)
-        LocalSocialBackend.wipe()   // the offline world's doings go with the save
-        let fresh = NewGame.create(displayName: account.demigodName)
-        player = fresh.player
-        seedStream = SeededRandom(seed: fresh.rngSeed)
-        markDirty()
     }
 
     // MARK: - Allies (the social layer, 2026-09-17)

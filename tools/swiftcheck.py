@@ -115,7 +115,10 @@ STORED = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
 COMPUTED_HINT = re.compile(r"\{")
 FUNC = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|static\s+|mutating\s+)*func\s")
 DECL = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|final\s+)*"
-                  r"(struct|class|enum|protocol|extension)\s+([A-Za-z_][A-Za-z0-9_]*)")
+                  r"(struct|class|actor|enum|protocol|extension)\s+([A-Za-z_][A-Za-z0-9_]*)")
+# A typealias names a type too (`typealias Transport = …`, the backend client's
+# canned-network hook, 2026-09-22).
+TYPEALIAS = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+|fileprivate\s+)?typealias\s+([A-Za-z_][A-Za-z0-9_]*)")
 CASE = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 INIT = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?init\s*\(")
 
@@ -179,11 +182,14 @@ def scan(files, verbose=False):
             if stack and stack[-1][3] is None and indent > stack[-1][2]:
                 stack[-1][3] = indent
 
+            ta = TYPEALIAS.match(ln)
+            if ta:
+                declared.add(ta.group(1))
             m = DECL.match(ln)
             if m:
                 kind, name = m.group(1), m.group(2)
                 stack.append([kind, name, indent, None])
-                if kind in ("struct", "class", "enum", "protocol"):
+                if kind in ("struct", "class", "actor", "enum", "protocol"):
                     declared.add(name)
                     # `struct GameScreen<Bar: View, Content: View>` declares Bar
                     # and Content as types for the length of the declaration.
@@ -953,6 +959,12 @@ def check_unknown_types(files, declared, errors):
         "ASAuthorizationAppleIDProvider","ASAuthorizationAppleIDRequest","ASAuthorizationController",
         "ASAuthorizationError","ASAuthorizationRequest","ASPresentationAnchor","SignInWithAppleButton",
         "CryptoKit","SHA256","CKAsset","CKRecordZone","CKAccountStatus",
+        # The Supabase backend over URLSession (2026-09-22, Docs/BACKEND.md):
+        # Foundation's request, response, URL parts, the plist reader, the
+        # ISO-8601 formatter Postgres's stamps are read with, and UTF8 for
+        # `String(decoding:as:)`.
+        "URLSession","URLRequest","HTTPURLResponse","URLComponents","URLQueryItem",
+        "PropertyListSerialization","ISO8601DateFormatter","UTF8",
     }
     used = defaultdict(list)
     for path in files:

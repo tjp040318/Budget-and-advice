@@ -1567,6 +1567,33 @@ environment can and cannot do. The short version:
   "Player ID" (the tail of the CloudKit record name — how a support
   request finds the record). `AccountTests` (9). No email/password yet
   (option B in PLAN.md; `AccountProvider` is the door).
+- **The backend is Supabase, and Reset account reaches the cloud
+  (2026-09-22; `Docs/BACKEND.md`, PLAN.md *The backend — Supabase, and
+  starting over*; the owner: "lets get the database for it going. I have
+  supabase or turso").** `Pantheon/Core/Backend/`: `CloudSaveSyncing` is
+  the protocol the CloudKit store and `SupabaseSaveStore` both implement
+  (`GameStore.cloudSave` is typed by it; the Account panel prints
+  `serviceName`, "iCloud" or "Pantheon Cloud"); `BackendConfig` reads
+  `Resources/Backend.plist` (`SupabaseURL`, `SupabaseAnonKey`; both empty
+  as committed = no backend, the offline game as before; never under
+  `-tour`); `SupabaseClient` is URLSession only (no SDK — the project has
+  no package dependencies): an anonymous user for a GUEST, Apple's
+  identity token (`AppleCredential.identityToken`, `grant_type=id_token`)
+  for an Apple ID, the session in `backend_session_<key>.json`, a refresh
+  a minute before expiry and once on a 401; the save is one row of
+  `saves` with the JSON as TEXT (byte-for-byte), guarded on the server by
+  the `saves_guard` trigger raising `lineage`/`stale`
+  (`Backend/supabase/migrations/`, applied by the owner in the SQL
+  editor — `supabase.com` is closed to this environment). **Reset
+  account** (Settings → Delete everything) is `AppSession.startOver`: the
+  save moved aside as `reset_<stamp>_…` (`SaveStore.archive`, never
+  deleted), `LocalSocialBackend.wipe()`, `cloudSave.erase()`, then
+  `open(account, freshStart: true)` which skips the legacy migration and
+  every restore; an unreachable cloud leaves its copy to come back as a
+  foreign save the panel offers. `GameStore.resetAccount()` is gone.
+  Turso was weighed and kept out: no auth, no RLS, no functions, so it
+  would need an API of our own in front of it. `BackendTests` (11) run
+  every path against a canned transport.
 - **The figures are lit physically, and the paint is tempered (2026-09-20;
   PLAN.md *The serious look in the light*; the owner: "why do the renders
   make the colors and the look of the characters, even the redesigned,

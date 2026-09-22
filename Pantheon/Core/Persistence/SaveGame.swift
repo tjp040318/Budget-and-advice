@@ -197,6 +197,23 @@ enum SaveStore {
         return result
     }
 
+    /// A save moved aside as `reset_<stamp>_…` when the player starts over
+    /// (2026-09-22): kept, never deleted, like a replaced or a corrupt one.
+    /// True when a file moved.
+    @discardableResult
+    static func archive(key: String) -> Bool {
+        guard let url = saveURL(for: key), FileManager.default.fileExists(atPath: url.path) else { return false }
+        let stamp = Int(Date().timeIntervalSince1970)
+        let backup = url.deletingLastPathComponent()
+            .appendingPathComponent("reset_\(stamp)_\(filename(for: key))")
+        do {
+            try FileManager.default.moveItem(at: url, to: backup)
+            return true
+        } catch {
+            return false
+        }
+    }
+
     static func deleteSave(key: String) {
         guard let url = saveURL(for: key) else { return }
         try? FileManager.default.removeItem(at: url)
