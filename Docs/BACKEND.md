@@ -87,6 +87,14 @@ claude.ai/code → the cloud icon → the environment's gear → **Network
 access: Custom** → add `kqlblqnioumkdoudhibi.supabase.co` → tick "Also
 include default list of common package managers" (new sessions only).
 
+**All three confirmed by the owner on 2026-09-22 (evening):** the Apple
+provider saved with `com.pantheon.game`, **Allow anonymous sign-ins** on,
+and the migration run in the SQL editor ("success"), so `players`,
+`saves` and the `saves_guard` trigger exist. The dashboard side is
+complete; what remains is a phone: a guest launch should log a
+`Pantheon Cloud` sign-in on the Account panel, and an Apple ID's first
+sign-in on a second device should show RESTORING.
+
 ## 2. Reset the account (today, on the phone)
 
 1. Island → **More** (the fifth tab) → **Settings**.
