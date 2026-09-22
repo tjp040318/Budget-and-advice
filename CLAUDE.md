@@ -1623,19 +1623,53 @@ environment can and cannot do. The short version:
   (it is `TabItem`).
 - **The skirt pass (2026-09-22).** `character.reweight_skirt` (in
   `mesh.py` after the cape pass; `tools/skirt_pass.py --survey | <names>
-  | --all` over the SHIPPED base and `_lod` files): waist-to-knee cloth
-  that Meshy's rigger gave to a HAND or a FOREARM — a tunic's panel, a
-  kilt's apron, a sash, because the concept's hands rest on the thighs —
-  goes back to the hips and the thighs (the nearest body-owned
-  neighbour's weights, the seam blended over three rings). Anhur's red
-  tunic swung up with his khopesh and read on the phone as a blade across
-  his chest. A rod (a weapon: second principal extent under a tenth of
-  the first) and a piece welded to the arm alone (a shield) stay the
-  hand's; `_big_sheets` refuses a panel that wraps a thigh, and a
-  "faces toward the leg" test cannot tell cloth's inner face from a
-  shield's back. Judge on `base_plus_clip.py` (the idle and the heavy
-  attack), never on the count. The winged and tailed families are
-  excluded by name (`CAPE_EXCLUDE`).
+  | --all` over the SHIPPED base and `_lod` files): cloth that Meshy's
+  rigger gave to a HAND, a FOREARM or an UPPER ARM — a tunic's panel, a
+  kilt's apron, a robe's drape, a cloak's side, because the concept's
+  hands rest on the thighs — goes back to the body (the nearest
+  body-owned neighbour's weights, the seam blended over three rings).
+  Anhur's red tunic swung up with his khopesh and read on the phone as a
+  blade across his chest; Heimdall's cloak flew out with his arm. The
+  candidates are arm-owned vertices below the neck and OUTSIDE the arm's
+  own surface (`_limb_surface`, the HAND a segment continued 0.12 h past
+  the wrist — Meshy's rigs have no finger bones, and without it every
+  hand in the roster was "a thing held"); each connected piece then stays
+  with the arm when it is a rod (a weapon), far from every body bone (the
+  Minotaur's axe), a solid (thick: Bes's drum), WELDED TO THE ARM (under
+  two fifths of its edge on body-owned mesh — the awakened Ares's shield,
+  Mars's scutum, Bragi's lyre, the smith's hammer at 0–4%; a garment's
+  panel is sewn to the garment at 42–73%; a panel between, welded to the
+  hand along most of its edge, stretches to a SPIKE when the hand swings
+  away from the leg it was given to, so it stays), held at its middle
+  (its centre within 0.075 h of a wrist) or lying on the arm (three
+  fifths within 0.02 h of the arm's surface). Then, each demanded by a
+  blow-frame render: the sheet GROWS back through the arm's layer (never
+  its skin) to take the cloth's rows nearest the hand; the copied weights
+  lose every ARM SHARE (Meshy blends smoothly — the garment's body-owned
+  rows beside the hand hold the hand at a third to a half, and so did
+  the "moved" tunic), as do the garment's rows within fourteen rings; and
+  `character.cut_seam` DOUBLES the seam's vertices so the weld Meshy
+  fused between a tunic's corner and the hand opens as a crack instead of
+  stretching into a spike. The LOD takes the base's verdict vertex by
+  vertex and is cut the same way (`skirt_pass.transfer`); `mesh.py`
+  decimates the LOD from the re-bound base. Three earlier rules are in
+  the docstring with what each took: a compact-object test on the span
+  took shields and a lyre, a "hanging" test refused Anhur's tunic, a
+  waist-to-knee band cut Heimdall's cloak at the knee. Judge on
+  `base_plus_clip.py` at the heavy attack's BLOW frame (`--frames=30`,
+  with the `=`: without it the tool renders the clip's first frame, the
+  hands at rest, and a board of that passed a broken pass) and the
+  ownership board (`skirt_mask_board.py` in the scratch), never on the
+  count. The pass is APPLIED BY NAME (`character.SKIRT_FAMILIES`: Anhur,
+  Atalanta, the awakened Sekhmet — `mesh.py` and `skirt_pass.py --all`
+  read it): of the sixteen families the survey moves cloth on, those
+  three are clear wins on the board, ten shred or tear (cloth welded to
+  the arm along a whole sleeve or a wrapped robe comes off the cut in
+  slivers — Heimdall, Pluto, Centurion, Njord, Satyr, the smith,
+  Aphrodite, Baldr, Loki, Freya) and stay as rigged, and three change
+  nothing a frame shows. A robe the arms pass through is the cape pass's
+  next problem (cloth bones through the sheet), not this one's; a new
+  family is judged on its board and added to the list.
 - **The figure stages are exposed and coloured (2026-09-22).**
   `FigureStageLighting`: key 1,150, fill 320, rim 420, ambient 140, the
   studio map at 1.0 (brighter softboxes; the old map is `studio_ibl_v1`),

@@ -350,7 +350,7 @@ struct TierChips: View {
 
     var body: some View {
         let player = store.player
-        HStack(spacing: 6) {
+        HStack(spacing: 5) {
             ForEach(CampaignDifficulty.allCases) { tier in
                 let open = CampaignService.isOpen(tier, of: base, player: player)
                 let cleared = (player.campaignProgress[base.id + tier.suffix] ?? 0) >= base.stages.count
@@ -364,12 +364,16 @@ struct TierChips: View {
                     HStack(spacing: 4) {
                         Image(systemName: open ? (cleared ? "checkmark.seal.fill" : tier.glyph) : "lock.fill")
                             .font(.system(size: 9, weight: .bold))
+                        // One line, never wrapped: the type floor lifted the
+                        // chips to 11 and run 204 photographed "NO / RM".
                         Text(tier.displayName.uppercased())
                             .font(Theme.body(10).weight(.black))
-                            .tracking(1.1)
+                            .tracking(0.5)
+                            .lineLimit(1)
+                            .fixedSize()
                     }
                     .foregroundStyle(selected ? Theme.ink : (open ? tint : Theme.textSecondary))
-                    .padding(.horizontal, 9)
+                    .padding(.horizontal, 7)
                     .frame(height: ScreenChrome.control)
                     .background(
                         ScreenChrome.controlShape.fill(selected ? tint : Theme.surfaceRaised)

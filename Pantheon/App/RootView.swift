@@ -281,7 +281,9 @@ struct SettingsView: View {
     /// The four destinations as tiles rather than as three panels each holding
     /// one button and a paragraph. Four across a landscape phone.
     private var destinations: some View {
-        HStack(spacing: 8) {
+        // Two rows of four: eight tiles across one row left 45 points for a
+        // name, and run 204 photographed "D", "C" and "EVE…".
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
             Button {
                 Juice.haptic(.light)
                 AudioLibrary.shared.play(.uiTap)
@@ -389,7 +391,6 @@ struct SettingsView: View {
             }
             .buttonStyle(PlateButtonStyle())
         }
-        .frame(height: 64)
     }
 
     /// One destination tile: a tinted glyph plate, the name, what it holds,

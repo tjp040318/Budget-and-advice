@@ -6443,25 +6443,118 @@ bone. The cape pass (2026-09-18) handles cloth BEHIND the spine and
 refuses a wrap by design; a tunic's front panel is the wrap.
 
 `character.reweight_skirt` (run by `mesh.py` after the cape pass unless
-`--no-skirt`; `tools/skirt_pass.py` over the shipped files): a vertex is
-such cloth when a hand or a forearm owns it, it lies in the waist-to-knee
-band, it is outside the arm's own surface (`_limb_surface`, so the hand,
-its bracer and a hilt in the palm stay), it is within a fifth of the
-height of a hip-to-knee bone, its connected piece is NOT a rod (the second
-principal extent under a tenth of the first: a khopesh, a spear, a staff —
-`_big_sheets` was tried first and refused the panel, which wraps a thigh
-and is not flat), and the piece touches the body's own garment on a fifth
-or more of its edge (a shield at the thigh is welded to the arm alone;
-Anhur's 274-vertex khopesh piece touched the garment on 0% and stayed).
-Each such vertex takes its nearest body-owned neighbour's weights and the
-seam is blended over three rings, the cape pass's way. A "faces turned
-toward the leg" test was tried for the shield and thrown out: cloth is
-modelled with a thickness, so a panel's inner face fails it too. Judged on
-`base_plus_clip.py` renders of the idle and the heavy attack: the tunic
-hangs from the hips and swings with the legs, the khopesh stays in the
-hand. The survey (`skirt_pass.py --survey`) flags 48 of 96 families; the
-winged and tailed ones are excluded by name as in the cape pass, and the
-rest were applied on the board's verdict (below).
+`--no-skirt`; `tools/skirt_pass.py` over the shipped files) went through
+four cuts in the day, each judged on two boards — the ownership board
+(every vertex of a family drawn front, side and back: grey the body's,
+blue the arm's own surface, red what moves, magenta what a rule kept
+with the arm) and the render board (`base_plus_clip.py` at the heavy
+attack's blow frame, before beside after). The cuts, and what each one
+got wrong on the roster's own pieces:
+
+1. **Waist-to-knee cloth a hand owns, outside the arm's surface, not a
+   rod, touching the body's garment on a fifth of its edge.** Fixed Anhur;
+   missed every drape that reaches the chest or hangs from a forearm
+   (Atalanta's cloak, Hathor's, Aphrodite's, Heimdall's), and its
+   "faces turned toward the leg" shield test was thrown out — cloth is
+   modelled with a thickness, so a panel's inner face fails it too.
+2. **Knee-to-neck, any arm bone, a compact object near the hand kept.**
+   Took the awakened Ares's shield (0.29 h across, over the compact cap),
+   Mars's scutum, Bragi's lyre, the smith's hammer and Neptune's sword —
+   the HAND was part of every piece: Meshy's rigs have no finger bones,
+   so the hand past the wrist is outside `_limb_surface` on the forearm,
+   and every family's hands surveyed as "a thing held 0.08 h across".
+3. **The hand as a segment continued 0.12 h past the wrist, a "held at its
+   middle" test and a "hanging" test.** The hanging test refused Anhur's
+   tunic, which is BESIDE the hand, not below it; a "lying on the arm" cut
+   at two fifths refused Hathor's and Atalanta's drapes, since the hand's
+   layer takes the drape's first rows and the rest is then adjacent to
+   "the arm".
+4. **What shipped.** A candidate is arm-owned, below the neck, outside the
+   arm's surface with the hand segment. Its connected piece stays with the
+   arm when it is a rod (second principal extent under a tenth of the
+   first), far from every body bone (median over 0.22 h: the Minotaur's
+   axe, Zeus's bolt), a solid (median thickness over 0.025 h: Bes's drum,
+   a pauldron), **welded to the arm** (under two fifths of its edge's
+   mesh neighbours body-owned — the rule that carries the load: a thing
+   held touches nothing but the hand, a garment's panel is sewn to the
+   rest of the garment; the shield 0%, the scutum 0%, the lyre 4%, the
+   hammer 0%, against Anhur's tunic 73%, Heimdall's cloak 49%, Atalanta's
+   cloak 55%, Loki's coat 53%; the threshold sat at a fifth for one board
+   and the awakened Ares's tunic side, welded to his sword hand along 65%
+   of its edge, went to the leg and stretched to a SPIKE beside the blade
+   at the blow frame — the rows of it in the hand's own layer travel with
+   the hand, the rest stays on the leg, and the triangles between span the
+   swing; at two fifths that panel, Odin's gathered cloak front (24%),
+   Baldr's (29%) and Sif's skirt side with a blade welded into it (23%)
+   stay with the arm, and every clear garment moves), held at its middle
+   (centre within 0.075 h of a wrist: a thing in the palm) or lying on the
+   arm (three fifths within 0.02 h of the arm's surface: a sleeve's
+   drape). `min_count` scales with the mesh (120 at 15,000 vertices).
+   Then four things the render board demanded, one after another, each
+   from a blow-frame render that was still wrong (the earlier "clean"
+   board had been the clip's FIRST frame — `--frames 30` without the `=`
+   is ignored by `base_plus_clip.py`, and the hands were at rest):
+   **growth** — the cloth's own rows nearest the arm sit inside the arm's
+   generous layer (1.8× the skin) and were never candidates, so the
+   sheet grows back through the layer, never the arm's own skin (1.2× the
+   innermost, a 0.6% gap), over the welded mesh; **no arm in the copied
+   weights** — Meshy's rigger blends smoothly, so the garment's body-owned
+   rows beside the hand, which the nearest-neighbour copy takes from,
+   carry the hand at a third to a half (Anhur's "moved" tunic still
+   followed his khopesh at 48%, measured), and the sheet takes the body
+   part alone, as do the garment's body-owned rows within fourteen rings
+   of it (the blend zone; 950 of the 3,025 body-owned vertices of Anhur's
+   tunic band held over a fifth of hand); **the seam cut** —
+   `character.cut_seam`: Meshy fuses a tunic's corner to the hand resting
+   on it, and however the corner is skinned the triangles across that
+   weld stretch from the hip to wherever the hand swings, so every face
+   with vertices on both sides goes to the side holding two of its three
+   and the third vertex is doubled (same point and UV, the mean of the
+   majority's weights), and the crack between two things that only
+   touched in the concept opens instead; and **the blend excludes the
+   arm's vertices** from its averaging, so the cloth's edge is the
+   garment's all the way to the cut. What moves takes its nearest
+   body-owned neighbour's weights, the seam blended over three rings.
+
+**What moved (2026-09-22, evening).** The survey over the 105 shipped
+families that are not winged or tailed moves cloth on SIXTEEN, and every
+one was rendered before beside after at the heavy attack's blow frame,
+base and LOD (`skirt_final_board.py` in the scratch). Three are clear
+wins and are applied — `character.SKIRT_FAMILIES`, which `mesh.py` and
+`skirt_pass.py --all` read: **Anhur** (1,568 vertices: the tunic hangs
+from his hips, the khopesh free in his hand, a sliver or two at the
+cut), **Atalanta** (980: she stands visible where the cloak had tented
+over her head with the bow arms) and **Sekhmet's awakened form** (884:
+the skirt's tab hangs where it flew with the sword). Ten come off the
+cut in pieces and stay as rigged: cloth welded to the arm along a whole
+sleeve, or a robe the arms pass through, is not a corner touching a
+hand — Heimdall's cloak and Pluto's robe shred outright, the Centurion's
+tunic side, Njord's cloak front, the Satyr's pelt and the smith's apron
+come off in shards, Aphrodite's and Baldr's drapes show a torn edge,
+Loki's coat tail and Freya's hem throw a spike. Three (Anubis, Bes,
+Nezha) change nothing a frame shows and nothing is risked on them. The
+first survey's 48 were 32 families of HANDS (above) and these sixteen.
+Kept with the arm by the rules, each one looked at on its ownership
+board: the awakened Ares's shield and tunic side, Mars's scutum, Bragi's
+lyre, the smith's hammer, Chang'e's ribbon and fan, Thoth's scroll,
+Frigg's distaff, every sword, spear, bow, khopesh, bident and trident,
+Odin's gathered cloak front, Sif's skirt side, and Hathor's — whose
+"curtain" at the blow frame is her skirt on the LEFT THIGH following a
+kick, 944 vertices of it, not the hand at all (`travel.py` in the
+scratch counted it).
+
+The LOD the battle draws is a decimation of the same surface and, judged
+on its own at a third of the vertices, read four of the sixteen
+differently (Heimdall's cloak a hair over the solid threshold at 0.026 h,
+Njord's weld at 37%), so `skirt_pass.apply` runs the pass on the base and
+the LOD TAKES THE BASE'S VERDICT vertex by vertex — every LOD vertex whose
+nearest base vertex within 2% of the height was re-bound takes that
+vertex's new weights, joints matched by name, and its seam is cut the
+same way (`skirt_pass.transfer`; `mesh.py` needs no such step, since it
+decimates the LOD from the re-bound base). The honest reading of the
+ten: the pass is a corner-of-a-tunic tool, and the cloaks and robes want
+what the cape got on the 18th — bones through the sheet and the spring
+simulation — extended to sheets the arms pass through.
 
 ### 2. The figure was underexposed, desaturated and matte
 
@@ -6548,3 +6641,26 @@ owner's word (about 6 credits a sheet); the island's own header is its
 own. Phase B is one screen at a time against the genre's own screen —
 the collection, the unit sheet, the campaign map's plates, the battle's
 HUD — with the CI frames as the judge.
+### Run 204's verdict (2026-09-22, 14:50 UTC) and the chrome fixed on it
+
+The build compiled first time and the 242 tests passed; every frame was
+photographed. The summon screen reads as designed — the hall full-bleed,
+the banners a glass rail, the name carved, the deck floating on the
+painting's dark foot — and the reveal's Sekhmet and the awakened Ares are
+brighter and more saturated than the run before, the metal shining, with
+the `previous` lab frame beside them as the control. Six things the
+bigger type broke, each fixed in the commit that follows: the strip's
+title truncated on crowded strips ("COLLECT…"; it is 19 points now and
+shrinks to half before it truncates); the wallet's numbers truncated on
+Missions and the Labyrinth ("79… 7… 2…"; the well is 18-point icons and
+12.5-point numbers, takes its full width and lets the title shrink); the
+campaign tier chips wrapped ("NO / RM"; one line, never wrapped); the
+More screen's eight tiles cut their names to a letter ("D", "C"; two rows
+of four); the pity chip's "in 90" was ink on glass and invisible (on-glass
+cream); and "Tap to finish" was dusk ink on the dusk. And the tour had
+never photographed a tab bar — it presents each screen without the
+root's TabView — so the island step now wears `GameTabBar` under it.
+Pre-existing and not touched: the unit sheet's strip sits a few points
+above the top edge in the tour (its title's top clipped, run 203 the
+same). Run 205 judges the fixes.
+

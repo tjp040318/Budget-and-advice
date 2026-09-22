@@ -210,8 +210,10 @@ def run_family(name, args):
     if not args.no_cape and not any(k in out_name.lower() for k in character.CAPE_EXCLUDE):
         character.reweight_cape(base)
     # A tunic's panel or a kilt's apron the rigger gave to the hand goes back
-    # to the hips and the legs (2026-09-22, Anhur's tunic on his sword hand).
-    if not args.no_skirt:
+    # to the hips and the legs (2026-09-22, Anhur's tunic on his sword hand)
+    # — for the families judged on the board and named in SKIRT_FAMILIES,
+    # since cloth welded along a sleeve shreds when cut free of it.
+    if not args.no_skirt and out_name.lower() in character.SKIRT_FAMILIES:
         character.reweight_skirt(base)
     problems = []
     base.name = out_name

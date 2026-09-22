@@ -124,7 +124,10 @@ struct TourView: View {
     private var content: some View {
         switch current {
         case "island":
+            // With the tab bar the app really shows under it (GameTabBar,
+            // 2026-09-22), which the tour had never photographed.
             IslandView(pinnedZoom: Self.pinnedIslandZoom) { _ in }
+                .safeAreaInset(edge: .bottom, spacing: 0) { GameTabBar(selection: .constant(.island)) }
         case "island_decor":
             // The island's decoration sheet: the catalogue with the tour's
             // brazier and sphinx owned and standing, the rest priced.

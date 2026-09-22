@@ -1464,12 +1464,15 @@ struct GameScreen<Bar: View, Content: View>: View {
             // 12-point ink caption in the corner was the first thing that
             // said "app" on every screen.
             VStack(alignment: .leading, spacing: 0) {
+                // 19 points, and it shrinks to half before it truncates: at 21
+                // with a wide tracking the collection's crowded strip cut it
+                // to "COLLECT…" on run 204.
                 Text(title.uppercased())
-                    .font(Theme.display(21))
-                    .tracking(2.0)
+                    .font(Theme.display(19))
+                    .tracking(1.4)
                     .carved(glow: false)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.5)
                 if let subtitle {
                     Text(subtitle)
                         .font(Theme.body(11))
@@ -1672,7 +1675,7 @@ struct BarCount: View {
     var body: some View {
         HStack(spacing: 5) {
             if let itemKey, ItemArt.hasPainting(itemKey) {
-                ItemIcon(key: itemKey, size: 22, glow: false)
+                ItemIcon(key: itemKey, size: 18, glow: false)
                     .shadow(color: .black.opacity(0.4), radius: 1, y: 1)
             } else if let systemImage {
                 Image(systemName: systemImage)
@@ -1680,14 +1683,15 @@ struct BarCount: View {
                     .foregroundStyle(tint == Theme.textSecondary ? Theme.onGlassDim : tint)
             }
             Text(value)
-                .font(Theme.numeric(14))
+                .font(Theme.numeric(12.5))
                 .foregroundStyle(Theme.onGlass)
                 .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, 10)
         .frame(height: ScreenChrome.control)
         .background(BarWell())
+        .fixedSize()
     }
 }
 
@@ -1735,21 +1739,27 @@ struct BarWallet: View {
         // A dark inset well ringed in gold with the painted coin, crystal
         // and bolt at 22 points (2026-09-22): the genre's currency bar,
         // where a cream pill with 13-point glyphs read as a form field.
-        HStack(spacing: 12) {
+        // The well never truncates its numbers (run 204's Missions strip
+        // read "79… 7… 2…"): it takes its full width and the strip's title
+        // shrinks instead.
+        HStack(spacing: 9) {
             ForEach(Array(shows.enumerated()), id: \.offset) { _, kind in
-                HStack(spacing: 5) {
-                    ItemIcon(key: key(kind), size: 22, tint: tint(kind), glow: false)
+                HStack(spacing: 4) {
+                    ItemIcon(key: key(kind), size: 18, tint: tint(kind), glow: false)
                         .shadow(color: .black.opacity(0.4), radius: 1, y: 1)
                     Text(value(kind))
-                        .font(Theme.numeric(14))
+                        .font(Theme.numeric(12.5))
                         .foregroundStyle(Theme.onGlass)
                         .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
+                        .lineLimit(1)
                 }
             }
         }
-        .padding(.horizontal, 13)
+        .padding(.horizontal, 10)
         .frame(height: ScreenChrome.control)
         .background(BarWell())
+        .fixedSize()
+        .layoutPriority(1)
     }
 
     private func key(_ kind: Kind) -> String {

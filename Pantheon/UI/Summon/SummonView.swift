@@ -135,6 +135,10 @@ struct SummonView: View {
         }
         .frame(width: Self.menuWidth)
         .frame(maxHeight: .infinity)
+        .mask(
+            LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.88),
+                                   .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
+        )
         .background(railPlate)
     }
 
@@ -366,7 +370,7 @@ struct SummonView: View {
                 pityReading(label: "5★", value: pity.sinceLegendary, cap: cap, tint: Theme.gold)
             }
             if let cap = selectedBanner.rarePity {
-                pityReading(label: "4★+", value: pity.sinceRare, cap: cap, tint: Theme.textSecondary)
+                pityReading(label: "4★+", value: pity.sinceRare, cap: cap, tint: Theme.onGlassDim)
             }
             if pity.featuredGuaranteed {
                 Image(systemName: "checkmark.seal.fill")
@@ -392,9 +396,10 @@ struct SummonView: View {
             Text(label)
                 .font(Theme.body(10).weight(.black))
                 .foregroundStyle(tint)
+            // On the glass chip: ink here was invisible on run 204 ("5★ …").
             Text("in \(max(1, cap - value))")
                 .font(Theme.numeric(11))
-                .foregroundStyle(Theme.textPrimary)
+                .foregroundStyle(Theme.onGlass)
         }
     }
 
