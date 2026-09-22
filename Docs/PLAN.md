@@ -6397,7 +6397,7 @@ the energy clock). Phase 3 moves the social layer from CloudKit's public
 database onto these tables. A guest who binds to an Apple ID leaves his
 anonymous user's row behind (harmless; a sweep or a user link is a later
 migration). CI never touches the backend: the tour is the fixed guest with
-the plist ignored, so run 199's frames show the same Account panel as
+the plist ignored, so run 200's frames show the same Account panel as
 before, with "Pantheon Cloud" appearing only on a phone whose plist is
 filled. `supabase.com` is closed to this environment, so the migration is
 applied by the owner in the dashboard's SQL editor (BACKEND.md §1, eight
