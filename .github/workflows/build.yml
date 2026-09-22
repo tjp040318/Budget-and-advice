@@ -34,7 +34,8 @@ jobs:
     runs-on: macos-15
     # The build is ~2 min, the test target ~6–10 (its compile, not its
     # tests, which run in twenty seconds), the tour ~25–28: run 161 sat at
-    # 38–41 against a limit of 40.
+    # 38–41 against a limit of 40. Phase B's 26 relaunches (2026-09-22) add
+    # about 3.5 minutes to the tour, so about 45 at the worst.
     timeout-minutes: 55
     steps:
       - uses: actions/checkout@v4
@@ -112,6 +113,10 @@ jobs:
           # to one step (-tour-step N), waits for the screen to settle, and
           # photographs it; battle and reveal get several frames each.
           shoot() { xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || true; }
+          # Relaunches the step being photographed with more arguments — a
+          # room, a tab, a ledger (phase B, 2026-09-22: twenty-six of them).
+          # Reads the loop's $step when it is called.
+          again() { xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step "$@" >/dev/null; }
           xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
@@ -212,6 +217,103 @@ jobs:
                 sleep 5; shoot "$step-${names[$step]}"
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-island-zoom 1.5 >/dev/null
                 sleep 6; shoot "$step-${names[$step]}-zoomed" ;;
+              # Phase B (2026-09-22): every rebuilt screen in the states its
+              # plain frame cannot show. The plain frame keeps its old name,
+              # so a run still compares with the one before; the relaunches
+              # are new names beside it. About 26 relaunches, 3.5 minutes.
+              #
+              # The unit sheet on the seed's awakened unit (its regalia at
+              # III): the unlocked regalia plate and the awakening line.
+              detail)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-detail awakened; sleep 5; shoot "$step-${names[$step]}-b" ;;
+              # The Hall of Ka's other three ledgers: the offering Auto chose,
+              # the evolution, and the fusion board — six seconds, so the
+              # prize's mesh has loaded onto the altar.
+              training)
+                sleep 5; shoot "$step-${names[$step]}"
+                for m in feed evolve fuse; do
+                  again -tour-training $m; sleep 6; shoot "$step-${names[$step]}-$m"
+                done ;;
+              # More's Diagnostics row, opened: where the model board and the
+              # console went when they left More's front page.
+              more)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-more diagnostics; sleep 5; shoot "$step-${names[$step]}-diagnostics" ;;
+              # The Halls on the brightest painting (Radiance, Olympus: can
+              # the glass be read?) and the darkest (Umbra, the Serpent Deep).
+              halls)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-dungeon hall_radiance; sleep 5; shoot "$step-${names[$step]}-radiance"
+                again -tour-dungeon hall_umbra; sleep 5; shoot "$step-${names[$step]}-umbra" ;;
+              # The bazaar's densest stall (ten wares, painted scrolls), and
+              # the Laurel exchange, which sits below the rail's fold: the
+              # rail must open scrolled to it.
+              shop)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-shop-stall scrolls; sleep 5; shoot "$step-${names[$step]}-scrolls"
+                again -tour-shop-stall laurel; sleep 5; shoot "$step-${names[$step]}-laurels" ;;
+              # The Duat's map with its scroll unrolled (story, yields,
+              # terms), and on Hell over the walked copy (the tier well's
+              # gold plate, Hell's grade and motes, the terms).
+              chapter_map)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-chapter-scroll; sleep 5; shoot "$step-${names[$step]}-scroll"
+                again -tour-tier hell; sleep 5; shoot "$step-${names[$step]}-hell" ;;
+              # The Feats: twenty-eight rows, the claimable ones first.
+              missions)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-missions-tab feats; sleep 5; shoot "$step-${names[$step]}-feats" ;;
+              # The Labyrinth's Halls and Tower wings, never photographed.
+              labyrinth)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-labyrinth-wing halls; sleep 5; shoot "$step-${names[$step]}-halls"
+                again -tour-labyrinth-wing tower; sleep 5; shoot "$step-${names[$step]}-tower" ;;
+              # The darkest dungeon (the Necropolis); the Vault's B1, three
+              # stars on the seed, for the room's Sweep; and its locked B10,
+              # the tallest drops plate — the height test.
+              dungeon)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-dungeon lab_necropolis; sleep 5; shoot "$step-${names[$step]}-necropolis"
+                again -tour-dungeon lab_colossus -tour-dungeon-floor 1; sleep 5; shoot "$step-${names[$step]}-mastered"
+                again -tour-dungeon lab_colossus -tour-dungeon-floor 10; sleep 5; shoot "$step-${names[$step]}-b10" ;;
+              # The boss stage's card: the BOSS eyebrow, the boss tile's tag,
+              # the boss's face on its medallion behind the dim.
+              stage_popup)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-popup-stage duat_1_5; sleep 5; shoot "$step-${names[$step]}-boss" ;;
+              # Athena's caret on the Collection door: proof that the tab
+              # bar's anchor reaches an overlay above the bar's inset.
+              guide)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-guide caret; sleep 5; shoot "$step-${names[$step]}-caret" ;;
+              # The plain frame is a real sweep's receipt over the Duat's map
+              # (under the tab bar, where the game shows it). Then the
+              # briefing alone, three ways: an unmastered three-wave campaign
+              # stage on the Hall of Two Truths, the mastered Duat 1-1 with
+              # Sweep live, and Labyrinth B10's six sets and BOSS wave.
+              sweep)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-briefing duat_1_4; sleep 5; shoot "$step-${names[$step]}-briefing"
+                again -tour-briefing duat_1_1; sleep 5; shoot "$step-${names[$step]}-briefing-sweep"
+                again -tour-briefing lab_colossus_10; sleep 5; shoot "$step-${names[$step]}-briefing-dungeon" ;;
+              # The dearest 5★ on the mileage counter, short of points.
+              mileage)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-mileage-pick dearest; sleep 5; shoot "$step-${names[$step]}-b" ;;
+              # The opening gift with a candidate lit and TAKE in gold.
+              selector)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-selector-pick first; sleep 5; shoot "$step-${names[$step]}-b" ;;
+              # The Umbra Titan: the rail scrolled to him and his three-line
+              # name whole, with the strip (title, Back, wallet) in place.
+              raids)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-raid raid_unwrapped_king; sleep 5; shoot "$step-${names[$step]}-umbra" ;;
+              # An ordinary week's band, a week after the Festival Monday.
+              events)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-events-week plain; sleep 5; shoot "$step-${names[$step]}-plain" ;;
               *)      sleep 5; shoot "$step-${names[$step]}" ;;
             esac
             echo "$(date -u +%T) ${names[$step]}"

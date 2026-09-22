@@ -1137,8 +1137,24 @@ final class GameStore: ObservableObject {
             // the gate's shut, the judgment far off, with pips under the
             // first three medallions.
             player.campaignProgress["duat_1"] = max(player.campaignProgress["duat_1"] ?? 0, 3)
+            // The Vault walked to B6 and the Hall of Embers to B2, so the
+            // dungeon rooms (tour steps 10 and 16, and their relaunches)
+            // photograph a floor rail in all three states — cleared with its
+            // pips, the current floor (B7, B3) and the locks beyond — where
+            // every frame through run 211 showed one open floor over a column
+            // of locks (2026-09-22, phase B). B1 at three stars is the floor
+            // the `-mastered` frame opens on for the room's Sweep. It moves
+            // the island's Labyrinth bubble and the Vault's card to B6/10.
+            player.campaignProgress["lab_colossus"] = max(player.campaignProgress["lab_colossus"] ?? 0, 6)
+            player.campaignProgress["hall_ember"] = max(player.campaignProgress["hall_ember"] ?? 0, 2)
             var stars = player.stageStars ?? [:]
-            for (stageID, pips) in [("duat_1_1", 3), ("duat_1_2", 3), ("duat_1_3", 2)] {
+            let pipsWalked: [(String, Int)] = [
+                ("duat_1_1", 3), ("duat_1_2", 3), ("duat_1_3", 2),
+                ("lab_colossus_1", 3), ("lab_colossus_2", 3), ("lab_colossus_3", 3),
+                ("lab_colossus_4", 2), ("lab_colossus_5", 3), ("lab_colossus_6", 1),
+                ("hall_ember_1", 3), ("hall_ember_2", 2),
+            ]
+            for (stageID, pips) in pipsWalked {
                 stars[stageID] = max(stars[stageID] ?? 0, pips)
             }
             player.stageStars = stars
@@ -1194,6 +1210,32 @@ final class GameStore: ObservableObject {
             }
             if offence.count == 4 {
                 player.arenaOffenseTeam = TeamPreset(name: "Arena Offense", unitIDs: offence)
+            }
+            // A full defence led by Zeus and a standing halfway up the ladder,
+            // so the arena's lobby (tour step 7) photographs what it is built
+            // to show: the Oracle's crest in its colour, the meter part way to
+            // Champion, a record, the attacks short of full with their refill
+            // clock running, and four faces on the defence. Run 211's frame
+            // was a fresh account — Initiate, 0–0, one defender, 10/10 — which
+            // exercised none of it (2026-09-22, phase B). The standing is
+            // seeded once, on a record no fight has touched, so a tour whose
+            // arena step fought keeps what it earned. It changes the pool the
+            // arena fight (step 8) draws from, since the pool is seeded by
+            // points, the island's arena bubble (7 attacks, not 10), and any
+            // board that reads the player's arena points.
+            let defence = ["zeus_ember", "sekhmet_umbra", "anubis_tide", UnitDatabase.starter.id].compactMap { id in
+                player.units.first { $0.blueprintID == id }?.id
+            }
+            if defence.count == 4 {
+                player.arenaDefenseTeam = TeamPreset(name: "Arena Defense", unitIDs: defence)
+            }
+            if player.arena.wins == 0 && player.arena.points == 1_000 {
+                player.arena.points = 1_860
+                player.arena.highestPoints = 1_905
+                player.arena.wins = 23
+                player.arena.losses = 9
+                player.arena.attacksRemaining = 7
+                player.arena.lastRefresh = Date().addingTimeInterval(-9 * 60)
             }
         }
     }

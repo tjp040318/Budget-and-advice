@@ -276,15 +276,39 @@ struct BundleImage: View {
 /// carried the label below the clip (2026-09-16). `Color.clear` is the
 /// size; the painting is an overlay on it, and an overlay is never
 /// measured. A missing painting draws nothing.
+///
+/// `focus` (2026-09-22, phase B) is the point of the painting that must stay
+/// in view when the cover crop cuts it, in 0…1 of the painting: a square
+/// painting on a 732 × 262 band shows 36% of its height, and the centred crop
+/// took the Arena's painted gods off at the neck (`focus` y 0.26 keeps their
+/// heads) and showed the bazaar's Forum as mostly floor (y 0.36 shows the
+/// temple and the arch). `.center`, the default, is the crop every earlier
+/// call site has always drawn, by the same code. The crop is solved in a
+/// `GeometryReader` inside the overlay, which is sized by the `Color.clear`,
+/// so nothing grows.
 struct PaintingFill: View {
     let name: String
+    var focus: UnitPoint = .center
 
     var body: some View {
         Color.clear
             .overlay {
-                if BundleImage.exists(name) {
-                    BundleImage(name: name)
-                        .aspectRatio(contentMode: .fill)
+                if focus == .center {
+                    if BundleImage.exists(name) {
+                        BundleImage(name: name)
+                            .aspectRatio(contentMode: .fill)
+                    }
+                } else if let image = BundleArt.image(name), image.size.width > 0, image.size.height > 0 {
+                    GeometryReader { frame in
+                        let scale = max(frame.size.width / image.size.width, frame.size.height / image.size.height)
+                        let width = image.size.width * scale
+                        let height = image.size.height * scale
+                        Image(uiImage: image)
+                            .resizable()
+                            .frame(width: width, height: height)
+                            .offset(x: (frame.size.width - width) * focus.x,
+                                    y: (frame.size.height - height) * focus.y)
+                    }
                 }
             }
             .clipped()
@@ -736,8 +760,7 @@ struct SkillIcon: View {
         ZStack {
             if socket {
                 RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
-                    .fill(LinearGradient(colors: [Color(hex: "#3B2F22"), Color(hex: "#181109")],
-                                         startPoint: .top, endPoint: .bottom))
+                    .fill(Theme.socketFill)
                     .overlay(
                         RoundedRectangle(cornerRadius: size * 0.22, style: .continuous)
                             .strokeBorder(Theme.goldDeep.opacity(dimmed ? 0.4 : 0.85), lineWidth: 1)
@@ -761,6 +784,77 @@ struct SkillIcon: View {
     }
 }
 
+// MARK: - The painted doors
+
+/// The painted chrome icons: `Portraits/tab_<key>.png`, one object per door —
+/// the five tabs (island, campaign, arena, summon, collection) and the island
+/// header's four (missions, allies, events, decor) — painted as one 3 × 3
+/// sheet on Meshy's nano-banana-pro and keyed off black by
+/// `tools/tab_icons.py`, the item icons' own cutter (PLAN.md, *The painted
+/// doors*, 2026-09-22). The five SF symbols in the tab bar were the loudest
+/// "app, not game" left. Until a file lands a door draws its glyph in the
+/// same socket, so nothing waits on art. `allKeys` is the set the tool and
+/// a test share.
+enum ChromeArt {
+    static func imageName(_ key: String) -> String { "tab_\(key)" }
+    static func hasPainting(_ key: String) -> Bool { !key.isEmpty && BundleArt.exists(imageName(key)) }
+
+    static let allKeys = ["island", "campaign", "arena", "summon", "collection",
+                          "missions", "allies", "events", "decor"]
+}
+
+/// A painted door: the object in a dark bronze socket (`Theme.socketFill`, a
+/// bronze rim, a lit top edge) or, until its painting ships, its glyph in
+/// cream (or `glyphTint`) in the same socket. Selected (`isOn`), the rim is
+/// the gold plate at 2.5, a warm light fills the socket and the medallion
+/// glows. No art is dimmed or desaturated in either state.
+///
+/// It is the TAB AND DOOR icon — `GameTabBar` at 38, the island header's
+/// doors at 36, More's tiles at 30 — and draws no button of its own; the
+/// caller wraps it. (The round bronze ACTION, a close or a back, is a
+/// different object and is not this.)
+struct MedallionIcon: View {
+    let key: String
+    let glyph: String
+    var size: CGFloat = 38
+    var isOn: Bool = false
+    var glyphTint: Color? = nil
+
+    var body: some View {
+        let rim: CGFloat = isOn ? 2.5 : 1.5
+        let art = size * 0.88
+        return ZStack {
+            Circle().fill(Theme.socketFill)
+            if isOn {
+                Circle()
+                    .fill(RadialGradient(colors: [Color(hex: "#FFD678").opacity(0.5), Color(hex: "#FFD678").opacity(0)],
+                                         center: .center, startRadius: 0, endRadius: size * 0.5))
+                    .padding(rim)
+            }
+            Circle()
+                .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.18), Color.white.opacity(0)],
+                                             startPoint: .top, endPoint: .center),
+                              lineWidth: 1)
+                .padding(rim)
+            if ChromeArt.hasPainting(key) {
+                BundleImage(name: ChromeArt.imageName(key), renderedAt: art * 1.1)
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: art, height: art)
+                    .shadow(color: Color.black.opacity(0.55), radius: 1.5, y: 1)
+            } else {
+                Image(systemName: glyph)
+                    .font(.system(size: size * 0.46, weight: .bold))
+                    .foregroundStyle(isOn ? AnyShapeStyle(Theme.goldText) : AnyShapeStyle(glyphTint ?? Theme.onGlass))
+            }
+            Circle().strokeBorder(isOn ? Theme.goldPlate : Theme.bronzeFrame, lineWidth: rim)
+        }
+        .frame(width: size, height: size)
+        .shadow(color: isOn ? Color(hex: "#FFD678").opacity(0.6) : Color.black.opacity(0.28),
+                radius: isOn ? 9 : 2.5, y: isOn ? 0 : 1.5)
+        .accessibilityHidden(true)
+    }
+}
+
 /// One reward, the genre's way: a socket with the item painted large in it,
 /// its count printed bold on the socket's corner, its stars under it when it
 /// has a grade, and its name in small type below. A relic is its own stone.
@@ -776,10 +870,25 @@ struct RewardTile: View {
     var relic: Relic? = nil
     var size: CGFloat = 64
     var showsTitle: Bool = true
+    /// A bundle painting drawn in the socket in place of the item icon — a
+    /// relic set's painted stone (`relic_<set>`), so each of a chapter's two
+    /// sets is its own drop tile in the stage popup (2026-09-22, phase B).
+    /// Nil, or a name not in the bundle, draws the item as before.
+    var imageName: String? = nil
+    /// A tile on dark glass (2026-09-22, phase B): a DARK socket
+    /// (`Theme.socketFill` in the bronze rim) and the name in cream. The
+    /// cream stone socket on a glass plate glared as a bright slab in the
+    /// mocks, and the ink name vanished on it. The popup, the briefing, the
+    /// Labyrinth's drops, the bazaar's deck and `GrantReceipt` set it.
+    var onGlass: Bool = false
     var onTap: (() -> Void)? = nil
 
+    /// `imageName` and `onGlass` stand BEFORE `onTap`, so `onTap` stays last
+    /// and a trailing closure still means it; every earlier call site passes
+    /// neither and draws as it did.
     init(key: String, title: String? = nil, amount: String? = nil, stars: Int? = nil, relic: Relic? = nil,
-         size: CGFloat = 64, showsTitle: Bool = true, onTap: (() -> Void)? = nil) {
+         size: CGFloat = 64, showsTitle: Bool = true, imageName: String? = nil, onGlass: Bool = false,
+         onTap: (() -> Void)? = nil) {
         self.key = key
         self.title = title
         self.amount = amount
@@ -787,13 +896,15 @@ struct RewardTile: View {
         self.relic = relic
         self.size = size
         self.showsTitle = showsTitle
+        self.imageName = imageName
+        self.onGlass = onGlass
         self.onTap = onTap
     }
 
     /// A grant, as the bazaar and the quests pay it.
-    init(grant: ShopService.Grant, size: CGFloat = 64, showsTitle: Bool = true) {
+    init(grant: ShopService.Grant, size: CGFloat = 64, showsTitle: Bool = true, onGlass: Bool = false) {
         self.init(key: ItemArt.key(for: grant), title: ItemArt.title(for: grant), amount: ItemArt.amount(for: grant),
-                  stars: ItemArt.stars(for: grant), size: size, showsTitle: showsTitle)
+                  stars: ItemArt.stars(for: grant), size: size, showsTitle: showsTitle, onGlass: onGlass)
     }
 
     private var corner: CGFloat { max(6, size * 0.16) }
@@ -810,6 +921,10 @@ struct RewardTile: View {
                 Group {
                     if let relic {
                         RelicIcon(relic: relic, size: size * 0.78, showsStars: false, showsLevel: false)
+                    } else if let imageName, BundleArt.exists(imageName) {
+                        BundleImage(name: imageName, renderedAt: size * 0.8)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: size * 0.8, height: size * 0.8)
                     } else {
                         ItemIcon(key: key, size: size * 0.74)
                     }
@@ -821,6 +936,9 @@ struct RewardTile: View {
                         font: Theme.numeric(max(10.5, size * 0.21)).weight(.black),
                         width: max(0.8, size * 0.016)
                     )
+                    // Its own width: "+2,000" overhangs the socket's corner
+                    // rather than reading "+2,0…" (run 211, the bazaar).
+                    .fixedSize()
                     .padding(.trailing, max(3, size * 0.07))
                     .padding(.bottom, max(2, size * 0.05))
                 }
@@ -832,7 +950,7 @@ struct RewardTile: View {
             if showsTitle, let title {
                 Text(title)
                     .font(Theme.body(max(9, size * 0.15)).weight(.semibold))
-                    .foregroundStyle(relic.map { $0.resolvedQuality.inkColor } ?? Theme.textPrimary)
+                    .foregroundStyle(relic.map { $0.resolvedQuality.inkColor } ?? (onGlass ? Theme.onGlass : Theme.textPrimary))
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
                     .frame(width: size * 1.35)
@@ -845,18 +963,19 @@ struct RewardTile: View {
     }
 
     /// The socket: the relic grid's stone plate in a bronze bevel, with a
-    /// graded thing's colour on the inner rim.
+    /// graded thing's colour on the inner rim — or, on glass, the dark
+    /// bronze well the painted icons sit in everywhere else over art.
     private var socket: some View {
         let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
         return shape
-            .fill(Theme.stonePlate)
+            .fill(onGlass ? Theme.socketFill : Theme.stonePlate)
             .overlay(shape.strokeBorder(Theme.bronzeFrame, lineWidth: max(1, size * 0.02)))
             .overlay(
                 shape
                     .strokeBorder((rarity?.glow ?? Color.clear).opacity(0.7), lineWidth: max(1, size * 0.03))
                     .padding(max(1, size * 0.02))
             )
-            .shadow(color: .black.opacity(0.18), radius: size * 0.05, y: size * 0.03)
+            .shadow(color: .black.opacity(onGlass ? 0.4 : 0.18), radius: size * 0.05, y: size * 0.03)
     }
 }
 
@@ -883,6 +1002,15 @@ struct UnitCard: View {
     static let paintedFrameFrom: CGFloat = 90
 
     private var showsPaintedFrame: Bool { size >= Self.paintedFrameFrom && rarity.hasPaintedFrame }
+
+    /// The name before its epithet: "Ares", not "Ares, Bane of Cities". An
+    /// awakened name's epithet cut the caption to "Anubis, Kee…" on seven of
+    /// run 211's frames (the collection, the team picker, the regalia, the
+    /// Hall of Ka, the sweep, the arena); the full name is on the unit
+    /// sheet. The critic's one line for every cream screen (2026-09-22).
+    private var captionName: String {
+        unit.name.split(separator: ",", maxSplits: 1).first.map { String($0) } ?? unit.name
+    }
 
     /// Everything the card wears — the badge, the sun, the lock, the crown,
     /// the stars and their band — scales with the card below 80 points, so
@@ -976,7 +1104,7 @@ struct UnitCard: View {
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
 
             VStack(spacing: 0) {
-                Text(unit.name)
+                Text(captionName)
                     .font(Theme.body(10).weight(.heavy))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
@@ -1181,7 +1309,9 @@ struct PrimaryButton: View {
                     .font(Theme.title(15))
                     .tracking(1.6)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    // 0.87 of 15 is 13.05, the title floor: at 0.8 a long
+                    // label went to 12 (three reviewers, 2026-09-22).
+                    .minimumScaleFactor(0.87)
             }
             // A bar, not a billboard: full width up to a hand's span, and
             // centred, so a landscape screen keeps its edges.
@@ -1208,14 +1338,14 @@ struct PrimaryButton: View {
     private var isGlass: Bool { style == .glass }
 
     private var rimColor: Color {
-        if !isEnabled { return Theme.stroke.opacity(0.6) }
+        if !isEnabled { return isGlass ? Theme.glassRim.opacity(0.35) : Theme.stroke.opacity(0.6) }
         if isGlass { return Theme.glassRim }
         if usesGoldPlate { return Color(hex: "#FFE9A8").opacity(0.55) }
         return Theme.goldDim.opacity(0.8)
     }
 
     private var labelColor: Color {
-        guard isEnabled else { return Theme.textSecondary }
+        guard isEnabled else { return isGlass ? Theme.onGlassDim : Theme.textSecondary }
         if isGlass { return Color(hex: "#FFE9A8") }
         // On gold (painted or drawn) ink is the only thing that reads. The
         // painted plain plate is cream marble with a gold border since the
@@ -1252,6 +1382,15 @@ struct PrimaryButton: View {
                 LinearGradient(colors: [.white.opacity(0.45), .clear],
                                startPoint: .top, endPoint: .center)
             )
+        } else if isGlass {
+            // A disabled glass button stays glass, dimmed (2026-09-22, phase
+            // B): the cream disabled plate was a cream slab over the painting
+            // — the summon screen's ×1 with no scrolls, the Night Market's
+            // Re-roll when divinity is short.
+            LinearGradient(
+                colors: [Color(hex: "#3A2C1A").opacity(0.5), Color(hex: "#150F0A").opacity(0.5)],
+                startPoint: .top, endPoint: .bottom
+            )
         } else {
             LinearGradient(colors: [Theme.surfaceHigh, Theme.surface],
                            startPoint: .top, endPoint: .bottom)
@@ -1281,6 +1420,15 @@ struct PrimaryButton: View {
             .allowsHitTesting(false)
         }
     }
+}
+
+extension PrimaryButton {
+    /// `PrimaryButton`'s true height since phase A: a 15-point title plus 13
+    /// points of padding above and below. `Theme.buttonHeight` still says 34
+    /// for the strip-height controls that rely on it; a box that reserves a
+    /// slot for a primary button, or a well that stands beside one
+    /// (`CostWell`), reserves this, so its layout is honest (2026-09-22).
+    static let height: CGFloat = 46
 }
 
 struct SectionHeader: View {
@@ -1333,23 +1481,38 @@ struct SectionHeader: View {
 }
 
 /// Shown wherever a list has nothing in it yet.
+///
+/// `onGlass` (2026-09-22, phase B) is the same empty state on a dark plate:
+/// the icon in the glass rim's gold, the title carved, the words in
+/// `onGlassDim` — ink on glass is invisible. The Hall of Ka's ledgers and the
+/// Arena's challengers use it.
 struct EmptyState: View {
     let icon: String
     let title: String
     let message: String
+    var onGlass: Bool = false
 
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 38, weight: .light))
-                .foregroundStyle(Theme.stroke)
-            Text(title.uppercased())
-                .font(Theme.title(16))
-                .tracking(1.2)
-                .foregroundStyle(Theme.textPrimary)
+                .foregroundStyle(onGlass ? Theme.glassRim : Theme.stroke)
+            Group {
+                if onGlass {
+                    Text(title.uppercased())
+                        .font(Theme.title(16))
+                        .tracking(1.2)
+                        .carved(glow: false)
+                } else {
+                    Text(title.uppercased())
+                        .font(Theme.title(16))
+                        .tracking(1.2)
+                        .foregroundStyle(Theme.textPrimary)
+                }
+            }
             Text(message)
                 .font(Theme.body(13))
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(onGlass ? Theme.onGlassDim : Theme.textSecondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
@@ -1605,7 +1768,7 @@ struct BarButton: View {
     /// Select, Lock and Free in ink-brown on the dark capsule, which read
     /// as disabled. Any other tint (danger, info, success) is itself.
     static func onWell(_ tint: Color) -> Color {
-        if tint == Theme.gold { return Color(hex: "#F3DFA6") }
+        if tint == Theme.gold { return Theme.onGlassGold }
         if tint == Theme.textPrimary || tint == Theme.textSecondary { return Theme.onGlass }
         return tint
     }
@@ -1683,7 +1846,7 @@ struct BarMenu<Content: View>: View {
                     .fixedSize()
                 Text(value)
                     .font(Theme.body(11).weight(.bold))
-                    .foregroundStyle(Color(hex: "#F3DFA6"))
+                    .foregroundStyle(Theme.onGlassGold)
                     .lineLimit(1)
                     .fixedSize()
                 Image(systemName: "chevron.down")
@@ -1902,111 +2065,5 @@ struct BarWell: View {
     }
 }
 
-/// A dark glass plate over art, with a gold rim and a lit top edge.
-struct GlassPlate: View {
-    var radius: CGFloat = Theme.cornerRadius
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: radius, style: .continuous)
-            .fill(Theme.glass)
-            .overlay(
-                RoundedRectangle(cornerRadius: radius, style: .continuous)
-                    .strokeBorder(Theme.glassRim, lineWidth: 1)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: max(0, radius - 1), style: .continuous)
-                    .strokeBorder(
-                        LinearGradient(colors: [Color.white.opacity(0.22), .clear], startPoint: .top, endPoint: .center),
-                        lineWidth: 1
-                    )
-                    .padding(1)
-            )
-            .shadow(color: Color.black.opacity(0.35), radius: 10, y: 4)
-    }
-}
-
-/// Rising motes of light over a painting — the launch screen's embers, for
-/// any hero screen. Drawn on one canvas, so a mote costs nothing.
-struct Motes: View {
-    var count: Int = 22
-    var color: Color = Color(hex: "#FFD678")
-    var seed: UInt64 = 900
-
-    private struct Mote {
-        let x: Double
-        let speed: Double
-        let phase: Double
-        let size: Double
-        let sway: Double
-    }
-
-    private var motes: [Mote] {
-        (0..<count).map { index in
-            var rng = SeededRandom(seed: seed + UInt64(index))
-            return Mote(
-                x: rng.double(in: 0.02...0.98),
-                speed: rng.double(in: 0.04...0.10),
-                phase: rng.double(in: 0...1),
-                size: rng.double(in: 1.2...3.0),
-                sway: rng.double(in: 8...26)
-            )
-        }
-    }
-
-    var body: some View {
-        let motes = self.motes
-        return TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
-            Canvas { context, size in
-                let t = timeline.date.timeIntervalSinceReferenceDate
-                for (index, mote) in motes.enumerated() {
-                    let travel = (t * mote.speed + mote.phase).truncatingRemainder(dividingBy: 1)
-                    let y = size.height * (1.05 - travel * 1.1)
-                    let x = size.width * mote.x + sin(t * 0.7 + Double(index)) * mote.sway
-                    let pulse = 0.25 + 0.55 * (0.5 + 0.5 * sin(t * 2.1 + Double(index) * 1.3))
-                    let fade = travel < 0.1 ? travel / 0.1 : (travel > 0.85 ? (1 - travel) / 0.15 : 1)
-                    let rect = CGRect(x: x - mote.size, y: y - mote.size, width: mote.size * 2, height: mote.size * 2)
-                    context.fill(Path(ellipseIn: rect), with: .color(color.opacity(pulse * fade)))
-                }
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
-
-/// Soft shafts of light falling from the upper left across a hall,
-/// drifting slowly and breathing.
-struct LightShafts: View {
-    var body: some View {
-        TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
-            Canvas { context, size in
-                let t = timeline.date.timeIntervalSinceReferenceDate
-                let shafts: [(x: Double, width: Double, alpha: Double)] = [
-                    (0.30, 0.09, 0.16), (0.47, 0.06, 0.11), (0.66, 0.11, 0.09),
-                ]
-                for (index, shaft) in shafts.enumerated() {
-                    let drift = sin(t * 0.13 + Double(index) * 2.1) * 0.02
-                    let top = (shaft.x + drift) * size.width
-                    let lean = size.width * 0.16
-                    let w = shaft.width * size.width
-                    var path = Path()
-                    path.move(to: CGPoint(x: top - w * 0.5, y: -4))
-                    path.addLine(to: CGPoint(x: top + w * 0.5, y: -4))
-                    path.addLine(to: CGPoint(x: top + w * 1.1 + lean, y: size.height + 4))
-                    path.addLine(to: CGPoint(x: top - w * 1.1 + lean, y: size.height + 4))
-                    path.closeSubpath()
-                    let breathe = 0.8 + 0.2 * sin(t * 0.4 + Double(index))
-                    context.fill(
-                        path,
-                        with: .linearGradient(
-                            Gradient(colors: [Color.white.opacity(shaft.alpha * breathe), Color.white.opacity(0)]),
-                            startPoint: CGPoint(x: top, y: 0),
-                            endPoint: CGPoint(x: top + lean, y: size.height * 0.9)
-                        )
-                    )
-                }
-            }
-        }
-        .blendMode(.plusLighter)
-        .allowsHitTesting(false)
-    }
-}
+// `GlassPlate`, `Motes` and `LightShafts` moved to Glass.swift with the rest
+// of the glass parts (2026-09-22, phase B).

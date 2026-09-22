@@ -37,8 +37,17 @@ extension View {
     }
 }
 
-/// Her portrait and her words: a bust at the left, a cream plate beside it,
-/// the line typed out rather than dropped in. A tap anywhere goes on.
+/// Her portrait and her words: a bust at the left, a plate of dark glass
+/// beside it, the line typed out rather than dropped in. A tap anywhere goes
+/// on.
+///
+/// Glass since phase B (2026-09-22, evening; PLAN.md, *Phase B of the premium
+/// pass*): she speaks over PLACES — the island, the Hall of Ka — and the rule
+/// is glass where words go over art. Run 211's guide frame had a cream slab
+/// across the island painting with her name as a small gold caption. Now the
+/// plate is `GlassPlate` at 0.86 (deep enough for a sentence over a bright
+/// beach), the words cream at 13, her name carved at 15, and Skip a glass
+/// bead rather than a word that could be missed.
 struct GuidePlate: View {
     let beat: LessonBeat
     let title: String
@@ -66,41 +75,51 @@ struct GuidePlate: View {
                 VStack(alignment: .leading, spacing: 5) {
                     HStack(spacing: 8) {
                         Text("ATHENA")
-                            .font(Theme.title(13))
-                            .foregroundStyle(Theme.gold)
+                            .font(Theme.title(15))
+                            .tracking(1.6)
+                            .carved()
+                            .lineLimit(1)
+                            .fixedSize()
+                        // The lesson's name, one line. It is the one thing
+                        // on the plate that gives way to the Skip bead.
                         Text(title)
-                            .font(Theme.body(10))
-                            .foregroundStyle(Theme.textSecondary)
+                            .font(Theme.body(11))
+                            .foregroundStyle(Theme.onGlassDim)
                             .lineLimit(1)
                         Spacer(minLength: 0)
                         if let onSkip {
-                            Button("Skip", action: onSkip)
-                                .font(Theme.body(10).weight(.semibold))
-                                .foregroundStyle(Theme.textSecondary)
-                                .buttonStyle(.plain)
+                            GlassBead(text: "Skip", systemImage: "forward.fill", tint: Theme.onGlassDim,
+                                      height: 24, action: onSkip)
                         }
                     }
                     Text(String(beat.says.prefix(shown)))
                         .font(Theme.body(13))
-                        .foregroundStyle(Theme.textPrimary)
+                        .foregroundStyle(Theme.onGlass)
+                        .lineSpacing(2)
                         .fixedSize(horizontal: false, vertical: true)
                         .frame(maxWidth: .infinity, alignment: .leading)
                     HStack(spacing: 4) {
                         Spacer(minLength: 0)
                         Text(finished ? (isLast ? "Tap to begin" : "Tap to go on") : " ")
-                            .font(Theme.body(10))
-                            .foregroundStyle(Theme.textSecondary)
+                            .font(Theme.body(11))
+                            .foregroundStyle(Theme.onGlassDim)
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 9, weight: .bold))
-                            .foregroundStyle(Theme.gold.opacity(finished ? 0.9 : 0))
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Theme.onGlassEyebrow.opacity(finished ? 0.95 : 0))
                     }
                 }
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .frame(minHeight: 96, alignment: .top)
-                .background(Theme.panel(Theme.tightCorner))
+                // At most a reading width: across a whole landscape phone a
+                // 13-point line ran past ninety characters.
+                .frame(maxWidth: 560, alignment: .leading)
+                .background(GlassPlate(radius: 14, opacity: 0.86))
                 .padding(.bottom, 14)
             }
+            // She stands at the left edge on a wide phone too, where the
+            // capped plate would otherwise centre the pair.
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 18)
             .padding(.bottom, 8)
         }
@@ -130,7 +149,9 @@ struct GuidePlate: View {
 
 /// The gold caret and the one line under it, sitting on the control the
 /// lesson named. Nothing here is tappable — the caret moves when the player
-/// does the thing, which is read off the save.
+/// does the thing, which is read off the save. The line is on the same dark
+/// glass as her plate (2026-09-22, phase B), so it is plainly her voice on a
+/// painted place and on a cream screen alike.
 struct GuideCaret: View {
     let prompt: String
     let target: CGRect
@@ -165,12 +186,13 @@ struct GuideCaret: View {
 
     private var line: some View {
         Text(prompt)
-            .font(Theme.body(11).weight(.semibold))
-            .foregroundStyle(Theme.textPrimary)
+            .font(Theme.body(12).weight(.semibold))
+            .foregroundStyle(Theme.onGlass)
             .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
-            .background(Theme.panel(Theme.tightCorner))
+            .background(GlassPlate(radius: Theme.tightCorner, opacity: 0.86))
     }
 }
 
@@ -276,6 +298,9 @@ struct LessonsView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
     @State private var replaying: Lesson?
+    /// The replay card's words, measured, so its scroll is exactly as tall
+    /// as they are up to its cap.
+    @State private var replayHeight: CGFloat = 120
 
     var body: some View {
         // The screen strip, like every other menu in the game: the title and
@@ -354,6 +379,13 @@ struct LessonsView: View {
     /// A replay is a CARD, not a pointer: the player may be standing on the
     /// island reading the lesson about a relic slot, and a caret aimed at a
     /// control that is not on this screen would be a caret that lies.
+    ///
+    /// Her words on her glass (2026-09-22, phase B), the plate she speaks on
+    /// over the island, so a lesson read again is the same object as the
+    /// lesson given; the list under it stays cream, since it is a list. A
+    /// long lesson scrolls inside the card: the card is an overlay on a
+    /// sheet, 329 points under the strip, and the longest lesson (the Night
+    /// Market's three beats and its prompt) all but fills that at 12 points.
     private func card(_ lesson: Lesson) -> some View {
         ZStack {
             Color.black.opacity(0.45)
@@ -364,31 +396,53 @@ struct LessonsView: View {
                     BundleImage(name: GuideFace.calm.imageName, renderedAt: 54)
                         .aspectRatio(contentMode: .fit)
                         .frame(width: 54, height: 54)
-                    Text(lesson.title)
+                    Text(lesson.title.uppercased())
                         .font(Theme.title(15))
-                        .foregroundStyle(Theme.gold)
+                        .tracking(1.2)
+                        .carved()
+                        .fixedSize(horizontal: false, vertical: true)
                     Spacer(minLength: 0)
                 }
-                ForEach(Array(lesson.beats.enumerated()), id: \.offset) { _, said in
-                    Text(said.says)
-                        .font(Theme.body(12))
-                        .foregroundStyle(Theme.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
+                // As tall as the words, up to 190: a ScrollView takes all
+                // the height it is offered, so the words are measured and
+                // the scroll given exactly that, and a short lesson's card
+                // does not stand half empty.
+                ScrollView(showsIndicators: false) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        ForEach(Array(lesson.beats.enumerated()), id: \.offset) { _, said in
+                            Text(said.says)
+                                .font(Theme.body(12))
+                                .foregroundStyle(Theme.onGlass)
+                                .lineSpacing(2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        if let prompt = lesson.prompt {
+                            Text(prompt)
+                                .font(Theme.body(11).weight(.semibold))
+                                .foregroundStyle(Theme.onGlassEyebrow)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.top, 2)
+                        }
+                    }
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear
+                                .onAppear { replayHeight = proxy.size.height }
+                                .onChange(of: proxy.size.height) { _, height in replayHeight = height }
+                        }
+                    )
                 }
-                if let prompt = lesson.prompt {
-                    Text(prompt)
-                        .font(Theme.body(11).weight(.semibold))
-                        .foregroundStyle(Theme.goldDeep)
-                        .padding(.top, 2)
-                }
+                .frame(height: min(max(replayHeight, 1), 190))
                 Text("Tap to close")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.onGlassDim)
             }
             .padding(16)
-            .frame(maxWidth: 420)
-            .background(Theme.panel(Theme.tightCorner))
+            .frame(maxWidth: 440)
+            .background(GlassPlate(radius: 14, opacity: 0.9))
             .onTapGesture { withAnimation { replaying = nil } }
+            .padding(.vertical, 12)
         }
     }
 }

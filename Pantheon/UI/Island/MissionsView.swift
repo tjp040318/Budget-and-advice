@@ -1,18 +1,36 @@
 import SwiftUI
 
-/// Missions, feats and the login gift: what the day asks for and what it
-/// pays. Opens from the scroll beside the wallet on the island and from More.
+/// Missions, Athena's counsel, feats and the login gift: what the day asks
+/// for and what it pays. Opens from the scroll beside the wallet on the
+/// island and from More.
 ///
-/// Landscape shape: the strip carries the tab (Daily / Feats), the tally and
-/// the wallet; the day's gift is one band across the top, and the list below
-/// runs in as many columns as the width holds, so a dozen rows sit in the
-/// frame at once where the navigation bar and the stacked panels used to leave
-/// room for five.
+/// A DATA screen, so it stays cream (PLAN.md, *Phase B of the premium pass*:
+/// a checklist of eight to thirty rows is a list, and lists are marble). What
+/// made run 211's frame read as a settings list was not the cream but the
+/// material: flat rows with 14-point glyphs and a 70 × 4 hairline, rewards
+/// as gold text although every reward has a painting, a Claim that was bare
+/// text on an invisible capsule, and the day's biggest prize ("Finish every
+/// mission") as the ninth row, under the fold. So, the marble board
+/// (2026-09-22, option E):
+///
+/// - a left column of CARDS that keep the prizes in view — today's gift with
+///   its seven days; the Daily Tribute, the chest for every mission of the
+///   day (Honkai Star Rail's and AFK Journey's daily track is the header of
+///   the list, never its last row); on the Counsel tab Athena herself, with
+///   the tier's blurb that used to truncate the strip ("Wake a g…"), and the
+///   tier's prize; on the Feats tab the tally;
+/// - one column of raised marble rows (`MarbleRowPlate`): a bronze medallion,
+///   the title at 14, a 7-point bar, the painted reward (`RewardTile`) and a
+///   real claim plate (`ClaimPlate`), lit gold when there is something to take;
+/// - the receipt as painted tiles (`GrantReceipt`) over the foot, where the
+///   green sentence it replaces pushed the whole list down.
 struct MissionsView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
-    @State private var receipt: String?
     @State private var tab: Tab
+    /// What the last claim paid, as tiles, and which claim showed them.
+    @State private var receipt: [ShopService.Grant] = []
+    @State private var receiptID = UUID()
 
     /// Which list the screen opens on. The island's scroll and More both want
     /// Daily; the CI tour wants the Counsel, which is the only way to
@@ -40,155 +58,332 @@ struct MissionsView: View {
         let id: String
         let icon: String
         let title: String
-        let reward: String
+        /// What it pays, drawn as its painting — it was a string of gold text.
+        let grant: ShopService.Grant
         let progress: Int
         let goal: Int
         let complete: Bool
         let claimed: Bool
-        /// Feats claim through `claimFeat`, missions (and the all-missions
-        /// bonus) through `claimMission`, the Counsel through `claimCounsel`.
+        /// Feats claim through `claimFeat`, missions through `claimMission`,
+        /// the Counsel through `claimCounsel`.
         let source: Source
     }
 
-    /// The two lists, as the strip's segmented switch.
+    /// The three lists, as the strip's segmented switch.
     private let tabs: [(value: Tab, title: String)] = [
         (value: .missions, title: "Daily"),
         (value: .counsel, title: "Counsel"),
         (value: .feats, title: "Feats"),
     ]
 
-    /// Two columns of rows on a landscape phone, one on anything narrower.
-    private let columns = [GridItem(.adaptive(minimum: 300), spacing: 8)]
+    /// The cards' column. 236 holds "HIEROPHANT PRIZE" and its "10 / 10" on
+    /// one line (197 of the 212 inside), seven 24-point day pips (192), and
+    /// Athena's blurb in three lines beside her bust; it leaves the rows 478
+    /// on an iPhone 16 Pro, 248 of it for a title.
+    private static let cardColumn: CGFloat = 236
 
     var body: some View {
         NavigationStack {
             GameScreen("Missions", subtitle: subtitle, dismiss: { dismiss() }) {
+                // The tally that sat here is on the cards now, where it says
+                // what it counts.
                 BarSegments(options: tabs, selection: $tab)
-                BarCount(value: tally, systemImage: "checkmark.seal.fill", tint: Theme.gold)
                 BarWallet(wallet: store.player.wallet)
             } content: {
-                VStack(spacing: 8) {
-                    loginBand
-                    if let receipt {
-                        receiptBanner(receipt)
-                    }
+                HStack(alignment: .top, spacing: 12) {
+                    cards
+                        .frame(width: Self.cardColumn)
                     list
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
-                .padding(.vertical, 8)
+                .padding(.top, 10)
+                .overlay(alignment: .bottom) {
+                    receiptOverlay
+                }
             }
         }
     }
 
     // MARK: - Strip
 
+    /// Short, so it never truncates: the counsel's 57-character blurb moved
+    /// onto Athena's card.
     private var subtitle: String {
         switch tab {
-        case .missions: return "Missions reset at midnight"
-        case .counsel: return CounselService.currentTier(for: store.player).blurb
+        case .missions: return "Resets at midnight"
+        case .counsel: return "Athena's counsel · " + CounselService.currentTier(for: store.player).title
         case .feats: return "Feats of a lifetime"
         }
     }
 
-    private var tally: String {
-        let player = store.player
-        switch tab {
-        case .missions:
-            let claimed = QuestService.missions.filter { QuestService.isMissionClaimed($0.id, player: player) }.count
-            return "\(claimed)/\(QuestService.missions.count)"
-        case .counsel:
-            let tier = CounselService.currentTier(for: player)
-            let steps = CounselService.steps(in: tier)
-            let claimed = steps.filter { CounselService.isClaimed($0.id, player: player) }.count
-            return "\(tier.title) \(claimed)/\(steps.count)"
-        case .feats:
-            let claimed = QuestService.feats.filter { QuestService.isFeatClaimed($0.id, player: player) }.count
-            return "\(claimed)/\(QuestService.feats.count)"
+    // MARK: - The cards
+
+    /// Two cards per tab, the day's prizes always in view. The column scrolls
+    /// only if a short phone cannot hold it (it measures 297 of the 311
+    /// points an iPhone 16 Pro gives it on the Daily tab).
+    private var cards: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 10) {
+                switch tab {
+                case .missions:
+                    giftCard
+                    tributeCard
+                case .counsel:
+                    athenaCard
+                    prizeCard
+                case .feats:
+                    giftCard
+                    featsCard
+                }
+            }
+            .padding(.bottom, 12)
         }
     }
 
-    // MARK: - The login gift
-
-    /// Seven day tiles, the day's reward and the claim, in one band rather than
-    /// the tall panel the portrait layout used.
-    private var loginBand: some View {
+    /// Today's login gift: the thing, what it is, the seven days as pips, and
+    /// the claim. The band it replaces had 34 × 36 day tiles with 16-point
+    /// icons, the gift as plain text, and day seven looking like day two.
+    private var giftCard: some View {
         let player = store.player
-        let day = max(1, player.loginStreak?.day ?? 1)
-        let claimed = QuestService.isLoginGiftClaimed(player: player)
         let gifts = QuestService.loginGifts
-        let today = gifts[max(0, min(gifts.count - 1, day - 1))]
-        return HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 1) {
-                Text("TODAY'S GIFT")
-                    .font(Theme.body(10).weight(.black))
-                    .tracking(1.0)
-                    .foregroundStyle(Theme.goldDim)
-                Text("Day \(day) of \(gifts.count)")
-                    .font(Theme.numeric(10))
-                    .foregroundStyle(Theme.textSecondary)
+        let day = max(1, min(gifts.count, player.loginStreak?.day ?? 1))
+        let claimed = QuestService.isLoginGiftClaimed(player: player)
+        let today = gifts[day - 1]
+        return VStack(alignment: .leading, spacing: 6) {
+            cardHeader("Today's gift", tally: "Day \(day) / \(gifts.count)")
+            HStack(spacing: 10) {
+                RewardTile(grant: today, size: 44, showsTitle: false)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(ItemArt.title(for: today))
+                        .font(Theme.body(13).weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text("A missed day starts the seven over.")
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             HStack(spacing: 4) {
                 ForEach(gifts.indices, id: \.self) { index in
-                    dayTile(index: index, day: day, claimed: claimed, gifts: gifts)
+                    let number = index + 1
+                    GiftDayPip(
+                        key: ItemArt.key(for: gifts[index]),
+                        taken: number < day || (number == day && claimed),
+                        isToday: number == day,
+                        isLast: index == gifts.count - 1
+                    )
                 }
             }
-            Spacer(minLength: 6)
-            VStack(alignment: .trailing, spacing: 1) {
-                Text(ShopService.describe(today))
-                    .font(Theme.body(12).weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                // Short enough to survive an SE-class landscape width beside
-                // seven tiles and the button; the long form truncated there.
-                Text("A missed day starts the seven over.")
-                    .font(Theme.body(9))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            claimButton(title: claimed ? "Claimed" : "Claim", enabled: !claimed) {
+            ClaimPlate(status: claimed ? .done : .ready) {
                 if let grants = store.claimLoginGift() { paid(grants) }
             }
         }
-        .padding(8)
-        .panelBackground()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(MarbleRowPlate(isLit: !claimed, radius: Theme.cornerRadius))
     }
 
-    private func dayTile(index: Int, day: Int, claimed: Bool, gifts: [ShopService.Grant]) -> some View {
-        let number = index + 1
-        let taken = number < day || (number == day && claimed)
-        let isToday = number == day
-        return VStack(spacing: 2) {
-            ItemIcon(key: ItemArt.key(for: gifts[index]), size: 16,
-                     tint: taken ? Theme.ink : (isToday ? Theme.gold : Theme.textSecondary), glow: false)
-            Text("\(number)")
-                .font(Theme.numeric(9))
-                .foregroundStyle(taken ? Theme.ink : Theme.textSecondary)
+    /// The day's biggest prize, the chest for every mission claimed, with
+    /// its track of eight — it was the ninth row of the list.
+    private var tributeCard: some View {
+        let player = store.player
+        let total = QuestService.missions.count
+        let claimed = QuestService.missions.filter { QuestService.isMissionClaimed($0.id, player: player) }.count
+        let done = QuestService.isMissionClaimed(QuestService.allMissionsID, player: player)
+        let ready = QuestService.allMissionsClaimable(player)
+        return VStack(alignment: .leading, spacing: 6) {
+            cardHeader("Daily tribute", tally: "\(claimed) / \(total)")
+            HStack(spacing: 10) {
+                ItemIcon(key: "chest_gold", size: 44, glow: ready)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Every mission of the day")
+                        .font(Theme.body(12).weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    segmentTrack(filled: claimed, total: total)
+                }
+            }
+            prizeRow(QuestService.allMissionsBonus, status: claimStatus(claimed: done, ready: ready)) {
+                if let grants = store.claimMission(QuestService.allMissionsID) { paid(grants) }
+            }
         }
-        .frame(width: 34, height: 36)
-        .background(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .fill(taken ? Theme.gold : (isToday ? Theme.surfaceHigh : Theme.surface))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .strokeBorder(isToday ? Theme.gold : Theme.stroke, lineWidth: 1)
-        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(MarbleRowPlate(isLit: ready, radius: Theme.cornerRadius))
+    }
+
+    /// Athena presents her own counsel: her bust (the four faces ship with
+    /// alpha and the tab never showed one), the tier carved, and the tier's
+    /// line in full. Pleased when something of hers is waiting to be taken.
+    private var athenaCard: some View {
+        let player = store.player
+        let tier = CounselService.currentTier(for: player)
+        let waiting = CounselService.steps(in: tier).contains {
+            CounselService.isComplete($0, player: player) && !CounselService.isClaimed($0.id, player: player)
+        } || CounselService.isPrizeReady(tier, player: player)
+        let face: GuideFace = waiting ? .pleased : .calm
+        return VStack(alignment: .leading, spacing: 6) {
+            cardHeader("Athena's counsel", tally: nil)
+            HStack(alignment: .top, spacing: 10) {
+                ZStack {
+                    Circle().fill(Theme.socketFill)
+                    BundleImage(name: face.imageName, renderedAt: 64)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 64, height: 64)
+                }
+                .frame(width: 64, height: 64)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 1.5))
+                .shadow(color: Color.black.opacity(0.2), radius: 3, y: 2)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(tier.title.uppercased())
+                        .font(Theme.title(15))
+                        .tracking(0.8)
+                        .carved(glow: false)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text(tier.blurb)
+                        .font(Theme.body(12))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(MarbleRowPlate(isLit: waiting, radius: Theme.cornerRadius))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// The tier's own prize, for every step of it claimed — the Counsel list's
+    /// last row before, below the fold.
+    private var prizeCard: some View {
+        let player = store.player
+        let tier = CounselService.currentTier(for: player)
+        let steps = CounselService.steps(in: tier)
+        let claimed = steps.filter { CounselService.isClaimed($0.id, player: player) }.count
+        let done = CounselService.isClaimed(tier.prizeID, player: player)
+        let ready = CounselService.isPrizeReady(tier, player: player)
+        return VStack(alignment: .leading, spacing: 6) {
+            cardHeader("\(tier.title) prize", tally: "\(claimed) / \(steps.count)")
+            HStack(spacing: 10) {
+                ItemIcon(key: "chest_gold", size: 44, glow: ready)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text("Every counsel of the tier")
+                        .font(Theme.body(12).weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    segmentTrack(filled: claimed, total: steps.count)
+                }
+            }
+            prizeRow(tier.prize, status: claimStatus(claimed: done, ready: ready)) {
+                claimCounsel(tier.prizeID)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(MarbleRowPlate(isLit: ready, radius: Theme.cornerRadius))
+    }
+
+    /// The feats' tally, and how many are waiting. Feats have no prize of
+    /// their own; each row is its own.
+    private var featsCard: some View {
+        let player = store.player
+        let total = QuestService.feats.count
+        let claimed = QuestService.feats.filter { QuestService.isFeatClaimed($0.id, player: player) }.count
+        let waiting = QuestService.feats.filter {
+            QuestService.isFeatComplete($0, player: player) && !QuestService.isFeatClaimed($0.id, player: player)
+        }.count
+        return VStack(alignment: .leading, spacing: 8) {
+            cardHeader("Feats", tally: "\(claimed) / \(total)")
+            StatBar(value: Double(claimed), maximum: Double(max(1, total)), tint: Theme.gold, height: 7)
+            Text(waiting == 0 ? "Nothing waiting to claim" : "\(waiting) ready to claim")
+                .font(Theme.body(12).weight(waiting == 0 ? .regular : .semibold))
+                .foregroundStyle(waiting == 0 ? Theme.textSecondary : Theme.textPrimary)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(MarbleRowPlate(isLit: waiting > 0, radius: Theme.cornerRadius))
+    }
+
+    // MARK: - The cards' parts
+
+    /// A card's name in carved-ink capitals and its tally at the right, both
+    /// at their own width.
+    private func cardHeader(_ title: String, tally: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(title.uppercased())
+                .font(Theme.title(13))
+                .tracking(1.2)
+                .foregroundStyle(Theme.goldDim)
+                .lineLimit(1)
+                .fixedSize()
+            Spacer(minLength: 4)
+            if let tally {
+                Text(tally)
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+    }
+
+    /// One segment per step, gold when claimed.
+    private func segmentTrack(filled: Int, total: Int) -> some View {
+        HStack(spacing: 3) {
+            ForEach(0..<max(1, total), id: \.self) { index in
+                Capsule()
+                    .fill(index < filled ? Theme.gold : Theme.stroke.opacity(0.7))
+                    .frame(height: 6)
+            }
+        }
+    }
+
+    /// A prize's tiles and its claim, on one line: two parts at 38, three at
+    /// 34, so the Hierophant's three and an 88-point claim fit the 212
+    /// inside a card.
+    private func prizeRow(_ grant: ShopService.Grant, status: ClaimStatus, action: @escaping () -> Void) -> some View {
+        let parts = Self.parts(of: grant)
+        return HStack(spacing: 5) {
+            ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                RewardTile(grant: part, size: parts.count > 2 ? 34 : 38, showsTitle: false)
+            }
+            Spacer(minLength: 6)
+            ClaimPlate(status: status, action: action)
+                .frame(width: 88)
+        }
     }
 
     // MARK: - The list
 
     private var list: some View {
-        ScrollView {
-            LazyVGrid(columns: columns, spacing: 8) {
+        ScrollView(showsIndicators: false) {
+            LazyVStack(spacing: 6) {
                 ForEach(entries) { entry in
                     row(entry)
                 }
             }
-            .padding(.vertical, 2)
+            // Room for a lit row's glow, which the scroll view would clip.
+            .padding(.horizontal, 3)
+            .padding(.top, 3)
+            .padding(.bottom, 16)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .mask(
+            VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 16)
+            }
+        )
     }
 
     private var entries: [Entry] {
@@ -199,16 +394,16 @@ struct MissionsView: View {
         }
     }
 
+    /// The day's eight, claimable first, then in progress, then done. The
+    /// all-missions bonus is the tribute card, not a row.
     private var missionEntries: [Entry] {
         let player = store.player
-        let claimedCount = QuestService.missions.filter { QuestService.isMissionClaimed($0.id, player: player) }.count
-        let bonusClaimed = QuestService.isMissionClaimed(QuestService.allMissionsID, player: player)
-        var rows = QuestService.missions.map { mission in
+        let rows = QuestService.missions.map { mission in
             Entry(
                 id: mission.id,
                 icon: mission.icon,
                 title: mission.title,
-                reward: ShopService.describe(mission.reward),
+                grant: mission.reward,
                 progress: QuestService.progress(of: mission, player: player),
                 goal: mission.goal,
                 complete: QuestService.isMissionComplete(mission, player: player),
@@ -216,32 +411,24 @@ struct MissionsView: View {
                 source: .mission
             )
         }
-        rows.append(
-            Entry(
-                id: QuestService.allMissionsID,
-                icon: "checkmark.seal.fill",
-                title: "Finish every mission",
-                reward: ShopService.describe(QuestService.allMissionsBonus),
-                progress: claimedCount,
-                goal: QuestService.missions.count,
-                complete: QuestService.allMissionsClaimable(player) || bonusClaimed,
-                claimed: bonusClaimed,
-                source: .mission
-            )
-        )
-        return rows
+        return rows.enumerated()
+            .sorted { lhs, rhs in
+                let left = Self.rank(complete: lhs.element.complete, claimed: lhs.element.claimed)
+                let right = Self.rank(complete: rhs.element.complete, claimed: rhs.element.claimed)
+                return left == right ? lhs.offset < rhs.offset : left < right
+            }
+            .map(\.element)
     }
 
     /// Claimable first, then in progress, then done.
     private var featEntries: [Entry] {
         let player = store.player
-        let ordered = QuestService.feats.sorted { rank($0, player) < rank($1, player) }
-        return ordered.map { feat in
+        let rows = QuestService.feats.map { feat in
             Entry(
                 id: feat.id,
                 icon: feat.icon,
                 title: feat.title,
-                reward: ShopService.describe(feat.reward),
+                grant: feat.reward,
                 progress: QuestService.progress(of: feat, player: player),
                 goal: feat.goal,
                 complete: QuestService.isFeatComplete(feat, player: player),
@@ -249,20 +436,27 @@ struct MissionsView: View {
                 source: .feat
             )
         }
+        return rows.enumerated()
+            .sorted { lhs, rhs in
+                let left = Self.rank(complete: lhs.element.complete, claimed: lhs.element.claimed)
+                let right = Self.rank(complete: rhs.element.complete, claimed: rhs.element.claimed)
+                return left == right ? lhs.offset < rhs.offset : left < right
+            }
+            .map(\.element)
     }
 
-    /// The tier the player is on, its steps in the order Athena set them, and
-    /// the tier's own prize as the last row. Showing all thirty at once would
-    /// be the feats list again, which is the thing this exists to replace.
+    /// The tier the player is on, its steps in the order Athena set them.
+    /// The tier's prize is its own card. Showing all thirty at once would be
+    /// the feats list again, which is the thing this exists to replace.
     private var counselEntries: [Entry] {
         let player = store.player
         let tier = CounselService.currentTier(for: player)
-        var rows = CounselService.steps(in: tier).map { step in
+        return CounselService.steps(in: tier).map { step in
             Entry(
                 id: step.id,
                 icon: step.icon,
                 title: step.title,
-                reward: ShopService.describe(step.reward),
+                grant: step.reward,
                 progress: CounselService.progress(of: step, player: player),
                 goal: step.goal,
                 complete: CounselService.isComplete(step, player: player),
@@ -270,116 +464,171 @@ struct MissionsView: View {
                 source: .counsel
             )
         }
-        let claimedSteps = rows.filter(\.claimed).count
-        rows.append(
-            Entry(
-                id: tier.prizeID,
-                icon: "laurel.leading",
-                title: "\(tier.title): every counsel taken",
-                reward: ShopService.describe(tier.prize),
-                progress: claimedSteps,
-                goal: rows.count,
-                complete: CounselService.isPrizeReady(tier, player: player)
-                    || CounselService.isClaimed(tier.prizeID, player: player),
-                claimed: CounselService.isClaimed(tier.prizeID, player: player),
-                source: .counsel
-            )
-        )
-        return rows
     }
 
-    private func rank(_ feat: QuestService.Feat, _ player: Player) -> Int {
-        if QuestService.isFeatClaimed(feat.id, player: player) { return 2 }
-        return QuestService.isFeatComplete(feat, player: player) ? 0 : 1
+    /// 0 waiting to be claimed, 1 in progress, 2 claimed. A stable sort on
+    /// it keeps each group in the order the game wrote it.
+    private static func rank(complete: Bool, claimed: Bool) -> Int {
+        if claimed { return 2 }
+        return complete ? 0 : 1
     }
 
-    // MARK: - Parts
+    // MARK: - A row
 
+    /// One row of the board: the bronze medallion (gold and glowing when
+    /// there is something to take), the title at 14 on up to two lines — the
+    /// longest counsel is "Claim a tribute chest on a chapter's road", 268
+    /// points against the row's 248 — the bar, the painted reward and the
+    /// claim plate.
     private func row(_ entry: Entry) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: entry.icon)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(entry.claimed ? Theme.textSecondary : Theme.gold)
-                .frame(width: 24)
-            VStack(alignment: .leading, spacing: 3) {
+        let lit = entry.complete && !entry.claimed
+        return HStack(spacing: 12) {
+            MedallionIcon(key: "", glyph: entry.claimed ? "checkmark" : entry.icon, size: 38, isOn: lit)
+            VStack(alignment: .leading, spacing: 6) {
                 Text(entry.title)
-                    .font(Theme.body(12).weight(.semibold))
-                    .foregroundStyle(entry.claimed ? Theme.textSecondary : Theme.textPrimary)
-                    .lineLimit(1)
-                HStack(spacing: 6) {
+                    .font(Theme.body(14).weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
                     StatBar(
                         value: Double(entry.progress),
                         maximum: Double(max(1, entry.goal)),
                         tint: entry.complete ? Theme.success : Theme.gold,
-                        height: 4
+                        height: 7
                     )
-                    .frame(width: 70)
-                    Text("\(entry.progress)/\(entry.goal)")
-                        .font(Theme.numeric(10))
+                    .frame(maxWidth: 150)
+                    Text("\(min(entry.progress, entry.goal)) / \(entry.goal)")
+                        .font(Theme.numeric(12))
                         .foregroundStyle(Theme.textSecondary)
-                    Text(entry.reward)
-                        .font(Theme.body(10))
-                        .foregroundStyle(Theme.goldDim)
                         .lineLimit(1)
+                        .fixedSize()
                 }
             }
-            Spacer(minLength: 4)
-            claimButton(title: entry.claimed ? "Done" : "Claim", enabled: entry.complete && !entry.claimed) {
+            Spacer(minLength: 8)
+            rewardTiles(entry.grant)
+            ClaimPlate(status: claimStatus(claimed: entry.claimed, ready: entry.complete)) {
                 claim(entry)
             }
+            .frame(width: 92)
         }
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(entry.complete && !entry.claimed ? Theme.surfaceHigh : Theme.surface)
-        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .frame(minHeight: 62)
+        .background(MarbleRowPlate(isLit: lit))
+        .opacity(entry.claimed ? 0.62 : 1)
     }
+
+    /// A reward as its painting: one tile, or a two-part bundle (a chapter's
+    /// feat pays divinity and a scroll) as its two, so neither reads as a
+    /// gift box marked "×2".
+    @ViewBuilder
+    private func rewardTiles(_ grant: ShopService.Grant) -> some View {
+        let parts = Self.parts(of: grant)
+        if parts.count == 2 {
+            HStack(spacing: 4) {
+                ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
+                    RewardTile(grant: part, size: 40, showsTitle: false)
+                }
+            }
+        } else {
+            RewardTile(grant: grant, size: 46, showsTitle: false)
+        }
+    }
+
+    /// A bundle flattened into its grants; anything else is itself.
+    private static func parts(of grant: ShopService.Grant) -> [ShopService.Grant] {
+        if case .bundle(let parts) = grant { return parts }
+        return [grant]
+    }
+
+    private func claimStatus(claimed: Bool, ready: Bool) -> ClaimStatus {
+        if claimed { return .done }
+        return ready ? .ready : .waiting
+    }
+
+    // MARK: - Claiming
 
     private func claim(_ entry: Entry) {
-        let grants: [ShopService.Grant]?
         switch entry.source {
-        case .mission: grants = store.claimMission(entry.id)
-        case .counsel: grants = store.claimCounsel(entry.id)
-        case .feat: grants = store.claimFeat(entry.id)
+        case .mission:
+            if let grants = store.claimMission(entry.id) { paid(grants) }
+        case .counsel:
+            claimCounsel(entry.id)
+        case .feat:
+            if let grants = store.claimFeat(entry.id) { paid(grants) }
         }
-        if let grants { paid(grants) }
     }
 
-    private func receiptBanner(_ text: String) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(Theme.success)
-            Text(text)
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(1)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.success.opacity(0.12))
-        )
+    private func claimCounsel(_ id: String) {
+        if let grants = store.claimCounsel(id) { paid(grants) }
     }
 
-    private func claimButton(title: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(Theme.body(11).weight(.bold))
-                .foregroundStyle(enabled ? Theme.ink : Theme.textSecondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(Capsule().fill(enabled ? Theme.gold : Theme.surface))
+    @ViewBuilder
+    private var receiptOverlay: some View {
+        if !receipt.isEmpty {
+            GrantReceipt(title: "Received", grants: receipt, onGlass: false)
+                .padding(.bottom, 10)
         }
-        .disabled(!enabled)
     }
 
+    /// `ClaimPlate` has already played the confirm and the haptic; this shows
+    /// what the claim paid for 2.8 seconds, unless a later claim replaced it.
     private func paid(_ grants: [ShopService.Grant]) {
-        AudioLibrary.shared.play(.uiConfirm)
-        Juice.haptic(.light)
-        receipt = "Received " + grants.map(ShopService.describe).joined(separator: ", ") + "."
+        let id = UUID()
+        withAnimation(.easeOut(duration: 0.2)) {
+            receipt = grants
+            receiptID = id
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
+            guard receiptID == id else { return }
+            withAnimation(.easeIn(duration: 0.25)) { receipt = [] }
+        }
+    }
+}
+
+/// One day of a seven-day gift, as a pip: the day's painted gift in a cream
+/// disc, gold with a check once taken, ringed gold today, the seventh ringed
+/// deeper so the week's last gift reads as its prize. The Missions' login
+/// gift and the Events' Festival draw the same pip (2026-09-22; the critic's
+/// note on run 211: the Festival's 30-point day tiles were the login band's).
+/// `faded` dims a day that can no longer be claimed — a Festival day missed.
+struct GiftDayPip: View {
+    let key: String
+    let taken: Bool
+    let isToday: Bool
+    var isLast: Bool = false
+    var faded: Bool = false
+    var size: CGFloat = 24
+
+    private var rim: Color {
+        if isToday { return Theme.gold }
+        return isLast ? Theme.goldDeep : Theme.stroke
     }
 
+    var body: some View {
+        ZStack {
+            Group {
+                if taken {
+                    Circle().fill(Theme.goldPlate)
+                } else if isToday {
+                    Circle().fill(Theme.surfaceHigh)
+                } else {
+                    Circle().fill(Theme.surface)
+                }
+            }
+            Circle().strokeBorder(rim, lineWidth: isToday || isLast ? 1.5 : 1)
+            if taken {
+                Image(systemName: "checkmark")
+                    .font(.system(size: size * 0.42, weight: .black))
+                    .foregroundStyle(Theme.ink)
+            } else {
+                ItemIcon(key: key, size: size * 0.7, glow: false)
+                    .opacity(faded ? 0.3 : (isToday ? 1 : 0.6))
+            }
+        }
+        .frame(width: size, height: size)
+        .shadow(color: isToday && !taken ? Theme.gold.opacity(0.45) : Color.clear, radius: 4)
+        .accessibilityHidden(true)
+    }
 }

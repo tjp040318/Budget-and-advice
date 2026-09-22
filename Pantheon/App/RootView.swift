@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The app's tab shell.
 struct RootView: View {
@@ -136,14 +137,30 @@ struct RootView: View {
     }
 }
 
-/// Account, diagnostics and the asset-pipeline status board: the "More" menu.
+/// The "More" menu: the places this screen leads to, and the three boards a
+/// player reads — the account, sound and camera, and support.
 ///
-/// Landscape shape: the strip carries the title, the summoner and the wallet;
-/// the four places this screen leads to are a band of tiles across the top,
-/// each one the size of a thumb; and the three boards that only report —
-/// account, sound and camera, and the model pipeline — fill the rest of the
-/// frame as three columns. The old layout stacked seven panels under a
-/// navigation bar and scrolled the lot.
+/// Landscape shape: the strip carries the title, the demigod and the wallet;
+/// the five places are one row of painted doors across the top; the three
+/// boards fill the rest of the frame as columns, each scrolling under a fade.
+///
+/// Phase B (2026-09-22, evening; PLAN.md, *Phase B of the premium pass*).
+/// Run 211's frame showed a player's screen carrying the developer's: a
+/// "3D ASSETS 521/523" board of `anubis.usdz` rows and a CONSOLE tile with a
+/// 554 badge, and the Sound & camera words cut off at the panel's foot with
+/// nothing to say there was more. Now the doors are `MedallionIcon`s (the
+/// island header's painted missions, events and allies; the bazaar and the
+/// lessons by glyph in the same socket); the console and the model board sit
+/// behind ONE Diagnostics row on the Support board, and the model board is
+/// compiled into a debug build only; Reset account is a quiet row at the
+/// foot of the Account board — where the genre keeps it, and where Apple's
+/// account-deletion rule expects it — rather than a door beside Missions;
+/// and every board scrolls and fades at its foot.
+///
+/// Height, on an iPhone 16 Pro in landscape: this is a sheet, so no tab bar
+/// — 402 less the 52-point strip and the 21-point home indicator is 329, 16
+/// of it padding. The doors take 95 and a gap of 8, and the boards the 210
+/// left (207 on an SE, which has no indicator but a shorter screen).
 struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var session: AppSession
@@ -176,7 +193,7 @@ struct SettingsView: View {
                     HStack(alignment: .top, spacing: 8) {
                         accountPanel
                         soundPanel
-                        assetStatusPanel
+                        supportPanel
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
@@ -278,207 +295,155 @@ struct SettingsView: View {
 
     // MARK: - Where this screen leads
 
-    /// The four destinations as tiles rather than as three panels each holding
-    /// one button and a paragraph. Four across a landscape phone.
+    /// The five places as one row of doors. Two rows of four horizontal tiles
+    /// were a glyph plate, a name and a caption squeezed side by side, and
+    /// eight across one row left 45 points for a name (run 204: "D", "C",
+    /// "EVE…"); a door with the medallion ABOVE its name needs only its
+    /// widest line — "Weekly boosts", 74 points — so five fit one row at 139
+    /// apiece on a 16 Pro and 122 on an SE, which is also the genre's menu:
+    /// an object over its word.
     private var destinations: some View {
-        // Two rows of four: eight tiles across one row left 45 points for a
-        // name, and run 204 photographed "D", "C" and "EVE…".
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+        HStack(spacing: 8) {
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showMissions = true
+                press { showMissions = true }
             } label: {
-                tileFace(
-                    title: "Missions",
-                    caption: "Daily & feats",
-                    icon: "scroll.fill",
-                    tint: Theme.gold,
-                    badge: store.claimableRewards > 0 ? "\(store.claimableRewards)" : nil
-                )
+                door(title: "Missions", caption: "Daily & feats", icon: "scroll.fill", art: "missions",
+                     badge: store.claimableRewards)
             }
             .buttonStyle(PlateButtonStyle())
 
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showEvents = true
+                press { showEvents = true }
             } label: {
-                let gifts = EventCalendar.claimableCount(player: store.player)
-                tileFace(
-                    title: "Events",
-                    caption: "Weekly boosts",
-                    icon: "calendar",
-                    tint: Theme.gold,
-                    badge: gifts > 0 ? "\(gifts)" : nil
-                )
+                door(title: "Events", caption: "Weekly boosts", icon: "calendar", art: "events",
+                     badge: EventCalendar.claimableCount(player: store.player))
             }
             .buttonStyle(PlateButtonStyle())
 
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showSocial = true
+                press { showSocial = true }
             } label: {
-                let pending = store.social.pendingCount
-                tileFace(
-                    title: "Allies",
-                    caption: "Friends & guild",
-                    icon: "person.2.fill",
-                    tint: Theme.gold,
-                    badge: pending > 0 ? "\(pending)" : nil
-                )
+                door(title: "Allies", caption: "Friends & guild", icon: "person.2.fill", art: "allies",
+                     badge: store.social.pendingCount)
             }
             .buttonStyle(PlateButtonStyle())
 
             Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showShop = true
+                press { showShop = true }
             } label: {
-                tileFace(
-                    title: "Bazaar",
-                    caption: "Scrolls & relics",
-                    icon: "bag.fill",
-                    tint: Theme.info,
-                    badge: nil
-                )
+                door(title: "Bazaar", caption: "Scrolls & relics", icon: "bag.fill")
             }
             .buttonStyle(PlateButtonStyle())
 
             // Everything Athena has ever said, kept and replayable. The
             // owner, on the opening being skippable: "that would be a good
             // idea, let's expand on that" — so the tutorial is the manual.
+            // Its old badge was the count of lessons read, which is not a
+            // thing waiting to be taken; the count is the Lessons screen's
+            // own subtitle.
             NavigationLink {
                 LessonsView()
                     .environmentObject(store)
             } label: {
-                tileFace(
-                    title: "Lessons",
-                    caption: "From Athena",
-                    icon: "book.fill",
-                    tint: Theme.gold,
-                    badge: "\(LessonBook.all.filter { store.hasReadLesson($0.id) }.count)"
-                )
-            }
-            .buttonStyle(PlateButtonStyle())
-
-            NavigationLink {
-                DiagnosticsView()
-            } label: {
-                tileFace(
-                    title: "Console",
-                    caption: "Copy or share",
-                    icon: "terminal.fill",
-                    tint: Theme.success,
-                    badge: "\(DiagnosticsLog.shared.count)"
-                )
-            }
-            .buttonStyle(PlateButtonStyle())
-
-            Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showResetConfirm = true
-            } label: {
-                tileFace(
-                    title: "Reset account",
-                    caption: "Start over",
-                    icon: "trash.fill",
-                    tint: Theme.danger,
-                    badge: nil
-                )
+                door(title: "Lessons", caption: "From Athena", icon: "book.fill")
             }
             .buttonStyle(PlateButtonStyle())
         }
+        .fixedSize(horizontal: false, vertical: true)
     }
 
-    /// One destination tile: a tinted glyph plate, the name, what it holds,
-    /// and a count when there is one to show.
-    private func tileFace(
+    /// The tap every door on this screen makes: a light haptic and the tap
+    /// sound, then the door.
+    private func press(_ open: () -> Void) {
+        Juice.haptic(.light)
+        AudioLibrary.shared.play(.uiTap)
+        open()
+    }
+
+    /// One door: the painted object in its dark socket (`MedallionIcon` at
+    /// 38, its glyph in pale gold until a painting ships), the name in
+    /// Cinzel at 13 and what it holds in one line of 11, each at its own
+    /// width so nothing is cut, on the Missions rows' marble. A count
+    /// waiting to be taken is the island header's red badge on the
+    /// medallion's shoulder, so the same thing reads the same on both
+    /// screens.
+    private func door(
         title: String,
         caption: String,
         icon: String,
-        tint: Color,
-        badge: String?
+        art: String? = nil,
+        badge: Int = 0
     ) -> some View {
-        HStack(spacing: 8) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .fill(tint.opacity(0.16))
-                RoundedRectangle(cornerRadius: 7, style: .continuous)
-                    .strokeBorder(tint.opacity(0.5), lineWidth: 0.5)
-                Image(systemName: icon)
-                    .font(.system(size: 15, weight: .black))
-                    .foregroundStyle(tint)
-            }
-            .frame(width: 30, height: 30)
-
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title.uppercased())
-                    .font(Theme.title(12))
-                    .tracking(0.6)
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                // One line, and the tile 44 points: two rows of four at
-                // 64 with two-line captions put the page over the phone's
-                // height, and SwiftUI centred it with the strip above the
-                // top edge (run 207).
-                Text(caption)
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-                    .truncationMode(.tail)
-            }
-
-            Spacer(minLength: 0)
-
-            if let badge {
-                Text(badge)
-                    .font(Theme.numeric(10))
-                    .foregroundStyle(Theme.ink)
-                    .padding(.horizontal, 5)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(tint))
-            }
+        VStack(spacing: 4) {
+            MedallionIcon(key: art ?? "", glyph: icon, size: 38, glyphTint: Theme.onGlassGold)
+                .overlay(alignment: .topTrailing) {
+                    if badge > 0 {
+                        waitingBadge(badge)
+                            .offset(x: 8, y: -3)
+                    }
+                }
+            Text(title.uppercased())
+                .font(Theme.title(13))
+                .tracking(0.8)
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .fixedSize()
+            Text(caption)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
         }
-        .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 44)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(
-                    LinearGradient(colors: [Theme.surfaceRaised, Theme.surface],
-                                   startPoint: .top, endPoint: .bottom)
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .strokeBorder(tint.opacity(0.4), lineWidth: 0.5)
-        )
-        .shadow(color: .black.opacity(0.45), radius: 4, y: 2)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(MarbleRowPlate(radius: Theme.tightCorner))
+        .contentShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// Red, not another gold pill beside a gold object: the one thing on the
+    /// screen that must not be missed, drawn as the island header draws it.
+    private func waitingBadge(_ count: Int) -> some View {
+        Text("\(count)")
+            .font(Theme.numeric(11.5).weight(.bold))
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1)
+            .frame(minWidth: 18)
+            .background(Capsule().fill(Theme.danger))
+            .overlay(Capsule().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
     }
 
     // MARK: - The boards
 
     private var accountPanel: some View {
         SectionPanel(title: "Account", accessory: "Lv.\(store.player.level)") {
-            VStack(spacing: 5) {
-                row("Account", accountLine)
-                // The key's tail, in capitals: what a support request quotes,
-                // and the tail of the save's record name in CloudKit.
-                row("Player ID", session.accounts.account?.playerCode ?? "—")
-                row("Name", store.player.displayName)
-                // The level is the panel's accessory; units and relics are
-                // the collection's own counts. Run 179's frame had the
-                // guest's Bind button cut off under eight rows and a
-                // three-line caption, so the panel keeps the rows only it
-                // can say.
-                row("Total summons", "\(store.player.totalSummons)")
-                row("Codex", "\(store.player.codex.count) / \(UnitDatabase.collectiblePool.count)")
-                Spacer(minLength: 0)
-                accountActions
+            FadingBoard {
+                VStack(spacing: 5) {
+                    row("Account", accountLine)
+                    // The key's tail, in capitals: what a support request
+                    // quotes, and the tail of the save's record name in
+                    // CloudKit.
+                    row("Player ID", session.accounts.account?.playerCode ?? "—")
+                    row("Name", store.player.displayName)
+                    // The level is the panel's accessory; units and relics
+                    // are the collection's own counts. Run 179's frame had
+                    // the guest's Bind button cut off under eight rows and a
+                    // three-line caption, so the panel keeps the rows only it
+                    // can say.
+                    row("Total summons", "\(store.player.totalSummons)")
+                    row("Codex", "\(store.player.codex.count) / \(UnitDatabase.collectiblePool.count)")
+                    // In a stack of its own, so the gap above is one gap and
+                    // not one per caption and button inside.
+                    VStack(spacing: 5) {
+                        accountActions
+                    }
+                    .padding(.top, 3)
+                    resetRow
+                        .padding(.top, 6)
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -516,6 +481,36 @@ struct SettingsView: View {
         }
     }
 
+    /// Reset account (`AppSession.startOver`, behind its confirmation) as a
+    /// quiet outlined row at the foot of the Account board (2026-09-22,
+    /// phase B). It was a red-glyph door beside Missions and Bazaar in run
+    /// 211 — the one irreversible thing on the screen, as loud as the daily
+    /// ones. The genre keeps it inside the account's settings, and Apple asks
+    /// for an account's deletion to be found in the account's place.
+    private var resetRow: some View {
+        Button {
+            press { showResetConfirm = true }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "trash.fill")
+                    .font(.system(size: 12, weight: .black))
+                Text("Reset account")
+                    .font(Theme.body(12).weight(.bold))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundStyle(Theme.danger)
+            .frame(maxWidth: .infinity)
+            .frame(height: 34)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(Theme.danger.opacity(0.45), lineWidth: 1)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(PlateButtonStyle())
+    }
+
     /// "iCloud" or "Pantheon Cloud": whichever keeps this account's copy.
     private var cloudName: String { store.cloudSave?.serviceName ?? "iCloud" }
 
@@ -528,7 +523,7 @@ struct SettingsView: View {
 
     private var soundPanel: some View {
         SectionPanel(title: "Sound & camera", accessory: nil) {
-            ScrollView {
+            FadingBoard {
                 VStack(alignment: .leading, spacing: 7) {
                     Toggle(isOn: $soundOn) {
                         Text("Sound effects")
@@ -556,22 +551,206 @@ struct SettingsView: View {
                             .foregroundStyle(Theme.textPrimary)
                     }
                     .tint(Theme.gold)
-                    caption("Off keeps one fixed view of the whole field, the way the genre does it; only an ultimate pushes in for a moment, and hits shake. On lets the camera cut, lean and orbit on skills.")
+                    // Two lines shorter than the paragraph run 211 cut off.
+                    caption("Off: one fixed view of the whole field, the genre's way; an ultimate pushes in and hits shake. On: the camera cuts, leans and orbits on skills.")
                 }
-                .padding(.trailing, 2)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// Shows which characters still render as placeholders. This is the board
-    /// the art pipeline works against — a unit turns green the moment its
-    /// `.usdz` is in the bundle, with no code change.
-    private var assetStatusPanel: some View {
+    /// What a player needs when something goes wrong: the build they are on
+    /// and ONE row to the diagnostics — which is also the owner's way to the
+    /// `[ModelLibrary]` block (More → Diagnostics, CLAUDE.md). The Player ID
+    /// a support request quotes is on the Account board. This column was the
+    /// art pipeline's model board until phase B (2026-09-22); that board is
+    /// behind the row now, in a debug build only (`DiagnosticsDesk`).
+    private var supportPanel: some View {
+        SectionPanel(title: "Support", accessory: nil) {
+            FadingBoard {
+                VStack(alignment: .leading, spacing: 8) {
+                    row("Version", LaunchView.version)
+                    NavigationLink {
+                        diagnosticsDestination
+                    } label: {
+                        diagnosticsRow
+                    }
+                    .buttonStyle(PlateButtonStyle())
+                    caption("Something wrong? Diagnostics copies or shares the log; send it with your Player ID.")
+                    caption("Set in Cinzel and Manrope, under the SIL Open Font License.")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// The row to the diagnostics, a door in miniature: the glyph in the
+    /// doors' dark socket, the name and what it does, a chevron.
+    private var diagnosticsRow: some View {
+        HStack(spacing: 8) {
+            MedallionIcon(key: "", glyph: "waveform.path.ecg", size: 30, glyphTint: Theme.onGlassGold)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("DIAGNOSTICS")
+                    .font(Theme.title(13))
+                    .tracking(0.6)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .fixedSize()
+                Text("Copy or share the log")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.goldDim)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(MarbleRowPlate(radius: Theme.tightCorner))
+        .contentShape(Rectangle())
+    }
+
+    /// The console itself in a release build; in a debug build the desk that
+    /// holds the console and the art pipeline's model board, which no player
+    /// ever sees.
+    @ViewBuilder
+    private var diagnosticsDestination: some View {
+        #if DEBUG
+        DiagnosticsDesk()
+        #else
+        DiagnosticsView()
+        #endif
+    }
+
+    private func caption(_ text: String) -> some View {
+        Text(text)
+            .font(Theme.body(11))
+            .foregroundStyle(Theme.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// A label and its value. The value wraps to a second line rather than
+    /// shrinking: it shrank to 0.7 before, which put an Apple name at eight
+    /// points, under the numeric floor.
+    private func row(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(label)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
+            Spacer(minLength: 0)
+            Text(value)
+                .font(Theme.numeric(11.5))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(2)
+                .multilineTextAlignment(.trailing)
+        }
+    }
+}
+
+/// A board's body on More: it scrolls when it is taller than its board, and
+/// its last 22 points fade out so a line cut at the foot reads as "more
+/// below" — run 211 stopped the Sound & camera paragraph mid-sentence at the
+/// panel's edge with nothing to say it went on (2026-09-22, phase B). The
+/// body ends in 22 empty points, so one that fits sits clear of the fade.
+private struct FadingBoard<Content: View>: View {
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 0) {
+                content()
+                Color.clear.frame(height: 22)
+            }
+            .padding(.trailing, 2)
+        }
+        .mask(
+            VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 22)
+            }
+        )
+    }
+}
+
+#if DEBUG
+/// The debug build's diagnostics, behind More's one Diagnostics row
+/// (2026-09-22, phase B): the console and the art pipeline's model board side
+/// by side. The board — which characters still stand in as sprites — was a
+/// third of More in run 211, a list of `anubis.usdz` rows on a player's
+/// screen. It is the pipeline's, not the player's, so a release build does
+/// not compile it and its Diagnostics row opens the console straight away.
+/// Copy is here as well as in the console so the owner's one errand —
+/// the `[ModelLibrary]` block into a chat — is still one tap past the row.
+///
+/// Pushed in More's navigation stack, which is a sheet: 329 points under the
+/// strip on a 16 Pro, no tab bar. Internal rather than private only so the
+/// CI tour can photograph where the model board went.
+struct DiagnosticsDesk: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var copied = false
+
+    var body: some View {
+        GameScreen(
+            "Diagnostics",
+            subtitle: "Debug build: the log and the model board",
+            dismiss: { dismiss() }
+        ) {
+            BarCount(value: "\(DiagnosticsLog.shared.count) lines", systemImage: "text.alignleft")
+        } content: {
+            HStack(alignment: .top, spacing: 8) {
+                consolePanel
+                    .frame(width: 250)
+                assetPanel
+            }
+            .padding(.horizontal, ScreenChrome.contentPadding)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private var consolePanel: some View {
+        SectionPanel(title: "Console", accessory: "\(DiagnosticsLog.shared.count) lines") {
+            VStack(alignment: .leading, spacing: 8) {
+                note("Everything the app has printed since launch. The [ModelLibrary] block says what each model loaded as.")
+                NavigationLink {
+                    DiagnosticsView()
+                } label: {
+                    deskRow(title: "Read the log", glyph: "text.alignleft", trailing: "chevron.right")
+                }
+                .buttonStyle(PlateButtonStyle())
+                Button {
+                    Juice.haptic(.light)
+                    AudioLibrary.shared.play(.uiTap)
+                    UIPasteboard.general.string = DiagnosticsLog.shared.text
+                    copied = true
+                } label: {
+                    deskRow(
+                        title: copied ? "Copied" : "Copy the log",
+                        glyph: copied ? "checkmark" : "doc.on.doc.fill",
+                        trailing: nil
+                    )
+                }
+                .buttonStyle(PlateButtonStyle())
+                Spacer(minLength: 0)
+            }
+        }
+        .frame(maxHeight: .infinity)
+    }
+
+    /// Shows which characters still render as placeholders. This is the
+    /// board the art pipeline works against — a unit turns green the moment
+    /// its `.usdz` is in the bundle, with no code change.
+    private var assetPanel: some View {
         SectionPanel(title: "3D assets", accessory: "\(shippedModels)/\(UnitDatabase.all.count)") {
             VStack(alignment: .leading, spacing: 6) {
-                caption("Green means a real model is in the bundle. Grey means the portrait is standing in as a sprite.")
-                ScrollView {
+                note("Green means a real model is in the bundle. Grey means the portrait is standing in as a sprite.")
+                FadingBoard {
                     VStack(spacing: 4) {
                         ForEach(UnitDatabase.all) { blueprint in
                             let hasModel = ModelLibrary.shared.hasRealModel(blueprint.model.assetName)
@@ -585,14 +764,13 @@ struct SettingsView: View {
                                     .lineLimit(1)
                                 Spacer(minLength: 4)
                                 Text("\(blueprint.model.assetName).usdz")
-                                    .font(Theme.numeric(9))
+                                    .font(Theme.numeric(11.5))
                                     .foregroundStyle(Theme.textSecondary)
                                     .lineLimit(1)
-                                    .minimumScaleFactor(0.7)
+                                    .fixedSize()
                             }
                         }
                     }
-                    .padding(.trailing, 2)
                 }
             }
         }
@@ -603,26 +781,39 @@ struct SettingsView: View {
         UnitDatabase.all.filter { ModelLibrary.shared.hasRealModel($0.model.assetName) }.count
     }
 
-    private func caption(_ text: String) -> some View {
+    private func note(_ text: String) -> some View {
         Text(text)
-            .font(Theme.body(10))
+            .font(Theme.body(11))
             .foregroundStyle(Theme.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func row(_ label: String, _ value: String) -> some View {
-        HStack {
-            Text(label).font(Theme.body(11)).foregroundStyle(Theme.textSecondary)
-            Spacer()
-            Text(value)
-                .font(Theme.numeric(11))
+    private func deskRow(title: String, glyph: String, trailing: String?) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: glyph)
+                .font(.system(size: 13, weight: .black))
+                .foregroundStyle(Theme.goldDim)
+                .frame(width: 22)
+            Text(title)
+                .font(Theme.body(12).weight(.bold))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .fixedSize()
+            Spacer(minLength: 4)
+            if let trailing {
+                Image(systemName: trailing)
+                    .font(.system(size: 11, weight: .black))
+                    .foregroundStyle(Theme.goldDim)
+            }
         }
+        .padding(.horizontal, 10)
+        .frame(height: 36)
+        .background(MarbleRowPlate(radius: Theme.tightCorner))
+        .contentShape(Rectangle())
     }
 }
+#endif
 
 // MARK: - The launch
 
@@ -840,7 +1031,9 @@ struct LaunchView: View {
         }
     }
 
-    private static var version: String {
+    /// "v1.0 (211)": the loading screen's corner, and More's Support board
+    /// (2026-09-22, phase B), where a support request reads it.
+    static var version: String {
         let info = Bundle.main.infoDictionary
         let short = info?["CFBundleShortVersionString"] as? String ?? "?"
         let build = info?["CFBundleVersion"] as? String ?? "?"
@@ -891,28 +1084,42 @@ private struct LaunchEmbers: View {
 
 // MARK: - The tab bar
 
-/// The game's own tab bar (2026-09-22): five bronze medallions on a marble
-/// band, the chosen one gold and lit — the iOS tab bar with its grey
-/// symbols was the loudest "app, not game" note on every screen (PLAN.md,
-/// *The premium pass*).
+/// The game's own tab bar (2026-09-22): five painted doors on a marble band,
+/// the chosen one lifted, gold-rimmed and lit — the iOS tab bar with its
+/// grey symbols was the loudest "app, not game" note on every screen
+/// (PLAN.md, *The premium pass*).
+///
+/// The doors are PAINTED since phase B (2026-09-22, evening; PLAN.md, *The
+/// painted doors*): each is `MedallionIcon`, the tab's object (`tab_<art>`,
+/// painted on one sheet with the island header's four) in a dark bronze
+/// socket. The socket is dark on purpose, on a cream band: every painted
+/// icon in the game was painted on black and keyed off it, and on the cream
+/// discs the mock left a dark halo round a glow; the old gold selected disc
+/// swallowed a gold object whole. So the art is full colour in both states
+/// and the selection is the rim, the light, the glow and a 1.1 lift from
+/// the bottom edge, never a dimmed picture. Run 211's frame had the five
+/// SF symbols in cream discs that all but dissolved into the band.
 struct GameTabBar: View {
     @Binding var selection: RootView.Tab
 
     static let height: CGFloat = 58
 
+    /// One door: its tab, its label, its glyph (drawn in the same socket
+    /// until the painting ships) and its painting's key in `ChromeArt`.
     private struct TabItem: Identifiable {
         let tab: RootView.Tab
         let title: String
         let glyph: String
+        let art: String
         var id: String { title }
     }
 
     private static let items: [TabItem] = [
-        TabItem(tab: .island, title: "Island", glyph: "sun.haze.fill"),
-        TabItem(tab: .campaign, title: "Campaign", glyph: "map.fill"),
-        TabItem(tab: .arena, title: "Arena", glyph: "trophy.fill"),
-        TabItem(tab: .summon, title: "Summon", glyph: "sparkles"),
-        TabItem(tab: .collection, title: "Collection", glyph: "person.3.fill"),
+        TabItem(tab: .island, title: "Island", glyph: "sun.haze.fill", art: "island"),
+        TabItem(tab: .campaign, title: "Campaign", glyph: "map.fill", art: "campaign"),
+        TabItem(tab: .arena, title: "Arena", glyph: "trophy.fill", art: "arena"),
+        TabItem(tab: .summon, title: "Summon", glyph: "sparkles", art: "summon"),
+        TabItem(tab: .collection, title: "Collection", glyph: "person.3.fill", art: "collection"),
     ]
 
     var body: some View {
@@ -927,37 +1134,41 @@ struct GameTabBar: View {
         .background(band)
     }
 
+    /// The door: the medallion at 38 over its name in Cinzel at 13 — 38, one
+    /// point and a 17.6-point line are 56.6 of the band's 58. The label is
+    /// written at 13 because that is what it drew: the old `title(10)` was
+    /// floored to 13 and only read as if it were smaller.
     private func button(_ item: TabItem) -> some View {
         let isOn = selection == item.tab
         return Button {
             guard !isOn else { return }
             Juice.haptic(.light)
             AudioLibrary.shared.play(.uiTap)
-            withAnimation(.easeOut(duration: 0.2)) { selection = item.tab }
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) { selection = item.tab }
         } label: {
-            VStack(spacing: 2) {
-                ZStack {
-                    Circle()
-                        .fill(isOn ? AnyShapeStyle(Theme.goldPlate) : AnyShapeStyle(Theme.surfaceRaised))
-                    Circle()
-                        .strokeBorder(isOn ? Theme.goldDeep.opacity(0.8) : Theme.goldDim.opacity(0.5), lineWidth: 1)
-                    Image(systemName: item.glyph)
-                        .font(.system(size: 17, weight: .black))
-                        .foregroundStyle(isOn ? Theme.ink : Theme.goldDim)
-                }
-                .frame(width: 36, height: 36)
-                .shadow(color: isOn ? Theme.gold.opacity(0.55) : Color.black.opacity(0.12), radius: isOn ? 8 : 2, y: 1)
+            VStack(spacing: 1) {
+                // Anchored at the bottom, so the chosen door rises about
+                // three points over the band's gold rule instead of growing
+                // down into its own name.
+                MedallionIcon(key: item.art, glyph: item.glyph, size: 38, isOn: isOn)
+                    .scaleEffect(isOn ? 1.1 : 1, anchor: .bottom)
                 Text(item.title.uppercased())
-                    .font(Theme.title(10))
+                    .font(Theme.title(13))
                     .tracking(0.8)
                     .foregroundStyle(isOn ? Theme.goldDeep : Theme.textSecondary)
                     .lineLimit(1)
+                    .fixedSize()
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // Athena's caret finds a tab by this name: lesson `first_relic`
+        // points at "tab_collection", which no view had registered, so the
+        // caret fell back to a line at the foot with nothing under it.
+        .guideAnchor("tab_\(item.art)")
         .accessibilityLabel(item.title)
+        .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
     private var band: some View {
@@ -978,6 +1189,11 @@ struct GameTabBar: View {
                 .frame(height: 2)
         }
         .shadow(color: .black.opacity(0.22), radius: 8, y: -3)
-        .ignoresSafeArea(edges: .bottom)
+        // Edge to edge: with the bottom alone, run 211's island frame showed
+        // the painting down to the band's midline in both bottom corners and
+        // a white strip under it, beside a band that stopped 62 points short
+        // of each edge. The doors stay inside the safe area; only the marble
+        // runs out to the glass.
+        .ignoresSafeArea(edges: [.horizontal, .bottom])
     }
 }

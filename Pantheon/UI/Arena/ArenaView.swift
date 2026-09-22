@@ -1,13 +1,34 @@
 import SwiftUI
 
-/// PvP: your standing, your defence, and the list of people to attack.
+/// PvP: your standing, your two teams, and the people to attack — in the
+/// Arena of Souls.
 ///
 /// Landscape shape. The page used to be one `ScrollView` under a navigation
 /// bar: the rank panel, the two team panels, then the challengers, so a phone
-/// showed the rank and about one opponent. It is now two columns under the
-/// strip — your side on the left (the rank card, then both teams), the
-/// challenger list on the right with the full height of the frame — and
-/// nothing but that list scrolls.
+/// showed the rank and about one opponent. It became two columns under the
+/// strip — your side on the left, the challengers on the right with the full
+/// height of the frame — and nothing but that list scrolls. That shape stays.
+///
+/// What changed on 2026-09-22 (phase B of the premium pass, PLAN.md *Phase B
+/// of the premium pass*): run 211's frame was cream panels on a cream ground,
+/// the one PLACE tab with no painting at all, "INITIATE" in grey-blue as the
+/// weakest word on the screen, a rank panel half empty marble, and every team
+/// card's name cut ("Anubis,…", "Sekh…", "Azure…", "Scara…"). The lobby is now
+/// the place its fights are staged in: `arena_of_souls_bg`, the painting every
+/// arena and guild-war battle stands on (`BattleContext.environment`), full
+/// bleed and anchored high so the watching gods' heads stay in the band, with
+/// the words on dark glass the way the summon hall has them. The teams are
+/// FACES (`UnitPortraitTile`, no name strip, nothing to cut), the tier is
+/// carved gold beside a crest, the challengers are three glass cards that fade
+/// into the rest (Epic Seven and AFK Journey both show three), and the strip
+/// holds the attacks with their refill clock, the laurel exchange and the
+/// three currencies the arena touches.
+///
+/// Two controls left the strip. Refresh was dead: `ArenaService.pool` is a
+/// pure function of the points and the UTC day, so it brought back the list
+/// that was already there — the list turns over by itself after every fight
+/// (a win moves the points) and at midnight. Simulate became the Rate bead
+/// beside the defence it rates, so the answer lands where the question is.
 struct ArenaView: View {
     @EnvironmentObject private var store: GameStore
     @State private var opponents: [ArenaOpponent] = []
@@ -15,6 +36,9 @@ struct ArenaView: View {
     @State private var battle: BattleContext?
     @State private var showDefensePicker = false
     @State private var showOffensePicker = false
+    /// The bazaar's laurel exchange: what the arena's own currency buys, one
+    /// tap from where it is won (there was no way from here to there).
+    @State private var showExchange = false
     @State private var defenseRating: Double?
     /// True while the challengers are being built off the main thread, so a
     /// second appearance does not start a second build over the top of the
@@ -28,50 +52,42 @@ struct ArenaView: View {
 
     private var record: ArenaRecord { store.player.arena }
 
-    /// The challenger rows' cards. They cross half a landscape frame beside
-    /// the name block and the attack capsule, which is what sets the number.
-    /// Your own two team panels are a quarter of the frame each and size their
-    /// cards to fit — see `teamRow`.
-    private let cardSize: CGFloat = 38
+    /// The Arena of Souls, where every arena fight is staged, so the lobby is
+    /// the fight's anteroom. The Colosseum was the other candidate and stays
+    /// Rome's second chapter's (PLAN.md, *Phase B*, option C).
+    private static let painting = "arena_of_souls_bg"
+    /// A square painting on a 750 × 271 band shows about a third of its
+    /// height; the centred crop took the painted gods off at the neck. Anchored
+    /// at 0.26 of the height their heads stay in the header band.
+    private static let paintingFocus = UnitPoint(x: 0.5, y: 0.26)
+    /// One attack comes back every thirty minutes. This is
+    /// `ArenaService.refreshAttacks`'s own interval, which is a local there:
+    /// the strip's clock counts to the same number and must change with it.
+    private static let attackRefill: TimeInterval = 30 * 60
+    /// The size every face on the screen is decoded at before the list is
+    /// handed over: the wide layout's 40 points (the narrow one's 32 lands in
+    /// the same 128-pixel bucket).
+    private static let faceWarmSize: CGFloat = 40
+    /// How far the challenger cards' shadows may fall outside the list's own
+    /// width before the fade's mask cuts them, so a card's shadow does not end
+    /// in a hard vertical edge at the list's side.
+    private static let shadowRoom: CGFloat = 12
 
     var body: some View {
         NavigationStack {
-            GameScreen("Arena", subtitle: "\(record.tier.displayName) · \(record.points) pts") {
-                BarCount(
-                    value: "\(record.attacksRemaining)/\(record.maxAttacks)",
-                    systemImage: "flame.fill",
-                    tint: record.attacksRemaining > 0 ? Theme.gold : Theme.textSecondary
-                )
-                BarButton(
-                    title: isRating ? "Simulating" : "Simulate",
-                    systemImage: "waveform.path.ecg",
-                    tint: isRating ? Theme.textSecondary : Theme.info
-                ) {
-                    rateDefence()
+            GameScreen("Arena") {
+                attacksWell
+                BarButton(title: "Exchange", systemImage: "laurel.leading") {
+                    showExchange = true
                 }
-                BarButton(title: "Refresh", systemImage: "arrow.clockwise") {
-                    refresh()
-                }
+                // Energy left the wallet: the arena never spends it, and the
+                // strip had seven readings on it (run 211).
                 BarWallet(
                     wallet: store.player.wallet,
-                    shows: [.energy, .divinity, .drachma, .laurels]
+                    shows: [.laurels, .divinity, .drachma]
                 )
             } content: {
-                HStack(alignment: .top, spacing: 8) {
-                    VStack(spacing: 8) {
-                        standingPanel
-                        HStack(alignment: .top, spacing: 8) {
-                            defensePanel
-                            offensePanel
-                        }
-                    }
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-                    opponentList
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                }
-                .padding(.horizontal, ScreenChrome.contentPadding)
-                .padding(.vertical, 8)
+                place
             }
             .onAppear(perform: refresh)
             .sheet(isPresented: $showDefensePicker) {
@@ -83,6 +99,11 @@ struct ArenaView: View {
                 TeamPickerView(slot: .arenaOffense, maxSize: ArenaService.teamSize)
                     .environmentObject(store)
             }
+            .sheet(isPresented: $showExchange) {
+                // Spelled out: `.laurels` is also a `BarWallet.Kind`.
+                ShopView(opening: ShopService.Section.laurels)
+                    .environmentObject(store)
+            }
             .fullScreenCover(item: $battle) { context in
                 battleScreen(for: context)
             }
@@ -90,7 +111,7 @@ struct ArenaView: View {
     }
 
     /// Building the challengers is not free: five opponents, each a team of
-    /// five units rolled out of the summon pool with six generated relics
+    /// four units rolled out of the summon pool with six generated relics
     /// apiece and every one of them resolved through `ProgressionService`. It
     /// ran on the main thread inside `onAppear`, so the Arena could not draw
     /// its first frame until it finished — the owner felt it as "it did get
@@ -103,6 +124,8 @@ struct ArenaView: View {
     /// visit is the previous list, and the challengers appear a moment later.
     /// The pool is deterministic in the day and the player's points, so the
     /// list that arrives is the same one that would have blocked the frame.
+    /// There is no Refresh button any more (see the type's comment): this runs
+    /// on appearing and after every fight.
     private func refresh() {
         let entered = Perf.begin()
         store.refreshTimedResources()
@@ -121,10 +144,10 @@ struct ArenaView: View {
         // where it came from.
         let record = store.player.arena
         let day = Int(Date().timeIntervalSince1970 / 86_400)
-        // The card size in pixels, read here because `UIScreen` is the main
+        // The face size in pixels, read here because `UIScreen` is the main
         // thread's; the task decodes every challenger's portrait at it before
         // the list is handed over, so the list draws from the cache.
-        let cardPixels = Int((cardSize * UIScreen.main.scale).rounded(.up))
+        let facePixels = Int((Self.faceWarmSize * UIScreen.main.scale).rounded(.up))
         Task.detached(priority: .userInitiated) {
             let started = Perf.begin()
             let built = ArenaService.pool(for: record, day: day)
@@ -134,7 +157,7 @@ struct ArenaView: View {
                 built.flatMap { opponent in
                     opponent.team.map { $0.blueprint.model.portraitName(awakened: $0.unit.isAwakened) }
                 },
-                maxPixel: cardPixels
+                maxPixel: facePixels
             )
             await MainActor.run {
                 let landed = Perf.begin()
@@ -147,7 +170,7 @@ struct ArenaView: View {
 
     /// Rating the defence runs five complete battles. On the main thread that
     /// is a freeze with no spinner and no explanation, so it runs off it and
-    /// the button says so while it works.
+    /// the bead says so while it works.
     private func rateDefence() {
         guard !isRating else { return }
         isRating = true
@@ -168,265 +191,596 @@ struct ArenaView: View {
                 .environmentObject(store)
                 .onDisappear { refresh() }
         } else {
-            Theme.surface.ignoresSafeArea().onAppear { battle = nil }
+            Theme.surface.ignoresSafeArea()
+                .onAppear { battle = nil }
+        }
+    }
+
+    // MARK: - The strip
+
+    /// The attacks and when the next one comes back: every game in the genre
+    /// puts a clock on its attack currency (Summoners War's wings, Raid's
+    /// tokens), and run 211's "10/10" had none. The clock is a
+    /// `Text(timerInterval:)`, which counts itself down without a timer here;
+    /// the store's 30-second tick (`refreshTimedResources`) bumps the count.
+    /// The range must run forwards or it traps, so the end is never less
+    /// than a second away.
+    private var attacksWell: some View {
+        let left = record.attacksRemaining
+        return HStack(spacing: 5) {
+            Image(systemName: "flame.fill")
+                .font(.system(size: 12, weight: .black))
+                .foregroundStyle(left > 0 ? Color(hex: "#F3A55A") : Theme.onGlassDim)
+            Text("\(left)/\(record.maxAttacks)")
+                .font(Theme.numeric(12.5))
+                .foregroundStyle(Theme.onGlass)
+                .lineLimit(1)
+                .fixedSize()
+            if left < record.maxAttacks {
+                let now = Date()
+                let next = max(now.addingTimeInterval(1), record.lastRefresh.addingTimeInterval(Self.attackRefill))
+                Text(timerInterval: now...next, countsDown: true)
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+        .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
+        .padding(.horizontal, 10)
+        .frame(height: ScreenChrome.control)
+        .background(BarWell())
+        .fixedSize()
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(left) of \(record.maxAttacks) attacks")
+    }
+
+    // MARK: - The place
+
+    /// The painting under everything, the dust over it, and the two columns
+    /// on glass. The sizes are solved once from the width the screen is given
+    /// (`ArenaLobbyMetrics`) — never a `ViewThatFits`, which lays out every
+    /// candidate. The teams and the offence's power are resolved once here
+    /// and handed down: a resolve reads every relic, and the old screen asked
+    /// for the offence three times a frame.
+    private var place: some View {
+        GeometryReader { geo in
+            let metrics = ArenaLobbyMetrics(width: geo.size.width)
+            let defence = store.team(store.player.arenaDefenseTeam)
+            let offence = store.team(store.player.arenaOffenseTeam)
+            ZStack {
+                // A lighter hand than the summon hall's 0.55 / 0.62: the glass
+                // carries the words here, and the painting shows only in the
+                // band and the gaps.
+                PlaceBackdrop(painting: Self.painting, focus: Self.paintingFocus, topScrim: 0.5, footScrim: 0.5)
+                // Dust over the sand, no shafts: the painting has its own.
+                PlaceAmbience(shafts: [], motes: 24, moteColor: Color(hex: "#F2C987"), seed: 930)
+                HStack(alignment: .top, spacing: ArenaLobbyMetrics.gap) {
+                    standingColumn(metrics, defence: defence, offence: offence)
+                        .frame(width: metrics.column)
+                    challengerColumn(metrics, offense: offensePower(offence))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+                }
+                .padding(.horizontal, ScreenChrome.contentPadding)
+                .padding(.vertical, 6)
+            }
         }
     }
 
     // MARK: - Standing
 
-    /// The rank card. It takes whatever height the two team panels leave, so
-    /// the tier, the climb to the next one and the day's laurels sit spread
-    /// down the column instead of stacked at the top of a scroll.
-    private var standingPanel: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(record.tier.displayName.uppercased())
-                .font(Theme.display(28))
-                .foregroundStyle(record.tier.color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-            Text("\(record.points) rank points")
-                .font(Theme.numeric(12))
-                .foregroundStyle(Theme.textSecondary)
+    /// Your side: the standing over the two teams. The standing takes the
+    /// height the teams leave, so its lines sit centred rather than stacked
+    /// at the top of an empty plate (run 211's panel was half empty marble).
+    private func standingColumn(_ metrics: ArenaLobbyMetrics, defence: [ResolvedUnit], offence: [ResolvedUnit]) -> some View {
+        VStack(spacing: 6) {
+            standingPlate(metrics)
+                .frame(maxHeight: .infinity)
+            teamsPlate(metrics, defence: defence, offence: offence)
+        }
+    }
 
-            Spacer(minLength: 2)
-
-            if let next = nextTier {
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("Next: \(next.displayName)")
-                            .font(Theme.body(11))
-                            .foregroundStyle(Theme.textSecondary)
-                        Spacer()
-                        Text("\(next.threshold - record.points) to go")
-                            .font(Theme.numeric(11))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
-                    StatBar(
+    /// The crest and the tier carved in gold, the points and what a day at
+    /// this rank pays, the climb to the next tier as a meter, and the record.
+    /// Four readings on one plate, where run 211 spread six lines of 11-point
+    /// text down a 290-point box with two Spacers. The ladder and the full
+    /// record are behind the little ?: words come on a tap.
+    private func standingPlate(_ metrics: ArenaLobbyMetrics) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            ArenaCrest(tier: record.tier, size: metrics.crest)
+            VStack(alignment: .leading, spacing: 0) {
+                HStack(spacing: 2) {
+                    // 24 points, and it may shrink to 0.7 (16.8, over the
+                    // title floor) for CHAMPION in the narrow column.
+                    Text(record.tier.displayName.uppercased())
+                        .font(Theme.display(24))
+                        .tracking(1.2)
+                        .carved()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                    InfoDot(title: "Arena ranks") { tierLadder }
+                }
+                HStack(spacing: 4) {
+                    ItemIcon(key: "rank_points", size: 18, glow: false)
+                    Text(record.points.formatted())
+                        .font(Theme.numeric(16))
+                        .foregroundStyle(Theme.onGlass)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text("pts")
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.onGlassDim)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Spacer(minLength: 6)
+                    laurelsPerDay
+                }
+                .padding(.top, 2)
+                if let next = nextTier {
+                    GlassMeter(
                         value: Double(record.points - record.tier.threshold),
                         maximum: Double(max(1, next.threshold - record.tier.threshold)),
                         tint: record.tier.color,
-                        height: 5
+                        height: 6
                     )
+                    .padding(.top, 5)
+                    climbLine("\(next.displayName.uppercased()) IN \((next.threshold - record.points).formatted())")
+                } else {
+                    GlassMeter(value: 1, maximum: 1, tint: record.tier.color, height: 6)
+                        .padding(.top, 5)
+                    climbLine("THE SUMMIT")
                 }
             }
-
-            Spacer(minLength: 2)
-
-            HStack {
-                Text("\(record.wins)W / \(record.losses)L")
-                    .font(Theme.numeric(12))
-                    .foregroundStyle(Theme.textPrimary)
-                Spacer()
-                Text("Best \(record.highestPoints)")
-                    .font(Theme.numeric(11))
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            Text("+\(record.tier.dailyLaurels) laurels daily")
-                .font(Theme.numeric(11))
-                .foregroundStyle(Theme.success)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(10)
-        .frame(maxHeight: .infinity)
-        .panelBackground()
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(GlassPlate(radius: 12))
+    }
+
+    /// The line under the meter: how far the next tier is, and the record.
+    /// Both at their own width; the narrow column's crest is 48 points so the
+    /// longest pair ("ACOLYTE IN 1,200", "123W · 45L", 174 points) still fits.
+    private func climbLine(_ climb: String) -> some View {
+        HStack(spacing: 4) {
+            Text(climb)
+                .font(Theme.body(11).weight(.heavy))
+                .tracking(0.6)
+                .foregroundStyle(Theme.onGlassDim)
+                .lineLimit(1)
+                .fixedSize()
+            Spacer(minLength: 4)
+            Text("\(record.wins)W · \(record.losses)L")
+                .font(Theme.numeric(11.5))
+                .foregroundStyle(Theme.onGlassDim)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.top, 4)
+    }
+
+    /// What a day at this tier pays, with the laurel painted beside it.
+    private var laurelsPerDay: some View {
+        HStack(spacing: 3) {
+            ItemIcon(key: "laurels", size: 14, glow: false)
+            Text("+\(record.tier.dailyLaurels)/day")
+                .font(Theme.numeric(11.5))
+                .foregroundStyle(Theme.onGlassSuccess)
+                .lineLimit(1)
+        }
+        .fixedSize()
     }
 
     private var nextTier: ArenaTier? {
         ArenaTier.allCases.first { $0.threshold > record.points }
     }
 
-    /// The power of the team that actually attacks. `store.totalPower` is the
-    /// sum of the player's best *five* units, and an arena team is four, so
-    /// comparing a challenger against it biased every row toward green — an
-    /// offence team that is not your top four was reported as an easy fight.
-    ///
-    /// Reading it resolves four units out of their relics, so it is read once
-    /// in `opponentList` and handed down to the rows: a computed property has
-    /// no cache, and five challengers asking one each would resolve twenty.
-    private var offensePower: Int {
-        store.team(store.player.arenaOffenseTeam).reduce(0) { $0 + $1.power }
+    /// The ? beside the tier: every rank with its crest, its floor and its
+    /// day's laurels, the player's own row lit, and the record in a sentence.
+    /// It is the cream popover every ? in the game opens, so it is written in
+    /// the cream screens' ink.
+    private var tierLadder: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(ArenaTier.allCases) { tier in
+                HStack(spacing: 8) {
+                    ArenaCrest(tier: tier, size: 22)
+                    Text(tier.displayName)
+                        .font(Theme.body(12).weight(.bold))
+                        .foregroundStyle(tier == record.tier ? Theme.goldDeep : Theme.textPrimary)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Spacer(minLength: 6)
+                    Text("\(tier.threshold.formatted())+")
+                        .font(Theme.numeric(11.5))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                    HStack(spacing: 2) {
+                        ItemIcon(key: "laurels", size: 14, glow: false)
+                        Text("+\(tier.dailyLaurels)")
+                            .font(Theme.numeric(11.5))
+                            .foregroundStyle(Theme.success)
+                            .lineLimit(1)
+                    }
+                    .fixedSize()
+                }
+                .padding(.horizontal, 4)
+                .padding(.vertical, 2)
+                .background(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(tier == record.tier ? Theme.gold.opacity(0.16) : Color.clear)
+                )
+            }
+            Text(recordSummary)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+        }
+    }
+
+    /// The record in words. The defence's own record is left out until it has
+    /// one: nothing attacks a defence in the offline game yet, and "held 0 of
+    /// 0" says nothing.
+    private var recordSummary: String {
+        var parts = ["Won \(record.wins), lost \(record.losses)."]
+        let defended = record.defenseWins + record.defenseLosses
+        if defended > 0 {
+            parts.append("Your defence held \(record.defenseWins) of \(defended).")
+        }
+        parts.append("Best \(record.highestPoints.formatted()) points.")
+        parts.append("Points never fall below your tier's floor.")
+        return parts.joined(separator: " ")
     }
 
     // MARK: - Teams
 
-    private var defensePanel: some View {
-        SectionPanel(title: "Defence", accessory: ratingText) {
-            teamRow(store.team(store.player.arenaDefenseTeam)) { showDefensePicker = true }
+    /// The power of the team that actually attacks. `store.totalPower` is the
+    /// sum of the player's best *five* units, and an arena team is four, so
+    /// comparing a challenger against it biased every row toward green — an
+    /// offence team that is not your top four was reported as an easy fight.
+    /// It is summed from the offence `place` resolves once a frame, so no
+    /// caller resolves the four again.
+    private func offensePower(_ offence: [ResolvedUnit]) -> Int {
+        offence.reduce(0) { $0 + $1.power }
+    }
+
+    /// Both teams on one plate, four faces each with the leader crowned, the
+    /// empty places dashed. Faces rather than `UnitCard`s: the card's cream
+    /// name strip cut every name in run 211 and would be a cream slab on glass.
+    private func teamsPlate(_ metrics: ArenaLobbyMetrics, defence: [ResolvedUnit], offence: [ResolvedUnit]) -> some View {
+        VStack(spacing: 5) {
+            teamRow(
+                title: "Defence",
+                team: defence,
+                face: metrics.face,
+                detail: defenceDetail(isEmpty: defence.isEmpty)
+            ) {
+                showDefensePicker = true
+            }
+            Rectangle()
+                .fill(Theme.glassRim.opacity(0.3))
+                .frame(height: 1)
+            teamRow(
+                title: "Offence",
+                team: offence,
+                face: metrics.face,
+                detail: offenceDetail(power: offensePower(offence))
+            ) {
+                showOffensePicker = true
+            }
         }
-        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 8)
+        .background(GlassPlate(radius: 12))
     }
 
-    private var ratingText: String? {
-        guard let defenseRating else { return nil }
-        return "holds \(Int(defenseRating * 100))%"
-    }
-
-    private var offensePanel: some View {
-        SectionPanel(
-            title: "Offence",
-            accessory: "Power \(offensePower)"
-        ) {
-            teamRow(store.team(store.player.arenaOffenseTeam)) { showOffensePicker = true }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    /// Four cards have to cross a quarter of the frame: half the screen for
-    /// this column, halved again for the two team panels, less whatever the
-    /// device's safe area takes. The row measures the width it is given and
-    /// sizes the cards to it — one layout.
+    /// One team: its name carved over a reading on the left, and all four
+    /// places as faces on the right — the faces are the button that opens the
+    /// picker. `detail` is taken as a VALUE, not a builder closure, so each
+    /// call carries exactly one trailing closure. The label side takes what
+    /// the faces leave (94 points wide, 88 narrow): "Holds 100%" is 86.
     ///
-    /// It used to offer four sizes to `ViewThatFits`, which lays out EVERY
-    /// candidate to pick one: eight rows of five cards measured on every
-    /// pass of a screen that renders three times on the way in. The phone's
-    /// watchdog put the Arena's entry at two seconds of main thread with the
-    /// challengers, the cards and the models all already off it; this row
-    /// is the one thing on the screen no other screen has.
-    private func teamRow(_ team: [ResolvedUnit], onTap: @escaping () -> Void) -> some View {
-        let slots = max(1, min(ArenaService.teamSize, team.count + (team.count < ArenaService.teamSize ? 1 : 0)))
-        return Button(action: onTap) {
-            GeometryReader { geo in
-                let size = max(30, min(44, floor((geo.size.width - CGFloat(slots - 1) * 5) / CGFloat(slots))))
-                teamCards(team, size: size)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+    /// The four-face row replaced a `ViewThatFits` of four card sizes, which
+    /// laid out every candidate on every pass; the phone's watchdog once put
+    /// the Arena's entry at two seconds of main thread.
+    private func teamRow<Detail: View>(
+        title: String,
+        team: [ResolvedUnit],
+        face: CGFloat,
+        detail: Detail,
+        onTap: @escaping () -> Void
+    ) -> some View {
+        let shown = Array(team.prefix(ArenaService.teamSize))
+        return HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title.uppercased())
+                    .font(Theme.title(13))
+                    .tracking(1.4)
+                    .carved(glow: false)
+                    .lineLimit(1)
+                    .fixedSize()
+                detail
             }
-            .frame(height: 44 * 1.62)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            Button(action: onTap) {
+                HStack(spacing: ArenaLobbyMetrics.faceSpacing) {
+                    ForEach(Array(shown.enumerated()), id: \.element.id) { index, unit in
+                        UnitPortraitTile(unit: unit, size: face, isLeader: index == 0 && leadsInArena(unit))
+                    }
+                    ForEach(0..<max(0, ArenaService.teamSize - shown.count), id: \.self) { _ in
+                        EmptyUnitSlot(size: face)
+                    }
+                }
+            }
+            .buttonStyle(PlateButtonStyle())
+            .accessibilityLabel("Change the \(title.lowercased()) team")
         }
-        .buttonStyle(.plain)
     }
 
-    private func teamCards(_ team: [ResolvedUnit], size: CGFloat) -> some View {
-        HStack(spacing: 5) {
-            ForEach(team) { unit in
-                UnitCard(unit: unit, showPower: false, size: size)
+    /// Under DEFENCE: NOT SET, the rating at work, the rating in its colour,
+    /// or the Rate bead — the strip's old Simulate, beside what it rates.
+    @ViewBuilder
+    private func defenceDetail(isEmpty: Bool) -> some View {
+        if isEmpty {
+            Text("NOT SET")
+                .font(Theme.body(11).weight(.heavy))
+                .tracking(0.6)
+                .foregroundStyle(Theme.onGlassWarning)
+                .lineLimit(1)
+                .fixedSize()
+        } else if isRating {
+            HStack(spacing: 4) {
+                Image(systemName: "hourglass")
+                    .font(.system(size: 11, weight: .black))
+                    .foregroundStyle(Theme.onGlassGold)
+                Text("Rating")
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .lineLimit(1)
+                    .fixedSize()
             }
-            if team.count < ArenaService.teamSize {
-                EmptyTeamSlot(size: size, label: "Add")
-            }
+            .frame(height: 22)
+        } else if let defenseRating {
+            GlassBead(
+                text: "Holds \(Int((defenseRating * 100).rounded()))%",
+                tint: ratingTint(defenseRating),
+                height: 22,
+                action: { rateDefence() }
+            )
+        } else {
+            GlassBead(
+                text: "Rate",
+                systemImage: "waveform.path.ecg",
+                tint: Theme.onGlassGold,
+                height: 22,
+                action: { rateDefence() }
+            )
         }
     }
 
-    // MARK: - Opponents
+    /// Under OFFENCE: the four's power, which every challenger's is tinted
+    /// against.
+    private func offenceDetail(power: Int) -> some View {
+        HStack(spacing: 3) {
+            Text("POWER")
+                .font(Theme.body(11).weight(.heavy))
+                .tracking(0.6)
+                .foregroundStyle(Theme.onGlassDim)
+            Text(power.formatted())
+                .font(Theme.numeric(12.5))
+                .foregroundStyle(Theme.onGlass)
+        }
+        .lineLimit(1)
+        .fixedSize()
+        .frame(height: 22)
+    }
 
-    private var opponentList: some View {
-        let offense = offensePower
-        return SectionPanel(title: "Challengers", accessory: "\(opponents.count)") {
+    private func ratingTint(_ rating: Double) -> Color {
+        if rating >= 0.6 { return Theme.onGlassSuccess }
+        if rating >= 0.4 { return Theme.onGlassWarning }
+        return Theme.onGlassDanger
+    }
+
+    /// The engine's leader is the team's first unit (`BattleEngine.buildSide`),
+    /// and its skill counts here only if it applies in the arena — so the
+    /// crown means what the fight will do.
+    private func leadsInArena(_ unit: ResolvedUnit) -> Bool {
+        unit.blueprint.leaderSkill?.appliesInArena ?? false
+    }
+
+    // MARK: - Challengers
+
+    /// The laurels a win pays. It depends on YOUR tier alone
+    /// (`ArenaService.laurelsForWin`), so run 211 printed the same "12" on
+    /// every row; it is said once, on the header. Computed the way
+    /// `ArenaService.applyResult` pays it, Thursday's Double Laurels included.
+    private var laurelsPerWin: Int {
+        Int(Double(ArenaService.laurelsForWin(tier: record.tier)) * EventCalendar.multiplier(for: .arenaLaurelsBoost))
+    }
+
+    private var laurelsBoosted: Bool {
+        EventCalendar.multiplier(for: .arenaLaurelsBoost) > 1
+    }
+
+    /// CHALLENGERS carved over the painting, then the cards on glass: three in
+    /// view on a phone, fading into the rest at the foot the way the summon
+    /// rail does. The cards may cast their shadows past the list's sides
+    /// (`scrollClipDisabled`), and the fade's mask is widened by
+    /// `shadowRoom` so it is the one thing that clips them.
+    ///
+    /// `offense` is the offence's power, summed once in `place`.
+    private func challengerColumn(_ metrics: ArenaLobbyMetrics, offense: Int) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            GlassSectionHeader(
+                title: "Challengers",
+                accessory: "+\(laurelsPerWin) a win",
+                accessoryItemKey: "laurels",
+                accessoryTint: laurelsBoosted ? Theme.onGlassGold : Theme.onGlassDim
+            )
+            .frame(height: 18)
             if opponents.isEmpty {
                 // An empty list means two completely different things now that
                 // the pool is built off the main thread, and saying the wrong
                 // one is worse than saying nothing: the CI tour photographed
                 // this panel announcing "You have cleared the current pool" on
                 // a fresh account that had not fought anybody, because the
-                // challengers were still a few milliseconds away.
+                // challengers were still a few milliseconds away. Two short
+                // lines each, so the plate (about 206 points) fits a mini's
+                // 208 under the header.
                 EmptyState(
                     icon: isRefreshing ? "hourglass" : "person.2.slash",
                     title: isRefreshing ? "Finding challengers" : "No challengers",
                     message: isRefreshing
                         ? "Building five defence teams to fight."
-                        : "You have cleared the current pool. It refreshes as your rating moves."
+                        : "You have beaten today's challengers. New ones come as your points move.",
+                    onGlass: true
                 )
+                .background(GlassPlate(radius: 12))
             } else {
-                // The one thing on this screen that scrolls, and it now has the
-                // whole height of the frame to do it in.
-                ScrollView {
-                    VStack(spacing: 8) {
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 6) {
                         ForEach(opponents) { opponent in
-                            opponentRow(opponent, offense: offense)
+                            challengerCard(opponent, offense: offense, metrics: metrics)
                         }
+                        Color.clear.frame(height: 12)
                     }
                 }
+                .scrollClipDisabled()
+                .padding(.horizontal, Self.shadowRoom)
+                .mask(
+                    LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.93),
+                                           .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
+                )
+                .padding(.horizontal, -Self.shadowRoom)
             }
         }
     }
 
-    /// One challenger, laid out across rather than down: who they are, the team
-    /// you would meet, what the fight costs if you lose and what it pays if you
-    /// win, and the plate that starts it.
-    ///
-    /// `offense` is `offensePower`, resolved once by the list.
-    private func opponentRow(_ opponent: ArenaOpponent, offense: Int) -> some View {
-        HStack(spacing: 8) {
+    /// One challenger: who they are (name, crest and tier, power tinted
+    /// against your offence), the four faces you would meet, and the gold
+    /// FIGHT plate with the points a win pays, the points a loss costs under
+    /// it. The name block is as wide as the width solve gives it
+    /// (`ArenaLobbyMetrics.nameWidth`, never under the longest generated name,
+    /// "Nikandros", at 84 points), so no card cuts a name; a longer real
+    /// display name, once there is a server, takes a second line rather than
+    /// an ellipsis. The opponent's points print only where the card has room
+    /// for them; the tier already says the neighbourhood.
+    private func challengerCard(_ opponent: ArenaOpponent, offense: Int, metrics: ArenaLobbyMetrics) -> some View {
+        let win = ArenaService.pointsForWin(playerPoints: record.points, opponentPoints: opponent.points)
+        let loss = ArenaService.pointsForLoss(playerPoints: record.points, opponentPoints: opponent.points)
+        let canAttack = record.attacksRemaining > 0
+        let team = Array(opponent.team.prefix(ArenaService.teamSize))
+        return HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(opponent.name)
-                    .font(Theme.body(13).weight(.semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                Text(opponent.tier.displayName)
-                    .font(Theme.body(10).weight(.bold))
-                    .foregroundStyle(opponent.tier.color)
-                    .lineLimit(1)
-                Text("\(opponent.points) pts")
-                    .font(Theme.numeric(10))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-                Text("Power \(opponent.power)")
-                    .font(Theme.numeric(10))
-                    .foregroundStyle(
-                        opponent.power > offense ? Theme.danger : Theme.success
-                    )
-                    .lineLimit(1)
-                // What the attack costs and pays: the points a loss takes off
-                // your rating, and the laurels a win is worth at your tier.
-                // Kept to one short line so it lives inside the name column
-                // rather than widening the row.
-                HStack(spacing: 3) {
-                    Text("−\(ArenaService.pointsForLoss(playerPoints: record.points, opponentPoints: opponent.points))")
-                        .foregroundStyle(Theme.danger.opacity(0.9))
-                    Text("·")
-                        .foregroundStyle(Theme.textSecondary)
-                    Label("\(Int((Double(ArenaService.laurelsForWin(tier: record.tier)) * EventCalendar.multiplier(for: .arenaLaurelsBoost)).rounded()))", systemImage: "laurel.leading")   // event
-                        .foregroundStyle(Theme.success)
+                    .font(Theme.title(metrics.nameSize))
+                    .foregroundStyle(Theme.onGlass)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 4) {
+                    ArenaCrest(tier: opponent.tier, size: 12)
+                    Text(opponent.tier.displayName)
+                        .font(Theme.body(11).weight(.bold))
+                        .foregroundStyle(opponent.tier.color)
+                        .lineLimit(1)
+                        .fixedSize()
+                    if metrics.showsPoints {
+                        Text(opponent.points.formatted())
+                            .font(Theme.numeric(11.5))
+                            .foregroundStyle(Theme.onGlassDim)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
                 }
-                .font(Theme.numeric(10))
+                HStack(spacing: 4) {
+                    Text("Power")
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.onGlassDim)
+                    Text(opponent.power.formatted())
+                        .font(Theme.numeric(11.5))
+                        .foregroundStyle(powerTint(opponent.power, against: offense))
+                }
                 .lineLimit(1)
+                .fixedSize()
             }
-            // Flexible, not fixed at 100: the name block is the one thing in
-            // the row that can give, so a narrow column truncates a long name
-            // instead of pushing the attack capsule off the panel.
-            .frame(maxWidth: 104, alignment: .leading)
+            .frame(width: metrics.nameWidth, alignment: .leading)
 
-            HStack(spacing: 5) {
-                ForEach(opponent.team) { unit in
-                    UnitCard(unit: unit, showPower: false, size: cardSize)
+            HStack(spacing: ArenaLobbyMetrics.faceSpacing) {
+                ForEach(Array(team.enumerated()), id: \.element.id) { index, unit in
+                    UnitPortraitTile(unit: unit, size: metrics.face, isLeader: index == 0 && leadsInArena(unit))
                 }
             }
 
             Spacer(minLength: 4)
 
-            // The verb goes above the number: a bare "+27" in a gold capsule
-            // did not read as the button that starts the fight, and the number
-            // could have been laurels, power or points. Two lines rather than
-            // two words, because the row has no width to spare.
-            Button {
-                attack(opponent)
-            } label: {
-                VStack(spacing: 0) {
-                    Text("FIGHT")
-                        .font(Theme.body(9).weight(.black))
-                        .tracking(0.8)
-                    Text("+\(ArenaService.pointsForWin(playerPoints: record.points, opponentPoints: opponent.points))")
-                        .font(Theme.numeric(12).weight(.bold))
-                }
-                .foregroundStyle(record.attacksRemaining > 0 ? Theme.ink : Theme.textSecondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule().fill(
-                        record.attacksRemaining > 0
-                            ? Theme.goldPlate
-                            : LinearGradient(colors: [Theme.stroke, Theme.stroke],
-                                             startPoint: .top, endPoint: .bottom)
+            VStack(spacing: 1) {
+                Button {
+                    attack(opponent)
+                } label: {
+                    VStack(spacing: 0) {
+                        Text("FIGHT")
+                            .font(Theme.title(13))
+                            .tracking(1.2)
+                            .lineLimit(1)
+                            .fixedSize()
+                        HStack(spacing: 3) {
+                            ItemIcon(key: "rank_points", size: 12, glow: false)
+                            Text("+\(win)")
+                                .font(Theme.numeric(12))
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                    }
+                    .foregroundStyle(canAttack ? Theme.ink : Theme.onGlassDim)
+                    .frame(width: metrics.fightWidth, height: 40)
+                    .background(fightPlate(canAttack))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                            .strokeBorder(canAttack ? Color(hex: "#FFE9A8").opacity(0.6) : Theme.glassRim, lineWidth: 1)
                     )
-                )
+                    .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+                    .shadow(color: canAttack ? Theme.gold.opacity(0.35) : .clear, radius: 6, y: 2)
+                }
+                .buttonStyle(PlateButtonStyle())
+                .disabled(!canAttack)
+                .accessibilityLabel("Fight \(opponent.name), win \(win) points")
+                Text("−\(loss) if lost")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .lineLimit(1)
+                    .fixedSize()
             }
-            .buttonStyle(.plain)
-            .disabled(record.attacksRemaining == 0)
         }
-        .padding(8)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(Theme.surface)
-        )
+        .padding(.horizontal, ArenaLobbyMetrics.cardPadding)
+        .padding(.vertical, 7)
+        .frame(minHeight: 66)
+        .background(GlassPlate(radius: 10))
+    }
+
+    /// Gold when there is an attack to spend, glass when there is not. An
+    /// if/else, never a `?:` — `Theme.goldPlate` is a LinearGradient and
+    /// `Theme.glass` a Color, and a ternary of the two does not compile.
+    @ViewBuilder
+    private func fightPlate(_ canAttack: Bool) -> some View {
+        if canAttack {
+            Theme.goldPlate
+        } else {
+            Theme.glass
+        }
+    }
+
+    /// A challenger's power against your offence's: rose when they are more
+    /// than a tenth stronger, green when more than a tenth weaker, cream in
+    /// between. The old rows were red or green with no middle, so an even
+    /// fight read as a warning.
+    private func powerTint(_ power: Int, against offense: Int) -> Color {
+        guard offense > 0 else { return Theme.onGlass }
+        let ratio = Double(power) / Double(offense)
+        if ratio > 1.10 { return Theme.onGlassDanger }
+        if ratio < 0.90 { return Theme.onGlassSuccess }
+        return Theme.onGlass
     }
 
     private func attack(_ opponent: ArenaOpponent) {
@@ -434,5 +788,141 @@ struct ArenaView: View {
         guard let engine = store.startArenaBattle(against: opponent) else { return }
         pendingEngines[opponent.id] = engine
         battle = .arena(opponent)
+    }
+}
+
+// MARK: - The lobby's sizes
+
+/// Every size the Arena lobby uses, solved once from the width it is given
+/// (2026-09-22). Two classes: WIDE from 700 points (every Face ID iPhone, the
+/// 13 mini's 724 included) and NARROW below it (the iPhone SE's 643). The
+/// research's first cut used one set of constants, and on the SE the
+/// challenger's name block collapsed to 47 points; the critic ruled out the
+/// shrinking and the ellipsis that would have hidden it. So the narrow class
+/// takes 32-point faces, a 262-point column, a 48-point crest and a 66-point
+/// FIGHT plate, and the name block is whatever the card has left — measured
+/// here, not left to the layout: 106 on an iPhone 15 Pro, 96 on a mini, 93 on
+/// an SE, where "Nikandros", the longest generated name, is 84 at 14 points
+/// and 78 at the narrow 13.
+///
+/// The heights were budgeted under the tab bar: a phone gives this screen
+/// 402 − 52 strip − 58 bar − 21 home indicator = 271 points (262 on a 15 Pro,
+/// 244 on a mini), 12 of it the columns' padding. The left column needs
+/// about 227 (the standing 107, the teams 114), so it fits a mini with 5 to
+/// spare; the right needs 246 for the header and three 70-point cards, so a
+/// 15 Pro shows all three with the third's foot in the fade and a mini shows
+/// two and most of the third — which is the fade's point.
+private struct ArenaLobbyMetrics {
+    static let wideFrom: CGFloat = 700
+    /// Between the two columns.
+    static let gap: CGFloat = 10
+    /// Between two faces in a row.
+    static let faceSpacing: CGFloat = 4
+    /// A challenger card's own inset, left and right.
+    static let cardPadding: CGFloat = 10
+
+    let column: CGFloat
+    let face: CGFloat
+    let crest: CGFloat
+    let fightWidth: CGFloat
+    let nameSize: CGFloat
+    let nameWidth: CGFloat
+    let showsPoints: Bool
+
+    init(width: CGFloat) {
+        let wide = width >= Self.wideFrom
+        column = wide ? 300 : 262
+        face = wide ? 40 : 32
+        crest = wide ? 72 : 48
+        fightWidth = wide ? 74 : 66
+        nameSize = wide ? 14 : 13
+        // The challenger card's interior, less everything in it that is not
+        // the name block: the four faces, three 8-point gaps, the Spacer's 4
+        // and the FIGHT plate.
+        let list = width - 2 * ScreenChrome.contentPadding - column - Self.gap
+        let interior = list - 2 * Self.cardPadding
+        let faces = CGFloat(ArenaService.teamSize) * face + CGFloat(ArenaService.teamSize - 1) * Self.faceSpacing
+        let room = interior - (faces + 3 * 8 + 4 + fightWidth)
+        nameWidth = max(80, min(124, room.rounded(.down)))
+        // Crest, tier and points: "Champion 2,301" is 105 points.
+        showsPoints = room >= 108
+    }
+}
+
+// MARK: - The crest
+
+/// An arena tier as an emblem: the painted laurel wreath with a disc of the
+/// tier's colour in it and the tier's numeral, I to VI, carved on the disc
+/// (2026-09-22). "INITIATE" in grey-blue with no emblem was the weakest thing
+/// on run 211's frame, where the genre's ranks are all named emblems.
+///
+/// It draws in one of three ways:
+/// 1. `arena_crest_<tier>` when the bundle has it. Painted crests are the
+///    better crest (PLAN.md, *Phase B*, option E: one Meshy picture sheet,
+///    about 9 credits) and wait on the owner's word; when they land they draw
+///    here with no code change. None is painted today.
+/// 2. At 44 points and up, the wreath, the disc and the numeral.
+/// 3. Under 44, the disc alone: the numeral would fall under the title floor.
+private struct ArenaCrest: View {
+    let tier: ArenaTier
+    var size: CGFloat = 72
+
+    var body: some View {
+        let painted = "arena_crest_\(tier.displayName.lowercased())"
+        return Group {
+            if BundleImage.exists(painted) {
+                BundleImage(name: painted, renderedAt: size)
+                    .aspectRatio(contentMode: .fit)
+            } else if size >= 44 {
+                ZStack {
+                    RadialGradient(
+                        colors: [tier.color.opacity(0.45), tier.color.opacity(0)],
+                        center: .center,
+                        startRadius: 0,
+                        endRadius: size * 0.55
+                    )
+                    ItemIcon(key: "laurels", size: size, glow: false)
+                    // The wreath's ring centres a little above the middle of
+                    // `item_laurels` (about 0.44 of its height).
+                    disc(size * 0.5)
+                        .offset(y: -size * 0.06)
+                    Text(numeral)
+                        .font(Theme.display(size * 0.22))
+                        .carved(glow: false)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .offset(y: -size * 0.06)
+                }
+            } else {
+                disc(size)
+            }
+        }
+        .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(tier.displayName)
+    }
+
+    private func disc(_ diameter: CGFloat) -> some View {
+        ZStack {
+            Circle().fill(tier.color)
+            Circle().fill(
+                LinearGradient(colors: [Color.white.opacity(0.38), Color.clear, Color.black.opacity(0.35)],
+                               startPoint: .top, endPoint: .bottom)
+            )
+            Circle().strokeBorder(Theme.goldText, lineWidth: max(1, diameter * 0.07))
+        }
+        .frame(width: diameter, height: diameter)
+        .shadow(color: tier.color.opacity(0.6), radius: diameter * 0.15)
+    }
+
+    private var numeral: String {
+        switch tier {
+        case .initiate: return "I"
+        case .acolyte: return "II"
+        case .oracle: return "III"
+        case .champion: return "IV"
+        case .demigod: return "V"
+        case .olympian: return "VI"
+        }
     }
 }

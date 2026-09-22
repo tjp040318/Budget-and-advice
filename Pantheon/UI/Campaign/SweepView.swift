@@ -18,6 +18,13 @@ struct SweepButton: View {
     let stage: Stage
     let runs: Int
     let onSweep: (Int) -> Void
+    /// The sweep over art (2026-09-22, phase B): dark glass as tall as a
+    /// `PrimaryButton`, the words in pale gold, and NO footnote. The
+    /// footnote is brown on cream — invisible on glass — and 30 points of
+    /// height the stage popup and the briefing's deck do not have; a caller
+    /// on glass words the refusal itself (the briefing's deck line). The
+    /// Labyrinth's deck can take the same button.
+    var onGlass: Bool = false
 
     @EnvironmentObject private var store: GameStore
 
@@ -27,6 +34,55 @@ struct SweepButton: View {
     private var effectiveRuns: Int { max(1, min(runs, affordable)) }
 
     var body: some View {
+        if onGlass {
+            glassButton
+        } else {
+            creamButton
+        }
+    }
+
+    /// Dark glass when it can sweep, dimmer glass when it cannot; the label
+    /// is the count the energy actually pays for.
+    private var glassButton: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+        let open = refusal == nil
+        return Button {
+            onSweep(effectiveRuns)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "forward.fill")
+                    .font(.system(size: 13, weight: .black))
+                Text(runs > 1 ? "SWEEP ×\(effectiveRuns)" : "SWEEP")
+                    .font(Theme.title(14))
+                    .tracking(1.2)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundStyle(open ? Color(hex: "#FFE9A8") : Theme.onGlassDim)
+            .frame(maxWidth: .infinity)
+            .frame(height: PrimaryButton.height)
+            .background(
+                // A gradient and a colour will not unify in a ternary.
+                Group {
+                    if open {
+                        shape.fill(LinearGradient(
+                            colors: [Color(hex: "#3A2C1A").opacity(0.92), Color(hex: "#150F0A").opacity(0.92)],
+                            startPoint: .top, endPoint: .bottom
+                        ))
+                    } else {
+                        shape.fill(Color(hex: "#17120E").opacity(0.5))
+                    }
+                }
+            )
+            .overlay(shape.strokeBorder(open ? Theme.glassRim : Theme.glassRim.opacity(0.35), lineWidth: 1))
+            .contentShape(shape)
+        }
+        .buttonStyle(PlateButtonStyle())
+        .disabled(!open)
+        .accessibilityHint(refusal ?? "")
+    }
+
+    private var creamButton: some View {
         VStack(alignment: .trailing, spacing: 2) {
             Button {
                 onSweep(effectiveRuns)

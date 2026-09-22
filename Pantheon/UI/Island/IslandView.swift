@@ -105,6 +105,10 @@ struct IslandView: View {
         return hour < 5 || hour >= 20
     }
 
+    /// The safe width at which the header holds all of itself (a 16's 734
+    /// and a 16 Pro's 750 do; `header(compact:)` says what gives below it).
+    static let roomyHeaderWidth: CGFloat = 720
+
     /// The painting's pixel size; the anchors are normalised against it. A
     /// 16:9 painting for a landscape phone, which shows its full width and
     /// crops 9% off the top and the bottom at rest.
@@ -171,7 +175,7 @@ struct IslandView: View {
                         .allowsHitTesting(false)
                 }
 
-                header
+                header(compact: geometry.size.width < Self.roomyHeaderWidth)
 
                 if let offering {
                     offeringToast(offering)
@@ -352,151 +356,115 @@ struct IslandView: View {
 
     /// The player's card — the leader's face in a ring, the name, the level
     /// and the experience bar, as the genre's top-left card has it — then
-    /// the missions scroll, the chisel for the decorations, and the wallet
-    /// that opens the bazaar.
-    private var header: some View {
+    /// four painted doors (the missions, the allies, the events and the
+    /// chisel for the decorations) and the wallet that opens the bazaar.
+    ///
+    /// On a phone narrower than `roomyHeaderWidth` inside its safe area (an
+    /// SE's 667, a mini's 712) the header does not fit whole: the card at its
+    /// least, the four doors and the purse with the energy's countdown come
+    /// to about 700 points. There the purse leaves out the laurels — the
+    /// arena's currency, on the arena's own strip — and the doors stand in
+    /// 40-point targets instead of 44.
+    private func header(compact: Bool) -> some View {
         let player = store.player
+        let target: CGFloat = compact ? 40 : 44
         return HStack(alignment: .center, spacing: 12) {
             HStack(spacing: 8) {
                 leaderPortrait
                 VStack(alignment: .leading, spacing: 3) {
+                    // 16 points, shrinking no further than the title floor
+                    // (0.82 of 16 is 13.1) before a long name gives way.
                     Text(player.displayName)
                         .font(Theme.title(16))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                    // The level at its own width and the bar taking what is
+                    // left, 44 to 120 points (2026-09-22, phase B). The row
+                    // was "Lv.12", a fixed 120-point bar and "1240/2050"
+                    // side by side, and in run 211's frame the header had
+                    // squeezed both numbers to nothing and left the bar
+                    // alone. The experience in numbers is the genre's
+                    // detail, not its card: it is in the accessibility label.
+                    // The level is the darker gold, which holds on the pale
+                    // plate where the bright one washed out.
                     HStack(spacing: 8) {
                         Text("Lv.\(player.level)")
                             .font(Theme.numeric(12))
-                            .foregroundStyle(Theme.gold)
+                            .foregroundStyle(Theme.goldDim)
                             .lineLimit(1)
+                            .fixedSize()
                         StatBar(
                             value: Double(player.experience),
                             maximum: Double(player.experienceToNextLevel),
                             tint: Theme.gold,
                             height: 5
                         )
-                        .frame(width: 120)
-                        // One line, always: "1240/2050" offers a break after
-                        // the slash, and a wrap here would add a second line
-                        // to the header on a narrow frame rather than truncate.
-                        Text("\(player.experience)/\(player.experienceToNextLevel)")
-                            .font(Theme.numeric(10))
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
+                        .frame(minWidth: 44, maxWidth: 120)
                     }
                 }
             }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(player.displayName), level \(player.level), \(player.experience) of \(player.experienceToNextLevel) experience")
             Spacer()
-            // Missions: the scroll beside the wallet, with what is waiting.
-            Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showMissions = true
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    roundGlyph("scroll.fill")
-                    let waiting = store.claimableRewards
-                    if waiting > 0 {
-                        // Rewards waiting are the one thing on this screen that
-                        // must not be missed: red, not another gold pill beside
-                        // a gold glyph in a gold ring next to the gold wallet.
-                        Text("\(waiting)")
-                            .font(Theme.numeric(10).weight(.bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .frame(minWidth: 16)
-                            .background(Capsule().fill(Theme.danger))
-                            .overlay(Capsule().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
-                            .offset(x: 6, y: -4)
-                    }
+            // The four doors, painted (2026-09-22, phase B; PLAN.md, *The
+            // painted doors*): each object from the tab bar's sheet in the
+            // same dark socket, 36 points in a 44-point target. They stand
+            // four points apart rather than the header's twelve: twenty
+            // points of cream between four 36-point medallions read as four
+            // loose buttons, and in run 211's frame the player's card beside
+            // them was squeezed until the level and the experience numbers
+            // either side of its bar were gone.
+            HStack(spacing: 4) {
+                // Missions: the scroll beside the wallet, with what is waiting.
+                Button {
+                    Juice.haptic(.light)
+                    AudioLibrary.shared.play(.uiTap)
+                    showMissions = true
+                } label: {
+                    door("scroll.fill", art: "missions", title: "Missions", waiting: store.claimableRewards, target: target)
                 }
-                // The 36pt disc is the look; the target is 44.
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-            }
-            .buttonStyle(PlateButtonStyle())
-            // Allies: friends, mail, the guild and the ranks; requests
-            // and unclaimed mail counted in red like the missions.
-            Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showSocial = true
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    roundGlyph("person.2.fill")
-                    let pending = store.social.pendingCount
-                    if pending > 0 {
-                        Text("\(pending)")
-                            .font(Theme.numeric(10).weight(.bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .frame(minWidth: 16)
-                            .background(Capsule().fill(Theme.danger))
-                            .overlay(Capsule().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
-                            .offset(x: 6, y: -4)
-                    }
+                .buttonStyle(PlateButtonStyle())
+                // Allies: friends, mail, the guild and the ranks; requests
+                // and unclaimed mail counted in red like the missions.
+                Button {
+                    Juice.haptic(.light)
+                    AudioLibrary.shared.play(.uiTap)
+                    showSocial = true
+                } label: {
+                    door("person.2.fill", art: "allies", title: "Allies", waiting: store.social.pendingCount, target: target)
                 }
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
-            }
-            .buttonStyle(PlateButtonStyle())
-            // Events: the week's calendar beside the missions, with the
-            // Festival's unclaimed gifts counted the same red way.
-            Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showEvents = true
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    roundGlyph("calendar")
-                    let gifts = EventCalendar.claimableCount(player: player)
-                    if gifts > 0 {
-                        Text("\(gifts)")
-                            .font(Theme.numeric(10).weight(.bold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .frame(minWidth: 16)
-                            .background(Capsule().fill(Theme.danger))
-                            .overlay(Capsule().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
-                            .offset(x: 6, y: -4)
-                    }
+                .buttonStyle(PlateButtonStyle())
+                // Events: the week's calendar beside the missions, with the
+                // Festival's unclaimed gifts counted the same red way.
+                Button {
+                    Juice.haptic(.light)
+                    AudioLibrary.shared.play(.uiTap)
+                    showEvents = true
+                } label: {
+                    door("calendar", art: "events", title: "Events", waiting: EventCalendar.claimableCount(player: player), target: target)
                 }
-                .frame(width: 44, height: 44)
-                .contentShape(Circle())
+                .buttonStyle(PlateButtonStyle())
+                // The chisel: the island's decorations.
+                Button {
+                    Juice.haptic(.light)
+                    AudioLibrary.shared.play(.uiTap)
+                    showDecor = true
+                } label: {
+                    door("hammer.fill", art: "decor", title: "Decorations", waiting: 0, target: target)
+                }
+                .buttonStyle(PlateButtonStyle())
             }
-            .buttonStyle(PlateButtonStyle())
-            // The chisel: the island's decorations.
-            Button {
-                Juice.haptic(.light)
-                AudioLibrary.shared.play(.uiTap)
-                showDecor = true
-            } label: {
-                roundGlyph("hammer.fill")
-                    .frame(width: 44, height: 44)
-                    .contentShape(Circle())
-            }
-            .buttonStyle(PlateButtonStyle())
             // The wallet is the way into the bazaar, as the genre has it.
             Button {
                 Juice.haptic(.light)
                 AudioLibrary.shared.play(.uiTap)
                 showShop = true
             } label: {
-                HStack(spacing: 6) {
-                    WalletBar(wallet: player.wallet)
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .black))
-                        .foregroundStyle(Theme.ink)
-                        .frame(width: 26, height: 26)
-                        .background(Circle().fill(Theme.gold))
-                        .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 1))
-                }
+                IslandPurse(wallet: player.wallet, showsLaurels: !compact)
             }
             // The wallet keeps its full width on a notched landscape frame;
-            // a long summoner name gives way before a truncated number does.
+            // a long demigod's name gives way before a truncated number does.
             .layoutPriority(1)
             .buttonStyle(PlateButtonStyle())
         }
@@ -510,13 +478,38 @@ struct IslandView: View {
         .padding(.top, 6)
     }
 
-    private func roundGlyph(_ name: String) -> some View {
-        Image(systemName: name)
-            .font(.system(size: 15, weight: .bold))
-            .foregroundStyle(Theme.gold)
-            .frame(width: 36, height: 36)
-            .background(Circle().fill(Theme.surface))
-            .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 1))
+    /// One of the header's doors: its painted object in the dark socket
+    /// (`MedallionIcon` at 36, the glyph in the same socket until the
+    /// painting ships) with what is waiting behind it counted in red on its
+    /// shoulder, in a 44-point target (40 on a narrow phone). `art` is the
+    /// door's `ChromeArt` key; `title` is what VoiceOver reads, since the
+    /// medallion is a picture and hides itself from it.
+    private func door(_ glyph: String, art: String, title: String, waiting: Int, target: CGFloat) -> some View {
+        MedallionIcon(key: art, glyph: glyph, size: 36)
+            .overlay(alignment: .topTrailing) {
+                if waiting > 0 {
+                    // Rewards waiting are the one thing on this screen that
+                    // must not be missed: red, not another gold pill beside
+                    // a gold object in a gold ring next to the gold wallet.
+                    // The white ring reads on the dark socket as it did on
+                    // the cream disc.
+                    Text("\(waiting)")
+                        .font(Theme.numeric(11.5).weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .frame(minWidth: 16)
+                        .background(Capsule().fill(Theme.danger))
+                        .overlay(Capsule().strokeBorder(Theme.surfaceHigh, lineWidth: 1))
+                        .offset(x: 8, y: -4)
+                }
+            }
+            .frame(width: target, height: 44)
+            .contentShape(Circle())
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(waiting > 0 ? "\(title), \(waiting) waiting" : title)
     }
 
     /// The campaign leader's face in a gold ring: the Isle's avatar, in our
@@ -815,6 +808,91 @@ struct IslandView: View {
         .padding(.top, 64)
         .transition(.move(edge: .top).combined(with: .opacity))
         .allowsHitTesting(false)
+    }
+}
+
+// MARK: - The purse
+
+/// The island's wallet (2026-09-22, phase B): the four currencies as their
+/// painted items in the strips' dark gold-rimmed well (`BarWell`), the next
+/// point of energy's countdown beside the energy, and the bazaar's gold plus
+/// inside the same well, so the way into the bazaar is one object.
+///
+/// It was `WalletBar`, a cream capsule of 11-point SF glyphs — a bolt, a
+/// sparkle, a hexagon cluster, a laurel — on the most-seen screen, while
+/// every other strip's `BarWallet` drew the painted energy, divinity, drachma
+/// and laurels, and the painted doors now stand beside it. It draws what
+/// `BarWallet` draws, item for item and at its sizes, because `BarWallet`
+/// has no countdown and the island is where a player checks when the next
+/// energy comes. Without the dividers and the twelve-point gaps it is about
+/// twenty points narrower than the capsule it replaced, which goes to the
+/// player's card.
+private struct IslandPurse: View {
+    let wallet: Wallet
+    /// False on a narrow phone, where the header cannot hold all four.
+    var showsLaurels: Bool = true
+
+    /// One energy every five minutes: `GameStore.refreshTimedResources`
+    /// keeps the same interval, and `lastEnergyTick` is where it counts from.
+    private static let energyInterval: TimeInterval = 5 * 60
+
+    var body: some View {
+        HStack(spacing: 9) {
+            HStack(spacing: 5) {
+                currency("energy", tint: Theme.info, value: "\(wallet.energy)/\(wallet.maxEnergy)")
+                if wallet.energy < wallet.maxEnergy {
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(countdown(at: context.date))
+                            .font(Theme.numeric(11.5))
+                            .foregroundStyle(Theme.onGlassDim)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                }
+            }
+            currency("divinity", tint: Theme.gold, value: "\(wallet.divinity)")
+            currency("drachma", tint: Theme.onGlass, value: BarWallet.compact(wallet.drachma))
+            if showsLaurels {
+                currency("laurels", tint: Theme.success, value: "\(wallet.laurels)")
+            }
+            Image(systemName: "plus")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.ink)
+                .frame(width: 24, height: 24)
+                .background(Circle().fill(Theme.goldPlate))
+                .overlay(Circle().strokeBorder(Color(hex: "#FFE9A8").opacity(0.6), lineWidth: 1))
+        }
+        .padding(.leading, 10)
+        .padding(.trailing, 5)
+        .frame(height: ScreenChrome.control)
+        .background(BarWell())
+        .fixedSize()
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Energy \(wallet.energy) of \(wallet.maxEnergy), divinity \(wallet.divinity), drachma \(wallet.drachma), laurels \(wallet.laurels). Opens the bazaar.")
+    }
+
+    /// A currency as `BarWallet` draws it: the painted item at 18 (its glyph
+    /// in `tint` until a painting ships) and the amount in cream, on one line
+    /// at its own width — run 179 broke "80/80" into "80/8" over "0".
+    private func currency(_ key: String, tint: Color, value: String) -> some View {
+        HStack(spacing: 4) {
+            ItemIcon(key: key, size: 18, tint: tint, glow: false)
+                .shadow(color: .black.opacity(0.4), radius: 1, y: 1)
+            Text(value)
+                .font(Theme.numeric(12.5))
+                .foregroundStyle(Theme.onGlass)
+                .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
+                .lineLimit(1)
+                .fixedSize()
+        }
+    }
+
+    /// Minutes and seconds to the next point of energy: the remainder of the
+    /// current interval since `lastEnergyTick`.
+    private func countdown(at now: Date) -> String {
+        let elapsed = max(0, now.timeIntervalSince(wallet.lastEnergyTick))
+        let remaining = Self.energyInterval - elapsed.truncatingRemainder(dividingBy: Self.energyInterval)
+        return String(format: "%d:%02d", Int(remaining) / 60, Int(remaining) % 60)
     }
 }
 

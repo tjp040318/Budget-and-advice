@@ -60,7 +60,7 @@ struct SummonView: View {
                 // dark glass, light shafts and motes over the painting.
                 ZStack(alignment: .topLeading) {
                     room
-                    HallAmbience()
+                    PlaceAmbience()
                     HStack(spacing: 0) {
                         bannerRail
                         roomControls
@@ -584,63 +584,8 @@ struct SummonView: View {
     }
 }
 
-// MARK: - The little ?
-
-/// The circled question mark itself, in one place so the three of them are the
-/// same object. It is drawn at 14 points inside a 26-point tap area: the glyph
-/// has to be small enough to read as an aside rather than as a control, and the
-/// target has to be big enough to hit with a thumb over a moving painting.
-///
-/// It is the OUTLINE `questionmark.circle`, not the filled one, because the
-/// filled one is already the Unknown Scroll's own glyph (`ScrollType.glyph`)
-/// and appears on that scroll's menu row, in the strip, and on both summon
-/// plates whenever it is the scroll in hand.
-private struct InfoGlyph: View {
-    var body: some View {
-        Image(systemName: "questionmark.circle")
-            .font(.system(size: 14, weight: .black))
-            .foregroundStyle(Color(hex: "#E0C275"))
-            .frame(width: 26, height: 26)
-            .contentShape(Circle())
-    }
-}
-
-/// A little ? that opens one short answer beside the thing it explains.
-///
-/// This is what the owner asked for in place of the slabs — "with little ? to
-/// view other details" — and it is a popover rather than a sheet on purpose:
-/// `.presentationCompactAdaptation(.popover)` keeps it a popover on a phone,
-/// so the answer appears next to the question with the room still behind it,
-/// where a sheet would cover the room to answer a question about it.
-private struct InfoDot<Detail: View>: View {
-    let title: String
-    @ViewBuilder var detail: () -> Detail
-    @State private var isOpen = false
-
-    var body: some View {
-        Button {
-            Juice.haptic(.light)
-            AudioLibrary.shared.play(.uiTap)
-            isOpen = true
-        } label: {
-            InfoGlyph()
-        }
-        .buttonStyle(.plain)
-        .popover(isPresented: $isOpen) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(title.uppercased())
-                    .font(Theme.body(10).weight(.black))
-                    .tracking(1.0)
-                    .foregroundStyle(Theme.goldDim)
-                detail()
-            }
-            .padding(14)
-            .frame(width: 272)
-            .background(Theme.surface)
-            .presentationCompactAdaptation(.popover)
-        }
-    }
-}
+// The little ? (`InfoGlyph`, `InfoDot`) moved to Glass.swift in phase B
+// (2026-09-22), shared by every place screen.
 
 /// The published odds. Shown in full, because a rate table that hides the pool
 /// is not a rate table.
@@ -981,14 +926,5 @@ struct SummoningCircle: View {
     }
 }
 
-/// The hall's air (2026-09-22): shafts of light from the high windows and
-/// motes rising through them, over the painting and under the words.
-private struct HallAmbience: View {
-    var body: some View {
-        ZStack {
-            LightShafts()
-            Motes(count: 26, color: Color(hex: "#FFE29A"), seed: 910)
-        }
-        .allowsHitTesting(false)
-    }
-}
+// The hall's air is `PlaceAmbience` (Glass.swift) since phase B
+// (2026-09-22): its defaults are this hall's shafts and motes.

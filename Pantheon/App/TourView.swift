@@ -78,6 +78,121 @@ struct TourView: View {
         return CGFloat(zoom)
     }
 
+    /// The word after `flag` on the launch line, or nil when the flag is
+    /// absent or last. Every relaunch argument below that takes a word is
+    /// read through it: phase B (2026-09-22) added sixteen, and sixteen
+    /// copies of the same four lines were sixteen places to get the bounds
+    /// check wrong.
+    private static func argument(after flag: String) -> String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: flag), at + 1 < args.count else { return nil }
+        return args[at + 1]
+    }
+
+    /// `-tour-dungeon <chapterID>` opens the `halls` or `dungeon` step on
+    /// another room: the CI job relaunches the Halls on Radiance (Olympus,
+    /// the brightest painting, where glass is hardest to read) and Umbra
+    /// (the Serpent Deep, the darkest), and the dungeon on the Necropolis.
+    static var pinnedDungeon: String? { argument(after: "-tour-dungeon") }
+
+    /// `-tour-dungeon-floor N` opens that room on floor N rather than the
+    /// player's current one: B1 for the mastered floor's Sweep deck, B10
+    /// for the locked floor with the tallest drops plate — the height test.
+    static var pinnedDungeonFloor: Int? { argument(after: "-tour-dungeon-floor").flatMap { Int($0) } }
+
+    /// `-tour-labyrinth-wing halls|tower|raids` opens the building on that
+    /// wing. Neither the Halls wing nor the Tower had ever been photographed
+    /// before phase B; the Tower is newly on glass.
+    static var pinnedLabyrinthWing: LabyrinthView.Wing {
+        switch argument(after: "-tour-labyrinth-wing") ?? "" {
+        case "halls": return .halls
+        case "tower": return .tower
+        case "raids": return .raids
+        default: return .dungeons
+        }
+    }
+
+    /// `-tour-raid <raid id>` opens the Titans on that Titan: the Unwrapped
+    /// King has the longest name, the one the rail's third line is for, and
+    /// sits low enough that the rail must scroll to him.
+    static var pinnedRaid: String? { argument(after: "-tour-raid") }
+
+    /// `-tour-training feed|evolve|fuse` opens the Hall of Ka on that ledger:
+    /// the offering Auto chose (the ghost gauge, the cost, the veils), the
+    /// evolution, and the fusion board with its prize on the altar. Only
+    /// Power up with nothing offered and Awaken had been photographed.
+    static var pinnedTraining: String? { argument(after: "-tour-training") }
+
+    /// `-tour-popup-stage <stageID>` opens the stage card on another stage
+    /// of the Duat: the fifth, for the BOSS eyebrow and the boss's face.
+    static var pinnedPopupStage: String? { argument(after: "-tour-popup-stage") }
+
+    /// `-tour-chapter-scroll` (no value) opens the chapter map with its
+    /// scroll unrolled: the story, the yields and the terms.
+    static var pinnedChapterScroll: Bool { ProcessInfo.processInfo.arguments.contains("-tour-chapter-scroll") }
+
+    /// `-tour-tier hard|hell` opens the Duat's map on that tier, on the
+    /// walked copy (`CampaignView.tourWalk`), which has the easier tiers
+    /// cleared so the tier is open: the tier well's gold plate and seals,
+    /// Hell's grade and motes, and the scroll opening on its terms.
+    static var pinnedTier: CampaignDifficulty? {
+        argument(after: "-tour-tier").flatMap { CampaignDifficulty(rawValue: $0.lowercased()) }
+    }
+
+    /// `-tour-briefing <stageID>` shows that stage's briefing ALONE, as the
+    /// sheet it is: nothing photographed the briefing except under the
+    /// sweep's receipt, a screen the game never draws (2026-09-22).
+    static var pinnedBriefing: String? { argument(after: "-tour-briefing") }
+
+    /// `-tour-shop-stall scrolls|laurel|night…` opens the bazaar on the stall
+    /// whose name begins with the word: the Scrolls stall is the densest
+    /// shelf, and the Laurel exchange sits below the rail's fold, so the
+    /// frame proves the rail opens scrolled to it.
+    static var pinnedShopStall: ShopService.Section? {
+        guard let word = argument(after: "-tour-shop-stall")?.lowercased() else { return nil }
+        return ShopService.visibleSections.first { $0.rawValue.lowercased().hasPrefix(word) }
+    }
+
+    /// `-tour-missions-tab daily|counsel|feats` opens the Missions on that
+    /// list; the Feats are twenty-eight rows with the claimable ones first.
+    static var pinnedMissionsTab: MissionsView.Tab? {
+        switch argument(after: "-tour-missions-tab")?.lowercased() ?? "" {
+        case "daily": return .missions
+        case "counsel": return .counsel
+        case "feats": return .feats
+        default: return nil
+        }
+    }
+
+    /// `-tour-events-week plain` moves the events step a week on from the
+    /// Festival Monday, so the ordinary week's band is photographed as well:
+    /// every frame till now was the Festival's.
+    static var pinnedPlainWeek: Bool { argument(after: "-tour-events-week") == "plain" }
+
+    /// `-tour-guide caret` shows Athena's caret on the Collection tab instead
+    /// of her plate — the proof that a door in the tab bar, which is the
+    /// screen's bottom inset, reaches an overlay drawn above it.
+    static var pinnedGuideCaret: Bool { argument(after: "-tour-guide") == "caret" }
+
+    /// `-tour-more diagnostics` shows the debug build's Diagnostics desk, the
+    /// place the model board and the console went when they left More's
+    /// front page (2026-09-22, phase B).
+    static var pinnedMoreDiagnostics: Bool { argument(after: "-tour-more") == "diagnostics" }
+
+    /// `-tour-selector-pick first` puts the first candidate on the opening
+    /// gift's counter, so the gold TAKE and the lit tile are in one frame.
+    static var pinnedSelectorPick: Bool { argument(after: "-tour-selector-pick") == "first" }
+
+    /// `-tour-mileage-pick dearest` puts the head of the Duat's catalogue —
+    /// the dearest 5★, 153 points against the save's 118 — on the counter:
+    /// the rose price and the dim "35 MORE".
+    static var pinnedMileagePick: Bool { argument(after: "-tour-mileage-pick") == "dearest" }
+
+    /// `-tour-detail awakened` opens the unit sheet on the seed's awakened
+    /// unit, whose regalia is at III: the unlocked regalia plate and the
+    /// awakening line, where the Zeus frame shows the regalia locked.
+    static var pinnedDetailAwakened: Bool { argument(after: "-tour-detail") == "awakened" }
+
     /// Seconds per tick. The runner screenshots on the same period, so every
     /// step is caught at least once.
     static let tickSeconds: TimeInterval = 4
@@ -134,14 +249,28 @@ struct TourView: View {
         }
     }
 
+    /// A tab's screen as the phone draws it: with the game's tab bar as its
+    /// bottom inset, the tab's own door lit. `RootView` puts `GameTabBar`
+    /// under every tab, so a tab screen gets 58 points less height than the
+    /// window; the tour photographed the collection, the summon hall, the
+    /// arena and the chapter map WITHOUT it until phase B (2026-09-22), so
+    /// every one of those frames judged a screen 58 points taller than any
+    /// phone has, and the four other doors' selected states were never seen.
+    /// A function and not a nested view, so no name can collide; generic
+    /// rather than an opaque parameter, which nothing else in the tree uses.
+    private func tabbed<Content: View>(_ tab: RootView.Tab, _ screen: Content) -> some View {
+        screen.safeAreaInset(edge: .bottom, spacing: 0) {
+            GameTabBar(selection: .constant(tab))
+        }
+    }
+
     @ViewBuilder
     private var content: some View {
         switch current {
         case "island":
             // With the tab bar the app really shows under it (GameTabBar,
             // 2026-09-22), which the tour had never photographed.
-            IslandView(pinnedZoom: Self.pinnedIslandZoom) { _ in }
-                .safeAreaInset(edge: .bottom, spacing: 0) { GameTabBar(selection: .constant(.island)) }
+            tabbed(.island, IslandView(pinnedZoom: Self.pinnedIslandZoom) { _ in })
         case "island_decor":
             // The island's decoration sheet: the catalogue with the tour's
             // brazier and sphinx owned and standing, the rest priced.
@@ -150,8 +279,9 @@ struct TourView: View {
             // The events calendar on a Festival Monday (2026-09-28, week
             // 143 from the calendar's epoch): the gift band, the TODAY card
             // and the weekend's headline all on one frame, whatever day CI
-            // runs on.
-            EventsView(now: Self.festivalMonday, onClaim: { _ in nil })
+            // runs on. `-tour-events-week plain` is the Monday after, an
+            // ordinary week, for the band every other week shows.
+            EventsView(now: Self.pinnedPlainWeek ? Self.plainMonday : Self.festivalMonday, onClaim: { _ in nil })
         case "demigods":
             // The social screen on the seeded offline world (the CI build
             // carries no iCloud entitlement): the Guild tab by default, and
@@ -172,32 +302,50 @@ struct TourView: View {
                 CollectionView()
             }
         case "collection":
-            CollectionView()
+            // Under the tab bar since phase B: both layouts are sized for the
+            // 271 points a tab gets under it.
+            tabbed(.collection, CollectionView())
         case "collection_stage":
             // The collection's other shape: the rail along the bottom, the
             // picked unit's model on the stage, the words and slots on the
             // left. Opened in that layout because nothing here taps the
             // switch; the `collection` step above keeps the Cards.
-            CollectionView(initialLayout: .stage)
+            tabbed(.collection, CollectionView(initialLayout: .stage))
         case "detail":
-            if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
+            // Zeus, the regalia locked; `-tour-detail awakened` is the seed's
+            // awakened unit, its regalia at III, for the unlocked plate and
+            // the awakening line in the skills.
+            if let unit = detailUnit {
                 UnitDetailView(unitID: unit.id)
             } else {
                 CollectionView()
             }
         case "training":
-            TrainingView()
+            // Power up with nothing offered by default; `-tour-training
+            // feed|evolve|fuse` for the three ledgers no frame had shown.
+            switch Self.pinnedTraining ?? "" {
+            case "feed":
+                TrainingView(selectedUnitID: feedCandidate?.id, offersOnOpen: true)
+            case "evolve":
+                TrainingView(initialMode: .evolve, selectedUnitID: evolveCandidate?.id)
+            case "fuse":
+                TrainingView(initialMode: .fuse)
+            default:
+                TrainingView()
+            }
         case "awaken":
-            // The Hall of Ka's Awaken panel — the two forms, the bill with
-            // every line met (the seed grants the essences), the hint that
-            // says where each essence comes from, and the button live — on
-            // the strongest unit of the seed that has an awakened form and
-            // has not taken it. The training step (3) opens on Power up, so
-            // this panel had never been photographed while the owner was
-            // testing exactly it (2026-09-17).
+            // The Hall of Ka's Awaken ledger on the strongest unit of the seed
+            // that has an awakened form and has not taken it: the whole
+            // awakened name carved, the bonus, the four essences as painted
+            // requirement tiles with have/need all met (the seed grants the
+            // essences), the ? that says where each drops, and AWAKEN live —
+            // with the BECOMES card beside the figure on the altar. The
+            // training step (3) opens on Power up, so this panel had never
+            // been photographed while the owner was testing exactly it
+            // (2026-09-17).
             TrainingView(initialMode: .awaken, selectedUnitID: awakeningCandidate?.id)
         case "summon":
-            SummonView()
+            tabbed(.summon, SummonView())
         case "reveal":
             // A second launch with `-tour-reveal awakened` shows an awakened
             // 5★ on the beam — the frame the owner sent back on 2026-09-17
@@ -212,7 +360,9 @@ struct TourView: View {
                     .onAppear { startBattle() }
             }
         case "arena":
-            ArenaView()
+            // The lobby on the Arena of Souls, under the tab bar, on the
+            // seed's mid-ladder standing and full defence.
+            tabbed(.arena, ArenaView())
         case "arena_battle":
             // The arena fight is a different stage, a 4v4 and an AI-built
             // enemy team, so the camera and the placement are photographed
@@ -224,14 +374,20 @@ struct TourView: View {
                     .onAppear { startArenaBattle() }
             }
         case "halls":
+            // The Hall of Embers on its current floor (B3 on the seed), or
+            // the hall `-tour-dungeon` names. Pushed from the Labyrinth, a
+            // full-screen cover, so no tab bar.
             NavigationStack {
-                DungeonLevelsView(chapterID: "hall_ember")
+                DungeonLevelsView(chapterID: Self.pinnedDungeon ?? "hall_ember", focusFloor: Self.pinnedDungeonFloor)
             }
         case "labyrinth":
-            LabyrinthView()
+            LabyrinthView(opening: Self.pinnedLabyrinthWing)
         case "dungeon":
+            // The Vault on B7 by default; `-tour-dungeon` and
+            // `-tour-dungeon-floor` for the Necropolis, the mastered B1 and
+            // the locked B10.
             NavigationStack {
-                DungeonLevelsView(chapterID: "lab_colossus")
+                DungeonLevelsView(chapterID: Self.pinnedDungeon ?? "lab_colossus", focusFloor: Self.pinnedDungeonFloor)
             }
         case "relic_picker":
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
@@ -280,20 +436,43 @@ struct TourView: View {
                 CampaignView(openingChapter: "duat_1")
             }
         case "guide":
-            // Athena over the island, saying the first thing she says. The
-            // tour's save is a veteran's, so the opening would be silent on
-            // its own: the plate is put up directly, which is what a picture
-            // of it needs.
-            ZStack {
-                IslandView(isActive: false) { _ in }
-                GuidePlate(
-                    beat: LessonBook.opening.first?.beats.first
-                        ?? LessonBeat("The gods of five worlds are asleep under the stone."),
-                    title: LessonBook.opening.first?.title ?? "",
-                    isLast: false,
-                    onAdvance: {},
-                    onSkip: {}
-                )
+            if Self.pinnedGuideCaret {
+                // Her caret on the Collection tab, drawn by the same overlay
+                // RootView's `.guide` puts above the bar: the frame proves
+                // the tab bar's `.guideAnchor("tab_collection")` reaches an
+                // overlay outside the bottom inset. No caret on the frame
+                // means the anchor is not getting out of the inset.
+                tabbed(.island, IslandView(isActive: false) { _ in })
+                    .overlayPreferenceValue(GuideAnchorKey.self) { anchors in
+                        GeometryReader { proxy in
+                            if let anchor = anchors["tab_collection"] {
+                                GuideCaret(
+                                    prompt: LessonBook.all.first(where: { $0.id == "first_relic" })?.prompt
+                                        ?? "Open the collection",
+                                    target: proxy[anchor],
+                                    bounds: proxy.size
+                                )
+                            }
+                        }
+                    }
+            } else {
+                // Athena over the island, saying the first thing she says.
+                // The tour's save is a veteran's, so the opening would be
+                // silent on its own: the plate is put up directly, which is
+                // what a picture of it needs. Over the island AND its bar,
+                // as RootView draws her (its `.guide` is applied after the
+                // bar's inset).
+                ZStack {
+                    tabbed(.island, IslandView(isActive: false) { _ in })
+                    GuidePlate(
+                        beat: LessonBook.opening.first?.beats.first
+                            ?? LessonBeat("The gods of five worlds are asleep under the stone."),
+                        title: LessonBook.opening.first?.title ?? "",
+                        isLast: false,
+                        onAdvance: {},
+                        onSkip: {}
+                    )
+                }
             }
         case "lessons":
             LessonsView()
@@ -306,23 +485,41 @@ struct TourView: View {
             // tier's prize. Opened on that tab for the same reason.
             MissionsView(opening: .counsel)
         case "sweep":
-            // The briefing with its Sweep button, and the receipt over it once
-            // the sweep has run. The tour's save three-stars Duat 1-1, so this
-            // is a real sweep of a real stage; if it were ever refused the
-            // frame still shows the button and the sentence that says why,
-            // which is the other thing worth photographing.
-            TourSweepScene()
+            // Two plans for this step met in phase B (2026-09-22) and are
+            // merged: the frame of old showed the receipt over the BRIEFING,
+            // a screen the game never draws, and nothing showed the briefing
+            // alone. So the plain launch is a real sweep of Duat 1-1 (the
+            // tour's save three-stars it) and its receipt over the Duat's map
+            // under the tab bar, where the game puts it; and `-tour-briefing
+            // <stageID>` is the briefing alone, as the sheet it is — no bar,
+            // no sweep, no receipt. The CI job relaunches it three times: an
+            // unmastered campaign stage, the mastered one with Sweep live,
+            // and Labyrinth B10's six sets.
+            if let id = Self.pinnedBriefing {
+                if let stage = StageDatabase.stage(id) ?? StageDatabase.stage("duat_1_4") {
+                    StageBriefingView(stage: stage, onStart: { _ in }, onSweep: { _ in })
+                }
+            } else {
+                tabbed(.campaign, TourSweepScene())
+            }
         case "mileage":
             // The Duat banner's exchange, with the tour's save partway up it:
             // the 4★ row can be taken and the 5★ row cannot, which is the
-            // difference the screen exists to show.
-            MileageSheet(banner: Banner.duatOpens) { _ in }
+            // difference the screen exists to show. The plain launch puts the
+            // head of the board the save can afford on the counter (the gold
+            // TAKE); `-tour-mileage-pick dearest` the dearest 5★, which it
+            // cannot (the rose price and "35 MORE").
+            MileageSheet(
+                banner: Banner.duatOpens,
+                preselect: Self.pinnedMileagePick ? MileageService.catalogue(for: Banner.duatOpens).first?.id : nil
+            ) { _ in }
         case "selector":
             // The opening gift, presented directly. The tour's save has
             // already spent it (a veteran's save would otherwise pop this
             // over the summoning room at step 4), so it is put up here the
-            // way the guide plate is.
-            SelectorSheet { _ in }
+            // way the guide plate is. `-tour-selector-pick first` lights the
+            // first candidate, for the gold TAKE.
+            SelectorSheet(preselect: Self.pinnedSelectorPick ? SelectorService.candidates().first?.id : nil) { _ in }
         case "relic_roll":
             // The choice of two, on a relic whose seed the tour's save sets.
             // The same screen as step 19, in the state it spends most of a
@@ -359,23 +556,43 @@ struct TourView: View {
         case "relics":
             RelicInventoryView()
         case "shop":
-            ShopView()
+            // The Daily stall, or the one `-tour-shop-stall` names.
+            ShopView(opening: Self.pinnedShopStall ?? .daily)
         case "chapter_map":
             // The first chapter as a place: the painting, the road, the
             // medallions and the chests; the world map is the `island`
-            // step's neighbour and is seen from there.
-            CampaignView(openingChapter: "duat_1")
+            // step's neighbour and is seen from there. Under the tab bar,
+            // which is how the phone measures the map. `-tour-chapter-scroll`
+            // unrolls the scroll; `-tour-tier hell` is Hell on the walked
+            // copy, which clears Normal and Hard so Hell is open.
+            if let tier = Self.pinnedTier {
+                tabbed(.campaign, CampaignView(
+                    openingChapter: "duat_1",
+                    openingDifficulty: tier,
+                    previewPlayer: CampaignView.tourWalk(store.player, chapterIndex: 0, tier: tier)
+                ))
+            } else {
+                tabbed(.campaign, CampaignView(openingChapter: "duat_1", openingScroll: Self.pinnedChapterScroll))
+            }
         case "stage_popup":
             // The fourth stage's card over the map: story, enemies, drops,
-            // power, Fight.
-            CampaignView(openingChapter: "duat_1", openingStage: "duat_1_4")
+            // power, Fight. `-tour-popup-stage duat_1_5` for the boss's.
+            tabbed(.campaign, CampaignView(openingChapter: "duat_1", openingStage: Self.pinnedPopupStage ?? "duat_1_4"))
         case "chapter_maps":
             // Every chapter's map in turn (-tour-chapter K), so a painted
             // region's medallions are seen on their landmarks before the
-            // owner does.
-            CampaignView(openingChapter: StageDatabase.chapters[Self.pinnedChapter].id)
+            // owner does — on the WALKED copy (`CampaignView.tourWalk`):
+            // the chapters before K full, K four stages in. Eleven of run
+            // 211's twelve frames showed a chapter no player can open, every
+            // medallion locked. The copy is never written to the save, which
+            // persists between the tour's launches.
+            tabbed(.campaign, CampaignView(
+                openingChapter: StageDatabase.chapters[Self.pinnedChapter].id,
+                previewPlayer: CampaignView.tourWalk(store.player, chapterIndex: Self.pinnedChapter)
+            ))
         case "missions":
-            MissionsView()
+            // The Daily list, or the one `-tour-missions-tab` names.
+            MissionsView(opening: Self.pinnedMissionsTab ?? .missions)
         case "victory":
             // The two acts of a win without fighting one: the reckoning,
             // then the chest opening on its spoils. `autoplay` taps through
@@ -390,9 +607,11 @@ struct TourView: View {
             BattleResultView(summary: Self.demoRaidVictory(relic: bestRelic), onDismiss: {}, autoplay: true, store: store)
                 .background(Color.black.ignoresSafeArea())
         case "raids":
-            // The Raids wing: the two cards with the tour save's best grade
-            // stamped on the serpent's, the mark to beat, and the aether held.
-            LabyrinthView(opening: .raids)
+            // The Titans wing: the serpent's room with the tour save's best
+            // grade stamped on it, the mark to beat, and the aether held;
+            // `-tour-raid raid_unwrapped_king` scrolls the rail to the Umbra
+            // Titan, whose three-line name is the one that has to fit.
+            LabyrinthView(opening: .raids, raid: Self.pinnedRaid)
         case "relic_awaken":
             // The awakening, performed as the screen appears on the tour
             // save's 6★ +15 (the debug seed's, with the aether to pay for
@@ -423,13 +642,51 @@ struct TourView: View {
             // Egyptians light The Weighing of Hearts I, and the hint names
             // what one more Greek would light.
             TeamPickerView(slot: .campaign, maxSize: 5)
+        case "more":
+            // More, a sheet over the island (no tab bar). `-tour-more
+            // diagnostics` opens the debug build's desk behind its one row.
+            if Self.pinnedMoreDiagnostics {
+                NavigationStack { DiagnosticsDesk() }
+            } else {
+                SettingsView()
+            }
         default:
             SettingsView()
         }
     }
 
-    /// The unit the awaken step opens on: not yet awakened, with an awakened
-    /// form to take, the highest grade and level first.
+    /// The unit the detail step opens: Zeus, or with `-tour-detail
+    /// awakened` the seed's awakened unit (the starter, regalia at III).
+    private var detailUnit: Unit? {
+        let units = store.player.units
+        if Self.pinnedDetailAwakened, let awakened = units.first(where: { $0.isAwakened }) {
+            return awakened
+        }
+        return units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? units.first
+    }
+
+    /// The unit the `feed` ledger opens on: the strongest one still BELOW its
+    /// level cap. A unit at the cap would have Auto pick nothing and the
+    /// ledger show its Evolve redirect instead of the ghost gauge.
+    private var feedCandidate: ResolvedUnit? {
+        store.resolvedUnits.filter { !$0.unit.isMaxLevel }.max { $0.power < $1.power }
+    }
+
+    /// The unit the `evolve` ledger opens on: one ready to evolve, preferring
+    /// one with enough unlocked units of its own grade to pay for it (an
+    /// evolution eats as many as its stars), the highest grade first. Nil —
+    /// the tour's seed levels no unit to its cap — falls back to the rail's
+    /// top, whose ledger shows the level requirement unmet, which still
+    /// judges the layout.
+    private var evolveCandidate: Unit? {
+        let units = store.player.units
+        let ready = units.filter { $0.canEvolve }
+        let paidFor = ready.filter { unit in
+            units.filter { $0.id != unit.id && !$0.isLocked && $0.stars == unit.stars }.count >= unit.stars
+        }
+        return (paidFor.isEmpty ? ready : paidFor).max { $0.stars < $1.stars }
+    }
+
     /// The Allies step's service on the seeded offline world, made once.
     private static let tourSocial = SocialService(backend: LocalSocialBackend(seed: 7, persisting: false))
 
@@ -438,6 +695,15 @@ struct TourView: View {
         EventCalendar.calendar.date(from: DateComponents(year: 2026, month: 9, day: 28, hour: 12)) ?? Date()
     }
 
+    /// The Monday a week after `festivalMonday`: the Festival comes every
+    /// fourth week, so this one is an ordinary week (`-tour-events-week
+    /// plain`).
+    private static var plainMonday: Date {
+        EventCalendar.calendar.date(byAdding: .day, value: 7, to: festivalMonday) ?? festivalMonday
+    }
+
+    /// The unit the awaken step opens on: not yet awakened, with an awakened
+    /// form to take, the highest grade and level first.
     private var awakeningCandidate: Unit? {
         store.player.units
             .filter { !$0.isAwakened && UnitDatabase.blueprint($0.blueprintID)?.awakening != nil }
@@ -653,12 +919,21 @@ struct TourView: View {
         return summary
     }
 }
-#endif
 
-/// The sweep, photographed: the briefing it is launched from and the chest it
-/// leaves. It runs a REAL sweep on the tour's save — `duat_1_1`, which the
+/// The sweep, photographed where the game shows it: the receipt over the
+/// chapter's map (TourView wraps this in the tab bar, since the map is a
+/// tab). It runs a REAL sweep on the tour's save — `duat_1_1`, which the
 /// debug save three-stars — rather than building a receipt by hand, because a
 /// hand-built one would photograph a screen the game cannot actually produce.
+///
+/// Until phase B (2026-09-22) the receipt stood over the stage's BRIEFING,
+/// which the game never draws: the briefing is a sheet that closes before a
+/// sweep runs, and the receipt is `CampaignView`'s own overlay on the map.
+/// The receipt is laid over the map here rather than through the campaign
+/// screen because nothing on it opens a receipt from outside; the two draw
+/// the same, the card over the whole screen and the bar outside it. The
+/// briefing alone is `-tour-briefing`. Inside the debug block since then too:
+/// it stood after the `#endif`, compiled into the release build for nothing.
 private struct TourSweepScene: View {
     @EnvironmentObject private var store: GameStore
     @State private var receipt: SweepReceipt?
@@ -667,17 +942,15 @@ private struct TourSweepScene: View {
 
     var body: some View {
         ZStack {
-            if let stage {
-                StageBriefingView(stage: stage, onStart: { _ in }, onSweep: { _ in })
-                if let receipt {
-                    SweepReceiptCard(
-                        receipt: receipt,
-                        loot: BattleSummary.loot(from: receipt.outcome) {
-                            store.resolved($0)?.name ?? "Unit"
-                        },
-                        onClose: {}
-                    )
-                }
+            CampaignView(openingChapter: "duat_1")
+            if let receipt {
+                SweepReceiptCard(
+                    receipt: receipt,
+                    loot: BattleSummary.loot(from: receipt.outcome) {
+                        store.resolved($0)?.name ?? "Unit"
+                    },
+                    onClose: {}
+                )
             }
         }
         .onAppear {
@@ -689,3 +962,4 @@ private struct TourSweepScene: View {
         }
     }
 }
+#endif

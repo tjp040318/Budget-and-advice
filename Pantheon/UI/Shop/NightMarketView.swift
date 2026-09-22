@@ -13,202 +13,55 @@ import SwiftUI
 /// differently is on `NightMarketService` — slots are levels and never
 /// purchases, no 5★ is ever on the shelf, and a sold slot stays where it was,
 /// crossed out, so a player can see what tonight gave them.
+///
+/// Since phase B (2026-09-22) the shelf is the bazaar's own glass shelf over
+/// the Forum at a deeper hour: six wares a clean 3 × 2 in fixed columns (run
+/// 211 drew five cream `ui_panel` frames and a sixth alone under them, cut by
+/// the foot), each ware a `BazaarWareTile` with its words behind a ?, and the
+/// clock and the re-roll in the room's header — `NightMarketTitle` and
+/// `NightMarketReroll` below — where Epic Seven puts its "59m left until
+/// refresh" and its Refresh with the price on it.
 struct NightMarketBoard: View {
     @EnvironmentObject private var store: GameStore
-    var onReceipt: (String) -> Void
-
-    /// Six across a landscape phone, because six is the shelf a new player
-    /// gets: at a 132-point minimum the grid fitted five and drew the sixth
-    /// alone on a second row beside a hole (run 151's frames). At 116 the
-    /// starting shelf is one clean row, and the ten a level-40 summoner has
-    /// are two.
-    ///
-    /// STATIC on purpose: a private STORED property drags the memberwise
-    /// initialiser down to private with it, and `ShopView` builds this from
-    /// another file. `ShopView`'s own `columns` gets away with being stored
-    /// because nothing ever passes it an argument.
-    private static let columns = [GridItem(.adaptive(minimum: 116, maximum: 170), spacing: 8)]
+    /// What a purchase paid, handed to the bazaar's receipt. Only `ShopView`
+    /// builds this board.
+    var onReceipt: ([ShopService.Grant]) -> Void
 
     var body: some View {
-        VStack(spacing: 6) {
-            clockRow
-            ScrollView {
-                LazyVGrid(columns: Self.columns, spacing: 8) {
-                    ForEach(store.nightMarketStalls) { stall in
-                        tile(stall)
-                    }
-                }
-                .padding(.horizontal, ScreenChrome.contentPadding)
-                .padding(.bottom, 8)
-            }
+        BazaarShelf(wares: store.nightMarketStalls) { stall in
+            tile(stall)
         }
         .onAppear { store.refreshNightMarket() }
-    }
-
-    // MARK: - The clock and the re-roll
-
-    /// The countdown, ticking, and the price of not waiting for it. A market
-    /// whose timer is hidden is a market a player has no reason to come back
-    /// to at any particular time.
-    private var clockRow: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "moon.stars.fill")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundStyle(Theme.gold)
-            if let refresh = store.nightMarketRefreshesAt {
-                TimelineView(.periodic(from: .now, by: 1)) { context in
-                    Text("New stock in \(countdown(to: refresh, now: context.date))")
-                        .font(Theme.numeric(11))
-                        .foregroundStyle(Theme.textSecondary)
-                }
-            }
-            Spacer(minLength: 0)
-            Button { reroll() } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 10, weight: .black))
-                    Text("Re-roll")
-                        .font(Theme.body(10).weight(.black))
-                        .tracking(0.6)
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 9, weight: .black))
-                    Text("\(store.nightMarketRerollPrice)")
-                        .font(Theme.numeric(11))
-                }
-                .foregroundStyle(canReroll ? Theme.ink : Theme.textSecondary)
-                .padding(.horizontal, 10)
-                .frame(height: 24)
-                .background(
-                    // A ternary cannot pick between `Theme.goldPlate`, which
-                    // is a LinearGradient, and `Theme.surface`, which is a
-                    // Color. ShopView's price plate uses a Group for the same
-                    // reason; copying its shape without this cost a CI run.
-                    Group {
-                        if canReroll {
-                            Capsule().fill(Theme.goldPlate)
-                        } else {
-                            Capsule().fill(Theme.surface)
-                        }
-                    }
-                )
-                .overlay(
-                    Capsule().strokeBorder(canReroll ? Color.clear : Theme.stroke, lineWidth: 0.5)
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(!canReroll)
-        }
-        .padding(.horizontal, ScreenChrome.contentPadding)
-        .padding(.top, 6)
-    }
-
-    private var canReroll: Bool {
-        store.player.wallet.divinity >= store.nightMarketRerollPrice
-    }
-
-    private func countdown(to date: Date, now: Date) -> String {
-        let seconds = max(0, Int(date.timeIntervalSince(now)))
-        return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
 
     // MARK: - One ware
 
     private func tile(_ stall: NightMarketService.Stall) -> some View {
-        let affordable = ShopService.canAfford(stall.price, wallet: store.player.wallet)
-        let available = !stall.isSoldOut && affordable
-        return VStack(spacing: 5) {
-            ZStack {
-                ware(stall.grant)
-                    .frame(height: 62)
-                if stall.isSoldOut {
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(Theme.plate.opacity(0.75))
-                        .overlay(
-                            Text("TAKEN")
-                                .font(Theme.title(12))
-                                .tracking(1.2)
-                                .foregroundStyle(Theme.goldDeep)
-                        )
-                }
-            }
-            .frame(maxWidth: .infinity)
-
-            Text(stall.title)
-                .font(Theme.body(11).weight(.bold))
-                .foregroundStyle(stall.isSoldOut ? Theme.textSecondary : Theme.textPrimary)
-                .lineLimit(1)
-            Text(stall.subtitle)
-                .font(Theme.body(9))
-                .foregroundStyle(Theme.textSecondary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-                .frame(maxWidth: .infinity)
-                .fixedSize(horizontal: false, vertical: true)
-
-            Spacer(minLength: 0)
-
-            Button { buy(stall) } label: {
-                HStack(spacing: 5) {
-                    Image(systemName: stall.price.currency.icon)
-                        .font(.system(size: 10, weight: .black))
-                    Text(grouped(stall.price.amount))
-                        .font(Theme.numeric(11))
-                        .lineLimit(1)
-                    Spacer(minLength: 4)
-                    Text(stall.isSoldOut ? "GONE" : (affordable ? "BUY" : "NEED MORE"))
-                        .font(Theme.body(9).weight(.black))
-                        .tracking(0.7)
-                        .lineLimit(1)
-                }
-                .foregroundStyle(available ? Theme.ink : Theme.textSecondary)
-                .padding(.horizontal, 8)
-                .frame(maxWidth: .infinity, minHeight: 24)
-                .background(
-                    Group {
-                        if available {
-                            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.goldPlate)
-                        } else {
-                            RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Theme.surface)
-                        }
-                    }
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .strokeBorder(available ? Color.clear : Theme.stroke, lineWidth: 0.5)
-                )
-            }
-            .buttonStyle(.plain)
-            .disabled(!available)
+        BazaarWareTile(
+            artKey: ItemArt.key(for: stall.grant),
+            amount: BazaarWareTile.cornerAmount(for: stall.grant),
+            stars: ItemArt.stars(for: stall.grant),
+            portraitName: Self.portraitName(for: stall.grant),
+            kind: BazaarWareTile.kind(for: stall.grant),
+            name: stall.title,
+            detail: stall.subtitle,
+            price: stall.price,
+            status: status(for: stall)
+        ) {
+            buy(stall)
         }
-        .padding(8)
-        .frame(height: 158)
-        .panelBackground(radius: Theme.tightCorner)
-        .opacity(stall.isSoldOut ? 0.72 : 1)
     }
 
-    /// A unit shows its PORTRAIT — the row is only worth having because the
-    /// player can see whose face is on the shelf. Everything else is the
-    /// game's one reward tile.
-    @ViewBuilder
-    private func ware(_ grant: ShopService.Grant) -> some View {
-        if case .unit(let id) = grant, let blueprint = UnitDatabase.blueprint(id) {
-            VStack(spacing: 2) {
-                BundleImage(name: blueprint.model.portraitName(awakened: false), renderedAt: 52)
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 46, height: 46)
-                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .stroke(
-                                Rarity(stars: blueprint.naturalStars).frame,
-                                lineWidth: Rarity(stars: blueprint.naturalStars).frameWidth
-                            )
-                    )
-                StarRow(stars: blueprint.naturalStars, size: 7)
-            }
-        } else {
-            RewardTile(grant: grant, size: 52, showsTitle: false)
-        }
+    /// A unit on the shelf shows its card's face: the row is only worth
+    /// having because the player can see whose face is on it.
+    private static func portraitName(for grant: ShopService.Grant) -> String? {
+        guard case .unit(let id) = grant, let blueprint = UnitDatabase.blueprint(id) else { return nil }
+        return blueprint.model.portraitName(awakened: false)
+    }
+
+    private func status(for stall: NightMarketService.Stall) -> BazaarWareStatus {
+        if stall.isSoldOut { return .taken }
+        return ShopService.canAfford(stall.price, wallet: store.player.wallet) ? .buy : .short
     }
 
     // MARK: - Doing things
@@ -217,23 +70,62 @@ struct NightMarketBoard: View {
         guard let grants = store.buyFromNightMarket(slot: stall.slot) else { return }
         AudioLibrary.shared.play(.uiConfirm)
         Juice.haptic(.light)
-        onReceipt("Received " + grants.map(ShopService.describe).joined(separator: ", ") + ".")
+        onReceipt(grants)
     }
 
-    private func reroll() {
-        store.rerollNightMarket()
-        AudioLibrary.shared.play(.uiTap)
-        Juice.haptic(.light)
+    /// "42:18" to the next free turn-over. The title's eyebrow and the
+    /// bazaar rail's Night Market row both print it.
+    static func countdown(to date: Date, now: Date) -> String {
+        let seconds = max(0, Int(date.timeIntervalSince(now)))
+        return String(format: "%02d:%02d", seconds / 60, seconds % 60)
     }
+}
 
-    /// 45000 → "45,000". A price is read, not estimated.
-    private func grouped(_ amount: Int) -> String {
-        let digits = Array(String(amount))
-        var out = ""
-        for (index, digit) in digits.enumerated() {
-            if index > 0, (digits.count - index) % 3 == 0 { out.append(",") }
-            out.append(digit)
+/// The Night Market's carved name with its clock as the eyebrow — "NEW STOCK
+/// IN 42:18" over "NIGHT MARKET" — ticking once a second. The clock was an
+/// 11-point grey line above the shelf, and beside a carved title, a clock
+/// bead and a 200-point re-roll would not fit one header on a 16 Pro, so the
+/// clock went where the stall's description goes on every other stall.
+struct NightMarketTitle: View {
+    @EnvironmentObject private var store: GameStore
+    let size: CGFloat
+
+    var body: some View {
+        if let refresh = store.nightMarketRefreshesAt {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                PlaceTitle(
+                    eyebrow: "New stock in " + NightMarketBoard.countdown(to: refresh, now: context.date),
+                    title: "Night Market",
+                    size: size
+                )
+            }
+        } else {
+            PlaceTitle(eyebrow: "New stock on the hour", title: "Night Market", size: size)
         }
-        return out
+    }
+}
+
+/// The paid re-roll as a glass button with its price on it, the summon
+/// screen's "Buy · 100" in the same material: the painted divinity, "RE-ROLL
+/// · 30", dimmed glass when the purse is short. It was a 24-point cream
+/// capsule with 10-point words, outside the chrome's one control language.
+/// 204 wide: the label at "RE-ROLL · 500" (the dearest re-roll) measures 192
+/// with its icon, and a narrower frame would shrink the title under the
+/// floor.
+struct NightMarketReroll: View {
+    @EnvironmentObject private var store: GameStore
+
+    var body: some View {
+        let price = store.nightMarketRerollPrice
+        return PrimaryButton(
+            title: "Re-roll · \(price)",
+            isEnabled: store.player.wallet.divinity >= price,
+            itemKey: "divinity",
+            style: .glass
+        ) {
+            store.rerollNightMarket()
+            Juice.haptic(.light)
+        }
+        .frame(width: 204)
     }
 }

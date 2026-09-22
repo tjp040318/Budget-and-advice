@@ -19,13 +19,15 @@ import SwiftUI
 ///   four combat stats with what the relics add, then the six relic slots as
 ///   a 3×2 of the unit sheet's own tiles with the sets they complete beside
 ///   them, and Full sheet / Train at the foot. The genre's side panel in the
-///   game's own marble and bronze rather than a copy of anyone's.
-/// - **Stage**: the roster as a rail of small cards along the bottom, the
+///   game's own marble and bronze rather than a copy of anyone's: this is
+///   the DATA layout, and it stays cream.
+/// - **Stage**: the roster as a rail of faces along the bottom, the
 ///   picked unit's real model standing on a rune ring in the right half of
 ///   the summoning hall's painting (`CollectionStageView`, the Hall of Ka's
 ///   trick), turned by a drag across that half, and the same words and slots
 ///   in a plate over the left half — "maybe we do that stuff on the left
-///   side, not to copy Summoners War".
+///   side, not to copy Summoners War". This is the PLACE layout, so since
+///   phase B (2026-09-22) the plate and the rail are dark glass.
 ///
 /// Both share the selection and the sheets: a slot opens the relic picker for
 /// that slot, Full sheet opens the unit sheet as a tap used to, and Train
@@ -233,7 +235,9 @@ struct CollectionView: View {
     /// How much of the width the grid keeps; the plate takes the rest. A
     /// little over half, because the grid is the list and the plate is one
     /// unit's worth of words: at 55% of an iPhone 16 Pro's frame the grid is
-    /// six columns of 69-point cards, three rows of them in view.
+    /// six columns of 60-point cards, two and a half rows of them in view
+    /// under the tab bar, and the plate keeps the 300 points its words, its
+    /// stats row and its slots with the Train button beside them need.
     private let gridShare: CGFloat = 0.55
     private let columnGap: CGFloat = 8
     /// The smallest card worth drawing: under this the name stops reading even
@@ -242,8 +246,10 @@ struct CollectionView: View {
     private let minimumCard: CGFloat = 56
     /// What `UnitCard` draws under the tile: the name over the level line.
     /// Held here only to size the grid — if the card's footer changes height,
-    /// change this with it.
-    private let cardFooter: CGFloat = 28
+    /// change this with it. 41 since the type floor of 2026-09-22 (body 11
+    /// and numeric 11.5 under 3 and 4 of padding; measured off run 211's
+    /// unit sheet, a 100-point card 141 tall); it was 28.
+    private let cardFooter: CGFloat = 41
 
     private func cardsLayout(_ list: [ResolvedUnit], selected: ResolvedUnit) -> some View {
         GeometryReader { geo in
@@ -349,56 +355,74 @@ struct CollectionView: View {
 
     // MARK: - The plate: one unit's words and slots
 
-    private static let portraitSize: CGFloat = 110
-    /// The relic tiles, in both layouts. Smaller than the sheet's 60 because
-    /// a plate that shares a frame with a grid or a stage has 118 points for
-    /// two rows of them, not a column of its own.
-    private static let slotSize: CGFloat = 52
+    /// The card's art beside the words on the Cards plate: 84, the words'
+    /// own height, so the block is no taller than its text.
+    private static let portraitSize: CGFloat = 84
+    /// The relic tiles, in both layouts: 44, so the six stand as a 3×2 of
+    /// 144 × 94 beside the words — what a plate that shares its frame with a
+    /// grid or a stage, UNDER the tab bar, can spend on them.
+    private static let slotSize: CGFloat = 44
     private static let slotGap: CGFloat = 6
     /// What the painted panel's last row has to clear at the bottom: its
     /// corner ornament reaches 17 points up, against the band's 8 (the unit
     /// sheet's `panelBottomInset`, measured there).
     private static let plateBottomInset: CGFloat = 18
 
-    /// The Cards layout's right side: the portrait and the words over the
-    /// slots, the sets they complete beside them, the two actions at the foot.
+    /// The Cards layout's right side: the portrait and the words, the four
+    /// stats across, then the slots with the sets they complete beside them
+    /// and the two doors at the foot — the unit sheet (a glyph, whole) and
+    /// Train (the gold `PrimaryButton`).
     ///
-    /// One frame, no scroll, so the heights are written down. A tabbed
-    /// iPhone 16 Pro in landscape gives the content 315 points; less the
-    /// layout's 12 of padding and the panel's 26 of inset, 277 inside. The
-    /// top block is 128 (the words, beside a 110 portrait), the divider row
-    /// 17, the slot rows 110: 255, with the bottom row stretching to put the
-    /// buttons on the panel's foot whatever is left.
+    /// One frame, no scroll, so the heights are written down. The
+    /// collection is a TAB, so its content is measured under the 58-point
+    /// `GameTabBar` (2026-09-22, phase B: the tour had photographed it
+    /// without the bar, 58 points taller than the phone): an iPhone 16 Pro
+    /// in landscape gives it 271, an iPhone 16 262. Less the layout's 12 of
+    /// padding and the panel's 26 of inset, 233 and 224 inside. The words
+    /// beside the 84 portrait are 86 (name 20, epithet 15, element and
+    /// power 18, the level line 16 and its meter, at the fonts' own line
+    /// heights), the stats row 34, the slots 96, with 4 between: 224. The
+    /// block it replaces was 300 tall — the type floor had grown the words
+    /// from 128 to 175 — and fitted only because the tour's frame had no
+    /// tab bar.
+    ///
+    /// Train was a teal plate, a third button material beside gold and
+    /// glass, and "Full sheet" was cut to "Full…" (run 211, frame 1); the
+    /// critic's two faults, both gone.
     private func detailPlate(_ unit: ResolvedUnit) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .top, spacing: 10) {
                 portrait(unit)
-                words(unit)
+                header(unit, ink: .cream)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
             }
-            Divider().overlay(Theme.stroke)
-            HStack(alignment: .top, spacing: 10) {
-                slotGrid(unit)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("RELIC SETS · \(unit.relics.count)/6 WORN")
-                        .font(Theme.body(8).weight(.black))
+            statsRow(unit, ink: .cream)
+            HStack(alignment: .top, spacing: 7) {
+                slotGrid(unit, onGlass: false)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("SETS · \(unit.relics.count)/6 WORN")
+                        .font(Theme.body(11).weight(.black))
                         .tracking(0.8)
                         .foregroundStyle(Theme.goldDim)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    setSummary(unit)
+                        .fixedSize()
+                    setSummary(unit, ink: .cream)
                     Spacer(minLength: 0)
-                    HStack(spacing: 6) {
-                        footButton("Full sheet", "rectangle.expand.vertical", tint: Theme.gold) {
-                            fullSheet = UnitPick(id: unit.id)
-                        }
-                        footButton("Train", "arrow.up.circle.fill", tint: Theme.info) {
+                    // 149 points on an iPhone 16 Pro, 141 on an iPhone 16:
+                    // the 46 door, 5, and 98 or 90 for TRAIN, whose label is
+                    // 59 of Cinzel at 15 plus the button's 28 of padding. No
+                    // glyph on it: with one it is 110 and the button would
+                    // shrink its title under the floor.
+                    HStack(spacing: 5) {
+                        fullSheetDoor(unit)
+                        PrimaryButton(title: "Train") {
                             showTraining = true
                         }
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
+            .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, Theme.panelInset)
@@ -407,8 +431,36 @@ struct CollectionView: View {
         .panelBackground(radius: Theme.tightCorner)
     }
 
+    /// The door to the unit sheet, as a glyph the height of the button
+    /// beside it: a cream plate in a gold rim, the sheet's own figure on it.
+    /// Its two words were cut to "Full…" in a plate that had 60 points for
+    /// them; a glyph cannot be cut, and the portrait above opens the same
+    /// sheet for a thumb that goes to the face.
+    private func fullSheetDoor(_ unit: ResolvedUnit) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+        return Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            fullSheet = UnitPick(id: unit.id)
+        } label: {
+            Image(systemName: "person.text.rectangle")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(Theme.goldDim)
+                .frame(width: PrimaryButton.height, height: PrimaryButton.height)
+                .background(
+                    shape.fill(LinearGradient(colors: [Theme.surfaceHigh, Theme.surface],
+                                              startPoint: .top, endPoint: .bottom))
+                )
+                .overlay(shape.strokeBorder(Theme.goldPlate, lineWidth: 1.5))
+                .shadow(color: .black.opacity(0.25), radius: 3, y: 2)
+                .contentShape(shape)
+        }
+        .buttonStyle(PlateButtonStyle())
+        .accessibilityLabel("Full sheet")
+    }
+
     /// The card's art in its grade's metal, without the card's caption: the
-    /// words stand beside it here.
+    /// words stand beside it here. A tap opens the unit sheet.
     private func portrait(_ unit: ResolvedUnit) -> some View {
         let rarity = Rarity(stars: unit.stars)
         let art = unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened)
@@ -445,8 +497,19 @@ struct CollectionView: View {
         .rarityFrame(rarity, radius: Theme.tightCorner)
         // A painting scaled to fill overhangs its frame, and `clipShape` does
         // not clip hit-testing: without this it takes the taps meant for the
-        // words beside it.
+        // words beside it. The tap is a clear plate of exactly the frame.
         .allowsHitTesting(false)
+        .overlay {
+            Button {
+                Juice.haptic(.light)
+                fullSheet = UnitPick(id: unit.id)
+            } label: {
+                Color.clear
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("\(unit.name), full sheet")
+        }
     }
 
     /// The carved frame for the grade, over the art, as `UnitCard` draws it.
@@ -459,104 +522,154 @@ struct CollectionView: View {
         }
     }
 
-    /// Name and power, epithet, element and grade, the level bar, and the
-    /// four combat stats in two columns. The same block in both layouts.
-    private func words(_ unit: ResolvedUnit) -> some View {
+    /// The unit's name without its epithet ("Ares", not "Ares, Bane of
+    /// Cities"), so the plate's title is never cut: `UnitCard`'s rule.
+    private func plateName(_ unit: ResolvedUnit) -> String {
+        unit.name.split(separator: ",", maxSplits: 1).first.map { String($0) } ?? unit.name
+    }
+
+    /// The line under the name: an awakened name's own epithet when it has
+    /// one ("Bane of Cities"), the family's otherwise ("of the Red Field").
+    private func plateEpithet(_ unit: ResolvedUnit) -> String {
+        let parts = unit.name.split(separator: ",", maxSplits: 1)
+        guard parts.count == 2 else { return unit.blueprint.epithet }
+        return parts[1].trimmingCharacters(in: .whitespaces)
+    }
+
+    /// Name, epithet, element, grade and power, and the level with its
+    /// meter — 85 points, the same block in both layouts, in cream ink on
+    /// the Cards plate and in the on-glass colours on the Stage's glass.
+    ///
+    /// The name is Cinzel at 15 and shrinks to the title floor (13) before
+    /// anything else gives; the widest in the roster ("Perseus Gorgon-Bane",
+    /// 180 points at 15) fits the 189 the Stage leaves it. The power moved
+    /// off the name's line onto the element's, so a long name has the width.
+    private func header(_ unit: ResolvedUnit, ink: PlateInk) -> some View {
         // `grantExperience` zeroes the stored experience at the cap, so a
         // maxed unit's bar would read "0 / 1400" under a full level — the
         // unit sheet's fix: fill it and say MAX.
         let toNextLevel = Double(ProgressionService.experienceForNextLevel(
             level: unit.level, stars: unit.stars
         ))
-        return VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline, spacing: 5) {
-                Text(unit.name)
-                    .font(Theme.title(15))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+        let experience = unit.unit.isMaxLevel ? toNextLevel : Double(unit.unit.experience)
+        let meterTint = unit.unit.isMaxLevel ? Theme.gold : Theme.info
+        return VStack(alignment: .leading, spacing: 3) {
+            Group {
+                if ink.isGlass {
+                    Text(plateName(unit))
+                        .font(Theme.title(15))
+                        .carved(glow: false)
+                } else {
+                    Text(plateName(unit))
+                        .font(Theme.title(15))
+                        .foregroundStyle(ink.primary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(Theme.titleFloor / 15)
+            Text(plateEpithet(unit))
+                .font(Theme.body(11))
+                .foregroundStyle(ink.secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: 6) {
+                ElementBadge(element: unit.element, compact: true)
+                StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars, size: 10)
                 Spacer(minLength: 4)
                 Text("\(unit.power)")
                     .font(Theme.numeric(13))
-                    .foregroundStyle(Theme.gold)
-                Text("POWER")
-                    .font(Theme.body(7).weight(.black))
-                    .tracking(0.8)
-                    .foregroundStyle(Theme.textSecondary)
-            }
-            Text(unit.blueprint.epithet)
-                .font(Theme.body(10))
-                .foregroundStyle(Theme.textSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-            HStack(spacing: 6) {
-                ElementBadge(element: unit.element)
-                StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars, size: 10)
-                Spacer(minLength: 0)
-            }
-            StatBar(
-                value: unit.unit.isMaxLevel ? toNextLevel : Double(unit.unit.experience),
-                maximum: toNextLevel,
-                tint: unit.unit.isMaxLevel ? Theme.gold : Theme.info,
-                height: 5,
-                label: unit.unit.isMaxLevel
-                    ? "Lv.\(unit.level) · MAX"
-                    : "Lv.\(unit.level) / \(unit.unit.maxLevel)"
-            )
-            coreStats(unit)
-        }
-    }
-
-    /// HP, ATK, DEF and SPD, each the total over its name with the relics'
-    /// share beside it. Base is grade, level and awakening; the difference to
-    /// the final number is the six slots, shown the way the genre shows it so
-    /// equipping a relic is visible here and not only in battle.
-    private func coreStats(_ unit: ResolvedUnit) -> some View {
-        let base = ProgressionService.baseStats(for: unit.unit, blueprint: unit.blueprint)
-        return HStack(alignment: .top, spacing: 10) {
-            VStack(alignment: .leading, spacing: 3) {
-                statCell("HP", base.hp, unit.stats.hp)
-                statCell("DEF", base.def, unit.stats.def)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            VStack(alignment: .leading, spacing: 3) {
-                statCell("ATK", base.atk, unit.stats.atk)
-                statCell("SPD", base.spd, unit.stats.spd)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    private func statCell(_ label: String, _ base: Double, _ total: Double) -> some View {
-        let bonus = total - base
-        return VStack(alignment: .leading, spacing: 0) {
-            Text(label)
-                .font(Theme.body(8).weight(.black))
-                .tracking(0.5)
-                .foregroundStyle(Theme.textSecondary)
-            HStack(alignment: .firstTextBaseline, spacing: 3) {
-                Text(UnitDetailView.statText(total, percent: false))
-                    .font(Theme.numeric(12))
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(ink.accent)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                if abs(bonus) >= 0.5 {
-                    Text((bonus > 0 ? "+" : "−") + UnitDetailView.statText(abs(bonus), percent: false))
-                        .font(Theme.numeric(9))
-                        .foregroundStyle(bonus > 0 ? Theme.success : Theme.danger)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                    .fixedSize()
+                Text("POWER")
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(0.8)
+                    .foregroundStyle(ink.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            HStack(spacing: 4) {
+                Text(unit.unit.isMaxLevel
+                     ? "Lv.\(unit.level) · MAX"
+                     : "Lv.\(unit.level) / \(unit.unit.maxLevel)")
+                    .font(Theme.body(11))
+                    .foregroundStyle(ink.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                Spacer(minLength: 4)
+                Text("\(Int(experience)) / \(Int(toNextLevel))")
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(ink.primary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            // A cream channel on marble, a dark one on glass: `StatBar`'s
+            // recessed cream track is a pale stripe on a dark plate.
+            Group {
+                if ink.isGlass {
+                    GlassMeter(value: experience, maximum: toNextLevel, tint: meterTint, height: 5)
+                } else {
+                    StatBar(value: experience, maximum: toNextLevel, tint: meterTint, height: 5)
                 }
             }
+        }
+    }
+
+    /// HP, ATK, DEF and SPD across the plate, each the total beside its name
+    /// with the relics' share under it. Base is grade, level and awakening;
+    /// the difference to the final number is the six slots, shown the way
+    /// the genre shows it so equipping a relic is visible here and not only
+    /// in battle. One row of four rather than two of two: 33 points instead
+    /// of 65, which is what let the plate fit under the tab bar.
+    private func statsRow(_ unit: ResolvedUnit, ink: PlateInk) -> some View {
+        let base = ProgressionService.baseStats(for: unit.unit, blueprint: unit.blueprint)
+        return HStack(alignment: .top, spacing: 6) {
+            statCell("HP", base.hp, unit.stats.hp, ink: ink)
+            statCell("ATK", base.atk, unit.stats.atk, ink: ink)
+            statCell("DEF", base.def, unit.stats.def, ink: ink)
+            statCell("SPD", base.spd, unit.stats.spd, ink: ink)
+        }
+    }
+
+    /// One stat: "HP 5270" over "+2573". Every figure is at its own width
+    /// (`fixedSize`) and at or over its floor — a 70-point cell holds
+    /// "HP 12345" (56) and "+10234" (40), so nothing is shrunk or cut.
+    private func statCell(_ label: String, _ base: Double, _ total: Double, ink: PlateInk) -> some View {
+        let bonus = total - base
+        // A blank line when the relics add nothing, so the four cells keep
+        // one height and one baseline. Hoisted out of the builder so the
+        // type checker is handed a String, not a ternary inside `Text(...)`.
+        let sign = bonus > 0 ? "+" : "−"
+        let bonusText: String = abs(bonus) >= 0.5 ? sign + UnitDetailView.statText(abs(bonus), percent: false) : " "
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .firstTextBaseline, spacing: 3) {
+                Text(label)
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(0.5)
+                    .foregroundStyle(ink.secondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                Text(UnitDetailView.statText(total, percent: false))
+                    .font(Theme.numeric(13))
+                    .foregroundStyle(ink.primary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            Text(bonusText)
+                .font(Theme.numeric(11.5))
+                .foregroundStyle(bonus > 0 ? ink.good : ink.bad)
+                .lineLimit(1)
+                .fixedSize()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// The six slots as two rows of three, 1–3 over 4–6, in the unit sheet's
-    /// own tiles. A tap opens the picker for that slot, worn or empty: the
-    /// picker shows the relic there now beside the one picked, so it is the
-    /// right screen for a change as well as for a first fit.
-    private func slotGrid(_ unit: ResolvedUnit) -> some View {
+    /// own tiles — dark sockets on the Stage's glass. A tap opens the picker
+    /// for that slot, worn or empty: the picker shows the relic there now
+    /// beside the one picked, so it is the right screen for a change as well
+    /// as for a first fit.
+    private func slotGrid(_ unit: ResolvedUnit, onGlass: Bool) -> some View {
         VStack(spacing: Self.slotGap) {
             ForEach(0..<2, id: \.self) { row in
                 HStack(spacing: Self.slotGap) {
@@ -565,7 +678,8 @@ struct CollectionView: View {
                         RelicSlotTile(
                             slot: slot,
                             relic: unit.unit.equippedRelics[slot].flatMap { store.player.relic($0) },
-                            size: Self.slotSize
+                            size: Self.slotSize,
+                            onGlass: onGlass
                         ) {
                             Juice.haptic(.light)
                             pickingSlot = SlotPick(id: slot, unitID: unit.id)
@@ -580,21 +694,21 @@ struct CollectionView: View {
     }
 
     /// The sets the worn relics complete, in a line: "Fury ×2 · Guard".
-    private func setSummary(_ unit: ResolvedUnit) -> some View {
+    private func setSummary(_ unit: ResolvedUnit, ink: PlateInk) -> some View {
         let sets = unit.activeRelicSets
         return Group {
             if sets.isEmpty {
                 Text(unit.relics.isEmpty ? "Nothing worn" : "No set bonus")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Theme.body(11))
+                    .foregroundStyle(ink.secondary)
             } else {
                 Text(sets.map { entry in
                     entry.completions > 1
                         ? "\(entry.set.displayName) ×\(entry.completions)"
                         : entry.set.displayName
                 }.joined(separator: " · "))
-                    .font(Theme.body(9).weight(.bold))
-                    .foregroundStyle(Theme.gold)
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(ink.accent)
             }
         }
         .lineLimit(2)
@@ -602,61 +716,45 @@ struct CollectionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// A small plate of a button: a glyph and a word on the tint, control
-    /// height, the pair dividing their row.
-    private func footButton(
-        _ title: String, _ symbol: String, tint: Color, action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 4) {
-                Image(systemName: symbol)
-                    .font(.system(size: 11, weight: .black))
-                Text(title)
-                    .font(Theme.body(10).weight(.bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-            }
-            .foregroundStyle(Theme.ink)
-            .padding(.horizontal, 8)
-            .frame(maxWidth: .infinity)
-            .frame(height: Theme.controlHeight)
-            .background(
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(tint)
-            )
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(PlateButtonStyle())
-    }
-
     // MARK: - Stage: the rail, the figure and the plate
 
-    private static let railCard: CGFloat = 60
-    private static let railPadding: CGFloat = 3
-    /// The rail is one card and its caption tall, plus its plate's padding:
-    /// 93 points at a 60-point card.
-    private static var railHeight: CGFloat { Theme.cardHeight(for: railCard) + railPadding * 2 }
+    /// The faces on the rail, and the room above and below them: the tile,
+    /// its row plate's 4 a side, and 7 over and under — 80 points.
+    private static let railFace: CGFloat = 58
+    private static let railPadding: CGFloat = 7
+    private static var railHeight: CGFloat { railFace + 8 + railPadding * 2 }
     /// Radians of turn per point of drag: one full turn across a landscape
     /// phone's width, which is what a finger expects of a turntable.
     private static let spinPerPoint: CGFloat = .pi * 2 / 800
 
-    /// The stage under everything, the plate over its left half, the drag
-    /// over its right, and the rail along the bottom.
+    /// The summoning hall under everything, the figure on its ring in the
+    /// right half, the glass plate over the left, the drag over the right,
+    /// and the rail of faces along the bottom on dark glass.
     ///
-    /// The heights, since nothing here scrolls but the rail: a tabbed iPhone
-    /// 16 Pro in landscape gives the content 315 points; less 12 of padding,
-    /// the rail's 93 and the 6 between, the stage is 204 tall. The plate is
-    /// the words beside the slots rather than over them — 149 — because the
-    /// two stacked would be 281 and would run under the rail.
+    /// It is a PLACE (2026-09-22, phase B): the critic's clearest miss after
+    /// the Hall of Ka was this screen's translucent CREAM plate over the
+    /// painting and its rail on a cream band with the names cut ("Anubis,
+    /// Kee…", frame 21). The plate is glass with the on-glass words now, the
+    /// rail a glass rail of faces (`UnitPortraitTile`, no name to cut), and
+    /// the hall has the summon screen's scrims and air. The Cards layout is
+    /// its DATA twin and stays cream.
+    ///
+    /// The heights, since nothing here scrolls but the rail: the collection
+    /// is a tab, so an iPhone 16 Pro gives the content 271 under the
+    /// `GameTabBar`. Less the rail's 80 and the stage's 16 of padding, the
+    /// plate has 175; it is 166 (the words and the sets beside the slots,
+    /// 106, then 6 and the stats row, 34, and its 20 of padding). An iPhone
+    /// 16 gives it exactly 166.
     private func stageLayout(_ list: [ResolvedUnit], selected: ResolvedUnit) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 0) {
             GeometryReader { geo in
+                let width = geo.size.width.isFinite ? geo.size.width : 0
                 ZStack(alignment: .topLeading) {
                     CollectionStageView(unit: selected, spin: Float((spinBase + spinDrag) * Self.spinPerPoint))
                         .allowsHitTesting(false)
                     HStack(alignment: .top, spacing: 0) {
                         stagePlate(selected)
-                            .frame(width: (geo.size.width.isFinite ? geo.size.width : 0) * 0.5, alignment: .topLeading)
+                            .frame(width: width * 0.5, alignment: .topLeading)
                         // The right half is the figure's: a drag across it
                         // turns the figure about its own axis, left for
                         // left, and it stays where the finger left it until
@@ -674,21 +772,28 @@ struct CollectionView: View {
                                     }
                             )
                             .overlay(alignment: .bottom) {
-                                Text("DRAG TO TURN")
-                                    .font(Theme.body(8).weight(.black))
-                                    .tracking(1.2)
-                                    .foregroundStyle(Theme.textSecondary.opacity(0.7))
-                                    .padding(.bottom, 4)
-                                    .allowsHitTesting(false)
+                                HStack(spacing: 5) {
+                                    Image(systemName: "arrow.left.and.right")
+                                        .font(.system(size: 10, weight: .black))
+                                    Text("DRAG TO TURN")
+                                        .font(Theme.body(11).weight(.black))
+                                        .tracking(1.2)
+                                        .lineLimit(1)
+                                        .fixedSize()
+                                }
+                                .foregroundStyle(Theme.onGlassDim.opacity(0.85))
+                                .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
+                                .padding(.bottom, 2)
+                                .allowsHitTesting(false)
                             }
                     }
                 }
             }
+            .padding(.horizontal, ScreenChrome.contentPadding)
+            .padding(.vertical, 8)
             stageRail(list, selected: selected)
         }
-        .padding(.horizontal, ScreenChrome.contentPadding)
-        .padding(.vertical, 6)
-        .background(stagePainting)
+        .background(stageGround)
         .onChange(of: selected.id) { _, _ in
             // A new figure is met face on.
             spinBase = 0
@@ -696,30 +801,29 @@ struct CollectionView: View {
         }
     }
 
-    /// The words and the slots over the left half, on a translucent plate so
-    /// the hall shows through, as the Hall of Ka's own plate does.
+    /// The words, the sets and the slots over the left half, on dark glass
+    /// with the on-glass colours — the rule for words over a painting. The
+    /// slots are dark sockets (`RelicSlotTile(onGlass:)`): a cream socket on
+    /// glass glared in the phase B mocks.
     private func stagePlate(_ unit: ResolvedUnit) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            words(unit)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 10) {
+                VStack(alignment: .leading, spacing: 5) {
+                    header(unit, ink: .glass)
+                    setSummary(unit, ink: .glass)
+                }
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-            VStack(alignment: .leading, spacing: 5) {
-                slotGrid(unit)
-                setSummary(unit)
-                    .frame(width: Self.slotSize * 3 + Self.slotGap * 2)
+                slotGrid(unit, onGlass: true)
             }
+            statsRow(unit, ink: .glass)
         }
         .padding(10)
-        // Cream, as every plate over a painting is since the palette turned:
-        // the words are ink, and ink on a dark plate is what the black UI
-        // was. Opaque enough for the numbers to read over the hall's floor.
-        .background(
-            Theme.plate.opacity(0.84),
-            in: RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-        )
+        .background(GlassPlate(radius: 12, opacity: 0.72))
     }
 
-    /// The roster as a rail of small cards along the bottom, the picked one
-    /// lit and kept in view.
+    /// The roster as a rail of faces along the bottom, the picked one on the
+    /// gold row plate and kept in view, the rail ending in a fade at its
+    /// right where it scrolls on.
     private func stageRail(_ list: [ResolvedUnit], selected: ResolvedUnit) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
@@ -727,20 +831,27 @@ struct CollectionView: View {
                     ForEach(list) { unit in
                         Button {
                             Juice.haptic(.light)
+                            AudioLibrary.shared.play(.uiTap)
                             selectedID = unit.id
                         } label: {
-                            // As in the grid: the portrait overhangs the card,
-                            // so the tap belongs to the card's rectangle.
-                            UnitCard(unit: unit, isSelected: unit.id == selected.id, size: Self.railCard)
+                            UnitPortraitTile(unit: unit, size: Self.railFace)
+                                .padding(4)
+                                .background(GlassRowPlate(isOn: unit.id == selected.id))
+                                // The face and its plate's rim are the tap.
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .id(unit.id)
                     }
                 }
-                .padding(.horizontal, 6)
+                .padding(.horizontal, ScreenChrome.contentPadding)
                 .padding(.vertical, Self.railPadding)
             }
+            .mask(
+                LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.92),
+                                       .init(color: .clear, location: 1)],
+                               startPoint: .leading, endPoint: .trailing)
+            )
             .onAppear {
                 proxy.scrollTo(selected.id, anchor: .center)
             }
@@ -751,38 +862,68 @@ struct CollectionView: View {
             }
         }
         .frame(height: Self.railHeight)
-        .background(
-            Theme.plate.opacity(0.5),
-            in: RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-        )
+        .background(railPlate)
     }
 
-    /// The summoning hall behind the stage, the size of the frame and never
-    /// larger.
-    ///
-    /// A `.background`, never a sibling: a fill-aspect painting under an
-    /// unbounded frame reports its own size and grows every ancestor with it
-    /// — the mistake that emptied the dungeon screen's frames. Off a
-    /// GeometryReader with a fixed frame it can measure nothing, and it
-    /// takes no taps, because `.clipped()` does not clip hit-testing.
-    private var stagePainting: some View {
-        GeometryReader { proxy in
-            ZStack {
-                Theme.surface
-                if BundleImage.exists("summon_hall_bg") {
-                    BundleImage(name: "summon_hall_bg")
-                        .aspectRatio(contentMode: .fill)
-                        .frame(width: proxy.size.width, height: proxy.size.height)
-                        .clipped()
-                }
-                // Softer under the plate, so its words read, and the
-                // painting's own vignette carried to the edges.
-                LinearGradient(colors: [Theme.plate.opacity(0.35), .clear, .clear],
-                               startPoint: .leading, endPoint: .trailing)
-            }
+    /// The summon screen's `GlassRailPlate`, laid along the bottom instead of
+    /// down the left: turned a quarter anticlockwise, so its dark edge is the
+    /// screen's foot and its gold hairline runs along the top, over the
+    /// stage. The one drawing of a rail's glass, whichever edge it is on.
+    private var railPlate: some View {
+        GeometryReader { geometry in
+            GlassRailPlate()
+                .frame(width: geometry.size.height, height: geometry.size.width)
+                .rotationEffect(.degrees(-90))
+                .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
         }
         .allowsHitTesting(false)
     }
+
+    /// The summoning hall behind the stage, with the summon screen's scrims
+    /// (lighter at the top, where the glass plate sits and the figure's head
+    /// stands) and its motes, under the figure.
+    ///
+    /// A `.background`, never a sibling: `PlaceBackdrop` is a `PaintingFill`,
+    /// which reports exactly the size it is given, and it takes no taps —
+    /// the mistake that emptied the dungeon screen's frames cannot recur.
+    private var stageGround: some View {
+        ZStack {
+            PlaceBackdrop(painting: "summon_hall_bg", topScrim: 0.35, footScrim: 0.55)
+            PlaceAmbience(motes: 16, seed: 961)
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// The colours of one unit's words: cream ink on the Cards plate (DATA,
+/// marble), the on-glass set on the Stage's glass (a PLACE). One block of
+/// words is drawn for both layouts, so the two cannot drift apart; only the
+/// ink changes (2026-09-22, phase B).
+private struct PlateInk {
+    let isGlass: Bool
+    let primary: Color
+    let secondary: Color
+    let accent: Color
+    let good: Color
+    let bad: Color
+
+    static let cream = PlateInk(
+        isGlass: false,
+        primary: Theme.textPrimary,
+        secondary: Theme.textSecondary,
+        accent: Theme.gold,
+        good: Theme.success,
+        bad: Theme.danger
+    )
+
+    static let glass = PlateInk(
+        isGlass: true,
+        primary: Theme.onGlass,
+        secondary: Theme.onGlassDim,
+        accent: Theme.onGlassGold,
+        good: Theme.onGlassSuccess,
+        bad: Theme.onGlassDanger
+    )
 }
 
 /// Which of the two shapes the collection takes. Stored by its name under

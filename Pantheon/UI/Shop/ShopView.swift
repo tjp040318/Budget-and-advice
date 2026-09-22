@@ -1,293 +1,191 @@
 import SwiftUI
 
 /// The bazaar: scrolls, energy, relic packs, essences and the laurel
-/// exchange, paid for in the game's own currencies, and a free offering once
-/// a day. Opens from the wallet on the island and from More.
+/// exchange, paid for in the game's own currencies, a free offering once a
+/// day, and the Night Market's rolled shelf. Opens from the wallet on the
+/// island, from More, and from the Arena on its Laurel stall.
 ///
-/// The six categories used to be six capsule pills under a navigation bar,
-/// above a single stretched column of rows — the worst offender in the game
-/// for the owner's "big top bar and pills as options" complaint. They are now
-/// one dropdown in the 34-point strip, and the offers are a grid of tiles that
-/// fills the frame: four across a landscape phone instead of one.
+/// A PLACE since phase B (2026-09-22; PLAN.md, *Phase B of the premium
+/// pass*, option B). Run 211 photographed it as a 360-point cream plate alone
+/// in a cream void, SF glyphs where 48 painted items ship, "+2,0…" on a tile
+/// and every stall hidden in one "Stall ▾" dropdown. It is the Forum at
+/// Midnight now — a forum was Rome's market, and `forum_rome_bg` is the one
+/// painting in the bundle that is one — full-bleed under dark glass, the
+/// genre's shop (Epic Seven's Secret Shop is a painted room with its goods on
+/// dark glass): the stalls a glass rail down the left, the summon screen's
+/// shape, so the two read as one game; the stall's name carved over the
+/// painting; the Daily offering floating as the painted gift over a glass
+/// deck; every other stall a shelf of glass ware tiles in fixed columns.
+///
+/// A bespoke day agora (`bazaar_bg`, option C) is the better result and is
+/// NOT made: about 9 Meshy credits on the owner's word. The screen prefers it
+/// the moment the file ships, with no code change.
 struct ShopView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
 
-    /// Which stall the screen opens on. The island's wallet and More both
-    /// want the daily offering; the CI tour wants the Night Market, which is
-    /// the only way to photograph a stall nothing taps its way to.
+    /// Which stall the screen opens on. The island's wallet and More want the
+    /// daily offering, the Arena the Laurel exchange, the CI tour the Night
+    /// Market.
     var opening: ShopService.Section = .daily
 
     @State private var section: ShopService.Section
-    @State private var receipt: String?
+    /// What the last purchase or claim paid, as tiles; empty when nothing is
+    /// shown. `receiptID` lets a later receipt outlive an earlier one's timer.
+    @State private var receipt: [ShopService.Grant] = []
+    @State private var receiptID = UUID()
 
     init(opening: ShopService.Section = .daily) {
         self.opening = opening
         _section = State(initialValue: opening)
     }
 
-    /// As many 208-point tiles as the width holds: four across a landscape
-    /// phone, three on a short one, rather than one column down the middle.
-    private let columns = [GridItem(.adaptive(minimum: 208, maximum: 320), spacing: 8)]
+    // MARK: - The room's measures
+
+    /// The stall rail. 200 and not the proposal's 188: at 188 "Market" had
+    /// 44 points beside the Night Market's clock bead and would have broken
+    /// mid-word (measured with the bundled Cinzel, 2026-09-22).
+    private static let railWidth: CGFloat = 200
+    /// The carved stall name. 22 rather than the summon room's 30: the
+    /// header, two rows of ware tiles and the foot fade have to fit the
+    /// 329 points an iPhone 16 Pro gives a sheet's content in landscape.
+    private static let titleSize: CGFloat = 22
+
+    private static let forumPainting = "forum_rome_bg"
+    private static let bespokePainting = "bazaar_bg"
+
+    /// The Forum, or a bazaar of its own once one ships.
+    private var backdropName: String {
+        BundleImage.exists(Self.bespokePainting) ? Self.bespokePainting : Self.forumPainting
+    }
+
+    /// The Forum cropped high enough to keep the arch and the temple roofs:
+    /// on this content box (750 × 329, a 2.28:1 band of a square painting)
+    /// the proposal's y 0.36 cut the arch's attic off, and 0.26 frames the
+    /// arch, the pediments and the braziers with the paving below. A bespoke
+    /// painting is composed for the band and takes the centre.
+    private var backdropFocus: UnitPoint {
+        backdropName == Self.forumPainting ? UnitPoint(x: 0.5, y: 0.26) : .center
+    }
+
+    /// The Night Market is the same Forum at a deeper hour: a cool wash over
+    /// the painting, nothing else changed.
+    private static let nightWash = Color(hex: "#0A1430").opacity(0.28)
+
+    /// The stalls as the rail lists them: Testing last, so the rows a player
+    /// spends in come first. `ShopService.Section`'s own order is untouched.
+    private static let railOrder: [ShopService.Section] = [
+        .daily, .nightMarket, .scrolls, .energy, .relics, .essences, .laurels, .testing,
+    ]
 
     private var offers: [ShopService.Item] { ShopService.items(in: section) }
 
-    /// The two sentences the old layout spent a content row on each fit the
-    /// strip's subtitle instead.
-    private var subtitle: String {
-        switch section {
-        case .daily: return "Free, once a day"
-        case .laurels: return "Won in the arena"
-        case .nightMarket: return "Rolled. Turns over on the hour"
-        default: return "\(offers.count) offers"
-        }
-    }
+    // MARK: - The screen
 
     var body: some View {
         NavigationStack {
-            GameScreen("Bazaar", subtitle: subtitle, dismiss: { dismiss() }) {
-                BarMenu(label: "Stall", value: section.rawValue) {
-                    ForEach(ShopService.visibleSections) { candidate in
-                        Button {
-                            section = candidate
-                            receipt = nil
-                        } label: {
-                            Label(candidate.rawValue, systemImage: glyph(for: candidate))
-                        }
-                    }
-                }
+            GameScreen("Bazaar", dismiss: { dismiss() }) {
                 BarWallet(
                     wallet: store.player.wallet,
                     shows: [.energy, .divinity, .drachma, .laurels]
                 )
             } content: {
-                ZStack(alignment: .bottom) {
-                    if section == .nightMarket {
-                        NightMarketBoard { text in
-                            withAnimation(.easeOut(duration: 0.2)) { receipt = text }
-                        }
-                    } else if section == .daily, let offering = offers.first {
-                        hero(offering)
-                    } else {
-                        ScrollView {
-                            LazyVGrid(columns: columns, spacing: 8) {
-                                ForEach(offers) { item in
-                                    tile(item)
-                                }
-                            }
-                            .padding(.horizontal, ScreenChrome.contentPadding)
-                            .padding(.vertical, 8)
-                        }
-                    }
-
-                    if let receipt {
-                        receiptToast(receipt)
+                ZStack(alignment: .topLeading) {
+                    PlaceBackdrop(
+                        painting: backdropName,
+                        focus: backdropFocus,
+                        wash: section == .nightMarket ? Self.nightWash : Color.clear
+                    )
+                    .animation(.easeInOut(duration: 0.35), value: section)
+                    // Brazier sparks: the Forum's three braziers are the
+                    // only light in it. Seed 931, since 930 is the Arena's.
+                    PlaceAmbience(shafts: [], motes: 18, moteColor: Color(hex: "#FFB866"), seed: 931)
+                    HStack(spacing: 0) {
+                        stallRail
+                        room
                     }
                 }
             }
         }
     }
 
-    // MARK: - The grid
+    // MARK: - The stall rail
 
-    /// One offer, as a shop tile: what it is, what it costs, and whether the
-    /// wallet covers it, all readable without a tap.
-    private func tile(_ item: ShopService.Item) -> some View {
-        let available = isAvailable(item)
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 8) {
-                Image(systemName: item.icon)
-                    .font(.system(size: 18, weight: .bold))
-                    .foregroundStyle(Theme.gold)
-                    .frame(width: 34, height: 34)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .fill(Theme.surfaceRaised)
-                    )
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5)
-                    )
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title)
-                        .font(Theme.body(12).weight(.bold))
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(1)
-                    Text(item.subtitle)
-                        .font(Theme.body(10))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-            }
-
-            Spacer(minLength: 0)
-
-            Button {
-                buy(item)
-            } label: {
-                priceLabel(item, available: available)
-            }
-            .buttonStyle(.plain)
-            .disabled(!available)
-        }
-        .padding(9)
-        .frame(height: 104)
-        .panelBackground(radius: Theme.tightCorner)
-    }
-
-    /// The daily offering is one item, and a lone tile in the corner of an
-    /// empty frame is the blank space the owner objects to. It gets the middle
-    /// of the screen and its contents spelled out instead.
-    private func hero(_ item: ShopService.Item) -> some View {
-        let available = isAvailable(item)
-        return VStack(spacing: 12) {
-            Image(systemName: item.icon)
-                .font(.system(size: 38, weight: .bold))
-                .foregroundStyle(Theme.gold)
-                .frame(width: 82, height: 82)
-                .background(Circle().fill(Theme.surfaceRaised))
-                .overlay(Circle().strokeBorder(Theme.goldDim.opacity(0.6), lineWidth: 1))
-                .shadow(color: Theme.gold.opacity(available ? 0.35 : 0), radius: 12)
-
-            VStack(spacing: 4) {
-                Text(item.title.uppercased())
-                    .font(Theme.title(17))
-                    .tracking(1.2)
-                    .foregroundStyle(Theme.textPrimary)
-                Text(item.subtitle)
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-
-            HStack(spacing: 8) {
-                // What the offer holds, as the genre's tiles with the count
-                // on each; the title above says what they are. Offsets, not
-                // the grants themselves: two identical grants in one bundle
-                // would collide on `id: \.self`.
-                ForEach(Array(grantParts(item.grant).enumerated()), id: \.offset) { _, part in
-                    RewardTile(grant: part, size: 42, showsTitle: false)
+    /// Every stall, down the left of the Forum. The genre shows its shop's
+    /// parts as a set the player sees (Summoners War's six, AFK Journey's
+    /// hub of stores); the dropdown hid seven of eight and the Daily stall's
+    /// free gift with them. It opens scrolled to the stall the screen opened
+    /// on, so the Arena's Laurel exchange is never under the fade.
+    private var stallRail: some View {
+        ScrollViewReader { proxy in
+            PlaceRail(width: Self.railWidth) {
+                PlaceRailLabel("Stalls")
+                ForEach(Self.railOrder.filter { ShopService.visibleSections.contains($0) }) { stall in
+                    railRow(stall)
+                        .id(stall)
                 }
             }
+            .onAppear { proxy.scrollTo(section) }
+        }
+    }
 
-            Button {
-                buy(item)
-            } label: {
-                priceLabel(item, available: available)
+    /// The Night Market's row carries its clock, ticking; only that row is
+    /// in a `TimelineView`, so the rail is not laid out again every second.
+    @ViewBuilder
+    private func railRow(_ stall: ShopService.Section) -> some View {
+        if stall == .nightMarket, let refresh = store.nightMarketRefreshesAt {
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                stallRow(stall, accessory: NightMarketBoard.countdown(to: refresh, now: context.date))
             }
-            .buttonStyle(.plain)
-            .disabled(!available)
-            .frame(width: 190)
+        } else {
+            stallRow(stall, accessory: nil)
         }
-        .padding(18)
-        .frame(width: 360)
-        .panelBackground(radius: Theme.cornerRadius)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// The price plate: currency, amount, and the verb that says whether the
-    /// wallet covers it. Gold when it does, dark when it does not.
-    private func priceLabel(_ item: ShopService.Item, available: Bool) -> some View {
-        HStack(spacing: 5) {
-            Image(systemName: leadingGlyph(item, available: available))
-                .font(.system(size: 10, weight: .black))
-            Text(leadingText(item, available: available))
-                .font(Theme.numeric(11))
-                .lineLimit(1)
-            Spacer(minLength: 4)
-            Text(verb(item, available: available))
-                .font(Theme.body(9).weight(.black))
-                .tracking(0.8)
-                .lineLimit(1)
+    private func stallRow(_ stall: ShopService.Section, accessory: String?) -> some View {
+        PlaceRailRow(
+            title: Self.railTitle(stall),
+            itemKey: Self.railArt(stall),
+            systemImage: Self.railGlyph(stall),
+            isOn: stall == section,
+            accessory: accessory,
+            dot: stall == .daily && ShopService.isDailyAvailable(player: store.player)
+        ) {
+            withAnimation(.easeOut(duration: 0.2)) { section = stall }
+            receipt = []
         }
-        .foregroundStyle(available ? Theme.ink : Theme.textSecondary)
-        .padding(.horizontal, 9)
-        .frame(maxWidth: .infinity, minHeight: 26)
-        .background(
-            Group {
-                if available {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Theme.goldPlate)
-                } else {
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(Theme.surface)
-                }
-            }
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 6, style: .continuous)
-                .strokeBorder(available ? Color.clear : Theme.stroke, lineWidth: 0.5)
-        )
     }
 
-    private func receiptToast(_ text: String) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "checkmark.seal.fill")
-                .font(.system(size: 12, weight: .black))
-                .foregroundStyle(Theme.success)
-            Text(text)
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(1)
+    private static func railTitle(_ stall: ShopService.Section) -> String {
+        switch stall {
+        case .daily: return "Daily"
+        case .nightMarket: return "Night Market"
+        case .testing: return "Testing"
+        case .scrolls: return "Scrolls"
+        case .energy: return "Energy"
+        case .relics: return "Relics"
+        case .essences: return "Essences"
+        case .laurels: return "Laurels"
         }
-        .padding(.horizontal, 12)
-        .frame(height: 28)
-        .background(Capsule().fill(Theme.surface.opacity(0.95)))
-        .overlay(Capsule().strokeBorder(Theme.success.opacity(0.5), lineWidth: 0.5))
-        .shadow(color: .black.opacity(0.5), radius: 8, x: 0, y: 3)
-        .padding(.bottom, 10)
-        // A toast that swallowed taps would make the bottom row of tiles dead.
-        .allowsHitTesting(false)
-        .transition(.opacity)
     }
 
-    // MARK: - Reading an offer
-
-    private func isAvailable(_ item: ShopService.Item) -> Bool {
-        item.isDaily
-            ? ShopService.isDailyAvailable(player: store.player)
-            : ShopService.canAfford(item.price, wallet: store.player.wallet)
-    }
-
-    private func leadingGlyph(_ item: ShopService.Item, available: Bool) -> String {
-        if item.isDaily { return available ? "gift.fill" : "checkmark" }
-        return item.price.currency.icon
-    }
-
-    private func leadingText(_ item: ShopService.Item, available: Bool) -> String {
-        if item.isDaily { return available ? "Free" : "Claimed" }
-        return grouped(item.price.amount)
-    }
-
-    private func verb(_ item: ShopService.Item, available: Bool) -> String {
-        if item.isDaily { return available ? "CLAIM" : "TOMORROW" }
-        return available ? "BUY" : "NEED MORE"
-    }
-
-    /// A bundle spelled out one grant to a tile; anything else is one tile.
-    private func grantParts(_ grant: ShopService.Grant) -> [ShopService.Grant] {
-        if case .bundle(let parts) = grant { return parts }
-        return [grant]
-    }
-
-    /// 45000 → "45,000". A price is read, not estimated, so the wallet's
-    /// compact "45K" is wrong here.
-    private func grouped(_ amount: Int) -> String {
-        let digits = Array(String(amount))
-        var out = ""
-        for (index, digit) in digits.enumerated() {
-            if index > 0, (digits.count - index) % 3 == 0 { out.append(",") }
-            out.append(digit)
+    /// The painted item each stall's row wears; Testing keeps its glyph.
+    private static func railArt(_ stall: ShopService.Section) -> String? {
+        switch stall {
+        case .daily: return "bundle"
+        case .nightMarket: return "chest_gold"
+        case .testing: return nil
+        case .scrolls: return "scroll_mystical"
+        case .energy: return "energy"
+        case .relics: return "relic_cache"
+        case .essences: return "essence_magic_mid"
+        case .laurels: return "laurels"
         }
-        return out
     }
 
-    private func glyph(for candidate: ShopService.Section) -> String {
-        switch candidate {
+    /// The glyph a row falls back to while its painting is missing.
+    private static func railGlyph(_ stall: ShopService.Section) -> String {
+        switch stall {
         case .daily: return "gift.fill"
         case .nightMarket: return "moon.stars.fill"
         case .testing: return "wrench.and.screwdriver.fill"
@@ -299,12 +197,573 @@ struct ShopView: View {
         }
     }
 
-    private func buy(_ item: ShopService.Item) {
+    // MARK: - The room
+
+    /// The stall, over the painting: its carved name and the one reading or
+    /// action it has, then its goods. The receipt rises over the goods.
+    private var room: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            roomHeader
+            stallBody
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .overlay(alignment: .bottom) {
+            receiptOverlay
+        }
+    }
+
+    private var roomHeader: some View {
+        HStack(alignment: .top, spacing: 10) {
+            if section == .nightMarket {
+                NightMarketTitle(size: Self.titleSize)
+            } else {
+                PlaceTitle(eyebrow: Self.eyebrow(section), title: Self.headline(section), size: Self.titleSize)
+            }
+            Spacer(minLength: 8)
+            headerAccessory
+        }
+    }
+
+    /// What the stall is sold for, or how it runs — the line the strip's
+    /// subtitle used to carry, which truncated there.
+    private static func eyebrow(_ stall: ShopService.Section) -> String {
+        switch stall {
+        case .daily: return "Free · once a day"
+        case .nightMarket: return "Rolled on the hour"
+        case .testing: return "Free while testing"
+        case .scrolls: return "Divinity and drachma"
+        case .energy: return "For divinity"
+        case .relics: return "Drachma and divinity"
+        case .essences: return "Awakening materials"
+        case .laurels: return "Won in the arena"
+        }
+    }
+
+    private static func headline(_ stall: ShopService.Section) -> String {
+        switch stall {
+        case .daily: return "Daily Offering"
+        case .nightMarket: return "Night Market"
+        case .testing: return "Testing"
+        case .scrolls: return "Scrolls"
+        case .energy: return "Energy"
+        case .relics: return "Relics"
+        case .essences: return "Essences"
+        case .laurels: return "Laurel Exchange"
+        }
+    }
+
+    /// The Daily stall's clock to midnight; the Night Market's re-roll with
+    /// its price (its clock is the title's eyebrow). Nothing on the rest.
+    @ViewBuilder
+    private var headerAccessory: some View {
+        switch section {
+        case .daily:
+            resetClock
+        case .nightMarket:
+            NightMarketReroll()
+        case .testing, .scrolls, .energy, .relics, .essences, .laurels:
+            EmptyView()
+        }
+    }
+
+    private var resetClock: some View {
+        GlassCapsule {
+            Image(systemName: "clock.fill")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.onGlassGold)
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                Text("Resets in \(Self.untilMidnight(from: context.date))")
+                    .font(Theme.numeric(12))
+                    .foregroundStyle(Theme.onGlass)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+    }
+
+    /// "07:42:10" to the next local midnight, when the offering returns.
+    private static func untilMidnight(from now: Date) -> String {
+        let calendar = Calendar.current
+        let midnight = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: now)) ?? now
+        let seconds = max(0, Int(midnight.timeIntervalSince(now)))
+        return String(format: "%02d:%02d:%02d", seconds / 3_600, (seconds % 3_600) / 60, seconds % 60)
+    }
+
+    @ViewBuilder
+    private var stallBody: some View {
+        switch section {
+        case .daily:
+            if let offering = offers.first {
+                dailyOffering(offering)
+            } else {
+                Spacer(minLength: 0)
+            }
+        case .nightMarket:
+            NightMarketBoard { grants in showReceipt(grants) }
+        case .testing, .scrolls, .energy, .relics, .essences, .laurels:
+            BazaarShelf(wares: offers) { item in
+                tile(item)
+            }
+        }
+    }
+
+    // MARK: - The daily offering
+
+    /// The one gift of the day, floating over the Forum as the painted gift
+    /// box — run 211 drew it as an SF gift in a cream circle — with what it
+    /// holds on a glass deck under it and the claim beside them. The sentence
+    /// that repeated the three tiles is gone; the tiles say it.
+    private func dailyOffering(_ item: ShopService.Item) -> some View {
+        let available = ShopService.isDailyAvailable(player: store.player)
+        // 124 + the deck (a two-line tile title makes it 109) + the gaps is
+        // 251 of the 264 points under the header on an iPhone 16 Pro.
+        return VStack(spacing: 6) {
+            Spacer(minLength: 0)
+            offeringArt(lit: available)
+            Spacer(minLength: 0)
+            offeringDeck(item, available: available)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// The gift breathing in its own light while it waits; still and dimmed
+    /// once taken. Driven by the clock rather than a repeating animation, so
+    /// it breathes again every time the stall is reopened.
+    private func offeringArt(lit: Bool) -> some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let breath = 1 + 0.03 * sin(t * 2 * .pi / 3.4)
+            ZStack {
+                RadialGradient(
+                    colors: [Color(hex: "#FFD678").opacity(lit ? 0.5 : 0.16), Color(hex: "#FFD678").opacity(0)],
+                    center: .center,
+                    startRadius: 4,
+                    endRadius: 100
+                )
+                .frame(width: 200, height: 200)
+                .blendMode(.screen)
+                ItemIcon(key: "bundle", size: 100, glow: false)
+                    .shadow(color: Theme.gold.opacity(lit ? 0.55 : 0.18), radius: 14)
+                    .saturation(lit ? 1 : 0.55)
+                    .scaleEffect(lit ? breath : 1)
+            }
+        }
+        .frame(height: 124)
+        .allowsHitTesting(false)
+    }
+
+    private func offeringDeck(_ item: ShopService.Item, available: Bool) -> some View {
+        HStack(spacing: 12) {
+            // Offsets, not the grants: two identical grants in one bundle
+            // would collide on `id: \.self`.
+            ForEach(Array(grantParts(item.grant).enumerated()), id: \.offset) { _, part in
+                RewardTile(grant: part, size: 56, showsTitle: true, onGlass: true)
+            }
+            Spacer(minLength: 16)
+            if available {
+                // No icon on the plate: the painted gift is right above it.
+                PrimaryButton(title: "Claim") { buy(item, chime: false) }
+                    .frame(width: 190)
+            } else {
+                GlassCapsule(height: 34) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 13, weight: .black))
+                        .foregroundStyle(Theme.onGlassSuccess)
+                    Text("Claimed · back at midnight")
+                        .font(Theme.body(12).weight(.semibold))
+                        .foregroundStyle(Theme.onGlass)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: 520)
+        .background(GlassPlate(radius: 14))
+    }
+
+    // MARK: - The shelf
+
+    /// One offer as a glass ware tile: its painting (an awakening cache or a
+    /// scroll by its own id where one is painted), what kind of thing it is
+    /// over its name, the words behind the ?, and the price plate.
+    private func tile(_ item: ShopService.Item) -> some View {
+        BazaarWareTile(
+            artKey: ItemArt.hasPainting(item.id) ? item.id : ItemArt.key(for: item.grant),
+            amount: BazaarWareTile.cornerAmount(for: item.grant),
+            stars: ItemArt.stars(for: item.grant),
+            portraitName: nil,
+            kind: Self.kind(for: item),
+            name: item.title,
+            detail: item.subtitle,
+            price: item.price,
+            status: status(for: item)
+        ) {
+            buy(item, chime: true)
+        }
+    }
+
+    /// A bundle is named by what it is for, not by the word "bundle".
+    private static func kind(for item: ShopService.Item) -> String {
+        if case .bundle = item.grant {
+            if item.section == .testing { return "Free pack" }
+            if item.id.hasPrefix("awakening_cache_") { return "Cache" }
+            return "Bundle"
+        }
+        return BazaarWareTile.kind(for: item.grant)
+    }
+
+    private func status(for item: ShopService.Item) -> BazaarWareStatus {
+        if item.price.currency == .free { return .free }
+        return ShopService.canAfford(item.price, wallet: store.player.wallet) ? .buy : .short
+    }
+
+    // MARK: - Doing things
+
+    /// A bundle spelled out one grant to a tile; anything else is one tile.
+    private func grantParts(_ grant: ShopService.Grant) -> [ShopService.Grant] {
+        if case .bundle(let parts) = grant { return parts }
+        return [grant]
+    }
+
+    /// `chime` is false for the daily's claim, whose `PrimaryButton` has
+    /// already played the confirm.
+    private func buy(_ item: ShopService.Item, chime: Bool) {
         guard let grants = store.buy(item) else { return }
-        AudioLibrary.shared.play(.uiConfirm)
+        if chime { AudioLibrary.shared.play(.uiConfirm) }
         Juice.haptic(.light)
+        showReceipt(grants)
+    }
+
+    @ViewBuilder
+    private var receiptOverlay: some View {
+        if !receipt.isEmpty {
+            GrantReceipt(title: "Received", grants: receipt, onGlass: true)
+                .padding(.bottom, 10)
+        }
+    }
+
+    /// What a purchase paid, as the genre's strip of tiles for 2.8 seconds —
+    /// it was a sentence in a capsule ("Received Mystical Scroll ×1, Drachma
+    /// +2000, …"), which a bundle of eighteen essences ran off the screen.
+    private func showReceipt(_ grants: [ShopService.Grant]) {
+        let id = UUID()
         withAnimation(.easeOut(duration: 0.2)) {
-            receipt = "Received " + grants.map(ShopService.describe).joined(separator: ", ") + "."
+            receipt = grants
+            receiptID = id
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) {
+            guard receiptID == id else { return }
+            withAnimation(.easeIn(duration: 0.25)) { receipt = [] }
+        }
+    }
+}
+
+// MARK: - The bazaar's parts, shared with the Night Market
+
+/// Where a ware stands for this player: payable, not yet payable, free, or
+/// already taken tonight (a Night Market slot stays on its shelf, crossed
+/// out).
+enum BazaarWareStatus {
+    case buy, short, free, taken
+}
+
+/// The measures every bazaar shelf shares, kept out of the generic
+/// `BazaarShelf` because a generic type cannot hold a stored static.
+enum BazaarLayout {
+    static let spacing: CGFloat = 10
+    /// The foot fade: the last 12 points of a shelf, which the shelf's own
+    /// bottom padding fills when the wares fit, so a full 3 × 2 Night Market
+    /// is never dimmed and a longer stall fades out instead of being cut.
+    static let fade: CGFloat = 12
+
+    /// Three fixed columns, never adaptive: the Night Market's first shelf is
+    /// six wares, and run 151's adaptive grid drew five and orphaned the
+    /// sixth (frame 32 of run 211 again). Two on a room narrower than 470
+    /// points (an SE-class phone), where three would cut the names.
+    static func columns(for width: CGFloat) -> [GridItem] {
+        let count = width >= 470 ? 3 : 2
+        return Array(repeating: GridItem(.flexible(), spacing: spacing), count: count)
+    }
+
+    static var footFade: some View {
+        VStack(spacing: 0) {
+            Color.black
+            LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .frame(height: fade)
+        }
+    }
+}
+
+/// A shelf of ware tiles over the painting: fixed columns chosen by the
+/// width it is given (a `GeometryReader`, never `ViewThatFits`), scrolling,
+/// ending in a fade. The day stalls and the Night Market are this one shelf.
+struct BazaarShelf<Ware: Identifiable, Tile: View>: View {
+    let wares: [Ware]
+    @ViewBuilder let tile: (Ware) -> Tile
+
+    var body: some View {
+        GeometryReader { frame in
+            ScrollView(showsIndicators: false) {
+                LazyVGrid(columns: BazaarLayout.columns(for: frame.size.width), spacing: BazaarLayout.spacing) {
+                    ForEach(wares) { ware in
+                        tile(ware)
+                    }
+                }
+                .padding(.top, 2)
+                .padding(.bottom, BazaarLayout.fade)
+            }
+            .mask(BazaarLayout.footFade)
+        }
+    }
+}
+
+/// One ware on glass, Epic Seven's Secret Shop hierarchy: the painted thing
+/// in a dark socket (or a unit's face), a gold kind line over the name, and
+/// the price plate across the foot. The long description is behind the ?
+/// in the corner — run 211's tiles cut it to "Replaces one sub stat with a
+/// stat of your cho…".
+///
+/// Every tile is `height` tall, so a row never staggers: a 12-point name on
+/// up to three lines (only two testing packs need a third), the 52-point art
+/// with its stars, the 32-point plate. Two rows, the header and the fade fit
+/// the 329 points an iPhone 16 Pro gives the sheet's content.
+struct BazaarWareTile: View {
+    let artKey: String
+    let amount: String?
+    let stars: Int?
+    let portraitName: String?
+    let kind: String
+    let name: String
+    let detail: String
+    let price: ShopService.Price
+    let status: BazaarWareStatus
+    let action: () -> Void
+
+    static let height: CGFloat = 120
+    private static let artSize: CGFloat = 52
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: 8) {
+                art
+                VStack(alignment: .leading, spacing: 2) {
+                    // The kinds are written short (STONE, CACHE, a unit's
+                    // element) so the line never reaches the ? in the corner.
+                    Text(kind.uppercased())
+                        .font(Theme.body(11).weight(.heavy))
+                        .tracking(1.0)
+                        .foregroundStyle(Theme.onGlassEyebrow)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.trailing, 16)
+                    Text(name)
+                        .font(Theme.body(12).weight(.semibold))
+                        .foregroundStyle(Theme.onGlass)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            Spacer(minLength: 4)
+            BazaarPriceButton(price: price, status: status, action: action)
+        }
+        .padding(8)
+        .frame(height: Self.height)
+        .background(GlassPlate(radius: 12))
+        .overlay(alignment: .topTrailing) {
+            InfoDot(title: name) {
+                Text(detail)
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .padding(1)
+        }
+        .opacity(status == .taken ? 0.55 : 1)
+        .accessibilityElement(children: .contain)
+    }
+
+    /// A unit shows its face — a ware is only worth a look because the player
+    /// can see whose face is on the shelf. Everything else is the game's one
+    /// reward tile, on its dark glass socket.
+    @ViewBuilder
+    private var art: some View {
+        if let portraitName, BundleImage.exists(portraitName) {
+            VStack(spacing: 2) {
+                BundleImage(name: portraitName, renderedAt: Self.artSize)
+                    .aspectRatio(contentMode: .fill)
+                    .frame(width: Self.artSize, height: Self.artSize)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                    .rarityFrame(Rarity(stars: stars ?? 3), radius: 8, painted: false)
+                StarRow(stars: stars ?? 3, size: 7)
+            }
+        } else {
+            RewardTile(key: artKey, amount: amount, stars: stars, size: Self.artSize, showsTitle: false, onGlass: true)
+        }
+    }
+
+    /// The gold line over a ware's name: what kind of thing it is. A unit is
+    /// named by its element, since the face already says it is a unit.
+    static func kind(for grant: ShopService.Grant) -> String {
+        switch grant {
+        case .scrolls: return "Scroll"
+        case .energy, .energyRefill: return "Energy"
+        case .drachma: return "Drachma"
+        case .divinity: return "Divinity"
+        case .relic: return "Relic"
+        case .essences: return "Essence"
+        case .stones: return "Stone"
+        case .boonCache: return "Boon"
+        case .unit(let id): return UnitDatabase.blueprint(id)?.element.displayName ?? "Unit"
+        case .bundle: return "Bundle"
+        }
+    }
+
+    /// The count on the socket's corner. None for a relic or a boon cache
+    /// (the stars under the socket are its grade — run 211's relic ware said
+    /// "3★" three times), a unit or a bundle.
+    static func cornerAmount(for grant: ShopService.Grant) -> String? {
+        switch grant {
+        case .relic, .boonCache, .unit, .bundle:
+            return nil
+        case .scrolls, .energy, .energyRefill, .drachma, .divinity, .essences, .stones:
+            return ItemArt.amount(for: grant)
+        }
+    }
+}
+
+/// A ware's price as one plate across its foot: the painted currency, the
+/// amount, and the verb. Gold with a gloss when the wallet covers it; dark
+/// glass with the amount in rose and a lock when it does not; gold "Free ·
+/// TAKE" for a free pack; "TAKEN" on dark glass for a sold slot. Each look
+/// is chosen with a switch, never a ternary between the gold plate (a
+/// gradient) and a colour.
+struct BazaarPriceButton: View {
+    let price: ShopService.Price
+    let status: BazaarWareStatus
+    let action: () -> Void
+
+    static let height: CGFloat = 32
+
+    private var isLit: Bool {
+        switch status {
+        case .buy, .free: return true
+        case .short, .taken: return false
+        }
+    }
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        return Button {
+            Juice.haptic(.light)
+            action()
+        } label: {
+            HStack(spacing: 5) {
+                label
+            }
+            .padding(.horizontal, 9)
+            .frame(maxWidth: .infinity)
+            .frame(height: Self.height)
+            .background(plate)
+            .overlay(shape.strokeBorder(isLit ? Color(hex: "#FFE9A8").opacity(0.55) : Theme.glassRim.opacity(0.45),
+                                        lineWidth: 1))
+            .shadow(color: isLit ? Theme.gold.opacity(0.3) : Color.clear, radius: 5, y: 2)
+            .contentShape(shape)
+        }
+        .buttonStyle(PlateButtonStyle())
+        .disabled(!isLit)
+        .accessibilityLabel(accessibilityText)
+    }
+
+    @ViewBuilder
+    private var label: some View {
+        switch status {
+        case .buy:
+            ItemIcon(key: Self.currencyKey(price.currency), size: 20, glow: false)
+            amountText(Theme.ink)
+            Spacer(minLength: 4)
+            verb("BUY", tint: Theme.ink)
+        case .short:
+            ItemIcon(key: Self.currencyKey(price.currency), size: 20, glow: false)
+                .opacity(0.8)
+            amountText(Theme.onGlassDanger)
+            Spacer(minLength: 4)
+            Image(systemName: "lock.fill")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.onGlassDim)
+        case .free:
+            Image(systemName: "gift.fill")
+                .font(.system(size: 13, weight: .black))
+                .foregroundStyle(Theme.ink)
+            Text("Free")
+                .font(Theme.numeric(13))
+                .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+                .fixedSize()
+            Spacer(minLength: 4)
+            verb("TAKE", tint: Theme.ink)
+        case .taken:
+            Spacer(minLength: 0)
+            verb("TAKEN", tint: Theme.onGlassDim)
+            Spacer(minLength: 0)
+        }
+    }
+
+    @ViewBuilder
+    private var plate: some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        switch status {
+        case .buy, .free:
+            shape
+                .fill(Theme.goldPlate)
+                .overlay(
+                    shape.fill(LinearGradient(colors: [Color.white.opacity(0.32), Color.white.opacity(0)],
+                                              startPoint: .top, endPoint: .center))
+                )
+        case .short, .taken:
+            shape.fill(Color.black.opacity(0.38))
+        }
+    }
+
+    /// The whole amount, grouped: a price is read, not estimated, so the
+    /// wallet's compact "45K" is wrong here.
+    private func amountText(_ tint: Color) -> some View {
+        Text(price.amount.formatted())
+            .font(Theme.numeric(13))
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    private func verb(_ word: String, tint: Color) -> some View {
+        Text(word)
+            .font(Theme.title(13))
+            .tracking(1.2)
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    private var accessibilityText: String {
+        switch status {
+        case .buy: return "Buy for \(price.amount) \(price.currency.displayName)"
+        case .short: return "Costs \(price.amount) \(price.currency.displayName), not enough"
+        case .free: return "Take, free"
+        case .taken: return "Taken"
+        }
+    }
+
+    /// The painted currency a price is paid in.
+    static func currencyKey(_ currency: ShopService.Currency) -> String {
+        switch currency {
+        case .divinity: return "divinity"
+        case .drachma: return "drachma"
+        case .laurels: return "laurels"
+        case .free: return "bundle"
         }
     }
 }

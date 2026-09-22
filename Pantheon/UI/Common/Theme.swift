@@ -199,6 +199,36 @@ enum Theme {
     static let onGlass = Color(hex: "#F5EBD2")
     static let onGlassDim = Color(hex: "#C9BB9E")
 
+    // The accents for words ON glass (2026-09-22, phase B). The day-UI
+    // accents are pigments for cream — `success` #4E8A3E and `danger`
+    // #B4364C go murky on #17120E at 0.68 — and four phase-B proposals had
+    // each invented their own: `onGlassGold` was #F3DFA6 in one, #FFE29A in
+    // another and #E0C275 in a third, and success and danger came in four
+    // shades each. The critic's one set, used by every place screen:
+
+    /// Pale gold: a value on glass, a count in a bead, the strip well's gold
+    /// words (`BarButton.onWell`, `BarMenu`, which spelled it as a literal).
+    static let onGlassGold = Color(hex: "#F3DFA6")
+    /// The deeper gold of an eyebrow over a carved title and of the little
+    /// ?: the summon room's scroll kind, `PlaceTitle`, `InfoGlyph`.
+    static let onGlassEyebrow = Color(hex: "#E0C275")
+    /// Met, ahead, done — on glass.
+    static let onGlassSuccess = Color(hex: "#A6D98A")
+    /// Short, behind, BOSS — on glass.
+    static let onGlassDanger = Color(hex: "#F2939F")
+    /// Partly there — some held, not enough — on glass.
+    static let onGlassWarning = Color(hex: "#E8C46A")
+    /// The dark bronze well a painted icon sits in over art or in chrome: the
+    /// painted doors (`MedallionIcon`), a cost's socket (`RequirementTile`), a
+    /// reward tile on glass and `SkillIcon`'s socket, which spelled these
+    /// stops first. One token so the bar, the header and the tiles cannot
+    /// drift apart.
+    static let socketFill = LinearGradient(
+        colors: [Color(hex: "#3B2F22"), Color(hex: "#181109")],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
     // MARK: - Type
 
     /// Headline voice. Heavy and wide-tracked; the previous serif fought with
