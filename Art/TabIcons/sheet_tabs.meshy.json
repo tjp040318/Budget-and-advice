@@ -1,0 +1,18 @@
+{
+  "id": "01a0caeb-bccd-7429-9bb2-c8f973ea7fec",
+  "kind": "picture",
+  "created": "2026-09-22T21:00:42Z",
+  "status": "SUCCEEDED",
+  "request": {
+    "prompt": "A grid of 9 game menu icons for a mobile fantasy RPG, 3 columns by 3 rows, every icon centred in its own equal cell with wide margins of empty black around it, on a PLAIN PURE BLACK background with nothing else, painted in a rich stylised fantasy style with strong readable silhouettes, glossy highlights, soft rim light and fine gold detail, a Greek-temple palette of gold, cream marble, lapis blue and verdigris, each icon a single clear object seen slightly from above; every icon compact and about as wide as it is tall, its darkest shadows a deep warm brown and never black, any light kept tight to the object with no wide glow or haze; no round medallion, disc, coin, badge, plaque, tile or frame behind any icon, no ground or floor under them; no borders, no frames, no cell lines, no text, no numbers, no letters, no labels, no runes, no signature. Reading left to right, then top to bottom: 1) a tiny round island of golden sand ringed by turquoise shallows, one leaning palm tree and a small white marble temple with four columns and a triangular roof standing on it; 2) a folded parchment map lying open at an angle, green hills and a blue coast painted on it and a winding red dotted road across it ending at a small red pennant on a bronze pin, no writing on the map; 3) a round bronze shield seen face on with a raised gold lion's head at its centre, two short steel swords with gold hilts crossed behind it so their points and hilts show at the four corners; 4) an ornate scroll with gold end caps and a violet ribbon, half unrolled and floating upright, a curl of golden light and a few small violet stars rising close around its open page; 5) a white marble bust of a stern bearded man with curled hair wearing a gold laurel wreath, on a small round marble plinth with a gold band; 6) a tall white feather quill standing in a round bronze inkwell, beside it a small stack of three wax writing tablets in wooden frames tied with red cord; 7) only two forearms and hands, no bodies, in bronze arm guards, clasping each other at the wrists in a warrior's handshake, red cloth at the cuffs, a small green laurel sprig behind the clasp; 8) a golden horn of plenty lying on its side, spilling gold coins, purple grapes and a split red pomegranate from its mouth; 9) a block of white marble with a scrolled column capital half carved out of its top, a bronze chisel standing in the stone and a wooden mallet leaning against it",
+    "ai_model": "nano-banana-pro"
+  },
+  "balance_before": 579,
+  "progress": 100,
+  "urls": {},
+  "created_at": 1790110842081,
+  "started_at": 1790110842097,
+  "polled": "2026-09-22T21:01:12Z",
+  "consumed_credits": 9,
+  "finished_at": 1790110870765
+}

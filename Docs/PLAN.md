@@ -6765,3 +6765,173 @@ and the skills row — with the scroll unused: the columns fit the frame
 once the strip stopped being pushed off it, so nothing hangs below and
 nothing needs trimming. main is dd239c7.
 
+
+## Phase B of the premium pass: every place on its painting, the painted doors, and the robe ring (2026-09-22, evening)
+
+The owner, after phase A's chrome landed and the costs of what was left
+were put to him: "So then run the stuff you need." Three pieces of work,
+each researched before anything was built: nine research agents (one per
+screen group, one for the tab icons, one for the robes, and a critic over
+all eight proposals and the 48 menu frames of run 211). The proposals and
+the critique are kept whole in the session scratch (`phaseb/research.json`);
+what follows is what was decided and why.
+
+Web research reached search snippets and a few public pages; the genre's
+wikis and fan sites were refused by the environment's proxy when fetched,
+so a genre fact below is either cited from a snippet or is the project's
+own earlier reading, and says which.
+
+### The rule each screen was judged against
+
+Phase A's rule, restated as a test a frame can pass or fail: a screen that
+is a PLACE (somewhere the player goes, with its own painting) shows the
+painting full-bleed and puts its words on dark glass; a screen that is
+DATA (an inventory, a long list to sort) stays cream marble on a cream
+ground. Everything else follows from that and from the type floors.
+
+### The screens, with the options and the choice
+
+1. **The Arena** (PLACE). Options: A cream, tidied; **B the Arena of
+   Souls full-bleed on glass**; C the same on the Colosseum painting; D a
+   3D lobby with the defence standing on the painted ring; E painted rank
+   crests. **B**, because `arena_of_souls_bg` is the painting every arena
+   and guild-war fight is staged on, so the lobby becomes the fight's
+   anteroom, and the Colosseum belongs to Rome's second chapter. The crop is
+   anchored high (focus y 0.26) so the painted gods' heads stay in the band.
+   The tier is carved gold with a code-drawn crest; the teams are portrait
+   tiles, not cream cards with cut names; the attacks show their refill
+   clock; the challengers show three and fade into the rest (Epic Seven and
+   AFK Journey show three at a time, from their patch notes and guides);
+   the dead Refresh (the pool is a pure function of points and the day)
+   goes. **E, painted crests, is the better crest and costs about 9 Meshy
+   credits: on the owner's word, not spent.**
+2. **The dungeon levels and the Halls** (PLACE). Options: A re-skin in
+   place; B a floor rail and one detail plate; **C the room, the summon
+   screen's recipe**; D a road down the painting; E the boss as a live 3D
+   figure. **C**: the place's painting unwashed (it was 62–88% cream), a
+   glass rail of floor rows that shows grade, stars, energy and power for
+   every floor at once, the chosen floor carved on the painting, its drops
+   as tiles on one glass plate (Summoners War defines a dungeon by its set
+   list and grade by floor), and the deck on the dark foot. The Titans
+   wing's overflow is fixed and it takes the same glass.
+3. **The Hall of Ka** (PLACE; the painting is already there). Options: A
+   glass the kit and keep the arrangement; **B the altar and one ledger**;
+   C Summoners War's bottom tray; D B without the rail. **B**: the figure
+   stands clean on the dais under a small glass nameplate, the rail is dark
+   glass, and each mode is ONE glass ledger on the room's dark side —
+   header, scrolling body, fixed foot with the cost and the button — so the
+   Awaken panel's overflow on frame 43 cannot recur (every column's budget
+   is written in the code). Auto-select, the over-cap warning and the
+   essences read by their pictures are the genre's (Summoners War, Epic
+   Seven, AFK Journey, from snippets).
+4. **The chapter map, the stage popup and the briefing** (PLACE). Options:
+   A restyle in place; **B place-first**; C a side drawer; D a permanent
+   band. **B**: the chapter's name is the strip's carved title, the tiers
+   one dark well, and the cream plate becomes a one-line glass tab placed at
+   runtime on clear ground, solved from the measured medallion and chest
+   points (no fixed corner is clear on every map; tested at six anchors on
+   three phones). The popup and the briefing go on glass over the stage's
+   own painting.
+5. **The Bazaar and the Night Market** (PLACE) and **the Missions** (DATA).
+   Bazaar options: A cream, fixed; **B a place on an existing painting**; C
+   B plus a bespoke bazaar painting and a keeper; D the Night Market as
+   rows. **B**: `forum_rome_bg`, the Forum at Midnight (a forum was Rome's
+   market), with a glass stall rail instead of the dropdown, the painted
+   item icons instead of SF glyphs, fixed three-column ware tiles. **C, a
+   bazaar painting of its own, is the better result: about 9 Meshy credits,
+   on the owner's word, not spent** (the Forum is also Rome's battle
+   backdrop, and a player sees both). The Missions stay a cream board with
+   big rows and the reward cards on the left.
+6. **The tribute, the relic drop and the sweep receipt**. Options: A three
+   polished sheets; B glass cards; **C one marble reward box as a modal
+   card over the scene it came from**; D a full chest act for the tribute.
+   **C**, because it makes every payout in the game the same object as the
+   victory's reward box, which the owner liked; glass was mocked over the
+   real frame and loses (the stones glare, a dark card has no edge on the
+   victory's black). This is the SECOND wave, after the helpers are proven.
+7. **Found by the critic, in the same pass:** the starter selector and the
+   mileage board over the summon hall (they open from it); Athena's guide
+   on glass over the island; the collection's Stage layout (a place with a
+   cream plate over it); More showing developer diagnostics to a player
+   (behind a row now); the island header's wallet still drawing SF glyphs
+   beside painted icons; the Events cards cut with ellipses; the teal
+   Power up and Train, a third button material.
+
+### The shared parts, written once
+
+Four proposals named a glass section header four ways, two defined a
+`GlassBead` of incompatible types, and three edited the same private
+ambience struct, so the helpers are written ONCE, in
+`Pantheon/UI/Common/Glass.swift`, before any screen is touched:
+`PlaceBackdrop` (a `PaintingFill` with a focus point and the summon
+screen's top and foot scrims), `PlaceAmbience` (the summon hall's light
+shafts and motes, moved out of SummonView), `GlassPlate` with an opacity,
+`GlassSectionHeader`, `GlassSection`, the rail plates, `GlassBead`,
+`PlaceTitle`, `GlassMeter` (with the Hall's projected gain),
+`UnitPortraitTile` (a face with no cut name — `UnitCard` also shows the
+name before its epithet now, "Anubis" not "Anubis, Kee…"), `RewardTile`
+with an on-glass socket that is dark (a cream socket on glass glared in
+the mocks), the Theme's on-glass colours (gold, eyebrow, success, danger,
+warning, one set), and the painted-door parts below. Two rules the critic
+added: a phone's content is measured UNDER the tab bar (the tour
+photographed tab screens without it, 58 points taller than the phone), so
+the tour draws every tab screen with its bar; and no `ViewThatFits` (it
+lays out every candidate) — a width-measured `GeometryReader` instead.
+
+### The painted doors
+
+The five tab symbols were the loudest "app, not game" left. Options: **A
+painted objects in dark bronze sockets**; B painted objects in today's
+cream discs; C free-standing objects on the band; D fully painted round
+buttons; E keep the symbols. **A**, one 3×3 sheet on Meshy's
+nano-banana-pro (9 credits, the model that painted the item icons, so the
+set matches): the island, campaign, arena, summon and collection tabs plus
+the island header's four doors (missions, allies, events, decor), every
+object described and none named, keyed off black by the item icons' own
+cutter (`tools/tab_icons.py`, which imports `item_icons.STYLE` and
+`ship_cell`). `MedallionIcon` draws a painting in a dark socket, gold and
+glowing when selected, the glyph in the same socket when a file is
+missing. Ceiling: the sheet plus one single-cell re-roll, 18 credits,
+from 579 over the 500 floor.
+
+### The robe ring
+
+Measured on the ten families the skirt pass had to leave as rigged
+(Heimdall, Pluto, Centurion, Njord, Satyr, the smith, Aphrodite, Baldr,
+Loki, Freya): NOT ONE has a sleeve. The cloth that flies is the LOWER
+garment the resting hands touched in the A-pose — 841 to 4,363 vertices
+below the hips held more than 30% by an arm, 995 to 3,928 of them flung
+more than 0.3 of the height from where the pelvis alone would carry them
+at the heavy attack's blow. The skirt pass re-bound such cloth to the
+nearest body bone, which for floor-length cloth is ONE LEG, so a robe
+tore between the legs (Pluto, Heimdall). Options: **A the robe ring**: the
+garment below the hips on up to eight spring chains of its own round the
+hips (one per 45° sector, four joints each, like the cape), with capsules
+on the thighs, shins and the swinging hand pushing the chains out of the
+body, ties between neighbouring chains and a 55° cone so no chain ever
+swings past it, and the arm-held cloth above the hips given to the spine;
+B split a sleeve's weights by distance (measured: there is no sleeve to
+act on); C per-family hand rules (they answer which vertices, not what
+they should do); D remake the ten from new concepts, about 770 credits,
+and each loses its cloak. **A** — the genre's own mechanism for exactly
+this (VRM's eight-chain long skirt with thigh capsules, KawaiiPhysics'
+skirt, Magica Cloth's bone cloth, from their documentation), free, and the
+cape's machinery generalised: the same sum in Python (`cape_sim.py`) and
+Swift (`ClothRing` beside `ClothChain`). A family is admitted to
+`ROBE_FAMILIES` only when its boards pass: the flying count down at least
+80%, no edge stretched past twice its length, the settled robe within
+half a percent of the height of its bind pose; one that fails stays as
+rigged and goes to option D. The tour gains a reveal of three robed
+families on the heavy attack, since no step photographs any of the ten.
+
+### The two waves
+
+Wave 1 (this push): the shared helpers, the arena, the dungeon screens and
+the Titans, the Hall of Ka, the chapter map with the popup and the
+briefing, the bazaar and the missions and events, the painted doors with
+the island header and More, the selector and mileage, Athena's guide, the
+collection's Stage. Wave 2, once wave 1 is green and judged: the three
+reward cards as modal boxes, the victory's reckoning over the frozen
+battle, and the data screens' leftovers (the painted ribbon headers, the
+clipped panel feet). The robe ring runs beside both and ships family by
+family as its boards pass.
