@@ -1708,10 +1708,14 @@ struct BarSegments<T: Hashable>: View {
                     AudioLibrary.shared.play(.uiTap)
                     selection = option.value
                 } label: {
+                    // One line at its own width (run 207: "Car… Sta…",
+                    // "Dung…"): the strip's title shrinks, a segment never.
                     Text(option.title)
                         .font(Theme.body(11).weight(.bold))
                         .foregroundStyle(isOn ? Theme.ink : Theme.textSecondary)
-                        .padding(.horizontal, 10)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.horizontal, 8)
                         .frame(height: ScreenChrome.control - 4)
                         .background(
                             RoundedRectangle(cornerRadius: ScreenChrome.corner - 2, style: .continuous)

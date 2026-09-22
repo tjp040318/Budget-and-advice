@@ -383,6 +383,9 @@ struct SummonView: View {
         .padding(.trailing, 1)
         .frame(height: 28)
         .background(chipPlate)
+        // Its own width, whole (run 207: "5★ in… ··· in…"); the banner's
+        // name on the left shrinks instead.
+        .fixedSize()
     }
 
     /// The reading counts DOWN, not up.

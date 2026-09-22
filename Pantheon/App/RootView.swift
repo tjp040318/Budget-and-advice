@@ -367,7 +367,7 @@ struct SettingsView: View {
                 DiagnosticsView()
             } label: {
                 tileFace(
-                    title: "Console log",
+                    title: "Console",
                     caption: "Copy or share the log",
                     icon: "terminal.fill",
                     tint: Theme.success,
@@ -421,12 +421,15 @@ struct SettingsView: View {
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
+                // One line, and the tile 44 points: two rows of four at
+                // 64 with two-line captions put the page over the phone's
+                // height, and SwiftUI centred it with the strip above the
+                // top edge (run 207).
                 Text(caption)
                     .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
             }
 
             Spacer(minLength: 0)
@@ -441,7 +444,8 @@ struct SettingsView: View {
             }
         }
         .padding(.horizontal, 8)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(height: 44)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                 .fill(
