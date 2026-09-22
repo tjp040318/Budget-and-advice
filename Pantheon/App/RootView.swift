@@ -291,7 +291,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Missions",
-                    caption: "Dailies, feats, the gift · also on the island",
+                    caption: "Dailies, feats, the gift",
                     icon: "scroll.fill",
                     tint: Theme.gold,
                     badge: store.claimableRewards > 0 ? "\(store.claimableRewards)" : nil
@@ -307,7 +307,7 @@ struct SettingsView: View {
                 let gifts = EventCalendar.claimableCount(player: store.player)
                 tileFace(
                     title: "Events",
-                    caption: "The week's boosts, the weekend's Hall, the Festival",
+                    caption: "This week's boosts",
                     icon: "calendar",
                     tint: Theme.gold,
                     badge: gifts > 0 ? "\(gifts)" : nil
@@ -323,7 +323,7 @@ struct SettingsView: View {
                 let pending = store.social.pendingCount
                 tileFace(
                     title: "Allies",
-                    caption: "Friends, mail, your guild and its war, the ranks",
+                    caption: "Friends, mail, your guild",
                     icon: "person.2.fill",
                     tint: Theme.gold,
                     badge: pending > 0 ? "\(pending)" : nil
@@ -338,7 +338,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Bazaar",
-                    caption: "Scrolls, energy, relics · also on the island",
+                    caption: "Scrolls, energy, relics",
                     icon: "bag.fill",
                     tint: Theme.info,
                     badge: nil
@@ -355,7 +355,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Lessons",
-                    caption: "Athena's Counsel · read any of them again",
+                    caption: "Athena's Counsel, kept",
                     icon: "book.fill",
                     tint: Theme.gold,
                     badge: "\(LessonBook.all.filter { store.hasReadLesson($0.id) }.count)"
@@ -383,7 +383,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Reset account",
-                    caption: "Erase every unit and clear",
+                    caption: "Start over from nothing",
                     icon: "trash.fill",
                     tint: Theme.danger,
                     badge: nil
@@ -417,10 +417,10 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(title.uppercased())
                     .font(Theme.title(12))
-                    .tracking(0.8)
+                    .tracking(0.6)
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.75)
                 // One line, and the tile 44 points: two rows of four at
                 // 64 with two-line captions put the page over the phone's
                 // height, and SwiftUI centred it with the strip above the

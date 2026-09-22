@@ -372,16 +372,19 @@ struct TierChips: View {
                             .lineLimit(1)
                             .fixedSize()
                     }
-                    .foregroundStyle(selected ? Theme.ink : (open ? tint : Theme.textSecondary))
-                    .padding(.horizontal, 7)
+                    .foregroundStyle(selected ? Theme.ink : (open ? tint : Theme.onGlassDim))
+                    .padding(.horizontal, 11)
                     .frame(height: ScreenChrome.control)
-                    .background(
-                        ScreenChrome.controlShape.fill(selected ? tint : Theme.surfaceRaised)
-                    )
-                    .overlay(
-                        ScreenChrome.controlShape.strokeBorder(open ? tint.opacity(selected ? 0 : 0.7) : Theme.stroke, lineWidth: 0.5)
-                    )
-                    .opacity(open ? 1 : 0.7)
+                    .background(Group {
+                        if selected {
+                            Capsule().fill(tint)
+                                .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 1).padding(1.5))
+                                .shadow(color: tint.opacity(0.5), radius: 4)
+                        } else {
+                            ScreenChrome.well
+                        }
+                    })
+                    .opacity(open ? 1 : 0.8)
                     .stripHitTarget()
                 }
                 .buttonStyle(.plain)
@@ -659,10 +662,11 @@ struct ChapterMapView: View {
                 .font(Theme.body(9).weight(.black))
                 .tracking(1.2)
                 .foregroundStyle(chapter.pantheon.color)
+            // Three lines, whole: two cut the story mid-sentence on run 207.
             Text(chapter.summary)
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textPrimary)
-                .lineLimit(2)
+                .lineLimit(3)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 6) {
                 StatBar(

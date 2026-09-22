@@ -1505,6 +1505,16 @@ enum ScreenChrome {
         RoundedRectangle(cornerRadius: corner, style: .continuous)
     }
 
+    /// Every control in the strip since 2026-09-22 (the owner, of run
+    /// 207's crops — "Car…", "Sta…", "5★ in…": "look how sloppy this is"):
+    /// ONE material, the wallet's dark capsule with a gold rim, 34 points
+    /// tall, its label on one line at its own width (`fixedSize`). If a
+    /// strip cannot hold its controls, the TITLE shrinks (it goes to half);
+    /// if it still cannot, the screen has too many controls — never a
+    /// truncated one. A cream pill, a tinted chip and a dark well in one
+    /// strip read as three kits.
+    static var well: some View { BarWell() }
+
     static var stripBackground: some View {
         ZStack(alignment: .bottom) {
             LinearGradient(
@@ -1571,13 +1581,14 @@ struct BarButton: View {
                     Text(title)
                         .font(Theme.body(11).weight(.bold))
                         .lineLimit(1)
+                        .fixedSize()
                 }
             }
-            .foregroundStyle(tint)
-            .padding(.horizontal, showsTitle ? 9 : 0)
-            .frame(minWidth: ScreenChrome.control, minHeight: ScreenChrome.control)
-            .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
-            .overlay(ScreenChrome.controlShape.strokeBorder(tint.opacity(0.4), lineWidth: 0.5))
+            .foregroundStyle(tint == Theme.gold ? Color(hex: "#F3DFA6") : tint)
+            .padding(.horizontal, showsTitle ? 11 : 0)
+            .frame(minWidth: ScreenChrome.control)
+            .frame(height: ScreenChrome.control)
+            .background(ScreenChrome.well)
             .stripHitTarget()
         }
         .buttonStyle(.plain)
@@ -1617,14 +1628,17 @@ struct ElementFilterTiles: View {
                         .tracking(0.4)
                 }
             }
-            .foregroundStyle(isOn ? Theme.ink : tint.opacity(0.85))
-            .frame(width: element == nil ? 32 : 28, height: ScreenChrome.control)
-            .background(ScreenChrome.controlShape.fill(isOn ? tint : Theme.surfaceRaised))
-            .overlay(
-                ScreenChrome.controlShape
-                    .strokeBorder(tint.opacity(isOn ? 0.0 : 0.35), lineWidth: 0.5)
-            )
-            .shadow(color: isOn ? tint.opacity(0.6) : .clear, radius: 4)
+            .foregroundStyle(isOn ? Theme.ink : tint)
+            .frame(width: element == nil ? 36 : 30, height: ScreenChrome.control)
+            .background(Group {
+                if isOn {
+                    Capsule().fill(tint)
+                        .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 1).padding(1.5))
+                        .shadow(color: tint.opacity(0.6), radius: 4)
+                } else {
+                    ScreenChrome.well
+                }
+            })
             .stripHitTarget()
         }
         .buttonStyle(.plain)
@@ -1647,19 +1661,19 @@ struct BarMenu<Content: View>: View {
                 Text(label.uppercased())
                     .font(Theme.body(9).weight(.black))
                     .tracking(0.5)
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(Theme.onGlassDim)
                 Text(value)
                     .font(Theme.body(11).weight(.bold))
-                    .foregroundStyle(Theme.gold)
+                    .foregroundStyle(Color(hex: "#F3DFA6"))
                     .lineLimit(1)
+                    .fixedSize()
                 Image(systemName: "chevron.down")
                     .font(.system(size: 8, weight: .black))
                     .foregroundStyle(Theme.goldDim)
             }
-            .padding(.horizontal, 9)
+            .padding(.horizontal, 11)
             .frame(height: ScreenChrome.control)
-            .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
-            .overlay(ScreenChrome.controlShape.strokeBorder(Theme.goldDim.opacity(0.4), lineWidth: 0.5))
+            .background(ScreenChrome.well)
         }
         .menuStyle(.borderlessButton)
     }
@@ -1712,22 +1726,21 @@ struct BarSegments<T: Hashable>: View {
                     // "Dung…"): the strip's title shrinks, a segment never.
                     Text(option.title)
                         .font(Theme.body(11).weight(.bold))
-                        .foregroundStyle(isOn ? Theme.ink : Theme.textSecondary)
+                        .foregroundStyle(isOn ? Theme.ink : Theme.onGlassDim)
                         .lineLimit(1)
                         .fixedSize()
-                        .padding(.horizontal, 8)
-                        .frame(height: ScreenChrome.control - 4)
+                        .padding(.horizontal, 10)
+                        .frame(height: ScreenChrome.control - 6)
                         .background(
-                            RoundedRectangle(cornerRadius: ScreenChrome.corner - 2, style: .continuous)
-                                .fill(isOn ? Theme.gold : Color.clear)
+                            Capsule().fill(isOn ? AnyShapeStyle(Theme.goldPlate) : AnyShapeStyle(Color.clear))
                         )
                 }
                 .buttonStyle(.plain)
             }
         }
-        .padding(2)
-        .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
-        .overlay(ScreenChrome.controlShape.strokeBorder(Theme.stroke, lineWidth: 0.5))
+        .padding(3)
+        .frame(height: ScreenChrome.control)
+        .background(ScreenChrome.well)
     }
 }
 

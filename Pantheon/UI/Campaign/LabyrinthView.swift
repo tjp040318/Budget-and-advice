@@ -138,11 +138,14 @@ struct LabyrinthView: View {
                             .font(Theme.body(9).weight(.bold))
                             .tracking(1.4)
                             .foregroundStyle(Theme.goldDim)
+                        // Two lines: "Necropolis of the Unwrapped King" was
+                        // cut at "UNWRAPPE…" on one line (run 207).
                         Text(labyrinth.name)
-                            .font(Theme.title(15))
+                            .font(Theme.title(14))
                             .foregroundStyle(Theme.textPrimary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.85)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .padding(8)
                 }

@@ -1626,7 +1626,18 @@ environment can and cannot do. The short version:
   deck floating on the dark foot). A nested type must not share a name
   with another type in the tree: the checker keys structs by NAME, so
   `GameTabBar.Item` was read against `ShopService.Item`'s memberwise init
-  (it is `TabItem`).
+  (it is `TabItem`). **The strip's rule (2026-09-22, evening; the owner,
+  of run 207's crops: "look how sloppy this is"):** every control in
+  the strip is ONE material — `ScreenChrome.well`, the wallet's dark
+  capsule with a gold rim (`BarButton`, `BarSegments`, the element
+  toggles, the sort menu, `TierChips`; the chosen segment a gold plate
+  with ink) — 34 points tall, its label on one line at its own width
+  (`fixedSize`); the strip's title shrinks to half before anything else
+  gives, and a truncated control means the screen has too many. No
+  ellipsis anywhere in the chrome: the More tiles' captions were
+  rewritten to fit their line, the Labyrinth cards' names have two
+  lines, the chapter plate's story three. The tour's chip sits under the
+  strip, not on the tab bar.
 - **The skirt pass (2026-09-22).** `character.reweight_skirt` (in
   `mesh.py` after the cape pass; `tools/skirt_pass.py --survey | <names>
   | --all` over the SHIPPED base and `_lod` files): cloth that Meshy's

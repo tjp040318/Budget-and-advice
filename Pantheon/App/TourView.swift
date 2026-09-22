@@ -87,7 +87,9 @@ struct TourView: View {
     private var current: String { Self.schedule[min(index, Self.schedule.count - 1)].name }
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
+        // The chip sits under the strip at the left, off the tab bar it
+        // stood on in run 207's island frame.
+        ZStack(alignment: .topLeading) {
             content
                 .id(index)
             Text("tour \(index + 1)/\(Self.schedule.count) · \(current)")
@@ -96,7 +98,8 @@ struct TourView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
                 .background(Color.black.opacity(0.7), in: Capsule())
-                .padding(10)
+                .padding(.leading, 10)
+                .padding(.top, ScreenChrome.height + 8)
         }
         .preferredColorScheme(.light)
         .onAppear {

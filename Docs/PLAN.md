@@ -6664,3 +6664,43 @@ Pre-existing and not touched: the unit sheet's strip sits a few points
 above the top edge in the tour (its title's top clipped, run 203 the
 same). Run 205 judges the fixes.
 
+### The chrome's second pass: one control language, and nothing truncates (2026-09-22, 16:45 UTC)
+
+The owner, with run 207's own detail crops in front of him — "Car…",
+"Sta…", "5★ in…", "CONSOLE L…", captions cut mid-word, the tour's chip
+over the ISLAND tab: "look how sloppy this is." He is right, and it is
+one habit, not seven bugs: the strips were laid out for the 0.9-scale
+type, and everywhere the words stopped fitting an ellipsis was accepted
+instead of a layout that fits. No premium game shows an ellipsis in its
+chrome; Summoners War's top bar has every control the same height in one
+material, labels of one or two words, and currency wells that always show
+the whole number.
+
+Three ways to take it:
+
+- **A. Keep the cream controls, fix the words.** `fixedSize` on every
+  label, shorter captions. Cheapest; leaves the strip as a mix of cream
+  pills, dark wells and tinted chips, which is the other half of "sloppy".
+- **B. One control language: every strip control a dark well.** The
+  wallet's `BarWell` already is one; the segments, the bar buttons, the
+  element toggles, the sort menu and the tier chips take the same dark
+  capsule with a gold rim, the selected segment a gold plate with ink
+  text, every one 34 points tall, every label on one line at its own
+  width so the strip's TITLE shrinks first and a control never
+  truncates. The cream marble band stays (the owner's temple), the
+  controls on it read as one set, and it is what the genre does.
+- **C. A dark bar.** Drop the cream strip for the genre's dark wood bar.
+  Rejected: the cream-and-gold chrome was his own call on 2026-09-11.
+
+**B**, plus the words: the More tiles' captions rewritten to fit their
+line ("Dailies, feats, the gift" — not "Dailies, feats, the gift · also
+on the island"), their titles allowed to shrink to three quarters,
+"Console log" to "Console"; the Labyrinth cards' names on two lines
+("Necropolis of the Unwrapped King" was cut at "UNWRAPPE…") and their
+story on four; the chapter plate's story on three lines; and the tour's
+chip moved to the top-left under the strip, where it no longer sits on
+a tab. The rule from here, written into `ScreenChrome`'s comment: a
+control in the strip is `fixedSize` on one line; if a strip cannot hold
+its controls at their own width, the title shrinks, and if it still
+cannot, the screen has too many controls, never a truncated one.
+
