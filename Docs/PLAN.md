@@ -6756,3 +6756,12 @@ the frame's height, so the sheet is one frame when it fits and scrolls
 when it does not — run 211's frame shows how much hangs below, which is
 what to trim next.
 
+**Run 211 (dd239c7, green, 243 tests) judged: all five read.** COLLECTION
+at full size beside its nine controls; the Vault, the Lair and the
+Necropolis (two lines) named on their cards; every More caption on one
+line beside its badge; the chip on its side in the inset under the
+cutout on every frame; and the unit sheet whole — strip, three columns
+and the skills row — with the scroll unused: the columns fit the frame
+once the strip stopped being pushed off it, so nothing hangs below and
+nothing needs trimming. main is dd239c7.
+
