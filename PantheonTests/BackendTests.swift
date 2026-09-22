@@ -74,11 +74,46 @@ final class BackendTests: XCTestCase {
         XCTAssertEqual(config?.anonKey, "k")
     }
 
-    func testBundledPlistShipsEmpty() {
+    /// The dashboard prints the REST endpoint as a URL too, and the owner
+    /// pasted it (2026-09-22): a base of `…/rest/v1/` would have sent the
+    /// sign-in to `…/rest/v1/auth/v1/signup`. The service path is stripped.
+    func testAPastedServiceURLIsTheProjectURL() {
+        let pasted = BackendConfig.from(dictionary: ["SupabaseURL": "https://x.supabase.co/rest/v1/", "SupabaseAnonKey": "k"])
+        XCTAssertEqual(pasted?.url.absoluteString, "https://x.supabase.co")
+        let auth = BackendConfig.from(dictionary: ["SupabaseURL": "https://x.supabase.co/auth/v1", "SupabaseAnonKey": "k"])
+        XCTAssertEqual(auth?.url.absoluteString, "https://x.supabase.co")
+        let plain = BackendConfig.from(dictionary: ["SupabaseURL": "https://x.supabase.co/", "SupabaseAnonKey": "k"])
+        XCTAssertEqual(plain?.url.absoluteString, "https://x.supabase.co")
+        let request = SupabaseClient.request(config: pasted!, method: "POST", path: "auth/v1/signup", query: [],
+                                             body: nil, bearer: nil, headers: [:])
+        XCTAssertEqual(request.url?.path, "/auth/v1/signup", "one auth path, not two")
+    }
+
+    /// The plist ships FILLED since 2026-09-22 (the anon key is public by
+    /// design; the tour never uses it). What it must never hold: a service
+    /// path on the URL, or a secret key.
+    func testBundledPlistIsAProjectURLAndAPublicKey() {
         let bundle = Bundle(for: AccountService.self)
         XCTAssertNotNil(bundle.url(forResource: BackendConfig.filename, withExtension: "plist"),
                         "Backend.plist must be in the app bundle, or the owner's keys have nowhere to go")
-        XCTAssertNil(BackendConfig.load(bundle: bundle), "the committed plist is empty: CI and a fresh checkout play offline")
+        guard let config = BackendConfig.load(bundle: bundle) else {
+            return   // an empty plist is the offline game, which is allowed too
+        }
+        XCTAssertEqual(config.url.scheme, "https")
+        XCTAssertEqual(config.url.path, "", "the project's URL, not a service endpoint")
+        XCTAssertTrue(config.url.host?.hasSuffix(".supabase.co") == true)
+        XCTAssertFalse(config.anonKey.hasPrefix("sb_secret_"), "a secret key must never ship in the app")
+        XCTAssertFalse(config.anonKey.contains("service_role"), "the service_role key must never ship in the app")
+        if config.anonKey.hasPrefix("eyJ") {
+            // A JWT: its middle part names the role, which must be anon.
+            let parts = config.anonKey.split(separator: ".")
+            XCTAssertEqual(parts.count, 3)
+            var middle = String(parts[1])
+            while middle.count % 4 != 0 { middle += "=" }
+            let json = Data(base64Encoded: middle.replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/"))
+            let claims = json.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+            XCTAssertEqual(claims?["role"] as? String, "anon", "the key in the plist must be the anon key")
+        }
     }
 
     // MARK: - Requests and sessions

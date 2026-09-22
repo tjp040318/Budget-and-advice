@@ -40,12 +40,19 @@ build environment — so a label may sit one menu over from where it is named.
    **Project Settings** → **Data API** for the URL and **API Keys** for the
    key). Copy **Project URL** (`https://<ref>.supabase.co`) and the **anon
    public** key. NEVER the `service_role` key: that one bypasses every
-   row-level rule and belongs on a server only.
+   row-level rule and belongs on a server only. The Data API page also
+   prints the REST endpoint, `https://<ref>.supabase.co/rest/v1` — either
+   form works since 2026-09-22 (the app strips a service path, because the
+   first paste was the REST one and every call would have gone to
+   `…/rest/v1/auth/v1/…`), but the plain project URL is the one to keep.
 6. In the repository open `Pantheon/Resources/Backend.plist` and paste the
-   two values between the empty `<string></string>` tags of `SupabaseURL`
-   and `SupabaseAnonKey`. Commit it: the anon key is public by design (it
+   two values between the `<string></string>` tags of `SupabaseURL` and
+   `SupabaseAnonKey`. Commit it: the anon key is public by design (it
    ships in every app that uses Supabase); row-level security is what
-   keeps a player to his own rows.
+   keeps a player to his own rows. **Done 2026-09-22:** the plist holds
+   project `kqlblqnioumkdoudhibi`'s URL and anon key (checked: the key's
+   role is `anon`, its project matches the URL), and a unit test now
+   refuses a service path on the URL or a secret key in the plist.
 7. Build and run on the phone. The console prints `[Backend] …` lines: no
    line is the plist still empty; `sign-in failed: …` names what the
    dashboard still needs.
@@ -53,6 +60,32 @@ build environment — so a label may sit one menu over from where it is named.
    launched, with its `player_code` (the six characters the Account panel
    prints as Player ID). `saves`: one row per player, `bytes` the size of
    the save, `revision` counting the uploads.
+
+### Checking the dashboard side without a phone (2026-09-22)
+
+`*.supabase.co` is closed to the Claude Code environment (a 403 at
+CONNECT), so from here only the plist can be checked, and the three
+things the dashboard must hold cannot. Each is one look:
+
+1. **The tables.** Left rail → **Table Editor**. `players` and `saves`
+   must both be listed. If they are not, step 4 was not run (or ran in
+   another project): paste the migration into **SQL Editor** and press
+   **Run** again. To see the guard too: **Database** → **Triggers** →
+   `saves_guard` on `saves`.
+2. **Anonymous sign-ins.** **Authentication** → **Sign In / Providers** →
+   scroll to **Allow anonymous sign-ins**: ON. Off, every guest launch
+   logs `sign-in failed: Anonymous sign-ins are disabled` and plays
+   offline.
+3. **Apple.** Same page → **Apple** → Enabled, with `com.pantheon.game`
+   (the app's bundle id, from Xcode's Signing & Capabilities) in
+   **Client IDs**. Without it an Apple ID's token is refused as
+   "audience mismatch" and that account plays offline; guests are
+   unaffected.
+
+Or open the environment to the project so it can be checked from here:
+claude.ai/code → the cloud icon → the environment's gear → **Network
+access: Custom** → add `kqlblqnioumkdoudhibi.supabase.co` → tick "Also
+include default list of common package managers" (new sessions only).
 
 ## 2. Reset the account (today, on the phone)
 

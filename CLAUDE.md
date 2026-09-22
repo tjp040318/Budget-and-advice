@@ -1574,9 +1574,15 @@ environment can and cannot do. The short version:
   the protocol the CloudKit store and `SupabaseSaveStore` both implement
   (`GameStore.cloudSave` is typed by it; the Account panel prints
   `serviceName`, "iCloud" or "Pantheon Cloud"); `BackendConfig` reads
-  `Resources/Backend.plist` (`SupabaseURL`, `SupabaseAnonKey`; both empty
-  as committed = no backend, the offline game as before; never under
-  `-tour`); `SupabaseClient` is URLSession only (no SDK — the project has
+  `Resources/Backend.plist` (`SupabaseURL`, `SupabaseAnonKey`; FILLED
+  since 2026-09-22 with the owner's project `kqlblqnioumkdoudhibi` —
+  the anon key is public by design — and both empty = no backend; never
+  under `-tour`; the owner's first paste was the dashboard's REST URL,
+  `…/rest/v1/`, which would have put every call at `…/rest/v1/auth/v1/…`,
+  so `from(dictionary:)` strips a service path and a trailing slash, and
+  `BackendTests` asserts the bundled plist holds a bare project URL and a
+  key whose role is `anon`, never a secret — the old test asserted the
+  plist EMPTY and went red the moment he filled it, run 206); `SupabaseClient` is URLSession only (no SDK — the project has
   no package dependencies): an anonymous user for a GUEST, Apple's
   identity token (`AppleCredential.identityToken`, `grant_type=id_token`)
   for an Apple ID, the session in `backend_session_<key>.json`, a refresh
