@@ -87,21 +87,30 @@ struct TourView: View {
     private var current: String { Self.schedule[min(index, Self.schedule.count - 1)].name }
 
     var body: some View {
-        // The chip sits under the strip at the left, off the tab bar it
-        // stood on in run 207's island frame.
-        ZStack(alignment: .topLeading) {
-            content
-                .id(index)
-            Text("tour \(index + 1)/\(Self.schedule.count) · \(current)")
-                .font(.system(size: 11, weight: .semibold, design: .monospaced))
-                .foregroundStyle(.white)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Color.black.opacity(0.7), in: Capsule())
-                .padding(.leading, 10)
-                // Under the strip on a GameScreen and under the island's
-                // header card (62 points) alike; at 60 it sat on the card.
-                .padding(.top, ScreenChrome.height + 20)
+        // The chip stands on its side in the LEFT safe-area inset — the
+        // 59 points beside the Dynamic Island where no screen draws — at
+        // the bottom, below the cutout. Everywhere else it has stood it
+        // covered something being judged: the ISLAND tab (run 207), the
+        // island's header card (209), More's first tile and the summon
+        // rail's label (210). `offset` moves the drawing only, so the
+        // screen's own layout is untouched.
+        GeometryReader { geometry in
+            let inset = geometry.safeAreaInsets.leading
+            ZStack(alignment: .bottomLeading) {
+                content
+                    .id(index)
+                Text("\(index + 1)/\(Self.schedule.count) \(current)")
+                    .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 3)
+                    .background(Color.black.opacity(0.7), in: Capsule())
+                    .fixedSize()
+                    .rotationEffect(.degrees(-90))
+                    .frame(width: 20, height: 120)
+                    .offset(x: inset > 24 ? -inset + 8 : 4, y: -8)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .preferredColorScheme(.light)
         .onAppear {

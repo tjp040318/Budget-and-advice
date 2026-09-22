@@ -86,11 +86,6 @@ struct CollectionView: View {
         let unitID: UUID
     }
 
-    /// The layout switch as the strip's segments.
-    private var layouts: [(value: CollectionLayout, title: String)] {
-        CollectionLayout.allCases.map { (value: $0, title: $0.title) }
-    }
-
     private var units: [ResolvedUnit] {
         var list = store.resolvedUnits
         if let elementFilter {
@@ -126,7 +121,17 @@ struct CollectionView: View {
 
         NavigationStack {
             GameScreen("Collection", subtitle: subtitle(showing: list.count)) {
-                BarSegments(options: layouts, selection: $layout)
+                // One glyph that toggles, showing the layout a tap would
+                // give: the two-word segments were 106 points of a strip
+                // that had none left for its own title (run 210: "COLLECT…"
+                // at half size). The genre's grid/figure switch is a glyph.
+                BarButton(
+                    title: layout == .cards ? "Stage" : "Cards",
+                    systemImage: layout == .cards ? "figure.stand" : "square.grid.3x3.fill",
+                    showsTitle: false
+                ) {
+                    layout = layout == .cards ? .stage : .cards
+                }
                 ElementFilterTiles(selection: $elementFilter)
                 BarMenu(label: "Grade", value: gradeFilter.map { "\($0)★+" } ?? "All") {
                     Button("All grades") { gradeFilter = nil }

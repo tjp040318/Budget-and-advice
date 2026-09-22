@@ -1464,15 +1464,19 @@ struct GameScreen<Bar: View, Content: View>: View {
             // 12-point ink caption in the corner was the first thing that
             // said "app" on every screen.
             VStack(alignment: .leading, spacing: 0) {
-                // 19 points, and it shrinks to half before it truncates: at 21
-                // with a wide tracking the collection's crowded strip cut it
-                // to "COLLECT…" on run 204.
+                // 19 points, and it shrinks to 0.7 (13.3, the title floor)
+                // before it truncates. It went to half for one run, which is
+                // under the floor and STILL read "COLLECT…" on the
+                // collection (run 210): a strip that needs less than 0.7 has
+                // too many controls, and the answer is fewer controls (the
+                // collection lost its ALL tile and its two-word layout
+                // switch), never a smaller title.
                 Text(title.uppercased())
                     .font(Theme.display(19))
                     .tracking(1.4)
                     .carved(glow: false)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+                    .minimumScaleFactor(0.7)
                 if let subtitle {
                     Text(subtitle)
                         .font(Theme.body(11))
@@ -1607,15 +1611,17 @@ struct BarButton: View {
     }
 }
 
-/// The element filter, as six square glyph tiles instead of six capsules of
-/// text. Six tiles are 186 points wide against 330 for the pills they replace,
-/// which is what lets them sit in the strip beside everything else.
+/// The element filter, as five square glyph tiles instead of six capsules of
+/// text: 162 points against 330 for the pills they replace, which is what
+/// lets them sit in the strip beside everything else. There is no ALL tile
+/// since run 210 — the lit element toggles off on a second tap, the genre's
+/// way (Summoners War's element buttons), and its 39 points were part of
+/// what left the collection's title no room.
 struct ElementFilterTiles: View {
     @Binding var selection: Element?
 
     var body: some View {
         HStack(spacing: 3) {
-            tile(nil)
             ForEach(Element.allCases) { element in
                 tile(element)
             }

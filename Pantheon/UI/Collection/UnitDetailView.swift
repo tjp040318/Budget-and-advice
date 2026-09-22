@@ -122,21 +122,33 @@ struct UnitDetailView: View {
                 }
             } content: {
                 if let unit {
-                    // Three columns, sized so a landscape phone holds the lot
-                    // without a scroll: card and actions, the ring, then stats
-                    // over skills. No ScrollView — the sheet is one frame, and
-                    // each panel stretches to a common bottom rail so no band
-                    // of bare backdrop is left under a short column.
-                    HStack(alignment: .top, spacing: 8) {
-                        identity(unit)
-                            .frame(width: 158)
-                        relicRing(unit)
-                            .frame(width: ringColumnWidth)
-                        VStack(spacing: 8) {
-                            stats(unit)
-                            skills(unit)
+                    // Three columns, sized so a landscape phone holds the lot:
+                    // card and actions, the ring, then stats over skills. The
+                    // sheet is one frame — each panel stretches to a common
+                    // bottom rail (`minHeight` is the frame's own height) so
+                    // no band of bare backdrop is left under a short column —
+                    // and it SCROLLS only when the columns are taller than
+                    // the frame. Without the scroll, a column 52 points too
+                    // tall (the type floor of 2026-09-22 grew every panel)
+                    // overflowed the VStack it sits in, which centred it and
+                    // pushed the strip's top half off the screen: the tour's
+                    // unit sheet showed "of the Scorching Sky" under a title
+                    // that was not there, runs 204–210.
+                    GeometryReader { geometry in
+                        ScrollView(.vertical, showsIndicators: false) {
+                            HStack(alignment: .top, spacing: 8) {
+                                identity(unit)
+                                    .frame(width: 158)
+                                relicRing(unit)
+                                    .frame(width: ringColumnWidth)
+                                VStack(spacing: 8) {
+                                    stats(unit)
+                                    skills(unit)
+                                }
+                                .frame(maxWidth: .infinity)
+                            }
+                            .frame(minHeight: geometry.size.height)
                         }
-                        .frame(maxWidth: .infinity)
                     }
                     .padding(.horizontal, ScreenChrome.contentPadding)
                     .padding(.vertical, 8)

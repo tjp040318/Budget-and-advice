@@ -123,15 +123,17 @@ struct LabyrinthView: View {
         } label: {
             VStack(alignment: .leading, spacing: 6) {
                 ZStack(alignment: .bottomLeading) {
-                    if BundleImage.exists(backdrop) {
-                        BundleImage(name: backdrop)
-                            .aspectRatio(contentMode: .fill)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .clipped()
-                    } else {
-                        Rectangle()
-                            .fill(Theme.surfaceHigh)
-                    }
+                    // `PaintingFill` (Color.clear with the painting as an
+                    // overlay), never a fill image under a flexible frame:
+                    // the fill size grew this stack to the painting's own
+                    // height and carried the name, aligned to the stack's
+                    // bottom, below the clip — run 210 photographed the
+                    // Vault with no name at all and the Necropolis with one
+                    // line of its two, each by its painting's aspect. The
+                    // Titan card had the same fault on run 160.
+                    Rectangle()
+                        .fill(Theme.surfaceHigh)
+                    PaintingFill(name: backdrop)
                     LinearGradient(colors: [.clear, Theme.plate.opacity(0.92)], startPoint: .center, endPoint: .bottom)
                     VStack(alignment: .leading, spacing: 1) {
                         Text("RELIC DUNGEON")

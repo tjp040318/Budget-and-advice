@@ -291,7 +291,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Missions",
-                    caption: "Dailies & feats",
+                    caption: "Daily & feats",
                     icon: "scroll.fill",
                     tint: Theme.gold,
                     badge: store.claimableRewards > 0 ? "\(store.claimableRewards)" : nil
@@ -355,7 +355,7 @@ struct SettingsView: View {
             } label: {
                 tileFace(
                     title: "Lessons",
-                    caption: "Athena's Counsel",
+                    caption: "From Athena",
                     icon: "book.fill",
                     tint: Theme.gold,
                     badge: "\(LessonBook.all.filter { store.hasReadLesson($0.id) }.count)"

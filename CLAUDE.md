@@ -1643,6 +1643,15 @@ environment can and cannot do. The short version:
   209 drew every "off" toggle (Filter, Select, Lock, Free) in ink-brown
   on the dark capsule, which reads as disabled; `fixedSize` goes on the
   LABEL of a strip control as well as its value (the sort menu's wrapped).
+  The title's floor is 0.7 (13.3 points), and a strip that still
+  truncates has too many controls, never a smaller title: the collection's
+  layout switch is one glyph and its element filter has no ALL tile (the
+  lit element toggles off), run 210. The tour's chip stands on its side
+  in the LEFT safe-area inset (`TourView`), where nothing draws. A card's
+  painting is `PaintingFill`, never a `.fill` image under a flexible
+  frame — the Labyrinth cards carried their names below the clip. And
+  the unit sheet's columns scroll when taller than the frame: its strip
+  was cut in half at the top from run 204 to 210.
 - **The skirt pass (2026-09-22).** `character.reweight_skirt` (in
   `mesh.py` after the cape pass; `tools/skirt_pass.py --survey | <names>
   | --all` over the SHIPPED base and `_lod` files): cloth that Meshy's

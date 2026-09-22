@@ -6725,3 +6725,34 @@ EVERY text in a strip control, the label as well as the value, and a
 colour a control asks for is the colour it reads as on ITS ground, not
 on the cream.
 
+**Run 210 (497be1a, green, 243 tests) showed the seven and five more**,
+fixed for run 211. The collection's title still read "COLLECT…" at HALF
+size: the strip held 762 points of controls in the 756 an iPhone has
+between its safe areas, so no title size fits — the two-word Cards/Stage
+segments are one glyph that toggles (the genre's grid/figure switch,
+showing the layout a tap would give), the element filter lost its ALL
+tile (the lit element toggles off on a second tap, as Summoners War's
+element buttons do), 111 points back, and the title's floor is 0.7 (13.3
+points, the title floor) instead of 0.5, so a strip that still cannot
+hold its title says so with an ellipsis rather than shrinking under the
+floor. The Labyrinth cards' names: the Vault's was not on the frame at
+all and the Necropolis showed one line of its two — the painting was a
+`.fill` image under a flexible frame, which grew each card's ZStack to
+the painting's own height and carried the bottom-aligned name below the
+clip by half the overflow, so by each painting's aspect; it is
+`PaintingFill` over a surface rectangle now (the Titan card's fault of
+run 160, one screen over). More's two badged tiles cut their captions
+three letters short ("Athena's Couns…"): a badge costs the caption about
+28 points, so they read "Daily & feats" and "From Athena". The tour's
+chip, at 72 points, covered More's first tile and the summon rail's
+label: it stands on its side in the LEFT safe-area inset now — the 59
+points beside the Dynamic Island's cutout where no screen draws — at the
+bottom below the cutout, moved there by `offset` so no layout changes.
+And the unit sheet's strip, cut in half at the top on every frame since
+run 204: its three columns overflow the frame by about 52 points (the
+type floor grew every panel), the VStack centred the overflow and pushed
+the strip up; the columns sit in a ScrollView whose content is at least
+the frame's height, so the sheet is one frame when it fits and scrolls
+when it does not — run 211's frame shows how much hangs below, which is
+what to trim next.
+
