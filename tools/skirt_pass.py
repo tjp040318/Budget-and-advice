@@ -31,6 +31,12 @@ def families():
     return out
 
 
+def excluded(name):
+    """The winged and the tailed, as the cape pass: wings along the arms are
+    a hand's sheet beside the thighs, and they must stay the arms'."""
+    return any(k in name.lower() for k in character.CAPE_EXCLUDE)
+
+
 def count(name):
     char = character.read_usdz(BUNDLE / f"{name}.usdz")
     return character.reweight_skirt(char), len(char.points)
@@ -64,6 +70,8 @@ def main():
     if args.survey or args.all:
         flagged = []
         for name in families():
+            if excluded(name):
+                continue
             try:
                 n, total = count(name)
             except Exception as exc:  # noqa: BLE001
@@ -80,6 +88,9 @@ def main():
                 apply(name)
         return
     for name in args.names:
+        if excluded(name):
+            print(f"== {name}: winged or tailed (character.CAPE_EXCLUDE); skipped")
+            continue
         print(f"== {name}")
         apply(name)
 
