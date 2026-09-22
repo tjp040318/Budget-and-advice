@@ -179,6 +179,26 @@ enum Theme {
         endPoint: .bottom
     )
 
+    // MARK: - Premium (2026-09-22)
+    //
+    // Display type is CARVED GOLD, not flat ink: a bright crown, the metal,
+    // a dark foot, on a dark edge (`View.carved()`). And a plate over ART is
+    // dark glass, never a cream slab: gold words on a dark plate over a
+    // painting is the one look every premium screen in the genre shares
+    // (PLAN.md, *The premium pass*).
+
+    static let goldText = LinearGradient(
+        colors: [Color(hex: "#FFF3C8"), Color(hex: "#EDCB6C"), Color(hex: "#B8902F"), Color(hex: "#7E5C1B")],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
+    static let glass = Color(hex: "#17120E").opacity(0.68)
+    static let glassRim = Color(hex: "#D2B26A").opacity(0.6)
+    /// Cream on glass: the words on a dark plate.
+    static let onGlass = Color(hex: "#F5EBD2")
+    static let onGlassDim = Color(hex: "#C9BB9E")
+
     // MARK: - Type
 
     /// Headline voice. Heavy and wide-tracked; the previous serif fought with
@@ -186,7 +206,12 @@ enum Theme {
     /// One knob for the whole app's type. The genre runs small — a landscape
     /// phone is 430 points tall and Summoners War fits a team, a grid and a
     /// bar into it — and the first playtest asked for exactly that density.
-    static let fontScale: CGFloat = 0.9
+    /// 1.0 since 2026-09-22 (0.9 from the density pass of 2026-09-12): the
+    /// owner, with the summon screen: "for fonts and things, I still think
+    /// the screens dont look the best that they can … it feels like a cheap
+    /// copy as opposed to a premium game". The genre's screens are dense
+    /// with BIG elements packed tight, not small ones with air between.
+    static let fontScale: CGFloat = 1.0
 
     /// A ROMAN SERIF for the two headline roles, against the system sans for
     /// everything else.
@@ -226,9 +251,9 @@ enum Theme {
     /// call sites at 7–9, which after `fontScale` was 6.3–8.1 on the
     /// screen; Apple's floor for legible text is 11 and the genre's smallest
     /// label about that. The floor lifts them all at once.
-    static let bodyFloor: CGFloat = 10
-    static let numericFloor: CGFloat = 10.5
-    static let titleFloor: CGFloat = 12
+    static let bodyFloor: CGFloat = 11
+    static let numericFloor: CGFloat = 11.5
+    static let titleFloor: CGFloat = 13
 
     static func display(_ size: CGFloat) -> Font {
         let points = max(titleFloor, size * fontScale)

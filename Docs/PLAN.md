@@ -6422,3 +6422,129 @@ derives its key from the account. Run 202: 242 tests, 0 failures, and
 the More screen's Account panel and the sign-in screen photograph as
 before (the "Pantheon Cloud" wording appears only on a phone whose plist
 is filled).
+
+## The figure on the phone, the tunic on the hand, and the premium pass (2026-09-22)
+
+The owner, with two frames — Anhur on the reveal and the summon screen:
+"More character issues. And for fonts and things, I still think the
+screens dont look the best that they can. It just doesnt FEEL like the
+game I want to build. It feels like a cheap copy as opposed to a premium
+game." Three things, each measured before it was touched.
+
+### 1. Anhur's tunic was skinned to his sword hand
+
+The frame showed a grey figure with a blade the width of his torso held
+across his chest. `tools/base_plus_clip.py` on the shipped Anhur with his
+standing idle reproduced it offline: the "blade" was the red TUNIC's front
+panel, lifted with the right hand — 1,429 vertices of waist-to-knee cloth
+owned by `RightHand` and `LeftHand`, because the concept's hands rest on
+the thighs in the A-pose and Meshy's auto-rig binds cloth to the nearest
+bone. The cape pass (2026-09-18) handles cloth BEHIND the spine and
+refuses a wrap by design; a tunic's front panel is the wrap.
+
+`character.reweight_skirt` (run by `mesh.py` after the cape pass unless
+`--no-skirt`; `tools/skirt_pass.py` over the shipped files): a vertex is
+such cloth when a hand or a forearm owns it, it lies in the waist-to-knee
+band, it is outside the arm's own surface (`_limb_surface`, so the hand,
+its bracer and a hilt in the palm stay), it is within a fifth of the
+height of a hip-to-knee bone, its connected piece is NOT a rod (the second
+principal extent under a tenth of the first: a khopesh, a spear, a staff —
+`_big_sheets` was tried first and refused the panel, which wraps a thigh
+and is not flat), and the piece touches the body's own garment on a fifth
+or more of its edge (a shield at the thigh is welded to the arm alone;
+Anhur's 274-vertex khopesh piece touched the garment on 0% and stayed).
+Each such vertex takes its nearest body-owned neighbour's weights and the
+seam is blended over three rings, the cape pass's way. A "faces turned
+toward the leg" test was tried for the shield and thrown out: cloth is
+modelled with a thickness, so a panel's inner face fails it too. Judged on
+`base_plus_clip.py` renders of the idle and the heavy attack: the tunic
+hangs from the hips and swings with the legs, the khopesh stays in the
+hand. The survey (`skirt_pass.py --survey`) flags 48 of 96 families; the
+winged and tailed ones are excluded by name as in the cape pass, and the
+rest were applied on the board's verdict (below).
+
+### 2. The figure was underexposed, desaturated and matte
+
+The texture is fine — `preview.py` draws a red tunic, white sleeves and a
+gold collar — and the phone drew a grey-brown man beside gold pillars.
+Three numbers, all from 2026-09-18/20: the figure stages' rig (key 900,
+environment 0.5) under the 1.85 white point lit a face-on surface to
+about six tenths of white, where the battle runs a 1,150 key with its own
+exposure; `paintSaturation` 0.85 in the surface shader pulled every
+texture a sixth of the way to grey on top of that; and Meshy paints its
+gold at roughness 0.5, satin, which under a dim studio map read as tan
+paint. The key was also the element's tint mixed 82% to white, so an
+ember unit's whites were peach. Now (`FigureStageLighting`): key 1,150,
+fill 320, rim 420, ambient 140, the studio map at 1.0 with brighter
+softboxes and sky (`tools/studio_ibl.py`; the map of the 18th is kept as
+`studio_ibl_v1`), the key 92% to white, the paint at 1.0 (the boards the
+owner judged the roster on draw the textures as painted; the physically
+based shading is what tempers a cartoon now, not a saturation knob), and a
+real metalness map's metal takes 0.55 of its roughness in the surface
+shader (`metalShine`). Every number sits behind the reveal lab's
+`-tour-reveal-lab previous`, which is the rig of the 18th photographed
+beside this one every run, so the change is judged on the same figure.
+
+### 3. Why the screens read as a cheap copy
+
+Measured on the summon frame against the genre (Summoners War's summon
+room, Epic Seven's, AFK Journey's, Honkai Star Rail's):
+
+1. **An app's skeleton.** The iOS tab bar with grey symbols along the
+   bottom; a 34-point strip with a 12-point ink caption for a title; every
+   control a rounded rectangle with a half-point hairline. That is the
+   vocabulary of Settings. The genre's screens have painted buttons, big
+   carved titles and controls that are objects.
+2. **Cream slabs beside the art.** The hall painting sat boxed inside a
+   cream frame with a cream list beside it and cream bands above and
+   below. Every premium screen in the genre is the art full-bleed with
+   DARK translucent plates over it where words go; gold words on a dark
+   plate over a painting is the one look they all share.
+3. **Everything small.** Display titles 20–22 points, body 9–11, icons
+   13–24, chips 28 tall — on a 6.7-inch phone, ant-sized. The genre runs
+   the banner name at 30–40, buttons 46–56 tall, currency icons 22–28.
+   The density pass of 2026-09-12 shrank everything to "fill like
+   Summoners War"; Summoners War is dense with BIG elements packed tight.
+4. **No material.** Flat fills, hairlines, no bevel, no gloss, no metal
+   in the type. The marble kit exists and was used at 1/1.4.
+5. **Nothing moves on the hero.** A static painting with a slow ring.
+
+Options weighed: (A) keep the cream-and-gold everywhere and give it
+material — parchment, marble, bronze, as AFK Journey's light chrome; (B)
+go dark stone and gold throughout, Summoners War's and Epic Seven's — but
+the dark UI of 2026-09-10 was rejected as "not premium" (it was a muddy
+violet monotone, not stone and gold, but the owner chose the temple); (C)
+the hybrid the genre actually uses: cream marble CHROME (the strip, the
+tab bar, the rails) and DARK GLASS over ART. **C**, and phase A is built:
+
+- `Theme.fontScale` 1.0 (0.9) and the floors 11 / 11.5 / 13; carved gold
+  display type (`Theme.goldText`, `View.carved()`) and the glass tokens
+  (`Theme.glass`, `glassRim`, `onGlass`).
+- `GameScreen`'s strip: 52 points, the title carved at 21, the back
+  chevron a bronze medallion; `BarWallet` and `BarCount` as dark inset
+  wells (`BarWell`) with the painted currencies at 22 points and cream
+  numbers at 14.
+- `GameTabBar` (RootView.swift): five bronze medallions on a marble band,
+  the chosen one gold and lit; the system tab bar hidden from inside every
+  tab (`.toolbar(.hidden, for: .tabBar)` in `GameScreen` and on each tab)
+  and this one the screen's bottom safe-area inset.
+- `PrimaryButton`: 46 points, `title(15)`, a gloss that sweeps the gold
+  plate every 4.4 s (`shine`), a `.glass` style for buttons over art.
+- The summon screen: the hall painting covers the frame anchored to its
+  floor; a rail of banner cards on dark glass (the scroll at 32 points,
+  the name in carved capitals, the count in a gold bead, the chosen card
+  on gold); the banner's name carved at 30 over the dark top of the
+  painting; odds, pity and mileage as glass beads; the deck of three
+  buttons floating on the painting's dark foot; light shafts and motes
+  over the hall (`LightShafts`, `Motes`, one canvas each).
+- The reveal: the name at 46 with a two-line fit, the stars at 32, the
+  epithet in the carved face, NEW in carved capitals, Skip on a glass
+  capsule.
+
+Not in phase A, said plainly: the other eighteen `GameScreen`s keep their
+cream panels (they take the new strip, wallet, buttons and type at once);
+painted tab icons and a painted frame kit are a Meshy picture batch on the
+owner's word (about 6 credits a sheet); the island's own header is its
+own. Phase B is one screen at a time against the genre's own screen —
+the collection, the unit sheet, the campaign map's plates, the battle's
+HUD — with the CI frames as the judge.

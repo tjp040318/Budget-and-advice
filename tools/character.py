@@ -1380,6 +1380,181 @@ def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
     return n
 
 
+def reweight_skirt(char, min_count=120, rings=3, reach=0.20):
+    """Hands back to the hips and the legs the cloth Meshy's auto-rig gave to
+    a HAND or a FOREARM (2026-09-22): a tunic's front panel, a kilt's apron,
+    a sash — cloth that hangs from the waist beside a hand resting on the
+    thigh in the A-pose, which the rigger bound to the nearest bone, the
+    hand. Anhur's red tunic swung up with his khopesh in every clip, and on
+    the owner's phone the reveal read as a blade held across his chest.
+
+    A vertex is such cloth when a hand or a forearm owns it; it lies in the
+    waist-to-knee band; it is OUTSIDE the arm's own surface (`_limb_surface`
+    on the forearm, the hand and the fingers: the hand, its bracer and a
+    hilt in the palm stay the hand's); it is within `reach` of the figure's
+    height of a hip or thigh bone (a blade swept out beside the leg is
+    farther); it is part of a SHEET (`_big_sheets`: thin one way, a hand's
+    width or more across the other — a sword is a rod and stays); and the
+    sheet is one layer facing away from the pelvis (a shield held against
+    the thigh has a back face turned toward the leg, and stays the hand's).
+    Each such vertex takes the weights of its nearest body-owned neighbour —
+    the garment's other panels, bound to the hips and the thighs — so the
+    cloth moves with the legs as the rest of the garment does, and the seam
+    is averaged over `rings` rings of mesh neighbours. Returns the count."""
+    if not char.skinned or not len(char.faces):
+        return 0
+    leaf = [j.split("/")[-1] for j in char.joints]
+    idx = {n.lower(): i for i, n in enumerate(leaf)}
+    kind = [_bone_kind(n) for n in leaf]
+    if "hips" not in idx:
+        return 0
+    J = len(leaf)
+    jw = np.array([char.bind[i][3, :3] for i in range(J)], dtype=np.float64)
+    P = char.points.astype(np.float64)
+    height = float(P[:, 1].max() - P[:, 1].min())
+    hips_y = float(jw[idx["hips"]][1])
+    knees = [jw[i][1] for i, k in enumerate(kind) if k == "leg"]
+    knee_y = float(np.mean(knees)) if knees else hips_y - 0.25 * height
+    owner = np.asarray(char.joint_indices)[np.arange(len(P)), np.argmax(char.joint_weights, axis=1)]
+    armkind = np.array([k == "forearm" or k.startswith("hand") for k in kind])
+    bodykind = np.array([k in ("hips", "spine", "spine01", "spine1", "spine02", "spine2", "spine03", "spine3",
+                               "upleg", "leg") for k in kind])
+    candidates = armkind[owner] & (P[:, 1] < hips_y + 0.03 * height) & (P[:, 1] > knee_y - 0.02 * height)
+    if int(candidates.sum()) < min_count:
+        return 0
+    normals = vertex_normals(P, char.faces).astype(np.float64)
+    # The arm's own surface: the forearm, the hand and every finger bone.
+    arm_layer = np.zeros(len(P), bool)
+    for j, p in enumerate(char.parents):
+        if p >= 0 and armkind[j]:
+            arm_layer |= _limb_surface(P, normals, jw[p], jw[j], reach=0.25 * height, gap=0.012 * height,
+                                       inward_stop=False)
+    # Near a hip-to-knee bone: the distance to the nearest thigh segment.
+    near = np.full(len(P), np.inf)
+    for j, p in enumerate(char.parents):
+        if p >= 0 and kind[j] == "leg":
+            a, b = jw[p], jw[j]
+            ab = b - a
+            t = np.clip(((P - a) @ ab) / max(float(ab @ ab), 1e-9), 0.0, 1.0)
+            near = np.minimum(near, np.linalg.norm(P - (a + t[:, None] * ab), axis=1))
+    mask = candidates & ~arm_layer & (near < reach * height)
+    if int(mask.sum()) < min_count:
+        return 0
+    # Cloth, not a weapon: the connected pieces of the mask (over the welded
+    # mesh) that are NOT rods. A tunic's panel wraps a thigh, so it is not
+    # flat and `_big_sheets` (a cape's test) refuses it; what a khopesh, a
+    # spear or a staff have that a panel has not is ONE long axis — the
+    # second principal extent of a rod is a twentieth of the first, a
+    # panel's a third or more.
+    sheet = np.zeros(len(P), bool)
+    key, canon = np.unique(np.round(P, 5), axis=0, return_inverse=True)
+    canon = canon.reshape(-1)
+    f = canon[char.faces]
+    e = np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
+    e = e[e[:, 0] != e[:, 1]]
+    mask_c = np.zeros(len(key), bool)
+    mask_c[canon[mask]] = True
+    e = e[mask_c[e[:, 0]] & mask_c[e[:, 1]]]
+    from scipy.sparse import coo_matrix
+    from scipy.sparse.csgraph import connected_components
+    graph = coo_matrix((np.ones(len(e)), (e[:, 0], e[:, 1])), shape=(len(key), len(key)))
+    _, label = connected_components(graph, directed=False)
+    labels = label[canon]
+    for lab in np.unique(labels[mask]):
+        piece = mask & (labels == lab)
+        if int(piece.sum()) < min_count:
+            continue
+        q = P[piece] - P[piece].mean(axis=0)
+        ev = np.sort(np.linalg.eigvalsh(q.T @ q / max(len(q), 1)))[::-1]
+        if ev[0] <= 1e-12 or ev[1] / ev[0] < 0.10:
+            continue
+        sheet |= piece
+    if not sheet.any():
+        return 0
+    # Part of the garment, not a thing held: the piece's mesh neighbours
+    # outside it are, in good part, the body's own (the tunic's other
+    # panels on the hips and the thighs). A shield or a buckler carried at
+    # the thigh is welded to the hand and the arm alone. (Cloth is modelled
+    # with a thickness, so a "faces turned toward the leg" test cannot tell
+    # a panel's inner face from a shield's back.)
+    e_all = np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
+    e_all = e_all[e_all[:, 0] != e_all[:, 1]]
+    kept = np.zeros(len(P), bool)
+    for lab in np.unique(labels[sheet]):
+        piece = sheet & (labels == lab)
+        in_piece = np.zeros(len(key), bool)
+        in_piece[canon[piece]] = True
+        touching = e_all[in_piece[e_all[:, 0]] != in_piece[e_all[:, 1]]]
+        outside = np.unique(np.concatenate([touching[:, 0][~in_piece[touching[:, 0]]],
+                                            touching[:, 1][~in_piece[touching[:, 1]]]]))
+        if len(outside) == 0:
+            continue
+        body_c = np.zeros(len(key), bool)
+        np.logical_or.at(body_c, canon, bodykind[owner])
+        share = float(body_c[outside].mean())
+        if share < 0.2:
+            print(f"    skirt: a hand-held piece of {int(piece.sum()):,} vertices touches the body's garment on "
+                  f"{100 * share:.0f}% of its edge — held, not worn; left as rigged")
+            continue
+        kept |= piece
+    sheet = kept
+    if not sheet.any():
+        return 0
+    n = int(sheet.sum())
+    # Dense weights; each cloth vertex takes its nearest body-owned neighbour's.
+    W = np.zeros((len(P), J), dtype=np.float64)
+    rows = np.arange(len(P))[:, None]
+    np.add.at(W, (np.broadcast_to(rows, char.joint_indices.shape), char.joint_indices), char.joint_weights.astype(np.float64))
+    body = bodykind[owner] & ~sheet
+    if int(body.sum()) < 10:
+        return 0
+    from scipy.spatial import cKDTree
+    tree = cKDTree(P[body])
+    body_rows = np.flatnonzero(body)
+    _, nearest = tree.query(P[sheet], k=1)
+    W[sheet] = W[body_rows[nearest]]
+    # The seam, as the cape pass: averaged with the mesh neighbours across
+    # UV seams for a few rings, the body's own rows fixed.
+    if rings > 0:
+        key, canon = np.unique(np.round(P, 5), axis=0, return_inverse=True)
+        canon = canon.reshape(-1)
+        f = canon[char.faces]
+        e = np.vstack([f[:, [0, 1]], f[:, [1, 2]], f[:, [2, 0]]])
+        e = np.unique(np.sort(e, axis=1), axis=0)
+        e = e[e[:, 0] != e[:, 1]]
+        C = len(key)
+        Wc = np.zeros((C, J)); cnt = np.zeros(C)
+        np.add.at(Wc, canon, W); np.add.at(cnt, canon, 1.0)
+        Wc /= np.maximum(cnt, 1.0)[:, None]
+        sheet_c = np.zeros(C, bool); sheet_c[canon[sheet]] = True
+        deg = np.zeros(C); np.add.at(deg, e[:, 0], 1.0); np.add.at(deg, e[:, 1], 1.0)
+        for _ in range(rings):
+            acc = Wc.copy()
+            np.add.at(acc, e[:, 0], Wc[e[:, 1]]); np.add.at(acc, e[:, 1], Wc[e[:, 0]])
+            acc /= (deg + 1.0)[:, None]
+            Wc[sheet_c] = acc[sheet_c]
+        W[sheet] = Wc[canon[sheet]]
+    K = char.joint_indices.shape[1]
+    top = np.argsort(-W[sheet], axis=1)[:, :K]
+    wt = np.take_along_axis(W[sheet], top, axis=1)
+    wt /= np.maximum(wt.sum(axis=1, keepdims=True), 1e-9)
+    top[wt <= 0] = 0
+    char.joint_indices[sheet] = top.astype(char.joint_indices.dtype)
+    char.joint_weights[sheet] = wt.astype(char.joint_weights.dtype)
+    was = {}
+    for o in owner[sheet]:
+        was[leaf[o]] = was.get(leaf[o], 0) + 1
+    was = ", ".join(f"{k} {v:,}" for k, v in sorted(was.items(), key=lambda kv: -kv[1])[:3])
+    now = {}
+    new_owner = np.asarray(char.joint_indices)[np.arange(len(P)), np.argmax(char.joint_weights, axis=1)]
+    for o in new_owner[sheet]:
+        now[leaf[o]] = now.get(leaf[o], 0) + 1
+    now = ", ".join(f"{k} {v:,}" for k, v in sorted(now.items(), key=lambda kv: -kv[1])[:3])
+    print(f"    skirt: {n:,} of {len(P):,} vertices of waist-to-knee cloth were a hand's ({was}); "
+          f"now the body's ({now}), the seam blended over {rings} rings")
+    return n
+
+
 def reproportion(char, scales, height=None, fit=None):
     """Scales named joints (by their leaf name) about their own origins or
     along their bones, bakes the skinned result into the points, and

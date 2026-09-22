@@ -38,7 +38,7 @@ struct SummonView: View {
     /// against: the painting is centred in what is left of the frame after
     /// the menu, so the altar stands in the middle of the room the player can
     /// actually see instead of 88 points to the left of it.
-    private static let menuWidth: CGFloat = 176
+    private static let menuWidth: CGFloat = 204
 
     var body: some View {
         NavigationStack {
@@ -55,18 +55,17 @@ struct SummonView: View {
                 )
                 BarWallet(wallet: store.player.wallet)
             } content: {
-                HStack(spacing: 0) {
-                    bannerMenu
-                    roomControls
+                // The hall is the screen (2026-09-22): the painting under
+                // everything, the rail and the words floating over it on
+                // dark glass, light shafts and motes over the painting.
+                ZStack(alignment: .topLeading) {
+                    room
+                    HallAmbience()
+                    HStack(spacing: 0) {
+                        bannerRail
+                        roomControls
+                    }
                 }
-                // The room is the content's BACKGROUND, never a sibling in the
-                // stack. A fill-aspect painting reports the size it needs to
-                // cover its frame, and `.clipped()` clips neither that reported
-                // size nor hit-testing: as a sibling under an unbounded frame
-                // it measures larger than the window and grows every ancestor,
-                // which blanked a whole screen in this app. A background is
-                // laid out in the content's frame and can never push on it.
-                .background(room)
             }
             .fullScreenCover(isPresented: .constant(!revealResults.isEmpty)) {
                 SummonRevealView(results: revealResults) {
@@ -117,92 +116,60 @@ struct SummonView: View {
     /// edge. The rail it replaces was pinned to the bottom of the frame, so
     /// the last row was guillotined halfway through — the owner's screenshot
     /// caught the Wind Scroll cut through its own count.
-    private var bannerMenu: some View {
+    // MARK: - The banner rail (2026-09-22)
+    //
+    // Cards on dark glass down the left, over the painting: the scroll's
+    // painting large, the banner's name in carved capitals, the count in a
+    // gold bead; the chosen one on a gold plate with a glow. The cream list
+    // with 24-point icons it replaces read as a settings table.
+
+    private var bannerRail: some View {
         ScrollView(showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 4) {
-                menuSection("Pantheons", banners: Banner.pantheonBanners, short: false)
-                menuSection("Scrolls", banners: Banner.scrollBanners, short: true)
-                // The fade below is 34 points tall. This is the room a whole
-                // row needs to travel out from under it, so the list can be
-                // scrolled to a clean end rather than to a dissolved half-row.
-                Color.clear.frame(height: 34)
+            VStack(alignment: .leading, spacing: 5) {
+                railSection("Pantheons", banners: Banner.pantheonBanners, short: false)
+                railSection("Scrolls", banners: Banner.scrollBanners, short: true)
+                Color.clear.frame(height: 24)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
+            .padding(.horizontal, 9)
+            .padding(.top, 8)
         }
         .frame(width: Self.menuWidth)
         .frame(maxHeight: .infinity)
-        .background(menuPlate)
-        .overlay(alignment: .bottom) { menuFade }
+        .background(railPlate)
     }
 
-    /// A cream column with one gold hairline down its inner edge — the same
-    /// marble the header strip is cut from, so the menu and the strip read as
-    /// one piece of chrome rather than an ink slab under a cream bar.
-    /// Decorative, so it is marked unhittable like every other painted thing
-    /// in this app.
-    private var menuPlate: some View {
+    private var railPlate: some View {
         ZStack(alignment: .trailing) {
             LinearGradient(
-                colors: [Theme.surface.opacity(0.96), Theme.surfaceRaised.opacity(0.86)],
+                colors: [Color(hex: "#0E0B08").opacity(0.86), Color(hex: "#0E0B08").opacity(0.62)],
                 startPoint: .leading,
                 endPoint: .trailing
             )
             Rectangle()
-                .fill(Theme.goldDim.opacity(0.55))
+                .fill(
+                    LinearGradient(colors: [Theme.gold.opacity(0.0), Theme.gold.opacity(0.7), Theme.gold.opacity(0.0)],
+                                   startPoint: .top, endPoint: .bottom)
+                )
                 .frame(width: 1)
         }
         .allowsHitTesting(false)
     }
 
-    /// The bottom of the list, and the answer to the half-row. A row that
-    /// scrolls under this dissolves instead of being cut, and the chevron says
-    /// there is more below — there always is, because ten banners at 32 points
-    /// a row need 390 and a landscape phone hands this panel about 340.
-    ///
-    /// It is a scrim rather than a `.mask`, because a mask takes hit-testing
-    /// with it and the row under the fade must still be tappable.
-    private var menuFade: some View {
-        LinearGradient(
-            colors: [Theme.surface.opacity(0), Theme.surface.opacity(0.97)],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .frame(height: 34)
-        .overlay(alignment: .bottom) {
-            Image(systemName: "chevron.compact.down")
-                .font(.system(size: 14, weight: .black))
-                .foregroundStyle(Theme.goldDim)
-                .padding(.bottom, 2)
-        }
-        .allowsHitTesting(false)
-    }
-
-    private func menuSection(_ title: String, banners: [Banner], short: Bool) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
+    private func railSection(_ title: String, banners: [Banner], short: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
             Text(title.uppercased())
-                .font(Theme.body(9).weight(.black))
-                .tracking(1.0)
-                .foregroundStyle(Theme.goldDim)
-                .padding(.top, 6)
-                .padding(.leading, 3)
+                .font(Theme.title(10))
+                .tracking(2.0)
+                .carved(glow: false)
+                .padding(.top, 8)
+                .padding(.leading, 4)
             ForEach(banners) { banner in
-                menuRow(banner, short: short)
+                railRow(banner, short: short)
             }
         }
     }
 
-    /// One banner: its scroll — the painted scroll itself since 2026-09-17
-    /// (evening), the same picture the bazaar, the chest and the circle
-    /// show, so a row is told apart by the object it spends and not by a
-    /// glyph in a colour (the owner: "I really want my scrolls designed to
-    /// have distinct looks … I just feel like this whole UI is sloppy/not
-    /// the easiest to understand without that artwork") — its name, and how
-    /// many of that scroll are left. A row with none left is dimmed but
-    /// still selectable, because wanting to read the odds for a scroll you
-    /// have run out of is normal. The glyph draws only for a scroll whose
-    /// painting has not shipped.
-    private func menuRow(_ banner: Banner, short: Bool) -> some View {
+    private func railRow(_ banner: Banner, short: Bool) -> some View {
         let owned = store.player.wallet.count(of: banner.scroll)
         let isOn = banner.id == selectedBanner.id
         let key = ItemArt.key(scroll: banner.scroll)
@@ -211,51 +178,53 @@ struct SummonView: View {
             AudioLibrary.shared.play(.uiTap)
             selectedBanner = banner
         } label: {
-            HStack(spacing: 7) {
-                if ItemArt.hasPainting(key) {
-                    ItemIcon(key: key, size: 24, glow: false)
-                        .frame(width: 24)
-                } else {
-                    Image(systemName: banner.scroll.glyph)
-                        .font(.system(size: 12, weight: .black))
-                        .foregroundStyle(isOn ? Theme.ink : banner.scroll.tint)
-                        .frame(width: 24)
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(Color.black.opacity(0.35))
+                    if ItemArt.hasPainting(key) {
+                        ItemIcon(key: key, size: 32, glow: false)
+                    } else {
+                        Image(systemName: banner.scroll.glyph)
+                            .font(.system(size: 14, weight: .black))
+                            .foregroundStyle(banner.scroll.tint)
+                    }
                 }
+                .frame(width: 36, height: 36)
                 Text(short ? shortName(banner) : banner.title)
-                    .font(Theme.body(11).weight(.semibold))
-                    .foregroundStyle(isOn ? Theme.ink : Theme.textPrimary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .font(Theme.title(11))
+                    .foregroundStyle(isOn ? Color(hex: "#FFF1C2") : Theme.onGlass)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                    .multilineTextAlignment(.leading)
                 Spacer(minLength: 2)
                 Text("\(owned)")
-                    .font(Theme.numeric(11))
-                    .foregroundStyle(isOn ? Theme.ink : (owned > 0 ? Theme.gold : Theme.textSecondary))
+                    .font(Theme.numeric(12))
+                    .foregroundStyle(owned > 0 ? Color(hex: "#FFE29A") : Theme.onGlassDim)
+                    .padding(.horizontal, 7)
+                    .frame(height: 20)
+                    .background(Capsule().fill(Color.black.opacity(0.5)))
+                    .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.7), lineWidth: 0.6))
             }
-            .padding(.horizontal, 8)
-            .frame(height: isOn ? 30 : 28)
-            .background(rowPlate(isOn: isOn))
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(railRowPlate(isOn: isOn))
         }
         .buttonStyle(.plain)
-        .opacity(owned > 0 || isOn ? 1 : 0.55)
+        .opacity(owned > 0 || isOn ? 1 : 0.6)
     }
 
-    /// The selected row has to be unmistakable against a lit painting, so it
-    /// takes all three of the app's selection signals at once: the gold plate,
-    /// ink lettering on it, and a glow the unselected rows do not have.
-    private func rowPlate(isOn: Bool) -> some View {
-        RoundedRectangle(cornerRadius: 6, style: .continuous)
-            .fill(isOn ? Theme.gold : Theme.surfaceRaised.opacity(0.82))
+    private func railRowPlate(isOn: Bool) -> some View {
+        RoundedRectangle(cornerRadius: 10, style: .continuous)
+            .fill(isOn
+                  ? AnyShapeStyle(LinearGradient(colors: [Color(hex: "#6A5020"), Color(hex: "#2E2210")], startPoint: .top, endPoint: .bottom))
+                  : AnyShapeStyle(Color.white.opacity(0.06)))
             .overlay(
-                RoundedRectangle(cornerRadius: 6, style: .continuous)
-                    .strokeBorder(Theme.goldDim.opacity(isOn ? 0 : 0.35), lineWidth: 0.5)
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .strokeBorder(isOn ? Theme.gold.opacity(0.95) : Color.white.opacity(0.12), lineWidth: isOn ? 1.2 : 0.8)
             )
-            .shadow(color: isOn ? Theme.gold.opacity(0.45) : .clear, radius: 6)
+            .shadow(color: isOn ? Theme.gold.opacity(0.45) : .clear, radius: 8)
     }
 
-    /// "The Endless Scroll" is a title for a painting, not for a 176-point
-    /// menu row: the scrolls are listed as Endless, Unknown, Divine, Light &
-    /// Dark, Fire, Water and Wind. The pantheons keep their full names, which
-    /// are what the banners are actually called.
     private func shortName(_ banner: Banner) -> String {
         banner.title
             .replacingOccurrences(of: "The ", with: "")
@@ -270,61 +239,48 @@ struct SummonView: View {
             Spacer(minLength: 8)
             summonDeck
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, 14)
+        .padding(.top, 8)
+        .padding(.bottom, 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
     }
 
-    /// What the player is standing in front of, and the two numbers he decides
-    /// on: the headline odds and the pity. Each carries the little ? the owner
-    /// asked for, which is where the slab's content went — a question mark and
-    /// a popover cost 26 points of the frame where the slab cost 210.
+    // The banner's name carved in gold at 30 points over the dark top of
+    // the painting, the scroll's kind as an eyebrow above it, the odds, the
+    // pity and the mileage as glass beads at the right (2026-09-22).
     private var roomHeader: some View {
-        HStack(alignment: .center, spacing: 8) {
-            VStack(alignment: .leading, spacing: 1) {
-                HStack(spacing: 2) {
+        HStack(alignment: .top, spacing: 10) {
+            VStack(alignment: .leading, spacing: 0) {
+                Text(selectedBanner.scroll.displayName.uppercased())
+                    .font(Theme.title(10))
+                    .tracking(2.4)
+                    .foregroundStyle(Color(hex: "#E0C275"))
+                    .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(selectedBanner.title)
-                        .font(Theme.display(22))
-                        .foregroundStyle(Theme.textPrimary)
+                        .font(Theme.display(30))
+                        .carved()
                         .lineLimit(1)
-                        .minimumScaleFactor(0.7)
+                        .minimumScaleFactor(0.6)
                     InfoDot(title: "This scroll") { scrollDetail }
                 }
-                Text(selectedBanner.scroll.displayName.uppercased())
-                    .font(Theme.body(9).weight(.black))
-                    .tracking(1.2)
-                    .foregroundStyle(Theme.goldDim)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 5)
-            // On a cream plate, like the two readings beside it: ink lettering
-            // over the temple's shadowed vault could not be read, and the dark
-            // halo it wore only made the smudge bigger.
-            .background(
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(Theme.plate.opacity(0.8))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                            .strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5)
-                    )
-            )
 
             Spacer(minLength: 6)
 
-            oddsChip
-            if showsPity {
-                pityChip
+            VStack(alignment: .trailing, spacing: 5) {
+                HStack(spacing: 6) {
+                    oddsChip
+                    if showsPity {
+                        pityChip
+                    }
+                }
+                mileageChip
             }
-            mileageChip
         }
     }
 
-    // MARK: - Mileage
 
-    /// Points on THIS banner and what they are worth, as a chip that opens the
-    /// exchange. It is beside the pity because it answers the question pity
-    /// cannot: a hard pity stops a drought, and this stops the WRONG five
-    /// star.
     private var mileageChip: some View {
         let points = MileageService.points(on: selectedBanner, player: store.player)
         let best = MileageService.catalogue(for: selectedBanner).first
@@ -339,7 +295,7 @@ struct SummonView: View {
                     .foregroundStyle(Theme.gold)
                 Text("\(points)")
                     .font(Theme.numeric(11))
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(Theme.onGlass)
                 if let best, points >= best.price {
                     Image(systemName: "checkmark.seal.fill")
                         .font(.system(size: 10, weight: .black))
@@ -357,16 +313,11 @@ struct SummonView: View {
     /// temple carries on behind it.
     private var chipPlate: some View {
         Capsule()
-            .fill(Theme.plate.opacity(0.85))
-            .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5))
+            .fill(Theme.glass)
+            .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 0.8))
     }
 
-    // MARK: - Rates
 
-    /// The one number a player actually decides on — the chance of the best
-    /// grade this scroll can hand him — with the full published table behind
-    /// the ?. The table used to be printed twice in one frame: as a permanent
-    /// slab down the right third, and again behind the strip's Rates button.
     private var oddsChip: some View {
         let best = SummonService.oddsTable(for: selectedBanner).first
         return HStack(spacing: 5) {
@@ -375,7 +326,7 @@ struct SummonView: View {
                 .foregroundStyle(Theme.gold)
             Text(best.map { "\($0.stars)★ \(String(format: "%.1f%%", $0.chance * 100))" } ?? "—")
                 .font(Theme.numeric(11))
-                .foregroundStyle(Theme.textPrimary)
+                .foregroundStyle(Theme.onGlass)
             // This ? opens the full table rather than a paragraph: every
             // grade's odds AND every name in the pool are already a screen
             // (`RateTableView`), and two summaries of one table is the fault
@@ -531,29 +482,21 @@ struct SummonView: View {
         let affordable = price.map { store.player.wallet.divinity >= $0 } ?? false
         let hint = countLine(owned: owned, price: price)
 
-        return VStack(alignment: .trailing, spacing: 5) {
-            // The hint floats above the bar rather than inside it. Measured on
-            // the narrowest frame this ships to — an SE in landscape leaves the
-            // room 491 points, and the Buy control and the two plates want 482
-            // of them — a line sharing that row would have been squeezed to a
-            // truncated stub or to nothing at all.
+        // The deck floats on the dark foot of the painting (2026-09-22): the
+        // ×10 on the painted gold plate with its gloss, the ×1 and Buy on
+        // dark glass, 46 points tall, no cream tray under them.
+        return VStack(alignment: .trailing, spacing: 6) {
             if !hint.isEmpty {
                 Text(hint)
-                    .font(Theme.body(11).weight(.semibold))
-                    .foregroundStyle(Theme.goldDim)
+                    .font(Theme.body(12).weight(.semibold))
+                    .foregroundStyle(Color(hex: "#E0C275"))
                     .lineLimit(1)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
                     .background(chipPlate)
             }
 
-            // No `Spacer` at the head of this row on purpose: the bar is only
-            // as wide as the three controls in it, so it hugs the trailing
-            // corner — under the right thumb in landscape, and the corner the
-            // owner called dead space — instead of laying half a plate of
-            // empty translucency over the floor of the room. A bigger room is
-            // worth more than a filled corner.
-            HStack(spacing: 10) {
+            HStack(spacing: 12) {
                 if let price {
                     buyButton(price: price, affordable: affordable)
                 }
@@ -563,11 +506,12 @@ struct SummonView: View {
                     systemImage: scroll.glyph,
                     tint: Theme.surfaceHigh,
                     isEnabled: owned >= 1,
-                    itemKey: ItemArt.key(scroll: scroll)
+                    itemKey: ItemArt.key(scroll: scroll),
+                    style: .glass
                 ) {
                     perform(count: 1)
                 }
-                .frame(maxWidth: 150)
+                .frame(maxWidth: 190)
 
                 PrimaryButton(
                     title: "Summon ×10",
@@ -577,57 +521,32 @@ struct SummonView: View {
                 ) {
                     perform(count: 10)
                 }
-                .frame(maxWidth: 210)
+                .frame(maxWidth: 250)
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(deckPlate)
         }
         .frame(maxWidth: .infinity, alignment: .trailing)
     }
 
-    /// Cream and translucent, because the floor circle burns directly behind
-    /// this bar and a solid plate would put the glow out.
-    private var deckPlate: some View {
-        RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-            .fill(Theme.plate.opacity(0.85))
-            .overlay(
-                RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
-                    .strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5)
-            )
-    }
-
-    /// A control is a rounded rectangle of `surfaceRaised` with a hairline in
-    /// its own tint, everywhere in this app. This one was a bare gold caption
-    /// with a 13-point tap target that stayed lit when it could not be paid.
     private func buyButton(price: Int, affordable: Bool) -> some View {
         Button {
             store.buyScroll(selectedBanner.scroll)
         } label: {
-            Label("Buy — \(price)", systemImage: "sparkles")
-                .font(Theme.body(12).weight(.semibold))
-                .foregroundStyle(affordable ? Theme.gold : Theme.textSecondary)
-                .lineLimit(1)
-                .padding(.horizontal, 9)
-                .frame(height: Theme.controlHeight)
-                .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised.opacity(0.9)))
-                .overlay(
-                    ScreenChrome.controlShape
-                        .strokeBorder(
-                            (affordable ? Theme.goldDim : Theme.stroke).opacity(0.6),
-                            lineWidth: 0.5
-                        )
-                )
+            HStack(spacing: 6) {
+                ItemIcon(key: "divinity", size: 20, glow: false)
+                Text("Buy · \(price)")
+                    .font(Theme.title(12))
+                    .tracking(0.6)
+            }
+            .foregroundStyle(affordable ? Color(hex: "#FFE9A8") : Theme.onGlassDim)
+            .lineLimit(1)
+            .padding(.horizontal, 14)
+            .frame(height: 44)
+            .background(GlassPlate(radius: Theme.tightCorner))
         }
         .buttonStyle(.plain)
         .disabled(!affordable)
     }
 
-    /// The only thing on screen that says why a plate is grey. At zero *both*
-    /// plates are grey, so "×10 needs 10 more" would read as though ×1 still
-    /// worked; and the unknown scroll has no divinity price, so it has no Buy
-    /// control beside this line to answer. With ten or more in hand there is
-    /// nothing to explain and the line says nothing.
     private func countLine(owned: Int, price: Int?) -> String {
         if owned == 0 {
             return price == nil ? "None held — the bazaar sells them for drachma" : "None held"
@@ -670,7 +589,7 @@ private struct InfoGlyph: View {
     var body: some View {
         Image(systemName: "questionmark.circle")
             .font(.system(size: 14, weight: .black))
-            .foregroundStyle(Theme.goldDim)
+            .foregroundStyle(Color(hex: "#E0C275"))
             .frame(width: 26, height: 26)
             .contentShape(Circle())
     }
@@ -857,22 +776,26 @@ struct SummoningCircle: View {
             // where the painter put it, and a fill crop moves it. Everything
             // below is measured off the fitted art rect, so the glow and the
             // rune rings stay on the painted meander whatever the frame does.
-            let scale = min(frame.size.width / 16.0, frame.size.height / 9.0)
+            // The painting COVERS the frame (2026-09-22), anchored to its
+            // floor so the summoning circle stays in view: the hall is the
+            // screen, the rail and the words float over it.
+            let scale = max(frame.size.width / 16.0, frame.size.height / 9.0)
             let artWidth = scale * 16
             let artHeight = scale * 9
-            let originX = leadingInset + (frame.size.width - leadingInset - artWidth) / 2
-            let originY = (frame.size.height - artHeight) / 2
+            let originX = (frame.size.width - artWidth) / 2
+            let originY = frame.size.height - artHeight
+            // The ring stands in the room to the right of the rail.
             let centre = CGPoint(
-                x: originX + Self.floorCentre.x * artWidth,
+                x: originX + Self.floorCentre.x * artWidth + leadingInset * 0.42,
                 y: originY + Self.floorCentre.y * artHeight
             )
             let ringSize = Self.floorRadius * 2 * artWidth
 
             ZStack {
-                // The letterbox beside the fitted painting is the screen's
-                // own cream, so the room's edge is the ground and not a black
-                // bar down the right of a cream screen.
-                Theme.surface
+                // Dark beyond the painting's edge (2026-09-22): the cover
+                // crop leaves none in view, and a cream bar would be the
+                // cheap copy back.
+                Color(hex: "#0E0B08")
                 hall(width: artWidth, height: artHeight)
                     .position(x: originX + artWidth / 2, y: originY + artHeight / 2)
 
@@ -968,30 +891,26 @@ struct SummoningCircle: View {
     /// The top one was an ink wash left from the days of white lettering, and
     /// it stood the ink title on a black vault.
     private var scrims: some View {
+        // Dark, since 2026-09-22: a cream veil over a painting is what read
+        // as a cheap copy; a dark one is a cinema's, and gold words sit on it.
         VStack(spacing: 0) {
             LinearGradient(
-                colors: [Theme.plate.opacity(0.7), Theme.plate.opacity(0)],
+                colors: [Color.black.opacity(0.55), Color.black.opacity(0)],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 92)
+            .frame(height: 110)
             Spacer(minLength: 0)
             LinearGradient(
-                colors: [Theme.plate.opacity(0), Theme.plate.opacity(0.5)],
+                colors: [Color.black.opacity(0), Color.black.opacity(0.62)],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            .frame(height: 92)
+            .frame(height: 120)
         }
         .allowsHitTesting(false)
     }
 
-    /// The hall itself: a Greek temple with the light falling through the
-    /// oculus onto the altar, which is what the owner asked for — "can the
-    /// summoning room be like a Greek temple, like the temple of Hephaestus or
-    /// the temple of Poseidon". The floor carries a meander band and a laurel
-    /// ring with bare marble in the middle, deliberately not a star or a
-    /// pentagram.
     private func hall(width: CGFloat, height: CGFloat) -> some View {
         Group {
             if BundleImage.exists("summon_hall_bg") {
@@ -1023,25 +942,11 @@ struct SummoningCircle: View {
     /// the screen. The transparent stops are the plate's own colour at zero:
     /// a fade to transparent INK passes through a grey band on the way.
     private var edgeFade: some View {
-        ZStack {
-            HStack(spacing: 0) {
-                LinearGradient(colors: [Theme.surface, Theme.surface.opacity(0)],
-                               startPoint: .leading, endPoint: .trailing)
-                    .frame(width: 44)
-                Spacer(minLength: 0)
-                LinearGradient(colors: [Theme.surface.opacity(0), Theme.surface],
-                               startPoint: .leading, endPoint: .trailing)
-                    .frame(width: 44)
-            }
-            VStack(spacing: 0) {
-                LinearGradient(colors: [Theme.plate.opacity(0.55), Theme.plate.opacity(0)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 30)
-                Spacer(minLength: 0)
-                LinearGradient(colors: [Theme.plate.opacity(0), Theme.plate.opacity(0.55)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 30)
-            }
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            LinearGradient(colors: [Color.black.opacity(0), Color.black.opacity(0.45)],
+                           startPoint: .leading, endPoint: .trailing)
+                .frame(width: 60)
         }
         .allowsHitTesting(false)
     }
@@ -1062,6 +967,18 @@ struct SummoningCircle: View {
         .frame(width: size, height: size)
         .scaleEffect(charging ? 1.06 : 1.0)
         .rotationEffect(.degrees(angle))
+        .allowsHitTesting(false)
+    }
+}
+
+/// The hall's air (2026-09-22): shafts of light from the high windows and
+/// motes rising through them, over the painting and under the words.
+private struct HallAmbience: View {
+    var body: some View {
+        ZStack {
+            LightShafts()
+            Motes(count: 26, color: Color(hex: "#FFE29A"), seed: 910)
+        }
         .allowsHitTesting(false)
     }
 }

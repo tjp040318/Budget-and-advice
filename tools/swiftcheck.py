@@ -968,6 +968,9 @@ def check_unknown_types(files, declared, errors):
         # `String(decoding:as:)`.
         "URLSession","URLRequest","HTTPURLResponse","URLComponents","URLQueryItem",
         "PropertyListSerialization","ISO8601DateFormatter","UTF8",
+        # The premium pass (2026-09-22): a type-erased fill for a `?:` of two
+        # ShapeStyles, and the Gradient a Canvas shading takes.
+        "AnyShapeStyle","Gradient",
     }
     used = defaultdict(list)
     for path in files:

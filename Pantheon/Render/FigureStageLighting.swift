@@ -22,22 +22,50 @@ import SceneKit
 enum FigureStageLighting {
     /// The studio map's strength: enough to lift the shadow side and give
     /// gold a reflection, not enough to flatten the key.
-    static let environmentIntensity: CGFloat = 0.5
+    static var environmentIntensity: CGFloat { lab == .previous ? 0.5 : 1.0 }
 
     /// The rig's numbers, shared so the three stages light a figure the same.
     /// The Lambert ramp gives away the half-Lambert's free 30%, so the key is
     /// a little stronger than the 780–820 it was; the ambient is lower because
     /// the environment now does its job.
-    static let keyIntensity: CGFloat = 900
-    static let fillIntensity: CGFloat = 240
-    static let rimIntensity: CGFloat = 400
-    static let ambientIntensity: CGFloat = 100
+    ///
+    /// Raised on 2026-09-22 (PLAN.md, *The figure on the phone*): under the
+    /// 1.85 white point the rig of 2026-09-18 (key 900, environment 0.5)
+    /// lit a figure to about six tenths of white, and the owner's phone
+    /// frame of Anhur was a grey-brown man beside gold pillars while his
+    /// texture is a red tunic and white sleeves. The `previous` lab variant
+    /// is that rig, photographed beside this one every run.
+    static var keyIntensity: CGFloat { lab == .previous ? 900 : 1150 }
+    static var fillIntensity: CGFloat { lab == .previous ? 240 : 320 }
+    static var rimIntensity: CGFloat { lab == .previous ? 400 : 420 }
+    static var ambientIntensity: CGFloat { lab == .previous ? 100 : 140 }
+
+    /// How far the key light's colour is pulled from the element's tint
+    /// toward white: 0.82 left an ember unit's key peach, and Anhur's white
+    /// sleeves tan; the rim keeps the element's colour whole.
+    static var keyTintMix: CGFloat { lab == .previous ? 0.82 : 0.92 }
+
+    /// The paint's saturation in the surface shader: 0.85 tempered every
+    /// texture on 2026-09-20 and the owner read grey; the physically based
+    /// shading is what tempers a cartoon now, and the boards he judged the
+    /// roster on draw the textures as painted.
+    static var paintSaturation: Double { lab == .previous ? 0.85 : 1.0 }
+
+    /// Whether a real metalness map's metal takes a lower roughness
+    /// (`MaterialTuner.surfaceModifier`): Meshy paints gold at 0.5, which
+    /// is satin, and satin gold beside a matte tunic is tan paint.
+    static var metalShine: Bool { lab != .previous }
 
     /// `scene.lightingEnvironment` from the studio map, unless the lab asks
     /// for the bare rig.
     static func applyEnvironment(to scene: SCNScene) {
+        // The map of 2026-09-18 is kept as `studio_ibl_v1` for the lab's
+        // `previous` variant; `studio_ibl` has brighter softboxes and sky
+        // since 2026-09-22, so gold has something to reflect.
+        let name = lab == .previous ? "studio_ibl_v1" : "studio_ibl"
         guard lab != .bare,
-              let url = Bundle.main.url(forResource: "studio_ibl", withExtension: "png") else { return }
+              let url = Bundle.main.url(forResource: name, withExtension: "png")
+                ?? Bundle.main.url(forResource: "studio_ibl", withExtension: "png") else { return }
         scene.lightingEnvironment.contents = url
         scene.lightingEnvironment.intensity = environmentIntensity
     }
@@ -71,13 +99,14 @@ enum FigureStageLighting {
     /// two thirds of a stop under, `-tour-reveal-lab bare` photographs the
     /// Lambert ramp with no environment and no shadow; with `-tour-shading
     /// legacy` beside it, `bare` is the render of 2026-09-17, the control.
-    enum Lab { case none, dark, bare }
+    enum Lab { case none, dark, bare, previous }
     static var lab: Lab {
         #if DEBUG
         let args = ProcessInfo.processInfo.arguments
         guard let at = args.firstIndex(of: "-tour-reveal-lab"), at + 1 < args.count else { return .none }
         switch args[at + 1] {
         case "dark": return .dark
+        case "previous": return .previous
         case "bare": return .bare
         default: return .none
         }

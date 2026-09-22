@@ -66,8 +66,12 @@ struct SummonRevealView: View {
                         AudioLibrary.shared.play(.uiTap)
                         if showAll { onFinish() } else { sequence += 1; showAll = true }
                     }
-                    .font(Theme.body(14).weight(.semibold))
-                    .foregroundStyle(Self.duskInk)
+                    .font(Theme.title(13))
+                    .tracking(1.2)
+                    .foregroundStyle(Color(hex: "#FFE9A8"))
+                    .padding(.horizontal, 16)
+                    .frame(height: 34)
+                    .background(GlassPlate(radius: 17))
                     .padding(12)
                 }
                 Spacer()
@@ -218,7 +222,7 @@ struct SummonRevealView: View {
                 HStack(spacing: 4) {
                     ForEach(0..<max(1, result.stars), id: \.self) { i in
                         Image(systemName: "star.fill")
-                            .font(.system(size: 26, weight: .black))
+                            .font(.system(size: 32, weight: .black))
                             .foregroundStyle(
                                 LinearGradient(colors: [Color(hex: "#FFF3C4"), Theme.gold, Color(hex: "#C9992F")],
                                                startPoint: .top, endPoint: .bottom)
@@ -233,7 +237,10 @@ struct SummonRevealView: View {
                 .frame(height: 34)
 
                 Text(result.isAwakening ? (result.blueprint.awakening?.awakenedName ?? result.blueprint.name) : result.blueprint.name)
-                    .font(Theme.display(38))
+                    .font(Theme.display(46))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
+                    .multilineTextAlignment(.center)
                     .foregroundStyle(
                         LinearGradient(colors: [Color(hex: "#FFF3C4"), Color(hex: "#E2C15E")],
                                        startPoint: .top, endPoint: .bottom)
@@ -246,7 +253,7 @@ struct SummonRevealView: View {
 
                 VStack(spacing: 6) {
                     Text(result.blueprint.epithet)
-                        .font(Theme.body(14))
+                        .font(Theme.title(15))
                         .foregroundStyle(Self.duskInk)
 
                     HStack(spacing: 8) {
@@ -262,14 +269,14 @@ struct SummonRevealView: View {
 
                     if result.isAwakening {
                         Text("AWAKENED")
-                            .font(Theme.body(12).weight(.black))
-                            .tracking(2.4)
+                            .font(Theme.title(14))
+                            .tracking(3.0)
                             .foregroundStyle(Theme.gold)
                             .shadow(color: Theme.gold.opacity(0.9), radius: 6)
                     } else if result.isNew {
                         Text("NEW")
-                            .font(Theme.body(12).weight(.black))
-                            .tracking(2.4)
+                            .font(Theme.title(14))
+                            .tracking(3.0)
                             .foregroundStyle(Theme.gold)
                             .shadow(color: Theme.gold.opacity(0.9), radius: 6)
                     } else {
@@ -292,8 +299,8 @@ struct SummonRevealView: View {
             }
 
             Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
-                .font(Theme.body(12))
-                .foregroundStyle(Theme.textPrimary)
+                .font(Theme.body(13))
+                .foregroundStyle(Self.duskInk)
                 // Over the lit floor of the set now, not a dark gradient.
                 .shadow(color: .black.opacity(0.9), radius: 3, y: 1)
                 .opacity(isFullyRevealed ? 1 : 0)
@@ -690,7 +697,7 @@ struct SummonStageView: UIViewRepresentable {
         let key = SCNLight()
         key.type = .directional
         key.intensity = FigureStageLighting.keyIntensity
-        key.color = tint.mixed(with: .white, amount: 0.82)
+        key.color = tint.mixed(with: .white, amount: FigureStageLighting.keyTintMix)
         // The one shadow in the scene: the figure's, deferred and soft; the
         // quads never cast (`restrictShadows`, below and in `show`).
         FigureStageLighting.castShadows(from: key)

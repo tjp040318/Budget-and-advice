@@ -155,7 +155,12 @@ jobs:
                 # (2026-09-20): the frame the physically based figure is
                 # judged against. Docs/PLAN.md, "The serious look in the light".
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-shading ramp >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened-ramp" ;;
+                sleep 7; shoot "$step-${names[$step]}-awakened-ramp"
+                # And the rig of 2026-09-18 (key 900, environment 0.5, the
+                # paint at 0.85, satin gold): the control for the brighter
+                # rig of 2026-09-22. Docs/PLAN.md, "The figure on the phone".
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab previous >/dev/null
+                sleep 7; shoot "$step-${names[$step]}-awakened-previous" ;;
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
               arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;

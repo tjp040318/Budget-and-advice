@@ -721,6 +721,7 @@ enum MaterialTuner {
     float costumeGlow;
     float paintSaturation;
     float hasMetalMap;
+    float metalShine;
     #pragma body
     float3 c = pow(max(_surface.diffuse.rgb, float3(0.0)), float3(1.0 / 2.2));
     // THE PAINT'S SATURATION (2026-09-20). Meshy's texturing doubles the
@@ -763,6 +764,12 @@ enum MaterialTuner {
         : 0.0;
     _surface.metalness = max(_surface.metalness, 0.85 * metal);
     _surface.roughness = mix(_surface.roughness, 0.28, metal);
+    // A real metalness map's metal takes a lower roughness (2026-09-22):
+    // Meshy paints its gold at about 0.5, satin, and under the studio
+    // map satin gold reads as tan paint beside a matte tunic.
+    if (hasMetalMap > 0.5 && metalShine > 0.5) {
+        _surface.roughness = mix(_surface.roughness, _surface.roughness * 0.55, saturate(_surface.metalness));
+    }
     if (costumeMix > 0.0 && maxC > 0.12 && delta > 0.001 && s > 0.5) {
         float away = abs(h - costumeSourceHue);
         away = min(away, 1.0 - away);
@@ -933,6 +940,7 @@ enum MaterialTuner {
                 let hasMetalMap = material.metalness.contents != nil && !(material.metalness.contents is NSNumber)
                 material.setValue(NSNumber(value: Float(hasMetalMap ? 1 : 0)), forKey: "hasMetalMap")
                 material.setValue(NSNumber(value: Float(paintSaturation)), forKey: "paintSaturation")
+                material.setValue(NSNumber(value: Float(FigureStageLighting.metalShine ? 1 : 0)), forKey: "metalShine")
                 // Float, and Float again when `applyElementTint` sets them:
                 // SceneKit logs an error and animates wrongly when a key
                 // switches between Double and Float.
@@ -1049,7 +1057,7 @@ enum MaterialTuner {
     /// together (2026-09-20; Docs/PLAN.md, *The serious look in the light*).
     static let rimPower: Double = 4.2
     static let rimStrength: Double = 0.12
-    static let paintSaturation: Double = 0.85
+    static var paintSaturation: Double { FigureStageLighting.paintSaturation }
 
     private static func report(_ node: SCNNode, _ message: String) {
         #if DEBUG

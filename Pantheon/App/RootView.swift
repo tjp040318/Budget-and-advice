@@ -49,27 +49,38 @@ struct RootView: View {
             }
             .tabItem { Label("Island", systemImage: "sun.haze.fill") }
             .tag(Tab.island)
+            .toolbar(.hidden, for: .tabBar)
 
             CampaignView()
                 .tabItem { Label("Campaign", systemImage: "map.fill") }
                 .tag(Tab.campaign)
+            .toolbar(.hidden, for: .tabBar)
 
             ArenaView()
                 .tabItem { Label("Arena", systemImage: "trophy.fill") }
                 .tag(Tab.arena)
+            .toolbar(.hidden, for: .tabBar)
 
             SummonView()
                 .tabItem { Label("Summon", systemImage: "sparkles") }
                 .tag(Tab.summon)
+            .toolbar(.hidden, for: .tabBar)
 
             CollectionView()
                 .tabItem { Label("Collection", systemImage: "person.3.fill") }
                 .tag(Tab.collection)
+            .toolbar(.hidden, for: .tabBar)
         }
         // Dim gold on the cream bar, and light everywhere: the shell was
         // `.dark` over cream screens, which is what left the tab bar ink
         // under a cream header.
         .tint(Theme.goldDim)
+        // The game's own bar (2026-09-22): the system tab bar is hidden from
+        // inside every tab, and this one is the screen's bottom inset, so
+        // every screen keeps its space above it.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            GameTabBar(selection: $tab)
+        }
         .preferredColorScheme(.light)
         // Athena over the whole shell. A full-screen cover is presented ABOVE
         // this, so the two that matter to the opening carry her themselves —
@@ -870,5 +881,98 @@ private struct LaunchEmbers: View {
             }
         }
         .allowsHitTesting(false)
+    }
+}
+
+// MARK: - The tab bar
+
+/// The game's own tab bar (2026-09-22): five bronze medallions on a marble
+/// band, the chosen one gold and lit — the iOS tab bar with its grey
+/// symbols was the loudest "app, not game" note on every screen (PLAN.md,
+/// *The premium pass*).
+struct GameTabBar: View {
+    @Binding var selection: RootView.Tab
+
+    static let height: CGFloat = 58
+
+    private struct TabItem: Identifiable {
+        let tab: RootView.Tab
+        let title: String
+        let glyph: String
+        var id: String { title }
+    }
+
+    private static let items: [TabItem] = [
+        TabItem(tab: .island, title: "Island", glyph: "sun.haze.fill"),
+        TabItem(tab: .campaign, title: "Campaign", glyph: "map.fill"),
+        TabItem(tab: .arena, title: "Arena", glyph: "trophy.fill"),
+        TabItem(tab: .summon, title: "Summon", glyph: "sparkles"),
+        TabItem(tab: .collection, title: "Collection", glyph: "person.3.fill"),
+    ]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Self.items) { item in
+                button(item)
+            }
+        }
+        .padding(.horizontal, 24)
+        .frame(height: Self.height)
+        .frame(maxWidth: .infinity)
+        .background(band)
+    }
+
+    private func button(_ item: TabItem) -> some View {
+        let isOn = selection == item.tab
+        return Button {
+            guard !isOn else { return }
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            withAnimation(.easeOut(duration: 0.2)) { selection = item.tab }
+        } label: {
+            VStack(spacing: 2) {
+                ZStack {
+                    Circle()
+                        .fill(isOn ? AnyShapeStyle(Theme.goldPlate) : AnyShapeStyle(Theme.surfaceRaised))
+                    Circle()
+                        .strokeBorder(isOn ? Theme.goldDeep.opacity(0.8) : Theme.goldDim.opacity(0.5), lineWidth: 1)
+                    Image(systemName: item.glyph)
+                        .font(.system(size: 17, weight: .black))
+                        .foregroundStyle(isOn ? Theme.ink : Theme.goldDim)
+                }
+                .frame(width: 36, height: 36)
+                .shadow(color: isOn ? Theme.gold.opacity(0.55) : Color.black.opacity(0.12), radius: isOn ? 8 : 2, y: 1)
+                Text(item.title.uppercased())
+                    .font(Theme.title(10))
+                    .tracking(0.8)
+                    .foregroundStyle(isOn ? Theme.goldDeep : Theme.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(item.title)
+    }
+
+    private var band: some View {
+        ZStack(alignment: .top) {
+            LinearGradient(
+                colors: [Color(hex: "#FBF5E8"), Theme.surface, Color(hex: "#DCCFB4")],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [Theme.goldDeep.opacity(0.0), Theme.gold, Theme.goldDeep.opacity(0.0)],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 2)
+        }
+        .shadow(color: .black.opacity(0.22), radius: 8, y: -3)
+        .ignoresSafeArea(edges: .bottom)
     }
 }

@@ -1153,13 +1153,16 @@ struct PlateButtonStyle: ButtonStyle {
 
 /// The app's primary button — a struck metal plate, not a coloured rectangle.
 struct PrimaryButton: View {
+    /// The painted marble plate (cream, gold ends) for a screen's own
+    /// chrome; dark glass with gold words for a button over art (2026-09-22).
+    enum Style { case painted, glass }
+
     let title: String
     var systemImage: String? = nil
     var tint: Color = Theme.gold
     var isEnabled: Bool = true
-    /// A painted item (`ItemArt` key) in place of the glyph — the summon
-    /// plates carry the scroll they spend. The glyph is the fallback.
     var itemKey: String? = nil
+    var style: Style = .painted
     let action: () -> Void
 
     var body: some View {
@@ -1167,75 +1170,74 @@ struct PrimaryButton: View {
             AudioLibrary.shared.play(.uiConfirm, volume: 0.7)
             action()
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 8) {
                 if let itemKey, ItemArt.hasPainting(itemKey) {
-                    ItemIcon(key: itemKey, size: 24, glow: false)
+                    ItemIcon(key: itemKey, size: 28, glow: false)
                 } else if let systemImage {
                     Image(systemName: systemImage)
-                        .font(.system(size: 13, weight: .black))
+                        .font(.system(size: 15, weight: .black))
                 }
                 Text(title.uppercased())
-                    .font(Theme.title(13))
-                    .tracking(1.0)
+                    .font(Theme.title(15))
+                    .tracking(1.6)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
             }
             // A bar, not a billboard: full width up to a hand's span, and
             // centred, so a landscape screen keeps its edges.
-            .frame(maxWidth: 380)
-            .padding(.vertical, 10)
+            .frame(maxWidth: 420)
+            .padding(.vertical, 13)
+            .padding(.horizontal, 14)
             .background(plate)
+            .overlay(shine)
             .overlay(
-                // A light plate — the summon screen's ×1 beside the painted
-                // gold ×10 — gets a gold edge, because a white highlight on
-                // cream is no edge at all; every other plate keeps its lit rim.
                 RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .strokeBorder(
-                        isLightPlate ? Theme.goldDim.opacity(0.8) : Color.white.opacity(isEnabled ? 0.4 : 0.12),
-                        lineWidth: 1
-                    )
-                    .blendMode(isLightPlate ? .normal : .plusLighter)
+                    .strokeBorder(rimColor, lineWidth: 1)
             )
             .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
             .foregroundStyle(labelColor)
-            .shadow(color: isEnabled ? tint.opacity(0.35) : .clear, radius: 6, y: 2)
-            .shadow(color: .black.opacity(0.5), radius: 3, y: 2)
+            .shadow(color: isEnabled ? tint.opacity(0.35) : .clear, radius: 8, y: 3)
+            .shadow(color: .black.opacity(0.45), radius: 4, y: 3)
             .frame(maxWidth: .infinity)
         }
         .buttonStyle(PlateButtonStyle())
         .disabled(!isEnabled)
     }
 
-    private var usesGoldPlate: Bool { tint == Theme.gold }
+    private var usesGoldPlate: Bool { tint == Theme.gold && style == .painted }
+    private var isGlass: Bool { style == .glass }
 
-    /// A DRAWN plate pale enough that ink is its label — cream, marble, the
-    /// high surface. It wears a gold edge instead of the white highlight,
-    /// which is invisible on cream. Never true once the painted plate is back,
-    /// since that brings its own frame.
-    private var isLightPlate: Bool {
-        isEnabled && !usesGoldPlate && Theme.isLight(tint)
-            && Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) == nil
+    private var rimColor: Color {
+        if !isEnabled { return Theme.stroke.opacity(0.6) }
+        if isGlass { return Theme.glassRim }
+        if usesGoldPlate { return Color(hex: "#FFE9A8").opacity(0.55) }
+        return Theme.goldDim.opacity(0.8)
     }
 
     private var labelColor: Color {
         guard isEnabled else { return Theme.textSecondary }
-        // The painted plain plate is cream marble with a gold border since the
-        // night-3 repaint (2026-09-12), so ink is the only label that reads on
-        // it — the first frames of the repaint had the summon screen's ×1 as
-        // cream on cream, because this rule still put the TINT on the label,
-        // which carried the meaning on the slate plate it was written for.
-        // On gold (painted or drawn) ink is the only thing that reads. On the
-        // DRAWN plate of any other tint — the painted one never shipped — the
-        // plate is the tint itself, so the label is whichever of ink and
-        // cream reads on it: the ×1 button was once ink on an ink plate.
-        if !usesGoldPlate {
-            return Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) != nil ? Theme.ink : Theme.readableText(on: tint)
-        }
-        return Theme.ink
+        if isGlass { return Color(hex: "#FFE9A8") }
+        // On gold (painted or drawn) ink is the only thing that reads. The
+        // painted plain plate is cream marble with a gold border since the
+        // night-3 repaint (2026-09-12), so ink reads on it too; on the DRAWN
+        // plate of any other tint the label is whichever of ink and cream
+        // reads on the tint.
+        if usesGoldPlate { return Theme.ink }
+        return Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) != nil ? Theme.ink : Theme.readableText(on: tint)
     }
 
     @ViewBuilder
     private var plate: some View {
-        if isEnabled, usesGoldPlate,
-           let painted = Chrome.slice("ui_button_gold", Chrome.goldButtonInsets) {
+        if isEnabled, isGlass {
+            LinearGradient(
+                colors: [Color(hex: "#3A2C1A").opacity(0.92), Color(hex: "#150F0A").opacity(0.92)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .overlay(
+                LinearGradient(colors: [.white.opacity(0.14), .clear], startPoint: .top, endPoint: .center)
+            )
+        } else if isEnabled, usesGoldPlate,
+                  let painted = Chrome.slice("ui_button_gold", Chrome.goldButtonInsets) {
             painted
         } else if isEnabled, !usesGoldPlate,
                   let painted = Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) {
@@ -1255,9 +1257,32 @@ struct PrimaryButton: View {
                            startPoint: .top, endPoint: .bottom)
         }
     }
+
+    /// A gloss sweeping across the gold plate every few seconds: the one
+    /// motion that says "metal" on a still screen (2026-09-22).
+    @ViewBuilder
+    private var shine: some View {
+        if isEnabled, usesGoldPlate {
+            TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+                GeometryReader { geometry in
+                    let cycle = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 4.4) / 4.4
+                    let phase = min(1.0, cycle / 0.38)
+                    let width = geometry.size.width
+                    LinearGradient(
+                        colors: [.clear, Color.white.opacity(0.05), Color.white.opacity(0.42), Color.white.opacity(0.05), .clear],
+                        startPoint: .leading, endPoint: .trailing
+                    )
+                    .frame(width: width * 0.32, height: geometry.size.height * 2.2)
+                    .rotationEffect(.degrees(20))
+                    .offset(x: -width * 0.45 + width * 1.7 * phase, y: -geometry.size.height * 0.6)
+                    .blendMode(.plusLighter)
+                }
+            }
+            .allowsHitTesting(false)
+        }
+    }
 }
 
-/// Section header with a rule, used down the whole app.
 struct SectionHeader: View {
     let title: String
     var accessory: String? = nil
@@ -1411,11 +1436,12 @@ struct GameScreen<Bar: View, Content: View>: View {
         }
         .background(Theme.backdrop)
         .toolbar(.hidden, for: .navigationBar)
+        .toolbar(.hidden, for: .tabBar)
         .preferredColorScheme(.light)
     }
 
     private var strip: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 10) {
             if let dismiss {
                 Button {
                     Juice.haptic(.light)
@@ -1423,51 +1449,54 @@ struct GameScreen<Bar: View, Content: View>: View {
                     dismiss()
                 } label: {
                     Image(systemName: "chevron.left")
-                        .font(.system(size: 13, weight: .black))
-                        .foregroundStyle(Theme.gold)
-                        .frame(width: ScreenChrome.control + 2, height: ScreenChrome.control)
-                        .background(ScreenChrome.controlShape.fill(Theme.surfaceRaised))
-                        .overlay(ScreenChrome.controlShape.strokeBorder(Theme.goldDim.opacity(0.55), lineWidth: 0.5))
+                        .font(.system(size: 15, weight: .black))
+                        .foregroundStyle(Theme.ink)
+                        .frame(width: ScreenChrome.control, height: ScreenChrome.control)
+                        .background(Circle().fill(Theme.goldPlate))
+                        .overlay(Circle().strokeBorder(Theme.goldDeep.opacity(0.75), lineWidth: 1))
+                        .shadow(color: .black.opacity(0.3), radius: 3, y: 2)
                         .stripHitTarget()
                 }
                 .buttonStyle(.plain)
             }
 
+            // The title is carved gold at a display size (2026-09-22): a
+            // 12-point ink caption in the corner was the first thing that
+            // said "app" on every screen.
             VStack(alignment: .leading, spacing: 0) {
                 Text(title.uppercased())
-                    .font(Theme.title(13))
-                    .tracking(1.4)
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.display(21))
+                    .tracking(2.0)
+                    .carved(glow: false)
                     .lineLimit(1)
+                    .minimumScaleFactor(0.7)
                 if let subtitle {
                     Text(subtitle)
-                        .font(Theme.body(9))
+                        .font(Theme.body(11))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
                 }
             }
-            .fixedSize(horizontal: true, vertical: false)
 
-            Spacer(minLength: 6)
+            Spacer(minLength: 8)
 
             bar()
         }
-        .padding(.horizontal, 10)
+        .padding(.horizontal, 12)
         .frame(height: ScreenChrome.height)
         .background(ScreenChrome.stripBackground)
     }
 }
 
-/// The strip's measurements, in one place so every control matches.
 enum ScreenChrome {
     /// The whole strip. 34 points against the navigation bar's 44 plus two
     /// control rows: the change hands roughly 80 points back to the content.
-    static let height: CGFloat = 34
+    static let height: CGFloat = 52
     /// Every control inside the strip.
-    static let control: CGFloat = 26
-    static let corner: CGFloat = 6
+    static let control: CGFloat = 34
+    static let corner: CGFloat = 8
     /// The padding content below the strip should use, so screens agree.
-    static let contentPadding: CGFloat = 10
+    static let contentPadding: CGFloat = 12
 
     static var controlShape: RoundedRectangle {
         RoundedRectangle(cornerRadius: corner, style: .continuous)
@@ -1476,20 +1505,26 @@ enum ScreenChrome {
     static var stripBackground: some View {
         ZStack(alignment: .bottom) {
             LinearGradient(
-                colors: [Theme.surfaceHigh, Theme.surface],
+                colors: [Color(hex: "#FFFBF1"), Theme.surfaceHigh, Theme.surface],
                 startPoint: .top,
                 endPoint: .bottom
             )
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [Theme.goldDeep.opacity(0.0), Theme.goldDim.opacity(0.75), Theme.goldDeep.opacity(0.0)],
-                        startPoint: .leading,
-                        endPoint: .trailing
+            VStack(spacing: 0) {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Theme.goldDeep.opacity(0.0), Theme.gold, Theme.goldDeep.opacity(0.0)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
-                )
-                .frame(height: 1)
+                    .frame(height: 1.5)
+                Rectangle()
+                    .fill(Theme.goldDeep.opacity(0.35))
+                    .frame(height: 1)
+            }
         }
+        .shadow(color: .black.opacity(0.16), radius: 6, y: 3)
     }
 }
 
@@ -1632,35 +1667,30 @@ struct BarCount: View {
     let value: String
     var systemImage: String?
     var tint: Color = Theme.textSecondary
-    /// A painted item (`ItemArt` key) in place of the glyph: the summon
-    /// strip's scroll count shows the scroll itself (2026-09-17, evening; the
-    /// owner: "use that artwork IN the summoning circle … this whole UI is
-    /// sloppy/not the easiest to understand without that artwork"). The glyph
-    /// still draws when the painting has not shipped.
     var itemKey: String? = nil
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 5) {
             if let itemKey, ItemArt.hasPainting(itemKey) {
-                ItemIcon(key: itemKey, size: 18, glow: false)
+                ItemIcon(key: itemKey, size: 22, glow: false)
+                    .shadow(color: .black.opacity(0.4), radius: 1, y: 1)
             } else if let systemImage {
                 Image(systemName: systemImage)
-                    .font(.system(size: 10, weight: .black))
-                    .foregroundStyle(tint)
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundStyle(tint == Theme.textSecondary ? Theme.onGlassDim : tint)
             }
             Text(value)
-                .font(Theme.numeric(11))
-                .foregroundStyle(Theme.textPrimary)
+                .font(Theme.numeric(14))
+                .foregroundStyle(Theme.onGlass)
+                .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
+                .lineLimit(1)
         }
-        .padding(.horizontal, 8)
+        .padding(.horizontal, 12)
         .frame(height: ScreenChrome.control)
-        .background(ScreenChrome.controlShape.fill(Theme.surface.opacity(0.8)))
-        .overlay(ScreenChrome.controlShape.strokeBorder(Theme.stroke.opacity(0.8), lineWidth: 0.5))
+        .background(BarWell())
     }
 }
 
-/// A segmented choice small enough for the strip, for the two- and three-way
-/// switches a dropdown would over-serve (Chapters/Halls, Buy/Sell).
 struct BarSegments<T: Hashable>: View {
     let options: [(value: T, title: String)]
     @Binding var selection: T
@@ -1702,22 +1732,24 @@ struct BarWallet: View {
     enum Kind { case energy, divinity, drachma, laurels }
 
     var body: some View {
-        HStack(spacing: 8) {
+        // A dark inset well ringed in gold with the painted coin, crystal
+        // and bolt at 22 points (2026-09-22): the genre's currency bar,
+        // where a cream pill with 13-point glyphs read as a form field.
+        HStack(spacing: 12) {
             ForEach(Array(shows.enumerated()), id: \.offset) { _, kind in
-                HStack(spacing: 3) {
-                    // The painted coin, crystal and bolt once they land; the
-                    // glyph in its tint until then.
-                    ItemIcon(key: key(kind), size: 13, tint: tint(kind), glow: false)
+                HStack(spacing: 5) {
+                    ItemIcon(key: key(kind), size: 22, tint: tint(kind), glow: false)
+                        .shadow(color: .black.opacity(0.4), radius: 1, y: 1)
                     Text(value(kind))
-                        .font(Theme.numeric(11))
-                        .foregroundStyle(Theme.textPrimary)
+                        .font(Theme.numeric(14))
+                        .foregroundStyle(Theme.onGlass)
+                        .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
                 }
             }
         }
-        .padding(.horizontal, 9)
+        .padding(.horizontal, 13)
         .frame(height: ScreenChrome.control)
-        .background(ScreenChrome.controlShape.fill(Theme.surface.opacity(0.85)))
-        .overlay(ScreenChrome.controlShape.strokeBorder(Theme.goldDim.opacity(0.45), lineWidth: 0.5))
+        .background(BarWell())
     }
 
     private func key(_ kind: Kind) -> String {
@@ -1795,5 +1827,140 @@ struct SectionPanel<Content: View>: View {
         }
         .padding(8)
         .background(Theme.panel(Theme.tightCorner))
+    }
+}
+
+// MARK: - Premium pieces (2026-09-22)
+
+extension View {
+    /// Display type as carved gold: the gold gradient as the fill, a dark
+    /// edge under it and a warm glow round it (PLAN.md, *The premium pass*).
+    func carved(glow: Bool = true) -> some View {
+        self
+            .foregroundStyle(Theme.goldText)
+            .shadow(color: Color.black.opacity(0.7), radius: 1, y: 1)
+            .shadow(color: Color(hex: "#FFD678").opacity(glow ? 0.35 : 0), radius: 7)
+    }
+}
+
+/// The dark inset well a currency or a count sits in, ringed in gold.
+struct BarWell: View {
+    var body: some View {
+        Capsule()
+            .fill(
+                LinearGradient(colors: [Color(hex: "#2C2218"), Color(hex: "#14100B")], startPoint: .top, endPoint: .bottom)
+            )
+            .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.9), lineWidth: 1))
+            .overlay(Capsule().strokeBorder(Color.white.opacity(0.10), lineWidth: 1).padding(1.5))
+            .shadow(color: .black.opacity(0.25), radius: 3, y: 2)
+    }
+}
+
+/// A dark glass plate over art, with a gold rim and a lit top edge.
+struct GlassPlate: View {
+    var radius: CGFloat = Theme.cornerRadius
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: radius, style: .continuous)
+            .fill(Theme.glass)
+            .overlay(
+                RoundedRectangle(cornerRadius: radius, style: .continuous)
+                    .strokeBorder(Theme.glassRim, lineWidth: 1)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: max(0, radius - 1), style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(colors: [Color.white.opacity(0.22), .clear], startPoint: .top, endPoint: .center),
+                        lineWidth: 1
+                    )
+                    .padding(1)
+            )
+            .shadow(color: Color.black.opacity(0.35), radius: 10, y: 4)
+    }
+}
+
+/// Rising motes of light over a painting — the launch screen's embers, for
+/// any hero screen. Drawn on one canvas, so a mote costs nothing.
+struct Motes: View {
+    var count: Int = 22
+    var color: Color = Color(hex: "#FFD678")
+    var seed: UInt64 = 900
+
+    private struct Mote {
+        let x: Double
+        let speed: Double
+        let phase: Double
+        let size: Double
+        let sway: Double
+    }
+
+    private var motes: [Mote] {
+        (0..<count).map { index in
+            var rng = SeededRandom(seed: seed + UInt64(index))
+            return Mote(
+                x: rng.double(in: 0.02...0.98),
+                speed: rng.double(in: 0.04...0.10),
+                phase: rng.double(in: 0...1),
+                size: rng.double(in: 1.2...3.0),
+                sway: rng.double(in: 8...26)
+            )
+        }
+    }
+
+    var body: some View {
+        let motes = self.motes
+        return TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
+            Canvas { context, size in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                for (index, mote) in motes.enumerated() {
+                    let travel = (t * mote.speed + mote.phase).truncatingRemainder(dividingBy: 1)
+                    let y = size.height * (1.05 - travel * 1.1)
+                    let x = size.width * mote.x + sin(t * 0.7 + Double(index)) * mote.sway
+                    let pulse = 0.25 + 0.55 * (0.5 + 0.5 * sin(t * 2.1 + Double(index) * 1.3))
+                    let fade = travel < 0.1 ? travel / 0.1 : (travel > 0.85 ? (1 - travel) / 0.15 : 1)
+                    let rect = CGRect(x: x - mote.size, y: y - mote.size, width: mote.size * 2, height: mote.size * 2)
+                    context.fill(Path(ellipseIn: rect), with: .color(color.opacity(pulse * fade)))
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+/// Soft shafts of light falling from the upper left across a hall,
+/// drifting slowly and breathing.
+struct LightShafts: View {
+    var body: some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
+            Canvas { context, size in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                let shafts: [(x: Double, width: Double, alpha: Double)] = [
+                    (0.30, 0.09, 0.16), (0.47, 0.06, 0.11), (0.66, 0.11, 0.09),
+                ]
+                for (index, shaft) in shafts.enumerated() {
+                    let drift = sin(t * 0.13 + Double(index) * 2.1) * 0.02
+                    let top = (shaft.x + drift) * size.width
+                    let lean = size.width * 0.16
+                    let w = shaft.width * size.width
+                    var path = Path()
+                    path.move(to: CGPoint(x: top - w * 0.5, y: -4))
+                    path.addLine(to: CGPoint(x: top + w * 0.5, y: -4))
+                    path.addLine(to: CGPoint(x: top + w * 1.1 + lean, y: size.height + 4))
+                    path.addLine(to: CGPoint(x: top - w * 1.1 + lean, y: size.height + 4))
+                    path.closeSubpath()
+                    let breathe = 0.8 + 0.2 * sin(t * 0.4 + Double(index))
+                    context.fill(
+                        path,
+                        with: .linearGradient(
+                            Gradient(colors: [Color.white.opacity(shaft.alpha * breathe), Color.white.opacity(0)]),
+                            startPoint: CGPoint(x: top, y: 0),
+                            endPoint: CGPoint(x: top + lean, y: size.height * 0.9)
+                        )
+                    )
+                }
+            }
+        }
+        .blendMode(.plusLighter)
+        .allowsHitTesting(false)
     }
 }

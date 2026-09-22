@@ -1601,6 +1601,50 @@ environment can and cannot do. The short version:
   formatter) lives in a private enum beside the class. And a test of a
   store that saves under `account.storageKey` plants its file under
   that key, not a literal (run 201).
+- **The premium pass, phase A (2026-09-22; PLAN.md *The figure on the
+  phone, the tunic on the hand, and the premium pass*; the owner: "It
+  feels like a cheap copy as opposed to a premium game").** The rule is
+  the genre's: cream marble CHROME, dark glass over ART, carved gold for
+  display type, nothing under 11 points. `Theme.fontScale` is 1.0, the
+  floors 11 / 11.5 / 13; `Theme.goldText` + `View.carved()` is a display
+  title, `Theme.glass`/`glassRim`/`onGlass` a plate over a painting
+  (`GlassPlate`); `GameScreen`'s strip is 52 points with the title carved
+  at 21 and a bronze medallion for Back; `BarWallet`/`BarCount` sit in a
+  dark `BarWell`; `GameTabBar` (RootView.swift) is the bottom bar — the
+  system tab bar is hidden with `.toolbar(.hidden, for: .tabBar)` inside
+  `GameScreen` and on every tab, and the bar is the TabView's bottom
+  `safeAreaInset`; `PrimaryButton` is 46 tall with a gloss sweep on gold
+  and a `.glass` style; `LightShafts` and `Motes` are the ambience over a
+  hero painting. The summon screen is the first screen rebuilt to it (the
+  painting covers the frame, the banners a rail of cards on glass, the
+  deck floating on the dark foot). A nested type must not share a name
+  with another type in the tree: the checker keys structs by NAME, so
+  `GameTabBar.Item` was read against `ShopService.Item`'s memberwise init
+  (it is `TabItem`).
+- **The skirt pass (2026-09-22).** `character.reweight_skirt` (in
+  `mesh.py` after the cape pass; `tools/skirt_pass.py --survey | <names>
+  | --all` over the SHIPPED base and `_lod` files): waist-to-knee cloth
+  that Meshy's rigger gave to a HAND or a FOREARM — a tunic's panel, a
+  kilt's apron, a sash, because the concept's hands rest on the thighs —
+  goes back to the hips and the thighs (the nearest body-owned
+  neighbour's weights, the seam blended over three rings). Anhur's red
+  tunic swung up with his khopesh and read on the phone as a blade across
+  his chest. A rod (a weapon: second principal extent under a tenth of
+  the first) and a piece welded to the arm alone (a shield) stay the
+  hand's; `_big_sheets` refuses a panel that wraps a thigh, and a
+  "faces toward the leg" test cannot tell cloth's inner face from a
+  shield's back. Judge on `base_plus_clip.py` (the idle and the heavy
+  attack), never on the count. The winged and tailed families are
+  excluded by name (`CAPE_EXCLUDE`).
+- **The figure stages are exposed and coloured (2026-09-22).**
+  `FigureStageLighting`: key 1,150, fill 320, rim 420, ambient 140, the
+  studio map at 1.0 (brighter softboxes; the old map is `studio_ibl_v1`),
+  the key 92% to white (`keyTintMix`), `paintSaturation` 1.0 (the
+  textures as the boards draw them; 0.85 read as grey on the phone), and
+  a real metal map's metal at 0.55 of its roughness (`metalShine`). Every
+  one of those is a `static var` read off the reveal lab, and
+  `-tour-reveal-lab previous` photographs the rig of the 18th beside the
+  new one every run (`5-reveal-awakened-previous`).
 - **The figures are lit physically, and the paint is tempered (2026-09-20;
   PLAN.md *The serious look in the light*; the owner: "why do the renders
   make the colors and the look of the characters, even the redesigned,

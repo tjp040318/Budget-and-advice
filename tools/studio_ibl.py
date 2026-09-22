@@ -19,7 +19,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "Pantheon" / "Resources" / "Stage" / "studio_ibl.png"
 
 W, H = 512, 256
-SKY = np.array([0.72, 0.80, 0.92])      # a cool, quiet sky
+SKY = np.array([0.80, 0.86, 0.96])      # a cool, quiet sky (0.72/0.80/0.92 until 2026-09-22)
 HORIZON = np.array([0.93, 0.88, 0.78])  # the cream of the temple
 GROUND = np.array([0.36, 0.30, 0.22])   # warm dark stone under the figure
 
@@ -36,7 +36,9 @@ def main():
     img = np.repeat(column, W, axis=1)            # (H, W, 3)
     # Two softboxes, high left and high right, warm and soft: what a gold
     # bracer reflects. Gaussian blobs in equirect space.
-    for cu, cv, amp in ((0.30, 0.22, 0.55), (0.72, 0.26, 0.40)):
+    # Brighter since 2026-09-22 (0.55 and 0.40 before): gold reflected
+    # nothing worth the name and read as tan paint.
+    for cu, cv, amp in ((0.30, 0.22, 0.95), (0.72, 0.26, 0.72)):
         du = np.minimum(np.abs(u - cu), 1 - np.abs(u - cu))
         blob = np.exp(-((du / 0.09) ** 2 + ((v - cv) / 0.10) ** 2))
         img = img + amp * blob[..., None] * np.array([1.0, 0.96, 0.88])[None, None, :]
