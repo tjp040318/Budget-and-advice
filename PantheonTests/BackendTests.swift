@@ -228,10 +228,13 @@ final class BackendTests: XCTestCase {
 
     @MainActor
     func testRestorePullsANewerCopyAndKeepsAForeignOne() async throws {
-        let key = "abc"
+        // The store restores under the ACCOUNT's storage key, as the app
+        // saves: the local game goes under that same key, or the import
+        // lands in another file (run 201).
+        let account = Account(id: "guest-test", provider: .guest, displayName: nil, email: nil, createdAt: Date())
+        let key = account.storageKey
         try SaveStore.save(NewGame.create(), key: key)
         let local = try XCTUnwrap(SaveStore.load(key: key))
-        let account = Account(id: "guest-test", provider: .guest, displayName: nil, email: nil, createdAt: Date())
 
         var cloudGame = local
         cloudGame.player.displayName = "FromTheCloud"
