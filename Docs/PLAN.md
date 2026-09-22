@@ -6704,3 +6704,24 @@ control in the strip is `fixedSize` on one line; if a strip cannot hold
 its controls at their own width, the title shrinks, and if it still
 cannot, the screen has too many controls, never a truncated one.
 
+**Run 209 (0943b21, green, 243 tests) showed the pass and seven
+leftovers**, fixed in 497be1a for run 210: the sort menu's LABEL had no
+line limit and wrapped ("S/R" over "Power") where its value was already
+`fixedSize`; a `BarButton` tinted with either ink colour (Filter, Select,
+Lock, Free — the "off" state of a toggle) drew ink-brown on the dark
+well, which reads as disabled, so `BarButton.onWell` maps the two ink
+tints to the cream every word on glass wears, gold to the pale gold, and
+leaves danger, info and success as themselves; the relic inventory's
+glyph menu was still a cream circle in a strip of dark wells; the summon
+header's odds chip went to "★ ···" beside the pity chip (the pity chip
+had `fixedSize`, the odds chip did not); More's captions truncated at a
+quarter of the width, so they are two words ("Dailies & feats", "Weekly
+boosts", "Friends & guild", "Scrolls & relics", "Athena's Counsel",
+"Copy or share", "Start over"); the Labyrinth card's and the chapter
+plate's summaries were cut at three lines and get a fourth; and the
+tour's chip at 60 points sat on the island's header card, which is 62
+tall, so it is 72. The lesson is the rule's own: `fixedSize` belongs on
+EVERY text in a strip control, the label as well as the value, and a
+colour a control asks for is the colour it reads as on ITS ground, not
+on the cream.
+

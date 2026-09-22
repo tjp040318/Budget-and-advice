@@ -1636,8 +1636,13 @@ environment can and cannot do. The short version:
   gives, and a truncated control means the screen has too many. No
   ellipsis anywhere in the chrome: the More tiles' captions were
   rewritten to fit their line, the Labyrinth cards' names have two
-  lines, the chapter plate's story three. The tour's chip sits under the
-  strip, not on the tab bar.
+  lines, the chapter plate's story four. The tour's chip sits under the
+  strip, not on the tab bar. And a tint a `BarButton` is given is read
+  through `BarButton.onWell` — the two ink colours are cream ON the dark
+  well, gold the pale gold, danger/info/success themselves — because run
+  209 drew every "off" toggle (Filter, Select, Lock, Free) in ink-brown
+  on the dark capsule, which reads as disabled; `fixedSize` goes on the
+  LABEL of a strip control as well as its value (the sort menu's wrapped).
 - **The skirt pass (2026-09-22).** `character.reweight_skirt` (in
   `mesh.py` after the cape pass; `tools/skirt_pass.py --survey | <names>
   | --all` over the SHIPPED base and `_lod` files): cloth that Meshy's
