@@ -842,6 +842,22 @@ struct SummoningCircle: View {
     private static let rightBrazier: CGFloat = 0.918
     /// The ground beyond the painting's edges.
     private static let ground = Color(hex: "#0E0B08")
+    /// How wide the shade at the frame's right edge and the feather at the
+    /// painting's slid left edge are.
+    private static let edgeFeather: CGFloat = 44
+
+    /// The frame's right edge in shade (fix round 5): with the hall slid
+    /// right, clear of the far brazier, the frame ends inside the painting,
+    /// where the painting's own dark edge used to close it.
+    private var edgeShade: some View {
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            LinearGradient(colors: [Self.ground.opacity(0), Self.ground.opacity(0.6)],
+                           startPoint: .leading, endPoint: .trailing)
+                .frame(width: Self.edgeFeather)
+        }
+        .allowsHitTesting(false)
+    }
 
     var body: some View {
         GeometryReader { frame in
@@ -900,6 +916,13 @@ struct SummoningCircle: View {
                 // The frame's right edge in shade, as the painting's own
                 // right edge was when the two coincided.
                 edgeShade
+                // And the painting's left edge, uncovered by the slide,
+                // feathered into the ground under the rail's glass rather
+                // than standing there as a hard line.
+                LinearGradient(colors: [Self.ground, Self.ground.opacity(0)], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: Self.edgeFeather, height: frame.size.height)
+                    .position(x: originX + Self.edgeFeather / 2, y: frame.size.height / 2)
+                    .allowsHitTesting(false)
 
                 // The light standing in the floor ring.
                 RadialGradient(

@@ -1381,8 +1381,14 @@ LONELY_SLOTS = [
     re.compile(r"\b(?:var|let)\s+[A-Za-z_][A-Za-z0-9_]*\s*(?::\s*[^=\n]+?)?=\s*"
                r"([a-z][A-Za-z0-9_]{3,})\s*(?=[,){\]]|$)", re.MULTILINE),
     re.compile(r"^\s*return\s+([a-z][A-Za-z0-9_]{3,})\s*$", re.MULTILINE),
+    # A name alone on its line: in a view builder that is a view. Round 5's
+    # parked summon edit drew `edgeShade` in the circle's ZStack and was
+    # stopped before it declared it — "cannot find 'edgeShade' in scope",
+    # run 233, which the two slots above could not see.
+    re.compile(r"^\s*([a-z][A-Za-z0-9_]{3,})\s*$", re.MULTILINE),
 ]
-LONELY_SKIP = {"self", "true", "false", "super", "nil", "some", "none", "result"}
+LONELY_SKIP = {"self", "true", "false", "super", "nil", "some", "none", "result",
+               "break", "continue", "fallthrough", "return", "default", "else"}
 
 
 def check_lonely_identifiers(files, errors):
