@@ -946,14 +946,35 @@ private struct SocialRankTable: View {
                     message: "The table fills as demigods publish their standing."
                 )
             } else {
+                // The list fades at its foot and ends in as much clear
+                // space, so a row under the fold reads as a scroll: the
+                // arena's sixth row was cut hard at the panel's inner rule
+                // with nothing to say there were seven more (run 220).
                 ScrollView {
                     VStack(spacing: 3) {
                         ForEach(entries) { entry in
                             SocialRankRow(entry: entry, unit: unit)
                         }
                     }
+                    .padding(.bottom, SocialScrollFoot.fade)
                 }
+                .mask { SocialScrollFoot.footMask }
             }
+        }
+    }
+}
+
+/// The foot of a scrolling list on the Allies screen: opaque down to its
+/// last `fade` points, then clear — the relic columns' and the bazaar's
+/// foot (`BazaarLayout.footFade`).
+private enum SocialScrollFoot {
+    static let fade: CGFloat = 18
+
+    static var footMask: some View {
+        VStack(spacing: 0) {
+            Color.black
+            LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .frame(height: fade)
         }
     }
 }

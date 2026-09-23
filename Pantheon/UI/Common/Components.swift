@@ -505,7 +505,8 @@ enum ItemArt {
         // Elemental aether burns in its element; pure aether is white-gold,
         // the colour of no element. It was amethyst (#9C6FD6), within a few
         // points of umbra's #9B6BE0, and the Titans' "Held" row drew the two
-        // as one (run 217). On cream it keeps a gold edge (`edge`).
+        // as one (run 217). It is drawn on its own dark coin (`hasCoin`), so
+        // the pale spark holds on cream as well as on glass.
         if key == Aether.pure { return Self.pureAetherTint }
         if Aether.isAether(key) { return Aether.element(of: key)?.color ?? Self.pureAetherTint }
         if let stone = RelicStone.from(id: key) { return stone.tier.quality.rarity.glow }
@@ -525,11 +526,23 @@ enum ItemArt {
     /// different glyph from every element's hexagon.
     static let pureAetherTint = Color(hex: "#F3E7C4")
 
-    /// A thin rim for a glyph too pale to hold on a cream socket by itself —
-    /// pure aether's white-gold on the relic card's awakening costs. Nil for
-    /// everything that carries its own colour.
-    static func edge(_ key: String) -> Color? {
-        key == Aether.pure ? Theme.goldDim : nil
+    /// A glyph too pale to hold on a cream socket by itself, drawn on a dark
+    /// bronze coin with a gold rim in EVERY context — pure aether's
+    /// white-gold spark. A 0.6-point gold-dim shadow was its edge on run
+    /// 220, and on the spoils panel's cream socket the tile read as empty
+    /// beside the Ember Aether; a coin reads on cream, and on the Titans'
+    /// glass it is a gold-rimmed disc, never umbra's violet hexagon.
+    static func hasCoin(_ key: String) -> Bool {
+        key == Aether.pure
+    }
+
+    /// The coin's face, `diameter` across: the deepest gold at the centre
+    /// falling to ink at the rim.
+    static func coinFace(diameter: CGFloat) -> RadialGradient {
+        RadialGradient(
+            colors: [Theme.goldDeep, Color(hex: "#2A2014")],
+            center: .center, startRadius: 0, endRadius: diameter / 2
+        )
     }
 
     private static func scrollType(of key: String) -> ScrollType? {
@@ -667,15 +680,28 @@ struct ItemIcon: View {
                 .aspectRatio(contentMode: .fit)
                 .frame(width: size, height: size)
                 .shadow(color: paint.opacity(glow ? 0.35 : 0), radius: size * 0.12)
+        } else if ItemArt.hasCoin(key) {
+            // The pale spark on its own dark coin, rimmed in gold: it reads
+            // on the cream socket and on dark glass alike.
+            let coin = size * 0.9
+            ZStack {
+                Circle()
+                    .fill(ItemArt.coinFace(diameter: coin))
+                    .frame(width: coin, height: coin)
+                Circle()
+                    .strokeBorder(Theme.gold, lineWidth: max(1, size * 0.05))
+                    .frame(width: coin, height: coin)
+                Image(systemName: ItemArt.glyph(key))
+                    .font(.system(size: size * 0.5, weight: .bold))
+                    .foregroundStyle(paint)
+                    .shadow(color: paint.opacity(glow ? 0.8 : 0.5), radius: size * 0.08)
+            }
+            .shadow(color: .black.opacity(0.25), radius: size * 0.04, y: size * 0.02)
+            .frame(width: size, height: size)
         } else {
-            // A pale glyph's edge is two tight shadows of its rim colour
-            // under the glow; `.clear` for every glyph that has none.
-            let edge = ItemArt.edge(key) ?? .clear
             Image(systemName: ItemArt.glyph(key))
                 .font(.system(size: size * 0.6, weight: .bold))
                 .foregroundStyle(paint)
-                .shadow(color: edge, radius: 0.6)
-                .shadow(color: edge, radius: 0.6)
                 .shadow(color: paint.opacity(glow ? 0.6 : 0), radius: size * 0.14)
                 .frame(width: size, height: size)
         }

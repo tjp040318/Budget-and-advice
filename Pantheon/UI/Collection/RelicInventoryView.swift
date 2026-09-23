@@ -568,7 +568,9 @@ struct RelicInventoryView: View {
         if let relic = picked {
             let wearer = relic.equippedBy.flatMap { store.resolved($0) }
             VStack(alignment: .leading, spacing: 6) {
-                ScrollView(showsIndicators: false) {
+                // Whole and unmasked when the words fit above OPEN; a fade
+                // over the buttons only when they do not.
+                RelicFitScroll(fade: RelicColumn.shortFade) {
                     VStack(alignment: .leading, spacing: 6) {
                         // The stone, its name and its wearer, and the fit
                         // on the right. The fit and the wearer were a row of
@@ -589,13 +591,21 @@ struct RelicInventoryView: View {
                                     .lineLimit(1)
                                     .fixedSize()
                                 // Only when worn: "Equip on…" under the
-                                // panel already says a free one is free. A
-                                // long awakened name wraps, never cut.
+                                // panel already says a free one is free.
+                                // One line, by the family's name with no
+                                // epithet: "Worn by Anubis, Keeper of the
+                                // Ash Road" took two and pushed the set
+                                // line under the fade (run 220).
                                 if let wearer {
-                                    Text("Worn by \(wearer.name)")
-                                        .font(Theme.body(10).weight(.semibold))
-                                        .foregroundStyle(Theme.info)
-                                        .fixedSize(horizontal: false, vertical: true)
+                                    HStack(spacing: 3) {
+                                        Image(systemName: "person.fill")
+                                            .font(.system(size: 9, weight: .bold))
+                                        Text(RelicWearer.line(wearer))
+                                            .font(Theme.body(10).weight(.semibold))
+                                            .lineLimit(1)
+                                            .fixedSize()
+                                    }
+                                    .foregroundStyle(Theme.info)
                                 }
                             }
                             Spacer(minLength: 0)
@@ -661,11 +671,8 @@ struct RelicInventoryView: View {
                             .foregroundStyle(Theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    .padding(.bottom, RelicColumn.shortFade)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                // What does not fit fades into the buttons, so a cut reads
-                // as a scroll rather than as a stray sliver.
-                .relicColumnFade(RelicColumn.shortFade)
                 .frame(maxHeight: .infinity)
                 PrimaryButton(title: "Open", systemImage: "arrow.up.circle.fill") {
                     opened = relic
@@ -1011,6 +1018,13 @@ private enum RelicColumn {
     /// under the relic card's plate, whose own padding is all that should
     /// stand in it when the plate fits.
     static let shortFade: CGFloat = 12
+    /// The least height the painted marble panel draws whole at: its top
+    /// and bottom caps together. `Theme.panel` paints any panel over
+    /// `Chrome.paintedPanelMinimum` (118), and one between that and this
+    /// draws its caps at full size past its own foot (run 217's +15
+    /// power-up panel ended 9 points under its frame); a panel that must
+    /// wear the marble is given this as its minimum.
+    static var paintedFloor: CGFloat { Chrome.panelInsets.top + Chrome.panelInsets.bottom }
 
     static func footMask(_ height: CGFloat) -> some View {
         VStack(spacing: 0) {
@@ -1026,6 +1040,66 @@ private extension View {
     /// the same `height`.
     func relicColumnFade(_ height: CGFloat = RelicColumn.fade) -> some View {
         mask { RelicColumn.footMask(height) }
+    }
+}
+
+/// A relic screen's column, drawn whole with no fade at all when its
+/// content fits the frame, and scrolling behind `RelicColumn.footMask`
+/// (its content padded by the fade, so the last row scrolls clear) only
+/// when it does not. The fade was unconditional until run 220, and a plate
+/// that fitted with a few points to spare lost its bottom rule and its
+/// acanthus corners to it (frames 19 and 37). Measured with a
+/// `GeometryReader`, never `ViewThatFits`, which lays out every candidate.
+private struct RelicFitScroll<Content: View>: View {
+    let fade: CGFloat
+    let content: () -> Content
+    @State private var contentHeight: CGFloat = 0
+    @State private var viewportHeight: CGFloat = 0
+
+    init(fade: CGFloat = RelicColumn.fade, @ViewBuilder content: @escaping () -> Content) {
+        self.fade = fade
+        self.content = content
+    }
+
+    private var overflows: Bool { contentHeight > viewportHeight + 0.5 }
+
+    var body: some View {
+        ScrollView(showsIndicators: false) {
+            content()
+                .background(
+                    GeometryReader { proxy in
+                        let height = proxy.size.height
+                        Color.clear
+                            .onAppear { contentHeight = height }
+                            .onChange(of: height) { _, now in contentHeight = now }
+                    }
+                )
+                .padding(.bottom, overflows ? fade : 0)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .background(
+            GeometryReader { proxy in
+                let height = proxy.size.height
+                Color.clear
+                    .onAppear { viewportHeight = height }
+                    .onChange(of: height) { _, now in viewportHeight = now }
+            }
+        )
+        // Opaque to the frame's foot when the content fits: the mask still
+        // stops a scroll view drawing under the home indicator.
+        .mask { RelicColumn.footMask(overflows ? fade : 0) }
+    }
+}
+
+/// Who wears a relic, in one short line: the FAMILY's name, never the
+/// awakened title ("Anubis, Keeper of the Ash Road" wrapped the inventory
+/// panel's header to two lines, run 220). Beside the inventory's dial,
+/// where the person glyph stands before it, "Worn by" is dropped for the
+/// few families whose name would not leave room for it; `roomy` keeps it.
+private enum RelicWearer {
+    static func line(_ unit: ResolvedUnit, roomy: Bool = false) -> String {
+        let family = unit.blueprint.name
+        return roomy || family.count <= 12 ? "Worn by \(family)" : family
     }
 }
 
@@ -1064,7 +1138,11 @@ struct RelicDetailView: View {
         NavigationStack {
             GameScreen(
                 relic.map { "\($0.set.displayName) · Slot \($0.slot)" } ?? "Relic",
-                subtitle: relic.map { "+\($0.level) · fit for \(role.withArticle)" },
+                // The wearer, not the role: the dial under the stone
+                // already says "fit for an attacker", which the strip said
+                // twice (run 220), and the plate lost its wearer line to
+                // fit its column whole.
+                subtitle: relic.map { "+\($0.level) · " + (wearer.map { RelicWearer.line($0, roomy: true) } ?? "not worn") },
                 dismiss: { dismiss() }
             ) {
                 BarButton(
@@ -1078,36 +1156,42 @@ struct RelicDetailView: View {
             } content: {
                 if let relic {
                     // Two columns that each scroll on their own, so a short
-                    // landscape frame never hides the power-up button. Each
+                    // landscape frame never hides the power-up button. A
+                    // column that fits is drawn whole; one that does not
                     // ends in a fade above the home indicator, and its
                     // content in as much clear space, so the last button
                     // can scroll clear of it: both ran under the indicator
-                    // on a hard line, "Power up to…" half cut (run 217).
+                    // on a hard line, "Power up to…" half cut (run 217),
+                    // and the plate that fitted lost its foot to the fade
+                    // (run 220).
                     HStack(alignment: .top, spacing: 8) {
-                        // The short fade on the plate: a 4-sub relic's
-                        // plate fits the frame, and only its own padding
-                        // stands in the fade.
-                        ScrollView(showsIndicators: false) {
+                        RelicFitScroll(fade: RelicColumn.shortFade) {
                             sheet(relic)
-                                .padding(.bottom, RelicColumn.shortFade)
                         }
-                        .relicColumnFade(RelicColumn.shortFade)
                         .frame(maxWidth: .infinity)
-                        ScrollView(showsIndicators: false) {
+                        RelicFitScroll {
                             VStack(spacing: 8) {
                                 if relic.hasPendingRoll {
                                     rollChoicePanel(relic)
                                 }
-                                powerUpPanel(relic)
+                                // At +15 a 6★'s road goes on in the
+                                // awakening panel, which says "+15" in its
+                                // header: a power-up panel with nothing
+                                // left to buy was a two-line plate under
+                                // the painted minimum, drawn as a third
+                                // kind of panel in the column (run 220).
+                                // It stays while the attempt that reached
+                                // +15 still has its result to show.
+                                if !(relic.isMaxLevel && relic.grade >= 6) || lastOutcome != nil || runSummary != nil {
+                                    powerUpPanel(relic)
+                                }
                                 // The road past +15, on every 6★ from +0 so
                                 // the player knows where the drachma leads.
                                 if relic.grade >= 6 {
                                     awakeningPanel(relic)
                                 }
                             }
-                            .padding(.bottom, RelicColumn.fade)
                         }
-                        .relicColumnFade()
                         .frame(width: 300)
                     }
                     .padding(.horizontal, ScreenChrome.contentPadding)
@@ -1220,15 +1304,14 @@ struct RelicDetailView: View {
                     Text("Slot \(relic.slot) · \(Relic.slotLabel(forSlot: relic.slot)) · \(relic.grade)★ · \(relic.set.piecesRequired)-piece set")
                         .font(Theme.body(9))
                         .foregroundStyle(Theme.textSecondary)
+                    // The wearer is in the strip's subtitle, and Change /
+                    // Unequip under the plate say the relic is worn: its
+                    // line here made a worn Legend's plate a few points
+                    // taller than the column (runs 217 and 220).
                     Text(relic.set.effectDescription)
                         .font(Theme.body(10))
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                    if let wearer {
-                        Label("Worn by \(wearer.name)", systemImage: "person.fill")
-                            .font(Theme.body(10))
-                            .foregroundStyle(Theme.info)
-                    }
                 }
                 Spacer(minLength: 4)
                 VStack(spacing: 2) {
@@ -1318,20 +1401,25 @@ struct RelicDetailView: View {
                                 .fill(changed ? Theme.success.opacity(0.12) : Theme.surface)
                         )
                     }
-                }
-                if relic.subStats.count < relic.subStatCap, let at = nextSubStatLevel(relic) {
-                    HStack {
-                        Text("A new sub stat at +\(at)")
-                            .font(Theme.body(10))
-                            .foregroundStyle(Theme.textSecondary)
-                        Spacer()
+                    // The slot the next roll fills, as the grid's next
+                    // cell: a row of its own under three subs made the
+                    // plate a row taller than the column (run 220).
+                    if relic.subStats.count < relic.subStatCap, let at = nextSubStatLevel(relic) {
+                        HStack {
+                            Text("A new sub stat at +\(at)")
+                                .font(Theme.body(10))
+                                .foregroundStyle(Theme.textSecondary)
+                                .lineLimit(1)
+                                .fixedSize()
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                                .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                        )
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                            .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
-                    )
                 }
             }
 
@@ -1435,9 +1523,12 @@ struct RelicDetailView: View {
                 }
                 .offset(x: shakeOffset)
                 // The genre's auto power-up: attempts until a milestone or
-                // the purse runs dry, with the bill summarised after.
+                // the purse runs dry, with the bill summarised after. Not
+                // while a roll is waiting: it could not be used, and it
+                // stood as a sliver of a button over the home indicator
+                // under "Take a roll first" (run 220).
                 let targets = [3, 6, 9, 12, 15].filter { $0 > relic.level }
-                if !targets.isEmpty {
+                if !targets.isEmpty && !relic.hasPendingRoll {
                     Menu {
                         ForEach(targets, id: \.self) { target in
                             Button("Power up to +\(target)") { attempt(to: target) }
@@ -1487,6 +1578,9 @@ struct RelicDetailView: View {
             }
         }
         .padding(10)
+        // A +15 plate is two lines: at its own height it fell under the
+        // painted minimum and was drawn as the dark-rimmed plate (run 220).
+        .frame(maxWidth: .infinity, minHeight: RelicColumn.paintedFloor, alignment: .topLeading)
         .panelBackground()
     }
 
@@ -1500,12 +1594,23 @@ struct RelicDetailView: View {
         let paying = payingElement ?? relic.set.aetherElement
         let cost = RelicService.awakeningCost(for: relic, paying: paying)
         let refusal = RelicService.awakeningRefusal(relic, paying: paying, player: store.player)
+        // "+15" is said here once the power-up panel has nothing left to
+        // buy and steps aside for this one.
+        let accessory = relic.isAwakened
+            ? "+15 · awakened"
+            : (relic.isMaxLevel ? "+15, the top" : "the road past +15")
         return VStack(alignment: .leading, spacing: 8) {
-            SectionHeader(title: "Awakening", accessory: relic.isAwakened ? "awakened" : "the road past +15")
+            SectionHeader(title: "Awakening", accessory: accessory)
             if relic.isAwakened {
                 Label("A fifth sub stat, and the +15 main stat at 3.6×: the top of the ladder.", systemImage: "sun.max.fill")
                     .font(Theme.body(10).weight(.semibold))
                     .foregroundStyle(Theme.gold)
+                    .fixedSize(horizontal: false, vertical: true)
+                // What the power-up panel said at +15, which no longer
+                // stands above this one.
+                Text("The main stat is at its peak and the sub stats are what they rolled; whetstones and gems still work on them.")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             } else {
                 Text("At +15, awaken it: a FIFTH sub stat, chosen from two, and the +15 main stat lifted from 3× to 3.6×. \(relic.set.displayName) takes \(relic.set.aetherElement.displayName) Aether at the fair price; any other colour costs half again.")
@@ -1542,6 +1647,8 @@ struct RelicDetailView: View {
             }
         }
         .padding(10)
+        // The awakened panel is short; it wears the marble like the rest.
+        .frame(maxWidth: .infinity, minHeight: RelicColumn.paintedFloor, alignment: .topLeading)
         .panelBackground()
     }
 
@@ -2822,6 +2929,28 @@ struct RelicFilterSheet: View {
                                 }
                             }
                         }
+                        // Emblems alone: sixteen words in chips was the
+                        // busiest row on the sheet, and the emblem is what
+                        // the stones wear. Second, under the slot: the set
+                        // is the filter a player reaches for first, and at
+                        // the foot it was below the fold (run 220).
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("SET")
+                                .font(Theme.body(9).weight(.black))
+                                .tracking(0.6)
+                                .foregroundStyle(Theme.textSecondary)
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 40, maximum: 52), spacing: 4)], spacing: 4) {
+                                ForEach(RelicSet.allCases) { relicSet in
+                                    FilterChip(title: "", isOn: filter.sets.contains(relicSet), emblem: relicSet) {
+                                        toggle(&filter.sets, relicSet)
+                                    }
+                                }
+                            }
+                            Text(filter.sets.isEmpty ? "Any set" : filter.sets.sorted(by: { $0.rawValue < $1.rawValue }).map(\.displayName).joined(separator: " · "))
+                                .font(Theme.body(10))
+                                .foregroundStyle(Theme.textSecondary)
+                                .lineLimit(2)
+                        }
                         section("Grade") {
                             ForEach(1...6, id: \.self) { grade in
                                 FilterChip(title: "\(grade)★", isOn: filter.grades.contains(grade)) {
@@ -2866,30 +2995,17 @@ struct RelicFilterSheet: View {
                                 }
                             }
                         }
-                        // Emblems alone: sixteen words in chips was the
-                        // busiest row on the sheet, and the emblem is what
-                        // the stones wear.
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("SET")
-                                .font(Theme.body(9).weight(.black))
-                                .tracking(0.6)
-                                .foregroundStyle(Theme.textSecondary)
-                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 40, maximum: 52), spacing: 4)], spacing: 4) {
-                                ForEach(RelicSet.allCases) { relicSet in
-                                    FilterChip(title: "", isOn: filter.sets.contains(relicSet), emblem: relicSet) {
-                                        toggle(&filter.sets, relicSet)
-                                    }
-                                }
-                            }
-                            Text(filter.sets.isEmpty ? "Any set" : filter.sets.sorted(by: { $0.rawValue < $1.rawValue }).map(\.displayName).joined(separator: " · "))
-                                .font(Theme.body(10))
-                                .foregroundStyle(Theme.textSecondary)
-                                .lineLimit(2)
-                        }
                     }
                     .padding(.horizontal, ScreenChrome.contentPadding)
-                    .padding(.vertical, 8)
+                    .padding(.top, 8)
+                    // Room for the last row to scroll clear of the fade.
+                    .padding(.bottom, RelicColumn.fade)
                 }
+                // The sheet is taller than the phone: its foot fades
+                // above the home indicator, so the rows under the fold
+                // read as a scroll, not as a row cut by the screen's edge
+                // (run 220's SUB STATS).
+                .relicColumnFade()
             }
         }
     }

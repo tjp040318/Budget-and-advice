@@ -26,8 +26,8 @@ final class UnitNode: SCNNode {
     private let healthBarRoot: SCNNode
     private let healthFill: SCNNode
     private let statusRow: SCNNode
-    /// The advantage arrow: beside the health bar on an ordinary unit, at
-    /// the chest of a boss (whose bar is hidden).
+    /// The advantage arrow beside the 3D health bar. A boss never wears
+    /// one (its matchup is the HUD's boss bar's), nor does a fallen unit.
     private let matchupBadge: SCNNode
     /// The screen-space plate that draws this unit's bars since 2026-09-11
     /// (`UnitPlateOverlay`, over the battle view). While one is attached the
@@ -196,20 +196,16 @@ final class UnitNode: SCNNode {
         // adrift a metre above it.
         barRoot.position = SCNVector3(0, combatant.model.height + 0.34, 0)
 
-        // The matchup arrow, hidden until a player's turn puts one up.
-        let badgeSize: CGFloat = combatant.isBoss ? 1.1 : 0.5
-        let badge = SCNNode(geometry: SCNPlane(width: badgeSize, height: badgeSize))
+        // The matchup arrow, hidden until a player's turn puts one up. A
+        // boss's rode at 0.62 of its height as a 1.1 m billboard, which put
+        // it ON the figure — a yellow disc on the Colossus's face, still
+        // there as it sank in death (run 220, 18-dungeon_battle-b/c) — so
+        // every badge hangs off the bar, and a boss's bar is hidden.
+        let badge = SCNNode(geometry: SCNPlane(width: 0.5, height: 0.5))
         badge.geometry?.firstMaterial = UnitNode.imageMaterial(nil)
         badge.isHidden = true
-        if combatant.isBoss {
-            let facing = SCNBillboardConstraint()
-            facing.freeAxes = .all
-            badge.constraints = [facing]
-            badge.position = SCNVector3(0, combatant.model.height * 0.62, 0.6)
-        } else {
-            badge.position = SCNVector3(Float(width / 2) + 0.36, 0, 0.01)
-            barRoot.addChildNode(badge)
-        }
+        badge.position = SCNVector3(Float(width / 2) + 0.36, 0, 0.01)
+        barRoot.addChildNode(badge)
 
         // Ground ring under the unit — the readable "who is this" cue.
         let ringGeometry = SCNTorus(ringRadius: modelHeight * 0.27, pipeRadius: 0.028)
@@ -245,7 +241,6 @@ final class UnitNode: SCNNode {
         if isBoss {
             barRoot.isHidden = true
             ring.isHidden = true
-            addChildNode(badge)
         }
 
         play(.idleCombat)
@@ -257,13 +252,18 @@ final class UnitNode: SCNNode {
     /// The genre's advantage arrow beside the health bar — green up, yellow
     /// even, red down — for the unit whose turn it is against this one; nil
     /// takes it off.
+    ///
+    /// A fallen unit takes nil whatever it is asked (the arrow is for a
+    /// target, and the dead are not one), and a boss never draws the 3D
+    /// badge: without a plate it had nowhere to go but its own body.
     func setMatchup(_ matchup: Element.Matchup?) {
-        plate?.setMatchup(matchup)
-        guard let matchup else {
+        let shown: Element.Matchup? = isDefeated ? nil : matchup
+        plate?.setMatchup(shown)
+        guard let arrow = shown, !isBoss else {
             matchupBadge.isHidden = true
             return
         }
-        matchupBadge.geometry?.firstMaterial?.diffuse.contents = MatchupIconRenderer.image(for: matchup)
+        matchupBadge.geometry?.firstMaterial?.diffuse.contents = MatchupIconRenderer.image(for: arrow)
         matchupBadge.isHidden = false
     }
 
@@ -855,6 +855,8 @@ final class UnitNode: SCNNode {
         play(.death)
         isDefeated = true
         plate?.setDefeated(true)
+        plate?.setMatchup(nil)
+        matchupBadge.isHidden = true
         healthBarRoot.runAction(.fadeOut(duration: 0.4))
         selectionRing.runAction(.fadeOut(duration: 0.3))
     }

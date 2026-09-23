@@ -58,8 +58,10 @@ struct RegaliaSheet: View {
                             .frame(width: 300)
                         // The ladder and what raises it fit the phone's
                         // height whole (run 217 cut "What raises it" through
-                        // its second row); on a shorter phone, or a line
-                        // that wraps, the column scrolls and says so.
+                        // its second row), and "What raises it" runs to the
+                        // column's foot, level with the item beside it; on a
+                        // shorter phone, or a line that wraps, the column
+                        // scrolls and says so.
                         RegaliaColumnScroll {
                             VStack(spacing: 6) {
                                 ladder(regalia)
@@ -164,12 +166,15 @@ struct RegaliaSheet: View {
                     ladderRow(regalia, level: level)
                 }
                 if let aside, let first = carrying.first, let last = carrying.last {
+                    // Under the rows' words, not under their numerals: at
+                    // the rows' own 6 it stood on the panel's acanthus
+                    // corner (run 220).
                     Text("\(ladderSpan(first, last)): \(aside)")
                         .font(Theme.body(11))
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
-                        .padding(.horizontal, 6)
-                        .padding(.top, 2)
+                        .padding(.leading, Self.ladderWordsInset)
+                        .padding(.trailing, 6)
                 }
             }
         }
@@ -192,27 +197,44 @@ struct RegaliaSheet: View {
         first == last ? Regalia.numeral(first) : "\(Regalia.numeral(first))–\(Regalia.numeral(last))"
     }
 
+    /// The numeral column of a ladder row, and where the row's words start
+    /// from the row's own edge (its padding, the column, the spacing).
+    private static let ladderNumeralWidth: CGFloat = 22
+    private static let ladderWordsInset: CGFloat = 6 + ladderNumeralWidth + 6
+
     private func ladderRow(_ regalia: Regalia, level: Int) -> some View {
         let current = level == regalia.level
         let reached = level <= regalia.level && unlocked
         return HStack(spacing: 6) {
             // 22 holds "III", the widest numeral, at 15 points in Cinzel.
-            Text(Regalia.numeral(level))
-                .font(Theme.title(12))
-                .foregroundStyle(reached ? Theme.gold : Theme.textSecondary)
-                .frame(width: 22, alignment: .leading)
+            // The numeral is drawn over its column rather than laid out in
+            // it: Cinzel's line is three points taller than the words', and
+            // it set every row's height — fifteen points over the ladder,
+            // which left "What raises it" too short to wear its marble
+            // whole (run 220).
+            Color.clear
+                .frame(width: Self.ladderNumeralWidth, height: 1)
+                .overlay(alignment: .leading) {
+                    Text(Regalia.numeral(level))
+                        .font(Theme.title(12))
+                        .foregroundStyle(reached ? Theme.gold : Theme.textSecondary)
+                        .fixedSize()
+                }
             Text(ladderWords(regalia, level: level).words)
                 .font(Theme.body(10))
                 .foregroundStyle(reached ? Theme.textPrimary : Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
             if current {
+                // One point above and below: the tag set the current row's
+                // height, and every point of the ladder is one "What raises
+                // it" needs to wear its marble whole.
                 Text(unlocked ? "NOW" : "BANKED")
                     .font(Theme.body(9).weight(.black))
                     .tracking(0.8)
                     .foregroundStyle(unlocked ? Theme.ink : Theme.textSecondary)
                     .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 1)
                     .background(Capsule().fill(unlocked ? Theme.gold : Theme.surfaceHigh))
             }
         }
@@ -255,6 +277,9 @@ struct RegaliaSheet: View {
                     done: regalia.isMaxLevel
                 )
             }
+            // Takes what the column leaves when the column fits, so the
+            // panel ends on the column's foot beside the item's.
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
     }
 
@@ -296,8 +321,16 @@ private struct RegaliaColumnScroll<Content: View>: View {
         self.content = content
     }
 
-    private var overflows: Bool { contentFrame.height > viewportHeight + 1 }
-    private var moreBelow: Bool { overflows && contentFrame.maxY > viewportHeight + 2 }
+    /// Half a point, not one or two: a column a point or two too tall was
+    /// neither drawn whole nor faded, only cut. Run 220's cut was the
+    /// marble's, though — "What raises it" was 128 points, under the
+    /// painted panel's 140 of caps, and its frame drew past its own foot
+    /// into the clip — which is why the panel now stretches to the foot.
+    private var overflows: Bool { contentFrame.height > viewportHeight + 0.5 }
+    private var moreBelow: Bool { overflows && contentFrame.maxY > viewportHeight + 0.5 }
+    /// Content that fits is given the whole column, so a panel that can
+    /// stretch ("What raises it") ends on the column's foot.
+    private var fills: Bool { !overflows && viewportHeight > 0 }
 
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
@@ -311,6 +344,7 @@ private struct RegaliaColumnScroll<Content: View>: View {
                             .onChange(of: frame) { _, now in contentFrame = now }
                     }
                 )
+                .frame(height: fills ? viewportHeight : nil, alignment: .top)
                 .padding(.bottom, overflows ? regaliaColumnFade : 0)
         }
         .coordinateSpace(name: regaliaColumnSpace)

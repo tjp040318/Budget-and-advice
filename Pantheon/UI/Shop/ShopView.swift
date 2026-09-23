@@ -74,13 +74,20 @@ struct ShopView: View {
     /// painted band's mean colour — under the header's scrims it did not
     /// read — and the day stalls sat in the same midnight. Now the night is
     /// a deep blue wash at 0.45 with a pale moon rising at the top right and
-    /// cool motes; the day a warm soft-light wash (0.28 of #FFB866) with the
-    /// braziers' sparks. The bespoke agora (option C) replaces both.
+    /// cool motes; the day a warm soft-light wash (0.4 of #FFB866) with the
+    /// braziers' sparks and a lamp's pool of light behind the Daily gift
+    /// (`lampColour`). Run 220 still read the day stalls as the same midnight
+    /// as the Night Market at 0.28 with no lamp: the gift was claimed under a
+    /// grey-blue Forum. The bespoke agora (option C) replaces all of it.
     private static let nightWash = Color(hex: "#0A1430").opacity(0.45)
-    private static let dayLight = Color(hex: "#FFB866").opacity(0.28)
+    private static let dayLight = Color(hex: "#FFB866").opacity(0.4)
     private static let moonLight = Color(hex: "#DDE8FF")
     private static let sparkColour = Color(hex: "#FFB866")
     private static let nightMoteColour = Color(hex: "#9FC3FF")
+    /// The lamp the Daily gift stands in: warmer and deeper than the gift's
+    /// own gold halo, so the pool reads as lamplight on stone rather than as
+    /// the gift glowing.
+    private static let lampColour = Color(hex: "#FFB35C")
 
     private var isNight: Bool { section == .nightMarket }
 
@@ -403,11 +410,32 @@ struct ShopView: View {
     /// The gift breathing in its own light while it waits; still and dimmed
     /// once taken. Driven by the clock rather than a repeating animation, so
     /// it breathes again every time the stall is reopened.
+    ///
+    /// Behind it, a lamp: a wide, low pool of warm light on the Forum's stone
+    /// (an ellipse 480 × 290 at its fade, screened), so the day stall is lit
+    /// like a stall at lamp-lighting and the Night Market's blue beside it
+    /// reads as another hour. It stays, fainter, once the gift is taken — the
+    /// hour does not change because the gift did. By the carved title above
+    /// it the pool is a tenth of its strength, and its fade ends short of the
+    /// stall rail on the left.
     private func offeringArt(lit: Bool) -> some View {
         TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
             let t = timeline.date.timeIntervalSinceReferenceDate
             let breath = 1 + 0.03 * sin(t * 2 * .pi / 3.4)
             ZStack {
+                RadialGradient(
+                    colors: [
+                        Self.lampColour.opacity(lit ? 0.55 : 0.34),
+                        Self.lampColour.opacity(lit ? 0.22 : 0.14),
+                        Self.lampColour.opacity(0),
+                    ],
+                    center: .center,
+                    startRadius: 0,
+                    endRadius: 170
+                )
+                .frame(width: 340, height: 340)
+                .scaleEffect(x: 1.4, y: 0.85)
+                .blendMode(.screen)
                 RadialGradient(
                     colors: [Color(hex: "#FFD678").opacity(lit ? 0.5 : 0.16), Color(hex: "#FFD678").opacity(0)],
                     center: .center,

@@ -166,6 +166,7 @@ final class BattleSceneController: NSObject {
         ledge = nil
         unitNodes.removeAll()
         plates.removeAllPlates()
+        plates.removeAllFloats()
         refreshPlateTargets()
         holdOverride = nil
         castRecovery = 0
@@ -357,7 +358,14 @@ final class BattleSceneController: NSObject {
         camera.vignettingPower = 1.2
         camera.screenSpaceAmbientOcclusionIntensity = 0.6
         camera.screenSpaceAmbientOcclusionRadius = 0.6
-        camera.motionBlurIntensity = 0.25
+        // NO motion blur (run 220). SceneKit blurs by velocity, and the
+        // camera's own velocity counts: every skill camera's push-in and
+        // pull-out (`CameraDirector.zoom`, 0.22 s in, 0.30 s out) smeared the
+        // whole frame into a radial orange streak with ghosted doubles of
+        // the statues — 8-arena_battle-a measured a third of the sharpness
+        // of the same frame at rest. The genre's skill camera is crisp; the
+        // swing trail and the dash already carry the speed.
+        camera.motionBlurIntensity = 0
 
         cameraNode = SCNNode()
         cameraNode.camera = camera
@@ -691,7 +699,7 @@ final class BattleSceneController: NSObject {
 
         case .turnSkipped(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
-            floatText("SKIPPED", at: node.headWorldPosition, color: UIColor(hex: "#C8C8C8")!)
+            floatText("SKIPPED", over: node, color: UIColor(hex: "#C8C8C8")!)
 
         case .skillCast(let actor, _, let name, let targets, let shot, let animation, let vfx):
             guard let casterNode = unitNodes[actor] else { return 0 }
@@ -762,7 +770,13 @@ final class BattleSceneController: NSObject {
                 casterNode.swingTrail(tint: animation == .ultimate ? elementTint : steel,
                                       duration: clipLength, after: beat(walkUp))
             }
-            floatText(name, at: casterNode.headWorldPosition, color: .white, scale: 0.7)
+            // The skill's name over its caster, followed through the leap
+            // (it hung over the EMPTY mark a closing caster had left, run
+            // 220), in the HUD's pale gold. Not for an ultimate: the cut-in
+            // is its name, and the two at once put it on the screen twice.
+            if animation != .ultimate {
+                floatText(name, over: casterNode, color: UIColor(hex: "#F3DFA6") ?? .white, scale: 0.7)
+            }
 
             // The frame the blade lands, measured from the start of the CLIP
             // rather than of the turn, and held by the queue so the damage
@@ -890,7 +904,7 @@ final class BattleSceneController: NSObject {
             } else {
                 color = .white
             }
-            floatText(label, at: node.headWorldPosition, color: color, scale: profile.numberScale, pop: true)
+            floatText(label, over: node, color: color, scale: profile.numberScale, pop: true)
 
             // A heavy blow is worth dwelling on. The freeze punctuates the
             // frame of contact itself; this holds the frame just after it, so
@@ -909,23 +923,23 @@ final class BattleSceneController: NSObject {
         case .healed(_, let target, let amount, let remaining):
             guard let node = unitNodes[target] else { return 0 }
             node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
-            floatText("+\(Int(amount.rounded()))", at: node.headWorldPosition, color: UIColor(hex: "#7FE8A0")!)
+            floatText("+\(Int(amount.rounded()))", over: node, color: UIColor(hex: "#7FE8A0")!)
             VFXLibrary.spawn("heal", at: node.position, in: scene, tint: UIColor(hex: "#7FE8A0")!)
 
         case .shieldAbsorbed(let target, let amount, _):
             guard let node = unitNodes[target] else { return 0 }
-            floatText("\(Int(amount.rounded())) blocked", at: node.headWorldPosition, color: UIColor(hex: "#6BD8F2")!, scale: 0.8)
+            floatText("\(Int(amount.rounded())) blocked", over: node, color: UIColor(hex: "#6BD8F2")!, scale: 0.8)
 
         case .statusApplied(_, let target, let kind, let turns):
             guard let node = unitNodes[target] else { return 0 }
             node.applyStatus(kind, turns: turns)
             VFXLibrary.spawn(kind.isBuff ? "buff" : "debuff", at: node.position, in: scene, tint: .white)
-            floatText(kind.displayName, at: node.headWorldPosition,
+            floatText(kind.displayName, over: node,
                       color: kind.isBuff ? UIColor(hex: "#6BD8F2")! : UIColor(hex: "#F2726B")!, scale: 0.7)
 
         case .statusResisted(_, let target, _):
             guard let node = unitNodes[target] else { return 0 }
-            floatText("RESIST", at: node.headWorldPosition, color: UIColor(hex: "#C8C8C8")!, scale: 0.8)
+            floatText("RESIST", over: node, color: UIColor(hex: "#C8C8C8")!, scale: 0.8)
 
         case .statusExpired(let target, let kind), .statusRemoved(let target, let kind, _):
             unitNodes[target]?.removeStatus(kind)
@@ -938,7 +952,7 @@ final class BattleSceneController: NSObject {
 
         case .counterattack(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
-            floatText("COUNTER", at: node.headWorldPosition, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
+            floatText("COUNTER", over: node, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
             node.play(.attackBasic)
             // A counter interrupts whatever the caster was in the middle of,
             // so the follow-through owed by that cast is void; leaving it
@@ -947,11 +961,11 @@ final class BattleSceneController: NSObject {
 
         case .extraTurnGranted(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
-            floatText("EXTRA TURN", at: node.headWorldPosition, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
+            floatText("EXTRA TURN", over: node, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
 
         case .passiveTriggered(let actor, let name):
             guard let node = unitNodes[actor] else { return 0 }
-            floatText(name, at: node.headWorldPosition, color: UIColor(hex: "#E8C86A")!, scale: 0.9)
+            floatText(name, over: node, color: UIColor(hex: "#E8C86A")!, scale: 0.9)
             VFXLibrary.spawn("stormlord_surge", at: node.position, in: scene, tint: UIColor(hex: "#E8C86A")!)
 
         case .revived(let target, _):
@@ -1174,6 +1188,8 @@ final class BattleSceneController: NSObject {
             plateLifts[key] = shown
             entry.plate.position = CGPoint(x: entry.point.x, y: entry.point.y + shown)
         }
+        // The floating words and numbers, over the plates just placed.
+        layoutFloats(in: renderer, bossStands: bosses.contains { !$0.isDefeated })
         // Forget the plates that have left (a fallen wave's), now and then.
         if plateLifts.count > standing.count + 8 {
             let live = Set(standing.map { $0.id })
@@ -1188,11 +1204,37 @@ final class BattleSceneController: NSObject {
     /// hit is read off the field rather than worked out; on an enemy's turn
     /// they come off. The owner: "I like the way summoners war shows
     /// element advantage using red, yellow, green arrows on who to attack."
+    ///
+    /// Not on the fallen — a dead Colossus kept its yellow disc on its face
+    /// as it sank (run 220) — and not on a boss at all: its 3D badge landed
+    /// on its body, so a boss's arrow goes to the HUD's boss bar beside its
+    /// name instead, where the genre shows it (`onBossMatchups`).
     private func showMatchups(for actorID: UUID) {
         guard let actor = unitNodes[actorID] else { return }
+        var bossMatchups: [UUID: Element.Matchup] = [:]
         for node in unitNodes.values where node.side == .opponent {
-            node.setMatchup(actor.side == .player ? actor.element.matchup(against: node.element) : nil)
+            let matchup = actor.side == .player ? actor.element.matchup(against: node.element) : nil
+            if node.isBoss {
+                if let matchup, !node.isDefeated { bossMatchups[node.combatantID] = matchup }
+                node.setMatchup(nil)
+            } else {
+                node.setMatchup(node.isDefeated ? nil : matchup)
+            }
         }
+        onBossMatchups?(bossMatchups)
+    }
+
+    /// Told on every turn's start with the acting player unit's matchup
+    /// against each living boss — empty on an enemy's turn — for the boss
+    /// bar's arrow. Main thread (`present` runs there). The view sets and
+    /// clears it; it holds nothing of the view model's, so no cycle.
+    var onBossMatchups: (([UUID: Element.Matchup]) -> Void)?
+
+    /// The field's chrome — the plates and the floating words — faded out
+    /// while the reckoning is up, and back (run 220: three plates showed
+    /// through the result's scrim).
+    func setPlatesHidden(_ hidden: Bool) {
+        plates.setFieldHidden(hidden)
     }
 
     /// Every unit that dashed walks back to its mark. Called as a turn begins
@@ -1203,85 +1245,138 @@ final class BattleSceneController: NSObject {
 
     // MARK: - Floating text
 
-    private func floatText(_ text: String, at position: SCNVector3, color: UIColor, scale: CGFloat = 1.0, pop: Bool = false) {
-        guard let image = FloatingTextRenderer.image(text: text, color: color) else { return }
+    /// The size of a floating number or word at weight 1, and its floor and
+    /// cap in points. The cap is the run-220 crit: a plane in the scene grew
+    /// with the skill camera's push-in to 75 points and ran off the top of
+    /// the frame. On the overlay a size is a size — a crit at weight 1.4 is
+    /// 31 points, a killing blow stops at 32 — and the pop's overshoot is
+    /// a twelfth over it for 70 ms.
+    private static let floatBase: CGFloat = 22
+    private static let floatFloor: CGFloat = 14
+    private static let floatCap: CGFloat = 32
 
-        let width = CGFloat(0.018) * image.size.width * scale
-        let height = CGFloat(0.018) * image.size.height * scale
-        let plane = SCNPlane(width: width, height: height)
-        let material = SCNMaterial()
-        material.lightingModel = .constant
-        material.diffuse.contents = image
-        material.isDoubleSided = true
-        material.writesToDepthBuffer = false
-        material.readsFromDepthBuffer = false
-        material.blendMode = .alpha
-        plane.firstMaterial = material
-
-        let node = SCNNode(geometry: plane)
+    /// A number or a word off a unit, on the plate overlay (run 220): a
+    /// fixed size in points whatever the camera does, drawn OVER every plate
+    /// — the 3D planes were under the overlay, so a plate covered "810!" —
+    /// Manrope-Bold for a number and Cinzel for a word, each with a dark
+    /// edge. `scale` is the weight of the moment: a glance 0.85, a crit 1.4,
+    /// a killing blow 1.6 (`Juice.Profile.numberScale`).
+    private func floatText(_ text: String, over node: UnitNode, color: UIColor, scale: CGFloat = 1.0, pop: Bool = false) {
+        let isNumber = text.contains { $0.isNumber }
+        // A word is read, not felt: it stops at 20 points however heavy the
+        // moment, and only a number grows to the cap.
+        let points = min(isNumber ? Self.floatCap : 20, max(Self.floatFloor, Self.floatBase * scale))
+        guard let image = FloatingTextRenderer.image(text: text, color: color, size: points, carved: !isNumber) else { return }
+        // A boss's head is at the top edge of its own framing, under the
+        // HUD's bar, so its numbers come off its chest; everyone else's off
+        // the head and shoulders, rising into its plate.
+        let lift = node.spec.height * (node.isBoss ? 0.6 : 0.85)
         // Damage numbers scatter a little sideways so a multi-hit reads as a
-        // burst rather than a stack of identical labels.
-        let scatter: Float = pop ? Float.random(in: -0.22...0.22) : 0
-        node.position = SCNVector3(position.x + scatter, position.y + 0.25, position.z)
-        node.renderingOrder = 1_000
-        let billboard = SCNBillboardConstraint()
-        billboard.freeAxes = .all
-        node.constraints = [billboard]
-        scene.rootNode.addChildNode(node)
+        // burst rather than a stack; a word starts a line above where a
+        // number would, so a status landing with a hit is not on top of it.
+        let scatter: CGFloat = pop ? CGFloat.random(in: -14...14) : 0
+        plates.addFloat(image: image, over: node, lift: lift, lead: isNumber ? 0 : 18,
+                        pop: pop, scatter: scatter, rise: 30)
+    }
 
-        let rise = SCNAction.moveBy(x: 0, y: 1.1, z: 0, duration: 1.0)
-        rise.timingMode = .easeOut
-        let drift = SCNAction.sequence([
-            .group([rise, .sequence([.wait(duration: 0.5), .fadeOut(duration: 0.5)])]),
-            .removeFromParentNode()
-        ])
-        if pop {
-            // The plane is authored at final size; start small and let the pop
-            // overshoot and settle before the drift takes over.
-            node.scale = SCNVector3(0.35, 0.35, 0.35)
-            node.runAction(.sequence([Juice.popAction(scale: 1.0), drift]))
-        } else {
-            node.runAction(drift)
+    /// Every floating word and number for the frame about to be drawn: over
+    /// the unit it came off, popped, risen and faded by its age, and held
+    /// INSIDE the frame — eight points in from every edge, under the boss's
+    /// bar when a boss stands, under the stage's chips at the top left.
+    /// Render thread, from `layoutPlates`, after the queue has drained.
+    private func layoutFloats(in renderer: SCNSceneRenderer, bossStands: Bool) {
+        let size = plates.size
+        guard size.width > 2, size.height > 2 else { return }
+        let now = CACurrentMediaTime()
+        let inset: CGFloat = 8
+        // The HUD's top, measured off run 220's frames: the boss's bar ends
+        // about 40 points down, the stage and wave chips 34 points down (78
+        // under a boss's bar) and about 300 points in from the left.
+        let barFoot: CGFloat = bossStands ? 40 : 0
+        let chipsFoot: CGFloat = bossStands ? 78 : 34
+        let chipsReach: CGFloat = 300
+        var finished: [FloatingLabel] = []
+        for label in plates.floats {
+            let age = now - label.born
+            guard age < label.life else {
+                finished.append(label)
+                continue
+            }
+            let projected = renderer.projectPoint(label.anchor)
+            guard projected.z > 0, projected.z < 1 else {
+                label.node.isHidden = true
+                continue
+            }
+            label.node.isHidden = false
+            let scale = label.scale(at: age)
+            label.node.setScale(scale)
+            label.node.alpha = label.alpha(at: age)
+            let halfWidth = label.node.size.width / 2 * scale
+            let halfHeight = label.node.size.height / 2 * scale
+            var x = CGFloat(projected.x) + label.scatter
+            x = min(size.width - inset - halfWidth, max(inset + halfWidth, x))
+            var y = size.height - CGFloat(projected.y) + label.lead + label.risen(at: age)
+            // The overlay's origin is at the bottom: the ceiling is a height.
+            var ceiling = size.height - inset - barFoot
+            if x - halfWidth < chipsReach { ceiling = min(ceiling, size.height - inset - chipsFoot) }
+            y = min(ceiling - halfHeight, max(inset + halfHeight, y))
+            label.node.position = CGPoint(x: x, y: y)
         }
+        plates.retireFloats(finished)
     }
 }
 
-/// Renders damage numbers and skill names to a texture.
+/// Renders damage numbers and words to a picture for the plate overlay.
 ///
 /// SCNText produces real geometry, which is expensive and hard to read at small
-/// sizes. A rasterised label with a stroke stays legible against any background
-/// and costs one texture per string, which is cached.
+/// sizes. A rasterised label with a dark edge stays legible against any
+/// background and costs one picture per string, which is cached. The game's
+/// own two faces since run 220 (grey SF Rounded before): Manrope-Bold for a
+/// number, Cinzel for a word — the HUD's faces — each with a dark OUTER edge
+/// drawn as a stroke pass under the fill, so the edge never eats into the
+/// letters as a fill-and-stroke pass does, and a soft shadow under both.
 enum FloatingTextRenderer {
     private static var cache: [String: UIImage] = [:]
 
-    static func image(text: String, color: UIColor) -> UIImage? {
-        let key = "\(text)|\(color.hashValue)"
+    static func image(text: String, color: UIColor, size: CGFloat, carved: Bool) -> UIImage? {
+        let key = "\(text)|\(color.hashValue)|\(Int(size * 2))|\(carved)"
         if let cached = cache[key] { return cached }
 
-        // A rounded semibold with a thin edge and a soft shadow: the heavy
-        // black-outlined figures of the first build were too big and too
-        // thick to sit over a painted stage.
-        let base = UIFont.systemFont(ofSize: 34, weight: .semibold)
-        let font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 34) } ?? base
+        let face = carved ? Theme.carvedFace : Theme.numberFace
+        let font = UIFont(name: face, size: size)
+            ?? UIFont.systemFont(ofSize: size, weight: carved ? .heavy : .bold)
+        // The edge: about a sixteenth of the size outside the letters (1.4
+        // points on a 22-point number, 2 on a crit). A stroke is centred on
+        // the outline, so it is drawn twice as wide and the fill covers the
+        // inner half.
+        let edge = max(1.2, size / 16)
         let shadow = NSShadow()
-        shadow.shadowColor = UIColor.black.withAlphaComponent(0.85)
+        shadow.shadowColor = UIColor.black.withAlphaComponent(0.7)
         shadow.shadowBlurRadius = 3
         shadow.shadowOffset = CGSize(width: 0, height: 1.5)
-        let attributes: [NSAttributedString.Key: Any] = [
+        let outline = NSAttributedString(string: text, attributes: [
+            .font: font,
+            .strokeColor: UIColor(red: 0.07, green: 0.05, blue: 0.03, alpha: 0.95),
+            .strokeWidth: 2 * edge / size * 100,
+            .shadow: shadow,
+        ])
+        let fill = NSAttributedString(string: text, attributes: [
             .font: font,
             .foregroundColor: color,
-            .strokeColor: UIColor.black.withAlphaComponent(0.9),
-            .strokeWidth: -2.0,
-            .shadow: shadow
-        ]
-        let string = NSAttributedString(string: text, attributes: attributes)
-        let size = string.size()
-        guard size.width > 0, size.height > 0 else { return nil }
+        ])
+        let measured = fill.size()
+        guard measured.width > 0, measured.height > 0 else { return nil }
 
-        let padded = CGSize(width: size.width + 16, height: size.height + 12)
-        let renderer = UIGraphicsImageRenderer(size: padded)
-        let image = renderer.image { _ in
-            string.draw(at: CGPoint(x: 8, y: 6))
+        let pad = edge + 5
+        let padded = CGSize(width: ceil(measured.width + 2 * pad), height: ceil(measured.height + 2 * pad))
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 3
+        format.opaque = false
+        let image = UIGraphicsImageRenderer(size: padded, format: format).image { context in
+            context.cgContext.setLineJoin(.round)
+            let origin = CGPoint(x: pad, y: pad)
+            outline.draw(at: origin)
+            fill.draw(at: origin)
         }
 
         // Bound the cache: strings are mostly numbers and repeat heavily, but a

@@ -2198,6 +2198,21 @@ private struct LabyrinthRailHead: View {
 /// always clears the foot's fade. The rows are measured, since a Titan's
 /// name runs to two lines or three.
 ///
+/// The opening is driven by the MEASUREMENTS, never by a clock (run 220).
+/// One 0.05 s timer after `onAppear` planned the scroll then, and on run
+/// 220 it never landed: the floor rails fell back to the old centring
+/// (something was not yet measured at the tick) and the Titans rail did not
+/// scroll at all, the chosen Umbra off the bottom. Now every row's height
+/// and the rail's own height try the plan as they arrive
+/// (`settleIfMeasured`), the plan runs once everything is measured, the
+/// scroll is issued after the spacer it needs is laid out (`onChange` of
+/// `tail`), and the rail counts as opened only once that scroll was issued.
+/// Then the top row's place in the scroll is read back and the scroll
+/// repeated, twice at most, if the row is not standing at `lead`
+/// (`checkLanding`). A rail that still has an unmeasured row a second after
+/// it appears centres the focused row, the old behaviour, rather than
+/// showing it nowhere. Each step prints a `[Rail]` line to the console.
+///
 /// The top edge is soft: a row scrolled up past where the top row stands
 /// fades out over `WholeRowPlan.fadeSpan` of travel (`rowOpacity`, read off
 /// the row's place in the scroll), so a row passing under the head dissolves
@@ -2211,8 +2226,8 @@ private struct WholeRowRail<Item: Identifiable, Row: View>: View where Item.ID =
     let focus: String?
     let row: (Item) -> Row
 
-    /// The rows' heights and whether the rail has opened, in a class so a
-    /// measurement never lays the rail out again.
+    /// The rows' heights and places, the rail's height and whether it has
+    /// opened, in a class so a measurement never lays the rail out again.
     @State private var gauge = RailRowGauge()
     /// The spacer after the last row that lets the top row be whole at the
     /// rail's end.
@@ -2234,9 +2249,19 @@ private struct WholeRowRail<Item: Identifiable, Row: View>: View where Item.ID =
                             .background {
                                 GeometryReader { box in
                                     Color.clear
-                                        .onAppear { gauge.heights[item.id] = box.size.height }
+                                        .onAppear {
+                                            gauge.heights[item.id] = box.size.height
+                                            gauge.tops[item.id] = box.frame(in: .scrollView).minY
+                                            settleIfMeasured(proxy, from: "row")
+                                        }
                                         .onChange(of: box.size.height) { _, height in
                                             gauge.heights[item.id] = height
+                                            settleIfMeasured(proxy, from: "row")
+                                        }
+                                        // Where the row stands in the scroll,
+                                        // for `checkLanding`.
+                                        .onChange(of: box.frame(in: .scrollView).minY) { _, top in
+                                            gauge.tops[item.id] = top
                                         }
                                 }
                                 .allowsHitTesting(false)
@@ -2251,43 +2276,142 @@ private struct WholeRowRail<Item: Identifiable, Row: View>: View where Item.ID =
                     }
                 }
                 .onAppear {
-                    let viewport = geometry.size.height
-                    // After the first layout, so every row has been measured.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                        settle(viewport: viewport, proxy: proxy)
+                    gauge.pass += 1
+                    let pass = gauge.pass
+                    gauge.viewport = geometry.size.height
+                    settleIfMeasured(proxy, from: "appear")
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        centreIfUnsettled(proxy, pass: pass)
                     }
                 }
-                .onDisappear { gauge.opened = false }
+                .onChange(of: geometry.size.height) { _, height in
+                    gauge.viewport = height
+                    settleIfMeasured(proxy, from: "viewport")
+                }
+                .onChange(of: tail) { _, _ in
+                    // The spacer is laid out by the next turn of the run
+                    // loop; scrolled to before it, the scroll stops at the
+                    // old end.
+                    DispatchQueue.main.async { issueRailScroll(proxy) }
+                }
+                .onDisappear {
+                    gauge.pass += 1
+                    gauge.opened = false
+                    gauge.target = nil
+                }
             }
         }
         .frame(width: width)
     }
 
-    /// Scrolls once per appearance: the spacer first, then — once it is laid
-    /// out, or the scroll would stop at the old end — the top row into place.
-    private func settle(viewport: CGFloat, proxy: ScrollViewProxy) {
-        guard !gauge.opened, let focus, let index = items.firstIndex(where: { $0.id == focus }) else { return }
-        gauge.opened = true
+    /// Plans the opening once the rail and every row are measured, and
+    /// issues it, or sets the spacer it needs first. Called by every
+    /// measurement; it does nothing once the rail has opened or while a
+    /// planned scroll waits for its spacer.
+    private func settleIfMeasured(_ proxy: ScrollViewProxy, from source: String) {
+        guard !gauge.opened, gauge.target == nil,
+              let focus, let index = items.firstIndex(where: { $0.id == focus }) else { return }
         let heights = items.map { gauge.heights[$0.id] ?? 0 }
-        guard viewport > 0, !heights.contains(where: { $0 <= 0 }) else {
-            // A row never measured: the old centring rather than a guess.
-            proxy.scrollTo(focus, anchor: .center)
+        guard gauge.viewport > 0, !heights.contains(where: { $0 <= 0 }) else { return }
+        let plan = WholeRowPlan(heights: heights, focus: index, viewport: gauge.viewport)
+        gauge.target = RailLanding(
+            id: items[plan.top].id,
+            anchor: UnitPoint(x: 0, y: plan.anchor),
+            source: source,
+            viewport: gauge.viewport,
+            tail: plan.tail
+        )
+        if abs(plan.tail - tail) < 0.5 {
+            DispatchQueue.main.async { issueRailScroll(proxy) }
+        } else {
+            // `onChange(of: tail)` issues the scroll once the spacer is in.
+            tail = plan.tail
+        }
+    }
+
+    /// Scrolls to the planned row and marks the rail opened; then reads the
+    /// landing back.
+    private func issueRailScroll(_ proxy: ScrollViewProxy) {
+        guard let target = gauge.target else { return }
+        gauge.target = nil
+        gauge.opened = true
+        proxy.scrollTo(target.id, anchor: target.anchor)
+        #if DEBUG
+        print("[Rail] focus=\(focus ?? "nil") planned from \(target.source): viewport=\(Int(target.viewport.rounded())) "
+              + "measured=\(items.count)/\(items.count) top=\(target.id) tail=\(Int(target.tail.rounded())) anchor=\(target.anchor.y)")
+        #endif
+        let pass = gauge.pass
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            checkLanding(target, proxy: proxy, attempt: 1, pass: pass)
+        }
+    }
+
+    /// The top row should stand `WholeRowPlan.lead` below the rail's top. A
+    /// scroll lost to a layout still in flight is repeated, twice at most.
+    private func checkLanding(_ target: RailLanding, proxy: ScrollViewProxy, attempt: Int, pass: Int) {
+        guard pass == gauge.pass else { return }
+        let top = gauge.tops[target.id]
+        let miss = top.map { abs($0 - WholeRowPlan.lead) } ?? .infinity
+        #if DEBUG
+        let stood = top.map { "\(Int($0.rounded()))" } ?? "unmeasured"
+        #endif
+        if miss > 1.5, attempt < 3 {
+            #if DEBUG
+            print("[Rail] \(target.id) stood at \(stood), not \(Int(WholeRowPlan.lead)); scrolling again (\(attempt))")
+            #endif
+            proxy.scrollTo(target.id, anchor: target.anchor)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                checkLanding(target, proxy: proxy, attempt: attempt + 1, pass: pass)
+            }
+        } else {
+            #if DEBUG
+            print("[Rail] \(target.id) landed at \(stood) after \(attempt) check(s)")
+            #endif
+        }
+    }
+
+    /// A second after the rail appears, a planned scroll still waiting for
+    /// its spacer is issued, and a rail with a row never measured centres
+    /// the focused row rather than leaving it anywhere. Neither is expected;
+    /// the console says which ran.
+    private func centreIfUnsettled(_ proxy: ScrollViewProxy, pass: Int) {
+        guard pass == gauge.pass, !gauge.opened else { return }
+        if gauge.target != nil {
+            issueRailScroll(proxy)
             return
         }
-        let plan = WholeRowPlan(heights: heights, focus: index, viewport: viewport)
-        tail = plan.tail
-        let topID = items[plan.top].id
-        let anchor = UnitPoint(x: 0, y: plan.anchor)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            proxy.scrollTo(topID, anchor: anchor)
-        }
+        guard let focus else { return }
+        #if DEBUG
+        let measured = items.filter { (gauge.heights[$0.id] ?? 0) > 0 }.count
+        print("[Rail] focus=\(focus) unsettled after 1 s: viewport=\(Int(gauge.viewport.rounded())) "
+              + "measured=\(measured)/\(items.count); centring")
+        #endif
+        proxy.scrollTo(focus, anchor: .center)
     }
 }
 
 /// What a `WholeRowRail` has measured, kept out of its view state.
 private final class RailRowGauge {
     var heights: [String: CGFloat] = [:]
+    /// Each row's top in the scroll's own space: `lead` for the top row once
+    /// the rail has opened.
+    var tops: [String: CGFloat] = [:]
+    var viewport: CGFloat = 0
+    /// The planned scroll, waiting for its spacer.
+    var target: RailLanding?
     var opened = false
+    /// Bumped on every appearance and disappearance, so a late check from
+    /// an earlier one does nothing.
+    var pass = 0
+}
+
+/// Where a `WholeRowRail` scrolls to open, and what it was planned from.
+private struct RailLanding {
+    let id: String
+    let anchor: UnitPoint
+    let source: String
+    let viewport: CGFloat
+    let tail: CGFloat
 }
 
 /// Where a `WholeRowRail` opens, from its rows' heights and its own height.

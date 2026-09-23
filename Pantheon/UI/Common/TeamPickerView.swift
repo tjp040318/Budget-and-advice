@@ -75,16 +75,16 @@ struct TeamPickerView: View {
 
     // MARK: - Rail
 
-    /// The lineup and the team's bonuses scroll together if a long leader
-    /// skill needs the room; the Save plate is pinned below them either way.
-    /// The scroll ends in a fade, not a cut: run 217 sliced the resonance's
-    /// words through the middle of a line on the edge above Save.
+    /// The team panel scrolls if a long leader skill needs the room; the
+    /// Save plate is pinned below it either way. The scroll ends in a fade,
+    /// not a cut (run 217 sliced the resonance's words on the edge above
+    /// Save), and the room after the panel is exactly the fade's height, so
+    /// at rest the whole panel stands above it.
     private var rail: some View {
         VStack(spacing: 8) {
             ScrollView {
-                VStack(spacing: 8) {
-                    lineup
-                    bonusesPanel
+                VStack(spacing: 0) {
+                    teamPanel
                     Color.clear.frame(height: Self.footFadeHeight)
                 }
             }
@@ -99,6 +99,35 @@ struct TeamPickerView: View {
         .frame(width: railWidth)
     }
 
+    /// The team and what it gives, in ONE painted panel: the faces, a rule,
+    /// then the leader's skill, what the lineup lights (`ResonanceService`)
+    /// and the nearest thing one more unit would light. It was a Lineup
+    /// panel over a Team Bonuses panel, and once the faces were one row the
+    /// Lineup panel was about 105 points, under `Chrome.paintedPanelMinimum`:
+    /// it fell back to the drawn plate and stood on the painted one below it,
+    /// two materials in one rail, and the pair ran into the foot fade (run
+    /// 220). One panel saves a header, a padding and a gap.
+    private var teamPanel: some View {
+        let lit = ResonanceService.active(for: selectedUnits.map(\.blueprint))
+        let count = "\(selected.count)/\(maxSize)"
+        return SectionPanel(title: "Lineup", accessory: lit.isEmpty ? count : "\(count) · \(lit.count) lit") {
+            VStack(alignment: .leading, spacing: 5) {
+                faces
+                Rectangle()
+                    .fill(Theme.stroke.opacity(0.7))
+                    .frame(height: 1)
+                bonuses
+                    // The words end 20 points in from the panel's right edge,
+                    // clear of the acanthus corners (about 18 points), and the
+                    // last line stands above the bottom pair: the hint printed
+                    // across both on run 220.
+                    .padding(.trailing, 12)
+                    .padding(.bottom, 4)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
     /// The team as FACES in one row on one top line, every slot shown, the
     /// leader crowned — the briefing's "Your team" row that opens this
     /// screen, the same tiles. It was 58-point name cards in an adaptive
@@ -107,95 +136,97 @@ struct TeamPickerView: View {
     /// border, a full team wrapped to a second row of one, and the panel's
     /// 150 points pushed the resonance off the rail (run 217). The names
     /// are on the roster's cards beside it, the selected ones rimmed.
-    private var lineup: some View {
-        SectionPanel(title: "Lineup", accessory: "\(selected.count)/\(maxSize)") {
-            let lineupUnits = selectedUnits
-            HStack(alignment: .top, spacing: Self.faceGap) {
-                ForEach(lineupUnits.indices, id: \.self) { index in
-                    let unit = lineupUnits[index]
-                    UnitPortraitTile(unit: unit, size: face, isLeader: index == 0)
-                        .onTapGesture { toggle(unit.id) }
-                }
-                ForEach(0..<max(0, maxSize - lineupUnits.count), id: \.self) { _ in
-                    EmptyUnitSlot(size: face, onGlass: false)
-                }
-                Spacer(minLength: 0)
+    private var faces: some View {
+        let lineupUnits = selectedUnits
+        return HStack(alignment: .top, spacing: Self.faceGap) {
+            ForEach(lineupUnits.indices, id: \.self) { index in
+                let unit = lineupUnits[index]
+                UnitPortraitTile(unit: unit, size: face, isLeader: index == 0)
+                    .onTapGesture { toggle(unit.id) }
             }
-            // Room over the leader's crown under the header, and the faces'
-            // feet above the panel's acanthus corners, which reach about 18
-            // points up from its foot.
-            .padding(.top, 3)
-            .padding(.bottom, 12)
-            .frame(maxWidth: .infinity, alignment: .leading)
+            ForEach(0..<max(0, maxSize - lineupUnits.count), id: \.self) { _ in
+                EmptyUnitSlot(size: face, onGlass: false)
+            }
+            Spacer(minLength: 0)
         }
+        // Room over the leader's crown under the header.
+        .padding(.top, 3)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// Everything the composition gives, in ONE panel: the leader's skill
-    /// and how many it reaches, what the lineup lights (`ResonanceService`)
-    /// with each line's words, and the nearest thing one more unit would
-    /// light. It was two panels, and on a phone the second sat below the
-    /// fold under the Save plate with only its title showing (run 162's
-    /// frame); one panel of rows fits above it with a resonance lit.
+    /// The rows under the faces: the leader's skill and how many it reaches,
+    /// each lit resonance with its words, and the hint — every one behind a
+    /// glyph in the same 14-point column, so no line starts at the panel's
+    /// edge. An empty lineup says how the screen works instead, which also
+    /// keeps the panel tall enough for its painting.
     @ViewBuilder
-    private var bonusesPanel: some View {
+    private var bonuses: some View {
         let blueprints = selectedUnits.map(\.blueprint)
         let lit = ResonanceService.active(for: blueprints)
         let hint = ResonanceService.hint(for: blueprints, maxSize: maxSize)
-        if let leader = selectedUnits.first {
-            SectionPanel(title: "Team bonuses", accessory: lit.isEmpty ? nil : "\(lit.count) lit") {
-                VStack(alignment: .leading, spacing: 6) {
-                    bonusRow(glyph: "crown.fill") {
-                        if let leaderSkill = leader.blueprint.leaderSkill {
-                            let affected = selectedUnits.filter { leaderSkill.applies(to: $0.blueprint) }.count
-                            Text("LEADER · \(affected) OF \(selectedUnits.count)")
-                                .font(Theme.title(11))
-                                .tracking(0.8)
-                                .foregroundStyle(affected > 1 ? Theme.goldDeep : Theme.textSecondary)
-                            Text(leaderSkill.description)
-                                .font(Theme.body(10))
-                                .foregroundStyle(Theme.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        } else {
-                            Text("LEADER")
-                                .font(Theme.title(11))
-                                .tracking(0.8)
-                                .foregroundStyle(Theme.textSecondary)
-                            Text("\(leader.name) has no leader skill. Any unit can lead; only the bonus is lost.")
-                                .font(Theme.body(10))
-                                .foregroundStyle(Theme.textSecondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    ForEach(lit) { resonance in
-                        bonusRow(glyph: resonance.kind.glyph) {
-                            Text(resonance.displayName.uppercased())
-                                .font(Theme.title(11))
-                                .tracking(0.8)
-                                .foregroundStyle(Theme.goldDeep)
-                            Text(resonance.line)
-                                .font(Theme.body(10))
-                                .foregroundStyle(Theme.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    if let hint {
-                        Text(hint)
+        VStack(alignment: .leading, spacing: 6) {
+            if let leader = selectedUnits.first {
+                bonusRow(glyph: "crown.fill") {
+                    if let leaderSkill = leader.blueprint.leaderSkill {
+                        let affected = selectedUnits.filter { leaderSkill.applies(to: $0.blueprint) }.count
+                        Text("LEADER · \(affected) OF \(selectedUnits.count)")
+                            .font(Theme.title(11))
+                            .tracking(0.8)
+                            .foregroundStyle(affected > 1 ? Theme.goldDeep : Theme.textSecondary)
+                        Text(leaderSkill.description)
+                            .font(Theme.body(10))
+                            .foregroundStyle(Theme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text("LEADER")
+                            .font(Theme.title(11))
+                            .tracking(0.8)
+                            .foregroundStyle(Theme.textSecondary)
+                        Text("\(leader.name) has no leader skill. Any unit can lead; only the bonus is lost.")
                             .font(Theme.body(10))
                             .foregroundStyle(Theme.textSecondary)
                             .fixedSize(horizontal: false, vertical: true)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                bonusRow(glyph: "crown.fill", tint: Theme.goldDim) {
+                    Text("Tap units on the right to add them. The first one you pick leads the team.")
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            ForEach(lit) { resonance in
+                bonusRow(glyph: resonance.kind.glyph) {
+                    Text(resonance.displayName.uppercased())
+                        .font(Theme.title(11))
+                        .tracking(0.8)
+                        .foregroundStyle(Theme.goldDeep)
+                    Text(resonance.line)
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if let hint {
+                bonusRow(glyph: "plus.circle", tint: Theme.goldDim) {
+                    Text(hint)
+                        .font(Theme.body(10))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     /// One bonus: its glyph in gold, and its name over its words.
-    private func bonusRow<Content: View>(glyph: String, @ViewBuilder content: () -> Content) -> some View {
+    private func bonusRow<Content: View>(glyph: String, tint: Color = Theme.gold,
+                                         @ViewBuilder content: () -> Content) -> some View {
         HStack(alignment: .top, spacing: 6) {
             Image(systemName: glyph)
                 .font(.system(size: 11, weight: .black))
-                .foregroundStyle(Theme.gold)
+                .foregroundStyle(tint)
                 .frame(width: 14)
             VStack(alignment: .leading, spacing: 2, content: content)
         }

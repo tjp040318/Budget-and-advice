@@ -774,8 +774,17 @@ enum StageBuilder {
             return Grade(saturation: 0.98, contrast: 0.14, exposure: -0.1, vignette: 0.42)
         case .colossusVault:
             return Grade(saturation: 0.98, contrast: 0.12, exposure: -0.05, vignette: 0.4)
+        // The sunlit marble sets, pulled down (run 220): Olympus measured
+        // 152 / 152 / 120 over its three bands at +0.05 against a 70–130
+        // target, pale floor and sky round figures with little left to stand
+        // out by. Its painting asks for nothing (+0.02 of compensation), so
+        // the grade is the whole lever, and the 1.85 white point's shoulder
+        // makes it a weak one near the top: a model of that curve on the
+        // frame put −0.30 at about 140 and −0.55 at 126–132 depending on the
+        // curve, the near floor near 100 — so −0.55. The Aegean cliffs share
+        // it; their darker painting adds +0.15 back.
         case .olympusGate, .aegeanCliffs:
-            return Grade(saturation: 0.98, contrast: 0.08, exposure: 0.05, vignette: 0.24)
+            return Grade(saturation: 0.98, contrast: 0.08, exposure: -0.55, vignette: 0.24)
         case .lernaMarsh, .hydraLair, .yggdrasilRoots:
             return Grade(saturation: 0.94, contrast: 0.12, exposure: -0.05, vignette: 0.38)
         case .midgardFjord:

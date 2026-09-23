@@ -76,7 +76,7 @@ struct SummonView: View {
                 }
             }
             .fullScreenCover(isPresented: .constant(!revealResults.isEmpty)) {
-                SummonRevealView(results: revealResults) {
+                SummonRevealView(results: revealResults, scroll: selectedBanner.scroll) {
                     revealResults = []
                 }
             }

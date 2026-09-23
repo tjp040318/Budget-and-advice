@@ -133,11 +133,25 @@ final class UnitPlateOverlay: SKScene {
         for item in work { item() }
     }
 
+    /// The plates' layer and, over it, the floating words and numbers'
+    /// (run 220: the numbers were 3D planes drawn UNDER this overlay, so a
+    /// plate covered "810!" and "373" and sat across "Red Land Blaze").
+    /// Two layers so the reckoning can fade the whole field's chrome as one.
+    private let plateLayer = SKNode()
+    private let floatLayer = SKNode()
+    /// The words and numbers in flight. Render thread only: added through
+    /// `perform`, moved and retired by `BattleSceneController.layoutFloats`.
+    private(set) var floats: [FloatingLabel] = []
+
     override init(size: CGSize) {
         super.init(size: size)
         backgroundColor = .clear
         scaleMode = .resizeFill
         isUserInteractionEnabled = false
+        plateLayer.zPosition = 0
+        addChild(plateLayer)
+        floatLayer.zPosition = 100
+        addChild(floatLayer)
     }
 
     required init?(coder: NSCoder) { fatalError("UnitPlateOverlay is created in code") }
@@ -150,8 +164,55 @@ final class UnitPlateOverlay: SKScene {
         let plate = UnitPlate(elementHex: elementHex)
         plate.host = self
         plates[id] = plate
-        perform { [weak self] in self?.addChild(plate) }
+        perform { [weak self] in self?.plateLayer.addChild(plate) }
         return plate
+    }
+
+    /// A word or a number off a unit, over every plate. The picture is drawn
+    /// by the caller; the node is made and placed on the render thread.
+    func addFloat(image: UIImage, over unit: UnitNode, lift: Float, lead: CGFloat, pop: Bool, scatter: CGFloat, rise: CGFloat) {
+        let anchor = unit.convertPosition(SCNVector3(0, lift, 0), to: nil)
+        let born = CACurrentMediaTime()
+        perform { [weak self] in
+            guard let self else { return }
+            let sprite = SKSpriteNode(texture: SKTexture(image: image))
+            sprite.size = image.size
+            sprite.alpha = 0
+            let label = FloatingLabel(
+                node: sprite, unit: unit, lift: lift, fallback: anchor,
+                born: born, pop: pop, scatter: scatter, lead: lead, rise: rise
+            )
+            self.floatLayer.addChild(sprite)
+            self.floats.append(label)
+        }
+    }
+
+    /// Takes the finished words off the field. Render thread.
+    func retireFloats(_ finished: [FloatingLabel]) {
+        guard !finished.isEmpty else { return }
+        for label in finished { label.node.removeFromParent() }
+        floats.removeAll { label in finished.contains { $0 === label } }
+    }
+
+    func removeAllFloats() {
+        perform { [weak self] in
+            guard let self else { return }
+            for label in self.floats { label.node.removeFromParent() }
+            self.floats.removeAll()
+        }
+    }
+
+    /// The whole field's chrome — every plate and every floating word —
+    /// faded out while the reckoning is up (run 220: three plates showed
+    /// through its scrim under the TURNS/DEALT/TAKEN tiles), and back.
+    func setFieldHidden(_ hidden: Bool) {
+        perform { [weak self] in
+            guard let self else { return }
+            for layer in [self.plateLayer, self.floatLayer] {
+                layer.removeAction(forKey: "field")
+                layer.run(.fadeAlpha(to: hidden ? 0 : 1, duration: 0.25), withKey: "field")
+            }
+        }
     }
 
     func removePlate(for id: UUID) {
@@ -164,6 +225,87 @@ final class UnitPlateOverlay: SKScene {
         let gone = Array(plates.values)
         plates.removeAll()
         perform { for plate in gone { plate.removeFromParent() } }
+    }
+}
+
+/// One floating word or number (2026-09-23, run 220), in points on the
+/// overlay rather than a plane in the 3D scene: a fixed size whatever the
+/// camera does — a zoom made a crit 75 points tall and ran it off the top —
+/// and drawn over the plates rather than under them. Its motion is worked
+/// out from its age on every frame (`BattleSceneController.layoutFloats`),
+/// so the clamp to the frame can be applied to where it really is.
+final class FloatingLabel {
+    /// Pop, rise and fade, in seconds: the pop's overshoot and settle, then
+    /// the second the 3D numbers took to rise, the last half of it fading.
+    static let popTime: TimeInterval = 0.13
+    static let riseTime: TimeInterval = 1.0
+    static let fadeTime: TimeInterval = 0.5
+
+    let node: SKSpriteNode
+    /// The unit it came off, followed while it lives — a victim's recoil, a
+    /// caster's leap — and the point it was raised from once it is gone.
+    weak var unit: UnitNode?
+    let lift: Float
+    let fallback: SCNVector3
+    let born: TimeInterval
+    let pop: Bool
+    /// Points sideways off the anchor, so a multi-hit reads as a burst.
+    let scatter: CGFloat
+    /// Points above the anchor it starts at, and how far it rises from there.
+    let lead: CGFloat
+    let rise: CGFloat
+
+    init(node: SKSpriteNode, unit: UnitNode?, lift: Float, fallback: SCNVector3,
+         born: TimeInterval, pop: Bool, scatter: CGFloat, lead: CGFloat, rise: CGFloat) {
+        self.node = node
+        self.unit = unit
+        self.lift = lift
+        self.fallback = fallback
+        self.born = born
+        self.pop = pop
+        self.scatter = scatter
+        self.lead = lead
+        self.rise = rise
+    }
+
+    var life: TimeInterval { (pop ? FloatingLabel.popTime : 0) + FloatingLabel.riseTime }
+
+    /// Where in the world it hangs this frame.
+    var anchor: SCNVector3 {
+        guard let unit else { return fallback }
+        let feet = unit.worldPosition
+        return SCNVector3(feet.x, feet.y + lift, feet.z)
+    }
+
+    /// The pop: from a third of its size past full and back, the genre's
+    /// number landing; 1 for a word, which fades in instead.
+    func scale(at age: TimeInterval) -> CGFloat {
+        guard pop else { return 1 }
+        let grow = 0.07
+        if age < grow {
+            let t = CGFloat(age / grow)
+            let eased = 1 - (1 - t) * (1 - t)
+            return 0.35 + (1.12 - 0.35) * eased
+        }
+        if age < FloatingLabel.popTime {
+            let t = CGFloat((age - grow) / (FloatingLabel.popTime - grow))
+            return 1.12 - 0.12 * t
+        }
+        return 1
+    }
+
+    /// How far it has risen, in points: eased out over the rise.
+    func risen(at age: TimeInterval) -> CGFloat {
+        let start = pop ? FloatingLabel.popTime : 0
+        let t = CGFloat(min(1, max(0, (age - start) / FloatingLabel.riseTime)))
+        return rise * (1 - (1 - t) * (1 - t))
+    }
+
+    func alpha(at age: TimeInterval) -> CGFloat {
+        let fadeFrom = life - FloatingLabel.fadeTime
+        if age > fadeFrom { return CGFloat(max(0, 1 - (age - fadeFrom) / FloatingLabel.fadeTime)) }
+        if !pop, age < 0.1 { return CGFloat(age / 0.1) }
+        return 1
     }
 }
 

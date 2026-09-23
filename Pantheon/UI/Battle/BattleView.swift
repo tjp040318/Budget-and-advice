@@ -1,6 +1,7 @@
 import Foundation
 import SceneKit
 import SwiftUI
+import UIKit
 
 /// The battle screen: 3D stage underneath, HUD on top.
 ///
@@ -40,6 +41,11 @@ struct BattleView: View {
     /// at all.
     @State private var previewSlot: Int?
 
+    /// The acting player unit's matchup against each living boss, told by
+    /// the scene as each turn opens (`BattleSceneController.onBossMatchups`)
+    /// and drawn as the arrow beside the boss's name in its bar — a boss's
+    /// 3D arrow landed on its body (run 220).
+    @State private var bossMatchups: [UUID: Element.Matchup] = [:]
 
     var body: some View {
         ZStack {
@@ -77,6 +83,12 @@ struct BattleView: View {
             .padding(.horizontal, 8)
             .padding(.top, 4)
             .padding(.bottom, 8)
+            // The reckoning takes the field: the chips, the controls and the
+            // skills fade with its arrival (it is set inside an animation)
+            // rather than showing through its scrim, as they did in run 220
+            // behind the VICTORY wordmark and under its tiles.
+            .opacity(summary == nil ? 1 : 0)
+            .allowsHitTesting(summary == nil)
 
             // The frame goes white for a beat as an ultimate's cut-in lands.
             Color.white
@@ -104,7 +116,7 @@ struct BattleView: View {
                     }
             }
 
-            if showLog { logOverlay }
+            if showLog, summary == nil { logOverlay }
 
             if let heldSkill {
                 skillCard(heldSkill, actor: model.awaitingActor)
@@ -141,13 +153,20 @@ struct BattleView: View {
         }
         .preferredColorScheme(.dark)
         .onAppear {
+            // A binding, not the view: the controller is the model's, and a
+            // closure holding the model would keep the whole fight alive.
+            let matchups = $bossMatchups
+            model.sceneController.onBossMatchups = { matchups.wrappedValue = $0 }
             model.begin()
             // A chapter boss or a raid says its one line as the fight opens;
             // every other stage returns from this without doing anything.
             model.announceBoss(ifPresentIn: model.displayedCombatants)
             AudioLibrary.shared.playMusic(.battle)
         }
-        .onDisappear { AudioLibrary.shared.playMusic(.island) }
+        .onDisappear {
+            model.sceneController.onBossMatchups = nil
+            AudioLibrary.shared.playMusic(.island)
+        }
         // A new actor means the old one's skill preview is meaningless.
         .onChange(of: model.awaitingActor?.id) { _, _ in previewSlot = nil }
         .onChange(of: model.outcome?.outcome) { _, newValue in
@@ -157,7 +176,10 @@ struct BattleView: View {
                 // On a repeat run this banks the loot and starts the next
                 // fight instead of returning a panel.
                 if let concluded = model.conclude() {
+                    // The plates and the floating numbers go with the HUD.
+                    model.sceneController.setPlatesHidden(true)
                     withAnimation(.easeOut(duration: 0.35)) {
+                        heldSkill = nil
                         summary = concluded
                     }
                 }
@@ -518,7 +540,16 @@ struct BattleView: View {
                     .tracking(1.4)
                     .foregroundStyle(.white)
                     .lineLimit(1)
+                    .layoutPriority(1)
                     .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
+                // The genre's arrow for the unit whose turn it is, beside the
+                // name: green up, yellow even, red down.
+                if let matchup = bossMatchups[boss.id] {
+                    Image(uiImage: MatchupIconRenderer.image(for: matchup))
+                        .resizable()
+                        .frame(width: 18, height: 18)
+                        .accessibilityLabel(matchupWord(matchup))
+                }
                 if let weakness = model.raidWeakness(boss.id) {
                     Chip(text: "Open to \(weakness.displayName)", systemImage: weakness.glyph, tint: weakness.color)
                 }
@@ -563,6 +594,15 @@ struct BattleView: View {
         .allowsHitTesting(false)
     }
 
+    /// The boss bar's arrow in words, for VoiceOver.
+    private func matchupWord(_ matchup: Element.Matchup) -> String {
+        switch matchup {
+        case .advantage: return "Strong against the boss"
+        case .neutral: return "Even against the boss"
+        case .disadvantage: return "Weak against the boss"
+        }
+    }
+
     /// An ultimate's announcement: a dark band across the field, the
     /// caster's card sliding in from the left and the skill's name from the
     /// right, gone in a second.
@@ -602,9 +642,12 @@ struct BattleView: View {
                         // an eighty-character one runs straight out of the 84pt
                         // band. It is set smaller, allowed three lines and given
                         // a width to wrap inside.
+                        // Pale gold on the dark band (a line of speech cream):
+                        // `textPrimary` is the cream UI's INK, and run 220's
+                        // "BREATH OF PLAGUE" was near-black on near-black.
                         Text(cutIn.skillName)
                             .font(cutIn.isSpeech ? Theme.title(15) : Theme.display(26))
-                            .foregroundStyle(Theme.textPrimary)
+                            .foregroundStyle(cutIn.isSpeech ? Theme.onGlass : Theme.onGlassGold)
                             // Every one of these is written so that it is the
                             // no-op it used to be when this is not speech: the
                             // ultimate's announcement must look exactly as it did.

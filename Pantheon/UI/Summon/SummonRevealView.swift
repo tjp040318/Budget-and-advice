@@ -11,13 +11,30 @@ import UIKit
 /// instantly, a tap after it advances.
 struct SummonRevealView: View {
     let results: [SummonResult]
+    /// The scroll the summon spent, drawn in the charge. Nil infers one from
+    /// the result (`scrollShown`), and an awakening draws none.
+    var scroll: ScrollType? = nil
     let onFinish: () -> Void
 
     @State private var index = 0
     @State private var showAll = false
 
-    // The staged reveal, in order.
-    @State private var charging = false
+    // The staged reveal, in order. `charging` starts TRUE so the very first
+    // frame, drawn before the stage has been built, is already the charge.
+    @State private var charging = true
+    /// When the charge's clock started: the moment its stage finished
+    /// building (`stageReady`). Nil while the stage is still being built, and
+    /// the charge holds its opening pose until then.
+    @State private var chargeStart: Date?
+    /// How long this charge runs: 1.25 s for a 4★ or better, 0.8 s under.
+    @State private var chargeDuration: TimeInterval = 1.25
+    /// The sequence whose charge is waiting on its stage to be built.
+    @State private var awaitingStage: Int?
+    /// The stage in the view tree (`stageKey`). It goes in a beat AFTER the
+    /// reveal's first frame, so that frame is the charge, not a stall.
+    @State private var mountedStage: String?
+    /// The stage that has finished building.
+    @State private var readyStage: String?
     @State private var flash: Double = 0
     @State private var revealed = false
     @State private var shownStars = 0
@@ -40,10 +57,26 @@ struct SummonRevealView: View {
 
             // The set fills the screen edge to edge behind the words: an
             // inset view showed its own rectangle where the floor stopped.
+            //
+            // Keyed on WHAT is on the beam (`stageKey`), never on the
+            // result's UUID (run 220). The tour builds its result in its own
+            // body, so every re-render of the tour minted a new UUID, and
+            // `.id(current.id)` tore the stage down and built it again: four
+            // builds of Sekhmet in one reveal, 1.4 s, 2.1 s and 0.4 s of
+            // main thread, and the 3-second frame fell inside the second —
+            // an empty dusk with only Skip on it.
             if !showAll, let current {
-                SummonStageView(result: current, revealed: revealed)
-                    .id(current.id)
-                    .ignoresSafeArea()
+                let key = stageKey(current)
+                if mountedStage == key {
+                    SummonStageView(result: current, revealed: revealed, onReady: { stageReady(key) })
+                        .id(key)
+                        .ignoresSafeArea()
+                }
+                // The charge stands OVER the set, where the figure will
+                // land, so it reads whether the set has drawn yet or not.
+                if charging {
+                    chargeLayer(current)
+                }
             }
 
             if showAll {
@@ -205,6 +238,263 @@ struct SummonRevealView: View {
     private static let duskGround = Color(hex: "#15110F")
     private static let duskInk = Color(hex: "#D9CDB3")
 
+    // MARK: - The charge
+
+    /// The anticipation beat, drawn in SwiftUI over the set (2026-09-23).
+    ///
+    /// Run 220's frame three seconds into a 5★ summon was the dusk and Skip
+    /// and nothing else: the charge was a gathering of the rarity glow
+    /// BEHIND a stage that had not drawn yet. The genre never shows an empty
+    /// beat — Summoners War's scroll burns over its circle in a pillar of
+    /// light before the monster steps out — so this is the same: the scroll
+    /// the player spent (the painting the summon room hangs over its ring)
+    /// in front of two rune rings turning opposite ways in the element's
+    /// colour, a beam rising from the floor where the feet will land, motes
+    /// climbing it, and a white flare in the last quarter that the flash
+    /// takes over. The grade sets the scale (`grandeur`): a 3★'s rings are
+    /// dim and slow and its beam thin, a 5★'s are bright, fast and wide.
+    ///
+    /// No blend modes: this layer sits over the SceneKit view, and a blend
+    /// against a platform view is not something to find out on the phone.
+    /// The rings are the painted `rune_ring` (runes on black) used as a
+    /// MASK by luminance over the element's colour, so the black is simply
+    /// absent. Everything is a pure function of the charge's clock, read off
+    /// a `TimelineView`, so a stale animation cannot retarget it.
+    private func chargeLayer(_ result: SummonResult) -> some View {
+        GeometryReader { frame in
+            TimelineView(.animation) { timeline in
+                chargeScene(result, clock: chargeClock(at: timeline.date), size: frame.size)
+            }
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+    }
+
+    /// Seconds since the charge's clock started; zero while the stage is
+    /// still being built, which holds the opening pose.
+    private func chargeClock(at date: Date) -> TimeInterval {
+        guard let chargeStart else { return 0 }
+        return max(0, date.timeIntervalSince(chargeStart))
+    }
+
+    private func chargeScene(_ result: SummonResult, clock: TimeInterval, size: CGSize) -> some View {
+        let grand: CGFloat = Self.grandeur(stars: result.stars)
+        let colour: Color = result.blueprint.element.color
+        let span: TimeInterval = max(0.1, chargeDuration)
+        // Held (the CI's charge frame) at seven tenths of the way: the
+        // rings and the motes keep turning, the gathering stops short of the
+        // flare.
+        let gathered: TimeInterval = Self.holdsCharge ? min(clock, span * 0.7) : clock
+        let progress: CGFloat = CGFloat(min(1, gathered / span))
+        let rest: CGFloat = 1 - progress
+        let gather: CGFloat = 1 - rest * rest * rest
+        let flare: CGFloat = max(0, (progress - 0.72) / 0.28)
+
+        // The figure's line and height, as the stage's camera is solved
+        // (`SummonStageView.frameCamera`): its centre line 26% in from the
+        // left, its feet 7% above the bottom edge, its heart a little above
+        // the frame's middle.
+        let height: CGFloat = size.height
+        let x: CGFloat = size.width * SummonStageView.figureLine
+        let feet: CGFloat = height * 0.93
+        let heart: CGFloat = height * 0.42
+
+        let beamWidth: CGFloat = height * (0.10 + 0.10 * grand)
+        let beamHeight: CGFloat = feet * (0.30 + 0.70 * gather)
+        let ringSize: CGFloat = height * (0.44 + 0.18 * grand)
+        let turn: Double = clock * Double(24 + 36 * grand)
+        let side: CGFloat = height * (0.24 + 0.07 * grand)
+        let bob: CGFloat = CGFloat(sin(clock * 2.6)) * 4 * rest
+        let motes: Int = 4 + Int((8 * grand).rounded())
+
+        return ZStack {
+            // A pool of the element's light on the floor under the feet.
+            Circle()
+                .fill(RadialGradient(
+                    colors: [colour.opacity(0.85), colour.opacity(0.25), colour.opacity(0)],
+                    center: .center, startRadius: 0, endRadius: height * 0.20
+                ))
+                .frame(width: height * 0.40, height: height * 0.40)
+                .scaleEffect(x: 1 + 0.4 * grand, y: 0.22)
+                .opacity(Double(0.45 + 0.45 * gather))
+                .position(x: x, y: feet)
+
+            // The beam, rising from the floor as the charge gathers.
+            chargeBeam(colour: colour)
+                .frame(width: beamWidth, height: beamHeight)
+                .opacity(Double((0.40 + 0.35 * grand) * (0.9 + 0.1 * flare)))
+                .position(x: x, y: feet - beamHeight / 2)
+
+            // Two rings, turning opposite ways, closing in as it gathers.
+            chargeRing(colour: colour, diameter: ringSize)
+                .scaleEffect(1.10 - 0.12 * gather)
+                .rotationEffect(.degrees(turn))
+                .opacity(Double(0.50 + 0.40 * grand))
+                .position(x: x, y: heart)
+            chargeRing(colour: colour, diameter: ringSize * 0.62)
+                .scaleEffect(1.10 - 0.12 * gather)
+                .rotationEffect(.degrees(-turn * 1.6))
+                .opacity(Double(0.36 + 0.40 * grand))
+                .position(x: x, y: heart)
+
+            // Motes climbing the beam.
+            ForEach(0..<motes, id: \.self) { mote in
+                chargeMote(mote, clock: clock, grand: grand, colour: colour)
+                    .position(Self.motePoint(mote, clock: clock, grand: grand, x: x, feet: feet, spread: beamWidth))
+            }
+
+            // The flare the flash takes over.
+            Circle()
+                .fill(RadialGradient(
+                    colors: [Color.white.opacity(0.9), colour.opacity(0.4), colour.opacity(0)],
+                    center: .center, startRadius: 0, endRadius: side * 0.9
+                ))
+                .frame(width: side * 1.8, height: side * 1.8)
+                .scaleEffect(0.6 + 0.8 * flare)
+                .opacity(Double(flare * (0.45 + 0.45 * grand)))
+                .position(x: x, y: heart)
+
+            // The scroll itself, straightening and swelling in the light.
+            chargeScroll(result, side: side, colour: colour)
+                .rotationEffect(.degrees(-12 * Double(rest)))
+                .scaleEffect(1 + 0.16 * gather)
+                .shadow(color: colour.opacity(0.85), radius: side * (0.08 + 0.14 * gather))
+                .position(x: x, y: heart + bob)
+        }
+        .frame(width: size.width, height: size.height)
+    }
+
+    /// 0 for a 3★ or under, 0.5 for a 4★, 1 for a 5★ or better.
+    private static func grandeur(stars: Int) -> CGFloat {
+        CGFloat(min(2, max(0, stars - 3))) / 2
+    }
+
+    /// A column of light: white at its core, the element's colour either
+    /// side, clear at the edges, fading out toward its top.
+    private func chargeBeam(colour: Color) -> some View {
+        LinearGradient(
+            stops: [
+                .init(color: colour.opacity(0), location: 0),
+                .init(color: colour.opacity(0.55), location: 0.28),
+                .init(color: Color.white.opacity(0.9), location: 0.5),
+                .init(color: colour.opacity(0.55), location: 0.72),
+                .init(color: colour.opacity(0), location: 1),
+            ],
+            startPoint: .leading, endPoint: .trailing
+        )
+        .mask {
+            LinearGradient(colors: [Color.white.opacity(0), Color.white, Color.white],
+                           startPoint: .top, endPoint: .bottom)
+        }
+    }
+
+    /// The painted rune ring in the element's colour: the painting's
+    /// luminance is the mask, so its black ground draws nothing. The
+    /// contrast first drops the painting's soft halos between the bands,
+    /// which as a mask filled the ring into one flat disc (judged on a mock
+    /// at the charge's own fractions, 2026-09-23).
+    @ViewBuilder
+    private func chargeRing(colour: Color, diameter: CGFloat) -> some View {
+        if BundleImage.exists("rune_ring") {
+            colour
+                .frame(width: diameter, height: diameter)
+                .mask {
+                    BundleImage(name: "rune_ring", renderedAt: diameter)
+                        .aspectRatio(contentMode: .fit)
+                        .contrast(1.6)
+                        .luminanceToAlpha()
+                }
+                .shadow(color: colour.opacity(0.9), radius: 6)
+        } else {
+            Circle()
+                .strokeBorder(colour.opacity(0.85), style: StrokeStyle(lineWidth: 2, dash: [6, 10]))
+                .frame(width: diameter, height: diameter)
+        }
+    }
+
+    /// The scroll spent, as the summon room hangs it; an awakening spends
+    /// none and gathers the unit's own light instead.
+    @ViewBuilder
+    private func chargeScroll(_ result: SummonResult, side: CGFloat, colour: Color) -> some View {
+        if let spent = scrollShown(for: result), ItemArt.hasPainting(ItemArt.key(scroll: spent)) {
+            ItemIcon(key: ItemArt.key(scroll: spent), size: side, glow: false)
+                // The painted scrolls carry a ragged rim of their sheet's
+                // dark ground; the summon room's feathered capsule along the
+                // roll's diagonal lets it go (`SummoningCircle`).
+                .mask {
+                    Capsule()
+                        .frame(width: side * 1.34, height: side * 0.44)
+                        .rotationEffect(.degrees(-45))
+                        .blur(radius: side * 0.025)
+                }
+        } else if let spent = scrollShown(for: result) {
+            Image(systemName: spent.glyph)
+                .font(.system(size: side * 0.4, weight: .black))
+                .foregroundStyle(colour)
+        } else {
+            Circle()
+                .fill(RadialGradient(
+                    colors: [Color.white, colour.opacity(0.8), colour.opacity(0)],
+                    center: .center, startRadius: 0, endRadius: side * 0.45
+                ))
+                .frame(width: side * 0.9, height: side * 0.9)
+        }
+    }
+
+    /// The scroll to draw: the one the caller named, else the one the result
+    /// must have come from (light and dark only from the Light & Dark
+    /// scroll, a featured unit from a pantheon's banner), and none for an
+    /// awakening, which spends no scroll.
+    private func scrollShown(for result: SummonResult) -> ScrollType? {
+        if result.isAwakening { return nil }
+        if let scroll { return scroll }
+        switch result.blueprint.element {
+        case .radiance, .umbra: return .lightDark
+        default: return result.isFeatured ? .pantheonic : .mystical
+        }
+    }
+
+    /// How far up the beam a mote is, 0 at the floor to 1 at the top.
+    private static func moteRise(_ mote: Int, clock: TimeInterval, grand: CGFloat) -> CGFloat {
+        let speed: Double = 0.55 + 0.30 * Double(grand)
+        let phase: Double = Double(mote) * 0.618
+        return CGFloat((clock * speed + phase).truncatingRemainder(dividingBy: 1))
+    }
+
+    private static func motePoint(_ mote: Int, clock: TimeInterval, grand: CGFloat,
+                                  x: CGFloat, feet: CGFloat, spread: CGFloat) -> CGPoint {
+        let rise: CGFloat = moteRise(mote, clock: clock, grand: grand)
+        let sway: CGFloat = CGFloat(sin(Double(mote) * 2.3 + clock * 1.9))
+        return CGPoint(x: x + sway * spread * 0.8, y: feet - rise * feet * 0.85)
+    }
+
+    private func chargeMote(_ mote: Int, clock: TimeInterval, grand: CGFloat, colour: Color) -> some View {
+        let rise: CGFloat = Self.moteRise(mote, clock: clock, grand: grand)
+        let dot: CGFloat = 3 + 2 * grand + CGFloat(mote % 3)
+        let fade: CGFloat = min(1, rise * 5) * (1 - rise)
+        return ZStack {
+            Circle()
+                .fill(colour.opacity(0.55))
+                .frame(width: dot * 2.6, height: dot * 2.6)
+            Circle()
+                .fill(Color.white)
+                .frame(width: dot, height: dot)
+        }
+        .opacity(Double(fade))
+    }
+
+    /// `-tour-reveal-hold charge` (DEBUG only): the charge plays and never
+    /// lands, so the CI can photograph the beat whatever second it shoots.
+    private static var holdsCharge: Bool {
+        #if DEBUG
+        let args = ProcessInfo.processInfo.arguments
+        guard let at = args.firstIndex(of: "-tour-reveal-hold"), at + 1 < args.count else { return false }
+        return args[at + 1] == "charge"
+        #else
+        return false
+        #endif
+    }
+
     // MARK: - One at a time
 
     /// Landscape: the stage fills the left half and the words the right, so
@@ -280,15 +570,17 @@ struct SummonRevealView: View {
                             .foregroundStyle(Theme.gold)
                             .shadow(color: Theme.gold.opacity(0.9), radius: 6)
                     } else {
+                        // Cream on the dusk: the interface's ink-brown
+                        // secondary sat on the dark sky at about 2:1.
                         Text("Duplicate — one skill levelled up")
                             .font(Theme.body(12))
-                            .foregroundStyle(Theme.textSecondary)
+                            .foregroundStyle(Self.duskInk)
                     }
 
                     if result.fromPity {
                         Text("Guaranteed by pity")
                             .font(Theme.body(11))
-                            .foregroundStyle(Theme.textSecondary)
+                            .foregroundStyle(Self.duskInk)
                     }
                 }
                 .opacity(detailsShown ? 1 : 0)
@@ -334,6 +626,7 @@ struct SummonRevealView: View {
 
     private func completeInstantly(_ result: SummonResult) {
         charging = false
+        awaitingStage = nil
         revealed = true
         shownStars = result.stars
         nameSlam = true
@@ -341,14 +634,31 @@ struct SummonRevealView: View {
         flash = 0
     }
 
+    /// What is on the beam: the pull's place in the list, the family and
+    /// the form. Two pulls of the same family are two stages (the index),
+    /// and a re-render that hands over an equal result with a new UUID is
+    /// the same stage (see `body`).
+    private func stageKey(_ result: SummonResult) -> String {
+        "\(index)|\(result.blueprint.id)|\(result.isAwakening || result.unit.isAwakened)"
+    }
+
     /// The staged reveal. Every step checks it still belongs to the current
     /// sequence, so a skipped or advanced reveal cannot fire stale steps.
+    ///
+    /// The charge's CLOCK waits for the stage (2026-09-23). Building the set
+    /// and the figure is main-thread work (1.4 s on the CI's simulator for
+    /// an unparsed family), and a charge timed from `onAppear` spent that
+    /// time frozen: on the next pull of a ten-pull the build ate the whole
+    /// beat and the figure popped in with no anticipation at all. So the
+    /// stage goes into the tree a beat after this frame (the charge's
+    /// opening pose is what is on screen while it builds), tells
+    /// `stageReady` when it is done, and the beat starts then; a fallback
+    /// starts it anyway should that word never come.
     private func revealNext() {
         guard let result = current else { return }
         sequence += 1
         let mine = sequence
-        let stars = result.stars
-        let big = stars >= 4
+        let key = stageKey(result)
 
         charging = true
         revealed = false
@@ -356,12 +666,51 @@ struct SummonRevealView: View {
         nameSlam = false
         detailsShown = false
         flash = 0
+        chargeStart = nil
+        chargeDuration = Self.chargeTime(stars: result.stars)
+
+        // The next pull's figure parses on a background queue while this one
+        // is on the beam, so its stage clones from the cache.
+        if results.indices.contains(index + 1) {
+            ModelLibrary.shared.warm([results[index + 1].blueprint.model])
+        }
+
+        if readyStage == key {
+            beginCharge(mine)
+            return
+        }
+        awaitingStage = mine
+        if mountedStage != key {
+            after(0.05) {
+                guard let now = current, stageKey(now) == key else { return }
+                mountedStage = key
+            }
+        }
+        after(2.5) {
+            guard awaitingStage == mine else { return }
+            beginCharge(mine)
+        }
+    }
+
+    /// The stage has built its set and its figure.
+    private func stageReady(_ key: String) {
+        readyStage = key
+        guard let waiting = awaitingStage, waiting == sequence,
+              let current, stageKey(current) == key else { return }
+        beginCharge(waiting)
+    }
+
+    /// Starts the charge's clock and times the rest of the reveal from it.
+    private func beginCharge(_ mine: Int) {
+        guard mine == sequence, let result = current else { return }
+        awaitingStage = nil
+        chargeStart = Date()
+        let stars = result.stars
+        let big = stars >= 4
+        let chargeTime = Self.chargeTime(stars: stars)
 
         AudioLibrary.shared.play(.summonCharge, volume: big ? 1.0 : 0.7)
-
-        // The charge is longer for a high grade, on purpose. Anticipation is
-        // the reward; a 5★ should make the player wait a beat.
-        let chargeTime: TimeInterval = big ? 1.25 : 0.8
+        if Self.holdsCharge { return }
 
         after(chargeTime) {
             guard mine == sequence else { return }
@@ -395,6 +744,12 @@ struct SummonRevealView: View {
         }
     }
 
+    /// The charge is longer for a high grade, on purpose. Anticipation is
+    /// the reward; a 5★ should make the player wait a beat.
+    private static func chargeTime(stars: Int) -> TimeInterval {
+        stars >= 4 ? 1.25 : 0.8
+    }
+
     private func after(_ seconds: TimeInterval, _ body: @escaping () -> Void) {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: body)
     }
@@ -403,9 +758,11 @@ struct SummonRevealView: View {
 
     private var grid: some View {
         VStack(spacing: 12) {
+            // Carved gold on the dusk the grid stands on; the ink it was set
+            // in vanished against the sky.
             Text("Summoned")
                 .font(Theme.display(30))
-                .foregroundStyle(Theme.textPrimary)
+                .carved()
 
             ScrollView {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 4), spacing: 12) {
@@ -465,10 +822,14 @@ struct SummonRevealView: View {
             .shadow(color: rarity.glow.opacity(rarity.glowRadius > 0 ? 0.7 : 0), radius: rarity.glowRadius)
 
             StarRow(stars: result.stars, size: 8)
+            // Two lines, never an ellipsis: "The Unwrapped King" is wider
+            // than a 74-point tile.
             Text(result.blueprint.name)
-                .font(Theme.body(10))
-                .foregroundStyle(Theme.textSecondary)
-                .lineLimit(1)
+                .font(Theme.body(11))
+                .foregroundStyle(Self.duskInk)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }
@@ -481,6 +842,15 @@ struct SummonStageView: UIViewRepresentable {
     let result: SummonResult
     /// Flips true when the charge ends; the figure appears on the beam then.
     var revealed: Bool = true
+    /// Called once the set and the figure are built, on the next turn of
+    /// the main queue (after the frame that carries them is committed): the
+    /// reveal starts its charge's clock from here, not from `onAppear`.
+    var onReady: (() -> Void)? = nil
+
+    /// Where the figure's centre line stands, as a fraction of the width
+    /// from the left: the camera is solved for it (`frameCamera`) and the
+    /// reveal's SwiftUI charge is drawn on it.
+    static let figureLine: CGFloat = 0.26
 
     final class Coordinator {
         var figure: SCNNode?
@@ -753,6 +1123,9 @@ struct SummonStageView: UIViewRepresentable {
         camera.exposureOffset = FigureStageLighting.exposureOffset
 
         if revealed { show(context.coordinator) }
+        if let onReady {
+            DispatchQueue.main.async { onReady() }
+        }
         return view
     }
 
@@ -785,7 +1158,7 @@ struct SummonStageView: UIViewRepresentable {
         // keeps it square to the lens and the temple upright — the same reason
         // a view camera has a rising front.
         let halfWidth = coordinator.visibleHeight * aspect / 2
-        let x = halfWidth * (1 - 2 * 0.26)
+        let x = halfWidth * (1 - 2 * Float(Self.figureLine))
         // A push-in in flight would fight this; a re-frame only happens on a
         // real change of shape, and the framing is what matters then.
         cameraNode.removeAction(forKey: "push")

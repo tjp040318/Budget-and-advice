@@ -417,7 +417,26 @@ struct GuideOverlay: ViewModifier {
 /// a good idea, let's expand on that." This is the expansion — the tutorial
 /// stops being eight minutes that are spent once and becomes the manual. A
 /// lesson she has given can be read again for ever; one she has not is
-/// listed by name and greyed, so a player can see what the game still holds.
+/// listed by name and dimmed, so a player can see what the game still holds.
+///
+/// A DATA screen on the Missions board's shape (2026-09-23; the Counsel tab,
+/// run 220's frame 33): run 220 photographed it as seven 713-point cream bars
+/// with a 12-point seal, a short title and "Read again" in grey — about 80%
+/// of every row empty, no art, "a settings screen". So:
+///
+/// - a left column of CARDS: Athena herself in a dark socket with the count
+///   carved ("4 · OF 14 GIVEN") and a track of fourteen, and a card that says
+///   what the dimmed ones are;
+/// - the lessons as a TWO-COLUMN grid of raised marble plates under their
+///   topics, each with the painted door of the place it teaches in a bronze
+///   socket (`MedallionIcon`: the campaign, the circle, the collection, a
+///   relic cache …), its title at 14, one line of what it teaches, and a
+///   round gold "read again" plate with a chevron; a lesson to come is the
+///   same plate paler, its socket dimmed and locked, its words in the
+///   secondary ink at full strength (never paler words: run 217 read them at
+///   1.8:1) and no tap;
+/// - the grid ends in a fade above the home indicator, with room under the
+///   last plate to scroll it clear.
 struct LessonsView: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
@@ -426,10 +445,22 @@ struct LessonsView: View {
     /// as they are up to its cap.
     @State private var replayHeight: CGFloat = 120
 
+    /// The cards' column. 224 holds "ATHENA'S LESSONS" at 13 with its
+    /// tracking (149 of the 200 inside), her 84-point bust beside "OF 14
+    /// GIVEN" (94), and a track of fourteen 11-point segments; it leaves the
+    /// grid 490 on an iPhone 16 Pro, two plates of 241.
+    private static let cardColumn: CGFloat = 224
+    /// A lesson's socket, the Missions rows' 38 and a little: the plate is
+    /// 56 tall, and the socket fills it with eight points over and under.
+    private static let socketSize: CGFloat = 40
+    /// The round gold plate that reads a lesson again.
+    private static let readPlate: CGFloat = 26
+
     var body: some View {
-        // The screen strip, like every other menu in the game: the title and
-        // the count on the left behind a chevron, and her face at the right of
-        // the bar so it is plain whose words these are before one is opened.
+        // The strip, like every other menu in the game: the title and the
+        // count on the left behind the Back medallion. Her face stood at the
+        // strip's right as a cut-out on bare cream (run 220); it is on her
+        // card now, in a socket, so the strip carries nothing else.
         // "Lessons", the name on its door in More: it was "Athena's Counsel"
         // until run 217, which is also the Missions screen's Counsel tab — a
         // mission ladder — so two features answered to one name.
@@ -438,23 +469,15 @@ struct LessonsView: View {
             subtitle: "Athena's words, kept · \(read) of \(LessonBook.all.count) given",
             dismiss: { dismiss() }
         ) {
-            BundleImage(name: GuideFace.calm.imageName, renderedAt: ScreenChrome.control)
-                .aspectRatio(contentMode: .fit)
-                .frame(width: ScreenChrome.control, height: ScreenChrome.control)
-                .clipShape(Circle())
-                .overlay(Circle().strokeBorder(Theme.goldDim.opacity(0.55), lineWidth: 0.5))
+            EmptyView()
         } content: {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 14) {
-                    ForEach(LessonTopic.allCases) { topic in
-                        let lessons = LessonBook.all.filter { $0.topic == topic }
-                        if !lessons.isEmpty {
-                            section(topic, lessons)
-                        }
-                    }
-                }
-                .padding(16)
+            HStack(alignment: .top, spacing: 12) {
+                cards
+                    .frame(width: Self.cardColumn)
+                library
             }
+            .padding(.horizontal, ScreenChrome.contentPadding)
+            .padding(.top, 10)
             .overlay { if let replaying { card(replaying) } }
         }
     }
@@ -463,53 +486,327 @@ struct LessonsView: View {
         LessonBook.all.filter { store.hasReadLesson($0.id) }.count
     }
 
-    private func section(_ topic: LessonTopic, _ lessons: [Lesson]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(topic.title.uppercased())
-                .font(Theme.title(12))
-                .foregroundStyle(Theme.goldDeep)
-            ForEach(lessons) { lesson in
-                row(lesson)
+    // MARK: - The cards
+
+    /// Her card and the card for the ones still to come. The column scrolls
+    /// only if a short phone cannot hold it (about 290 of the 319 points an
+    /// iPhone 16 Pro gives it).
+    private var cards: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 10) {
+                athenaCard
+                comingCard
             }
+            .padding(.bottom, 12)
         }
     }
 
-    /// A lesson given, to read again; or one still to come, named so the
-    /// list shows what the game still holds. A lesson to come is READ as
-    /// one by its lock and its paler plate, never by paler words: run 217
-    /// drew those titles at about 1.8:1 on the cream (the words at 0.7 of
-    /// the secondary ink and `.disabled` dimming them again), which is a
-    /// list of names nobody can read. The words are the secondary ink at
-    /// full strength now (about 4.6:1), and a row to come takes no tap.
-    private func row(_ lesson: Lesson) -> some View {
-        let given = store.hasReadLesson(lesson.id)
-        return Button {
-            guard given else { return }
-            withAnimation { replaying = lesson }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: given ? "checkmark.seal.fill" : "lock.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(given ? Theme.gold : Theme.textSecondary.opacity(0.8))
-                Text(lesson.title)
-                    .font(Theme.body(12).weight(.semibold))
-                    .foregroundStyle(given ? Theme.textPrimary : Theme.textSecondary)
-                Spacer(minLength: 0)
-                if given {
-                    Text("Read again")
-                        .font(Theme.body(11))
-                        .foregroundStyle(Theme.textSecondary)
+    /// Athena presents her own words: her bust in the dark socket with the
+    /// gold rim the Counsel tab gives her, the count carved beside it, and one
+    /// segment per lesson, gold when given. Pleased once every one is.
+    private var athenaCard: some View {
+        let total = LessonBook.all.count
+        let given = read
+        let face: GuideFace = given >= total ? .pleased : .calm
+        return VStack(alignment: .leading, spacing: 8) {
+            cardHeader("Athena's lessons", tally: nil)
+            HStack(alignment: .center, spacing: 12) {
+                ZStack {
+                    Circle().fill(Theme.socketFill)
+                    BundleImage(name: face.imageName, renderedAt: 84)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 84, height: 84)
+                }
+                .frame(width: 84, height: 84)
+                .clipShape(Circle())
+                .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 1.5))
+                .shadow(color: Color.black.opacity(0.2), radius: 3, y: 2)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("\(given)")
+                        .font(Theme.display(34))
+                        .carved(glow: false)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text("OF \(total) GIVEN")
+                        .font(Theme.title(13))
+                        .tracking(1.0)
+                        .foregroundStyle(Theme.goldDim)
                         .lineLimit(1)
                         .fixedSize()
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 9)
-            .frame(maxWidth: .infinity)
-            .background(Theme.panel(Theme.tightCorner).opacity(given ? 1 : 0.6))
+            segmentTrack(filled: given, total: total)
+            Text(given == 0 ? "She has not spoken yet. Her first words come on the island."
+                            : "Tap one she has given to hear it again.")
+                .font(Theme.body(12))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
-        .buttonStyle(.plain)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(MarbleRowPlate(radius: Theme.cornerRadius))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// What the dimmed plates are, so a locked lesson never reads as a
+    /// broken button: she gives each one when its place first opens.
+    private var comingCard: some View {
+        let waiting = LessonBook.all.count - read
+        return VStack(alignment: .leading, spacing: 6) {
+            cardHeader(waiting > 0 ? "Still to come" : "Every lesson given",
+                       tally: waiting > 0 ? "\(waiting)" : nil)
+            HStack(alignment: .top, spacing: 10) {
+                MedallionIcon(key: "", glyph: "book.fill", size: 38, glyphTint: Theme.onGlassGold,
+                              itemKey: ItemArt.key(scroll: .unknown))
+                Text(waiting > 0
+                     ? "She gives each one the first time its place opens, and keeps it here after."
+                     : "Nothing is left for her to teach. Read any of them again.")
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(MarbleRowPlate(radius: Theme.cornerRadius))
+        .accessibilityElement(children: .combine)
+    }
+
+    /// A card's name in carved-ink capitals and its tally at the right, both
+    /// at their own width — the Missions cards' header.
+    private func cardHeader(_ title: String, tally: String?) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Text(title.uppercased())
+                .font(Theme.title(13))
+                .tracking(1.2)
+                .foregroundStyle(Theme.goldDim)
+                .lineLimit(1)
+                .fixedSize()
+            Spacer(minLength: 4)
+            if let tally {
+                Text(tally)
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+    }
+
+    /// One segment per lesson, gold when given.
+    private func segmentTrack(filled: Int, total: Int) -> some View {
+        HStack(spacing: 3) {
+            ForEach(0..<max(1, total), id: \.self) { index in
+                Capsule()
+                    .fill(index < filled ? Theme.gold : Theme.stroke.opacity(0.7))
+                    .frame(height: 6)
+            }
+        }
+    }
+
+    // MARK: - The grid
+
+    private var library: some View {
+        ScrollView(showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 12) {
+                ForEach(LessonTopic.allCases) { topic in
+                    let lessons = LessonBook.all.filter { $0.topic == topic }
+                    if !lessons.isEmpty {
+                        section(topic, lessons)
+                    }
+                }
+            }
+            // Room for a plate's shadow, which the scroll view would clip,
+            // and under the last plate, so it scrolls clear of the fade and
+            // of the home indicator below it.
+            .padding(.horizontal, 3)
+            .padding(.top, 3)
+            .padding(.bottom, 22)
+        }
+        // The grid ends in a fade at its own foot, which is the top of the
+        // home indicator's band: nothing draws under it (run 220: "The
+        // wheel" ran to the frame's bottom under the indicator).
+        .mask(
+            VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: 16)
+            }
+        )
+    }
+
+    /// A topic: its name and how many of its lessons are given over a rule,
+    /// then its lessons two to a row. The two plates of a row are one height
+    /// (`fixedSize` on the row, `maxHeight` on each plate), so a two-line
+    /// title — "Two of a kind, four of a kind" — never leaves its neighbour
+    /// short; a lone last plate keeps half the width.
+    private func section(_ topic: LessonTopic, _ lessons: [Lesson]) -> some View {
+        let given = lessons.filter { store.hasReadLesson($0.id) }.count
+        let rows: [[Lesson]] = stride(from: 0, to: lessons.count, by: 2).map { start in
+            Array(lessons[start..<min(start + 2, lessons.count)])
+        }
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(topic.title.uppercased())
+                    .font(Theme.title(13))
+                    .tracking(1.2)
+                    .foregroundStyle(Theme.goldDim)
+                    .lineLimit(1)
+                    .fixedSize()
+                Rectangle()
+                    .fill(Theme.goldDim.opacity(0.3))
+                    .frame(height: 1)
+                    .frame(maxWidth: .infinity)
+                Text("\(given) / \(lessons.count)")
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .padding(.horizontal, 2)
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
+                HStack(alignment: .top, spacing: 8) {
+                    ForEach(row) { lesson in
+                        plate(lesson)
+                    }
+                    if row.count < 2 {
+                        Color.clear
+                            .frame(maxWidth: .infinity, maxHeight: 1)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    /// One lesson on its marble: the door it teaches in a bronze socket, its
+    /// title and what it teaches, and — given — the gold read-again plate.
+    /// The whole plate is the tap. A lesson to come is the same plate at a
+    /// paler marble with its socket dimmed and locked; its words keep the
+    /// secondary ink at full strength (about 4.6:1), and it takes no tap.
+    private func plate(_ lesson: Lesson) -> some View {
+        let given = store.hasReadLesson(lesson.id)
+        let spoken: String = given ? lesson.title + ". Read again" : lesson.title + ". Still to come"
+        return Button {
+            guard given else { return }
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            withAnimation { replaying = lesson }
+        } label: {
+            HStack(spacing: 10) {
+                socket(for: lesson, given: given)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(lesson.title)
+                        .font(Theme.body(14).weight(.semibold))
+                        .foregroundStyle(given ? Theme.textPrimary : Theme.textSecondary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(Self.teaches(lesson))
+                        .font(Theme.body(11.5))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if given {
+                    readAgainPlate
+                }
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .background(MarbleRowPlate(radius: Theme.tightCorner).opacity(given ? 1 : 0.55))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+        }
+        .buttonStyle(PlateButtonStyle())
         .allowsHitTesting(given)
+        .accessibilityLabel(spoken)
+    }
+
+    /// The door's painting in its socket; dimmed, with a lock on its
+    /// shoulder, while the lesson is still to come.
+    private func socket(for lesson: Lesson, given: Bool) -> some View {
+        let art = Self.art(for: lesson)
+        return MedallionIcon(key: art.door, glyph: art.glyph, size: Self.socketSize,
+                             glyphTint: Theme.onGlassGold, itemKey: art.item)
+            .saturation(given ? 1 : 0.3)
+            .opacity(given ? 1 : 0.7)
+            .overlay(alignment: .bottomTrailing) {
+                if !given {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(Theme.onGlass)
+                        .frame(width: 20, height: 20)
+                        .background(Circle().fill(Theme.ink))
+                        .overlay(Circle().strokeBorder(Theme.bronze, lineWidth: 1))
+                        .offset(x: 4, y: 3)
+                }
+            }
+    }
+
+    /// Read again: the strip's Back medallion turned to face forward, small —
+    /// the gold plate with a chevron in ink. It was the words "Read again"
+    /// in grey at the far end of a bar (run 220).
+    private var readAgainPlate: some View {
+        Image(systemName: "chevron.right")
+            .font(.system(size: 12, weight: .black))
+            .foregroundStyle(Theme.ink)
+            .frame(width: Self.readPlate, height: Self.readPlate)
+            .background(Circle().fill(Theme.goldPlate))
+            .overlay(Circle().strokeBorder(Theme.goldDeep.opacity(0.75), lineWidth: 1))
+            .shadow(color: Color.black.opacity(0.25), radius: 2, y: 1)
+    }
+
+    /// The painting each lesson's socket wears: the DOOR of the place it
+    /// teaches (`ChromeArt`) or the ITEM it is about (`ItemArt`), the same
+    /// paintings the island, the tab bar and the bazaar use, so a lesson
+    /// looks like the thing it is about. The glyph is the fallback while a
+    /// painting is missing. The Night Market is the drachma that buys it,
+    /// since the bazaar's chest is the Labyrinth's loot here.
+    private static func art(for lesson: Lesson) -> (door: String, item: String?, glyph: String) {
+        switch lesson.id {
+        case "welcome": return ("island", nil, "sun.max.fill")
+        case "first_fight": return ("campaign", nil, "map.fill")
+        case "first_summon": return ("summon", nil, "sparkles")
+        case "first_relic": return ("collection", nil, "person.fill")
+        case "first_powerup": return ("", "unit_exp", "arrow.up.circle.fill")
+        case "farewell": return ("", ItemArt.key(scroll: .unknown), "book.fill")
+        case "relic_power": return ("", "gem_legend", "diamond.fill")
+        case "sets": return ("", "relic_cache", "circle.hexagongrid.fill")
+        case "elements": return ("", "essence_magic_high", "flame.fill")
+        case "evolve": return ("", "level_up", "star.circle.fill")
+        case "labyrinth": return ("", "chest_gold", "shippingbox.fill")
+        case "arena": return ("arena", nil, "trophy.fill")
+        case "tiers": return ("campaign", nil, "flame.circle.fill")
+        case "night_market": return ("", "drachma", "moon.stars.fill")
+        default: return ("", nil, "book.fill")
+        }
+    }
+
+    /// One line of what a lesson teaches, written to fit the plate's 135
+    /// points at 11.5 on one line (measured in Manrope, 2026-09-23; the
+    /// longest, "Dungeons and the Halls", is 127). It wraps rather than
+    /// truncates on a narrower phone. A lesson added to the book without a
+    /// line here shows its topic.
+    private static func teaches(_ lesson: Lesson) -> String {
+        switch lesson.id {
+        case "welcome": return "Who wakes the gods"
+        case "first_fight": return "Your first fight"
+        case "first_summon": return "Your first scroll"
+        case "first_relic": return "Dressing a god in relics"
+        case "first_powerup": return "Feeding gods to gods"
+        case "farewell": return "The four things to do"
+        case "relic_power": return "Powering a relic to +15"
+        case "sets": return "Where each set drops"
+        case "elements": return "Which element wins"
+        case "evolve": return "Evolving for a star"
+        case "labyrinth": return "Dungeons and the Halls"
+        case "arena": return "Rank, laurels, the arena"
+        case "tiers": return "Hard and Hell chapters"
+        case "night_market": return "A shelf that rolls hourly"
+        default: return lesson.topic.title
+        }
     }
 
     /// A replay is a CARD, not a pointer: the player may be standing on the

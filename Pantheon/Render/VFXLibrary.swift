@@ -80,11 +80,13 @@ enum VFXLibrary {
             }
             flash(at: position, in: scene, color: tint, radius: 1.0 * scale, duration: 0.14)
         case "impact_radiance":
-            if let flare = sprite("flare"), let ring = sprite("ring") {
+            // No painted ring (run 220): `vfx_ring.png` was painted on WHITE
+            // and ships as an opaque square, so its puff — additive, grown
+            // 4.5× — laid a white slab over the victim on every light hit.
+            // The flare carries the hit until the ring is repainted on black.
+            if let flare = sprite("flare") {
                 host.addParticleSystem(puff(flare, tint: tint.mixed(with: .white, amount: 0.5), count: 1, speed: 0,
                                             size: 1.6 * CGFloat(scale), life: 0.4, spread: 0, lift: 0, spin: 0.5, grow: 1.9))
-                host.addParticleSystem(puff(ring, tint: tint, count: 1, speed: 0, size: 0.6 * CGFloat(scale),
-                                            life: 0.45, spread: 0, lift: 0, spin: 0, grow: 4.5))
                 host.addParticleSystem(puff(flare, tint: tint, count: 14, speed: 4, size: 0.18 * CGFloat(scale),
                                             life: 0.6, spread: 180, lift: 1, spin: 2))
             } else {
@@ -92,12 +94,19 @@ enum VFXLibrary {
             }
             flash(at: position, in: scene, color: tint, radius: 2.0 * scale, duration: 0.26)
         case "impact_umbra":
-            if let wisp = sprite("wisp"), let smoke = sprite("smoke") {
+            // The smoke stands on its own: the wisp was painted on white too,
+            // and `sprite` refuses it (an opaque square, additive, eight to a
+            // hit), so rising motes take its place until it is repainted.
+            if let smoke = sprite("smoke") {
                 host.addParticleSystem(puff(smoke, tint: tint.mixed(with: .black, amount: 0.3), count: 5, speed: 0.8,
                                             size: 0.9 * CGFloat(scale), life: 0.8, spread: 90, lift: 0.6, spin: 0.6,
                                             blend: .alpha, grow: 2.0))
-                host.addParticleSystem(puff(wisp, tint: tint, count: 8, speed: 1.6, size: 0.5 * CGFloat(scale),
-                                            life: 0.7, spread: 60, lift: 1.8, spin: 1.5))
+                if let wisp = sprite("wisp") {
+                    host.addParticleSystem(puff(wisp, tint: tint, count: 8, speed: 1.6, size: 0.5 * CGFloat(scale),
+                                                life: 0.7, spread: 60, lift: 1.8, spin: 1.5))
+                } else {
+                    host.addParticleSystem(rising(tint: tint, count: 40, scale: scale))
+                }
             } else {
                 host.addParticleSystem(falling(tint: tint, count: 50, scale: scale * 1.2))
                 host.addParticleSystem(sparks(tint: tint, count: 30, speed: 3, scale: scale))
@@ -368,13 +377,59 @@ enum VFXLibrary {
     /// effect above keeps the spark it had. The owner: "the effects like the
     /// fire or hits and stuff we need to really work on ... a fireball, it
     /// cant be your bullshit red circle."
+    ///
+    /// A sprite painted on a LIGHT ground is refused (nil, and one console
+    /// line): drawn additive, its ground is an opaque square of the tint,
+    /// and two shipped that way — `vfx_ring` and `vfx_wisp`, white to the
+    /// corners — put white slabs over the light and dark hits, the dark
+    /// projectile and the deeps' weather (run 220). Every caller already
+    /// has a code-built fallback for a missing sprite, so a refused one
+    /// reads as a plainer effect, never a slab. A sprite repainted on black
+    /// and shipped through `tools/vfx_ship.py` passes and returns by itself.
     private static var spriteCache: [String: UIImage?] = [:]
 
     static func sprite(_ name: String) -> UIImage? {
         if let cached = spriteCache[name] { return cached }
-        let image = UIImage(named: "vfx_\(name)")
+        var image = UIImage(named: "vfx_\(name)")
+        if let found = image, paintedOnLightGround(found) {
+            let line = "[VFX] vfx_\(name) refused: painted on a light ground (an opaque square when added)"
+            print(line)
+            DiagnosticsLog.shared.record(line)
+            image = nil
+        }
         spriteCache[name] = image
         return image
+    }
+
+    /// True when the image's outer border is bright and opaque — a sprite
+    /// shipped with the white it was painted on. A sprite keyed off black
+    /// has a border of nothing (premultiplied 0 in every shipped one); the
+    /// two painted on white measure about 254 of 255. Read off a 32 × 32
+    /// reduction, the way `PaintingPalette` reads a painting.
+    private static func paintedOnLightGround(_ image: UIImage) -> Bool {
+        guard let cg = image.cgImage else { return false }
+        let side = 32
+        var data = [UInt8](repeating: 0, count: side * side * 4)
+        let drawn = data.withUnsafeMutableBytes { buffer -> Bool in
+            guard let base = buffer.baseAddress,
+                  let context = CGContext(data: base, width: side, height: side, bitsPerComponent: 8,
+                                          bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.interpolationQuality = .medium
+            context.draw(cg, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        guard drawn else { return false }
+        var light = 0
+        var samples = 0
+        for row in 0..<side {
+            for column in 0..<side where row == 0 || column == 0 || row == side - 1 || column == side - 1 {
+                let at = (row * side + column) * 4
+                light += Int(data[at]) + Int(data[at + 1]) + Int(data[at + 2])
+                samples += 3
+            }
+        }
+        return samples > 0 && light / samples > 96
     }
 
     /// A curve for a particle property over its life.
@@ -945,32 +1000,17 @@ enum VFXLibrary {
               radius: 7 * scale, duration: duration, strength: 0.25)
     }
 
-    /// The expanding shockwave for the ultimate.
+    /// The expanding shockwave for the ultimate: a torus of the element's
+    /// light racing out from the victim.
+    ///
+    /// The painted ring that lay flat on the floor under it is GONE (run
+    /// 220): `vfx_ring.png` was painted on white and ships as an opaque white
+    /// square, and drawn additive and scaled 9× it was a slab of the tint
+    /// over two thirds of the screen on every ultimate that calls this
+    /// (18-dungeon_battle-a: the middle band 4.2% blown, a 64-px patch 75%).
+    /// Put it back only once the ring is repainted on black and shipped
+    /// through `tools/vfx_ship.py` (alpha from brightness).
     private static func addStormRing(to host: SCNNode, tint: UIColor, scale: Float) {
-        // The painted ring, flat on the floor, racing out under the line:
-        // the shockwave a line-wide skill reads by.
-        if let image = sprite("ring") {
-            let plane = SCNPlane(width: CGFloat(1.2 * scale), height: CGFloat(1.2 * scale))
-            let material = SCNMaterial()
-            material.lightingModel = .constant
-            material.diffuse.contents = image
-            material.emission.contents = image
-            material.multiply.contents = tint
-            material.blendMode = .add
-            material.writesToDepthBuffer = false
-            material.isDoubleSided = true
-            plane.firstMaterial = material
-            let wave = SCNNode(geometry: plane)
-            wave.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
-            // On the floor under the chest the host sits at; a hand above it
-            // so it does not fight the stone for depth.
-            wave.position = SCNVector3(0, -Float(0.9 * scale) + 0.06, 0)
-            host.addChildNode(wave)
-            wave.runAction(.sequence([
-                .group([.scale(to: CGFloat(9 * scale), duration: 0.5), .fadeOut(duration: 0.5)]),
-                .removeFromParentNode(),
-            ]))
-        }
         let ring = SCNTorus(ringRadius: CGFloat(0.4 * scale), pipeRadius: CGFloat(0.05 * scale))
         let material = SCNMaterial()
         material.lightingModel = .constant
