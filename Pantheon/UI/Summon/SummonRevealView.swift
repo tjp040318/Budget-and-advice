@@ -325,6 +325,66 @@ struct SummonRevealView: View {
 
     private func chargeScene(_ result: SummonResult, clock: TimeInterval, ambient: TimeInterval,
                              size: CGSize) -> some View {
+        let look = chargeLook(result, clock: clock, ambient: ambient, size: size)
+        // One small builder per layer, every number worked out beforehand in
+        // `ChargeLook`: the one ZStack of eight layers with its sums inline
+        // was more than the owner's Xcode could type-check "in reasonable
+        // time" (2026-09-23, the build failed on his machine; CI's Xcode 16
+        // accepted it). Nothing drawn changed.
+        return ZStack {
+            chargePool(look)
+            chargeRings(look)
+            // The beam, rising from the floor as the charge gathers: OVER the
+            // rings, so the pillar of light runs through them to the scroll
+            // (the genre's scroll burns in its column; run 221 drew the
+            // column under the rings and lost it).
+            chargeBeamLayer(look)
+            chargeMotes(look)
+            chargeFlare(look)
+            chargeScrollLayer(result, look: look)
+        }
+        .frame(width: size.width, height: size.height)
+    }
+
+    /// Every number the charge draws with, as typed values, so no layer's
+    /// view expression holds arithmetic.
+    private struct ChargeLook {
+        let colour: Color
+        let grand: CGFloat
+        let ambient: TimeInterval
+        let x: CGFloat
+        let feet: CGFloat
+        let heart: CGFloat
+        let poolSide: CGFloat
+        let poolRadius: CGFloat
+        let poolStretch: CGFloat
+        let poolOpacity: Double
+        let ringSize: CGFloat
+        let innerRingSize: CGFloat
+        let ringScale: CGFloat
+        let outerTurn: Double
+        let innerTurn: Double
+        let outerRingOpacity: Double
+        let innerRingOpacity: Double
+        let beamWidth: CGFloat
+        let beamHeight: CGFloat
+        let beamCentre: CGFloat
+        let beamOpacity: Double
+        let moteSpread: CGFloat
+        let motes: Int
+        let side: CGFloat
+        let flareSide: CGFloat
+        let flareRadius: CGFloat
+        let flareScale: CGFloat
+        let flareOpacity: Double
+        let scrollTilt: Double
+        let scrollScale: CGFloat
+        let scrollGlow: CGFloat
+        let scrollY: CGFloat
+    }
+
+    private func chargeLook(_ result: SummonResult, clock: TimeInterval, ambient: TimeInterval,
+                            size: CGSize) -> ChargeLook {
         let grand: CGFloat = Self.grandeur(stars: result.stars)
         let colour: Color = result.blueprint.element.color
         let span: TimeInterval = max(0.1, chargeDuration)
@@ -335,7 +395,8 @@ struct SummonRevealView: View {
         let progress: CGFloat = CGFloat(min(1, gathered / span))
         let rest: CGFloat = 1 - progress
         let gather: CGFloat = 1 - rest * rest * rest
-        let flare: CGFloat = max(0, (progress - 0.72) / 0.28)
+        let flareRamp: CGFloat = (progress - 0.72) / 0.28
+        let flare: CGFloat = max(0, flareRamp)
 
         // The figure's line and height, as the stage's camera is solved
         // (`SummonStageView.frameCamera`): its centre line 26% in from the
@@ -349,74 +410,134 @@ struct SummonRevealView: View {
         // A 5★'s pillar is 0.28 of the frame's height across (run 221: at
         // 0.20, and drawn under the rings, it showed as a faint streak below
         // them); a 3★'s stays a thin shaft.
-        let beamWidth: CGFloat = height * (0.10 + 0.18 * grand)
-        let beamHeight: CGFloat = feet * (0.30 + 0.70 * gather)
+        let beamShare: CGFloat = 0.10 + 0.18 * grand
+        let beamWidth: CGFloat = height * beamShare
+        let beamRise: CGFloat = 0.30 + 0.70 * gather
+        let beamHeight: CGFloat = feet * beamRise
+        let beamCentre: CGFloat = feet - beamHeight / 2
+        let beamBase: CGFloat = 0.40 + 0.35 * grand
+        let beamFlare: CGFloat = 0.9 + 0.1 * flare
+        let beamOpacity: Double = Double(beamBase * beamFlare)
         // The motes keep the sway they had with the narrower beam.
-        let moteSpread: CGFloat = height * (0.10 + 0.10 * grand)
-        let ringSize: CGFloat = height * (0.44 + 0.18 * grand)
-        let turn: Double = ambient * Double(24 + 36 * grand)
-        let side: CGFloat = height * (0.24 + 0.07 * grand)
-        let bob: CGFloat = CGFloat(sin(ambient * 2.6)) * 4 * rest
-        let motes: Int = 4 + Int((8 * grand).rounded())
+        let spreadShare: CGFloat = 0.10 + 0.10 * grand
+        let moteSpread: CGFloat = height * spreadShare
+        let moteCount: CGFloat = (8 * grand).rounded()
+        let motes: Int = 4 + Int(moteCount)
 
-        return ZStack {
-            // A pool of the element's light on the floor under the feet.
-            Circle()
-                .fill(RadialGradient(
-                    colors: [colour.opacity(0.85), colour.opacity(0.25), colour.opacity(0)],
-                    center: .center, startRadius: 0, endRadius: height * 0.20
-                ))
-                .frame(width: height * 0.40, height: height * 0.40)
-                .scaleEffect(x: 1 + 0.4 * grand, y: 0.22)
-                .opacity(Double(0.45 + 0.45 * gather))
-                .position(x: x, y: feet)
+        // A pool of the element's light on the floor under the feet.
+        let poolSide: CGFloat = height * 0.40
+        let poolRadius: CGFloat = height * 0.20
+        let poolStretch: CGFloat = 1 + 0.4 * grand
+        let poolLight: CGFloat = 0.45 + 0.45 * gather
+        let poolOpacity: Double = Double(poolLight)
 
-            // Two rings, turning opposite ways, closing in as it gathers.
-            chargeRing(colour: colour, diameter: ringSize)
-                .scaleEffect(1.10 - 0.12 * gather)
-                .rotationEffect(.degrees(turn))
-                .opacity(Double(0.50 + 0.40 * grand))
-                .position(x: x, y: heart)
-            chargeRing(colour: colour, diameter: ringSize * 0.62)
-                .scaleEffect(1.10 - 0.12 * gather)
-                .rotationEffect(.degrees(-turn * 1.6))
-                .opacity(Double(0.36 + 0.40 * grand))
-                .position(x: x, y: heart)
+        // Two rings, turning opposite ways, closing in as it gathers.
+        let ringShare: CGFloat = 0.44 + 0.18 * grand
+        let ringSize: CGFloat = height * ringShare
+        let innerRingSize: CGFloat = ringSize * 0.62
+        let ringScale: CGFloat = 1.10 - 0.12 * gather
+        let turnRate: Double = Double(24 + 36 * grand)
+        let outerTurn: Double = ambient * turnRate
+        let innerTurn: Double = -outerTurn * 1.6
+        let outerLight: CGFloat = 0.50 + 0.40 * grand
+        let innerLight: CGFloat = 0.36 + 0.40 * grand
 
-            // The beam, rising from the floor as the charge gathers: OVER the
-            // rings, so the pillar of light runs through them to the scroll
-            // (the genre's scroll burns in its column; run 221 drew the
-            // column under the rings and lost it).
-            chargeBeam(colour: colour)
-                .frame(width: beamWidth, height: beamHeight)
-                .opacity(Double((0.40 + 0.35 * grand) * (0.9 + 0.1 * flare)))
-                .position(x: x, y: feet - beamHeight / 2)
+        // The flare the flash takes over.
+        let sideShare: CGFloat = 0.24 + 0.07 * grand
+        let side: CGFloat = height * sideShare
+        let flareSide: CGFloat = side * 1.8
+        let flareRadius: CGFloat = side * 0.9
+        let flareScale: CGFloat = 0.6 + 0.8 * flare
+        let flareLight: CGFloat = 0.45 + 0.45 * grand
+        let flareOpacity: Double = Double(flare * flareLight)
 
-            // Motes climbing the beam.
-            ForEach(0..<motes, id: \.self) { mote in
-                chargeMote(mote, clock: ambient, grand: grand, colour: colour)
-                    .position(Self.motePoint(mote, clock: ambient, grand: grand, x: x, feet: feet, spread: moteSpread))
-            }
+        // The scroll itself, straightening and swelling in the light.
+        let sway: Double = sin(ambient * 2.6)
+        let bob: CGFloat = CGFloat(sway) * 4 * rest
+        let scrollTilt: Double = -12 * Double(rest)
+        let scrollScale: CGFloat = 1 + 0.16 * gather
+        let glowShare: CGFloat = 0.08 + 0.14 * gather
+        let scrollGlow: CGFloat = side * glowShare
+        let scrollY: CGFloat = heart + bob
 
-            // The flare the flash takes over.
-            Circle()
-                .fill(RadialGradient(
-                    colors: [Color.white.opacity(0.9), colour.opacity(0.4), colour.opacity(0)],
-                    center: .center, startRadius: 0, endRadius: side * 0.9
-                ))
-                .frame(width: side * 1.8, height: side * 1.8)
-                .scaleEffect(0.6 + 0.8 * flare)
-                .opacity(Double(flare * (0.45 + 0.45 * grand)))
-                .position(x: x, y: heart)
+        return ChargeLook(
+            colour: colour, grand: grand, ambient: ambient,
+            x: x, feet: feet, heart: heart,
+            poolSide: poolSide, poolRadius: poolRadius, poolStretch: poolStretch, poolOpacity: poolOpacity,
+            ringSize: ringSize, innerRingSize: innerRingSize, ringScale: ringScale,
+            outerTurn: outerTurn, innerTurn: innerTurn,
+            outerRingOpacity: Double(outerLight), innerRingOpacity: Double(innerLight),
+            beamWidth: beamWidth, beamHeight: beamHeight, beamCentre: beamCentre, beamOpacity: beamOpacity,
+            moteSpread: moteSpread, motes: motes,
+            side: side, flareSide: flareSide, flareRadius: flareRadius,
+            flareScale: flareScale, flareOpacity: flareOpacity,
+            scrollTilt: scrollTilt, scrollScale: scrollScale, scrollGlow: scrollGlow, scrollY: scrollY
+        )
+    }
 
-            // The scroll itself, straightening and swelling in the light.
-            chargeScroll(result, side: side, colour: colour)
-                .rotationEffect(.degrees(-12 * Double(rest)))
-                .scaleEffect(1 + 0.16 * gather)
-                .shadow(color: colour.opacity(0.85), radius: side * (0.08 + 0.14 * gather))
-                .position(x: x, y: heart + bob)
+    /// A pool of the element's light on the floor under the feet.
+    private func chargePool(_ look: ChargeLook) -> some View {
+        let colours: [Color] = [look.colour.opacity(0.85), look.colour.opacity(0.25), look.colour.opacity(0)]
+        let light = RadialGradient(colors: colours, center: .center, startRadius: 0, endRadius: look.poolRadius)
+        return Circle()
+            .fill(light)
+            .frame(width: look.poolSide, height: look.poolSide)
+            .scaleEffect(x: look.poolStretch, y: 0.22)
+            .opacity(look.poolOpacity)
+            .position(x: look.x, y: look.feet)
+    }
+
+    /// Two rings, turning opposite ways, closing in as it gathers.
+    private func chargeRings(_ look: ChargeLook) -> some View {
+        Group {
+            chargeRing(colour: look.colour, diameter: look.ringSize)
+                .scaleEffect(look.ringScale)
+                .rotationEffect(.degrees(look.outerTurn))
+                .opacity(look.outerRingOpacity)
+                .position(x: look.x, y: look.heart)
+            chargeRing(colour: look.colour, diameter: look.innerRingSize)
+                .scaleEffect(look.ringScale)
+                .rotationEffect(.degrees(look.innerTurn))
+                .opacity(look.innerRingOpacity)
+                .position(x: look.x, y: look.heart)
         }
-        .frame(width: size.width, height: size.height)
+    }
+
+    private func chargeBeamLayer(_ look: ChargeLook) -> some View {
+        chargeBeam(colour: look.colour)
+            .frame(width: look.beamWidth, height: look.beamHeight)
+            .opacity(look.beamOpacity)
+            .position(x: look.x, y: look.beamCentre)
+    }
+
+    /// Motes climbing the beam.
+    private func chargeMotes(_ look: ChargeLook) -> some View {
+        ForEach(0..<look.motes, id: \.self) { mote in
+            chargeMote(mote, clock: look.ambient, grand: look.grand, colour: look.colour)
+                .position(Self.motePoint(mote, clock: look.ambient, grand: look.grand,
+                                         x: look.x, feet: look.feet, spread: look.moteSpread))
+        }
+    }
+
+    /// The flare the flash takes over.
+    private func chargeFlare(_ look: ChargeLook) -> some View {
+        let colours: [Color] = [Color.white.opacity(0.9), look.colour.opacity(0.4), look.colour.opacity(0)]
+        let light = RadialGradient(colors: colours, center: .center, startRadius: 0, endRadius: look.flareRadius)
+        return Circle()
+            .fill(light)
+            .frame(width: look.flareSide, height: look.flareSide)
+            .scaleEffect(look.flareScale)
+            .opacity(look.flareOpacity)
+            .position(x: look.x, y: look.heart)
+    }
+
+    /// The scroll itself, straightening and swelling in the light.
+    private func chargeScrollLayer(_ result: SummonResult, look: ChargeLook) -> some View {
+        chargeScroll(result, side: look.side, colour: look.colour)
+            .rotationEffect(.degrees(look.scrollTilt))
+            .scaleEffect(look.scrollScale)
+            .shadow(color: look.colour.opacity(0.85), radius: look.scrollGlow)
+            .position(x: look.x, y: look.scrollY)
     }
 
     /// 0 for a 3★ or under, 0.5 for a 4★, 1 for a 5★ or better.

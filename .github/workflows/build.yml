@@ -64,6 +64,7 @@ jobs:
             -destination 'generic/platform=iOS Simulator' \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
+            OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -warn-long-expression-type-checking=300' \
             build 2>&1 | tee build.log | grep -E "error:|warning: (unused|never|will never|immutable)|BUILD (SUCCEEDED|FAILED)|\*\* " || true
           echo "---- errors, if any ----"
           grep -n "error:" build.log || echo "no compiler errors"
@@ -82,6 +83,7 @@ jobs:
             -destination "platform=iOS Simulator,name=$DEST" \
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
+            OTHER_SWIFT_FLAGS='$(inherited) -Xfrontend -warn-long-expression-type-checking=300' \
             test 2>&1 | tee test.log | grep -E "error:|failed|passed|Executed|\*\* " || true
           grep -q "TEST SUCCEEDED\|\*\* TEST SUCCEEDED" test.log
 
@@ -438,6 +440,17 @@ jobs:
           if [ -f build.log ]; then
             { grep -n "error:" build.log || echo "no compiler errors"; } | head -n 80 > /tmp/screens/build-errors.txt
             grep -q "BUILD SUCCEEDED" build.log || echo "** BUILD FAILED **" >> /tmp/screens/build-errors.txt
+            # The expressions slowest to type-check, slowest first: a newer
+            # Xcode gives up on one this one still solves (the owner's build
+            # of 2026-09-23 failed on the summon charge's ZStack, which CI's
+            # Xcode 16 compiled), so anything near the top is split before
+            # it reaches his machine.
+            SLOW=$(grep -hoE "[^ ]+\.swift:[0-9]+:[0-9]+: warning: expression took [0-9]+ms to type-check" build.log test.log 2>/dev/null \
+              | sed -E 's#^.*/##; s/: warning: expression took ([0-9]+)ms to type-check/ \1ms/' \
+              | sort -u | sort -t' ' -k2 -rn | head -n 25)
+            if [ -n "$SLOW" ]; then
+              { echo "---- slowest to type-check (over 300 ms) ----"; echo "$SLOW"; } >> /tmp/screens/build-errors.txt
+            fi
           fi
           if [ -f test.log ]; then
             grep -E "error:|failed|Executed|\*\* TEST" test.log | head -n 80 > /tmp/screens/test-errors.txt || true
