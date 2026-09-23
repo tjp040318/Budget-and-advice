@@ -46,12 +46,25 @@ import SwiftUI
 /// it — so the two cannot collide. Used by the Arena, the dungeon levels and
 /// the Halls, the Titans wing, the Hall of Ka, the stage briefing and the
 /// bazaar; it replaces five sets of inline scrims those screens wrote.
+///
+/// FULL-BLEED since run 216 (`bleeds`, on by default): the painting runs
+/// under the side safe areas and the home indicator to the glass, while the
+/// words and controls laid over it stay inside the safe area. Every place
+/// photographed in cream columns — 62 points a side and a strip under the
+/// foot — because the backdrop was sized to the safe frame and
+/// `GameScreen`'s cream showed round it. The expansion is
+/// `ignoresSafeArea`, which never changes the size reported to the parent,
+/// so it is still safe as a `.background` or a `ZStack`'s bottom layer; it
+/// only reaches an edge its frame TOUCHES, so put it outside any horizontal
+/// padding. `bleeds: false` keeps it to the safe frame — for a painting a
+/// 3D stage is registered to, until the stage shares the wider frame.
 struct PlaceBackdrop: View {
     let painting: String
     var focus: UnitPoint = .center
     var wash: Color = .clear
     var topScrim: Double = 0.55
     var footScrim: Double = 0.62
+    var bleeds: Bool = true
 
     var body: some View {
         ZStack {
@@ -71,6 +84,7 @@ struct PlaceBackdrop: View {
         }
         .clipped()
         .allowsHitTesting(false)
+        .ignoresSafeArea(.container, edges: bleeds ? [.horizontal, .bottom] : [])
     }
 }
 
@@ -197,11 +211,15 @@ struct Motes: View {
 /// the Labyrinth its key light's motes (`shafts: []`, 18), and the bazaar its
 /// brazier sparks (`shafts: []`, 18, #FFB866 — a seed of its own, since 930
 /// is the Arena's). One seed per screen keeps two places from sharing a sky.
+///
+/// It bleeds to the glass with the backdrop it lies over (`bleeds`, on by
+/// default since run 216), so the air and the painting share one frame.
 struct PlaceAmbience: View {
     var shafts: [LightShaft] = LightShaft.hall
     var motes: Int = 26
     var moteColor: Color = Color(hex: "#FFE29A")
     var seed: UInt64 = 910
+    var bleeds: Bool = true
 
     var body: some View {
         ZStack {
@@ -213,6 +231,7 @@ struct PlaceAmbience: View {
             }
         }
         .allowsHitTesting(false)
+        .ignoresSafeArea(.container, edges: bleeds ? [.horizontal, .bottom] : [])
     }
 }
 
@@ -353,6 +372,10 @@ struct GlassRailPlate: View {
                 .frame(width: 1)
         }
         .allowsHitTesting(false)
+        // Out under the left inset when the rail stands on the safe edge, so
+        // the glass meets the glass of the phone rather than a strip of bare
+        // painting beside the sensor housing.
+        .ignoresSafeArea(.container, edges: .leading)
     }
 }
 
@@ -405,9 +428,12 @@ struct PlaceRail<Content: View>: View {
         }
         .frame(width: width)
         .frame(maxHeight: .infinity)
+        // A fade at BOTH ends (run 216): a row scrolled up under the strip
+        // was cut on a hard line with only the foot fading.
         .mask(
-            LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.88),
-                                   .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
+            LinearGradient(stops: [.init(color: .clear, location: 0), .init(color: .black, location: 0.025),
+                                   .init(color: .black, location: 0.88), .init(color: .clear, location: 1)],
+                           startPoint: .top, endPoint: .bottom)
         )
         .background(GlassRailPlate())
     }
@@ -588,17 +614,22 @@ struct GlassCapsule<Content: View>: View {
 /// The title shrinks to fit one line but never under the title floor of 13.
 /// Used by the bazaar's stall headers, the Labyrinth's floor title and the
 /// starter selector.
+///
+/// `centered: true` for a ceremony screen whose title stands centred on its
+/// plate (the starter selector; run 216 had its eyebrow and title flush
+/// left, 50 points off the plate's centre).
 struct PlaceTitle: View {
     var eyebrow: String? = nil
     let title: String
     var size: CGFloat = 26
+    var centered: Bool = false
 
     private var shrink: CGFloat {
         max(0.6, min(1, Theme.titleFloor / max(size, 1)))
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: centered ? .center : .leading, spacing: 0) {
             if let eyebrow {
                 Text(eyebrow.uppercased())
                     .font(Theme.title(13))
@@ -718,11 +749,17 @@ struct GlassMeter: View {
             ZStack(alignment: .leading) {
                 Capsule().fill(Color.black.opacity(0.5))
                 if let ghostFraction = ghost {
+                    // The gain as LIGHT: a bright gold that pulses, with a
+                    // glow. Pale cream at half over the black track read as a
+                    // greyed, disabled bar (run 216, the Hall of Ka's feed).
                     TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
-                        let pulse = 0.475 + 0.125 * sin(timeline.date.timeIntervalSinceReferenceDate * 3)
+                        let pulse = 0.85 + 0.10 * sin(timeline.date.timeIntervalSinceReferenceDate * 3)
                         Capsule()
-                            .fill(Theme.onGlassGold.opacity(pulse))
+                            .fill(LinearGradient(colors: [Color(hex: "#FFE29A"), Color(hex: "#E0B64A")],
+                                                 startPoint: .top, endPoint: .bottom))
+                            .opacity(pulse)
                             .frame(width: max(height, width * ghostFraction))
+                            .shadow(color: Theme.gold.opacity(0.6), radius: 4)
                     }
                 }
                 if filled > 0 {
@@ -754,8 +791,23 @@ struct GlassMeter: View {
 /// is half a small card: it truncated every name in run 211's arena
 /// ("Anubi…", "Sekh…", "Azure…") and "Sun-Scar…" in the stage popup, and it
 /// is a cream slab on glass; the genre's team rows over art are faces.
-/// `tag` is a ribbon across the top edge (BOSS, WAVE 3), `isLeader` a crown
-/// there. The name is in the accessibility label.
+/// `tag` is a ribbon across the FOOT (BOSS, WAVE 3), `isLeader` a crown on
+/// the top edge. The name is in the accessibility label.
+///
+/// Two layouts, by size (run 216). From 48 points: the element badge top
+/// left, the level in a dark capsule top right, the stars along the foot.
+/// Under 48 — the Arena's 40-point team rows, where the badge and the
+/// capsule met as one pill across the top and the stars filled the foot, so
+/// the face was a dark band between them — the genre's small icon: the
+/// stars small along the top, the element a 12-point disc at the bottom
+/// left, the level as bare outlined digits at the bottom right, and the
+/// face clear in the middle. Stars are sized to the room at every size
+/// (six never run into the rim) and drawn bright: the dim natural-star
+/// bronze on the ink foot could not be counted (the Hall of Ka's judge).
+///
+/// The tag hangs INSIDE the tile at its foot, with the stars lifted over
+/// it: on the top edge it hid the element and the level, and outside the
+/// tile it met the row above (the popup's "Wave 1 of 3") or below.
 ///
 /// Used by the Arena's teams, the stage popup's and briefing's enemies and
 /// team, the Hall of Ka's rail and fodder, the collection's Stage rail, the
@@ -767,9 +819,22 @@ struct UnitPortraitTile: View {
     var tag: String? = nil
     var tagTint: Color = Theme.onGlassDanger
     var isLeader: Bool = false
+    /// False on a face that is offered rather than owned — the selector's
+    /// and the mileage board's, all level 1 — where the level is noise.
+    var showsLevel: Bool = true
 
     private var corner: CGFloat { max(6, min(Theme.tightCorner, size * 0.14)) }
     private var wear: CGFloat { max(0.6, min(1, size / 80)) }
+    private var isSmall: Bool { size < 48 }
+
+    /// The stars' point size: what the row's width allows (a star and its
+    /// gap are about 1.2 of the point size), capped at 15% of the tile, and
+    /// a little smaller on a small tile, where they ride over the face.
+    private var starSize: CGFloat {
+        let count = CGFloat(max(1, unit.stars))
+        let room = (size - (isSmall ? 6 : 10)) / (count * 1.2)
+        return max(4.5, min(isSmall ? 6 : 9, size * 0.15, room))
+    }
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: corner, style: .continuous)
@@ -778,8 +843,51 @@ struct UnitPortraitTile: View {
                 .frame(width: size, height: size)
             LinearGradient(colors: [.clear, .clear, Theme.ink.opacity(0.85)],
                            startPoint: .top, endPoint: .bottom)
-            ElementBadge(element: unit.element, compact: true, scale: wear)
-                .padding(max(2, 4 * wear))
+            if isSmall {
+                smallMarks
+            } else {
+                largeMarks
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(shape)
+        .rarityFrame(Rarity(stars: unit.stars), radius: corner, painted: false)
+        .overlay(alignment: .top) {
+            if isLeader {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 10, weight: .black))
+                    .foregroundStyle(Theme.goldText)
+                    .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
+                    .offset(y: -8)
+            }
+        }
+        .overlay(alignment: .bottom) {
+            if let tag {
+                Text(tag.uppercased())
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(1.0)
+                    .foregroundStyle(tagTint)
+                    .lineLimit(1)
+                    .fixedSize()
+                    .padding(.horizontal, 6)
+                    .frame(height: 16)
+                    .background(Capsule().fill(Color(hex: "#17120E").opacity(0.92)))
+                    .overlay(Capsule().strokeBorder(tagTint.opacity(0.8), lineWidth: 0.8))
+                    .offset(y: 4)
+            }
+        }
+        .contentShape(shape)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(unit.name), level \(unit.level), \(unit.stars) stars")
+    }
+
+    /// From 48 points: the badge and the level across the top, the stars at
+    /// the foot — lifted over the tag when there is one.
+    @ViewBuilder
+    private var largeMarks: some View {
+        ElementBadge(element: unit.element, compact: true, scale: wear)
+            .padding(max(2, 4 * wear))
+        if showsLevel {
             Text("\(unit.level)")
                 .font(Theme.numeric(11.5))
                 .foregroundStyle(Theme.onGlass)
@@ -791,42 +899,38 @@ struct UnitPortraitTile: View {
                 .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.8), lineWidth: 0.6))
                 .padding(max(2, 3 * wear))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
-            StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars,
-                    size: max(5.5, min(9, size * 0.13)))
-                .padding(.bottom, max(2, 3 * wear))
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
         }
-        .frame(width: size, height: size)
-        .clipShape(shape)
-        .rarityFrame(Rarity(stars: unit.stars), radius: corner, painted: false)
-        .overlay(alignment: .top) {
-            if isLeader || tag != nil {
-                HStack(spacing: 3) {
-                    if isLeader {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: 10, weight: .black))
-                            .foregroundStyle(Theme.goldText)
-                            .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
-                    }
-                    if let tag {
-                        Text(tag.uppercased())
-                            .font(Theme.body(11).weight(.black))
-                            .tracking(1.0)
-                            .foregroundStyle(tagTint)
-                            .lineLimit(1)
-                            .fixedSize()
-                            .padding(.horizontal, 6)
-                            .frame(height: 16)
-                            .background(Capsule().fill(Color(hex: "#17120E").opacity(0.9)))
-                            .overlay(Capsule().strokeBorder(tagTint.opacity(0.8), lineWidth: 0.8))
-                    }
-                }
-                .offset(y: -8)
+        StarRow(stars: unit.stars, size: starSize)
+            .padding(.bottom, tag == nil ? max(2, 3 * wear) : 14)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+    }
+
+    /// Under 48 points: the stars small along the top on a breath of ink,
+    /// the element disc and the bare level at the foot, the face between.
+    @ViewBuilder
+    private var smallMarks: some View {
+        LinearGradient(colors: [Theme.ink.opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
+            .frame(height: size * 0.32)
+        StarRow(stars: unit.stars, size: starSize)
+            .padding(.top, 2)
+            .frame(maxWidth: .infinity, alignment: .top)
+        HStack(alignment: .bottom, spacing: 0) {
+            Image(systemName: unit.element.glyph)
+                .font(.system(size: 7, weight: .black))
+                .foregroundStyle(.white)
+                .frame(width: 12, height: 12)
+                .background(Circle().fill(unit.element.color))
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.4), lineWidth: 0.6))
+                .shadow(color: .black.opacity(0.6), radius: 1, y: 0.5)
+            Spacer(minLength: 0)
+            if showsLevel {
+                OutlinedText(text: "\(unit.level)", font: Theme.numeric(11.5).weight(.black), width: 0.8)
+                    .fixedSize()
             }
         }
-        .contentShape(shape)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(unit.name), level \(unit.level), \(unit.stars) stars")
+        .padding(.horizontal, 2)
+        .padding(.bottom, 1)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 
     /// The card's painting at the tile's own size, or the element-tinted

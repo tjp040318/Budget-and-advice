@@ -100,6 +100,10 @@ struct TourView: View {
     /// for the locked floor with the tallest drops plate — the height test.
     static var pinnedDungeonFloor: Int? { argument(after: "-tour-dungeon-floor").flatMap { Int($0) } }
 
+    /// `-tour-dungeon-sweep` opens the focused floor's sweep choices (the
+    /// run count, the energy it costs), over a mastered floor.
+    static var pinnedDungeonSweep: Bool { ProcessInfo.processInfo.arguments.contains("-tour-dungeon-sweep") }
+
     /// `-tour-labyrinth-wing halls|tower|raids` opens the building on that
     /// wing. Neither the Halls wing nor the Tower had ever been photographed
     /// before phase B; the Tower is newly on glass.
@@ -170,9 +174,24 @@ struct TourView: View {
     static var pinnedPlainWeek: Bool { argument(after: "-tour-events-week") == "plain" }
 
     /// `-tour-guide caret` shows Athena's caret on the Collection tab instead
-    /// of her plate — the proof that a door in the tab bar, which is the
-    /// screen's bottom inset, reaches an overlay drawn above it.
+    /// of her plate — the proof that a door in the tab bar, laid out under
+    /// the screen, reaches an overlay drawn above both.
     static var pinnedGuideCaret: Bool { argument(after: "-tour-guide") == "caret" }
+
+    /// `-tour-root summon` shows the app's own shell (`RootView`) on the
+    /// Summon tab instead of the tour's `tabbed` copy: the phone lays the
+    /// tab bar out under a TabView of NavigationStacks, and no frame had
+    /// ever photographed that path (run 216's judges inferred it).
+    static var pinnedRoot: RootView.Tab? {
+        switch argument(after: "-tour-root") ?? "" {
+        case "island": return .island
+        case "campaign": return .campaign
+        case "arena": return .arena
+        case "summon": return .summon
+        case "collection": return .collection
+        default: return nil
+        }
+    }
 
     /// `-tour-more diagnostics` shows the debug build's Diagnostics desk, the
     /// place the model board and the console went when they left More's
@@ -249,17 +268,22 @@ struct TourView: View {
         }
     }
 
-    /// A tab's screen as the phone draws it: with the game's tab bar as its
-    /// bottom inset, the tab's own door lit. `RootView` puts `GameTabBar`
-    /// under every tab, so a tab screen gets 58 points less height than the
-    /// window; the tour photographed the collection, the summon hall, the
-    /// arena and the chapter map WITHOUT it until phase B (2026-09-22), so
-    /// every one of those frames judged a screen 58 points taller than any
-    /// phone has, and the four other doors' selected states were never seen.
-    /// A function and not a nested view, so no name can collide; generic
-    /// rather than an opaque parameter, which nothing else in the tree uses.
+    /// A tab's screen as the phone draws it: the screen, and under it the
+    /// game's tab bar with the tab's own door lit — LAID OUT, as `RootView`
+    /// lays it out, so the screen is 58 points shorter than the window.
+    ///
+    /// Until run 216 the bar was the screen's `.safeAreaInset`, and an inset
+    /// applied outside a screen's `NavigationStack` never reaches the content
+    /// inside it: the arena's offence, the summon deck, the collection's
+    /// Train and the chapter map's lowest medallions were all laid out to the
+    /// window's foot and painted over by the bar. A frame is a hard limit an
+    /// inset is not. A function and not a nested view, so no name can
+    /// collide; generic rather than an opaque parameter, which nothing else
+    /// in the tree uses.
     private func tabbed<Content: View>(_ tab: RootView.Tab, _ screen: Content) -> some View {
-        screen.safeAreaInset(edge: .bottom, spacing: 0) {
+        VStack(spacing: 0) {
+            screen
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             GameTabBar(selection: .constant(tab))
         }
     }
@@ -327,7 +351,7 @@ struct TourView: View {
             case "feed":
                 TrainingView(selectedUnitID: feedCandidate?.id, offersOnOpen: true)
             case "evolve":
-                TrainingView(initialMode: .evolve, selectedUnitID: evolveCandidate?.id)
+                TrainingView(initialMode: .evolve, selectedUnitID: evolveCandidate?.id, offersOnOpen: true)
             case "fuse":
                 TrainingView(initialMode: .fuse)
             default:
@@ -345,7 +369,11 @@ struct TourView: View {
             // (2026-09-17).
             TrainingView(initialMode: .awaken, selectedUnitID: awakeningCandidate?.id)
         case "summon":
-            tabbed(.summon, SummonView())
+            if let root = Self.pinnedRoot {
+                RootView(initialTab: root)
+            } else {
+                tabbed(.summon, SummonView())
+            }
         case "reveal":
             // A second launch with `-tour-reveal awakened` shows an awakened
             // 5★ on the beam — the frame the owner sent back on 2026-09-17
@@ -387,7 +415,8 @@ struct TourView: View {
             // `-tour-dungeon-floor` for the Necropolis, the mastered B1 and
             // the locked B10.
             NavigationStack {
-                DungeonLevelsView(chapterID: Self.pinnedDungeon ?? "lab_colossus", focusFloor: Self.pinnedDungeonFloor)
+                DungeonLevelsView(chapterID: Self.pinnedDungeon ?? "lab_colossus", focusFloor: Self.pinnedDungeonFloor,
+                                  opensSweep: Self.pinnedDungeonSweep)
             }
         case "relic_picker":
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
@@ -440,8 +469,8 @@ struct TourView: View {
                 // Her caret on the Collection tab, drawn by the same overlay
                 // RootView's `.guide` puts above the bar: the frame proves
                 // the tab bar's `.guideAnchor("tab_collection")` reaches an
-                // overlay outside the bottom inset. No caret on the frame
-                // means the anchor is not getting out of the inset.
+                // overlay drawn over the screen and the bar together. No
+                // caret on the frame means the anchor is not getting out.
                 tabbed(.island, IslandView(isActive: false) { _ in })
                     .overlayPreferenceValue(GuideAnchorKey.self) { anchors in
                         GeometryReader { proxy in
@@ -460,8 +489,8 @@ struct TourView: View {
                 // The tour's save is a veteran's, so the opening would be
                 // silent on its own: the plate is put up directly, which is
                 // what a picture of it needs. Over the island AND its bar,
-                // as RootView draws her (its `.guide` is applied after the
-                // bar's inset).
+                // as RootView draws her (its `.guide` is applied to the
+                // stack that holds both).
                 ZStack {
                     tabbed(.island, IslandView(isActive: false) { _ in })
                     GuidePlate(
@@ -669,15 +698,21 @@ struct TourView: View {
     /// level cap. A unit at the cap would have Auto pick nothing and the
     /// ledger show its Evolve redirect instead of the ghost gauge.
     private var feedCandidate: ResolvedUnit? {
-        store.resolvedUnits.filter { !$0.unit.isMaxLevel }.max { $0.power < $1.power }
+        store.resolvedUnits
+            .filter { !$0.unit.isMaxLevel && $0.unit.acquiredFrom != Self.arenaSquadTag }
+            .max { $0.power < $1.power }
     }
+
+    /// The seed's level-40 arena squad (`GameStore.grantTourRoster`, run
+    /// 216) is tagged, and the Hall of Ka's steps pass over it, so its
+    /// frames keep the units they were composed on.
+    private static let arenaSquadTag = "tour-arena"
 
     /// The unit the `evolve` ledger opens on: one ready to evolve, preferring
     /// one with enough unlocked units of its own grade to pay for it (an
-    /// evolution eats as many as its stars), the highest grade first. Nil —
-    /// the tour's seed levels no unit to its cap — falls back to the rail's
-    /// top, whose ledger shows the level requirement unmet, which still
-    /// judges the layout.
+    /// evolution eats as many as its stars), the highest grade first. The
+    /// seed has one since run 216 — a water Shabti at its cap of 35, with the
+    /// four level-1 Shabtis to pay — so the ledger photographs a LIVE Evolve.
     private var evolveCandidate: Unit? {
         let units = store.player.units
         let ready = units.filter { $0.canEvolve }
@@ -706,7 +741,8 @@ struct TourView: View {
     /// form to take, the highest grade and level first.
     private var awakeningCandidate: Unit? {
         store.player.units
-            .filter { !$0.isAwakened && UnitDatabase.blueprint($0.blueprintID)?.awakening != nil }
+            .filter { !$0.isAwakened && $0.acquiredFrom != Self.arenaSquadTag }
+            .filter { UnitDatabase.blueprint($0.blueprintID)?.awakening != nil }
             .max { ($0.stars, $0.level) < ($1.stars, $1.level) }
     }
 
@@ -943,6 +979,7 @@ private struct TourSweepScene: View {
     var body: some View {
         ZStack {
             CampaignView(openingChapter: "duat_1")
+                .dimsTabBar(receipt != nil)
             if let receipt {
                 SweepReceiptCard(
                     receipt: receipt,

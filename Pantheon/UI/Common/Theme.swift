@@ -193,6 +193,19 @@ enum Theme {
         endPoint: .bottom
     )
 
+    /// Carved gold for text that may run to TWO OR MORE lines
+    /// (`carved(multiline: true)`). A gradient fill spans the whole text
+    /// block, not each line, so `goldText` gave a two-line title's second
+    /// line only its dark half (run 216: the Labyrinth's "COLOSSUS" and the
+    /// Awaken card's "SEVEN ARROWS" in bronze under a pale first line). This
+    /// one stays light from top to foot, so every line reads as the same
+    /// gold; the carving is the dark edge `carved` puts under it.
+    static let goldTextFlat = LinearGradient(
+        colors: [Color(hex: "#FFF3C8"), Color(hex: "#F1D586"), Color(hex: "#E3BF5E")],
+        startPoint: .top,
+        endPoint: .bottom
+    )
+
     static let glass = Color(hex: "#17120E").opacity(0.68)
     static let glassRim = Color(hex: "#D2B26A").opacity(0.6)
     /// Cream on glass: the words on a dark plate.

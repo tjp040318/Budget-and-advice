@@ -66,10 +66,33 @@ struct IslandView: View {
     /// Nothing goes below y 0.75. The painting is filled into the frame, so on
     /// a landscape phone y 0.80 puts a figure's feet on the surf line with its
     /// shadow behind the tab bar, and y 0.84 puts them in the sea.
+    ///
+    /// The leader's mark was (0.43, 0.63), right under the Summoning
+    /// Circle's name chip: run 216 photographed the fourth figure's body
+    /// behind the capsule at both zooms. (0.47, 0.67) is the open sand
+    /// between the palms and the scrub, and a figure's head there clears the
+    /// chip by two points at rest and at the tour's 1.5 (measured on a port
+    /// of this layout, `restAnchorY` 0.4 and a 323-point frame).
     static let stands: [CGPoint] = [
-        CGPoint(x: 0.43, y: 0.63), CGPoint(x: 0.50, y: 0.73),
+        CGPoint(x: 0.47, y: 0.67), CGPoint(x: 0.50, y: 0.73),
         CGPoint(x: 0.36, y: 0.72), CGPoint(x: 0.63, y: 0.745)
     ]
+
+    /// Where the painting's spare height goes at rest: 0.5 would centre it,
+    /// 0.4 lets 40% of the overflow off the top and 60% off the bottom.
+    ///
+    /// Since run 216 the tab bar is LAID OUT under the island (RootView), so
+    /// the island is a 323-point frame, not the 402-point window it filled
+    /// with the bar drawn over its foot. Centred in 323 the header covered
+    /// the Hall of Ka's roof and pushed its bubble under the header; at 0.4
+    /// every building stands whole under the header, the Gate's and the
+    /// Arena's name chips (which the old bar hid) sit three points over the
+    /// band, and the figures keep twenty points of sand under them.
+    static let restAnchorY: CGFloat = 0.4
+
+    /// The header capsule's foot in the safe area: six over it, six inside
+    /// it round a 44-point row. Chips and bubbles are held under it.
+    private static let headerBottom: CGFloat = 62
 
     /// The campaign team, made up to four from the strongest of the rest,
     /// so the island is never empty and the team the player fights with is
@@ -110,8 +133,9 @@ struct IslandView: View {
     static let roomyHeaderWidth: CGFloat = 720
 
     /// The painting's pixel size; the anchors are normalised against it. A
-    /// 16:9 painting for a landscape phone, which shows its full width and
-    /// crops 9% off the top and the bottom at rest.
+    /// 16:9 painting for a landscape phone, which shows its full width at
+    /// rest; in the island's 323-point frame over the tab bar a third of its
+    /// height is cropped, 40% of that off the top (`restAnchorY`).
     static let paintingSize = CGSize(width: 2048, height: 1152)
 
     var body: some View {
@@ -127,6 +151,10 @@ struct IslandView: View {
             let shift = CGPoint(x: insets.leading, y: insets.top)
             let hour = Self.daylight()
             let night = Self.isNight()
+            // The named figure's plate, so a chip or a bubble it lands on can
+            // step back for the breath it is up (run 216: "Zeus · Lv.12" over
+            // the start of "Summoning Circle").
+            let plate = nameplateRect(frame: frame, full: full, shift: shift)
 
             ZStack(alignment: .top) {
                 // Open sand: a double tap brings the camera home.
@@ -157,13 +185,13 @@ struct IslandView: View {
                 .allowsHitTesting(false)
 
                 ForEach(IslandDatabase.landmarks) { landmark in
-                    building(landmark, frame: frame, shift: shift)
+                    building(landmark, frame: frame, shift: shift, bounds: geometry.size, plate: plate)
                 }
 
                 figureTargets(frame: frame, full: full, shift: shift)
 
                 if ShopService.isDailyAvailable(player: store.player) {
-                    offeringBubble(frame: frame, shift: shift)
+                    offeringBubble(frame: frame, shift: shift, bounds: geometry.size, plate: plate)
                 }
                 if burst {
                     Circle()
@@ -250,15 +278,17 @@ struct IslandView: View {
         }
     }
 
-    /// Where an image of `image` size lands when drawn to fill `container`,
-    /// centred — the same placement SwiftUI's `.aspectRatio(contentMode: .fill)`
-    /// produces, so the anchors and the pixels agree.
+    /// Where an image of `image` size lands when drawn to fill `container`:
+    /// scaled as SwiftUI's `.aspectRatio(contentMode: .fill)` scales it,
+    /// centred across and held at `restAnchorY` down. The backdrop draws
+    /// the painting at the camera's frame, which starts from this, so the
+    /// anchors and the pixels agree.
     static func fill(_ image: CGSize, in container: CGSize) -> CGRect {
         let scale = max(container.width / image.width, container.height / image.height)
         let size = CGSize(width: image.width * scale, height: image.height * scale)
         return CGRect(
             x: (container.width - size.width) / 2,
-            y: (container.height - size.height) / 2,
+            y: (container.height - size.height) * restAnchorY,
             width: size.width,
             height: size.height
         )
@@ -326,13 +356,20 @@ struct IslandView: View {
                     .fill(hour.overlay)
                     .opacity(hour.opacity)
                     .blendMode(.multiply)
-                // The painting pales toward its top and bottom edges so the
-                // header and the chips read against it: cream, like the
-                // plates they sit on, never a dark wash under ink.
-                LinearGradient(
-                    colors: [Theme.plate.opacity(0.55), .clear, .clear, Theme.plate.opacity(0.7)],
-                    startPoint: .top, endPoint: .bottom
-                )
+                // A little shade under the header and nothing else
+                // (2026-09-23, run 216). The painting paled to cream top and
+                // bottom while the header and the chips were cream plates;
+                // the header is dark glass now and the bar under the island
+                // is opaque, and the cream wash only turned the top fifth of
+                // the sea milky. The sea keeps its blue.
+                VStack(spacing: 0) {
+                    LinearGradient(
+                        colors: [Color.black.opacity(0.25), Color.black.opacity(0)],
+                        startPoint: .top, endPoint: .bottom
+                    )
+                    .frame(height: 70)
+                    Spacer(minLength: 0)
+                }
             }
             .frame(width: full.width, height: full.height)
             .clipped()
@@ -374,11 +411,12 @@ struct IslandView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     // 16 points, shrinking no further than the title floor
                     // (0.82 of 16 is 13.1) before a long name gives way.
+                    // Carved gold on the glass, like every name over art.
                     Text(player.displayName)
                         .font(Theme.title(16))
-                        .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
                         .minimumScaleFactor(0.82)
+                        .carved(glow: false)
                     // The level at its own width and the bar taking what is
                     // left, 44 to 120 points (2026-09-22, phase B). The row
                     // was "Lv.12", a fixed 120-point bar and "1240/2050"
@@ -386,15 +424,16 @@ struct IslandView: View {
                     // squeezed both numbers to nothing and left the bar
                     // alone. The experience in numbers is the genre's
                     // detail, not its card: it is in the accessibility label.
-                    // The level is the darker gold, which holds on the pale
-                    // plate where the bright one washed out.
+                    // The level is the pale gold that reads on glass, and the
+                    // bar the glass's own meter (run 216: goldDim on the
+                    // cream capsule was faint).
                     HStack(spacing: 8) {
                         Text("Lv.\(player.level)")
                             .font(Theme.numeric(12))
-                            .foregroundStyle(Theme.goldDim)
+                            .foregroundStyle(Theme.onGlassGold)
                             .lineLimit(1)
                             .fixedSize()
-                        StatBar(
+                        GlassMeter(
                             value: Double(player.experience),
                             maximum: Double(player.experienceToNextLevel),
                             tint: Theme.gold,
@@ -410,12 +449,13 @@ struct IslandView: View {
             // The four doors, painted (2026-09-22, phase B; PLAN.md, *The
             // painted doors*): each object from the tab bar's sheet in the
             // same dark socket, 36 points in a 44-point target. They stand
-            // four points apart rather than the header's twelve: twenty
-            // points of cream between four 36-point medallions read as four
-            // loose buttons, and in run 211's frame the player's card beside
-            // them was squeezed until the level and the experience numbers
-            // either side of its bar were gone.
-            HStack(spacing: 4) {
+            // six points apart rather than the header's twelve: twenty
+            // points between four 36-point medallions read as four loose
+            // buttons, and in run 211's frame the player's card beside them
+            // was squeezed until the level and the experience numbers either
+            // side of its bar were gone. Six, not four, so the missions'
+            // red count clears the allies' rim (run 216).
+            HStack(spacing: 6) {
                 // Missions: the scroll beside the wallet, with what is waiting.
                 Button {
                     Juice.haptic(.light)
@@ -470,10 +510,11 @@ struct IslandView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(
-            Capsule().fill(Theme.plate.opacity(0.62))
-                .overlay(Capsule().strokeBorder(Theme.stroke.opacity(0.7), lineWidth: 1))
-        )
+        // Dark glass, the one material of the doors' sockets and the purse's
+        // well (2026-09-23, run 216): the cream capsule at 0.62 was a third
+        // material, milky over the sea, with the obelisk's flame and the
+        // bubbles ghosting through it. Words over art go on glass.
+        .background(GlassPlate(radius: 28, opacity: 0.8))
         .padding(.horizontal, 12)
         .padding(.top, 6)
     }
@@ -542,7 +583,16 @@ struct IslandView: View {
     /// of what it wants, and a small chip under it names it — the owner's
     /// players are new to the island and the painting names nothing. A tap
     /// pops the chip and the bubble before the screen opens.
-    private func building(_ landmark: Landmark, frame: CGRect, shift: CGPoint) -> some View {
+    ///
+    /// The chip and the bubble are held inside the island's frame
+    /// (2026-09-23, run 216): at the tour's 1.5 the Hall of Ka's chip slid
+    /// under the sensor housing ("all of Ka") and the temple's bubble under
+    /// the header. Each is clamped across into the safe width and down under
+    /// the header, and a building whose own centre has left the frame (or
+    /// gone under the header) drops both rather than pinning them to an edge
+    /// over somewhere else. `plate` is the named figure's plate: a chip or a
+    /// bubble it lands on steps back while it is up.
+    private func building(_ landmark: Landmark, frame: CGRect, shift: CGPoint, bounds: CGSize, plate: CGRect?) -> some View {
         let level = store.player.level
         let unlocked = landmark.isUnlocked(atLevel: level)
         let tier = landmark.tier(atLevel: level)
@@ -555,18 +605,34 @@ struct IslandView: View {
         let bottom = centre.y + size.height / 2
         let pop: CGFloat = pressed == landmark.id ? 1.12 : 1
         let shake: CGFloat = shaking == landmark.id ? 5 : 0
+        let inView = centre.x >= 0 && centre.x <= bounds.width
+            && centre.y >= Self.headerBottom && centre.y <= bounds.height
+        // The chip on the building's front step, four points under its
+        // footprint's foot (it hung eleven under, on the sand where the
+        // leader stands), held in the frame.
+        let chipSize = Self.chipSize(landmark, unlocked: unlocked, tier: tier)
+        let chipAt = Self.held(CGPoint(x: centre.x, y: bottom + 4), size: chipSize, in: bounds)
+        let chipRect = CGRect(x: chipAt.x - chipSize.width / 2, y: chipAt.y - chipSize.height / 2,
+                              width: chipSize.width, height: chipSize.height)
+        let chipShown = inView && !(plate?.intersects(chipRect) ?? false)
+        let wants = active ? badge(for: landmark) : nil
 
         return Group {
             if active {
+                // Light on the sand under the building, not paint beside it
+                // (run 216: a salmon smear 1.3 times the footprint ran down
+                // to the band). A warm-white core and the accent, ADDED to
+                // the painting, the building's width and a third its height.
                 Ellipse()
                     .fill(
                         RadialGradient(
-                            colors: [accent.opacity(pulse ? 0.62 : 0.34), accent.opacity(pulse ? 0.22 : 0.1), .clear],
-                            center: .center, startRadius: 0, endRadius: size.width * 0.62
+                            colors: [Color(hex: "#FFF3D0").opacity(0.25), accent.opacity(pulse ? 0.32 : 0.16), .clear],
+                            center: .center, startRadius: 0, endRadius: size.width * 0.5
                         )
                     )
-                    .frame(width: size.width * 1.3, height: size.height * 0.5)
-                    .position(x: centre.x, y: bottom - size.height * 0.06)
+                    .frame(width: size.width, height: size.height * 0.32)
+                    .blendMode(.plusLighter)
+                    .position(x: centre.x, y: bottom - size.height * 0.08)
                     .allowsHitTesting(false)
             }
 
@@ -579,27 +645,68 @@ struct IslandView: View {
                 .guideAnchor("island_\(landmark.id)")
                 .position(centre)
 
-            chip(landmark, unlocked: unlocked, tier: tier, accent: accent)
-                .scaleEffect(pop)
-                .offset(x: shake)
-                .onTapGesture { tap(landmark, unlocked: unlocked) }
-                .position(x: centre.x, y: bottom + 11)
-                .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
-                .animation(.default.speed(3), value: shaking)
+            if inView {
+                chip(landmark, unlocked: unlocked, tier: tier, accent: accent)
+                    .scaleEffect(pop)
+                    .offset(x: shake)
+                    .opacity(chipShown ? 1 : 0)
+                    .allowsHitTesting(chipShown)
+                    .onTapGesture { tap(landmark, unlocked: unlocked) }
+                    .position(chipAt)
+                    .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
+                    .animation(.default.speed(3), value: shaking)
+                    .animation(.easeOut(duration: 0.2), value: chipShown)
+            }
 
-            if active, let badge = badge(for: landmark) {
-                IslandBubble(glyph: badge.glyph, text: badge.text, tint: accent)
+            if inView, let wants {
+                let bubbleSize = IslandBubble.size(for: wants.text)
+                let bubbleAt = Self.held(CGPoint(x: centre.x, y: top - 16), size: bubbleSize, in: bounds)
+                let bubbleRect = CGRect(x: bubbleAt.x - bubbleSize.width / 2, y: bubbleAt.y - bubbleSize.height / 2,
+                                        width: bubbleSize.width, height: bubbleSize.height)
+                let bubbleShown = !(plate?.intersects(bubbleRect) ?? false)
+                IslandBubble(glyph: wants.glyph, text: wants.text, tint: accent, art: wants.art)
                     .scaleEffect(pop)
                     .offset(y: pulse ? -3 : 3)
+                    .opacity(bubbleShown ? 1 : 0)
+                    .allowsHitTesting(bubbleShown)
                     .onTapGesture { tap(landmark, unlocked: unlocked) }
-                    .position(x: centre.x, y: top - 16)
+                    .position(bubbleAt)
                     .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
+                    .animation(.easeOut(duration: 0.2), value: bubbleShown)
             }
         }
     }
 
-    /// The building's name on a cream chip, with a lock and the level it
-    /// wants while it is shut, and a diamond per tier past the first.
+    /// A point moved just far enough that a thing of `size` centred on it
+    /// stands inside the island's safe frame with four points to spare, and
+    /// under the header.
+    private static func held(_ point: CGPoint, size: CGSize, in bounds: CGSize) -> CGPoint {
+        let halfWidth = size.width / 2 + 4
+        let halfHeight = size.height / 2 + 4
+        let x = min(max(point.x, halfWidth), max(halfWidth, bounds.width - halfWidth))
+        let y = min(max(point.y, headerBottom + halfHeight), max(headerBottom + halfHeight, bounds.height - halfHeight))
+        return CGPoint(x: x, y: y)
+    }
+
+    /// A name chip's size, reckoned rather than measured so the clamp and the
+    /// plate's test need no layout pass: Manrope ExtraBold at 11 set
+    /// "Summoning Circle" in 100 points (run 216's chip measured 114 with its
+    /// padding) and "Hall of Ka" in 50, so 6.4 a character plus the padding,
+    /// the lock and the tier diamonds errs wide: a clamped chip stops a few
+    /// points early, never late.
+    private static func chipSize(_ landmark: Landmark, unlocked: Bool, tier: Int) -> CGSize {
+        let words = unlocked ? landmark.title : "\(landmark.title) · Lv.\(landmark.unlockLevel)"
+        var width = CGFloat(words.count) * 6.4 + 18
+        if !unlocked { width += 13 }
+        if tier > 1 { width += CGFloat(tier) * 6 + 4 }
+        return CGSize(width: width, height: 21)
+    }
+
+    /// The building's name on a chip of dark glass rimmed in the building's
+    /// colour, with a lock and the level it wants while it is shut, and a
+    /// diamond per tier past the first. Glass since run 216: cream chips on
+    /// the painting were the one cream thing left between a glass header,
+    /// glass bubbles and Athena's glass.
     private func chip(_ landmark: Landmark, unlocked: Bool, tier: Int, accent: Color) -> some View {
         HStack(spacing: 4) {
             if !unlocked {
@@ -607,48 +714,54 @@ struct IslandView: View {
                     .font(.system(size: 9, weight: .black))
             }
             Text(unlocked ? landmark.title : "\(landmark.title) · Lv.\(landmark.unlockLevel)")
-                .font(Theme.body(10).weight(.heavy))
+                .font(Theme.body(11).weight(.heavy))
                 .lineLimit(1)
+                .fixedSize()
             if tier > 1 {
                 HStack(spacing: 1) {
                     ForEach(0..<tier, id: \.self) { _ in
                         Image(systemName: "diamond.fill")
                             .font(.system(size: 5, weight: .black))
-                            .foregroundStyle(Theme.gold)
+                            .foregroundStyle(Theme.onGlassGold)
                     }
                 }
             }
         }
-        .foregroundStyle(unlocked ? Theme.textPrimary : Theme.textSecondary)
+        .foregroundStyle(unlocked ? Theme.onGlass : Theme.onGlassDim)
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
         .background(
-            Capsule().fill(Theme.plate.opacity(0.88))
-                .overlay(Capsule().strokeBorder(accent.opacity(unlocked ? 0.8 : 0.3), lineWidth: 1))
+            Capsule().fill(IslandBubble.glassFill)
+                .overlay(Capsule().strokeBorder(accent.opacity(unlocked ? 0.85 : 0.35), lineWidth: 1))
                 .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
         )
     }
 
     /// What a building's bubble carries: the thing you have to spend there,
-    /// with the glyph that quantity wears everywhere else in the game.
-    private func badge(for landmark: Landmark) -> (glyph: String, text: String)? {
+    /// with its painted item (`art`, a bundle painting — the energy's bolt,
+    /// the summon door's scroll, the arena's shield, the collection's bust,
+    /// the relic chest the Labyrinth pays) and the glyph that quantity wears
+    /// elsewhere as the fallback. Run 216 had five SF glyphs on cream here,
+    /// under a header and over a bar of painted objects.
+    private func badge(for landmark: Landmark) -> (glyph: String, text: String, art: String?)? {
         let player = store.player
+        let energy = ItemArt.imageName("energy")
         switch landmark.destination {
         case .campaign:
-            return (glyph: "bolt.fill", text: "\(player.wallet.energy)")
+            return (glyph: "bolt.fill", text: "\(player.wallet.energy)", art: energy)
         case .summon:
             let scrolls = ScrollType.allCases.reduce(0) { $0 + player.wallet.count(of: $1) }
             guard scrolls > 0 else { return nil }
-            return (glyph: "scroll.fill", text: "\(scrolls)")
+            return (glyph: "scroll.fill", text: "\(scrolls)", art: ChromeArt.imageName("summon"))
         case .arena:
-            return (glyph: "flame.fill", text: "\(player.arena.attacksRemaining)")
+            return (glyph: "flame.fill", text: "\(player.arena.attacksRemaining)", art: ChromeArt.imageName("arena"))
         case .collection, .training:
-            return (glyph: "person.3.fill", text: "\(player.units.count)")
+            return (glyph: "person.3.fill", text: "\(player.units.count)", art: ChromeArt.imageName("collection"))
         case .labyrinth:
             // The deepest level open across the relic dungeons.
             let deepest = DungeonDatabase.labyrinths.map { player.campaignProgress[$0.id] ?? 0 }.max() ?? 0
-            guard deepest > 0 else { return (glyph: "bolt.fill", text: "\(player.wallet.energy)") }
-            return (glyph: "flag.checkered", text: "B\(deepest)")
+            guard deepest > 0 else { return (glyph: "bolt.fill", text: "\(player.wallet.energy)", art: energy) }
+            return (glyph: "flag.checkered", text: "B\(deepest)", art: ItemArt.imageName("relic_cache"))
         case .settings:
             return nil
         }
@@ -722,22 +835,47 @@ struct IslandView: View {
                 .position(x: feet.x, y: feet.y - height * 0.5)
             if let named, named.index == index {
                 nameplate(unit)
-                    .position(x: feet.x, y: feet.y - height - 14)
+                    .position(x: feet.x, y: max(feet.y - height - 14, Self.headerBottom + 16))
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
                     .allowsHitTesting(false)
             }
         }
     }
 
+    /// What a figure's plate says.
+    private static func nameplateWords(_ unit: ResolvedUnit) -> String {
+        "\(unit.name) · Lv.\(unit.unit.level)"
+    }
+
+    /// Where the named figure's plate stands, reckoned the way `chipSize`
+    /// reckons a chip, or nil while nobody is named. A name and a level run
+    /// narrower than a building's name (Manrope ExtraBold at 11 set "Zeus ·
+    /// Lv.12" in 59 points and "Sekhmet · Lv.12" in 81), so 5.8 a
+    /// character, and a chip steps back only when the plate is really on it.
+    private func nameplateRect(frame: CGRect, full: CGSize, shift: CGPoint) -> CGRect? {
+        guard let named else { return nil }
+        let units = standingUnits
+        guard named.index < units.count, named.index < Self.stands.count else { return nil }
+        let height = full.height * IslandSceneView.figureHeight * camera.zoom
+        let feet = point(Self.stands[named.index], frame: frame, shift: shift)
+        let words = Self.nameplateWords(units[named.index])
+        let width = CGFloat(words.count) * 5.8 + 20
+        let centreY = max(feet.y - height - 14, Self.headerBottom + 16)
+        return CGRect(x: feet.x - width / 2, y: centreY - 12, width: width, height: 24)
+    }
+
+    /// The figure's name and level on the same dark glass as the chips,
+    /// rimmed in its element.
     private func nameplate(_ unit: ResolvedUnit) -> some View {
-        Text("\(unit.name) · Lv.\(unit.unit.level)")
+        Text(Self.nameplateWords(unit))
             .font(Theme.body(11).weight(.heavy))
-            .foregroundStyle(Theme.textPrimary)
+            .foregroundStyle(Theme.onGlass)
             .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 9)
             .padding(.vertical, 4)
             .background(
-                Capsule().fill(Theme.plate.opacity(0.92))
+                Capsule().fill(IslandBubble.glassFill)
                     .overlay(Capsule().strokeBorder(Color(hex: unit.element.accentHex).opacity(0.9), lineWidth: 1.5))
                     .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
             )
@@ -766,11 +904,23 @@ struct IslandView: View {
     /// bubble; a tap claims it where it stands — the same item through the
     /// same `GameStore.buy`, so the two doors cannot pay differently — with
     /// a burst of gold and the grants as tiles for a few seconds.
-    private func offeringBubble(frame: CGRect, shift: CGPoint) -> some View {
-        IslandBubble(glyph: "gift.fill", text: "Daily offering", tint: Theme.gold, filled: true)
+    /// Held in the frame and under the header like the buildings' bubbles,
+    /// and gone while the pool itself is off the screen or under the header.
+    private func offeringBubble(frame: CGRect, shift: CGPoint, bounds: CGSize, plate: CGRect?) -> some View {
+        let pool = point(Self.offeringPoint, frame: frame, shift: shift)
+        let inView = pool.x >= 0 && pool.x <= bounds.width && pool.y >= Self.headerBottom && pool.y <= bounds.height
+        let size = IslandBubble.size(for: "Daily offering")
+        let at = Self.held(pool, size: size, in: bounds)
+        let rect = CGRect(x: at.x - size.width / 2, y: at.y - size.height / 2, width: size.width, height: size.height)
+        let shown = inView && !(plate?.intersects(rect) ?? false)
+        return IslandBubble(glyph: "gift.fill", text: "Daily offering", tint: Theme.gold, filled: true,
+                            art: ItemArt.imageName("bundle"))
             .offset(y: pulse ? -3 : 3)
+            .opacity(shown ? 1 : 0)
+            .allowsHitTesting(shown)
             .onTapGesture { claimOffering() }
-            .position(point(Self.offeringPoint, frame: frame, shift: shift))
+            .position(at)
+            .animation(.easeOut(duration: 0.2), value: shown)
     }
 
     private func claimOffering() {
@@ -972,40 +1122,92 @@ struct IslandCamera: Equatable {
 
 // MARK: - Bubbles
 
-/// The genre's floating marker over a building: a small plate with a glyph
-/// and a count and a tail pointing down, bobbing. Gold and filled for the
-/// daily offering.
+/// The genre's floating marker over a building: a small plate with the
+/// painted item and a count and a tail pointing down, bobbing. Gold and
+/// filled for the daily offering.
+///
+/// On dark glass rimmed in the building's colour since run 216, the wallet
+/// well's material, with the item PAINTED (`art`, a bundle painting's name)
+/// at 18 points; `glyph` is drawn only while that painting is missing. Five
+/// SF glyphs on cream were the system kit in the middle of the painting.
 struct IslandBubble: View {
     let glyph: String
     let text: String
     var tint: Color = Theme.gold
     var filled: Bool = false
+    var art: String? = nil
+
+    /// The island's glass: the chips', the bubbles' and the plates' ground.
+    static let glassFill = Color(hex: "#17120E").opacity(0.84)
+
+    /// The painted item's size.
+    static let artSize: CGFloat = 18
+
+    /// A bubble's size with its tail, reckoned rather than measured so the
+    /// island can keep it in the frame before it is drawn: Manrope-Bold's
+    /// figures at 12 run about 7.6 points, the rest is the item and padding.
+    static func size(for text: String) -> CGSize {
+        CGSize(width: CGFloat(text.count) * 7.6 + artSize + 20, height: artSize + 8 + 5)
+    }
 
     var body: some View {
         VStack(spacing: -1) {
             HStack(spacing: 4) {
-                Image(systemName: glyph)
-                    .font(.system(size: 11, weight: .black))
+                if let art, BundleImage.exists(art) {
+                    BundleImage(name: art, renderedAt: Self.artSize)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: Self.artSize, height: Self.artSize)
+                        .shadow(color: .black.opacity(0.5), radius: 1, y: 1)
+                } else {
+                    Image(systemName: glyph)
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(filled ? Theme.ink : tint)
+                }
                 Text(text)
                     .font(Theme.numeric(12))
+                    .foregroundStyle(filled ? Theme.ink : Theme.onGlass)
                     .lineLimit(1)
+                    .fixedSize()
             }
-            .foregroundStyle(filled ? Theme.ink : Theme.textPrimary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .fill(filled ? Theme.gold : Theme.plate.opacity(0.94))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 9, style: .continuous)
-                    .strokeBorder(filled ? Theme.goldDeep.opacity(0.7) : tint, lineWidth: 1.5)
-            )
+            .padding(.leading, 6)
+            .padding(.trailing, 8)
+            .padding(.vertical, 4)
+            .background(plate)
             BubbleTail()
                 .fill(filled ? Theme.gold : tint)
                 .frame(width: 10, height: 6)
         }
         .shadow(color: .black.opacity(0.35), radius: 3, y: 2)
+    }
+
+    /// Gold for the offering; otherwise the glass, its colour on the rim and
+    /// a lit top edge, like the wallet's well.
+    @ViewBuilder
+    private var plate: some View {
+        if filled {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Theme.gold)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .strokeBorder(Theme.goldDeep.opacity(0.7), lineWidth: 1.5)
+                )
+        } else {
+            RoundedRectangle(cornerRadius: 9, style: .continuous)
+                .fill(Self.glassFill)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 9, style: .continuous)
+                        .strokeBorder(tint, lineWidth: 1.5)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .strokeBorder(
+                            LinearGradient(colors: [Color.white.opacity(0.18), Color.white.opacity(0)],
+                                           startPoint: .top, endPoint: .center),
+                            lineWidth: 1
+                        )
+                        .padding(1.5)
+                )
+        }
     }
 }
 

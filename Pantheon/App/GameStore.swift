@@ -12,6 +12,11 @@ final class GameStore: ObservableObject {
     @Published private(set) var player: Player
     @Published var lastError: String?
     @Published private(set) var isSaving = false
+    /// True while a modal CARD stands over a tab screen (the stage popup, the
+    /// sweep receipt): `GameTabBar` dims under it and takes no tap, so a door
+    /// cannot switch screens under an open card (run 216). Set only through
+    /// `View.dimsTabBar(_:)`; never saved.
+    @Published var tabBarDimmed = false
 
     /// The account this store plays as. Its save goes under
     /// `account.storageKey` and nowhere else, so a store retired at sign-out
@@ -1043,6 +1048,33 @@ final class GameStore: ObservableObject {
                 unit.acquiredFrom = "tour"
                 player.units.append(unit)
             }
+            // The arena squad (run 216): four more gods at level 40, fielded
+            // as the arena's offence and defence ONLY, so the campaign team
+            // and every battle frame keep their level-12 three. The standing
+            // below (1,860, the Oracle) fields challengers at level 26–29 with
+            // 3★ relics, 10.6k–14.4k power; against the level-12 team every
+            // challenger was rose and the lobby read as a broken matchmaker.
+            // At 40 (×2.15 the level-12 stats) the squad stands near 12–13k,
+            // inside the pool, so the three rows can read green, cream and
+            // rose. Tagged `tour-arena`, and the Hall of Ka's tour steps pass
+            // over them, so the feed and awaken frames keep their units.
+            let arenaSquad = ["ares_ember", "thoth_tide", "perseus_gale", "heracles_umbra"]
+            for id in arenaSquad where !player.units.contains(where: { $0.blueprintID == id }) {
+                guard let blueprint = UnitDatabase.blueprint(id) else { continue }
+                var unit = Unit(blueprint: blueprint, level: 40)
+                unit.acquiredFrom = "tour-arena"
+                player.units.append(unit)
+            }
+            // One common at its level cap (3★, level 35) with the four
+            // Shabtis as its fodder, so tour step 3's `evolve` ledger shows a
+            // unit READY to evolve — the pips, MAX and a live Evolve — where
+            // it fell back to a level-12 Zeus with the requirement unmet.
+            if !player.units.contains(where: { $0.blueprintID == "shabti_tide" }),
+               let blueprint = UnitDatabase.blueprint("shabti_tide") {
+                var unit = Unit(blueprint: blueprint, level: ProgressionService.maxLevel(stars: blueprint.naturalStars))
+                unit.acquiredFrom = "tour"
+                player.units.append(unit)
+            }
             // One awakened unit, so the tour's collection, detail and battle
             // frames show the awakened card, name and look: the STARTER,
             // whichever family and element that is (`UnitDatabase.starter`;
@@ -1203,15 +1235,17 @@ final class GameStore: ObservableObject {
             if team.count == 3 {
                 player.campaignTeam = TeamPreset(name: "Campaign", unitIDs: team)
             }
-            // The arena step fights a full four, so the offence team is the
-            // three plus the water Anubis rather than the starter alone.
-            let offence = [UnitDatabase.starter.id, "sekhmet_umbra", "zeus_ember", "anubis_tide"].compactMap { id in
+            // The arena step fights a full four: the level-40 squad seeded
+            // above (run 216), a fair match for the standing's challengers.
+            // It was the campaign three plus the water Anubis at level 12,
+            // which every challenger outgunned by two to one.
+            let offence = arenaSquad.compactMap { id in
                 player.units.first { $0.blueprintID == id }?.id
             }
             if offence.count == 4 {
                 player.arenaOffenseTeam = TeamPreset(name: "Arena Offense", unitIDs: offence)
             }
-            // A full defence led by Zeus and a standing halfway up the ladder,
+            // A full defence and a standing halfway up the ladder,
             // so the arena's lobby (tour step 7) photographs what it is built
             // to show: the Oracle's crest in its colour, the meter part way to
             // Champion, a record, the attacks short of full with their refill
@@ -1223,7 +1257,9 @@ final class GameStore: ObservableObject {
             // arena fight (step 8) draws from, since the pool is seeded by
             // points, the island's arena bubble (7 attacks, not 10), and any
             // board that reads the player's arena points.
-            let defence = ["zeus_ember", "sekhmet_umbra", "anubis_tide", UnitDatabase.starter.id].compactMap { id in
+            // The same squad, led by Thoth: the defence and the offence rows
+            // of the lobby read one level, as a player's do.
+            let defence = ["thoth_tide", "ares_ember", "perseus_gale", "heracles_umbra"].compactMap { id in
                 player.units.first { $0.blueprintID == id }?.id
             }
             if defence.count == 4 {
@@ -1237,6 +1273,9 @@ final class GameStore: ObservableObject {
                 player.arena.attacksRemaining = 7
                 player.arena.lastRefresh = Date().addingTimeInterval(-9 * 60)
             }
+            // Laurels in hand, so the lobby's Exchange leads to something a
+            // 23-win record could buy.
+            player.wallet.laurels = max(player.wallet.laurels, 1_240)
         }
     }
     #endif

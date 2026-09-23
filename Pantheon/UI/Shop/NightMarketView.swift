@@ -44,6 +44,7 @@ struct NightMarketBoard: View {
             portraitName: Self.portraitName(for: stall.grant),
             kind: BazaarWareTile.kind(for: stall.grant),
             name: stall.title,
+            shelfName: BazaarWareTile.shelfName(stall.title, grant: stall.grant),
             detail: stall.subtitle,
             price: stall.price,
             status: status(for: stall)

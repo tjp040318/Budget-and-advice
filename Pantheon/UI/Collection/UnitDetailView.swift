@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// What one fodder unit costs to feed. `GameStore.levelUp` charges the same
 /// figure (`let cost = fodder.count * 500`, GameStore.swift); the two are kept
@@ -33,50 +34,95 @@ private let ringColumnWidth: CGFloat = 212
 /// frame has to hold.
 private let slotTileSize: CGFloat = 60
 
-/// What `UnitCard` draws under its square since the type floor of
-/// 2026-09-22: the name at body 11 over the level and power at numeric
-/// 11.5, with 3 and 4 of padding — 41 points, measured off run 211's unit
-/// sheet (a 100-point card 141 tall). `Theme.cardCaptionHeight` still says
-/// 36 at that size; the identity column sizes its card off this.
-private let cardCaption: CGFloat = 41
+/// The largest face the identity column draws: its 158 less the panel's 12
+/// a side is 134, and 120 leaves the rarity frame air inside it.
+private let identityFaceMaximum: CGFloat = 120
 
 /// The fade at the foot of a panel body that scrolls (`SheetPanelScroll`),
 /// and the room its last line keeps under it so it can scroll clear.
 private let panelFade: CGFloat = 14
 
-/// A panel's body that scrolls INSIDE its panel and ends in a fade.
+/// The coordinate space a `SheetPanelScroll` measures its content in.
+private let sheetPanelSpace = "sheetPanelScroll"
+
+/// A panel's body that scrolls INSIDE its panel — and says so only when it
+/// has to.
 ///
 /// The unit sheet is one frame since phase B (2026-09-22): three columns,
 /// each exactly the frame's height, the painted panels fixed and only what
-/// cannot fit scrolling inside them. The whole sheet scrolled before, and
-/// every column was taller than the phone — run 211's frame 2 cut the ring
-/// panel's regalia row, the Evolve and Awaken rows and the skills' words at
-/// the frame's foot with nothing to say there was more, the critic's
-/// "clipped". Here the last line fades instead of being cut, the things a
-/// player acts on (the buttons, the ring, the skill icons) are pinned
-/// outside the scroll, and the regalia is the first thing in the ring's
-/// scroll, whole at rest.
+/// cannot fit scrolling inside them. The things a player acts on (the
+/// buttons, the ring, the skill icons) are pinned outside the scroll.
+///
+/// Run 216's judge: both panels ended in a GHOST ROW — set chips at a fifth
+/// of their opacity, the skill's last line fading mid-sentence — which read
+/// as clipped, with nothing to say it scrolled. So the body is measured:
+/// content that fits is drawn whole, with no fade at all; content that does
+/// not fades at the foot AND wears a small chevron there, which goes when
+/// the last line has been scrolled into view. And the panels were cut so
+/// that at rest they fit: the ring panel's footer and the skills' notes
+/// moved to popovers and a tile of their own.
 private struct SheetPanelScroll<Content: View>: View {
     let content: () -> Content
+    /// The content's frame in the scroll's own space: its height against
+    /// the viewport's says whether it overflows, its foot whether there is
+    /// more below.
+    @State private var contentFrame: CGRect = .zero
+    @State private var viewportHeight: CGFloat = 0
 
     init(@ViewBuilder content: @escaping () -> Content) {
         self.content = content
     }
 
+    private var overflows: Bool { contentFrame.height > viewportHeight + 1 }
+    private var moreBelow: Bool { overflows && contentFrame.maxY > viewportHeight + 2 }
+
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
             content()
                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(.bottom, panelFade)
+                .background(
+                    GeometryReader { proxy in
+                        let frame = proxy.frame(in: .named(sheetPanelSpace))
+                        Color.clear
+                            .onAppear { contentFrame = frame }
+                            .onChange(of: frame) { _, now in contentFrame = now }
+                    }
+                )
+                // Room for the last line to scroll clear of the fade — only
+                // when there is a fade.
+                .padding(.bottom, overflows ? panelFade : 0)
         }
+        // The name-based pair (`coordinateSpace(name:)` with the proxy's
+        // `.named`), which every SDK since iOS 13 resolves the same way.
+        .coordinateSpace(name: sheetPanelSpace)
         .scrollBounceBehavior(.basedOnSize)
+        .background(
+            GeometryReader { proxy in
+                let height = proxy.size.height
+                Color.clear
+                    .onAppear { viewportHeight = height }
+                    .onChange(of: height) { _, now in viewportHeight = now }
+            }
+        )
         .mask(
             VStack(spacing: 0) {
                 Color.black
-                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                LinearGradient(colors: [Color.black, moreBelow ? Color.clear : Color.black], startPoint: .top, endPoint: .bottom)
                     .frame(height: panelFade)
             }
         )
+        .overlay(alignment: .bottom) {
+            if moreBelow {
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.goldDim)
+                    .frame(width: 30, height: 12)
+                    .background(Capsule().fill(Theme.surfaceHigh.opacity(0.92)))
+                    .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 0.8))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 }
 
@@ -120,6 +166,11 @@ struct UnitDetailView: View {
     @State private var showSets = false
     @State private var showBoons = false
     @State private var showRegalia = false
+    /// The popover off the ring's POWER: what the six slots and the boon
+    /// are worth (the footer the ring panel scrolled to until run 216).
+    @State private var showWorth = false
+    /// The skill whose words are shown, by its place in the kit — or
+    /// `leaderSlot` for the leader skill's own tile.
     @State private var selectedSkill = 0
 
     /// A slot number that can drive a sheet.
@@ -138,9 +189,13 @@ struct UnitDetailView: View {
 
     var body: some View {
         NavigationStack {
+            // The short name and ONE epithet under it — the awakened name's
+            // own when it has one — as every plate in the build prints a
+            // unit; run 216 stacked "ANUBIS, KEEPER OF THE ASH ROAD" over
+            // "of the Burning Sands".
             GameScreen(
-                unit?.name ?? "Unit",
-                subtitle: unit?.blueprint.epithet,
+                unit?.nameWithoutEpithet ?? "Unit",
+                subtitle: unit?.epithetUnderName,
                 dismiss: { dismiss() }
             ) {
                 BarButton(
@@ -155,8 +210,10 @@ struct UnitDetailView: View {
                     store.autoEquip(unitID)
                 }
                 // The genre's "remove all", free: the six come off in one tap
-                // so another unit can wear them.
-                BarButton(title: "Unequip all", systemImage: "minus.circle", tint: Theme.textSecondary, showsTitle: false) {
+                // so another unit can wear them. Worded since run 216: a bare
+                // ⊖ read as "remove", not as the relics coming off, and the
+                // strip has the room now that its title is the short name.
+                BarButton(title: "Unequip all", systemImage: "minus.circle", tint: Theme.textSecondary) {
                     store.unequipAll(unitID)
                     AudioLibrary.shared.play(.uiTap)
                 }
@@ -253,22 +310,23 @@ struct UnitDetailView: View {
 
     // MARK: - Left: the card and what to do with it
 
-    /// The card, its level, and the three things to do with a unit.
+    /// The face, its level, and the three things to do with a unit.
     ///
     /// Fitted to the frame rather than scrolled: the buttons are pinned at
-    /// the panel's foot and the CARD takes what they leave, up to 100 points
-    /// — 93 on an iPhone 16 Pro with all three rows, 84 on an iPhone 16. The
-    /// epithet row that stood under the card is gone: the strip's subtitle
-    /// is the epithet, and the card wears the element, so it said both twice
-    /// and cost the 21 points that put Evolve and Awaken under the frame's
-    /// foot in run 211.
+    /// the panel's foot and the FACE takes what they leave, up to 120 points
+    /// — 120 on an iPhone 16 Pro and on an iPhone 16 with all three rows.
+    /// It is the face alone (`UnitPortraitTile`), no caption and no level
+    /// badge: the card's caption printed the name the strip prints, the
+    /// level the bar under it prints and the power the ring prints, all
+    /// within 150 pixels (run 216), and its 41 points are the face's now,
+    /// 93 → 120.
     private func identity(_ unit: ResolvedUnit, height: CGFloat) -> some View {
         // The fixed parts: the panel's 8 and 18, the level bar's 23, the 6
         // over it and the spacer's least 6 under it, and the rows — Power
         // up's 46 and 32 for each row under it with 4 between.
         let rows: CGFloat = unit.blueprint.awakening != nil ? 118 : 82
         let room = height - 61 - rows
-        let card = max(64, min(100, (room - cardCaption).rounded(.down)))
+        let card = max(64, min(identityFaceMaximum, room.rounded(.down)))
         // `grantExperience` zeroes the stored experience at the cap, so a
         // maxed unit's bar read "0 / 1400" under a full level — the same
         // lie the fodder footer was fixed for. Fill it and say MAX.
@@ -276,7 +334,7 @@ struct UnitDetailView: View {
             level: unit.level, stars: unit.stars
         ))
         return VStack(spacing: 0) {
-            UnitCard(unit: unit, size: card)
+            UnitPortraitTile(unit: unit, size: card, showsLevel: false)
                 .padding(.bottom, 6)
             StatBar(
                 value: unit.unit.isMaxLevel ? toNextLevel : Double(unit.unit.experience),
@@ -310,12 +368,17 @@ struct UnitDetailView: View {
                 }
                 if let awakening = unit.blueprint.awakening {
                     let ready = awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
+                    // Awakened is an ACHIEVEMENT, not a disabled row: it was
+                    // drawn exactly like the unavailable Evolve above it and
+                    // could not be pressed (run 216). It is the achieved
+                    // plate now, and it opens the sheet with both forms.
                     actionButton(
                         unit.unit.isAwakened ? "Awakened" : "Awaken",
                         unit.unit.isAwakened
-                            ? "Form unlocked"
+                            ? "Form unlocked ✓"
                             : (ready ? "Essences ready" : "Essences short"),
-                        "sun.max.fill", enabled: !unit.unit.isAwakened
+                        "sun.max.fill",
+                        achieved: unit.unit.isAwakened
                     ) {
                         showAwakening = true
                     }
@@ -346,16 +409,22 @@ struct UnitDetailView: View {
         return "\(fodder) × \(unit.stars)★ · \(BarWallet.compact(cost))"
     }
 
-    /// Evolve and Awaken: a row with its word and why it is lit or dark.
-    /// Lit, it is the gold of `ClaimPlate`'s ready state — the metal plate
-    /// with a gloss and a pale rim, ink on it — so the column's three rows
-    /// are one gold under the Power up bar; dark, the cream surface. The
-    /// tint parameter is gone with the teal it carried.
+    /// Evolve and Awaken: a row with its word and why it is lit, dark or
+    /// done. THREE states since run 216, so the three read apart at a glance:
+    ///
+    /// - lit: the drawn gold of the gold `PrimaryButton` above it — the same
+    ///   four stops and gloss, so the column is ONE gold (run 216 had the
+    ///   painted copper bar over `goldPlate`'s bronze), ink on it;
+    /// - dark: the cream surface, secondary ink — not yet;
+    /// - achieved: the dark bronze socket of a painted icon with a gold rim
+    ///   and gold words — done, and still a door (the awakened unit's row
+    ///   opens the sheet with both forms).
     private func actionButton(
         _ title: String, _ subtitle: String, _ symbol: String,
-        enabled: Bool = true, action: @escaping () -> Void
+        enabled: Bool = true, achieved: Bool = false, action: @escaping () -> Void
     ) -> some View {
         let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+        let ink: Color = achieved ? Theme.onGlassGold : (enabled ? Theme.ink : Theme.textSecondary)
         return Button(action: action) {
             HStack(spacing: 6) {
                 Image(systemName: symbol)
@@ -370,23 +439,34 @@ struct UnitDetailView: View {
                     // scale factor would take body 11 under the floor.
                     Text(subtitle)
                         .font(Theme.body(11))
+                        .foregroundStyle(achieved ? Theme.onGlass : ink)
                         .lineLimit(1)
                 }
                 Spacer(minLength: 0)
             }
-            .foregroundStyle(enabled ? Theme.ink : Theme.textSecondary)
+            .foregroundStyle(ink)
             .padding(.horizontal, 7)
             .frame(height: 32)
             .background(
                 // Gradient or colour: a Group, never a ternary.
                 Group {
-                    if enabled {
-                        shape.fill(Theme.goldPlate)
-                            .overlay(
-                                shape.fill(LinearGradient(colors: [Color.white.opacity(0.35), .clear],
-                                                          startPoint: .top, endPoint: .center))
+                    if achieved {
+                        shape.fill(Theme.socketFill)
+                            .overlay(shape.strokeBorder(Theme.gold, lineWidth: 1.2))
+                            .overlay(shape.inset(by: 2).strokeBorder(Color(hex: "#FFE9A8").opacity(0.25), lineWidth: 0.6))
+                    } else if enabled {
+                        shape.fill(
+                            LinearGradient(
+                                colors: [Color(hex: "#FFE9A8"), Color(hex: "#E2BF62"), Theme.gold, Color(hex: "#7A5B1C")],
+                                startPoint: .top,
+                                endPoint: .bottom
                             )
-                            .overlay(shape.strokeBorder(Color(hex: "#FFE9A8").opacity(0.55), lineWidth: 1))
+                        )
+                        .overlay(
+                            shape.fill(LinearGradient(colors: [Color.white.opacity(0.35), .clear],
+                                                      startPoint: .top, endPoint: .center))
+                        )
+                        .overlay(shape.strokeBorder(Color(hex: "#FFE9A8").opacity(0.55), lineWidth: 1))
                     } else {
                         shape.fill(Theme.surface)
                             .overlay(shape.strokeBorder(Theme.stroke, lineWidth: 1))
@@ -395,7 +475,7 @@ struct UnitDetailView: View {
             )
         }
         .buttonStyle(PlateButtonStyle())
-        .disabled(!enabled)
+        .disabled(!enabled && !achieved)
     }
 
     // MARK: - Middle: the relic ring
@@ -415,10 +495,15 @@ struct UnitDetailView: View {
         // drawn three points into the panel's painted top band — measured on
         // CI frame 2-detail.jpg, badge top at 69 px against the band's inner
         // edge at 74.
-        let height = (radius + slotTileSize / 2 + 5) * 2
-        let centre = CGPoint(x: width / 2, y: height / 2)
+        //
+        // The five points are paid at the TOP only (run 216): the bottom
+        // tile's badge hangs off its top-left corner, inside the ring, so
+        // the frame ends at the bottom tile's edge and the centre sits 2.5
+        // below the middle — five points handed to the words under it.
+        let height = (radius + slotTileSize / 2) * 2 + 5
+        let centre = CGPoint(x: width / 2, y: radius + slotTileSize / 2 + 5)
         let figures = relicFigures(unit)
-        return VStack(spacing: 6) {
+        return VStack(spacing: 4) {
             ZStack {
                 // The rune hexagon: one thin line through the six sockets.
                 Path { path in
@@ -434,22 +519,50 @@ struct UnitDetailView: View {
                 // whole sheet exists to raise, and over it the BOON SOCKET —
                 // the one earned line a unit carries (`BoonPickerView`) —
                 // where a second copy of the element used to sit.
+                //
+                // The power is a door too (run 216): a tap opens what the
+                // ring is worth — the boon's line, the slots filled, the
+                // power the relics bought and their quality — the footer
+                // that scrolled under the ring and ended the panel in a
+                // ghost row.
                 VStack(spacing: 2) {
                     boonSocket(unit)
-                    Text("\(unit.power)")
-                        .font(Theme.numeric(16))
-                        .foregroundStyle(Theme.gold)
-                        // The clear disc inside the ring is 74pt across; five
-                        // monospaced digits at 16 are 43 of them and six would
-                        // touch the tiles at 2 and 6 o'clock. It may shrink,
-                        // but only to the numeric floor.
-                        .lineLimit(1)
-                        .minimumScaleFactor(Theme.numericFloor / 16)
-                        .frame(maxWidth: 74)
-                    Text("POWER")
-                        .font(Theme.body(8).weight(.black))
-                        .tracking(1)
-                        .foregroundStyle(Theme.textSecondary)
+                    Button {
+                        Juice.haptic(.light)
+                        showWorth = true
+                    } label: {
+                        VStack(spacing: 2) {
+                            Text("\(unit.power)")
+                                .font(Theme.numeric(16))
+                                .foregroundStyle(Theme.gold)
+                                // The clear disc inside the ring is 74pt
+                                // across; five monospaced digits at 16 are 43
+                                // of them and six would touch the tiles at 2
+                                // and 6 o'clock. It may shrink, but only to
+                                // the numeric floor.
+                                .lineLimit(1)
+                                .minimumScaleFactor(Theme.numericFloor / 16)
+                                .frame(maxWidth: 74)
+                            HStack(spacing: 2) {
+                                Text("POWER")
+                                    .font(Theme.body(8).weight(.black))
+                                    .tracking(1)
+                                Image(systemName: "info.circle")
+                                    .font(.system(size: 7, weight: .bold))
+                            }
+                            .foregroundStyle(Theme.textSecondary)
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Power \(unit.power), what the relics are worth")
+                    .popover(isPresented: $showWorth) {
+                        ringWorth(unit, figures: figures)
+                            .padding(14)
+                            .frame(width: 272)
+                            .background(Theme.surface)
+                            .presentationCompactAdaptation(.popover)
+                    }
                 }
                 .position(centre)
                 ForEach(1...6, id: \.self) { slot in
@@ -462,34 +575,28 @@ struct UnitDetailView: View {
                 }
             }
             .frame(width: width, height: height)
-            // Under the ring, the column SCROLLS inside its panel and fades at
-            // its foot (2026-09-22, phase B): the regalia first, whole — run
-            // 211's frame cut it in half at the frame's foot, the critic's
-            // "clipped" — then the sets as progress chips, the boon's line,
-            // and the arithmetic of what the six slots are worth. On an
-            // iPhone 16 Pro the ring panel has 287 points inside its
-            // paddings; the ring takes 204 and this 77: the regalia's two
-            // lines (37) and the first row of chips at rest, the rest a
-            // scroll away.
+            // Under the ring: the regalia and ONE line of set chips, which at
+            // rest FIT (run 216). They sat in a scroll with the boon's line
+            // and the relic arithmetic under them, and the panel ended in a
+            // ghost row — the chips at a fifth of their opacity — with the
+            // rest out of sight; the arithmetic and the boon are the
+            // power's popover now. On an iPhone 16 Pro the panel has 287
+            // points inside its paddings, the ring 199 and 4 of them, and
+            // this 84: the regalia's two or three lines (40–55) and the chip
+            // line (22). A regalia whose name AND line both wrap is taller,
+            // and then the body scrolls with the chevron that says so.
             //
             // The regalia was a one-line row that could not hold the
             // longest names ("Potter's Wheel of Elephantine", 159 points)
             // beside its pips and its line without shrinking them under the
-            // floor; it has two lines now. It is not pinned at the foot
-            // because two lines pinned there would leave the chips 34
-            // points. And the footer was offered to `ViewThatFits` in three
-            // sizes, shedding its note, its captions, then itself as the
-            // chips grew — the unit this screen exists to admire, six relics
-            // in three sets, lost it altogether. In the scroll it is always
-            // there, whole.
+            // floor; it has two lines now. And the footer was offered to
+            // `ViewThatFits` in three sizes, shedding its note, its
+            // captions, then itself as the chips grew; it is a popover now,
+            // always whole.
             SheetPanelScroll {
                 VStack(spacing: 6) {
                     regaliaLine(unit)
                     setsRow(unit)
-                    if let boon = unit.boon {
-                        boonLine(boon)
-                    }
-                    relicSummary(figures)
                 }
             }
         }
@@ -629,7 +736,7 @@ struct UnitDetailView: View {
                     Spacer(minLength: 0)
                 }
                 .padding(.horizontal, 6)
-                .padding(.vertical, 4)
+                .padding(.vertical, 3)
                 .background(shape.fill(unlocked ? Theme.gold.opacity(0.12) : Theme.surface))
                 .overlay(shape.strokeBorder(unlocked ? Theme.gold.opacity(0.6) : Theme.stroke.opacity(0.6), lineWidth: 0.5))
                 .contentShape(shape)
@@ -639,12 +746,18 @@ struct UnitDetailView: View {
         }
     }
 
-    /// Every set with a piece on the ring as a progress chip — "Fury 2/2"
-    /// lit in gold where the set is complete, "Fates 1/4" dim where it is
-    /// not — and a book that opens the set reference counting this unit's
-    /// pieces. The genre shows a set's count against its need beside the
-    /// rune hexagon; the completed-only chips before this left a player to
-    /// work out from six stones which set was one piece short.
+    /// Every set with a piece on the ring as ONE line of chips — the set's
+    /// stone and a count, "×2" lit in gold where the set is complete (and
+    /// how many times), "1/4" dim where it is not — and a book at the end
+    /// that opens the set reference counting this unit's pieces, where the
+    /// names are.
+    ///
+    /// One line since run 216: the named chips were a grid of two a row
+    /// that the ring panel could not hold at rest, so they sat at a fifth of
+    /// their opacity under the fade; and "Thunder 4/2" — two complete
+    /// Thunder sets — read as a counting bug. The stone names the set (the
+    /// chip's accessibility label says it), and more sets than the line
+    /// holds scroll sideways.
     private func setsRow(_ unit: ResolvedUnit) -> some View {
         let tally = Dictionary(grouping: unit.relics, by: { $0.set }).mapValues(\.count)
         // Complete sets first, then the nearest to complete, then by name,
@@ -656,27 +769,23 @@ struct UnitDetailView: View {
             if ra != rb { return ra > rb }
             return a.displayName < b.displayName
         }
-        return LazyVGrid(columns: [GridItem(.adaptive(minimum: 72, maximum: 120), spacing: 4)], spacing: 4) {
-            ForEach(entries) { relicSet in
-                let count = tally[relicSet, default: 0]
-                let complete = count >= relicSet.piecesRequired
-                // Two chips a row, 92 points each: the widest, "Nemesis
-                // 2/2", is 66 at the floor beside its 12-point stone, which
-                // fits at 5 of padding and 3 of spacing with nothing shrunk
-                // (it was 0.8, under the floor).
-                HStack(spacing: 3) {
-                    RelicSetEmblem(set: relicSet, size: 12, tint: complete ? Theme.gold : Theme.textSecondary)
-                    Text("\(relicSet.displayName) \(count)/\(relicSet.piecesRequired)")
-                        .font(Theme.body(11).weight(.bold))
-                        .foregroundStyle(complete ? Theme.gold : Theme.textSecondary)
-                        .lineLimit(1)
-                        .fixedSize()
+        return HStack(spacing: 4) {
+            if entries.isEmpty {
+                Text("Nothing worn")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                Spacer(minLength: 0)
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 4) {
+                        ForEach(entries) { relicSet in
+                            setChip(relicSet, count: tally[relicSet, default: 0])
+                        }
+                    }
                 }
-                .padding(.horizontal, 5)
-                .frame(height: 22)
-                .frame(maxWidth: .infinity)
-                .background(Capsule().fill(complete ? Theme.surfaceHigh : Theme.surface))
-                .overlay(Capsule().strokeBorder(complete ? Theme.gold.opacity(0.35) : Theme.stroke.opacity(0.6), lineWidth: 1))
+                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
             Button {
                 Juice.haptic(.light)
@@ -685,21 +794,64 @@ struct UnitDetailView: View {
                 HStack(spacing: 4) {
                     Image(systemName: "book.closed.fill")
                         .font(.system(size: 10, weight: .bold))
-                    Text(entries.isEmpty ? "Set effects" : "Sets")
-                        .font(Theme.body(11).weight(.bold))
-                        .lineLimit(1)
-                        .fixedSize()
+                    // The word only when there are no chips to explain it.
+                    if entries.isEmpty {
+                        Text("Set effects")
+                            .font(Theme.body(11).weight(.bold))
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
                 }
                 .foregroundStyle(Theme.gold)
-                .padding(.horizontal, 6)
+                .padding(.horizontal, entries.isEmpty ? 8 : 0)
+                .frame(minWidth: 26)
                 .frame(height: 22)
-                .frame(maxWidth: .infinity)
                 .background(Capsule().fill(Theme.surface))
                 .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Set effects")
         }
-        .frame(maxWidth: .infinity)
+        .frame(height: 22)
+    }
+
+    /// One set on the chip line: its painted stone and its count. "Nemesis
+    /// ×2" is 36 points at the floor beside a 14-point stone, so four stand
+    /// in the column's 188 with the book.
+    private func setChip(_ relicSet: RelicSet, count: Int) -> some View {
+        let completions = count / relicSet.piecesRequired
+        let complete = completions > 0
+        let label: String = complete ? "×\(completions)" : "\(count)/\(relicSet.piecesRequired)"
+        return HStack(spacing: 3) {
+            RelicSetEmblem(set: relicSet, size: 14, tint: complete ? Theme.gold : Theme.textSecondary)
+            Text(label)
+                .font(Theme.numeric(11.5))
+                .foregroundStyle(complete ? Theme.gold : Theme.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 6)
+        .frame(height: 22)
+        .background(Capsule().fill(complete ? Theme.surfaceHigh : Theme.surface))
+        .overlay(Capsule().strokeBorder(complete ? Theme.gold.opacity(0.45) : Theme.stroke.opacity(0.6), lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(relicSet.displayName), \(count) of \(relicSet.piecesRequired)")
+    }
+
+    /// What the ring is worth, in the popover off its POWER: the boon's
+    /// line when one is socketed, then the three figures and the note of
+    /// what is empty (`relicSummary`).
+    private func ringWorth(_ unit: ResolvedUnit, figures: RelicFigures) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("WHAT THE RING IS WORTH")
+                .font(Theme.body(11).weight(.black))
+                .tracking(1.0)
+                .foregroundStyle(Theme.goldDim)
+            if let boon = unit.boon {
+                boonLine(boon)
+            }
+            relicSummary(figures)
+        }
     }
 
     /// The three figures the footer prints, worked out once per pass.
@@ -733,8 +885,8 @@ struct UnitDetailView: View {
     /// is anywhere else in the app — the inventory scores one relic at a time,
     /// and the stats panel shows the bonus per stat but never the total.
     ///
-    /// In the ring's scroll since phase B, so it is always drawn whole and
-    /// can carry the note of what is empty under it.
+    /// In the power's popover since run 216 (`ringWorth`), where it is
+    /// always drawn whole and carries the note of what is empty under it.
     private func relicSummary(_ figures: RelicFigures) -> some View {
         VStack(spacing: 4) {
             Divider().overlay(Theme.stroke)
@@ -814,8 +966,8 @@ struct UnitDetailView: View {
     /// add — and nothing else, so the panel is its natural height (132
     /// points) and the skills under it get the rest of the column. The
     /// leader skill and the awakening lines were here and made the column
-    /// taller than the phone; they are the skills panel's scroll now, with
-    /// the other words about what the unit can do (2026-09-22, phase B).
+    /// taller than the phone; the leader skill is the skill row's crown tile
+    /// and the awakening the Awaken row's sheet (run 216).
     private func stats(_ unit: ResolvedUnit) -> some View {
         // Base is grade, level and awakening; the difference to the final
         // number is the relics, shown beside it the way the genre does, so
@@ -824,7 +976,7 @@ struct UnitDetailView: View {
         return VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 5) {
                 StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars, size: 10)
-                tag(unit.pantheon.displayName, color: unit.pantheon.color)
+                tag(unit.pantheon.displayName, color: unit.pantheon.color, ink: Self.inked(unit.pantheon.color))
                 tag(unit.archetype.displayName, color: Theme.textSecondary)
                 tag(unit.role.displayName, color: Theme.textSecondary)
             }
@@ -862,14 +1014,34 @@ struct UnitDetailView: View {
     /// "Egyptian", "Primordial" and "Controller" beside a 6★ star row are
     /// 269 points against the panel's 316 on an iPhone 16 Pro and 300 on an
     /// iPhone 16, so nothing shrinks (it was 0.75, under the floor).
-    private func tag(_ text: String, color: Color) -> some View {
+    ///
+    /// `ink` is the word's colour when it is not the tint's own: the
+    /// pantheon colours were chosen for dark grounds, and "Greek" in its pale
+    /// gold on its own pale gold tint on cream marble was all but invisible
+    /// (run 216). The capsule keeps the tint; the word is the tint taken
+    /// most of the way to ink (`inked`), 4.8:1 for the Greek gold.
+    private func tag(_ text: String, color: Color, ink: Color? = nil) -> some View {
         Text(text)
             .font(Theme.body(11).weight(.semibold))
             .lineLimit(1)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
             .background(Capsule().fill(color.opacity(0.18)))
-            .foregroundStyle(color)
+            .foregroundStyle(ink ?? color)
+    }
+
+    /// A colour taken 60% of the way to `Theme.ink`, so a word in it reads on
+    /// cream and on the colour's own tint and still says which colour it is.
+    private static func inked(_ color: Color) -> Color {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        guard UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return Theme.textPrimary }
+        var inkRed: CGFloat = 0, inkGreen: CGFloat = 0, inkBlue: CGFloat = 0, inkAlpha: CGFloat = 0
+        _ = UIColor(Theme.ink).getRed(&inkRed, green: &inkGreen, blue: &inkBlue, alpha: &inkAlpha)
+        let keep: CGFloat = 0.4
+        let mixedRed: Double = Double(red * keep + inkRed * (1 - keep))
+        let mixedGreen: Double = Double(green * keep + inkGreen * (1 - keep))
+        let mixedBlue: Double = Double(blue * keep + inkBlue * (1 - keep))
+        return Color(red: mixedRed, green: mixedGreen, blue: mixedBlue)
     }
 
     /// Three columns — label, total, relic bonus — so the numbers line up down
@@ -931,15 +1103,37 @@ struct UnitDetailView: View {
 
     // MARK: - Bottom: the skills
 
-    /// The skills: the icons pinned along the top, and under them, in a
-    /// scroll that fades at the panel's foot, the chosen skill's words, then
-    /// the leader skill and the awakening — everything the sheet says about
-    /// what the unit can do, in one place that is never cut (2026-09-22,
-    /// phase B; run 211's frame cut this panel's words at the phone's foot).
+    /// The leader skill's place in `selectedSkill`: its tile stands after
+    /// the kit's.
+    private static let leaderSlot = -1
+
+    /// The skills: the icons pinned along the top — the kit's, then the
+    /// leader skill's crown — and under them, in a scroll that fades at the
+    /// panel's foot only when the words do not fit (`SheetPanelScroll`), the
+    /// chosen one's words.
+    ///
+    /// ICONS ALONE since run 216, the genre's way. Each tile held its name
+    /// in 70 points and three of Anubis's four were cut ("Verdict of A…",
+    /// "Rite of the…", "Scales of M…"); Summoners War's row is icons, and
+    /// the chosen skill's name is in the words under it, which this panel
+    /// already printed. The icons are painted, never greyed — the gold rim
+    /// is the selection. The level is in the words beside the name, a door
+    /// to the skill-up ladder (`SkillLevelButton`). The leader skill, which
+    /// ended the scroll under the words with the awakening, is the crown's
+    /// tile — the genre puts it in the skill row too — and the awakening is
+    /// the Awaken row's sheet.
     private func skills(_ unit: ResolvedUnit) -> some View {
-        let index = min(selectedSkill, max(0, unit.skills.count - 1))
+        let leader = unit.blueprint.leaderSkill
+        let index: Int = (selectedSkill == Self.leaderSlot && leader != nil)
+            ? Self.leaderSlot
+            : min(max(0, selectedSkill), max(0, unit.skills.count - 1))
         let icons = SkillArt.keys(for: unit.skills, element: unit.element, ranged: !unit.blueprint.model.melee)
-        return VStack(alignment: .leading, spacing: 6) {
+        let tileCount = unit.skills.count + (leader == nil ? 0 : 1)
+        // 44 while four tiles share the row, 40 for five: a tile is the
+        // icon and 4 a side, and five of them are 58 wide in the 316 of an
+        // iPhone 16 Pro.
+        let icon: CGFloat = tileCount > 4 ? 40 : 44
+        return VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
                 ForEach(unit.skills.indices, id: \.self) { slot in
                     Button {
@@ -949,23 +1143,35 @@ struct UnitDetailView: View {
                         skillTile(
                             unit.skills[slot],
                             selected: slot == index,
-                            level: unit.unit.skillLevels.indices.contains(slot) ? unit.unit.skillLevels[slot] : 1,
                             element: unit.element,
                             ranged: !unit.blueprint.model.melee,
-                            iconKey: slot < icons.count ? icons[slot] : nil
+                            iconKey: slot < icons.count ? icons[slot] : nil,
+                            icon: icon
                         )
                     }
                     .buttonStyle(PlateButtonStyle())
+                    .accessibilityLabel(unit.skills[slot].name)
                 }
-            }
-            SheetPanelScroll {
-                VStack(alignment: .leading, spacing: 6) {
-                    if unit.skills.indices.contains(index) {
-                        skillWords(unit.skills[index], index: index, unit: unit)
+                if leader != nil {
+                    Button {
+                        Juice.haptic(.light)
+                        selectedSkill = Self.leaderSlot
+                    } label: {
+                        leaderTile(selected: index == Self.leaderSlot, icon: icon)
                     }
-                    abilityNotes(unit)
+                    .buttonStyle(PlateButtonStyle())
+                    .accessibilityLabel("Leader skill")
                 }
             }
+            // A new skill is a new page, met at its top.
+            SheetPanelScroll {
+                if index == Self.leaderSlot, let leader {
+                    leaderWords(leader)
+                } else if unit.skills.indices.contains(index) {
+                    skillWords(unit.skills[index], index: index, unit: unit)
+                }
+            }
+            .id(index)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, Theme.panelInset)
@@ -979,106 +1185,96 @@ struct UnitDetailView: View {
         .panelBackground(radius: Theme.tightCorner)
     }
 
-    /// The leader skill and the awakening, under the chosen skill's words:
-    /// they were the last two lines of the stats panel, and the reason the
-    /// right column was 402 points on a 313-point frame.
-    @ViewBuilder
-    private func abilityNotes(_ unit: ResolvedUnit) -> some View {
-        if unit.blueprint.leaderSkill != nil || unit.blueprint.awakening != nil {
-            Divider().overlay(Theme.stroke)
-        }
-        if let leader = unit.blueprint.leaderSkill {
-            HStack(alignment: .top, spacing: 5) {
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Theme.gold)
-                    .frame(width: 14)
-                Text(leader.description)
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        if let awakening = unit.blueprint.awakening {
-            HStack(alignment: .top, spacing: 5) {
-                Image(systemName: "sun.max.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(unit.unit.isAwakened ? Theme.gold : Theme.textSecondary)
-                    .frame(width: 14)
-                Text(unit.unit.isAwakened
-                     ? "Awakened: \(awakening.bonusDescription)"
-                     : "Awakens into \(awakening.awakenedName): \(awakening.bonusDescription)")
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
+    /// One skill's tile: its painted icon in the dark socket, in a plate
+    /// rimmed gold when it is the one whose words are shown.
+    private func skillTile(_ skill: Skill, selected: Bool, element: Element,
+                           ranged: Bool, iconKey: String?, icon: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+        return SkillIcon(skill: skill, element: element, ranged: ranged, resolvedKey: iconKey,
+                         size: icon, socket: true)
+            .padding(4)
+            // The tiles divide the row rather than sitting at a fixed width
+            // with a Spacer holding the rest of it open — which also
+            // overflowed on a narrower phone.
+            .frame(maxWidth: .infinity)
+            .background(shape.fill(selected ? Theme.surfaceHigh : Theme.surface))
+            .overlay(shape.strokeBorder(selected ? Theme.gold : Theme.stroke, lineWidth: selected ? 1.5 : 1))
+            .contentShape(Rectangle())
     }
 
-    private func skillTile(_ skill: Skill, selected: Bool, level: Int,
-                           element: Element, ranged: Bool, iconKey: String?) -> some View {
-        VStack(spacing: 2) {
-            SkillIcon(skill: skill, element: element, ranged: ranged, resolvedKey: iconKey,
-                      size: 26, tint: selected ? Theme.gold : Theme.textSecondary,
-                      dimmed: !selected, socket: true)
-            // Two lines at the floor, never shrunk (it was 0.8, under it):
-            // "Judgement of the" is 93 points, and a tile of four is 70.
-            Text(skill.name)
-                .font(Theme.body(11).weight(.semibold))
-                .foregroundStyle(selected ? Theme.textPrimary : Theme.textSecondary)
-                .lineLimit(2)
-                .multilineTextAlignment(.center)
-            Text("Lv.\(level)/\(skill.maxSkillLevel)")
-                .font(Theme.numeric(11.5))
-                .foregroundStyle(level >= skill.maxSkillLevel ? Theme.gold : Theme.textSecondary)
-                .lineLimit(1)
-                .fixedSize()
+    /// The leader skill's tile: a gold crown in the same socket as the
+    /// skills' icons.
+    private func leaderTile(selected: Bool, icon: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+        let socket = RoundedRectangle(cornerRadius: icon * 0.22, style: .continuous)
+        return ZStack {
+            socket.fill(Theme.socketFill)
+            socket.strokeBorder(Theme.goldDeep.opacity(0.85), lineWidth: 1)
+            Image(systemName: "crown.fill")
+                .font(.system(size: icon * 0.44, weight: .black))
+                .foregroundStyle(Theme.goldText)
+                .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
         }
-        .padding(.horizontal, 3)
-        .padding(.vertical, 3)
-        // The tiles divide the row rather than sitting at a fixed 58 with a
-        // Spacer holding the rest of it open — which also overflowed on a
-        // narrower phone.
-        .frame(maxWidth: .infinity, minHeight: 52)
-        .background(
-            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .fill(selected ? Theme.surfaceHigh : Theme.surface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                .strokeBorder(selected ? Theme.gold : Theme.stroke, lineWidth: selected ? 1.5 : 1)
-        )
+        .frame(width: icon, height: icon)
+        .padding(4)
+        .frame(maxWidth: .infinity)
+        .background(shape.fill(selected ? Theme.surfaceHigh : Theme.surface))
+        .overlay(shape.strokeBorder(selected ? Theme.gold : Theme.stroke, lineWidth: selected ? 1.5 : 1))
         .contentShape(Rectangle())
     }
 
-    /// The chosen skill: its name with its skill-up pips, what it costs and
-    /// hits for, what it does, and the next skill-up. In the panel's scroll
-    /// since phase B, so the name and the hint take a second line rather
-    /// than shrinking under the floor.
+    /// The leader skill's words: what it gives, to whom, and where it
+    /// counts. It works for the unit that LEADS — the first of a team
+    /// (`BattleEngine.buildSide`).
+    private func leaderWords(_ leader: LeaderSkill) -> some View {
+        let reach: String
+        if leader.appliesInArena && leader.appliesInCampaign {
+            reach = "When this unit leads — the first of the team — in any fight."
+        } else if leader.appliesInArena {
+            reach = "When this unit leads — the first of the team — in the Arena only."
+        } else if leader.appliesInCampaign {
+            reach = "When this unit leads — the first of the team — anywhere but the Arena."
+        } else {
+            reach = "It applies nowhere yet."
+        }
+        return VStack(alignment: .leading, spacing: 3) {
+            HStack(spacing: 5) {
+                Image(systemName: "crown.fill")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Theme.gold)
+                Text("Leader skill")
+                    .font(Theme.body(12).weight(.bold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+            }
+            Text(leader.description)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Text(reach)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.goldDim)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The chosen skill: its name with its level (a door to the skill-up
+    /// ladder), what it costs and hits for, and what it does. In the
+    /// panel's scroll, so a long name takes a second line rather than
+    /// shrinking under the floor; the "Next skill-up" line that ended it is
+    /// the ladder's popover, so a skill of two lines of words fits at rest.
     private func skillWords(_ skill: Skill, index: Int, unit: ResolvedUnit) -> some View {
         let level = unit.unit.skillLevels.indices.contains(index) ? unit.unit.skillLevels[index] : 1
         return VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
+            HStack(alignment: .center, spacing: 6) {
                 Text(skill.name)
                     .font(Theme.body(12).weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
                 Spacer(minLength: 4)
-                if !skill.levelUpBonuses.isEmpty {
-                    HStack(spacing: 3) {
-                        ForEach(skill.levelUpBonuses.indices, id: \.self) { bonusIndex in
-                            Circle()
-                                .fill(level > bonusIndex + 1 ? Theme.success : Theme.stroke)
-                                .frame(width: 6, height: 6)
-                        }
-                        Text("skill-ups")
-                            .font(Theme.body(11))
-                            .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
-                            .fixedSize()
-                    }
-                }
+                SkillLevelButton(skill: skill, level: level)
             }
             HStack(spacing: 8) {
                 if skill.isPassive {
@@ -1113,15 +1309,93 @@ struct UnitDetailView: View {
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
-            if let next = skill.levelUpBonuses.indices.first(where: { level <= $0 + 1 }) {
-                Text("Next skill-up: \(skill.levelUpBonuses[next].label) — feed a duplicate in the Hall of Ka.")
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.goldDim)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A skill's level beside its name, and the door to its ladder: every
+/// skill-up with what it adds, the ones gained ticked, and where the next
+/// one comes from. It replaced the five pips and the "Next skill-up: …"
+/// line that ended the skill's words and ran them past the panel's foot
+/// (run 216). A skill with no skill-ups prints its level and opens nothing.
+private struct SkillLevelButton: View {
+    let skill: Skill
+    let level: Int
+    @State private var isOpen = false
+
+    private var isMax: Bool { level >= skill.maxSkillLevel }
+
+    var body: some View {
+        if skill.levelUpBonuses.isEmpty {
+            badge
+        } else {
+            Button {
+                Juice.haptic(.light)
+                AudioLibrary.shared.play(.uiTap)
+                isOpen = true
+            } label: {
+                badge
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Skill level \(level) of \(skill.maxSkillLevel), skill-ups")
+            .popover(isPresented: $isOpen) {
+                ladder
+                    .padding(14)
+                    .frame(width: 272, alignment: .leading)
+                    .background(Theme.surface)
+                    .presentationCompactAdaptation(.popover)
+            }
+        }
+    }
+
+    private var badge: some View {
+        let label: String = "Lv.\(level)/\(skill.maxSkillLevel)"
+        return HStack(spacing: 3) {
+            Text(label)
+                .font(Theme.numeric(11.5))
+                .lineLimit(1)
+                .fixedSize()
+            if !skill.levelUpBonuses.isEmpty {
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 8, weight: .black))
+            }
+        }
+        .foregroundStyle(isMax ? Theme.gold : Theme.textSecondary)
+        .padding(.horizontal, 7)
+        .frame(height: 20)
+        .background(Capsule().fill(Theme.surfaceHigh))
+        .overlay(Capsule().strokeBorder(isMax ? Theme.gold.opacity(0.5) : Theme.stroke, lineWidth: 1))
+    }
+
+    private var ladder: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SKILL-UPS")
+                .font(Theme.body(11).weight(.black))
+                .tracking(1.0)
+                .foregroundStyle(Theme.goldDim)
+            ForEach(skill.levelUpBonuses.indices, id: \.self) { step in
+                let gained = level > step + 1
+                let rung: String = "Lv.\(step + 2)"
+                HStack(spacing: 6) {
+                    Image(systemName: gained ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(gained ? Theme.success : Theme.stroke)
+                    Text(rung)
+                        .font(Theme.numeric(11.5))
+                        .foregroundStyle(Theme.textSecondary)
+                        .frame(width: 38, alignment: .leading)
+                    Text(skill.levelUpBonuses[step].label)
+                        .font(Theme.body(12))
+                        .foregroundStyle(gained ? Theme.textPrimary : Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Text(isMax ? "Every skill-up is in." : "The next comes from a duplicate fed in the Hall of Ka.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.goldDim)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

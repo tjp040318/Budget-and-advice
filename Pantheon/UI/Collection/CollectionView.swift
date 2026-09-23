@@ -305,10 +305,25 @@ struct CollectionView: View {
                         EmptyCollectionSlot(size: card)
                     }
                 }
-                .padding(.bottom, gridPadding)
+                // Room for the last row to scroll clear of the fade.
+                .padding(.bottom, Self.gridFade)
             }
+            // The foot fades, as the mileage board's does: a card cut by the
+            // frame's edge read as the tab bar's doing in run 216's frame 1.
+            // Two rows and part of a third stand in the frame at rest, so the
+            // third row's head under the fade says the grid goes on.
+            .mask(
+                VStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                        .frame(height: Self.gridFade)
+                }
+            )
         }
     }
+
+    /// The Cards grid's foot fade, and the room under its last row.
+    private static let gridFade: CGFloat = 20
 
     /// The width the cards have to share: the column's own frame, since the
     /// layout around it carries the screen padding now. A non-finite proposal
@@ -522,23 +537,10 @@ struct CollectionView: View {
         }
     }
 
-    /// The unit's name without its epithet ("Ares", not "Ares, Bane of
-    /// Cities"), so the plate's title is never cut: `UnitCard`'s rule.
-    private func plateName(_ unit: ResolvedUnit) -> String {
-        unit.name.split(separator: ",", maxSplits: 1).first.map { String($0) } ?? unit.name
-    }
-
-    /// The line under the name: an awakened name's own epithet when it has
-    /// one ("Bane of Cities"), the family's otherwise ("of the Red Field").
-    private func plateEpithet(_ unit: ResolvedUnit) -> String {
-        let parts = unit.name.split(separator: ",", maxSplits: 1)
-        guard parts.count == 2 else { return unit.blueprint.epithet }
-        return parts[1].trimmingCharacters(in: .whitespaces)
-    }
-
     /// Name, epithet, element, grade and power, and the level with its
     /// meter — 85 points, the same block in both layouts, in cream ink on
-    /// the Cards plate and in the on-glass colours on the Stage's glass.
+    /// the Cards plate and in the on-glass colours on the Stage's glass
+    /// (96 there, the name carved at 22).
     ///
     /// The name is Cinzel at 15 and shrinks to the title floor (13) before
     /// anything else gives; the widest in the roster ("Perseus Gorgon-Bane",
@@ -554,20 +556,26 @@ struct CollectionView: View {
         let experience = unit.unit.isMaxLevel ? toNextLevel : Double(unit.unit.experience)
         let meterTint = unit.unit.isMaxLevel ? Theme.gold : Theme.info
         return VStack(alignment: .leading, spacing: 3) {
+            // On the Stage's glass the name is CARVED at a display size, as
+            // the Hall of Ka carves it on its plate (run 216: a 15-point name
+            // on a place screen read as a data box beside the Hall's 26). It
+            // shrinks to the title floor before anything gives: "Perseus
+            // Gorgon-Bane" is 264 points at 22 in the 189 it has, 0.72.
             Group {
                 if ink.isGlass {
-                    Text(plateName(unit))
-                        .font(Theme.title(15))
+                    Text(unit.nameWithoutEpithet)
+                        .font(Theme.display(22))
                         .carved(glow: false)
+                        .minimumScaleFactor(Theme.titleFloor / 22)
                 } else {
-                    Text(plateName(unit))
+                    Text(unit.nameWithoutEpithet)
                         .font(Theme.title(15))
                         .foregroundStyle(ink.primary)
+                        .minimumScaleFactor(Theme.titleFloor / 15)
                 }
             }
             .lineLimit(1)
-            .minimumScaleFactor(Theme.titleFloor / 15)
-            Text(plateEpithet(unit))
+            Text(unit.epithetUnderName)
                 .font(Theme.body(11))
                 .foregroundStyle(ink.secondary)
                 .lineLimit(2)
@@ -740,11 +748,13 @@ struct CollectionView: View {
     /// its DATA twin and stays cream.
     ///
     /// The heights, since nothing here scrolls but the rail: the collection
-    /// is a tab, so an iPhone 16 Pro gives the content 271 under the
+    /// is a tab, so an iPhone 16 Pro gives the content 271 over the
     /// `GameTabBar`. Less the rail's 80 and the stage's 16 of padding, the
-    /// plate has 175; it is 166 (the words and the sets beside the slots,
-    /// 106, then 6 and the stats row, 34, and its 20 of padding). An iPhone
-    /// 16 gives it exactly 166.
+    /// plate has 175; it is 156 (the words beside the slots, 96 with the
+    /// name carved at 22, then 6 and the stats row, 34, and its 20 of
+    /// padding). An iPhone 16 gives it 166. The set line the plate carried
+    /// under the words went for the carved name (run 216's judge: the Cards
+    /// plate says it, and the stones on the slots wear their sets' colours).
     private func stageLayout(_ list: [ResolvedUnit], selected: ResolvedUnit) -> some View {
         VStack(spacing: 0) {
             GeometryReader { geo in
@@ -808,11 +818,8 @@ struct CollectionView: View {
     private func stagePlate(_ unit: ResolvedUnit) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 10) {
-                VStack(alignment: .leading, spacing: 5) {
-                    header(unit, ink: .glass)
-                    setSummary(unit, ink: .glass)
-                }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
+                header(unit, ink: .glass)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 slotGrid(unit, onGlass: true)
             }
             statsRow(unit, ink: .glass)
@@ -862,7 +869,10 @@ struct CollectionView: View {
             }
         }
         .frame(height: Self.railHeight)
-        .background(railPlate)
+        // The rail's glass runs out to both edges with the painting under it
+        // (the backdrop bleeds since run 216); the faces stay inside the
+        // safe area.
+        .background(railPlate.ignoresSafeArea(.container, edges: .horizontal))
     }
 
     /// The summon screen's `GlassRailPlate`, laid along the bottom instead of
@@ -883,12 +893,23 @@ struct CollectionView: View {
     /// (lighter at the top, where the glass plate sits and the figure's head
     /// stands) and its motes, under the figure.
     ///
+    /// Anchored to the painting's FLOOR (`focus` y 1): cropped at its centre
+    /// it showed the columns and the altar in the right half and no floor at
+    /// all above the rail, so the figure hovered on its ring in front of a
+    /// fluted column (run 216, frame 21). Measured off the painting with a
+    /// grid: its floor medallion is centred at (0.50, 0.82) and 0.60 of the
+    /// width across; over the 874 × 271 of an iPhone 16 Pro's tab this crop
+    /// shows the painting from 0.45 of its height down, the marble floor
+    /// from about 0.33 of the frame, and the figure's feet (the stage's
+    /// `across` 0.66, `down` 0.78) land at (0.63, 0.74) of the painting — on
+    /// the medallion's laurel ring, on the painted floor.
+    ///
     /// A `.background`, never a sibling: `PlaceBackdrop` is a `PaintingFill`,
     /// which reports exactly the size it is given, and it takes no taps —
     /// the mistake that emptied the dungeon screen's frames cannot recur.
     private var stageGround: some View {
         ZStack {
-            PlaceBackdrop(painting: "summon_hall_bg", topScrim: 0.35, footScrim: 0.55)
+            PlaceBackdrop(painting: "summon_hall_bg", focus: UnitPoint(x: 0.5, y: 1.0), topScrim: 0.35, footScrim: 0.55)
             PlaceAmbience(motes: 16, seed: 961)
         }
         .allowsHitTesting(false)
@@ -955,11 +976,15 @@ struct CollectionStageView: UIViewRepresentable {
     /// The turn about Y, in radians, on top of the stance.
     let spin: Float
 
-    /// Where the figure stands: its centre line 72% of the way across the
+    /// Where the figure stands: its centre line 66% of the way across the
     /// frame, its feet 78% of the way down, and 70% of the height tall. The
     /// left half is the plate's; the figure has the right, with room over its
-    /// head for the tallest family and under its feet for the ring.
-    private static let across: Float = 0.72
+    /// head for the tallest family and under its feet for the ring. 0.66
+    /// rather than 0.72 since run 216, so the feet stand on the hall's
+    /// painted floor medallion (`CollectionView.stageGround`) rather than on
+    /// bare marble beside a column; the ring's left edge still clears the
+    /// plate by 30 points.
+    private static let across: Float = 0.66
     private static let down: Float = 0.78
     private static let fill: Float = 0.70
     private static let lens: Float = 30
@@ -1171,5 +1196,26 @@ struct CollectionStageView: UIViewRepresentable {
         // painting looks down at its floor.
         cameraNode.position = SCNVector3(x, aimY + visible * 0.08, distance)
         cameraNode.look(at: SCNVector3(x, aimY, 0))
+    }
+}
+
+// MARK: - A unit's name, as the plates print it
+
+extension ResolvedUnit {
+    /// The name without its epithet ("Ares", not "Ares, Bane of Cities"), so
+    /// a plate's or a strip's title is never cut: `UnitCard`'s rule. The
+    /// collection's plates and the unit sheet's strip read it.
+    var nameWithoutEpithet: String {
+        name.split(separator: ",", maxSplits: 1).first.map { String($0) } ?? name
+    }
+
+    /// The ONE line under the name: an awakened name's own epithet when it
+    /// has one ("Keeper of the Ash Road"), the family's otherwise ("of the
+    /// Burning Sands"). The unit sheet's strip printed the awakened name
+    /// whole over the family's epithet — two epithets stacked (run 216).
+    var epithetUnderName: String {
+        let parts = name.split(separator: ",", maxSplits: 1)
+        guard parts.count == 2 else { return blueprint.epithet }
+        return parts[1].trimmingCharacters(in: .whitespaces)
     }
 }

@@ -54,6 +54,14 @@ struct GuidePlate: View {
     let isLast: Bool
     var onAdvance: () -> Void
     var onSkip: (() -> Void)?
+    /// How much of the container's foot belongs to the game's tab bar: she
+    /// and her plate stand ON its gold rule, never across it (run 216: the
+    /// plate lay half over the band with the doors ghosting through the
+    /// glass and her bust over the Island door). `GuideOverlay` passes what
+    /// it measured off the bar's own doors — nothing inside a full-screen
+    /// cover. Nil is the bar's own height, since the one place the plate is
+    /// built directly (the tour's `guide` step) is over the shell.
+    var bottomClearance: CGFloat? = nil
 
     /// How much of the line has been typed. Reset by `.id(beat.says)` at the
     /// call site, so a new beat starts empty.
@@ -61,6 +69,13 @@ struct GuidePlate: View {
     @State private var finished = false
 
     private var portrait: CGFloat { 168 }
+
+    /// Her foot: two points of air over the bar's rule when there is a bar,
+    /// eight off the foot of a screen that has none.
+    private var footing: CGFloat {
+        let clearance = bottomClearance ?? GameTabBar.height
+        return clearance > 0 ? clearance + 2 : 8
+    }
 
     var body: some View {
         VStack {
@@ -121,8 +136,21 @@ struct GuidePlate: View {
             // capped plate would otherwise centre the pair.
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, 18)
-            .padding(.bottom, 8)
+            // On the bar's rule when there is a bar, with two points of air;
+            // eight off the foot of a screen that has none.
+            .padding(.bottom, footing)
         }
+        // While she talks the place recedes, the bar with it — the genre's
+        // tutorial dim, deeper at the foot where her words are. Run 216 had
+        // nothing between her and a bright island and bar but a clear tap
+        // catcher, so the plate read as pasted on.
+        .background(
+            LinearGradient(
+                colors: [Color.black.opacity(0.18), Color.black.opacity(0.28), Color.black.opacity(0.48)],
+                startPoint: .top, endPoint: .bottom
+            )
+            .ignoresSafeArea()
+        )
         .task(id: beat.says) {
             shown = 0
             finished = false
@@ -147,43 +175,96 @@ struct GuidePlate: View {
     }
 }
 
-/// The gold caret and the one line under it, sitting on the control the
+/// The gold caret and the one line beside it, sitting on the control the
 /// lesson named. Nothing here is tappable — the caret moves when the player
 /// does the thing, which is read off the save. The line is on the same dark
 /// glass as her plate (2026-09-22, phase B), so it is plainly her voice on a
 /// painted place and on a cream screen alike.
+///
+/// The ARROW and the LINE are placed apart since run 216. The whole stack
+/// was clamped to keep a 300-point box on the screen, and the clamp dragged
+/// the arrow with it: aimed at the Collection door, the arrowhead stood 65
+/// points to its left over the sand, 15 points short of the bar, and the
+/// line broke with an orphan "→ Equip." Now the arrow stands on the
+/// target's own centre with its tip over the control, the target wears a
+/// breathing gold ring, and only the line's box is kept on the screen, one
+/// line up to a 460-point reading width.
 struct GuideCaret: View {
     let prompt: String
     let target: CGRect
     let bounds: CGSize
 
+    /// The line's box as it measured, for the clamp and the stacking; the
+    /// first frame guesses a one-line box.
+    @State private var box = CGSize(width: 300, height: 32)
+    @State private var breathe = false
+
+    /// The arrowhead: 18 wide, 12 tall, a dark edge so it reads on sand.
+    private static let arrow = CGSize(width: 18, height: 12)
+    /// Air between the ring and the tip, and between the arrow and the box.
+    private static let reach: CGFloat = 7
+    private static let gap: CGFloat = 5
+    /// The widest the line's box may be before it wraps.
+    private static let reading: CGFloat = 460
+
+    /// Whether the target is a control rather than the no-anchor fallback,
+    /// which is a point and wears no ring.
+    private var hasTarget: Bool { target.width >= 1 && target.height >= 1 }
+
     var body: some View {
-        // Under the control when the whole box fits under it, over it when it
-        // does not.
-        let below = target.maxY + 78 < bounds.height
-        let y = below ? target.maxY + 8 : target.minY - 8
-        VStack(spacing: 4) {
-            if !below {
-                line
-                Image(systemName: "arrowtriangle.down.fill")
-                    .font(.system(size: 13, weight: .black))
-                    .foregroundStyle(Theme.gold)
-            } else {
-                Image(systemName: "arrowtriangle.up.fill")
-                    .font(.system(size: 13, weight: .black))
-                    .foregroundStyle(Theme.gold)
-                line
+        // Under the control when the arrow and the box fit under it, over it
+        // when they do not (a tab door, a button on the foot of a screen).
+        let stack = Self.reach + Self.arrow.height + Self.gap + box.height
+        let below = target.maxY + stack + 8 < bounds.height
+        let tip = below ? target.maxY + Self.reach : target.minY - Self.reach
+        let arrowY = below ? tip + Self.arrow.height / 2 : tip - Self.arrow.height / 2
+        let boxY = below
+            ? tip + Self.arrow.height + Self.gap + box.height / 2
+            : tip - Self.arrow.height - Self.gap - box.height / 2
+        let arrowX = min(max(target.midX, 12), max(12, bounds.width - 12))
+        let half = box.width / 2 + 12
+        let boxX = min(max(target.midX, half), max(half, bounds.width - half))
+        let lineWidth = min(Self.reading, max(0, bounds.width - 24))
+
+        ZStack {
+            if hasTarget {
+                RoundedRectangle(cornerRadius: min(16, min(target.width, target.height) / 2 + 4), style: .continuous)
+                    .strokeBorder(Theme.gold, lineWidth: 2.5)
+                    .shadow(color: Color.black.opacity(0.55), radius: 1.5)
+                    .shadow(color: Color(hex: "#FFD678").opacity(0.7), radius: 6)
+                    .frame(width: target.width + 8, height: target.height + 8)
+                    .scaleEffect(breathe ? 1.05 : 1)
+                    .opacity(breathe ? 0.45 : 0.95)
+                    .animation(Self.breath, value: breathe)
+                    .position(x: target.midX, y: target.midY)
             }
+            BubbleTail()
+                .fill(Theme.gold)
+                .overlay(BubbleTail().stroke(Color.black.opacity(0.6), lineWidth: 1))
+                .frame(width: Self.arrow.width, height: Self.arrow.height)
+                .rotationEffect(.degrees(below ? 180 : 0))
+                .shadow(color: Color.black.opacity(0.35), radius: 2, y: 1)
+                .offset(y: breathe ? (below ? 3 : -3) : 0)
+                .animation(Self.breath, value: breathe)
+                .position(x: arrowX, y: arrowY)
+            line
+                .frame(width: lineWidth)
+                .position(x: boxX, y: boxY)
         }
-        .frame(maxWidth: 300)
-        .position(
-            x: min(max(160, target.midX), bounds.width - 160),
-            y: below ? y + 40 : y - 40
-        )
+        .frame(width: bounds.width, height: bounds.height)
         .allowsHitTesting(false)
         .transition(.opacity)
+        // The breath is scoped to the ring and the arrow (`.animation(_:
+        // value:)` on each), so the box and the arrow never glide when the
+        // target moves or the line is measured.
+        .onAppear { breathe = true }
     }
 
+    /// The ring's and the arrow's breath.
+    private static let breath = Animation.easeInOut(duration: 0.9).repeatForever(autoreverses: true)
+
+    /// The prompt on its glass, as wide as its words up to the reading
+    /// width (it is proposed the whole of it and hugs what it needs).
     private var line: some View {
         Text(prompt)
             .font(Theme.body(12).weight(.semibold))
@@ -193,6 +274,13 @@ struct GuideCaret: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 7)
             .background(GlassPlate(radius: Theme.tightCorner, opacity: 0.86))
+            .background(
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { box = proxy.size }
+                        .onChange(of: proxy.size) { _, size in box = size }
+                }
+            )
     }
 }
 
@@ -226,6 +314,7 @@ struct GuideOverlay: ViewModifier {
         proxy: GeometryProxy
     ) -> some View {
         let talking = speaking == lesson.id && beat < lesson.beats.count
+        let clearance = Self.barClearance(anchors, proxy: proxy)
         ZStack {
             if talking {
                 // While she is speaking she owns the taps, so a stray press
@@ -240,7 +329,8 @@ struct GuideOverlay: ViewModifier {
                     title: lesson.title,
                     isLast: beat == lesson.beats.count - 1,
                     onAdvance: { advance(lesson) },
-                    onSkip: lesson.topic == .opening ? { store.silenceOpening() } : nil
+                    onSkip: lesson.topic == .opening ? { store.silenceOpening() } : nil,
+                    bottomClearance: clearance
                 )
                 .id(lesson.id)
             } else if let prompt = lesson.prompt, lesson.isStep {
@@ -251,7 +341,7 @@ struct GuideOverlay: ViewModifier {
                     // still tells the player where to go.
                     GuideCaret(
                         prompt: prompt,
-                        target: CGRect(x: proxy.size.width / 2, y: proxy.size.height - 96, width: 0, height: 0),
+                        target: CGRect(x: proxy.size.width / 2, y: proxy.size.height - clearance - 12, width: 0, height: 0),
                         bounds: proxy.size
                     )
                 }
@@ -260,6 +350,22 @@ struct GuideOverlay: ViewModifier {
         .animation(.easeOut(duration: 0.2), value: talking)
         .onAppear { open(lesson) }
         .onChange(of: lesson.id) { _, _ in open(lesson) }
+    }
+
+    /// How far up the container's foot the game's tab bar reaches, read off
+    /// the bar's own doors (`GameTabBar` registers `tab_<name>` anchors), so
+    /// her plate stands on the bar over the shell and on the screen's foot
+    /// inside a full-screen cover, with no argument threaded through
+    /// `guide(_:)`. Zero when no door is in this container. The doors are
+    /// 56.6 points tall in the bar's 58, so the rule is a point above them.
+    private static func barClearance(_ anchors: [String: Anchor<CGRect>], proxy: GeometryProxy) -> CGFloat {
+        var top: CGFloat?
+        for (name, anchor) in anchors where name.hasPrefix("tab_") {
+            let door = proxy[anchor].minY
+            top = min(top ?? door, door)
+        }
+        guard let top else { return 0 }
+        return max(0, proxy.size.height - top + 1)
     }
 
     /// A lesson whose words have not been read starts talking; one already

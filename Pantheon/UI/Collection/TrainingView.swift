@@ -35,11 +35,14 @@ import SwiftUI
 /// Seven's Enhance) in the summon screen's materials:
 ///
 /// - the painting full-bleed with dark scrims, never a cream veil
-///   (`PlaceBackdrop`), one light shaft laid along the painted one and a few
-///   motes (`PlaceAmbience`);
+///   (`PlaceBackdrop`), out to the glass under the side insets and the home
+///   indicator with the 3D figure in the same frame (`hallStage`), one light
+///   shaft laid along the painted one and a few motes over the altar
+///   (`PlaceAmbience`);
 /// - the roster a dark glass rail of faces down the left (`PlaceRail`,
-///   `UnitPortraitTile` — a face has no name to cut), with a gold pip on the
-///   units ready for the mode's rite; in Fuse the rail is the six prizes;
+///   `UnitPortraitTile` — a face has no name to cut), with the rite's glyph
+///   in a gold-ringed disc on the units ready for it; in Fuse the rail is
+///   the six prizes;
 /// - the figure clean on the dais under a small glass nameplate, the
 ///   awakened card floating beside it in Awaken ("BECOMES"), the moment's
 ///   words over it and the last commit's line at its feet;
@@ -74,11 +77,18 @@ struct TrainingView: View {
     /// The hexagram picked on the Fuse rail. Nil is the first one ready, or
     /// the first of the six (`selectedPlan`).
     @State private var fusionID: String?
+    /// The question asked before an offering that eats a unit worth keeping
+    /// — one on a team, wearing relics or a boon, awakened, or a 4★ and up
+    /// fed for experience — the genre's "a 4★+ monster is included" prompt.
+    /// Nil when nothing is being asked.
+    @State private var warning: OfferingWarning?
 
-    /// Whether the Power up ledger opens with Auto's offering already chosen.
-    /// No player path asks for it; the CI tour's `-tour-training feed` frame
-    /// does, because the ghost gauge, the cost and the chosen veils had never
-    /// been photographed (2026-09-22).
+    /// Whether the Power up ledger opens with Auto's offering already chosen
+    /// (and the Evolve ledger with its sockets filled by the cheapest units
+    /// of the grade nothing keeps, `evolutionOffering`). No player path asks
+    /// for it; the CI tour's `-tour-training feed` frame does, because the
+    /// ghost gauge, the cost and the chosen veils had never been photographed
+    /// (2026-09-22), and the evolve frame may, for a lit EVOLVE.
     private let offersOnOpen: Bool
 
     /// Which tab the screen opens on, and on whom. Every caller wants the
@@ -176,34 +186,48 @@ struct TrainingView: View {
     // phone. An iPhone 16 Pro in landscape is 874 × 402 points; the hall is a
     // full-screen cover or a sheet, so no tab bar sits under it. Take the side
     // insets (62 each), the home indicator (21) and the strip (52) and the
-    // content is **750 × 329**.
+    // content is **750 × 329**. The STAGE — the painting, the figure and the
+    // light — is not: it bleeds under both side insets and the home indicator
+    // to the glass, **874 × 350** (run 216: the sanctuary sat in a cream box
+    // on three sides), and the figure is solved on that frame
+    // (`AltarStageView.placement`), so the painted dais and the 3D figure
+    // share one frame and cannot slide apart.
     //
     // Across: the rail is 84, the ledger 320 plus the 12-point edge, and the
     // altar column keeps the 334 between them — the painted dais is 29% of the
-    // way across the WHOLE frame (217 points), 133 into that column, under the
-    // figure.
+    // way across the WHOLE stage (253 points, 191 into the safe frame), 107
+    // into that column, under the figure.
     //
     // Down, inside the ledger (329, less 8 above and below, less its own 10
     // and 10): **293**. Power up spends 26 on the header, 58 on the gauge (the
     // level line, the bar, the experience line), 46 on the foot and 24 on the
     // three gaps, which leaves 139 for the offering: two rows of 52-point faces
-    // and the top of a third, so the grid visibly goes on. Evolve spends 26,
-    // 24, 46 and 24 and leaves 173. Awaken has no header and scrolls its whole
+    // and the top of a third, so the grid visibly goes on. Evolve spends 26 on
+    // its title, 24 on the grade line, 60 on the sockets the price fills, 46
+    // on the foot and 32 on the gaps, and leaves about 105: the "YOUR 3★"
+    // label and a row of faces with the next one under the fade. The body is
+    // inset 12 inside the plate's own edge, so a face's rarity glow is never
+    // cut on the scroll view's line. Awaken has no header and scrolls its whole
     // body (the name, the bonus, four essence tiles: about 240) over a 46-point
     // foot. Fuse spends 26 and 46 and scrolls about 200. On a mini (375 tall)
     // the offering keeps its two rows; every body scrolls, nothing else moves.
 
     private let railWidth: CGFloat = 84
     private let ledgerWidth: CGFloat = 320
-    /// Five faces across the ledger's 296 inner points: 5 × 52 + 4 × 7 = 288,
-    /// and 4 on either side so a chosen face's ring and a kin mark are not cut
-    /// by the scroll view's edge.
+    /// Five faces across the ledger's 296 inner points: 5 × 52 + 4 × 7 = 288.
+    /// The glow round each face has the plate's own 12 points on either side
+    /// (`HallLedger` insets the body inside the scroll view, not round it).
     private let offeringColumns = Array(repeating: GridItem(.fixed(52), spacing: 7), count: 5)
     /// Four essences across: a `RequirementTile` of 56 is 68 wide with its
     /// caption, so 4 × 68 + 3 × 6 = 290.
     private let essenceColumns = Array(repeating: GridItem(.fixed(68), spacing: 6), count: 4)
-    /// Four fusion corners across, the same 68-point columns.
-    private let cornerColumns = Array(repeating: GridItem(.fixed(68), spacing: 6), count: 4)
+    /// Four fusion corners across, the same 68-point columns, TOP-aligned: a
+    /// name that wraps ("Jackal / Warrior") centred its whole tile 12 points
+    /// higher than its neighbours' and the row zig-zagged (run 216).
+    private let cornerColumns = Array(repeating: GridItem(.fixed(68), spacing: 6, alignment: .top), count: 4)
+    /// What one offered unit costs to feed, in drachma — `GameStore.levelUp`'s
+    /// price, written once here for the well and the rate beside the button.
+    private static let drachmaPerOffering = 500
     /// The experience bar's fill: the unit plate's old verdigris lifted to
     /// read on dark glass, so the pale-gold ghost of the gain ahead of it is a
     /// different colour from the bar it extends.
@@ -218,9 +242,14 @@ struct TrainingView: View {
                 BarSegments(options: modes, selection: $mode)
                 BarWallet(wallet: store.player.wallet, shows: [.drachma])
             } content: {
-                hall
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .background(hallBackdrop)
+                // The rail, the altar's words and the ledger in the safe
+                // frame; the stage under them out to the glass. The reader
+                // is how the words know where the stage put the figure.
+                GeometryReader { geometry in
+                    hall(figureX: figureInColumn(geometry))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                .background { hallStage }
             }
             .onAppear {
                 if targetID == nil { targetID = units.first?.id }
@@ -231,6 +260,12 @@ struct TrainingView: View {
                 if mode == .fuse { warmPrizes() }
                 if offersOnOpen, mode == .powerUp, let target {
                     fodder = Set(OfferingRule.pick(for: target.unit, from: store.player.units, keep: keptIDs))
+                }
+                // The same for Evolve: the cheapest units of the grade that
+                // nothing keeps, as many as the rite eats, so the tour can
+                // photograph the sockets filled and EVOLVE lit.
+                if offersOnOpen, mode == .evolve, let target {
+                    fodder = Set(evolutionOffering(for: target).map(\.id))
                 }
             }
             .onChange(of: mode) { _, now in
@@ -254,19 +289,74 @@ struct TrainingView: View {
             .fullScreenCover(item: $reveal) { result in
                 SummonRevealView(results: [result]) { reveal = nil }
             }
+            .alert(
+                warning?.title ?? "",
+                isPresented: warningShown,
+                presenting: warning
+            ) { asked in
+                Button("Offer", role: .destructive) { asked.commit() }
+                Button("Keep them", role: .cancel) {}
+            } message: { asked in
+                Text(asked.message)
+            }
         }
+    }
+
+    /// Whether the keep-it question is up; dismissing it forgets it.
+    private var warningShown: Binding<Bool> {
+        Binding(get: { warning != nil }, set: { if !$0 { warning = nil } })
     }
 
     // MARK: - The hall
 
-    /// The sanctuary under everything, the size of the frame and never
-    /// larger (`PlaceBackdrop` is a `PaintingFill`, which reports only the
-    /// space it is given — the dungeon screen's lesson). Its scrims are
-    /// lighter than the summon hall's, 0.45 at the top and the foot, because
-    /// the painted dais is in the bottom fifth and the figure stands on it;
-    /// the right half, where the ledger's glass sits on the dark colonnade,
-    /// goes a little darker still. The cream veil it replaces lightened
-    /// exactly the half that should be dark.
+    /// The stage: the painting, the figure on its dais and the light falling
+    /// on both, in ONE frame that runs under the side insets and the home
+    /// indicator to the glass. Run 216 had the painting as a background of
+    /// the safe frame, so the dark sanctuary sat in flat cream on three sides
+    /// — the most "app, not game" thing on every Hall frame. The figure's
+    /// view is in the same frame as the painting, never beside it: the
+    /// camera is solved against the painting's crop in that frame
+    /// (`AltarStageView.placement`), so the feet stay on the painted stone
+    /// on any phone. Every layer ignores the safe area itself as well as
+    /// through the stack, so each one is laid out in the stage's frame.
+    private var hallStage: some View {
+        ZStack {
+            hallBackdrop
+                .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
+            AltarStageView(blueprint: altarBlueprint, awakened: altarAwakened, ceremony: ceremony)
+                .allowsHitTesting(false)
+                .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
+            // The shaft alone out here; the motes rise in the altar column
+            // (`altarColumn`), because through the ledger's glass they read
+            // as specks of dust — one as a missing sixth star (run 216).
+            PlaceAmbience(shafts: LightShaft.sanctuary, motes: 0, seed: 944)
+                .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
+        }
+        .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
+    }
+
+    /// Where the figure's centre line stands in the altar column, in points
+    /// from the column's leading edge. The stage is the whole glass, so the
+    /// dais is solved on that frame — the safe frame widened by its side
+    /// insets and lengthened by the home indicator — and brought back into
+    /// the column's coordinates (the island reads its insets the same way).
+    private func figureInColumn(_ geometry: GeometryProxy) -> CGFloat {
+        let insets = geometry.safeAreaInsets
+        let stage = CGSize(
+            width: geometry.size.width + insets.leading + insets.trailing,
+            height: geometry.size.height + insets.bottom
+        )
+        let across = AltarStageView.placement(in: stage).across
+        return stage.width * across - insets.leading - railWidth
+    }
+
+    /// The sanctuary under everything (`PlaceBackdrop` is a `PaintingFill`,
+    /// which reports only the space it is given — the dungeon screen's
+    /// lesson). Its scrims are lighter than the summon hall's, 0.45 at the
+    /// top and the foot, because the painted dais is in the bottom fifth and
+    /// the figure stands on it; the right half, where the ledger's glass sits
+    /// on the dark colonnade, goes a little darker still. The cream veil it
+    /// replaces lightened exactly the half that should be dark.
     private var hallBackdrop: some View {
         PlaceBackdrop(painting: "hall_of_ka_bg", topScrim: 0.45, footScrim: 0.45)
             .overlay(
@@ -283,25 +373,20 @@ struct TrainingView: View {
             .allowsHitTesting(false)
     }
 
-    /// The stage under everything, the air over it, then the rail, the
-    /// altar's words and the ledger across it.
-    private var hall: some View {
-        ZStack(alignment: .topLeading) {
-            AltarStageView(blueprint: altarBlueprint, awakened: altarAwakened, ceremony: ceremony)
-                .allowsHitTesting(false)
-
-            PlaceAmbience(shafts: LightShaft.sanctuary, motes: 18, seed: 944)
-
-            HStack(spacing: 0) {
-                rail
-                altarColumn
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                ledger
-                    .frame(width: ledgerWidth)
-                    .frame(maxHeight: .infinity)
-                    .padding(.vertical, 8)
-                    .padding(.trailing, ScreenChrome.contentPadding)
-            }
+    /// The rail, the altar's words and the ledger across the stage, in the
+    /// safe frame. The ledger is exactly `ledgerWidth` in every mode:
+    /// `HallLedger` takes the width it is given and no child can widen it
+    /// (run 216's Evolve plate grew 35 points and hung off the painting).
+    private func hall(figureX: CGFloat) -> some View {
+        HStack(spacing: 0) {
+            rail
+            altarColumn(figureX: figureX)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            ledger
+                .frame(width: ledgerWidth)
+                .frame(maxHeight: .infinity)
+                .padding(.vertical, 8)
+                .padding(.trailing, ScreenChrome.contentPadding)
         }
     }
 
@@ -338,14 +423,18 @@ struct TrainingView: View {
             targetID = unit.id
         } label: {
             UnitPortraitTile(unit: unit, size: 58)
-                .padding(4)
-                .background(GlassRowPlate(isOn: isOn))
+                // The rite's own mark on a unit ready for it, on the face's
+                // corner and hanging just off it, clear of the star row.
+                // Not on the unit already on the altar: the ledger beside
+                // it says so in words.
                 .overlay(alignment: .bottomTrailing) {
-                    if isReady(unit) {
-                        readyPip
-                            .offset(x: 2, y: 2)
+                    if !isOn, let glyph = readyGlyph(unit) {
+                        readyMark(glyph)
+                            .offset(x: 6, y: 6)
                     }
                 }
+                .padding(4)
+                .background(GlassRowPlate(isOn: isOn))
                 // The face's own shape is the tap, plus the plate's padding:
                 // a thumb on the plate's rim picks the unit too.
                 .contentShape(Rectangle())
@@ -369,13 +458,30 @@ struct TrainingView: View {
         }
     }
 
-    private var readyPip: some View {
-        Circle()
-            .fill(Theme.onGlassGold)
-            .frame(width: 10, height: 10)
-            .overlay(Circle().strokeBorder(Color.black.opacity(0.7), lineWidth: 1.2))
-            .shadow(color: Theme.gold.opacity(0.9), radius: 4)
-            .allowsHitTesting(false)
+    /// The glyph of the rite a unit is ready for in this mode — the star of
+    /// Evolve, the sun of Awaken — or nil.
+    private func readyGlyph(_ unit: ResolvedUnit) -> String? {
+        guard isReady(unit) else { return nil }
+        return mode == .awaken ? "sun.max.fill" : "star.fill"
+    }
+
+    /// "Ready for the rite": a 16-point dark disc with the rite's glyph in
+    /// gold and a gold ring that breathes. The 10-point cream dot it replaces
+    /// hung off the corner and read as a stray page dot (run 216).
+    private func readyMark(_ glyph: String) -> some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 20.0)) { timeline in
+            let pulse = 0.55 + 0.45 * (0.5 + 0.5 * sin(timeline.date.timeIntervalSinceReferenceDate * 3))
+            ZStack {
+                Circle().fill(Color(hex: "#17120E").opacity(0.94))
+                Circle().strokeBorder(Theme.gold.opacity(pulse), lineWidth: 1.5)
+                Image(systemName: glyph)
+                    .font(.system(size: 8.5, weight: .black))
+                    .foregroundStyle(Theme.gold)
+            }
+            .frame(width: 16, height: 16)
+            .shadow(color: Theme.gold.opacity(0.55 * pulse), radius: 4)
+        }
+        .allowsHitTesting(false)
     }
 
     /// One hexagram on the Fuse rail: the prize's card in its grade's metal,
@@ -411,12 +517,14 @@ struct TrainingView: View {
     /// overhang the frame it is given.
     private func prizePortrait(_ blueprint: UnitBlueprint?, size: CGFloat) -> some View {
         let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
+        let zoom: CGFloat = Self.fullFigurePrizes.contains(blueprint?.id ?? "") ? 1.9 : 1
         return ZStack(alignment: .topLeading) {
             shape.fill(Theme.socketFill)
             if let blueprint, BundleImage.exists(blueprint.model.portraitName) {
-                BundleImage(name: blueprint.model.portraitName, renderedAt: size)
+                BundleImage(name: blueprint.model.portraitName, renderedAt: size * zoom)
                     .aspectRatio(contentMode: .fill)
                     .frame(width: size, height: size)
+                    .scaleEffect(zoom, anchor: .top)
             }
             if let blueprint {
                 ElementBadge(element: blueprint.element, compact: true, scale: 0.72)
@@ -428,6 +536,12 @@ struct TrainingView: View {
         .rarityFrame(Rarity(stars: blueprint?.naturalStars ?? 5), radius: 7, painted: false)
     }
 
+    /// Prizes whose card was painted as a whole small figure on black rather
+    /// than a bust (the fire Horus): drawn at 1.9× from the top, so the head
+    /// and chest fill the face like the other five until the card is
+    /// re-rolled as a bust.
+    private static let fullFigurePrizes: Set<String> = ["horus_ember"]
+
     // MARK: - The altar
 
     /// Over the altar, all as overlays on a clear column (an overlay is never
@@ -435,8 +549,14 @@ struct TrainingView: View {
     /// top left, clear of the figure's head; the awakened card floating
     /// beside the figure in Awaken; the moment's words over it; the last
     /// commit's line at its feet.
-    private var altarColumn: some View {
+    private func altarColumn(figureX: CGFloat) -> some View {
         Color.clear
+            // The motes rise here and nowhere else: over the figure and the
+            // dais, never through the rail's or the ledger's glass.
+            .background {
+                PlaceAmbience(shafts: [], motes: 18, seed: 944, bleeds: false)
+                    .clipped()
+            }
             .overlay(alignment: .topLeading) {
                 nameplate
                     .padding(.top, 8)
@@ -444,9 +564,9 @@ struct TrainingView: View {
             }
             .overlay {
                 // Measured, because the card must stand clear of the figure
-                // and the figure's place depends on the whole frame's width.
+                // and the figure's place depends on the whole stage's width.
                 GeometryReader { column in
-                    becomesCard(size: becomesSize(columnWidth: column.size.width))
+                    becomesCard(size: becomesSize(columnWidth: column.size.width, figureX: figureX))
                         .padding(.trailing, 10)
                         .offset(y: -12)
                         .frame(width: column.size.width, height: column.size.height, alignment: .trailing)
@@ -512,7 +632,9 @@ struct TrainingView: View {
                         .fixedSize()
                 }
                 HStack(spacing: 8) {
-                    StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars, size: 11)
+                    // Bright on the glass, as the faces' stars are since run
+                    // 216: the natural stars' dim bronze could not be counted.
+                    StarRow(stars: unit.stars, size: 11)
                     ElementBadge(element: unit.element, compact: true)
                     Text("Lv.\(unit.level)")
                         .font(Theme.numeric(13))
@@ -600,6 +722,15 @@ struct TrainingView: View {
         name.split(separator: ",", maxSplits: 1).first.map { String($0) } ?? name
     }
 
+    /// The epithet after the comma — "Bringer of the Seven Arrows" — or nil
+    /// for a name that has none ("Ares Stormlance").
+    private func epithetPart(_ name: String) -> String? {
+        let parts = name.split(separator: ",", maxSplits: 1)
+        guard parts.count == 2 else { return nil }
+        let rest = parts[1].trimmingCharacters(in: .whitespaces)
+        return rest.isEmpty ? nil : rest
+    }
+
     /// In Awaken, the card the unit becomes, floating beside the figure on the
     /// altar with a gold chevron from the figure to it — the genre sells an
     /// awakening as two forms side by side. It replaces the Awaken panel's two
@@ -641,16 +772,15 @@ struct TrainingView: View {
 
     /// The awakened card's side: 96 points where the altar has the room, and
     /// whatever stands clear of the figure where it has not. The figure's
-    /// centre line is `AltarStageView.daisAcross` of the WHOLE frame (the rail,
-    /// this column, the ledger and its edge), and it is taken as 44 points
-    /// wide either side of that line; the card also gives up its 10-point
-    /// margin and the chevron's 24. On an iPhone 16 Pro that is the full 96
-    /// (122 to spare); on an SE, whose frame is 667 wide with no side insets,
-    /// the column is 251 and the card 64 — at 96 it stood over the figure. A
-    /// card under 56 is not drawn at all.
-    private func becomesSize(columnWidth: CGFloat) -> CGFloat {
-        let frameWidth = railWidth + columnWidth + ledgerWidth + ScreenChrome.contentPadding
-        let figureRight = frameWidth * CGFloat(AltarStageView.daisAcross) - railWidth + 44
+    /// centre line is `figureX` into this column (`figureInColumn`, solved on
+    /// the whole stage), and it is taken as 48 points wide either side of
+    /// that line; the card also gives up its 10-point margin and the
+    /// chevron's 24. On an iPhone 16 Pro that is the full 96 (about 140 to
+    /// spare); on an SE, whose frame is 667 wide with no side insets, the
+    /// column is 251 and the card about 59 — at 96 it stood over the figure.
+    /// A card under 56 is not drawn at all.
+    private func becomesSize(columnWidth: CGFloat, figureX: CGFloat) -> CGFloat {
+        let figureRight = figureX + 48
         return min(96, columnWidth - figureRight - 10 - 24)
     }
 
@@ -781,12 +911,13 @@ struct TrainingView: View {
     // MARK: - Power up
 
     private func powerUpLedger(_ target: ResolvedUnit) -> some View {
-        let candidates = units.filter { $0.id != target.id && !$0.unit.isLocked }
+        let kept = keptIDs
+        let candidates = cheapestFirst(units.filter { $0.id != target.id && !$0.unit.isLocked }, kept: kept)
         let chosen = candidates.filter { fodder.contains($0.id) }
         let experience = chosen.reduce(0) { $0 + ProgressionService.feedValue(of: $1.unit) }
         let duplicates = chosen.filter { $0.blueprint.id == target.blueprint.id }.count
         let kin = chosen.filter { RegaliaService.isSameFamily($0.unit, as: target.unit) }.count
-        let cost = chosen.count * 500
+        let cost = chosen.count * Self.drachmaPerOffering
         var preview = target.unit
         let gained = ProgressionService.grantExperience(experience, to: &preview)
         let reached = preview
@@ -811,7 +942,7 @@ struct TrainingView: View {
                     onGlass: true
                 )
             } else {
-                offeringGrid(candidates, target: target, limit: 12)
+                offeringGrid(candidates, target: target, limit: 12, marksKin: true, kept: kept)
             }
         } foot: {
             HStack(spacing: 8) {
@@ -820,13 +951,43 @@ struct TrainingView: View {
                         mode = .evolve
                     }
                 } else {
-                    CostWell(key: "drachma", amount: cost, affordable: affordable, height: PrimaryButton.height)
+                    // Nothing chosen is the RATE, not a zero: "0" beside a
+                    // dead button read as a broken price (run 216).
+                    if chosen.isEmpty {
+                        rateWell
+                    } else {
+                        CostWell(key: "drachma", amount: cost, affordable: affordable, height: PrimaryButton.height)
+                    }
                     ledgerButton("Power up", systemImage: "arrow.up.circle.fill", isEnabled: !chosen.isEmpty && affordable) {
-                        commitPowerUp(target, feeding: chosen)
+                        askBeforeOffering(chosen, gradeCounts: true, kept: kept) {
+                            commitPowerUp(target, feeding: chosen)
+                        }
                     }
                 }
             }
         }
+    }
+
+    /// The price before anything is chosen: the drachma and "500 each" in
+    /// the cost well's own dark socket, dim, so the foot reads as the rule
+    /// and not as a price of nothing.
+    private var rateWell: some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+        let rate = "\(Self.drachmaPerOffering) each"
+        return HStack(spacing: 6) {
+            ItemIcon(key: "drachma", size: 20, glow: false)
+            Text(rate)
+                .font(Theme.numeric(13))
+                .foregroundStyle(Theme.onGlassDim)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 12)
+        .frame(height: PrimaryButton.height)
+        .background(shape.fill(Color(hex: "#1C1610").opacity(0.9)))
+        .overlay(shape.strokeBorder(Theme.goldDim.opacity(0.8), lineWidth: 1))
+        .fixedSize()
+        .accessibilityElement(children: .combine)
     }
 
     /// The Offering's name and count, the rule behind the ?, and Auto — or
@@ -835,7 +996,7 @@ struct TrainingView: View {
         HStack(spacing: 6) {
             GlassSectionHeader(title: "Offering", accessory: "\(chosen) / 12")
             InfoDot(title: "Offering") {
-                infoText("Every unit offered is consumed for experience, at 500 drachma each. A copy of \(personalName(target.name)) (marked ↑) is a skill-up as well; once its skills are capped, or for another element of the family, it raises the regalia. Auto offers unlocked 1–3★ units that wear no relic or boon and stand on no team, and stops at the level cap.")
+                infoText("Every unit offered is consumed for experience, at 500 drachma each. A copy of \(personalName(target.name)) (marked ↑) is a skill-up as well; once its skills are capped, or for another element of the family, it raises the regalia. Auto offers unlocked 1–3★ units that wear no relic or boon and stand on no team, and stops at the level cap. A unit on a team (shield), wearing relics (diamond) or awakened (sun) is marked and listed last, and the hall asks before it is offered.")
             }
             if fodder.isEmpty {
                 GlassBead(text: "Auto", systemImage: "wand.and.stars", tint: Theme.onGlassGold) {
@@ -850,8 +1011,9 @@ struct TrainingView: View {
     }
 
     /// The genre's power-up read: the level now and the level the offering
-    /// reaches, the skill-ups it carries, the bar with the gain as a pulsing
-    /// ghost ahead of the fill (to the end when a level is crossed), and the
+    /// reaches (and a "+1 LV" seal), the skill-ups it carries, the bar with
+    /// the gain as pulsing gold light ahead of the fill (the reached level's
+    /// bar, filled from its start, when a level is crossed), and the
     /// experience it brings — or, when the offering runs past the level cap,
     /// how much of it would be wasted (Summoners War's over-cap warning).
     ///
@@ -867,6 +1029,13 @@ struct TrainingView: View {
     ) -> some View {
         let unit = target.unit
         let needed = ProgressionService.experienceForNextLevel(level: unit.level, stars: unit.stars)
+        // The bar of the level the offering REACHES once it crosses one: the
+        // genre's wrapping bar, the gain as gold light from its start (full
+        // at the cap). A ghost run to the end of the old level's bar said
+        // "a level" and nothing about how far into the next.
+        let reachedNeeded = max(1, ProgressionService.experienceForNextLevel(level: reached.level, stars: reached.stars))
+        let reachedInto = reached.isMaxLevel ? reachedNeeded : max(1, reached.experience)
+        let levelsGained = "+\(gained) LV"
         let wasted = unit.isMaxLevel ? 0 : max(0, experience - experienceToCap(unit))
         let line: String
         if unit.isMaxLevel {
@@ -899,20 +1068,33 @@ struct TrainingView: View {
                         .foregroundStyle(Theme.onGlassGold)
                         .lineLimit(1)
                         .fixedSize()
+                    // Not beside MAX, which says it already (and the line
+                    // must hold "Lv.12 › Lv.50 MAX" and SKILL ×n in 296).
+                    if !reached.isMaxLevel {
+                        sealChip(levelsGained)
+                    }
                 }
                 Spacer(minLength: 6)
                 if duplicates > 0 {
-                    skillChip(duplicates)
+                    sealChip("SKILL ×\(duplicates)")
                 }
             }
             if unit.isMaxLevel {
                 GlassMeter(value: 1, maximum: 1, tint: Theme.gold, height: 10)
+            } else if gained > 0 {
+                GlassMeter(
+                    value: 0,
+                    maximum: Double(reachedNeeded),
+                    projected: Double(reachedInto),
+                    reachesNext: reached.isMaxLevel,
+                    tint: Self.experienceTint,
+                    height: 10
+                )
             } else {
                 GlassMeter(
                     value: Double(unit.experience),
                     maximum: Double(needed),
                     projected: Double(unit.experience + experience),
-                    reachesNext: gained > 0,
                     tint: Self.experienceTint,
                     height: 10
                 )
@@ -935,9 +1117,10 @@ struct TrainingView: View {
         }
     }
 
-    /// "SKILL ×2": the skill-ups the offering carries, a small gold seal.
-    private func skillChip(_ count: Int) -> some View {
-        Text("SKILL ×\(count)")
+    /// A small gold seal on the gauge's line: "+1 LV", the levels the
+    /// offering reaches, and "SKILL ×2", the skill-ups it carries.
+    private func sealChip(_ text: String) -> some View {
+        Text(text)
             .font(Theme.body(11).weight(.black))
             .tracking(0.6)
             .foregroundStyle(Color(hex: "#FFF1C2"))
@@ -1011,19 +1194,38 @@ struct TrainingView: View {
 
     /// The units that can be offered, as faces five across. A tap toggles
     /// one, up to `limit`; a chosen face is veiled with a gold check and
-    /// ringed, and a copy of the family wears ↑ (a skill-up or the regalia).
-    private func offeringGrid(_ candidates: [ResolvedUnit], target: ResolvedUnit, limit: Int) -> some View {
+    /// ringed, a copy of the family wears ↑ in Power up (a skill-up or the
+    /// regalia), and a unit worth keeping wears its reason on the corner
+    /// before a tap can eat it (`Keepsake`).
+    private func offeringGrid(
+        _ candidates: [ResolvedUnit],
+        target: ResolvedUnit,
+        limit: Int,
+        marksKin: Bool,
+        kept: Set<UUID>
+    ) -> some View {
         LazyVGrid(columns: offeringColumns, alignment: .leading, spacing: 8) {
             ForEach(candidates) { candidate in
-                offeringTile(candidate, target: target, limit: limit)
+                offeringTile(
+                    candidate,
+                    target: target,
+                    limit: limit,
+                    marksKin: marksKin,
+                    worth: keepsake(candidate, kept: kept)
+                )
             }
         }
-        .padding(4)
     }
 
-    private func offeringTile(_ candidate: ResolvedUnit, target: ResolvedUnit, limit: Int) -> some View {
+    private func offeringTile(
+        _ candidate: ResolvedUnit,
+        target: ResolvedUnit,
+        limit: Int,
+        marksKin: Bool,
+        worth: Keepsake?
+    ) -> some View {
         let chosen = fodder.contains(candidate.id)
-        let kin = RegaliaService.isSameFamily(candidate.unit, as: target.unit)
+        let kin = marksKin && RegaliaService.isSameFamily(candidate.unit, as: target.unit)
         let shape = RoundedRectangle(cornerRadius: 7, style: .continuous)
         return Button {
             if fodder.contains(candidate.id) {
@@ -1059,9 +1261,113 @@ struct TrainingView: View {
                             .offset(x: 4, y: 4)
                     }
                 }
+                .overlay(alignment: .bottomLeading) {
+                    if let worth {
+                        keepsakeMark(worth)
+                            .offset(x: -4, y: 4)
+                    }
+                }
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityHint(worth?.phrase ?? "")
+    }
+
+    /// Why an offered unit is worth keeping: on a saved team, wearing relics
+    /// or a boon, or awakened. Run 216's grid led with the player's best 5★
+    /// and marked nothing, so one mis-tap ate a team's unit.
+    private enum Keepsake {
+        case team, relics, awakened
+
+        var glyph: String {
+            switch self {
+            case .team: return "shield.fill"
+            case .relics: return "diamond.fill"
+            case .awakened: return "sun.max.fill"
+            }
+        }
+
+        var phrase: String {
+            switch self {
+            case .team: return "on a team"
+            case .relics: return "wears relics"
+            case .awakened: return "awakened"
+            }
+        }
+    }
+
+    private func keepsake(_ unit: ResolvedUnit, kept: Set<UUID>) -> Keepsake? {
+        if kept.contains(unit.id) { return .team }
+        if !unit.unit.equippedRelics.isEmpty || unit.unit.boonID != nil { return .relics }
+        if unit.unit.isAwakened { return .awakened }
+        return nil
+    }
+
+    /// A kept unit's mark: a 16-point dark disc on the face's lower left with
+    /// the reason's glyph in the eyebrow gold.
+    private func keepsakeMark(_ worth: Keepsake) -> some View {
+        ZStack {
+            Circle().fill(Color(hex: "#17120E").opacity(0.92))
+            Circle().strokeBorder(Theme.onGlassEyebrow.opacity(0.85), lineWidth: 1)
+            Image(systemName: worth.glyph)
+                .font(.system(size: 8.5, weight: .black))
+                .foregroundStyle(Theme.onGlassEyebrow)
+        }
+        .frame(width: 16, height: 16)
+        .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
+        .allowsHitTesting(false)
+    }
+
+    /// The genre's material order, cheapest first, so the thumb lands on
+    /// fodder: the units worth keeping last, then the grade, the level and
+    /// the power, lowest first. The grid was the rail's order, strongest
+    /// first, which put the player's best 5★ under the first tap (run 216).
+    private func cheapestFirst(_ candidates: [ResolvedUnit], kept: Set<UUID>) -> [ResolvedUnit] {
+        candidates.sorted { lhs, rhs in
+            let lhsKept = keepsake(lhs, kept: kept) != nil
+            let rhsKept = keepsake(rhs, kept: kept) != nil
+            if lhsKept != rhsKept { return rhsKept }
+            if lhs.stars != rhs.stars { return lhs.stars < rhs.stars }
+            if lhs.level != rhs.level { return lhs.level < rhs.level }
+            return lhs.power < rhs.power
+        }
+    }
+
+    /// Commits at once when the offering eats nothing worth keeping, and
+    /// otherwise asks first, naming what would go and why — Summoners War's
+    /// "a 4★+ monster is included" prompt. `gradeCounts` is Power up's: a 4★
+    /// or better fed for experience is worth the question; Evolve takes its
+    /// own grade by rule, so there only a kept unit asks.
+    private func askBeforeOffering(
+        _ chosen: [ResolvedUnit],
+        gradeCounts: Bool,
+        kept: Set<UUID>,
+        commit: @escaping () -> Void
+    ) {
+        var lines: [String] = []
+        for unit in chosen {
+            var reasons: [String] = []
+            if let worth = keepsake(unit, kept: kept) { reasons.append(worth.phrase) }
+            let precious = gradeCounts && unit.stars >= 4
+            if reasons.isEmpty && !precious { continue }
+            reasons.insert("\(unit.stars)★", at: 0)
+            let name = personalName(unit.name)
+            let why = reasons.joined(separator: ", ")
+            lines.append("\(name) (\(why))")
+        }
+        guard !lines.isEmpty else {
+            commit()
+            return
+        }
+        let shown = lines.prefix(3).joined(separator: "\n")
+        let more = lines.count > 3 ? "\nand \(lines.count - 3) more" : ""
+        let title = lines.count == 1 ? "Offer a unit worth keeping?" : "Offer \(lines.count) units worth keeping?"
+        warning = OfferingWarning(
+            title: title,
+            message: shown + more + "\n\nOffered units are consumed; their relics come back to the inventory.",
+            commit: commit
+        )
+        Juice.notify(.warning)
     }
 
     // MARK: - Evolve
@@ -1070,10 +1376,16 @@ struct TrainingView: View {
     private func evolveLedger(_ target: ResolvedUnit) -> some View {
         let required = ProgressionService.evolutionFodderRequired(currentStars: target.stars)
         let cost = ProgressionService.drachmaCostToEvolve(currentStars: target.stars)
-        let candidates = units.filter { $0.id != target.id && !$0.unit.isLocked && $0.stars == target.stars }
+        let kept = keptIDs
+        let candidates = cheapestFirst(
+            units.filter { $0.id != target.id && !$0.unit.isLocked && $0.stars == target.stars },
+            kept: kept
+        )
         let chosen = candidates.filter { fodder.contains($0.id) }
         let affordable = store.player.wallet.drachma >= cost
         let ready = target.unit.canEvolve && chosen.count == required && affordable
+        let filled = "\(chosen.count) / \(required)"
+        let yours = "Your \(target.stars)★"
 
         if target.stars >= 6 {
             quietLedger(
@@ -1085,12 +1397,17 @@ struct TrainingView: View {
             HallLedger {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 6) {
-                        GlassSectionHeader(title: "Evolution", accessory: "\(chosen.count) / \(required)")
+                        GlassSectionHeader(
+                            title: "Evolution",
+                            accessory: filled,
+                            accessoryTint: chosen.count == required ? Theme.onGlassSuccess : Theme.onGlassDim
+                        )
                         InfoDot(title: "Evolution") {
                             infoText("Evolving resets the level to 1 and raises every stat. It takes the unit at its level cap and \(required) unlocked units at exactly \(target.stars)★, which are consumed.")
                         }
                     }
                     evolutionLadder(target)
+                    evolveSockets(chosen, required: required, stars: target.stars)
                 }
             } content: {
                 if candidates.isEmpty {
@@ -1101,22 +1418,17 @@ struct TrainingView: View {
                         onGlass: true
                     )
                 } else {
-                    offeringGrid(candidates, target: target, limit: required)
+                    VStack(alignment: .leading, spacing: 8) {
+                        GlassSectionHeader(title: yours)
+                        offeringGrid(candidates, target: target, limit: required, marksKin: false, kept: kept)
+                    }
                 }
             } foot: {
                 HStack(spacing: 8) {
                     CostWell(key: "drachma", amount: cost, affordable: affordable, height: PrimaryButton.height)
                     ledgerButton("Evolve", systemImage: "star.circle.fill", isEnabled: ready) {
-                        store.evolve(target.id, fodderIDs: chosen.map(\.id))
-                        fodder = []
-                        if let after = store.resolved(target.id), after.stars > target.stars {
-                            outcome = "\(after.name) evolved to \(after.stars)★"
-                            Juice.notify(.success)
-                            AudioLibrary.shared.play(.summonBurst, volume: 0.8)
-                            play(.evolve, tint: target.blueprint.element.accentHex)
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                                show("EVOLVED", String(repeating: "★", count: after.stars))
-                            }
+                        askBeforeOffering(chosen, gradeCounts: false, kept: kept) {
+                            commitEvolution(target, feeding: chosen)
                         }
                     }
                 }
@@ -1124,26 +1436,113 @@ struct TrainingView: View {
         }
     }
 
+    /// The cheapest units of the target's grade that nothing keeps, exactly
+    /// as many as its evolution eats — or none when there are not enough.
+    private func evolutionOffering(for target: ResolvedUnit) -> [ResolvedUnit] {
+        let kept = keptIDs
+        let required = ProgressionService.evolutionFodderRequired(currentStars: target.stars)
+        let pool = cheapestFirst(
+            units.filter { $0.id != target.id && !$0.unit.isLocked && $0.stars == target.stars },
+            kept: kept
+        )
+        .filter { keepsake($0, kept: kept) == nil }
+        return pool.count >= required ? Array(pool.prefix(required)) : []
+    }
+
+    private func commitEvolution(_ target: ResolvedUnit, feeding chosen: [ResolvedUnit]) {
+        store.evolve(target.id, fodderIDs: chosen.map(\.id))
+        fodder = []
+        if let after = store.resolved(target.id), after.stars > target.stars {
+            outcome = "\(after.name) evolved to \(after.stars)★"
+            Juice.notify(.success)
+            AudioLibrary.shared.play(.summonBurst, volume: 0.8)
+            play(.evolve, tint: target.blueprint.element.accentHex)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                show("EVOLVED", String(repeating: "★", count: after.stars))
+            }
+        }
+    }
+
     /// The grade now, the grade next (lit), and the level requirement with a
-    /// tick or a cross — the three requirement rows it replaces, in one line.
+    /// tick or a cross — in one line that fits the ledger's 296 points. Two
+    /// star rows at 13 made it about 330, and the plate grew with it and hung
+    /// off the painting (run 216); the grades are numerals with one star.
     private func evolutionLadder(_ target: ResolvedUnit) -> some View {
         let atCap = target.unit.isMaxLevel
+        let level = atCap ? "Lv.\(target.level) MAX" : "Lv.\(target.level) / \(target.unit.maxLevel)"
         return HStack(spacing: 8) {
-            StarRow(stars: target.stars, natural: target.blueprint.naturalStars, size: 13)
+            gradeMark(target.stars, lit: false)
             Image(systemName: "chevron.right.2")
                 .font(.system(size: 12, weight: .black))
                 .foregroundStyle(Theme.onGlassDim)
-            StarRow(stars: target.stars + 1, size: 13)
-                .shadow(color: Theme.gold.opacity(0.6), radius: 5)
+            gradeMark(target.stars + 1, lit: true)
             Spacer(minLength: 6)
             Image(systemName: atCap ? "checkmark.circle.fill" : "xmark.circle.fill")
                 .font(.system(size: 12, weight: .black))
                 .foregroundStyle(atCap ? Theme.onGlassSuccess : Theme.onGlassDanger)
-            Text(atCap ? "Lv.\(target.level) MAX" : "Lv.\(target.level) / \(target.unit.maxLevel)")
+            Text(level)
                 .font(Theme.numeric(12))
                 .foregroundStyle(atCap ? Theme.onGlassSuccess : Theme.onGlassDanger)
                 .lineLimit(1)
                 .fixedSize()
+        }
+    }
+
+    /// A grade as a numeral and one star: "5★", the next one larger and lit.
+    private func gradeMark(_ stars: Int, lit: Bool) -> some View {
+        let count = "\(stars)"
+        return HStack(spacing: 2) {
+            Text(count)
+                .font(Theme.numeric(lit ? 18 : 16))
+                .foregroundStyle(lit ? Theme.onGlassGold : Theme.onGlass)
+                .lineLimit(1)
+                .fixedSize()
+            StarRow(stars: 1, size: lit ? 14 : 12)
+        }
+        .shadow(color: lit ? Theme.gold.opacity(0.6) : .clear, radius: 5)
+    }
+
+    /// The evolution's price in faces: `required` sockets, the chosen units
+    /// filling them from the left — a tap on one gives it back — and the rest
+    /// empty wells marked with the grade they want. The genre's evolve
+    /// layout; run 216's ledger had one face over 190 points of empty glass
+    /// and the count as a small grey "0 / 5".
+    private func evolveSockets(_ chosen: [ResolvedUnit], required: Int, stars: Int) -> some View {
+        let want = "\(stars)★"
+        return HStack(spacing: 7) {
+            ForEach(Array(0..<max(1, required)), id: \.self) { index in
+                socket(index < chosen.count ? chosen[index] : nil, want: want)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func socket(_ unit: ResolvedUnit?, want: String) -> some View {
+        if let unit {
+            Button {
+                Juice.haptic(.light)
+                AudioLibrary.shared.play(.uiTap)
+                fodder.remove(unit.id)
+            } label: {
+                UnitPortraitTile(unit: unit, size: 52)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 7, style: .continuous)
+                            .strokeBorder(Theme.onGlassGold, lineWidth: 1.5)
+                    )
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else {
+            EmptyUnitSlot(size: 52)
+                .overlay(alignment: .bottom) {
+                    Text(want)
+                        .font(Theme.numeric(11.5))
+                        .foregroundStyle(Theme.onGlassDim)
+                        .lineLimit(1)
+                        .fixedSize()
+                        .padding(.bottom, 2)
+                }
+                .allowsHitTesting(false)
         }
     }
 
@@ -1156,17 +1555,31 @@ struct TrainingView: View {
             // inside each — the order the Halls pay them in.
             let costs = awakening.essenceCost.sorted { essenceOrder($0.key) < essenceOrder($1.key) }
             let ready = costs.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
+            let awakenedTitle = personalName(awakening.awakenedName).uppercased()
+            let awakenedEpithet = epithetPart(awakening.awakenedName)?.uppercased()
             HallLedger {
                 EmptyView()
             } content: {
                 VStack(alignment: .leading, spacing: 8) {
-                    // The whole awakened name, carved, on as many lines as it
-                    // takes: the title is the one place it is never cut.
-                    Text(awakening.awakenedName.uppercased())
-                        .font(Theme.title(15))
-                        .tracking(1.0)
-                        .carved(glow: false)
-                        .fixedSize(horizontal: false, vertical: true)
+                    // The whole awakened name, carved, never cut: the name
+                    // and its epithet as two titles, each light gold on
+                    // every line. One carved block over two lines ran one
+                    // gradient down both and left the second in dark bronze
+                    // (run 216: "SEKHMET, BRINGER OF THE" over "SEVEN ARROWS").
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(awakenedTitle)
+                            .font(Theme.title(18))
+                            .tracking(1.0)
+                            .carved(glow: false, multiline: true)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let awakenedEpithet {
+                            Text(awakenedEpithet)
+                                .font(Theme.title(13))
+                                .tracking(1.2)
+                                .carved(glow: false, multiline: true)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
                     if target.unit.isAwakened {
                         Text("AWAKENED")
                             .font(Theme.body(11).weight(.black))
@@ -1261,6 +1674,11 @@ struct TrainingView: View {
     /// the prize now stands on the altar and the six are the rail.
     private func fusionLedger(_ plan: FusionService.Plan) -> some View {
         let recipe = plan.recipe
+        // "Prize · Sekhmet of the Red Nile": a blueprint's epithet is written
+        // to follow its name, and alone under the title it read as a broken
+        // string ("of the Red Nile", run 216).
+        let prize: String? = recipe.result.map { "Prize · \(personalName($0.name)) \($0.epithet)" }
+        let blocker = fusionBlocker(plan)
         return HallLedger {
             HStack(spacing: 6) {
                 GlassSectionHeader(title: recipe.name)
@@ -1273,8 +1691,8 @@ struct TrainingView: View {
             }
         } content: {
             VStack(alignment: .leading, spacing: 8) {
-                if let result = recipe.result {
-                    Text(result.epithet)
+                if let prize {
+                    Text(prize)
                         .font(Theme.body(12))
                         .foregroundStyle(Theme.onGlassDim)
                         .fixedSize(horizontal: false, vertical: true)
@@ -1284,7 +1702,7 @@ struct TrainingView: View {
                         cornerTile(slot)
                     }
                 }
-                Text(plan.blocker ?? "Every corner is ready.")
+                Text(blocker ?? "Every corner is ready.")
                     .font(Theme.body(12))
                     .foregroundStyle(plan.canFuse ? Theme.onGlassSuccess : Theme.onGlassDanger)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1345,17 +1763,20 @@ struct TrainingView: View {
                 }
             }
 
+            // Two lines' room for every name, filled or not, so the grade
+            // and the state lines of the four corners share one baseline.
             Text(personalName(blueprint?.name ?? slot.ingredient.blueprintID))
                 .font(Theme.body(11).weight(.semibold))
                 .foregroundStyle(Theme.onGlass)
                 .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(2)
+                .frame(width: 68, height: 30, alignment: .top)
             Text(slot.ingredient.requirement)
                 .font(Theme.numeric(11.5))
                 .foregroundStyle(Theme.onGlassDim)
                 .lineLimit(1)
                 .fixedSize()
-            Text(met ? "Ready" : (slot.shortfall?.short ?? "Not ready"))
+            Text(met ? "Ready" : shortfallWords(slot))
                 .font(Theme.body(11))
                 .foregroundStyle(met ? Theme.onGlassSuccess : Theme.onGlassDanger)
                 .lineLimit(1)
@@ -1363,6 +1784,36 @@ struct TrainingView: View {
         }
         .frame(width: 68)
         .accessibilityElement(children: .combine)
+    }
+
+    /// What a corner is short of, in words a player reads at once under the
+    /// "4★ Lv.30" it asks for: "Not owned", "Only 3★", "Only Lv.12",
+    /// "Locked" or "On a team". `Shortfall.short` is "none" and "reserved",
+    /// which read as debug strings (run 216). A reserved corner says which
+    /// of the two holds it back: locked if any copy is locked, else a team.
+    private func shortfallWords(_ slot: FusionService.Slot) -> String {
+        guard let shortfall = slot.shortfall else { return "Not ready" }
+        switch shortfall {
+        case .notOwned:
+            return "Not owned"
+        case .grade(let have, _):
+            return "Only \(have)★"
+        case .level(let have, _):
+            return "Only Lv.\(have)"
+        case .reserved:
+            let copies = store.player.units.filter { $0.blueprintID == slot.ingredient.blueprintID }
+            return copies.contains { $0.isLocked } ? "Locked" : "On a team"
+        }
+    }
+
+    /// The line under the corners when the hexagram cannot be fused: the
+    /// plan's own, with the price grouped ("Needs 40,000 drachma").
+    private func fusionBlocker(_ plan: FusionService.Plan) -> String? {
+        if plan.missing.isEmpty && !plan.costMet {
+            let price = plan.recipe.drachmaCost.formatted()
+            return "Needs \(price) drachma"
+        }
+        return plan.blocker
     }
 
     private func commitFusion(_ plan: FusionService.Plan) {
@@ -1416,13 +1867,22 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
             ScrollView(showsIndicators: false) {
                 content()
                     .frame(maxWidth: .infinity, alignment: .leading)
+                    // The plate's 12 points INSIDE the scroll view, which
+                    // spans the plate's full width (the -12 below): a face's
+                    // rarity glow reaches about 8 points past the face, and
+                    // with the body inset round the scroll view its clip cut
+                    // every halo of the first row and the left column on a
+                    // ruled line (run 216). 8 over the first row for the same.
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
                     // Room under the last row to scroll it clear of the fade.
                     .padding(.bottom, 16)
             }
             .mask(
                 LinearGradient(
                     stops: [
-                        .init(color: .black, location: 0),
+                        .init(color: .clear, location: 0),
+                        .init(color: .black, location: 0.04),
                         .init(color: .black, location: 0.9),
                         .init(color: .clear, location: 1),
                     ],
@@ -1430,12 +1890,19 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
                     endPoint: .bottom
                 )
             )
+            .padding(.horizontal, -12)
             .frame(maxHeight: .infinity)
             foot()
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // The width it is GIVEN, whatever a child asks for: with no minimum
+        // a flexible frame takes the larger of the offer and its child, so
+        // run 216's 330-point Evolve ladder grew the plate 35 points past
+        // the Power up plate's and off the painting. A child too wide now
+        // overflows its own line, where a frame shows it, and the plate —
+        // the thing the eye measures between tabs — never moves.
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity, alignment: .top)
         .background(GlassPlate(radius: 14))
     }
 }
@@ -1479,6 +1946,15 @@ private enum OfferingRule {
     }
 }
 
+/// The question asked before an offering eats a unit worth keeping: its
+/// title, the units and why each is worth keeping, and the commit it holds
+/// back until the player says Offer.
+private struct OfferingWarning {
+    let title: String
+    let message: String
+    let commit: () -> Void
+}
+
 // MARK: - The altar
 
 /// One rite on the altar, stamped so the stage plays each exactly once.
@@ -1492,6 +1968,15 @@ struct AltarCeremony {
     var stamp: Int
     var kind: Kind
     var tintHex: String
+}
+
+/// Where the altar's figure stands in a frame, in 0…1 of it: its centre
+/// line `across`, its feet `down`, and its height `fill` of the frame's
+/// height (`AltarStageView.placement(in:)`).
+struct AltarPlacement {
+    var across: CGFloat
+    var down: CGFloat
+    var fill: CGFloat
 }
 
 /// The words of a moment over the altar.
@@ -1521,19 +2006,47 @@ struct AltarStageView: UIViewRepresentable {
     let awakened: Bool
     let ceremony: AltarCeremony?
 
-    /// Where the painting's dais is: its centre 29% of the way across the
-    /// frame, its top 80% of the way down. Measured off `hall_of_ka_bg`.
-    /// Internal, not private: the Awaken card beside the figure reads it to
-    /// stand clear of the figure (`TrainingView.becomesSize`).
-    static let daisAcross: Float = 0.29
-    private static let daisDown: Float = 0.80
-    /// The figure stands 54% of the frame's height: statuesque under the
-    /// shaft of light. It was 56% until 2026-09-22, when the words over the
-    /// altar became a glass nameplate at its top left: at 54% on a 329-point
-    /// frame the head is about 85 points down and the nameplate's foot at 74,
-    /// so a crown clears it.
-    private static let fill: Float = 0.54
+    /// Where the figure's feet stand on the painting, in 0…1 of the PAINTING
+    /// (`hall_of_ka_bg`, 2048 × 1152): 29% across, 73.4% down — the front of
+    /// the dais's top, where they have stood since the Hall became a place.
+    /// It was written as 29% and 80% of a 750 × 329 FRAME until run 216; the
+    /// stage bleeds to the glass now (874 × 350 on a 16 Pro), the cover crop
+    /// changes with the frame's shape, and a number of the frame would have
+    /// stood the figure 12 points off the painted stone. So the dais is
+    /// measured on the painting and solved on whatever frame the stage gets
+    /// (`placement(in:)`), the island's way (`tools/mapgrid.py` on the
+    /// painting with a dot at 0.29, 0.734 is the check).
+    static let daisInPainting = CGPoint(x: 0.29, y: 0.734)
+    static let paintingSize = CGSize(width: 2048, height: 1152)
+    /// The figure's height as a share of the painting's DRAWN height, so it
+    /// keeps its size against the painted dais on any frame: 0.41 is the 54%
+    /// of the old 329-point frame (a 422-point drawn painting) a breath
+    /// smaller. On a 16 Pro the drawn painting is 492 tall, the figure about
+    /// 202 and its head about 88 points down, under the nameplate's foot at 74.
+    static let fillOfPainting: CGFloat = 0.41
     private static let lens: Float = 30
+
+    /// Where the dais lands in a frame of `size` that draws the painting the
+    /// way `PaintingFill` does — a centred cover crop — as fractions of that
+    /// frame: the figure's centre line across, its feet down, and its height
+    /// against the frame's height. Only the frame's SHAPE matters. Internal:
+    /// the Awaken card beside the figure reads it to stand clear of it
+    /// (`TrainingView.figureInColumn`).
+    static func placement(in size: CGSize) -> AltarPlacement {
+        guard size.width > 0, size.height > 0 else {
+            return placement(in: CGSize(width: 874, height: 350))
+        }
+        let scale = max(size.width / paintingSize.width, size.height / paintingSize.height)
+        let drawnWidth = paintingSize.width * scale
+        let drawnHeight = paintingSize.height * scale
+        let left = (drawnWidth - size.width) / 2
+        let top = (drawnHeight - size.height) / 2
+        return AltarPlacement(
+            across: (daisInPainting.x * drawnWidth - left) / size.width,
+            down: (daisInPainting.y * drawnHeight - top) / size.height,
+            fill: fillOfPainting * drawnHeight / size.height
+        )
+    }
 
     final class Coordinator {
         var scene: SCNScene?
@@ -1717,27 +2230,29 @@ struct AltarStageView: UIViewRepresentable {
     /// Places the camera so the figure's feet land on the painted dais.
     ///
     /// The vertical lens makes the frame's height a known quantity: the
-    /// figure is `fill` of it, the feet sit `daisDown` of the way down, and
-    /// the camera is shifted — not turned — so the figure's centre line
-    /// stands `daisAcross` of the way across, the reveal's rising front.
-    /// Solved again only when the viewport's shape or the figure changes.
+    /// figure is `fill` of it, the feet sit `down` of the way down, and the
+    /// camera is shifted — not turned — so the figure's centre line stands
+    /// `across` of the way across, the reveal's rising front; all three are
+    /// the painting's dais solved on this view's frame (`placement(in:)`),
+    /// which is the painting's own frame. Solved again only when the
+    /// viewport's shape or the figure changes.
     private func frameCamera(_ view: SCNView, _ coordinator: Coordinator) {
         guard let cameraNode = coordinator.cameraNode else { return }
-        let bounds = view.bounds
-        // The content frame of a notched phone in landscape stands in until
-        // the first real layout.
-        let phoneAspect: Float = 820 / 330
-        let aspect = bounds.height > 0 ? Float(bounds.width / bounds.height) : phoneAspect
+        // The stage of a 16 Pro in landscape, bled to the glass, stands in
+        // until the first real layout.
+        let bounds = view.bounds.height > 0 ? view.bounds.size : CGSize(width: 874, height: 350)
+        let aspect = Float(bounds.width / bounds.height)
         let framedFor = aspect * 1000 + coordinator.figureHeight
         guard abs(framedFor - coordinator.framedFor) > 0.01 else { return }
         coordinator.framedFor = framedFor
 
-        let visible = coordinator.figureHeight / Self.fill
+        let dais = Self.placement(in: bounds)
+        let visible = coordinator.figureHeight / Float(dais.fill)
         let distance = visible / (2 * tan(Self.lens * .pi / 360))
-        // The frame's centre is `daisDown - 0.5` of a frame above the feet.
-        let aimY = visible * (Self.daisDown - 0.5)
+        // The frame's centre is `down - 0.5` of a frame above the feet.
+        let aimY = visible * (Float(dais.down) - 0.5)
         let halfWidth = visible * aspect / 2
-        let x = halfWidth * (1 - 2 * Self.daisAcross)
+        let x = halfWidth * (1 - 2 * Float(dais.across))
         // A little above the aim and looking down at it, the way the painting
         // looks down at its dais.
         cameraNode.position = SCNVector3(x, aimY + visible * 0.08, distance)

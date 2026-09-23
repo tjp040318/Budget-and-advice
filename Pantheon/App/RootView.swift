@@ -5,11 +5,18 @@ import UIKit
 struct RootView: View {
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var session: AppSession
-    @State private var tab: Tab = .island
+    @State private var tab: Tab
     @State private var showTraining = false
     @State private var showSettings = false
     @State private var showLabyrinth = false
     @Environment(\.scenePhase) private var scenePhase
+
+    /// The phone opens on the island; the CI tour's `-tour-root <tab>` opens
+    /// the shell itself on another tab, so the real TabView-and-bar layout
+    /// is photographed and not only the tour's copy of it.
+    init(initialTab: Tab = .island) {
+        _tab = State(initialValue: initialTab)
+    }
 
     /// Five tabs, which is all an iPhone shows before it folds the rest
     /// into a "More" list of its own; the Hall of Ka and the settings open
@@ -30,62 +37,27 @@ struct RootView: View {
     }
 
     var body: some View {
-        TabView(selection: $tab) {
-            // The hub. Every landmark on it is a tab below — except the Hall
-            // of Ka, which opens over whatever is showing — so the island is a
-            // way in rather than a fifth place things live.
-            IslandView(isActive: tab == .island) { destination in
-                switch destination {
-                case .training:
-                    showTraining = true
-                case .settings:
-                    showSettings = true
-                case .labyrinth:
-                    showLabyrinth = true
-                default:
-                    if let next = Tab(destination) {
-                        withAnimation { tab = next }
-                    }
-                }
-            }
-            .tabItem { Label("Island", systemImage: "sun.haze.fill") }
-            .tag(Tab.island)
-            .toolbar(.hidden, for: .tabBar)
-
-            CampaignView()
-                .tabItem { Label("Campaign", systemImage: "map.fill") }
-                .tag(Tab.campaign)
-            .toolbar(.hidden, for: .tabBar)
-
-            ArenaView()
-                .tabItem { Label("Arena", systemImage: "trophy.fill") }
-                .tag(Tab.arena)
-            .toolbar(.hidden, for: .tabBar)
-
-            SummonView()
-                .tabItem { Label("Summon", systemImage: "sparkles") }
-                .tag(Tab.summon)
-            .toolbar(.hidden, for: .tabBar)
-
-            CollectionView()
-                .tabItem { Label("Collection", systemImage: "person.3.fill") }
-                .tag(Tab.collection)
-            .toolbar(.hidden, for: .tabBar)
-        }
-        // Dim gold on the cream bar, and light everywhere: the shell was
-        // `.dark` over cream screens, which is what left the tab bar ink
-        // under a cream header.
-        .tint(Theme.goldDim)
-        // The game's own bar (2026-09-22): the system tab bar is hidden from
-        // inside every tab, and this one is the screen's bottom inset, so
-        // every screen keeps its space above it.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
+        // The game's own bar (2026-09-22) is LAID OUT under the tabs since
+        // run 216: the tabs' container ends where the bar begins, so every
+        // tab screen is 58 points shorter than the window. It was the
+        // TabView's `.safeAreaInset`, and that inset never reached the
+        // content inside each tab's `NavigationStack` — the arena's offence,
+        // the summon deck, the collection's Train and the chapter map's
+        // lowest medallions were laid out to the window's foot and painted
+        // over by the bar. The band's marble still runs under the home
+        // indicator and out to both edges (`GameTabBar.band`); the TabView,
+        // a UIKit container, still reaches both side edges and hands each
+        // tab the side insets, so a place's painting can bleed to the glass.
+        VStack(spacing: 0) {
+            tabs
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             GameTabBar(selection: $tab)
         }
         .preferredColorScheme(.light)
-        // Athena over the whole shell. A full-screen cover is presented ABOVE
-        // this, so the two that matter to the opening carry her themselves —
-        // she has to be able to talk inside the Hall of Ka.
+        // Athena over the whole shell, the bar included — her caret points
+        // at a door in it. A full-screen cover is presented ABOVE this, so
+        // the two that matter to the opening carry her themselves — she has
+        // to be able to talk inside the Hall of Ka.
         .guide(store)
         .fullScreenCover(isPresented: $showTraining) {
             TrainingView()
@@ -135,6 +107,56 @@ struct RootView: View {
             }
         }
     }
+
+    /// The five tabs, each with the system tab bar hidden from inside it.
+    private var tabs: some View {
+        TabView(selection: $tab) {
+            // The hub. Every landmark on it is a tab below — except the Hall
+            // of Ka, which opens over whatever is showing — so the island is a
+            // way in rather than a fifth place things live.
+            IslandView(isActive: tab == .island) { destination in
+                switch destination {
+                case .training:
+                    showTraining = true
+                case .settings:
+                    showSettings = true
+                case .labyrinth:
+                    showLabyrinth = true
+                default:
+                    if let next = Tab(destination) {
+                        withAnimation { tab = next }
+                    }
+                }
+            }
+            .tabItem { Label("Island", systemImage: "sun.haze.fill") }
+            .tag(Tab.island)
+            .toolbar(.hidden, for: .tabBar)
+
+            CampaignView()
+                .tabItem { Label("Campaign", systemImage: "map.fill") }
+                .tag(Tab.campaign)
+            .toolbar(.hidden, for: .tabBar)
+
+            ArenaView()
+                .tabItem { Label("Arena", systemImage: "trophy.fill") }
+                .tag(Tab.arena)
+            .toolbar(.hidden, for: .tabBar)
+
+            SummonView()
+                .tabItem { Label("Summon", systemImage: "sparkles") }
+                .tag(Tab.summon)
+            .toolbar(.hidden, for: .tabBar)
+
+            CollectionView()
+                .tabItem { Label("Collection", systemImage: "person.3.fill") }
+                .tag(Tab.collection)
+            .toolbar(.hidden, for: .tabBar)
+        }
+        // Dim gold on the cream bar, and light everywhere: the shell was
+        // `.dark` over cream screens, which is what left the tab bar ink
+        // under a cream header.
+        .tint(Theme.goldDim)
+    }
 }
 
 /// The "More" menu: the places this screen leads to, and the three boards a
@@ -159,8 +181,9 @@ struct RootView: View {
 ///
 /// Height, on an iPhone 16 Pro in landscape: this is a sheet, so no tab bar
 /// — 402 less the 52-point strip and the 21-point home indicator is 329, 16
-/// of it padding. The doors take 95 and a gap of 8, and the boards the 210
-/// left (207 on an SE, which has no indicator but a shorter screen).
+/// of it padding. The doors take 74 since run 216 (their captions went) and
+/// a gap of 8, and the boards the 231 left; the Account board's buttons are
+/// a pinned foot of 85 under its scrolling rows.
 struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var session: AppSession
@@ -307,15 +330,14 @@ struct SettingsView: View {
             Button {
                 press { showMissions = true }
             } label: {
-                door(title: "Missions", caption: "Daily & feats", icon: "scroll.fill", art: "missions",
-                     badge: store.claimableRewards)
+                door(title: "Missions", icon: "scroll.fill", art: "missions", badge: store.claimableRewards)
             }
             .buttonStyle(PlateButtonStyle())
 
             Button {
                 press { showEvents = true }
             } label: {
-                door(title: "Events", caption: "Weekly boosts", icon: "calendar", art: "events",
+                door(title: "Events", icon: "calendar", art: "events",
                      badge: EventCalendar.claimableCount(player: store.player))
             }
             .buttonStyle(PlateButtonStyle())
@@ -323,15 +345,17 @@ struct SettingsView: View {
             Button {
                 press { showSocial = true }
             } label: {
-                door(title: "Allies", caption: "Friends & guild", icon: "person.2.fill", art: "allies",
-                     badge: store.social.pendingCount)
+                door(title: "Allies", icon: "person.2.fill", art: "allies", badge: store.social.pendingCount)
             }
             .buttonStyle(PlateButtonStyle())
 
             Button {
                 press { showShop = true }
             } label: {
-                door(title: "Bazaar", caption: "Scrolls & relics", icon: "bag.fill")
+                // The drachma's painted coin stack, the bazaar's own coin,
+                // where a flat SF shopping bag stood beside three painted
+                // objects (run 216).
+                door(title: "Bazaar", icon: "bag.fill", itemKey: "drachma")
             }
             .buttonStyle(PlateButtonStyle())
 
@@ -345,7 +369,7 @@ struct SettingsView: View {
                 LessonsView()
                     .environmentObject(store)
             } label: {
-                door(title: "Lessons", caption: "From Athena", icon: "book.fill")
+                door(title: "Lessons", icon: "book.fill", itemKey: ItemArt.key(scroll: .unknown))
             }
             .buttonStyle(PlateButtonStyle())
         }
@@ -361,21 +385,23 @@ struct SettingsView: View {
     }
 
     /// One door: the painted object in its dark socket (`MedallionIcon` at
-    /// 38, its glyph in pale gold until a painting ships), the name in
-    /// Cinzel at 13 and what it holds in one line of 11, each at its own
-    /// width so nothing is cut, on the Missions rows' marble. A count
-    /// waiting to be taken is the island header's red badge on the
-    /// medallion's shoulder, so the same thing reads the same on both
-    /// screens.
+    /// 38 — its own painting, or the closest painted item, or its glyph in
+    /// pale gold) over its name in Cinzel at 13, at its own width so
+    /// nothing is cut, on the Missions rows' marble. A count waiting to be
+    /// taken is the island header's red badge on the medallion's shoulder,
+    /// so the same thing reads the same on both screens. No caption since
+    /// run 216: the object and the name carry the door, and the 20 points
+    /// the caption line took are what the boards below needed to show the
+    /// Bind button whole.
     private func door(
         title: String,
-        caption: String,
         icon: String,
         art: String? = nil,
+        itemKey: String? = nil,
         badge: Int = 0
     ) -> some View {
         VStack(spacing: 4) {
-            MedallionIcon(key: art ?? "", glyph: icon, size: 38, glyphTint: Theme.onGlassGold)
+            MedallionIcon(key: art ?? "", glyph: icon, size: 38, glyphTint: Theme.onGlassGold, itemKey: itemKey)
                 .overlay(alignment: .topTrailing) {
                     if badge > 0 {
                         waitingBadge(badge)
@@ -388,13 +414,8 @@ struct SettingsView: View {
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
                 .fixedSize()
-            Text(caption)
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textSecondary)
-                .lineLimit(1)
-                .fixedSize()
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 7)
         .frame(maxWidth: .infinity)
         .background(MarbleRowPlate(radius: Theme.tightCorner))
         .contentShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
@@ -418,31 +439,29 @@ struct SettingsView: View {
 
     // MARK: - The boards
 
+    /// The account's rows scroll under a fade; its ACTIONS are a pinned foot
+    /// below them (run 216): inside the fading board, Bind to Apple ID — the
+    /// guest's one action — sat bisected at the board's foot and washed to a
+    /// pale ghost that read as disabled. The rows keep only what the screen
+    /// does not already say: the name and the level are the strip's
+    /// subtitle, the codex its count.
     private var accountPanel: some View {
-        SectionPanel(title: "Account", accessory: "Lv.\(store.player.level)") {
-            FadingBoard {
-                VStack(spacing: 5) {
-                    row("Account", accountLine)
-                    // The key's tail, in capitals: what a support request
-                    // quotes, and the tail of the save's record name in
-                    // CloudKit.
-                    row("Player ID", session.accounts.account?.playerCode ?? "—")
-                    row("Name", store.player.displayName)
-                    // The level is the panel's accessory; units and relics
-                    // are the collection's own counts. Run 179's frame had
-                    // the guest's Bind button cut off under eight rows and a
-                    // three-line caption, so the panel keeps the rows only it
-                    // can say.
-                    row("Total summons", "\(store.player.totalSummons)")
-                    row("Codex", "\(store.player.codex.count) / \(UnitDatabase.collectiblePool.count)")
-                    // In a stack of its own, so the gap above is one gap and
-                    // not one per caption and button inside.
+        SectionPanel(title: "Account", accessory: nil) {
+            VStack(spacing: 6) {
+                FadingBoard {
                     VStack(spacing: 5) {
-                        accountActions
+                        row("Account", accountLine)
+                        // The key's tail, in capitals: what a support request
+                        // quotes, and the tail of the save's record name in
+                        // CloudKit.
+                        row("Player ID", session.accounts.account?.playerCode ?? "—")
+                        row("Total summons", "\(store.player.totalSummons)")
+                        accountCaptions
                     }
-                    .padding(.top, 3)
+                }
+                VStack(spacing: 5) {
+                    accountActions
                     resetRow
-                        .padding(.top, 6)
                 }
             }
         }
@@ -458,19 +477,30 @@ struct SettingsView: View {
         }
     }
 
+    /// What the account's buttons need said first: the foreign save's date,
+    /// the guest's warning. They scroll with the rows; the buttons are the
+    /// pinned foot.
+    @ViewBuilder
+    private var accountCaptions: some View {
+        if let foreign = store.cloudSave?.foreign {
+            caption("\(cloudName) holds a different save, from \(SettingsView.dayFormatter.string(from: foreign.modifiedAt)).")
+        }
+        if session.accounts.account?.isGuest ?? true {
+            caption("A guest cannot sign back in; bind this phone's progress to your Apple ID.")
+        }
+    }
+
     /// Sign out for an Apple account; Bind to Apple ID for a guest, who could
     /// not sign back in; Restore from iCloud when the cloud holds a save of
     /// another lineage that this store will never overwrite.
     @ViewBuilder
     private var accountActions: some View {
-        if let foreign = store.cloudSave?.foreign {
-            caption("\(cloudName) holds a different save, from \(SettingsView.dayFormatter.string(from: foreign.modifiedAt)).")
+        if store.cloudSave?.foreign != nil {
             PrimaryButton(title: "Restore from \(cloudName)", systemImage: "icloud.and.arrow.down", tint: Theme.info) {
                 showRestoreConfirm = true
             }
         }
         if session.accounts.account?.isGuest ?? true {
-            caption("A guest cannot sign back in; bind this phone's progress to your Apple ID.")
             PrimaryButton(title: "Bind to Apple ID", systemImage: "person.crop.circle.badge.checkmark") {
                 showBind = true
             }
@@ -551,8 +581,10 @@ struct SettingsView: View {
                             .foregroundStyle(Theme.textPrimary)
                     }
                     .tint(Theme.gold)
-                    // Two lines shorter than the paragraph run 211 cut off.
-                    caption("Off: one fixed view of the whole field, the genre's way; an ultimate pushes in and hits shake. On: the camera cuts, leans and orbits on skills.")
+                    // One line each (run 216 cut the old paragraph mid-word
+                    // at the board's foot).
+                    caption("Off: one fixed view, the genre's way.")
+                    caption("On: cuts, leans and orbits on skills.")
                 }
             }
         }
@@ -702,7 +734,9 @@ struct DiagnosticsDesk: View {
             subtitle: "Debug build: the log and the model board",
             dismiss: { dismiss() }
         ) {
-            BarCount(value: "\(DiagnosticsLog.shared.count) lines", systemImage: "text.alignleft")
+            // The count is the Console panel's accessory; twice on one
+            // screen was once too many (run 216).
+            EmptyView()
         } content: {
             HStack(alignment: .top, spacing: 8) {
                 consolePanel
@@ -1101,6 +1135,9 @@ private struct LaunchEmbers: View {
 /// SF symbols in cream discs that all but dissolved into the band.
 struct GameTabBar: View {
     @Binding var selection: RootView.Tab
+    /// Read for `tabBarDimmed` alone: a modal card over a tab screen
+    /// (`View.dimsTabBar(_:)`) dims the band and takes its taps.
+    @EnvironmentObject private var store: GameStore
 
     static let height: CGFloat = 58
 
@@ -1132,6 +1169,20 @@ struct GameTabBar: View {
         .frame(height: Self.height)
         .frame(maxWidth: .infinity)
         .background(band)
+        // Under a card (the stage popup, the sweep receipt) the bar recedes
+        // with the screen: the card's own 0.55 black, over the whole band,
+        // and no door takes a tap while it stands (run 216: a bright, live
+        // bar under a dimmed map read as a card pasted between two screens,
+        // and a tap on a door switched screens with the card still up).
+        .overlay {
+            if store.tabBarDimmed {
+                Color.black.opacity(0.55)
+                    .ignoresSafeArea(edges: [.horizontal, .bottom])
+                    .transition(.opacity)
+            }
+        }
+        .allowsHitTesting(!store.tabBarDimmed)
+        .animation(.easeOut(duration: 0.2), value: store.tabBarDimmed)
     }
 
     /// The door: the medallion at 38 over its name in Cinzel at 13 — 38, one
@@ -1148,14 +1199,17 @@ struct GameTabBar: View {
         } label: {
             VStack(spacing: 1) {
                 // Anchored at the bottom, so the chosen door rises about
-                // three points over the band's gold rule instead of growing
+                // four points over the band's gold rule instead of growing
                 // down into its own name.
                 MedallionIcon(key: item.art, glyph: item.glyph, size: 38, isOn: isOn)
-                    .scaleEffect(isOn ? 1.1 : 1, anchor: .bottom)
+                    .scaleEffect(isOn ? 1.12 : 1, anchor: .bottom)
+                // The chosen door's name in ink, the rest in a quieter brown
+                // (run 216: goldDeep against textSecondary measured as two
+                // near-identical dark inks, so the label never changed).
                 Text(item.title.uppercased())
                     .font(Theme.title(13))
                     .tracking(0.8)
-                    .foregroundStyle(isOn ? Theme.goldDeep : Theme.textSecondary)
+                    .foregroundStyle(isOn ? Theme.ink : Theme.textSecondary.opacity(0.78))
                     .lineLimit(1)
                     .fixedSize()
             }

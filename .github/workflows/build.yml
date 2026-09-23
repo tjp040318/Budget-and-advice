@@ -276,14 +276,15 @@ jobs:
                 sleep 5; shoot "$step-${names[$step]}"
                 again -tour-dungeon lab_necropolis; sleep 5; shoot "$step-${names[$step]}-necropolis"
                 again -tour-dungeon lab_colossus -tour-dungeon-floor 1; sleep 5; shoot "$step-${names[$step]}-mastered"
-                again -tour-dungeon lab_colossus -tour-dungeon-floor 10; sleep 5; shoot "$step-${names[$step]}-b10" ;;
+                again -tour-dungeon lab_colossus -tour-dungeon-floor 10; sleep 5; shoot "$step-${names[$step]}-b10"
+                again -tour-dungeon lab_colossus -tour-dungeon-floor 1 -tour-dungeon-sweep; sleep 5; shoot "$step-${names[$step]}-sweep" ;;
               # The boss stage's card: the BOSS eyebrow, the boss tile's tag,
               # the boss's face on its medallion behind the dim.
               stage_popup)
                 sleep 5; shoot "$step-${names[$step]}"
                 again -tour-popup-stage duat_1_5; sleep 5; shoot "$step-${names[$step]}-boss" ;;
               # Athena's caret on the Collection door: proof that the tab
-              # bar's anchor reaches an overlay above the bar's inset.
+              # bar's anchor reaches an overlay drawn over screen and bar.
               guide)
                 sleep 5; shoot "$step-${names[$step]}"
                 again -tour-guide caret; sleep 5; shoot "$step-${names[$step]}-caret" ;;
@@ -297,6 +298,14 @@ jobs:
                 again -tour-briefing duat_1_4; sleep 5; shoot "$step-${names[$step]}-briefing"
                 again -tour-briefing duat_1_1; sleep 5; shoot "$step-${names[$step]}-briefing-sweep"
                 again -tour-briefing lab_colossus_10; sleep 5; shoot "$step-${names[$step]}-briefing-dungeon" ;;
+              # The app's own shell on the Summon tab (-tour-root summon):
+              # RootView lays the tab bar out under a TabView of
+              # NavigationStacks, a path the tour's copy stands in for and no
+              # frame had photographed (run 216). The deck must sit whole
+              # above the bar, the painting to both edges.
+              summon)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-root summon; sleep 6; shoot "$step-${names[$step]}-root" ;;
               # The dearest 5★ on the mileage counter, short of points.
               mileage)
                 sleep 5; shoot "$step-${names[$step]}"

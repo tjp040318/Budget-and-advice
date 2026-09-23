@@ -449,6 +449,37 @@ enum ItemArt {
         guard key.hasPrefix("scroll_") else { return nil }
         return ScrollType(rawValue: String(key.dropFirst("scroll_".count)))
     }
+
+    /// A tile's corner count cut to the genre's short form — "+15,000" is
+    /// "+15K", "+1,240" is "+1.2K", "×2,000,000" is "×2M" — keeping its sign
+    /// or its ×. Anything that is not a plain count ("Refill", "5★", "Slot
+    /// 4", "50%") comes back as it was. `RewardTile` uses it when the full
+    /// figure would overhang a small socket (run 216: "+15,000" past the
+    /// rim of a 44-point tile), never at 56 points and up.
+    static func compactAmount(_ amount: String) -> String {
+        var prefix = ""
+        var digits = amount
+        if let first = digits.first, first == "+" || first == "×" || first == "x" {
+            prefix = String(first)
+            digits = String(digits.dropFirst())
+        }
+        let plain = digits.replacingOccurrences(of: ",", with: "")
+        guard !plain.isEmpty, plain.allSatisfy(\.isNumber), let value = Int(plain), value >= 1_000 else {
+            return amount
+        }
+        return prefix + shortCount(value)
+    }
+
+    /// 1,240 → "1.2K", 15,000 → "15K", 2,500,000 → "2.5M".
+    private static func shortCount(_ value: Int) -> String {
+        let (unit, suffix): (Double, String) = value >= 1_000_000 ? (1_000_000, "M") : (1_000, "K")
+        let scaled = Double(value) / unit
+        if scaled >= 10 || scaled == scaled.rounded() {
+            return "\(Int(scaled))\(suffix)"
+        }
+        let tenths = (scaled * 10).rounded(.down) / 10
+        return String(format: "%.1f", tenths) + suffix
+    }
 }
 
 // MARK: - The raid grade
@@ -804,10 +835,20 @@ enum ChromeArt {
 }
 
 /// A painted door: the object in a dark bronze socket (`Theme.socketFill`, a
-/// bronze rim, a lit top edge) or, until its painting ships, its glyph in
-/// cream (or `glyphTint`) in the same socket. Selected (`isOn`), the rim is
-/// the gold plate at 2.5, a warm light fills the socket and the medallion
-/// glows. No art is dimmed or desaturated in either state.
+/// bronze rim, a lit top edge) or, until its painting ships, the closest
+/// painted ITEM (`itemKey`, an `item_<key>` painting) or its glyph in cream
+/// (or `glyphTint`) in the same socket. No art is dimmed or desaturated in
+/// either state.
+///
+/// Selected (`isOn`), the socket STAYS DARK — the painted object keeps the
+/// ground every icon was painted on — and the selection is the metal: the
+/// gold plate at 3 points round it with a pale gold hairline inside, a warm
+/// gold halo tight to the rim and a dark drop shadow under it, so the chosen
+/// door reads strongest on the cream band. Run 216 measured the old selected
+/// socket, a #FFD678 light at half over the dark, as a muddy khaki (≈130,
+/// 108, 70 against ≈50, 40, 28 at rest) that took the dark ground from the
+/// island, the bust and the scroll, and its 9-point yellow glow vanished on
+/// the cream.
 ///
 /// It is the TAB AND DOOR icon — `GameTabBar` at 38, the island header's
 /// doors at 36, More's tiles at 30 — and draws no button of its own; the
@@ -819,18 +860,17 @@ struct MedallionIcon: View {
     var size: CGFloat = 38
     var isOn: Bool = false
     var glyphTint: Color? = nil
+    /// A painted item (`ItemArt`, `item_<key>`) drawn in the socket when
+    /// `key` has no painting of its own: More's Bazaar is the drachma's coin
+    /// stack and its Lessons a scroll (run 216: two flat SF glyphs beside
+    /// three painted objects in one row).
+    var itemKey: String? = nil
 
     var body: some View {
-        let rim: CGFloat = isOn ? 2.5 : 1.5
+        let rim: CGFloat = isOn ? 3 : 1.5
         let art = size * 0.88
         return ZStack {
             Circle().fill(Theme.socketFill)
-            if isOn {
-                Circle()
-                    .fill(RadialGradient(colors: [Color(hex: "#FFD678").opacity(0.5), Color(hex: "#FFD678").opacity(0)],
-                                         center: .center, startRadius: 0, endRadius: size * 0.5))
-                    .padding(rim)
-            }
             Circle()
                 .strokeBorder(LinearGradient(colors: [Color.white.opacity(0.18), Color.white.opacity(0)],
                                              startPoint: .top, endPoint: .center),
@@ -841,16 +881,24 @@ struct MedallionIcon: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: art, height: art)
                     .shadow(color: Color.black.opacity(0.55), radius: 1.5, y: 1)
+            } else if let itemKey, ItemArt.hasPainting(itemKey) {
+                ItemIcon(key: itemKey, size: size * 0.72, glow: false)
+                    .shadow(color: Color.black.opacity(0.55), radius: 1.5, y: 1)
             } else {
                 Image(systemName: glyph)
                     .font(.system(size: size * 0.46, weight: .bold))
                     .foregroundStyle(isOn ? AnyShapeStyle(Theme.goldText) : AnyShapeStyle(glyphTint ?? Theme.onGlass))
             }
             Circle().strokeBorder(isOn ? Theme.goldPlate : Theme.bronzeFrame, lineWidth: rim)
+            if isOn {
+                Circle()
+                    .strokeBorder(Color(hex: "#FFE9A8").opacity(0.8), lineWidth: 1)
+                    .padding(rim)
+            }
         }
         .frame(width: size, height: size)
-        .shadow(color: isOn ? Color(hex: "#FFD678").opacity(0.6) : Color.black.opacity(0.28),
-                radius: isOn ? 9 : 2.5, y: isOn ? 0 : 1.5)
+        .shadow(color: Color(hex: "#E8B84A").opacity(isOn ? 0.9 : 0), radius: isOn ? 5 : 0)
+        .shadow(color: Color.black.opacity(isOn ? 0.35 : 0.28), radius: isOn ? 4 : 2.5, y: isOn ? 2 : 1.5)
         .accessibilityHidden(true)
     }
 }
@@ -908,6 +956,26 @@ struct RewardTile: View {
     }
 
     private var corner: CGFloat { max(6, size * 0.16) }
+
+    /// The count as the corner prints it: the full figure when it fits the
+    /// socket at the corner's own size, the short form ("+15K") when it
+    /// would overhang. A digit of Manrope-Black is about 0.62 of its point
+    /// size and a comma 0.3; the socket leaves its width less the corner's
+    /// padding.
+    private func cornerAmount(_ amount: String) -> String {
+        let points = max(Theme.numericFloor, max(10.5, size * 0.21) * Theme.fontScale)
+        let room = size - max(3, size * 0.07) - 3
+        let ems: CGFloat = amount.reduce(0) { total, character in total + (character == "," ? 0.3 : 0.62) }
+        return ems * points > room ? ItemArt.compactAmount(amount) : amount
+    }
+
+    /// A star row's point size that fits `width`: a star and its gap are
+    /// about 1.2 of the point size, and it never grows past 12% of the tile.
+    static func starSize(stars: Int, width: CGFloat) -> CGFloat {
+        let count = CGFloat(max(1, stars))
+        return max(4.5, min(width * 0.12, (width - 4) / (count * 1.2)))
+    }
+
     private var rarity: Rarity? {
         if let relic { return relic.resolvedQuality.rarity }
         if let stars { return Rarity(stars: stars) }
@@ -932,12 +1000,12 @@ struct RewardTile: View {
                 .frame(width: size, height: size)
                 if let amount {
                     OutlinedText(
-                        text: amount,
+                        text: cornerAmount(amount),
                         font: Theme.numeric(max(10.5, size * 0.21)).weight(.black),
                         width: max(0.8, size * 0.016)
                     )
-                    // Its own width: "+2,000" overhangs the socket's corner
-                    // rather than reading "+2,0…" (run 211, the bazaar).
+                    // Its own width, never an ellipsis ("+2,0…", run 211);
+                    // and short enough to stay on the socket (`cornerAmount`).
                     .fixedSize()
                     .padding(.trailing, max(3, size * 0.07))
                     .padding(.bottom, max(2, size * 0.05))
@@ -945,7 +1013,9 @@ struct RewardTile: View {
             }
             .frame(width: size, height: size)
             if let stars = relic?.grade ?? stars {
-                StarRow(stars: stars, size: max(6, size * 0.12))
+                // Fitted to the socket's width: six stars at 12% of a
+                // 44-point tile were wider than the stone (run 216).
+                StarRow(stars: stars, size: Self.starSize(stars: stars, width: size))
             }
             if showsTitle, let title {
                 Text(title)
@@ -1366,9 +1436,20 @@ struct PrimaryButton: View {
             .overlay(
                 LinearGradient(colors: [.white.opacity(0.14), .clear], startPoint: .top, endPoint: .center)
             )
-        } else if isEnabled, usesGoldPlate,
-                  let painted = Chrome.slice("ui_button_gold", Chrome.goldButtonInsets) {
-            painted
+        } else if isEnabled, usesGoldPlate {
+            // DRAWN gold, lit from above, with the sweep (`shine`) over it —
+            // not the painted `ui_button_gold` slice, which photographs as a
+            // copper-rose plate with verdigris ends. Five judges of run 216
+            // named it the dullest metal on its screen, beside the drawn
+            // gold of every claim, chip and lit row: the one tap that
+            // matters was the least golden thing there.
+            LinearGradient(
+                colors: [Color(hex: "#FFE9A8"), Color(hex: "#E2BF62"), Theme.gold, Color(hex: "#7A5B1C")],
+                startPoint: .top, endPoint: .bottom
+            )
+            .overlay(
+                LinearGradient(colors: [.white.opacity(0.35), .clear], startPoint: .top, endPoint: .center)
+            )
         } else if isEnabled, !usesGoldPlate,
                   let painted = Chrome.slice("ui_button_dark", Chrome.darkButtonInsets) {
             painted
@@ -1654,7 +1735,14 @@ struct GameScreen<Bar: View, Content: View>: View {
         }
         .padding(.horizontal, 12)
         .frame(height: ScreenChrome.height)
-        .background(ScreenChrome.stripBackground)
+        // The strip's marble runs out to both edges of the glass, as the tab
+        // band under it does; its controls stay inside the safe area. It
+        // stopped at the safe area until run 216, so the top chrome and the
+        // bottom chrome were two widths on every tab screen.
+        .background {
+            ScreenChrome.stripBackground
+                .ignoresSafeArea(.container, edges: [.horizontal, .top])
+        }
     }
 }
 
@@ -1988,11 +2076,13 @@ struct BarWallet: View {
         }
     }
 
-    /// 1,240,000 in a strip is noise; 1.2M is a number.
+    /// 1,240,000 in a strip is noise; 1.2M is a number. Under 10,000 the
+    /// figure is grouped ("1,143"), as every other number on a screen is
+    /// (run 216: the Awaken tiles' "1143 / 15").
     static func compact(_ amount: Int) -> String {
         if amount >= 1_000_000 { return String(format: "%.1fM", Double(amount) / 1_000_000) }
         if amount >= 10_000 { return "\(amount / 1000)K" }
-        return "\(amount)"
+        return amount.formatted()
     }
 }
 
@@ -2024,18 +2114,58 @@ struct SectionPanel<Content: View>: View {
                     .fill(Theme.stroke.opacity(0.7))
                     .frame(height: 1)
                 if let accessory {
+                    // At the numeric floor and its own width: the 10 with a
+                    // 0.75 shrink could go to 8.6 points (run 216).
                     Text(accessory)
-                        .font(Theme.numeric(10))
+                        .font(Theme.numeric(11.5))
                         .foregroundStyle(Theme.textSecondary)
                         .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                        .fixedSize(horizontal: true, vertical: false)
+                        .fixedSize()
                 }
             }
+            // Clear of the painted panel's acanthus corners, which reach
+            // about 18 points in: at the body's 8 the first letters of
+            // "ACCOUNT" and the accessory stood on the scrolls (run 216).
+            .padding(.horizontal, 12)
             content()
         }
         .padding(8)
         .background(Theme.panel(Theme.tightCorner))
+    }
+}
+
+// MARK: - A card over a tab screen
+
+extension View {
+    /// Dims the game's tab bar and takes its taps while `isPresented` is
+    /// true — put it on the screen that shows a modal CARD over itself (the
+    /// stage popup, the sweep receipt), with the card's own condition:
+    /// `.dimsTabBar(popupStage != nil)`. The bar is laid out under the tab,
+    /// outside the screen, so the card's own scrim never reached it (run
+    /// 216: a bright, live bar under a dimmed map). It writes
+    /// `GameStore.tabBarDimmed`, which `GameTabBar` reads, and clears it
+    /// when the screen goes away with the card still up. Needs the store in
+    /// the environment, as every screen has it.
+    func dimsTabBar(_ isPresented: Bool) -> some View {
+        modifier(TabBarDimmer(isPresented: isPresented))
+    }
+}
+
+private struct TabBarDimmer: ViewModifier {
+    @EnvironmentObject private var store: GameStore
+    let isPresented: Bool
+
+    func body(content: Content) -> some View {
+        content
+            .onAppear {
+                if isPresented { store.tabBarDimmed = true }
+            }
+            .onChange(of: isPresented) { _, now in
+                store.tabBarDimmed = now
+            }
+            .onDisappear {
+                if isPresented { store.tabBarDimmed = false }
+            }
     }
 }
 
@@ -2044,9 +2174,14 @@ struct SectionPanel<Content: View>: View {
 extension View {
     /// Display type as carved gold: the gold gradient as the fill, a dark
     /// edge under it and a warm glow round it (PLAN.md, *The premium pass*).
-    func carved(glow: Bool = true) -> some View {
+    ///
+    /// `multiline: true` for any carved text that can wrap (a `lineLimit`
+    /// above 1): the fill is `Theme.goldTextFlat`, light on every line,
+    /// because one gradient spans the whole block and left a second line in
+    /// dark bronze (run 216). A one-line title keeps the deeper `goldText`.
+    func carved(glow: Bool = true, multiline: Bool = false) -> some View {
         self
-            .foregroundStyle(Theme.goldText)
+            .foregroundStyle(multiline ? Theme.goldTextFlat : Theme.goldText)
             .shadow(color: Color.black.opacity(0.7), radius: 1, y: 1)
             .shadow(color: Color(hex: "#FFD678").opacity(glow ? 0.35 : 0), radius: 7)
     }

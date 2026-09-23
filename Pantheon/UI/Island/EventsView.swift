@@ -62,10 +62,10 @@ struct EventsView: View {
                     }
                     weekRow
                     nextLine
-                    Spacer(minLength: 0)
                 }
                 .padding(.horizontal, ScreenChrome.contentPadding)
                 .padding(.top, 10)
+                .padding(.bottom, 12)
                 .overlay(alignment: .bottom) {
                     receiptOverlay
                 }
@@ -82,13 +82,16 @@ struct EventsView: View {
         return names.isEmpty ? "The week's calendar" : "Today: " + names.joined(separator: " · ")
     }
 
-    /// "21 – 27 Sep": the week the cards show.
+    /// "Sep 28 – Oct 4", "Oct 5 – 11": the week the cards show, as the
+    /// locale writes a span of days. It printed "28 – Oct 4" — the first
+    /// date's month dropped — because the day-first pattern it assumed is
+    /// month-first in en_US (runs 211 and 216). The interval style puts the
+    /// month where the locale wants it and drops a repeated one itself.
     private var weekLabel: String {
         let monday = EventCalendar.weekStart(at: now)
         let sunday = EventCalendar.day(6, after: monday)
-        let first = monday.formatted(.dateTime.day())
-        let last = sunday.formatted(.dateTime.day().month(.abbreviated))
-        return "\(first) – \(last)"
+        let week = monday..<max(sunday, monday)
+        return week.formatted(.interval.month(.abbreviated).day())
     }
 
     // MARK: - The Festival
@@ -159,7 +162,8 @@ struct EventsView: View {
         let next = EventCalendar.nextFestival(after: now)
         let gifts = EventCalendar.festivalGifts
         return HStack(spacing: 12) {
-            MedallionIcon(key: "", glyph: next.glyph, size: 36)
+            // The Festival's painted gift, not its SF glyph (run 216).
+            MedallionIcon(key: "", glyph: next.glyph, size: 36, itemKey: "bundle")
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 2) {
                     Text(next.title.uppercased())
@@ -198,24 +202,27 @@ struct EventsView: View {
     // MARK: - The week
 
     /// Monday to Thursday and the weekend, as one row of cards of one
-    /// height: the row takes its tallest card's height (the Necropolis
-    /// weekend's three-line name) and every card stretches to it.
+    /// height that takes the board down to its foot: the Spacer under the
+    /// row left 40–55 points of bare cream (run 216). The tallest card (the
+    /// Necropolis weekend's four-line name) needs about 180 of the 190 or so
+    /// it is given on an iPhone 16 Pro.
     private var weekRow: some View {
         HStack(alignment: .top, spacing: 8) {
             ForEach(cards) { event in
                 eventCard(event)
             }
         }
-        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxHeight: .infinity, alignment: .top)
     }
 
     /// One day of the week. Its name at the title floor with no shrink, on
     /// as many lines as it needs — a word never breaks: "HALF-ENERGY" is 104
     /// points and a card's inside is 123 on an iPhone 16 Pro — then one short
-    /// line of what it touches, its multiplier and its clock; the whole
-    /// sentence behind the ?. The event's glyph stands large and faint in
-    /// the corner, where the 30-point disc beside the name used to take the
-    /// name's width.
+    /// line of what it touches; at the foot its multiplier over its clock,
+    /// and beside them what it doubles as its painting in a socket (the
+    /// drachma, the codex, the energy, the laurels, the Hall's essence, the
+    /// relic box) — a faint SF glyph in the corner was the card's only art.
+    /// The whole sentence is behind the ?.
     private func eventCard(_ event: GameEvent) -> some View {
         let active = event.isActive(at: now)
         let over = event.end <= now
@@ -240,25 +247,25 @@ struct EventsView: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 4)
-            HStack(spacing: 6) {
-                EventBadge(event: event, compact: true)
+            HStack(alignment: .bottom, spacing: 4) {
+                // "Ends in 12h" is 57 points and the socket 44: with the
+                // spacing they are 105 of the 123 a card has inside.
+                VStack(alignment: .leading, spacing: 4) {
+                    EventBadge(event: event, compact: true)
+                        .opacity(over ? 0.5 : 1)
+                    Text(timing(event))
+                        .font(Theme.body(11))
+                        .foregroundStyle(active ? Theme.textPrimary : Theme.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                Spacer(minLength: 0)
+                RewardTile(key: Self.itemKey(event.kind), size: 44, showsTitle: false)
                     .opacity(over ? 0.5 : 1)
-                Text(timing(event))
-                    .font(Theme.body(11))
-                    .foregroundStyle(active ? Theme.textPrimary : Theme.textSecondary)
-                    .lineLimit(1)
-                    .fixedSize()
             }
         }
         .padding(8)
-        .frame(maxWidth: .infinity, minHeight: 150, maxHeight: .infinity, alignment: .topLeading)
-        .background(alignment: .bottomTrailing) {
-            Image(systemName: event.glyph)
-                .font(.system(size: 40, weight: .black))
-                .foregroundStyle(event.color.opacity(over ? 0.05 : 0.12))
-                .padding(8)
-                .allowsHitTesting(false)
-        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background(MarbleRowPlate(isLit: active, radius: Theme.tightCorner))
         .overlay(alignment: .top) {
             if active {
@@ -302,10 +309,25 @@ struct EventsView: View {
         }
     }
 
-    /// Next weekend's headline and the Festival, so the week can be planned.
+    /// The painted thing an event doubles, for its card's socket.
+    private static func itemKey(_ kind: EventKind) -> String {
+        switch kind {
+        case .doubleDrachma: return "drachma"
+        case .doubleExperience: return "unit_exp"
+        case .halfEnergyCampaign: return "energy"
+        case .arenaLaurelsBoost: return "laurels"
+        case .doubleEssence(let element): return "essence_\(element.rawValue)_mid"
+        case .doubleRelics: return "relic_cache"
+        case .loginGift: return "bundle"
+        }
+    }
+
+    /// Next weekend's headline, so the week can be planned. The Festival's
+    /// date is the notice band's above it (a second "Festival in 20 days"
+    /// here repeated it, run 216), and in a Festival week the band is the
+    /// Festival itself.
     private var nextLine: some View {
         let headline = EventCalendar.nextHeadline(after: now)
-        let festival = EventCalendar.nextFestival(after: now)
         return HStack(spacing: 8) {
             Text("NEXT WEEKEND")
                 .font(Theme.title(13))
@@ -320,16 +342,11 @@ struct EventsView: View {
                 .lineLimit(1)
                 .fixedSize()
             Spacer(minLength: 6)
-            if !festival.isActive(at: now) {
-                Image(systemName: festival.glyph)
-                    .font(.system(size: 11, weight: .black))
-                    .foregroundStyle(Theme.gold)
-                Text("Festival in \(span(festival.start.timeIntervalSince(now)))")
-                    .font(Theme.body(12))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-                    .fixedSize()
-            }
+            Text(timing(headline))
+                .font(Theme.body(12))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
         }
         .padding(.horizontal, 12)
         .frame(height: 34)

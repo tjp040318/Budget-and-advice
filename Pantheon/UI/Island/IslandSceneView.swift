@@ -80,8 +80,22 @@ struct IslandSceneView: UIViewRepresentable {
     /// index, so the screen can name it.
     var onStir: ((Int) -> Void)? = nil
 
-    /// A figure's height as a fraction of the screen's, at zoom 1.
+    /// A figure's height as a fraction of the stage's (`stageHeight`).
     static let figureHeight: CGFloat = 0.11
+
+    /// The height the island's figures, props and weather are sized from.
+    /// It was the screen's height until 2026-09-23, when the tab bar went
+    /// from lying OVER the island to being laid out below it: the island's
+    /// view lost about 79 points and every figure, brazier and ember shrank
+    /// a fifth, although the painting stayed the same size (on a landscape
+    /// phone it covers the view by its width). So the stage is the
+    /// painting's own displayed height, zoom included, scaled so the
+    /// reference phone (874 x 402 before the change, the painting drawn
+    /// 491.6 points tall) keeps every size it had.
+    static func stageHeight(paintingFrame: CGRect) -> CGFloat {
+        let reference: CGFloat = 402.0 / 491.6
+        return paintingFrame.height * reference
+    }
 
     /// The scrub where the fireflies come out at night, on the painting.
     static let fireflyPatches: [CGPoint] = [
@@ -326,7 +340,7 @@ struct IslandSceneView: UIViewRepresentable {
         private func layoutFigures(paintingFrame: CGRect, viewSize: CGSize, zoom: CGFloat) {
             layout = (paintingFrame, viewSize, zoom)
             for (index, node) in figureNodes.enumerated() {
-                let scale = Float(viewSize.height * IslandSceneView.figureHeight * zoom) / figureMetres[index]
+                let scale = Float(IslandSceneView.stageHeight(paintingFrame: paintingFrame) * IslandSceneView.figureHeight) / figureMetres[index]
                 node.scale = SCNVector3(scale, scale, scale)
                 let width = CGFloat(scale) * 1.1
                 figureShadows[index].scale = SCNVector3(Float(width), Float(width), 1)
@@ -553,7 +567,7 @@ struct IslandSceneView: UIViewRepresentable {
             for entry in decorEntries {
                 let point = screenPoint(entry.placement.slot.point, paintingFrame: paintingFrame, viewSize: viewSize)
                 // The piece's height on screen, in points.
-                let target = Float(viewSize.height * entry.placement.decoration.height * zoom)
+                let target = Float(IslandSceneView.stageHeight(paintingFrame: paintingFrame) * entry.placement.decoration.height)
                 let scale = target / entry.metres
                 let depth = IslandSceneView.depth(entry.placement.slot.point.y)
                 entry.holder.scale = SCNVector3(scale, scale, scale)
@@ -629,7 +643,7 @@ struct IslandSceneView: UIViewRepresentable {
         private func rebuildWeather(viewSize: CGSize, paintingFrame: CGRect, zoom: CGFloat, isNight: Bool) {
             weather.childNodes.forEach { $0.removeFromParentNode() }
             weatherEntries = []
-            let unit = viewSize.height / 100 * zoom
+            let unit = IslandSceneView.stageHeight(paintingFrame: paintingFrame) / 100
 
             func add(_ point: CGPoint, depth: Float, _ system: SCNParticleSystem) {
                 let node = SCNNode()

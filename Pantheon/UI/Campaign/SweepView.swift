@@ -141,58 +141,195 @@ struct SweepButton: View {
 
 /// The receipt, over whatever screen asked for the sweep.
 ///
-/// It is the win's own reward box (`SpoilsPanel`) rather than a list of its
-/// own: a sweep pays exactly what the fights would have paid, and a player
-/// who sees the same framed chest learns that without being told. The tiles
-/// are all popped in at once — the victory screen deals them one by one
-/// because that is the drama of a fight it just watched, and a sweep has no
-/// drama to pace.
+/// Deep glass over the dimmed map (2026-09-23): a card over a place is glass
+/// on the rule every place screen keeps since phase A. It was the win's
+/// cream `SpoilsPanel`, centred in the whole screen — so its ribbon rose into
+/// the strip and covered the chapter's name, its caption floated on the map
+/// and the tab bar under it stayed bright (run 216). Now it stands in the
+/// map under the strip, with what it paid as the popup's tiles on glass (the
+/// same `RewardTile`, the stars inside the socket so every name sits on one
+/// line) and what it cost as its eyebrow. A sweep pays exactly what the
+/// fights would have paid; the tiles are all shown at once — the victory
+/// deals them one by one for the drama of a fight it just watched, and a
+/// sweep has no drama to pace. Its screen dims the tab bar
+/// (`dimsTabBar`) while it is up.
 struct SweepReceiptCard: View {
     let receipt: SweepReceipt
     let loot: [BattleSummary.Loot]
     let onClose: () -> Void
     var onRelic: (Relic) -> Void = { _ in }
 
-    var body: some View {
-        ZStack {
-            Color.black.opacity(0.5)
-                .ignoresSafeArea()
-                .onTapGesture(perform: onClose)
+    /// About 80% of the CI phone's map, so the map shows round it.
+    private static let maxWidth: CGFloat = 580
+    private static let tile: CGFloat = 52
+    /// A tile's name frame: 1.3 of the tile, and "Whetstone" (60 at 11).
+    private static let footprint: CGFloat = 68
+    private static let gap: CGFloat = 8
+    private static let chevron: CGFloat = 18
 
-            VStack(spacing: 8) {
-                SpoilsPanel(
-                    title: "\(receipt.stage.name) ×\(receipt.runs)",
-                    stars: 3,
-                    isFirstClear: false,
-                    loot: loot,
-                    shown: loot.count,
-                    continueShown: true,
-                    tapAction: { item in
-                        guard let relic = item.relic else { return nil }
-                        return { onRelic(relic) }
-                    },
-                    onContinue: onClose
-                )
-                caption
+    var body: some View {
+        GeometryReader { frame in
+            let width = min(Self.maxWidth, max(0, frame.size.width - 32))
+            ZStack {
+                Color.black.opacity(0.55)
+                    .ignoresSafeArea()
+                    .onTapGesture(perform: onClose)
+                // Centred in the map under the strip, clear of the strip.
+                card(width: width)
+                    .padding(.top, ScreenChrome.height)
             }
-            .padding(.horizontal, 24)
+            .frame(width: frame.size.width, height: frame.size.height)
         }
     }
 
-    /// The line under the chest: what it cost, and — when it matters — that
-    /// the energy ran out before the runs did. A sweep that silently did
-    /// eleven of twenty would be read as a bug.
-    private var caption: some View {
-        VStack(spacing: 2) {
-            Text("\(receipt.runs) \(receipt.runs == 1 ? "run" : "runs") swept · \(receipt.energySpent) energy")
-                .font(Theme.numeric(11))
-                .foregroundStyle(Theme.plate)
+    /// About 44 + 10 + 88 + 10 + 46 and the padding — 226 points, or 246
+    /// with the line that says the energy ran out, inside the CI phone's
+    /// 262-point map.
+    private func card(width: CGFloat) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 16, style: .continuous)
+        return VStack(spacing: 10) {
+            header
+            spoils(inner: width - 28)
             if receipt.cameUpShort {
-                Text("The energy ran out after \(receipt.runs) of \(receipt.requested).")
-                    .font(Theme.body(11).weight(.bold))
-                    .foregroundStyle(Theme.gold)
+                // A sweep that silently did eleven of twenty would be read
+                // as a bug.
+                let done = receipt.runs
+                let asked = receipt.requested
+                Text("The energy ran out after \(done) of \(asked) runs.")
+                    .font(Theme.body(11.5).weight(.bold))
+                    .foregroundStyle(Theme.onGlassWarning)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            PrimaryButton(title: "Continue", action: onClose)
+                .frame(width: 220)
+        }
+        .padding(14)
+        .frame(width: width)
+        .background(GlassPlate(radius: 16, opacity: 0.9))
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Theme.glassRim, lineWidth: 1))
+        .shadow(color: .black.opacity(0.6), radius: 22, y: 10)
+    }
+
+    /// The chest, what the sweep cost as a gold eyebrow, the stage's name
+    /// carved, and its three stars — a swept stage is three-starred.
+    private var header: some View {
+        let runs = receipt.runs
+        let runWord = runs == 1 ? "RUN" : "RUNS"
+        let energy = receipt.energySpent
+        let eyebrow = "SWEPT · \(runs) \(runWord) · \(energy) ENERGY"
+        return HStack(spacing: 12) {
+            TributeChestImage(size: 44)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(eyebrow)
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(1.4)
+                    .foregroundStyle(Theme.onGlassEyebrow)
+                    .lineLimit(1)
+                    .fixedSize()
+                Text(receipt.stage.name.uppercased())
+                    .font(Theme.display(20))
+                    .tracking(0.8)
+                    .carved()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.66)
+            }
+            Spacer(minLength: 8)
+            HStack(spacing: 3) {
+                ForEach(0..<3, id: \.self) { _ in
+                    Image(systemName: "star.fill")
+                        .font(.system(size: 14, weight: .black))
+                        .foregroundStyle(Theme.gold)
+                        .shadow(color: Theme.gold.opacity(0.6), radius: 3)
+                }
             }
         }
-        .shadow(color: .black.opacity(0.7), radius: 3)
+    }
+
+    /// Every spoil as a tile: all of them when they fit, else as many WHOLE
+    /// tiles as the card holds, scrolling for the rest, with a chevron to
+    /// say so — never a fade across a name.
+    private func spoils(inner: CGFloat) -> some View {
+        let count = loot.count
+        let needed = CGFloat(count) * Self.footprint + CGFloat(max(0, count - 1)) * Self.gap
+        let fits = needed <= inner + 0.5
+        let whole = max(1, Int((inner - Self.chevron + Self.gap) / (Self.footprint + Self.gap)))
+        let window = CGFloat(whole) * Self.footprint + CGFloat(max(0, whole - 1)) * Self.gap
+        return Group {
+            if fits {
+                spoilsRow
+                    .frame(maxWidth: .infinity)
+            } else {
+                HStack(alignment: .top, spacing: 0) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        spoilsRow
+                    }
+                    .frame(width: window)
+                    .fixedSize(horizontal: false, vertical: true)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(Theme.onGlassEyebrow)
+                        .frame(width: Self.chevron, height: Self.tile)
+                }
+            }
+        }
+    }
+
+    private var spoilsRow: some View {
+        HStack(alignment: .top, spacing: Self.gap) {
+            ForEach(loot) { item in
+                spoilTile(item)
+            }
+        }
+    }
+
+    /// One spoil. A relic is its set's painted stone with its quality's
+    /// rim and its grade's stars in the socket, and opens its card on a tap.
+    private func spoilTile(_ item: BattleSummary.Loot) -> some View {
+        let relic = item.relic
+        let stars: Int? = relic?.grade ?? item.stars
+        let corner = max(6, Self.tile * 0.16)
+        let tap: (() -> Void)?
+        if let relic {
+            tap = { onRelic(relic) }
+        } else {
+            tap = nil
+        }
+        return VStack(spacing: 3) {
+            RewardTile(
+                key: relic == nil ? (item.key ?? "") : "relic_cache",
+                amount: item.amount,
+                size: Self.tile,
+                showsTitle: false,
+                imageName: relic?.stoneImageName,
+                onGlass: true,
+                onTap: tap
+            )
+            .overlay {
+                if let relic {
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .strokeBorder(relic.resolvedQuality.rarity.glow.opacity(0.8), lineWidth: 1.6)
+                        .padding(1)
+                        .allowsHitTesting(false)
+                }
+            }
+            .overlay(alignment: .top) {
+                if let stars {
+                    StarRow(stars: stars, size: RewardTile.starSize(stars: stars, width: Self.tile * 0.8))
+                        .shadow(color: .black.opacity(0.8), radius: 1)
+                        .padding(.top, 2)
+                        .allowsHitTesting(false)
+                }
+            }
+            Text(item.title)
+                .font(Theme.body(11).weight(.semibold))
+                .foregroundStyle(Theme.onGlass)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
+                .frame(width: Self.footprint)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(width: Self.footprint)
     }
 }

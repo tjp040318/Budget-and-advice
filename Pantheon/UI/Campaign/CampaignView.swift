@@ -46,7 +46,9 @@ struct CampaignView: View {
         _openChapterID = State(initialValue: openingChapter)
         _popupStage = State(initialValue: openingStage.flatMap { StageDatabase.stage($0) })
         _difficulty = State(initialValue: openingDifficulty)
-        self.openingScroll = openingScroll || openingDifficulty != .normal
+        // A tier's terms are a line of glass on the map now; the scroll
+        // opens only when asked for (run 216's Hell frame was a paragraph).
+        self.openingScroll = openingScroll
         self.previewPlayer = previewPlayer
     }
 
@@ -91,8 +93,9 @@ struct CampaignView: View {
 
     /// The strip's second line on a chapter: where it is on the road, the
     /// tier when it is not Normal, and how far it is walked — "The Duat ·
-    /// Chapter 1 · 3/5". The progress is here as well as on the map's tab,
-    /// because on the most crowded maps the tab is the two stones alone.
+    /// Chapter 1 · 3/5". The progress is HERE and only here since run 216,
+    /// which printed it twice (here and on the map's tab); the tab's room
+    /// went to the sets' names.
     private func chapterSubtitle(_ chapter: Chapter) -> String {
         let count = chapter.stages.count
         let cleared = min(count, player.campaignProgress[chapter.id] ?? 0)
@@ -194,11 +197,11 @@ struct CampaignView: View {
             .fullScreenCover(item: $battle) { context in
                 battleScreen(for: context)
             }
-            // The stage's card covers this screen and not the game's tab bar,
-            // which is `RootView`'s bottom inset and draws above every tab:
-            // a tap on a tab with the card open still changes screens. The
-            // fix is RootView's (hide the bar while a card is up); said in
-            // the phase-B report.
+            // The stage's card and the sweep's receipt cover this screen; the
+            // game's tab bar is laid out under it, outside, so the card's own
+            // scrim never reached it — run 216 showed a bright, live bar under
+            // a dimmed map. The bar dims and takes no taps while either is up.
+            .dimsTabBar(popupStage != nil || sweepReceipt != nil)
             .overlay {
                 if let stage = popupStage, let chapter = StageDatabase.chapter(stage.chapterID) {
                     StagePopup(
@@ -310,14 +313,16 @@ extension CampaignView {
 
 // MARK: - What a stage pays, as tiles
 
-/// One thing a stage can pay, as the painted tile draws it: the chapter's
-/// sets each as its own stone with its true share of the relic chance
-/// (`CampaignService` picks the set uniformly, so a 45% relic of two sets is
-/// 22.5% each), the essences, the scrolls, the stones, the drachma, the
-/// experience and the first clear's divinity. The popup and the briefing
-/// read the same list, so the two cannot disagree. It was a text list with
-/// 14-point glyphs although every item has a painted icon (run 211, frame
-/// 27).
+/// One thing a stage can pay, as the painted tile draws it: the relic of the
+/// chapter's sets as ONE stone tile (the first set's stone, the second's
+/// small on its corner, both names under it, the whole relic chance on it —
+/// `CampaignService` picks the set uniformly), the essences, the scrolls,
+/// the stones, the first clear's divinity, the drachma and the experience.
+/// The popup and the briefing read the same list, so the two cannot
+/// disagree. It was a text list with 14-point glyphs although every item
+/// has a painted icon (run 211, frame 27); then each set its own tile, which
+/// pushed the first clear — the reward a new player is chasing — off the
+/// popup's row behind a fade (run 216).
 private struct StageDrop: Identifiable {
     let id: String
     let key: String
@@ -325,6 +330,9 @@ private struct StageDrop: Identifiable {
     let amount: String?
     var stars: Int? = nil
     var imageName: String? = nil
+    /// A second painting drawn small on the first's corner: the chapter's
+    /// other set.
+    var secondImage: String? = nil
 
     /// Main actor: it reads `BarWallet.compact`, a static of a `View` (so
     /// main-actor isolated), and its only callers are the popup and the
@@ -335,16 +343,22 @@ private struct StageDrop: Identifiable {
         var drops: [StageDrop] = []
         if rewards.relicChance > 0 {
             let sets = rewards.relicSets ?? []
-            if sets.isEmpty {
+            if let first = sets.first {
+                let title: String
+                if sets.count == 2 {
+                    title = "\(first.displayName) · \(sets[1].displayName)"
+                } else if sets.count == 1 {
+                    title = first.displayName
+                } else {
+                    title = "\(sets.count) sets"
+                }
+                drops.append(StageDrop(id: "relic_sets", key: "relic_cache", title: title,
+                                       amount: percent(rewards.relicChance), stars: rewards.relicGrade,
+                                       imageName: first.stoneImageName,
+                                       secondImage: sets.count > 1 ? sets[1].stoneImageName : nil))
+            } else {
                 drops.append(StageDrop(id: "relic", key: "relic_cache", title: "\(rewards.relicGrade)★ relic",
                                        amount: percent(rewards.relicChance), stars: rewards.relicGrade))
-            } else {
-                let share = rewards.relicChance / Double(sets.count)
-                for relicSet in sets {
-                    drops.append(StageDrop(id: "relic_\(relicSet.rawValue)", key: "relic_cache",
-                                           title: relicSet.displayName, amount: percent(share),
-                                           stars: rewards.relicGrade, imageName: relicSet.stoneImageName))
-                }
             }
         }
         for id in rewards.essenceChances.keys.sorted() {
@@ -365,15 +379,17 @@ private struct StageDrop: Identifiable {
                 drops.append(StageDrop(id: id, key: id, title: stone.displayName, amount: percent(chance)))
             }
         }
+        // The first clear before the drachma: it is paid once, and it is
+        // what a player new to the stage is chasing.
+        if firstClear, rewards.firstClearDivinity > 0 {
+            drops.append(StageDrop(id: "divinity", key: "divinity", title: "First clear",
+                                   amount: "+\(rewards.firstClearDivinity)"))
+        }
         drops.append(StageDrop(id: "drachma", key: "drachma", title: "Drachma",
                                amount: BarWallet.compact(rewards.drachma)))
         if experience {
             drops.append(StageDrop(id: "unit_exp", key: "unit_exp", title: "Unit EXP",
                                    amount: BarWallet.compact(rewards.unitExperience)))
-        }
-        if firstClear, rewards.firstClearDivinity > 0 {
-            drops.append(StageDrop(id: "divinity", key: "divinity", title: "First clear",
-                                   amount: "+\(rewards.firstClearDivinity)"))
         }
         return drops
     }
@@ -387,7 +403,7 @@ private struct StageDrop: Identifiable {
     }
 
     /// A tile's name without the word the picture already says: "High
-    /// Radiance", "Light & Dark" — two lines at most in the tile's 62 points.
+    /// Radiance", "Light & Dark" — two lines at most under the tile.
     static func shortTitle(_ name: String) -> String {
         for suffix in [" Essence", " Scroll"] where name.hasSuffix(suffix) {
             return String(name.dropLast(suffix.count))
@@ -396,9 +412,58 @@ private struct StageDrop: Identifiable {
     }
 }
 
-/// A row of drop tiles given `available` points: it fits, or it scrolls
-/// sideways and fades at its trailing edge to say so. The width is the
-/// caller's arithmetic, never a `ViewThatFits` (which lays out every
+/// One drop as a tile: the painted socket with the chance on its corner,
+/// the grade's stars INSIDE the socket's top edge (under it they pushed the
+/// relic's name 16 points below its neighbours', run 216), the second set's
+/// stone on the corner, and the name under it in two lines at most.
+private struct StageDropTile: View {
+    let drop: StageDrop
+    let tile: CGFloat
+    let titled: Bool
+    let footprint: CGFloat
+
+    var body: some View {
+        let spoken = "\(drop.title), \(drop.amount ?? "")"
+        VStack(spacing: 3) {
+            RewardTile(key: drop.key, amount: drop.amount, size: tile, showsTitle: false,
+                       imageName: drop.imageName, onGlass: true)
+                .overlay(alignment: .bottomLeading) {
+                    if let second = drop.secondImage, BundleArt.exists(second) {
+                        BundleImage(name: second, renderedAt: tile * 0.46)
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: tile * 0.46, height: tile * 0.46)
+                            .shadow(color: .black.opacity(0.65), radius: 2, y: 1)
+                            .offset(x: -tile * 0.06, y: tile * 0.05)
+                    }
+                }
+                .overlay(alignment: .top) {
+                    if let stars = drop.stars {
+                        StarRow(stars: stars, size: RewardTile.starSize(stars: stars, width: tile * 0.8))
+                            .shadow(color: .black.opacity(0.8), radius: 1)
+                            .padding(.top, 2)
+                    }
+                }
+            if titled {
+                Text(drop.title)
+                    .font(Theme.body(11).weight(.semibold))
+                    .foregroundStyle(Theme.onGlass)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(width: footprint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(width: footprint)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(spoken)
+    }
+}
+
+/// A row of drop tiles given `available` points: it fits, or it shows as
+/// many WHOLE tiles as the room holds, scrolls sideways for the rest and
+/// says so with a chevron. It faded its trailing sixth before, which cut
+/// the last name mid-word ("First c", run 216) — never again. The width is
+/// the caller's arithmetic, never a `ViewThatFits` (which lays out every
 /// candidate) — the popup and the briefing both know their column's width.
 private struct StageDropStrip: View {
     let drops: [StageDrop]
@@ -406,32 +471,54 @@ private struct StageDropStrip: View {
     let titled: Bool
     let available: CGFloat
 
+    /// A tile's width in the row: a titled tile is as wide as its name's
+    /// frame — 1.3 of the tile, and never under the 60 points "Whetstone"
+    /// takes at 11 — an untitled one is the tile.
+    static func footprint(tile: CGFloat, titled: Bool) -> CGFloat { titled ? max(60, tile * 1.3) : tile }
+    static func gap(titled: Bool) -> CGFloat { titled ? 4 : 8 }
+
+    /// The width `count` tiles take side by side.
+    static func width(count: Int, tile: CGFloat, titled: Bool) -> CGFloat {
+        let tiles = CGFloat(max(0, count))
+        let gaps = CGFloat(max(0, count - 1))
+        return tiles * footprint(tile: tile, titled: titled) + gaps * gap(titled: titled)
+    }
+
+    /// The chevron that says the row scrolls, and its gap.
+    private static let chevron: CGFloat = 18
+
     var body: some View {
-        // A titled tile is as wide as its name's frame (1.35 of the tile).
-        let footprint = titled ? tile * 1.35 : tile
-        let gap: CGFloat = titled ? 4 : 8
-        let needed = CGFloat(drops.count) * footprint + CGFloat(max(0, drops.count - 1)) * gap
-        let overflows = needed > available + 0.5
-        // The trailing sixth fades out only when there is more to scroll to.
-        let fadeFrom: CGFloat = overflows ? 0.84 : 1
-        return ScrollView(.horizontal, showsIndicators: false) {
-            HStack(alignment: .top, spacing: gap) {
-                ForEach(drops) { drop in
-                    RewardTile(key: drop.key, title: drop.title, amount: drop.amount, stars: drop.stars,
-                               size: tile, showsTitle: titled, imageName: drop.imageName, onGlass: true)
+        let footprint = Self.footprint(tile: tile, titled: titled)
+        let gap = Self.gap(titled: titled)
+        let fits = Self.width(count: drops.count, tile: tile, titled: titled) <= available + 0.5
+        let whole = max(1, Int((available - Self.chevron + gap) / (footprint + gap)))
+        let window = Self.width(count: whole, tile: tile, titled: titled)
+        Group {
+            if fits {
+                row(footprint: footprint, gap: gap)
+            } else {
+                HStack(alignment: .top, spacing: 0) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        row(footprint: footprint, gap: gap)
+                    }
+                    .frame(width: window)
+                    .fixedSize(horizontal: false, vertical: true)
+                    // On the sockets' line, where the eye is.
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(Theme.onGlassEyebrow)
+                        .frame(width: Self.chevron, height: tile)
                 }
             }
-            .padding(.trailing, overflows ? 24 : 0)
         }
-        .scrollDisabled(!overflows)
-        .fixedSize(horizontal: false, vertical: true)
-        .mask(
-            LinearGradient(
-                stops: [.init(color: .black, location: 0), .init(color: .black, location: fadeFrom),
-                        .init(color: overflows ? .clear : .black, location: 1)],
-                startPoint: .leading, endPoint: .trailing
-            )
-        )
+    }
+
+    private func row(footprint: CGFloat, gap: CGFloat) -> some View {
+        HStack(alignment: .top, spacing: gap) {
+            ForEach(drops) { drop in
+                StageDropTile(drop: drop, tile: tile, titled: titled, footprint: footprint)
+            }
+        }
     }
 }
 
@@ -481,9 +568,15 @@ struct StageBriefingView: View {
 
     private static let runChoices = [1, 5, 10, 20]
 
-    /// The right column: five 48-point faces and the chevron (278) inside
-    /// the plate's 20 points of padding.
-    private static let columnWidth: CGFloat = 320
+    /// The right column at its narrowest: five 48-point faces and the
+    /// chevron (278) inside the plate's 20 points of padding. It widens to
+    /// hold the spoils' row whole (`columnWidth(drops:in:)`).
+    private static let minimumColumn: CGFloat = 320
+    /// The opposition plate at its narrowest: "OPPOSITION" in Cinzel (109),
+    /// a hairline, "3 waves · boss last" (102) and the plate's padding.
+    private static let oppositionMinimum: CGFloat = 268
+    /// The spoils' tiles, without their names (the popup has the names).
+    private static let spoilsTile: CGFloat = 44
     /// The deck is as tall as its buttons.
     private static let deckHeight: CGFloat = PrimaryButton.height
     /// "BOSS" in Cinzel at 13 is 35 points; one width for every wave's label
@@ -508,11 +601,24 @@ struct StageBriefingView: View {
     private var cost: Int { EventCalendar.energyCost(for: stage) }
     private var hasEnergy: Bool { store.player.wallet.energy >= cost }
 
-    /// The strip's second line: the chapter and the stage's place in it, or
-    /// for a Labyrinth level (whose chapter is not the campaign's) the place.
+    /// The strip's second line: the chapter and the stage's place in it;
+    /// for a Labyrinth level, a Hall's floor or the Tower's, where it stands
+    /// in its own climb — the place's name only repeated the title ("VAULT
+    /// OF THE COLOSSUS B10" over "The Vault of the Colossus", run 216).
     private var subtitle: String {
+        let waveCount = 1 + stage.laterWaves.count
+        let waves = waveCount > 1 ? " · \(waveCount) waves" : ""
         if let chapter = StageDatabase.chapter(stage.chapterID) {
             return "\(chapter.name) · Stage \(stage.index) of \(chapter.stages.count)"
+        }
+        if let labyrinth = DungeonDatabase.labyrinth(containing: stage) {
+            return "Labyrinth · Level \(stage.index) of \(labyrinth.levels.count)\(waves)"
+        }
+        if let hall = DungeonDatabase.hall(containing: stage) {
+            return "\(hall.name) · Floor \(stage.index) of \(hall.floors.count)\(waves)"
+        }
+        if DungeonDatabase.isTowerFloor(stage) {
+            return "The Endless Tower · Floor \(stage.index) of \(DungeonDatabase.towerFloors)"
         }
         return stage.environment.displayName
     }
@@ -556,18 +662,28 @@ struct StageBriefingView: View {
         // in every wave each time it is read.
         let rows = waves
         let bossID = StageDatabase.chapter(stage.chapterID)?.bossBlueprintID
+        let drops = StageDrop.list(for: stage, firstClear: !CampaignService.isCleared(stage, player: store.player),
+                                   experience: true)
         return GeometryReader { geometry in
             let size = geometry.size
-            let tile = enemyTile(rows: rows, in: size)
+            let column = Self.columnWidth(drops: drops.count, in: size)
+            let tile = enemyTile(rows: rows, column: column, in: size)
+            let room = size.width - ScreenChrome.contentPadding * 2 - 10 - column
             VStack(spacing: 8) {
-                HStack(alignment: .top, spacing: 10) {
+                // The opposition as wide as its faces, the team and the
+                // spoils as wide as the spoils' row, and the painting between
+                // them: the opposition plate filled the width with 35–60% of
+                // it empty glass beside a spoils row that faded out its last
+                // three (run 216).
+                HStack(alignment: .top, spacing: 0) {
                     oppositionPlate(rows, tile: tile, bossID: bossID)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .frame(width: oppositionWidth(rows: rows, tile: tile, room: room), alignment: .topLeading)
+                    Spacer(minLength: 10)
                     VStack(spacing: 8) {
                         teamPlate
-                        spoilsPlate
+                        spoilsPlate(drops, column: column)
                     }
-                    .frame(width: Self.columnWidth)
+                    .frame(width: column)
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
                 launchDeck(width: size.width - ScreenChrome.contentPadding * 2)
@@ -583,12 +699,35 @@ struct StageBriefingView: View {
     /// (`PlaceBackdrop`: dark at the top for the plates, dark at the foot
     /// for the deck), with motes in the place's key light. A background is
     /// measured by its host and never takes a tap.
+    ///
+    /// Out to the glass on both sides and under the home indicator: the
+    /// room stood in cream pillars and a cream foot in run 216.
     private var backdrop: some View {
         ZStack {
             PlaceBackdrop(painting: stage.environment.backdropName)
             PlaceAmbience(shafts: [], motes: 16, moteColor: Color(hex: stage.environment.keyLightHex), seed: 1600)
         }
+        .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
         .allowsHitTesting(false)
+    }
+
+    /// The right column's width: the spoils' row whole (untitled 44-point
+    /// tiles 8 apart, in the plate's 20 of padding), never under the team's
+    /// 320, and never so wide that the opposition's header cannot stand.
+    private static func columnWidth(drops: Int, in size: CGSize) -> CGFloat {
+        let spoils = StageDropStrip.width(count: drops, tile: spoilsTile, titled: false) + 20
+        let most = size.width - ScreenChrome.contentPadding * 2 - 10 - oppositionMinimum
+        return max(minimumColumn, min(spoils, most))
+    }
+
+    /// The opposition plate's width: its label, its widest wave and its
+    /// padding, or its header's width, whichever is wider — within `room`.
+    private func oppositionWidth(rows: [[ResolvedUnit]], tile: CGFloat, room: CGFloat) -> CGFloat {
+        let widest = CGFloat(max(1, rows.map(\.count).max() ?? 1))
+        let label: CGFloat = rows.count > 1 ? Self.waveLabelWidth + Self.tileGap : 0
+        let faces: CGFloat = widest * tile + (widest - 1) * Self.tileGap
+        let content: CGFloat = 20 + label + faces
+        return min(room, max(Self.oppositionMinimum, content))
     }
 
     /// The faces grow as the waves thin out, and every size is solved from
@@ -601,11 +740,11 @@ struct StageBriefingView: View {
     /// single wave of two at 104 is the subject of the screen; three waves
     /// stop at 64. On the CI phone a three-wave stage of three draws at 62,
     /// and on an SE a wave of four at 56; the old 42-point cards are gone.
-    private func enemyTile(rows: [[ResolvedUnit]], in size: CGSize) -> CGFloat {
+    private func enemyTile(rows: [[ResolvedUnit]], column: CGFloat, in size: CGSize) -> CGFloat {
         let waveCount = max(1, rows.count)
         let widest = max(1, rows.map(\.count).max() ?? 1)
         let label: CGFloat = waveCount > 1 ? Self.waveLabelWidth + Self.tileGap : 0
-        let inner = size.width - ScreenChrome.contentPadding * 2 - 10 - Self.columnWidth - 20
+        let inner = size.width - ScreenChrome.contentPadding * 2 - 10 - column - 20
         let byWidth = (inner - label - CGFloat(widest - 1) * Self.tileGap) / CGFloat(widest)
         let plates = size.height - 16 - 8 - Self.deckHeight
         let byHeight = (plates - 20 - 18 - 8 - CGFloat(waveCount - 1) * 8) / CGFloat(waveCount)
@@ -627,8 +766,12 @@ struct StageBriefingView: View {
                         if rows.count > 1 {
                             waveLabel(index: index, boss: bossLast && index == rows.count - 1)
                         }
+                        // No BOSS tag in the row whose label already says
+                        // BOSS: it covered the boss's own face and badge.
+                        let bossRow = bossLast && index == rows.count - 1
                         ForEach(rows[index]) { enemy in
-                            UnitPortraitTile(unit: enemy, size: tile, tag: foeIsBoss(enemy, bossID: bossID) ? "Boss" : nil)
+                            UnitPortraitTile(unit: enemy, size: tile,
+                                             tag: !bossRow && foeIsBoss(enemy, bossID: bossID) ? "Boss" : nil)
                         }
                         Spacer(minLength: 0)
                     }
@@ -707,11 +850,13 @@ struct StageBriefingView: View {
         }
     }
 
-    /// The leader's bonus and the lit resonances as glass beads — the
-    /// resonance by its glyph and rank, since "The Weighing of Hearts II"
-    /// three times over does not fit a 300-point row and a chip that shrank
-    /// to fit rendered at 8 points (the old `minimumScaleFactor(0.75)` under
-    /// the 11-point floor) — and a ? with every line in words.
+    /// The leader's bonus and the lit resonances as glass beads — each
+    /// resonance by its glyph, its pantheon's one word and its rank ("Egypt
+    /// I"), since "The Weighing of Hearts II" three times over does not fit
+    /// a 300-point row and a chip that shrank to fit rendered at 8 points
+    /// (the old `minimumScaleFactor(0.75)` under the 11-point floor), and a
+    /// glyph with a bare "I" read as a stray icon (run 216) — and a ? with
+    /// every line in words.
     private func teamBonuses(team: [ResolvedUnit], leads: Bool, lit: [ActiveResonance]) -> some View {
         let skill = leads ? team.first?.blueprint.leaderSkill : nil
         return HStack(spacing: 6) {
@@ -719,7 +864,7 @@ struct StageBriefingView: View {
                 GlassBead(text: leaderLine(skill), systemImage: "crown.fill", tint: Theme.onGlassGold, height: 24)
             }
             ForEach(lit) { resonance in
-                GlassBead(text: resonance.rank.label, systemImage: resonance.kind.glyph, tint: Theme.onGlass, height: 24)
+                GlassBead(text: resonanceWord(resonance), systemImage: resonance.kind.glyph, tint: Theme.onGlass, height: 24)
                     .accessibilityLabel(resonance.displayName)
             }
             InfoDot(title: "Team bonuses") {
@@ -742,6 +887,21 @@ struct StageBriefingView: View {
         }
     }
 
+    /// "Egypt I": the pantheon a resonance reads, in one word, and its rank.
+    private func resonanceWord(_ resonance: ActiveResonance) -> String {
+        let word: String
+        switch resonance.kind {
+        case .weighingOfHearts: word = "Egypt"
+        case .olympianHubris: word = "Greece"
+        case .valhalla: word = "Norse"
+        case .theLegion: word = "Rome"
+        case .mandateOfHeaven: word = "Jade"
+        case .concord: word = "Concord"
+        }
+        let rank = resonance.rank.label
+        return "\(word) \(rank)"
+    }
+
     /// "ATK +18%": the leader skill in the words of a stat line.
     private func leaderLine(_ skill: LeaderSkill) -> String {
         let stat = skill.stat.displayName.replacingOccurrences(of: " %", with: "")
@@ -749,14 +909,12 @@ struct StageBriefingView: View {
     }
 
     /// What the stage pays, as the popup's tiles without their names (a
-    /// tile's painting says what it is; the popup has the names): on the
-    /// campaign's stages the row fits, on a Labyrinth level of six sets it
-    /// scrolls and fades.
-    private var spoilsPlate: some View {
-        let drops = StageDrop.list(for: stage, firstClear: !CampaignService.isCleared(stage, player: store.player),
-                                   experience: true)
-        return GlassSection(title: "Spoils") {
-            StageDropStrip(drops: drops, tile: 44, titled: false, available: Self.columnWidth - 20)
+    /// tile's painting says what it is; the popup has the names). The
+    /// column is as wide as the row, so the campaign's stages show every
+    /// tile whole; a Labyrinth level's six sets are one stone.
+    private func spoilsPlate(_ drops: [StageDrop], column: CGFloat) -> some View {
+        GlassSection(title: "Spoils") {
+            StageDropStrip(drops: drops, tile: Self.spoilsTile, titled: false, available: column - 20)
         }
     }
 
@@ -817,18 +975,21 @@ struct StageBriefingView: View {
 /// place the fight is in (the stage's own battle painting as its band, the
 /// stage's name carved over it), the first wave's faces and the last wave's
 /// boss or leader, what it drops as painted tiles — the chapter's two sets
-/// first, each its own stone — your power against the stage's, and Fight.
+/// first, as one stone — your power against the stage's, and Fight.
 /// "Team & runs" opens the full briefing for the team and the auto runs.
 ///
 /// Deep glass over the dimmed map (2026-09-22, phase B). It was a cream
 /// slab 88% of the map wide with half its body empty, the enemies' names cut
 /// to "Sun-Scar…", the drops a text list and the chapter's story repeated
-/// from the map (run 211, frame 27). It stands in the campaign's content,
-/// which on the CI phone is 734 × 314 under the tab bar, so its height is
-/// a budget: the band 64, the body 10 + 18 + 8 + 88 (a titled tile), the
-/// foot 10 + 48 + 12 — about 258, centred in 314 with 56 to spare. The enemies
-/// and the drops stand side by side to make that fit: stacked they came to
-/// 346.
+/// from the map (run 211, frame 27). It stands in the MAP, under the strip:
+/// on the CI phone 734 × 262 now that the tab bar is laid out under the tab
+/// (run 216 centred it in the strip-and-map's 314 and its top rose into the
+/// strip). Its height is a budget: the band 60, the body 10 + 18 + 8 + 77
+/// (a tile, its gap and a two-line name), the foot 10 + 46 + 12 — about
+/// 241, a ring of the map round it. The width is the drops' row: 644 holds
+/// the first wave of three, the headliner and six named drops whole (it was
+/// 700 and a seventh drop faded mid-word). The enemies and the drops stand
+/// side by side to make the height fit: stacked they came to 346.
 struct StagePopup: View {
     let stage: Stage
     let chapter: Chapter
@@ -844,11 +1005,13 @@ struct StagePopup: View {
 
     @EnvironmentObject private var store: GameStore
 
-    private static let maxWidth: CGFloat = 700
-    private static let enemyTile: CGFloat = 50
-    private static let dropTile: CGFloat = 46
-    /// "ENEMIES" and "Wave 1 of 3" with their hairline: 158 points.
-    private static let enemiesMinimum: CGFloat = 170
+    private static let maxWidth: CGFloat = 644
+    /// 48, the smallest `UnitPortraitTile` whose tag hangs under the stars
+    /// and not over the element and the level.
+    private static let enemyTile: CGFloat = 48
+    private static let dropTile: CGFloat = 44
+    /// "ENEMIES" and "3 waves" with their hairline.
+    private static let enemiesMinimum: CGFloat = 160
     /// The foot's buttons, measured in Cinzel at 15: "TEAM & RUNS" with
     /// its glyph 177, "TEAM" 102, "FIGHT · 10" with the painted bolt 156,
     /// the sweep 133; the power readout is 137.
@@ -872,7 +1035,9 @@ struct StagePopup: View {
                 Color.black.opacity(0.55)
                     .ignoresSafeArea()
                     .onTapGesture(perform: onClose)
+                // Centred in the map under the strip, so the map shows round it.
                 card(width: width)
+                    .padding(.top, ScreenChrome.height)
             }
             .frame(width: frame.size.width, height: frame.size.height)
         }
@@ -892,7 +1057,9 @@ struct StagePopup: View {
             band
             HStack(alignment: .top, spacing: 16) {
                 VStack(alignment: .leading, spacing: 8) {
-                    GlassSectionHeader(title: "Enemies", accessory: waveCount > 1 ? "Wave 1 of \(waveCount)" : nil)
+                    // "3 waves", not "Wave 1 of 3": the accessory stands over
+                    // the last wave's headliner, and its tag says which it is.
+                    GlassSectionHeader(title: "Enemies", accessory: waveCount > 1 ? "\(waveCount) waves" : nil)
                     HStack(alignment: .center, spacing: 6) {
                         ForEach(foes) { foe in
                             UnitPortraitTile(unit: foe, size: Self.enemyTile)
@@ -935,10 +1102,10 @@ struct StagePopup: View {
     /// The band: the stage's own battle painting, a window onto where the
     /// fight is, darkened toward its foot, with the tier, the stage's place
     /// on the road and the place's name as a gold eyebrow and the stage's
-    /// name carved over it; the energy and the close at the right. The name
-    /// shrinks to 0.6 of 22 before anything cuts it (13.2, over the floor):
-    /// the longest, "The Sand of the Colosseum — Confrontation · Hell", is
-    /// 738 points at 22 and gets 536 on the CI phone.
+    /// name carved over it; the close at the right. The name shrinks to 0.6
+    /// of 22 before anything cuts it (13.2, over the floor): the longest,
+    /// "The Sand of the Colosseum — Confrontation · Hell", is 738 points at
+    /// 22 and gets about 576 on the CI phone.
     private var band: some View {
         let tier = CampaignDifficulty.split(stage.chapterID).difficulty
         return ZStack(alignment: .bottomLeading) {
@@ -978,13 +1145,9 @@ struct StagePopup: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                 }
+                // No energy bead: the strip's wallet shows it over the card,
+                // Fight carries the cost and the foot says when it is short.
                 Spacer(minLength: 8)
-                GlassBead(
-                    text: "\(player.wallet.energy)/\(player.wallet.maxEnergy)",
-                    itemKey: "energy",
-                    tint: hasEnergy ? Theme.onGlass : Theme.onGlassDanger,
-                    height: 28
-                )
                 Button(action: onClose) {
                     Image(systemName: "xmark")
                         .font(.system(size: 12, weight: .black))
@@ -1001,9 +1164,9 @@ struct StagePopup: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        // The eyebrow's 18 and the name's 30 (Cinzel's line is 1.35 of its
+        // The eyebrow's 15 and the name's 30 (Cinzel's line is 1.35 of its
         // size) and 12 of padding.
-        .frame(height: 64)
+        .frame(height: 60)
     }
 
     /// Hard or Hell, in the tier's colour lifted for glass.

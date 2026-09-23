@@ -24,6 +24,12 @@ import SwiftUI
 /// holds the attacks with their refill clock, the laurel exchange and the
 /// three currencies the arena touches.
 ///
+/// Run 216's judges found it still wall-to-wall glass over brown murk, so
+/// the standing came off its plate (it is carved on the painting now, with
+/// the painting open under it down to the teams), the painting bleeds to
+/// both edges of the glass, and the "+110/day" laurels nothing pays left
+/// the screen (`standingBlock`).
+///
 /// Two controls left the strip. Refresh was dead: `ArenaService.pool` is a
 /// pure function of the points and the UTC day, so it brought back the list
 /// that was already there — the list turns over by itself after every fight
@@ -56,10 +62,14 @@ struct ArenaView: View {
     /// the fight's anteroom. The Colosseum was the other candidate and stays
     /// Rome's second chapter's (PLAN.md, *Phase B*, option C).
     private static let painting = "arena_of_souls_bg"
-    /// A square painting on a 750 × 271 band shows about a third of its
-    /// height; the centred crop took the painted gods off at the neck. Anchored
-    /// at 0.26 of the height their heads stay in the header band.
-    private static let paintingFocus = UnitPoint(x: 0.5, y: 0.26)
+    /// A square painting on an 874 × 271 band (full bleed since run 216)
+    /// shows about a third of its height; the centred crop took the painted
+    /// gods off at the neck. At 0.26 the band opened at 0.18 of the painting
+    /// and Anubis's ears and Horus's crown were under the strip; at 0.20 it
+    /// opens at 0.14, so the jackal's whole head stands at the top of the
+    /// band beside the carved standing, and his body fills the open painting
+    /// between the standing and the teams.
+    private static let paintingFocus = UnitPoint(x: 0.5, y: 0.20)
     /// One attack comes back every thirty minutes. This is
     /// `ArenaService.refreshAttacks`'s own interval, which is a local there:
     /// the strip's clock counts to the same number and must change with it.
@@ -77,9 +87,7 @@ struct ArenaView: View {
         NavigationStack {
             GameScreen("Arena") {
                 attacksWell
-                BarButton(title: "Exchange", systemImage: "laurel.leading") {
-                    showExchange = true
-                }
+                exchangeButton
                 // Energy left the wallet: the arena never spends it, and the
                 // strip had seven readings on it (run 211).
                 BarWallet(
@@ -205,12 +213,19 @@ struct ArenaView: View {
     /// the store's 30-second tick (`refreshTimedResources`) bumps the count.
     /// The range must run forwards or it traps, so the end is never less
     /// than a second away.
+    ///
+    /// Run 216's "7/10 14:32" read as the time of day, so the clock says
+    /// what it counts to: "+1 in 14:32". The flame is drawn in the wallet's
+    /// 18-point icon box, so it stands the same size as the painted laurel,
+    /// crystal and coins beside it; it stays a glyph until an attack token
+    /// is painted (no item painting exists for it).
     private var attacksWell: some View {
         let left = record.attacksRemaining
         return HStack(spacing: 5) {
             Image(systemName: "flame.fill")
-                .font(.system(size: 12, weight: .black))
+                .font(.system(size: 14, weight: .black))
                 .foregroundStyle(left > 0 ? Color(hex: "#F3A55A") : Theme.onGlassDim)
+                .frame(width: 18, height: 18)
             Text("\(left)/\(record.maxAttacks)")
                 .font(Theme.numeric(12.5))
                 .foregroundStyle(Theme.onGlass)
@@ -219,6 +234,11 @@ struct ArenaView: View {
             if left < record.maxAttacks {
                 let now = Date()
                 let next = max(now.addingTimeInterval(1), record.lastRefresh.addingTimeInterval(Self.attackRefill))
+                Text("+1 in")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .lineLimit(1)
+                    .fixedSize()
                 Text(timerInterval: now...next, countsDown: true)
                     .font(Theme.numeric(11.5))
                     .foregroundStyle(Theme.onGlassDim)
@@ -235,12 +255,41 @@ struct ArenaView: View {
         .accessibilityLabel("\(left) of \(record.maxAttacks) attacks")
     }
 
+    /// The door to the bazaar's laurel exchange, in the strip's one material
+    /// (`BarButton`'s well, height and label) but carrying the PAINTED laurel
+    /// the wallet beside it draws: `BarButton` takes only an SF glyph, and
+    /// `laurel.leading` beside the wallet's painting was two icon languages
+    /// in one strip (run 216).
+    private var exchangeButton: some View {
+        Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            showExchange = true
+        } label: {
+            HStack(spacing: 4) {
+                ItemIcon(key: "laurels", size: 18, glow: false)
+                Text("Exchange")
+                    .font(Theme.body(11).weight(.bold))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundStyle(Theme.onGlassGold)
+            .padding(.leading, 8)
+            .padding(.trailing, 11)
+            .frame(height: ScreenChrome.control)
+            .background(ScreenChrome.well)
+            .stripHitTarget()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Laurel exchange")
+    }
+
     // MARK: - The place
 
-    /// The painting under everything, the dust over it, and the two columns
-    /// on glass. The sizes are solved once from the width the screen is given
-    /// (`ArenaLobbyMetrics`) — never a `ViewThatFits`, which lays out every
-    /// candidate. The teams and the offence's power are resolved once here
+    /// The painting under everything, the standing carved on it, the teams
+    /// and the challengers on glass. The sizes are solved once from the width
+    /// the screen is given (`ArenaLobbyMetrics`) — never a `ViewThatFits`,
+    /// which lays out every candidate. The teams and the offence's power are resolved once here
     /// and handed down: a resolve reads every relic, and the old screen asked
     /// for the offence three times a frame.
     private var place: some View {
@@ -249,15 +298,20 @@ struct ArenaView: View {
             let defence = store.team(store.player.arenaDefenseTeam)
             let offence = store.team(store.player.arenaOffenseTeam)
             ZStack {
-                // A lighter hand than the summon hall's 0.55 / 0.62: the glass
-                // carries the words here, and the painting shows only in the
-                // band and the gaps.
+                // A lighter hand than the summon hall's 0.55 / 0.62: the
+                // standing is carved on the painting under the top scrim, the
+                // teams and the challengers are on glass. The backdrop is the
+                // bottom layer of a full-size stack with no padding round it,
+                // so it bleeds to both edges of the glass.
                 PlaceBackdrop(painting: Self.painting, focus: Self.paintingFocus, topScrim: 0.5, footScrim: 0.5)
-                // Dust over the sand, no shafts: the painting has its own.
-                PlaceAmbience(shafts: [], motes: 24, moteColor: Color(hex: "#F2C987"), seed: 930)
+                // No `PlaceAmbience` across the whole frame: its motes drifted
+                // UNDER the glass plates and photographed as grey specks on
+                // their edges (run 216). The dust rises in the open painting
+                // of the left column only (`standingColumn`).
                 HStack(alignment: .top, spacing: ArenaLobbyMetrics.gap) {
                     standingColumn(metrics, defence: defence, offence: offence)
                         .frame(width: metrics.column)
+                        .frame(maxHeight: .infinity)
                     challengerColumn(metrics, offense: offensePower(offence))
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
@@ -269,31 +323,59 @@ struct ArenaView: View {
 
     // MARK: - Standing
 
-    /// Your side: the standing over the two teams. The standing takes the
-    /// height the teams leave, so its lines sit centred rather than stacked
-    /// at the top of an empty plate (run 211's panel was half empty marble).
+    /// Your side: the standing carved on the painting at the top, the two
+    /// teams on glass at the foot, and the painting open between them.
+    ///
+    /// Run 216 had the standing on a plate that took every spare point, so
+    /// 40% of it was empty glass (run 211's "half empty marble" again, in
+    /// dark glass) and both columns were wall-to-wall plates over a brown
+    /// murk, with Anubis a ghost behind the glass. Now the standing has no
+    /// plate — the crest and the tier stand on the painting the way the
+    /// banner's name stands on the summon hall — the teams plate sits on the
+    /// column's foot level with the challengers' fade, and what is left
+    /// between them is the Arena of Souls itself, with its dust rising in it.
+    /// The dust is here and nowhere else, so no mote drifts under glass.
     private func standingColumn(_ metrics: ArenaLobbyMetrics, defence: [ResolvedUnit], offence: [ResolvedUnit]) -> some View {
-        VStack(spacing: 6) {
-            standingPlate(metrics)
-                .frame(maxHeight: .infinity)
+        VStack(spacing: 0) {
+            standingBlock(metrics)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                .background(
+                    // Out into the leading margin, and clipped at the
+                    // column's trailing edge so a swaying mote never drifts
+                    // under the challengers' glass.
+                    Motes(count: 12, color: Color(hex: "#FFDFA0"), seed: 930)
+                        .padding(.leading, -ScreenChrome.contentPadding)
+                        .clipped()
+                )
+            Color.clear.frame(height: 6)
             teamsPlate(metrics, defence: defence, offence: offence)
         }
     }
 
-    /// The crest and the tier carved in gold, the points and what a day at
-    /// this rank pays, the climb to the next tier as a meter, and the record.
-    /// Four readings on one plate, where run 211 spread six lines of 11-point
-    /// text down a 290-point box with two Spacers. The ladder and the full
-    /// record are behind the little ?: words come on a tap.
-    private func standingPlate(_ metrics: ArenaLobbyMetrics) -> some View {
+    /// The crest and the tier carved in gold, the points, the climb to the
+    /// next tier as a meter, and the record — carved on the painting, not on
+    /// glass. Four readings, where run 211 spread six lines of 11-point text
+    /// down a 290-point box with two Spacers. The ladder and the full record
+    /// are behind the little ?: words come on a tap.
+    ///
+    /// On the painting the words need their own dark: the carved gold has
+    /// its edge and glow, the cream and the dim lines a close black shadow,
+    /// and the block stands in a soft pool of shade (black 0.32, blurred to
+    /// nothing at its edges) over what the top scrim already darkens. The
+    /// pool is a background, never measured.
+    ///
+    /// Run 216's "+110/day" is gone: `ArenaTier.dailyLaurels` is paid by
+    /// nothing in the game, so the screen stopped promising it (reported to
+    /// the owner as a rule to decide).
+    private func standingBlock(_ metrics: ArenaLobbyMetrics) -> some View {
         HStack(alignment: .center, spacing: 12) {
             ArenaCrest(tier: record.tier, size: metrics.crest)
             VStack(alignment: .leading, spacing: 0) {
                 HStack(spacing: 2) {
-                    // 24 points, and it may shrink to 0.7 (16.8, over the
+                    // 26 points, and it may shrink to 0.7 (18.2, over the
                     // title floor) for CHAMPION in the narrow column.
                     Text(record.tier.displayName.uppercased())
-                        .font(Theme.display(24))
+                        .font(Theme.display(26))
                         .tracking(1.2)
                         .carved()
                         .lineLimit(1)
@@ -312,9 +394,8 @@ struct ArenaView: View {
                         .foregroundStyle(Theme.onGlassDim)
                         .lineLimit(1)
                         .fixedSize()
-                    Spacer(minLength: 6)
-                    laurelsPerDay
                 }
+                .shadow(color: .black.opacity(0.85), radius: 1.5, y: 1)
                 .padding(.top, 2)
                 if let next = nextTier {
                     GlassMeter(
@@ -332,15 +413,22 @@ struct ArenaView: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(GlassPlate(radius: 12))
+        .padding(.horizontal, 4)
+        .padding(.top, 4)
+        .background(
+            Ellipse()
+                .fill(Color.black.opacity(0.32))
+                .padding(.horizontal, -18)
+                .padding(.vertical, -10)
+                .blur(radius: 18)
+                .allowsHitTesting(false)
+        )
     }
 
     /// The line under the meter: how far the next tier is, and the record.
     /// Both at their own width; the narrow column's crest is 48 points so the
     /// longest pair ("ACOLYTE IN 1,200", "123W · 45L", 174 points) still fits.
+    /// Cream-dim on the painting, so it carries the block's close shadow.
     private func climbLine(_ climb: String) -> some View {
         HStack(spacing: 4) {
             Text(climb)
@@ -356,31 +444,26 @@ struct ArenaView: View {
                 .lineLimit(1)
                 .fixedSize()
         }
+        .shadow(color: .black.opacity(0.85), radius: 1.5, y: 1)
         .padding(.top, 4)
-    }
-
-    /// What a day at this tier pays, with the laurel painted beside it.
-    private var laurelsPerDay: some View {
-        HStack(spacing: 3) {
-            ItemIcon(key: "laurels", size: 14, glow: false)
-            Text("+\(record.tier.dailyLaurels)/day")
-                .font(Theme.numeric(11.5))
-                .foregroundStyle(Theme.onGlassSuccess)
-                .lineLimit(1)
-        }
-        .fixedSize()
     }
 
     private var nextTier: ArenaTier? {
         ArenaTier.allCases.first { $0.threshold > record.points }
     }
 
-    /// The ? beside the tier: every rank with its crest, its floor and its
-    /// day's laurels, the player's own row lit, and the record in a sentence.
-    /// It is the cream popover every ? in the game opens, so it is written in
-    /// the cream screens' ink.
+    /// The ? beside the tier: every rank with its crest, its floor and the
+    /// laurels a win pays there (`ArenaService.laurelsForWin`, what
+    /// `applyResult` actually grants — the column was the day's laurels until
+    /// run 216, which nothing pays), the player's own row lit, and the record
+    /// in a sentence. It is the cream popover every ? in the game opens, so
+    /// it is written in the cream screens' ink.
     private var tierLadder: some View {
         VStack(alignment: .leading, spacing: 6) {
+            Text("Each rank's floor, and the laurels a win pays there.")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             ForEach(ArenaTier.allCases) { tier in
                 HStack(spacing: 8) {
                     ArenaCrest(tier: tier, size: 22)
@@ -397,7 +480,7 @@ struct ArenaView: View {
                         .fixedSize()
                     HStack(spacing: 2) {
                         ItemIcon(key: "laurels", size: 14, glow: false)
-                        Text("+\(tier.dailyLaurels)")
+                        Text("+\(ArenaService.laurelsForWin(tier: tier))")
                             .font(Theme.numeric(11.5))
                             .foregroundStyle(Theme.success)
                             .lineLimit(1)
@@ -726,7 +809,9 @@ struct ArenaView: View {
                             .lineLimit(1)
                             .fixedSize()
                         HStack(spacing: 3) {
-                            ItemIcon(key: "rank_points", size: 12, glow: false)
+                            // 15, not 12: at 12 the painted trophy was a
+                            // smudge beside the "+9" (run 216).
+                            ItemIcon(key: "rank_points", size: 15, glow: false)
                             Text("+\(win)")
                                 .font(Theme.numeric(12))
                                 .lineLimit(1)
@@ -760,12 +845,24 @@ struct ArenaView: View {
     }
 
     /// Gold when there is an attack to spend, glass when there is not. An
-    /// if/else, never a `?:` — `Theme.goldPlate` is a LinearGradient and
-    /// `Theme.glass` a Color, and a ternary of the two does not compile.
+    /// if/else, never a `?:` — a LinearGradient and `Theme.glass`, a Color,
+    /// in a ternary do not compile.
+    ///
+    /// The gold is `PrimaryButton`'s drawn gold, lit from above with its top
+    /// gloss: the bare `Theme.goldPlate` read as flat khaki beside every
+    /// Fight and Claim of phase A (run 216). The ramp stops at `Theme.gold`
+    /// rather than the button's dark #7A5B1C foot, because this plate has a
+    /// second line ("+9") in its lower half and ink must read on it there.
     @ViewBuilder
     private func fightPlate(_ canAttack: Bool) -> some View {
         if canAttack {
-            Theme.goldPlate
+            LinearGradient(
+                colors: [Color(hex: "#FFE9A8"), Color(hex: "#E2BF62"), Theme.gold],
+                startPoint: .top, endPoint: .bottom
+            )
+            .overlay(
+                LinearGradient(colors: [Color.white.opacity(0.35), Color.clear], startPoint: .top, endPoint: .center)
+            )
         } else {
             Theme.glass
         }
@@ -805,13 +902,17 @@ struct ArenaView: View {
 /// an SE, where "Nikandros", the longest generated name, is 84 at 14 points
 /// and 78 at the narrow 13.
 ///
-/// The heights were budgeted under the tab bar: a phone gives this screen
-/// 402 − 52 strip − 58 bar − 21 home indicator = 271 points (262 on a 15 Pro,
-/// 244 on a mini), 12 of it the columns' padding. The left column needs
-/// about 227 (the standing 107, the teams 114), so it fits a mini with 5 to
-/// spare; the right needs 246 for the header and three 70-point cards, so a
-/// 15 Pro shows all three with the third's foot in the fade and a mini shows
-/// two and most of the third — which is the fade's point.
+/// The heights are budgeted under the tab bar, which since run 216 is laid
+/// out under the tab rather than inset over it (run 216 laid this screen out
+/// 58 points too tall and put the offence under the bar): a phone gives this
+/// screen 402 − 52 strip − 58 bar − 21 home indicator = 271 points (262 on a
+/// 15 Pro, 244 on a mini), 12 of it the columns' padding. The left column
+/// needs about 205 (the carved standing about 84, the teams about 115), so
+/// it fits a mini with room to spare and the rest is open painting between
+/// them; the right needs 246 for the header and three 70-point cards, so a
+/// 16 Pro shows all three with the fourth's top in the fade, a 15 Pro the
+/// third's foot in the fade, and a mini two and most of the third — which
+/// is the fade's point.
 private struct ArenaLobbyMetrics {
     static let wideFrom: CGFloat = 700
     /// Between the two columns.

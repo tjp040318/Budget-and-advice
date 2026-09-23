@@ -24,10 +24,11 @@ private let hallFocus = UnitPoint(x: 0.5, y: 1.0)
 /// `UnitPortraitTile` takes a `ResolvedUnit` — a unit that exists — and
 /// these two screens are about units that do not exist yet. They are drawn
 /// as the thing they hand over: the blueprint at level 1 with nothing worn,
-/// which is exactly what `redeemMileage` and `claimSelector` create, so the
-/// "1" in the tile's corner is the truth rather than a placeholder. The
-/// private `BlueprintPortrait` this replaces was a second drawing of the same
-/// face with a thinner frame.
+/// which is exactly what `redeemMileage` and `claimSelector` create. The
+/// level is not drawn (`showsLevel: false`): a "1" on every offered face,
+/// fifteen across the two screens, is noise the genre does not print on a
+/// gift or a shop face (run 216). The private `BlueprintPortrait` this
+/// replaced was a second drawing of the same face with a thinner frame.
 private func previewUnit(of blueprint: UnitBlueprint) -> ResolvedUnit {
     ProgressionService.resolve(Unit(blueprint: blueprint), blueprint: blueprint, equipped: [])
 }
@@ -61,9 +62,13 @@ struct MileageSheet: View {
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
     /// The face on the counter. Nil until the player taps one; the counter
-    /// shows the head of the board until then — the dearest thing he can
-    /// take now, or, when he can take nothing, the thing he is saving for.
+    /// shows the head of the board until then — the first face of the grade
+    /// on show.
     @State private var pickedID: String?
+    /// The grade the board shows, chosen in the strip. Nil until the player
+    /// taps a tab: the board then opens on the grade of the offer on the
+    /// counter, or the dearest grade his points reach (`shownGrade`).
+    @State private var grade: Int?
 
     /// `preselect` puts one offer on the counter before any tap — a
     /// blueprint id from the banner's catalogue — so the tour can photograph
@@ -90,31 +95,57 @@ struct MileageSheet: View {
     /// The board's foot fade, and the room the last row keeps under it so it
     /// can scroll clear of the fade.
     private static let fade: CGFloat = 26
+    /// A cell's height over its face: the name at title 13 (18), the 22 bead,
+    /// 4 and 4 between them and the row plate's 4 above and below.
+    private static let cellChrome: CGFloat = 56
+    /// How much of a THIRD row stands in the plate at rest, under the fade:
+    /// the genre's "there is more below". Run 216's faces were sized so two
+    /// rows ended exactly on the plate's edge, and the fade covered empty
+    /// padding — nothing said the board scrolled.
+    private static let peek: CGFloat = 30
 
     private var points: Int { MileageService.points(on: banner, player: store.player) }
     /// The whole board, dearest first — the catalogue's own order, and what
     /// the header's target is read off.
     private var offers: [MileageService.Offer] { MileageService.catalogue(for: banner) }
 
-    /// What the grid actually draws: **what you can take, first.**
+    /// The grades on this banner's board, lowest first — the strip's tabs.
+    private func grades(_ all: [MileageService.Offer]) -> [Int] {
+        Array(Set(all.map(\.blueprint.naturalStars))).sorted()
+    }
+
+    /// The grade the board shows: the one tapped in the strip; before any
+    /// tap, the grade of the offer on the counter (the tour's pinned 5★);
+    /// otherwise **what you can take**, the dearest grade the points reach,
+    /// or the dearest of all when they reach none.
     ///
-    /// Run 153's frame is why. The catalogue is sorted dearest-first so the
-    /// thing a player is saving for is the headline — and with 122 units in
-    /// the Duat's pool that filled the entire first screen with 5★s at 153
-    /// points and "35 MORE" under every one of them. A shop whose first
-    /// screenful is nothing you can buy reads as a wall, not an offer. The
-    /// affordable band comes first now, dearest within it, and the
-    /// aspirational tail follows in the catalogue's own order underneath.
-    private func sorted(_ all: [MileageService.Offer]) -> [MileageService.Offer] {
+    /// ONE grade at a time since run 216. The board was every offer in one
+    /// grid, affordable first: 57 4★s at 61 before the fifteen 5★s anyone
+    /// saves mileage for, twelve rows down with nothing to say they were
+    /// there, and a counter pinned to Horus with no Horus on the board. Run
+    /// 153's reason for the affordable-first order still holds — a shop
+    /// whose first screenful is nothing you can buy reads as a wall — and
+    /// the tabs keep it: the board opens on the grade in reach, and the 5★
+    /// tab says in the strip what it costs.
+    private func shownGrade(_ all: [MileageService.Offer]) -> Int {
+        let present = grades(all)
+        if let grade, present.contains(grade) { return grade }
+        if let pickedID, let offer = all.first(where: { $0.id == pickedID }) {
+            return offer.blueprint.naturalStars
+        }
         let held = points
-        return all.filter { held >= $0.price } + all.filter { held < $0.price }
+        return (all.first { held >= $0.price } ?? all.first)?.blueprint.naturalStars ?? 0
     }
 
     var body: some View {
         // Read once per pass: the catalogue walks the banner's whole pool.
         let all = offers
-        let board = sorted(all)
+        let shown = shownGrade(all)
+        // The catalogue's own order within a grade: by name. One grade has
+        // one price, so there is nothing else to sort by.
+        let board = all.filter { $0.blueprint.naturalStars == shown }
         let picked = board.first { $0.id == pickedID } ?? board.first
+        let tabs = gradeTabs(all)
 
         NavigationStack {
             GameScreen(
@@ -123,7 +154,23 @@ struct MileageSheet: View {
                 dismiss: { dismiss() }
             ) {
                 BarCount(value: "\(points)", systemImage: "ticket.fill", tint: Theme.gold)
-                BarCount(value: "\(all.count)", systemImage: "person.3.fill")
+                // The grades as tabs, each with its price — "4★ · 61",
+                // "5★ · 153" — in place of the catalogue's size under a
+                // people glyph, which the judges read as a mystery number.
+                if tabs.count > 1 {
+                    BarSegments(
+                        options: tabs,
+                        selection: Binding(
+                            get: { shown },
+                            set: { newGrade in
+                                grade = newGrade
+                                // The counter follows the tab: the head of
+                                // the new grade until a face is tapped.
+                                pickedID = nil
+                            }
+                        )
+                    )
+                }
             } content: {
                 ZStack {
                     PlaceBackdrop(painting: hallPainting, focus: hallFocus)
@@ -138,6 +185,8 @@ struct MileageSheet: View {
                     } else {
                         HStack(alignment: .top, spacing: 10) {
                             grid(board, litID: picked?.id)
+                                // A new grade is a new board, met at its top.
+                                .id(shown)
                             counter(picked, all: all)
                                 .frame(width: Self.counterWidth)
                         }
@@ -149,41 +198,73 @@ struct MileageSheet: View {
         }
     }
 
+    /// The strip's tabs: every grade on the board with the one price it
+    /// costs on this banner.
+    private func gradeTabs(_ all: [MileageService.Offer]) -> [(value: Int, title: String)] {
+        grades(all).map { stars in
+            let price: Int = all.first { $0.blueprint.naturalStars == stars }?.price ?? 0
+            let title: String = "\(stars)★ · \(price)"
+            return (value: stars, title: title)
+        }
+    }
+
     // MARK: - The board
 
-    /// Every offer as a face on one glass plate, as many columns as the
-    /// width holds at `minimumCell` — five on an iPhone 16 Pro, four on an
-    /// iPhone 16, three on an SE — measured with a `GeometryReader`, never
-    /// `ViewThatFits`. The
-    /// plate scrolls and fades at its foot, so a row is never guillotined
-    /// with nothing to say there is more (the frame of run 211).
+    /// Every offer of the grade on show as a face on one glass plate, as
+    /// many columns as the width holds at `minimumCell` — five on an iPhone
+    /// 16 Pro, four on an iPhone 16, three on an SE — measured with a
+    /// `GeometryReader`, never `ViewThatFits`. The plate scrolls and fades
+    /// at its foot, so a row is never guillotined with nothing to say there
+    /// is more (the frame of run 211).
+    ///
+    /// The face is sized off the HEIGHT as well (run 216): two whole rows
+    /// and `peek` of a third under the fade, 70 points on an iPhone 16 Pro
+    /// — at 84 the two rows ended on the plate's edge and the board read as
+    /// all there was. The offer on the counter is scrolled into view when
+    /// the board opens, so a pinned or picked face is lit on the board.
     private func grid(_ board: [MileageService.Offer], litID: String?) -> some View {
         GeometryReader { geometry in
             let width = geometry.size.width.isFinite ? geometry.size.width : 0
+            let height = geometry.size.height.isFinite ? geometry.size.height : 0
             let inner = max(Self.minimumCell, width - 20)
             let columns = max(1, Int((inner + Self.gap) / (Self.minimumCell + Self.gap)))
             let cell = ((inner - Self.gap * CGFloat(columns - 1)) / CGFloat(columns)).rounded(.down)
-            let face = min(Self.maximumFace, cell - 8)
-            ScrollView(showsIndicators: false) {
-                LazyVGrid(
-                    columns: Array(repeating: GridItem(.fixed(cell), spacing: Self.gap), count: columns),
-                    alignment: .leading,
-                    spacing: Self.gap
-                ) {
-                    ForEach(board) { offer in
-                        tile(offer, face: face, cell: cell, isOn: offer.id == litID)
+            let byHeight = ((height - 10 - Self.peek - Self.gap * 2) / 2 - Self.cellChrome).rounded(.down)
+            let face = max(56, min(Self.maximumFace, cell - 8, byHeight))
+            ScrollViewReader { proxy in
+                ScrollView(showsIndicators: false) {
+                    LazyVGrid(
+                        columns: Array(repeating: GridItem(.fixed(cell), spacing: Self.gap), count: columns),
+                        alignment: .leading,
+                        spacing: Self.gap
+                    ) {
+                        ForEach(board) { offer in
+                            tile(offer, face: face, cell: cell, isOn: offer.id == litID)
+                                .id(offer.id)
+                        }
+                    }
+                    .padding(10)
+                    .padding(.bottom, Self.fade)
+                }
+                .mask(
+                    VStack(spacing: 0) {
+                        Color.black
+                        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                            .frame(height: Self.fade)
+                    }
+                )
+                .onAppear {
+                    // Only a face below the first two rows needs the move;
+                    // the head of the board is already in view.
+                    if let litID, let index = board.firstIndex(where: { $0.id == litID }), index >= columns * 2 {
+                        // A beat after the lazy grid's first layout, so the
+                        // row it scrolls to has been measured.
+                        DispatchQueue.main.async {
+                            proxy.scrollTo(litID, anchor: .center)
+                        }
                     }
                 }
-                .padding(10)
-                .padding(.bottom, Self.fade)
             }
-            .mask(
-                VStack(spacing: 0) {
-                    Color.black
-                    LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-                        .frame(height: Self.fade)
-                }
-            )
         }
         .background(GlassPlate(radius: 14, opacity: 0.62))
     }
@@ -200,7 +281,7 @@ struct MileageSheet: View {
             pickedID = offer.id
         } label: {
             VStack(spacing: 4) {
-                UnitPortraitTile(unit: previewUnit(of: offer.blueprint), size: face)
+                UnitPortraitTile(unit: previewUnit(of: offer.blueprint), size: face, showsLevel: false)
                 Text(faceName(offer.blueprint.name))
                     .font(Theme.title(13))
                     .foregroundStyle(isOn ? Color(hex: "#FFF1C2") : Theme.onGlass)
@@ -232,17 +313,24 @@ struct MileageSheet: View {
     ///
     /// Heights on a sheet (329 points under the strip, 309 inside the 10 of
     /// padding): 12 + 26 header + 80 face + 17 line + 48 two-line name + 26
-    /// price + 46 button + 12, with the spacing, is 301 at its tallest.
+    /// price + 46 button + 12, with the spacing, is 301 at its tallest. A
+    /// name that stands on ONE line (ten letters or fewer at display 18 in
+    /// the counter's 176) gives its 24 to the face, 96 — the 40 points of
+    /// dead glass run 216 photographed between the price and the button.
+    ///
+    /// The header says "On offer" until a face is tapped: "Your pick" over
+    /// the head of the board was a pick the player had not made.
     private func counter(_ offer: MileageService.Offer?, all: [MileageService.Offer]) -> some View {
         VStack(spacing: 8) {
             HStack(spacing: 2) {
-                GlassSectionHeader(title: "Your pick")
+                GlassSectionHeader(title: pickedID == nil ? "On offer" : "Your pick")
                 InfoDot(title: "Mileage") { rules(all) }
             }
             if let offer {
                 let affordable = points >= offer.price
                 let blueprint = offer.blueprint
-                UnitPortraitTile(unit: previewUnit(of: blueprint), size: 80)
+                let face: CGFloat = faceName(blueprint.name).count <= 10 ? 96 : 80
+                UnitPortraitTile(unit: previewUnit(of: blueprint), size: face, showsLevel: false)
                 VStack(spacing: 2) {
                     Text("\(blueprint.naturalStars)★ · \(blueprint.element.displayName) · \(blueprint.role.displayName)")
                         .font(Theme.body(11).weight(.bold))
@@ -298,8 +386,8 @@ struct MileageSheet: View {
                 let short: Int = max(0, target.price - held)
                 let name: String = faceName(target.blueprint.name)
                 let line: String = within > 0
-                    ? "\(within) within reach, shown first. \(short) more for \(name)."
-                    : "\(short) more for \(name)."
+                    ? "\(within) within reach. \(short) more for \(name). The tabs in the bar switch grades."
+                    : "\(short) more for \(name). The tabs in the bar switch grades."
                 Text(line)
                     .font(Theme.numeric(12))
                     .foregroundStyle(held >= target.price ? Theme.success : Theme.textSecondary)
@@ -353,12 +441,14 @@ struct SelectorSheet: View {
     var body: some View {
         let five = candidates
         NavigationStack {
+            // No count in the strip: "5" under a people glyph said nothing
+            // the five faces do not (run 216).
             GameScreen(
                 "Opening Gift",
                 subtitle: "Once, before the dice",
                 dismiss: { dismiss() }
             ) {
-                BarCount(value: "\(five.count)", systemImage: "person.3.fill", tint: Theme.gold)
+                EmptyView()
             } content: {
                 ZStack {
                     PlaceBackdrop(painting: hallPainting, focus: hallFocus)
@@ -373,15 +463,21 @@ struct SelectorSheet: View {
                     GeometryReader { geometry in
                         let face = faceSize(for: geometry.size.width, count: five.count)
                         VStack(spacing: 0) {
-                            HStack(alignment: .center, spacing: 4) {
-                                PlaceTitle(eyebrow: "One 4★ of the Duat, yours to name", title: "Choose your first", size: 24)
-                                InfoDot(title: "The opening gift") {
-                                    Text("The circle owes every demigod one soul it did not choose for him. Pick the one you want; the rest of the roster is still out there, and this gift comes once.")
-                                        .font(Theme.body(12))
-                                        .foregroundStyle(Theme.textPrimary)
-                                        .fixedSize(horizontal: false, vertical: true)
+                            // The title block is centred on the plate's own
+                            // centre line, eyebrow and title alike, and the ?
+                            // hangs off its right edge rather than sharing an
+                            // HStack with it — run 216 had the pair flush left
+                            // to each other, 50 points off the plate's centre.
+                            PlaceTitle(eyebrow: "One 4★ of the Duat, yours to name", title: "Choose your first", size: 24, centered: true)
+                                .overlay(alignment: .topTrailing) {
+                                    InfoDot(title: "The opening gift") {
+                                        Text("The circle owes every demigod one soul it did not choose for him. Pick the one you want; the rest of the roster is still out there, and this gift comes once.")
+                                            .font(Theme.body(12))
+                                            .foregroundStyle(Theme.textPrimary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                    .offset(x: 30, y: -4)
                                 }
-                            }
                             HStack(alignment: .top, spacing: Self.gap) {
                                 ForEach(five) { blueprint in
                                     candidate(blueprint, face: face)
@@ -434,7 +530,7 @@ struct SelectorSheet: View {
             picked = blueprint.id
         } label: {
             VStack(spacing: 4) {
-                UnitPortraitTile(unit: previewUnit(of: blueprint), size: face)
+                UnitPortraitTile(unit: previewUnit(of: blueprint), size: face, showsLevel: false)
                 Text(faceName(blueprint.name))
                     .font(Theme.title(15))
                     .foregroundStyle(isPicked ? Color(hex: "#FFF1C2") : Theme.onGlass)

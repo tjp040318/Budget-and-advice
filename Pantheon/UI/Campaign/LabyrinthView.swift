@@ -147,6 +147,7 @@ struct LabyrinthView: View {
     private func labyrinthCard(_ labyrinth: DungeonDatabase.Labyrinth) -> some View {
         let cleared = store.player.campaignProgress[labyrinth.id] ?? 0
         let doubled = EventCalendar.isActive(.doubleRelics(labyrinth: labyrinth.id))
+        let standing = dungeonStanding(labyrinth, cleared: cleared).uppercased()
         return Button {
             Juice.haptic(.light)
             AudioLibrary.shared.play(.uiTap)
@@ -170,18 +171,22 @@ struct LabyrinthView: View {
                 )
                 .allowsHitTesting(false)
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("RELIC DUNGEON")
+                    // Where the player stands, not the wing's own name said
+                    // three times over (run 216): "NEXT B7 · 5★ RELIC".
+                    Text(standing)
                         .font(Theme.title(13))
-                        .tracking(2.0)
+                        .tracking(1.2)
                         .foregroundStyle(Theme.onGlassEyebrow)
                         .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
                         .lineLimit(1)
                         .fixedSize()
                     // Two lines, shrinking to the title floor before either
-                    // is cut: "Necropolis of the Unwrapped King" is the long one.
+                    // is cut: "Necropolis of the Unwrapped King" is the long
+                    // one. The flat gold keeps the second line as light as
+                    // the first (run 216 carved it in dark bronze).
                     Text(labyrinth.name)
                         .font(Theme.display(18))
-                        .carved()
+                        .carved(multiline: true)
                         .lineLimit(2)
                         .minimumScaleFactor(Theme.titleFloor / 18)
                         .fixedSize(horizontal: false, vertical: true)
@@ -208,6 +213,17 @@ struct LabyrinthView: View {
         .accessibilityLabel("\(labyrinth.name), \(cleared) of \(labyrinth.levels.count) levels cleared")
     }
 
+    /// The card's eyebrow, read off the dungeon's levels: the next level and
+    /// the grade it pays ("Next B7 · 5★ relic"; B1 for a dungeon not yet
+    /// entered), or that every level has fallen. `campaignProgress` holds the
+    /// highest level cleared.
+    private func dungeonStanding(_ labyrinth: DungeonDatabase.Labyrinth, cleared: Int) -> String {
+        guard let next = labyrinth.levels.first(where: { $0.index == cleared + 1 }) else {
+            return "All \(labyrinth.levels.count) cleared"
+        }
+        return "Next B\(next.index) · \(next.rewards.relicGrade)★ relic"
+    }
+
     /// The six sets as the painted stones themselves, in a row, with their
     /// names under them: six stones at 26 points are 186 wide, inside the
     /// narrowest card's 207. The cream text pills with 9-point emblems they
@@ -230,9 +246,9 @@ struct LabyrinthView: View {
     // MARK: - A hall
 
     /// A hall as a tall art card, five across the frame the way the genre
-    /// draws its Hall of Magic: the hall's painting, its element's light
-    /// rising from the foot, the High essence it is farmed for painted large,
-    /// the name carved, and the three tiers it pays as their paintings. The
+    /// draws its Hall of Magic: the hall's painting, the High essence it is
+    /// farmed for painted large in its element's light, "HALL OF" over the
+    /// element's word carved, and the three tiers it pays as their paintings. The
     /// 30-point SF Symbol in a tinted circle it replaces was the app-skeleton
     /// look, and the three tier paintings say what the old name line and
     /// summary said in words.
@@ -240,6 +256,13 @@ struct LabyrinthView: View {
         let cleared = store.player.campaignProgress[hall.id] ?? 0
         let doubled = EventCalendar.isActive(.doubleEssence(hall.element))
         let prefix = "essence_\(hall.element.rawValue)_"
+        // "HALL OF" as an eyebrow and the element's word carved on ONE line,
+        // so every card has the same stack: "Hall of Tides" fitted one line
+        // and "Hall of Radiance" wrapped to two, and the five essences stood
+        // at two heights (run 216).
+        let named = hall.name.hasPrefix("Hall of ")
+        let word = (named ? String(hall.name.dropFirst(8)) : hall.name).uppercased()
+        let eyebrow = named ? "HALL OF" : "HALL"
         return Button {
             Juice.haptic(.light)
             AudioLibrary.shared.play(.uiTap)
@@ -258,18 +281,34 @@ struct LabyrinthView: View {
                     endPoint: .bottom
                 )
                 .allowsHitTesting(false)
-                LinearGradient(colors: [hall.element.color.opacity(0.28), .clear], startPoint: .bottom, endPoint: .center)
-                    .allowsHitTesting(false)
                 VStack(spacing: 6) {
                     Spacer(minLength: 0)
+                    // The element's light as a glow round the essence, not a
+                    // wash over the foot: radiance's pale gold lifted the
+                    // black foot to khaki under the carved name (run 216).
                     ItemIcon(key: prefix + "high", size: 60, glow: true)
-                    Text(hall.name)
-                        .font(Theme.title(15))
-                        .carved(glow: false)
-                        .multilineTextAlignment(.center)
-                        .lineLimit(2)
-                        .minimumScaleFactor(Theme.titleFloor / 15)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .background(
+                            Circle()
+                                .fill(RadialGradient(colors: [hall.element.color.opacity(0.35), .clear],
+                                                     center: .center, startRadius: 4, endRadius: 58))
+                                .frame(width: 116, height: 116)
+                                .blendMode(.plusLighter)
+                                .allowsHitTesting(false)
+                        )
+                    VStack(spacing: 1) {
+                        Text(eyebrow)
+                            .font(Theme.title(13))
+                            .tracking(2.0)
+                            .foregroundStyle(Theme.onGlassEyebrow)
+                            .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
+                            .lineLimit(1)
+                            .fixedSize()
+                        Text(word)
+                            .font(Theme.title(15))
+                            .carved(glow: false)
+                            .lineLimit(1)
+                            .minimumScaleFactor(Theme.titleFloor / 15)
+                    }
                     HStack(spacing: 4) {
                         ForEach(["low", "mid", "high"], id: \.self) { tier in
                             ItemIcon(key: prefix + tier, size: 20, glow: false)
@@ -327,17 +366,29 @@ struct LabyrinthView: View {
         .padding(.bottom, 10)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .background {
-            placeGround(environment.backdropName, motes: Color(hex: environment.keyLightHex), seed: 952)
+            // The tower crops its painting higher than the room of the same
+            // place: the Sand Stair borrows the Vault's corridor, and on
+            // run 216 the Tower read as the Vault with other plates.
+            placeGround(environment, focus: environment.towerFocus,
+                        motes: Color(hex: environment.roomMoteHex), seed: 952)
         }
     }
 
     /// A place's painting under dark scrims with its motes over it: the
     /// ground of the Tower and the Titans. `PlaceBackdrop` is exactly the size
     /// it is given, so as a `.background` it can never spill over the strip
-    /// the way the dungeon levels' painting did for a week.
-    private func placeGround(_ painting: String, motes: Color, seed: UInt64) -> some View {
-        ZStack {
-            PlaceBackdrop(painting: painting)
+    /// the way the dungeon levels' painting did for a week. A dark painting
+    /// (`roomIsDark`) takes lighter scrims: the ones tuned for a bright
+    /// painting turned the Serpent Deep into a black panel (run 216).
+    private func placeGround(_ environment: BattleEnvironment?, focus: UnitPoint, motes: Color, seed: UInt64) -> some View {
+        let dark = environment?.roomIsDark ?? false
+        return ZStack {
+            PlaceBackdrop(
+                painting: environment?.backdropName ?? "",
+                focus: focus,
+                topScrim: dark ? 0.3 : 0.55,
+                footScrim: dark ? 0.45 : 0.62
+            )
             PlaceAmbience(shafts: [], motes: 16, moteColor: motes, seed: seed)
         }
         .allowsHitTesting(false)
@@ -367,15 +418,27 @@ struct LabyrinthView: View {
                 )
                 Spacer(minLength: 0)
             }
+            // The foes as the dungeon room draws its boss — large faces with
+            // their names under them — and the plate the column's full
+            // height, so it ends on the climb panel's line. At 60 points with
+            // no names the plate was half empty glass and ended 90 points
+            // short of its neighbour (run 216).
             VStack(alignment: .leading, spacing: 7) {
                 GlassSectionHeader(title: warden ? "The warden and two" : "\(foes.count) foes")
-                HStack(spacing: 10) {
+                HStack(alignment: .top, spacing: 14) {
                     ForEach(Array(foes.enumerated()), id: \.offset) { index, foe in
-                        UnitPortraitTile(unit: foe, size: 60, tag: warden && index == 0 ? "Warden" : nil)
+                        VStack(spacing: 4) {
+                            UnitPortraitTile(unit: foe, size: 72, tag: warden && index == 0 ? "Warden" : nil)
+                            Text(Self.bareName(foe.name))
+                                .font(Theme.body(11).weight(.semibold))
+                                .foregroundStyle(Theme.onGlass)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .frame(width: 84)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
                     }
                 }
-                // The warden's tag straddles the tile's top edge.
-                .padding(.top, warden ? 6 : 0)
                 GlassSectionHeader(title: "What it pays")
                 HStack(alignment: .top, spacing: 6) {
                     ForEach(towerDrops(stage)) { drop in
@@ -385,11 +448,16 @@ struct LabyrinthView: View {
                 }
             }
             .padding(10)
-            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(GlassPlate())
-            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// A name before its epithet: "Colossus", not "Colossus, the Statue That
+    /// Stood Up". The full name is on the battle's plates.
+    private static func bareName(_ name: String) -> String {
+        name.split(separator: ",", maxSplits: 1).first.map { String($0) } ?? name
     }
 
     /// A tower floor's pay as tiles: drachma and unit experience with the
@@ -427,13 +495,20 @@ struct LabyrinthView: View {
         let power = team.reduce(0) { $0 + $1.power }
         let cost = stage.map { EventCalendar.energyCost(for: $0) } ?? 0
         let hasEnergy = store.player.wallet.energy >= cost
+        let next = TowerService.nextMilestone(player: store.player)
+        let previous = DungeonDatabase.towerMilestones.last(where: { $0 <= cleared }) ?? 0
         return VStack(alignment: .leading, spacing: 7) {
             GlassSectionHeader(title: "The climb", accessory: "\(cleared) of \(DungeonDatabase.towerFloors)")
-            milestoneTrack(cleared: cleared)
+            milestoneTrack(cleared: cleared, next: next)
+            // How far along the way to the next milestone: the five pills
+            // alone read as a segmented control (run 216).
+            if let next {
+                GlassMeter(value: Double(cleared - previous), maximum: Double(max(1, next - previous)), height: 5)
+            }
 
-            if let next = TowerService.nextMilestone(player: store.player),
-               let reward = DungeonDatabase.towerMilestoneReward(floor: next) {
-                GlassSectionHeader(title: "Floor \(next) pays")
+            if let next, let reward = DungeonDatabase.towerMilestoneReward(floor: next) {
+                let togo = next - cleared
+                GlassSectionHeader(title: "Floor \(next) pays", accessory: togo == 1 ? "1 floor to go" : "\(togo) floors to go")
                 HStack(alignment: .top, spacing: 6) {
                     ForEach(Array(Self.grants(in: reward).enumerated()), id: \.offset) { _, grant in
                         RewardTile(key: ItemArt.key(for: grant), amount: Self.shortAmount(grant),
@@ -442,8 +517,9 @@ struct LabyrinthView: View {
                 }
             }
 
-            Spacer(minLength: 0)
-
+            // The team sits under what the climb pays and the button alone
+            // at the foot: a 90-point gap of empty glass stood between the
+            // pay and the team (run 216).
             GlassSectionHeader(
                 title: "Your team",
                 accessory: stage.map { "\(power.formatted()) / \($0.recommendedPower.formatted())" },
@@ -467,6 +543,8 @@ struct LabyrinthView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel("Your team, \(team.count) of 5")
+
+            Spacer(minLength: 0)
 
             if let stage {
                 // Both reasons the button can be dead are its title: an empty
@@ -511,23 +589,29 @@ struct LabyrinthView: View {
     }
 
     /// The five milestones as a track. A pip is gold once its floor is behind
-    /// the player, so the panel says how far up the hundred they are without a
-    /// progress bar's worth of height.
-    private func milestoneTrack(cleared: Int) -> some View {
+    /// the player, and the NEXT one wears a gold rim and a glow with its
+    /// number in pale gold, so the track says both how far up the hundred
+    /// the player is and what he is climbing toward.
+    private func milestoneTrack(cleared: Int, next: Int?) -> some View {
         HStack(spacing: 4) {
             ForEach(DungeonDatabase.towerMilestones, id: \.self) { floor in
                 let reached = cleared >= floor
+                let aimed = floor == next
                 Text("\(floor)")
                     .font(Theme.numeric(11.5).weight(.bold))
-                    .foregroundStyle(reached ? Theme.ink : Theme.onGlassDim)
+                    .foregroundStyle(reached ? Theme.ink : (aimed ? Color(hex: "#FFE9A8") : Theme.onGlassDim))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 4)
                     .background(
                         Capsule().fill(reached ? AnyShapeStyle(Theme.goldPlate) : AnyShapeStyle(Color.black.opacity(0.4)))
                     )
                     .overlay(
-                        Capsule().strokeBorder(reached ? Color.clear : Theme.glassRim.opacity(0.6), lineWidth: 0.8)
+                        Capsule().strokeBorder(
+                            reached ? Color.clear : (aimed ? Theme.gold : Theme.glassRim.opacity(0.6)),
+                            lineWidth: aimed ? 1.4 : 0.8
+                        )
                     )
+                    .shadow(color: aimed ? Theme.gold.opacity(0.55) : .clear, radius: 5)
             }
         }
     }
@@ -573,18 +657,23 @@ struct LabyrinthView: View {
         let chosen = chosenRaid
         return HStack(spacing: 0) {
             // Five rows of two and three lines are taller than the frame, so
-            // the rail opens scrolled to the Titan whose room is open.
-            ScrollViewReader { proxy in
-                PlaceRail(width: Self.titanRailWidth) {
-                    PlaceRailLabel("Titans")
-                    ForEach(StageDatabase.raids) { raid in
-                        titanTile(raid, isOn: raid.id == chosen?.id)
-                            .id(raid.id)
+            // the rail opens scrolled to the Titan whose room is open. The
+            // label is pinned above the scroll: inside it, the scroll to the
+            // chosen Titan carried it off the top and cut the first row on
+            // the strip's edge (run 216).
+            VStack(spacing: 0) {
+                LabyrinthRailHead(title: "Titans")
+                ScrollViewReader { proxy in
+                    PlaceRail(width: Self.titanRailWidth) {
+                        ForEach(StageDatabase.raids) { raid in
+                            titanTile(raid, isOn: raid.id == chosen?.id)
+                                .id(raid.id)
+                        }
                     }
-                }
-                .onAppear {
-                    guard let id = chosen?.id else { return }
-                    DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
+                    .onAppear {
+                        guard let id = chosen?.id else { return }
+                        DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
+                    }
                 }
             }
             .frame(width: Self.titanRailWidth)
@@ -598,7 +687,8 @@ struct LabyrinthView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
             placeGround(
-                chosen?.environment.backdropName ?? "",
+                chosen?.environment,
+                focus: chosen?.environment.roomFocus ?? .center,
                 motes: chosen.map { RaidGradeService.element(of: $0).color } ?? Theme.gold,
                 seed: 951
             )
@@ -618,7 +708,7 @@ struct LabyrinthView: View {
             selectedRaidID = raid.id
         } label: {
             HStack(spacing: 8) {
-                RaidGradeStamp(grade: best, size: 34)
+                titanSeal(best, element: element, size: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: 4) {
                         Image(systemName: element.glyph)
@@ -653,6 +743,19 @@ struct LabyrinthView: View {
         .accessibilityLabel("\(raid.name), \(element.displayName) Titan\(best.map { ", best grade \($0.label)" } ?? "")")
     }
 
+    /// The best grade's stamp, or — before the first grade — a dim dashed
+    /// ring holding the Titan's element. `RaidGradeStamp`'s circled dash is
+    /// iOS's remove control, and four rows of five read as delete buttons
+    /// (run 216).
+    @ViewBuilder
+    private func titanSeal(_ grade: RaidGrade?, element: Element, size: CGFloat) -> some View {
+        if let grade {
+            RaidGradeStamp(grade: grade, size: size)
+        } else {
+            UngradedTitanSeal(element: element, size: size)
+        }
+    }
+
     // MARK: - A Titan's room
 
     /// One Titan as a room: the name carved on the painting's dark top with
@@ -680,10 +783,19 @@ struct LabyrinthView: View {
             }
             ScrollView(.vertical, showsIndicators: false) {
                 HStack(alignment: .top, spacing: 14) {
-                    VStack(spacing: 0) {
+                    // The Titan stands on the floor with its name carved
+                    // under it, as the dungeon's boss does; run 216 had the
+                    // card alone over the void.
+                    VStack(spacing: 6) {
                         if let titan {
                             UnitPortraitTile(unit: titan, size: 84)
                                 .background(alignment: .bottom) { PaintedFloorPool() }
+                            Text(Self.bareName(titan.name))
+                                .font(Theme.title(13))
+                                .carved(glow: false, multiline: true)
+                                .multilineTextAlignment(.center)
+                                .lineLimit(2)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     .frame(width: 96)
@@ -779,31 +891,97 @@ struct LabyrinthView: View {
     }
 
     /// The grade: the best one earned as a stamp, the mark the next one asks
-    /// for, and the aether in hand — the raid is farmed for it, so the room
-    /// says what the player has and what the next grade would add.
+    /// for, the aether in hand after its word, and what the grade aimed at
+    /// PAYS — the raid is farmed for it, and run 216's room ended in two bare
+    /// numbers with nothing saying what a grade brings.
     private func raidGradeRow(_ raid: RaidEncounter, profile: RaidBossProfile) -> some View {
         let best = RaidGradeService.bestGrade(for: raid, player: store.player)
-        let elemental = Aether.id(for: RaidGradeService.element(of: raid))
-        return HStack(alignment: .center, spacing: 8) {
-            RaidGradeStamp(grade: best, size: 34)
-            VStack(alignment: .leading, spacing: 1) {
-                Text((best.map { "Best grade \($0.label)" } ?? "Not yet graded").uppercased())
-                    .font(Theme.title(13))
-                    .tracking(1.0)
-                    .foregroundStyle(Theme.onGlassEyebrow)
-                    .lineLimit(1)
-                    .fixedSize()
-                Text(RaidGradeService.target(after: best, profile: profile))
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.onGlassDim)
-                    .fixedSize(horizontal: false, vertical: true)
+        let element = RaidGradeService.element(of: raid)
+        let elemental = Aether.id(for: element)
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .center, spacing: 8) {
+                titanSeal(best, element: element, size: 34)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 6) {
+                        Text((best.map { "Best grade \($0.label)" } ?? "Not yet graded").uppercased())
+                            .font(Theme.title(13))
+                            .tracking(1.0)
+                            .foregroundStyle(Theme.onGlassEyebrow)
+                            .lineLimit(1)
+                            .fixedSize()
+                        Spacer(minLength: 6)
+                        // The aether the player holds, after its word, on the
+                        // eyebrow's line so the target keeps the plate's
+                        // width: two bare numbers by 16-point glyphs said
+                        // nothing (run 216).
+                        Text("Held")
+                            .font(Theme.body(11))
+                            .foregroundStyle(Theme.onGlassDim)
+                            .lineLimit(1)
+                            .fixedSize()
+                        aetherCount(elemental)
+                        aetherCount(Aether.pure)
+                    }
+                    Text(RaidGradeService.target(after: best, profile: profile))
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.onGlassDim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
-            Spacer(minLength: 4)
-            // What it pays, and how much of it the player holds.
-            VStack(alignment: .trailing, spacing: 2) {
-                aetherCount(elemental)
-                aetherCount(Aether.pure)
+            gradePays(raid, best: best, element: element)
+        }
+    }
+
+    /// The grade worth aiming at — S until it is held (where the relic is
+    /// lifted to Hero and the boon cache opens), then SS, then SSS.
+    private func aimedGrade(after best: RaidGrade?) -> RaidGrade {
+        guard let best, best >= .s else { return .s }
+        return best == .s ? .ss : .sss
+    }
+
+    /// What the aimed grade pays, as one line of painted items with their
+    /// words, read off `RaidGradeService` so it cannot drift from the payout:
+    /// the Titan's aether and the pure, the relic the grade lifts, and the
+    /// boon cache's chance. A line and not a row of tiles because the room's
+    /// middle has no height for one: tiles put it below the fold.
+    private func gradePays(_ raid: RaidEncounter, best: RaidGrade?, element: Element) -> some View {
+        let aim = aimedGrade(after: best)
+        let aether = RaidGradeService.aether(for: aim)
+        let quality = RaidGradeService.qualityFloor(for: aim)
+        let boon = RaidGradeService.boonCacheChance(for: aim)
+        let heading = "\(aim.label) pays"
+        let relicWords = quality.map { "\(raid.stage.rewards.relicGrade)★ \($0.displayName) relic" }
+        let boonWords = "Boon \(DungeonDrop.percent(boon))"
+        return HStack(spacing: 10) {
+            Text(heading.uppercased())
+                .font(Theme.title(13))
+                .tracking(1.2)
+                .carved(glow: false)
+                .lineLimit(1)
+                .fixedSize()
+            payItem(Aether.id(for: element), "+\(aether.elemental)")
+            if aether.pure > 0 {
+                payItem(Aether.pure, "+\(aether.pure)")
             }
+            if let relicWords {
+                payItem("relic_cache", relicWords)
+            }
+            if boon > 0 {
+                payItem("chest_gold", boonWords)
+            }
+            Spacer(minLength: 0)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func payItem(_ key: String, _ words: String) -> some View {
+        HStack(spacing: 3) {
+            ItemIcon(key: key, size: 18, glow: false)
+            Text(words)
+                .font(Theme.body(11).weight(.semibold))
+                .foregroundStyle(Theme.onGlass)
+                .lineLimit(1)
+                .fixedSize()
         }
     }
 
@@ -927,17 +1105,26 @@ struct DungeonLevelsView: View {
     @State private var pulse = false
     /// The haul of the last sweep, shown over the room.
     @State private var sweepReceipt: SweepReceipt?
+    /// The floor whose sweep choices (×1, ×5, ×10, Max) stand open over the
+    /// deck. A sweep never spends on one tap: run 216's "Sweep ×13" spent 78
+    /// of 79 energy with no choice and no confirmation.
+    @State private var sweepChoicesFor: String?
 
     /// `focusFloor` opens the room on that floor rather than the player's
     /// current one; the CI tour pins it to photograph a mastered floor's deck.
     /// Every dungeon's and hall's stage ids are `<chapter>_<n>`.
-    init(chapterID: String, focusFloor: Int? = nil) {
+    ///
+    /// `opensSweep` opens the focused floor's sweep choices, so the tour can
+    /// photograph them over a mastered floor.
+    init(chapterID: String, focusFloor: Int? = nil, opensSweep: Bool = false) {
         self.chapterID = chapterID
-        _focusedID = State(initialValue: focusFloor.map { "\(chapterID)_\($0)" })
+        let focus = focusFloor.map { "\(chapterID)_\($0)" }
+        _focusedID = State(initialValue: focus)
+        _sweepChoicesFor = State(initialValue: opensSweep ? focus : nil)
     }
 
     /// The floor rail's width: the summon rail's 204 plus room for a hall
-    /// row's two essence readings ("Low · 40%") beside the energy and power.
+    /// row's essence tiers in words ("Mid · High 50%") beside the energy and power.
     private static let railWidth: CGFloat = 212
 
     private var labyrinth: DungeonDatabase.Labyrinth? { DungeonDatabase.labyrinth(chapterID) }
@@ -945,8 +1132,14 @@ struct DungeonLevelsView: View {
     private var chapter: Chapter? { labyrinth?.chapter ?? hall?.chapter }
     private var environment: BattleEnvironment? { labyrinth?.environment ?? hall?.environment }
 
+    /// The strip's subtitle says something the room does not: the sets a
+    /// relic dungeon drops, the essence a hall pays. It said "three waves a
+    /// level" and "Hall of Essence", both said again on the same screen
+    /// (run 216).
     private var kindLabel: String {
-        labyrinth != nil ? "Relic dungeon · three waves a level" : "Hall of Essence"
+        if let labyrinth { return "Relic dungeon · \(labyrinth.sets.count) sets" }
+        if let hall { return "\(hall.element.displayName) essence" }
+        return "Dungeon"
     }
 
     private var progressLabel: String {
@@ -1090,13 +1283,27 @@ struct DungeonLevelsView: View {
     /// the strip above and painted the title, the wallet and the BACK BUTTON
     /// out of existence, on this screen alone, for a week (the owner,
     /// 2026-09-17: "There's no back button on this").
+    ///
+    /// The crop and the scrims follow the painting (`roomFocus`,
+    /// `roomIsDark`): the Serpent Deep's lake is black under its statues, and
+    /// the centre crop under the summon room's scrims was a black panel with
+    /// the Hall of Shadows' boss on it (run 216). The motes are the room's
+    /// own light, saturated — a hall's in its element — since the battle's
+    /// key light read as grey dust.
     private var backdrop: some View {
-        ZStack {
-            PlaceBackdrop(painting: environment?.backdropName ?? "")
+        let dark = environment?.roomIsDark ?? false
+        let motes = hall.map { $0.element.color } ?? Color(hex: environment?.roomMoteHex ?? "#FFE29A")
+        return ZStack {
+            PlaceBackdrop(
+                painting: environment?.backdropName ?? "",
+                focus: environment?.roomFocus ?? .center,
+                topScrim: dark ? 0.3 : 0.55,
+                footScrim: dark ? 0.45 : 0.62
+            )
             PlaceAmbience(
                 shafts: [],
                 motes: 18,
-                moteColor: Color(hex: environment?.keyLightHex ?? "#FFE29A"),
+                moteColor: motes,
                 seed: 931
             )
         }
@@ -1110,32 +1317,27 @@ struct DungeonLevelsView: View {
     /// and the power it asks against the CAMPAIGN team — the team that fights
     /// — never the best five units owned. It opens scrolled to the floor the
     /// room shows.
+    ///
+    /// The label is pinned ABOVE the scroll: inside it, the scroll to the
+    /// focused floor carried it off the top and cut the first row on the
+    /// strip's edge (run 216). The waves are said once, in the room's
+    /// eyebrow.
     private func floorRail(_ chapter: Chapter) -> some View {
         let teamPower = store.team(store.player.campaignTeam).reduce(0) { $0 + $1.power }
         let focus = focused(chapter)?.id
-        let waves = 1 + (chapter.stages.first?.laterWaves.count ?? 0)
-        return ScrollViewReader { proxy in
-            PlaceRail(width: Self.railWidth) {
-                HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    PlaceRailLabel(labyrinth != nil ? "Levels" : "Floors")
-                    Spacer(minLength: 4)
-                    Text(waves == 1 ? "ONE WAVE" : "\(waves) WAVES")
-                        .font(Theme.title(13))
-                        .tracking(1.2)
-                        .foregroundStyle(Theme.onGlassDim)
-                        .lineLimit(1)
-                        .fixedSize()
-                        .padding(.top, 8)
-                        .padding(.trailing, 4)
+        return VStack(spacing: 0) {
+            LabyrinthRailHead(title: labyrinth != nil ? "Levels" : "Floors")
+            ScrollViewReader { proxy in
+                PlaceRail(width: Self.railWidth) {
+                    ForEach(chapter.stages) { stage in
+                        floorRow(stage, isOn: stage.id == focus, teamPower: teamPower)
+                    }
                 }
-                ForEach(chapter.stages) { stage in
-                    floorRow(stage, isOn: stage.id == focus, teamPower: teamPower)
+                .onAppear {
+                    guard let focus else { return }
+                    // After the first layout, or the rail has no rows to scroll to.
+                    DispatchQueue.main.async { proxy.scrollTo(focus, anchor: .center) }
                 }
-            }
-            .onAppear {
-                guard let focus else { return }
-                // After the first layout, or the rail has no rows to scroll to.
-                DispatchQueue.main.async { proxy.scrollTo(focus, anchor: .center) }
             }
         }
         .frame(width: Self.railWidth)
@@ -1234,27 +1436,20 @@ struct DungeonLevelsView: View {
     }
 
     /// What a floor pays, in a row's width: a relic dungeon's relic grade, or
-    /// a hall's essence tiers as their paintings — the sure tier by its name,
-    /// a chance by its odds ("[low] Low [mid] 40%").
+    /// a hall's essence tiers by NAME — the sure tier alone, a chance with
+    /// its odds ("Low · Mid 40%"). The paintings with a bare percent read
+    /// "Low 40%" as if Low dropped at 40%, and at 16 points the Low and Mid
+    /// paintings are one stone (run 216). "Mid · High 50%" is 76 points of
+    /// Manrope at 11, inside the 80 a row leaves it.
     @ViewBuilder
     private func rowPayout(_ stage: Stage, dim: Bool) -> some View {
         let ink = dim ? Theme.onGlassDim : Theme.onGlass
         if let hall {
-            HStack(spacing: 3) {
-                ForEach(Self.essenceTiers, id: \.self) { tier in
-                    let id = "essence_\(hall.element.rawValue)_\(tier)"
-                    let chance = stage.rewards.essenceChances[id] ?? 0
-                    if chance > 0 {
-                        ItemIcon(key: id, size: 16, glow: false)
-                        Text(chance >= 1 ? tier.capitalized : DungeonDrop.percent(chance))
-                            .font(Theme.body(11).weight(.semibold))
-                            .foregroundStyle(ink)
-                            .lineLimit(1)
-                            .fixedSize()
-                            .padding(.trailing, 3)
-                    }
-                }
-            }
+            Text(hallRowWords(hall, stage: stage))
+                .font(Theme.body(11).weight(.semibold))
+                .foregroundStyle(ink)
+                .lineLimit(1)
+                .fixedSize()
         } else {
             HStack(spacing: 4) {
                 ItemIcon(key: "relic_cache", size: 16, glow: false)
@@ -1265,6 +1460,16 @@ struct DungeonLevelsView: View {
                     .fixedSize()
             }
         }
+    }
+
+    /// A hall floor's tiers in words: "Low · Mid 40%".
+    private func hallRowWords(_ hall: DungeonDatabase.Hall, stage: Stage) -> String {
+        let parts: [String] = Self.essenceTiers.compactMap { tier -> String? in
+            let chance = stage.rewards.essenceChances["essence_\(hall.element.rawValue)_\(tier)"] ?? 0
+            guard chance > 0 else { return nil }
+            return chance >= 1 ? tier.capitalized : tier.capitalized + " " + DungeonDrop.percent(chance)
+        }
+        return parts.joined(separator: " · ")
     }
 
     /// The three essence tiers in ladder order, as the ids spell them; a
@@ -1325,9 +1530,11 @@ struct DungeonLevelsView: View {
     /// is on, and the ? that holds the lore and the ladder.
     private func floorTitle(_ chapter: Chapter, stage: Stage) -> some View {
         let level = stage.enemies.first?.level ?? 0
+        // One format in both rooms, the level first (run 216 had "3 waves ·
+        // foes Lv.38" in a dungeon and "4 foes · Lv.44" in a hall).
         let eyebrow = labyrinth != nil
-            ? "\(1 + stage.laterWaves.count) waves · foes Lv.\(level)"
-            : "\(stage.enemies.count) foes · Lv.\(level)"
+            ? "Lv.\(level) · \(1 + stage.laterWaves.count) waves"
+            : "Lv.\(level) · \(stage.enemies.count) foes"
         let eventOn = labyrinth.map { EventCalendar.isActive(.doubleRelics(labyrinth: $0.id)) }
             ?? hall.map { EventCalendar.isActive(.doubleEssence($0.element)) }
             ?? false
@@ -1452,7 +1659,7 @@ struct DungeonLevelsView: View {
                 // "Colossus", not "Colossus, the Statue That Stood Up".
                 Text(boss.name.split(separator: ",", maxSplits: 1).first.map { String($0) } ?? boss.name)
                     .font(Theme.title(13))
-                    .carved(glow: false)
+                    .carved(glow: false, multiline: true)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1463,37 +1670,61 @@ struct DungeonLevelsView: View {
 
     /// The floor's drops as tiles on one glass plate — they follow the floor
     /// chosen, as Star Rail's Caverns show a level's own rewards — then the
-    /// dungeon's six sets as their stones with their names, or, in a hall,
-    /// what an awakening spends of this element by grade. The first clear's
-    /// divinity is the Drops header's accessory and the awakened relic's
-    /// chance the sets header's, so a B10 keeps one row of six tiles.
+    /// dungeon's six sets as their stones with their names under them, or,
+    /// in a hall, what an awakening spends of this element by grade. The
+    /// first clear's divinity is the Drops header's accessory and the
+    /// awakened relic's chance the sets header's, so a B10 keeps one row of
+    /// six tiles.
+    ///
+    /// Run 216's judges: the tile rows stood at three heights (a grid row
+    /// centres its items, and a relic's stars or a two-line name made some
+    /// taller), so every item is TOP-aligned; the sets were six mostly empty
+    /// capsules like the fields of a form, so they are the six painted
+    /// stones with their names, the hub card's treatment; and a floor that
+    /// pays two things left 400 points of empty glass beside them, so a
+    /// relic dungeon floor of three tiles or fewer lays the tiles and the
+    /// sets side by side.
     private func floorDrops(_ stage: Stage) -> some View {
         let firstClear: String? = !CampaignService.isCleared(stage, player: store.player) && stage.rewards.firstClearDivinity > 0
             ? "+\(stage.rewards.firstClearDivinity) first clear"
             : nil
+        let tiles = dropTiles(stage)
+        let awakened = stage.rewards.awakenedChance.map { "\(DungeonDrop.percent($0)) awakened" }
         return VStack(alignment: .leading, spacing: 7) {
-            GlassSectionHeader(title: "Drops", accessory: firstClear, accessoryItemKey: firstClear == nil ? nil : "divinity")
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 58, maximum: 66), spacing: 4)], alignment: .leading, spacing: 6) {
-                ForEach(dropTiles(stage)) { drop in
-                    RewardTile(key: drop.key, title: drop.title, amount: drop.amount, stars: drop.stars,
-                               size: 44, onGlass: true)
-                }
-            }
-            if let labyrinth {
-                GlassSectionHeader(
-                    title: "One of \(labyrinth.sets.count) sets",
-                    accessory: stage.rewards.awakenedChance.map { "\(DungeonDrop.percent($0)) awakened" }
-                )
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 104), spacing: 6)], alignment: .leading, spacing: 5) {
-                    ForEach(labyrinth.sets) { relicSet in
-                        LabyrinthSetChip(set: relicSet)
+            if let labyrinth, tiles.count <= 3 {
+                HStack(alignment: .top, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 7) {
+                        GlassSectionHeader(title: "Drops", accessory: firstClear,
+                                           accessoryItemKey: firstClear == nil ? nil : "divinity")
+                        HStack(alignment: .top, spacing: 4) {
+                            ForEach(tiles) { drop in
+                                dropRewardTile(drop)
+                            }
+                        }
+                    }
+                    .fixedSize(horizontal: true, vertical: false)
+                    VStack(alignment: .leading, spacing: 7) {
+                        GlassSectionHeader(title: "One of \(labyrinth.sets.count) sets", accessory: awakened)
+                        setGrid(labyrinth.sets, perRow: 3)
                     }
                 }
-            } else if let hall {
-                GlassSectionHeader(title: "An awakening spends")
-                HStack(spacing: 6) {
-                    ForEach([3, 4, 5], id: \.self) { stars in
-                        awakenChip(hall, stars: stars)
+            } else {
+                GlassSectionHeader(title: "Drops", accessory: firstClear, accessoryItemKey: firstClear == nil ? nil : "divinity")
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 58, maximum: 66), spacing: 4, alignment: .top)],
+                          alignment: .leading, spacing: 6) {
+                    ForEach(tiles) { drop in
+                        dropRewardTile(drop)
+                    }
+                }
+                if let labyrinth {
+                    GlassSectionHeader(title: "One of \(labyrinth.sets.count) sets", accessory: awakened)
+                    setGrid(labyrinth.sets, perRow: 6)
+                } else if let hall {
+                    GlassSectionHeader(title: "An awakening spends")
+                    HStack(spacing: 6) {
+                        ForEach([3, 4, 5], id: \.self) { stars in
+                            awakenChip(hall, stars: stars)
+                        }
                     }
                 }
             }
@@ -1501,6 +1732,22 @@ struct DungeonLevelsView: View {
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .background(GlassPlate(radius: Theme.cornerRadius))
+    }
+
+    private func dropRewardTile(_ drop: DungeonDrop) -> some View {
+        RewardTile(key: drop.key, title: drop.title, amount: drop.amount, stars: drop.stars,
+                   size: 44, imageName: drop.imageName, onGlass: true)
+    }
+
+    /// The dungeon's sets as their painted stones with their names under
+    /// them, `perRow` to a row in equal columns.
+    private func setGrid(_ sets: [RelicSet], perRow: Int) -> some View {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 2, alignment: .top), count: perRow),
+                  alignment: .leading, spacing: 6) {
+            ForEach(sets) { relicSet in
+                LabyrinthSetStone(set: relicSet)
+            }
+        }
     }
 
     /// What a floor pays, in the order a farmer reads it: the relic, the
@@ -1533,8 +1780,10 @@ struct DungeonLevelsView: View {
             (RelicStone.from(id: $0.key)?.tier.rawValue ?? 0) < (RelicStone.from(id: $1.key)?.tier.rawValue ?? 0)
         }
         for (id, chance) in stones where chance > 0 {
+            // "Rare Whetstone", not "Rare": the tier alone read as a relic's
+            // quality (run 216). Two lines; the grid's rows are top-aligned.
             drops.append(DungeonDrop(
-                id: id, key: id, title: RelicStone.from(id: id)?.tier.displayName ?? "Stone",
+                id: id, key: id, title: RelicStone.from(id: id)?.displayName ?? "Stone",
                 amount: DungeonDrop.percent(chance), stars: nil
             ))
         }
@@ -1547,9 +1796,12 @@ struct DungeonLevelsView: View {
         }
         if let chance = rewards.boonCacheChance, chance > 0 {
             let grade = rewards.boonCacheGrade ?? 5
+            // The boon cache has no painting of its own yet; the shut gold
+            // chest stands in for it, since the seal glyph was the one
+            // unpainted thing in a row of paintings (run 216).
             drops.append(DungeonDrop(
-                id: "boon", key: "boon_cache_\(grade)", title: "Boon",
-                amount: DungeonDrop.percent(chance), stars: grade
+                id: "boon", key: "boon_cache_\(grade)", title: "Boon cache",
+                amount: DungeonDrop.percent(chance), stars: grade, imageName: "item_chest_gold"
             ))
         }
         drops.append(DungeonDrop(
@@ -1674,7 +1926,7 @@ struct DungeonLevelsView: View {
         let cost = EventCalendar.energyCost(for: stage)
         let hasEnergy = store.player.wallet.energy >= cost
         let canSweep = unlocked && SweepService.canSweep(stage, player: store.player)
-        let runs = max(1, min(SweepService.maximumRuns, SweepService.affordableRuns(stage, player: store.player)))
+        let choosing = canSweep && sweepChoicesFor == stage.id
         let strong = power >= stage.recommendedPower
         let roomy = width >= (canSweep ? 620 : 590)
         let fightTitle: String
@@ -1707,10 +1959,13 @@ struct DungeonLevelsView: View {
                 teamButton(stage, enabled: unlocked)
             }
             if canSweep {
-                PrimaryButton(title: "Sweep ×\(runs)", systemImage: "forward.fill", isEnabled: hasEnergy, style: .glass) {
-                    sweep(stage, runs: runs)
+                // Opens the choices over the deck; it never spends by itself.
+                PrimaryButton(title: "Sweep", systemImage: "forward.fill", isEnabled: hasEnergy, style: .glass) {
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        sweepChoicesFor = choosing ? nil : stage.id
+                    }
                 }
-                .frame(maxWidth: 170)
+                .frame(maxWidth: 150)
             }
             PrimaryButton(
                 title: fightTitle,
@@ -1726,6 +1981,87 @@ struct DungeonLevelsView: View {
             }
             .frame(maxWidth: 250)
         }
+        // The choices float over the room above the deck, as an overlay, so
+        // opening them moves nothing.
+        .overlay(alignment: .bottomTrailing) {
+            if choosing {
+                sweepChoices(stage)
+                    .offset(y: -(PrimaryButton.height + 8))
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    /// The sweep's choices: once, five, ten, and as many as the energy pays
+    /// for (never past `SweepService.maximumRuns`), each with the energy it
+    /// spends — the campaign briefing's 1 / 5 / 10 / 20, with the last one
+    /// "Max" because the wallet, not the menu, is usually the limit. The
+    /// energy per run is the same `EventCalendar.energyCost` the fight
+    /// charges.
+    private func sweepChoices(_ stage: Stage) -> some View {
+        let most = min(SweepService.maximumRuns, SweepService.affordableRuns(stage, player: store.player))
+        let cost = EventCalendar.energyCost(for: stage)
+        let short: [Int] = [1, 5, 10].filter { $0 < most }
+        let counts: [Int] = most >= 1 ? short + [most] : short
+        return HStack(spacing: 6) {
+            Text("SWEEP")
+                .font(Theme.title(13))
+                .tracking(1.2)
+                .carved(glow: false)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.trailing, 2)
+            ForEach(counts, id: \.self) { runs in
+                sweepChoice(stage, runs: runs, spend: cost * runs, isMost: runs == most && runs > 1)
+            }
+            Button {
+                withAnimation(.easeOut(duration: 0.15)) { sweepChoicesFor = nil }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .frame(width: 30, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
+        .padding(.vertical, 6)
+        .background(GlassPlate(radius: Theme.tightCorner, opacity: 0.92))
+        .fixedSize()
+    }
+
+    private func sweepChoice(_ stage: Stage, runs: Int, spend: Int, isMost: Bool) -> some View {
+        let label = isMost ? "Max ×\(runs)" : "×\(runs)"
+        let spent = "\(spend)"
+        return Button {
+            Juice.haptic(.light)
+            withAnimation(.easeOut(duration: 0.15)) { sweepChoicesFor = nil }
+            sweep(stage, runs: runs)
+        } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(Theme.numeric(12).weight(.heavy))
+                    .foregroundStyle(Color(hex: "#FFE9A8"))
+                    .lineLimit(1)
+                    .fixedSize()
+                ItemIcon(key: "energy", size: 13, glow: false)
+                Text(spent)
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(Theme.onGlass)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 32)
+            .background(Capsule().fill(Color.black.opacity(0.45)))
+            .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PlateButtonStyle())
+        .accessibilityLabel("Sweep \(runs) times for \(spend) energy")
     }
 
     /// Team & runs as a glyph plate the height of the buttons beside it, for
@@ -1781,9 +2117,10 @@ struct DungeonLevelsView: View {
 // MARK: - Shared by the rooms
 
 /// One thing a floor pays, as its `RewardTile` draws it: the painted item's
-/// key, a one-word title (the tier for an essence or a stone, the kind
-/// otherwise, so no tile's name wraps and the row stays one line tall), the
-/// amount or the chance on the socket's corner, and the grade's stars.
+/// key, a short title (the tier for an essence, the tier and the noun for a
+/// stone — "Rare Whetstone" — the kind otherwise; a two-line name is fine,
+/// since the rows are top-aligned), the amount or the chance on the socket's
+/// corner, and the grade's stars.
 /// Private to the Labyrinth's rooms; the name is unique in the tree.
 private struct DungeonDrop: Identifiable {
     let id: String
@@ -1791,6 +2128,9 @@ private struct DungeonDrop: Identifiable {
     let title: String
     let amount: String
     let stars: Int?
+    /// A bundle painting drawn in the socket in place of the item's own
+    /// (`RewardTile.imageName`): the boon cache's stand-in chest.
+    var imageName: String? = nil
 
     /// A chance as the tile prints it: 0.25 as "25%".
     static func percent(_ chance: Double) -> String {
@@ -1804,43 +2144,145 @@ private struct DungeonDrop: Identifiable {
     }
 }
 
-/// A relic set on dark glass: its painted stone and its name beside it, in a
-/// dark capsule with a gold rim that fills its grid column. The dungeon's six
-/// sets on the drops plate. It is the glass twin of the cream chips the room
-/// had, and it is here rather than in Glass.swift because nothing else draws
-/// it yet (phase B's helper set did not include one).
-private struct LabyrinthSetChip: View {
+/// A relic set on dark glass as the hub card draws its sets: the painted
+/// stone at 30 points with its name under it, in an equal column. Run 216's
+/// judges read the capsules it replaced — a stone and a name in the left
+/// third of a 180-point dark pill, six of them in a 3×2 grid — as the empty
+/// fields of a form.
+private struct LabyrinthSetStone: View {
     let set: RelicSet
 
     var body: some View {
-        HStack(spacing: 5) {
-            RelicSetEmblem(set: set, size: 18)
+        VStack(spacing: 3) {
+            RelicSetEmblem(set: set, size: 30)
+                .shadow(color: .black.opacity(0.6), radius: 3, y: 2)
             Text(set.displayName)
                 .font(Theme.body(11).weight(.semibold))
                 .foregroundStyle(Theme.onGlass)
                 .lineLimit(1)
                 .fixedSize()
-            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 8)
-        .frame(height: 24)
-        .background(Capsule().fill(Color.black.opacity(0.42)))
-        .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.7), lineWidth: 0.8))
+        .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
     }
 }
 
-/// A dark pool on the painted floor under a face — the dungeon's boss, a
-/// Titan — so the tile stands in the room rather than floating over it. It
-/// is a background, so it is drawn wider than the tile without being measured.
+/// A rail's label pinned above its scroll, on the rail's own dark glass
+/// (the `GlassRailPlate` gradient, under the leading inset as the plate is,
+/// without its gold hairline, which fades in below it). Inside the scroll,
+/// the scroll to the chosen row carried the label off the top and cut the
+/// first row on the strip (run 216).
+private struct LabyrinthRailHead: View {
+    let title: String
+
+    var body: some View {
+        PlaceRailLabel(title)
+            .padding(.horizontal, 9)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(
+                    colors: [Color(hex: "#0E0B08").opacity(0.86), Color(hex: "#0E0B08").opacity(0.62)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .ignoresSafeArea(.container, edges: .leading)
+                .allowsHitTesting(false)
+            )
+    }
+}
+
+/// A Titan not yet graded: a dim dashed ring holding its element, in place
+/// of `RaidGradeStamp`'s circled dash, which is iOS's remove control.
+private struct UngradedTitanSeal: View {
+    let element: Element
+    var size: CGFloat = 34
+
+    var body: some View {
+        ZStack {
+            Circle().fill(Color.black.opacity(0.35))
+            Circle().strokeBorder(Theme.onGlassDim.opacity(0.7),
+                                  style: StrokeStyle(lineWidth: 1.2, dash: [3, 3]))
+            Image(systemName: element.glyph)
+                .font(.system(size: size * 0.38, weight: .bold))
+                .foregroundStyle(element.color.opacity(0.75))
+        }
+        .frame(width: size, height: size)
+        .accessibilityLabel("Not graded")
+    }
+}
+
+/// The floor a face stands on — the dungeon's boss, a Titan — so the tile
+/// stands in the room rather than floating over it: a warm pool of light
+/// on the painted floor and a dark contact shadow at the card's foot,
+/// centred on its bottom edge and wider than it. The dark pool it replaces
+/// sat under the name at 0.6 on grounds already dark and was never seen
+/// (run 216). A background, so it is drawn wider than the tile without
+/// being measured.
 private struct PaintedFloorPool: View {
     var body: some View {
-        Ellipse()
-            .fill(RadialGradient(colors: [Color.black.opacity(0.6), .clear], center: .center,
-                                 startRadius: 2, endRadius: 64))
-            .frame(width: 136, height: 36)
-            .offset(y: 16)
-            .allowsHitTesting(false)
+        ZStack {
+            Ellipse()
+                .fill(RadialGradient(colors: [Theme.gold.opacity(0.30), Theme.gold.opacity(0.08), .clear],
+                                     center: .center, startRadius: 4, endRadius: 88))
+                .frame(width: 176, height: 46)
+                .blendMode(.plusLighter)
+            Ellipse()
+                .fill(RadialGradient(colors: [Color.black.opacity(0.8), .clear], center: .center,
+                                     startRadius: 2, endRadius: 54))
+                .frame(width: 116, height: 18)
+        }
+        .offset(y: 25)
+        .allowsHitTesting(false)
+    }
+}
+
+/// How a Labyrinth room shows its place's painting, measured off the
+/// paintings (run 216's judges; `framelight`-style means of 0–255 over the
+/// band a room shows at 874 × 350 points).
+private extension BattleEnvironment {
+    /// Where a room crops its painting. The Serpent Deep is a square whose
+    /// statues, pillars and glowing mushrooms fill its top 38% over a black
+    /// lake: the centre crop showed the lake (mean 15, the ground under the
+    /// portrait 7–8) and the Titans' first room and the Hall of Shadows were
+    /// black; its top band is 34. Every other room's painting reads at the
+    /// centre (51–110).
+    var roomFocus: UnitPoint {
+        switch self {
+        case .serpentDeep: return UnitPoint(x: 0.5, y: 0.02)
+        default: return .center
+        }
+    }
+
+    /// The tower's crop: higher than a room's, so the Sand Stair — which
+    /// borrows the Vault of the Colossus's corridor — shows its torches and
+    /// ceiling rather than the Vault room's statues.
+    var towerFocus: UnitPoint {
+        switch self {
+        case .serpentDeep: return UnitPoint(x: 0.5, y: 0.02)
+        default: return UnitPoint(x: 0.5, y: 0.15)
+        }
+    }
+
+    /// A painting too dark for the summon room's scrims (0.55 over the top,
+    /// 0.62 under the foot), which take 0.3 and 0.45.
+    var roomIsDark: Bool {
+        switch self {
+        case .serpentDeep: return true
+        default: return false
+        }
+    }
+
+    /// The motes' light: the room's own, saturated. The battle's key light
+    /// (the Necropolis's #D8C8A8) drew motes as grey specks (run 216).
+    var roomMoteHex: String {
+        switch self {
+        case .colossusVault: return "#FFC870"
+        case .necropolis: return "#B98CFF"
+        case .hydraLair: return "#A6F07A"
+        case .jotunheimHall: return "#9FD8FF"
+        case .serpentDeep: return "#C08CFF"
+        default: return keyLightHex
+        }
     }
 }
 

@@ -207,7 +207,8 @@ struct MissionsView: View {
                     segmentTrack(filled: claimed, total: total)
                 }
             }
-            prizeRow(QuestService.allMissionsBonus, status: claimStatus(claimed: done, ready: ready)) {
+            prizeRow(QuestService.allMissionsBonus, status: claimStatus(claimed: done, ready: ready),
+                     remaining: total - claimed) {
                 if let grants = store.claimMission(QuestService.allMissionsID) { paid(grants) }
             }
         }
@@ -226,16 +227,26 @@ struct MissionsView: View {
             CounselService.isComplete($0, player: player) && !CounselService.isClaimed($0.id, player: player)
         } || CounselService.isPrizeReady(tier, player: player)
         let face: GuideFace = waiting ? .pleased : .calm
+        // How many of her steps wait to be taken: the list sorts them first,
+        // and her card says how many there are (run 216: a third ready step
+        // sat under the fold with nothing to say it was there).
+        let ready = CounselService.steps(in: tier).filter {
+            CounselService.isComplete($0, player: player) && !CounselService.isClaimed($0.id, player: player)
+        }.count
+        let tally: String? = ready > 0 ? "\(ready) ready" : nil
         return VStack(alignment: .leading, spacing: 6) {
-            cardHeader("Athena's counsel", tally: nil)
+            cardHeader("Athena's counsel", tally: tally)
             HStack(alignment: .top, spacing: 10) {
+                // 84, as designed: at 64 the card ended half way down the
+                // column. The blurb then has 118 points, four lines at most
+                // ("Hierophant" is 116 at 15; measured 2026-09-23).
                 ZStack {
                     Circle().fill(Theme.socketFill)
-                    BundleImage(name: face.imageName, renderedAt: 64)
+                    BundleImage(name: face.imageName, renderedAt: 84)
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: 64, height: 64)
+                        .frame(width: 84, height: 84)
                 }
-                .frame(width: 64, height: 64)
+                .frame(width: 84, height: 84)
                 .clipShape(Circle())
                 .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 1.5))
                 .shadow(color: Color.black.opacity(0.2), radius: 3, y: 2)
@@ -282,7 +293,8 @@ struct MissionsView: View {
                     segmentTrack(filled: claimed, total: steps.count)
                 }
             }
-            prizeRow(tier.prize, status: claimStatus(claimed: done, ready: ready)) {
+            prizeRow(tier.prize, status: claimStatus(claimed: done, ready: ready),
+                     remaining: steps.count - claimed) {
                 claimCounsel(tier.prizeID)
             }
         }
@@ -350,16 +362,40 @@ struct MissionsView: View {
 
     /// A prize's tiles and its claim, on one line: two parts at 38, three at
     /// 34, so the Hierophant's three and an 88-point claim fit the 212
-    /// inside a card.
-    private func prizeRow(_ grant: ShopService.Grant, status: ClaimStatus, action: @escaping () -> Void) -> some View {
+    /// inside a card. Not yet earned, the slot says how many steps are left
+    /// ("8 to go") instead of a dead Claim.
+    private func prizeRow(_ grant: ShopService.Grant, status: ClaimStatus, remaining: Int,
+                          action: @escaping () -> Void) -> some View {
         let parts = Self.parts(of: grant)
         return HStack(spacing: 5) {
             ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
                 RewardTile(grant: part, size: parts.count > 2 ? 34 : 38, showsTitle: false)
             }
             Spacer(minLength: 6)
-            ClaimPlate(status: status, action: action)
+            claimSlot(status: status, waitingNote: "\(max(0, remaining)) to go", action: action)
                 .frame(width: 88)
+        }
+    }
+
+    /// The claim slot of a card or a row: the gold claim when there is
+    /// something to take, DONE once taken, and — not yet earned — only a
+    /// quiet note of what is left, right-aligned. Run 216's board ended every
+    /// unfinished row in a cream CLAIM slab at 75%, a column of dead buttons
+    /// that read as a disabled form; the genre puts a button on a finished
+    /// mission only.
+    @ViewBuilder
+    private func claimSlot(status: ClaimStatus, waitingNote: String, action: @escaping () -> Void) -> some View {
+        switch status {
+        case .waiting:
+            Text(waitingNote)
+                .font(Theme.numeric(13))
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+                .fixedSize()
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 6)
+        case .ready, .done:
+            ClaimPlate(status: status, action: action)
         }
     }
 
@@ -367,7 +403,7 @@ struct MissionsView: View {
 
     private var list: some View {
         ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 6) {
+            LazyVStack(spacing: 5) {
                 ForEach(entries) { entry in
                     row(entry)
                 }
@@ -445,13 +481,16 @@ struct MissionsView: View {
             .map(\.element)
     }
 
-    /// The tier the player is on, its steps in the order Athena set them.
-    /// The tier's prize is its own card. Showing all thirty at once would be
-    /// the feats list again, which is the thing this exists to replace.
+    /// The tier the player is on: claimable first, then in progress, then
+    /// done, each group in the order Athena set it — the other two lists'
+    /// sort. Kept in her order, a ready step sat under the fold below an
+    /// unfinished one (run 216). The tier's prize is its own card. Showing
+    /// all thirty at once would be the feats list again, which is the thing
+    /// this exists to replace.
     private var counselEntries: [Entry] {
         let player = store.player
         let tier = CounselService.currentTier(for: player)
-        return CounselService.steps(in: tier).map { step in
+        let rows = CounselService.steps(in: tier).map { step in
             Entry(
                 id: step.id,
                 icon: step.icon,
@@ -464,6 +503,13 @@ struct MissionsView: View {
                 source: .counsel
             )
         }
+        return rows.enumerated()
+            .sorted { lhs, rhs in
+                let left = Self.rank(complete: lhs.element.complete, claimed: lhs.element.claimed)
+                let right = Self.rank(complete: rhs.element.complete, claimed: rhs.element.claimed)
+                return left == right ? lhs.offset < rhs.offset : left < right
+            }
+            .map(\.element)
     }
 
     /// 0 waiting to be claimed, 1 in progress, 2 claimed. A stable sort on
@@ -475,46 +521,48 @@ struct MissionsView: View {
 
     // MARK: - A row
 
-    /// One row of the board: the bronze medallion (gold and glowing when
-    /// there is something to take), the title at 14 on up to two lines — the
-    /// longest counsel is "Claim a tribute chest on a chapter's road", 268
-    /// points against the row's 248 — the bar, the painted reward and the
-    /// claim plate.
+    /// One row of the board: the painted door of the place the row is about
+    /// in a bronze socket (gold-rimmed and glowing when there is something to
+    /// take; its glyph where no painting fits), the title at 14 on up to two
+    /// lines — the longest counsel is "Claim a tribute chest on a chapter's
+    /// road", 268 points against the row's 248 — the bar, the painted reward
+    /// and the claim slot: the gold claim when ready, the count ("0 / 3")
+    /// while not. Rows are 54 at least, so about six show beside the cards.
     private func row(_ entry: Entry) -> some View {
         let lit = entry.complete && !entry.claimed
+        let status = claimStatus(claimed: entry.claimed, ready: entry.complete)
+        let fraction = "\(min(entry.progress, entry.goal)) / \(entry.goal)"
+        let art = Self.rowArt(for: entry.icon)
         return HStack(spacing: 12) {
-            MedallionIcon(key: "", glyph: entry.claimed ? "checkmark" : entry.icon, size: 38, isOn: lit)
+            if entry.claimed {
+                MedallionIcon(key: "", glyph: "checkmark", size: 38)
+            } else {
+                MedallionIcon(key: art.door, glyph: entry.icon, size: 38, isOn: lit, itemKey: art.item)
+            }
             VStack(alignment: .leading, spacing: 6) {
                 Text(entry.title)
                     .font(Theme.body(14).weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
-                HStack(spacing: 8) {
-                    StatBar(
-                        value: Double(entry.progress),
-                        maximum: Double(max(1, entry.goal)),
-                        tint: entry.complete ? Theme.success : Theme.gold,
-                        height: 7
-                    )
-                    .frame(maxWidth: 150)
-                    Text("\(min(entry.progress, entry.goal)) / \(entry.goal)")
-                        .font(Theme.numeric(12))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .fixedSize()
-                }
+                StatBar(
+                    value: Double(entry.progress),
+                    maximum: Double(max(1, entry.goal)),
+                    tint: entry.complete ? Theme.success : Theme.gold,
+                    height: 7
+                )
+                .frame(maxWidth: 190)
             }
             Spacer(minLength: 8)
             rewardTiles(entry.grant)
-            ClaimPlate(status: claimStatus(claimed: entry.claimed, ready: entry.complete)) {
+            claimSlot(status: status, waitingNote: fraction) {
                 claim(entry)
             }
             .frame(width: 92)
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .frame(minHeight: 62)
+        .padding(.vertical, 5)
+        .frame(minHeight: 54)
         .background(MarbleRowPlate(isLit: lit))
         .opacity(entry.claimed ? 0.62 : 1)
     }
@@ -533,6 +581,38 @@ struct MissionsView: View {
             }
         } else {
             RewardTile(grant: grant, size: 46, showsTitle: false)
+        }
+    }
+
+    /// The painting a row's socket wears, read off the row's own glyph: the
+    /// DOOR of the place it sends the player (`ChromeArt`: the campaign, the
+    /// arena, the summoning circle, the collection) or the ITEM it is about
+    /// (energy, the daily gift, a relic, an essence, the demigod's medal).
+    /// A glyph with neither — the Labyrinth, the Tower, the codex, fusion —
+    /// keeps its glyph, drawn legibly on the dark socket. Run 216's list was
+    /// a column of flat SF glyphs, "a settings screen".
+    private static func rowArt(for glyph: String) -> (door: String, item: String?) {
+        switch glyph {
+        case "map.fill", "flag.fill", "checkmark.seal.fill", "bolt.shield.fill", "flame.circle.fill", "shippingbox.fill":
+            return ("campaign", nil)
+        case "trophy.fill":
+            return ("arena", nil)
+        case "sparkles", "star.fill":
+            return ("summon", nil)
+        case "arrow.up.circle.fill", "star.circle.fill", "sun.max.fill", "person.3.fill":
+            return ("collection", nil)
+        case "gift.fill":
+            return ("", "bundle")
+        case "bolt.fill":
+            return ("", "energy")
+        case "shield.lefthalf.filled", "circle.hexagongrid.fill", "diamond.fill":
+            return ("", "relic_cache")
+        case "flame.fill":
+            return ("", "essence_magic_mid")
+        case "crown.fill":
+            return ("", "player_exp")
+        default:
+            return ("", nil)
         }
     }
 

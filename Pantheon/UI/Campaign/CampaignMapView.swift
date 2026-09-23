@@ -159,6 +159,13 @@ struct ChapterMapArt {
         // (a ten-stage chapter stands on its five landmarks and the road
         // between them) and its three chests on open ground beside it; each
         // point read off the painting with tools/mapgrid.py and looked at.
+        // Thirty-four points were moved on 2026-09-23 (run 216's frames at
+        // the phone's real 262 points): marks stood on marks on eleven maps
+        // — Jötunheim's fourth stage straight above its second, the Aegean
+        // road chest over the fourth stage's stars, a boss's BOSS foot on
+        // the disc below it on five maps. Each moved to the next landmark
+        // along its road or to open ground, the mark and its foot clear of
+        // every other on every phone (`ChapterMapTests.testNoMarkStandsOnAnother`).
         // Duat 1: the jackal gate at the lower left, the reed island, the
         // scarab court, the hall of sentinels, the serpent's hall of scales.
         "duat_1": ChapterMapArt(
@@ -173,11 +180,11 @@ struct ChapterMapArt {
             nodes: [
                 CGPoint(x: 0.12, y: 0.66), CGPoint(x: 0.30, y: 0.80), CGPoint(x: 0.34, y: 0.42),
                 CGPoint(x: 0.50, y: 0.72), CGPoint(x: 0.59, y: 0.58), CGPoint(x: 0.72, y: 0.70),
-                CGPoint(x: 0.90, y: 0.60), CGPoint(x: 0.62, y: 0.22), CGPoint(x: 0.80, y: 0.40),
+                CGPoint(x: 0.88, y: 0.62), CGPoint(x: 0.62, y: 0.22), CGPoint(x: 0.80, y: 0.40),
                 CGPoint(x: 0.92, y: 0.18),
             ],
             chests: [
-                CGPoint(x: 0.40, y: 0.86), CGPoint(x: 0.70, y: 0.46), CGPoint(x: 0.96, y: 0.42),
+                CGPoint(x: 0.40, y: 0.86), CGPoint(x: 0.70, y: 0.46), CGPoint(x: 0.97, y: 0.47),
             ]
         ),
         // The shrine, the stair's foot, the column terrace, the stair, the round temple, the spring, the stair up, the gate, the rock, the forge cellar.
@@ -186,11 +193,11 @@ struct ChapterMapArt {
             nodes: [
                 CGPoint(x: 0.11, y: 0.63), CGPoint(x: 0.30, y: 0.80), CGPoint(x: 0.27, y: 0.30),
                 CGPoint(x: 0.45, y: 0.72), CGPoint(x: 0.50, y: 0.30), CGPoint(x: 0.57, y: 0.62),
-                CGPoint(x: 0.66, y: 0.60), CGPoint(x: 0.67, y: 0.22), CGPoint(x: 0.80, y: 0.42),
+                CGPoint(x: 0.66, y: 0.60), CGPoint(x: 0.67, y: 0.22), CGPoint(x: 0.79, y: 0.43),
                 CGPoint(x: 0.89, y: 0.35),
             ],
             chests: [
-                CGPoint(x: 0.12, y: 0.85), CGPoint(x: 0.85, y: 0.72), CGPoint(x: 0.95, y: 0.85),
+                CGPoint(x: 0.20, y: 0.86), CGPoint(x: 0.85, y: 0.72), CGPoint(x: 0.95, y: 0.85),
             ]
         ),
         // The harbour, the beach road, the lighthouse, the cliff road, the sea cave, the cliff, the trident temple, the ruins path, the columns, the statue garden.
@@ -199,24 +206,24 @@ struct ChapterMapArt {
             nodes: [
                 CGPoint(x: 0.12, y: 0.78), CGPoint(x: 0.22, y: 0.60), CGPoint(x: 0.31, y: 0.32),
                 CGPoint(x: 0.42, y: 0.28), CGPoint(x: 0.60, y: 0.42), CGPoint(x: 0.70, y: 0.50),
-                CGPoint(x: 0.78, y: 0.58), CGPoint(x: 0.88, y: 0.47), CGPoint(x: 0.82, y: 0.30),
+                CGPoint(x: 0.78, y: 0.58), CGPoint(x: 0.88, y: 0.49), CGPoint(x: 0.80, y: 0.28),
                 CGPoint(x: 0.92, y: 0.18),
             ],
             chests: [
-                CGPoint(x: 0.44, y: 0.40), CGPoint(x: 0.90, y: 0.75), CGPoint(x: 0.96, y: 0.58),
+                CGPoint(x: 0.50, y: 0.35), CGPoint(x: 0.90, y: 0.75), CGPoint(x: 0.96, y: 0.58),
             ]
         ),
         // The stilt village, the boardwalk, the drowned shrine, the boardwalk, the dead trees, the boardwalk, the bone mound, its end, the reeds, the hydra's pool.
         "olympus_3": ChapterMapArt(
             image: "map_olympus_3",
             nodes: [
-                CGPoint(x: 0.13, y: 0.52), CGPoint(x: 0.20, y: 0.72), CGPoint(x: 0.38, y: 0.60),
-                CGPoint(x: 0.50, y: 0.57), CGPoint(x: 0.48, y: 0.30), CGPoint(x: 0.62, y: 0.57),
-                CGPoint(x: 0.65, y: 0.37), CGPoint(x: 0.76, y: 0.42), CGPoint(x: 0.80, y: 0.30),
-                CGPoint(x: 0.88, y: 0.16),
+                CGPoint(x: 0.13, y: 0.50), CGPoint(x: 0.23, y: 0.71), CGPoint(x: 0.38, y: 0.60),
+                CGPoint(x: 0.50, y: 0.57), CGPoint(x: 0.48, y: 0.30), CGPoint(x: 0.61, y: 0.60),
+                CGPoint(x: 0.64, y: 0.34), CGPoint(x: 0.72, y: 0.47), CGPoint(x: 0.80, y: 0.32),
+                CGPoint(x: 0.90, y: 0.14),
             ],
             chests: [
-                CGPoint(x: 0.42, y: 0.85), CGPoint(x: 0.92, y: 0.45), CGPoint(x: 0.96, y: 0.70),
+                CGPoint(x: 0.46, y: 0.86), CGPoint(x: 0.93, y: 0.50), CGPoint(x: 0.96, y: 0.70),
             ]
         ),
         // The longships, the pyre, the rune stone, the road, the stave church, the road, the burial mound, the road, the climb, the mead hall.
@@ -225,7 +232,7 @@ struct ChapterMapArt {
             nodes: [
                 CGPoint(x: 0.13, y: 0.70), CGPoint(x: 0.28, y: 0.80), CGPoint(x: 0.27, y: 0.30),
                 CGPoint(x: 0.40, y: 0.45), CGPoint(x: 0.53, y: 0.35), CGPoint(x: 0.50, y: 0.68),
-                CGPoint(x: 0.72, y: 0.58), CGPoint(x: 0.80, y: 0.80), CGPoint(x: 0.90, y: 0.48),
+                CGPoint(x: 0.72, y: 0.58), CGPoint(x: 0.80, y: 0.80), CGPoint(x: 0.88, y: 0.55),
                 CGPoint(x: 0.88, y: 0.27),
             ],
             chests: [
@@ -238,11 +245,11 @@ struct ChapterMapArt {
             nodes: [
                 CGPoint(x: 0.14, y: 0.75), CGPoint(x: 0.30, y: 0.72), CGPoint(x: 0.32, y: 0.38),
                 CGPoint(x: 0.42, y: 0.52), CGPoint(x: 0.55, y: 0.30), CGPoint(x: 0.50, y: 0.62),
-                CGPoint(x: 0.65, y: 0.48), CGPoint(x: 0.76, y: 0.42), CGPoint(x: 0.80, y: 0.25),
-                CGPoint(x: 0.88, y: 0.40),
+                CGPoint(x: 0.65, y: 0.48), CGPoint(x: 0.75, y: 0.46), CGPoint(x: 0.80, y: 0.18),
+                CGPoint(x: 0.90, y: 0.44),
             ],
             chests: [
-                CGPoint(x: 0.45, y: 0.86), CGPoint(x: 0.92, y: 0.70), CGPoint(x: 0.95, y: 0.15),
+                CGPoint(x: 0.40, y: 0.86), CGPoint(x: 0.93, y: 0.74), CGPoint(x: 0.95, y: 0.15),
             ]
         ),
         // The ice pillars, the road, the giant's camp, the road, the frozen waterfall, the road's top, the icicles, the ice bridge, the road, the ice hall.
@@ -250,19 +257,19 @@ struct ChapterMapArt {
             image: "map_yggdrasil_3",
             nodes: [
                 CGPoint(x: 0.14, y: 0.62), CGPoint(x: 0.30, y: 0.48), CGPoint(x: 0.38, y: 0.72),
-                CGPoint(x: 0.30, y: 0.30), CGPoint(x: 0.47, y: 0.48), CGPoint(x: 0.55, y: 0.22),
-                CGPoint(x: 0.70, y: 0.35), CGPoint(x: 0.75, y: 0.62), CGPoint(x: 0.88, y: 0.55),
+                CGPoint(x: 0.22, y: 0.31), CGPoint(x: 0.47, y: 0.48), CGPoint(x: 0.55, y: 0.22),
+                CGPoint(x: 0.70, y: 0.35), CGPoint(x: 0.75, y: 0.62), CGPoint(x: 0.89, y: 0.58),
                 CGPoint(x: 0.86, y: 0.28),
             ],
             chests: [
-                CGPoint(x: 0.10, y: 0.85), CGPoint(x: 0.65, y: 0.85), CGPoint(x: 0.96, y: 0.80),
+                CGPoint(x: 0.06, y: 0.87), CGPoint(x: 0.65, y: 0.85), CGPoint(x: 0.96, y: 0.86),
             ]
         ),
         // The arch, the road, the cold temple, the road, the basilica, the road, the rostra, the road, the camp gate, the Capitol.
         "rome_1": ChapterMapArt(
             image: "map_rome_1",
             nodes: [
-                CGPoint(x: 0.16, y: 0.62), CGPoint(x: 0.30, y: 0.55), CGPoint(x: 0.29, y: 0.30),
+                CGPoint(x: 0.16, y: 0.62), CGPoint(x: 0.30, y: 0.55), CGPoint(x: 0.29, y: 0.28),
                 CGPoint(x: 0.42, y: 0.48), CGPoint(x: 0.52, y: 0.28), CGPoint(x: 0.55, y: 0.70),
                 CGPoint(x: 0.63, y: 0.58), CGPoint(x: 0.78, y: 0.80), CGPoint(x: 0.79, y: 0.45),
                 CGPoint(x: 0.89, y: 0.22),
@@ -275,13 +282,13 @@ struct ChapterMapArt {
         "rome_2": ChapterMapArt(
             image: "map_rome_2",
             nodes: [
-                CGPoint(x: 0.14, y: 0.72), CGPoint(x: 0.25, y: 0.40), CGPoint(x: 0.30, y: 0.20),
+                CGPoint(x: 0.14, y: 0.72), CGPoint(x: 0.25, y: 0.40), CGPoint(x: 0.36, y: 0.22),
                 CGPoint(x: 0.40, y: 0.55), CGPoint(x: 0.50, y: 0.42), CGPoint(x: 0.55, y: 0.72),
-                CGPoint(x: 0.66, y: 0.82), CGPoint(x: 0.68, y: 0.55), CGPoint(x: 0.78, y: 0.40),
+                CGPoint(x: 0.66, y: 0.82), CGPoint(x: 0.68, y: 0.50), CGPoint(x: 0.77, y: 0.42),
                 CGPoint(x: 0.87, y: 0.20),
             ],
             chests: [
-                CGPoint(x: 0.42, y: 0.12), CGPoint(x: 0.93, y: 0.80), CGPoint(x: 0.80, y: 0.86),
+                CGPoint(x: 0.46, y: 0.12), CGPoint(x: 0.93, y: 0.80), CGPoint(x: 0.80, y: 0.86),
             ]
         ),
         // The moon gate, the path, the pavilion, the path, the peach terraces, the path, the bridge, the path, the shrine stair, the fox shrine.
@@ -290,11 +297,11 @@ struct ChapterMapArt {
             nodes: [
                 CGPoint(x: 0.13, y: 0.72), CGPoint(x: 0.28, y: 0.66), CGPoint(x: 0.23, y: 0.30),
                 CGPoint(x: 0.36, y: 0.48), CGPoint(x: 0.45, y: 0.62), CGPoint(x: 0.55, y: 0.45),
-                CGPoint(x: 0.63, y: 0.47), CGPoint(x: 0.74, y: 0.33), CGPoint(x: 0.83, y: 0.42),
+                CGPoint(x: 0.63, y: 0.47), CGPoint(x: 0.74, y: 0.33), CGPoint(x: 0.82, y: 0.48),
                 CGPoint(x: 0.87, y: 0.18),
             ],
             chests: [
-                CGPoint(x: 0.08, y: 0.86), CGPoint(x: 0.95, y: 0.60), CGPoint(x: 0.93, y: 0.85),
+                CGPoint(x: 0.04, y: 0.80), CGPoint(x: 0.95, y: 0.60), CGPoint(x: 0.93, y: 0.85),
             ]
         ),
         // The falls, the bridge, the sunken temple, the sand, the wrecked junk, the path, the pearl grotto, the path, the climb, the dragon gate.
@@ -303,7 +310,7 @@ struct ChapterMapArt {
             nodes: [
                 CGPoint(x: 0.14, y: 0.45), CGPoint(x: 0.22, y: 0.70), CGPoint(x: 0.36, y: 0.30),
                 CGPoint(x: 0.42, y: 0.58), CGPoint(x: 0.55, y: 0.50), CGPoint(x: 0.62, y: 0.80),
-                CGPoint(x: 0.64, y: 0.22), CGPoint(x: 0.78, y: 0.65), CGPoint(x: 0.85, y: 0.48),
+                CGPoint(x: 0.64, y: 0.22), CGPoint(x: 0.78, y: 0.65), CGPoint(x: 0.86, y: 0.54),
                 CGPoint(x: 0.86, y: 0.25),
             ],
             chests: [
@@ -336,7 +343,7 @@ struct ChapterMapArt {
     // whose place is SOLVED from the same measured points the medallions
     // stand on, the way `CameraDirector` solves the camera from the figures:
     // the first spot along the top edge, then the bottom, clear of every
-    // medallion, chest and arrow, in the widest of three forms that fits.
+    // medallion, chest and arrow, in the wider of two forms that fits.
     // The solve takes every medallion at its LARGEST (the leader's face over
     // it, a foot under it), so the tab stands still while the player walks
     // the road; it moves only from one map to the next. `ChapterMapTests`
@@ -386,6 +393,44 @@ struct ChapterMapArt {
         return (nodes, chests)
     }
 
+    /// The boss's face for its medallion: its own card, or the card of the
+    /// mesh it fights in until its own lands (`ModelSpec.standInAsset` —
+    /// the Colossus of the Sun as the Vault's Colossus, the Dragon of
+    /// Longmen as the Dragon King in its element), or nil. Four of twelve
+    /// bosses showed a bare pink lock in run 216 because only the first was
+    /// looked for; the Hydra and the Jötunn have no card of any kind yet.
+    static func bossPortrait(for chapter: Chapter) -> String? {
+        guard let boss = UnitDatabase.blueprint(chapter.bossBlueprintID) else { return nil }
+        var names = [boss.model.portraitName(awakened: false)]
+        if let standIn = boss.model.standInAsset {
+            names.append("portrait_\(standIn)")
+            names.append("portrait_\(standIn)_\(boss.element.rawValue)")
+        }
+        return names.first(where: { BundleArt.exists($0) })
+    }
+
+    /// What each mark covers on the map, for the test that no mark stands
+    /// on another: a medallion's disc with its foot under it (the stars, the
+    /// energy or BOSS, 22 points under the disc; up to 50 points wide, 80
+    /// for the boss's "⚡ 5 BOSS"), and a chest's painting (40 points, 44
+    /// with its badge). The leader's face and the pulse are left out — one
+    /// stage at a time wears them and they are drawn over the painting's
+    /// air. Nodes first, in story order, then the three chests.
+    static func markRects(nodes: [CGPoint], bosses: [Bool], chests: [CGPoint]) -> [CGRect] {
+        var rects: [CGRect] = []
+        for (index, point) in nodes.enumerated() {
+            let isBoss = index < bosses.count && bosses[index]
+            let radius = medallionRadius(isBoss: isBoss)
+            let halfFoot: CGFloat = isBoss ? 40 : 25
+            let half = max(radius, halfFoot)
+            rects.append(CGRect(x: point.x - half, y: point.y - radius, width: half * 2, height: radius * 2 + 22))
+        }
+        for chest in chests {
+            rects.append(CGRect(x: chest.x - 22, y: chest.y - 22, width: 44, height: 44))
+        }
+        return rects
+    }
+
     /// Whether the leader's face can ride above the current medallion; when
     /// the medallion stands too near the top of the frame it rides at the
     /// medallion's right instead, so the face is never cut by the strip.
@@ -418,18 +463,20 @@ struct ChapterMapArt {
         return rects
     }
 
-    /// The chapter tab's three forms, widest first, each wide enough for its
+    /// The chapter tab's two forms, widest first, each wide enough for its
     /// longest content in the shipped Manrope (measured with the font files):
-    /// the progress and both sets with their names (Zephyr and Titanfall are
-    /// 258 points), the progress and the two stones (158), the two stones
-    /// alone (88).
+    /// both sets with their names (Zephyr and Titanfall, 190 points with
+    /// their stones and the chevron), and the two stones alone (88). The
+    /// road's progress is the strip's line ("The Duat · Chapter 1 · 3/5"),
+    /// not the tab's: it was printed in both (run 216), and the room it took
+    /// is what lets the names stand on eight maps of twelve where they stood
+    /// on four.
     enum TabForm: CaseIterable {
-        case named, stones, seal
+        case named, seal
 
         var width: CGFloat {
             switch self {
-            case .named: return 264
-            case .stones: return 162
+            case .named: return 194
             case .seal: return 92
             }
         }
@@ -440,11 +487,13 @@ struct ChapterMapArt {
     /// Where the chapter's tab stands: for each form, widest first, along the
     /// top edge from the left and then along the bottom, the first place
     /// four points clear of every obstacle. On the five phones the test
-    /// covers there is always one; a map painted later that has none gets
-    /// the smallest tab at the top left, drawn UNDER the road so a medallion
-    /// over it still draws and takes its tap.
+    /// covers there is always one. A map that has none still gets its tab —
+    /// never nothing (run 216 photographed four maps with no tab at all,
+    /// laid out under the tab bar): the small form where it covers the least
+    /// of the road, drawn UNDER the road so a medallion over it still draws
+    /// and takes its tap.
     static func tabSlot(obstacles: [CGRect], in size: CGSize) -> (origin: CGPoint, form: TabForm) {
-        let rows: [CGFloat] = [8, size.height - 8 - tabHeight]
+        let rows: [CGFloat] = [8, max(8, size.height - 8 - tabHeight)]
         for form in TabForm.allCases {
             for y in rows {
                 var x: CGFloat = 8
@@ -457,7 +506,35 @@ struct ChapterMapArt {
                 }
             }
         }
-        return (CGPoint(x: 8, y: 8), .seal)
+        return (leastCovered(obstacles: obstacles, rows: rows, in: size), .seal)
+    }
+
+    /// The small tab's place along either edge where the fewest points of
+    /// it are under a mark, for a map with no clear ground at all; the top
+    /// left when even that ties.
+    private static func leastCovered(obstacles: [CGRect], rows: [CGFloat], in size: CGSize) -> CGPoint {
+        let width = TabForm.seal.width
+        var best = CGPoint(x: 8, y: 8)
+        var bestCover = CGFloat.greatestFiniteMagnitude
+        for y in rows {
+            var x: CGFloat = 8
+            while x + width <= size.width - 8 {
+                let tab = CGRect(x: x, y: y, width: width, height: tabHeight)
+                var cover: CGFloat = 0
+                for obstacle in obstacles {
+                    let overlap = obstacle.intersection(tab)
+                    if !overlap.isNull {
+                        cover += overlap.width * overlap.height
+                    }
+                }
+                if cover < bestCover {
+                    bestCover = cover
+                    best = CGPoint(x: x, y: y)
+                }
+                x += 4
+            }
+        }
+        return best
     }
 }
 
@@ -582,6 +659,14 @@ struct ChapterMapView: View {
     /// The chapter's scroll — the story, the progress, the yields and the
     /// tier's terms — open over the map from the tab.
     @State private var scrollOpen: Bool
+    /// Hard's or Hell's terms in one line of glass, for a few seconds after
+    /// the tier is chosen (or the map opens on it). Choosing a tier used to
+    /// unroll the whole scroll over the left half of the road, every time
+    /// (run 216's Hell frame was mostly a paragraph).
+    @State private var tierToast: CampaignDifficulty?
+
+    /// Under the CI tour the toast stays up, so the frame shows it.
+    private static let touring = ProcessInfo.processInfo.arguments.contains("-tour")
 
     init(
         chapterID: String,
@@ -629,11 +714,32 @@ struct ChapterMapView: View {
                     painting(chapter, size: size)
                     // UNDER the road: where a map ever leaves it no clear
                     // ground, a medallion over it still draws and still
-                    // takes its tap.
+                    // takes its tap. Hidden while the scroll is open — the
+                    // scroll IS the tab unrolled, and the tab's line showed
+                    // through the scroll's header (run 216).
                     chapterTab(chapter, form: slot.form)
                         .offset(x: slot.origin.x, y: slot.origin.y)
+                        .opacity(scrollOpen ? 0 : 1)
+                        .allowsHitTesting(!scrollOpen)
                     road(chapter, nodes: placed.nodes, chests: placed.chests, size: size)
                     arrows(size: size)
+                    if let tierToast, !scrollOpen {
+                        // Along the edge the tab is not on, centred.
+                        let toastY: CGFloat = slot.origin.y < size.height / 2
+                            ? slot.origin.y + ChapterMapArt.tabHeight + 8
+                            : 8
+                        tierLine(tierToast, base: base)
+                            .frame(width: size.width)
+                            .offset(y: toastY)
+                            .allowsHitTesting(false)
+                            .transition(.opacity)
+                    }
+                    Color.clear
+                        .frame(width: 1, height: 1)
+                        .onAppear { Self.report(chapterID, size: size, origin: slot.origin, form: slot.form) }
+                        .onChange(of: size) { _, now in
+                            Self.report(chapterID, size: now, origin: slot.origin, form: slot.form)
+                        }
                     if scrollOpen {
                         Color.black.opacity(0.001)
                             .frame(width: size.width, height: size.height)
@@ -651,21 +757,30 @@ struct ChapterMapView: View {
                 }
             }
             .frame(width: size.width, height: size.height)
+            // The painting runs on under the side insets to the glass, as
+            // every place's does since run 216 (the map stood in cream
+            // pillars between a strip and a tab bar that reach both edges).
+            .background(alignment: .topLeading) {
+                if let chapter {
+                    bleed(chapter, size: size)
+                }
+            }
         }
         .onAppear {
             settleTier()
             withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) {
                 pulse = true
             }
+            announce(difficulty)
         }
         .onChange(of: chapterID) { _, _ in
             settleTier()
             scrollOpen = false
         }
-        // Switching to Hard or Hell opens the scroll on the tier's terms:
-        // what the tier changes is the thing to read at that moment.
+        // Switching to Hard or Hell says the tier's terms in one line for a
+        // few seconds; the scroll stays the tab's to open.
         .onChange(of: difficulty) { _, tier in
-            withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { scrollOpen = tier != .normal }
+            announce(tier)
         }
         .sheet(item: $openTribute) { tribute in
             TributeCard(tribute: tribute, chapterID: chapterID, difficulty: difficulty)
@@ -678,11 +793,32 @@ struct ChapterMapView: View {
     /// The chapter's painting, full bleed, shaded at the top and the bottom
     /// so the gold reads on any sky, and graded by the tier: a crimson cast
     /// and a darkened rim on Hard, a violet night with embers rising on
-    /// Hell, a few motes of dust on Normal — the tier is felt on the place
-    /// before it is read. Decorative only: `.clipped()` does not clip hit
-    /// testing, so it never takes a tap. A fixed `.frame(width:height:)`
-    /// off the GeometryReader is the safe way to fill it.
+    /// Hell — the tier is felt on the place before it is read. Normal is the
+    /// painting as painted: its twelve flat motes photographed as specks of
+    /// dirt on the glass (run 216). Decorative only: `.clipped()` does not
+    /// clip hit testing, so it never takes a tap. A fixed
+    /// `.frame(width:height:)` off the GeometryReader is the safe way to fill
+    /// it. The last 14 points darken to meet the tab bar softly: the foot
+    /// shade was laid out under the bar until run 216 and the map met the
+    /// bar in a hard seam.
     private func painting(_ chapter: Chapter, size: CGSize) -> some View {
+        ZStack {
+            paintingImage(chapter, size: size)
+            tierTint(size: size)
+            tierAir
+        }
+        .frame(width: size.width, height: size.height)
+        .overlay(alignment: .bottom) {
+            LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.42)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 14)
+        }
+        .clipped()
+        .allowsHitTesting(false)
+    }
+
+    /// The painting itself and its top and foot shade, at `size`.
+    private func paintingImage(_ chapter: Chapter, size: CGSize) -> some View {
         let backdrop = chapter.stages.first?.environment.backdropName ?? ""
         return ZStack {
             if let art {
@@ -709,25 +845,27 @@ struct ChapterMapView: View {
                 ],
                 startPoint: .top, endPoint: .bottom
             )
-            tierGrade(size: size)
         }
         .frame(width: size.width, height: size.height)
-        .clipped()
-        .allowsHitTesting(false)
     }
 
-    /// The tier's grade over the painting. The multiply strengths and the
-    /// vignettes are first values, to be judged on the Hell frame.
+    /// The tier's colour over the painting. A dark violet MULTIPLY alone only
+    /// darkened a warm painting — run 216's Hell was "Normal with the lights
+    /// down", still orange-brown — so each tier also lays its hue over the
+    /// painting's own light: a `.color` layer on Hell (the painting's
+    /// luminance in violet), a crimson `.softLight` on Hard. The vignettes
+    /// close the rim in the tier's dark.
     @ViewBuilder
-    private func tierGrade(size: CGSize) -> some View {
+    private func tierTint(size: CGSize) -> some View {
         switch difficulty {
         case .normal:
-            Motes(count: 12, color: Color(hex: "#FFE29A"), seed: 1400)
-                .opacity(0.7)
+            Color.clear
         case .hard:
             ZStack {
                 Color(hex: "#6E1022").opacity(0.20)
                     .blendMode(.multiply)
+                Color(hex: "#C0243F").opacity(0.34)
+                    .blendMode(.softLight)
                 RadialGradient(
                     colors: [.clear, Color(hex: "#3A0810").opacity(0.45)],
                     center: .center, startRadius: size.width * 0.30, endRadius: size.width * 0.75
@@ -735,14 +873,84 @@ struct ChapterMapView: View {
             }
         case .hell:
             ZStack {
-                Color(hex: "#24103D").opacity(0.34)
+                Color(hex: "#24103D").opacity(0.30)
                     .blendMode(.multiply)
+                Color(hex: "#5B2A86").opacity(0.36)
+                    .blendMode(.color)
                 RadialGradient(
                     colors: [.clear, Color(hex: "#12061F").opacity(0.60)],
                     center: .center, startRadius: size.width * 0.30, endRadius: size.width * 0.75
                 )
-                Motes(count: 18, color: Color(hex: "#FF7A4D"), seed: 1500)
             }
+        }
+    }
+
+    /// Hell's embers, rising and glowing: the same thirty motes twice, one
+    /// blurred into a halo and added as light, one sharp — eighteen flat
+    /// four-point dots did not read in a still. The two share a seed and a
+    /// clock, so every halo stays on its ember.
+    @ViewBuilder
+    private var tierAir: some View {
+        if difficulty == .hell {
+            ZStack {
+                Motes(count: 30, color: Color(hex: "#FF9A4D"), seed: 1500)
+                    .blur(radius: 3)
+                    .blendMode(.plusLighter)
+                Motes(count: 30, color: Color(hex: "#FFC27A"), seed: 1500)
+            }
+        }
+    }
+
+    /// The painting carried on under the side insets to the glass: the
+    /// painting MIRRORED about each edge of the safe frame — so it meets
+    /// itself with no seam — in the tier's colour, darkening toward the
+    /// glass. It cannot simply be drawn wider: a 21:9 painting covering the
+    /// whole 852-point width crops twice as much of its height, and thirty
+    /// medallions would leave their landmarks. So the marks stand where they
+    /// stood and only the pillars of cream go. Read off a GeometryReader
+    /// that ignores the horizontal safe area; it never takes a tap.
+    private func bleed(_ chapter: Chapter, size: CGSize) -> some View {
+        GeometryReader { outer in
+            // The insets as reported, or the extra width split evenly (a
+            // landscape phone's two insets are equal) if they read zero.
+            let extra: CGFloat = max(0, outer.size.width - size.width)
+            let reported: CGFloat = outer.safeAreaInsets.leading
+            let leading: CGFloat = reported > 0 && reported <= extra ? reported : extra / 2
+            let trailing: CGFloat = extra - leading
+            ZStack(alignment: .topLeading) {
+                if leading > 0 {
+                    mirroredPainting(chapter, size: size, width: leading, towardLeading: true)
+                }
+                if trailing > 0 {
+                    mirroredPainting(chapter, size: size, width: trailing, towardLeading: false)
+                        .offset(x: leading + size.width)
+                }
+            }
+        }
+        .ignoresSafeArea(.container, edges: .horizontal)
+        .allowsHitTesting(false)
+    }
+
+    /// One side's mirror, `width` wide: the painting flipped, aligned so its
+    /// edge meets the painting's own edge, clipped to the inset.
+    private func mirroredPainting(_ chapter: Chapter, size: CGSize, width: CGFloat, towardLeading: Bool) -> some View {
+        ZStack {
+            paintingImage(chapter, size: size)
+            tierTint(size: size)
+        }
+        .frame(width: size.width, height: size.height)
+        .scaleEffect(x: -1, y: 1)
+        .frame(width: width, height: size.height, alignment: towardLeading ? .trailing : .leading)
+        .clipped()
+        .overlay(
+            LinearGradient(colors: [Theme.ink.opacity(0.62), Theme.ink.opacity(0.08)],
+                           startPoint: towardLeading ? .leading : .trailing,
+                           endPoint: towardLeading ? .trailing : .leading)
+        )
+        .overlay(alignment: .bottom) {
+            LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.42)],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: 14)
         }
     }
 
@@ -774,9 +982,7 @@ struct ChapterMapView: View {
             CampaignService.isUnlocked($0, player: player) && !CampaignService.isCleared($0, player: player)
         }
         let leader = store.team(store.player.campaignTeam).first
-        let bossPortrait = UnitDatabase.blueprint(chapter.bossBlueprintID)
-            .map { $0.model.portraitName(awakened: false) }
-            .flatMap { BundleArt.exists($0) ? $0 : nil }
+        let bossPortrait = ChapterMapArt.bossPortrait(for: chapter)
         return ZStack(alignment: .topLeading) {
             // The road: a dotted curve through the medallions — drawn only
             // where the map is not painted, since a painted map has its own.
@@ -956,9 +1162,24 @@ struct ChapterMapView: View {
                     }
                 }
         } else if stage.isBoss {
-            Image(systemName: state == .locked ? "lock.fill" : "crown.fill")
-                .font(.system(size: state == .locked ? 16 : 22, weight: .black))
+            // A crown for a boss with no card, and the portrait's own small
+            // lock on it while shut — a bare lock read as "locked, danger",
+            // not as the thing the road walks toward.
+            Image(systemName: "crown.fill")
+                .font(.system(size: 22, weight: .black))
                 .foregroundStyle(state == .cleared ? Theme.ink : Theme.onGlassDanger)
+                .opacity(state == .locked ? 0.8 : 1)
+                .frame(width: diameter - 8, height: diameter - 8)
+                .overlay(alignment: .bottomTrailing) {
+                    if state == .locked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 10, weight: .black))
+                            .foregroundStyle(Theme.onGlass)
+                            .frame(width: 20, height: 20)
+                            .background(Circle().fill(Color(hex: "#17120E")))
+                            .overlay(Circle().strokeBorder(Theme.glassRim, lineWidth: 1))
+                    }
+                }
         } else {
             switch state {
             case .cleared:
@@ -1051,10 +1272,12 @@ struct ChapterMapView: View {
 
     // MARK: - The chapter's tab and scroll
 
-    /// The chapter on the map as one line of glass: how far the road is
-    /// walked, the two sets it yields (with their names where the map has
-    /// room, as stones alone where it does not), and a chevron that opens
-    /// the scroll. The form and the place are solved by `ChapterMapArt`.
+    /// The chapter on the map as one line of glass: the two sets its road
+    /// yields — with their names where the map has room, as stones alone
+    /// where it does not — and a chevron that opens the scroll. The form and
+    /// the place are solved by `ChapterMapArt`; the capsule hugs what it
+    /// holds (the named form had a 60-point gap before its chevron). How far
+    /// the road is walked is the strip's second line.
     private func chapterTab(_ chapter: Chapter, form: ChapterMapArt.TabForm) -> some View {
         Button {
             Juice.haptic(.light)
@@ -1063,12 +1286,6 @@ struct ChapterMapView: View {
         } label: {
             HStack(spacing: 8) {
                 HStack(spacing: form == .seal ? 6 : 8) {
-                    if form != .seal {
-                        progressMark(chapter)
-                        Rectangle()
-                            .fill(Theme.glassRim.opacity(0.7))
-                            .frame(width: 1, height: 18)
-                    }
                     ForEach(chapter.relicSets) { relicSet in
                         HStack(spacing: 5) {
                             RelicSetEmblem(set: relicSet, size: 20)
@@ -1082,13 +1299,13 @@ struct ChapterMapView: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
                 Image(systemName: scrollOpen ? "chevron.up" : "chevron.down")
                     .font(.system(size: 10, weight: .black))
                     .foregroundStyle(Theme.onGlassDim)
             }
             .padding(.horizontal, 12)
-            .frame(width: form.width, height: ChapterMapArt.tabHeight)
+            .fixedSize(horizontal: true, vertical: false)
+            .frame(height: ChapterMapArt.tabHeight)
             .background(GlassPlate(radius: ChapterMapArt.tabHeight / 2))
             .contentShape(Capsule())
         }
@@ -1096,32 +1313,10 @@ struct ChapterMapView: View {
         .accessibilityLabel("\(chapter.name), the chapter's story and yields")
     }
 
-    /// The road's progress with a glyph that says which of three things it
-    /// is: walking (a map), done (a seal, in gold), or not yet open (a lock,
-    /// dim) — the plate printed "0/10 ✓ Cleared" on a sealed chapter, since
-    /// "no stage left open" was read as "every stage cleared".
-    private func progressMark(_ chapter: Chapter) -> some View {
-        let count = chapter.stages.count
-        let cleared = min(count, player.campaignProgress[chapter.id] ?? 0)
-        let sealed = !(chapter.stages.first.map { CampaignService.isUnlocked($0, player: player) } ?? false)
-        let done = cleared >= count && count > 0
-        let tint: Color = done ? Theme.onGlassGold : (sealed ? Theme.onGlassDim : Theme.onGlass)
-        return HStack(spacing: 4) {
-            Image(systemName: done ? "checkmark.seal.fill" : (sealed ? "lock.fill" : "map.fill"))
-                .font(.system(size: 11, weight: .black))
-                .frame(width: 14)
-            Text("\(cleared)/\(count)")
-                .font(Theme.numeric(12.5))
-                .lineLimit(1)
-                .fixedSize()
-        }
-        .foregroundStyle(tint)
-    }
-
     /// The chapter's scroll, open over the map from its tab: where it is
     /// (realm and chapter), its name carved, its story line, how far the
     /// road is walked and what comes next, what it yields, and the tier's
-    /// terms — or, on Normal, what opens Hard. Deep glass (0.86) because it
+    /// terms — or, on Normal, what opens Hard. Deep glass (0.94) because it
     /// is a paragraph. Its budget is the CI phone's 262-point map less 16:
     /// 22 + 23 + three lines of story + a two-line next + 24 + two lines of
     /// terms + the spacing is about 238.
@@ -1208,7 +1403,9 @@ struct ChapterMapView: View {
         }
         .padding(14)
         .frame(width: Self.scrollWidth, alignment: .leading)
-        .background(GlassPlate(radius: 14, opacity: 0.86))
+        // Deeper than any plate: a paragraph over a painting (0.86 let a
+        // medallion show through the story, run 216).
+        .background(GlassPlate(radius: 14, opacity: 0.94))
     }
 
     /// Whose terms the scroll's last line gives: the tier shown, or on
@@ -1254,18 +1451,87 @@ struct ChapterMapView: View {
     }
 
     private func tierNote(_ tier: CampaignDifficulty, open: Bool, base: Chapter) -> String {
+        let order = StageDatabase.chapterOrder(of: base.id)
         switch tier {
         case .normal:
-            return "The story. Relics as the stage gives them."
+            return Self.terms(.normal, chapterOrder: order)
         case .hard:
-            return open
-                ? "Hard: a grade up, ×1.2 · every stage drops a 5★+ relic · ×1.7 drachma and EXP"
-                : "Hard opens when \(base.name)'s boss falls on Normal."
+            return open ? Self.terms(.hard, chapterOrder: order) : "Hard opens when \(base.name)'s boss falls on Normal."
         case .hell:
-            return open
-                ? "Hell: two grades up, ×1.5 · every stage drops a 6★ relic · ×2.6 drachma and EXP"
-                : "Hell opens when \(base.name)'s boss falls on Hard."
+            return open ? Self.terms(.hell, chapterOrder: order) : "Hell opens when \(base.name)'s boss falls on Hard."
         }
+    }
+
+    /// A tier's terms in the game's own numbers for this chapter — "Hell ·
+    /// two grades up · enemies ×1.5 · relics 4★+ · ×2.6 drachma & EXP".
+    /// Read off `CampaignDifficulty`, never written out: the line said
+    /// "every stage drops a 6★ relic" on every chapter, which has not been
+    /// the rule since the relic floor began to climb with the chapter
+    /// (2026-09-16: Hell pays 4★ in chapter 1 and 6★ from chapter 7, at a
+    /// 45% floor), and "×1.5" did not say what it multiplied.
+    static func terms(_ tier: CampaignDifficulty, chapterOrder: Int) -> String {
+        let grades: String
+        switch tier.starBonus {
+        case 0: return "Normal · the story · relics as each stage gives them"
+        case 1: grades = "a grade up"
+        case 2: grades = "two grades up"
+        default: grades = "\(tier.starBonus) grades up"
+        }
+        let stats = String(format: "%.1f", tier.statScale)
+        let pay = String(format: "%.1f", tier.rewardScale)
+        let relicFloor = tier.relicGradeFloor(chapterOrder: chapterOrder)
+        let name = tier.displayName
+        return "\(name) · \(grades) · enemies ×\(stats) · relics \(relicFloor)★+ · ×\(pay) drachma & EXP"
+    }
+
+    /// The tier's terms as one line of glass along the top of the map.
+    private func tierLine(_ tier: CampaignDifficulty, base: Chapter) -> some View {
+        let words = Self.terms(tier, chapterOrder: StageDatabase.chapterOrder(of: base.id))
+        let tint = Color(hex: tier.glowHex)
+        return HStack(spacing: 6) {
+            Image(systemName: tier.glyph)
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(tint)
+            Text(words)
+                .font(Theme.body(11.5).weight(.bold))
+                .foregroundStyle(Theme.onGlass)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 12)
+        .frame(height: 30)
+        .background(Capsule().fill(Color(hex: "#17120E").opacity(0.9)))
+        .overlay(Capsule().strokeBorder(tint.opacity(0.8), lineWidth: 1))
+        .shadow(color: .black.opacity(0.5), radius: 6, y: 3)
+    }
+
+    /// Says a tier's terms for about three seconds (for as long as the tour
+    /// photographs); Normal says nothing.
+    private func announce(_ tier: CampaignDifficulty) {
+        guard tier != .normal else {
+            withAnimation(.easeOut(duration: 0.2)) { tierToast = nil }
+            return
+        }
+        withAnimation(.easeOut(duration: 0.25)) { tierToast = tier }
+        guard !Self.touring else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.2) {
+            guard tierToast == tier else { return }
+            withAnimation(.easeIn(duration: 0.35)) { tierToast = nil }
+        }
+    }
+
+    /// The map's measured size and where its tab stood, on the console
+    /// (DEBUG only): run 216's map was laid out 58 points taller than the
+    /// phone showed and a green test described a size the view never got,
+    /// so the size the view DOES get is printed for the CI job to read.
+    private static func report(_ chapterID: String, size: CGSize, origin: CGPoint, form: ChapterMapArt.TabForm) {
+        #if DEBUG
+        let width = Int(size.width.rounded())
+        let height = Int(size.height.rounded())
+        let x = Int(origin.x.rounded())
+        let y = Int(origin.y.rounded())
+        print("[ChapterMap] \(chapterID) size \(width)x\(height) tab \(form) at \(x),\(y)")
+        #endif
     }
 
     // MARK: - The arrows
