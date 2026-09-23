@@ -592,10 +592,22 @@ struct StageBriefingView: View {
 
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
-    @State private var showTeamPicker = false
     @State private var runs = 1
 
     private static let runChoices = [1, 5, 10, 20]
+
+    /// The genre's prep screen keeps the player's units in one scrolling
+    /// row along the foot, under everything else: a tap puts a unit in the
+    /// team or takes it out, where the team used to change on a separate
+    /// screen behind a chevron (the owner: "a mon selector / pre battle prep
+    /// that is like Summoners War").
+    private static let rosterTile: CGFloat = 56
+    private static let rosterHeight: CGFloat = rosterTile + 14
+    /// The team and the launch share the right column: the run count and
+    /// the sweep over Begin.
+    private static let rightColumn: CGFloat = 340
+    /// The team's faces in its plate.
+    private static let teamTile: CGFloat = 46
 
     /// The right column at its narrowest: five 48-point faces and the
     /// chevron (278) inside the plate's 20 points of padding. It widens to
@@ -676,10 +688,6 @@ struct StageBriefingView: View {
             } content: {
                 briefing
             }
-            .sheet(isPresented: $showTeamPicker) {
-                TeamPickerView(slot: .campaign, maxSize: 5)
-                    .environmentObject(store)
-            }
         }
         .onAppear(perform: warmModels)
     }
@@ -691,31 +699,29 @@ struct StageBriefingView: View {
         // in every wave each time it is read.
         let rows = waves
         let bossID = StageDatabase.chapter(stage.chapterID)?.bossBlueprintID
-        let drops = StageDrop.list(for: stage, firstClear: !CampaignService.isCleared(stage, player: store.player),
-                                   experience: true)
         return GeometryReader { geometry in
             let size = geometry.size
-            let column = Self.columnWidth(drops: drops.count, in: size)
-            let tile = enemyTile(rows: rows, column: column, in: size)
+            let column = Self.rightColumn
+            let plates = size.height - 16 - 8 - Self.rosterHeight
+            let tile = enemyTile(rows: rows, column: column, in: size, plates: plates)
             let room = size.width - ScreenChrome.contentPadding * 2 - 10 - column
             VStack(spacing: 8) {
-                // The opposition as wide as its faces, the team and the
-                // spoils as wide as the spoils' row, and the painting between
-                // them: the opposition plate filled the width with 35–60% of
-                // it empty glass beside a spoils row that faded out its last
-                // three (run 216).
+                // The genre's prep: who you face on the left, your team and
+                // the launch on the right, your units along the foot. The
+                // spoils are the stage popup's; this screen is for the team.
                 HStack(alignment: .top, spacing: 0) {
                     oppositionPlate(rows, tile: tile, bossID: bossID)
                         .frame(width: oppositionWidth(rows: rows, tile: tile, room: room), alignment: .topLeading)
                     Spacer(minLength: 10)
                     VStack(spacing: 8) {
                         teamPlate
-                        spoilsPlate(drops, column: column)
+                        launchDeck
                     }
                     .frame(width: column)
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
-                launchDeck(width: size.width - ScreenChrome.contentPadding * 2)
+                rosterStrip
+                    .frame(height: Self.rosterHeight)
             }
             .padding(.horizontal, ScreenChrome.contentPadding)
             .padding(.vertical, 8)
@@ -740,15 +746,6 @@ struct StageBriefingView: View {
         .allowsHitTesting(false)
     }
 
-    /// The right column's width: the spoils' row whole (untitled 44-point
-    /// tiles 8 apart, in the plate's 20 of padding), never under the team's
-    /// 320, and never so wide that the opposition's header cannot stand.
-    private static func columnWidth(drops: Int, in size: CGSize) -> CGFloat {
-        let spoils = StageDropStrip.width(count: drops, tile: spoilsTile, titled: false) + 20
-        let most = size.width - ScreenChrome.contentPadding * 2 - 10 - oppositionMinimum
-        return max(minimumColumn, min(spoils, most))
-    }
-
     /// The opposition plate's width: its label, its widest wave and its
     /// padding, or its header's width, whichever is wider — within `room`.
     private func oppositionWidth(rows: [[ResolvedUnit]], tile: CGFloat, room: CGFloat) -> CGFloat {
@@ -769,13 +766,12 @@ struct StageBriefingView: View {
     /// single wave of two at 104 is the subject of the screen; three waves
     /// stop at 64. On the CI phone a three-wave stage of three draws at 62,
     /// and on an SE a wave of four at 56; the old 42-point cards are gone.
-    private func enemyTile(rows: [[ResolvedUnit]], column: CGFloat, in size: CGSize) -> CGFloat {
+    private func enemyTile(rows: [[ResolvedUnit]], column: CGFloat, in size: CGSize, plates: CGFloat) -> CGFloat {
         let waveCount = max(1, rows.count)
         let widest = max(1, rows.map(\.count).max() ?? 1)
         let label: CGFloat = waveCount > 1 ? Self.waveLabelWidth + Self.tileGap : 0
         let inner = size.width - ScreenChrome.contentPadding * 2 - 10 - column - 20
         let byWidth = (inner - label - CGFloat(widest - 1) * Self.tileGap) / CGFloat(widest)
-        let plates = size.height - 16 - 8 - Self.deckHeight
         let byHeight = (plates - 20 - 18 - 8 - CGFloat(waveCount - 1) * 8) / CGFloat(waveCount)
         let ceiling: CGFloat
         switch waveCount {
@@ -853,25 +849,23 @@ struct StageBriefingView: View {
             accessoryTint: power >= stage.recommendedPower ? Theme.onGlassSuccess : Theme.onGlassDanger
         ) {
             VStack(alignment: .leading, spacing: 8) {
-                Button {
-                    showTeamPicker = true
-                } label: {
-                    HStack(spacing: Self.tileGap) {
-                        ForEach(Array(team.enumerated()), id: \.element.id) { index, unit in
-                            UnitPortraitTile(unit: unit, size: 48, isLeader: index == 0 && leads)
+                // Five slots, the leader first. A tap on a face takes the unit
+                // out; a tap on a unit in the strip below puts it in.
+                HStack(spacing: Self.tileGap) {
+                    ForEach(Array(team.enumerated()), id: \.element.id) { index, unit in
+                        Button {
+                            toggle(unit)
+                        } label: {
+                            UnitPortraitTile(unit: unit, size: Self.teamTile, isLeader: index == 0 && leads)
                         }
-                        ForEach(0..<max(0, 5 - team.count), id: \.self) { _ in
-                            EmptyUnitSlot(size: 48)
-                        }
-                        Spacer(minLength: 0)
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .black))
-                            .foregroundStyle(Theme.onGlassDim)
+                        .buttonStyle(PlateButtonStyle())
+                        .accessibilityLabel("Take \(unit.blueprint.name) out of the team")
                     }
-                    .contentShape(Rectangle())
+                    ForEach(0..<max(0, 5 - team.count), id: \.self) { _ in
+                        EmptyUnitSlot(size: Self.teamTile)
+                    }
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(PlateButtonStyle())
-                .accessibilityLabel("Change the team")
                 if leads || !lit.isEmpty {
                     teamBonuses(team: team, leads: leads, lit: lit)
                 }
@@ -937,16 +931,6 @@ struct StageBriefingView: View {
         return "\(stat) +\(Int((skill.amount * 100).rounded()))%"
     }
 
-    /// What the stage pays, as the popup's tiles without their names (a
-    /// tile's painting says what it is; the popup has the names). The
-    /// column is as wide as the row, so the campaign's stages show every
-    /// tile whole; a Labyrinth level's six sets are one stone.
-    private func spoilsPlate(_ drops: [StageDrop], column: CGFloat) -> some View {
-        GlassSection(title: "Spoils") {
-            StageDropStrip(drops: drops, tile: Self.spoilsTile, titled: false, available: column - 20)
-        }
-    }
-
     // MARK: - The deck
 
     /// Once, or a run of the same stage on auto, beside the sweep and
@@ -957,42 +941,92 @@ struct StageBriefingView: View {
     /// plate of glass where there is room for it; why the SWEEP is dark is
     /// on the sweep itself ("0/3 ★" under a lock). That reason was loose
     /// words on the painting with no plate (runs 220 and 221).
-    private func launchDeck(width: CGFloat) -> some View {
-        let hintWidth = width - Self.runsWidth - Self.sweepWidth - Self.beginWidth - 40 - 8
-        let hint = deckHint
-        return HStack(spacing: 10) {
-            BarSegments(
-                options: Self.runChoices.map { (value: $0, title: $0 == 1 ? "Once" : "×\($0)") },
-                selection: $runs
-            )
-            if hintWidth >= Self.hintMinimum, let hint {
-                // Two lines at 11 in the plate's 125 points (each hint wraps
-                // to two, measured in Manrope): 42 points of plate in the
-                // 46-point deck.
-                Text(hint.text)
-                    .font(Theme.body(11))
-                    .foregroundStyle(hint.tint)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                    .background(GlassPlate(radius: Theme.tightCorner, opacity: 0.78))
-                    .frame(width: hintWidth, alignment: .leading)
+    private var launchDeck: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                BarSegments(
+                    options: Self.runChoices.map { (value: $0, title: $0 == 1 ? "Once" : "×\($0)") },
+                    selection: $runs
+                )
+                .fixedSize()
+                if let hint = deckHint {
+                    Text(hint.text)
+                        .font(Theme.body(11))
+                        .foregroundStyle(hint.tint)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
-            SweepButton(stage: stage, runs: runs, onSweep: onSweep, onGlass: true)
-                .frame(width: Self.sweepWidth)
-            PrimaryButton(
-                title: runs > 1 ? "Begin ×\(runs) · \(cost * runs)" : "Begin · \(cost)",
-                systemImage: runs > 1 ? "repeat" : "play.fill",
-                isEnabled: hasEnergy && !team.isEmpty,
-                itemKey: "energy"
-            ) {
-                onStart(runs)
+            HStack(spacing: 8) {
+                SweepButton(stage: stage, runs: runs, onSweep: onSweep, onGlass: true)
+                    .frame(width: 124)
+                PrimaryButton(
+                    title: runs > 1 ? "Begin ×\(runs) · \(cost * runs)" : "Begin · \(cost)",
+                    systemImage: runs > 1 ? "repeat" : "play.fill",
+                    isEnabled: hasEnergy && !team.isEmpty,
+                    itemKey: "energy"
+                ) {
+                    onStart(runs)
+                }
             }
-            .frame(width: Self.beginWidth)
+            .frame(height: Self.deckHeight)
         }
-        .frame(height: Self.deckHeight)
+    }
+
+    // MARK: - The roster
+
+    /// Every unit the player owns, strongest first, in one scrolling row:
+    /// the ones in the team lit and ticked, the rest a tap from joining.
+    private var rosterStrip: some View {
+        let chosen = Set(store.player.campaignTeam.unitIDs)
+        let units = store.resolvedUnits.sorted { $0.power > $1.power }
+        return ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(units) { unit in
+                    let inTeam = chosen.contains(unit.id)
+                    Button {
+                        toggle(unit)
+                    } label: {
+                        UnitPortraitTile(unit: unit, size: Self.rosterTile)
+                            .opacity(inTeam ? 0.45 : 1)
+                            .overlay {
+                                if inTeam {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.system(size: 20, weight: .bold))
+                                        .foregroundStyle(Theme.onGlassGold)
+                                        .shadow(color: .black.opacity(0.7), radius: 2)
+                                }
+                            }
+                    }
+                    .buttonStyle(PlateButtonStyle())
+                    .accessibilityLabel(inTeam ? "Take \(unit.blueprint.name) out of the team"
+                                               : "Put \(unit.blueprint.name) in the team")
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 7)
+        }
+        .background(GlassPlate(radius: Theme.tightCorner, opacity: 0.78))
+    }
+
+    /// In or out of the campaign team, saved at once as the genre saves a
+    /// prep: a unit in the team comes out (never the last one), a unit out
+    /// of it joins while there is a free slot of the five. The first unit
+    /// is the leader.
+    private func toggle(_ unit: ResolvedUnit) {
+        var preset = store.teamPreset(for: .campaign)
+        if let index = preset.unitIDs.firstIndex(of: unit.id) {
+            guard preset.unitIDs.count > 1 else { return }
+            preset.unitIDs.remove(at: index)
+        } else {
+            guard preset.unitIDs.count < 5 else { return }
+            preset.unitIDs.append(unit.id)
+        }
+        withAnimation(.easeOut(duration: 0.15)) {
+            store.setTeam(preset, for: .campaign)
+        }
     }
 
     /// The deck's one line: what stops Begin, or what the runs do. Why the
@@ -1230,13 +1264,10 @@ struct StagePopup: View {
     /// enemies it is compared with (it was green text in the far corner),
     /// then the team and runs on glass, the sweep once the stage is
     /// mastered, and Fight on gold with the painted bolt and its cost. On a
-    /// card too narrow for all of it (an SE with the sweep) "Team & runs"
-    /// says "Team".
+    /// Prepare opens the battle prep: the genre starts a fight there, never
+    /// on the map.
     private func footer(inner: CGFloat) -> some View {
         let canSweep = SweepService.canSweep(stage, player: player)
-        let full = Self.powerWidth + 18 + Self.teamWide + Self.fightWidth + 10
-            + (canSweep ? Self.sweepWidth + 10 : 0)
-        let roomy = inner >= full
         let meets = teamPower >= stage.recommendedPower
         return HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 1) {
@@ -1268,23 +1299,20 @@ struct StagePopup: View {
                 }
             }
             Spacer(minLength: 8)
-            PrimaryButton(title: roomy ? "Team & runs" : "Team", systemImage: "person.2.fill", style: .glass) {
-                onPrepare()
-            }
-            .frame(width: roomy ? Self.teamWide : Self.teamNarrow)
             if canSweep {
                 SweepButton(stage: stage, runs: 1, onSweep: { _ in
                     withAnimation(.easeOut(duration: 0.15)) { choosingSweep.toggle() }
                 }, onGlass: true)
                     .frame(width: Self.sweepWidth)
             }
+            // The genre's way: a stage opens the battle prep — the team, the
+            // foes, the runs — and the fight begins from there, never on
+            // the map.
             PrimaryButton(
-                title: "Fight · \(cost)",
-                systemImage: "play.fill",
-                isEnabled: hasEnergy && !team.isEmpty,
-                itemKey: "energy"
+                title: "Prepare",
+                systemImage: "person.3.fill"
             ) {
-                onFight()
+                onPrepare()
             }
             .frame(width: Self.fightWidth)
         }
