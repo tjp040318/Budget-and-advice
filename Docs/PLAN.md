@@ -5147,6 +5147,51 @@ at their spaces and started "generate blue," seven times over (no task
 was created, the concept argument being empty) and gave the seven the
 default blade clip set until they were launched again line by line.
 
+### Where the serious roster stands (2026-09-23, 22:00): all of it
+
+The owner bought more credits on the feature day and chose "I'll buy
+credits, remake them all". One agent finished the roster in an evening:
+
+- **The last 22 base families**, **all 16 awakened forms** (Hera's
+  awakened form made for the first time; the wave list had fifteen) and
+  **both Labyrinth bosses**, every build "verified clean", judged on
+  `roster/board_egypt.jpg`, `board_greece_rome_jade.jpg`,
+  `board_norse.jpg`, `board_awakened_1.jpg` and
+  `board_awakened_2_bosses.jpg`, which went to the owner.
+- **The concepts were judged before a credit went on a mesh:** most of
+  the old sentences still had the pole fault (a spear, staff, halberd or
+  longbow reaching the shin), so they were rewritten, and seventeen
+  concepts re-rolled; Medusa's and the Nymph's of the 18th were
+  repainted; Athena's was mirrored so her sword is in the hand the blade
+  clips swing. Ullr was refused once (a bow to the shin) and his repaint
+  rigged. Thor's awakened concept was refused by the painter for naming
+  him; described, it passed.
+- **The Colossus** could not be animated at 8 m ("model file not found"
+  twice); rigged at 4.5 m, he still ships at 8.
+- **The bespoke motions** of Ares, Sekhmet, Thoth and Zeus were
+  retargeted onto their awakened rigs for nothing, so the awakened forms
+  no longer play Meshy presets under the bespoke contact timings.
+- **Credits:** 3,570 → 594, over the 500 floor: 522 on 58 pictures,
+  2,454 on meshes (40 at 59, a refused mesh at 30, a failed rig at 5).
+
+**The fault it found, and the next pass.** A held object painted
+against the thigh — which is exactly where the rigger's own rules put
+it — is rigged partly to the LEG, and stretches from the hand to the hip
+when the arm lifts: worst in the victory clip, which the island plays on
+a tap, and seen in the battle's heavy attacks. Today's families with it:
+the Minotaur, Satyr, Nymph, Siren, Skadi, Taweret, Medjay, Vestal and
+the awakened Ares, Horus, Ra, Isis, Osiris, Freya and Zeus; older
+families such as Sif and Set have it too. The options: (a) remake each
+at 68 credits from a concept with the weapon held clear — the budget is
+spent, and the rigger refuses a weapon held out; (b) a **weapon pass**,
+the skirt pass's reverse — measure every edge's stretch across the
+clips, find the rigid held pieces, and give the whole object to the
+hand that holds it, cutting the seam where it is welded to cloth or leg;
+(c) leave it. (b) is being built (`tools/weapon_pass.py`) and judged
+before it touches the bundle, on per-family pose sheets that skin the
+shipped base and the LOD with the shipped clips at eight frames each —
+the whole roster is being audited on those sheets at the same time.
+
 ### Where the serious roster stands (2026-09-19, 03:45)
 
 **Seventy-five of the ninety-six base families are in the bundle in the
