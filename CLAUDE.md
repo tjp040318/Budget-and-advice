@@ -1303,8 +1303,15 @@ environment can and cannot do. The short version:
   top row, a boss (`Combatant.isBoss`: a primordial or anything 3 m tall)
   gets a wide red bar across the top, and an ultimate plays a **cut-in**
   (`BattleViewModel.cutIn`: the caster's card and the skill's name sweep
-  across a dark band for a second). Damage numbers are a rounded semibold
-  with a thin edge, not the heavy outlined figures of the first build.
+  across a dark band for a second). **Damage numbers and skill words are
+  SpriteKit labels in the plate overlay, ABOVE the plates (2026-09-23)**
+  (`FloatingLabel`, `UnitPlateOverlay.floatLayer`, placed by
+  `BattleSceneController.layoutFloats` from `projectPoint`): Manrope
+  numbers and Cinzel words with a dark edge, clamped inside the edges and
+  under the boss bar, a crit capped near 32 pt; they were SceneKit planes
+  under the plates, and a crit grew to 75 pt off the top of the frame.
+  The skill camera has no motion blur (it smeared the frame on every
+  push-in), and a boss's matchup arrow is in the boss bar, never on it.
 - **Motion.** A melee unit's dash is a 0.3 s leap (the model container
   hops while the node moves), clips cross-fade over 0.22/0.30 s
   (`ModelLibrary`), one-shot clips are never sped past 2× (the contracts in
@@ -1325,7 +1332,14 @@ environment can and cannot do. The short version:
   fading, each `impact_<element>` is built from its own two, and
   `projectile` flies the element's sprite from a ranged caster's chest to
   the victim's on an arc, launched by `BattleSceneController` to land on
-  the frame of contact. A missing sprite falls back to the spark. An
+  the frame of contact. A missing sprite falls back to the spark, and
+  since 2026-09-23 so does a BAD one: `VFXLibrary.sprite` refuses any
+  sprite whose border is bright and opaque (a 32 × 32 read, one `[VFX]`
+  line in the console) — `vfx_ring` and `vfx_wisp` were painted on
+  WHITE, shipped as opaque squares, and drawn additive at nine times
+  their size they put a pink-white slab over two thirds of the frame on
+  every ultimate. Both need repainting on black (their sources in
+  `Art/VFX/` are white too) before they come back. An
   effect authored in Xcode's particle editor and dropped in the bundle as
   `<identifier>.scnp` replaces the code-built one, so the owner can design
   a hit by hand. The key also lists Veo 3.1 video models (a clip on black

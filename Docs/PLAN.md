@@ -7026,3 +7026,52 @@ The tour grew three frames for states no frame had shown: `4-summon-root`
 (a tab screen inside the real root, so the bar's place is photographed
 every run), `3-training-evolve` opening on its offer, and
 `16-dungeon-sweep` (the chooser over a mastered floor).
+
+### Rounds 2 and 3: every screen the tour shows, judged twice (2026-09-23)
+
+Run 217's frames went to six judges, one group of screens each, with the
+fix agents' claims beside them; each fault was a BLOCKER (content hidden,
+text cut, a control unreachable), VISIBLE (the owner would call it
+sloppy) or POLISH. Seven blockers came back, four of them on screens
+phase B never touched and so already on the phone: the Allies strip
+printed "ALL…" because it held four segments, an Offline count, Refresh
+and a three-value wallet; the Boons cache panel was taller than the
+frame and pushed the whole screen up under the top edge; the relic drop
+card cut "SELL FOR…", hiding the one number it exists to show; and the
+island's decoration list could not reach its sixth patch. The other
+three were the Fuse ledger's "Jackal Warr…" (a two-line box 30 pt tall,
+under two lines of Manrope 11), and the victory chest in a white
+rectangle — its light beam wrote alpha into the transparent view. Round
+2 fixed all seven and about thirty visible faults; main moved to it
+after run 220 was green and judged.
+
+Run 220's judges found one more blocker, older than phase B: every
+ultimate and every light hit drew `vfx_ring.png` additive at nine times
+its size, and that sprite is an opaque WHITE square — a pink-white slab
+over two thirds of the frame on the owner's first ultimate. The wisp had
+the same fault. `VFXLibrary.sprite` now refuses any sprite whose border
+is bright and opaque (read off a 32 × 32 reduction, one `[VFX]` line in
+the console), every caller falls back to code-built motes, and the two
+sprites need repainting on black before they come back — art, on the
+owner's word. Round 3 took the battle's other judged faults with it:
+
+| Fault | What changed |
+|---|---|
+| the skill camera's push-in smeared the whole frame | `motionBlurIntensity` 0; SceneKit blurs by the camera's own speed |
+| damage numbers drawn under the unit plates, a crit 75 pt tall off the top | the numbers and skill words are SpriteKit labels in the plate overlay, above the plates: Manrope numbers and Cinzel words with a dark edge, clamped inside the edges and under the boss bar, a crit capped near 32 pt, a skill's name following its caster |
+| the boss wore its matchup badge on its chest, and kept it dead | no 3D badge on a boss or a fallen unit; the boss's arrow sits in the boss bar beside its name |
+| the cut-in's skill name in ink on the dark band | pale gold |
+| the reckoning drawn over the live HUD and plates | both fade out under it |
+| Olympus washed out (bands at 155 against 70–130) | its grade's exposure −0.55, solved on the frame's own tone curve (−0.30 left it at 140) |
+| a 5★ summon's first three seconds an empty dusk while the stage built | a charge drawn in SwiftUI — the banner's painted scroll over turning rings and a rising beam — so the beat is never empty; `-tour-reveal-hold charge` photographs it |
+| the Lessons screen a settings list | rebuilt in the Counsel's shape |
+
+A lesson from the judging itself: a round's fix is judged on the NEXT
+run's frames against the previous run's, and three of round 2's fixes
+regressed something beside them — the team picker's lineup fell under
+the painted panel's minimum height and drew as the plain plate, the
+Titans rail stopped opening on the chosen Titan (a one-shot timer that
+fired before the rows were measured), and pure aether's new pale colour
+vanished on the cream reward socket. Round 3 fixed all three. A judge
+that compares the pair catches these; a judge of the new frame alone
+would have passed them.
