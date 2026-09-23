@@ -17,11 +17,23 @@ struct TeamPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selected: [UUID] = []
 
-    /// Wide enough for four lineup tiles across, narrow enough to leave the
-    /// roster seven columns on a landscape phone.
+    /// Wide enough for a full team of faces across the lineup panel (five
+    /// 52-point faces and their gaps are the panel's 284 points inside),
+    /// narrow enough to leave the roster five columns on a landscape phone.
     private let railWidth: CGFloat = 300
     private let rosterColumns = [GridItem(.adaptive(minimum: 70, maximum: 84), spacing: 8)]
-    private let lineupColumns = [GridItem(.adaptive(minimum: 56, maximum: 70), spacing: 6)]
+    private static let faceGap: CGFloat = 6
+    /// How far the rail and the roster fade out at their foot, and the room
+    /// left after their last line so it can scroll clear of the fade.
+    private static let footFadeHeight: CGFloat = 18
+
+    /// The lineup's face: the largest that puts `maxSize` of them in one
+    /// row inside the panel (its 8-point padding each side), at most 52.
+    private var face: CGFloat {
+        let slots = CGFloat(max(1, maxSize))
+        let inside = railWidth - 16 - (slots - 1) * Self.faceGap
+        return min(52, (inside / slots).rounded(.down))
+    }
 
     private var selectedUnits: [ResolvedUnit] {
         selected.compactMap { store.resolved($0) }
@@ -65,14 +77,18 @@ struct TeamPickerView: View {
 
     /// The lineup and the team's bonuses scroll together if a long leader
     /// skill needs the room; the Save plate is pinned below them either way.
+    /// The scroll ends in a fade, not a cut: run 217 sliced the resonance's
+    /// words through the middle of a line on the edge above Save.
     private var rail: some View {
         VStack(spacing: 8) {
             ScrollView {
                 VStack(spacing: 8) {
                     lineup
                     bonusesPanel
+                    Color.clear.frame(height: Self.footFadeHeight)
                 }
             }
+            .mask { footFade }
             PrimaryButton(title: "Save team", isEnabled: !selected.isEmpty) {
                 var preset = store.teamPreset(for: slot)
                 preset.unitIDs = selected
@@ -83,27 +99,33 @@ struct TeamPickerView: View {
         .frame(width: railWidth)
     }
 
+    /// The team as FACES in one row on one top line, every slot shown, the
+    /// leader crowned — the briefing's "Your team" row that opens this
+    /// screen, the same tiles. It was 58-point name cards in an adaptive
+    /// grid with a LEADER line under the first: the taller leader cell was
+    /// centred 9 points above the others with its label on the panel's
+    /// border, a full team wrapped to a second row of one, and the panel's
+    /// 150 points pushed the resonance off the rail (run 217). The names
+    /// are on the roster's cards beside it, the selected ones rimmed.
     private var lineup: some View {
         SectionPanel(title: "Lineup", accessory: "\(selected.count)/\(maxSize)") {
-            LazyVGrid(columns: lineupColumns, spacing: 6) {
-                let lineupUnits = selectedUnits
+            let lineupUnits = selectedUnits
+            HStack(alignment: .top, spacing: Self.faceGap) {
                 ForEach(lineupUnits.indices, id: \.self) { index in
                     let unit = lineupUnits[index]
-                    VStack(spacing: 3) {
-                        UnitCard(unit: unit, size: 58)
-                        if index == 0 {
-                            Text("LEADER")
-                                .font(Theme.body(8).weight(.black))
-                                .tracking(1)
-                                .foregroundStyle(Theme.gold)
-                        }
-                    }
-                    .onTapGesture { toggle(unit.id) }
+                    UnitPortraitTile(unit: unit, size: face, isLeader: index == 0)
+                        .onTapGesture { toggle(unit.id) }
                 }
-                if selected.count < maxSize {
-                    EmptyTeamSlot(size: 58)
+                ForEach(0..<max(0, maxSize - lineupUnits.count), id: \.self) { _ in
+                    EmptyUnitSlot(size: face, onGlass: false)
                 }
+                Spacer(minLength: 0)
             }
+            // Room over the leader's crown under the header, and the faces'
+            // feet above the panel's acanthus corners, which reach about 18
+            // points up from its foot.
+            .padding(.top, 3)
+            .padding(.bottom, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
@@ -198,8 +220,23 @@ struct TeamPickerView: View {
                 }
             }
             .padding(.vertical, 2)
+            .padding(.bottom, Self.footFadeHeight)
         }
+        // The last visible row fades rather than stopping on a hard line
+        // with its names cut off (run 217's third row of Shabti).
+        .mask { footFade }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// A scroll's mask: opaque down to its last `footFadeHeight` points,
+    /// which fade to nothing — a fixed height, so a short rail and a tall
+    /// roster fade over the same distance.
+    private var footFade: some View {
+        VStack(spacing: 0) {
+            Color.black
+            LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+                .frame(height: Self.footFadeHeight)
+        }
     }
 
     /// Tapping a selected unit removes it; tapping a new one appends it, which

@@ -106,12 +106,22 @@ final class BattleSceneController: NSObject {
     private(set) var unitNodes: [UUID: UnitNode] = [:]
     /// The unit plates — every fighter's health and attack bars — drawn over
     /// the view in points (`UnitPlateOverlay`); `layoutPlates` stands each
-    /// one under its unit's feet on every frame.
+    /// one over its unit's head on every frame.
     let plates = UnitPlateOverlay(size: CGSize(width: 2, height: 2))
     /// The plates and the nodes they follow, snapshotted for the render
-    /// thread under a lock whenever the units change.
+    /// thread under a lock whenever the units change — each with its
+    /// figure's head joint when the rig has one (`headJoint(of:)`), so a
+    /// body going down takes its plate down with it.
     private let plateLock = NSLock()
-    private var plateTargets: [(UnitPlate, UnitNode)] = []
+    private var plateTargets: [(UnitPlate, UnitNode, SCNNode?)] = []
+    /// The bosses on the field, for the same thread: a plate is not drawn
+    /// over a boss's chest for a unit standing inside the boss's body.
+    private var plateBosses: [UnitNode] = []
+    /// The render thread's own memory of each plate, eased from frame to
+    /// frame so nothing pops: how far it is lifted off a neighbour it would
+    /// overlap, and how far a fallen body has taken it down.
+    private var plateLifts: [UUID: CGFloat] = [:]
+    private var plateDrops: [UUID: Float] = [:]
     private var cameraNode = SCNNode()
     private var director: CameraDirector?
     private var queue: [BattleEvent] = []
@@ -1003,12 +1013,34 @@ final class BattleSceneController: NSObject {
 
     /// The plates and the nodes they follow, for the render thread.
     private func refreshPlateTargets() {
-        let pairs: [(UnitPlate, UnitNode)] = unitNodes.values.compactMap { node in
-            node.plate.map { ($0, node) }
+        let triples: [(UnitPlate, UnitNode, SCNNode?)] = unitNodes.values.compactMap { node in
+            guard let plate = node.plate else { return nil }
+            return (plate, node, Self.headJoint(of: node))
         }
+        let bosses = unitNodes.values.filter { $0.isBoss }
         plateLock.lock()
-        plateTargets = pairs
+        plateTargets = triples
+        plateBosses = bosses
         plateLock.unlock()
+    }
+
+    /// The joint a plate reads a falling body's height off: the top of the
+    /// skull (`head_end` on a Meshy rig), else the head (Zeus's rig names
+    /// only `Head`), else nil — an unrigged mesh keeps its standing height.
+    /// Case blind, as every bone lookup here is.
+    private static func headJoint(of node: UnitNode) -> SCNNode? {
+        var skullTop: SCNNode?
+        var head: SCNNode?
+        node.enumerateHierarchy { child, stop in
+            guard let name = child.name?.lowercased() else { return }
+            if name == "head_end" || name == "headtop_end" {
+                skullTop = child
+                stop.pointee = true
+            } else if head == nil, name == "head" {
+                head = child
+            }
+        }
+        return skullTop ?? head
     }
 
     /// The attack bars after a turn resolves, from the engine's truth: the
@@ -1020,10 +1052,11 @@ final class BattleSceneController: NSObject {
         }
     }
 
-    /// Stands every plate under its unit's feet for the frame about to be
-    /// drawn. Called by the view's renderer delegate on the render thread,
-    /// with the camera where it will be for that frame, so a plate follows a
-    /// dash and a zoom without a frame of lag.
+    /// Stands every plate over its unit's head for the frame about to be
+    /// drawn, clear of its neighbours. Called by the view's renderer
+    /// delegate on the render thread, with the camera where it will be for
+    /// that frame, so a plate follows a dash and a zoom without a frame of
+    /// lag.
     ///
     /// `projectPoint` answers in the view's points with the origin at the
     /// top; the overlay's origin is at the bottom, so y is flipped by the
@@ -1040,20 +1073,112 @@ final class BattleSceneController: NSObject {
         guard height > 2 else { return }
         plateLock.lock()
         let targets = plateTargets
+        let bosses = plateBosses
         plateLock.unlock()
-        for (plate, node) in targets {
+
+        // Each plate where it would stand on its own.
+        var standing: [(plate: UnitPlate, id: UUID, point: CGPoint, blocks: Bool)] = []
+        for (plate, node, headJoint) in targets {
             // Over the head: the top of the figure, projected, and the
             // track's bottom edge a little above it (the genre's place;
             // under the feet before 2026-09-15).
             let feet = node.worldPosition
-            let head = SCNVector3(feet.x, feet.y + node.spec.height, feet.z)
-            let projected = renderer.projectPoint(head)
-            let onScreen = projected.z > 0 && projected.z < 1
+            let tall = node.spec.height
+            // The top of the figure AS IT IS NOW, read off the head joint.
+            // Standing, breathing, swinging or leaping, the head stays within
+            // a quarter of the height of where a standing figure's is, and
+            // the plate does not move with it; a body going DOWN — a fall, a
+            // knock-down, a death before the plate has faded — takes the
+            // plate down with it past that, eased, so no bar is left hanging
+            // in the air where a head stood (run 217's judge read a plate
+            // over the Colossus's chest as exactly that).
+            let key = node.combatantID
+            var drop: Float = 0
+            if let headJoint {
+                let skull = headJoint.presentation.worldPosition.y + tall * 0.04
+                drop = max(0, feet.y + tall - skull - tall * 0.25)
+            }
+            let easedDrop = (plateDrops[key] ?? drop) * 0.7 + drop * 0.3
+            plateDrops[key] = easedDrop
+            let top = SCNVector3(feet.x, feet.y + tall - easedDrop, feet.z)
+            // A unit standing INSIDE a boss's body — a melee dash that ends a
+            // stride from the boss's centre, which is inside the Colossus's
+            // fist — is hidden by it, and its plate hung alone over the
+            // boss's chest where it read as the boss's own (run 217). It is
+            // shown again the moment the unit walks back out.
+            let insideBoss = bosses.contains { boss in
+                guard !boss.isDefeated else { return false }
+                let centre = boss.worldPosition
+                let reach = boss.spec.height * 0.3
+                let dx = feet.x - centre.x, dz = feet.z - centre.z
+                return dx * dx + dz * dz < reach * reach
+            }
+            let projected = renderer.projectPoint(top)
+            let onScreen = projected.z > 0 && projected.z < 1 && !insideBoss
             plate.isHidden = !onScreen
-            plate.position = CGPoint(
+            let point = CGPoint(
                 x: CGFloat(projected.x),
                 y: height - CGFloat(projected.y) + UnitPlate.riseAboveHead + UnitPlate.trackHeight / 2
             )
+            // A plate on its way out (its unit has fallen) or off the frame
+            // stands in nobody's way.
+            standing.append((plate, key, point, onScreen && !node.isDefeated))
+        }
+
+        // The declutter (run 217's arena: four challengers abreast put each
+        // plate's level badge on its neighbour's health bar, so the row read
+        // as one broken bar). Left to right, a plate whose box meets one
+        // already placed moves the least distance that clears every placed
+        // plate — up a plate's height over its neighbour, or a little down
+        // under a neighbour that was itself lifted — which staggers a crowded
+        // row, the genre's answer. The box is the level badge's left edge to
+        // the track's right end and the badge's height; a badge grazing the
+        // rounded end of the next track (under 3 points) is left alone, or
+        // every row of five abreast would zigzag. Nothing is lifted past the
+        // top of the frame, and the move is eased, so a dash past a
+        // neighbour slides its plate rather than popping it.
+        let reach = UnitPlate.barWidth + 2 * UnitPlate.trackPad + 3 + UnitPlate.badgeSize / 2 - 3
+        let clear = UnitPlate.badgeSize + 3
+        let deepestDrop: CGFloat = 10
+        let headroom = UnitPlate.badgeSize / 2 + UnitPlate.tile + 4
+        var placed: [CGPoint] = []
+        for entry in standing.sorted(by: { $0.point.x < $1.point.x }) {
+            let key = entry.id
+            var lift: CGFloat = 0
+            if entry.blocks {
+                let x = entry.point.x
+                let baseY = entry.point.y
+                let beside = placed.filter { abs(x - $0.x) < reach }
+                let isClear: (CGFloat) -> Bool = { y in
+                    !beside.contains { abs(y - $0.y) < clear - 3 }
+                }
+                if !isClear(baseY) {
+                    var candidates: [CGFloat] = []
+                    for other in beside {
+                        candidates.append(other.y + clear - baseY)
+                        candidates.append(other.y - clear - baseY)
+                    }
+                    // The nearest spot that clears everything placed and
+                    // stays on the frame; failing that the nearest that
+                    // clears; failing that, where it stands.
+                    let clearing = candidates
+                        .filter { isClear(baseY + $0) }
+                        .sorted { abs($0) < abs($1) }
+                    let fitting = clearing.filter { $0 >= -deepestDrop && baseY + $0 + headroom < height }
+                    lift = fitting.first ?? clearing.first ?? 0
+                }
+                placed.append(CGPoint(x: x, y: baseY + lift))
+            }
+            let eased = (plateLifts[key] ?? lift) * 0.65 + lift * 0.35
+            let shown = abs(eased - lift) < 0.25 ? lift : eased
+            plateLifts[key] = shown
+            entry.plate.position = CGPoint(x: entry.point.x, y: entry.point.y + shown)
+        }
+        // Forget the plates that have left (a fallen wave's), now and then.
+        if plateLifts.count > standing.count + 8 {
+            let live = Set(standing.map { $0.id })
+            plateLifts = plateLifts.filter { live.contains($0.key) }
+            plateDrops = plateDrops.filter { live.contains($0.key) }
         }
     }
 

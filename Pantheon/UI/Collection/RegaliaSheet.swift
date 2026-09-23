@@ -56,8 +56,12 @@ struct RegaliaSheet: View {
                     HStack(alignment: .top, spacing: 8) {
                         item(unit, regalia)
                             .frame(width: 300)
-                        ScrollView(showsIndicators: false) {
-                            VStack(spacing: 8) {
+                        // The ladder and what raises it fit the phone's
+                        // height whole (run 217 cut "What raises it" through
+                        // its second row); on a shorter phone, or a line
+                        // that wraps, the column scrolls and says so.
+                        RegaliaColumnScroll {
+                            VStack(spacing: 6) {
                                 ladder(regalia)
                                 raising(unit, regalia)
                             }
@@ -147,26 +151,57 @@ struct RegaliaSheet: View {
 
     // MARK: - The ladder
 
+    /// The five levels, one line each, with an aside the lines share printed
+    /// ONCE under them: a Lasting Word's III, IV and V each closed on "(never
+    /// a stun, a freeze or a sleep)", which doubled three rows to two lines
+    /// and ran "What raises it" off the foot of the sheet (run 217).
     private func ladder(_ regalia: Regalia) -> some View {
-        SectionPanel(title: "The five levels", accessory: "I → \(Regalia.numeral(RegaliaTemplate.levels))") {
-            VStack(spacing: 3) {
+        let carrying = (1...RegaliaTemplate.levels).filter { ladderWords(regalia, level: $0).aside != nil }
+        let aside = carrying.first.flatMap { ladderWords(regalia, level: $0).aside }
+        return SectionPanel(title: "The five levels", accessory: "I → \(Regalia.numeral(RegaliaTemplate.levels))") {
+            VStack(alignment: .leading, spacing: 2) {
                 ForEach(1...RegaliaTemplate.levels, id: \.self) { level in
                     ladderRow(regalia, level: level)
+                }
+                if let aside, let first = carrying.first, let last = carrying.last {
+                    Text("\(ladderSpan(first, last)): \(aside)")
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.horizontal, 6)
+                        .padding(.top, 2)
                 }
             }
         }
     }
 
+    /// A level's line for the ladder, split from the parenthesised aside it
+    /// closes on, if any: "+10% accuracy, and the debuffs it lands hold a
+    /// turn longer" and "never a stun, a freeze or a sleep".
+    private func ladderWords(_ regalia: Regalia, level: Int) -> (words: String, aside: String?) {
+        let line = regalia.template.line(regalia.template.magnitude(at: level), level: level)
+        guard line.hasSuffix(")"), let open = line.range(of: " (", options: .backwards) else {
+            return (line, nil)
+        }
+        let aside = String(line[open.upperBound..<line.index(before: line.endIndex)])
+        return (String(line[..<open.lowerBound]), aside)
+    }
+
+    /// "III–V", or "V" alone.
+    private func ladderSpan(_ first: Int, _ last: Int) -> String {
+        first == last ? Regalia.numeral(first) : "\(Regalia.numeral(first))–\(Regalia.numeral(last))"
+    }
+
     private func ladderRow(_ regalia: Regalia, level: Int) -> some View {
         let current = level == regalia.level
         let reached = level <= regalia.level && unlocked
-        let magnitude = regalia.template.magnitude(at: level)
-        return HStack(spacing: 8) {
+        return HStack(spacing: 6) {
+            // 22 holds "III", the widest numeral, at 15 points in Cinzel.
             Text(Regalia.numeral(level))
                 .font(Theme.title(12))
                 .foregroundStyle(reached ? Theme.gold : Theme.textSecondary)
-                .frame(width: 26, alignment: .leading)
-            Text(regalia.template.line(magnitude, level: level))
+                .frame(width: 22, alignment: .leading)
+            Text(ladderWords(regalia, level: level).words)
                 .font(Theme.body(10))
                 .foregroundStyle(reached ? Theme.textPrimary : Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -182,7 +217,7 @@ struct RegaliaSheet: View {
             }
         }
         .padding(.horizontal, 6)
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                 .fill(current ? Theme.gold.opacity(0.12) : Theme.surface)
@@ -199,7 +234,7 @@ struct RegaliaSheet: View {
         let levelLine = "Level \(regalia.levelLabel) of \(Regalia.numeral(RegaliaTemplate.levels)) — "
             + "\(toGo) more duplicate\(toGo == 1 ? "" : "s") to V"
         return SectionPanel(title: "What raises it") {
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(RegaliaService.raisingLine)
                     .font(Theme.body(10))
                     .foregroundStyle(Theme.textSecondary)
@@ -234,6 +269,78 @@ struct RegaliaSheet: View {
                 .foregroundStyle(done ? Theme.textPrimary : Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
+        }
+    }
+}
+
+/// The fade at the foot of the regalia sheet's right column when it scrolls,
+/// and the room its last line keeps under it to scroll clear.
+private let regaliaColumnFade: CGFloat = 14
+
+/// The coordinate space `RegaliaColumnScroll` measures its content in.
+private let regaliaColumnSpace = "regaliaColumnScroll"
+
+/// The regalia sheet's right column, measured the way the unit sheet's
+/// panels are (`SheetPanelScroll`, private to UnitDetailView.swift): content
+/// that fits is drawn whole with no fade at all; content that does not fades
+/// at the foot and wears a small chevron there until its last line has been
+/// scrolled into view. The plain scroll it replaces cut "What raises it"
+/// through a line of words with no border and nothing to say it scrolled
+/// (run 217, frame 46).
+private struct RegaliaColumnScroll<Content: View>: View {
+    let content: () -> Content
+    @State private var contentFrame: CGRect = .zero
+    @State private var viewportHeight: CGFloat = 0
+
+    init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+
+    private var overflows: Bool { contentFrame.height > viewportHeight + 1 }
+    private var moreBelow: Bool { overflows && contentFrame.maxY > viewportHeight + 2 }
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            content()
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .background(
+                    GeometryReader { proxy in
+                        let frame = proxy.frame(in: .named(regaliaColumnSpace))
+                        Color.clear
+                            .onAppear { contentFrame = frame }
+                            .onChange(of: frame) { _, now in contentFrame = now }
+                    }
+                )
+                .padding(.bottom, overflows ? regaliaColumnFade : 0)
+        }
+        .coordinateSpace(name: regaliaColumnSpace)
+        .scrollBounceBehavior(.basedOnSize)
+        .background(
+            GeometryReader { proxy in
+                let height = proxy.size.height
+                Color.clear
+                    .onAppear { viewportHeight = height }
+                    .onChange(of: height) { _, now in viewportHeight = now }
+            }
+        )
+        .mask(
+            VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [Color.black, moreBelow ? Color.clear : Color.black], startPoint: .top, endPoint: .bottom)
+                    .frame(height: regaliaColumnFade)
+            }
+        )
+        .overlay(alignment: .bottom) {
+            if moreBelow {
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.goldDim)
+                    .frame(width: 30, height: 12)
+                    .background(Capsule().fill(Theme.surfaceHigh.opacity(0.92)))
+                    .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 0.8))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
         }
     }
 }

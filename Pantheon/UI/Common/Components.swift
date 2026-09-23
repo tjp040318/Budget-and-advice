@@ -11,11 +11,34 @@ struct StarRow: View {
     let stars: Int
     var natural: Int? = nil
     var size: CGFloat = 12
+    /// Each star in a box of `packedBox` × its point size, a hairline apart,
+    /// so the row is exactly as wide as the arithmetic says. Unpacked, a
+    /// star's width is the symbol's own advance, which at the small sizes
+    /// SF's optical sizing loosens to about 1.55 × the point size (run 217,
+    /// measured off the arena's 40-point tiles: 9.1 points a star at 6), so
+    /// five stars sized for 1.2 ran 4 points past the tile and lost half a
+    /// star under each rim. `UnitPortraitTile` packs its rows; every other
+    /// row keeps the symbol's spacing.
+    var packed: Bool = false
+
+    /// A packed star's box, as a multiple of the point size: the black
+    /// star's ink is about 1.1 of it, so the box holds the ink whole.
+    static let packedBox: CGFloat = 1.15
+    /// The gap between two packed stars, as a multiple of the point size.
+    static let packedGap: CGFloat = 0.08
+    /// The width one packed star takes along its row, box and gap — what a
+    /// caller divides its room by to size the stars so the row fits.
+    static let packedAdvance: CGFloat = packedBox + packedGap
 
     var body: some View {
-        HStack(spacing: size * 0.06) {
+        HStack(spacing: size * (packed ? Self.packedGap : 0.06)) {
             ForEach(Array(0..<max(1, stars)), id: \.self) { index in
-                star(evolved: isEvolved(index))
+                if packed {
+                    star(evolved: isEvolved(index))
+                        .frame(width: size * Self.packedBox, height: size * Self.packedBox)
+                } else {
+                    star(evolved: isEvolved(index))
+                }
             }
         }
     }
@@ -444,6 +467,10 @@ enum ItemArt {
         if key.hasPrefix("gem_") { return "diamond.fill" }
         if key.hasPrefix("awakening_cache_") { return "shippingbox.fill" }
         if key.hasPrefix("boon_cache_") { return "seal.fill" }
+        // Pure aether is a spark of its own, never an element's hexagon: in
+        // the Titans' room it stood beside umbra's in the same violet hexagon
+        // and the two counts could not be told apart (run 217).
+        if key == Aether.pure { return "sparkle" }
         if Aether.isAether(key) { return "circle.hexagonpath.fill" }
         switch key {
         case "drachma": return "circle.hexagongrid.fill"
@@ -475,9 +502,12 @@ enum ItemArt {
         // A boon cache is a wax seal in gold, like the relic cache it stands
         // beside on a shelf.
         if key.hasPrefix("boon_cache_") { return Theme.gold }
-        // Elemental aether burns in its element; pure aether is amethyst, a
-        // shade brighter than divinity's violet so the two never read as one.
-        if Aether.isAether(key) { return Aether.element(of: key)?.color ?? Color(hex: "#9C6FD6") }
+        // Elemental aether burns in its element; pure aether is white-gold,
+        // the colour of no element. It was amethyst (#9C6FD6), within a few
+        // points of umbra's #9B6BE0, and the Titans' "Held" row drew the two
+        // as one (run 217). On cream it keeps a gold edge (`edge`).
+        if key == Aether.pure { return Self.pureAetherTint }
+        if Aether.isAether(key) { return Aether.element(of: key)?.color ?? Self.pureAetherTint }
         if let stone = RelicStone.from(id: key) { return stone.tier.quality.rarity.glow }
         switch key {
         case "drachma", "relic_cache", "rank_points", "bundle": return Theme.gold
@@ -489,6 +519,17 @@ enum ItemArt {
         case "unit_exp": return Theme.verdigris
         default: return Theme.gold
         }
+    }
+
+    /// Pure aether's white-gold: paler than radiance's #F5D96B and a
+    /// different glyph from every element's hexagon.
+    static let pureAetherTint = Color(hex: "#F3E7C4")
+
+    /// A thin rim for a glyph too pale to hold on a cream socket by itself —
+    /// pure aether's white-gold on the relic card's awakening costs. Nil for
+    /// everything that carries its own colour.
+    static func edge(_ key: String) -> Color? {
+        key == Aether.pure ? Theme.goldDim : nil
     }
 
     private static func scrollType(of key: String) -> ScrollType? {
@@ -627,9 +668,14 @@ struct ItemIcon: View {
                 .frame(width: size, height: size)
                 .shadow(color: paint.opacity(glow ? 0.35 : 0), radius: size * 0.12)
         } else {
+            // A pale glyph's edge is two tight shadows of its rim colour
+            // under the glow; `.clear` for every glyph that has none.
+            let edge = ItemArt.edge(key) ?? .clear
             Image(systemName: ItemArt.glyph(key))
                 .font(.system(size: size * 0.6, weight: .bold))
                 .foregroundStyle(paint)
+                .shadow(color: edge, radius: 0.6)
+                .shadow(color: edge, radius: 0.6)
                 .shadow(color: paint.opacity(glow ? 0.6 : 0), radius: size * 0.14)
                 .frame(width: size, height: size)
         }

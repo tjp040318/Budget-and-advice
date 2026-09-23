@@ -251,7 +251,9 @@ enum RaidGradeService {
     static func target(after best: RaidGrade?, profile: RaidBossProfile) -> String {
         func turns(_ grade: RaidGrade) -> Int { turnsAllowed(for: grade, profile: profile) ?? enrageBar(profile) }
         guard let best, best.isKill else {
-            return "Bring it down for a B. S inside \(turns(.s)) turns, SSS inside \(turns(.sss))."
+            // Each grade after its condition (run 217): "for a B. S inside"
+            // read at a glance as "B.S.".
+            return "A kill earns B; inside \(turns(.s)) turns S, inside \(turns(.sss)) SSS."
         }
         switch best {
         case .b: return "A inside \(turns(.a)) turns."

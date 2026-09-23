@@ -120,10 +120,11 @@ struct BattleView: View {
             if let banner = model.repeatBanner {
                 Text(banner)
                     .font(Theme.title(16))
-                    .foregroundStyle(Theme.gold)
+                    .foregroundStyle(Theme.onGlassGold)
                     .padding(.horizontal, 18)
                     .padding(.vertical, 10)
-                    .background(Capsule().fill(Theme.plate.opacity(0.6)))
+                    .background(Capsule().fill(Theme.glass))
+                    .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 1))
                     .allowsHitTesting(false)
                     .transition(.opacity)
                     .onAppear {
@@ -175,15 +176,23 @@ struct BattleView: View {
 
     // MARK: - Top bar
 
-    /// One height and one shape for every control in the top row, and one way
-    /// for a stateful control — AUTO, fast-forward, the log — to say it is
-    /// on: a gold plate under a gold hairline.
+    /// One height and one shape for every chip in the top row, and one way
+    /// for a stateful one — a repeat run — to say it is on: a gold plate
+    /// under a gold hairline.
+    ///
+    /// DARK GLASS over the fight (run 217): the chips were the cream plate at
+    /// 0.6 over the 3D set — the premium pass's rule is dark glass over art,
+    /// cream marble for data — and "Wave 1/3" in gold on pale cream was the
+    /// lowest-contrast word on the screen. A chip takes its own width
+    /// (`fixedSize`): the title chip was a fixed 190 points with "vs Phaidra"
+    /// filling a third of it, like an empty search field.
     private func hudChip<C: View>(active: Bool = false, @ViewBuilder _ content: () -> C) -> some View {
         content()
             .frame(height: 30)
-            .padding(.horizontal, 10)
-            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.92) : Theme.plate.opacity(0.6)))
-            .overlay(Capsule().strokeBorder(active ? Theme.gold : Theme.stroke, lineWidth: 1))
+            .padding(.horizontal, 12)
+            .background(Capsule().fill(active ? Theme.goldDeep.opacity(0.92) : Theme.glass))
+            .overlay(Capsule().strokeBorder(active ? Theme.gold : Theme.glassRim, lineWidth: 1))
+            .fixedSize()
     }
 
     // MARK: - The player's team
@@ -225,16 +234,14 @@ struct BattleView: View {
             hudChip {
                 Text(model.context.title)
                     .font(Theme.body(11).weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(Theme.onGlass)
                     .lineLimit(1)
-                    .truncationMode(.tail)
-                    .frame(maxWidth: 170, alignment: .leading)
             }
             if model.waveCount > 1 {
                 hudChip {
                     Text("Wave \(model.waveIndex)/\(model.waveCount)")
                         .font(Theme.numeric(11))
-                        .foregroundStyle(Theme.gold)
+                        .foregroundStyle(Theme.onGlassGold)
                         .lineLimit(1)
                 }
             }
@@ -249,7 +256,7 @@ struct BattleView: View {
                             Text("\(min(session.completed + 1, session.requested))/\(session.requested)")
                         }
                         .font(Theme.numeric(11).weight(.bold))
-                        .foregroundStyle(Theme.gold)
+                        .foregroundStyle(Theme.onGlassGold)
                     }
                 }
             }
@@ -282,19 +289,21 @@ struct BattleView: View {
         }
     }
 
-    /// One control: a 36-point plate, gold-rimmed and gold-lit when it is on.
+    /// One control: a 36-point square of dark glass with its glyph in pale
+    /// gold, and a lit gold plate with ink when it is on (the cream plate at
+    /// 0.7 it was read as washed-out chrome over the set, run 217).
     private func squareControl<L: View>(active: Bool, action: @escaping () -> Void, @ViewBuilder label: () -> L) -> some View {
         Button(action: action) {
             label()
-                .foregroundStyle(active ? Theme.ink : Theme.textPrimary)
+                .foregroundStyle(active ? Theme.ink : Theme.onGlassGold)
                 .frame(width: 36, height: 36)
                 .background(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(active ? Theme.gold.opacity(0.92) : Theme.plate.opacity(0.7))
+                        .fill(active ? Theme.gold.opacity(0.92) : Theme.glass)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(active ? Theme.goldDeep : Theme.stroke, lineWidth: 1)
+                        .strokeBorder(active ? Theme.goldDeep : Theme.glassRim, lineWidth: 1)
                 )
                 .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
         }
@@ -328,21 +337,30 @@ struct BattleView: View {
         }
     }
 
+    /// Skip, on the same dark glass as the controls and the same 36 points
+    /// tall: cream words and a pale gold glyph, because the caption grey it
+    /// wore on the cream plate read as a disabled button (run 217).
     private var skipButton: some View {
         Button {
             model.skipAnimation()
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "forward.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(Theme.onGlassGold)
                 Text("Skip")
+                    .font(Theme.body(13).weight(.bold))
+                    .foregroundStyle(Theme.onGlass)
+                    .lineLimit(1)
             }
-            .font(Theme.body(12).weight(.semibold))
-            .foregroundStyle(Theme.textSecondary)
-            .padding(.horizontal, 14)
-            .frame(height: 30)
-            .background(Capsule().fill(Theme.plate.opacity(0.6)))
-            .overlay(Capsule().strokeBorder(Theme.stroke, lineWidth: 1))
+            .padding(.horizontal, 16)
+            .frame(height: 36)
+            .background(Capsule().fill(Theme.glass))
+            .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 1))
+            .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+            .fixedSize()
         }
+        .buttonStyle(.plain)
     }
 
     /// The target the next tap would hit, if one is aimed.
@@ -732,19 +750,6 @@ struct SkillButton: View {
             }
             .frame(width: 60, height: 60)
             .clipShape(RoundedRectangle(cornerRadius: Self.corner, style: .continuous))
-            .overlay(alignment: .topTrailing) {
-                // Who it lands on — but only when that is worth saying. A
-                // plain single-enemy skill is the common case and wears
-                // nothing, so the art is what the eye meets.
-                if let badge = Self.targetGlyph(for: skill) {
-                    Image(systemName: badge)
-                        .font(.system(size: 7, weight: .black))
-                        .foregroundStyle(Theme.ink)
-                        .padding(2.5)
-                        .background(Circle().fill(Theme.plate.opacity(0.95)))
-                        .offset(x: 3, y: -3)
-                }
-            }
             .overlay(
                 RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
                     .strokeBorder(
@@ -752,6 +757,23 @@ struct SkillButton: View {
                         lineWidth: isSelected ? 3 : 2
                     )
             )
+            .overlay(alignment: .topTrailing) {
+                // Who it lands on — but only when that is worth saying. A
+                // plain single-enemy skill is the common case and wears
+                // nothing, so the art is what the eye meets. Inside the
+                // frame's corner on a 16-point disc of dark glass, the glyph
+                // in cream: it hung over the gold corner as a small grey
+                // disc with a 7-point glyph nobody could read (run 217).
+                if let badge = Self.targetGlyph(for: skill) {
+                    Image(systemName: badge)
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Theme.onGlass)
+                        .frame(width: 16, height: 16)
+                        .background(Circle().fill(Theme.glass))
+                        .overlay(Circle().strokeBorder(Theme.glassRim, lineWidth: 0.8))
+                        .padding(4)
+                }
+            }
             .shadow(color: isSelected ? Theme.gold.opacity(0.9) : Color.black.opacity(0.5), radius: isSelected ? 10 : 4, y: isSelected ? 0 : 2)
             .scaleEffect(isSelected ? 1.06 : 1)
             .animation(.easeOut(duration: 0.15), value: isSelected)
@@ -1463,12 +1485,159 @@ struct RewardChestView: UIViewRepresentable {
     /// lid hinged anywhere else swings through the box or floats.
     private static let hinge = SCNVector3(0, 0.617, -0.433)
 
-    final class Coordinator {
+    final class Coordinator: NSObject, SCNSceneRendererDelegate {
         var scene: SCNScene?
         let chest = SCNNode()
         var lid: SCNNode?
         var opened = false
         var vanished = false
+        /// The view, held at alpha 0 until SceneKit has drawn it once.
+        weak var view: SCNView?
+        /// The render thread's: the first frame has been drawn.
+        private var drewFirstFrame = false
+        /// The main thread's: the view has been faded in.
+        private var revealed = false
+
+        /// The first frame is on the screen: fade the view in over it. A
+        /// transparent HDR view shows nothing of its own until then, and a
+        /// view that is visible before its first frame is whatever the
+        /// compositor had — never a white slab in front of the chest.
+        func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
+            guard !drewFirstFrame else { return }
+            drewFirstFrame = true
+            DispatchQueue.main.async { [weak self] in self?.reveal() }
+        }
+
+        /// Fades the view in, once — on its first frame, or from a half-second
+        /// fallback so a callback that never comes cannot hide the chest.
+        func reveal() {
+            guard !revealed else { return }
+            revealed = true
+            DispatchQueue.main.async { [weak self] in
+                guard let view = self?.view else { return }
+                UIView.animate(withDuration: 0.22) { view.alpha = 1 }
+            }
+        }
+
+        /// The opening's light, sized for THIS frame — half a second into the
+        /// opening, built on the main thread. The chest used to borrow the
+        /// reveal's beam and the light element's hit: the beam is a 14 m
+        /// column for a stage seen from eight metres, which ran out of the
+        /// top of this 300-point view and was cut flat by its edge, and the
+        /// hit throws the painted ring, whose sprite is an opaque WHITE
+        /// square (`vfx_ring.png` was painted on white), grown to 3.5 m —
+        /// wider than this whole frame at the chest, which is about 3.1 m by
+        /// 1.8. Run 217 photographed the chest standing in a pure white
+        /// rectangle over the dark victory ground. Everything here stays
+        /// inside the frame, fades before it reaches an edge and ADDS light
+        /// without writing alpha (the transparent view's rule, written down
+        /// in `SummonRevealView`).
+        func burst() {
+            let gold = UIColor(hex: "#FFD36A") ?? .yellow
+            let warm = gold.mixed(with: .white, amount: 0.45)
+
+            // The pillar: a sheet facing the lens, brightest at the chest's
+            // mouth and gone by 1.35 m — the frame's top edge is 1.45 m up
+            // at the chest.
+            let pillar = SCNPlane(width: 0.95, height: 0.95)
+            pillar.firstMaterial = lightMaterial(ChestLight.pillar, tint: warm)
+            let pillarNode = SCNNode(geometry: pillar)
+            pillarNode.position = SCNVector3(0, 0.875, 0.02)
+            pillarNode.opacity = 0
+            pillarNode.scale = SCNVector3(0.15, 1, 1)
+            chest.addChildNode(pillarNode)
+            let rise = SCNAction.group([
+                .fadeIn(duration: 0.28),
+                .customAction(duration: 0.28) { node, elapsed in
+                    let t = Float(min(1, elapsed / 0.28))
+                    node.scale = SCNVector3(0.15 + 0.85 * t, 1, 1)
+                },
+            ])
+            pillarNode.runAction(.sequence([rise, .wait(duration: 0.5), .fadeOut(duration: 0.6), .removeFromParentNode()]))
+
+            // The flare at the mouth: the painted four-point star (a real
+            // alpha channel), 0.8 m growing to 1.2 m and gone in half a
+            // second.
+            if let flareImage = VFXLibrary.sprite("flare") {
+                let flare = SCNPlane(width: 0.8, height: 0.8)
+                flare.firstMaterial = lightMaterial(flareImage, tint: warm)
+                let flareNode = SCNNode(geometry: flare)
+                flareNode.position = SCNVector3(0, 0.72, 0.18)
+                chest.addChildNode(flareNode)
+                let bloom = SCNAction.scale(to: 1.5, duration: 0.5)
+                bloom.timingMode = .easeOut
+                flareNode.runAction(.sequence([
+                    .group([bloom, .sequence([.wait(duration: 0.15), .fadeOut(duration: 0.35)])]),
+                    .removeFromParentNode(),
+                ]))
+            }
+
+            // Sparks rising out of the box, gone before the frame's top.
+            let sparks = SCNParticleSystem()
+            sparks.loops = false
+            sparks.birthRate = 110
+            sparks.emissionDuration = 0.5
+            sparks.birthLocation = .volume
+            sparks.emitterShape = SCNBox(width: 0.7, height: 0.02, length: 0.35, chamferRadius: 0)
+            sparks.particleImage = VFXLibrary.sprite("flare") ?? UIImage(named: "spark")
+            sparks.particleColor = warm
+            sparks.particleSize = 0.05
+            sparks.particleSizeVariation = 0.025
+            sparks.particleLifeSpan = 0.75
+            sparks.particleLifeSpanVariation = 0.15
+            sparks.particleVelocity = 0.6
+            sparks.particleVelocityVariation = 0.2
+            sparks.emittingDirection = SCNVector3(0, 1, 0)
+            sparks.spreadingAngle = 18
+            sparks.acceleration = SCNVector3(0, 0.2, 0)
+            sparks.isAffectedByGravity = false
+            sparks.blendMode = .additive
+            sparks.isLightingEnabled = false
+            sparks.orientationMode = .billboardScreenAligned
+            let fade = CAKeyframeAnimation()
+            fade.values = [0, 1, 1, 0] as [NSNumber]
+            fade.keyTimes = [0, 0.15, 0.6, 1] as [NSNumber]
+            sparks.propertyControllers = [.opacity: SCNParticlePropertyController(animation: fade)]
+            let sparkHost = SCNNode()
+            sparkHost.position = SCNVector3(0, 0.55, 0)
+            sparkHost.addParticleSystem(sparks)
+            chest.addChildNode(sparkHost)
+            sparkHost.runAction(.sequence([.wait(duration: 2.5), .removeFromParentNode()]))
+
+            // And the gold the box throws on its own lid and rim: a small
+            // lamp in its mouth, reaching a metre and a half.
+            let lamp = SCNLight()
+            lamp.type = .omni
+            lamp.color = gold
+            lamp.intensity = 0
+            lamp.attenuationStartDistance = 0.3
+            lamp.attenuationEndDistance = 1.5
+            let lampNode = SCNNode()
+            lampNode.light = lamp
+            lampNode.position = SCNVector3(0, 0.75, 0.1)
+            chest.addChildNode(lampNode)
+            lampNode.runAction(.sequence([
+                .customAction(duration: 1.1) { node, elapsed in
+                    let t = CGFloat(min(1, elapsed / 1.1))
+                    node.light?.intensity = 1_300 * (t < 0.2 ? t / 0.2 : (1 - t) / 0.8)
+                },
+                .removeFromParentNode(),
+            ]))
+        }
+
+        /// A sheet of light: constant, added to what is behind it, never
+        /// written to depth or to the alpha channel.
+        private func lightMaterial(_ image: UIImage, tint: UIColor) -> SCNMaterial {
+            let material = SCNMaterial()
+            material.lightingModel = .constant
+            material.diffuse.contents = image
+            material.multiply.contents = tint
+            material.blendMode = .add
+            material.writesToDepthBuffer = false
+            material.colorBufferWriteMask = [.red, .green, .blue]
+            material.isDoubleSided = true
+            return material
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -1476,11 +1645,15 @@ struct RewardChestView: UIViewRepresentable {
     func makeUIView(context: Context) -> SCNView {
         let view = SCNView()
         let scene = SCNScene()
-        view.scene = scene
         // Transparent, like the reveal's stage: the rays and the gold glow
-        // behind this view are the light the chest sits in. The beam and the
-        // sparks it spawns are the reveal's own and write no alpha.
+        // behind this view are the light the chest sits in. Said three
+        // times over — the scene's own background, the view's colour and
+        // its opacity — because a transparent HDR view that falls back to
+        // any one default is a slab in front of the act (run 217).
+        scene.background.contents = UIColor.clear
+        view.scene = scene
         view.backgroundColor = .clear
+        view.isOpaque = false
         view.antialiasingMode = .multisampling2X
         view.allowsCameraControl = false
         view.rendersContinuously = true
@@ -1489,6 +1662,15 @@ struct RewardChestView: UIViewRepresentable {
 
         let coordinator = context.coordinator
         coordinator.scene = scene
+        // Held invisible until SceneKit has drawn it once, then faded in by
+        // the coordinator's `didRenderScene`, with a fallback in case that
+        // callback never comes.
+        view.alpha = 0
+        coordinator.view = view
+        view.delegate = coordinator
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak coordinator] in
+            coordinator?.reveal()
+        }
         let chest = coordinator.chest
         chest.addChildNode(StageBuilder.loadProp("prop_reward_chest") ?? Self.standInBox())
         let lid = SCNNode()
@@ -1604,7 +1786,7 @@ struct RewardChestView: UIViewRepresentable {
 
     /// The shake, the lid, the light. About a second; the flash follows.
     private func openSequence(_ coordinator: Coordinator) {
-        guard !coordinator.opened, let lid = coordinator.lid, let scene = coordinator.scene else { return }
+        guard !coordinator.opened, let lid = coordinator.lid else { return }
         coordinator.opened = true
         let chest = coordinator.chest
         chest.removeAction(forKey: "hop")
@@ -1630,15 +1812,13 @@ struct RewardChestView: UIViewRepresentable {
         settle.timingMode = .easeInEaseOut
         lid.runAction(.sequence([.wait(duration: 0.32), swing, settle]))
 
-        // The light standing up out of the box, and a flare at its mouth.
-        let gold = UIColor(hex: "#FFD36A") ?? .yellow
-        chest.runAction(.sequence([
-            .wait(duration: 0.5),
-            .run { _ in
-                VFXLibrary.summonBeam(at: SCNVector3(0, 0.3, 0), in: scene, tint: gold)
-                VFXLibrary.spawn("impact_radiance", at: SCNVector3(0, 0.8, 0), in: scene, tint: gold, scale: 1.3)
-            },
-        ]))
+        // The light standing up out of the box, and a flare at its mouth —
+        // this frame's own (the coordinator's `burst()`), built on the main
+        // thread half a second in, not in an action's block on the render
+        // thread.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak coordinator] in
+            coordinator?.burst()
+        }
     }
 
     /// Lifts and fades under the flash; the spoils on the shelf are what stay.
@@ -1682,4 +1862,44 @@ struct RewardChestView: UIViewRepresentable {
         node.position = SCNVector3(0, 0.18, 0.43)
         return node
     }
+}
+
+/// The reward chest's pillar of light, drawn once: white at the core and
+/// soft at the sides, full at the bottom and nothing at the top, so the
+/// sheet the chest's `burst()` stands up out of the box never shows an
+/// edge. Tinted gold by the material.
+private enum ChestLight {
+    static let pillar: UIImage = {
+        let size = CGSize(width: 64, height: 256)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: size, format: format).image { context in
+            let cg = context.cgContext
+            let space = CGColorSpaceCreateDeviceRGB()
+            let across = [
+                UIColor(white: 1, alpha: 0).cgColor,
+                UIColor(white: 1, alpha: 0.35).cgColor,
+                UIColor(white: 1, alpha: 1).cgColor,
+                UIColor(white: 1, alpha: 0.35).cgColor,
+                UIColor(white: 1, alpha: 0).cgColor,
+            ]
+            let acrossStops: [CGFloat] = [0, 0.28, 0.5, 0.72, 1]
+            if let gradient = CGGradient(colorsSpace: space, colors: across as CFArray, locations: acrossStops) {
+                cg.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: size.width, y: 0), options: [])
+            }
+            // Keep what is drawn, faded from the foot (y = height in UIKit's
+            // flipped context) to nothing at the top.
+            cg.setBlendMode(.destinationIn)
+            let up = [
+                UIColor(white: 1, alpha: 1).cgColor,
+                UIColor(white: 1, alpha: 0.5).cgColor,
+                UIColor(white: 1, alpha: 0).cgColor,
+            ]
+            let upStops: [CGFloat] = [0, 0.5, 1]
+            if let fade = CGGradient(colorsSpace: space, colors: up as CFArray, locations: upStops) {
+                cg.drawLinearGradient(fade, start: CGPoint(x: 0, y: size.height), end: .zero, options: [])
+            }
+        }
+    }()
 }

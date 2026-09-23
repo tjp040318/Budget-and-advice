@@ -43,7 +43,10 @@ struct IslandDecorView: View {
     private func tile(_ piece: IslandDecoration) -> some View {
         let player = store.player
         let owned = IslandDecorService.owns(piece.id, player: player)
-        let locked = player.level < piece.unlockLevel
+        // A piece already owned is never locked, whatever the level: run
+        // 217's tour player (level 1) owned the sphinx and it wore a padlock
+        // over its thumbnail beside its "Owned" chip.
+        let locked = !owned && player.level < piece.unlockLevel
         let standing = player.islandDecor?.values.contains(piece.id) ?? false
         let picked = selected == piece.id
 
@@ -78,10 +81,14 @@ struct IslandDecorView: View {
                     RoundedRectangle(cornerRadius: 10, style: .continuous)
                         .strokeBorder(picked ? Theme.gold : Theme.stroke, lineWidth: picked ? 2 : 1)
                 )
+                // Two lines rather than an ellipsis: "Statue of the
+                // Thunderer" is wider than a tile.
                 Text(piece.title)
-                    .font(Theme.body(10).weight(.bold))
+                    .font(Theme.body(11).weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 priceLine(piece, owned: owned, locked: locked)
             }
             .padding(6)
@@ -120,45 +127,57 @@ struct IslandDecorView: View {
 
     // MARK: - The piece and the patches
 
+    /// The piece picked over the six sand patches, the height of the content
+    /// and no taller: the patches are one-line rows in a scroll that ends
+    /// above the home indicator. Run 217 drew them as two-line rows under a
+    /// 96-point thumbnail in a panel that did not scroll, so "Eastern shore"
+    /// was cut by the screen's foot and "By the grove" could not be reached.
+    /// At rest the six fit (a 72-point head, 26 a row); a long piece's name
+    /// wraps its row and the list scrolls rather than cut anything.
     private var panel: some View {
         let piece = IslandDatabase.decoration(selected) ?? IslandDatabase.decorations[0]
         let player = store.player
         let owned = IslandDecorService.owns(piece.id, player: player)
-        let locked = player.level < piece.unlockLevel
+        let locked = !owned && player.level < piece.unlockLevel
         let affordable = player.wallet.drachma >= piece.price
         let figures = piece.height / IslandSceneView.figureHeight
 
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
-                thumbnail(piece, size: 96)
-                    .padding(6)
-                    .frame(width: 96, height: 96)
+                thumbnail(piece, size: 72)
+                    .padding(5)
+                    .frame(width: 72, height: 72)
                     .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(Theme.stonePlate))
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 3) {
                     Text(piece.title)
                         .font(Theme.title(15))
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(2)
-                        .minimumScaleFactor(0.8)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(piece.blurb)
-                        .font(Theme.body(10))
+                        .font(Theme.body(11))
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(String(format: "Stands %.1f× a figure's height", figures))
-                        .font(Theme.numeric(10))
+                        .font(Theme.numeric(11))
                         .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
             if owned {
                 SectionHeader(title: "Where it stands")
-                VStack(spacing: 2) {
-                    ForEach(IslandDatabase.decorSlots) { slot in
-                        slotRow(slot, piece: piece)
+                ScrollView(.vertical, showsIndicators: false) {
+                    VStack(spacing: 0) {
+                        ForEach(IslandDatabase.decorSlots) { slot in
+                            slotRow(slot, piece: piece)
+                        }
                     }
                 }
+                .scrollBounceBehavior(.basedOnSize)
             } else if locked {
                 PrimaryButton(title: "Reach level \(piece.unlockLevel)", systemImage: "lock.fill", isEnabled: false) {}
+                Spacer(minLength: 0)
             } else {
                 PrimaryButton(title: "Buy · \(piece.price.formatted())", systemImage: "circle.hexagongrid.fill", isEnabled: affordable) {
                     if store.buyDecoration(piece.id) {
@@ -167,37 +186,45 @@ struct IslandDecorView: View {
                 }
                 if !affordable {
                     Text("Not enough drachma — the campaign and the Night Market pay it.")
-                        .font(Theme.body(10))
+                        .font(Theme.body(11))
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
         .padding(10)
+        .frame(maxHeight: .infinity, alignment: .top)
         .modifier(PanelBackground())
     }
 
-    /// One sand patch: what stands there, and Place, Swap or Clear for the
-    /// piece picked.
+    /// One sand patch on one line: its name, what stands there, and Place,
+    /// Swap or Take in for the piece picked. The dashed ring is an empty
+    /// patch, the gold pin the piece picked standing there.
     private func slotRow(_ slot: DecorSlot, piece: IslandDecoration) -> some View {
         let standingID = store.player.islandDecor?[slot.id]
         let standing = standingID.flatMap { IslandDatabase.decoration($0) }
         let isHere = standingID == piece.id
+        let standingName = standing?.title ?? "Empty"
 
-        return HStack(spacing: 8) {
+        return HStack(alignment: .center, spacing: 8) {
             Image(systemName: isHere ? "mappin.circle.fill" : "circle.dashed")
                 .font(.system(size: 13, weight: .bold))
                 .foregroundStyle(isHere ? Theme.gold : Theme.textSecondary)
-            VStack(alignment: .leading, spacing: 1) {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text(slot.title)
                     .font(Theme.body(11).weight(.bold))
                     .foregroundStyle(Theme.textPrimary)
-                Text(standing?.title ?? "Empty")
-                    .font(Theme.body(9))
-                    .foregroundStyle(isHere ? Theme.gold : Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                // What stands there wraps under itself rather than cut:
+                // "Statue of the Thunderer" is longer than the row.
+                Text("· \(standingName)")
+                    .font(Theme.body(11))
+                    .foregroundStyle(isHere ? Theme.goldDim : Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer()
+            Spacer(minLength: 4)
             if isHere {
                 pill("Take in", tint: Theme.stroke) {
                     store.clearDecoration(in: slot.id)
@@ -208,7 +235,7 @@ struct IslandDecorView: View {
                 }
             }
         }
-        .padding(.vertical, 3)
+        .frame(minHeight: 26)
     }
 
     private func pill(_ title: String, tint: Color, action: @escaping () -> Void) -> some View {
@@ -221,8 +248,10 @@ struct IslandDecorView: View {
                 .font(Theme.title(12))
                 .tracking(0.8)
                 .foregroundStyle(Theme.ink)
+                .lineLimit(1)
+                .fixedSize()
                 .padding(.horizontal, 10)
-                .frame(height: 24)
+                .frame(height: 22)
                 .background(Capsule().fill(tint))
                 .overlay(Capsule().strokeBorder(Theme.goldDeep.opacity(0.35), lineWidth: 1))
         }

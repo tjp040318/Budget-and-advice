@@ -553,8 +553,12 @@ struct SettingsView: View {
 
     private var soundPanel: some View {
         SectionPanel(title: "Sound & camera", accessory: nil) {
-            FadingBoard {
-                VStack(alignment: .leading, spacing: 7) {
+            // Four points between the rows, not seven, and the camera's two
+            // captions as one pair: the 18 points that buys are what keeps
+            // the last caption off the bottom-left acanthus with the board
+            // still whole at rest (run 217).
+            FadingBoard(foot: boardAcanthus) {
+                VStack(alignment: .leading, spacing: 4) {
                     Toggle(isOn: $soundOn) {
                         Text("Sound effects")
                             .font(Theme.body(12))
@@ -583,8 +587,10 @@ struct SettingsView: View {
                     .tint(Theme.gold)
                     // One line each (run 216 cut the old paragraph mid-word
                     // at the board's foot).
-                    caption("Off: one fixed view, the genre's way.")
-                    caption("On: cuts, leans and orbits on skills.")
+                    VStack(alignment: .leading, spacing: 1) {
+                        caption("Off: one fixed view, the genre's way.")
+                        caption("On: cuts, leans and orbits on skills.")
+                    }
                 }
             }
         }
@@ -599,7 +605,7 @@ struct SettingsView: View {
     /// behind the row now, in a debug build only (`DiagnosticsDesk`).
     private var supportPanel: some View {
         SectionPanel(title: "Support", accessory: nil) {
-            FadingBoard {
+            FadingBoard(foot: boardAcanthus) {
                 VStack(alignment: .leading, spacing: 8) {
                     row("Version", LaunchView.version)
                     NavigationLink {
@@ -685,29 +691,100 @@ struct SettingsView: View {
     }
 }
 
-/// A board's body on More: it scrolls when it is taller than its board, and
-/// its last 22 points fade out so a line cut at the foot reads as "more
-/// below" — run 211 stopped the Sound & camera paragraph mid-sentence at the
-/// panel's edge with nothing to say it went on (2026-09-22, phase B). The
-/// body ends in 22 empty points, so one that fits sits clear of the fade.
+/// The fade at the foot of a More board that scrolls, and the room its last
+/// line keeps under it so it can scroll clear.
+private let boardFade: CGFloat = 22
+
+/// How far the painted panel's acanthus corner reaches up past the panel's
+/// own padding: the room a board whose foot is its panel's foot keeps under
+/// its last line. Run 217's Sound & camera caption stood on the bottom-left
+/// scroll ("On: cuts, …" with its "O" in the leaves).
+private let boardAcanthus: CGFloat = 16
+
+/// The coordinate space a `FadingBoard` measures its content in.
+private let fadingBoardSpace = "fadingBoard"
+
+/// A board's body on More: it scrolls when it is taller than its board — and
+/// says so only when it has to.
+///
+/// Run 211 stopped the Sound & camera paragraph mid-sentence at the panel's
+/// edge with nothing to say it went on, so the body got a 22-point fade at
+/// its foot and 22 empty points under its last line (2026-09-22, phase B).
+/// Those 22 points were what overflowed: run 217's Sound & camera board and
+/// the guest's note on the Account board both FIT their boards, and their
+/// last lines stood ghosted in the fade, reading as disabled. So the body is
+/// measured, as the unit sheet's `SheetPanelScroll` is: content that fits is
+/// drawn whole with no fade at all; content that does not fades at the foot,
+/// wears a small chevron there until its last line has been scrolled into
+/// view, and keeps the fade's height under that line so it can scroll clear.
+/// `foot` is room kept under the last line either way (`boardAcanthus` where
+/// the board's foot is its panel's foot).
 private struct FadingBoard<Content: View>: View {
-    @ViewBuilder var content: () -> Content
+    let foot: CGFloat
+    let content: () -> Content
+    /// The content's frame in the scroll's own space: its height against the
+    /// viewport's says whether it overflows, its foot whether there is more
+    /// below.
+    @State private var contentFrame: CGRect = .zero
+    @State private var viewportHeight: CGFloat = 0
+
+    init(foot: CGFloat = 0, @ViewBuilder content: @escaping () -> Content) {
+        self.foot = foot
+        self.content = content
+    }
+
+    private var overflows: Bool { contentFrame.height > viewportHeight + 1 }
+    private var moreBelow: Bool { overflows && contentFrame.maxY > viewportHeight + 2 }
 
     var body: some View {
-        ScrollView(showsIndicators: false) {
+        ScrollView(.vertical, showsIndicators: false) {
             VStack(alignment: .leading, spacing: 0) {
                 content()
-                Color.clear.frame(height: 22)
             }
             .padding(.trailing, 2)
+            .padding(.bottom, foot)
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .background(
+                GeometryReader { proxy in
+                    let frame = proxy.frame(in: .named(fadingBoardSpace))
+                    Color.clear
+                        .onAppear { contentFrame = frame }
+                        .onChange(of: frame) { _, now in contentFrame = now }
+                }
+            )
+            // Room for the last line to scroll clear of the fade — only when
+            // there is a fade.
+            .padding(.bottom, overflows ? max(0, boardFade - foot) : 0)
         }
+        .coordinateSpace(name: fadingBoardSpace)
+        .scrollBounceBehavior(.basedOnSize)
+        .background(
+            GeometryReader { proxy in
+                let height = proxy.size.height
+                Color.clear
+                    .onAppear { viewportHeight = height }
+                    .onChange(of: height) { _, now in viewportHeight = now }
+            }
+        )
         .mask(
             VStack(spacing: 0) {
                 Color.black
-                LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 22)
+                LinearGradient(colors: [Color.black, moreBelow ? Color.clear : Color.black], startPoint: .top, endPoint: .bottom)
+                    .frame(height: boardFade)
             }
         )
+        .overlay(alignment: .bottom) {
+            if moreBelow {
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.goldDim)
+                    .frame(width: 30, height: 12)
+                    .background(Capsule().fill(Theme.surfaceHigh.opacity(0.92)))
+                    .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 0.8))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
     }
 }
 

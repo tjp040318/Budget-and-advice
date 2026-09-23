@@ -189,10 +189,23 @@ struct GuidePlate: View {
 /// target's own centre with its tip over the control, the target wears a
 /// breathing gold ring, and only the line's box is kept on the screen, one
 /// line up to a 460-point reading width.
+///
+/// Over a control the line stands a label's height clear of the arrow
+/// (`labelBand`), since run 217: aimed at the Collection door, the box lay
+/// on the top of the island's "Arena of Souls" chip with the arrow beside
+/// it — two call-outs colliding on the one frame that teaches where to tap.
+/// The band just over a control at the foot is where the place above it
+/// keeps its lowest names (the island holds its chips to its own foot, on
+/// the bar's rule), so the line clears it and the arrow alone crosses it.
 struct GuideCaret: View {
     let prompt: String
     let target: CGRect
     let bounds: CGSize
+    /// How much of the container's foot is the game's tab bar, measured off
+    /// its doors by `GuideOverlay`: the line never stands on it, so a target
+    /// whose line would reach the bar has it over instead. Zero where there
+    /// is no bar.
+    var footing: CGFloat = 0
 
     /// The line's box as it measured, for the clamp and the stacking; the
     /// first frame guesses a one-line box.
@@ -206,6 +219,10 @@ struct GuideCaret: View {
     private static let gap: CGFloat = 5
     /// The widest the line's box may be before it wraps.
     private static let reading: CGFloat = 460
+    /// The extra air between the arrow and a line over its control: a chip's
+    /// height and a little, so the line clears the names in the band over a
+    /// control at the foot.
+    private static let labelBand: CGFloat = 12
 
     /// Whether the target is a control rather than the no-anchor fallback,
     /// which is a point and wears no ring.
@@ -215,12 +232,12 @@ struct GuideCaret: View {
         // Under the control when the arrow and the box fit under it, over it
         // when they do not (a tab door, a button on the foot of a screen).
         let stack = Self.reach + Self.arrow.height + Self.gap + box.height
-        let below = target.maxY + stack + 8 < bounds.height
+        let below = target.maxY + stack + 8 < bounds.height - footing
         let tip = below ? target.maxY + Self.reach : target.minY - Self.reach
         let arrowY = below ? tip + Self.arrow.height / 2 : tip - Self.arrow.height / 2
         let boxY = below
             ? tip + Self.arrow.height + Self.gap + box.height / 2
-            : tip - Self.arrow.height - Self.gap - box.height / 2
+            : tip - Self.arrow.height - Self.gap - Self.labelBand - box.height / 2
         let arrowX = min(max(target.midX, 12), max(12, bounds.width - 12))
         let half = box.width / 2 + 12
         let boxX = min(max(target.midX, half), max(half, bounds.width - half))
@@ -335,14 +352,15 @@ struct GuideOverlay: ViewModifier {
                 .id(lesson.id)
             } else if let prompt = lesson.prompt, lesson.isStep {
                 if let name = lesson.anchor, let anchor = anchors[name] {
-                    GuideCaret(prompt: prompt, target: proxy[anchor], bounds: proxy.size)
+                    GuideCaret(prompt: prompt, target: proxy[anchor], bounds: proxy.size, footing: clearance)
                 } else {
                     // No view on this screen registered that anchor: the line
                     // still tells the player where to go.
                     GuideCaret(
                         prompt: prompt,
                         target: CGRect(x: proxy.size.width / 2, y: proxy.size.height - clearance - 12, width: 0, height: 0),
-                        bounds: proxy.size
+                        bounds: proxy.size,
+                        footing: clearance
                     )
                 }
             }
@@ -412,9 +430,12 @@ struct LessonsView: View {
         // The screen strip, like every other menu in the game: the title and
         // the count on the left behind a chevron, and her face at the right of
         // the bar so it is plain whose words these are before one is opened.
+        // "Lessons", the name on its door in More: it was "Athena's Counsel"
+        // until run 217, which is also the Missions screen's Counsel tab — a
+        // mission ladder — so two features answered to one name.
         GameScreen(
-            "Athena's Counsel",
-            subtitle: "\(read) of \(LessonBook.all.count) lessons given",
+            "Lessons",
+            subtitle: "Athena's words, kept · \(read) of \(LessonBook.all.count) given",
             dismiss: { dismiss() }
         ) {
             BundleImage(name: GuideFace.calm.imageName, renderedAt: ScreenChrome.control)
@@ -453,6 +474,13 @@ struct LessonsView: View {
         }
     }
 
+    /// A lesson given, to read again; or one still to come, named so the
+    /// list shows what the game still holds. A lesson to come is READ as
+    /// one by its lock and its paler plate, never by paler words: run 217
+    /// drew those titles at about 1.8:1 on the cream (the words at 0.7 of
+    /// the secondary ink and `.disabled` dimming them again), which is a
+    /// list of names nobody can read. The words are the secondary ink at
+    /// full strength now (about 4.6:1), and a row to come takes no tap.
     private func row(_ lesson: Lesson) -> some View {
         let given = store.hasReadLesson(lesson.id)
         return Button {
@@ -462,24 +490,26 @@ struct LessonsView: View {
             HStack(spacing: 10) {
                 Image(systemName: given ? "checkmark.seal.fill" : "lock.fill")
                     .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(given ? Theme.gold : Theme.textSecondary.opacity(0.6))
+                    .foregroundStyle(given ? Theme.gold : Theme.textSecondary.opacity(0.8))
                 Text(lesson.title)
                     .font(Theme.body(12).weight(.semibold))
-                    .foregroundStyle(given ? Theme.textPrimary : Theme.textSecondary.opacity(0.7))
+                    .foregroundStyle(given ? Theme.textPrimary : Theme.textSecondary)
                 Spacer(minLength: 0)
                 if given {
                     Text("Read again")
-                        .font(Theme.body(10))
+                        .font(Theme.body(11))
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize()
                 }
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 9)
             .frame(maxWidth: .infinity)
-            .background(Theme.panel(Theme.tightCorner))
+            .background(Theme.panel(Theme.tightCorner).opacity(given ? 1 : 0.6))
         }
         .buttonStyle(.plain)
-        .disabled(!given)
+        .allowsHitTesting(given)
     }
 
     /// A replay is a CARD, not a pointer: the player may be standing on the

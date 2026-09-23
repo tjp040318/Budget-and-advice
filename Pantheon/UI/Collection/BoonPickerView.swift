@@ -247,17 +247,26 @@ struct BoonPickerView: View {
 
     // MARK: - The panel
 
+    /// The panel's words scroll inside the plate, so the plate is never
+    /// taller than the frame: as a fixed stack, the three doors at the type
+    /// floors were taller than the frame, and the overflow pushed the whole
+    /// screen up — the back medallion cut by the top edge, the doors' foot
+    /// under the home indicator (run 217). A panel that fits never bounces.
     private var panel: some View {
-        VStack(spacing: 8) {
-            if let cache = pickedCache {
-                cachePanel(cache)
-            } else if let boon = pickedBoon {
-                boonPanel(boon)
-            } else {
-                EmptyState(icon: "seal", title: "Nothing picked", message: "Pick a boon or a cache on the left.")
+        ScrollView(showsIndicators: false) {
+            VStack(spacing: 8) {
+                if let cache = pickedCache {
+                    cachePanel(cache)
+                } else if let boon = pickedBoon {
+                    boonPanel(boon)
+                } else {
+                    EmptyState(icon: "seal", title: "Nothing picked", message: "Pick a boon or a cache on the left.")
+                }
             }
+            .padding(Theme.panelInset)
+            .frame(maxWidth: .infinity, alignment: .top)
         }
-        .padding(Theme.panelInset)
+        .scrollBounceBehavior(.basedOnSize)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .panelBackground(radius: Theme.tightCorner)
     }
@@ -266,7 +275,7 @@ struct BoonPickerView: View {
     /// he has chosen. Each door prints the range its roll can land in.
     private func cachePanel(_ cache: BoonCache) -> some View {
         let doors = BoonService.offers(for: cache)
-        return VStack(alignment: .leading, spacing: 8) {
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
                 Image(systemName: "seal.fill")
                     .font(.system(size: 12, weight: .black))
@@ -278,7 +287,9 @@ struct BoonPickerView: View {
                 Spacer(minLength: 0)
                 StarRow(stars: cache.grade, size: 8)
             }
-            Text("One of the three is yours. The kind is chosen; its size rolls once you choose, and a push can lift it five times.")
+            // One line, so the three doors fit the plate whole; the push is
+            // explained on the boon's own card, where it is bought.
+            Text("Pick one; its size rolls when you choose.")
                 .font(Theme.body(10))
                 .foregroundStyle(Theme.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)

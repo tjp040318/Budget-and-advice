@@ -801,9 +801,11 @@ struct GlassMeter: View {
 /// the face was a dark band between them — the genre's small icon: the
 /// stars small along the top, the element a 12-point disc at the bottom
 /// left, the level as bare outlined digits at the bottom right, and the
-/// face clear in the middle. Stars are sized to the room at every size
-/// (six never run into the rim) and drawn bright: the dim natural-star
-/// bronze on the ink foot could not be counted (the Hall of Ka's judge).
+/// face clear in the middle. Stars are packed (`StarRow.packed`) and sized
+/// to the room INSIDE the rim at every size (six never run into it), every
+/// mark stands inside the rim (`inset`), and the stars are drawn bright:
+/// the dim natural-star bronze on the ink foot could not be counted (the
+/// Hall of Ka's judge).
 ///
 /// The tag hangs INSIDE the tile at its foot, with the stars lifted over
 /// it: on the top edge it hid the element and the level, and outside the
@@ -827,13 +829,24 @@ struct UnitPortraitTile: View {
     private var wear: CGFloat { max(0.6, min(1, size / 80)) }
     private var isSmall: Bool { size < 48 }
 
-    /// The stars' point size: what the row's width allows (a star and its
-    /// gap are about 1.2 of the point size), capped at 15% of the tile, and
-    /// a little smaller on a small tile, where they ride over the face.
+    /// How far in from the tile's edge a mark may start: the grade's metal
+    /// (`Rarity.frameWidth`, 2.5 points on a 4★ and up) and a point clear of
+    /// it. Run 217's 40-point tiles had their level 2 points in, under the
+    /// 2.5-point gold rim, and the "40" lost its last stroke.
+    private var inset: CGFloat { Rarity(stars: unit.stars).frameWidth + 1 }
+
+    /// The stars' point size: what the width INSIDE the rim allows at a
+    /// packed star's real advance (`StarRow.packedAdvance`), capped at 15%
+    /// of the tile, and a little smaller on a small tile, where they ride
+    /// over the face. It divided the whole tile by 1.2 a star, while the
+    /// symbol's own advance at 6 points is about 1.55: every 5★ row on the
+    /// arena's 40-point tiles was 4 points wider than the tile, with half a
+    /// star under each rim (run 217). Six stars on a 40-point tile come to
+    /// about 4.3 points, the floor.
     private var starSize: CGFloat {
         let count = CGFloat(max(1, unit.stars))
-        let room = (size - (isSmall ? 6 : 10)) / (count * 1.2)
-        return max(4.5, min(isSmall ? 6 : 9, size * 0.15, room))
+        let room = (size - 2 * (inset + 0.5)) / (count * StarRow.packedAdvance)
+        return max(4, min(isSmall ? 6 : 9, size * 0.15, room))
     }
 
     var body: some View {
@@ -854,11 +867,16 @@ struct UnitPortraitTile: View {
         .rarityFrame(Rarity(stars: unit.stars), radius: corner, painted: false)
         .overlay(alignment: .top) {
             if isLeader {
+                // Above the tile, standing on its rim. At −8 a 40-point
+                // tile's crown came 3 points down into it and sat on the
+                // middle star of the row along the top (run 217); −11 puts
+                // its foot on the rim, clear of the stars. A large tile's
+                // stars are at its foot, so its crown keeps the old seat.
                 Image(systemName: "crown.fill")
                     .font(.system(size: 10, weight: .black))
                     .foregroundStyle(Theme.goldText)
                     .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
-                    .offset(y: -8)
+                    .offset(y: isSmall ? -11 : -8)
             }
         }
         .overlay(alignment: .bottom) {
@@ -886,7 +904,7 @@ struct UnitPortraitTile: View {
     @ViewBuilder
     private var largeMarks: some View {
         ElementBadge(element: unit.element, compact: true, scale: wear)
-            .padding(max(2, 4 * wear))
+            .padding(max(inset, 4 * wear))
         if showsLevel {
             Text("\(unit.level)")
                 .font(Theme.numeric(11.5))
@@ -897,22 +915,23 @@ struct UnitPortraitTile: View {
                 .frame(height: 15)
                 .background(Capsule().fill(Color.black.opacity(0.62)))
                 .overlay(Capsule().strokeBorder(Theme.goldDim.opacity(0.8), lineWidth: 0.6))
-                .padding(max(2, 3 * wear))
+                .padding(max(inset, 3 * wear))
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
         }
-        StarRow(stars: unit.stars, size: starSize)
-            .padding(.bottom, tag == nil ? max(2, 3 * wear) : 14)
+        StarRow(stars: unit.stars, size: starSize, packed: true)
+            .padding(.bottom, tag == nil ? max(inset, 3 * wear) : 14)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 
     /// Under 48 points: the stars small along the top on a breath of ink,
-    /// the element disc and the bare level at the foot, the face between.
+    /// the element disc and the bare level at the foot, the face between —
+    /// every mark inside the rim (`inset`).
     @ViewBuilder
     private var smallMarks: some View {
         LinearGradient(colors: [Theme.ink.opacity(0.55), .clear], startPoint: .top, endPoint: .bottom)
             .frame(height: size * 0.32)
-        StarRow(stars: unit.stars, size: starSize)
-            .padding(.top, 2)
+        StarRow(stars: unit.stars, size: starSize, packed: true)
+            .padding(.top, inset)
             .frame(maxWidth: .infinity, alignment: .top)
         HStack(alignment: .bottom, spacing: 0) {
             Image(systemName: unit.element.glyph)
@@ -928,8 +947,10 @@ struct UnitPortraitTile: View {
                     .fixedSize()
             }
         }
-        .padding(.horizontal, 2)
-        .padding(.bottom, 1)
+        // Inside the rim with room for the digits' outline, which draws 0.8
+        // past the text's frame: at 2 the gold rim took the "0" of "40".
+        .padding(.horizontal, inset + 0.5)
+        .padding(.bottom, inset - 0.5)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 

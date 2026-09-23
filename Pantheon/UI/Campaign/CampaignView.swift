@@ -394,12 +394,15 @@ private struct StageDrop: Identifiable {
         return drops
     }
 
-    /// A chance as the corner of a tile reads it: "Sure", "7.5%", "25%".
+    /// A chance as the corner of a tile reads it: "Sure", "7.5%", "8%",
+    /// "25%" — a whole number under ten without the ".0" run 217 printed
+    /// ("8.0%" beside "10%").
     static func percent(_ chance: Double) -> String {
         if chance >= 0.995 { return "Sure" }
         let points = chance * 100
-        if points < 10 { return String(format: "%.1f%%", points) }
-        return "\(Int(points.rounded()))%"
+        let whole: Double = points.rounded()
+        if points < 10, abs(points - whole) >= 0.05 || whole < 1 { return String(format: "%.1f%%", points) }
+        return "\(Int(whole))%"
     }
 
     /// A tile's name without the word the picture already says: "High
@@ -415,25 +418,40 @@ private struct StageDrop: Identifiable {
 /// One drop as a tile: the painted socket with the chance on its corner,
 /// the grade's stars INSIDE the socket's top edge (under it they pushed the
 /// relic's name 16 points below its neighbours', run 216), the second set's
-/// stone on the corner, and the name under it in two lines at most.
+/// stone hung on the socket's left side, and the name under it in two lines
+/// at most.
 private struct StageDropTile: View {
     let drop: StageDrop
     let tile: CGFloat
     let titled: Bool
     let footprint: CGFloat
 
+    /// The second stone: 0.40 of the tile, hung 0.10 of it off the socket's
+    /// left edge with its centre at 0.38 of the height — so it spans
+    /// −0.10…0.30 across and 0.18…0.58 down. The chance on the bottom-right
+    /// corner starts no higher than 0.59 ("Sure", "8.0%" at the numeric
+    /// floor) and the star row ends by 0.16, so the stone meets neither. It
+    /// stood on the bottom-left corner until run 217 and covered the "S" of
+    /// "Sure" on the boss's popup and the Labyrinth's briefing. The 0.10
+    /// overhang is 4.4 points of a 44-point tile: inside the popup's name
+    /// margin and the briefing's glass padding.
+    private static let secondScale: CGFloat = 0.40
+    private static let secondOverhang: CGFloat = 0.10
+    private static let secondLift: CGFloat = 0.12
+
     var body: some View {
         let spoken = "\(drop.title), \(drop.amount ?? "")"
+        let second: CGFloat = tile * Self.secondScale
         VStack(spacing: 3) {
             RewardTile(key: drop.key, amount: drop.amount, size: tile, showsTitle: false,
                        imageName: drop.imageName, onGlass: true)
-                .overlay(alignment: .bottomLeading) {
-                    if let second = drop.secondImage, BundleArt.exists(second) {
-                        BundleImage(name: second, renderedAt: tile * 0.46)
+                .overlay(alignment: .leading) {
+                    if let secondName = drop.secondImage, BundleArt.exists(secondName) {
+                        BundleImage(name: secondName, renderedAt: second)
                             .aspectRatio(contentMode: .fit)
-                            .frame(width: tile * 0.46, height: tile * 0.46)
-                            .shadow(color: .black.opacity(0.65), radius: 2, y: 1)
-                            .offset(x: -tile * 0.06, y: tile * 0.05)
+                            .frame(width: second, height: second)
+                            .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
+                            .offset(x: -tile * Self.secondOverhang, y: -tile * Self.secondLift)
                     }
                 }
                 .overlay(alignment: .top) {

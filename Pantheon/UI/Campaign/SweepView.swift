@@ -322,14 +322,28 @@ struct SweepReceiptCard: View {
                         .allowsHitTesting(false)
                 }
             }
-            Text(item.title)
+            Text(Self.caption(item))
                 .font(Theme.body(11).weight(.semibold))
                 .foregroundStyle(Theme.onGlass)
-                .lineLimit(2)
+                // Three lines before an ellipsis: a levelled unit's name
+                // ("Terracotta Soldier levelled") takes three in 68 points,
+                // and the card has the height for it.
+                .lineLimit(3)
                 .multilineTextAlignment(.center)
                 .frame(width: Self.footprint)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(width: Self.footprint)
+    }
+
+    /// A spoil's name under its tile. A relic is named by its set alone —
+    /// "Nemesis Relic" — because the rim already says its quality and the
+    /// corner its slot: the loot's full "Normal Nemesis Relic" ran to three
+    /// lines in 68 points and printed "Normal / Nemesis R…" (run 217).
+    private static func caption(_ item: BattleSummary.Loot) -> String {
+        if let relic = item.relic {
+            return "\(relic.set.displayName) Relic"
+        }
+        return item.title
     }
 }

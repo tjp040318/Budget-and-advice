@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// Allies: friends, the inbox, the guild and its war, the rankings — the
 /// social layer (`Docs/SOCIAL.md`) in the shape of the app's other screens:
@@ -44,17 +45,22 @@ struct SocialView: View {
 
     var body: some View {
         NavigationStack {
+            // Three controls (run 217: "ALL…", "Demig…" and "Refres|h" out of
+            // its capsule with seven): the switch, Refresh as a glyph well,
+            // and the two currencies this screen can change — the inbox pays
+            // drachma. The Online/Offline chip is gone: the notice line under
+            // the strip says Offline in words, and online is the normal case.
             GameScreen("Allies", subtitle: subtitle, dismiss: { dismiss() }) {
                 BarSegments(options: tabs, selection: $tab)
-                BarCount(
-                    value: social.availability.isOnline ? "Online" : "Offline",
-                    systemImage: social.availability.isOnline ? "icloud.fill" : "icloud.slash",
-                    tint: social.availability.isOnline ? Theme.success : Theme.textSecondary
-                )
-                BarButton(title: social.isRefreshing ? "Refreshing" : "Refresh", systemImage: "arrow.clockwise") {
+                BarButton(
+                    title: social.isRefreshing ? "Refreshing" : "Refresh",
+                    systemImage: "arrow.clockwise",
+                    tint: social.isRefreshing ? Theme.textSecondary : Theme.gold,
+                    showsTitle: false
+                ) {
                     refresh()
                 }
-                BarWallet(wallet: store.player.wallet)
+                BarWallet(wallet: store.player.wallet, shows: [.energy, .drachma])
             } content: {
                 VStack(spacing: 8) {
                     if let notice = social.availability.notice {
@@ -252,9 +258,13 @@ struct SocialView: View {
             }
         } else {
             HStack(alignment: .top, spacing: 8) {
+                // One way to found it: the field's own "Found" pill did what
+                // FOUND THE GUILD under the crests does (run 217). The return
+                // key still submits. Both panels hang from the top, so their
+                // headers stand on one line; the short one was centred.
                 SectionPanel(title: "Found a guild") {
                     VStack(spacing: 8) {
-                        SocialField(placeholder: "The guild's name", draft: $newGuildName, submitLabel: "Found") {
+                        SocialField(placeholder: "The guild's name", draft: $newGuildName, submitLabel: nil) {
                             Task { await social.createGuild(name: newGuildName, crest: newGuildCrest) }
                         }
                         SocialCrestPicker(chosen: newGuildCrest) { newGuildCrest = $0 }
@@ -267,7 +277,7 @@ struct SocialView: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
                 SectionPanel(title: "Find a guild", accessory: "\(social.guildsFound.count)") {
                     VStack(spacing: 6) {
@@ -292,7 +302,7 @@ struct SocialView: View {
                         }
                     }
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .onAppear { Task { await social.findGuilds(name: "") } }
             }
         }
@@ -418,11 +428,12 @@ private struct SocialNoticeLine: View {
 }
 
 /// A text field in the app's cream, with its action on the return key and
-/// as a small button beside it.
+/// as a small button beside it — or on the return key alone when the panel
+/// has its own button for it (`submitLabel` nil: Found a guild).
 private struct SocialField: View {
     let placeholder: String
     @Binding var draft: String
-    let submitLabel: String
+    let submitLabel: String?
     let submit: () -> Void
 
     var body: some View {
@@ -438,7 +449,9 @@ private struct SocialField: View {
                 .frame(height: ScreenChrome.control)
                 .background(ScreenChrome.controlShape.fill(Theme.surfaceHigh))
                 .overlay(ScreenChrome.controlShape.strokeBorder(Theme.stroke, lineWidth: 0.5))
-            SocialPillButton(title: submitLabel, enabled: true, tint: Theme.gold, action: submit)
+            if let submitLabel {
+                SocialPillButton(title: submitLabel, enabled: true, tint: Theme.gold, action: submit)
+            }
         }
     }
 }
@@ -469,17 +482,34 @@ private struct SocialPillButton: View {
     }
 }
 
-/// A defence's leader as a small card, or the empty slot when the family
-/// is unknown to this build.
+/// A defence's leader as a face, or an empty square when the family is
+/// unknown to this build.
+///
+/// A face, not a `UnitCard` (run 217): at 44 points the card's caption
+/// strip read "Azure D…", its element badge was cut by the card's left
+/// edge and its stars ran to the rim — and the row beside it already
+/// names the demigod. `UnitPortraitTile` has no name to cut.
 private struct SocialLeaderCard: View {
     let unit: TeamSnapshotUnit?
     var size: CGFloat = 44
 
     var body: some View {
         if let resolved = unit?.resolved() {
-            UnitCard(unit: resolved, showPower: false, size: size)
+            UnitPortraitTile(unit: resolved, size: size)
         } else {
-            EmptyTeamSlot(size: size, label: "None")
+            Image(systemName: "person.fill.questionmark")
+                .font(.system(size: size * 0.36, weight: .bold))
+                .foregroundStyle(Theme.goldDim)
+                .frame(width: size, height: size)
+                .background(
+                    RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                        .fill(Theme.plate.opacity(0.55))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                        .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))
+                )
+                .accessibilityLabel("No leader")
         }
     }
 }
@@ -555,28 +585,50 @@ private struct SocialFriendRow: View {
     let greeted: Bool
     let greet: () -> Void
 
+    /// How long the two have been friends, short enough to sit under the
+    /// greeting pill: "friends 3 d", "friends 5 h", "new friend".
+    private var friendsFor: String {
+        let seconds = max(0, Date().timeIntervalSince(friendship.since))
+        if seconds >= 86_400 { return "friends \(Int(seconds / 86_400)) d" }
+        if seconds >= 3_600 { return "friends \(Int(seconds / 3_600)) h" }
+        return "new friend"
+    }
+
+    // The power line is the power alone and the friendship's age sits under
+    // the pill, as a war target's points do under Attack: "Power 6,955 ·
+    // friends 3 d a…" was cut in run 217. The tier's word is taken 60% to
+    // ink — the Initiate's blue-grey was 2.7:1 on the cream row.
     var body: some View {
         HStack(spacing: 8) {
-            SocialLeaderCard(unit: friendship.friend.leader, size: 44)
+            SocialLeaderCard(unit: friendship.friend.leader, size: 48)
             VStack(alignment: .leading, spacing: 2) {
                 Text(friendship.friend.name)
                     .font(Theme.body(13).weight(.semibold))
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(1)
                 Text("Lv.\(friendship.friend.level) · \(friendship.friend.tier.displayName)")
-                    .font(Theme.body(10).weight(.bold))
-                    .foregroundStyle(friendship.friend.tier.color)
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(SocialInk.inked(friendship.friend.tier.color))
                     .lineLimit(1)
-                Text("Power \(friendship.friend.power) · friends \(SocialClock.ago(friendship.since))")
-                    .font(Theme.numeric(10))
+                    .fixedSize()
+                Text("Power \(friendship.friend.power)")
+                    .font(Theme.numeric(11))
                     .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
+                    .fixedSize()
                 if let guildName = friendship.friend.guildName {
                     Chip(text: guildName.uppercased(), systemImage: "flag.fill", tint: Theme.goldDim)
                 }
             }
             Spacer(minLength: 4)
-            SocialPillButton(title: greeted ? "Greeted" : "Send greeting", enabled: !greeted, action: greet)
+            VStack(spacing: 3) {
+                SocialPillButton(title: greeted ? "Greeted" : "Send greeting", enabled: !greeted, action: greet)
+                Text(friendsFor)
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
         }
         .padding(8)
         .background(
@@ -948,6 +1000,23 @@ private struct SocialRankRow: View {
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                 .strokeBorder(entry.isMine ? Theme.gold : Color.clear, lineWidth: 1)
         )
+    }
+}
+
+/// A colour taken 60% of the way to `Theme.ink`, so a tier's word reads on
+/// the cream rows and still says which tier it is (the unit sheet's tags
+/// do the same, `UnitDetailView.inked`).
+private enum SocialInk {
+    static func inked(_ color: Color) -> Color {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        guard UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return Theme.textPrimary }
+        var inkRed: CGFloat = 0, inkGreen: CGFloat = 0, inkBlue: CGFloat = 0, inkAlpha: CGFloat = 0
+        _ = UIColor(Theme.ink).getRed(&inkRed, green: &inkGreen, blue: &inkBlue, alpha: &inkAlpha)
+        let keep: CGFloat = 0.4
+        let mixedRed: Double = Double(red * keep + inkRed * (1 - keep))
+        let mixedGreen: Double = Double(green * keep + inkGreen * (1 - keep))
+        let mixedBlue: Double = Double(blue * keep + inkBlue * (1 - keep))
+        return Color(red: mixedRed, green: mixedGreen, blue: mixedBlue)
     }
 }
 

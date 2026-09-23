@@ -901,14 +901,20 @@ struct ChapterMapView: View {
         }
     }
 
-    /// The painting carried on under the side insets to the glass: the
-    /// painting MIRRORED about each edge of the safe frame — so it meets
-    /// itself with no seam — in the tier's colour, darkening toward the
-    /// glass. It cannot simply be drawn wider: a 21:9 painting covering the
-    /// whole 852-point width crops twice as much of its height, and thirty
-    /// medallions would leave their landmarks. So the marks stand where they
-    /// stood and only the pillars of cream go. Read off a GeometryReader
-    /// that ignores the horizontal safe area; it never takes a tap.
+    /// The painting carried on under the side insets to the glass as HAZE:
+    /// each inset is the painting's own outer column on that side
+    /// (`bleedColumn` points of it) stretched across the inset, blurred and
+    /// darkened toward the glass, in the tier's colour. It starts in the
+    /// edge's own colours, so it meets the painting with no seam, and it
+    /// holds no landmark. It was the painting MIRRORED about each edge until
+    /// run 217, which doubled the Duat's dome and serpent and folded the
+    /// Colosseum's stands and the Jade gate into kaleidoscope shapes about a
+    /// visible line — "a Rorschach reflection". It cannot simply be drawn
+    /// wider: a 21:9 painting covering the whole 852-point width crops twice
+    /// as much of its height, and thirty medallions would leave their
+    /// landmarks. So the marks stand where they stood and only the pillars
+    /// of cream go. Read off a GeometryReader that ignores the horizontal
+    /// safe area; it never takes a tap.
     private func bleed(_ chapter: Chapter, size: CGSize) -> some View {
         GeometryReader { outer in
             // The insets as reported, or the extra width split evenly (a
@@ -919,10 +925,10 @@ struct ChapterMapView: View {
             let trailing: CGFloat = extra - leading
             ZStack(alignment: .topLeading) {
                 if leading > 0 {
-                    mirroredPainting(chapter, size: size, width: leading, towardLeading: true)
+                    edgeHaze(chapter, size: size, width: leading, towardLeading: true)
                 }
                 if trailing > 0 {
-                    mirroredPainting(chapter, size: size, width: trailing, towardLeading: false)
+                    edgeHaze(chapter, size: size, width: trailing, towardLeading: false)
                         .offset(x: leading + size.width)
                 }
             }
@@ -931,21 +937,42 @@ struct ChapterMapView: View {
         .allowsHitTesting(false)
     }
 
-    /// One side's mirror, `width` wide: the painting flipped, aligned so its
-    /// edge meets the painting's own edge, clipped to the inset.
-    private func mirroredPainting(_ chapter: Chapter, size: CGSize, width: CGFloat, towardLeading: Bool) -> some View {
-        ZStack {
+    /// How many points of the painting's edge the side haze is stretched
+    /// from: two, so every row carries its edge colour and nothing more —
+    /// a wider slice would drag a landmark's shape across the inset.
+    private static let bleedColumn: CGFloat = 2
+
+    /// One side's haze, `width` wide: the painting's outer column on that
+    /// side (its left edge for the left inset, its right edge for the right)
+    /// stretched to the inset, blurred into atmosphere, and shaded from
+    /// nothing at the painting's edge to deep at the glass.
+    private func edgeHaze(_ chapter: Chapter, size: CGSize, width: CGFloat, towardLeading: Bool) -> some View {
+        let column: CGFloat = Self.bleedColumn
+        let stretch: CGFloat = max(1, width / column)
+        return ZStack {
             paintingImage(chapter, size: size)
             tierTint(size: size)
         }
         .frame(width: size.width, height: size.height)
-        .scaleEffect(x: -1, y: 1)
-        .frame(width: width, height: size.height, alignment: towardLeading ? .trailing : .leading)
+        // The outer column only.
+        .frame(width: column, height: size.height, alignment: towardLeading ? .leading : .trailing)
+        .clipped()
+        // Stretched across the inset, then softened so its streaks read as
+        // haze; `opaque` keeps the blur from fading the inset's own edges.
+        .scaleEffect(x: stretch, y: 1, anchor: .center)
+        .frame(width: width, height: size.height)
+        .blur(radius: 7, opaque: true)
         .clipped()
         .overlay(
-            LinearGradient(colors: [Theme.ink.opacity(0.62), Theme.ink.opacity(0.08)],
-                           startPoint: towardLeading ? .leading : .trailing,
-                           endPoint: towardLeading ? .trailing : .leading)
+            LinearGradient(
+                stops: [
+                    .init(color: Theme.ink.opacity(0), location: 0),
+                    .init(color: Theme.ink.opacity(0.28), location: 0.4),
+                    .init(color: Theme.ink.opacity(0.74), location: 1),
+                ],
+                startPoint: towardLeading ? .trailing : .leading,
+                endPoint: towardLeading ? .leading : .trailing
+            )
         )
         .overlay(alignment: .bottom) {
             LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.42)],
@@ -1900,6 +1927,16 @@ struct TributeChestImage: View {
 /// lid hinged the same way), what earns it, what it holds, and Claim — then
 /// what it paid, the relic drawn as a stone. All three chests of a road
 /// open here.
+///
+/// ONE panel, sized to what it holds and centred in the screen (run 217):
+/// the chest and Claim on the left, a gold hairline, and what the tribute
+/// holds on the right as a centred group — the header between two rules,
+/// the grants as 72-point tiles, the relic line, the footnote. It was two
+/// cream panels: the right one stretched to the screen's foot with two
+/// 52-point tiles in its top corner, 85% empty, the left one ending 110
+/// pixels higher, and the header's and the footnote's first letters on the
+/// painted panel's acanthus corners. The content now stands `cornerReach`
+/// in from every side, clear of the scrolls.
 struct TributeCard: View {
     let tribute: Tribute
     let chapterID: String
@@ -1912,6 +1949,20 @@ struct TributeCard: View {
 
     private var chapter: Chapter? { StageDatabase.chapter(chapterID)?.at(difficulty) }
 
+    /// How far the painted panel's acanthus corners reach in, and a margin:
+    /// about 20 points measured on run 217's frame (SectionPanel's header
+    /// was moved in for the same scrolls).
+    private static let cornerReach: CGFloat = 24
+    private static let cornerReachDown: CGFloat = 22
+    /// The chest's column; Claim's label takes about 200 of it.
+    private static let chestColumn: CGFloat = 240
+    /// The gap either side of the hairline between the two columns.
+    private static let columnGap: CGFloat = 28
+    /// The holds' column: the grants as 72-point tiles, or 60 for the Hell
+    /// judgment's four (4 × 81 + 3 × 6 = 342), and their names.
+    private static let holdsColumn: CGFloat = 380
+    private static let holdsColumnMin: CGFloat = 300
+
     var body: some View {
         NavigationStack {
             GameScreen(
@@ -1922,19 +1973,36 @@ struct TributeCard: View {
                 BarWallet(wallet: store.player.wallet, shows: [.divinity])
             } content: {
                 if let chapter {
-                    HStack(alignment: .top, spacing: 8) {
-                        chestPane(chapter)
-                            .frame(width: 250)
-                        contents(chapter)
-                            .frame(maxWidth: .infinity)
-                    }
-                    .padding(.horizontal, ScreenChrome.contentPadding)
-                    .padding(.top, 6)
+                    card(chapter)
+                        .padding(.horizontal, ScreenChrome.contentPadding)
+                        .padding(.vertical, 6)
                 } else {
                     EmptyState(icon: "questionmark", title: "No such road", message: "This chapter is not in the campaign.")
                 }
             }
         }
+    }
+
+    /// The one panel: both columns at the height of the taller, the holds
+    /// centred against the chest, a hairline between them.
+    private func card(_ chapter: Chapter) -> some View {
+        HStack(alignment: .center, spacing: Self.columnGap) {
+            chestPane(chapter)
+                .frame(width: Self.chestColumn)
+            contents(chapter)
+                .frame(minWidth: Self.holdsColumnMin, maxWidth: Self.holdsColumn)
+        }
+        .overlay(alignment: .topLeading) {
+            Rectangle()
+                .fill(Theme.goldDim.opacity(0.35))
+                .frame(width: 1)
+                .padding(.vertical, 8)
+                .offset(x: Self.chestColumn + Self.columnGap / 2)
+                .allowsHitTesting(false)
+        }
+        .padding(.horizontal, Self.cornerReach)
+        .padding(.vertical, Self.cornerReachDown)
+        .panelBackground(radius: Theme.tightCorner)
     }
 
     private func chestPane(_ chapter: Chapter) -> some View {
@@ -1956,15 +2024,26 @@ struct TributeCard: View {
                     RewardChestView(open: opened, gone: false)
                 }
             }
-            .frame(width: 230, height: 150)
-            Text(TributeService.requirement(tribute, chapter: chapter))
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
+            .frame(width: Self.chestColumn - 10, height: 140)
+            // A met requirement is said as done, in green — "Clear Scarab
+            // Court" beside Claim read as "go clear it" and "claim it" at
+            // once (run 217).
+            if earned || claimed {
+                Label(metLine(chapter), systemImage: "checkmark.circle.fill")
+                    .font(Theme.body(11.5).weight(.semibold))
+                    .foregroundStyle(Theme.success)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                Text(TributeService.requirement(tribute, chapter: chapter))
+                    .font(Theme.body(11.5))
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             if claimed {
                 Label("Claimed", systemImage: "checkmark.seal.fill")
-                    .font(Theme.body(11).weight(.bold))
+                    .font(Theme.body(12).weight(.bold))
                     .foregroundStyle(Theme.success)
             } else if earned {
                 PrimaryButton(title: "Claim the tribute", systemImage: "gift.fill") {
@@ -1972,30 +2051,57 @@ struct TributeCard: View {
                 }
             } else {
                 Label("Not yet earned", systemImage: "lock.fill")
-                    .font(Theme.body(11).weight(.bold))
+                    .font(Theme.body(12).weight(.bold))
                     .foregroundStyle(Theme.textSecondary)
             }
         }
-        .padding(10)
-        .panelBackground(radius: Theme.tightCorner)
     }
 
+    /// The requirement as done.
+    private func metLine(_ chapter: Chapter) -> String {
+        switch tribute.milestone {
+        case .third:
+            guard !chapter.stages.isEmpty else { return "Cleared" }
+            let stage = chapter.stages[min(2, chapter.stages.count - 1)]
+            return "\(stage.name) cleared"
+        case .boss:
+            return "The boss of \(chapter.name) has fallen"
+        case .flawless:
+            return "Three stars on every stage"
+        }
+    }
+
+    /// The header between two rules, the grants as a centred row of tiles,
+    /// the relic, and the footnote — a group centred in its column.
     private func contents(_ chapter: Chapter) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(receipt == nil ? "THE TRIBUTE HOLDS" : "YOU RECEIVED")
-                .font(Theme.body(9).weight(.black))
-                .tracking(1.2)
-                .foregroundStyle(Theme.textSecondary)
+        let grants = tribute.grants
+        // Three tiles at 72 with their names (1.35 of the tile) are 304
+        // points, four at 60 are 342: either fits the 380-point column, and
+        // the Hell judgment's four still fit a phone without side insets.
+        let tile: CGFloat = grants.count >= 4 ? 60 : 72
+        return VStack(alignment: .center, spacing: 12) {
+            HStack(spacing: 10) {
+                Rectangle()
+                    .fill(Theme.stroke.opacity(0.8))
+                    .frame(height: 1)
+                Text(receipt == nil ? "THE TRIBUTE HOLDS" : "YOU RECEIVED")
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(1.2)
+                    .foregroundStyle(Theme.goldDim)
+                    .lineLimit(1)
+                    .fixedSize()
+                Rectangle()
+                    .fill(Theme.stroke.opacity(0.8))
+                    .frame(height: 1)
+            }
             // The grants as the genre's tiles, the count on each, the name
             // under it.
-            HStack(alignment: .top, spacing: 10) {
-                ForEach(Array(tribute.grants.enumerated()), id: \.offset) { _, grant in
-                    RewardTile(grant: grant, size: 52)
+            HStack(alignment: .top, spacing: 6) {
+                ForEach(Array(grants.enumerated()), id: \.offset) { _, grant in
+                    RewardTile(grant: grant, size: tile)
                 }
-                Spacer(minLength: 0)
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 4)
+            .frame(maxWidth: .infinity)
             if let grade = tribute.relicGrade {
                 HStack(spacing: 8) {
                     if let relic = receipt?.relic {
@@ -2004,8 +2110,9 @@ struct TributeCard: View {
                             Text(relic.displayName)
                                 .font(Theme.body(12).weight(.semibold))
                                 .foregroundStyle(relic.resolvedQuality.inkColor)
+                                .fixedSize(horizontal: false, vertical: true)
                             Text("Slot \(relic.slot) · \(relic.effectiveMainStat.displayText)")
-                                .font(Theme.body(10))
+                                .font(Theme.body(11))
                                 .foregroundStyle(Theme.textSecondary)
                         }
                     } else {
@@ -2021,24 +2128,23 @@ struct TributeCard: View {
                                 .foregroundStyle(Theme.textPrimary)
                                 .fixedSize(horizontal: false, vertical: true)
                             Text("Guaranteed, and the chapter's own set.")
-                                .font(Theme.body(10))
+                                .font(Theme.body(11))
                                 .foregroundStyle(Theme.textSecondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                     Spacer(minLength: 0)
                 }
-                .padding(.horizontal, 8)
+                .padding(.horizontal, 10)
                 .padding(.vertical, 6)
                 .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
             }
-            Spacer(minLength: 0)
             Text(footnote)
-                .font(Theme.body(10))
+                .font(Theme.body(11))
                 .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(10)
-        .panelBackground(radius: Theme.tightCorner)
     }
 
     private var footnote: String {

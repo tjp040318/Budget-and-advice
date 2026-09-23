@@ -423,14 +423,18 @@ struct TrainingView: View {
             targetID = unit.id
         } label: {
             UnitPortraitTile(unit: unit, size: 58)
-                // The rite's own mark on a unit ready for it, on the face's
-                // corner and hanging just off it, clear of the star row.
-                // Not on the unit already on the altar: the ledger beside
-                // it says so in words.
-                .overlay(alignment: .bottomTrailing) {
+                // The rite's own mark on a unit ready for it: on the face's
+                // right edge, hanging just off it, in the top corner UNDER
+                // the level capsule (which ends 17 points down) and well
+                // above the star row (which starts about 48 down). On the
+                // bottom corner it hid the last star of every ready tile
+                // (run 217: Thoth, Ares and Zeus read as 4★). Not on the
+                // unit already on the altar: the ledger beside it says so
+                // in words.
+                .overlay(alignment: .topTrailing) {
                     if !isOn, let glyph = readyGlyph(unit) {
                         readyMark(glyph)
-                            .offset(x: 6, y: 6)
+                            .offset(x: 6, y: 20)
                     }
                 }
                 .padding(4)
@@ -1195,8 +1199,8 @@ struct TrainingView: View {
     /// The units that can be offered, as faces five across. A tap toggles
     /// one, up to `limit`; a chosen face is veiled with a gold check and
     /// ringed, a copy of the family wears ↑ in Power up (a skill-up or the
-    /// regalia), and a unit worth keeping wears its reason on the corner
-    /// before a tap can eat it (`Keepsake`).
+    /// regalia), and a unit worth keeping wears its reason on the face's
+    /// left edge before a tap can eat it (`Keepsake`).
     private func offeringGrid(
         _ candidates: [ResolvedUnit],
         target: ResolvedUnit,
@@ -1250,21 +1254,27 @@ struct TrainingView: View {
                         }
                     }
                 }
-                .overlay(alignment: .bottomTrailing) {
+                // Both marks sit on the face's side edges at mid-height,
+                // hanging 3 points off (the grid's 7-point gap holds the two
+                // of neighbouring tiles without a touch): clear of the
+                // element and the level along the top, which end 17 points
+                // down on this 52-point face, and of the star row along the
+                // foot, which starts about 42 down. On the bottom corners
+                // the keepsake hid the FIRST star of every marked tile and
+                // the kin arrow the last (run 217: Perseus 4★ read as 3★).
+                .overlay(alignment: .trailing) {
                     if kin {
-                        // Bottom right, clear of the level at the top right
-                        // and the element at the top left.
                         Image(systemName: "arrow.up.circle.fill")
                             .font(.system(size: 15, weight: .black))
                             .foregroundStyle(Theme.onGlassGold)
                             .background(Circle().fill(Color.black.opacity(0.75)))
-                            .offset(x: 4, y: 4)
+                            .offset(x: 3)
                     }
                 }
-                .overlay(alignment: .bottomLeading) {
+                .overlay(alignment: .leading) {
                     if let worth {
                         keepsakeMark(worth)
-                            .offset(x: -4, y: 4)
+                            .offset(x: -3)
                     }
                 }
                 .contentShape(Rectangle())
@@ -1765,12 +1775,16 @@ struct TrainingView: View {
 
             // Two lines' room for every name, filled or not, so the grade
             // and the state lines of the four corners share one baseline.
+            // The name is laid out at its own height first and the box is
+            // 32: two lines of Manrope 11 are 30.05 points, and the 30-point
+            // box of run 217 laid out one line and cut "Jackal Warr…".
             Text(personalName(blueprint?.name ?? slot.ingredient.blueprintID))
                 .font(Theme.body(11).weight(.semibold))
                 .foregroundStyle(Theme.onGlass)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
-                .frame(width: 68, height: 30, alignment: .top)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(width: 68, height: 32, alignment: .top)
             Text(slot.ingredient.requirement)
                 .font(Theme.numeric(11.5))
                 .foregroundStyle(Theme.onGlassDim)

@@ -41,43 +41,56 @@ struct SignInView: View {
     }
 
     var body: some View {
-        GeometryReader { geo in
-            ZStack {
-                Theme.ink
-                // Anchored to its top so the five figures stay in frame, as
-                // the loading screen has it; a fixed frame off the
-                // GeometryReader, never a fill image under a flexible one.
-                BundleImage(name: SignInView.artName)
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
-                    .clipped()
+        // The painting and its shade run to every edge of the glass; the
+        // words and the door stand INSIDE the safe area. Until run 217 the
+        // whole stack ignored it, padded 28 points off the glass: the P of
+        // PANTHEON began under the Dynamic Island and every line of the left
+        // column sat in the 62-point landscape inset.
+        ZStack {
+            GeometryReader { geo in
+                ZStack {
+                    Theme.ink
+                    // Anchored to its top so the five figures stay in frame,
+                    // as the loading screen has it; a fixed frame off the
+                    // GeometryReader, never a fill image under a flexible one.
+                    BundleImage(name: SignInView.artName)
+                        .aspectRatio(contentMode: .fill)
+                        .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+                        .clipped()
+                        .allowsHitTesting(false)
+                        .opacity(revealed ? 1 : 0)
+                    LinearGradient(
+                        stops: [
+                            .init(color: Theme.ink.opacity(0.25), location: 0),
+                            .init(color: .clear, location: 0.18),
+                            .init(color: .clear, location: 0.40),
+                            .init(color: Theme.ink.opacity(0.92), location: 1),
+                        ],
+                        startPoint: .top, endPoint: .bottom
+                    )
                     .allowsHitTesting(false)
-                    .opacity(revealed ? 1 : 0)
-                LinearGradient(
-                    stops: [
-                        .init(color: Theme.ink.opacity(0.25), location: 0),
-                        .init(color: .clear, location: 0.18),
-                        .init(color: .clear, location: 0.40),
-                        .init(color: Theme.ink.opacity(0.92), location: 1),
-                    ],
-                    startPoint: .top, endPoint: .bottom
-                )
-                .allowsHitTesting(false)
-                HStack(alignment: .bottom, spacing: 24) {
-                    wordmark
-                    Spacer(minLength: 12)
-                    door
                 }
-                .padding(.horizontal, 28)
-                .padding(.bottom, 18)
-                .frame(width: geo.size.width, height: geo.size.height, alignment: .bottom)
-                if isOpening {
-                    veil
-                }
+                .frame(width: geo.size.width, height: geo.size.height)
             }
-            .frame(width: geo.size.width, height: geo.size.height)
+            .ignoresSafeArea()
+
+            // The safe area is the margin: 62 points either side on a
+            // landscape 16 Pro and the home indicator's 21 under, so the
+            // padding is only a little air inside it.
+            HStack(alignment: .bottom, spacing: 0) {
+                wordmark
+                Spacer(minLength: 24)
+                door
+            }
+            .padding(.horizontal, 8)
+            .padding(.bottom, 8)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+
+            if isOpening {
+                veil
+                    .ignoresSafeArea()
+            }
         }
-        .ignoresSafeArea()
         .onAppear {
             withAnimation(.easeOut(duration: 1.0)) { revealed = true }
         }
@@ -127,8 +140,11 @@ struct SignInView: View {
                     .font(Theme.body(11))
                     .foregroundStyle(Color(hex: "#FFD678"))
                     .multilineTextAlignment(.trailing)
-                    .lineLimit(4)
-                    .frame(maxWidth: 340, alignment: .trailing)
+                    .lineLimit(6)
+                    // The door's own width (the guest note's 300): at 340 a
+                    // notice widened the column past what the safe width
+                    // leaves beside the wordmark's widest line.
+                    .frame(maxWidth: 300, alignment: .trailing)
                     .padding(.bottom, 2)
             }
             AppleSignInButton(

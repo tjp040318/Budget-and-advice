@@ -235,12 +235,24 @@ struct LabyrinthView: View {
                     RelicSetEmblem(set: relicSet, size: 26)
                 }
             }
-            Text(sets.map(\.displayName).joined(separator: " · "))
+            Text(Self.setNameLines(sets))
                 .font(Theme.body(11))
                 .foregroundStyle(Theme.onGlassDim)
-                .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
+    }
+
+    /// The set names as two lines of three, every card alike. One line
+    /// wrapped where it ran out on run 217's frame 15 and began the second
+    /// with its separator ("· Chains"). The widest half of any dungeon is
+    /// 135 points in Manrope at 11, inside the narrowest card's 207; the
+    /// space before each dot is non-breaking, so a line that ever did wrap
+    /// would end "Titanfall ·" and never start with the dot.
+    private static func setNameLines(_ sets: [RelicSet]) -> String {
+        let names = sets.map(\.displayName)
+        let split = names.count > 3 ? (names.count + 1) / 2 : names.count
+        let lines = [names.prefix(split), names.dropFirst(split)].filter { !$0.isEmpty }
+        return lines.map { $0.joined(separator: "\u{00A0}· ") }.joined(separator: "\n")
     }
 
     // MARK: - A hall
@@ -657,23 +669,15 @@ struct LabyrinthView: View {
         let chosen = chosenRaid
         return HStack(spacing: 0) {
             // Five rows of two and three lines are taller than the frame, so
-            // the rail opens scrolled to the Titan whose room is open. The
-            // label is pinned above the scroll: inside it, the scroll to the
-            // chosen Titan carried it off the top and cut the first row on
-            // the strip's edge (run 216).
+            // the rail opens scrolled to the Titan whose room is open, with a
+            // WHOLE row at its top (`WholeRowRail`; run 217 opened on the
+            // Gale Titan cut through its eyebrow). The label is pinned above
+            // the scroll: inside it, the scroll to the chosen Titan carried it
+            // off the top and cut the first row on the strip's edge (run 216).
             VStack(spacing: 0) {
                 LabyrinthRailHead(title: "Titans")
-                ScrollViewReader { proxy in
-                    PlaceRail(width: Self.titanRailWidth) {
-                        ForEach(StageDatabase.raids) { raid in
-                            titanTile(raid, isOn: raid.id == chosen?.id)
-                                .id(raid.id)
-                        }
-                    }
-                    .onAppear {
-                        guard let id = chosen?.id else { return }
-                        DispatchQueue.main.async { proxy.scrollTo(id, anchor: .center) }
-                    }
+                WholeRowRail(width: Self.titanRailWidth, items: StageDatabase.raids, focus: chosen?.id) { raid in
+                    titanTile(raid, isOn: raid.id == chosen?.id)
                 }
             }
             .frame(width: Self.titanRailWidth)
@@ -1316,7 +1320,9 @@ struct DungeonLevelsView: View {
     /// each pays, the stars earned (the sweep is gated on three), the energy,
     /// and the power it asks against the CAMPAIGN team — the team that fights
     /// — never the best five units owned. It opens scrolled to the floor the
-    /// room shows.
+    /// room shows, with a whole row at its top (`WholeRowRail`): centring the
+    /// focused floor left B4's disc cut through its label under the head on
+    /// run 217's frame 16, and B5's on the B10 frame.
     ///
     /// The label is pinned ABOVE the scroll: inside it, the scroll to the
     /// focused floor carried it off the top and cut the first row on the
@@ -1327,17 +1333,8 @@ struct DungeonLevelsView: View {
         let focus = focused(chapter)?.id
         return VStack(spacing: 0) {
             LabyrinthRailHead(title: labyrinth != nil ? "Levels" : "Floors")
-            ScrollViewReader { proxy in
-                PlaceRail(width: Self.railWidth) {
-                    ForEach(chapter.stages) { stage in
-                        floorRow(stage, isOn: stage.id == focus, teamPower: teamPower)
-                    }
-                }
-                .onAppear {
-                    guard let focus else { return }
-                    // After the first layout, or the rail has no rows to scroll to.
-                    DispatchQueue.main.async { proxy.scrollTo(focus, anchor: .center) }
-                }
+            WholeRowRail(width: Self.railWidth, items: chapter.stages, focus: focus) { stage in
+                floorRow(stage, isOn: stage.id == focus, teamPower: teamPower)
             }
         }
         .frame(width: Self.railWidth)
@@ -1385,7 +1382,6 @@ struct DungeonLevelsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .id(stage.id)
         .accessibilityLabel("B\(stage.index), \(stage.rewards.relicGrade) star relic, \(earned) of 3 stars\(unlocked ? "" : ", locked")")
     }
 
@@ -2188,6 +2184,178 @@ private struct LabyrinthRailHead: View {
                 .ignoresSafeArea(.container, edges: .leading)
                 .allowsHitTesting(false)
             )
+    }
+}
+
+/// A `PlaceRail` that opens on WHOLE rows (run 217). The Labyrinth's rails
+/// scrolled the focused row to their centre, which left the row above it cut
+/// in half under the pinned head: B4's disc sliced through its label on
+/// frame 16, B5's on the B10 frame, the Gale Titan without its eyebrow or its
+/// rim on frame 39. Now the focused row opens third from the top, the row at
+/// the top standing exactly where the first stands at rest; near the end,
+/// where the rail could not scroll that far, a spacer after the last row
+/// lets it (the scroll's own end cut the top row too); and the focused row
+/// always clears the foot's fade. The rows are measured, since a Titan's
+/// name runs to two lines or three.
+///
+/// The top edge is soft: a row scrolled up past where the top row stands
+/// fades out over `WholeRowPlan.fadeSpan` of travel (`rowOpacity`, read off
+/// the row's place in the scroll), so a row passing under the head dissolves
+/// rather than being cut at full brightness on the rail's 8-point mask, and
+/// the sliver of the row above an opened top row is not drawn at all. Only
+/// the rows fade; the rail's glass stays whole.
+private struct WholeRowRail<Item: Identifiable, Row: View>: View where Item.ID == String {
+    let width: CGFloat
+    let items: [Item]
+    /// The row to open on; nil opens at the top.
+    let focus: String?
+    let row: (Item) -> Row
+
+    /// The rows' heights and whether the rail has opened, in a class so a
+    /// measurement never lays the rail out again.
+    @State private var gauge = RailRowGauge()
+    /// The spacer after the last row that lets the top row be whole at the
+    /// rail's end.
+    @State private var tail: CGFloat = 0
+
+    init(width: CGFloat, items: [Item], focus: String?, @ViewBuilder row: @escaping (Item) -> Row) {
+        self.width = width
+        self.items = items
+        self.focus = focus
+        self.row = row
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                PlaceRail(width: width) {
+                    ForEach(items) { item in
+                        row(item)
+                            .background {
+                                GeometryReader { box in
+                                    Color.clear
+                                        .onAppear { gauge.heights[item.id] = box.size.height }
+                                        .onChange(of: box.size.height) { _, height in
+                                            gauge.heights[item.id] = height
+                                        }
+                                }
+                                .allowsHitTesting(false)
+                            }
+                            .visualEffect { content, place in
+                                content.opacity(WholeRowPlan.rowOpacity(top: place.frame(in: .scrollView).minY))
+                            }
+                            .id(item.id)
+                    }
+                    if tail > 0 {
+                        Color.clear.frame(height: tail)
+                    }
+                }
+                .onAppear {
+                    let viewport = geometry.size.height
+                    // After the first layout, so every row has been measured.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        settle(viewport: viewport, proxy: proxy)
+                    }
+                }
+                .onDisappear { gauge.opened = false }
+            }
+        }
+        .frame(width: width)
+    }
+
+    /// Scrolls once per appearance: the spacer first, then — once it is laid
+    /// out, or the scroll would stop at the old end — the top row into place.
+    private func settle(viewport: CGFloat, proxy: ScrollViewProxy) {
+        guard !gauge.opened, let focus, let index = items.firstIndex(where: { $0.id == focus }) else { return }
+        gauge.opened = true
+        let heights = items.map { gauge.heights[$0.id] ?? 0 }
+        guard viewport > 0, !heights.contains(where: { $0 <= 0 }) else {
+            // A row never measured: the old centring rather than a guess.
+            proxy.scrollTo(focus, anchor: .center)
+            return
+        }
+        let plan = WholeRowPlan(heights: heights, focus: index, viewport: viewport)
+        tail = plan.tail
+        let topID = items[plan.top].id
+        let anchor = UnitPoint(x: 0, y: plan.anchor)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            proxy.scrollTo(topID, anchor: anchor)
+        }
+    }
+}
+
+/// What a `WholeRowRail` has measured, kept out of its view state.
+private final class RailRowGauge {
+    var heights: [String: CGFloat] = [:]
+    var opened = false
+}
+
+/// Where a `WholeRowRail` opens, from its rows' heights and its own height.
+/// The layout numbers are `PlaceRail`'s: 8 over the first row, 5 between
+/// rows, 5 and 24 after the last, the foot fading from 88% of the height —
+/// change them here if `PlaceRail` changes.
+private struct WholeRowPlan {
+    /// Where the first row stands at rest, and where the top row stands once
+    /// opened: `PlaceRail`'s top padding.
+    static let lead: CGFloat = 8
+    static let rowGap: CGFloat = 5
+    static let trail: CGFloat = 5 + 24
+    static let fadeFrom: CGFloat = 0.88
+    /// How far into the foot's fade the focused row may reach: four points
+    /// of a 36-point fade is 89% bright.
+    static let fadeGrace: CGFloat = 4
+    /// The travel over which a row scrolled up past `lead` fades out. The
+    /// row above an opened top row is at least a row and a gap past it
+    /// (51 points on the floor rail), so it is never drawn.
+    static let fadeSpan: CGFloat = 28
+
+    /// A row's opacity from its top edge in the scroll's own space: whole at
+    /// `lead` and below, gone `fadeSpan` above it.
+    static func rowOpacity(top: CGFloat) -> Double {
+        let lift = WholeRowPlan.lead - top
+        return Double(min(1, max(0, 1 - lift / WholeRowPlan.fadeSpan)))
+    }
+
+    /// The row that opens at the top.
+    let top: Int
+    /// The scroll anchor that puts that row `lead` below the rail's top:
+    /// `scrollTo` lines up the same unit point of the row and of the rail,
+    /// so the row's top lands at `lead` when y is lead / (rail − row).
+    let anchor: CGFloat
+    /// The spacer after the last row, zero while the rail reaches anyway.
+    let tail: CGFloat
+
+    init(heights: [CGFloat], focus: Int, viewport: CGFloat) {
+        guard !heights.isEmpty, heights.indices.contains(focus) else {
+            top = 0
+            anchor = 0
+            tail = 0
+            return
+        }
+        var tops: [CGFloat] = []
+        var y = Self.lead
+        for height in heights {
+            tops.append(y)
+            y += height + Self.rowGap
+        }
+        let last = heights.count - 1
+        // How far the rail scrolls with no spacer.
+        let reach = max(0, tops[last] + heights[last] + Self.trail - viewport)
+        let clear = viewport * Self.fadeFrom + Self.fadeGrace
+        let offsets = tops.map { $0 - Self.lead }
+        // The focused row third from the top, but no further down the rail
+        // than the first row-aligned stop at or past its natural end.
+        var row = max(0, focus - 2)
+        if let end = offsets.firstIndex(where: { $0 >= reach - 0.5 }) {
+            row = min(row, end)
+        }
+        // And the focused row whole above the foot's fade.
+        while row < focus, tops[focus] + heights[focus] - offsets[row] > clear {
+            row += 1
+        }
+        top = row
+        anchor = Self.lead / max(1, viewport - heights[row])
+        tail = max(0, offsets[row] - reach)
     }
 }
 

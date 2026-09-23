@@ -570,21 +570,43 @@ struct RelicInventoryView: View {
             VStack(alignment: .leading, spacing: 6) {
                 ScrollView(showsIndicators: false) {
                     VStack(alignment: .leading, spacing: 6) {
-                        HStack(alignment: .top, spacing: 10) {
+                        // The stone, its name and its wearer, and the fit
+                        // on the right. The fit and the wearer were a row of
+                        // their own at the foot, under the fold with a gold
+                        // sliver of the dial over OPEN (run 217).
+                        HStack(alignment: .top, spacing: 8) {
                             RelicIcon(relic: relic, size: 52, showsStars: true, showsLevel: true)
                             VStack(alignment: .leading, spacing: 3) {
                                 Text("\(relic.set.displayName) Relic")
                                     .font(Theme.title(13))
                                     .foregroundStyle(relic.resolvedQuality.inkColor)
                                     .lineLimit(1)
-                                    .minimumScaleFactor(0.8)
+                                    .minimumScaleFactor(0.85)
                                 RelicQualityTag(quality: relic.resolvedQuality, size: 8)
                                 Text("Slot \(relic.slot) · \(Relic.slotLabel(forSlot: relic.slot)) · \(relic.grade)★")
                                     .font(Theme.body(10))
                                     .foregroundStyle(Theme.textSecondary)
                                     .lineLimit(1)
+                                    .fixedSize()
+                                // Only when worn: "Equip on…" under the
+                                // panel already says a free one is free. A
+                                // long awakened name wraps, never cut.
+                                if let wearer {
+                                    Text("Worn by \(wearer.name)")
+                                        .font(Theme.body(10).weight(.semibold))
+                                        .foregroundStyle(Theme.info)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                             Spacer(minLength: 0)
+                            VStack(spacing: 2) {
+                                EfficiencyDial(value: RelicService.efficiency(relic, for: role))
+                                Text(role.displayName)
+                                    .font(Theme.body(10))
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .lineLimit(1)
+                                    .fixedSize()
+                            }
                         }
                         // The main stat, large: the one figure a player checks.
                         HStack {
@@ -604,22 +626,32 @@ struct RelicInventoryView: View {
                                 .font(Theme.body(10))
                                 .foregroundStyle(Theme.textSecondary)
                         } else {
-                            VStack(spacing: 2) {
+                            // Two to a row, as the relic's card has them: a
+                            // Legend's four subs take two lines, not four.
+                            LazyVGrid(
+                                columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+                                alignment: .leading,
+                                spacing: 2
+                            ) {
                                 ForEach(relic.effectiveSubStats.indices, id: \.self) { index in
                                     let sub = relic.effectiveSubStats[index]
                                     HStack(spacing: 4) {
                                         Text(sub.kind.displayName)
                                             .font(Theme.body(10))
                                             .foregroundStyle(Theme.textSecondary)
+                                            .lineLimit(1)
+                                            .fixedSize()
                                         if relic.gemmed == index {
                                             Image(systemName: "diamond.fill")
                                                 .font(.system(size: 6, weight: .black))
                                                 .foregroundStyle(Theme.gold)
                                         }
-                                        Spacer(minLength: 4)
+                                        Spacer(minLength: 2)
                                         Text("+\(sub.kind.format(sub.value))")
                                             .font(Theme.numeric(11))
                                             .foregroundStyle(relic.honedBonus(at: index) > 0 ? Theme.info : Theme.textPrimary)
+                                            .lineLimit(1)
+                                            .fixedSize()
                                     }
                                 }
                             }
@@ -627,23 +659,13 @@ struct RelicInventoryView: View {
                         Text("\(relic.set.piecesRequired) pieces · \(relic.set.effectDescription)")
                             .font(Theme.body(10))
                             .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(2)
                             .fixedSize(horizontal: false, vertical: true)
-                        HStack(spacing: 6) {
-                            EfficiencyDial(value: RelicService.efficiency(relic, for: role))
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("fit for \(role.withArticle)")
-                                    .font(Theme.body(10))
-                                    .foregroundStyle(Theme.textSecondary)
-                                Text(wearer.map { "Worn by \($0.name)" } ?? "Not worn")
-                                    .font(Theme.body(10).weight(.semibold))
-                                    .foregroundStyle(wearer == nil ? Theme.textSecondary : Theme.info)
-                                    .lineLimit(1)
-                            }
-                            Spacer(minLength: 0)
-                        }
                     }
+                    .padding(.bottom, RelicColumn.shortFade)
                 }
+                // What does not fit fades into the buttons, so a cut reads
+                // as a scroll rather than as a stray sliver.
+                .relicColumnFade(RelicColumn.shortFade)
                 .frame(maxHeight: .infinity)
                 PrimaryButton(title: "Open", systemImage: "arrow.up.circle.fill") {
                     opened = relic
@@ -977,6 +999,36 @@ struct EfficiencyDial: View {
     }
 }
 
+/// The foot of a scrolling column on the relic screens (run 217): the
+/// column fades out over its last `fade` points instead of running on a
+/// hard line under the home indicator, and its content ends in as much
+/// clear space, so the last row can always scroll clear of the fade. The
+/// bazaar's shelves end the same way (`BazaarLayout.footFade`).
+private enum RelicColumn {
+    /// Over the home indicator.
+    static let fade: CGFloat = 20
+    /// Over a panel's own buttons (the inventory's, the picker's), and
+    /// under the relic card's plate, whose own padding is all that should
+    /// stand in it when the plate fits.
+    static let shortFade: CGFloat = 12
+
+    static func footMask(_ height: CGFloat) -> some View {
+        VStack(spacing: 0) {
+            Color.black
+            LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                .frame(height: height)
+        }
+    }
+}
+
+private extension View {
+    /// `RelicColumn.footMask` on a scroll view; pad its content's foot by
+    /// the same `height`.
+    func relicColumnFade(_ height: CGFloat = RelicColumn.fade) -> some View {
+        mask { RelicColumn.footMask(height) }
+    }
+}
+
 /// One relic: its numbers, its wearer, and the four things you can do to it.
 struct RelicDetailView: View {
     let relicID: UUID
@@ -1026,13 +1078,22 @@ struct RelicDetailView: View {
             } content: {
                 if let relic {
                     // Two columns that each scroll on their own, so a short
-                    // landscape frame never hides the power-up button.
+                    // landscape frame never hides the power-up button. Each
+                    // ends in a fade above the home indicator, and its
+                    // content in as much clear space, so the last button
+                    // can scroll clear of it: both ran under the indicator
+                    // on a hard line, "Power up to…" half cut (run 217).
                     HStack(alignment: .top, spacing: 8) {
-                        ScrollView {
+                        // The short fade on the plate: a 4-sub relic's
+                        // plate fits the frame, and only its own padding
+                        // stands in the fade.
+                        ScrollView(showsIndicators: false) {
                             sheet(relic)
+                                .padding(.bottom, RelicColumn.shortFade)
                         }
+                        .relicColumnFade(RelicColumn.shortFade)
                         .frame(maxWidth: .infinity)
-                        ScrollView {
+                        ScrollView(showsIndicators: false) {
                             VStack(spacing: 8) {
                                 if relic.hasPendingRoll {
                                     rollChoicePanel(relic)
@@ -1044,7 +1105,9 @@ struct RelicDetailView: View {
                                     awakeningPanel(relic)
                                 }
                             }
+                            .padding(.bottom, RelicColumn.fade)
                         }
+                        .relicColumnFade()
                         .frame(width: 300)
                     }
                     .padding(.horizontal, ScreenChrome.contentPadding)
@@ -1135,7 +1198,9 @@ struct RelicDetailView: View {
     /// level takes it, its sub stats with the last roll marked, and the
     /// level track with the sub-stat levels on it.
     private func sheet(_ relic: Relic) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        // Six between the rows, not eight: a Legend with a two-line effect
+        // and a wearer was 330 points in a 323-point column (run 217).
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 12) {
                 // The stone, large: the one place a relic is looked at.
                 RelicIcon(relic: relic, size: 80, showsStars: true, showsLevel: false, glow: glow)
@@ -1412,10 +1477,14 @@ struct RelicDetailView: View {
             // Players assume the worst because every game before this one
             // took something on a failure. It never has here, and a rule the
             // player cannot see does none of the work it was built to do.
-            Text("A failed attempt spends the drachma and keeps the level. It never takes a level or a sub stat.")
-                .font(Theme.body(10))
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            // Not at +15, where there is no attempt left to fail (run 217
+            // printed it under "This relic is +15").
+            if !relic.isMaxLevel {
+                Text("A failed attempt spends the drachma and keeps the level. It never takes a level or a sub stat.")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .padding(10)
         .panelBackground()
@@ -1958,18 +2027,16 @@ struct RelicPickerView: View {
     /// rows, the sets line and the footer, comfortably past the height a
     /// landscape frame leaves under the strip, so the primary action used to
     /// sit below the fold at the end of the scroll.
+    ///
+    /// Run 217 showed only HP and ATK of the eight rows, both red, with the
+    /// swap's gains and the sets under the fold: the screen read as all
+    /// loss. So "Now" is one line, and the table lists only the stats that
+    /// move, gains first, two to a row — the whole answer above the button.
     private var comparison: some View {
         VStack(spacing: 6) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 8) {
-                    SectionHeader(title: "Now", accessory: current.map { "\($0.set.displayName) +\($0.level)" } ?? "Empty")
-                    if let current {
-                        relicSummary(current)
-                    } else {
-                        Text("Nothing in slot \(slot).")
-                            .font(Theme.body(11))
-                            .foregroundStyle(Theme.textSecondary)
-                    }
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 5) {
+                    nowLine
                     if let selected {
                         SectionHeader(title: "If equipped", accessory: "\(selected.set.displayName) +\(selected.level)")
                         relicSummary(selected)
@@ -1977,7 +2044,9 @@ struct RelicPickerView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.bottom, RelicColumn.shortFade)
             }
+            .relicColumnFade(RelicColumn.shortFade)
             .frame(maxHeight: .infinity)
             if let selected {
                 PrimaryButton(
@@ -2004,6 +2073,43 @@ struct RelicPickerView: View {
         }
         .padding(10)
         .panelBackground(radius: Theme.tightCorner)
+    }
+
+    /// What the slot holds now, on one line: its stone, its set and level,
+    /// its main stat. Its sub stats are in the table's deltas below.
+    private var nowLine: some View {
+        HStack(spacing: 6) {
+            Text("NOW")
+                .font(Theme.body(11).weight(.black))
+                .tracking(1.0)
+                .foregroundStyle(Theme.goldDim)
+                .lineLimit(1)
+                .fixedSize()
+            if let current {
+                RelicIcon(relic: current, size: 22, showsStars: false, showsLevel: false)
+                Text("\(current.set.displayName) +\(current.level)")
+                    .font(Theme.body(11).weight(.semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .fixedSize()
+                Spacer(minLength: 4)
+                Text(current.effectiveMainStat.displayText)
+                    .font(Theme.body(11).weight(.bold))
+                    .foregroundStyle(Theme.gold)
+                    .lineLimit(1)
+                    .fixedSize()
+            } else {
+                Text("Slot \(slot) is empty")
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(minHeight: 28)
+        .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
     }
 
     private func relicSummary(_ relic: Relic) -> some View {
@@ -2043,7 +2149,8 @@ struct RelicPickerView: View {
             before: unit?.stats ?? Stats.zero,
             after: after?.stats ?? unit?.stats ?? Stats.zero,
             beforeSets: unit?.activeRelicSets ?? [],
-            afterSets: after?.activeRelicSets ?? []
+            afterSets: after?.activeRelicSets ?? [],
+            compact: true
         )
     }
 }
@@ -2063,9 +2170,14 @@ struct StatDeltaTable: View {
     let after: Stats
     var beforeSets: [ActiveRelicSet] = []
     var afterSets: [ActiveRelicSet] = []
+    /// Only the stats that move, gains first, two to a row, each with its
+    /// new value and its change: the relic picker's column, where the full
+    /// eight rows put DEF to Resistance and the sets under the fold (run
+    /// 217). The optimiser and "Equip on…" keep the whole table.
+    var compact: Bool = false
 
-    var body: some View {
-        let rows: [(label: String, before: Double, after: Double, percent: Bool)] = [
+    private var rows: [(label: String, before: Double, after: Double, percent: Bool)] {
+        [
             ("HP", before.hp, after.hp, false),
             ("ATK", before.atk, after.atk, false),
             ("DEF", before.def, after.def, false),
@@ -2075,11 +2187,77 @@ struct StatDeltaTable: View {
             ("Accuracy", before.accuracy, after.accuracy, true),
             ("Resistance", before.resistance, after.resistance, true),
         ]
+    }
+
+    /// A change worth printing: half a point, or half a percent.
+    private static func moves(_ delta: Double, percent: Bool) -> Bool {
+        abs(delta) >= (percent ? 0.005 : 0.5)
+    }
+
+    var body: some View {
+        let rows = self.rows
         return VStack(spacing: 3) {
+            if compact {
+                movedGrid(rows)
+            } else {
+                fullRows(rows)
+            }
+            sets
+        }
+    }
+
+    /// The stats that move, gains first and then losses, each in the
+    /// table's own order within its kind.
+    @ViewBuilder
+    private func movedGrid(_ rows: [(label: String, before: Double, after: Double, percent: Bool)]) -> some View {
+        let gains = rows.filter { Self.moves($0.after - $0.before, percent: $0.percent) && $0.after > $0.before }
+        let losses = rows.filter { Self.moves($0.after - $0.before, percent: $0.percent) && $0.after < $0.before }
+        let moved = gains + losses
+        if moved.isEmpty {
+            Text("No stat changes")
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        } else {
+            LazyVGrid(
+                columns: [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)],
+                alignment: .leading,
+                spacing: 4
+            ) {
+                ForEach(moved.indices, id: \.self) { index in
+                    let row = moved[index]
+                    let delta = row.after - row.before
+                    HStack(spacing: 4) {
+                        Text(row.label)
+                            .font(Theme.body(11))
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                            .fixedSize()
+                        Spacer(minLength: 3)
+                        Text(UnitDetailView.statText(row.after, percent: row.percent))
+                            .font(Theme.numeric(11))
+                            .foregroundStyle(Theme.textPrimary)
+                            .lineLimit(1)
+                            .fixedSize()
+                        Text((delta > 0 ? "+" : "−") + UnitDetailView.statText(abs(delta), percent: row.percent))
+                            .font(Theme.numeric(11).weight(.bold))
+                            .foregroundStyle(delta > 0 ? Theme.success : Theme.danger)
+                            .lineLimit(1)
+                            .fixedSize()
+                            .frame(minWidth: 36, alignment: .trailing)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Every stat, before and after, in fixed columns.
+    private func fullRows(_ rows: [(label: String, before: Double, after: Double, percent: Bool)]) -> some View {
+        VStack(spacing: 3) {
             ForEach(rows.indices, id: \.self) { index in
                 let row = rows[index]
                 let delta = row.after - row.before
-                let changed = abs(delta) >= (row.percent ? 0.005 : 0.5)
+                let changed = Self.moves(delta, percent: row.percent)
                 HStack(spacing: 5) {
                     Text(row.label)
                         .font(Theme.body(10))
@@ -2105,7 +2283,6 @@ struct StatDeltaTable: View {
                     }
                 }
             }
-            sets
         }
     }
 
@@ -3165,72 +3342,188 @@ struct RelicDropCard: View {
         let best = roles.max(by: { RelicService.efficiency(relic, for: $0) < RelicService.efficiency(relic, for: $1) })
         let bestValue = best.map { RelicService.efficiency(relic, for: $0) } ?? 0
         return VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(relic.effectiveMainStat.kind.displayName)
-                    .font(Theme.body(12).weight(.bold))
-                    .foregroundStyle(Theme.gold)
-                Spacer()
-                Text("+\(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))")
-                    .font(Theme.numeric(14).weight(.bold))
-                    .foregroundStyle(Theme.gold)
-            }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
-            .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
-            if relic.subStats.isEmpty {
-                Text("No sub stat yet — a Normal gains its first at +3.")
-                    .font(Theme.body(10))
-                    .foregroundStyle(Theme.textSecondary)
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 4) {
-                    ForEach(relic.effectiveSubStats.indices, id: \.self) { index in
-                        let sub = relic.effectiveSubStats[index]
-                        HStack(spacing: 6) {
-                            Text(sub.kind.displayName)
-                                .font(Theme.body(11))
-                                .foregroundStyle(Theme.textSecondary)
-                                .lineLimit(1)
-                            Spacer(minLength: 4)
-                            Text("+\(sub.kind.format(sub.value))")
-                                .font(Theme.numeric(12))
-                                .foregroundStyle(Theme.textPrimary)
+            // The stats and the fit take the plate down to the buttons and
+            // scroll only if they must: an awakened drop's fifth sub stat is
+            // a third row, and as a fixed stack it would push the whole
+            // screen up under the strip (the Boons screen did, run 217).
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack {
+                        Text(relic.effectiveMainStat.kind.displayName)
+                            .font(Theme.body(12).weight(.bold))
+                            .foregroundStyle(Theme.gold)
+                        Spacer()
+                        Text("+\(relic.effectiveMainStat.kind.format(relic.effectiveMainStat.value))")
+                            .font(Theme.numeric(14).weight(.bold))
+                            .foregroundStyle(Theme.gold)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
+                    if relic.subStats.isEmpty {
+                        Text("No sub stat yet — a Normal gains its first at +3.")
+                            .font(Theme.body(10))
+                            .foregroundStyle(Theme.textSecondary)
+                    } else {
+                        LazyVGrid(columns: [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)], spacing: 4) {
+                            ForEach(relic.effectiveSubStats.indices, id: \.self) { index in
+                                let sub = relic.effectiveSubStats[index]
+                                HStack(spacing: 6) {
+                                    Text(sub.kind.displayName)
+                                        .font(Theme.body(11))
+                                        .foregroundStyle(Theme.textSecondary)
+                                        .lineLimit(1)
+                                    Spacer(minLength: 4)
+                                    Text("+\(sub.kind.format(sub.value))")
+                                        .font(Theme.numeric(12))
+                                        .foregroundStyle(Theme.textPrimary)
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
+                            }
                         }
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surface))
+                    }
+                    fitRow(relic, best: best, bestValue: bestValue)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(maxHeight: .infinity, alignment: .top)
+            // KEEP is the card's answer, on a row of its own; Lock and Sell
+            // under it at half width each, their words in their own colour
+            // and the price whole. Three painted plates in one row cut two
+            // of them to "LOCK & KE…" and "SELL FOR…" — the one number the
+            // card must show — and drew both tints as ink on cream, which
+            // read as disabled (run 217).
+            VStack(spacing: 8) {
+                PrimaryButton(title: "Keep", systemImage: "checkmark.circle.fill") { dismiss() }
+                HStack(spacing: 8) {
+                    tintedAction(tint: Theme.info, enabled: !relic.isLocked) {
+                        store.toggleRelicLock(relicID)
+                        AudioLibrary.shared.play(.uiConfirm)
+                        dismiss()
+                    } label: {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 13, weight: .black))
+                        Text(relic.isLocked ? "LOCKED" : "LOCK & KEEP")
+                            .font(Theme.title(13))
+                            .tracking(1.2)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    tintedAction(tint: Theme.danger, enabled: !relic.isLocked) {
+                        showSellConfirm = true
+                    } label: {
+                        Text("SELL")
+                            .font(Theme.title(13))
+                            .tracking(1.2)
+                            .lineLimit(1)
+                            .fixedSize()
+                        ItemIcon(key: "drachma", size: 20, glow: false)
+                        Text(RelicService.sellValue(relic).formatted())
+                            .font(Theme.numeric(14).weight(.bold))
+                            .lineLimit(1)
+                            .fixedSize()
                     }
                 }
             }
-            if let best {
-                HStack(spacing: 8) {
-                    EfficiencyDial(value: bestValue)
-                    Text("Best for a \(best.displayName.lowercased())")
-                        .font(Theme.body(11).weight(.semibold))
-                        .foregroundStyle(Theme.textPrimary)
-                    Spacer(minLength: 0)
-                }
-            }
-            Spacer(minLength: 0)
-            HStack(spacing: 8) {
-                PrimaryButton(title: "Keep", systemImage: "checkmark.circle.fill") { dismiss() }
-                PrimaryButton(
-                    title: relic.isLocked ? "Locked" : "Lock & keep", systemImage: "lock.fill",
-                    tint: Theme.info, isEnabled: !relic.isLocked
-                ) {
-                    store.toggleRelicLock(relicID)
-                    AudioLibrary.shared.play(.uiConfirm)
-                    dismiss()
-                }
-                PrimaryButton(
-                    title: "Sell for \(RelicService.sellValue(relic).formatted())", systemImage: "circle.hexagongrid.fill",
-                    tint: Theme.danger, isEnabled: !relic.isLocked
-                ) {
-                    showSellConfirm = true
-                }
-            }
+            // The gold plate stops at 420 points; the pair under it stops
+            // with it, so the two rows share their edges.
+            .frame(maxWidth: 420)
+            .frame(maxWidth: .infinity)
         }
         .padding(10)
         .panelBackground(radius: Theme.tightCorner)
+    }
+
+    /// How well the relic fits each of the five roles, the best one lit —
+    /// the genre's rune card judges a rune for a job, and one dial for the
+    /// best job left 200 px of empty plate in the card's middle (run 217).
+    private func fitRow(_ relic: Relic, best: CombatRole?, bestValue: Double) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text("FIT BY ROLE")
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(1.0)
+                    .foregroundStyle(Theme.goldDim)
+                    .lineLimit(1)
+                    .fixedSize()
+                Rectangle()
+                    .fill(Theme.stroke.opacity(0.7))
+                    .frame(height: 1)
+                if let best {
+                    Text("Best for \(best.withArticle)")
+                        .font(Theme.body(11).weight(.semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            HStack(spacing: 6) {
+                ForEach(roles, id: \.self) { role in
+                    let isBest = role == best && bestValue > 0
+                    VStack(spacing: 2) {
+                        EfficiencyDial(value: RelicService.efficiency(relic, for: role))
+                        Text(role.displayName)
+                            .font(Theme.body(11).weight(isBest ? .bold : .medium))
+                            .foregroundStyle(isBest ? Theme.goldDeep : Theme.textSecondary)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .padding(.vertical, 5)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                            .fill(isBest ? Theme.gold.opacity(0.16) : Theme.surface)
+                    )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                            .strokeBorder(isBest ? Theme.gold : Theme.stroke.opacity(0.5), lineWidth: isBest ? 1.5 : 0.5)
+                    )
+                }
+            }
+        }
+    }
+
+    /// Lock and Sell: a cream plate with its words and its rim in its own
+    /// colour, 40 points tall, the label at its own width — never cut.
+    /// `PrimaryButton`'s painted plate draws every tint as ink on cream.
+    private func tintedAction<Content: View>(
+        tint: Color,
+        enabled: Bool,
+        action: @escaping () -> Void,
+        @ViewBuilder label: () -> Content
+    ) -> some View {
+        let face = label()
+        return Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            action()
+        } label: {
+            HStack(spacing: 7) {
+                face
+            }
+            .foregroundStyle(enabled ? tint : Theme.textSecondary)
+            .padding(.horizontal, 10)
+            .frame(maxWidth: .infinity, minHeight: 40)
+            .background(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(enabled ? tint.opacity(0.10) : Theme.surface)
+            )
+            .background(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .fill(Theme.surfaceHigh)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                    .strokeBorder(enabled ? tint.opacity(0.75) : Theme.stroke, lineWidth: 1.5)
+            )
+            .shadow(color: .black.opacity(0.18), radius: 3, y: 2)
+            .opacity(enabled ? 1 : 0.6)
+        }
+        .buttonStyle(PlateButtonStyle())
+        .disabled(!enabled)
     }
 }
 
@@ -3266,19 +3559,27 @@ struct RelicSetsSheet: View {
                         column("EFFECT SETS · 4 PIECES", sets: RelicSet.allCases.filter { $0.piecesRequired == 4 })
                     }
                     .padding(.horizontal, ScreenChrome.contentPadding)
-                    .padding(.vertical, 6)
+                    .padding(.top, 6)
+                    .padding(.bottom, RelicColumn.fade)
                 }
+                .relicColumnFade()
             }
         }
     }
 
     private func column(_ title: String, sets: [RelicSet]) -> some View {
         VStack(alignment: .leading, spacing: 4) {
+            // Clear of the painted panel's acanthus corners, which reach
+            // about 18 points in: at 2 the S of STAT and the E of EFFECT
+            // stood on the scrolls (run 217), as SectionPanel's did before.
             Text(title)
-                .font(Theme.body(9).weight(.black))
+                .font(Theme.body(11).weight(.black))
                 .tracking(0.8)
-                .foregroundStyle(Theme.textSecondary)
-                .padding(.horizontal, 2)
+                .foregroundStyle(Theme.goldDim)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.horizontal, 14)
+                .padding(.top, 2)
             ForEach(sets) { relicSet in
                 row(relicSet)
             }

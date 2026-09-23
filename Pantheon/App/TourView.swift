@@ -798,8 +798,22 @@ struct TourView: View {
         // as fourteen greyed rows — true of a save that has never met Athena,
         // and useless as a picture of the screen: what it is FOR is the
         // difference between a lesson kept and a lesson still locked.
-        for lesson in LessonBook.opening.prefix(4) {
-            store.markLessonRead(lesson.id)
+        //
+        // The shell's own frame (`-tour-root`) is the one launch that draws
+        // RootView, whose `.guide` puts Athena up for the next unread lesson:
+        // on run 217 her plate covered the deck and the rail the frame exists
+        // to prove. That launch alone has read everything and skipped the
+        // opening, so she is silent. The save persists between the tour's
+        // launches, so every other launch sets the record back to exactly the
+        // first four — what it always was, since nothing in the tour taps her
+        // on — or the lessons step (31) would photograph every row kept.
+        let lessonsWanted: [String] = Self.pinnedRoot != nil
+            ? (LessonBook.all.map(\.id) + [LessonBook.openingSkipped]).sorted()
+            : LessonBook.opening.prefix(4).map(\.id)
+        if store.player.lessonsRead != lessonsWanted {
+            store.update { player in
+                player.lessonsRead = lessonsWanted
+            }
         }
     }
 

@@ -582,7 +582,10 @@ struct CollectionView: View {
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: 6) {
                 ElementBadge(element: unit.element, compact: true)
-                StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars, size: 10)
+                // Bright on glass, as the Hall's nameplate draws them: the
+                // natural stars' dim bronze could not be counted on the dark
+                // plate (run 217). The cream plate keeps the two tones.
+                StarRow(stars: unit.stars, natural: ink.isGlass ? nil : unit.blueprint.naturalStars, size: 10)
                 Spacer(minLength: 4)
                 Text("\(unit.power)")
                     .font(Theme.numeric(13))
@@ -781,18 +784,22 @@ struct CollectionView: View {
                                         spinDrag = 0
                                     }
                             )
+                            // The hint on a small dark glass capsule, the
+                            // rule for words over a painting: bare pale caps
+                            // on the painted floor had the meander and the
+                            // laurel running through the letters (run 217).
                             .overlay(alignment: .bottom) {
-                                HStack(spacing: 5) {
+                                GlassCapsule(height: 22) {
                                     Image(systemName: "arrow.left.and.right")
                                         .font(.system(size: 10, weight: .black))
+                                        .foregroundStyle(Theme.onGlassEyebrow)
                                     Text("DRAG TO TURN")
                                         .font(Theme.body(11).weight(.black))
                                         .tracking(1.2)
+                                        .foregroundStyle(Theme.onGlass)
                                         .lineLimit(1)
                                         .fixedSize()
                                 }
-                                .foregroundStyle(Theme.onGlassDim.opacity(0.85))
-                                .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
                                 .padding(.bottom, 2)
                                 .allowsHitTesting(false)
                             }

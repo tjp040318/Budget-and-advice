@@ -40,6 +40,14 @@ struct SummonView: View {
     /// actually see instead of 88 points to the left of it.
     private static let menuWidth: CGFloat = 204
 
+    /// The band the scroll over the ring hangs in, in the room's own points:
+    /// below the header (8 points of padding, the eyebrow and the 30-point
+    /// name, whose ink ends near 50) and above the deck (10 points of padding
+    /// and the 46-point plates). Run 217 hung the scroll off the ring alone
+    /// and its top ran under the "5★ 3.0%" chip and against the name's ?.
+    private static let headerFoot: CGFloat = 58
+    private static let deckHead: CGFloat = 60
+
     var body: some View {
         NavigationStack {
             GameScreen("Summon") {
@@ -97,12 +105,22 @@ struct SummonView: View {
         }
     }
 
+    /// Out to the glass on both sides, as every other place's painting is
+    /// (`PlaceBackdrop` bleeds by default): run 217 still photographed this
+    /// hall in cream columns 60 points wide, because the room is its own
+    /// view and the shared bleed never reached it. The circle's geometry
+    /// reads the wider frame, so the rings stay on the painted floor; the
+    /// expansion never changes the size the ZStack is told, and the room's
+    /// `.clipped()` bounds it. The rail and the words stay in the safe area.
     private var room: some View {
         SummoningCircle(
             banner: selectedBanner,
             charging: isCharging,
-            leadingInset: Self.menuWidth
+            leadingInset: Self.menuWidth,
+            headerClearance: Self.headerFoot,
+            deckClearance: Self.deckHead
         )
+        .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
     }
 
     // MARK: - The banner menu
@@ -139,24 +157,11 @@ struct SummonView: View {
             LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.88),
                                    .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
         )
-        .background(railPlate)
-    }
-
-    private var railPlate: some View {
-        ZStack(alignment: .trailing) {
-            LinearGradient(
-                colors: [Color(hex: "#0E0B08").opacity(0.86), Color(hex: "#0E0B08").opacity(0.62)],
-                startPoint: .leading,
-                endPoint: .trailing
-            )
-            Rectangle()
-                .fill(
-                    LinearGradient(colors: [Theme.gold.opacity(0.0), Theme.gold.opacity(0.7), Theme.gold.opacity(0.0)],
-                                   startPoint: .top, endPoint: .bottom)
-                )
-                .frame(width: 1)
-        }
-        .allowsHitTesting(false)
+        // The shared rail glass (this screen's own plate, made shared in
+        // phase B), which runs out under the leading inset now that the
+        // hall does: the rows stay in the safe area, the glass meets the
+        // glass of the phone.
+        .background(GlassRailPlate())
     }
 
     private func railSection(_ title: String, banners: [Banner], short: Bool) -> some View {
@@ -712,8 +717,17 @@ struct SummoningCircle: View {
     /// painting is centred in what is left over rather than in the whole
     /// frame, so the altar stands in the middle of the room the player can
     /// see; on a 734-point frame with a 176-point menu that also hides the
-    /// letterbox under the menu instead of leaving it beside the art.
+    /// letterbox under the menu instead of leaving it beside the art. Since
+    /// 2026-09-23 the frame is the whole glass (the room bleeds under both
+    /// side insets), which grows it the same on both sides, so the ring
+    /// stands where it stood.
     var leadingInset: CGFloat = 0
+    /// How far down the frame the words laid over the room reach (the
+    /// banner's name and the rates chips), and how far up from its foot the
+    /// summon plates stand: the scroll over the ring hangs in the band
+    /// between, whatever the painting's scale does to the ring.
+    var headerClearance: CGFloat = 0
+    var deckClearance: CGFloat = 0
 
     @State private var spin: Double = 0
     @State private var pulse: CGFloat = 1
@@ -777,7 +791,7 @@ struct SummoningCircle: View {
                 // rest it hangs above the ring, tilted, and breathes; when
                 // the summon is coming it drops toward the ring's centre,
                 // swells and flares, and the reveal takes over.
-                scrollOverTheRing(centre: centre, ringSize: ringSize)
+                scrollOverTheRing(centre: centre, ringSize: ringSize, height: frame.size.height)
 
                 // The banner's name used to hang above the altar here, on a
                 // marble plaque. It is in the header now: this whole view is a
@@ -807,13 +821,24 @@ struct SummoningCircle: View {
     }
 
     /// The scroll over the ring (see `body`): a disc of its own light behind
-    /// it so it reads against the painted floor and the marble alike, the
-    /// painting at two fifths of the ring at rest and half of it charging,
-    /// a slow breath (`pulse`) as a bob and a swell. The glyph remains the
-    /// fallback for a scroll whose painting has not shipped.
-    private func scrollOverTheRing(centre: CGPoint, ringSize: CGFloat) -> some View {
+    /// it so it reads against the painted floor and the marble alike, a slow
+    /// breath (`pulse`) as a bob and a swell. The glyph remains the fallback
+    /// for a scroll whose painting has not shipped.
+    ///
+    /// It hangs in the band between the header and the deck
+    /// (`headerClearance`, `deckClearance`), at four fifths of the band or
+    /// two fifths of the ring, whichever is smaller, and swells a quarter
+    /// and drops a third of the way to the ring's centre when charging. Run
+    /// 217 hung it at 0.44 of the ring above the centre and two fifths of
+    /// the ring tall, which put its top under the "5★ 3.0%" chip.
+    private func scrollOverTheRing(centre: CGPoint, ringSize: CGFloat, height: CGFloat) -> some View {
         let key = ItemArt.key(scroll: banner.scroll)
-        let size = ringSize * (charging ? 0.50 : 0.40)
+        let top = headerClearance
+        let foot = max(top + 40, height - deckClearance)
+        let rest = min(ringSize * 0.40, (foot - top) * 0.80)
+        let size = charging ? rest * 1.25 : rest
+        let restY = (top + foot) / 2
+        let y = charging ? restY + (centre.y - restY) * 0.35 : restY
         return ZStack {
             RadialGradient(
                 colors: [tint.opacity(charging ? 0.9 : 0.5), tint.opacity(0)],
@@ -823,9 +848,24 @@ struct SummoningCircle: View {
             .blendMode(.screen)
             if ItemArt.hasPainting(key) {
                 ItemIcon(key: key, size: size, glow: false)
+                    // Seven of the eight painted scrolls carry their sheet's
+                    // dark ground as a ragged glow round the roll (only the
+                    // black was keyed), and on the marble hall it read as a
+                    // black smudge behind the scroll (run 217). Every roll
+                    // lies corner to corner, lower left to upper right, so a
+                    // feathered capsule along that diagonal keeps the roll,
+                    // its knobs, its seal and its ribbon and lets the ground
+                    // go. Before the tilt, so it is the painting's diagonal.
+                    .mask {
+                        Capsule()
+                            .frame(width: size * 1.34, height: size * 0.44)
+                            .rotationEffect(.degrees(-45))
+                            .blur(radius: size * 0.025)
+                    }
                     .rotationEffect(.degrees(charging ? 0 : -12))
+                    // The element's light round the roll, and no dark drop
+                    // shadow under it: a scroll hanging in light casts none.
                     .shadow(color: tint.opacity(0.85), radius: charging ? size * 0.22 : size * 0.10)
-                    .shadow(color: .black.opacity(0.35), radius: 6, y: 8)
             } else {
                 Image(systemName: banner.scroll.glyph)
                     .font(.system(size: size * 0.4, weight: .black))
@@ -835,7 +875,7 @@ struct SummoningCircle: View {
         }
         .scaleEffect(pulse)
         .offset(y: (1 - pulse) * 90)
-        .position(x: centre.x, y: charging ? centre.y - ringSize * 0.18 : centre.y - ringSize * 0.44)
+        .position(x: centre.x, y: y)
     }
 
     /// Something for the overlaid controls to sit on. The lettering over the
