@@ -910,6 +910,9 @@ final class GameStore: ObservableObject {
                 outcomes.append(
                     CampaignService.settle(stage: stage, result: result, player: &player, rng: &rng)
                 )
+                // A swept run finds a Hidden Shrine as a fought win does
+                // (Docs/SHRINES.md): the two pay the same.
+                _ = ShrineService.noteClear(stage: stage, result: result, player: &player, rng: &rng)
             }
             receipt = SweepReceipt(
                 stage: stage,
