@@ -90,7 +90,15 @@ final class StoreTests: XCTestCase {
         let best: Double = Double(hoard.regularDivinity) / hoard.referencePrice
         let blessingTotal: Int = StoreCatalog.blessing.divinity + StoreCatalog.blessingDays * StoreCatalog.blessingDaily
         let blessingRate: Double = Double(blessingTotal) / StoreCatalog.blessing.referencePrice
-        let starterWorth: Double = 500 + 5 * 100 + 600 + 100_000 / 300.0
+        // The starter's worth in divinity, a term at a time: 500 divinity, five
+        // Pantheon Scrolls at 100, the Divine Scroll at 600, and 100,000 drachma
+        // at 300 to one (a literal sum of mixed types took the type checker
+        // ten seconds and then failed, run 238).
+        let starterDivinity: Double = 500
+        let starterScrolls: Double = 5.0 * 100.0
+        let starterDivine: Double = 600
+        let starterDrachma: Double = 100_000.0 / 300.0
+        let starterWorth: Double = starterDivinity + starterScrolls + starterDivine + starterDrachma
         let starterRate: Double = starterWorth / StoreCatalog.starter.referencePrice
         let floor: Double = best * 5
         XCTAssertEqual(blessingTotal, 1_800)
