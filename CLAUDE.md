@@ -1021,6 +1021,13 @@ environment can and cannot do. The short version:
   --store` checks the catalog against `Pantheon.storekit`; CI has no
   StoreKit. Turn off the Testing stall
   (`ShopService.testingPacksEnabled`) before any review build.
+  **Anonymous play data** (`Docs/ANALYTICS.md`): `AnalyticsService`
+  batches listed events to the Supabase `analytics_events` table on the
+  anon key with a random install number, never under `-tour` or the
+  tests; the owner reads the `analytics.*` views; the Support board's
+  switch turns it off and forgets the number. A new kind of play worth
+  counting gets an event in `Analytics.swift` and a column in a view,
+  never a free-text field.
 - **The paid programme of 2026-09-17** (PLAN.md, *The paid programme*):
   the five gods are meshy-7 now (`_m7`, judged on boards, better in every
   one), their bespoke motions re-applied, Zeus's ultimate remade (blow at

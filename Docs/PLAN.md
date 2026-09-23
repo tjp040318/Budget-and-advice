@@ -7535,4 +7535,25 @@ numbers are in its own document:
   dormant until the owner adds the App Store Connect API key and the
   signing secrets; he may upload from his Mac instead ("the
   Xcode/testflight stuff isn't as important").
-- **Analytics** and **the remakes** are recorded below as they land.
+- **Anonymous play data** (`Docs/ANALYTICS.md`; the owner chose
+  "Yes, anonymous only"). Options weighed: TelemetryDeck, GameAnalytics,
+  Firebase and PostHog against the owner's own Supabase. Supabase won:
+  no package dependency (CI resolves none, and the checker reads only
+  plain Swift), the data stays in his project, the server enforces the
+  anonymity rather than a vendor promising it, and every question is a
+  SQL view. What it sends: a random install number (renewed every 13
+  months, forgotten when the switch goes off), listed event names and
+  numbers only — `first_open`, sessions with their spend and earn counts,
+  the first-hour funnel, every stage result (won or lost, turns, stars,
+  power against the recommended), summons, arena, evolve / awaken / fuse,
+  level-ups and purchases read off `Player.treasury`. The anon key only,
+  no IP stored, 400 events an install a day, 120 days kept. Nothing under
+  the tour, the tests, previews or an empty `Backend.plist`. The views
+  (`analytics.daily`, `retention` D1–D30, `first_hour`, `stages` fail
+  rates, `quit_points`, `economy`) are the owner's dashboard; the
+  migration is `20260923010000_analytics_events.sql` and his steps are
+  ANALYTICS.md §1. `CampaignService.settle` records every run
+  (`stageSettled`, counting toward no mission), because the quests see
+  only wins. `AnalyticsTests` (19). The Support board's "Share anonymous
+  play data" toggle lists what is sent under it.
+- **The remakes** are recorded below as they land.

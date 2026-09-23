@@ -251,7 +251,15 @@ and `Backend/supabase/functions/apple-revoke/index.ts`.
   Apple's identity token, which Supabase keeps on the user), **Gameplay
   Content** (the save, the Allies defence snapshot, war results), **Other
   User Content** (guild board posts), **Product Interaction** (the player
-  row's last launch). The App Store Connect questionnaire must say the same.
+  row's last launch). Since the anonymous play data and the Treasury
+  (2026-09-23; `Docs/ANALYTICS.md`, `Docs/STORE.md`): **Device ID** is
+  collected NOT linked, for Analytics (the random install number, renewed
+  every 13 months and forgotten when "Share anonymous play data" is turned
+  off); **Product Interaction** gains Analytics beside App Functionality;
+  and **Purchase History** is collected, linked, for App Functionality and
+  Analytics (the Treasury's ledger in the save). The App Store Connect
+  questionnaire must say the same (Apple answers "linked" once per data
+  type, so a type that is linked for one purpose is linked for all).
   Required-reason APIs: **UserDefaults** `CA92.1` (the app's own settings);
   **File timestamp** `C617.1` (the only timestamp read is a `CKRecord`'s
   `modificationDate` in the app's own CloudKit container — declared because
