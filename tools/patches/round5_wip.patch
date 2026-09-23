@@ -1,0 +1,3173 @@
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index 83cdfa8..609fb6b 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -115,6 +115,47 @@ jobs:
+           # to one step (-tour-step N), waits for the screen to settle, and
+           # photographs it; battle and reveal get several frames each.
+           shoot() { xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || true; }
++          # The first frame after every launch, re-shot while it is dark. Run
++          # 224's Hall of Ka came out as the empty framebuffer — every pixel
++          # 0,0,0 but the home indicator — because that launch's main thread
++          # sat 10.4 s in its first Metal compile (0.4 s in run 223), while
++          # the step's three relaunches drew normally. Redrawn at full size,
++          # that frame is some 11 KB as a PNG and the darkest drawn first
++          # frame of the run (the rite over its veil) some 780 KB, so a frame
++          # under 100 KB is shot again four seconds on, three times at most,
++          # and every retake is written to retakes.txt beside the frames.
++          shoot_lit() {
++            shoot "$1"
++            local tries=0 bytes
++            while :; do
++              bytes=$(stat -f%z "shots/$1.png" 2>/dev/null || echo 0)
++              [ "$bytes" -gt 100000 ] && return 0
++              if [ $tries -ge 3 ]; then
++                echo "$(date -u +%T) $1 still dark after $tries retakes ($bytes bytes)" | tee -a shots/retakes.txt
++                return 0
++              fi
++              tries=$((tries + 1))
++              echo "$(date -u +%T) $1 came out dark ($bytes bytes): retake $tries in 4 s" | tee -a shots/retakes.txt
++              sleep 4; shoot "$1"
++            done
++          }
++          # Waits up to $2 seconds for the step's app to print "[TourCue] $1"
++          # on its stdout (line-buffered in a debug build), so a beat that runs
++          # on the app's own clock is photographed on that clock and not the
++          # launch's. The relic's rite is 2.8 s from its first frame to its
++          # close; run 223's frame caught its peak and run 224's the fade out,
++          # with the same sleep, because the launch alone varies by seconds.
++          cue() {
++            local out="shots/$step-${names[$step]}-out.txt" ticks=0
++            until grep -q "\[TourCue\] $1" "$out" 2>/dev/null; do
++              ticks=$((ticks + 1))
++              if [ $ticks -gt $(( $2 * 10 )) ]; then
++                echo "$(date -u +%T) no '$1' cue from step $step in $2 s"
++                return 0
++              fi
++              sleep 0.1
++            done
++          }
+           # Relaunches the step being photographed with more arguments — a
+           # room, a tab, a ledger (phase B, 2026-09-22: twenty-six of them).
+           # Reads the loop's $step when it is called. Each relaunch keeps its
+@@ -157,60 +198,79 @@ jobs:
+               # CI's simulator the flash lands about 2.5 s later than it did:
+               # a is the charge, b and c the landing, and the awakened lab
+               # frames wait 10 s, not 7, for the words to be up.
+-              reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 5; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
++              reveal) sleep 3; shoot_lit "$step-${names[$step]}-a"; sleep 5; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
+                 SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
+                   --stdout="$PWD/shots/$step-${names[$step]}-awakened-out.txt" \
+                   --stderr="$PWD/shots/$step-${names[$step]}-awakened-err.txt" \
+                   "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened >/dev/null
+-                sleep 10; shoot "$step-${names[$step]}-awakened"
++                sleep 10; shoot_lit "$step-${names[$step]}-awakened"
+                 # The lighting lab (2026-09-18): the same awakened Ares two
+                 # thirds of a stop under, with the bare rig (Lambert, no
+                 # environment, no shadow), and with the ramp of 2026-09-17
+                 # on the bare rig — the control every other frame is judged
+                 # against. Docs/PLAN.md, "The figure stages' light".
+-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab dark >/dev/null
+-                sleep 10; shoot "$step-${names[$step]}-awakened-dark"
+-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab bare >/dev/null
+-                sleep 10; shoot "$step-${names[$step]}-awakened-bare"
+-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab bare -tour-shading legacy >/dev/null
+-                sleep 10; shoot "$step-${names[$step]}-awakened-legacy"
++                # Through `again` since fix round 5 (2026-09-23), so each of
++                # the six keeps its console in 5-reveal-console.txt: run
++                # 224's judges had no shader timing for any of them.
++                again -tour-reveal awakened -tour-reveal-lab dark
++                sleep 10; shoot_lit "$step-${names[$step]}-awakened-dark"
++                again -tour-reveal awakened -tour-reveal-lab bare
++                sleep 10; shoot_lit "$step-${names[$step]}-awakened-bare"
++                again -tour-reveal awakened -tour-reveal-lab bare -tour-shading legacy
++                sleep 10; shoot_lit "$step-${names[$step]}-awakened-legacy"
+                 # And the Lambert ramp of 2026-09-18 on the full rig
+                 # (2026-09-20): the frame the physically based figure is
+                 # judged against. Docs/PLAN.md, "The serious look in the light".
+-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-shading ramp >/dev/null
+-                sleep 10; shoot "$step-${names[$step]}-awakened-ramp"
++                again -tour-reveal awakened -tour-shading ramp
++                sleep 10; shoot_lit "$step-${names[$step]}-awakened-ramp"
+                 # And the rig of 2026-09-18 (key 900, environment 0.5, the
+                 # paint at 0.85, satin gold): the control for the brighter
+                 # rig of 2026-09-22. Docs/PLAN.md, "The figure on the phone".
+-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab previous >/dev/null
+-                sleep 10; shoot "$step-${names[$step]}-awakened-previous"
++                again -tour-reveal awakened -tour-reveal-lab previous
++                sleep 10; shoot_lit "$step-${names[$step]}-awakened-previous"
+                 # The 5★'s charge (2026-09-23): the painted scroll over the
+                 # turning rings, held, so the beat before a reveal is judged
+                 # on its own (it played over an empty dusk until run 220).
+-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal-hold charge >/dev/null
+-                sleep 5; shoot "$step-${names[$step]}-charge" ;;
+-              battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
+-              arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
+-              dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
++                again -tour-reveal-hold charge
++                sleep 5; shoot_lit "$step-${names[$step]}-charge" ;;
++              battle) sleep 7; shoot_lit "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
++              # The arena fight, then its row under an enemy's area ultimate
++              # (-tour-aoe <effect>: fired on the whole player row three
++              # seconds after the scene first draws, the scene paused 0.45 s
++              # later so the peak holds): the Duat rite and the Wrath of the
++              # Eye, the two that laid a white slab over the team in run 224.
++              # Fourteen seconds, because a launch can stall seconds in its
++              # first shader compile before the scene draws at all.
++              arena_battle) sleep 7; shoot_lit "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"
++                again -tour-aoe duat_rite; sleep 14; shoot_lit "$step-${names[$step]}-aoe"
++                again -tour-aoe wrath_of_the_eye; sleep 14; shoot_lit "$step-${names[$step]}-aoe-b" ;;
++              dungeon_battle) sleep 8; shoot_lit "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
+               # The reckoning (about 3 s in), the chest with its lid coming
+               # up (about 7.6 s), the spoils panel with every tile and
+               # Continue (about 14 s); a screenshot itself takes a second
+               # or more, which is in these numbers. The old 4/5/8 landed the
+               # first frame on the very instant the chest's SceneKit view was
+               # made, and photographed a black screen with TAP TO OPEN on it.
+-              victory|raid_grade) sleep 2; shoot "$step-${names[$step]}-a"; sleep 3; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
+-              # The rite (about 1.5 s in: the stone lit, the halo drawing),
+-              # then the awakened relic with its fifth sub stat's choice up.
+-              relic_awaken) sleep 1.5; shoot "$step-${names[$step]}-a"; sleep 4.5; shoot "$step-${names[$step]}-b" ;;
++              victory|raid_grade) sleep 2; shoot_lit "$step-${names[$step]}-a"; sleep 3; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
++              # The rite at its peak, then the awakened relic with its fifth
++              # sub stat's choice up. The rite's own clock (RelicAwakeningRite
++              # .play): the veil up by 0.35 s, the halo drawn by 1.2, AWAKENED
++              # and its caption settled by about 1.4, and the fade out from
++              # 2.8 to 3.15. The tour lets the screen settle, then performs the
++              # awakening and prints its cue; 1.3 s after the cue plus the
++              # screenshot's own half second or so is the middle of the peak.
++              relic_awaken)
++                cue rite 20
++                sleep 1.3; shoot_lit "$step-${names[$step]}-a"; sleep 4.5; shoot "$step-${names[$step]}-b" ;;
+               # Every chapter's map: the step is relaunched once per chapter
+               # (-tour-chapter K) so each painted region is photographed with
+               # its medallions and chests in place.
+               chapter_maps)
+                 letters=(a b c d e f g h i j k l m n o p)
+-                sleep 5; shoot "$step-${names[$step]}-a"
++                sleep 5; shoot_lit "$step-${names[$step]}-a"
+                 for k in 1 2 3 4 5 6 7 8 9 10 11; do
+                   xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-chapter $k >/dev/null
+-                  sleep 5; shoot "$step-${names[$step]}-${letters[$k]}"
++                  sleep 5; shoot_lit "$step-${names[$step]}-${letters[$k]}"
+                 done ;;
+               # One fight per realm (-tour-environment): the sets the other
+               # battle steps never reach — Olympus, the marsh, the fjord, the
+@@ -222,24 +282,24 @@ jobs:
+                 i=0
+                 for env in olympus_gate lerna_marsh midgard_fjord jotunheim_hall forum_rome peach_garden; do
+                   xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-environment $env >/dev/null
+-                  sleep 9; shoot "$step-${names[$step]}-${letters[$i]}"
++                  sleep 9; shoot_lit "$step-${names[$step]}-${letters[$i]}"
+                   i=$((i+1))
+                 done ;;
+               # The Allies screen, one frame per tab (-tour-social-tab).
+               allies)
+-                sleep 5; shoot "$step-${names[$step]}-guild"
++                sleep 5; shoot_lit "$step-${names[$step]}-guild"
+                 for tab in friends inbox ranks; do
+                   xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-social-tab $tab >/dev/null
+-                  sleep 5; shoot "$step-${names[$step]}-$tab"
++                  sleep 5; shoot_lit "$step-${names[$step]}-$tab"
+                 done ;;
+               # The island at rest, then relaunched with its camera zoomed
+               # onto the summoning circle (-tour-island-zoom 1.5), so the
+               # diorama is seen close: the buildings as targets, the
+               # bubbles, the figures and the decorations at the larger size.
+               island)
+-                sleep 5; shoot "$step-${names[$step]}"
++                sleep 5; shoot_lit "$step-${names[$step]}"
+                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-island-zoom 1.5 >/dev/null
+-                sleep 6; shoot "$step-${names[$step]}-zoomed" ;;
++                sleep 6; shoot_lit "$step-${names[$step]}-zoomed" ;;
+               # Phase B (2026-09-22): every rebuilt screen in the states its
+               # plain frame cannot show. The plain frame keeps its old name,
+               # so a run still compares with the one before; the relaunches
+@@ -248,110 +308,110 @@ jobs:
+               # The unit sheet on the seed's awakened unit (its regalia at
+               # III): the unlocked regalia plate and the awakening line.
+               detail)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-detail awakened; sleep 5; shoot "$step-${names[$step]}-b" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-detail awakened; sleep 5; shoot_lit "$step-${names[$step]}-b" ;;
+               # The Hall of Ka's other three ledgers: the offering Auto chose,
+               # the evolution, and the fusion board — six seconds, so the
+               # prize's mesh has loaded onto the altar.
+               training)
+-                sleep 5; shoot "$step-${names[$step]}"
++                sleep 5; shoot_lit "$step-${names[$step]}"
+                 for m in feed evolve fuse; do
+-                  again -tour-training $m; sleep 6; shoot "$step-${names[$step]}-$m"
++                  again -tour-training $m; sleep 6; shoot_lit "$step-${names[$step]}-$m"
+                 done ;;
+               # More's Diagnostics row, opened: where the model board and the
+               # console went when they left More's front page.
+               more)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-more diagnostics; sleep 5; shoot "$step-${names[$step]}-diagnostics" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-more diagnostics; sleep 5; shoot_lit "$step-${names[$step]}-diagnostics" ;;
+               # The inventory with its fullest worn relic picked (four subs,
+               # a four-piece set): the panel run 221 cut above OPEN.
+               relics)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-relic legend; sleep 5; shoot "$step-${names[$step]}-legend" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-relic legend; sleep 5; shoot_lit "$step-${names[$step]}-legend" ;;
+               # The Halls on the brightest painting (Radiance, Olympus: can
+               # the glass be read?) and the darkest (Umbra, the Serpent Deep).
+               halls)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-dungeon hall_radiance; sleep 5; shoot "$step-${names[$step]}-radiance"
+-                again -tour-dungeon hall_umbra; sleep 5; shoot "$step-${names[$step]}-umbra" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-dungeon hall_radiance; sleep 5; shoot_lit "$step-${names[$step]}-radiance"
++                again -tour-dungeon hall_umbra; sleep 5; shoot_lit "$step-${names[$step]}-umbra" ;;
+               # The bazaar's densest stall (ten wares, painted scrolls), and
+               # the Laurel exchange, which sits below the rail's fold: the
+               # rail must open scrolled to it.
+               shop)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-shop-stall scrolls; sleep 5; shoot "$step-${names[$step]}-scrolls"
+-                again -tour-shop-stall laurel; sleep 5; shoot "$step-${names[$step]}-laurels" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-shop-stall scrolls; sleep 5; shoot_lit "$step-${names[$step]}-scrolls"
++                again -tour-shop-stall laurel; sleep 5; shoot_lit "$step-${names[$step]}-laurels" ;;
+               # The Duat's map with its scroll unrolled (story, yields,
+               # terms), and on Hell over the walked copy (the tier well's
+               # gold plate, Hell's grade and motes, the terms).
+               chapter_map)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-chapter-scroll; sleep 5; shoot "$step-${names[$step]}-scroll"
+-                again -tour-tier hell; sleep 5; shoot "$step-${names[$step]}-hell" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-chapter-scroll; sleep 5; shoot_lit "$step-${names[$step]}-scroll"
++                again -tour-tier hell; sleep 5; shoot_lit "$step-${names[$step]}-hell" ;;
+               # The Feats: twenty-eight rows, the claimable ones first.
+               missions)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-missions-tab feats; sleep 5; shoot "$step-${names[$step]}-feats" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-missions-tab feats; sleep 5; shoot_lit "$step-${names[$step]}-feats" ;;
+               # The Labyrinth's Halls and Tower wings, never photographed.
+               labyrinth)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-labyrinth-wing halls; sleep 5; shoot "$step-${names[$step]}-halls"
+-                again -tour-labyrinth-wing tower; sleep 5; shoot "$step-${names[$step]}-tower" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-labyrinth-wing halls; sleep 5; shoot_lit "$step-${names[$step]}-halls"
++                again -tour-labyrinth-wing tower; sleep 5; shoot_lit "$step-${names[$step]}-tower" ;;
+               # The darkest dungeon (the Necropolis); the Vault's B1, three
+               # stars on the seed, for the room's Sweep; and its locked B10,
+               # the tallest drops plate — the height test.
+               dungeon)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-dungeon lab_necropolis; sleep 5; shoot "$step-${names[$step]}-necropolis"
+-                again -tour-dungeon lab_colossus -tour-dungeon-floor 1; sleep 5; shoot "$step-${names[$step]}-mastered"
+-                again -tour-dungeon lab_colossus -tour-dungeon-floor 10; sleep 5; shoot "$step-${names[$step]}-b10"
+-                again -tour-dungeon lab_colossus -tour-dungeon-floor 1 -tour-dungeon-sweep; sleep 5; shoot "$step-${names[$step]}-sweep" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-dungeon lab_necropolis; sleep 5; shoot_lit "$step-${names[$step]}-necropolis"
++                again -tour-dungeon lab_colossus -tour-dungeon-floor 1; sleep 5; shoot_lit "$step-${names[$step]}-mastered"
++                again -tour-dungeon lab_colossus -tour-dungeon-floor 10; sleep 5; shoot_lit "$step-${names[$step]}-b10"
++                again -tour-dungeon lab_colossus -tour-dungeon-floor 1 -tour-dungeon-sweep; sleep 5; shoot_lit "$step-${names[$step]}-sweep" ;;
+               # The boss stage's card: the BOSS eyebrow, the boss tile's tag,
+               # the boss's face on its medallion behind the dim.
+               stage_popup)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-popup-stage duat_1_5; sleep 5; shoot "$step-${names[$step]}-boss" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-popup-stage duat_1_5; sleep 5; shoot_lit "$step-${names[$step]}-boss" ;;
+               # Athena's caret on the Collection door: proof that the tab
+               # bar's anchor reaches an overlay drawn over screen and bar.
+               guide)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-guide caret; sleep 5; shoot "$step-${names[$step]}-caret" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-guide caret; sleep 5; shoot_lit "$step-${names[$step]}-caret" ;;
+               # The plain frame is a real sweep's receipt over the Duat's map
+               # (under the tab bar, where the game shows it). Then the
+               # briefing alone, three ways: an unmastered three-wave campaign
+               # stage on the Hall of Two Truths, the mastered Duat 1-1 with
+               # Sweep live, and Labyrinth B10's six sets and BOSS wave.
+               sweep)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-briefing duat_1_4; sleep 5; shoot "$step-${names[$step]}-briefing"
+-                again -tour-briefing duat_1_1; sleep 5; shoot "$step-${names[$step]}-briefing-sweep"
+-                again -tour-briefing lab_colossus_10; sleep 5; shoot "$step-${names[$step]}-briefing-dungeon" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-briefing duat_1_4; sleep 5; shoot_lit "$step-${names[$step]}-briefing"
++                again -tour-briefing duat_1_1; sleep 5; shoot_lit "$step-${names[$step]}-briefing-sweep"
++                again -tour-briefing lab_colossus_10; sleep 5; shoot_lit "$step-${names[$step]}-briefing-dungeon" ;;
+               # The app's own shell on the Summon tab (-tour-root summon):
+               # RootView lays the tab bar out under a TabView of
+               # NavigationStacks, a path the tour's copy stands in for and no
+               # frame had photographed (run 216). The deck must sit whole
+               # above the bar, the painting to both edges.
+               summon)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-root summon; sleep 6; shoot "$step-${names[$step]}-root" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-root summon; sleep 6; shoot_lit "$step-${names[$step]}-root" ;;
+               # The dearest 5★ on the mileage counter, short of points.
+               mileage)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-mileage-pick dearest; sleep 5; shoot "$step-${names[$step]}-b" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-mileage-pick dearest; sleep 5; shoot_lit "$step-${names[$step]}-b" ;;
+               # The opening gift with a candidate lit and TAKE in gold.
+               selector)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-selector-pick first; sleep 5; shoot "$step-${names[$step]}-b" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-selector-pick first; sleep 5; shoot_lit "$step-${names[$step]}-b" ;;
+               # The Umbra Titan: the rail scrolled to him and his three-line
+               # name whole, with the strip (title, Back, wallet) in place.
+               raids)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-raid raid_unwrapped_king; sleep 5; shoot "$step-${names[$step]}-umbra" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-raid raid_unwrapped_king; sleep 5; shoot_lit "$step-${names[$step]}-umbra" ;;
+               # An ordinary week's band, a week after the Festival Monday.
+               events)
+-                sleep 5; shoot "$step-${names[$step]}"
+-                again -tour-events-week plain; sleep 5; shoot "$step-${names[$step]}-plain" ;;
+-              *)      sleep 5; shoot "$step-${names[$step]}" ;;
++                sleep 5; shoot_lit "$step-${names[$step]}"
++                again -tour-events-week plain; sleep 5; shoot_lit "$step-${names[$step]}-plain" ;;
++              *)      sleep 5; shoot_lit "$step-${names[$step]}" ;;
+             esac
+             echo "$(date -u +%T) ${names[$step]}"
+           done
+@@ -361,11 +421,24 @@ jobs:
+           # The unified log for the process over the WHOLE tour (--last 12m
+           # missed a crash in its sixth minute), in case something never
+           # reached stderr (a Metal compiler message, the OS killing the app).
++          # Run 224's stopped four minutes in, before the reveal whose shader
++          # timing it was read for: 1,179 of its 1,500 lines were RenderBox's
++          # "RBLayer: stale image queue" / "full image queue" and "RBDrawable:
++          # no surface, dropping frame", and most of the rest were lines every
++          # launch writes that pass the filter by accident ("Default" holds
++          # "fault", "assertion" holds "assert", "notify signal" "signal",
++          # com.apple.metal.simulator "Metal"). Those launch lines are dropped,
++          # each unbroken run of RenderBox lines is counted into one line with
++          # its span (a black frame may yet want to know frames were dropped),
++          # and the cap is 5,000.
+           xcrun simctl spawn "$UDID" log show --start "$TOUR_START" --style compact \
+             --predicate 'process == "Pantheon" OR (eventMessage CONTAINS "Pantheon" AND messageType == error)' \
+-            2>/dev/null | grep -v -E 'CoreAnalytics|Bluetooth|RunningBoard|LaunchServices|activity' \
++            2>/dev/null | grep -v -E 'CoreAnalytics|Bluetooth|RunningBoard|runningboard|LaunchServices|activity|UIKit:BackgroundTask|UIKit:KeyWindow|dt\.xctest|audio\.caulk|coreaudio|xpc:connection|PrototypeTools' \
+             | grep -i -E 'error|fault|assert|crash|fatal|exc_|signal|abort|terminat|kill|jetsam|hidden|SceneKit|Metal' \
+-            | head -n 1500 > shots/system-log.txt || true
++            | awk '/RBLayer|RBDrawable/ { if (!n) first = $1 " " $2; n++; last = $2; next }
++                   { if (n) print first " to " last " renderbox: " n " stale/full image queue and no-surface lines"; n = 0; print }
++                   END { if (n) print first " to " last " renderbox: " n " stale/full image queue and no-surface lines" }' \
++            | head -n 5000 > shots/system-log.txt || true
+           # A crash report, when a launch died: the host's ReportCrash writes
+           # one for a simulated process too. Every report for the app since
+           # the tour began is published as text, and tools/ciframes.py prints
+diff --git a/Pantheon/App/TourView.swift b/Pantheon/App/TourView.swift
+index 88f0d6b..9c39ad3 100644
+--- a/Pantheon/App/TourView.swift
++++ b/Pantheon/App/TourView.swift
+@@ -648,10 +648,11 @@ struct TourView: View {
+             // Titan, whose three-line name is the one that has to fit.
+             LabyrinthView(opening: .raids, raid: Self.pinnedRaid)
+         case "relic_awaken":
+-            // The awakening, performed as the screen appears on the tour
+-            // save's 6★ +15 (the debug seed's, with the aether to pay for
+-            // it): the rite in the first frame, then the halo on the stone,
+-            // the Awakened chip and the fifth sub stat's choice of two.
++            // The awakening on the tour save's 6★ +15 (the debug seed's, with
++            // the aether to pay for it): the rite in the first frame, then
++            // the halo on the stone, the Awakened chip and the fifth sub
++            // stat's choice of two. Performed on a settled screen, with a cue
++            // the CI job times the frame from (`TourRite`).
+             //
+             // Picked by a rule that still holds AFTER the awakening: the
+             // store changes the moment it lands, this `content` is
+@@ -659,7 +660,7 @@ struct TourView: View {
+             // sheet for the best climbing relic between the two frames —
+             // run 159 photographed the Vigil +12 twice and the rite never.
+             if let relic = store.player.relics.first(where: { $0.grade >= 6 && $0.isMaxLevel }) {
+-                RelicDetailView(relicID: relic.id, awakenOnAppear: !relic.isAwakened)
++                TourRite(relicID: relic.id, awakens: !relic.isAwakened)
+             } else if let relic = bestRelic {
+                 RelicDetailView(relicID: relic.id)
+             }
+@@ -989,6 +990,43 @@ struct TourView: View {
+     }
+ }
+ 
++/// The relic's rite, performed where the CI job can time it. The rite runs
++/// on its own clock — the veil up by 0.35 s, AWAKENED settled by about 1.4,
++/// the fade out from 2.8 — and awakening on appear put its start wherever
++/// the launch happened to finish: run 223's frame caught the peak and run
++/// 224's, with the same sleep, the fade out (a khaki wash, the caption at
++/// 70%). So the relic's screen is drawn first and left to settle, then the
++/// awakening is performed on a fresh copy of it (its `onAppear` is what
++/// awakens) and `[TourCue] rite` goes to stdout the same moment; the job
++/// waits for that line and photographs the peak a fixed time after it.
++private struct TourRite: View {
++    let relicID: UUID
++    /// False once the relic is awakened: a later launch on the same save
++    /// has no rite to perform, and prints no cue.
++    let awakens: Bool
++
++    @State private var armed = false
++
++    var body: some View {
++        Group {
++            if armed {
++                RelicDetailView(relicID: relicID, awakenOnAppear: true)
++            } else {
++                RelicDetailView(relicID: relicID)
++            }
++        }
++        .onAppear {
++            guard awakens, !armed else { return }
++            // Long enough for the launch's first draw — run 224's main
++            // thread was busy 0.8 s bringing this screen up — to be over.
++            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
++                armed = true
++                print("[TourCue] rite")
++            }
++        }
++    }
++}
++
+ /// The sweep, photographed where the game shows it: the receipt over the
+ /// chapter's map (TourView wraps this in the tab bar, since the map is a
+ /// tab). It runs a REAL sweep on the tour's save — `duat_1_1`, which the
+diff --git a/Pantheon/Render/BattleSceneView.swift b/Pantheon/Render/BattleSceneView.swift
+index 29fca15..5a8df2f 100644
+--- a/Pantheon/Render/BattleSceneView.swift
++++ b/Pantheon/Render/BattleSceneView.swift
+@@ -178,6 +178,12 @@ final class UnitPlateOverlay: SKScene {
+     /// Two layers so the reckoning can fade the whole field's chrome as one.
+     private let plateLayer = SKNode()
+     private let floatLayer = SKNode()
++    /// The plates themselves, inside `plateLayer`, dimmed while a cut-in's
++    /// band is up (run 224's 18-b, the cut-in's first photograph: the band
++    /// fades to clear at its ends, and the plates showed through beside the
++    /// portrait and the name, two tiles over its top rule). A node of its
++    /// own, so the band's dim and the reckoning's fade never undo each other.
++    private let dimLayer = SKNode()
+     /// The words and numbers in flight. Render thread only: added through
+     /// `perform`, moved and retired by `BattleSceneController.layoutFloats`.
+     private(set) var floats: [FloatingLabel] = []
+@@ -197,6 +203,7 @@ final class UnitPlateOverlay: SKScene {
+         isUserInteractionEnabled = false
+         plateLayer.zPosition = 0
+         addChild(plateLayer)
++        plateLayer.addChild(dimLayer)
+         floatLayer.zPosition = 100
+         addChild(floatLayer)
+     }
+@@ -211,7 +218,7 @@ final class UnitPlateOverlay: SKScene {
+         let plate = UnitPlate(elementHex: elementHex, wearsMarker: wearsMarker)
+         plate.host = self
+         plates[id] = plate
+-        perform { [weak self] in self?.plateLayer.addChild(plate) }
++        perform { [weak self] in self?.dimLayer.addChild(plate) }
+         return plate
+     }
+ 
+@@ -265,6 +272,18 @@ final class UnitPlateOverlay: SKScene {
+         }
+     }
+ 
++    /// The plates at a quarter while a cut-in's band is up, so the band
++    /// reads alone — the genre hides its bars for a skill's moment — and
++    /// back as it goes. The floating numbers stay: an ultimate's hits land
++    /// as the band leaves, and they are its payoff.
++    func setPlatesDimmed(_ dimmed: Bool) {
++        perform { [weak self] in
++            guard let self else { return }
++            self.dimLayer.removeAction(forKey: "dim")
++            self.dimLayer.run(.fadeAlpha(to: dimmed ? 0.25 : 1, duration: dimmed ? 0.15 : 0.3), withKey: "dim")
++        }
++    }
++
+     func removePlate(for id: UUID) {
+         guard let plate = plates[id] else { return }
+         plates[id] = nil
+@@ -324,6 +343,10 @@ final class FloatingLabel {
+     /// and by its unit's plate, eased so a push slides rather than jumps.
+     var push: CGFloat = 0
+     var pushed = false
++    /// Crowded out of its unit's column (run 224): the lanes under and over
++    /// the plate could not hold every float, and the oldest — read by now —
++    /// gives up its place. It fades where it stands and does not come back.
++    var crowded = false
+ 
+     init(node: SKSpriteNode, unit: UnitNode?, lift: Float, side: Float, align: CGFloat, fallback: SCNVector3,
+          born: TimeInterval, pop: Bool, scatter: CGFloat, rise: CGFloat) {
+@@ -381,6 +404,39 @@ final class FloatingLabel {
+     }
+ }
+ 
++/// A rectangle a plate draws, in overlay points (y up): the badge and the
++/// track, or the row of status tiles with their turn chips. `UnitPlate`
++/// gives its own from its centre; `placed(at:)` stands one on the frame.
++struct PlateBox {
++    var rect: CGRect
++    /// The status row's. Nothing may stand within four points of it across:
++    /// run 224's arena lifted a plate clear of its neighbour's badge alone,
++    /// and the lower plate's turn chip "2" stood on the lifted badge's ring
++    /// beside its "40" — "240".
++    var isTiles: Bool
++
++    func placed(at centre: CGPoint) -> PlateBox {
++        PlateBox(rect: rect.offsetBy(dx: centre.x, dy: centre.y), isTiles: isTiles)
++    }
++
++    /// Whether two placed boxes are near enough across to meet at some
++    /// height. A badge may graze the rounded end of the next track by three
++    /// points — or every row of five abreast would zigzag — but a tile row
++    /// keeps four clear of anything.
++    func isBeside(_ other: PlateBox) -> Bool {
++        let across = min(rect.maxX, other.rect.maxX) - max(rect.minX, other.rect.minX)
++        return across > (isTiles || other.isTiles ? -4 : 3)
++    }
++
++    /// Whether two placed boxes meet: beside each other, and overlapping up
++    /// and down — or, with a tile row in it, within two points.
++    func meets(_ other: PlateBox) -> Bool {
++        guard isBeside(other) else { return false }
++        let upright = min(rect.maxY, other.rect.maxY) - max(rect.minY, other.rect.minY)
++        return upright > (isTiles || other.isTiles ? -2 : 0)
++    }
++}
++
+ /// One fighter's bars, the genre's way — and OVER THE HEAD, where the genre
+ /// keeps them (2026-09-15; the owner, with Summoners War's frame beside
+ /// ours: "The health bars are not above the heads"). One dark rounded
+@@ -435,9 +491,23 @@ final class UnitPlate: SKNode {
+     /// whether or not one is up, so a row of plates does not re-stagger
+     /// every time the turn changes hands.
+     let reachRight: CGFloat
+-    /// How far it draws above its centre now: the badge, or the tiles while
+-    /// any are up. Render thread.
+-    private(set) var reachAbove: CGFloat = UnitPlate.badgeSize / 2
++    /// The status row's box while any tile is up, from the plate's centre,
++    /// the turn chips included; nil with none. Render thread.
++    private(set) var tileBox: CGRect?
++
++    /// What the plate draws, from its centre: the badge's left edge to the
++    /// track's end (or the marker's) at the badge's height, and the status
++    /// row while one is up. The declutter keeps plates' boxes apart and the
++    /// floating words keep off all of them. Render thread.
++    var boxes: [PlateBox] {
++        let body = PlateBox(
++            rect: CGRect(x: -UnitPlate.reachLeft, y: -UnitPlate.reachBelow,
++                         width: UnitPlate.reachLeft + reachRight, height: 2 * UnitPlate.reachBelow),
++            isTiles: false
++        )
++        guard let tileBox else { return [body] }
++        return [body, PlateBox(rect: tileBox, isTiles: true)]
++    }
+ 
+     private let hpFill: SKSpriteNode
+     private let hpMask: SKSpriteNode
+@@ -693,21 +763,41 @@ final class UnitPlate: SKNode {
+ 
+     private func applyStatuses(_ tiles: [StatusIconRenderer.PlateTile]) {
+         statusRow.removeAllChildren()
+-        reachAbove = tiles.isEmpty ? UnitPlate.badgeSize / 2 : UnitPlate.tallestReach
+-        guard !tiles.isEmpty else { return }
++        guard !tiles.isEmpty else {
++            tileBox = nil
++            return
++        }
++        // The picture is the tile and its chip; the anchor is the tile's
++        // centre, so the row lines up on the tiles. The row's reach is
++        // measured off the pictures, chips and all, and the row centred on
++        // the track by it: centred on the tiles alone, the last chip hung
++        // six points further right than the first tile reached left, so a
++        // row of three ended past the track's right end (run 224).
+         let step = UnitPlate.tileStep
+-        let totalWidth = step * CGFloat(tiles.count - 1)
++        var left = CGFloat.greatestFiniteMagnitude
++        var right = -CGFloat.greatestFiniteMagnitude
++        var bottom = CGFloat.greatestFiniteMagnitude
++        var top = -CGFloat.greatestFiniteMagnitude
++        for (index, tile) in tiles.enumerated() {
++            let x = step * CGFloat(index)
++            let size = tile.image.size
++            left = min(left, x - tile.anchor.x * size.width)
++            right = max(right, x + (1 - tile.anchor.x) * size.width)
++            bottom = min(bottom, -tile.anchor.y * size.height)
++            top = max(top, (1 - tile.anchor.y) * size.height)
++        }
++        let shift = -(left + right) / 2
+         for (index, tile) in tiles.enumerated() {
+-            // The picture is the tile and its chip; the anchor is the tile's
+-            // centre, so the row lines up on the tiles.
+             let sprite = SKSpriteNode(texture: SKTexture(image: tile.image))
+             sprite.size = tile.image.size
+             sprite.anchorPoint = tile.anchor
+-            sprite.position = CGPoint(x: -totalWidth / 2 + step * CGFloat(index), y: 0)
++            sprite.position = CGPoint(x: shift + step * CGFloat(index), y: 0)
+             // Each chip over its right-hand neighbour's corner.
+             sprite.zPosition = CGFloat(tiles.count - index)
+             statusRow.addChild(sprite)
+         }
++        let rowY = statusRow.position.y
++        tileBox = CGRect(x: left + shift, y: rowY + bottom, width: right - left, height: top - bottom)
+     }
+ 
+     private func applyMatchup(_ image: UIImage?) {
+diff --git a/Pantheon/UI/Campaign/CampaignView.swift b/Pantheon/UI/Campaign/CampaignView.swift
+index 9de80d3..b223333 100644
+--- a/Pantheon/UI/Campaign/CampaignView.swift
++++ b/Pantheon/UI/Campaign/CampaignView.swift
+@@ -315,9 +315,9 @@ extension CampaignView {
+ // MARK: - What a stage pays, as tiles
+ 
+ /// One thing a stage can pay, as the painted tile draws it: the relic of the
+-/// chapter's sets as ONE stone tile (the first set's stone, the second's
+-/// small on its corner, both names under it, the whole relic chance on it —
+-/// `CampaignService` picks the set uniformly), the essences, the scrolls,
++/// chapter's sets as ONE tile (the two sets' stones side by side, both names
++/// under it, the whole relic chance on it — `CampaignService` picks the set
++/// uniformly), the essences, the scrolls,
+ /// the stones, the first clear's divinity, the drachma and the experience.
+ /// The popup and the briefing read the same list, so the two cannot
+ /// disagree. It was a text list with 14-point glyphs although every item
+@@ -331,8 +331,8 @@ private struct StageDrop: Identifiable {
+     let amount: String?
+     var stars: Int? = nil
+     var imageName: String? = nil
+-    /// A second painting drawn small on the first's corner: the chapter's
+-    /// other set.
++    /// A second painting drawn beside the first, as its equal: the
++    /// chapter's other set.
+     var secondImage: String? = nil
+ 
+     /// Main actor: it reads `BarWallet.compact`, a static of a `View` (so
+@@ -418,53 +418,28 @@ private struct StageDrop: Identifiable {
+ 
+ /// One drop as a tile: the painted socket with the chance on its corner,
+ /// the grade's stars INSIDE the socket's top edge (under it they pushed the
+-/// relic's name 16 points below its neighbours', run 216), the second set's
+-/// stone small in the socket's top-left corner, and the name under it in two
+-/// lines at most.
++/// relic's name 16 points below its neighbours', run 216), and the name
++/// under it in two lines at most. A relic of the chapter's two sets draws
++/// both sets' stones side by side (`PairedSetSocket`).
+ private struct StageDropTile: View {
+     let drop: StageDrop
+     let tile: CGFloat
+     let titled: Bool
+     let footprint: CGFloat
+ 
+-    /// The second stone: 0.30 of the tile, INSIDE the socket, 3 points in
+-    /// from its left edge and a point under the star row (`secondTop`) — a
+-    /// badge pinned on the first stone's upper-left corner, the same place on
+-    /// every grade. In the corner itself it touched a 3★ row's first star
+-    /// and sat under a 4★ one (drawn at 6× off the shipped stones). The
+-    /// chance sits on the bottom-right corner, so the stone never meets it.
+-    /// It hung 0.10 of the tile off the socket's left rim until run 221,
+-    /// onto the panel and over the Eye stone's left edge; before run 217 it
+-    /// stood on the bottom-left corner and covered the "S" of "Sure".
+-    private static let secondScale: CGFloat = 0.30
+-    private static let secondInset: CGFloat = 3
+-
+-    /// How far down the second stone stands: a point under the star row —
++    /// How far down a pair of stones stands: a point under the star row —
+     /// 2 points down, a line of stars about 1.25 of their point size tall —
+-    /// or the corner's inset on a tile with no stars.
+-    static func secondTop(stars: Int?, tile: CGFloat) -> CGFloat {
+-        guard let stars, stars > 0 else { return secondInset }
++    /// or 3 points on a tile with no stars.
++    static func stonesTop(stars: Int?, tile: CGFloat) -> CGFloat {
++        guard let stars, stars > 0 else { return 3 }
+         let size = RewardTile.starSize(stars: stars, width: tile * 0.8)
+         return 2 + size * 1.25 + 1
+     }
+ 
+     var body: some View {
+         let spoken = "\(drop.title), \(drop.amount ?? "")"
+-        let second: CGFloat = tile * Self.secondScale
+         VStack(spacing: 3) {
+-            RewardTile(key: drop.key, amount: drop.amount, size: tile, showsTitle: false,
+-                       imageName: drop.imageName, onGlass: true)
+-                .overlay(alignment: .topLeading) {
+-                    if let secondName = drop.secondImage, BundleArt.exists(secondName) {
+-                        BundleImage(name: secondName, renderedAt: second)
+-                            .aspectRatio(contentMode: .fit)
+-                            .frame(width: second, height: second)
+-                            .shadow(color: .black.opacity(0.8), radius: 1.5, y: 1)
+-                            .padding(.leading, Self.secondInset)
+-                            .padding(.top, Self.secondTop(stars: drop.stars, tile: tile))
+-                            .allowsHitTesting(false)
+-                    }
+-                }
++            socket
+                 .overlay(alignment: .top) {
+                     if let stars = drop.stars {
+                         StarRow(stars: stars, size: RewardTile.starSize(stars: stars, width: tile * 0.8))
+@@ -486,6 +461,84 @@ private struct StageDropTile: View {
+         .accessibilityElement(children: .ignore)
+         .accessibilityLabel(spoken)
+     }
++
++    /// The socket: the two sets' stones as a pair when the drop has both
++    /// paintings, the tile's one painting otherwise.
++    @ViewBuilder
++    private var socket: some View {
++        if let first = drop.imageName, let second = drop.secondImage,
++           BundleArt.exists(first), BundleArt.exists(second) {
++            PairedSetSocket(first: first, second: second, amount: drop.amount, tile: tile,
++                            top: Self.stonesTop(stars: drop.stars, tile: tile))
++        } else {
++            RewardTile(key: drop.key, amount: drop.amount, size: tile, showsTitle: false,
++                       imageName: drop.imageName, onGlass: true)
++        }
++    }
++}
++
++/// A relic of the chapter's TWO sets as one socket (fix round 5): the two
++/// sets' stones side by side and equal under the star row, the chance on
++/// the corner under them — "Oracle · Nemesis" reads left to right across
++/// the pair. The second set's stone was a 0.30 badge on the first's upper
++/// left until run 224, and wherever it stood it covered the first stone
++/// (run 224, by 4 points), the stars or the chance, and at 13 points its
++/// device could not be read. The stage pays either set, so neither is the
++/// badge. The socket is `RewardTile`'s on glass, drawn here because a tile
++/// holds one painting, at 0.8 of it.
++private struct PairedSetSocket: View {
++    let first: String
++    let second: String
++    let amount: String?
++    let tile: CGFloat
++    /// The stones' top, under the star row (`StageDropTile.stonesTop`).
++    let top: CGFloat
++
++    /// Each stone's painting is 0.48 of the tile (21 points at 44) and the
++    /// two stand 0.86 of a painting apart, centre to centre: a stone's
++    /// hexagon is 0.79 of its painting wide, so the two are a point and a
++    /// half apart and 4.5 in from the socket's sides, and their points end
++    /// above the chance's figures.
++    private static let stoneScale: CGFloat = 0.48
++    private static let pitch: CGFloat = 0.86
++
++    var body: some View {
++        let shape = RoundedRectangle(cornerRadius: max(6, tile * 0.16), style: .continuous)
++        let stone: CGFloat = tile * Self.stoneScale
++        ZStack(alignment: .bottomTrailing) {
++            shape
++                .fill(Theme.socketFill)
++                .overlay(shape.strokeBorder(Theme.bronzeFrame, lineWidth: max(1, tile * 0.02)))
++                .shadow(color: .black.opacity(0.4), radius: tile * 0.05, y: tile * 0.03)
++            HStack(spacing: stone * (Self.pitch - 1)) {
++                stoneImage(first, size: stone)
++                stoneImage(second, size: stone)
++            }
++            .padding(.top, top)
++            .frame(width: tile, height: tile, alignment: .top)
++            .allowsHitTesting(false)
++            if let amount {
++                // `RewardTile`'s corner count; a relic's chance ("50%",
++                // "Sure") is never long enough to need its short form.
++                OutlinedText(
++                    text: amount,
++                    font: Theme.numeric(max(10.5, tile * 0.21)).weight(.black),
++                    width: max(0.8, tile * 0.016)
++                )
++                .fixedSize()
++                .padding(.trailing, max(3, tile * 0.07))
++                .padding(.bottom, max(2, tile * 0.05))
++            }
++        }
++        .frame(width: tile, height: tile)
++    }
++
++    private func stoneImage(_ name: String, size: CGFloat) -> some View {
++        BundleImage(name: name, renderedAt: size)
++            .aspectRatio(contentMode: .fit)
++            .frame(width: size, height: size)
++            .shadow(color: .black.opacity(0.7), radius: 1.5, y: 1)
++    }
+ }
+ 
+ /// A row of drop tiles given `available` points: it fits, or it shows as
+diff --git a/Pantheon/UI/Campaign/LabyrinthView.swift b/Pantheon/UI/Campaign/LabyrinthView.swift
+index d8634ae..0186761 100644
+--- a/Pantheon/UI/Campaign/LabyrinthView.swift
++++ b/Pantheon/UI/Campaign/LabyrinthView.swift
+@@ -36,8 +36,8 @@ struct LabyrinthView: View {
+ 
+     /// The island opens the building on its dungeons. The CI tour opens it
+     /// on the Titans so the grade stamp is photographed, and may name the
+-    /// Titan (`raid`, a `RaidEncounter.id`): the Unwrapped King has the
+-    /// longest name, the one that needs the rail's third line (2026-09-22).
++    /// Titan (`raid`, a `RaidEncounter.id`): the Unwrapped King is the last
++    /// of the five and has the longest name (2026-09-22).
+     init(opening: Wing = .dungeons, raid: String? = nil) {
+         _wing = State(initialValue: opening)
+         _selectedRaidID = State(initialValue: raid)
+@@ -63,12 +63,18 @@ struct LabyrinthView: View {
+     /// the first.
+     @State private var selectedRaidID: String?
+ 
+-    /// The Titans' rail, the summon rail's width. The longest name, "The
+-    /// Serpent That Swallows the Sun", is whole on three lines at the title
+-    /// floor of 13 in the 130 points beside its grade stamp (its widest line,
+-    /// "The Serpent That", is 122 in Cinzel): at 168 the rail read "THE KING
+-    /// WHO WAS NEVER WEIG…" on run 211's frame 39, an ellipsis in a menu.
+-    private static let titanRailWidth: CGFloat = 204
++    /// The Titans' rail: wide enough that every Titan's name stands on TWO
++    /// lines at the title floor of 13 in the 146 points beside its seal —
++    /// the widest lines are "The King Who Was" (128 in Cinzel) and
++    /// "Swallows the Sun" (126). Run 224's frame 39 had the rail at 204 with
++    /// the element's word as an eyebrow over each name: the Serpent and the
++    /// King ran to three lines, the five rows came to 386 points against the
++    /// 303 the CI phone gives the rail, and the rail opened scrolled past
++    /// Ember and Gale with nothing to say they were there. Now the element
++    /// rides the seal and the rows are 46 points, so all five stand whole and
++    /// unscrolled (258 points). At 168 the rail read "THE KING WHO WAS NEVER
++    /// WEIG…" (run 211), an ellipsis in a menu.
++    private static let titanRailWidth: CGFloat = 222
+ 
+     private var subtitle: String {
+         switch wing {
+@@ -678,12 +684,13 @@ struct LabyrinthView: View {
+     private var titansWing: some View {
+         let chosen = chosenRaid
+         return HStack(spacing: 0) {
+-            // Five rows of two and three lines are taller than the frame, so
+-            // the rail opens scrolled to the Titan whose room is open, with a
+-            // WHOLE row at its top (`WholeRowRail`; run 217 opened on the
+-            // Gale Titan cut through its eyebrow). The label is pinned above
+-            // the scroll: inside it, the scroll to the chosen Titan carried it
+-            // off the top and cut the first row on the strip's edge (run 216).
++            // The five rows fit the rail on the CI phone and stand unscrolled
++            // (`titanRailWidth`). On a shorter phone the rail still opens on
++            // the Titan whose room is open with a WHOLE row at its top
++            // (`WholeRowRail`; run 217 opened on the Gale Titan cut through
++            // its eyebrow). The label is pinned above the scroll: inside it,
++            // the scroll to the chosen Titan carried it off the top and cut
++            // the first row on the strip's edge (run 216).
+             VStack(spacing: 0) {
+                 LabyrinthRailHead(title: "Titans")
+                 WholeRowRail(width: Self.titanRailWidth, items: StageDatabase.raids, focus: chosen?.id) { raid in
+@@ -709,9 +716,14 @@ struct LabyrinthView: View {
+         }
+     }
+ 
+-    /// One Titan on the rail: its best grade as a stamp, its element, its
+-    /// name in Cinzel at the title floor on up to three lines — never cut —
+-    /// and a seal once it has fallen, on the summon rail's row plate.
++    /// One Titan on the rail: its seal — the best grade's stamp wearing the
++    /// Titan's element, or before the first grade the dashed ring that is
++    /// the element — and its name in Cinzel at the title floor, on the
++    /// summon rail's row plate. The element's WORD was an eyebrow over the
++    /// name until run 224, and with it the Serpent and the King ran to three
++    /// lines and the rail to 386 points; the room's own eyebrow ("Titan of
++    /// Umbra") says the word. Every name stands on two lines at this width;
++    /// three are allowed, never an ellipsis, should a longer one come.
+     private func titanTile(_ raid: RaidEncounter, isOn: Bool) -> some View {
+         let element = RaidGradeService.element(of: raid)
+         let best = RaidGradeService.bestGrade(for: raid, player: store.player)
+@@ -722,39 +734,58 @@ struct LabyrinthView: View {
+             selectedRaidID = raid.id
+         } label: {
+             HStack(spacing: 8) {
+-                titanSeal(best, element: element, size: 34)
+-                VStack(alignment: .leading, spacing: 2) {
+-                    HStack(spacing: 4) {
+-                        Image(systemName: element.glyph)
+-                            .font(.system(size: 10, weight: .black))
+-                        Text(element.displayName.uppercased())
+-                            .font(Theme.body(11).weight(.black))
+-                            .tracking(1.0)
+-                            .lineLimit(1)
+-                            .fixedSize()
+-                        if cleared {
+-                            Image(systemName: "checkmark.seal.fill")
+-                                .font(.system(size: 10, weight: .bold))
+-                                .foregroundStyle(Theme.onGlassGold)
+-                        }
+-                    }
+-                    .foregroundStyle(element.color)
+-                    Text(raid.name)
+-                        .font(Theme.title(13))
+-                        .foregroundStyle(isOn ? Color(hex: "#FFF1C2") : Theme.onGlass)
+-                        .lineLimit(3)
+-                        .multilineTextAlignment(.leading)
+-                        .fixedSize(horizontal: false, vertical: true)
+-                }
+-                Spacer(minLength: 0)
++                titanRailSeal(best, element: element, cleared: cleared)
++                // The name takes the rest of the row itself: a Spacer after
++                // it took the stack's 8-point gap again, out of the name.
++                Text(Self.railName(raid.name))
++                    .font(Theme.title(13))
++                    .foregroundStyle(isOn ? Color(hex: "#FFF1C2") : Theme.onGlass)
++                    .lineLimit(3)
++                    .multilineTextAlignment(.leading)
++                    .fixedSize(horizontal: false, vertical: true)
++                    .frame(maxWidth: .infinity, alignment: .leading)
+             }
+             .padding(.horizontal, 7)
+-            .padding(.vertical, 6)
++            .padding(.vertical, 5)
+             .background(GlassRowPlate(isOn: isOn))
+             .contentShape(Rectangle())
+         }
+         .buttonStyle(.plain)
+-        .accessibilityLabel("\(raid.name), \(element.displayName) Titan\(best.map { ", best grade \($0.label)" } ?? "")")
++        .accessibilityLabel("\(raid.name), \(element.displayName) Titan\(best.map { ", best grade \($0.label)" } ?? "")\(cleared ? ", fallen" : "")")
++    }
++
++    /// A Titan's name for the rail, its last two words bound by a no-break
++    /// space so no name ends on a word alone: at this width "The King Under
++    /// the" fits a line and left "Ice" under it.
++    private static func railName(_ name: String) -> String {
++        guard let last = name.range(of: " ", options: .backwards) else { return name }
++        return name.replacingCharacters(in: last, with: "\u{00A0}")
++    }
++
++    /// The seal on a Titan's rail row, 36 points. A graded Titan's stamp
++    /// wears its element as a disc on its lower right, clear of the grade's
++    /// letters; an ungraded one's dashed ring already holds the element's
++    /// glyph. A gold check stands on the seal's shoulder once the Titan has
++    /// fallen — it was the end of the eyebrow the element's word is gone
++    /// from. Both stay inside the row's 5-point padding.
++    private func titanRailSeal(_ grade: RaidGrade?, element: Element, cleared: Bool) -> some View {
++        titanSeal(grade, element: element, size: 36)
++            .overlay(alignment: .bottomTrailing) {
++                if grade != nil {
++                    TitanElementPip(element: element)
++                        .offset(x: 5, y: 3)
++                }
++            }
++            .overlay(alignment: .topTrailing) {
++                if cleared {
++                    Image(systemName: "checkmark.seal.fill")
++                        .font(.system(size: 12, weight: .bold))
++                        .foregroundStyle(Theme.onGlassGold)
++                        .shadow(color: .black.opacity(0.8), radius: 1)
++                        .offset(x: 4, y: -3)
++                        .allowsHitTesting(false)
++                }
++            }
+     }
+ 
+     /// The best grade's stamp, or — before the first grade — a dim dashed
+@@ -1719,25 +1750,25 @@ struct DungeonLevelsView: View {
+     ///
+     /// The tiles ask for `dropSpacing` between them: a tile's name is as
+     /// wide as its frame (`RewardTile`, 1.35 of the socket), and at 4 points
+-    /// two "Whetstone"s read as one phrase on a B10 (run 221). In the grid a
+-    /// B10's six 59-point names get about 7.6 of it on the CI phone — six
+-    /// cannot stand 10 apart in 392 points; the side-by-side row gets all 10.
++    /// two "Whetstone"s read as one phrase on a B10 (run 221). At 7.6 points
++    /// they still did (run 224, "Whetstone Whetstone"), so a run of one
++    /// stone's tiers is ONE slot now (`dropSlots`, `stoneRun`): the tiers'
++    /// stones side by side over their tiers' words, the stone named once.
++    /// That row is an HStack, since a grid's column cannot hold a pair; a
++    /// row too wide for the plate falls back to the grid and the full names.
+     private func floorDrops(_ stage: Stage) -> some View {
+         let firstClearPays = !CampaignService.isCleared(stage, player: store.player) && stage.rewards.firstClearDivinity > 0
+         let firstClear: String? = firstClearPays ? "+\(stage.rewards.firstClearDivinity) first clear" : nil
+         let tiles = dropTiles(stage)
+         let besideSets = firstClearPays ? tiles + [Self.firstClearTile(stage)] : tiles
+         let awakened = stage.rewards.awakenedChance.map { "\(DungeonDrop.percent($0)) awakened" }
++        let slots = Self.dropSlots(tiles)
+         return VStack(alignment: .leading, spacing: 7) {
+             if let labyrinth, besideSets.count <= 3 {
+                 HStack(alignment: .top, spacing: 14) {
+                     VStack(alignment: .leading, spacing: 7) {
+                         GlassSectionHeader(title: "Drops")
+-                        HStack(alignment: .top, spacing: Self.dropSpacing) {
+-                            ForEach(besideSets) { drop in
+-                                dropRewardTile(drop)
+-                            }
+-                        }
++                        dropRow(Self.dropSlots(besideSets))
+                     }
+                     .fixedSize(horizontal: true, vertical: false)
+                     VStack(alignment: .leading, spacing: 7) {
+@@ -1747,15 +1778,14 @@ struct DungeonLevelsView: View {
+                 }
+             } else {
+                 GlassSectionHeader(title: "Drops", accessory: firstClear, accessoryItemKey: firstClear == nil ? nil : "divinity")
+-                // Six to a row at the CI phone's 392 points: 6 × 54 + 5 × 10
+-                // is 374, and a minimum of 58 at this spacing made it five
+-                // and sent a B10's sixth tile to a second row, past the
+-                // room's middle.
+-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 54, maximum: 66), spacing: Self.dropSpacing, alignment: .top)],
+-                          alignment: .leading, spacing: 6) {
+-                    ForEach(tiles) { drop in
+-                        dropRewardTile(drop)
++                if slots.count < tiles.count {
++                    // A B10's five slots are 374 points of the CI phone's 392.
++                    ViewThatFits(in: .horizontal) {
++                        dropRow(slots)
++                        dropGrid(tiles)
+                     }
++                } else {
++                    dropGrid(tiles)
+                 }
+                 if let labyrinth {
+                     GlassSectionHeader(title: "One of \(labyrinth.sets.count) sets", accessory: awakened)
+@@ -1777,12 +1807,129 @@ struct DungeonLevelsView: View {
+ 
+     private func dropRewardTile(_ drop: DungeonDrop) -> some View {
+         RewardTile(key: drop.key, title: drop.title, amount: drop.amount, stars: drop.stars,
+-                   size: 44, imageName: drop.imageName, onGlass: true)
++                   size: Self.dropTile, imageName: drop.imageName, onGlass: true)
++    }
++
++    /// The drops as a grid of tiles, six to a row at the CI phone's 392
++    /// points: 6 × 54 + 5 × 10 is 374, and a minimum of 58 at this spacing
++    /// made it five and sent a B10's sixth tile to a second row, past the
++    /// room's middle.
++    private func dropGrid(_ tiles: [DungeonDrop]) -> some View {
++        LazyVGrid(columns: [GridItem(.adaptive(minimum: 54, maximum: 66), spacing: Self.dropSpacing, alignment: .top)],
++                  alignment: .leading, spacing: 6) {
++            ForEach(tiles) { drop in
++                dropRewardTile(drop)
++            }
++        }
++    }
++
++    /// The drops as one row of slots, top-aligned.
++    private func dropRow(_ slots: [DungeonDropSlot]) -> some View {
++        HStack(alignment: .top, spacing: Self.dropSpacing) {
++            ForEach(slots) { slot in
++                dropSlot(slot)
++            }
++        }
++    }
++
++    @ViewBuilder
++    private func dropSlot(_ slot: DungeonDropSlot) -> some View {
++        switch slot {
++        case .tile(let drop):
++            dropRewardTile(drop)
++        case .stones(let kind, let run):
++            stoneRun(kind, run)
++        }
++    }
++
++    /// One stone's tiers as ONE drop: the tiers' stones side by side, 8
++    /// points apart where tiles stand 25, each over its tier's word in its
++    /// quality's colour (Rare's blue, Hero's violet — the stones' own), and
++    /// the stone named once under the pair: "Rare  Hero / Whetstone". Run
++    /// 224's B10 read "Rare Whetstone Hero Whetstone" across two tiles, and
++    /// the tier alone on each read as a relic's quality (run 216); here the
++    /// name under both says what the tiers are of.
++    private func stoneRun(_ kind: RelicStone.Kind, _ run: [DungeonDrop]) -> some View {
++        let spoken = run.map { drop in
++            "\(RelicStone.from(id: drop.id)?.tier.displayName ?? drop.title) \(drop.amount)"
++        }
++        return VStack(spacing: Self.captionGap) {
++            HStack(alignment: .top, spacing: Self.stoneRunGap) {
++                ForEach(run) { drop in
++                    let tier = RelicStone.from(id: drop.id)?.tier
++                    VStack(spacing: Self.captionGap) {
++                        RewardTile(key: drop.key, amount: drop.amount, size: Self.dropTile,
++                                   showsTitle: false, onGlass: true)
++                        Text(tier?.displayName ?? drop.title)
++                            .font(Theme.body(11).weight(.semibold))
++                            .foregroundStyle(tier.map { $0.quality.rarity.glow } ?? Theme.onGlass)
++                            .lineLimit(1)
++                            .fixedSize()
++                    }
++                    .frame(width: Self.dropTile)
++                }
++            }
++            Text(kind.displayName)
++                .font(Theme.body(11).weight(.semibold))
++                .foregroundStyle(Theme.onGlass)
++                .lineLimit(1)
++                .fixedSize()
++        }
++        .accessibilityElement(children: .ignore)
++        .accessibilityLabel("\(kind.displayName): " + spoken.joined(separator: ", "))
++    }
++
++    /// Where a stone stands among a floor's stones: whetstones before gems,
++    /// each kind's tiers low to high.
++    private static func stoneOrder(_ id: String) -> Int {
++        guard let stone = RelicStone.from(id: id) else { return 0 }
++        let kind = RelicStone.Kind.allCases.firstIndex(of: stone.kind) ?? 0
++        return kind * 10 + stone.tier.rawValue
++    }
++
++    /// A drop row's slots: every tile on its own, except a run of one
++    /// stone's tiers (a B10's Rare and Hero whetstones), which is one slot.
++    /// A stone alone keeps its tile and its full name.
++    private static func dropSlots(_ drops: [DungeonDrop]) -> [DungeonDropSlot] {
++        var slots: [DungeonDropSlot] = []
++        var run: [DungeonDrop] = []
++        var runKind: RelicStone.Kind? = nil
++        func closeRun() {
++            if let kind = runKind, run.count > 1 {
++                slots.append(.stones(kind, run))
++            } else {
++                slots.append(contentsOf: run.map { DungeonDropSlot.tile($0) })
++            }
++            run = []
++            runKind = nil
++        }
++        for drop in drops {
++            let kind = RelicStone.from(id: drop.id)?.kind
++            if kind == nil || kind != runKind {
++                closeRun()
++            }
++            if let kind {
++                runKind = kind
++                run.append(drop)
++            } else {
++                slots.append(.tile(drop))
++            }
++        }
++        closeRun()
++        return slots
+     }
+ 
+     /// Between two drop tiles. The names under them are as wide as the
+     /// tiles' frames, so this is all the air two names get.
+     private static let dropSpacing: CGFloat = 10
++    /// A drop tile's socket.
++    private static let dropTile: CGFloat = 44
++    /// Between the sockets of one stone's tiers: a pair, where tiles stand
++    /// about 25 apart.
++    private static let stoneRunGap: CGFloat = 8
++    /// `RewardTile`'s own gap between its socket and its name, 0.05 of the
++    /// socket, so a tier's word stands where a tile's name does.
++    private static let captionGap: CGFloat = max(2, dropTile * 0.05)
+ 
+     /// A floor's first-clear divinity as a drop tile.
+     private static func firstClearTile(_ stage: Stage) -> DungeonDrop {
+@@ -1827,12 +1974,16 @@ struct DungeonLevelsView: View {
+                 ))
+             }
+         }
++        // Each kind's tiers together, low to high, so a kind's run is one
++        // slot in the row (`dropSlots`).
+         let stones = (rewards.stoneChances ?? [:]).sorted {
+-            (RelicStone.from(id: $0.key)?.tier.rawValue ?? 0) < (RelicStone.from(id: $1.key)?.tier.rawValue ?? 0)
++            Self.stoneOrder($0.key) < Self.stoneOrder($1.key)
+         }
+         for (id, chance) in stones where chance > 0 {
+             // "Rare Whetstone", not "Rare": the tier alone read as a relic's
+             // quality (run 216). Two lines; the grid's rows are top-aligned.
++            // Two tiers of one stone side by side are drawn as one slot,
++            // named once (`dropSlots`); this name is a lone stone's.
+             drops.append(DungeonDrop(
+                 id: id, key: id, title: RelicStone.from(id: id)?.displayName ?? "Stone",
+                 amount: DungeonDrop.percent(chance), stars: nil
+@@ -2195,6 +2346,20 @@ private struct DungeonDrop: Identifiable {
+     }
+ }
+ 
++/// A place in a floor's drop row: one tile, or a run of one stone's tiers
++/// drawn as one (`DungeonLevelsView.dropSlots`, `stoneRun`).
++private enum DungeonDropSlot: Identifiable {
++    case tile(DungeonDrop)
++    case stones(RelicStone.Kind, [DungeonDrop])
++
++    var id: String {
++        switch self {
++        case .tile(let drop): return drop.id
++        case .stones(let kind, _): return "stones_" + kind.rawValue
++        }
++    }
++}
++
+ /// A relic set on dark glass as the hub card draws its sets: the painted
+ /// stone at 30 points with its name under it, in an equal column. Run 216's
+ /// judges read the capsules it replaced — a stone and a name in the left
+@@ -2262,6 +2427,32 @@ private struct UngradedTitanSeal: View {
+     }
+ }
+ 
++/// A graded Titan's element on its rail seal: a 17-point disc of the
++/// element's colour with its glyph, where the element's word stood over the
++/// name until run 224. Radiance's gold is pale, so its glyph is ink, as the
++/// card's `ElementBadge` has it; the others are white.
++private struct TitanElementPip: View {
++    let element: Element
++
++    var body: some View {
++        let pale = element == .radiance
++        ZStack {
++            Circle()
++                .fill(LinearGradient(colors: [element.color, element.color.opacity(0.6)],
++                                     startPoint: .top, endPoint: .bottom))
++            Circle()
++                .strokeBorder(Color.black.opacity(0.55), lineWidth: 1)
++            Image(systemName: element.glyph)
++                .font(.system(size: 11, weight: .black))
++                .foregroundStyle(pale ? Theme.ink : Color.white)
++        }
++        .frame(width: 17, height: 17)
++        .shadow(color: element.color.opacity(0.5), radius: 3)
++        .allowsHitTesting(false)
++        .accessibilityHidden(true)
++    }
++}
++
+ /// The floor a face stands on — the dungeon's boss, a Titan — so the tile
+ /// stands in the room rather than floating over it: a warm pool of light
+ /// on the painted floor and a dark contact shadow at the card's foot,
+diff --git a/Pantheon/UI/Campaign/SweepView.swift b/Pantheon/UI/Campaign/SweepView.swift
+index bfa8c91..95df575 100644
+--- a/Pantheon/UI/Campaign/SweepView.swift
++++ b/Pantheon/UI/Campaign/SweepView.swift
+@@ -374,12 +374,17 @@ struct SweepReceiptCard: View {
+         }
+     }
+ 
+-    /// One spoil. A relic is its set's painted stone with its quality's
+-    /// rim and its grade's stars in the socket, and opens its card on a tap.
++    /// One spoil. A relic is the stone every relic screen draws
++    /// (`RelicIcon`, through `RewardTile`'s `relic`): its quality on the
++    /// stone's rim and the socket's, its slot on the stone's corner, and its
++    /// grade's stars on a band at the socket's foot — inside the socket, so
++    /// every name sits on one line — and it opens its card on a tap. It was
++    /// the set's painting alone, and the receipt could not say which of the
++    /// six slots had dropped (run 224, 34-sweep). Any other graded spoil (a
++    /// boon cache) keeps its stars along the socket's top, clear of the
++    /// count on its corner.
+     private func spoilTile(_ item: BattleSummary.Loot) -> some View {
+         let relic = item.relic
+-        let stars: Int? = relic?.grade ?? item.stars
+-        let corner = max(6, Self.tile * 0.16)
+         let tap: (() -> Void)?
+         if let relic {
+             tap = { onRelic(relic) }
+@@ -390,22 +395,20 @@ struct SweepReceiptCard: View {
+             RewardTile(
+                 key: relic == nil ? (item.key ?? "") : "relic_cache",
+                 amount: item.amount,
++                relic: relic,
+                 size: Self.tile,
+                 showsTitle: false,
+-                imageName: relic?.stoneImageName,
++                showsGrade: false,
+                 onGlass: true,
+                 onTap: tap
+             )
+-            .overlay {
++            .overlay(alignment: .bottom) {
+                 if let relic {
+-                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+-                        .strokeBorder(relic.resolvedQuality.rarity.glow.opacity(0.8), lineWidth: 1.6)
+-                        .padding(1)
+-                        .allowsHitTesting(false)
++                    Self.gradeBand(relic.grade)
+                 }
+             }
+             .overlay(alignment: .top) {
+-                if let stars {
++                if relic == nil, let stars = item.stars {
+                     StarRow(stars: stars, size: RewardTile.starSize(stars: stars, width: Self.tile * 0.8))
+                         .shadow(color: .black.opacity(0.8), radius: 1)
+                         .padding(.top, 2)
+@@ -426,6 +429,21 @@ struct SweepReceiptCard: View {
+         .frame(width: Self.footprint)
+     }
+ 
++    /// A relic's grade at its socket's foot: the stars packed to fit the
++    /// stone's width, on the dark band a unit card's stars stand on, so they
++    /// read over the stone's lower point and never meet the slot's number on
++    /// its top corner, which a row along the top did from 4★ up.
++    private static func gradeBand(_ grade: Int) -> some View {
++        let room = Self.tile * 0.8 - 6
++        let size = max(4, min(Self.tile * 0.1, room / (CGFloat(max(1, grade)) * StarRow.packedAdvance)))
++        return StarRow(stars: grade, size: size, packed: true)
++            .padding(.horizontal, 3)
++            .padding(.vertical, 1.5)
++            .background(Capsule().fill(Theme.ink.opacity(0.74)))
++            .padding(.bottom, 3)
++            .allowsHitTesting(false)
++    }
++
+     /// A spoil's name under its tile. A relic is named by its set alone —
+     /// "Nemesis Relic" — because the rim already says its quality and the
+     /// corner its slot: the loot's full "Normal Nemesis Relic" ran to three
+diff --git a/Pantheon/UI/Collection/BoonPickerView.swift b/Pantheon/UI/Collection/BoonPickerView.swift
+index 2694d43..d1e0383 100644
+--- a/Pantheon/UI/Collection/BoonPickerView.swift
++++ b/Pantheon/UI/Collection/BoonPickerView.swift
+@@ -56,6 +56,14 @@ struct BoonPickerView: View {
+         return pickedCache == nil ? boons.first : nil
+     }
+ 
++    /// What the panel's last row clears at its foot: the marble's lower
++    /// acanthus reaches about 17 points up (the unit sheet's
++    /// `panelBottomInset`, measured there). This padding is inside the
++    /// scroll, so when the three doors run a point or two past the plate
++    /// the overflow comes off it: 20, and the last door still clears the
++    /// scrolls by the unit sheet's 18.
++    private static let panelFoot: CGFloat = 20
++
+     private static let sources = "Caches fall from a Titan at S or better (one kill in four, a 6★), the Labyrinth's "
+         + "tenth level (one run in ten, a 5★), the Tower's 25th, 50th, 75th and 100th floors, and a realm's "
+         + "Judgment on Hell. The Halls never."
+@@ -252,6 +260,10 @@ struct BoonPickerView: View {
+     /// floors were taller than the frame, and the overflow pushed the whole
+     /// screen up — the back medallion cut by the top edge, the doors' foot
+     /// under the home indicator (run 217). A panel that fits never bounces.
++    ///
++    /// Its foot clears the marble's lower acanthus (`panelFoot`): the last
++    /// door runs the panel's width, and at the plain inset its bottom
++    /// corners met the scrolls (runs 223 and 224, 41-boons).
+     private var panel: some View {
+         ScrollView(showsIndicators: false) {
+             VStack(spacing: 8) {
+@@ -263,7 +275,9 @@ struct BoonPickerView: View {
+                     EmptyState(icon: "seal", title: "Nothing picked", message: "Pick a boon or a cache on the left.")
+                 }
+             }
+-            .padding(Theme.panelInset)
++            .padding(.horizontal, Theme.panelInset)
++            .padding(.top, Theme.panelInset)
++            .padding(.bottom, Self.panelFoot)
+             .frame(maxWidth: .infinity, alignment: .top)
+         }
+         .scrollBounceBehavior(.basedOnSize)
+diff --git a/Pantheon/UI/Collection/RelicInventoryView.swift b/Pantheon/UI/Collection/RelicInventoryView.swift
+index 7b04e69..898bf47 100644
+--- a/Pantheon/UI/Collection/RelicInventoryView.swift
++++ b/Pantheon/UI/Collection/RelicInventoryView.swift
+@@ -623,8 +623,8 @@ struct RelicInventoryView: View {
+                                 }
+                                 .lineLimit(1)
+                                 .fixedSize()
+-                                // Only when worn: "Equip on…" under the
+-                                // panel already says a free one is free.
++                                // Only when worn: "Equip" under the panel
++                                // already says a free one is free.
+                                 // One line, by the family's name with no
+                                 // epithet: "Worn by Anubis, Keeper of the
+                                 // Ash Road" took two and pushed the set
+@@ -667,42 +667,49 @@ struct RelicInventoryView: View {
+                         .padding(.horizontal, 8)
+                         .padding(.vertical, 2)
+                         .background(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous).fill(Theme.surfaceHigh))
+-                        if relic.subStats.isEmpty {
+-                            Text("No sub stat yet · +3 adds the first")
+-                                .font(Theme.body(10))
+-                                .foregroundStyle(Theme.textSecondary)
+-                        } else {
+-                            // Two to a row, as the relic's card has them: a
+-                            // Legend's four subs take two lines, not four,
+-                            // an awakened relic's five three. Row to row on
+-                            // the numbers' own 16-point line, no gap.
+-                            LazyVGrid(
+-                                columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
+-                                alignment: .leading,
+-                                spacing: 0
+-                            ) {
+-                                ForEach(relic.effectiveSubStats.indices, id: \.self) { index in
+-                                    let sub = relic.effectiveSubStats[index]
+-                                    HStack(spacing: 4) {
+-                                        Text(sub.kind.displayName)
+-                                            .font(Theme.body(10))
+-                                            .foregroundStyle(Theme.textSecondary)
+-                                            .lineLimit(1)
+-                                            .fixedSize()
+-                                        if relic.gemmed == index {
+-                                            Image(systemName: "diamond.fill")
+-                                                .font(.system(size: 6, weight: .black))
+-                                                .foregroundStyle(Theme.gold)
+-                                        }
+-                                        Spacer(minLength: 2)
+-                                        Text("+\(sub.kind.format(sub.value))")
+-                                            .font(Theme.numeric(11))
+-                                            .foregroundStyle(relic.honedBonus(at: index) > 0 ? Theme.info : Theme.textPrimary)
+-                                            .lineLimit(1)
+-                                            .fixedSize()
++                        // Two to a row, as the relic's card has them: a
++                        // Legend's four subs take two lines, not four, an
++                        // awakened relic's five three. Row to row on the
++                        // numbers' own 16-point line, no gap.
++                        //
++                        // Every socket is drawn, filled or not: a sub stat
++                        // still to come is a dim row naming the level that
++                        // adds it (`RelicSubOpening`), up to the relic's
++                        // `subStatCap`. A two-sub Rare's panel was two rows
++                        // of words over 60 points of blank marble (run 224,
++                        // 11-relics), the ordinary case for Magic and Rare;
++                        // now every relic under the cap is the Legend's
++                        // shape, with its empty sockets in it — the genre's
++                        // upgrade screens show the locked lines the same way.
++                        LazyVGrid(
++                            columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
++                            alignment: .leading,
++                            spacing: 0
++                        ) {
++                            ForEach(relic.effectiveSubStats.indices, id: \.self) { index in
++                                let sub = relic.effectiveSubStats[index]
++                                HStack(spacing: 4) {
++                                    Text(sub.kind.displayName)
++                                        .font(Theme.body(10))
++                                        .foregroundStyle(Theme.textSecondary)
++                                        .lineLimit(1)
++                                        .fixedSize()
++                                    if relic.gemmed == index {
++                                        Image(systemName: "diamond.fill")
++                                            .font(.system(size: 6, weight: .black))
++                                            .foregroundStyle(Theme.gold)
+                                     }
++                                    Spacer(minLength: 2)
++                                    Text("+\(sub.kind.format(sub.value))")
++                                        .font(Theme.numeric(11))
++                                        .foregroundStyle(relic.honedBonus(at: index) > 0 ? Theme.info : Theme.textPrimary)
++                                        .lineLimit(1)
++                                        .fixedSize()
+                                 }
+                             }
++                            ForEach(RelicSubOpening.all(for: relic)) { opening in
++                                openingRow(opening)
++                            }
+                         }
+                         Text("\(relic.set.piecesRequired) pieces · \(relic.set.effectDescription)")
+                             .font(Theme.body(10))
+@@ -716,7 +723,11 @@ struct RelicInventoryView: View {
+                     opened = relic
+                 }
+                 HStack(spacing: 6) {
+-                    panelButton(wearer == nil ? "Equip on…" : "Change", "person.crop.circle.badge.plus", tint: Theme.info) {
++                    // "Equip", the genre's word, where the relic card says
++                    // "Equip on a unit": a third of this panel is 80 points,
++                    // and the longer label would shrink under the type floor.
++                    // "Equip on…" read as a label cut short (run 224).
++                    panelButton(wearer == nil ? "Equip" : "Change", "person.crop.circle.badge.plus", tint: Theme.info) {
+                         pickingWearerFor = relic
+                     }
+                     panelButton(relic.isLocked ? "Unlock" : "Lock", relic.isLocked ? "lock.fill" : "lock.open", tint: Theme.gold) {
+@@ -737,6 +748,25 @@ struct RelicInventoryView: View {
+         }
+     }
+ 
++    /// A sub stat still to come, as a dim row of the panel's sub grid: a
++    /// plus in a ring and the level whose roll adds it — or, for a roll
++    /// already made, that it waits on the relic's card to be chosen. Its
++    /// longest, "New sub stat at +12", is 113 points of the cell's 121.
++    private func openingRow(_ opening: RelicSubOpening) -> some View {
++        HStack(spacing: 4) {
++            Image(systemName: "plus.circle")
++                .font(.system(size: 9, weight: .bold))
++                .foregroundStyle(Theme.goldDim.opacity(0.8))
++            Text(opening.waiting ? "A roll to choose" : "New sub stat at +\(opening.level)")
++                .font(Theme.body(10))
++                .foregroundStyle(Theme.textSecondary.opacity(0.75))
++                .lineLimit(1)
++                .fixedSize()
++            Spacer(minLength: 0)
++        }
++        .accessibilityElement(children: .combine)
++    }
++
+     private func panelButton(
+         _ title: String, _ symbol: String, tint: Color, enabled: Bool = true, action: @escaping () -> Void
+     ) -> some View {
+@@ -1063,6 +1093,12 @@ private enum RelicColumn {
+     /// power-up panel ended 9 points under its frame); a panel that must
+     /// wear the marble is given this as its minimum.
+     static var paintedFloor: CGFloat { Chrome.panelInsets.top + Chrome.panelInsets.bottom }
++    /// What a painted panel's last full-width row has to clear at its foot:
++    /// the marble's lower acanthus reaches about 17 points up and 19 in
++    /// (the unit sheet's `panelBottomInset`, measured there), against the
++    /// 10 the relic panels pad with. The choice of two ends in two cards the
++    /// panel's width, and the scrolls stood over their corners (run 224).
++    static let ornamentFoot: CGFloat = 18
+ 
+     static func footMask(_ height: CGFloat) -> some View {
+         VStack(spacing: 0) {
+@@ -1073,6 +1109,35 @@ private enum RelicColumn {
+     }
+ }
+ 
++/// A sub stat a relic has still to gain, as the inventory panel draws its
++/// empty socket (run 224): the level whose roll adds it, or the roll the
++/// relic's card is already waiting on.
++private struct RelicSubOpening: Identifiable {
++    let level: Int
++    let waiting: Bool
++    var id: Int { level }
++
++    /// One per sub stat to come, up to `subStatCap`: the waiting roll first
++    /// when it adds one, then the levels that will (`levelRollsSubStat`:
++    /// +3, +6, +9, +12). None when the subs are full, and none past the
++    /// last level that adds one — a socket is never promised that no roll
++    /// can fill.
++    static func all(for relic: Relic) -> [RelicSubOpening] {
++        let missing = relic.subStatCap - relic.subStats.count
++        guard missing > 0 else { return [] }
++        var openings: [RelicSubOpening] = []
++        if relic.hasPendingRoll {
++            openings.append(RelicSubOpening(level: relic.level, waiting: true))
++        }
++        if relic.level < relic.maxLevel {
++            for level in (relic.level + 1)...relic.maxLevel where RelicService.levelRollsSubStat(level) {
++                openings.append(RelicSubOpening(level: level, waiting: false))
++            }
++        }
++        return Array(openings.prefix(missing))
++    }
++}
++
+ private extension View {
+     /// `RelicColumn.footMask` on a scroll view; pad its content's foot by
+     /// the same `height`.
+@@ -1636,12 +1701,18 @@ struct RelicDetailView: View {
+             SectionHeader(title: "Power-up", accessory: relic.isMaxLevel ? "+15, the top" : "+\(relic.level) → +\(relic.level + 1)")
+             if relic.hasPendingRoll {
+                 // While a roll waits the panel is its header, what just
+-                // happened, and one line pointing up at the choice. The
+-                // rate, the cost, a disabled "Take a roll first" and the
+-                // failure note could not be used, and they ran the column
+-                // into the fade with the awakening below the fold (run
+-                // 221). At the painted floor this is 140 points, and the
+-                // column the choice's 165 and this: 313 of its 323.
++                // happened, and one line pointing up at the choice. A
++                // disabled "Take a roll first" and the failure note could
++                // not be used, and they ran the column into the fade with
++                // the awakening below the fold (run 221). With nothing to
++                // report, the next attempt's rate and cost stand where the
++                // open panel prints them, read-only, with no button: the
++                // line alone left 60 points of blank marble, the lower half
++                // of the column (run 224, 37-relic_roll), and the player
++                // sees what the climb costs before he takes a roll — and
++                // nothing moves when he does. A result takes their place,
++                // so the panel stays inside the painted floor either way:
++                // 140 points, and the column 321 of its 323.
+                 if let runSummary {
+                     Text(runSummary)
+                         .font(Theme.body(10))
+@@ -1649,30 +1720,15 @@ struct RelicDetailView: View {
+                         .fixedSize(horizontal: false, vertical: true)
+                 } else if let outcome = lastOutcome {
+                     resultLine(outcome)
++                } else if !relic.isMaxLevel {
++                    attemptRows(chance: chance, cost: cost, affordable: affordable)
+                 }
+                 Label("Take one of the two rolls above to keep climbing", systemImage: "arrow.up")
+                     .font(Theme.body(10).weight(.semibold))
+                     .foregroundStyle(Theme.textSecondary)
+                     .fixedSize(horizontal: false, vertical: true)
+             } else if !relic.isMaxLevel {
+-                HStack {
+-                    Text("Success rate")
+-                        .font(Theme.body(11))
+-                        .foregroundStyle(Theme.textSecondary)
+-                    Spacer()
+-                    Text("\(Int((chance * 100).rounded()))%")
+-                        .font(Theme.numeric(13).weight(.bold))
+-                        .foregroundStyle(chance >= 1 ? Theme.success : (chance >= 0.6 ? Theme.gold : Theme.danger))
+-                }
+-                HStack {
+-                    Text("Cost")
+-                        .font(Theme.body(11))
+-                        .foregroundStyle(Theme.textSecondary)
+-                    Spacer()
+-                    Text("\(cost) drachma")
+-                        .font(Theme.numeric(12))
+-                        .foregroundStyle(affordable ? Theme.textPrimary : Theme.danger)
+-                }
++                attemptRows(chance: chance, cost: cost, affordable: affordable)
+                 if RelicService.levelRollsSubStat(relic.level + 1) {
+                     Label(relic.subStats.count < relic.subStatCap ? "This level adds a sub stat" : "This level grows a sub stat", systemImage: "sparkles")
+                         .font(Theme.body(10).weight(.semibold))
+@@ -1698,11 +1754,18 @@ struct RelicDetailView: View {
+                             Button("Power up to +\(target)") { attempt(to: target) }
+                         }
+                     } label: {
++                        // A menu says so with the strip's chevron (`BarMenu`),
++                        // never an ellipsis: "Power up to…" read as a label
++                        // cut short (run 224, 19-relic_powerup).
+                         HStack(spacing: 5) {
+                             Image(systemName: "forward.fill")
+                                 .font(.system(size: 10, weight: .bold))
+-                            Text("Power up to…")
++                            Text("Power up to")
+                                 .font(Theme.body(11).weight(.semibold))
++                                .lineLimit(1)
++                                .fixedSize()
++                            Image(systemName: "chevron.down")
++                                .font(.system(size: 8, weight: .black))
+                         }
+                         .foregroundStyle(affordable ? Theme.info : Theme.textSecondary)
+                         .frame(maxWidth: .infinity, minHeight: 30)
+@@ -1765,6 +1828,32 @@ struct RelicDetailView: View {
+         .panelBackground()
+     }
+ 
++    /// The next attempt: its chance, in the colour of the risk, and its
++    /// cost, in red when the purse cannot pay it. The open panel's first
++    /// two rows, and the waiting panel's read-only pair in the same place.
++    private func attemptRows(chance: Double, cost: Int, affordable: Bool) -> some View {
++        VStack(alignment: .leading, spacing: 8) {
++            HStack {
++                Text("Success rate")
++                    .font(Theme.body(11))
++                    .foregroundStyle(Theme.textSecondary)
++                Spacer()
++                Text("\(Int((chance * 100).rounded()))%")
++                    .font(Theme.numeric(13).weight(.bold))
++                    .foregroundStyle(chance >= 1 ? Theme.success : (chance >= 0.6 ? Theme.gold : Theme.danger))
++            }
++            HStack {
++                Text("Cost")
++                    .font(Theme.body(11))
++                    .foregroundStyle(Theme.textSecondary)
++                Spacer()
++                Text("\(cost) drachma")
++                    .font(Theme.numeric(12))
++                    .foregroundStyle(affordable ? Theme.textPrimary : Theme.danger)
++            }
++        }
++    }
++
+     // MARK: - Awakening
+ 
+     /// The road past +15 for a 6★: a fifth sub stat, the main stat at 3.6×,
+@@ -1897,7 +1986,9 @@ struct RelicDetailView: View {
+                 } else {
+                     // The genre's Equip from the inventory: the wearer is
+                     // chosen here, with the delta, not found from the unit.
+-                    smallButton("Equip on…", "person.crop.circle.badge.plus", tint: Theme.info) { showWearerPicker = true }
++                    // Said whole, never with an ellipsis: "Equip on…" read
++                    // as a label cut short (run 224, 40-relic_awaken-b).
++                    smallButton("Equip on a unit", "person.crop.circle.badge.plus", tint: Theme.info) { showWearerPicker = true }
+                 }
+                 smallButton("Hone & gem", "diamond.fill", tint: Theme.gold, enabled: !relic.subStats.isEmpty) { showStones = true }
+             }
+@@ -1930,9 +2021,14 @@ struct RelicDetailView: View {
+     /// The same painted marble and marble-band header as the power-up and
+     /// awakening panels under it: a drawn cream plate with a gold rim and
+     /// its own Cinzel header was a second kind of panel in one column (runs
+-    /// 220 and 221). Six between its rows, not eight: with the band it is
+-    /// 165 points, and the column (this, the 140-point panel under it and
+-    /// the gap) closes whole in its 323.
++    /// 220 and 221). Six between its rows, not eight.
++    ///
++    /// The cards run the panel's width, so its foot clears the marble's
++    /// lower acanthus (`RelicColumn.ornamentFoot`): at the drawn plate's old
++    /// 10 points the scrolls stood over both cards' bottom corners and the
++    /// second card ended 7 points above the gold rule (run 224, frames 37
++    /// and 40-b). With the band it is 173 points, and the column (this, the
++    /// 140-point panel under it and the gap) closes whole at 321 of its 323.
+     private func rollChoicePanel(_ relic: Relic) -> some View {
+         let offers = RelicService.candidates(for: relic)
+         return VStack(alignment: .leading, spacing: 6) {
+@@ -1950,7 +2046,9 @@ struct RelicDetailView: View {
+                 rollCard(offer)
+             }
+         }
+-        .padding(10)
++        .padding(.horizontal, 10)
++        .padding(.top, 10)
++        .padding(.bottom, RelicColumn.ornamentFoot)
+         .frame(maxWidth: .infinity, minHeight: RelicColumn.paintedFloor, alignment: .topLeading)
+         .panelBackground()
+     }
+@@ -2468,7 +2566,7 @@ struct StatDeltaTable: View {
+     /// Only the stats that move, gains first, two to a row, each with its
+     /// new value and its change: the relic picker's column, where the full
+     /// eight rows put DEF to Resistance and the sets under the fold (run
+-    /// 217). The optimiser and "Equip on…" keep the whole table.
++    /// 217). The optimiser and "Equip on a unit" keep the whole table.
+     var compact: Bool = false
+ 
+     private var rows: [(label: String, before: Double, after: Double, percent: Bool)] {
+@@ -3487,7 +3585,7 @@ struct RelicStoneSheet: View {
+     }
+ }
+ 
+-// MARK: - Equip on…
++// MARK: - Equip on a unit
+ 
+ /// The genre's Equip from the rune inventory: the roster by power, the
+ /// delta for the unit tapped, and Equip — a relic finds its wearer here
+@@ -3507,7 +3605,9 @@ struct RelicWearerPicker: View {
+     var body: some View {
+         NavigationStack {
+             GameScreen(
+-                "Equip on…",
++                // Whole, as the card's button says it: a strip title ending
++                // in an ellipsis reads as cut (run 224's rule for labels).
++                "Equip on a unit",
+                 subtitle: relic.map { "\($0.displayName) · slot \($0.slot)" },
+                 dismiss: { dismiss() }
+             ) {
+diff --git a/Pantheon/UI/Collection/TrainingView.swift b/Pantheon/UI/Collection/TrainingView.swift
+index dd4e21d..3df5a58 100644
+--- a/Pantheon/UI/Collection/TrainingView.swift
++++ b/Pantheon/UI/Collection/TrainingView.swift
+@@ -767,10 +767,12 @@ struct TrainingView: View {
+                         BundleImage(name: art, renderedAt: size)
+                             .aspectRatio(contentMode: .fill)
+                             .frame(width: size, height: size)
+-                        Image(systemName: "sun.max.fill")
+-                            .font(.system(size: 12, weight: .black))
+-                            .foregroundStyle(Theme.onGlassGold)
+-                            .shadow(color: .black.opacity(0.8), radius: 1)
++                        // The awakened sun in its socket, as every card
++                        // wears it since round 4 (`CardMark`): a bare
++                        // cream glyph with a shadow floated on the purple
++                        // art (run 224, 43-awaken). At 20 its glyph is the
++                        // 11 points the bare one was.
++                        CardMark(systemName: "sun.max.fill", size: 20)
+                             .padding(5)
+                     }
+                     .frame(width: size, height: size)
+@@ -1210,6 +1212,13 @@ struct TrainingView: View {
+     /// ringed, a copy of the family wears ↑ in Power up (a skill-up or the
+     /// regalia), and a unit worth keeping wears its reason on the face's
+     /// left edge before a tap can eat it (`Keepsake`).
++    ///
++    /// Each face rests like a row of the cream lists (`restingRow()`): one
++    /// showing a third of itself or less is not drawn. The ledger's third
++    /// row stood under the second as a six-pixel sliver of a card's rim
++    /// over the cost well (run 224, 3-training-feed), the fault this round
++    /// took off Missions, Lessons and the decor catalogue; the ledger's
++    /// chevron says the offering goes on.
+     private func offeringGrid(
+         _ candidates: [ResolvedUnit],
+         target: ResolvedUnit,
+@@ -1226,6 +1235,7 @@ struct TrainingView: View {
+                     marksKin: marksKin,
+                     worth: keepsake(candidate, kept: kept)
+                 )
++                .restingRow()
+             }
+         }
+     }
+@@ -1859,6 +1869,9 @@ struct TrainingView: View {
+ 
+ // MARK: - The ledger's shape
+ 
++/// The coordinate space a `HallLedger` measures its body in.
++private let hallLedgerSpace = "hallLedger"
++
+ /// One glass ledger of the Hall of Ka: a fixed header, a body that scrolls
+ /// and fades at its foot, and a fixed foot for the price and the button, on
+ /// one `GlassPlate` the height of its column.
+@@ -1874,6 +1887,15 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
+     let content: () -> Content
+     let foot: () -> Foot
+ 
++    /// The body's frame in its scroll's own space and the scroll's height:
++    /// whether a row stands below the fold.
++    @State private var bodyFrame: CGRect = .zero
++    @State private var viewportHeight: CGFloat = 0
++
++    /// The room under the body's last row, which scrolls it clear of the
++    /// fade: not a row, so it never calls the chevron up by itself.
++    private static var footRoom: CGFloat { 16 }
++
+     init(
+         @ViewBuilder header: @escaping () -> Header,
+         @ViewBuilder content: @escaping () -> Content,
+@@ -1884,6 +1906,13 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
+         self.foot = foot
+     }
+ 
++    /// A row of the body is below the fold. The offering's faces rest on
++    /// whole rows (`restingRow()`), so a row cut at the foot is not drawn
++    /// and nothing else would say the offering goes on.
++    private var moreBelow: Bool {
++        bodyFrame.height > viewportHeight + 1 && bodyFrame.maxY - Self.footRoom > viewportHeight + 2
++    }
++
+     var body: some View {
+         VStack(alignment: .leading, spacing: 8) {
+             header()
+@@ -1899,8 +1928,25 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
+                     .padding(.horizontal, 12)
+                     .padding(.top, 8)
+                     // Room under the last row to scroll it clear of the fade.
+-                    .padding(.bottom, 16)
++                    .padding(.bottom, Self.footRoom)
++                    .background(
++                        GeometryReader { proxy in
++                            let frame = proxy.frame(in: .named(hallLedgerSpace))
++                            Color.clear
++                                .onAppear { bodyFrame = frame }
++                                .onChange(of: frame) { _, now in bodyFrame = now }
++                        }
++                    )
+             }
++            .coordinateSpace(name: hallLedgerSpace)
++            .background(
++                GeometryReader { proxy in
++                    let height = proxy.size.height
++                    Color.clear
++                        .onAppear { viewportHeight = height }
++                        .onChange(of: height) { _, now in viewportHeight = now }
++                }
++            )
+             .mask(
+                 LinearGradient(
+                     stops: [
+@@ -1913,6 +1959,21 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
+                     endPoint: .bottom
+                 )
+             )
++            // The cream lists' cue (`RestingList`) in the glass's own
++            // colours, over the fade rather than under its mask: while a
++            // row is below the fold, a small chevron at the body's foot.
++            .overlay(alignment: .bottom) {
++                if moreBelow {
++                    Image(systemName: "chevron.compact.down")
++                        .font(.system(size: 13, weight: .bold))
++                        .foregroundStyle(Theme.onGlassGold)
++                        .frame(width: 30, height: 12)
++                        .background(Capsule().fill(Color.black.opacity(0.6)))
++                        .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 0.8))
++                        .allowsHitTesting(false)
++                        .accessibilityHidden(true)
++                }
++            }
+             .padding(.horizontal, -12)
+             .frame(maxHeight: .infinity)
+             foot()
+diff --git a/Pantheon/UI/Collection/UnitDetailView.swift b/Pantheon/UI/Collection/UnitDetailView.swift
+index c1c153a..b362c7e 100644
+--- a/Pantheon/UI/Collection/UnitDetailView.swift
++++ b/Pantheon/UI/Collection/UnitDetailView.swift
+@@ -137,7 +137,9 @@ private let chipLineSpace = "chipLine"
+ /// fit are drawn whole with no fade; chips that do not end in a fade at the
+ /// line's trailing edge, over the one the edge cuts, until the last chip
+ /// has been scrolled into view (run 221: five sets, three chips, and nothing
+-/// to say the other two were there).
++/// to say the other two were there). Since run 224 a chip carries its
++/// pieces as pips, and six sets fit the line, so the scroll is only the
++/// fallback for a line the arithmetic did not foresee.
+ private struct ChipLine<Content: View>: View {
+     let content: () -> Content
+     /// The chips' frame in the scroll's own space: its width against the
+@@ -187,6 +189,53 @@ private struct ChipLine<Content: View>: View {
+     }
+ }
+ 
++/// A set's pieces as pips under its stone on the sets row: a gold pip for
++/// each piece that completes the set (both pairs of a 2-piece set worn
++/// twice), a filled grey pip for a piece of a set still short, and a hollow
++/// one for each piece it still wants — so "1 of 4" is one grey pip and
++/// three hollow, a row 19.6 points wide under the stone, where "1/4" in
++/// figures stood 19 wide BESIDE it. The regalia's pips (`RegaliaPips`) in
++/// the set's terms: gold, the unlit cream, the same hairline.
++private struct SetPiecePips: View {
++    let count: Int
++    let needed: Int
++
++    static let pip: CGFloat = 4
++    static let gap: CGFloat = 1.2
++
++    /// A row of `pips` pips, end to end.
++    static func rowWidth(_ pips: Int) -> CGFloat {
++        CGFloat(pips) * pip + CGFloat(max(0, pips - 1)) * gap
++    }
++
++    /// Whole sets' worth of pips: the set once, or as many times as the
++    /// pieces worn reach into.
++    private var shown: Int {
++        let size = max(1, needed)
++        return max(size, (count + size - 1) / size * size)
++    }
++
++    /// The pieces that make whole sets.
++    private var completing: Int {
++        let size = max(1, needed)
++        return count / size * size
++    }
++
++    var body: some View {
++        HStack(spacing: Self.gap) {
++            ForEach(0..<shown, id: \.self) { index in
++                Circle()
++                    .fill(index < completing ? Theme.gold : (index < count ? Theme.textSecondary : Theme.surfaceHigh))
++                    .overlay(
++                        Circle().strokeBorder(index < completing ? Theme.goldDim.opacity(0.8) : Theme.stroke, lineWidth: 0.5)
++                    )
++                    .frame(width: Self.pip, height: Self.pip)
++            }
++        }
++        .accessibilityHidden(true)
++    }
++}
++
+ /// The three figures at the foot of the relic ring, and the line under them.
+ ///
+ /// A type rather than three loose values so the arithmetic — resolving the
+@@ -811,22 +860,21 @@ struct UnitDetailView: View {
+     }
+ 
+     /// Every set with a piece on the ring as ONE line of chips — the set's
+-    /// stone and a count, "×2" lit in gold where the set is complete (and
+-    /// how many times), "1/4" dim where it is not — and a book at the end
+-    /// that opens the set reference counting this unit's pieces, where the
+-    /// names are.
++    /// stone over its pieces as pips, gold where the set is complete (twice
++    /// over, two gold pairs), one grey and three hollow for "1 of 4" — and
++    /// a book at the end that opens the set reference counting this unit's
++    /// pieces, where the names are.
+     ///
+     /// One line since run 216: the named chips were a grid of two a row
+     /// that the ring panel could not hold at rest, so they sat at a fifth of
+     /// their opacity under the fade; and "Thunder 4/2" — two complete
+     /// Thunder sets — read as a counting bug. The stone names the set (the
+-    /// chip's accessibility label says it), and more sets than the line
+-    /// holds scroll sideways — and SAY so (`ChipLine`): Zeus wore five sets
+-    /// and the line showed three chips and the book, with nothing to say
+-    /// there were two more (runs 220–221). The chips are cut so a fourth
+-    /// stands half in view, fading, at the line's end; a second line of
+-    /// chips was the other way, and it would have ended the ring panel in
+-    /// the ghost row again.
++    /// chip's accessibility label says it). Zeus wore five sets and the line
++    /// showed three chips and the book (runs 220–221), then three and a
++    /// fourth cut to a lone grey stone in the fade (run 224): the counts in
++    /// figures were 43 points a chip. As pips a chip is 23.6 points and
++    /// every set a unit can wear stands whole on the line; a second line of
++    /// chips would have ended the ring panel in the ghost row again.
+     private func setsRow(_ unit: ResolvedUnit) -> some View {
+         let tally = Dictionary(grouping: unit.relics, by: { $0.set }).mapValues(\.count)
+         // Complete sets first, then the nearest to complete, then by name,
+@@ -881,30 +929,37 @@ struct UnitDetailView: View {
+         .frame(height: 22)
+     }
+ 
+-    /// One set on the chip line: its painted stone and its count. A "1/4"
+-    /// chip is 43 points (4, the 13-point stone, 3, the count's 19, 4), so
+-    /// three stand whole in the 160 the book leaves and a fourth starts at
+-    /// 139 — about half of it in view, under the line's fade (run 221; at
+-    /// 48 a chip, the fourth started two points short of the edge and could
+-    /// not be seen at all).
++    /// One set on the chip line: its painted stone over its pieces as pips
++    /// (`SetPiecePips`) — "1/4" is ●○○○, a complete set all gold. A chip
++    /// is a 4-piece set's row of pips and 2 a side, 23.6 points, so six
++    /// sets, the most six slots can wear, stand whole in the 160 the book
++    /// leaves (156.6). The count in figures was 43 points a chip (the
++    /// numeric floor is 11.5), three stood whole, and the fourth was cut to
++    /// a lone grey stone in the fade with Zeus's fifth out of sight (runs
++    /// 221 and 224, 2-detail). A figure small enough to sit on the stone's
++    /// corner would be under the floor; a pip is not type.
+     private func setChip(_ relicSet: RelicSet, count: Int) -> some View {
+-        let completions = count / relicSet.piecesRequired
++        let needed = relicSet.piecesRequired
++        let completions = count / needed
+         let complete = completions > 0
+-        let label: String = complete ? "×\(completions)" : "\(count)/\(relicSet.piecesRequired)"
+-        return HStack(spacing: 3) {
+-            RelicSetEmblem(set: relicSet, size: 13, tint: complete ? Theme.gold : Theme.textSecondary)
+-            Text(label)
+-                .font(Theme.numeric(11.5))
+-                .foregroundStyle(complete ? Theme.gold : Theme.textSecondary)
+-                .lineLimit(1)
+-                .fixedSize()
++        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
++        return VStack(spacing: 2) {
++            RelicSetEmblem(set: relicSet, size: 14, tint: complete ? Theme.gold : Theme.textSecondary)
++            SetPiecePips(count: count, needed: needed)
+         }
+-        .padding(.horizontal, 4)
++        .padding(.horizontal, 2)
++        // One width for every chip, a 4-piece set's, so the line reads as a
++        // row of sockets; only a set worn past its second copy is wider.
++        .frame(minWidth: SetPiecePips.rowWidth(4) + 4)
+         .frame(height: 22)
+-        .background(Capsule().fill(complete ? Theme.surfaceHigh : Theme.surface))
+-        .overlay(Capsule().strokeBorder(complete ? Theme.gold.opacity(0.45) : Theme.stroke.opacity(0.6), lineWidth: 1))
++        .background(shape.fill(complete ? Theme.surfaceHigh : Theme.surface))
++        .overlay(shape.strokeBorder(complete ? Theme.gold.opacity(0.45) : Theme.stroke.opacity(0.6), lineWidth: 1))
+         .accessibilityElement(children: .ignore)
+-        .accessibilityLabel("\(relicSet.displayName), \(count) of \(relicSet.piecesRequired)")
++        .accessibilityLabel(
++            complete
++                ? "\(relicSet.displayName), complete\(completions > 1 ? " \(completions) times" : "")"
++                : "\(relicSet.displayName), \(count) of \(needed)"
++        )
+     }
+ 
+     /// What the ring is worth, in the popover off its POWER: the boon's
+diff --git a/Pantheon/UI/Common/Components.swift b/Pantheon/UI/Common/Components.swift
+index 70edeec..0db4b76 100644
+--- a/Pantheon/UI/Common/Components.swift
++++ b/Pantheon/UI/Common/Components.swift
+@@ -307,13 +307,21 @@ struct BundleImage: View {
+ /// lower (`topOverride`) to keep the sheet's edge out of the square.
+ /// A re-roll as a real bust is paid art on the owner's word; this is the
+ /// free half, and it stops applying the moment a family leaves the list.
++///
++/// A boss's card has no element in its name (`portrait_boss_unwrapped_king`),
++/// so an entry also matches a name exactly: the Unwrapped King's card is a
++/// whole small figure, and on the Necropolis's levels and the Titans' card
++/// it stood feet and all under its star row beside Apep's and the
++/// Colossus's busts (run 224, frames 16-dungeon-necropolis and
++/// 39-raids-umbra). At the 0.04 crop its gold mask stands whole in the
++/// square, so it needs no `topOverride`.
+ struct PortraitPainting: View {
+     let name: String
+     let size: CGFloat
+ 
+     static let fullFigureFamilies: [String] = [
+-        "amazon", "apollo", "artemis", "athena", "bellona", "berserker", "bragi",
+-        "chang_e", "cobra_priestess", "cyclops", "demeter", "frigg", "frost_troll",
++        "amazon", "apollo", "artemis", "athena", "bellona", "berserker", "boss_unwrapped_king",
++        "bragi", "chang_e", "cobra_priestess", "cyclops", "demeter", "frigg", "frost_troll",
+         "heimdall", "hel", "hera", "heracles", "horus", "jiangshi", "khnum", "maat",
+         "medusa", "mercury", "minotaur", "mummy", "neptune", "odin", "osiris",
+         "poseidon", "ptah", "scarab_knight", "skadi", "sobek", "terracotta_soldier",
+@@ -326,12 +334,19 @@ struct PortraitPainting: View {
+     static let topOverride: [String: CGFloat] = ["mummy": 0.10]
+ 
+     static func cropTop(for name: String) -> CGFloat {
+-        topOverride.first { name.hasPrefix("portrait_\($0.key)_") }?.value ?? Self.top
++        topOverride.first { Self.isCard(name, of: $0.key) }?.value ?? Self.top
+     }
+ 
+-    /// `portrait_<family>_<element>` or `…_awakened`.
++    /// `portrait_<family>_<element>` or `…_awakened`, or a boss's own
++    /// `portrait_<id>`.
+     static func isFullFigure(_ name: String) -> Bool {
+-        fullFigureFamilies.contains { name.hasPrefix("portrait_\($0)_") }
++        fullFigureFamilies.contains { Self.isCard(name, of: $0) }
++    }
++
++    /// Whether a card's file name is this family's: its card, or one of its
++    /// forms after an underscore.
++    private static func isCard(_ name: String, of family: String) -> Bool {
++        name == "portrait_\(family)" || name.hasPrefix("portrait_\(family)_")
+     }
+ 
+     var body: some View {
+@@ -1067,6 +1082,12 @@ struct RewardTile: View {
+     var relic: Relic? = nil
+     var size: CGFloat = 64
+     var showsTitle: Bool = true
++    /// The grade's star row under the socket. Off where the caller draws
++    /// the grade inside the socket itself — the sweep's receipt, whose
++    /// names sit on one line — so a relic passed for its slot badge is not
++    /// starred twice. The receipt left its relic out to avoid exactly that,
++    /// and printed no slot anywhere (run 224, 34-sweep).
++    var showsGrade: Bool = true
+     /// A bundle painting drawn in the socket in place of the item icon — a
+     /// relic set's painted stone (`relic_<set>`), so each of a chapter's two
+     /// sets is its own drop tile in the stage popup (2026-09-22, phase B).
+@@ -1080,12 +1101,12 @@ struct RewardTile: View {
+     var onGlass: Bool = false
+     var onTap: (() -> Void)? = nil
+ 
+-    /// `imageName` and `onGlass` stand BEFORE `onTap`, so `onTap` stays last
+-    /// and a trailing closure still means it; every earlier call site passes
+-    /// neither and draws as it did.
++    /// `showsGrade`, `imageName` and `onGlass` stand BEFORE `onTap`, so
++    /// `onTap` stays last and a trailing closure still means it; every
++    /// earlier call site passes none of them and draws as it did.
+     init(key: String, title: String? = nil, amount: String? = nil, stars: Int? = nil, relic: Relic? = nil,
+-         size: CGFloat = 64, showsTitle: Bool = true, imageName: String? = nil, onGlass: Bool = false,
+-         onTap: (() -> Void)? = nil) {
++         size: CGFloat = 64, showsTitle: Bool = true, showsGrade: Bool = true, imageName: String? = nil,
++         onGlass: Bool = false, onTap: (() -> Void)? = nil) {
+         self.key = key
+         self.title = title
+         self.amount = amount
+@@ -1093,6 +1114,7 @@ struct RewardTile: View {
+         self.relic = relic
+         self.size = size
+         self.showsTitle = showsTitle
++        self.showsGrade = showsGrade
+         self.imageName = imageName
+         self.onGlass = onGlass
+         self.onTap = onTap
+@@ -1174,7 +1196,7 @@ struct RewardTile: View {
+                 }
+             }
+             .frame(width: size, height: size)
+-            if let stars = relic?.grade ?? stars {
++            if showsGrade, let stars = relic?.grade ?? stars {
+                 // Fitted to the socket's width: six stars at 12% of a
+                 // 44-point tile were wider than the stone (run 216).
+                 StarRow(stars: stars, size: Self.starSize(stars: stars, width: size))
+@@ -1985,8 +2007,13 @@ struct GameScreen<Bar: View, Content: View>: View {
+                 // too many controls, and the answer is fewer controls (the
+                 // collection lost its ALL tile and its two-word layout
+                 // switch), never a smaller title.
+-                Text(title.uppercased())
+-                    .font(Theme.display(19))
++                //
++                // Its figures in Manrope (`Text.inscribed`): Cinzel's 1 and
++                // 0 are a Roman I and O, and every strip that names a floor
++                // read "VAULT OF THE COLOSSUS BIO" (run 224, 34-sweep-
++                // briefing-dungeon) after round 4 had fixed the same on the
++                // room's headline, the hub and the tower.
++                Text.inscribed(title.uppercased(), letters: Theme.display(19), digits: Theme.numeric(18.4).weight(.heavy))
+                     .tracking(1.4)
+                     .carved(glow: false)
+                     .lineLimit(1)
+diff --git a/Pantheon/UI/Guide/GuideOverlay.swift b/Pantheon/UI/Guide/GuideOverlay.swift
+index 14b48d6..0608a85 100644
+--- a/Pantheon/UI/Guide/GuideOverlay.swift
++++ b/Pantheon/UI/Guide/GuideOverlay.swift
+@@ -37,6 +37,54 @@ extension View {
+     }
+ }
+ 
++/// What of Athena is on the screen now, for the place under her to make
++/// room: her plates while she speaks, and each caret's call-out — its line's
++/// box, the stem, the arrow and the ring round the control, one rect in the
++/// window's coordinates (2026-09-23, run 224).
++///
++/// The island asks (`IslandView`). Its name chips and bubbles are drawn
++/// under her, and run 224's guide frame had her plate slicing three chips at
++/// its edges — "Summoning Circle" half over its top edge and ghosting through
++/// the glass, "…of the Duat" between her bust and the plate, "Arena of Souls"
++/// under its foot — and the caret's frame the "Arena of Souls" chip standing
++/// between the line and its arrow. The plate and the caret say they are up
++/// themselves, rather than the island reading the save's current lesson,
++/// because the tour puts both up directly over the island, and the tour's
++/// save has an unread lesson waiting on every island frame where neither is
++/// drawn: read off the save, the island would have hidden its names on the
++/// very frames that judge them.
++@MainActor
++final class GuideStage: ObservableObject {
++    static let shared = GuideStage()
++
++    /// One id per plate up: she can speak in the shell and in a sheet over
++    /// it at once.
++    @Published private(set) var plates: Set<UUID> = []
++    /// Each caret's call-out, in the window's coordinates.
++    @Published private(set) var callouts: [UUID: CGRect] = [:]
++
++    private init() {}
++
++    /// Whether she is speaking anywhere.
++    var isSpeaking: Bool { !plates.isEmpty }
++
++    /// A plate going up or down. Nothing is published when nothing changed.
++    func plate(_ id: UUID, isUp: Bool) {
++        guard plates.contains(id) != isUp else { return }
++        if isUp {
++            plates.insert(id)
++        } else {
++            plates.remove(id)
++        }
++    }
++
++    /// A caret's call-out where it stands now, or nil once it has gone.
++    func callout(_ id: UUID, at rect: CGRect?) {
++        guard callouts[id] != rect else { return }
++        callouts[id] = rect
++    }
++}
++
+ /// Her portrait and her words: a bust at the left, a plate of dark glass
+ /// beside it, the line typed out rather than dropped in. A tap anywhere goes
+ /// on.
+@@ -67,6 +115,9 @@ struct GuidePlate: View {
+     /// call site, so a new beat starts empty.
+     @State private var shown = 0
+     @State private var finished = false
++    /// This plate on the `GuideStage`, so the place under her steps back
++    /// while she speaks.
++    @State private var stageID = UUID()
+ 
+     private var portrait: CGFloat { 168 }
+ 
+@@ -172,6 +223,11 @@ struct GuidePlate: View {
+                 finished = true
+             }
+         }
++        // While she speaks the island's chips and bubbles stand back
++        // (`GuideStage`): a name cut by her plate's edge, or ghosting
++        // through its glass, was the first thing run 224's opening showed.
++        .onAppear { GuideStage.shared.plate(stageID, isUp: true) }
++        .onDisappear { GuideStage.shared.plate(stageID, isUp: false) }
+     }
+ }
+ 
+@@ -197,6 +253,14 @@ struct GuidePlate: View {
+ /// The band just over a control at the foot is where the place above it
+ /// keeps its lowest names (the island holds its chips to its own foot, on
+ /// the bar's rule), so the line clears it and the arrow alone crosses it.
++///
++/// Since run 224 the line and the arrow are ONE call-out: a gold stem runs
++/// from the line's box to the arrow's base, and the whole of it — box, stem,
++/// arrow and ring — is published on the `GuideStage`, where the island
++/// stands back any chip or bubble it covers. Run 224's caret frame still read
++/// line, "Arena of Souls", arrow, top to bottom: the chip stood in the band
++/// between the two, and read in that order the caret could point at the
++/// arena instead of the Collection door.
+ struct GuideCaret: View {
+     let prompt: String
+     let target: CGRect
+@@ -211,6 +275,8 @@ struct GuideCaret: View {
+     /// first frame guesses a one-line box.
+     @State private var box = CGSize(width: 300, height: 32)
+     @State private var breathe = false
++    /// This caret on the `GuideStage`.
++    @State private var stageID = UUID()
+ 
+     /// The arrowhead: 18 wide, 12 tall, a dark edge so it reads on sand.
+     private static let arrow = CGSize(width: 18, height: 12)
+@@ -223,6 +289,8 @@ struct GuideCaret: View {
+     /// height and a little, so the line clears the names in the band over a
+     /// control at the foot.
+     private static let labelBand: CGFloat = 12
++    /// The stem from the line's box to the arrow's base.
++    private static let stemWidth: CGFloat = 1.5
+ 
+     /// Whether the target is a control rather than the no-anchor fallback,
+     /// which is a point and wears no ring.
+@@ -242,6 +310,21 @@ struct GuideCaret: View {
+         let half = box.width / 2 + 12
+         let boxX = min(max(target.midX, half), max(half, bounds.width - half))
+         let lineWidth = min(Self.reading, max(0, bounds.width - 24))
++        // The stem, from the box's near edge to the arrow's base (the
++        // triangle's flat side, which faces the box either way). The arrow's
++        // x is always inside the box's span: the box is clamped to the screen
++        // round the same centre the arrow is.
++        let stemFrom = below ? arrowY + Self.arrow.height / 2 : boxY + box.height / 2
++        let stemTo = below ? boxY - box.height / 2 : arrowY - Self.arrow.height / 2
++        let stem = max(0, stemTo - stemFrom)
++        // The whole call-out, for the place under it (`GuideStage`): the box,
++        // the stem, the arrow through its three-point breath, and the ring
++        // round the control through its own.
++        let boxRect = CGRect(x: boxX - box.width / 2, y: boxY - box.height / 2, width: box.width, height: box.height)
++        let arrowRect = CGRect(x: arrowX - Self.arrow.width / 2, y: arrowY - Self.arrow.height / 2 - 3,
++                               width: Self.arrow.width, height: Self.arrow.height + 6)
++        let pointer = boxRect.union(arrowRect)
++        let callout = hasTarget ? pointer.union(target.insetBy(dx: -6, dy: -6)) : pointer
+ 
+         ZStack {
+             if hasTarget {
+@@ -255,6 +338,14 @@ struct GuideCaret: View {
+                     .animation(Self.breath, value: breathe)
+                     .position(x: target.midX, y: target.midY)
+             }
++            // Under the arrow, which breathes three points into it.
++            if stem > 0.5 {
++                Capsule()
++                    .fill(Theme.gold)
++                    .frame(width: Self.stemWidth, height: stem)
++                    .shadow(color: Color.black.opacity(0.5), radius: 1)
++                    .position(x: arrowX, y: stemFrom + stem / 2)
++            }
+             BubbleTail()
+                 .fill(Theme.gold)
+                 .overlay(BubbleTail().stroke(Color.black.opacity(0.6), lineWidth: 1))
+@@ -269,12 +360,24 @@ struct GuideCaret: View {
+                 .position(x: boxX, y: boxY)
+         }
+         .frame(width: bounds.width, height: bounds.height)
++        // The call-out in the window's coordinates, kept current while the
++        // line is measured and the control moves.
++        .background(
++            GeometryReader { proxy in
++                let origin = proxy.frame(in: .global).origin
++                let placed = callout.offsetBy(dx: origin.x, dy: origin.y)
++                Color.clear
++                    .onAppear { GuideStage.shared.callout(stageID, at: placed) }
++                    .onChange(of: placed) { _, now in GuideStage.shared.callout(stageID, at: now) }
++            }
++        )
+         .allowsHitTesting(false)
+         .transition(.opacity)
+         // The breath is scoped to the ring and the arrow (`.animation(_:
+         // value:)` on each), so the box and the arrow never glide when the
+         // target moves or the line is measured.
+         .onAppear { breathe = true }
++        .onDisappear { GuideStage.shared.callout(stageID, at: nil) }
+     }
+ 
+     /// The ring's and the arrow's breath.
+diff --git a/Pantheon/UI/Island/IslandView.swift b/Pantheon/UI/Island/IslandView.swift
+index 5914bde..3eb5a9b 100644
+--- a/Pantheon/UI/Island/IslandView.swift
++++ b/Pantheon/UI/Island/IslandView.swift
+@@ -41,7 +41,16 @@ struct IslandView: View {
+     @State private var pinchStart: IslandCamera?
+     @State private var magnifying = false
+     @State private var reaction: IslandReaction?
++    /// The figure named for a breath: its plate's place is kept clear of
++    /// chips and bubbles from the moment it is set (`IslandKeepOut`)…
+     @State private var named: NamedFigure?
++    /// …and the plate itself is drawn only while this is true: a beat after
++    /// `named`, so what it lands on has stepped back first, and a beat before
++    /// `named` clears, so nothing steps back in under a plate still fading.
++    @State private var nameplateDrawn = false
++    /// What of Athena is up — her plate, her caret's call-out — so the chips
++    /// and bubbles under her stand back (`GuideStage`, run 224).
++    @ObservedObject private var guide = GuideStage.shared
+     @State private var offering: OfferingToast?
+     @State private var burst = false
+     @State private var burstOut = false
+@@ -161,10 +170,17 @@ struct IslandView: View {
+             let shift = CGPoint(x: insets.leading, y: insets.top)
+             let hour = Self.daylight()
+             let night = Self.isNight()
+-            // The named figure's plate, so a chip or a bubble it lands on can
+-            // step back for the breath it is up (run 216: "Zeus · Lv.12" over
+-            // the start of "Summoning Circle").
+-            let plate = nameplateRect(frame: frame, full: full, shift: shift)
++            // Where a chip or a bubble steps back this frame: under the named
++            // figure's plate for the breath it is up (run 216: "Zeus · Lv.12"
++            // over the start of "Summoning Circle"), under Athena's caret, and
++            // everywhere while she speaks (run 224). Her call-outs come in
++            // the window's coordinates; the island's are this reader's.
++            let window = geometry.frame(in: .global).origin
++            let keepOut = IslandKeepOut(
++                plate: nameplateRect(frame: frame, full: full, shift: shift),
++                callouts: guide.callouts.values.map { $0.offsetBy(dx: -window.x, dy: -window.y) },
++                speaking: guide.isSpeaking
++            )
+ 
+             ZStack(alignment: .top) {
+                 // Open sand: a double tap brings the camera home.
+@@ -195,13 +211,13 @@ struct IslandView: View {
+                 .allowsHitTesting(false)
+ 
+                 ForEach(IslandDatabase.landmarks) { landmark in
+-                    building(landmark, frame: frame, shift: shift, bounds: geometry.size, plate: plate)
++                    building(landmark, frame: frame, shift: shift, bounds: geometry.size, keepOut: keepOut)
+                 }
+ 
+                 figureTargets(frame: frame, full: full, shift: shift)
+ 
+                 if ShopService.isDailyAvailable(player: store.player) {
+-                    offeringBubble(frame: frame, shift: shift, bounds: geometry.size, plate: plate)
++                    offeringBubble(frame: frame, shift: shift, bounds: geometry.size, keepOut: keepOut)
+                 }
+                 if burst {
+                     Circle()
+@@ -604,9 +620,16 @@ struct IslandView: View {
+     /// them to an edge over somewhere else. It was the centre across as well
+     /// until run 221, whose 1.5 had the Arena of Souls filling the lower
+     /// right with neither its bubble nor its name, its centre just past the
+-    /// edge. `plate` is the named figure's plate: a chip or a bubble it
+-    /// lands on steps back while it is up.
+-    private func building(_ landmark: Landmark, frame: CGRect, shift: CGPoint, bounds: CGSize, plate: CGRect?) -> some View {
++    /// edge. `keepOut` is where a chip or a bubble steps back: the named
++    /// figure's plate while it is up, Athena's caret, anywhere while she
++    /// speaks.
++    ///
++    /// A chip or a bubble steps back AT ONCE and comes back over 0.2 s (run
++    /// 224). Eased both ways, the zoomed island caught a chip fading out
++    /// through the plate springing in over it — two half-drawn labels across
++    /// the circle's front — and the same whenever Athena's plate rose over
++    /// the chips at its edges.
++    private func building(_ landmark: Landmark, frame: CGRect, shift: CGPoint, bounds: CGSize, keepOut: IslandKeepOut) -> some View {
+         let level = store.player.level
+         let unlocked = landmark.isUnlocked(atLevel: level)
+         let tier = landmark.tier(atLevel: level)
+@@ -629,7 +652,7 @@ struct IslandView: View {
+         let chipAt = Self.held(CGPoint(x: centre.x, y: bottom + 4), size: chipSize, in: bounds)
+         let chipRect = CGRect(x: chipAt.x - chipSize.width / 2, y: chipAt.y - chipSize.height / 2,
+                               width: chipSize.width, height: chipSize.height)
+-        let chipShown = inView && !(plate?.intersects(chipRect) ?? false)
++        let chipShown = inView && keepOut.allows(chipRect)
+         let wants = active ? badge(for: landmark) : nil
+ 
+         return Group {
+@@ -679,7 +702,7 @@ struct IslandView: View {
+                     .position(chipAt)
+                     .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
+                     .animation(.default.speed(3), value: shaking)
+-                    .animation(.easeOut(duration: 0.2), value: chipShown)
++                    .animation(Self.stepBack(to: chipShown), value: chipShown)
+             }
+ 
+             if inView, let wants {
+@@ -687,7 +710,7 @@ struct IslandView: View {
+                 let bubbleAt = Self.held(CGPoint(x: centre.x, y: top - 16), size: bubbleSize, in: bounds)
+                 let bubbleRect = CGRect(x: bubbleAt.x - bubbleSize.width / 2, y: bubbleAt.y - bubbleSize.height / 2,
+                                         width: bubbleSize.width, height: bubbleSize.height)
+-                let bubbleShown = !(plate?.intersects(bubbleRect) ?? false)
++                let bubbleShown = keepOut.allows(bubbleRect)
+                 IslandBubble(glyph: wants.glyph, text: wants.text, tint: accent, art: wants.art)
+                     .scaleEffect(pop)
+                     .offset(y: pulse ? -3 : 3)
+@@ -696,7 +719,7 @@ struct IslandView: View {
+                     .onTapGesture { tap(landmark, unlocked: unlocked) }
+                     .position(bubbleAt)
+                     .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
+-                    .animation(.easeOut(duration: 0.2), value: bubbleShown)
++                    .animation(Self.stepBack(to: bubbleShown), value: bubbleShown)
+             }
+         }
+     }
+@@ -705,6 +728,13 @@ struct IslandView: View {
+     /// bubble and its name to show (`building`).
+     private static let inViewShare: CGFloat = 0.35
+ 
++    /// A chip's or a bubble's animation for a change in whether it shows:
++    /// none on the way out, so whatever is drawn in its place never meets it
++    /// half faded, and 0.2 s on the way back (run 224).
++    private static func stepBack(to shown: Bool) -> Animation? {
++        shown ? .easeOut(duration: 0.2) : nil
++    }
++
+     /// A point moved just far enough that a thing of `size` centred on it
+     /// stands inside the island's safe frame, eight points from either side
+     /// and four from the foot, and under the header.
+@@ -850,10 +880,12 @@ struct IslandView: View {
+     // MARK: - The figures
+ 
+     /// A tap target over each figure and, for a breath after a tap or a
+-    /// stir, its name and level over its head.
++    /// stir, its name and level over its head — never while Athena speaks,
++    /// when the island has stepped back behind her plate.
+     private func figureTargets(frame: CGRect, full: CGSize, shift: CGPoint) -> some View {
+         let height = full.height * IslandSceneView.figureHeight * camera.zoom
+         let units = Array(standingUnits.prefix(Self.stands.count).enumerated())
++        let plateShown = nameplateDrawn && !guide.isSpeaking
+         return ForEach(units, id: \.element.id) { index, unit in
+             let feet = point(Self.stands[index], frame: frame, shift: shift)
+             Color.clear
+@@ -861,7 +893,7 @@ struct IslandView: View {
+                 .contentShape(Rectangle())
+                 .onTapGesture { poke(index) }
+                 .position(x: feet.x, y: feet.y - height * 0.5)
+-            if let named, named.index == index {
++            if plateShown, let named, named.index == index {
+                 nameplate(unit)
+                     .position(x: feet.x, y: max(feet.y - height - 14, Self.headerBottom + 16))
+                     .transition(.scale(scale: 0.6).combined(with: .opacity))
+@@ -870,9 +902,13 @@ struct IslandView: View {
+         }
+     }
+ 
+-    /// What a figure's plate says.
++    /// What a figure's plate says: the name without its epithet, as every
++    /// card and plate prints it (`nameWithoutEpithet`). The awakened title
++    /// made "Anubis, Keeper of the Ash Road · Lv.12" about 240 points wide,
++    /// a plate over the whole of the Summoning Circle's front (run 224);
++    /// "Anubis · Lv.12" is 90.
+     private static func nameplateWords(_ unit: ResolvedUnit) -> String {
+-        "\(unit.name) · Lv.\(unit.unit.level)"
++        "\(unit.nameWithoutEpithet) · Lv.\(unit.unit.level)"
+     }
+ 
+     /// Where the named figure's plate stands, reckoned the way `chipSize`
+@@ -916,16 +952,43 @@ struct IslandView: View {
+         name(index)
+     }
+ 
++    /// Names a figure for a breath, in three beats so the plate and what it
++    /// lands on are never drawn together: its place is kept clear at once
++    /// (the chip or bubble there steps back with no fade), the plate springs
++    /// in `plateDelay` later, fades after `plateHold`, and only once it has
++    /// gone does the place open again. Run 224's zoomed island caught the two
++    /// crossing — the plate springing in through a "Summoning Circle" chip
++    /// still fading — a flicker the phone showed at every stir under a chip,
++    /// every nine to fifteen seconds.
+     private func name(_ index: Int) {
+         let plate = NamedFigure(index: index)
+-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { named = plate }
+-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
+-            if named == plate {
+-                withAnimation(.easeOut(duration: 0.3)) { named = nil }
++        let fade = Self.plateFade
++        // A plate already up goes with no fade: another figure has the name.
++        var instantly = Transaction()
++        instantly.disablesAnimations = true
++        withTransaction(instantly) {
++            named = plate
++            nameplateDrawn = false
++        }
++        DispatchQueue.main.asyncAfter(deadline: .now() + Self.plateDelay) {
++            guard named == plate else { return }
++            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { nameplateDrawn = true }
++        }
++        DispatchQueue.main.asyncAfter(deadline: .now() + Self.plateDelay + Self.plateHold) {
++            guard named == plate else { return }
++            withAnimation(.easeOut(duration: fade)) { nameplateDrawn = false }
++            DispatchQueue.main.asyncAfter(deadline: .now() + fade) {
++                if named == plate { named = nil }
+             }
+         }
+     }
+ 
++    /// The name's three beats (`name`): the wait for what it lands on to
++    /// step back, the time it is up, and its fade.
++    private static let plateDelay: TimeInterval = 0.15
++    private static let plateHold: TimeInterval = 1.6
++    private static let plateFade: TimeInterval = 0.25
++
+     // MARK: - The daily offering
+ 
+     /// The bazaar's free daily offering, waiting by the pool as a bubble of
+@@ -941,12 +1004,13 @@ struct IslandView: View {
+     /// the middle one in a material of its own (run 221). It is the same
+     /// glass as every bubble now, and it stands beside the scroll count
+     /// (`offeringSpot`), so the pool carries one row of bubbles over its name.
+-    private func offeringBubble(frame: CGRect, shift: CGPoint, bounds: CGSize, plate: CGRect?) -> some View {
++    /// It steps back where the buildings' bubbles do (`IslandKeepOut`).
++    private func offeringBubble(frame: CGRect, shift: CGPoint, bounds: CGSize, keepOut: IslandKeepOut) -> some View {
+         let spot = offeringSpot(frame: frame, shift: shift, bounds: bounds)
+         let size = Self.offeringSize
+         let rect = CGRect(x: spot.centre.x - size.width / 2, y: spot.centre.y - size.height / 2,
+                           width: size.width, height: size.height)
+-        let shown = spot.inView && !(plate?.intersects(rect) ?? false)
++        let shown = spot.inView && keepOut.allows(rect)
+         return IslandBubble(glyph: "gift.fill", text: Self.offeringWords, tint: Theme.gold,
+                             art: ItemArt.imageName("bundle"))
+             .offset(y: pulse ? -3 : 3)
+@@ -954,7 +1018,7 @@ struct IslandView: View {
+             .allowsHitTesting(shown)
+             .onTapGesture { claimOffering(at: spot.centre) }
+             .position(spot.centre)
+-            .animation(.easeOut(duration: 0.2), value: shown)
++            .animation(Self.stepBack(to: shown), value: shown)
+     }
+ 
+     /// Where the offering's bubble stands: level with the Summoning Circle's
+@@ -1024,6 +1088,32 @@ struct IslandView: View {
+     }
+ }
+ 
++// MARK: - Where the chips stand back
++
++/// Where the island's name chips, its buildings' bubbles and the daily
++/// offering may not stand this frame: under the named figure's plate while
++/// it is up, under Athena's caret — its line, stem, arrow and ring, one
++/// call-out (`GuideStage`) — and anywhere at all while she is speaking,
++/// when the place recedes behind her plate and the genre's tutorial dim.
++///
++/// Run 224's guide frame had her plate slicing three chips at its edges
++/// and the caret's frame "Arena of Souls" standing between the line and its
++/// arrow; run 216's had "Zeus · Lv.12" over the start of "Summoning Circle".
++/// One test for all three, so the buildings and the offering cannot answer
++/// differently.
++private struct IslandKeepOut {
++    var plate: CGRect?
++    var callouts: [CGRect] = []
++    var speaking = false
++
++    /// Whether a chip or a bubble standing in `rect` is drawn.
++    func allows(_ rect: CGRect) -> Bool {
++        if speaking { return false }
++        if let plate, plate.intersects(rect) { return false }
++        return !callouts.contains { $0.intersects(rect) }
++    }
++}
++
+ // MARK: - The purse
+ 
+ /// The island's wallet (2026-09-22, phase B): the four currencies as their
+diff --git a/Pantheon/UI/Social/SocialView.swift b/Pantheon/UI/Social/SocialView.swift
+index 6325865..e8be73d 100644
+--- a/Pantheon/UI/Social/SocialView.swift
++++ b/Pantheon/UI/Social/SocialView.swift
+@@ -114,9 +114,11 @@ struct SocialView: View {
+     /// beside the acanthus-cornered Friends (runs 220 and 221). It hangs from
+     /// the top at its own height, as Found a guild does on the Guild tab, and
+     /// scrolls under its field only when a search fills it. The friends
+-    /// hang from the top of theirs and end in a line that says where the
+-    /// next one comes from — one friend's row stood over two thirds of
+-    /// empty marble.
++    /// panel hangs the same way: its rows and the line that says where the
++    /// next friend comes from, at their own height, scrolling only once they
++    /// fill the column. Run 224 drew it to the frame's foot for one friend,
++    /// 135 points of empty marble under the line and its foot 95 points
++    /// below the left panel's.
+     private var friendsTab: some View {
+         HStack(alignment: .top, spacing: 8) {
+             SectionPanel(title: "Find demigods") {
+@@ -147,22 +149,31 @@ struct SocialView: View {
+                         message: "Find a demigod by name and send a request; a friend's row greets them with a gift."
+                     )
+                 } else {
+-                    ScrollView {
+-                        VStack(spacing: 6) {
+-                            ForEach(social.friends) { friendship in
+-                                SocialFriendRow(friendship: friendship, greeted: social.greetedIDs.contains(friendship.friend.id)) {
+-                                    Task { await social.sendGreeting(to: friendship) }
+-                                }
+-                            }
+-                            SocialInviteLine(text: "Find more demigods by name on the left.")
++                    ViewThatFits(in: .vertical) {
++                        friendRows
++                        ScrollView {
++                            friendRows
++                                .padding(.bottom, SocialScrollFoot.fade)
+                         }
+-                        .padding(.bottom, SocialScrollFoot.fade)
++                        .mask { SocialScrollFoot.footMask }
+                     }
+-                    .mask { SocialScrollFoot.footMask }
+                     .modifier(SocialPanelInset())
+                 }
+             }
+-            .frame(maxWidth: .infinity, maxHeight: .infinity)
++            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
++        }
++    }
++
++    /// The friends, each with the day's greeting, and the line that says
++    /// where the next one comes from.
++    private var friendRows: some View {
++        VStack(spacing: 6) {
++            ForEach(social.friends) { friendship in
++                SocialFriendRow(friendship: friendship, greeted: social.greetedIDs.contains(friendship.friend.id)) {
++                    Task { await social.sendGreeting(to: friendship) }
++                }
++            }
++            SocialInviteLine(text: "Find more demigods by name on the left.")
+         }
+     }
+ 
+@@ -208,6 +219,10 @@ struct SocialView: View {
+ 
+     // MARK: - Inbox
+ 
++    /// The mail hangs from the top at its own height, as the friends do,
++    /// and ends in the line that says what lands here; it scrolls, fading at
++    /// its foot, only once it fills the frame. Run 224 drew the plate to the
++    /// frame's foot for one mail, 135 points of empty marble under it.
+     private var inboxTab: some View {
+         SectionPanel(title: "Inbox", accessory: "\(social.unclaimedMail) to claim") {
+             if social.mail.isEmpty {
+@@ -217,18 +232,31 @@ struct SocialView: View {
+                     message: "Greetings from friends and the game's own gifts land here, each with its reward."
+                 )
+             } else {
+-                ScrollView {
+-                    VStack(spacing: 6) {
+-                        ForEach(social.mail) { item in
+-                            SocialMailRow(item: item) {
+-                                claim(item)
+-                            }
+-                        }
++                ViewThatFits(in: .vertical) {
++                    mailRows
++                    ScrollView {
++                        mailRows
++                            .padding(.bottom, SocialScrollFoot.fade)
+                     }
++                    .mask { SocialScrollFoot.footMask }
++                }
++                .modifier(SocialPanelInset())
++            }
++        }
++        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
++    }
++
++    /// The mail as the backend sends it, and the line that says what lands
++    /// here.
++    private var mailRows: some View {
++        VStack(spacing: 6) {
++            ForEach(social.mail) { item in
++                SocialMailRow(item: item) {
++                    claim(item)
+                 }
+             }
++            SocialInviteLine(text: "Greetings from friends and the game's own gifts land here.", systemImage: "envelope")
+         }
+-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+     }
+ 
+     private func claim(_ item: Mail) {
+@@ -1014,6 +1042,17 @@ private struct SocialTargetRow: View {
+ /// the thirteenth, the player's own. A table with no row of his (a demigod
+ /// in no guild) ends in a line that says where one is found, where the
+ /// guilds' four rows stood over 65 points of empty marble.
++///
++/// The list's window holds WHOLE rows (fix round 5; `windowHeight`). Its
++/// foot faded over 18 points, and with the standing pinned under it the
++/// window was 167 points: the arena's fourth row, Ragnhild, ended inside
++/// the fade with her detail line ghosted and cut through, directly over the
++/// YOUR STANDING rule (run 224). `RestingList`'s 16-point fade would ghost
++/// it the same way. Now the window is as many whole rows as it holds, the
++/// few points over stand under it, a row passing either edge while the
++/// list scrolls dims out as a `RestingList` row does (`restingRow`), and
++/// while rows wait below, `RestingList`'s chevron stands on the window's
++/// foot to say so.
+ private struct SocialRankTable: View {
+     let title: String
+     let entries: [LeaderboardEntry]
+@@ -1024,20 +1063,42 @@ private struct SocialRankTable: View {
+     /// What the foot says when the player has no row here at all.
+     var withoutOwnRow: String? = nil
+ 
+-    /// Whether the player's own row stands whole in the list's window, above
+-    /// its fade — read as the list scrolls, written only when it flips — and
+-    /// how tall the window is.
++    /// Whether the player's own row stands whole in the list's window —
++    /// read as the list scrolls, written only when it flips — how tall the
++    /// window is, a row's height with the gap under it (every row is the
++    /// same two lines; measured off the first), and where the rows end in
++    /// the window as it scrolls.
+     @State private var ownRowShown = false
+     @State private var window: CGFloat = 0
++    @State private var rowPitch: CGFloat = 0
++    @State private var contentBottom: CGFloat = 0
+ 
+     private static let space = "socialRankWindow"
++    private static let rowGap: CGFloat = 3
+ 
+     /// The player's row, in the list or from outside it.
+     private var mine: LeaderboardEntry? { entries.first(where: \.isMine) ?? ownOutsideList }
+ 
+-    /// A row at `frame` in the list's window stands whole above the fade.
++    /// A row at `frame` in the list's window stands whole in it.
+     private func inWindow(_ frame: CGRect) -> Bool {
+-        window > 0 && frame.minY >= -1 && frame.maxY <= window - SocialScrollFoot.fade + 1
++        window > 0 && frame.minY >= -1 && frame.maxY <= window + 1
++    }
++
++    /// Rows wait below the window.
++    private var moreBelow: Bool {
++        window > 0 && contentBottom > window + 1
++    }
++
++    /// The list's window in `available` points: all of it while every row
++    /// fits, or until a row has been measured; otherwise as many whole rows
++    /// as it holds — at least one. On the CI phone the arena's 167 points
++    /// hold four rows of 38 (162), where the fade stood over the fourth.
++    static func windowHeight(available: CGFloat, rows: Int, pitch: CGFloat) -> CGFloat {
++        guard pitch > rowGap, available > 0 else { return available }
++        let all = CGFloat(rows) * pitch - rowGap
++        if all <= available + 0.5 { return available }
++        let whole = max(1, ((available + rowGap) / pitch).rounded(.down))
++        return min(available, whole * pitch - rowGap)
+     }
+ 
+     var body: some View {
+@@ -1050,37 +1111,26 @@ private struct SocialRankTable: View {
+                 )
+             } else {
+                 VStack(spacing: 6) {
+-                    // The list fades at its foot and ends in as much clear
+-                    // space, so a row under the fold reads as a scroll: the
+-                    // arena's sixth row was cut hard at the panel's inner rule
+-                    // with nothing to say there were seven more (run 220).
+-                    ScrollView {
+-                        VStack(spacing: 3) {
+-                            ForEach(entries) { entry in
+-                                SocialRankRow(entry: entry, unit: unit)
+-                                    .background {
+-                                        if entry.isMine {
+-                                            GeometryReader { row in
+-                                                let shown = inWindow(row.frame(in: .named(Self.space)))
+-                                                Color.clear
+-                                                    .onAppear { ownRowShown = shown }
+-                                                    .onChange(of: shown) { _, now in ownRowShown = now }
+-                                            }
+-                                        }
+-                                    }
++                    GeometryReader { box in
++                        let height = Self.windowHeight(available: box.size.height, rows: entries.count, pitch: rowPitch)
++                        rankList
++                            .frame(height: height)
++                            .overlay(alignment: .bottom) {
++                                if moreBelow {
++                                    Image(systemName: "chevron.compact.down")
++                                        .font(.system(size: 13, weight: .bold))
++                                        .foregroundStyle(Theme.goldDim)
++                                        .frame(width: 30, height: 12)
++                                        .background(Capsule().fill(Theme.surfaceHigh.opacity(0.92)))
++                                        .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 0.8))
++                                        // On the window's foot, over the gap
++                                        // under it rather than the last row.
++                                        .offset(y: 6)
++                                        .allowsHitTesting(false)
++                                        .accessibilityHidden(true)
++                                }
+                             }
+-                        }
+-                        .padding(.bottom, SocialScrollFoot.fade)
+-                    }
+-                    .coordinateSpace(name: Self.space)
+-                    .background {
+-                        GeometryReader { box in
+-                            Color.clear
+-                                .onAppear { window = box.size.height }
+-                                .onChange(of: box.size.height) { _, now in window = now }
+-                        }
+                     }
+-                    .mask { SocialScrollFoot.footMask }
+                     foot
+                 }
+                 .modifier(SocialPanelInset())
+@@ -1088,6 +1138,57 @@ private struct SocialRankTable: View {
+         }
+     }
+ 
++    /// The rows in their scroll, each read for its height (the first) and
++    /// its place (the player's own) as the list moves.
++    private var rankList: some View {
++        ScrollView {
++            VStack(spacing: Self.rowGap) {
++                ForEach(entries) { entry in
++                    SocialRankRow(entry: entry, unit: unit)
++                        .background {
++                            GeometryReader { row in
++                                let shown = entry.isMine && inWindow(row.frame(in: .named(Self.space)))
++                                let height = row.size.height
++                                Color.clear
++                                    .onAppear { measured(entry, height: height, shown: shown) }
++                                    .onChange(of: shown) { _, now in measured(entry, height: height, shown: now) }
++                                    .onChange(of: height) { _, now in measured(entry, height: now, shown: shown) }
++                            }
++                        }
++                        .restingRow()
++                }
++            }
++            .background {
++                GeometryReader { content in
++                    let bottom = content.frame(in: .named(Self.space)).maxY
++                    Color.clear
++                        .onAppear { contentBottom = bottom }
++                        .onChange(of: bottom) { _, now in contentBottom = now }
++                }
++            }
++        }
++        .coordinateSpace(name: Self.space)
++        .background {
++            GeometryReader { box in
++                Color.clear
++                    .onAppear { window = box.size.height }
++                    .onChange(of: box.size.height) { _, now in window = now }
++            }
++        }
++    }
++
++    /// One row's reading: the first row's height sets the pitch, and the
++    /// player's own says whether it stands whole in the window. Each is
++    /// written only when it moves.
++    private func measured(_ entry: LeaderboardEntry, height: CGFloat, shown: Bool) {
++        if entry.id == entries.first?.id, height > 0, abs(height + Self.rowGap - rowPitch) > 0.5 {
++            rowPitch = height + Self.rowGap
++        }
++        if entry.isMine, shown != ownRowShown {
++            ownRowShown = shown
++        }
++    }
++
+     /// Under the list: a rule and the player's own row while the window
+     /// does not show it, or the dashed line for a table with no row of his —
+     /// 37 points, so the guilds' four rows still stand whole above the
+diff --git a/Pantheon/UI/Summon/SummonView.swift b/Pantheon/UI/Summon/SummonView.swift
+index 70e8f2c..1087a6e 100644
+--- a/Pantheon/UI/Summon/SummonView.swift
++++ b/Pantheon/UI/Summon/SummonView.swift
+@@ -33,6 +33,10 @@ struct SummonView: View {
+     /// The banner's mileage exchange, and the opening selector.
+     @State private var showMileage = false
+     @State private var showSelector = false
++    /// The banner rail's content in its own scroll, and the rail's height:
++    /// whether a banner stands below the fold (`railMoreBelow`).
++    @State private var railContent: CGRect = .zero
++    @State private var railHeight: CGFloat = 0
+ 
+     /// The side menu's width, and the same number the room is composed
+     /// against: the painting is centred in what is left of the frame after
+@@ -43,10 +47,13 @@ struct SummonView: View {
+     /// The band the scroll over the ring hangs in, in the room's own points:
+     /// below the header (8 points of padding, the eyebrow and the 30-point
+     /// name, whose ink ends near 50) and above the deck (10 points of padding
+-    /// and the 46-point plates). Run 217 hung the scroll off the ring alone
+-    /// and its top ran under the "5★ 3.0%" chip and against the name's ?.
++    /// and the plates). Run 217 hung the scroll off the ring alone and its
++    /// top ran under the "5★ 3.0%" chip and against the name's ?. The plates
++    /// are 54 points, not 46 (the painted scroll on each is 28, with 13 above
++    /// and below it): run 224's ×10 measured 206–261 of a 271-point room,
++    /// and the room hangs the painted portal clear of them by this number.
+     private static let headerFoot: CGFloat = 58
+-    private static let deckHead: CGFloat = 60
++    private static let deckHead: CGFloat = 64
+ 
+     var body: some View {
+         NavigationStack {
+@@ -146,22 +153,62 @@ struct SummonView: View {
+     // gold bead; the chosen one on a gold plate with a glow. The cream list
+     // with 24-point icons it replaces read as a settings table.
+ 
++    // The rail RESTS ON WHOLE CARDS (2026-09-23, fix round 5): runs 223 and
++    // 224 ended it on the top half of its fifth banner, "The Jade …" cut at
++    // the tab bar under the foot's fade, while the cream lists had rested on
++    // whole rows since round 4 (`RestingList`). The same rule on the glass:
++    // a card with less than about three quarters of itself in view is not
++    // drawn (`restingRow`, the ramp narrowed so a card at rest is whole or
++    // gone), a section's name only when its letters are whole, and while a
++    // card stands below the fold the glass's own chevron (the Hall of Ka's
++    // ledger's, gold on a dark capsule) says the rail goes on.
+     private var bannerRail: some View {
+         ScrollView(showsIndicators: false) {
+             VStack(alignment: .leading, spacing: 5) {
+                 railSection("Pantheons", banners: Banner.pantheonBanners, short: false)
+                 railSection("Scrolls", banners: Banner.scrollBanners, short: true)
+-                Color.clear.frame(height: 24)
++                Color.clear.frame(height: Self.railFootRoom)
+             }
+             .padding(.horizontal, 9)
+             .padding(.top, 8)
++            .background(
++                GeometryReader { proxy in
++                    let frame = proxy.frame(in: .named(Self.railSpace))
++                    Color.clear
++                        .onAppear { railContent = frame }
++                        .onChange(of: frame) { _, now in railContent = now }
++                }
++            )
+         }
++        .coordinateSpace(name: Self.railSpace)
+         .frame(width: Self.menuWidth)
+         .frame(maxHeight: .infinity)
++        .background(
++            GeometryReader { proxy in
++                let height = proxy.size.height
++                Color.clear
++                    .onAppear { railHeight = height }
++                    .onChange(of: height) { _, now in railHeight = now }
++            }
++        )
+         .mask(
+             LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.88),
+                                    .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
+         )
++        // Over the fade, not under its mask.
++        .overlay(alignment: .bottom) {
++            if railMoreBelow {
++                Image(systemName: "chevron.compact.down")
++                    .font(.system(size: 13, weight: .bold))
++                    .foregroundStyle(Theme.onGlassGold)
++                    .frame(width: 30, height: 12)
++                    .background(Capsule().fill(Color.black.opacity(0.6)))
++                    .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 0.8))
++                    .padding(.bottom, 6)
++                    .allowsHitTesting(false)
++                    .accessibilityHidden(true)
++            }
++        }
+         // The shared rail glass (this screen's own plate, made shared in
+         // phase B), which runs out under the leading inset now that the
+         // hall does: the rows stay in the safe area, the glass meets the
+@@ -169,6 +216,19 @@ struct SummonView: View {
+         .background(GlassRailPlate())
+     }
+ 
++    /// The rail's scroll space, for its content's frame.
++    private static let railSpace = "summonBannerRail"
++    /// The clear under the rail's last card, which lets it scroll clear of
++    /// the fade; it is not a card, so it never calls the chevron up alone.
++    private static let railFootRoom: CGFloat = 24
++
++    /// A card of the rail stands below the fold (`bannerRail`): below the
++    /// last card's foot is the foot room and the stack's 5-point gap.
++    private var railMoreBelow: Bool {
++        railContent.height > railHeight + 1
++            && railContent.maxY - Self.railFootRoom - 5 > railHeight + 2
++    }
++
+     private func railSection(_ title: String, banners: [Banner], short: Bool) -> some View {
+         VStack(alignment: .leading, spacing: 5) {
+             Text(title.uppercased())
+@@ -177,8 +237,13 @@ struct SummonView: View {
+                 .carved(glow: false)
+                 .padding(.top, 8)
+                 .padding(.leading, 4)
++                // Never cut through its letters: drawn only whole.
++                .restingRow(goneBelow: 0.9, wholeFrom: 0.995)
+             ForEach(banners) { banner in
+                 railRow(banner, short: short)
++                    // A 46-point card at rest on the phone was 61% in view
++                    // (28 of 46 points): gone under 72%, whole from 96%.
++                    .restingRow(goneBelow: 0.72, wholeFrom: 0.96)
+             }
+         }
+     }
+@@ -742,14 +807,11 @@ struct SummoningCircle: View {
+     let banner: Banner
+     /// Set for the moment between the button and the reveal.
+     var charging: Bool
+-    /// How much of the frame's leading edge the banner menu covers. The
+-    /// painting is centred in what is left over rather than in the whole
+-    /// frame, so the altar stands in the middle of the room the player can
+-    /// see; on a 734-point frame with a 176-point menu that also hides the
+-    /// letterbox under the menu instead of leaving it beside the art. Since
++    /// How much of the frame's leading edge the banner menu covers: the
++    /// painting may slide right by up to half of it, the strip it uncovers
++    /// on the left staying under the menu's dark glass (see `body`). Since
+     /// 2026-09-23 the frame is the whole glass (the room bleeds under both
+-    /// side insets), which grows it the same on both sides, so the ring
+-    /// stands where it stood.
++    /// side insets).
+     var leadingInset: CGFloat = 0
+     /// How far down the frame the words laid over the room reach (the
+     /// banner's name and the rates chips), and how far up from its foot the
+@@ -763,10 +825,23 @@ struct SummoningCircle: View {
+ 
+     private var tint: Color { banner.scroll.tint }
+ 
+-    /// Where the painted floor ring sits in `summon_hall_bg`, in fractions of
+-    /// the painting. Measured off the art, like every other anchor here.
+-    private static let floorCentre = CGPoint(x: 0.50, y: 0.82)
++    /// Where the painted PORTAL sits in `summon_hall_bg` — the dark well at
++    /// the heart of the floor ring, which the rings, their light and the
++    /// scroll all stand on — in fractions of the painting, measured off the
++    /// art (2026-09-23, fix round 5): the well spans 0.397–0.605 across and
++    /// 0.769–0.849 down, and the foot of its gold rim is at 0.853. The old
++    /// 0.82 was the middle of the whole meander, whose far half is
++    /// foreshortened; it stood the rings 5 points under the well.
++    private static let floorCentre = CGPoint(x: 0.50, y: 0.81)
++    private static let portalFoot: CGFloat = 0.853
+     private static let floorRadius: CGFloat = 0.21
++    /// How far the foot of the portal's rim stands above the summon plates.
++    private static let portalClearance: CGFloat = 5
++    /// The far-right brazier stands in the painting's last 8% (its bowl's
++    /// lip from 0.923 of the width): the frame's right edge stops at 0.918.
++    private static let rightBrazier: CGFloat = 0.918
++    /// The ground beyond the painting's edges.
++    private static let ground = Color(hex: "#0E0B08")
+ 
+     var body: some View {
+         GeometryReader { frame in
+@@ -780,31 +855,51 @@ struct SummoningCircle: View {
+             let scale = max(frame.size.width / 16.0, frame.size.height / 9.0)
+             let artWidth = scale * 16
+             let artHeight = scale * 9
+-            let originX = (frame.size.width - artWidth) / 2
+-            // Hung three quarters of the way from its top edge to its foot
+-            // (2026-09-23), not by the foot alone: run 221's crop cut the
+-            // right-hand brazier at the strip, a bare dark tripod with its
+-            // fire above the frame. Only as far down as keeps the painted
+-            // floor ring's centre above the summon plates — on the phone
+-            // that is 26 points lower, the brazier's bowl and the foot of
+-            // its fire in view.
++            // Slid right, under the rail (2026-09-23, fix round 5). Runs 221
++            // to 224 ended the frame on the far-right brazier — a bare tripod,
++            // then an unlit bowl — with its fire above the strip, and no hang
++            // shows that fire and the portal both: the fire starts 0.31 down
++            // the painting, the portal ends 0.85, and above the plates the
++            // room shows 0.42 of the painting's height. So the frame's right
++            // edge stops short of the brazier (72 points of slide on the
++            // phone), and the strip the slide uncovers on the left lies under
++            // the rail's dark glass, the painting's edge feathered into it
++            // (`leadingFeather`). It also stands the altar, the portal and
++            // the scroll nearer the middle of the room the player can see.
++            // Never more than half the rail, so the strip stays under glass.
++            let centred = (frame.size.width - artWidth) / 2
++            let clearOfBrazier = frame.size.width - Self.rightBrazier * artWidth
++            let originX = min(max(centred, clearOfBrazier), centred + leadingInset * 0.5)
++            // Hung as low as keeps the WHOLE portal above the summon plates,
++            // its rim's foot `portalClearance` over them, and never lower
++            // than three quarters of the way to its foot. Run 224 hung it
++            // until the ring's middle met the plates (26 points lower than
++            // by the foot), and the plates hid the portal's front half.
+             let footAnchored = frame.size.height - artHeight
+-            let ringAbovePlates = frame.size.height - deckClearance - Self.floorCentre.y * artHeight
+-            let originY = min(footAnchored * 0.75, max(footAnchored, ringAbovePlates))
+-            // The ring stands in the room to the right of the rail.
++            let portalAbovePlates = frame.size.height - deckClearance - Self.portalClearance
++                - Self.portalFoot * artHeight
++            let originY = min(footAnchored * 0.75, max(footAnchored, portalAbovePlates))
++            // The rings, their light and the scroll stand on the painted
++            // portal, through the painting's own origin and scale. Run 224
++            // drew them 86 points right of it (`leadingInset * 0.42` on the
++            // drawn layer alone): two rings with two centres, and the scroll
++            // over the altar's steps.
+             let centre = CGPoint(
+-                x: originX + Self.floorCentre.x * artWidth + leadingInset * 0.42,
++                x: originX + Self.floorCentre.x * artWidth,
+                 y: originY + Self.floorCentre.y * artHeight
+             )
+             let ringSize = Self.floorRadius * 2 * artWidth
+ 
+             ZStack {
+                 // Dark beyond the painting's edge (2026-09-22): the cover
+-                // crop leaves none in view, and a cream bar would be the
+-                // cheap copy back.
+-                Color(hex: "#0E0B08")
++                // crop leaves none in view but the strip under the rail, and
++                // a cream bar would be the cheap copy back.
++                Self.ground
+                 hall(width: artWidth, height: artHeight)
+                     .position(x: originX + artWidth / 2, y: originY + artHeight / 2)
++                // The frame's right edge in shade, as the painting's own
++                // right edge was when the two coincided.
++                edgeShade
+ 
+                 // The light standing in the floor ring.
+                 RadialGradient(
+@@ -826,10 +921,10 @@ struct SummoningCircle: View {
+                 // will step out of it: the painted scroll the menu row and
+                 // the plates carry, not a mark (2026-09-17, evening; the
+                 // owner: "use that artwork IN the summoning circle"). At
+-                // rest it hangs above the ring, tilted, and breathes; when
+-                // the summon is coming it drops toward the ring's centre,
++                // rest it hangs over the portal, tilted, and breathes; when
++                // the summon is coming it drops toward the portal's centre,
+                 // swells and flares, and the reveal takes over.
+-                scrollOverTheRing(centre: centre, ringSize: ringSize, height: frame.size.height)
++                scrollOverTheRing(portal: centre, ringSize: ringSize, height: frame.size.height)
+ 
+                 // The banner's name used to hang above the altar here, on a
+                 // marble plaque. It is in the header now: this whole view is a
+@@ -863,20 +958,29 @@ struct SummoningCircle: View {
+     /// breath (`pulse`) as a bob and a swell. The glyph remains the fallback
+     /// for a scroll whose painting has not shipped.
+     ///
+-    /// It hangs in the band between the header and the deck
+-    /// (`headerClearance`, `deckClearance`), at four fifths of the band or
+-    /// two fifths of the ring, whichever is smaller, and swells a quarter
+-    /// and drops a third of the way to the ring's centre when charging. Run
+-    /// 217 hung it at 0.44 of the ring above the centre and two fifths of
+-    /// the ring tall, which put its top under the "5★ 3.0%" chip.
+-    private func scrollOverTheRing(centre: CGPoint, ringSize: CGFloat, height: CGFloat) -> some View {
++    /// It hangs OVER THE PAINTED PORTAL, its lower knob in the well
++    /// (2026-09-23, fix round 5), as run 223 had it: run 224 hung the
++    /// painting 26 points lower and left the scroll in the middle of the
++    /// band under the header, over the altar's steps 60 points above a
++    /// portal the plates half hid. It is as tall as the room between the
++    /// header (`headerClearance`) and the portal's centre, at most two
++    /// fifths of the ring; its centre stands 0.42 of its size above the
++    /// portal's, which puts the lower knob — 0.55 of the size down the
++    /// tilted roll — just inside the well; it never rises into the header
++    /// nor comes within 8 points of the plates (`deckClearance`). When the
++    /// summon is coming it swells a quarter and drops a third of the way
++    /// to the portal's centre. Run 217 hung it at 0.44 of the ring above
++    /// the centre and two fifths of the ring tall, which put its top under
++    /// the "5★ 3.0%" chip.
++    private func scrollOverTheRing(portal: CGPoint, ringSize: CGFloat, height: CGFloat) -> some View {
+         let key = ItemArt.key(scroll: banner.scroll)
+         let top = headerClearance
+-        let foot = max(top + 40, height - deckClearance)
+-        let rest = min(ringSize * 0.40, (foot - top) * 0.80)
++        let plates = max(top + 40, height - deckClearance)
++        let rest = max(24, min(ringSize * 0.40, portal.y - top))
+         let size = charging ? rest * 1.25 : rest
+-        let restY = (top + foot) / 2
+-        let y = charging ? restY + (centre.y - restY) * 0.35 : restY
++        let hung = portal.y - rest * 0.42
++        let restY = min(max(hung, top + rest * 0.5), plates - 8 - rest * 0.55)
++        let y = charging ? restY + (portal.y - restY) * 0.35 : restY
+         return ZStack {
+             RadialGradient(
+                 colors: [tint.opacity(charging ? 0.9 : 0.5), tint.opacity(0)],
+@@ -913,7 +1017,7 @@ struct SummoningCircle: View {
+         }
+         .scaleEffect(pulse)
+         .offset(y: (1 - pulse) * 90)
+-        .position(x: centre.x, y: y)
++        .position(x: portal.x, y: y)
+     }
+ 
+     /// Something for the overlaid controls to sit on. The lettering over the
+diff --git a/tools/item_icons.py b/tools/item_icons.py
+index f30376a..cb632e0 100644
+--- a/tools/item_icons.py
++++ b/tools/item_icons.py
+@@ -8,6 +8,8 @@
+     python3 tools/item_icons.py --split all
+     python3 tools/item_icons.py --split scrolls --sheet scrolls_2k --px 512 --only scroll_
+                                                             # the eight scrolls from the 2K sheet, glow ramped
++    python3 tools/item_icons.py --split currencies --only divinity
++                                                            # the divinity crystal alone, glow ramped (its HALO_RAMP key)
+     python3 tools/item_icons.py --preview icons.jpg         # a contact sheet of what shipped
+ 
+ GEMINI IS PAUSED (CLAUDE.md): `--paint` is run only on the owner's word for

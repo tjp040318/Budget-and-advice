@@ -1,0 +1,502 @@
+[
+ {
+  "frame": "8-arena_battle-b",
+  "severity": "BLOCKER",
+  "what": "An enemy AoE ultimate lays a WHITE SLAB over the whole player team. framelight: middle band 157 mean with 21.8% at 240+, near floor 4.8%, worst 64-px patch 100%, blown area spanning x22-1169, y23-537. Three of the four team figures are invisible; Heracles shows through lit blue, and the crit '2092!' is pale gold on white, barely legible. It is Fenrir's Gleipnir Strain: a tide striker ultimate on 4 targets at 11:27:46 in 8-arena_battle-console.txt; the blue ring on the floor and the blue motes are the tide aura, and the Slow tiles appear by 8-c. Its vfx is duat_rite, which spawns PER TARGET: a pure-white additive 'script' sheet at 3.2 x height/1.9 m (about 3.7 m on these 2.2 m units standing 2.4 m apart), a storm ring scaled to about 7 m, 160 sparks and a flash of 4.0 x scale. Four overlapping sheets saturate to white. wrath_of_the_eye, every ember AoE ultimate (Set's Red Land Blaze, the ember strikers), has the same pattern with a 4.8 m pure-white sunburst and a sky flash per target. Round 4 did not touch this (its VFX diff is impact_umbra only), and round 3's 'no white slab on an ultimate' fixed the storm ring's plane, not this. r223's 8-b simply caught a player's turn.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Render/VFXLibrary.swift (case \"duat_rite\" l.150, case \"wrath_of_the_eye\" l.181); /home/user/Budget-and-advice/Pantheon/Render/BattleSceneController.swift (the per-target VFXLibrary.spawn loop in the cast_impact action, ~l.853-870)",
+  "suggestedFix": "1. For a cast with more than one target, spawn a named effect's flipbook, storm ring, sky flash and point light ONCE, at the targets' centroid and sized to the row's span. Keep only the sparks per target. 2. Tint every named flipbook off pure white (tint.mixed(with: .white, amount: 0.5)), as the thunderbolt does. Cut 'script' to about 2.2 m and 'sunburst' to about 2.8 m. 3. Add a tour frame that fires duat_rite and wrath_of_the_eye on the player row. Hold framelight on it to a middle band under 2% and a worst patch under 60%.",
+  "judge": "battle",
+  "id": "F01"
+ },
+ {
+  "frame": "29-realm_battle-d",
+  "severity": "VISIBLE",
+  "what": "An ember hit on Anubis draws a HARD-EDGED SQUARE of fire, about 365 x 305 px. It has straight left, top and right edges (the fire's left boundary sits at x\u2248240 and its right at x\u2248604 on many rows) and a faint rectangular outline. It engulfs Anubis, the attacker and half of Sekhmet. It is impact_ember's 'fireburst' flipbook, the only fire sheet (vfx_fireburst_sheet.png, 4x8 cells, 2026-09-10). Its later cells reach their borders (premultiplied border brightness 12-18/255 in rows 2-3, against 0 in row 0), and it never went through the cell-edge fade that the eight sheets of 2026-09-15 got. Additive at 2.4 x scale with a 50%-white tint, the cell's square shows. Not caused by round 4; r223's frames had no ember hit.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Render/VFXLibrary.swift (case \"impact_ember\" l.44, flipbook() l.493); /home/user/Budget-and-advice/Pantheon/Resources/Portraits/vfx_fireburst_sheet.png",
+  "suggestedFix": "1. Run vfx_fireburst_sheet.png through the same outer-ring fade tools/vfx_sheets.py gives the other sheets (8x4 layout), or multiply each cell by a radial falloff when flipbook() loads it. 2. Check the burst's world size: it projects at about 365 px where 2.4 x 1.08 m should be about 215 px at the team's depth. 3. Re-shoot a frame with an ember hit on the team (29-d's J\u00f6tunheim fight).",
+  "judge": "battle",
+  "id": "F02"
+ },
+ {
+  "frame": "8-arena_battle-c",
+  "severity": "VISIBLE",
+  "what": "Two plates collide. The first player plate (red '40', low health) carries three status tiles. The third tile's '2' turn chip sits on the blue ring of the next plate's level badge, which reads as '240'. Round 4's tiles (16 pt, 21 pt apart, a chip hanging off the top-right) make a three-tile row about 64 pt wide at exactly the height of a neighbour staggered 25 pt higher. layoutPlates' declutter still separates plates by `clear = badgeSize + 3` over a badge-to-track box, and ignores the tile row (reachAbove).",
+  "isRegression": true,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Render/BattleSceneController.swift (layoutPlates declutter, l.1155-1200); /home/user/Budget-and-advice/Pantheon/Render/BattleSceneView.swift (UnitPlate.applyStatuses l.694, tile/tileStep l.413-414)",
+  "suggestedFix": "1. In the declutter, give each plate a box whose top is its reachAbove (tiles and chips) while tiles are up. A plate placed higher must clear the lower one's tile row, not just its badge. 2. Or anchor the tile row at the badge's right edge and cap its width at the track, so the last chip ends inside the plate's own box. 3. Re-check 8-c with three debuffs on the left player.",
+  "judge": "battle",
+  "id": "F03"
+ },
+ {
+  "frame": "18-dungeon_battle-c (run 223's frame; r224 missed the moment)",
+  "severity": "VISIBLE",
+  "what": "LATENT, still in the r224 build. In r223's 18-c a hit on the 8 m Colossus ('1130' on its chest) filled the whole upper frame with a purple-white-cyan bokeh wash and blocky magnified texels. framelight on r223 18-c: middle band 153 mean with 3.4% clipped. BattleSceneController spawns every impact at scale = TARGET height / 1.9, which is about 4.2 on the Colossus. A basic's fireburst becomes about 10 m, heart_weigh's shadow sheet about 12.6 m, Keraunos's lightning sheet about 22 m, and the sparks and flash radius grow with them. The expression is unchanged between the two commits. r224's Seven Arrows (11:35:18) and Keraunos (11:35:21) on the boss fell between frames c and d, so this run's frames never caught it.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Render/BattleSceneController.swift (VFXLibrary.spawn(... scale: node.spec.height / 1.9), ~l.856-862)",
+  "suggestedFix": "1. Clamp an effect's scale on a boss, for example scale = min(node.spec.height, 2.6) / 1.9, and anchor it at the boss's chest. 2. Add a tour frame timed on a player's ultimate against the boss (the Vault's third wave). Check it has no blocky texels and holds a middle band under 2% at 240+.",
+  "judge": "battle",
+  "id": "F04"
+ },
+ {
+  "frame": "29-realm_battle-d",
+  "severity": "POLISH",
+  "what": "The float stack's overflow lands on another unit's plate. The newer 'RESIST' took Anubis's chest, so his older '1163' went over his plate. It landed on the dashing attacker's plate and covers its level badge (a '4' hidden under '63'). The over-the-plate branch never checks other plates.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Render/BattleSceneController.swift (layoutFloats, l.1346; the plate zone at l.1467)",
+  "suggestedFix": "Treat every placed plate's box (badge, track, tiles) as an obstacle for a float's final position: slide the pushed float sideways, or fade the older float out when a newer one takes its unit's chest, instead of lifting it over the plate.",
+  "judge": "battle",
+  "id": "F05"
+ },
+ {
+  "frame": "18-dungeon_battle-c",
+  "severity": "POLISH",
+  "what": "The Colossus still glows cream-white at the right shoulder and knee under the reduced spot. The worst patch (x640 y256) is 56% blown and that area 29% clipped. It is just inside the <2% / <60% targets, but the shoulder has no stone grain. The spot's 42% cut moved the boss region only 164 -> 140, so most of the light on the 0.24-albedo texture is the key, the environment and the bloom, not the spot.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Render/UnitNode.swift (bossLightScale l.929, the pale-boss material path l.163); /home/user/Budget-and-advice/Pantheon/Render/StageBuilder.swift (colossusVault grade)",
+  "suggestedFix": "1. For a pale boss (albedo > 0.2), also scale its diffuse (for example multiply the material's diffuse intensity by 0.8) or drop its aura. 2. Or lower the Vault's grade exposure by about 0.2 stop. 3. Re-measure: the arm patch under 40%.",
+  "judge": "battle",
+  "id": "F06"
+ },
+ {
+  "frame": "29-realm_battle-c",
+  "severity": "POLISH",
+  "what": "The pure-black rectangle at the fjord's right brazier is still there, at x1281-1299, y105-139. It is 6 px lower than in r221, i.e. it moved with the bowl's 0.18 m step. J\u00f6tunheim's identical block vanished once its bowl moved 0.49 m clear of the pillar.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Render/StageBuilder.swift (standClear l.892; case .midgardFjord recipe l.199)",
+  "suggestedFix": "Step the fjord's built bowl as far clear of its built rune stone as J\u00f6tunheim's (0.5 m or more), or raise its fire above the stone's top, then re-check 29-c for pixels under 12 at the right edge.",
+  "judge": "battle",
+  "id": "F07"
+ },
+ {
+  "frame": "29-realm_battle-a",
+  "severity": "POLISH",
+  "what": "The skill word 'BULL RUSH' at the charging Minotaur's back is pale Cinzel on the pale Olympus marble: fill about 170, edge about 110, ground about 148, roughly 1.2:1. It is probably fading out, but the thin dark edge cannot carry a pale word on the pale sets (the same fault as r221's RESIST on the Colossus's chin).",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Render/BattleSceneView.swift (FloatingLabel word style)",
+  "suggestedFix": "Give words a 2-pt near-black stroke plus a soft dark shadow, as the numbers' edge has, or a slim dark glass pill behind skill words. Then check 29-a/29-e on the pale marble.",
+  "judge": "battle",
+  "id": "F08"
+ },
+ {
+  "frame": "18-dungeon_battle-b",
+  "severity": "POLISH",
+  "what": "The cut-in band fades to clear at its ends. The plates and their green bars show through beside the portrait and the name, and two status tiles ('2') poke above the band's top rule. This is the cut-in's first photograph.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Battle/BattleView.swift (cutInBanner l.644); /home/user/Budget-and-advice/Pantheon/Render/BattleSceneView.swift (UnitPlateOverlay)",
+  "suggestedFix": "Dim the plate overlay to about 0.25 alpha while model.cutIn is non-nil (1.15 s) and restore it after, so the band reads alone.",
+  "judge": "battle",
+  "id": "F09"
+ },
+ {
+  "frame": "5-reveal (5-reveal-console.txt)",
+  "severity": "POLISH",
+  "what": "The first reveal of a launch still hitches at the flash on CI. The main queue was held for about 477 ms just before the figure's first-shown callback: the watchdog's ping, queued ahead of figureShown, printed at 11:22:06.280, then '[Reveal] facing'. So the hold is at the flash, not in settle's joint read. The awakened relaunch shows none, which fits a shader compiled on first use. The likely cause is VFXLibrary.summonBeam's rising particle system. The warm-up twin draws only the column, so the particles' pipeline is first built at the flash, while show() changes the scene. The frames look right, and on a phone this would be shorter.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Summon/SummonRevealView.swift (warmBeamTwin ~l.1612, clearWarmUp ~l.1073, show()); /home/user/Budget-and-advice/Pantheon/Render/VFXLibrary.swift (summonBeam l.1094, private rising l.798)",
+  "suggestedFix": "1. Make VFXLibrary.rising(tint:count:scale:) internal. 2. In SummonStageView.makeUIView, add a second warm host carrying rising(tint:, count: 8, scale: 2.0), let it emit for one drawn frame, then set its birthRate to 0. 3. Do not remove that host in clearWarmUp; take it down no sooner than 3 s after its last particle (the particle-host rule). 4. After the system-log fix below, check that no '(Metal) compiling shader' line follows the summonBurst audio start, and that no [Perf] line comes between the burst and '[Reveal] facing'.",
+  "judge": "reveal",
+  "id": "F10"
+ },
+ {
+  "frame": "5-reveal-charge",
+  "severity": "POLISH",
+  "what": "The charge's beam reads as a thin streak, not a pillar of light. Its ember-coloured flanks (0.55 \u00d7 about 0.68 opacity) disappear into the orange Duat set. Only about 40 pt of white core shows, peaking at 218, and inside the ring it fades into the scroll's red glow before it reaches the scroll.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Summon/SummonRevealView.swift (chargeBeam ~l.429-446; its use in chargeScene ~l.385-389)",
+  "suggestedFix": "1. Draw chargeBeam with .blendMode(.plusLighter). 2. Make its white a plateau: stops at 0.40 and 0.60 at 0.95. 3. Take the colour flanks to 0.35. 4. Raise the 5\u2605 beam's opacity to about 0.85 through the gather. 5. Judge the next 5-reveal-charge: the core should read above 230 from the floor through both rings to the scroll's lower knob.",
+  "judge": "reveal",
+  "id": "F11"
+ },
+ {
+  "frame": "4-summon, 4-summon-root",
+  "severity": "POLISH",
+  "what": "The hanging scroll and the two drawn rune rings stand about 95 pt (140 px) right of the painted floor ring. The drawn rings centre at about (792,365) px and the painted portal at about (652,368). The cause is centre.x, which adds leadingInset \u00d7 0.42 to the drawn layer and not to the painting. Round 4's lower hang now puts the painted portal's centre on the plates' top edge. So the scroll floats above and right of a half-hidden portal, and two rings of different centres overlap, where the owner asked for the scroll IN the summoning circle.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Summon/SummonView.swift (SummoningCircle.body, centre ~l.795-798)",
+  "suggestedFix": "1. Drop `+ leadingInset * 0.42` from centre.x, so the rings and the scroll stand on the painted meander. The outer ring then spans about 265\u2013609 pt, clear of the rail's edge at about 259 pt. 2. If the offset must stay, shift the painting by the same amount and raise scale to max((frame.width + 2 \u00d7 shift) / 16, frame.height / 9), so it still covers. 3. Check on the next 4-summon that the scroll's knob hangs over the painted portal.",
+  "judge": "reveal",
+  "id": "F12"
+ },
+ {
+  "frame": "4-summon, 4-summon-root",
+  "severity": "POLISH",
+  "what": "The right-edge brazier is now an unlit bronze bowl cut by the right edge. Its fire is still above the strip, because the ring clamp stops the painting from going lower. This is half of run 221's fault.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Summon/SummonView.swift (SummoningCircle, originY ~l.791-793)",
+  "suggestedFix": "Since the clamp binds, light the bowl in code: 1. Measure the bowl's rim on summon_hall_bg with tools/mapgrid.py. 2. Seat a small flickering flame there: the vfx_flame sprite, scale 0.9\u20131.1 and opacity 0.8\u20131.0 on a 0.35 s ease. 3. Position it through the same originX, originY and scale as the hall, and clip it to the room. Otherwise, accept the unlit bowl and drop the claim.",
+  "judge": "reveal",
+  "id": "F13"
+ },
+ {
+  "frame": "system-log.txt (CI)",
+  "severity": "POLISH",
+  "what": "Run 224's system-log.txt stops at 11:21:59, before step 5 (the reveal) launched, so the reveal's shader-compile timing, the one thing round 4's prediction rests on, cannot be read. About 1,180 of its 1,500 lines are '[com.apple.renderbox:error] RBLayer: stale image queue / full image queue' and 'RBDrawable: no surface' lines from steps 3\u20134, which pass the workflow's 'error' filter. Run 223's log reached the reveal. The reveal's six relaunches also keep no console.",
+  "isRegression": true,
+  "likelyFile": "/home/user/Budget-and-advice/.github/workflows/build.yml (~l.364-368; the reveal relaunches ~l.164-190)",
+  "suggestedFix": "1. Add `RBLayer|RBDrawable` to the `grep -v -E` before `head`. 2. Raise `head -n 1500` to 5000. 3. Launch the lab and charge relaunches through `again`, so their consoles are appended to 5-reveal-console.txt.",
+  "judge": "reveal",
+  "id": "F14"
+ },
+ {
+  "frame": "37-relic_roll, 40-relic_awaken-b",
+  "severity": "VISIBLE",
+  "what": "CHOOSE YOUR ROLL is now painted marble but keeps its old 10-pt padding. The panel's lower acanthus scrolls, about 20 pt tall and 23 pt wide, are drawn over both roll cards' bottom corners. The second card (Resistance on 37, SPD on 40-b) ends about 7 pt above the gold rule, so the cards look jammed into the frame. In run 223 the drawn plate had no corner scrolls and the cards sat clear.",
+  "isRegression": true,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/RelicInventoryView.swift (rollChoicePanel ~line 1936, '.padding(10)')",
+  "suggestedFix": "Give the panel a foot clear of the scrolls: '.padding(.horizontal, 10).padding(.top, 10).padding(.bottom, 18)', or inset the cards about 14 pt on each side. The column grows from 313 to 321 of its 323 pt and stays whole. If it must stay at 313, drop the pending POWER-UP plate and move its line into this panel's caption (next fault).",
+  "judge": "panels",
+  "id": "F15"
+ },
+ {
+  "frame": "37-relic_roll",
+  "severity": "POLISH",
+  "what": "While a roll waits, POWER-UP is a 140-pt painted plate holding only its band and one line, 'Take one of the two rolls above to keep climbing'. About 60 pt of blank marble fills the rest, which is the lower half of the right column.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/RelicInventoryView.swift (powerUpPanel, hasPendingRoll branch ~lines 1637-1655)",
+  "suggestedFix": "Keep the plate, but under the line print the next attempt read-only, with no button: 'Next: +10 at 65% \u00b7 14,400 drachma'. The player then sees what climbing costs. Or drop the plate while a roll waits and write 'Take one to keep climbing (+9 \u2192 +10)' as CHOOSE YOUR ROLL's caption.",
+  "judge": "panels",
+  "id": "F16"
+ },
+ {
+  "frame": "11-relics",
+  "severity": "POLISH",
+  "what": "The default frame now opens on a two-sub Rare Fury. Its panel leaves about 60 pt of blank marble between '2 pieces \u00b7 ATK % +35%' and OPEN, the space a four-sub relic's rows would fill. It reads as words at the top and a hole above the button, and it is the ordinary case for Magic and Rare relics.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/RelicInventoryView.swift (RelicInventoryView.panel ~lines 565-720)",
+  "suggestedFix": "Draw the unrolled sub slots as dim placeholder rows up to the relic's subStatCap, e.g. '+3 \u00b7 new sub stat' and '+6 \u00b7 new sub stat' in textSecondary at 11 pt, so a two-sub relic's well shows its empty sockets. Or anchor the set line at the well's foot, so the gap sits between the subs and the set instead of above OPEN.",
+  "judge": "panels",
+  "id": "F17"
+ },
+ {
+  "frame": "40-relic_awaken-a",
+  "severity": "POLISH",
+  "what": "The -a frame was shot during the rite's exit fade, not at its peak. The caption is at about 70% opacity, and the veiled ground reads about 105/255 where a 0.85 veil over cream would give about 40. So the moment photographs as a flat khaki-grey wash with a washed-out stone and no visible rays, even though the code is right. build.yml's 'sleep 1.5', plus the screenshot's own second or more, lands at or after the rite's 2.8-s self-dismiss. Run 223 happened to catch the peak with the same timing.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/.github/workflows/build.yml (relic_awaken case, line 204); /home/user/Budget-and-advice/Pantheon/UI/Collection/RelicInventoryView.swift (RelicAwakeningRite.play, the asyncAfter 2.8 s onDone)",
+  "suggestedFix": "Under -tour, hold the rite longer (e.g. dismiss at 5 s when the tour is active) and move the -b shot to 'sleep 6'. Or shoot -a at 'sleep 0.5'. Either way the frame shows the 0.85 veil this round built, and the owner is not shown a muddy rite.",
+  "judge": "panels",
+  "id": "F18"
+ },
+ {
+  "frame": "19-relic_powerup, 40-relic_awaken-b",
+  "severity": "POLISH",
+  "what": "Two button labels end in an ellipsis, against the no-ellipsis rule: 'Power up to\u2026' (19) and 'Equip on\u2026' (40-b, also the inventory panel's button for an unworn relic). 'Equip on\u2026' reads as a cut label. Both are carried from run 223.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/RelicInventoryView.swift (lines 1704, 1900, 719)",
+  "suggestedFix": "Label the menu 'Power up to' with a chevron.down glyph, as the strip's SORT menu does. Label the other button 'Equip on a unit', keeping the person glyph.",
+  "judge": "panels",
+  "id": "F19"
+ },
+ {
+  "frame": "2-detail",
+  "severity": "POLISH",
+  "what": "The sets row's fourth chip is cut down to its stone in the fade, with no count, so it reads as a lone grey stone. Zeus's fifth set is still out of view, and only the fade hints that the row scrolls.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/UnitDetailView.swift (setsRow / ChipLine)",
+  "suggestedFix": "Fit all five sets in the 160-pt line: make each chip the stone with its count as a corner badge (about 28 pt each). Or let the row wrap to a second line.",
+  "judge": "panels",
+  "id": "F20"
+ },
+ {
+  "frame": "41-boons",
+  "severity": "POLISH",
+  "what": "Carried and pixel-identical to run 223. In THREE DOORS the last door card (First Blood) ends about 14 pt above the rule, so the panel's lower acanthus scrolls touch its bottom corners. This is the same kind of overlap as the roll cards, but milder.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/BoonPickerView.swift (panel ~line 266, '.padding(Theme.panelInset)')",
+  "suggestedFix": "Add '.padding(.bottom, 8)' to the panel's VStack so its last card clears the scrolls, which reach about 20 pt.",
+  "judge": "panels",
+  "id": "F21"
+ },
+ {
+  "frame": "41-boons",
+  "severity": "POLISH",
+  "what": "The boon icons are SF Symbols in pastel hexagons: a blue drop, a flame, a crosshair, a seal. This is the one relic-family screen whose items are not painted, and beside the painted relic stones they read as placeholders.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/BoonPickerView.swift (Image(systemName: boon.kind.glyph) ~lines 208, 314, 369)",
+  "suggestedFix": "On the owner's word, paint the 17 kinds as item icons: two 3\u00d73 sheets through the item_icons pipeline, about 12 Meshy credits. Draw them through ItemIcon and keep the SF glyph as the fallback.",
+  "judge": "panels",
+  "id": "F22"
+ },
+ {
+  "frame": "3-training",
+  "severity": "VISIBLE",
+  "isRegression": false,
+  "what": "The whole frame is pure black (0,0,0, not the #1F1912 ink launch colour), with only the home indicator showing. Nothing of the Hall of Ka had been drawn when the 5-s photo was taken. The step's first launch logged '[Perf] 11:20:10.839 main thread was busy for about 10376 ms' (run 223: 2688 ms). system-log.txt shows the main thread starting its first '(Metal) compiling shader' at 11:20:02.602 and logging nothing more until 11:20:10.218, a 7.6-s gap. The same first compile, at the same point after launch, took 0.4 s in run 223 (10:03:52.673 \u2192 53.077). No round-4 change touched a shader, the three relaunches of this step (feed, evolve, fuse: same view, same rail) drew normally, and there is no crash report. So this looks like a one-off runner stall, not the code. The same Power-up screen renders correctly in 3-training-feed; only Thoth's opening frame is unverified this run.",
+  "likelyFile": "/home/user/Budget-and-advice/.github/workflows/build.yml (training case: 'sleep 5; shoot'); no Pantheon Swift change indicated",
+  "suggestedFix": "1. In build.yml, add a settle-and-retry helper and use it for the first shot of every step: shoot_lit() { shoot \"$1\"; for i in 1 2 3; do [ \"$(stat -f%z \"shots/$1.png\" 2>/dev/null || echo 0)\" -gt 200000 ] && break; sleep 4; shoot \"$1\"; done; }. A black simulator PNG is a few KB; a real frame is megabytes. 2. Re-run and check 3-training shows Thoth lit at the top of the rail. 3. Only if the stall comes back on this step: prepare the altar's scene off the main thread before its first display (SCNView.prepare in TrainingView's AltarStageView), the way ModelLibrary warms meshes.",
+  "judge": "rails",
+  "id": "F23"
+ },
+ {
+  "frame": "39-raids-umbra",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "The rail lands as planned (Tide, Radiance, Umbra lit), but \u224896 pt of empty glass sits under Umbra (y\u2248455\u2192598 px). Ember and Gale are hidden above the rail's top with no cue, so the rail reads as three Titans under a '5 Titans' subtitle. The cause: the five rows come to \u2248386 pt (the Ember and Umbra names run to three lines) against a \u2248303-pt rail. The plan therefore scrolls 45 pt past the list's end to put Umbra third.",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Campaign/LabyrinthView.swift (titansWing l.678, titanTile l.715, titanSeal l.765); /home/user/Budget-and-advice/Pantheon/UI/Common/Glass.swift (WholeRowRail, PlaceRail)",
+  "suggestedFix": "Take the rails agent's own notDone option. 1. Move the element word (EMBER/GALE/TIDE/RADIANCE/UMBRA) out of the eyebrow into the seal. 2. Cap each name at two lines (.lineLimit(2), at the 13-pt floor). 3. Widen the Titans rail to \u2248230 pt. Rows become \u224848\u201356 pt, and all five (\u2248297 pt) fit the \u2248303-pt rail unscrolled: no scroll, no hidden Titans, no dead glass. If the scroll has to stay, fade the rail's top and show an up-chevron pill while rows are hidden above (RestingList's foot pill, mirrored).",
+  "judge": "rails",
+  "id": "F24"
+ },
+ {
+  "frame": "34-sweep-briefing-dungeon",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "The strip title reads 'VAULT OF THE COLOSSUS BIO': the floor number is set in Cinzel, whose 1 and 0 read as I and O. Round 4's Text.inscribed fixed the room headline, the hub and the tower, but not GameScreen's title. Every strip that names a floor (Labyrinth B1\u2013B10, Halls B1\u2013B5, Tower floors) still has the fault.",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Common/Components.swift (GameScreen title, \u2248l.1988)",
+  "suggestedFix": "Replace Text(title.uppercased()).font(Theme.display(19)) with Text.inscribed(title.uppercased(), letters: Theme.display(19), digits: Theme.numeric(18.4).weight(.heavy)). Keep .tracking(1.4), .carved(glow: false), .lineLimit(1) and .minimumScaleFactor(0.7), and put no .font after it.",
+  "judge": "rails",
+  "id": "F25"
+ },
+ {
+  "frame": "16-dungeon-b10",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "Carried, partly improved. The second lines of the 'Rare Whetstone' and 'Hero Whetstone' captions stand 13 px (\u22488.7 pt) apart (run 223: 10 px), so the drops row still reads 'Whetstone Whetstone'.",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Campaign/LabyrinthView.swift (floorDrops l.1725); /home/user/Budget-and-advice/Pantheon/UI/Common/Components.swift (RewardTile)",
+  "suggestedFix": "Caption a stone tile by its tier alone ('Rare', 'Hero'); the painted whetstone already names the item. Give RewardTile an optional rim in the RelicQuality colour so the pair reads as two grades of one stone. Or merge the two chances into one 'Whetstone' tile reading '25% \u00b7 10%'.",
+  "judge": "rails",
+  "id": "F26"
+ },
+ {
+  "frame": "3-training-feed",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "Carried. In the Power-up offering ledger, the third row of fodder shows as a \u22486-px sliver of a card's top rim (x\u2248733\u2013808, y\u2248452\u2013460 px) under the second row, just above the cost well. This round fixed the same kind of foot sliver on Missions, Lessons and the decor catalogue. (7-arena's fourth challenger peeks the same way, but ArenaView documents that as the list's intended cue, so it is left.)",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/TrainingView.swift (offeringGrid l.1213, HallLedger l.1887); /home/user/Budget-and-advice/Pantheon/UI/Island/MissionsView.swift (RestingList, restingRow)",
+  "suggestedFix": "Put the shared .restingRow() on each offering tile, so a tile showing a third of itself or less is not drawn, and add RestingList's chevron pill at the ledger's foot while more is below. Alternatively, size the ledger's scroll to whole rows (two rows plus the 8-pt top pad).",
+  "judge": "rails",
+  "id": "F27"
+ },
+ {
+  "frame": "39-raids-umbra, 16-dungeon-necropolis",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "The Unwrapped King's boss card shows the whole figure: a small head, with the feet under the star row. Apep, the Colossus and, since this round, the Valkyrie all show a bust. portrait_boss_unwrapped_king is not a family, so the lead's full-figure list misses it.",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Common/Components.swift (PortraitPainting.fullFigureFamilies, l.314)",
+  "suggestedFix": "Add 'boss_unwrapped' to fullFigureFamilies; it matches the 'portrait_boss_unwrapped_king' prefix. Check the crown stays inside the square at the 0.04 top crop, and add a topOverride only if it does not.",
+  "judge": "rails",
+  "id": "F28"
+ },
+ {
+  "frame": "43-awaken",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "The awakened sun on the BECOMES card is a bare cream glyph with a shadow on the purple art. This is the unsocketed mark that round 4 replaced on UnitCard with CardMark.",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/TrainingView.swift (becomesCard, \u2248l.770)",
+  "suggestedFix": "Replace the Image(systemName: \"sun.max.fill\") \u2026 .shadow \u2026 .padding(5) with CardMark(systemName: \"sun.max.fill\", size: 20).padding(5).",
+  "judge": "rails",
+  "id": "F29"
+ },
+ {
+  "frame": "34-sweep-briefing",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "On the 50% Eye relic spoil tile, the Nemesis stone now sits inside the socket under the stars, but it still covers the Eye stone's upper-left corner by \u22484 pt.",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Campaign/CampaignView.swift (StageDropTile)",
+  "suggestedFix": "When a second set is drawn, draw the primary stone at \u22480.66 of the tile and offset it 3 pt right and 2 pt down. The 0.30 second stone then sits clear in the top-left corner under the star row.",
+  "judge": "rails",
+  "id": "F30"
+ },
+ {
+  "frame": "39-raids, 39-raids-umbra",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "Carried. The Ember aether ('+10', 'Held 74') and the Umbra aether ('+8', 'Held 0') are code-drawn dot glyphs, on the same line as the painted relic chest and boon cache.",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Common/Components.swift (ItemArt / ItemIcon); tools/item_icons.py",
+  "suggestedFix": "On the owner's word (\u22486 Meshy credits), paint the six aether icons as one 3\u00d73 sheet with tools/item_icons.py and ship them as item_aether_<element>.png. ItemIcon already prefers a painting when one exists.",
+  "judge": "rails",
+  "id": "F31"
+ },
+ {
+  "frame": "43-awaken",
+  "severity": "POLISH",
+  "isRegression": false,
+  "what": "Carried; this is the owner's call. The chibi painted BECOMES card stands beside the serious 3D Sekhmet on the dais.",
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Collection/TrainingView.swift (becomesCard)",
+  "suggestedFix": "Report it to the owner. The fix is serious awakened cards, which are paid art.",
+  "judge": "rails",
+  "id": "F32"
+ },
+ {
+  "frame": "30-guide",
+  "severity": "VISIBLE",
+  "what": "While Athena talks, her plate still slices three island chips at its edges. 'Summoning Circle' stands half above the plate's top edge, and its lower half ghosts through the glass. '\u2026of the Duat' pokes out between her bust and the plate, and 'Arena of Souls' shows under the plate's foot. This is the first screen every new player reads. It was logged as POLISH in runs 217 and 220, was never claimed, and has not changed. I am raising it because it is the first-hour screen.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Island/IslandView.swift (building(): chipShown ~l.632, bubbleShown ~l.690; offeringBubble shown ~l.949)",
+  "suggestedFix": "1. In IslandView.body, compute `let athenaTalking = store.currentLesson.map { !store.hasReadLesson($0.id) } ?? false`. This is the same test GuideOverlay.open uses to start her talking. 2. Pass it into building(...) and offeringBubble(...), and AND `!athenaTalking` into chipShown, bubbleShown and the offering's `shown`. These already fade over 0.2 s and drop hit-testing. 3. Leave the chips up while only the caret shows (30-guide-caret), where they are the map.",
+  "judge": "shop-island",
+  "id": "F33"
+ },
+ {
+  "frame": "12-shop, 12-shop-scrolls, 12-shop-laurels",
+  "severity": "VISIBLE",
+  "what": "The day stalls still use the night Forum painting, the same one as the Night Market: a slate dusk sky and moonlit columns behind the Daily Offering, Scrolls and Laurel Exchange. The lamp pool makes the Daily read as lamp-lit night, not a day market. This has been carried since run 217. Round 4 left it for the owner's word, as the run-221 judges asked.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Shop/ShopView.swift (backdropName already prefers bazaar_bg)",
+  "suggestedFix": "1. Show the owner 12-shop beside 32-night_market and ask for his word on the bespoke daylight agora 'bazaar_bg' (about 9 Meshy credits via meshy.py picture). 2. ShopView picks it up with no code change. Do not push the warm wash further.",
+  "judge": "shop-island",
+  "id": "F34"
+ },
+ {
+  "frame": "33-counsel",
+  "severity": "POLISH",
+  "what": "With the empty claim slot collapsed, the reward column steps about 100 pt between the groups. On the three ready rows the reward sits left of CLAIM (x\u2248945-1012 px). On the two waiting rows it jumps to the row's end (x\u22481100-1167 px). The fractions are also about 8 px apart, because the ready rows' bars are shorter. In run 223 every reward stood in one column; the agent listed this as a risk.",
+  "isRegression": true,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Island/MissionsView.swift (the row's trailing rewardTiles + claimSlot, ~l.570-577)",
+  "suggestedFix": "Keep the reward in one column. Draw rewardTiles LAST, at the row's right end on every row, and put the 92-pt claimSlot before it on a ready row. Then a row that becomes ready gains a button without its reward moving; the ~460-pt row holds a 190-pt bar + CLAIM 92 + reward 46. Give the StatBar a fixed width of 190 instead of maxWidth, so the fractions line up across both states.",
+  "judge": "shop-island",
+  "id": "F35"
+ },
+ {
+  "frame": "0-island-zoomed",
+  "severity": "POLISH",
+  "what": "A figure's nameplate, 'Anubis, Keeper of the Ash Road \u00b7 Lv.12', is printed through the 'Summoning Circle' chip. The frame caught the step-back mid-crossfade: the chip is about 80% faded in and the plate is springing in, so two half-drawn labels overlap across the circle's front. The awakened title makes the plate about 240 pt wide. On the phone this flickers for about 0.3 s whenever the figure under a chip stirs (every 9-15 s), then leaves the long plate over the whole circle for 1.6 s. The code is unchanged; run 223's capture just caught no stir.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Island/IslandView.swift (nameplateWords ~l.874, figureTargets, building() chip .animation(.easeOut(duration: 0.2), value: chipShown))",
+  "suggestedFix": "1. Print the family name, not the awakened title: `\"\\(unit.nameWithoutEpithet) \u00b7 Lv.\\(unit.unit.level)\"` ('Anubis \u00b7 Lv.12'), as RelicWearer already does. Reckon nameplateRect from the same words. 2. When the plate lands on a chip or bubble, hide it at once (no ease when chipShown/bubbleShown goes false), and delay the plate's spring by about 0.15 s so the two are never drawn together.",
+  "judge": "shop-island",
+  "id": "F36"
+ },
+ {
+  "frame": "30-guide-caret",
+  "severity": "POLISH",
+  "what": "The 'Arena of Souls' chip still stands between the caret's line and its arrow. Read line, chip, arrow, it can point at the arena rather than the Collection door; only the ring on the door carries the meaning. Carried from run 220.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Guide/GuideOverlay.swift (GuideCaret ~l.200) with IslandView.swift",
+  "suggestedFix": "1. While a caret is up, publish the rect spanning its line box and its target, the way nameplateRect is published. 2. AND `!(caretRect?.intersects(chipRect) ?? false)` into chipShown and bubbleShown. Or draw a 1.5-pt gold stem from the line's box down to the arrow, so the two read as one.",
+  "judge": "shop-island",
+  "id": "F37"
+ },
+ {
+  "frame": "12-shop-scrolls",
+  "severity": "POLISH",
+  "what": "The Scrolls stall's grid ends on a faded third row at the screen foot: only the kind lines 'SCROLL SCROLL SCROLL', the '?' dots and the tops of three sockets show, with no names and no chevron. The peek is deliberate (BazaarWareTile's doc, run 216). But since round 4 Missions, Lessons and the decor catalogue rest on whole rows with a chevron pill, so the bazaar is now the one list that ends on part of a row. The same in run 223; not logged before.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Shop/ShopView.swift (BazaarShelf, ~l.619-636)",
+  "suggestedFix": "Wrap BazaarShelf's grid in the shared RestingList (MissionsView.swift) and give each tile `.restingRow()`. A tile that shows a third of itself or less is then not drawn, and the cream chevron pill stands at the foot while more lies below. At minimum, add the chevron pill to the peek.",
+  "judge": "shop-island",
+  "id": "F38"
+ },
+ {
+  "frame": "33-counsel",
+  "severity": "POLISH",
+  "what": "'Put a relic on a god' and 'Feed a relic to +3' now wear the same painted relic chest, one under the other, so two different lessons show one icon twice.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Island/MissionsView.swift (rowArt(for:id:) ~l.615, the 'hexagon.fill' case)",
+  "suggestedFix": "Keep the chest for equipping. Map the power-up counsels (hexagon.fill with an id containing 'relic') to a painting that says 'feed': 'level_up' (item_level_up.png) or a painted set stone such as relic_fury. Feeding a relic then reads differently from wearing one.",
+  "judge": "shop-island",
+  "id": "F39"
+ },
+ {
+  "frame": "9-more-diagnostics",
+  "severity": "POLISH",
+  "what": "This debug screen is unchanged since runs 217 and 220. The 3D ASSETS list ends on a faded 'Zeus zeus.usdz' row under the chevron, between the lower corner ornaments. The CONSOLE board is two-thirds blank marble under its two buttons, and the list prints 'Anubis anubis.usdz' five times, once per element.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/App/RootView.swift (DiagnosticsDesk.assetPanel ~l.875 'FadingBoard {'; consolePanel ~l.839)",
+  "suggestedFix": "1. Change the asset panel's `FadingBoard {` to `FadingBoard(foot: boardAcanthus) {`, as the Sound and Account boards have. 2. Group the rows by blueprint.model.assetName with an element count ('Anubis \u00b7 5 forms'). 3. Show a six-line log tail under Copy the log.",
+  "judge": "shop-island",
+  "id": "F40"
+ },
+ {
+  "frame": "13-chapter_map, 13-chapter_map-scroll, 13-chapter_map-hell, 28-chapter_maps-a, 28-chapter_maps-e, 28-chapter_maps-k (dimmed behind 27-stage_popup, 27-stage_popup-boss, 34-sweep)",
+  "severity": "VISIBLE",
+  "what": "The chapter map's side haze is now a neutral charcoal letterbox pillar, the same on every chapter: mean (19,18,16) outside, (64,64,64) at the join, on the Duat, the Marsh and the Peach Garden alike. The painting's outer ~7 pt is burnt toward black: (9,6,1) at x=1205 on the Duat, where run 223 had (130,76,42). So x\u224893 and x\u22481207 px are now a black-to-grey step, harder than run 223's seam, with red and violet fringe streaks at the join. Hell's haze is (5,5,3) with a violet line. Run 223's haze carried each painting's colour.",
+  "isRegression": true,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Campaign/CampaignMapView.swift (softPainting ~l.997, edgeFeather ~l.1016, edgeHaze ~l.1046)",
+  "suggestedFix": "1. The likely cause is softPainting's full-size `.blur(radius: 7, opaque: true)`, which takes in black at the view's bounds. The feather is black at the edge, and the 2-pt column the haze stretches carries none of the painting. Stop blurring at the bounds in SwiftUI. 2. Build the soft painting once per chapter as a cached UIImage: `CIImage(image:).clampedToExtent().applyingGaussianBlur(sigma: 7 * displayScale).cropped(to: extent)` through a CIContext. Draw it with `Image(uiImage:)` for edgeFeather, with tierTint laid over it as now. 3. For the haze, crop that image's outer 2-pt column (`cgImage.cropping(to:)`), draw it `.resizable()` across the inset, and add the ink gradient. No frame, clip, scaleEffect and blur chain on a live view. 4. If that cannot land this round, restore run 223's edgeHaze (6cf60b7^) and delete edgeFeather: that seam was POLISH, this is VISIBLE. 5. Accept it when the colours at x=90 and x=1210 are within ~10 levels of the painting's at x=100 and x=1200.",
+  "judge": "campaign-social",
+  "id": "F41"
+ },
+ {
+  "frame": "4-summon",
+  "severity": "POLISH",
+  "what": "The hall painting now hangs 26 pt lower, but scrollOverTheRing's rest point is still anchored to the header/deck band. The painted floor ring's centre now sits on the SUMMON plates' top edge and its front half is hidden behind the three plates. The scroll hangs over the altar steps about 60 pt above the portal, not inside the ring as in run 223 (the owner asked for the scroll 'IN the summoning circle'). The far-right brazier is only partly fixed: its bowl shows, but the fire is a faint glow under the strip, so it reads as an empty bowl.",
+  "isRegression": true,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Summon/SummonView.swift (SummoningCircle body l.791-797, scrollOverTheRing l.872-878)",
+  "suggestedFix": "1. Pass the painting's drop (originY \u2212 footAnchored) into scrollOverTheRing and add it to restY, so the scroll moves with the ring. Cap `rest` so the scroll's foot stays 8 pt above deckClearance. 2. If that crowds the plates, hang the painting 13 pt lower instead of 26 (originY = footAnchored + 13). That keeps the ring's front arc above the plates and still shows the brazier's bowl. 3. Judge on 4-summon and 4-summon-root.",
+  "judge": "campaign-social",
+  "id": "F42"
+ },
+ {
+  "frame": "47-allies-friends",
+  "severity": "POLISH",
+  "what": "The FRIENDS panel still runs to the frame's foot for one friend. Under Amunet's row and the new dashed invite line lie about 135 pt of empty marble (y\u2248350-553 px). The new left panel hangs at 177 pt, so the two columns end about 95 pt apart.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Social/SocialView.swift (friends tab, FRIENDS SectionPanel ~l.151)",
+  "suggestedFix": "Either hang the FRIENDS panel at its content height like the left one (top-aligned column, panel .fixedSize(horizontal: false, vertical: true)), or fill it the genre's way. For the second: a SUGGESTED subheader under the invite line with two or three seeded demigods from LocalSocialBackend, each with an Add button.",
+  "judge": "campaign-social",
+  "id": "F43"
+ },
+ {
+  "frame": "47-allies-inbox",
+  "severity": "POLISH",
+  "what": "Unchanged (notDone). The INBOX plate runs to the foot for one mail, so about 135 pt of empty marble sits under the Welcome row.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Social/SocialView.swift (inboxTab)",
+  "suggestedFix": "Apply the round's own notDone step: add `SocialInviteLine(text: \"Greetings from friends and the game's own gifts land here.\", systemImage: \"envelope\")` after the ForEach, `.padding(.bottom, SocialScrollFoot.fade)`, `.mask { SocialScrollFoot.footMask }.modifier(SocialPanelInset())`. Or hang the plate at its content height.",
+  "judge": "campaign-social",
+  "id": "F44"
+ },
+ {
+  "frame": "47-allies-ranks",
+  "severity": "POLISH",
+  "what": "Pinning YOUR STANDING shortened the ARENA list's window. Ragnhild's 4th row now ends inside the window's foot fade: its detail line 'Lv.43 \u00b7 Champion \u00b7 power 21,711' is ghosted and cut through, directly above the YOUR STANDING rule. Run 223 cut its 6th row at the plate's foot instead.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Social/SocialView.swift (SocialRankTable)",
+  "suggestedFix": "Put the list in the shared RestingList (MissionsView.swift) and give each SocialRankRow `.restingRow()`, so the window rests on three whole rows with the chevron pill. Or trim the row padding so four rows fit whole above the pin.",
+  "judge": "campaign-social",
+  "id": "F45"
+ },
+ {
+  "frame": "47-allies-ranks",
+  "severity": "POLISH",
+  "what": "The guest's default name 'Demigod' is also the top arena tier. The table reads 'Lysander \u00b7 Lv.50 \u00b7 Demigod' over the player's own gold row, 'Demigod \u00b7 Lv.1 \u00b7 Oracle', so the tier and the player look alike.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Core/Models/Player.swift:49 (displayName default), /home/user/Budget-and-advice/Pantheon/Core/PvP/ArenaService.swift:21 (tier name)",
+  "suggestedFix": "Give an unnamed demigod a distinct display name: 'Demigod ' plus the six-hex Player ID the Account panel already shows. Or rename the top arena tier, e.g. 'Ascendant', in ArenaService.",
+  "judge": "campaign-social",
+  "id": "F46"
+ },
+ {
+  "frame": "34-sweep",
+  "severity": "POLISH",
+  "what": "The relic spoil (Oracle Relic, 2\u2605) no longer prints 'Slot N' over the stone, but it now shows no slot anywhere. The receipt cannot say which of the six slots dropped.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Campaign/SweepView.swift (spoilTile ~l.390-400); /home/user/Budget-and-advice/Pantheon/UI/Common/Components.swift (RewardTile)",
+  "suggestedFix": "Pass `relic:` to RewardTile in spoilTile so its slot badge draws. Add a RewardTile flag (e.g. `showsGrade: false`) so the tile's own star row is not drawn a second time, which is why the lead left it out.",
+  "judge": "campaign-social",
+  "id": "F47"
+ },
+ {
+  "frame": "26-tribute",
+  "severity": "POLISH",
+  "what": "On the cream tribute tile, the Divinity crystal carries its painting's dark-violet ground as an egg-shaped blob behind the crystals. It is the same unkeyed-ground problem the scrolls just lost; the Pantheon Scroll beside it is now clean.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/Resources/Portraits/item_divinity.png (tools/item_icons.py)",
+  "suggestedFix": "Re-key item_divinity with the scrolls' halo ramp: `python3 tools/item_icons.py --split <its sheet> --only divinity --ramp 70,110`. Check it on a cream tile and on a dark glass tile (27-stage_popup's First clear) before shipping.",
+  "judge": "campaign-social",
+  "id": "F48"
+ },
+ {
+  "frame": "28-chapter_maps-e",
+  "severity": "POLISH",
+  "what": "The Marsh of Lerna's BOSS medallion is a bare pink crown glyph, where every other chapter shows its boss's face. The Hydra has no card; CampaignMapView.bossPortrait's own comment says so.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Campaign/CampaignMapView.swift (bossPortrait ~l.402); art: portrait_boss_hydra",
+  "suggestedFix": "Free: render the shipped boss_hydra mesh (`python3 tools/preview.py Pantheon/Resources/Models/boss_hydra.usdz --out ...`), crop it to a head-and-necks bust, and ship it as portrait_boss_hydra.jpg. Better: a painted card from the Hydra's concept, on the owner's word (about 9 Meshy credits with `meshy.py picture`).",
+  "judge": "campaign-social",
+  "id": "F49"
+ },
+ {
+  "frame": "35-mileage, 35-mileage-b, 42-resonance, 4-summon",
+  "severity": "POLISH",
+  "what": "Lists at rest still cut a row at their foot, while Missions, Lessons and the decor sheet now rest on whole rows. Mileage's grid shows a ~20-pt sliver of a third row (portrait tops and element badges, no names). The team picker's last row (three Shabti) has its names and levels under the foot. The summon rail's fifth banner ('The Jade \u2026') is cut at the tab bar. All carried from run 223.",
+  "isRegression": false,
+  "likelyFile": "/home/user/Budget-and-advice/Pantheon/UI/Summon/MileageView.swift; /home/user/Budget-and-advice/Pantheon/UI/Common/TeamPickerView.swift; /home/user/Budget-and-advice/Pantheon/UI/Summon/SummonView.swift (banner rail)",
+  "suggestedFix": "Wrap the mileage grid's and the team picker's rows in the shared RestingList with `.restingRow()` on each row (MissionsView.swift), so each rests on whole rows with the chevron pill. For the team picker, a bottom content margin of one name plate (`.contentMargins(.bottom, 30, for: .scrollContent)`) also lets the last row rest whole.",
+  "judge": "campaign-social",
+  "id": "F50"
+ }
+]

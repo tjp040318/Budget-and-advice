@@ -7212,3 +7212,67 @@ Left for the owner, each with its price: the wisp and ring sprites
 repainted on black (about 6 Meshy credits each), the day bazaar's own
 painting (`bazaar_bg`, about 9), the six aether icons (about 6), and
 real busts for the mummy's and the cobra priestess's white-sheet cards.
+
+### Round 5: stopped for the owner's usage, with its work parked (2026-09-23, 12:55 UTC)
+
+Run 224 (round 4, `6cf60b7`) built green with every test passing, and
+four of its six judges said "yes with polish". The other two said no, for
+two reasons. **The chapter map's side haze had regressed:** round 4 blurred
+the whole map with SwiftUI's `.blur(radius: 7, opaque: true)`, and an
+opaque SwiftUI blur takes in BLACK at a view's bounds. Every chapter's
+insets came out as charcoal pillars, the painting's last points burnt
+black. **An enemy's area ultimate whited out the whole team** (8-arena_battle-b):
+`duat_rite` spawns a pure-white additive sheet PER TARGET, and four
+overlapping sheets saturate. This was latent on `main` too, first caught
+in a frame by that run.
+
+Three ways were weighed for the haze: (a) restore run 223's haze and drop
+the feather, which brings back the seam; (b) a Core Image blur with the
+edges clamped, built once per painting; (c) outpaint every map wider,
+twelve paid paintings. (b) was chosen and is built (`b0aec7e`, run 225).
+`SoftMapPainting` (CampaignMapView.swift) decodes the painting at 512 px
+and clamps it (`clampedToExtent`, so each edge column carries on outward
+before the blur). It pads the painting by a fifth of its width each side,
+and a smooth ramp blends the rim's 7-point blur into a 29-point mist
+51 points out. On a mock of three maps, the clamped edge alone stood as
+horizontal bands of the rim's colours; the mist melts them. The map draws
+this once, across the whole width, behind the sharp painting. It is lined
+up by the same fill, shaded and tinted the same way (the tier's radial
+tint about the painting's own centre). The sharp painting's last 24 points
+fade over it on a smoothstep, so rim and haze are one picture where they
+meet. It is built off the main thread when the world road opens. The rule
+for next time: SwiftUI's opaque blur is not an edge-clamped blur. A blur
+that must keep an image's colour to its edge is Core Image's
+`clampedToExtent`.
+
+The other fifty faults of run 224's judges are numbered, with each judge's
+frame, cause, likely file and suggested fix, in
+`tools/patches/round5_faults.json`. F01 is the white-out BLOCKER. The
+VISIBLE ones are:
+
+- F02: the fireburst sheet's cells never got the edge fade, so an ember
+  hit is a hard-edged square.
+- F03: the 16-pt status tiles run into the next plate's badge ("240").
+- F04: effects scale with a boss's height, so on the Colossus a hit
+  fills the frame.
+- F15: the painted CHOOSE YOUR ROLL panel's acanthus sits on the roll
+  cards.
+- F23: 3-training was black, a one-off stall on CI.
+- F33: Athena's plate slices the island's chips.
+- F34: the day bazaar uses the night painting, which waits on the owner.
+
+Seven fix agents were working on the fifty, in disjoint file groups, when
+the owner asked to stop for his usage. They were stopped, and their
+partial edits (16 files, unreviewed, never compiled) are
+`tools/patches/round5_wip.patch`. It applies cleanly on `b0aec7e` and is
+NOT in the build. It includes the `-tour-aoe <effect>` hook started for
+F01's frame, and the build.yml relaunches for it. Resume by applying it,
+finishing each group from the fault list, running a compile review per
+group (as rounds 3 and 4 did), then pushing and judging.
+
+Left for the owner, each with its price: the day bazaar's painting
+(`bazaar_bg`, about 9 Meshy credits); the wisp and ring sprites repainted
+on black (about 6 each); the six aether icons (about 6); the seventeen boon
+icons (about 12); a Hydra card for its boss medallion (about 9, or a free
+render of the mesh to be judged); serious awakened cards; real busts for
+the mummy's and the cobra priestess's white-sheet cards.
