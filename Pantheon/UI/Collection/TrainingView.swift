@@ -1196,13 +1196,30 @@ struct TrainingView: View {
         // words land as the orbs do.
         play(.feed(count: chosen.count), tint: target.blueprint.element.accentHex)
         let regaliaName = RegaliaService.regalia(forBlueprint: target.blueprint.id, level: regaliaAfter)?.name ?? "Regalia"
-        let title = after.level > before.level ? "LEVEL UP!"
-            : (skillUps > 0 ? "SKILL UP!" : (regaliaRose ? "REGALIA \(Regalia.numeral(regaliaAfter))" : "POWERED UP"))
-        let detail = after.level > before.level
-            ? "Lv.\(before.level) → Lv.\(after.level)" + (skillUps > 0 ? "  ·  skill-up ×\(skillUps)" : "")
-            : (skillUps > 0 ? "skill-up ×\(skillUps)"
-               : (regaliaRose ? "\(regaliaName) → \(Regalia.numeral(regaliaAfter))" : "+\(after.experience - before.experience) experience"))
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55 + 0.06 * Double(min(12, chosen.count))) {
+        // The words, one plain branch at a time: as two nested ternaries
+        // of interpolated strings, with the delay's sum inside the call,
+        // this took the type checker most of a second on CI (run 229).
+        let levelled = after.level > before.level
+        let title: String
+        let detail: String
+        if levelled {
+            title = "LEVEL UP!"
+            let skills: String = skillUps > 0 ? "  ·  skill-up ×\(skillUps)" : ""
+            detail = "Lv.\(before.level) → Lv.\(after.level)" + skills
+        } else if skillUps > 0 {
+            title = "SKILL UP!"
+            detail = "skill-up ×\(skillUps)"
+        } else if regaliaRose {
+            title = "REGALIA \(Regalia.numeral(regaliaAfter))"
+            detail = "\(regaliaName) → \(Regalia.numeral(regaliaAfter))"
+        } else {
+            title = "POWERED UP"
+            let gained: Int = after.experience - before.experience
+            detail = "+\(gained) experience"
+        }
+        let offered: Double = Double(min(12, chosen.count))
+        let delay: Double = 0.55 + 0.06 * offered
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
             show(title, detail)
         }
     }

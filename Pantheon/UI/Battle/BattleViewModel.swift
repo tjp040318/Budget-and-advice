@@ -588,8 +588,13 @@ final class BattleViewModel: ObservableObject {
                 survived: unit.isAlive
             )
         }
-        let mvp = stats.max { ($0.dealt + $0.healed) < ($1.dealt + $1.healed) }
-        return (stats, (mvp?.dealt ?? 0) + (mvp?.healed ?? 0) > 0 ? mvp?.id : nil)
+        let mvp = stats.max { first, second in
+            let one: Double = first.dealt + first.healed
+            let other: Double = second.dealt + second.healed
+            return one < other
+        }
+        let mvpShare: Double = (mvp?.dealt ?? 0) + (mvp?.healed ?? 0)
+        return (stats, mvpShare > 0 ? mvp?.id : nil)
     }
 
     private func loot(from stageOutcome: StageOutcome) -> [BattleSummary.Loot] {

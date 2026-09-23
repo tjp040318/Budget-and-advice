@@ -360,9 +360,14 @@ final class ClothChain {
             let restDirection = restRotation.act(links[k].axis)
             let length = links[k].length * scale
             let tail = links[k].tail
-            var next = tail + (tail - links[k].previous) * (1 - Cloth.drag)
-                + restDirection * (links[k].stiffness * unit * scale * h)
-                + SIMD3<Float>(0, -Cloth.gravity * unit * scale * h, 0)
+            // The same sum as `tools/cape_sim.py`, one typed term a line:
+            // as one expression it was among the slowest to type-check.
+            let carried: SIMD3<Float> = (tail - links[k].previous) * (1 - Cloth.drag)
+            let pull: Float = links[k].stiffness * unit * scale * h
+            let fall: Float = Cloth.gravity * unit * scale * h
+            let returning: SIMD3<Float> = restDirection * pull
+            let sag = SIMD3<Float>(0, -fall, 0)
+            var next: SIMD3<Float> = tail + carried + returning + sag
             next = position + Self.normalised(next - position) * length
             let free = next
             for (centre, radius) in centres {

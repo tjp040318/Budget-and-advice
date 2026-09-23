@@ -597,14 +597,17 @@ enum StageBuilder {
             ring(radius * 0.93, width: radius * 0.06, alpha: 0.5)
             ring(radius * 0.885, width: radius * 0.012, alpha: 0.45)
             for index in 0..<36 {
-                let angle = CGFloat(index) / 36 * .pi * 2
+                let share: CGFloat = CGFloat(index) / 36
+                let angle: CGFloat = share * 2 * CGFloat.pi
                 spoke(angle: angle, from: radius * 0.845, to: radius * 0.87, width: radius * 0.012, alpha: 0.45)
             }
             ring(radius * 0.83, width: radius * 0.012, alpha: 0.45)
             ring(radius * 0.42, width: radius * 0.02, alpha: 0.45)
             ring(radius * 0.09, width: radius * 0.012, alpha: 0.45)
             for index in 0..<8 {
-                let angle = CGFloat(index) / 8 * .pi * 2 + .pi / 8
+                let share: CGFloat = CGFloat(index) / 8
+                let half: CGFloat = CGFloat.pi / 8
+                let angle: CGFloat = share * 2 * CGFloat.pi + half
                 spoke(angle: angle, from: radius * 0.1, to: radius * 0.40, width: radius * 0.009, alpha: 0.42)
             }
         }
@@ -1251,9 +1254,14 @@ enum StageBuilder {
         light.attenuationStartDistance = 0.5
         light.attenuationEndDistance = 6
         fire.light = light
+        // Each term typed on its own line: as one expression it took the
+        // type checker two seconds on CI (run 229's slowest).
         let flicker = SCNAction.customAction(duration: 2.3) { node, elapsed in
             let t = Float(elapsed)
-            node.light?.intensity = CGFloat(300 + 70 * sin(t * 11.3) + 40 * sin(t * 4.7 + 1.3))
+            let quick: Float = 70 * sin(t * 11.3)
+            let slow: Float = 40 * sin(t * 4.7 + 1.3)
+            let level: Float = 300 + quick + slow
+            node.light?.intensity = CGFloat(level)
         }
         fire.runAction(.repeatForever(flicker))
         node.addChildNode(fire)

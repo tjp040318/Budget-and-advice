@@ -275,7 +275,11 @@ struct IslandDecorView: View {
     /// pills of three widths, and TAKE IN in the pale taupe of a disabled
     /// control.
     private func pill(_ title: String, gold: Bool, action: @escaping () -> Void) -> some View {
-        Button {
+        // The colours picked before the chain, so its modifiers type-check
+        // without a ternary among them.
+        let ink: Color = gold ? Theme.ink : Theme.onGlass
+        let rim: Color = gold ? Color(hex: "#FFE9A8").opacity(0.55) : Theme.goldDeep.opacity(0.7)
+        return Button {
             Juice.haptic(.light)
             AudioLibrary.shared.play(.uiConfirm, volume: 0.6)
             action()
@@ -283,15 +287,14 @@ struct IslandDecorView: View {
             Text(title.uppercased())
                 .font(Theme.title(13))
                 .tracking(0.8)
-                .foregroundStyle(gold ? Theme.ink : Theme.onGlass)
+                .foregroundStyle(ink)
                 .lineLimit(1)
                 .fixedSize()
                 .padding(.horizontal, 10)
                 .frame(minWidth: 84, minHeight: 28)
                 .background(pillPlate(gold: gold))
                 .overlay(
-                    Capsule().strokeBorder(gold ? Color(hex: "#FFE9A8").opacity(0.55) : Theme.goldDeep.opacity(0.7),
-                                           lineWidth: 1)
+                    Capsule().strokeBorder(rim, lineWidth: 1)
                 )
                 .shadow(color: Color.black.opacity(0.22), radius: 2, y: 1)
                 .contentShape(Capsule())

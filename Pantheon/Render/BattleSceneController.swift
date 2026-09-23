@@ -1371,8 +1371,8 @@ final class BattleSceneController: NSObject {
     /// raid's barrier row 24 — so the bar ends 62 points down at most and
     /// the chips under it 98. Change one there, change it here.
     private static let hudPadding: CGFloat = 8
-    private static let hudControls = CGSize(width: 3 * 36 + 2 * 6, height: 36)
-    private static let hudSkills = CGSize(width: 3 * 60 + 2 * 10, height: 64)
+    private static let hudControls = CGSize(width: CGFloat(3 * 36 + 2 * 6), height: 36)
+    private static let hudSkills = CGSize(width: CGFloat(3 * 60 + 2 * 10), height: 64)
     private static let hudChipsLength: CGFloat = 250
     /// How far a float keeps from the HUD.
     private static let hudClearance: CGFloat = 6
