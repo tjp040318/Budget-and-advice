@@ -425,45 +425,58 @@ enum VFXLibrary {
         host.addChildNode(carrier)
     }
 
-    /// A painted sheet standing over a ROW (`Reach.row`): a camera-facing
-    /// plane rather than a particle, so its material can fade it into the
-    /// floor. A screen-facing sheet 3–4 m wide centred at chest height
-    /// reaches below the floor, and the floor cut it with a hard straight
-    /// line through the burst (run 234's aoe-b, c and d). Engines hide that
-    /// seam with a depth fade — Unity's soft particles, Unreal's DepthFade —
-    /// and SceneKit's particle system has none; the floor here is the plane
-    /// y = 0, so fading by the fragment's height above it (`floorFade`) IS
-    /// the depth fade against it. The frames are stepped from the main
-    /// thread on a timer, as `groundFlipbook` steps its own, and the sheet
-    /// holds for half its life and fades over the rest, as the particle's
-    /// opacity curve did.
+    /// A painted sheet standing over a ROW (`Reach.row`), or a single
+    /// victim's burst big enough to reach the floor: a camera-facing plane
+    /// rather than a particle, so its colour can fade into the floor. A
+    /// screen-facing sheet 3–4 m wide centred at chest height reaches below
+    /// the floor, and the floor cut it with a hard straight line through
+    /// the burst (run 234's aoe-b, c and d). Engines hide that seam with a
+    /// depth fade — Unity's soft particles, Unreal's DepthFade — and
+    /// SceneKit's particle system has none. The floor here is the plane
+    /// y = 0 and the battle camera never turns, so the height of every row
+    /// of the sheet is known when it is spawned: the fade is BAKED into the
+    /// mask it is multiplied by (`floorFadeMask`), with the caster's tint
+    /// and the sheet's strength. Run 235 drew it with a fragment modifier
+    /// reading `_surface.position` instead, and the sheet was drawn nowhere
+    /// in any of the four frames while its sparks and its light were: no
+    /// shader here now, and one `[VFX]` line per sheet says it stood. The
+    /// frames are stepped from the main thread on a timer, as
+    /// `groundFlipbook` steps its own, and the sheet holds for half its
+    /// life and fades over the rest by its opacity, as the slash does.
     private static func standingFlipbook(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
                                          size: CGFloat, life: TimeInterval, lift: Float) {
         let cut = frames(of: name, rows: 4, cols: 4)
         guard !cut.isEmpty else { return }
-        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-        tint.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let centreHeight: Float = position.y + lift
+        let upright: Float = cameraUpright(in: scene)
+        let side = Float(size)
+        guard let mask = floorFadeMask(tint: tint, side: side, centreHeight: centreHeight, upright: upright) else {
+            return
+        }
         let plane = SCNPlane(width: size, height: size)
         let material = SCNMaterial()
         material.lightingModel = .constant
         material.diffuse.contents = cut[0]
-        // The strength goes into the colour: an additive sheet's alpha may
-        // or may not weigh it, the colour always does.
-        material.multiply.contents = UIColor(red: red * alpha, green: green * alpha, blue: blue * alpha, alpha: 1)
+        material.multiply.contents = mask
         material.blendMode = .add
         material.colorBufferWriteMask = [.red, .green, .blue]
         material.writesToDepthBuffer = false
         material.readsFromDepthBuffer = true
         material.isDoubleSided = true
-        material.shaderModifiers = [.fragment: floorFadeModifier]
-        material.setValue(NSNumber(value: floorFadeHeight), forKey: "floorFade")
-        material.setValue(NSNumber(value: Float(1)), forKey: "sheetFade")
         plane.firstMaterial = material
         let node = SCNNode(geometry: plane)
-        node.position = SCNVector3(position.x, position.y + lift, position.z)
-        node.constraints = [SCNBillboardConstraint()]
+        node.position = SCNVector3(position.x, centreHeight, position.z)
+        let billboard = SCNBillboardConstraint()
+        billboard.freeAxes = .all
+        node.constraints = [billboard]
         node.castsShadow = false
         scene.rootNode.addChildNode(node)
+        if standingSheetsSeen.insert(name).inserted {
+            let across = String(format: "%.2f", Double(side))
+            let up = String(format: "%.2f", Double(centreHeight))
+            let cosine = String(format: "%.2f", Double(upright))
+            print("[VFX] \(name) stands: \(across) m, its centre \(up) m up, \(cosine) of it upright")
+        }
         let count = cut.count
         let start = CACurrentMediaTime()
         var shown = 0
@@ -481,25 +494,60 @@ enum VFXLibrary {
                 node.geometry?.firstMaterial?.diffuse.contents = cut[index]
             }
             let remaining: Double = 2.0 - 2.0 * elapsed / life
-            let fade: Float = Float(min(1.0, max(0.0, remaining)))
-            node.geometry?.firstMaterial?.setValue(NSNumber(value: fade), forKey: "sheetFade")
+            node.opacity = CGFloat(min(1.0, max(0.0, remaining)))
         }
         RunLoop.main.add(timer, forMode: .common)
     }
 
-    /// The fade `standingFlipbook` draws with: nothing at the floor, all of
-    /// the sheet `floorFade` metres above it (the fragment's position is in
-    /// view space; `inverseViewTransform` takes it to the world), times the
-    /// sheet's own fade over its life.
-    static let floorFadeModifier = """
-    #pragma arguments
-    float floorFade;
-    float sheetFade;
-    #pragma body
-    float4 world = scn_frame.inverseViewTransform * float4(_surface.position, 1.0);
-    float above = smoothstep(0.0, floorFade, world.y);
-    _output.color *= above * sheetFade;
-    """
+    /// The standing sheets that have printed their line.
+    private static var standingSheetsSeen: Set<String> = []
+
+    /// How much of a camera-facing sheet's height stands upright: the
+    /// cosine of the camera's pitch, read off the scene's camera (a sheet
+    /// facing a camera 36° down leans back 36°, so its rows climb 0.81 of
+    /// their spacing). 0.81, the home pitch's, when the scene has none.
+    private static func cameraUpright(in scene: SCNScene) -> Float {
+        let cameras = scene.rootNode.childNodes { node, _ in node.camera != nil }
+        guard let camera = cameras.first else { return 0.81 }
+        let front = camera.presentation.worldFront
+        let down: Float = min(1, abs(front.y))
+        return (1 - down * down).squareRoot()
+    }
+
+    /// The mask a standing sheet is multiplied by: one column of 64 rows,
+    /// the image's top row the sheet's top. Each row is the tint scaled by
+    /// the tint's alpha (the strength goes into the colour: an additive
+    /// sheet's alpha may or may not weigh it, the colour always does) and by
+    /// how far that row stands over the floor — nothing at the floor, all of
+    /// it `floorFadeHeight` up, smoothstepped between.
+    private static func floorFadeMask(tint: UIColor, side: Float, centreHeight: Float, upright: Float) -> CGImage? {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        tint.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let rows = 64
+        var pixels = [UInt8](repeating: 255, count: rows * 4)
+        for row in 0..<rows {
+            let down: Float = (Float(row) + 0.5) / Float(rows)
+            let drop: Float = (down - 0.5) * side * upright
+            let height: Float = centreHeight - drop
+            let ramp: Float = min(1, max(0, height / floorFadeHeight))
+            let smooth: Float = ramp * ramp * (3 - 2 * ramp)
+            let strength: CGFloat = alpha * CGFloat(smooth) * 255
+            let at = row * 4
+            pixels[at] = UInt8(clamping: Int((red * strength).rounded()))
+            pixels[at + 1] = UInt8(clamping: Int((green * strength).rounded()))
+            pixels[at + 2] = UInt8(clamping: Int((blue * strength).rounded()))
+            pixels[at + 3] = 255
+        }
+        // A bitmap context's first row in memory is its image's top row.
+        let space = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.noneSkipLast.rawValue
+        return pixels.withUnsafeMutableBytes { buffer -> CGImage? in
+            guard let base = buffer.baseAddress,
+                  let context = CGContext(data: base, width: 1, height: rows, bitsPerComponent: 8,
+                                          bytesPerRow: 4, space: space, bitmapInfo: info) else { return nil }
+            return context.makeImage()
+        }
+    }
 
     private static var frameCache: [String: [CGImage]] = [:]
 

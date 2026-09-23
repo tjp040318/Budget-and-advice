@@ -7346,13 +7346,20 @@ y = 0, so fading a fragment by its world height over the floor is exactly
 that fade. (d) was chosen. A sheet whose lower edge would pass through
 the floor is now a camera-facing plane, not a particle
 (`VFXLibrary.standingFlipbook`). That means every sheet over a row, and a
-single victim's burst big enough to reach the floor. Its fragment
-modifier (`floorFadeModifier`) takes the fragment's view-space position
-to the world through `scn_frame.inverseViewTransform` and fades it from
+single victim's burst big enough to reach the floor. It fades from
 nothing at the floor to all of it 0.9 m up (`floorFadeHeight`). The
 frames are stepped on the main thread, as the ground ring's are, and the
 sheet holds for half its life and fades over the rest, as the particle
-did. The glare: a row sheet is tinted 0.6 toward the caster's colour and
+did. **Run 235 drew no sheet at all.** The first build faded the plane in
+a fragment modifier that read `_surface.position`. In all four area
+frames the sparks and the row's light showed and the sheet did not, and
+no shader error was logged. The fade is now BAKED instead: the battle
+camera never turns and the floor is y = 0, so the height of every row of
+the sheet is known when it is spawned. The plane is multiplied by a
+64-row mask (`floorFadeMask`) holding the tint, the strength and the
+fade, its rows' heights foreshortened by the camera's pitch
+(`cameraUpright`). Its fade over its life is the node's opacity, as the
+slash's is, and one `[VFX] <sheet> stands` line per sheet says it drew. The glare: a row sheet is tinted 0.6 toward the caster's colour and
 its paint scaled to half (`rowSheetStrength`, in the colour, so the
 additive blend is dimmed whatever it reads of the alpha), and
 `areaSheetLimit` is 3.4 m, down from 4.4.

@@ -1724,11 +1724,16 @@ environment can and cannot do. The short version:
   resumed*):** the chapter map's haze is Core Image's clamped blur
   (`SoftMapPainting`; SwiftUI's opaque blur takes in black at its
   bounds). **A cast on several victims is drawn ONCE over the row**
-  (`VFXLibrary.spawnArea`, `Reach.row`: its sheets off white and at most
-  4.4 m, one light, and every victim its own sparks; an element's hit or
-  a heal stays on each victim as `Reach.member`, with no light of its
-  own). Drawn per victim, four white sheets made a slab over the whole
-  team. An effect's scale on a unit is capped at a 2.6 m unit
+  (`VFXLibrary.spawnArea`, `Reach.row`: its sheets off white, at half
+  strength and at most 3.4 m, one light, and every victim its own sparks;
+  an element's hit or a heal stays on each victim as `Reach.member`, with
+  no light of its own). Drawn per victim, four white sheets made a slab
+  over the whole team. A sheet that would reach the floor STANDS as a
+  camera-facing plane faded into it by a baked mask
+  (`standingFlipbook`, `floorFadeMask`): the floor cut the particle
+  version with a hard line (run 234), and a fragment modifier reading
+  `_surface.position` drew nothing at all (run 235) — no custom shader
+  on an effect. An effect's scale on a unit is capped at a 2.6 m unit
   (`BattleSceneController.effectScale`). The tour casts an area ultimate
   on the team every run (`-tour-aoe`, frames `8-arena_battle-aoe-*`). The
   fifty judged faults are in `tools/patches/round5_faults.json`, and
