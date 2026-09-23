@@ -1413,6 +1413,25 @@ def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
 # these names alone; a new family is judged on its board and added here.
 SKIRT_FAMILIES = ("anhur", "atalanta", "sekhmet_awakened")
 
+# The weapon pass's judged families (tools/weapon_pass.py, 2026-09-23): a
+# held thing the rigger bound partly to the thigh — because the rigger's own
+# rule puts it against the thigh in the A-pose — stretched into a strip from
+# the hand to the hip on every arm swing (Ra's ankh 77x, Horus's blade 51x,
+# the Siren's harp 246x); the pass gives the whole object to the hand that
+# holds it and cuts the seam where it touches the body. Every name here was
+# judged on its before/after board (scratchpad weapon/boards); refused and
+# left as rigged: osiris_awakened (the kilt welded to the fist), loki, set,
+# nuwa, maat and isis (a hand sewn to a garment), anubis, thoth_awakened,
+# hathor, berserker and achilles (no visible gain or a strip left), and the
+# jiangshi and terracotta soldier (sleeves and cuffs, 12x -> 19x bound). The
+# Siren and the awakened Isis are winged (CAPE_EXCLUDE) and were judged
+# with their wings untouched. mesh.py runs the pass on these names after it
+# ships a family, so a re-ship keeps the fix; a new family is judged on its
+# board and added here.
+WEAPON_FAMILIES = ("ra_awakened", "horus_awakened", "ares_awakened", "freya_awakened", "zeus_awakened",
+                   "isis_awakened", "siren", "thor", "taweret", "gladiator", "vestal", "sekhmet", "serqet",
+                   "ptah", "einherjar", "athena", "satyr", "cobra_priestess", "cyclops")
+
 
 def cut_seam(char, moved, ji_before, jw_before, against=None):
     """Opens the mesh along the seam between the vertices `moved` to another

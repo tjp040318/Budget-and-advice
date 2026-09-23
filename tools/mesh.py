@@ -296,6 +296,15 @@ def run_family(name, args):
         problems += build(c, BUNDLE_DIR / f"{out_name}_{clip_name}.usdz", args.clip_tris, args.clip_texture, height,
                           carrier=True)["problems"]
 
+    # A held weapon the rigger bound partly to the thigh goes to the hand
+    # (tools/weapon_pass.py, 2026-09-23) — for the families judged on their
+    # boards and named in WEAPON_FAMILIES. It measures the stretch on the
+    # clips just written, so it runs after them, over the base and the LOD.
+    if only is None and not args.no_weapon and out_name.lower() in character.WEAPON_FAMILIES:
+        import weapon_pass
+        print(f"\n  weapon pass: {out_name}")
+        weapon_pass.process(out_name, in_place=True)
+
     total = sum(p.stat().st_size for p in BUNDLE_DIR.glob(f"{out_name}*.usdz"))
     print(f"\n  {out_name}: {total / 1048576:.1f} MB in the bundle folder")
     if problems:
@@ -331,6 +340,7 @@ def main():
     ap.add_argument("--grade", choices=sorted(character.GRADES), help="a colour grade on the textures at shipping (character.GRADES; gold: olive to burnished gold, magenta runes to ember)")
     ap.add_argument("--no-cape", action="store_true", help="skip the cape re-bind (character.reweight_cape)")
     ap.add_argument("--no-skirt", action="store_true", help="skip the skirt re-bind (character.reweight_skirt)")
+    ap.add_argument("--no-weapon", action="store_true", help="skip the weapon pass (tools/weapon_pass.py) on a WEAPON_FAMILIES name")
     ap.add_argument("--no-robe", action="store_true", help="skip the robe ring (character.reweight_robe)")
     ap.add_argument("--maps-from", help="a textured stage file (.glb/.usdz) to take the metallic-roughness and normal maps from; "
                                         "default: <name>_image or <name>_refine beside the source")
