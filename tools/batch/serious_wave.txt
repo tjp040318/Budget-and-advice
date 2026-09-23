@@ -113,3 +113,4 @@ thoth_awakened_serious:Art/Concepts/thoth_awakened_serious_sw.png:2.05:white, bu
 zeus_awakened_serious:Art/Concepts/zeus_awakened_serious_sw.png:2.15:white, burnished gold, storm blue:blade:zeus_awakened
 boss_colossus_serious:Art/Concepts/boss_colossus_serious_sw.png:8.00:patina green, bronze, gold:heavy:boss_colossus
 boss_unwrapped_king_serious:Art/Concepts/boss_unwrapped_king_serious_sw.png:6.00:tarnished gold, linen, dust grey:caster:boss_unwrapped_king
+hera_awakened_serious:Art/Concepts/hera_awakened_serious_sw.png:2.10:royal purple, gold, peacock blue:caster:hera_awakened
