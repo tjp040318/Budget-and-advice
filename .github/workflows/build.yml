@@ -117,6 +117,45 @@ jobs:
           # to one step (-tour-step N), waits for the screen to settle, and
           # photographs it; battle and reveal get several frames each.
           shoot() { xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || true; }
+          # The first frame after a launch, shot again while it is dark. Run
+          # 224's Hall of Ka came out as the empty framebuffer — every pixel
+          # 0,0,0 but the home indicator — because that launch's main thread
+          # sat 10.4 s in its first Metal compile (0.4 s in run 223). Such a
+          # frame is about 11 KB as a PNG and the darkest drawn one about
+          # 780 KB, so a frame under 100 KB is shot again four seconds on,
+          # three times at most, and every retake is listed in retakes.txt.
+          shoot_lit() {
+            shoot "$1"
+            local tries=0 bytes
+            while :; do
+              bytes=$(stat -f%z "shots/$1.png" 2>/dev/null || echo 0)
+              [ "$bytes" -gt 100000 ] && return 0
+              if [ $tries -ge 3 ]; then
+                echo "$(date -u +%T) $1 still dark after $tries retakes ($bytes bytes)" | tee -a shots/retakes.txt
+                return 0
+              fi
+              tries=$((tries + 1))
+              echo "$(date -u +%T) $1 came out dark ($bytes bytes): retake $tries in 4 s" | tee -a shots/retakes.txt
+              sleep 4; shoot "$1"
+            done
+          }
+          # Waits up to $2 seconds for the step's app to print "[TourCue] $1"
+          # on its stdout (line-buffered in a debug build), so a beat that runs
+          # on the app's own clock is photographed on that clock and not the
+          # launch's. The relic's rite is 2.8 s from its first frame to its
+          # close; run 223's frame caught its peak and run 224's the fade out,
+          # with the same sleep, because the launch alone varies by seconds.
+          cue() {
+            local out="shots/$step-${names[$step]}-out.txt" ticks=0
+            until grep -q "\[TourCue\] $1" "$out" 2>/dev/null; do
+              ticks=$((ticks + 1))
+              if [ $ticks -gt $(( $2 * 10 )) ]; then
+                echo "$(date -u +%T) no '$1' cue from step $step in $2 s"
+                return 0
+              fi
+              sleep 0.1
+            done
+          }
           # Relaunches the step being photographed with more arguments — a
           # room, a tab, a ledger (phase B, 2026-09-22: twenty-six of them).
           # Reads the loop's $step when it is called. Each relaunch keeps its
@@ -195,7 +234,14 @@ jobs:
                 # The skill panel: the first player turn opens with a skill
                 # chosen and what it does over the skill squares.
                 again -tour-skill-info; sleep 12; shoot "$step-${names[$step]}-skill" ;;
-              arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
+              # Then an enemy's area ultimate on the team, cast once a second
+              # by -tour-aoe through the path a real one takes (run 224's b
+              # caught Fenrir's by chance: four white sheets, one slab over
+              # the whole team). Two frames each, a second apart, so one
+              # lands on the sheet at its brightest.
+              arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"
+                again -tour-aoe duat_rite:tide; sleep 8; shoot "$step-${names[$step]}-aoe-a"; sleep 0.5; shoot "$step-${names[$step]}-aoe-b"
+                again -tour-aoe wrath_of_the_eye:ember; sleep 8; shoot "$step-${names[$step]}-aoe-c"; sleep 0.5; shoot "$step-${names[$step]}-aoe-d" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
               # The reckoning (about 3 s in), the chest with its lid coming
               # up (about 7.6 s), the spoils panel with every tile and
@@ -204,9 +250,16 @@ jobs:
               # first frame on the very instant the chest's SceneKit view was
               # made, and photographed a black screen with TAP TO OPEN on it.
               victory|raid_grade) sleep 2; shoot "$step-${names[$step]}-a"; sleep 3; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
-              # The rite (about 1.5 s in: the stone lit, the halo drawing),
-              # then the awakened relic with its fifth sub stat's choice up.
-              relic_awaken) sleep 1.5; shoot "$step-${names[$step]}-a"; sleep 4.5; shoot "$step-${names[$step]}-b" ;;
+              # The rite at its peak, then the awakened relic with its fifth
+              # sub stat's choice up. The rite's own clock (RelicAwakeningRite
+              # .play): the veil up by 0.35 s, the halo drawn by 1.2, AWAKENED
+              # and its caption settled by about 1.4, and the fade out from
+              # 2.8 to 3.15. The tour lets the screen settle, then performs the
+              # awakening and prints its cue (TourRite); 1.3 s after the cue
+              # plus the screenshot's own half second is the middle of the peak.
+              relic_awaken)
+                cue rite 20
+                sleep 1.3; shoot_lit "$step-${names[$step]}-a"; sleep 4.5; shoot "$step-${names[$step]}-b" ;;
               # Every chapter's map: the step is relaunched once per chapter
               # (-tour-chapter K) so each painted region is photographed with
               # its medallions and chests in place.
@@ -242,7 +295,7 @@ jobs:
               # diorama is seen close: the buildings as targets, the
               # bubbles, the figures and the decorations at the larger size.
               island)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-island-zoom 1.5 >/dev/null
                 sleep 6; shoot "$step-${names[$step]}-zoomed" ;;
               # Phase B (2026-09-22): every rebuilt screen in the states its
@@ -253,60 +306,60 @@ jobs:
               # The unit sheet on the seed's awakened unit (its regalia at
               # III): the unlocked regalia plate and the awakening line.
               detail)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-detail awakened; sleep 5; shoot "$step-${names[$step]}-b" ;;
               # The Hall of Ka's other three ledgers: the offering Auto chose,
               # the evolution, and the fusion board — six seconds, so the
               # prize's mesh has loaded onto the altar.
               training)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 for m in feed evolve fuse; do
-                  again -tour-training $m; sleep 6; shoot "$step-${names[$step]}-$m"
+                  again -tour-training $m; sleep 6; shoot_lit "$step-${names[$step]}-$m"
                 done ;;
               # More's Diagnostics row, opened: where the model board and the
               # console went when they left More's front page.
               more)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-more diagnostics; sleep 5; shoot "$step-${names[$step]}-diagnostics" ;;
               # The inventory with its fullest worn relic picked (four subs,
               # a four-piece set): the panel run 221 cut above OPEN.
               relics)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-relic legend; sleep 5; shoot "$step-${names[$step]}-legend" ;;
               # The Halls on the brightest painting (Radiance, Olympus: can
               # the glass be read?) and the darkest (Umbra, the Serpent Deep).
               halls)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-dungeon hall_radiance; sleep 5; shoot "$step-${names[$step]}-radiance"
                 again -tour-dungeon hall_umbra; sleep 5; shoot "$step-${names[$step]}-umbra" ;;
               # The bazaar's densest stall (ten wares, painted scrolls), and
               # the Laurel exchange, which sits below the rail's fold: the
               # rail must open scrolled to it.
               shop)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-shop-stall scrolls; sleep 5; shoot "$step-${names[$step]}-scrolls"
                 again -tour-shop-stall laurel; sleep 5; shoot "$step-${names[$step]}-laurels" ;;
               # The Duat's map with its scroll unrolled (story, yields,
               # terms), and on Hell over the walked copy (the tier well's
               # gold plate, Hell's grade and motes, the terms).
               chapter_map)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-chapter-scroll; sleep 5; shoot "$step-${names[$step]}-scroll"
                 again -tour-tier hell; sleep 5; shoot "$step-${names[$step]}-hell" ;;
               # The Feats: twenty-eight rows, the claimable ones first.
               missions)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-missions-tab feats; sleep 5; shoot "$step-${names[$step]}-feats" ;;
               # The Labyrinth's Halls and Tower wings, never photographed.
               labyrinth)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-labyrinth-wing halls; sleep 5; shoot "$step-${names[$step]}-halls"
                 again -tour-labyrinth-wing tower; sleep 5; shoot "$step-${names[$step]}-tower" ;;
               # The darkest dungeon (the Necropolis); the Vault's B1, three
               # stars on the seed, for the room's Sweep; and its locked B10,
               # the tallest drops plate — the height test.
               dungeon)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-dungeon lab_necropolis; sleep 5; shoot "$step-${names[$step]}-necropolis"
                 again -tour-dungeon lab_colossus -tour-dungeon-floor 1; sleep 5; shoot "$step-${names[$step]}-mastered"
                 again -tour-dungeon lab_colossus -tour-dungeon-floor 10; sleep 5; shoot "$step-${names[$step]}-b10"
@@ -314,12 +367,12 @@ jobs:
               # The boss stage's card: the BOSS eyebrow, the boss tile's tag,
               # the boss's face on its medallion behind the dim.
               stage_popup)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-popup-stage duat_1_5; sleep 5; shoot "$step-${names[$step]}-boss" ;;
               # Athena's caret on the Collection door: proof that the tab
               # bar's anchor reaches an overlay drawn over screen and bar.
               guide)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-guide caret; sleep 5; shoot "$step-${names[$step]}-caret" ;;
               # The plain frame is a real sweep's receipt over the Duat's map
               # (under the tab bar, where the game shows it). Then the
@@ -327,7 +380,7 @@ jobs:
               # stage on the Hall of Two Truths, the mastered Duat 1-1 with
               # Sweep live, and Labyrinth B10's six sets and BOSS wave.
               sweep)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-briefing duat_1_4; sleep 5; shoot "$step-${names[$step]}-briefing"
                 again -tour-briefing duat_1_1; sleep 5; shoot "$step-${names[$step]}-briefing-sweep"
                 again -tour-briefing lab_colossus_10; sleep 5; shoot "$step-${names[$step]}-briefing-dungeon" ;;
@@ -337,26 +390,26 @@ jobs:
               # frame had photographed (run 216). The deck must sit whole
               # above the bar, the painting to both edges.
               summon)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-root summon; sleep 6; shoot "$step-${names[$step]}-root" ;;
               # The dearest 5★ on the mileage counter, short of points.
               mileage)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-mileage-pick dearest; sleep 5; shoot "$step-${names[$step]}-b" ;;
               # The opening gift with a candidate lit and TAKE in gold.
               selector)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-selector-pick first; sleep 5; shoot "$step-${names[$step]}-b" ;;
               # The Umbra Titan: the rail scrolled to him and his three-line
               # name whole, with the strip (title, Back, wallet) in place.
               raids)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-raid raid_unwrapped_king; sleep 5; shoot "$step-${names[$step]}-umbra" ;;
               # An ordinary week's band, a week after the Festival Monday.
               events)
-                sleep 5; shoot "$step-${names[$step]}"
+                sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-events-week plain; sleep 5; shoot "$step-${names[$step]}-plain" ;;
-              *)      sleep 5; shoot "$step-${names[$step]}" ;;
+              *)      sleep 5; shoot_lit "$step-${names[$step]}" ;;
             esac
             echo "$(date -u +%T) ${names[$step]}"
           done
@@ -366,11 +419,15 @@ jobs:
           # The unified log for the process over the WHOLE tour (--last 12m
           # missed a crash in its sixth minute), in case something never
           # reached stderr (a Metal compiler message, the OS killing the app).
+          # SwiftUI's render box logs a stale or full image queue and a
+          # dropped frame on every busy draw — over a thousand lines by the
+          # fifth step, so run 224's 1,500-line log ended before the reveal
+          # it was kept for — and none of it says anything; it is dropped.
           xcrun simctl spawn "$UDID" log show --start "$TOUR_START" --style compact \
             --predicate 'process == "Pantheon" OR (eventMessage CONTAINS "Pantheon" AND messageType == error)' \
-            2>/dev/null | grep -v -E 'CoreAnalytics|Bluetooth|RunningBoard|LaunchServices|activity' \
+            2>/dev/null | grep -v -E 'CoreAnalytics|Bluetooth|RunningBoard|LaunchServices|activity|RBLayer|RBDrawable|test daemon' \
             | grep -i -E 'error|fault|assert|crash|fatal|exc_|signal|abort|terminat|kill|jetsam|hidden|SceneKit|Metal' \
-            | head -n 1500 > shots/system-log.txt || true
+            | head -n 4000 > shots/system-log.txt || true
           # A crash report, when a launch died: the host's ReportCrash writes
           # one for a simulated process too. Every report for the app since
           # the tour began is published as text, and tools/ciframes.py prints

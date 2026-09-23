@@ -767,10 +767,12 @@ struct TrainingView: View {
                         BundleImage(name: art, renderedAt: size)
                             .aspectRatio(contentMode: .fill)
                             .frame(width: size, height: size)
-                        Image(systemName: "sun.max.fill")
-                            .font(.system(size: 12, weight: .black))
-                            .foregroundStyle(Theme.onGlassGold)
-                            .shadow(color: .black.opacity(0.8), radius: 1)
+                        // The awakened sun in its socket, as every card
+                        // wears it since round 4 (`CardMark`): a bare
+                        // cream glyph with a shadow floated on the purple
+                        // art (run 224, 43-awaken). At 20 its glyph is the
+                        // 11 points the bare one was.
+                        CardMark(systemName: "sun.max.fill", size: 20)
                             .padding(5)
                     }
                     .frame(width: size, height: size)
@@ -1210,6 +1212,13 @@ struct TrainingView: View {
     /// ringed, a copy of the family wears ↑ in Power up (a skill-up or the
     /// regalia), and a unit worth keeping wears its reason on the face's
     /// left edge before a tap can eat it (`Keepsake`).
+    ///
+    /// Each face rests like a row of the cream lists (`restingRow()`): one
+    /// showing a third of itself or less is not drawn. The ledger's third
+    /// row stood under the second as a six-pixel sliver of a card's rim
+    /// over the cost well (run 224, 3-training-feed), the fault this round
+    /// took off Missions, Lessons and the decor catalogue; the ledger's
+    /// chevron says the offering goes on.
     private func offeringGrid(
         _ candidates: [ResolvedUnit],
         target: ResolvedUnit,
@@ -1226,6 +1235,7 @@ struct TrainingView: View {
                     marksKin: marksKin,
                     worth: keepsake(candidate, kept: kept)
                 )
+                .restingRow()
             }
         }
     }
@@ -1859,6 +1869,9 @@ struct TrainingView: View {
 
 // MARK: - The ledger's shape
 
+/// The coordinate space a `HallLedger` measures its body in.
+private let hallLedgerSpace = "hallLedger"
+
 /// One glass ledger of the Hall of Ka: a fixed header, a body that scrolls
 /// and fades at its foot, and a fixed foot for the price and the button, on
 /// one `GlassPlate` the height of its column.
@@ -1874,6 +1887,15 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
     let content: () -> Content
     let foot: () -> Foot
 
+    /// The body's frame in its scroll's own space and the scroll's height:
+    /// whether a row stands below the fold.
+    @State private var bodyFrame: CGRect = .zero
+    @State private var viewportHeight: CGFloat = 0
+
+    /// The room under the body's last row, which scrolls it clear of the
+    /// fade: not a row, so it never calls the chevron up by itself.
+    private static var footRoom: CGFloat { 16 }
+
     init(
         @ViewBuilder header: @escaping () -> Header,
         @ViewBuilder content: @escaping () -> Content,
@@ -1882,6 +1904,13 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
         self.header = header
         self.content = content
         self.foot = foot
+    }
+
+    /// A row of the body is below the fold. The offering's faces rest on
+    /// whole rows (`restingRow()`), so a row cut at the foot is not drawn
+    /// and nothing else would say the offering goes on.
+    private var moreBelow: Bool {
+        bodyFrame.height > viewportHeight + 1 && bodyFrame.maxY - Self.footRoom > viewportHeight + 2
     }
 
     var body: some View {
@@ -1899,8 +1928,25 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
                     .padding(.horizontal, 12)
                     .padding(.top, 8)
                     // Room under the last row to scroll it clear of the fade.
-                    .padding(.bottom, 16)
+                    .padding(.bottom, Self.footRoom)
+                    .background(
+                        GeometryReader { proxy in
+                            let frame = proxy.frame(in: .named(hallLedgerSpace))
+                            Color.clear
+                                .onAppear { bodyFrame = frame }
+                                .onChange(of: frame) { _, now in bodyFrame = now }
+                        }
+                    )
             }
+            .coordinateSpace(name: hallLedgerSpace)
+            .background(
+                GeometryReader { proxy in
+                    let height = proxy.size.height
+                    Color.clear
+                        .onAppear { viewportHeight = height }
+                        .onChange(of: height) { _, now in viewportHeight = now }
+                }
+            )
             .mask(
                 LinearGradient(
                     stops: [
@@ -1913,6 +1959,21 @@ private struct HallLedger<Header: View, Content: View, Foot: View>: View {
                     endPoint: .bottom
                 )
             )
+            // The cream lists' cue (`RestingList`) in the glass's own
+            // colours, over the fade rather than under its mask: while a
+            // row is below the fold, a small chevron at the body's foot.
+            .overlay(alignment: .bottom) {
+                if moreBelow {
+                    Image(systemName: "chevron.compact.down")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(Theme.onGlassGold)
+                        .frame(width: 30, height: 12)
+                        .background(Capsule().fill(Color.black.opacity(0.6)))
+                        .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 0.8))
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+            }
             .padding(.horizontal, -12)
             .frame(maxHeight: .infinity)
             foot()

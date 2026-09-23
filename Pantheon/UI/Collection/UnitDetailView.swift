@@ -137,7 +137,9 @@ private let chipLineSpace = "chipLine"
 /// fit are drawn whole with no fade; chips that do not end in a fade at the
 /// line's trailing edge, over the one the edge cuts, until the last chip
 /// has been scrolled into view (run 221: five sets, three chips, and nothing
-/// to say the other two were there).
+/// to say the other two were there). Since run 224 a chip carries its
+/// pieces as pips, and six sets fit the line, so the scroll is only the
+/// fallback for a line the arithmetic did not foresee.
 private struct ChipLine<Content: View>: View {
     let content: () -> Content
     /// The chips' frame in the scroll's own space: its width against the
@@ -184,6 +186,53 @@ private struct ChipLine<Content: View>: View {
                     .frame(width: chipLineFade)
             }
         )
+    }
+}
+
+/// A set's pieces as pips under its stone on the sets row: a gold pip for
+/// each piece that completes the set (both pairs of a 2-piece set worn
+/// twice), a filled grey pip for a piece of a set still short, and a hollow
+/// one for each piece it still wants — so "1 of 4" is one grey pip and
+/// three hollow, a row 19.6 points wide under the stone, where "1/4" in
+/// figures stood 19 wide BESIDE it. The regalia's pips (`RegaliaPips`) in
+/// the set's terms: gold, the unlit cream, the same hairline.
+private struct SetPiecePips: View {
+    let count: Int
+    let needed: Int
+
+    static let pip: CGFloat = 4
+    static let gap: CGFloat = 1.2
+
+    /// A row of `pips` pips, end to end.
+    static func rowWidth(_ pips: Int) -> CGFloat {
+        CGFloat(pips) * pip + CGFloat(max(0, pips - 1)) * gap
+    }
+
+    /// Whole sets' worth of pips: the set once, or as many times as the
+    /// pieces worn reach into.
+    private var shown: Int {
+        let size = max(1, needed)
+        return max(size, (count + size - 1) / size * size)
+    }
+
+    /// The pieces that make whole sets.
+    private var completing: Int {
+        let size = max(1, needed)
+        return count / size * size
+    }
+
+    var body: some View {
+        HStack(spacing: Self.gap) {
+            ForEach(0..<shown, id: \.self) { index in
+                Circle()
+                    .fill(index < completing ? Theme.gold : (index < count ? Theme.textSecondary : Theme.surfaceHigh))
+                    .overlay(
+                        Circle().strokeBorder(index < completing ? Theme.goldDim.opacity(0.8) : Theme.stroke, lineWidth: 0.5)
+                    )
+                    .frame(width: Self.pip, height: Self.pip)
+            }
+        }
+        .accessibilityHidden(true)
     }
 }
 
@@ -811,22 +860,21 @@ struct UnitDetailView: View {
     }
 
     /// Every set with a piece on the ring as ONE line of chips — the set's
-    /// stone and a count, "×2" lit in gold where the set is complete (and
-    /// how many times), "1/4" dim where it is not — and a book at the end
-    /// that opens the set reference counting this unit's pieces, where the
-    /// names are.
+    /// stone over its pieces as pips, gold where the set is complete (twice
+    /// over, two gold pairs), one grey and three hollow for "1 of 4" — and
+    /// a book at the end that opens the set reference counting this unit's
+    /// pieces, where the names are.
     ///
     /// One line since run 216: the named chips were a grid of two a row
     /// that the ring panel could not hold at rest, so they sat at a fifth of
     /// their opacity under the fade; and "Thunder 4/2" — two complete
     /// Thunder sets — read as a counting bug. The stone names the set (the
-    /// chip's accessibility label says it), and more sets than the line
-    /// holds scroll sideways — and SAY so (`ChipLine`): Zeus wore five sets
-    /// and the line showed three chips and the book, with nothing to say
-    /// there were two more (runs 220–221). The chips are cut so a fourth
-    /// stands half in view, fading, at the line's end; a second line of
-    /// chips was the other way, and it would have ended the ring panel in
-    /// the ghost row again.
+    /// chip's accessibility label says it). Zeus wore five sets and the line
+    /// showed three chips and the book (runs 220–221), then three and a
+    /// fourth cut to a lone grey stone in the fade (run 224): the counts in
+    /// figures were 43 points a chip. As pips a chip is 23.6 points and
+    /// every set a unit can wear stands whole on the line; a second line of
+    /// chips would have ended the ring panel in the ghost row again.
     private func setsRow(_ unit: ResolvedUnit) -> some View {
         let tally = Dictionary(grouping: unit.relics, by: { $0.set }).mapValues(\.count)
         // Complete sets first, then the nearest to complete, then by name,
@@ -881,30 +929,37 @@ struct UnitDetailView: View {
         .frame(height: 22)
     }
 
-    /// One set on the chip line: its painted stone and its count. A "1/4"
-    /// chip is 43 points (4, the 13-point stone, 3, the count's 19, 4), so
-    /// three stand whole in the 160 the book leaves and a fourth starts at
-    /// 139 — about half of it in view, under the line's fade (run 221; at
-    /// 48 a chip, the fourth started two points short of the edge and could
-    /// not be seen at all).
+    /// One set on the chip line: its painted stone over its pieces as pips
+    /// (`SetPiecePips`) — "1/4" is ●○○○, a complete set all gold. A chip
+    /// is a 4-piece set's row of pips and 2 a side, 23.6 points, so six
+    /// sets, the most six slots can wear, stand whole in the 160 the book
+    /// leaves (156.6). The count in figures was 43 points a chip (the
+    /// numeric floor is 11.5), three stood whole, and the fourth was cut to
+    /// a lone grey stone in the fade with Zeus's fifth out of sight (runs
+    /// 221 and 224, 2-detail). A figure small enough to sit on the stone's
+    /// corner would be under the floor; a pip is not type.
     private func setChip(_ relicSet: RelicSet, count: Int) -> some View {
-        let completions = count / relicSet.piecesRequired
+        let needed = relicSet.piecesRequired
+        let completions = count / needed
         let complete = completions > 0
-        let label: String = complete ? "×\(completions)" : "\(count)/\(relicSet.piecesRequired)"
-        return HStack(spacing: 3) {
-            RelicSetEmblem(set: relicSet, size: 13, tint: complete ? Theme.gold : Theme.textSecondary)
-            Text(label)
-                .font(Theme.numeric(11.5))
-                .foregroundStyle(complete ? Theme.gold : Theme.textSecondary)
-                .lineLimit(1)
-                .fixedSize()
+        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
+        return VStack(spacing: 2) {
+            RelicSetEmblem(set: relicSet, size: 14, tint: complete ? Theme.gold : Theme.textSecondary)
+            SetPiecePips(count: count, needed: needed)
         }
-        .padding(.horizontal, 4)
+        .padding(.horizontal, 2)
+        // One width for every chip, a 4-piece set's, so the line reads as a
+        // row of sockets; only a set worn past its second copy is wider.
+        .frame(minWidth: SetPiecePips.rowWidth(4) + 4)
         .frame(height: 22)
-        .background(Capsule().fill(complete ? Theme.surfaceHigh : Theme.surface))
-        .overlay(Capsule().strokeBorder(complete ? Theme.gold.opacity(0.45) : Theme.stroke.opacity(0.6), lineWidth: 1))
+        .background(shape.fill(complete ? Theme.surfaceHigh : Theme.surface))
+        .overlay(shape.strokeBorder(complete ? Theme.gold.opacity(0.45) : Theme.stroke.opacity(0.6), lineWidth: 1))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(relicSet.displayName), \(count) of \(relicSet.piecesRequired)")
+        .accessibilityLabel(
+            complete
+                ? "\(relicSet.displayName), complete\(completions > 1 ? " \(completions) times" : "")"
+                : "\(relicSet.displayName), \(count) of \(needed)"
+        )
     }
 
     /// What the ring is worth, in the popover off its POWER: the boon's

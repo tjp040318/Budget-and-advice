@@ -7276,3 +7276,53 @@ on black (about 6 each); the six aether icons (about 6); the seventeen boon
 icons (about 12); a Hydra card for its boss medallion (about 9, or a free
 render of the mesh to be judged); serious awakened cards; real busts for
 the mummy's and the cobra priestess's white-sheet cards.
+
+### Round 5, resumed (2026-09-23, afternoon)
+
+**The area white-out (F01).** Three ways were weighed. (a) Keep drawing a
+named effect on every victim, but quieter: smaller sheets, tinted off
+white. Four layers 2.4 m apart still add up where they overlap, and each
+victim still drops its own light. (b) Draw the effect ONCE over the row
+and give each victim its own sparks. This is how the genre draws an area
+skill: Summoners War lays one big effect across the enemy line, and each
+target shows only its hit and its number. (c) Paint a dedicated
+area sheet per skill, which is paid art and waits on the owner. (b) was
+chosen and is built: `VFXLibrary.spawnArea` takes the victims' chests,
+draws the named effect once at their centroid (`Reach.row`: the painted
+sheets tinted half toward the caster's colour at 0.7 alpha and no wider
+than `areaSheetLimit`, 4.4 m; half the sparks; one light at 0.6 strength,
+no wider than 4 m; one sky flash), then gives every victim 36 sparks of
+the caster's colour. An element's hit, a heal or a blessing still lands
+on each victim, because its place is on the unit it touches
+(`Reach.member`: the same off-white sheets at 0.85 of their size and no
+light of their own). One light at the row's centre covers the cast. A
+single victim's effect is exactly as designed (`Reach.single`, the
+default). A heavy melee blow on a row breaks the ground once, under its
+middle. The CI tour casts `duat_rite` and `wrath_of_the_eye` over the
+player's row once a second (`-tour-aoe effect:element`,
+`BattleSceneController.startTourAreaDrill`), and step 8 photographs both
+twice (`8-arena_battle-aoe-a…d`). Judge them with `framelight.py`: the
+middle band under 2% at 240+, the worst patch under 60%.
+
+**Also built:** an effect's size on a unit is its height over 1.9 m,
+capped at 2.6 m (`BattleSceneController.effectScale`, F04: a hit on the
+8 m Colossus drew at 4.2 times). The same cap applies to a boss's
+ultimate wind-up. The Veo fireburst sheet (4 × 8 cells of 128 px) got the
+cell-edge fade the eight painted sheets have (`tools/vfx_sheets.py
+--refade fireburst:4x8`, once, F02). The plate declutter now counts a
+plate's row of status tiles, including its turn chips, as part of the
+plate (`UnitPlate.tilesLeft/tilesRight`, F03). CI shoots again any first
+frame under 100 KB (`shoot_lit`, F23) and times the relic rite off its
+`[TourCue]` line (F18). The CI system log drops the render box's
+image-queue noise, so it reaches the end of the tour (F14). And the
+parked patch is applied except its `BattleSceneView` half, which removed
+`reachAbove` without the controller half that reads it; F03 is fixed
+above instead, and F09's dim under a cut-in is left for the next round.
+The applied fixes: the relic panels (F15, F16, F17, F19), Athena's
+plate and caret on the island (F33, F36, F37, `GuideStage`), the summon
+rail and scroll (F12, F13, F42, F50), the Labyrinth's drops and Titan
+rail (F24, F26, F28), the unit sheet, the Hall of Ka, the boons, the
+sweep, the Allies screen and the item shipper. Two checker rules were
+fixed: a `private(set) var` is a member, and a `var x = value` with no
+annotation is a memberwise parameter. Each was a false alarm on correct
+code, and a misspelt member still fails.

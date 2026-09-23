@@ -438,6 +438,16 @@ final class UnitPlate: SKNode {
     /// How far it draws above its centre now: the badge, or the tiles while
     /// any are up. Render thread.
     private(set) var reachAbove: CGFloat = UnitPlate.badgeSize / 2
+    /// How far the row of status tiles reaches left and right of the
+    /// plate's centre while one is up, the turn chips included; zero with
+    /// none. The declutter keeps a neighbour off the row as well as off the
+    /// badge and track (run 224's arena: a plate lifted clear of its
+    /// neighbour's badge alone put that neighbour's third turn chip, "2",
+    /// on its own badge's ring beside its "40" — "240"). Render thread.
+    private(set) var tilesLeft: CGFloat = 0
+    private(set) var tilesRight: CGFloat = 0
+    /// Whether a row of status tiles is up. Render thread.
+    var wearsTiles: Bool { tilesRight > tilesLeft }
 
     private let hpFill: SKSpriteNode
     private let hpMask: SKSpriteNode
@@ -694,20 +704,30 @@ final class UnitPlate: SKNode {
     private func applyStatuses(_ tiles: [StatusIconRenderer.PlateTile]) {
         statusRow.removeAllChildren()
         reachAbove = tiles.isEmpty ? UnitPlate.badgeSize / 2 : UnitPlate.tallestReach
+        tilesLeft = 0
+        tilesRight = 0
         guard !tiles.isEmpty else { return }
         let step = UnitPlate.tileStep
         let totalWidth = step * CGFloat(tiles.count - 1)
+        var rowLeft: CGFloat = 0
+        var rowRight: CGFloat = 0
         for (index, tile) in tiles.enumerated() {
             // The picture is the tile and its chip; the anchor is the tile's
             // centre, so the row lines up on the tiles.
             let sprite = SKSpriteNode(texture: SKTexture(image: tile.image))
             sprite.size = tile.image.size
             sprite.anchorPoint = tile.anchor
-            sprite.position = CGPoint(x: -totalWidth / 2 + step * CGFloat(index), y: 0)
+            let x: CGFloat = -totalWidth / 2 + step * CGFloat(index)
+            sprite.position = CGPoint(x: x, y: 0)
             // Each chip over its right-hand neighbour's corner.
             sprite.zPosition = CGFloat(tiles.count - index)
             statusRow.addChild(sprite)
+            let width: CGFloat = tile.image.size.width
+            rowLeft = min(rowLeft, x - tile.anchor.x * width)
+            rowRight = max(rowRight, x + (1 - tile.anchor.x) * width)
         }
+        tilesLeft = rowLeft
+        tilesRight = rowRight
     }
 
     private func applyMatchup(_ image: UIImage?) {

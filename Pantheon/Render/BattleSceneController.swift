@@ -63,6 +63,15 @@ final class BattleSceneController: NSObject {
     /// contact is written down, and `UnitNode.play` retimes every one-shot to
     /// its contract so the fraction means the same thing whatever length Meshy
     /// happened to author the clip at.
+    /// The size an effect is drawn at on a unit: its height over a hero's
+    /// 1.9 m, no taller than 2.6 m. Unclamped, a hit on the 8 m Colossus drew
+    /// at 4.2 times — a basic's fireburst ten metres across, Keraunos's
+    /// lightning sheet twenty-two — and filled the upper frame with a wash
+    /// of magnified texels (run 223, 18-c). The same on a boss's own wind-up.
+    static func effectScale(for node: UnitNode) -> Float {
+        min(node.spec.height, 2.6) / 1.9
+    }
+
     /// Where in a clip the blow lands, as a fraction of its length. The stock
     /// clips' values first; a bespoke clip's blow lands where its sentence
     /// put it, read off the clip's frames when it shipped (2026-09-15: the
@@ -176,6 +185,38 @@ final class BattleSceneController: NSObject {
         buildCamera()
         registerMaxHealth(combatants)
         place(combatants: combatants)
+        startTourAreaDrill()
+    }
+
+    /// Under the CI tour's `-tour-aoe <effect>:<element>` (`duat_rite:tide`,
+    /// `wrath_of_the_eye:ember`) the named effect is cast over the player's
+    /// row once a second from four seconds in, through the same
+    /// `VFXLibrary.spawnArea` a real area skill takes, so every run
+    /// photographs what an enemy's area ultimate does to the team — run
+    /// 224's 8-b caught one by chance, a white slab over all four heroes.
+    private func startTourAreaDrill() {
+        scene.rootNode.removeAction(forKey: "tour_aoe")
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("-tour"), let flag = arguments.firstIndex(of: "-tour-aoe"),
+              flag + 1 < arguments.count else { return }
+        let parts = arguments[flag + 1].split(separator: ":").map(String.init)
+        guard let effect = parts.first else { return }
+        let element = parts.count > 1 ? Element(rawValue: parts[1]) : nil
+        let tint = UIColor(hex: element?.accentHex ?? "#FFFFFF") ?? .white
+        let fire = SCNAction.run { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self else { return }
+                let row = self.unitNodes.values.filter { $0.side == .player && !$0.isDefeated }
+                guard !row.isEmpty else { return }
+                let scale = row.map { Self.effectScale(for: $0) }.reduce(0, +) / Float(row.count)
+                VFXLibrary.spawnArea(effect, over: row.map { $0.chestWorldPosition }, in: self.scene,
+                                     tint: tint, scale: scale)
+            }
+        }
+        scene.rootNode.runAction(.sequence([
+            .wait(duration: 4),
+            .repeatForever(.sequence([fire, .wait(duration: 1.0)]))
+        ]), forKey: "tour_aoe")
     }
 
     private func buildStage() {
@@ -776,7 +817,7 @@ final class BattleSceneController: NSObject {
             if animation == .ultimate {
                 VFXLibrary.charge(on: casterNode, tint: elementTint,
                                   duration: beat(walkUp + animation.fallbackDuration * Self.contactFraction(of: animation, for: casterNode.spec.assetName)),
-                                  scale: casterNode.spec.height / 1.9)
+                                  scale: Self.effectScale(for: casterNode))
             }
             if casterNode.spec.melee, animation != .castRelease, !casterNode.isBoss {
                 let steel = UIColor(hex: "#D9E4F2") ?? .white
@@ -851,22 +892,47 @@ final class BattleSceneController: NSObject {
                         if vfx == "thunderbolt" || vfx == "thunderclap" || vfx == "keraunos" {
                             AudioLibrary.shared.play(.thunder, volume: vfx == "keraunos" ? 1.0 : 0.7)
                         }
-                        for targetID in targets {
-                            guard let node = self.unitNodes[targetID] else { continue }
+                        let victims = targets.compactMap { self.unitNodes[$0] }
+                        // A cast on several victims is drawn ONCE over the
+                        // row (`VFXLibrary.spawnArea`): drawn on each of
+                        // them, four white sheets 2.4 m apart added up to a
+                        // slab over the whole team (run 224, 8-b).
+                        if victims.count > 1 {
+                            let scale = victims.map { Self.effectScale(for: $0) }.reduce(0, +) / Float(victims.count)
+                            VFXLibrary.spawnArea(
+                                effect, over: victims.map { $0.chestWorldPosition }, in: self.scene,
+                                tint: tint, scale: scale
+                            )
+                            // A heavy blow on the row breaks the ground once,
+                            // under its middle.
+                            if animation == .attackHeavy, casterNode.spec.melee {
+                                let feet = victims.map { $0.position }
+                                let count = Float(feet.count)
+                                let middle = SCNVector3(
+                                    feet.reduce(Float(0)) { $0 + $1.x } / count, 0,
+                                    feet.reduce(Float(0)) { $0 + $1.z } / count
+                                )
+                                VFXLibrary.spawn("shockwave", at: middle, in: self.scene, tint: tint, scale: scale,
+                                                 reach: .row(span: 0))
+                            }
+                            return
+                        }
+                        for node in victims {
+                            let scale = Self.effectScale(for: node)
                             VFXLibrary.spawn(
                                 effect, at: node.chestWorldPosition, in: self.scene,
-                                tint: tint, scale: node.spec.height / 1.9
+                                tint: tint, scale: scale
                             )
                             if slashes {
                                 VFXLibrary.spawn(
                                     "slash", at: node.chestWorldPosition, in: self.scene,
-                                    tint: tint, scale: node.spec.height / 1.9 * (animation == .attackHeavy ? 1.3 : 1.0)
+                                    tint: tint, scale: scale * (animation == .attackHeavy ? 1.3 : 1.0)
                                 )
                             }
                             // A heavy blow breaks the ground under its victim.
                             if animation == .attackHeavy, casterNode.spec.melee {
                                 VFXLibrary.spawn("shockwave", at: node.position, in: self.scene, tint: tint,
-                                                 scale: node.spec.height / 1.9)
+                                                 scale: scale)
                             }
                         }
                     }
@@ -1165,27 +1231,44 @@ final class BattleSceneController: NSObject {
         // is left alone, or every row of five abreast would zigzag. Nothing
         // is lifted past the top of the frame, and the move is eased, so a
         // dash past a neighbour slides its plate rather than popping it.
-        let clear = UnitPlate.badgeSize + 3
+        //
+        // A plate wearing status tiles is TALLER and may be wider: its box
+        // runs up to the tiles' top (`reachAbove`) and across the row with
+        // its turn chips (`tilesLeft`/`tilesRight`), and a tile row keeps
+        // four points clear of anything across and two up and down — lifted
+        // clear of the badge alone, a neighbour's badge landed on the row's
+        // last chip and read "240" (run 224, 8-c). Without tiles the box is
+        // the badge's height, as before.
+        let spacing: CGFloat = 3
         let deepestDrop: CGFloat = 10
         let headroom = UnitPlate.tallestReach + 4
-        var placed: [(x: CGFloat, y: CGFloat, left: CGFloat, right: CGFloat)] = []
+        var placed: [(left: CGFloat, right: CGFloat, bottom: CGFloat, top: CGFloat, tiles: Bool)] = []
         for entry in standing.sorted(by: { $0.point.x < $1.point.x }) {
             let key = entry.id
             var lift: CGFloat = 0
             if entry.blocks {
                 let x = entry.point.x
                 let baseY = entry.point.y
-                let left = x - UnitPlate.reachLeft
-                let right = x + entry.plate.reachRight
-                let beside = placed.filter { min(right, $0.right) - max(left, $0.left) > 3 }
+                let tiles = entry.plate.wearsTiles
+                let left = x + min(-UnitPlate.reachLeft, entry.plate.tilesLeft)
+                let right = x + max(entry.plate.reachRight, entry.plate.tilesRight)
+                let reachUp = entry.plate.reachAbove
+                let reachDown = UnitPlate.reachBelow
+                let beside = placed.filter { other in
+                    let across = min(right, other.right) - max(left, other.left)
+                    return across > (tiles || other.tiles ? -4 : 3)
+                }
                 let isClear: (CGFloat) -> Bool = { y in
-                    !beside.contains { abs(y - $0.y) < clear - 3 }
+                    !beside.contains { other in
+                        let upright = min(y + reachUp, other.top) - max(y - reachDown, other.bottom)
+                        return upright > (tiles || other.tiles ? -2 : 0)
+                    }
                 }
                 if !isClear(baseY) {
                     var candidates: [CGFloat] = []
                     for other in beside {
-                        candidates.append(other.y + clear - baseY)
-                        candidates.append(other.y - clear - baseY)
+                        candidates.append(other.top + spacing + reachDown - baseY)
+                        candidates.append(other.bottom - spacing - reachUp - baseY)
                     }
                     // The nearest spot that clears everything placed and
                     // stays on the frame; failing that the nearest that
@@ -1200,7 +1283,8 @@ final class BattleSceneController: NSObject {
                     let fitting = onFrame.filter { $0 >= -deepestDrop }
                     lift = fitting.first ?? onFrame.first ?? clearing.first ?? 0
                 }
-                placed.append((x: x, y: baseY + lift, left: left, right: right))
+                placed.append((left: left, right: right, bottom: baseY + lift - reachDown,
+                               top: baseY + lift + reachUp, tiles: tiles))
             }
             let eased = (plateLifts[key] ?? lift) * 0.65 + lift * 0.35
             let shown = abs(eased - lift) < 0.25 ? lift : eased

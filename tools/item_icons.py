@@ -8,6 +8,8 @@
     python3 tools/item_icons.py --split all
     python3 tools/item_icons.py --split scrolls --sheet scrolls_2k --px 512 --only scroll_
                                                             # the eight scrolls from the 2K sheet, glow ramped
+    python3 tools/item_icons.py --split currencies --only divinity
+                                                            # the divinity crystal alone, glow ramped (its HALO_RAMP key)
     python3 tools/item_icons.py --preview icons.jpg         # a contact sheet of what shipped
 
 GEMINI IS PAUSED (CLAUDE.md): `--paint` is run only on the owner's word for

@@ -36,8 +36,8 @@ struct LabyrinthView: View {
 
     /// The island opens the building on its dungeons. The CI tour opens it
     /// on the Titans so the grade stamp is photographed, and may name the
-    /// Titan (`raid`, a `RaidEncounter.id`): the Unwrapped King has the
-    /// longest name, the one that needs the rail's third line (2026-09-22).
+    /// Titan (`raid`, a `RaidEncounter.id`): the Unwrapped King is the last
+    /// of the five and has the longest name (2026-09-22).
     init(opening: Wing = .dungeons, raid: String? = nil) {
         _wing = State(initialValue: opening)
         _selectedRaidID = State(initialValue: raid)
@@ -63,12 +63,18 @@ struct LabyrinthView: View {
     /// the first.
     @State private var selectedRaidID: String?
 
-    /// The Titans' rail, the summon rail's width. The longest name, "The
-    /// Serpent That Swallows the Sun", is whole on three lines at the title
-    /// floor of 13 in the 130 points beside its grade stamp (its widest line,
-    /// "The Serpent That", is 122 in Cinzel): at 168 the rail read "THE KING
-    /// WHO WAS NEVER WEIG…" on run 211's frame 39, an ellipsis in a menu.
-    private static let titanRailWidth: CGFloat = 204
+    /// The Titans' rail: wide enough that every Titan's name stands on TWO
+    /// lines at the title floor of 13 in the 146 points beside its seal —
+    /// the widest lines are "The King Who Was" (128 in Cinzel) and
+    /// "Swallows the Sun" (126). Run 224's frame 39 had the rail at 204 with
+    /// the element's word as an eyebrow over each name: the Serpent and the
+    /// King ran to three lines, the five rows came to 386 points against the
+    /// 303 the CI phone gives the rail, and the rail opened scrolled past
+    /// Ember and Gale with nothing to say they were there. Now the element
+    /// rides the seal and the rows are 46 points, so all five stand whole and
+    /// unscrolled (258 points). At 168 the rail read "THE KING WHO WAS NEVER
+    /// WEIG…" (run 211), an ellipsis in a menu.
+    private static let titanRailWidth: CGFloat = 222
 
     private var subtitle: String {
         switch wing {
@@ -678,12 +684,13 @@ struct LabyrinthView: View {
     private var titansWing: some View {
         let chosen = chosenRaid
         return HStack(spacing: 0) {
-            // Five rows of two and three lines are taller than the frame, so
-            // the rail opens scrolled to the Titan whose room is open, with a
-            // WHOLE row at its top (`WholeRowRail`; run 217 opened on the
-            // Gale Titan cut through its eyebrow). The label is pinned above
-            // the scroll: inside it, the scroll to the chosen Titan carried it
-            // off the top and cut the first row on the strip's edge (run 216).
+            // The five rows fit the rail on the CI phone and stand unscrolled
+            // (`titanRailWidth`). On a shorter phone the rail still opens on
+            // the Titan whose room is open with a WHOLE row at its top
+            // (`WholeRowRail`; run 217 opened on the Gale Titan cut through
+            // its eyebrow). The label is pinned above the scroll: inside it,
+            // the scroll to the chosen Titan carried it off the top and cut
+            // the first row on the strip's edge (run 216).
             VStack(spacing: 0) {
                 LabyrinthRailHead(title: "Titans")
                 WholeRowRail(width: Self.titanRailWidth, items: StageDatabase.raids, focus: chosen?.id) { raid in
@@ -709,9 +716,14 @@ struct LabyrinthView: View {
         }
     }
 
-    /// One Titan on the rail: its best grade as a stamp, its element, its
-    /// name in Cinzel at the title floor on up to three lines — never cut —
-    /// and a seal once it has fallen, on the summon rail's row plate.
+    /// One Titan on the rail: its seal — the best grade's stamp wearing the
+    /// Titan's element, or before the first grade the dashed ring that is
+    /// the element — and its name in Cinzel at the title floor, on the
+    /// summon rail's row plate. The element's WORD was an eyebrow over the
+    /// name until run 224, and with it the Serpent and the King ran to three
+    /// lines and the rail to 386 points; the room's own eyebrow ("Titan of
+    /// Umbra") says the word. Every name stands on two lines at this width;
+    /// three are allowed, never an ellipsis, should a longer one come.
     private func titanTile(_ raid: RaidEncounter, isOn: Bool) -> some View {
         let element = RaidGradeService.element(of: raid)
         let best = RaidGradeService.bestGrade(for: raid, player: store.player)
@@ -722,39 +734,58 @@ struct LabyrinthView: View {
             selectedRaidID = raid.id
         } label: {
             HStack(spacing: 8) {
-                titanSeal(best, element: element, size: 34)
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack(spacing: 4) {
-                        Image(systemName: element.glyph)
-                            .font(.system(size: 10, weight: .black))
-                        Text(element.displayName.uppercased())
-                            .font(Theme.body(11).weight(.black))
-                            .tracking(1.0)
-                            .lineLimit(1)
-                            .fixedSize()
-                        if cleared {
-                            Image(systemName: "checkmark.seal.fill")
-                                .font(.system(size: 10, weight: .bold))
-                                .foregroundStyle(Theme.onGlassGold)
-                        }
-                    }
-                    .foregroundStyle(element.color)
-                    Text(raid.name)
-                        .font(Theme.title(13))
-                        .foregroundStyle(isOn ? Color(hex: "#FFF1C2") : Theme.onGlass)
-                        .lineLimit(3)
-                        .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
+                titanRailSeal(best, element: element, cleared: cleared)
+                // The name takes the rest of the row itself: a Spacer after
+                // it took the stack's 8-point gap again, out of the name.
+                Text(Self.railName(raid.name))
+                    .font(Theme.title(13))
+                    .foregroundStyle(isOn ? Color(hex: "#FFF1C2") : Theme.onGlass)
+                    .lineLimit(3)
+                    .multilineTextAlignment(.leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 7)
-            .padding(.vertical, 6)
+            .padding(.vertical, 5)
             .background(GlassRowPlate(isOn: isOn))
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .accessibilityLabel("\(raid.name), \(element.displayName) Titan\(best.map { ", best grade \($0.label)" } ?? "")")
+        .accessibilityLabel("\(raid.name), \(element.displayName) Titan\(best.map { ", best grade \($0.label)" } ?? "")\(cleared ? ", fallen" : "")")
+    }
+
+    /// A Titan's name for the rail, its last two words bound by a no-break
+    /// space so no name ends on a word alone: at this width "The King Under
+    /// the" fits a line and left "Ice" under it.
+    private static func railName(_ name: String) -> String {
+        guard let last = name.range(of: " ", options: .backwards) else { return name }
+        return name.replacingCharacters(in: last, with: "\u{00A0}")
+    }
+
+    /// The seal on a Titan's rail row, 36 points. A graded Titan's stamp
+    /// wears its element as a disc on its lower right, clear of the grade's
+    /// letters; an ungraded one's dashed ring already holds the element's
+    /// glyph. A gold check stands on the seal's shoulder once the Titan has
+    /// fallen — it was the end of the eyebrow the element's word is gone
+    /// from. Both stay inside the row's 5-point padding.
+    private func titanRailSeal(_ grade: RaidGrade?, element: Element, cleared: Bool) -> some View {
+        titanSeal(grade, element: element, size: 36)
+            .overlay(alignment: .bottomTrailing) {
+                if grade != nil {
+                    TitanElementPip(element: element)
+                        .offset(x: 5, y: 3)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if cleared {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(Theme.onGlassGold)
+                        .shadow(color: .black.opacity(0.8), radius: 1)
+                        .offset(x: 4, y: -3)
+                        .allowsHitTesting(false)
+                }
+            }
     }
 
     /// The best grade's stamp, or — before the first grade — a dim dashed
@@ -1719,25 +1750,25 @@ struct DungeonLevelsView: View {
     ///
     /// The tiles ask for `dropSpacing` between them: a tile's name is as
     /// wide as its frame (`RewardTile`, 1.35 of the socket), and at 4 points
-    /// two "Whetstone"s read as one phrase on a B10 (run 221). In the grid a
-    /// B10's six 59-point names get about 7.6 of it on the CI phone — six
-    /// cannot stand 10 apart in 392 points; the side-by-side row gets all 10.
+    /// two "Whetstone"s read as one phrase on a B10 (run 221). At 7.6 points
+    /// they still did (run 224, "Whetstone Whetstone"), so a run of one
+    /// stone's tiers is ONE slot now (`dropSlots`, `stoneRun`): the tiers'
+    /// stones side by side over their tiers' words, the stone named once.
+    /// That row is an HStack, since a grid's column cannot hold a pair; a
+    /// row too wide for the plate falls back to the grid and the full names.
     private func floorDrops(_ stage: Stage) -> some View {
         let firstClearPays = !CampaignService.isCleared(stage, player: store.player) && stage.rewards.firstClearDivinity > 0
         let firstClear: String? = firstClearPays ? "+\(stage.rewards.firstClearDivinity) first clear" : nil
         let tiles = dropTiles(stage)
         let besideSets = firstClearPays ? tiles + [Self.firstClearTile(stage)] : tiles
         let awakened = stage.rewards.awakenedChance.map { "\(DungeonDrop.percent($0)) awakened" }
+        let slots = Self.dropSlots(tiles)
         return VStack(alignment: .leading, spacing: 7) {
             if let labyrinth, besideSets.count <= 3 {
                 HStack(alignment: .top, spacing: 14) {
                     VStack(alignment: .leading, spacing: 7) {
                         GlassSectionHeader(title: "Drops")
-                        HStack(alignment: .top, spacing: Self.dropSpacing) {
-                            ForEach(besideSets) { drop in
-                                dropRewardTile(drop)
-                            }
-                        }
+                        dropRow(Self.dropSlots(besideSets))
                     }
                     .fixedSize(horizontal: true, vertical: false)
                     VStack(alignment: .leading, spacing: 7) {
@@ -1747,15 +1778,14 @@ struct DungeonLevelsView: View {
                 }
             } else {
                 GlassSectionHeader(title: "Drops", accessory: firstClear, accessoryItemKey: firstClear == nil ? nil : "divinity")
-                // Six to a row at the CI phone's 392 points: 6 × 54 + 5 × 10
-                // is 374, and a minimum of 58 at this spacing made it five
-                // and sent a B10's sixth tile to a second row, past the
-                // room's middle.
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 54, maximum: 66), spacing: Self.dropSpacing, alignment: .top)],
-                          alignment: .leading, spacing: 6) {
-                    ForEach(tiles) { drop in
-                        dropRewardTile(drop)
+                if slots.count < tiles.count {
+                    // A B10's five slots are 374 points of the CI phone's 392.
+                    ViewThatFits(in: .horizontal) {
+                        dropRow(slots)
+                        dropGrid(tiles)
                     }
+                } else {
+                    dropGrid(tiles)
                 }
                 if let labyrinth {
                     GlassSectionHeader(title: "One of \(labyrinth.sets.count) sets", accessory: awakened)
@@ -1777,12 +1807,129 @@ struct DungeonLevelsView: View {
 
     private func dropRewardTile(_ drop: DungeonDrop) -> some View {
         RewardTile(key: drop.key, title: drop.title, amount: drop.amount, stars: drop.stars,
-                   size: 44, imageName: drop.imageName, onGlass: true)
+                   size: Self.dropTile, imageName: drop.imageName, onGlass: true)
+    }
+
+    /// The drops as a grid of tiles, six to a row at the CI phone's 392
+    /// points: 6 × 54 + 5 × 10 is 374, and a minimum of 58 at this spacing
+    /// made it five and sent a B10's sixth tile to a second row, past the
+    /// room's middle.
+    private func dropGrid(_ tiles: [DungeonDrop]) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 54, maximum: 66), spacing: Self.dropSpacing, alignment: .top)],
+                  alignment: .leading, spacing: 6) {
+            ForEach(tiles) { drop in
+                dropRewardTile(drop)
+            }
+        }
+    }
+
+    /// The drops as one row of slots, top-aligned.
+    private func dropRow(_ slots: [DungeonDropSlot]) -> some View {
+        HStack(alignment: .top, spacing: Self.dropSpacing) {
+            ForEach(slots) { slot in
+                dropSlot(slot)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func dropSlot(_ slot: DungeonDropSlot) -> some View {
+        switch slot {
+        case .tile(let drop):
+            dropRewardTile(drop)
+        case .stones(let kind, let run):
+            stoneRun(kind, run)
+        }
+    }
+
+    /// One stone's tiers as ONE drop: the tiers' stones side by side, 8
+    /// points apart where tiles stand 25, each over its tier's word in its
+    /// quality's colour (Rare's blue, Hero's violet — the stones' own), and
+    /// the stone named once under the pair: "Rare  Hero / Whetstone". Run
+    /// 224's B10 read "Rare Whetstone Hero Whetstone" across two tiles, and
+    /// the tier alone on each read as a relic's quality (run 216); here the
+    /// name under both says what the tiers are of.
+    private func stoneRun(_ kind: RelicStone.Kind, _ run: [DungeonDrop]) -> some View {
+        let spoken = run.map { drop in
+            "\(RelicStone.from(id: drop.id)?.tier.displayName ?? drop.title) \(drop.amount)"
+        }
+        return VStack(spacing: Self.captionGap) {
+            HStack(alignment: .top, spacing: Self.stoneRunGap) {
+                ForEach(run) { drop in
+                    let tier = RelicStone.from(id: drop.id)?.tier
+                    VStack(spacing: Self.captionGap) {
+                        RewardTile(key: drop.key, amount: drop.amount, size: Self.dropTile,
+                                   showsTitle: false, onGlass: true)
+                        Text(tier?.displayName ?? drop.title)
+                            .font(Theme.body(11).weight(.semibold))
+                            .foregroundStyle(tier.map { $0.quality.rarity.glow } ?? Theme.onGlass)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .frame(width: Self.dropTile)
+                }
+            }
+            Text(kind.displayName)
+                .font(Theme.body(11).weight(.semibold))
+                .foregroundStyle(Theme.onGlass)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(kind.displayName): " + spoken.joined(separator: ", "))
+    }
+
+    /// Where a stone stands among a floor's stones: whetstones before gems,
+    /// each kind's tiers low to high.
+    private static func stoneOrder(_ id: String) -> Int {
+        guard let stone = RelicStone.from(id: id) else { return 0 }
+        let kind = RelicStone.Kind.allCases.firstIndex(of: stone.kind) ?? 0
+        return kind * 10 + stone.tier.rawValue
+    }
+
+    /// A drop row's slots: every tile on its own, except a run of one
+    /// stone's tiers (a B10's Rare and Hero whetstones), which is one slot.
+    /// A stone alone keeps its tile and its full name.
+    private static func dropSlots(_ drops: [DungeonDrop]) -> [DungeonDropSlot] {
+        var slots: [DungeonDropSlot] = []
+        var run: [DungeonDrop] = []
+        var runKind: RelicStone.Kind? = nil
+        func closeRun() {
+            if let kind = runKind, run.count > 1 {
+                slots.append(.stones(kind, run))
+            } else {
+                slots.append(contentsOf: run.map { DungeonDropSlot.tile($0) })
+            }
+            run = []
+            runKind = nil
+        }
+        for drop in drops {
+            let kind = RelicStone.from(id: drop.id)?.kind
+            if kind == nil || kind != runKind {
+                closeRun()
+            }
+            if let kind {
+                runKind = kind
+                run.append(drop)
+            } else {
+                slots.append(.tile(drop))
+            }
+        }
+        closeRun()
+        return slots
     }
 
     /// Between two drop tiles. The names under them are as wide as the
     /// tiles' frames, so this is all the air two names get.
     private static let dropSpacing: CGFloat = 10
+    /// A drop tile's socket.
+    private static let dropTile: CGFloat = 44
+    /// Between the sockets of one stone's tiers: a pair, where tiles stand
+    /// about 25 apart.
+    private static let stoneRunGap: CGFloat = 8
+    /// `RewardTile`'s own gap between its socket and its name, 0.05 of the
+    /// socket, so a tier's word stands where a tile's name does.
+    private static let captionGap: CGFloat = max(2, dropTile * 0.05)
 
     /// A floor's first-clear divinity as a drop tile.
     private static func firstClearTile(_ stage: Stage) -> DungeonDrop {
@@ -1827,12 +1974,16 @@ struct DungeonLevelsView: View {
                 ))
             }
         }
+        // Each kind's tiers together, low to high, so a kind's run is one
+        // slot in the row (`dropSlots`).
         let stones = (rewards.stoneChances ?? [:]).sorted {
-            (RelicStone.from(id: $0.key)?.tier.rawValue ?? 0) < (RelicStone.from(id: $1.key)?.tier.rawValue ?? 0)
+            Self.stoneOrder($0.key) < Self.stoneOrder($1.key)
         }
         for (id, chance) in stones where chance > 0 {
             // "Rare Whetstone", not "Rare": the tier alone read as a relic's
             // quality (run 216). Two lines; the grid's rows are top-aligned.
+            // Two tiers of one stone side by side are drawn as one slot,
+            // named once (`dropSlots`); this name is a lone stone's.
             drops.append(DungeonDrop(
                 id: id, key: id, title: RelicStone.from(id: id)?.displayName ?? "Stone",
                 amount: DungeonDrop.percent(chance), stars: nil
@@ -2195,6 +2346,20 @@ private struct DungeonDrop: Identifiable {
     }
 }
 
+/// A place in a floor's drop row: one tile, or a run of one stone's tiers
+/// drawn as one (`DungeonLevelsView.dropSlots`, `stoneRun`).
+private enum DungeonDropSlot: Identifiable {
+    case tile(DungeonDrop)
+    case stones(RelicStone.Kind, [DungeonDrop])
+
+    var id: String {
+        switch self {
+        case .tile(let drop): return drop.id
+        case .stones(let kind, _): return "stones_" + kind.rawValue
+        }
+    }
+}
+
 /// A relic set on dark glass as the hub card draws its sets: the painted
 /// stone at 30 points with its name under it, in an equal column. Run 216's
 /// judges read the capsules it replaced — a stone and a name in the left
@@ -2259,6 +2424,32 @@ private struct UngradedTitanSeal: View {
         }
         .frame(width: size, height: size)
         .accessibilityLabel("Not graded")
+    }
+}
+
+/// A graded Titan's element on its rail seal: a 17-point disc of the
+/// element's colour with its glyph, where the element's word stood over the
+/// name until run 224. Radiance's gold is pale, so its glyph is ink, as the
+/// card's `ElementBadge` has it; the others are white.
+private struct TitanElementPip: View {
+    let element: Element
+
+    var body: some View {
+        let pale = element == .radiance
+        ZStack {
+            Circle()
+                .fill(LinearGradient(colors: [element.color, element.color.opacity(0.6)],
+                                     startPoint: .top, endPoint: .bottom))
+            Circle()
+                .strokeBorder(Color.black.opacity(0.55), lineWidth: 1)
+            Image(systemName: element.glyph)
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(pale ? Theme.ink : Color.white)
+        }
+        .frame(width: 17, height: 17)
+        .shadow(color: element.color.opacity(0.5), radius: 3)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
     }
 }
 

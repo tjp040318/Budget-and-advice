@@ -1720,14 +1720,19 @@ environment can and cannot do. The short version:
   221's consoles) and one plan on the first of them landed nowhere. Lists
   rest on whole rows (`RestingList`, `restingRow()`), and the Night
   Market never shows a ware twice (`NightMarketService.twinRedraws`).
-  **Round 5 was stopped for the owner's usage on 2026-09-23 (PLAN.md,
-  *Round 5: stopped …*):** the chapter map's haze is Core Image's clamped
-  blur (`SoftMapPainting`; SwiftUI's opaque blur takes in black at its
-  bounds), and the rest of run 224's fifty judged faults — F01 an enemy
-  area ultimate whiting out the team — are numbered in
-  `tools/patches/round5_faults.json`, with the stopped agents' partial,
-  uncompiled edits parked in `tools/patches/round5_wip.patch` (not in the
-  build). Resume from there.
+  **Round 5 (2026-09-23; PLAN.md, *Round 5: stopped …* and *Round 5,
+  resumed*):** the chapter map's haze is Core Image's clamped blur
+  (`SoftMapPainting`; SwiftUI's opaque blur takes in black at its
+  bounds). **A cast on several victims is drawn ONCE over the row**
+  (`VFXLibrary.spawnArea`, `Reach.row`: its sheets off white and at most
+  4.4 m, one light, and every victim its own sparks; an element's hit or
+  a heal stays on each victim as `Reach.member`, with no light of its
+  own). Drawn per victim, four white sheets made a slab over the whole
+  team. An effect's scale on a unit is capped at a 2.6 m unit
+  (`BattleSceneController.effectScale`). The tour casts an area ultimate
+  on the team every run (`-tour-aoe`, frames `8-arena_battle-aoe-*`). The
+  fifty judged faults are in `tools/patches/round5_faults.json`, and
+  `round5_wip.patch` is applied except its `BattleSceneView` half.
 - **The skirt pass (2026-09-22).** `character.reweight_skirt` (in
   `mesh.py` after the cape pass; `tools/skirt_pass.py --survey | <names>
   | --all` over the SHIPPED base and `_lod` files): cloth that Meshy's

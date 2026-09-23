@@ -315,9 +315,9 @@ extension CampaignView {
 // MARK: - What a stage pays, as tiles
 
 /// One thing a stage can pay, as the painted tile draws it: the relic of the
-/// chapter's sets as ONE stone tile (the first set's stone, the second's
-/// small on its corner, both names under it, the whole relic chance on it —
-/// `CampaignService` picks the set uniformly), the essences, the scrolls,
+/// chapter's sets as ONE tile (the two sets' stones side by side, both names
+/// under it, the whole relic chance on it — `CampaignService` picks the set
+/// uniformly), the essences, the scrolls,
 /// the stones, the first clear's divinity, the drachma and the experience.
 /// The popup and the briefing read the same list, so the two cannot
 /// disagree. It was a text list with 14-point glyphs although every item
@@ -331,8 +331,8 @@ private struct StageDrop: Identifiable {
     let amount: String?
     var stars: Int? = nil
     var imageName: String? = nil
-    /// A second painting drawn small on the first's corner: the chapter's
-    /// other set.
+    /// A second painting drawn beside the first, as its equal: the
+    /// chapter's other set.
     var secondImage: String? = nil
 
     /// Main actor: it reads `BarWallet.compact`, a static of a `View` (so
@@ -418,53 +418,28 @@ private struct StageDrop: Identifiable {
 
 /// One drop as a tile: the painted socket with the chance on its corner,
 /// the grade's stars INSIDE the socket's top edge (under it they pushed the
-/// relic's name 16 points below its neighbours', run 216), the second set's
-/// stone small in the socket's top-left corner, and the name under it in two
-/// lines at most.
+/// relic's name 16 points below its neighbours', run 216), and the name
+/// under it in two lines at most. A relic of the chapter's two sets draws
+/// both sets' stones side by side (`PairedSetSocket`).
 private struct StageDropTile: View {
     let drop: StageDrop
     let tile: CGFloat
     let titled: Bool
     let footprint: CGFloat
 
-    /// The second stone: 0.30 of the tile, INSIDE the socket, 3 points in
-    /// from its left edge and a point under the star row (`secondTop`) — a
-    /// badge pinned on the first stone's upper-left corner, the same place on
-    /// every grade. In the corner itself it touched a 3★ row's first star
-    /// and sat under a 4★ one (drawn at 6× off the shipped stones). The
-    /// chance sits on the bottom-right corner, so the stone never meets it.
-    /// It hung 0.10 of the tile off the socket's left rim until run 221,
-    /// onto the panel and over the Eye stone's left edge; before run 217 it
-    /// stood on the bottom-left corner and covered the "S" of "Sure".
-    private static let secondScale: CGFloat = 0.30
-    private static let secondInset: CGFloat = 3
-
-    /// How far down the second stone stands: a point under the star row —
+    /// How far down a pair of stones stands: a point under the star row —
     /// 2 points down, a line of stars about 1.25 of their point size tall —
-    /// or the corner's inset on a tile with no stars.
-    static func secondTop(stars: Int?, tile: CGFloat) -> CGFloat {
-        guard let stars, stars > 0 else { return secondInset }
+    /// or 3 points on a tile with no stars.
+    static func stonesTop(stars: Int?, tile: CGFloat) -> CGFloat {
+        guard let stars, stars > 0 else { return 3 }
         let size = RewardTile.starSize(stars: stars, width: tile * 0.8)
         return 2 + size * 1.25 + 1
     }
 
     var body: some View {
         let spoken = "\(drop.title), \(drop.amount ?? "")"
-        let second: CGFloat = tile * Self.secondScale
         VStack(spacing: 3) {
-            RewardTile(key: drop.key, amount: drop.amount, size: tile, showsTitle: false,
-                       imageName: drop.imageName, onGlass: true)
-                .overlay(alignment: .topLeading) {
-                    if let secondName = drop.secondImage, BundleArt.exists(secondName) {
-                        BundleImage(name: secondName, renderedAt: second)
-                            .aspectRatio(contentMode: .fit)
-                            .frame(width: second, height: second)
-                            .shadow(color: .black.opacity(0.8), radius: 1.5, y: 1)
-                            .padding(.leading, Self.secondInset)
-                            .padding(.top, Self.secondTop(stars: drop.stars, tile: tile))
-                            .allowsHitTesting(false)
-                    }
-                }
+            socket
                 .overlay(alignment: .top) {
                     if let stars = drop.stars {
                         StarRow(stars: stars, size: RewardTile.starSize(stars: stars, width: tile * 0.8))
@@ -485,6 +460,84 @@ private struct StageDropTile: View {
         .frame(width: footprint)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(spoken)
+    }
+
+    /// The socket: the two sets' stones as a pair when the drop has both
+    /// paintings, the tile's one painting otherwise.
+    @ViewBuilder
+    private var socket: some View {
+        if let first = drop.imageName, let second = drop.secondImage,
+           BundleArt.exists(first), BundleArt.exists(second) {
+            PairedSetSocket(first: first, second: second, amount: drop.amount, tile: tile,
+                            top: Self.stonesTop(stars: drop.stars, tile: tile))
+        } else {
+            RewardTile(key: drop.key, amount: drop.amount, size: tile, showsTitle: false,
+                       imageName: drop.imageName, onGlass: true)
+        }
+    }
+}
+
+/// A relic of the chapter's TWO sets as one socket (fix round 5): the two
+/// sets' stones side by side and equal under the star row, the chance on
+/// the corner under them — "Oracle · Nemesis" reads left to right across
+/// the pair. The second set's stone was a 0.30 badge on the first's upper
+/// left until run 224, and wherever it stood it covered the first stone
+/// (run 224, by 4 points), the stars or the chance, and at 13 points its
+/// device could not be read. The stage pays either set, so neither is the
+/// badge. The socket is `RewardTile`'s on glass, drawn here because a tile
+/// holds one painting, at 0.8 of it.
+private struct PairedSetSocket: View {
+    let first: String
+    let second: String
+    let amount: String?
+    let tile: CGFloat
+    /// The stones' top, under the star row (`StageDropTile.stonesTop`).
+    let top: CGFloat
+
+    /// Each stone's painting is 0.48 of the tile (21 points at 44) and the
+    /// two stand 0.86 of a painting apart, centre to centre: a stone's
+    /// hexagon is 0.79 of its painting wide, so the two are a point and a
+    /// half apart and 4.5 in from the socket's sides, and their points end
+    /// above the chance's figures.
+    private static let stoneScale: CGFloat = 0.48
+    private static let pitch: CGFloat = 0.86
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: max(6, tile * 0.16), style: .continuous)
+        let stone: CGFloat = tile * Self.stoneScale
+        ZStack(alignment: .bottomTrailing) {
+            shape
+                .fill(Theme.socketFill)
+                .overlay(shape.strokeBorder(Theme.bronzeFrame, lineWidth: max(1, tile * 0.02)))
+                .shadow(color: .black.opacity(0.4), radius: tile * 0.05, y: tile * 0.03)
+            HStack(spacing: stone * (Self.pitch - 1)) {
+                stoneImage(first, size: stone)
+                stoneImage(second, size: stone)
+            }
+            .padding(.top, top)
+            .frame(width: tile, height: tile, alignment: .top)
+            .allowsHitTesting(false)
+            if let amount {
+                // `RewardTile`'s corner count; a relic's chance ("50%",
+                // "Sure") is never long enough to need its short form.
+                OutlinedText(
+                    text: amount,
+                    font: Theme.numeric(max(10.5, tile * 0.21)).weight(.black),
+                    width: max(0.8, tile * 0.016)
+                )
+                .fixedSize()
+                .padding(.trailing, max(3, tile * 0.07))
+                .padding(.bottom, max(2, tile * 0.05))
+            }
+        }
+        .frame(width: tile, height: tile)
+    }
+
+    private func stoneImage(_ name: String, size: CGFloat) -> some View {
+        BundleImage(name: name, renderedAt: size)
+            .aspectRatio(contentMode: .fit)
+            .frame(width: size, height: size)
+            .shadow(color: .black.opacity(0.7), radius: 1.5, y: 1)
     }
 }
 

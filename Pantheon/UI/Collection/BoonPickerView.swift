@@ -56,6 +56,14 @@ struct BoonPickerView: View {
         return pickedCache == nil ? boons.first : nil
     }
 
+    /// What the panel's last row clears at its foot: the marble's lower
+    /// acanthus reaches about 17 points up (the unit sheet's
+    /// `panelBottomInset`, measured there). This padding is inside the
+    /// scroll, so when the three doors run a point or two past the plate
+    /// the overflow comes off it: 20, and the last door still clears the
+    /// scrolls by the unit sheet's 18.
+    private static let panelFoot: CGFloat = 20
+
     private static let sources = "Caches fall from a Titan at S or better (one kill in four, a 6★), the Labyrinth's "
         + "tenth level (one run in ten, a 5★), the Tower's 25th, 50th, 75th and 100th floors, and a realm's "
         + "Judgment on Hell. The Halls never."
@@ -252,6 +260,10 @@ struct BoonPickerView: View {
     /// floors were taller than the frame, and the overflow pushed the whole
     /// screen up — the back medallion cut by the top edge, the doors' foot
     /// under the home indicator (run 217). A panel that fits never bounces.
+    ///
+    /// Its foot clears the marble's lower acanthus (`panelFoot`): the last
+    /// door runs the panel's width, and at the plain inset its bottom
+    /// corners met the scrolls (runs 223 and 224, 41-boons).
     private var panel: some View {
         ScrollView(showsIndicators: false) {
             VStack(spacing: 8) {
@@ -263,7 +275,9 @@ struct BoonPickerView: View {
                     EmptyState(icon: "seal", title: "Nothing picked", message: "Pick a boon or a cache on the left.")
                 }
             }
-            .padding(Theme.panelInset)
+            .padding(.horizontal, Theme.panelInset)
+            .padding(.top, Theme.panelInset)
+            .padding(.bottom, Self.panelFoot)
             .frame(maxWidth: .infinity, alignment: .top)
         }
         .scrollBounceBehavior(.basedOnSize)

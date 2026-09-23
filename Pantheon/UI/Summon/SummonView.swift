@@ -33,6 +33,10 @@ struct SummonView: View {
     /// The banner's mileage exchange, and the opening selector.
     @State private var showMileage = false
     @State private var showSelector = false
+    /// The banner rail's content in its own scroll, and the rail's height:
+    /// whether a banner stands below the fold (`railMoreBelow`).
+    @State private var railContent: CGRect = .zero
+    @State private var railHeight: CGFloat = 0
 
     /// The side menu's width, and the same number the room is composed
     /// against: the painting is centred in what is left of the frame after
@@ -43,10 +47,13 @@ struct SummonView: View {
     /// The band the scroll over the ring hangs in, in the room's own points:
     /// below the header (8 points of padding, the eyebrow and the 30-point
     /// name, whose ink ends near 50) and above the deck (10 points of padding
-    /// and the 46-point plates). Run 217 hung the scroll off the ring alone
-    /// and its top ran under the "5★ 3.0%" chip and against the name's ?.
+    /// and the plates). Run 217 hung the scroll off the ring alone and its
+    /// top ran under the "5★ 3.0%" chip and against the name's ?. The plates
+    /// are 54 points, not 46 (the painted scroll on each is 28, with 13 above
+    /// and below it): run 224's ×10 measured 206–261 of a 271-point room,
+    /// and the room hangs the painted portal clear of them by this number.
     private static let headerFoot: CGFloat = 58
-    private static let deckHead: CGFloat = 60
+    private static let deckHead: CGFloat = 64
 
     var body: some View {
         NavigationStack {
@@ -146,27 +153,80 @@ struct SummonView: View {
     // gold bead; the chosen one on a gold plate with a glow. The cream list
     // with 24-point icons it replaces read as a settings table.
 
+    // The rail RESTS ON WHOLE CARDS (2026-09-23, fix round 5): runs 223 and
+    // 224 ended it on the top half of its fifth banner, "The Jade …" cut at
+    // the tab bar under the foot's fade, while the cream lists had rested on
+    // whole rows since round 4 (`RestingList`). The same rule on the glass:
+    // a card with less than about three quarters of itself in view is not
+    // drawn (`restingRow`, the ramp narrowed so a card at rest is whole or
+    // gone), a section's name only when its letters are whole, and while a
+    // card stands below the fold the glass's own chevron (the Hall of Ka's
+    // ledger's, gold on a dark capsule) says the rail goes on.
     private var bannerRail: some View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 5) {
                 railSection("Pantheons", banners: Banner.pantheonBanners, short: false)
                 railSection("Scrolls", banners: Banner.scrollBanners, short: true)
-                Color.clear.frame(height: 24)
+                Color.clear.frame(height: Self.railFootRoom)
             }
             .padding(.horizontal, 9)
             .padding(.top, 8)
+            .background(
+                GeometryReader { proxy in
+                    let frame = proxy.frame(in: .named(Self.railSpace))
+                    Color.clear
+                        .onAppear { railContent = frame }
+                        .onChange(of: frame) { _, now in railContent = now }
+                }
+            )
         }
+        .coordinateSpace(name: Self.railSpace)
         .frame(width: Self.menuWidth)
         .frame(maxHeight: .infinity)
+        .background(
+            GeometryReader { proxy in
+                let height = proxy.size.height
+                Color.clear
+                    .onAppear { railHeight = height }
+                    .onChange(of: height) { _, now in railHeight = now }
+            }
+        )
         .mask(
             LinearGradient(stops: [.init(color: .black, location: 0), .init(color: .black, location: 0.88),
                                    .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom)
         )
+        // Over the fade, not under its mask.
+        .overlay(alignment: .bottom) {
+            if railMoreBelow {
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.onGlassGold)
+                    .frame(width: 30, height: 12)
+                    .background(Capsule().fill(Color.black.opacity(0.6)))
+                    .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 0.8))
+                    .padding(.bottom, 6)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
         // The shared rail glass (this screen's own plate, made shared in
         // phase B), which runs out under the leading inset now that the
         // hall does: the rows stay in the safe area, the glass meets the
         // glass of the phone.
         .background(GlassRailPlate())
+    }
+
+    /// The rail's scroll space, for its content's frame.
+    private static let railSpace = "summonBannerRail"
+    /// The clear under the rail's last card, which lets it scroll clear of
+    /// the fade; it is not a card, so it never calls the chevron up alone.
+    private static let railFootRoom: CGFloat = 24
+
+    /// A card of the rail stands below the fold (`bannerRail`): below the
+    /// last card's foot is the foot room and the stack's 5-point gap.
+    private var railMoreBelow: Bool {
+        railContent.height > railHeight + 1
+            && railContent.maxY - Self.railFootRoom - 5 > railHeight + 2
     }
 
     private func railSection(_ title: String, banners: [Banner], short: Bool) -> some View {
@@ -177,8 +237,13 @@ struct SummonView: View {
                 .carved(glow: false)
                 .padding(.top, 8)
                 .padding(.leading, 4)
+                // Never cut through its letters: drawn only whole.
+                .restingRow(goneBelow: 0.9, wholeFrom: 0.995)
             ForEach(banners) { banner in
                 railRow(banner, short: short)
+                    // A 46-point card at rest on the phone was 61% in view
+                    // (28 of 46 points): gone under 72%, whole from 96%.
+                    .restingRow(goneBelow: 0.72, wholeFrom: 0.96)
             }
         }
     }
@@ -742,14 +807,11 @@ struct SummoningCircle: View {
     let banner: Banner
     /// Set for the moment between the button and the reveal.
     var charging: Bool
-    /// How much of the frame's leading edge the banner menu covers. The
-    /// painting is centred in what is left over rather than in the whole
-    /// frame, so the altar stands in the middle of the room the player can
-    /// see; on a 734-point frame with a 176-point menu that also hides the
-    /// letterbox under the menu instead of leaving it beside the art. Since
+    /// How much of the frame's leading edge the banner menu covers: the
+    /// painting may slide right by up to half of it, the strip it uncovers
+    /// on the left staying under the menu's dark glass (see `body`). Since
     /// 2026-09-23 the frame is the whole glass (the room bleeds under both
-    /// side insets), which grows it the same on both sides, so the ring
-    /// stands where it stood.
+    /// side insets).
     var leadingInset: CGFloat = 0
     /// How far down the frame the words laid over the room reach (the
     /// banner's name and the rates chips), and how far up from its foot the
@@ -763,10 +825,23 @@ struct SummoningCircle: View {
 
     private var tint: Color { banner.scroll.tint }
 
-    /// Where the painted floor ring sits in `summon_hall_bg`, in fractions of
-    /// the painting. Measured off the art, like every other anchor here.
-    private static let floorCentre = CGPoint(x: 0.50, y: 0.82)
+    /// Where the painted PORTAL sits in `summon_hall_bg` — the dark well at
+    /// the heart of the floor ring, which the rings, their light and the
+    /// scroll all stand on — in fractions of the painting, measured off the
+    /// art (2026-09-23, fix round 5): the well spans 0.397–0.605 across and
+    /// 0.769–0.849 down, and the foot of its gold rim is at 0.853. The old
+    /// 0.82 was the middle of the whole meander, whose far half is
+    /// foreshortened; it stood the rings 5 points under the well.
+    private static let floorCentre = CGPoint(x: 0.50, y: 0.81)
+    private static let portalFoot: CGFloat = 0.853
     private static let floorRadius: CGFloat = 0.21
+    /// How far the foot of the portal's rim stands above the summon plates.
+    private static let portalClearance: CGFloat = 5
+    /// The far-right brazier stands in the painting's last 8% (its bowl's
+    /// lip from 0.923 of the width): the frame's right edge stops at 0.918.
+    private static let rightBrazier: CGFloat = 0.918
+    /// The ground beyond the painting's edges.
+    private static let ground = Color(hex: "#0E0B08")
 
     var body: some View {
         GeometryReader { frame in
@@ -780,31 +855,51 @@ struct SummoningCircle: View {
             let scale = max(frame.size.width / 16.0, frame.size.height / 9.0)
             let artWidth = scale * 16
             let artHeight = scale * 9
-            let originX = (frame.size.width - artWidth) / 2
-            // Hung three quarters of the way from its top edge to its foot
-            // (2026-09-23), not by the foot alone: run 221's crop cut the
-            // right-hand brazier at the strip, a bare dark tripod with its
-            // fire above the frame. Only as far down as keeps the painted
-            // floor ring's centre above the summon plates — on the phone
-            // that is 26 points lower, the brazier's bowl and the foot of
-            // its fire in view.
+            // Slid right, under the rail (2026-09-23, fix round 5). Runs 221
+            // to 224 ended the frame on the far-right brazier — a bare tripod,
+            // then an unlit bowl — with its fire above the strip, and no hang
+            // shows that fire and the portal both: the fire starts 0.31 down
+            // the painting, the portal ends 0.85, and above the plates the
+            // room shows 0.42 of the painting's height. So the frame's right
+            // edge stops short of the brazier (72 points of slide on the
+            // phone), and the strip the slide uncovers on the left lies under
+            // the rail's dark glass, the painting's edge feathered into it
+            // (`leadingFeather`). It also stands the altar, the portal and
+            // the scroll nearer the middle of the room the player can see.
+            // Never more than half the rail, so the strip stays under glass.
+            let centred = (frame.size.width - artWidth) / 2
+            let clearOfBrazier = frame.size.width - Self.rightBrazier * artWidth
+            let originX = min(max(centred, clearOfBrazier), centred + leadingInset * 0.5)
+            // Hung as low as keeps the WHOLE portal above the summon plates,
+            // its rim's foot `portalClearance` over them, and never lower
+            // than three quarters of the way to its foot. Run 224 hung it
+            // until the ring's middle met the plates (26 points lower than
+            // by the foot), and the plates hid the portal's front half.
             let footAnchored = frame.size.height - artHeight
-            let ringAbovePlates = frame.size.height - deckClearance - Self.floorCentre.y * artHeight
-            let originY = min(footAnchored * 0.75, max(footAnchored, ringAbovePlates))
-            // The ring stands in the room to the right of the rail.
+            let portalAbovePlates = frame.size.height - deckClearance - Self.portalClearance
+                - Self.portalFoot * artHeight
+            let originY = min(footAnchored * 0.75, max(footAnchored, portalAbovePlates))
+            // The rings, their light and the scroll stand on the painted
+            // portal, through the painting's own origin and scale. Run 224
+            // drew them 86 points right of it (`leadingInset * 0.42` on the
+            // drawn layer alone): two rings with two centres, and the scroll
+            // over the altar's steps.
             let centre = CGPoint(
-                x: originX + Self.floorCentre.x * artWidth + leadingInset * 0.42,
+                x: originX + Self.floorCentre.x * artWidth,
                 y: originY + Self.floorCentre.y * artHeight
             )
             let ringSize = Self.floorRadius * 2 * artWidth
 
             ZStack {
                 // Dark beyond the painting's edge (2026-09-22): the cover
-                // crop leaves none in view, and a cream bar would be the
-                // cheap copy back.
-                Color(hex: "#0E0B08")
+                // crop leaves none in view but the strip under the rail, and
+                // a cream bar would be the cheap copy back.
+                Self.ground
                 hall(width: artWidth, height: artHeight)
                     .position(x: originX + artWidth / 2, y: originY + artHeight / 2)
+                // The frame's right edge in shade, as the painting's own
+                // right edge was when the two coincided.
+                edgeShade
 
                 // The light standing in the floor ring.
                 RadialGradient(
@@ -826,10 +921,10 @@ struct SummoningCircle: View {
                 // will step out of it: the painted scroll the menu row and
                 // the plates carry, not a mark (2026-09-17, evening; the
                 // owner: "use that artwork IN the summoning circle"). At
-                // rest it hangs above the ring, tilted, and breathes; when
-                // the summon is coming it drops toward the ring's centre,
+                // rest it hangs over the portal, tilted, and breathes; when
+                // the summon is coming it drops toward the portal's centre,
                 // swells and flares, and the reveal takes over.
-                scrollOverTheRing(centre: centre, ringSize: ringSize, height: frame.size.height)
+                scrollOverTheRing(portal: centre, ringSize: ringSize, height: frame.size.height)
 
                 // The banner's name used to hang above the altar here, on a
                 // marble plaque. It is in the header now: this whole view is a
@@ -863,20 +958,29 @@ struct SummoningCircle: View {
     /// breath (`pulse`) as a bob and a swell. The glyph remains the fallback
     /// for a scroll whose painting has not shipped.
     ///
-    /// It hangs in the band between the header and the deck
-    /// (`headerClearance`, `deckClearance`), at four fifths of the band or
-    /// two fifths of the ring, whichever is smaller, and swells a quarter
-    /// and drops a third of the way to the ring's centre when charging. Run
-    /// 217 hung it at 0.44 of the ring above the centre and two fifths of
-    /// the ring tall, which put its top under the "5★ 3.0%" chip.
-    private func scrollOverTheRing(centre: CGPoint, ringSize: CGFloat, height: CGFloat) -> some View {
+    /// It hangs OVER THE PAINTED PORTAL, its lower knob in the well
+    /// (2026-09-23, fix round 5), as run 223 had it: run 224 hung the
+    /// painting 26 points lower and left the scroll in the middle of the
+    /// band under the header, over the altar's steps 60 points above a
+    /// portal the plates half hid. It is as tall as the room between the
+    /// header (`headerClearance`) and the portal's centre, at most two
+    /// fifths of the ring; its centre stands 0.42 of its size above the
+    /// portal's, which puts the lower knob — 0.55 of the size down the
+    /// tilted roll — just inside the well; it never rises into the header
+    /// nor comes within 8 points of the plates (`deckClearance`). When the
+    /// summon is coming it swells a quarter and drops a third of the way
+    /// to the portal's centre. Run 217 hung it at 0.44 of the ring above
+    /// the centre and two fifths of the ring tall, which put its top under
+    /// the "5★ 3.0%" chip.
+    private func scrollOverTheRing(portal: CGPoint, ringSize: CGFloat, height: CGFloat) -> some View {
         let key = ItemArt.key(scroll: banner.scroll)
         let top = headerClearance
-        let foot = max(top + 40, height - deckClearance)
-        let rest = min(ringSize * 0.40, (foot - top) * 0.80)
+        let plates = max(top + 40, height - deckClearance)
+        let rest = max(24, min(ringSize * 0.40, portal.y - top))
         let size = charging ? rest * 1.25 : rest
-        let restY = (top + foot) / 2
-        let y = charging ? restY + (centre.y - restY) * 0.35 : restY
+        let hung = portal.y - rest * 0.42
+        let restY = min(max(hung, top + rest * 0.5), plates - 8 - rest * 0.55)
+        let y = charging ? restY + (portal.y - restY) * 0.35 : restY
         return ZStack {
             RadialGradient(
                 colors: [tint.opacity(charging ? 0.9 : 0.5), tint.opacity(0)],
@@ -913,7 +1017,7 @@ struct SummoningCircle: View {
         }
         .scaleEffect(pulse)
         .offset(y: (1 - pulse) * 90)
-        .position(x: centre.x, y: y)
+        .position(x: portal.x, y: y)
     }
 
     /// Something for the overlaid controls to sit on. The lettering over the

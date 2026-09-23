@@ -9,6 +9,14 @@ plays as one screen-facing particle whose texture steps through the cells.
     python3 tools/vfx_sheets.py --force
     python3 tools/vfx_sheets.py --only claw,sunburst
     python3 tools/vfx_sheets.py --contact x.jpg # the shipped sheets, to look at
+    python3 tools/vfx_sheets.py --refade fireburst:4x8   # fade a shipped sheet's cells in place
+
+`--refade` is for a sheet that never came through here: the Veo fireburst of
+2026-09-10 (4 rows of 8, 128 px cells) was cut by `tools/veo.py sheet` with
+no fade, its later frames reached their cell borders at 22-32 of 255, and
+every ember hit drew a hard-edged square of fire (run 224, 29-d). It runs the
+same fade over the file's own alpha, once — a second run would fade the
+already faded ring again.
 
 Unlike `vfx_ship.py` nothing is trimmed: the cells must stay on their grid.
 The alpha is the brightest channel, the colour divided back out of it (so the
@@ -41,17 +49,31 @@ def ship(src: Path, dst: Path) -> None:
     # strength and the alpha carries the faintness.
     colour = rgb / np.maximum(alpha, 1e-3)[..., None]
     colour = np.clip(colour, 0, 1)
-    # A soft circular fade over every cell's outer ring, so no frame ends at
-    # a straight edge whatever the painter did in the corners.
-    cell = SIZE // GRID
-    yy, xx = np.mgrid[0:cell, 0:cell]
-    radius = np.hypot((xx + 0.5) / cell - 0.5, (yy + 0.5) / cell - 0.5) * 2  # 0 at the centre, 1 at the edge midpoints
-    fade = np.clip((1.0 - radius) / 0.28, 0, 1)  # full inside 72% of the way out, gone at the edge
-    fade = fade * fade * (3 - 2 * fade)
-    mask = np.tile(fade, (GRID, GRID))
-    alpha = alpha * mask
+    alpha = alpha * cell_fade(SIZE // GRID, SIZE // GRID, GRID, GRID)
     out = np.dstack([colour, alpha])
     Image.fromarray(np.clip(out * 255 + 0.5, 0, 255).astype(np.uint8), "RGBA").save(dst, optimize=True)
+
+
+def cell_fade(cell_w: int, cell_h: int, rows: int, cols: int) -> np.ndarray:
+    """A soft circular fade over every cell's outer ring, so no frame ends at
+    a straight edge whatever the painter did in the corners: full inside 72%
+    of the way out, gone at the edge midpoints, tiled over the sheet."""
+    yy, xx = np.mgrid[0:cell_h, 0:cell_w]
+    radius = np.hypot((xx + 0.5) / cell_w - 0.5, (yy + 0.5) / cell_h - 0.5) * 2  # 0 at the centre, 1 at the edge midpoints
+    fade = np.clip((1.0 - radius) / 0.28, 0, 1)
+    fade = fade * fade * (3 - 2 * fade)
+    return np.tile(fade, (rows, cols))
+
+
+def refade(name: str, rows: int, cols: int) -> None:
+    """Fade the cells of an already shipped sheet in place (see `--refade`)."""
+    path = DST / f"vfx_{name}_sheet.png"
+    im = np.asarray(Image.open(path).convert("RGBA")).astype(np.float32) / 255.0
+    height, width = im.shape[:2]
+    mask = cell_fade(width // cols, height // rows, rows, cols)
+    im[..., 3] = im[..., 3] * mask
+    Image.fromarray(np.clip(im * 255 + 0.5, 0, 255).astype(np.uint8), "RGBA").save(path, optimize=True)
+    print(f"faded {path.name}: {rows} x {cols} cells of {width // cols} x {height // rows}")
 
 
 def main() -> None:
@@ -59,7 +81,13 @@ def main() -> None:
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--only", help="comma list of names (claw, sunburst, ...)")
     ap.add_argument("--contact", help="write a contact sheet of the shipped files here")
+    ap.add_argument("--refade", help="NAME:ROWSxCOLS - fade a shipped sheet's cells in place, once")
     a = ap.parse_args()
+    if a.refade:
+        name, grid = a.refade.split(":")
+        rows, cols = (int(n) for n in grid.lower().split("x"))
+        refade(name, rows, cols)
+        return
     only = {n.strip() for n in a.only.split(",")} if a.only else None
     shipped = []
     for src in sorted(SRC.glob("sheet_*.png")):

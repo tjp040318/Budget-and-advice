@@ -41,7 +41,16 @@ struct IslandView: View {
     @State private var pinchStart: IslandCamera?
     @State private var magnifying = false
     @State private var reaction: IslandReaction?
+    /// The figure named for a breath: its plate's place is kept clear of
+    /// chips and bubbles from the moment it is set (`IslandKeepOut`)…
     @State private var named: NamedFigure?
+    /// …and the plate itself is drawn only while this is true: a beat after
+    /// `named`, so what it lands on has stepped back first, and a beat before
+    /// `named` clears, so nothing steps back in under a plate still fading.
+    @State private var nameplateDrawn = false
+    /// What of Athena is up — her plate, her caret's call-out — so the chips
+    /// and bubbles under her stand back (`GuideStage`, run 224).
+    @ObservedObject private var guide = GuideStage.shared
     @State private var offering: OfferingToast?
     @State private var burst = false
     @State private var burstOut = false
@@ -161,10 +170,17 @@ struct IslandView: View {
             let shift = CGPoint(x: insets.leading, y: insets.top)
             let hour = Self.daylight()
             let night = Self.isNight()
-            // The named figure's plate, so a chip or a bubble it lands on can
-            // step back for the breath it is up (run 216: "Zeus · Lv.12" over
-            // the start of "Summoning Circle").
-            let plate = nameplateRect(frame: frame, full: full, shift: shift)
+            // Where a chip or a bubble steps back this frame: under the named
+            // figure's plate for the breath it is up (run 216: "Zeus · Lv.12"
+            // over the start of "Summoning Circle"), under Athena's caret, and
+            // everywhere while she speaks (run 224). Her call-outs come in
+            // the window's coordinates; the island's are this reader's.
+            let window = geometry.frame(in: .global).origin
+            let keepOut = IslandKeepOut(
+                plate: nameplateRect(frame: frame, full: full, shift: shift),
+                callouts: guide.callouts.values.map { $0.offsetBy(dx: -window.x, dy: -window.y) },
+                speaking: guide.isSpeaking
+            )
 
             ZStack(alignment: .top) {
                 // Open sand: a double tap brings the camera home.
@@ -195,13 +211,13 @@ struct IslandView: View {
                 .allowsHitTesting(false)
 
                 ForEach(IslandDatabase.landmarks) { landmark in
-                    building(landmark, frame: frame, shift: shift, bounds: geometry.size, plate: plate)
+                    building(landmark, frame: frame, shift: shift, bounds: geometry.size, keepOut: keepOut)
                 }
 
                 figureTargets(frame: frame, full: full, shift: shift)
 
                 if ShopService.isDailyAvailable(player: store.player) {
-                    offeringBubble(frame: frame, shift: shift, bounds: geometry.size, plate: plate)
+                    offeringBubble(frame: frame, shift: shift, bounds: geometry.size, keepOut: keepOut)
                 }
                 if burst {
                     Circle()
@@ -604,9 +620,16 @@ struct IslandView: View {
     /// them to an edge over somewhere else. It was the centre across as well
     /// until run 221, whose 1.5 had the Arena of Souls filling the lower
     /// right with neither its bubble nor its name, its centre just past the
-    /// edge. `plate` is the named figure's plate: a chip or a bubble it
-    /// lands on steps back while it is up.
-    private func building(_ landmark: Landmark, frame: CGRect, shift: CGPoint, bounds: CGSize, plate: CGRect?) -> some View {
+    /// edge. `keepOut` is where a chip or a bubble steps back: the named
+    /// figure's plate while it is up, Athena's caret, anywhere while she
+    /// speaks.
+    ///
+    /// A chip or a bubble steps back AT ONCE and comes back over 0.2 s (run
+    /// 224). Eased both ways, the zoomed island caught a chip fading out
+    /// through the plate springing in over it — two half-drawn labels across
+    /// the circle's front — and the same whenever Athena's plate rose over
+    /// the chips at its edges.
+    private func building(_ landmark: Landmark, frame: CGRect, shift: CGPoint, bounds: CGSize, keepOut: IslandKeepOut) -> some View {
         let level = store.player.level
         let unlocked = landmark.isUnlocked(atLevel: level)
         let tier = landmark.tier(atLevel: level)
@@ -629,7 +652,7 @@ struct IslandView: View {
         let chipAt = Self.held(CGPoint(x: centre.x, y: bottom + 4), size: chipSize, in: bounds)
         let chipRect = CGRect(x: chipAt.x - chipSize.width / 2, y: chipAt.y - chipSize.height / 2,
                               width: chipSize.width, height: chipSize.height)
-        let chipShown = inView && !(plate?.intersects(chipRect) ?? false)
+        let chipShown = inView && keepOut.allows(chipRect)
         let wants = active ? badge(for: landmark) : nil
 
         return Group {
@@ -679,7 +702,7 @@ struct IslandView: View {
                     .position(chipAt)
                     .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
                     .animation(.default.speed(3), value: shaking)
-                    .animation(.easeOut(duration: 0.2), value: chipShown)
+                    .animation(Self.stepBack(to: chipShown), value: chipShown)
             }
 
             if inView, let wants {
@@ -687,7 +710,7 @@ struct IslandView: View {
                 let bubbleAt = Self.held(CGPoint(x: centre.x, y: top - 16), size: bubbleSize, in: bounds)
                 let bubbleRect = CGRect(x: bubbleAt.x - bubbleSize.width / 2, y: bubbleAt.y - bubbleSize.height / 2,
                                         width: bubbleSize.width, height: bubbleSize.height)
-                let bubbleShown = !(plate?.intersects(bubbleRect) ?? false)
+                let bubbleShown = keepOut.allows(bubbleRect)
                 IslandBubble(glyph: wants.glyph, text: wants.text, tint: accent, art: wants.art)
                     .scaleEffect(pop)
                     .offset(y: pulse ? -3 : 3)
@@ -696,7 +719,7 @@ struct IslandView: View {
                     .onTapGesture { tap(landmark, unlocked: unlocked) }
                     .position(bubbleAt)
                     .animation(.spring(response: 0.22, dampingFraction: 0.45), value: pressed)
-                    .animation(.easeOut(duration: 0.2), value: bubbleShown)
+                    .animation(Self.stepBack(to: bubbleShown), value: bubbleShown)
             }
         }
     }
@@ -704,6 +727,13 @@ struct IslandView: View {
     /// How much of a building's footprint must be across the frame for its
     /// bubble and its name to show (`building`).
     private static let inViewShare: CGFloat = 0.35
+
+    /// A chip's or a bubble's animation for a change in whether it shows:
+    /// none on the way out, so whatever is drawn in its place never meets it
+    /// half faded, and 0.2 s on the way back (run 224).
+    private static func stepBack(to shown: Bool) -> Animation? {
+        shown ? .easeOut(duration: 0.2) : nil
+    }
 
     /// A point moved just far enough that a thing of `size` centred on it
     /// stands inside the island's safe frame, eight points from either side
@@ -850,10 +880,12 @@ struct IslandView: View {
     // MARK: - The figures
 
     /// A tap target over each figure and, for a breath after a tap or a
-    /// stir, its name and level over its head.
+    /// stir, its name and level over its head — never while Athena speaks,
+    /// when the island has stepped back behind her plate.
     private func figureTargets(frame: CGRect, full: CGSize, shift: CGPoint) -> some View {
         let height = full.height * IslandSceneView.figureHeight * camera.zoom
         let units = Array(standingUnits.prefix(Self.stands.count).enumerated())
+        let plateShown = nameplateDrawn && !guide.isSpeaking
         return ForEach(units, id: \.element.id) { index, unit in
             let feet = point(Self.stands[index], frame: frame, shift: shift)
             Color.clear
@@ -861,7 +893,7 @@ struct IslandView: View {
                 .contentShape(Rectangle())
                 .onTapGesture { poke(index) }
                 .position(x: feet.x, y: feet.y - height * 0.5)
-            if let named, named.index == index {
+            if plateShown, let named, named.index == index {
                 nameplate(unit)
                     .position(x: feet.x, y: max(feet.y - height - 14, Self.headerBottom + 16))
                     .transition(.scale(scale: 0.6).combined(with: .opacity))
@@ -870,9 +902,13 @@ struct IslandView: View {
         }
     }
 
-    /// What a figure's plate says.
+    /// What a figure's plate says: the name without its epithet, as every
+    /// card and plate prints it (`nameWithoutEpithet`). The awakened title
+    /// made "Anubis, Keeper of the Ash Road · Lv.12" about 240 points wide,
+    /// a plate over the whole of the Summoning Circle's front (run 224);
+    /// "Anubis · Lv.12" is 90.
     private static func nameplateWords(_ unit: ResolvedUnit) -> String {
-        "\(unit.name) · Lv.\(unit.unit.level)"
+        "\(unit.nameWithoutEpithet) · Lv.\(unit.unit.level)"
     }
 
     /// Where the named figure's plate stands, reckoned the way `chipSize`
@@ -916,15 +952,42 @@ struct IslandView: View {
         name(index)
     }
 
+    /// Names a figure for a breath, in three beats so the plate and what it
+    /// lands on are never drawn together: its place is kept clear at once
+    /// (the chip or bubble there steps back with no fade), the plate springs
+    /// in `plateDelay` later, fades after `plateHold`, and only once it has
+    /// gone does the place open again. Run 224's zoomed island caught the two
+    /// crossing — the plate springing in through a "Summoning Circle" chip
+    /// still fading — a flicker the phone showed at every stir under a chip,
+    /// every nine to fifteen seconds.
     private func name(_ index: Int) {
         let plate = NamedFigure(index: index)
-        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { named = plate }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) {
-            if named == plate {
-                withAnimation(.easeOut(duration: 0.3)) { named = nil }
+        let fade = Self.plateFade
+        // A plate already up goes with no fade: another figure has the name.
+        var instantly = Transaction()
+        instantly.disablesAnimations = true
+        withTransaction(instantly) {
+            named = plate
+            nameplateDrawn = false
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.plateDelay) {
+            guard named == plate else { return }
+            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { nameplateDrawn = true }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.plateDelay + Self.plateHold) {
+            guard named == plate else { return }
+            withAnimation(.easeOut(duration: fade)) { nameplateDrawn = false }
+            DispatchQueue.main.asyncAfter(deadline: .now() + fade) {
+                if named == plate { named = nil }
             }
         }
     }
+
+    /// The name's three beats (`name`): the wait for what it lands on to
+    /// step back, the time it is up, and its fade.
+    private static let plateDelay: TimeInterval = 0.15
+    private static let plateHold: TimeInterval = 1.6
+    private static let plateFade: TimeInterval = 0.25
 
     // MARK: - The daily offering
 
@@ -941,12 +1004,13 @@ struct IslandView: View {
     /// the middle one in a material of its own (run 221). It is the same
     /// glass as every bubble now, and it stands beside the scroll count
     /// (`offeringSpot`), so the pool carries one row of bubbles over its name.
-    private func offeringBubble(frame: CGRect, shift: CGPoint, bounds: CGSize, plate: CGRect?) -> some View {
+    /// It steps back where the buildings' bubbles do (`IslandKeepOut`).
+    private func offeringBubble(frame: CGRect, shift: CGPoint, bounds: CGSize, keepOut: IslandKeepOut) -> some View {
         let spot = offeringSpot(frame: frame, shift: shift, bounds: bounds)
         let size = Self.offeringSize
         let rect = CGRect(x: spot.centre.x - size.width / 2, y: spot.centre.y - size.height / 2,
                           width: size.width, height: size.height)
-        let shown = spot.inView && !(plate?.intersects(rect) ?? false)
+        let shown = spot.inView && keepOut.allows(rect)
         return IslandBubble(glyph: "gift.fill", text: Self.offeringWords, tint: Theme.gold,
                             art: ItemArt.imageName("bundle"))
             .offset(y: pulse ? -3 : 3)
@@ -954,7 +1018,7 @@ struct IslandView: View {
             .allowsHitTesting(shown)
             .onTapGesture { claimOffering(at: spot.centre) }
             .position(spot.centre)
-            .animation(.easeOut(duration: 0.2), value: shown)
+            .animation(Self.stepBack(to: shown), value: shown)
     }
 
     /// Where the offering's bubble stands: level with the Summoning Circle's
@@ -1021,6 +1085,32 @@ struct IslandView: View {
         .padding(.top, 64)
         .transition(.move(edge: .top).combined(with: .opacity))
         .allowsHitTesting(false)
+    }
+}
+
+// MARK: - Where the chips stand back
+
+/// Where the island's name chips, its buildings' bubbles and the daily
+/// offering may not stand this frame: under the named figure's plate while
+/// it is up, under Athena's caret — its line, stem, arrow and ring, one
+/// call-out (`GuideStage`) — and anywhere at all while she is speaking,
+/// when the place recedes behind her plate and the genre's tutorial dim.
+///
+/// Run 224's guide frame had her plate slicing three chips at its edges
+/// and the caret's frame "Arena of Souls" standing between the line and its
+/// arrow; run 216's had "Zeus · Lv.12" over the start of "Summoning Circle".
+/// One test for all three, so the buildings and the offering cannot answer
+/// differently.
+private struct IslandKeepOut {
+    var plate: CGRect?
+    var callouts: [CGRect] = []
+    var speaking = false
+
+    /// Whether a chip or a bubble standing in `rect` is drawn.
+    func allows(_ rect: CGRect) -> Bool {
+        if speaking { return false }
+        if let plate, plate.intersects(rect) { return false }
+        return !callouts.contains { $0.intersects(rect) }
     }
 }
 

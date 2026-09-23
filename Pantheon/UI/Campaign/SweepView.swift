@@ -374,12 +374,17 @@ struct SweepReceiptCard: View {
         }
     }
 
-    /// One spoil. A relic is its set's painted stone with its quality's
-    /// rim and its grade's stars in the socket, and opens its card on a tap.
+    /// One spoil. A relic is the stone every relic screen draws
+    /// (`RelicIcon`, through `RewardTile`'s `relic`): its quality on the
+    /// stone's rim and the socket's, its slot on the stone's corner, and its
+    /// grade's stars on a band at the socket's foot — inside the socket, so
+    /// every name sits on one line — and it opens its card on a tap. It was
+    /// the set's painting alone, and the receipt could not say which of the
+    /// six slots had dropped (run 224, 34-sweep). Any other graded spoil (a
+    /// boon cache) keeps its stars along the socket's top, clear of the
+    /// count on its corner.
     private func spoilTile(_ item: BattleSummary.Loot) -> some View {
         let relic = item.relic
-        let stars: Int? = relic?.grade ?? item.stars
-        let corner = max(6, Self.tile * 0.16)
         let tap: (() -> Void)?
         if let relic {
             tap = { onRelic(relic) }
@@ -390,22 +395,20 @@ struct SweepReceiptCard: View {
             RewardTile(
                 key: relic == nil ? (item.key ?? "") : "relic_cache",
                 amount: item.amount,
+                relic: relic,
                 size: Self.tile,
                 showsTitle: false,
-                imageName: relic?.stoneImageName,
+                showsGrade: false,
                 onGlass: true,
                 onTap: tap
             )
-            .overlay {
+            .overlay(alignment: .bottom) {
                 if let relic {
-                    RoundedRectangle(cornerRadius: corner, style: .continuous)
-                        .strokeBorder(relic.resolvedQuality.rarity.glow.opacity(0.8), lineWidth: 1.6)
-                        .padding(1)
-                        .allowsHitTesting(false)
+                    Self.gradeBand(relic.grade)
                 }
             }
             .overlay(alignment: .top) {
-                if let stars {
+                if relic == nil, let stars = item.stars {
                     StarRow(stars: stars, size: RewardTile.starSize(stars: stars, width: Self.tile * 0.8))
                         .shadow(color: .black.opacity(0.8), radius: 1)
                         .padding(.top, 2)
@@ -424,6 +427,21 @@ struct SweepReceiptCard: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(width: Self.footprint)
+    }
+
+    /// A relic's grade at its socket's foot: the stars packed to fit the
+    /// stone's width, on the dark band a unit card's stars stand on, so they
+    /// read over the stone's lower point and never meet the slot's number on
+    /// its top corner, which a row along the top did from 4★ up.
+    private static func gradeBand(_ grade: Int) -> some View {
+        let room = Self.tile * 0.8 - 6
+        let size = max(4, min(Self.tile * 0.1, room / (CGFloat(max(1, grade)) * StarRow.packedAdvance)))
+        return StarRow(stars: grade, size: size, packed: true)
+            .padding(.horizontal, 3)
+            .padding(.vertical, 1.5)
+            .background(Capsule().fill(Theme.ink.opacity(0.74)))
+            .padding(.bottom, 3)
+            .allowsHitTesting(false)
     }
 
     /// A spoil's name under its tile. A relic is named by its set alone —

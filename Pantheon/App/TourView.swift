@@ -648,10 +648,11 @@ struct TourView: View {
             // Titan, whose three-line name is the one that has to fit.
             LabyrinthView(opening: .raids, raid: Self.pinnedRaid)
         case "relic_awaken":
-            // The awakening, performed as the screen appears on the tour
-            // save's 6★ +15 (the debug seed's, with the aether to pay for
-            // it): the rite in the first frame, then the halo on the stone,
-            // the Awakened chip and the fifth sub stat's choice of two.
+            // The awakening on the tour save's 6★ +15 (the debug seed's, with
+            // the aether to pay for it): the rite in the first frame, then
+            // the halo on the stone, the Awakened chip and the fifth sub
+            // stat's choice of two. Performed on a settled screen, with a cue
+            // the CI job times the frame from (`TourRite`).
             //
             // Picked by a rule that still holds AFTER the awakening: the
             // store changes the moment it lands, this `content` is
@@ -659,7 +660,7 @@ struct TourView: View {
             // sheet for the best climbing relic between the two frames —
             // run 159 photographed the Vigil +12 twice and the rite never.
             if let relic = store.player.relics.first(where: { $0.grade >= 6 && $0.isMaxLevel }) {
-                RelicDetailView(relicID: relic.id, awakenOnAppear: !relic.isAwakened)
+                TourRite(relicID: relic.id, awakens: !relic.isAwakened)
             } else if let relic = bestRelic {
                 RelicDetailView(relicID: relic.id)
             }
@@ -986,6 +987,43 @@ struct TourView: View {
             .init(glyph: "drop.triangle.fill", title: "High Ember Essence", amount: "+2", tint: .element(.ember), key: "essence_ember_high"),
         ]
         return summary
+    }
+}
+
+/// The relic's rite, performed where the CI job can time it. The rite runs
+/// on its own clock — the veil up by 0.35 s, AWAKENED settled by about 1.4,
+/// the fade out from 2.8 — and awakening on appear put its start wherever
+/// the launch happened to finish: run 223's frame caught the peak and run
+/// 224's, with the same sleep, the fade out (a khaki wash, the caption at
+/// 70%). So the relic's screen is drawn first and left to settle, then the
+/// awakening is performed on a fresh copy of it (its `onAppear` is what
+/// awakens) and `[TourCue] rite` goes to stdout the same moment; the job
+/// waits for that line and photographs the peak a fixed time after it.
+private struct TourRite: View {
+    let relicID: UUID
+    /// False once the relic is awakened: a later launch on the same save
+    /// has no rite to perform, and prints no cue.
+    let awakens: Bool
+
+    @State private var armed = false
+
+    var body: some View {
+        Group {
+            if armed {
+                RelicDetailView(relicID: relicID, awakenOnAppear: true)
+            } else {
+                RelicDetailView(relicID: relicID)
+            }
+        }
+        .onAppear {
+            guard awakens, !armed else { return }
+            // Long enough for the launch's first draw — run 224's main
+            // thread was busy 0.8 s bringing this screen up — to be over.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                armed = true
+                print("[TourCue] rite")
+            }
+        }
     }
 }
 

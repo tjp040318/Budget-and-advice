@@ -114,9 +114,11 @@ struct SocialView: View {
     /// beside the acanthus-cornered Friends (runs 220 and 221). It hangs from
     /// the top at its own height, as Found a guild does on the Guild tab, and
     /// scrolls under its field only when a search fills it. The friends
-    /// hang from the top of theirs and end in a line that says where the
-    /// next one comes from — one friend's row stood over two thirds of
-    /// empty marble.
+    /// panel hangs the same way: its rows and the line that says where the
+    /// next friend comes from, at their own height, scrolling only once they
+    /// fill the column. Run 224 drew it to the frame's foot for one friend,
+    /// 135 points of empty marble under the line and its foot 95 points
+    /// below the left panel's.
     private var friendsTab: some View {
         HStack(alignment: .top, spacing: 8) {
             SectionPanel(title: "Find demigods") {
@@ -147,22 +149,31 @@ struct SocialView: View {
                         message: "Find a demigod by name and send a request; a friend's row greets them with a gift."
                     )
                 } else {
-                    ScrollView {
-                        VStack(spacing: 6) {
-                            ForEach(social.friends) { friendship in
-                                SocialFriendRow(friendship: friendship, greeted: social.greetedIDs.contains(friendship.friend.id)) {
-                                    Task { await social.sendGreeting(to: friendship) }
-                                }
-                            }
-                            SocialInviteLine(text: "Find more demigods by name on the left.")
+                    ViewThatFits(in: .vertical) {
+                        friendRows
+                        ScrollView {
+                            friendRows
+                                .padding(.bottom, SocialScrollFoot.fade)
                         }
-                        .padding(.bottom, SocialScrollFoot.fade)
+                        .mask { SocialScrollFoot.footMask }
                     }
-                    .mask { SocialScrollFoot.footMask }
                     .modifier(SocialPanelInset())
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    /// The friends, each with the day's greeting, and the line that says
+    /// where the next one comes from.
+    private var friendRows: some View {
+        VStack(spacing: 6) {
+            ForEach(social.friends) { friendship in
+                SocialFriendRow(friendship: friendship, greeted: social.greetedIDs.contains(friendship.friend.id)) {
+                    Task { await social.sendGreeting(to: friendship) }
+                }
+            }
+            SocialInviteLine(text: "Find more demigods by name on the left.")
         }
     }
 
@@ -208,6 +219,10 @@ struct SocialView: View {
 
     // MARK: - Inbox
 
+    /// The mail hangs from the top at its own height, as the friends do,
+    /// and ends in the line that says what lands here; it scrolls, fading at
+    /// its foot, only once it fills the frame. Run 224 drew the plate to the
+    /// frame's foot for one mail, 135 points of empty marble under it.
     private var inboxTab: some View {
         SectionPanel(title: "Inbox", accessory: "\(social.unclaimedMail) to claim") {
             if social.mail.isEmpty {
@@ -217,18 +232,31 @@ struct SocialView: View {
                     message: "Greetings from friends and the game's own gifts land here, each with its reward."
                 )
             } else {
-                ScrollView {
-                    VStack(spacing: 6) {
-                        ForEach(social.mail) { item in
-                            SocialMailRow(item: item) {
-                                claim(item)
-                            }
-                        }
+                ViewThatFits(in: .vertical) {
+                    mailRows
+                    ScrollView {
+                        mailRows
+                            .padding(.bottom, SocialScrollFoot.fade)
                     }
+                    .mask { SocialScrollFoot.footMask }
                 }
+                .modifier(SocialPanelInset())
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+    }
+
+    /// The mail as the backend sends it, and the line that says what lands
+    /// here.
+    private var mailRows: some View {
+        VStack(spacing: 6) {
+            ForEach(social.mail) { item in
+                SocialMailRow(item: item) {
+                    claim(item)
+                }
+            }
+            SocialInviteLine(text: "Greetings from friends and the game's own gifts land here.", systemImage: "envelope")
+        }
     }
 
     private func claim(_ item: Mail) {
@@ -1014,6 +1042,17 @@ private struct SocialTargetRow: View {
 /// the thirteenth, the player's own. A table with no row of his (a demigod
 /// in no guild) ends in a line that says where one is found, where the
 /// guilds' four rows stood over 65 points of empty marble.
+///
+/// The list's window holds WHOLE rows (fix round 5; `windowHeight`). Its
+/// foot faded over 18 points, and with the standing pinned under it the
+/// window was 167 points: the arena's fourth row, Ragnhild, ended inside
+/// the fade with her detail line ghosted and cut through, directly over the
+/// YOUR STANDING rule (run 224). `RestingList`'s 16-point fade would ghost
+/// it the same way. Now the window is as many whole rows as it holds, the
+/// few points over stand under it, a row passing either edge while the
+/// list scrolls dims out as a `RestingList` row does (`restingRow`), and
+/// while rows wait below, `RestingList`'s chevron stands on the window's
+/// foot to say so.
 private struct SocialRankTable: View {
     let title: String
     let entries: [LeaderboardEntry]
@@ -1024,20 +1063,42 @@ private struct SocialRankTable: View {
     /// What the foot says when the player has no row here at all.
     var withoutOwnRow: String? = nil
 
-    /// Whether the player's own row stands whole in the list's window, above
-    /// its fade — read as the list scrolls, written only when it flips — and
-    /// how tall the window is.
+    /// Whether the player's own row stands whole in the list's window —
+    /// read as the list scrolls, written only when it flips — how tall the
+    /// window is, a row's height with the gap under it (every row is the
+    /// same two lines; measured off the first), and where the rows end in
+    /// the window as it scrolls.
     @State private var ownRowShown = false
     @State private var window: CGFloat = 0
+    @State private var rowPitch: CGFloat = 0
+    @State private var contentBottom: CGFloat = 0
 
     private static let space = "socialRankWindow"
+    private static let rowGap: CGFloat = 3
 
     /// The player's row, in the list or from outside it.
     private var mine: LeaderboardEntry? { entries.first(where: \.isMine) ?? ownOutsideList }
 
-    /// A row at `frame` in the list's window stands whole above the fade.
+    /// A row at `frame` in the list's window stands whole in it.
     private func inWindow(_ frame: CGRect) -> Bool {
-        window > 0 && frame.minY >= -1 && frame.maxY <= window - SocialScrollFoot.fade + 1
+        window > 0 && frame.minY >= -1 && frame.maxY <= window + 1
+    }
+
+    /// Rows wait below the window.
+    private var moreBelow: Bool {
+        window > 0 && contentBottom > window + 1
+    }
+
+    /// The list's window in `available` points: all of it while every row
+    /// fits, or until a row has been measured; otherwise as many whole rows
+    /// as it holds — at least one. On the CI phone the arena's 167 points
+    /// hold four rows of 38 (162), where the fade stood over the fourth.
+    static func windowHeight(available: CGFloat, rows: Int, pitch: CGFloat) -> CGFloat {
+        guard pitch > rowGap, available > 0 else { return available }
+        let all = CGFloat(rows) * pitch - rowGap
+        if all <= available + 0.5 { return available }
+        let whole = max(1, ((available + rowGap) / pitch).rounded(.down))
+        return min(available, whole * pitch - rowGap)
     }
 
     var body: some View {
@@ -1050,41 +1111,81 @@ private struct SocialRankTable: View {
                 )
             } else {
                 VStack(spacing: 6) {
-                    // The list fades at its foot and ends in as much clear
-                    // space, so a row under the fold reads as a scroll: the
-                    // arena's sixth row was cut hard at the panel's inner rule
-                    // with nothing to say there were seven more (run 220).
-                    ScrollView {
-                        VStack(spacing: 3) {
-                            ForEach(entries) { entry in
-                                SocialRankRow(entry: entry, unit: unit)
-                                    .background {
-                                        if entry.isMine {
-                                            GeometryReader { row in
-                                                let shown = inWindow(row.frame(in: .named(Self.space)))
-                                                Color.clear
-                                                    .onAppear { ownRowShown = shown }
-                                                    .onChange(of: shown) { _, now in ownRowShown = now }
-                                            }
-                                        }
-                                    }
+                    GeometryReader { box in
+                        let height = Self.windowHeight(available: box.size.height, rows: entries.count, pitch: rowPitch)
+                        rankList
+                            .frame(height: height)
+                            .overlay(alignment: .bottom) {
+                                if moreBelow {
+                                    Image(systemName: "chevron.compact.down")
+                                        .font(.system(size: 13, weight: .bold))
+                                        .foregroundStyle(Theme.goldDim)
+                                        .frame(width: 30, height: 12)
+                                        .background(Capsule().fill(Theme.surfaceHigh.opacity(0.92)))
+                                        .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 0.8))
+                                        // On the window's foot, over the gap
+                                        // under it rather than the last row.
+                                        .offset(y: 6)
+                                        .allowsHitTesting(false)
+                                        .accessibilityHidden(true)
+                                }
                             }
-                        }
-                        .padding(.bottom, SocialScrollFoot.fade)
                     }
-                    .coordinateSpace(name: Self.space)
-                    .background {
-                        GeometryReader { box in
-                            Color.clear
-                                .onAppear { window = box.size.height }
-                                .onChange(of: box.size.height) { _, now in window = now }
-                        }
-                    }
-                    .mask { SocialScrollFoot.footMask }
                     foot
                 }
                 .modifier(SocialPanelInset())
             }
+        }
+    }
+
+    /// The rows in their scroll, each read for its height (the first) and
+    /// its place (the player's own) as the list moves.
+    private var rankList: some View {
+        ScrollView {
+            VStack(spacing: Self.rowGap) {
+                ForEach(entries) { entry in
+                    SocialRankRow(entry: entry, unit: unit)
+                        .background {
+                            GeometryReader { row in
+                                let shown = entry.isMine && inWindow(row.frame(in: .named(Self.space)))
+                                let height = row.size.height
+                                Color.clear
+                                    .onAppear { measured(entry, height: height, shown: shown) }
+                                    .onChange(of: shown) { _, now in measured(entry, height: height, shown: now) }
+                                    .onChange(of: height) { _, now in measured(entry, height: now, shown: shown) }
+                            }
+                        }
+                        .restingRow()
+                }
+            }
+            .background {
+                GeometryReader { content in
+                    let bottom = content.frame(in: .named(Self.space)).maxY
+                    Color.clear
+                        .onAppear { contentBottom = bottom }
+                        .onChange(of: bottom) { _, now in contentBottom = now }
+                }
+            }
+        }
+        .coordinateSpace(name: Self.space)
+        .background {
+            GeometryReader { box in
+                Color.clear
+                    .onAppear { window = box.size.height }
+                    .onChange(of: box.size.height) { _, now in window = now }
+            }
+        }
+    }
+
+    /// One row's reading: the first row's height sets the pitch, and the
+    /// player's own says whether it stands whole in the window. Each is
+    /// written only when it moves.
+    private func measured(_ entry: LeaderboardEntry, height: CGFloat, shown: Bool) {
+        if entry.id == entries.first?.id, height > 0, abs(height + Self.rowGap - rowPitch) > 0.5 {
+            rowPitch = height + Self.rowGap
+        }
+        if entry.isMine, shown != ownRowShown {
+            ownRowShown = shown
         }
     }
 

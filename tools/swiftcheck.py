@@ -112,6 +112,13 @@ def split_top_level(argstr):
 STORED = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
                     r"(?:public\s+|private\s+|internal\s+|fileprivate\s+)?"
                     r"(?:static\s+)?(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)\s*:")
+# A `var` with no annotation and a default (`var speaking = false`) is a
+# memberwise parameter too, with its default: the label check called
+# `IslandKeepOut(plate:callouts:speaking:)` wrong for it (2026-09-23). A `let`
+# with a default is not one (it cannot be set twice), and a static never is.
+STORED_INFERRED = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
+                             r"(?:(?:public|private|internal|fileprivate)(?:\(set\))?\s+)*"
+                             r"var\s+([A-Za-z_][A-Za-z0-9_]*)\s*=")
 COMPUTED_HINT = re.compile(r"\{")
 FUNC = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|static\s+|mutating\s+|nonisolated\s+)*func\s")
 DECL = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|final\s+)*"
@@ -225,7 +232,7 @@ def scan(files, verbose=False):
 
             if kind == "struct" and name in structs:
                 if INIT.match(ln): structs[name]["hasInit"] = True
-                pm = STORED.match(ln)
+                pm = STORED.match(ln) or STORED_INFERRED.match(ln)
                 if pm and not FUNC.match(ln) and indent == member_indent:
                     after = ln[pm.end():]
                     # A computed property has a brace on the same line and no '='
@@ -753,8 +760,11 @@ def check_model_members(files, errors):
     members = {name: set() for name in MODELS}
     decl = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|final\s+)*"
                       r"(?:struct|class|extension|enum)\s+([A-Za-z_][A-Za-z0-9_]*)")
+    # An access level may carry a setter's (`private(set) var isDefeated =
+    # false`): without the `(set)` the rule never saw UnitNode's
+    # `isDefeated` and called a real read of it missing (2026-09-23).
     prop = re.compile(r"^\s*(?:@[A-Za-z_][A-Za-z0-9_]*(?:\([^)]*\))?\s+)*"
-                      r"(?:public\s+|private\s+|internal\s+|fileprivate\s+)?"
+                      r"(?:(?:public|private|internal|fileprivate)(?:\(set\))?\s+)*"
                       r"(?:static\s+)?(?:var|let)\s+([A-Za-z_][A-Za-z0-9_]*)\s*[:{=]")
     fn = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|fileprivate\s+|"
                     r"static\s+|mutating\s+|final\s+|@discardableResult\s+)*func\s+"

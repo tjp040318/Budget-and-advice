@@ -37,6 +37,54 @@ extension View {
     }
 }
 
+/// What of Athena is on the screen now, for the place under her to make
+/// room: her plates while she speaks, and each caret's call-out — its line's
+/// box, the stem, the arrow and the ring round the control, one rect in the
+/// window's coordinates (2026-09-23, run 224).
+///
+/// The island asks (`IslandView`). Its name chips and bubbles are drawn
+/// under her, and run 224's guide frame had her plate slicing three chips at
+/// its edges — "Summoning Circle" half over its top edge and ghosting through
+/// the glass, "…of the Duat" between her bust and the plate, "Arena of Souls"
+/// under its foot — and the caret's frame the "Arena of Souls" chip standing
+/// between the line and its arrow. The plate and the caret say they are up
+/// themselves, rather than the island reading the save's current lesson,
+/// because the tour puts both up directly over the island, and the tour's
+/// save has an unread lesson waiting on every island frame where neither is
+/// drawn: read off the save, the island would have hidden its names on the
+/// very frames that judge them.
+@MainActor
+final class GuideStage: ObservableObject {
+    static let shared = GuideStage()
+
+    /// One id per plate up: she can speak in the shell and in a sheet over
+    /// it at once.
+    @Published private(set) var plates: Set<UUID> = []
+    /// Each caret's call-out, in the window's coordinates.
+    @Published private(set) var callouts: [UUID: CGRect] = [:]
+
+    private init() {}
+
+    /// Whether she is speaking anywhere.
+    var isSpeaking: Bool { !plates.isEmpty }
+
+    /// A plate going up or down. Nothing is published when nothing changed.
+    func plate(_ id: UUID, isUp: Bool) {
+        guard plates.contains(id) != isUp else { return }
+        if isUp {
+            plates.insert(id)
+        } else {
+            plates.remove(id)
+        }
+    }
+
+    /// A caret's call-out where it stands now, or nil once it has gone.
+    func callout(_ id: UUID, at rect: CGRect?) {
+        guard callouts[id] != rect else { return }
+        callouts[id] = rect
+    }
+}
+
 /// Her portrait and her words: a bust at the left, a plate of dark glass
 /// beside it, the line typed out rather than dropped in. A tap anywhere goes
 /// on.
@@ -67,6 +115,9 @@ struct GuidePlate: View {
     /// call site, so a new beat starts empty.
     @State private var shown = 0
     @State private var finished = false
+    /// This plate on the `GuideStage`, so the place under her steps back
+    /// while she speaks.
+    @State private var stageID = UUID()
 
     private var portrait: CGFloat { 168 }
 
@@ -172,6 +223,11 @@ struct GuidePlate: View {
                 finished = true
             }
         }
+        // While she speaks the island's chips and bubbles stand back
+        // (`GuideStage`): a name cut by her plate's edge, or ghosting
+        // through its glass, was the first thing run 224's opening showed.
+        .onAppear { GuideStage.shared.plate(stageID, isUp: true) }
+        .onDisappear { GuideStage.shared.plate(stageID, isUp: false) }
     }
 }
 
@@ -197,6 +253,14 @@ struct GuidePlate: View {
 /// The band just over a control at the foot is where the place above it
 /// keeps its lowest names (the island holds its chips to its own foot, on
 /// the bar's rule), so the line clears it and the arrow alone crosses it.
+///
+/// Since run 224 the line and the arrow are ONE call-out: a gold stem runs
+/// from the line's box to the arrow's base, and the whole of it — box, stem,
+/// arrow and ring — is published on the `GuideStage`, where the island
+/// stands back any chip or bubble it covers. Run 224's caret frame still read
+/// line, "Arena of Souls", arrow, top to bottom: the chip stood in the band
+/// between the two, and read in that order the caret could point at the
+/// arena instead of the Collection door.
 struct GuideCaret: View {
     let prompt: String
     let target: CGRect
@@ -211,6 +275,8 @@ struct GuideCaret: View {
     /// first frame guesses a one-line box.
     @State private var box = CGSize(width: 300, height: 32)
     @State private var breathe = false
+    /// This caret on the `GuideStage`.
+    @State private var stageID = UUID()
 
     /// The arrowhead: 18 wide, 12 tall, a dark edge so it reads on sand.
     private static let arrow = CGSize(width: 18, height: 12)
@@ -223,6 +289,8 @@ struct GuideCaret: View {
     /// height and a little, so the line clears the names in the band over a
     /// control at the foot.
     private static let labelBand: CGFloat = 12
+    /// The stem from the line's box to the arrow's base.
+    private static let stemWidth: CGFloat = 1.5
 
     /// Whether the target is a control rather than the no-anchor fallback,
     /// which is a point and wears no ring.
@@ -242,6 +310,21 @@ struct GuideCaret: View {
         let half = box.width / 2 + 12
         let boxX = min(max(target.midX, half), max(half, bounds.width - half))
         let lineWidth = min(Self.reading, max(0, bounds.width - 24))
+        // The stem, from the box's near edge to the arrow's base (the
+        // triangle's flat side, which faces the box either way). The arrow's
+        // x is always inside the box's span: the box is clamped to the screen
+        // round the same centre the arrow is.
+        let stemFrom = below ? arrowY + Self.arrow.height / 2 : boxY + box.height / 2
+        let stemTo = below ? boxY - box.height / 2 : arrowY - Self.arrow.height / 2
+        let stem = max(0, stemTo - stemFrom)
+        // The whole call-out, for the place under it (`GuideStage`): the box,
+        // the stem, the arrow through its three-point breath, and the ring
+        // round the control through its own.
+        let boxRect = CGRect(x: boxX - box.width / 2, y: boxY - box.height / 2, width: box.width, height: box.height)
+        let arrowRect = CGRect(x: arrowX - Self.arrow.width / 2, y: arrowY - Self.arrow.height / 2 - 3,
+                               width: Self.arrow.width, height: Self.arrow.height + 6)
+        let pointer = boxRect.union(arrowRect)
+        let callout = hasTarget ? pointer.union(target.insetBy(dx: -6, dy: -6)) : pointer
 
         ZStack {
             if hasTarget {
@@ -254,6 +337,14 @@ struct GuideCaret: View {
                     .opacity(breathe ? 0.45 : 0.95)
                     .animation(Self.breath, value: breathe)
                     .position(x: target.midX, y: target.midY)
+            }
+            // Under the arrow, which breathes three points into it.
+            if stem > 0.5 {
+                Capsule()
+                    .fill(Theme.gold)
+                    .frame(width: Self.stemWidth, height: stem)
+                    .shadow(color: Color.black.opacity(0.5), radius: 1)
+                    .position(x: arrowX, y: stemFrom + stem / 2)
             }
             BubbleTail()
                 .fill(Theme.gold)
@@ -269,12 +360,24 @@ struct GuideCaret: View {
                 .position(x: boxX, y: boxY)
         }
         .frame(width: bounds.width, height: bounds.height)
+        // The call-out in the window's coordinates, kept current while the
+        // line is measured and the control moves.
+        .background(
+            GeometryReader { proxy in
+                let origin = proxy.frame(in: .global).origin
+                let placed = callout.offsetBy(dx: origin.x, dy: origin.y)
+                Color.clear
+                    .onAppear { GuideStage.shared.callout(stageID, at: placed) }
+                    .onChange(of: placed) { _, now in GuideStage.shared.callout(stageID, at: now) }
+            }
+        )
         .allowsHitTesting(false)
         .transition(.opacity)
         // The breath is scoped to the ring and the arrow (`.animation(_:
         // value:)` on each), so the box and the arrow never glide when the
         // target moves or the line is measured.
         .onAppear { breathe = true }
+        .onDisappear { GuideStage.shared.callout(stageID, at: nil) }
     }
 
     /// The ring's and the arrow's breath.

@@ -307,13 +307,21 @@ struct BundleImage: View {
 /// lower (`topOverride`) to keep the sheet's edge out of the square.
 /// A re-roll as a real bust is paid art on the owner's word; this is the
 /// free half, and it stops applying the moment a family leaves the list.
+///
+/// A boss's card has no element in its name (`portrait_boss_unwrapped_king`),
+/// so an entry also matches a name exactly: the Unwrapped King's card is a
+/// whole small figure, and on the Necropolis's levels and the Titans' card
+/// it stood feet and all under its star row beside Apep's and the
+/// Colossus's busts (run 224, frames 16-dungeon-necropolis and
+/// 39-raids-umbra). At the 0.04 crop its gold mask stands whole in the
+/// square, so it needs no `topOverride`.
 struct PortraitPainting: View {
     let name: String
     let size: CGFloat
 
     static let fullFigureFamilies: [String] = [
-        "amazon", "apollo", "artemis", "athena", "bellona", "berserker", "bragi",
-        "chang_e", "cobra_priestess", "cyclops", "demeter", "frigg", "frost_troll",
+        "amazon", "apollo", "artemis", "athena", "bellona", "berserker", "boss_unwrapped_king",
+        "bragi", "chang_e", "cobra_priestess", "cyclops", "demeter", "frigg", "frost_troll",
         "heimdall", "hel", "hera", "heracles", "horus", "jiangshi", "khnum", "maat",
         "medusa", "mercury", "minotaur", "mummy", "neptune", "odin", "osiris",
         "poseidon", "ptah", "scarab_knight", "skadi", "sobek", "terracotta_soldier",
@@ -326,12 +334,19 @@ struct PortraitPainting: View {
     static let topOverride: [String: CGFloat] = ["mummy": 0.10]
 
     static func cropTop(for name: String) -> CGFloat {
-        topOverride.first { name.hasPrefix("portrait_\($0.key)_") }?.value ?? Self.top
+        topOverride.first { Self.isCard(name, of: $0.key) }?.value ?? Self.top
     }
 
-    /// `portrait_<family>_<element>` or `…_awakened`.
+    /// `portrait_<family>_<element>` or `…_awakened`, or a boss's own
+    /// `portrait_<id>`.
     static func isFullFigure(_ name: String) -> Bool {
-        fullFigureFamilies.contains { name.hasPrefix("portrait_\($0)_") }
+        fullFigureFamilies.contains { Self.isCard(name, of: $0) }
+    }
+
+    /// Whether a card's file name is this family's: its card, or one of its
+    /// forms after an underscore.
+    private static func isCard(_ name: String, of family: String) -> Bool {
+        name == "portrait_\(family)" || name.hasPrefix("portrait_\(family)_")
     }
 
     var body: some View {
@@ -1067,6 +1082,12 @@ struct RewardTile: View {
     var relic: Relic? = nil
     var size: CGFloat = 64
     var showsTitle: Bool = true
+    /// The grade's star row under the socket. Off where the caller draws
+    /// the grade inside the socket itself — the sweep's receipt, whose
+    /// names sit on one line — so a relic passed for its slot badge is not
+    /// starred twice. The receipt left its relic out to avoid exactly that,
+    /// and printed no slot anywhere (run 224, 34-sweep).
+    var showsGrade: Bool = true
     /// A bundle painting drawn in the socket in place of the item icon — a
     /// relic set's painted stone (`relic_<set>`), so each of a chapter's two
     /// sets is its own drop tile in the stage popup (2026-09-22, phase B).
@@ -1080,12 +1101,12 @@ struct RewardTile: View {
     var onGlass: Bool = false
     var onTap: (() -> Void)? = nil
 
-    /// `imageName` and `onGlass` stand BEFORE `onTap`, so `onTap` stays last
-    /// and a trailing closure still means it; every earlier call site passes
-    /// neither and draws as it did.
+    /// `showsGrade`, `imageName` and `onGlass` stand BEFORE `onTap`, so
+    /// `onTap` stays last and a trailing closure still means it; every
+    /// earlier call site passes none of them and draws as it did.
     init(key: String, title: String? = nil, amount: String? = nil, stars: Int? = nil, relic: Relic? = nil,
-         size: CGFloat = 64, showsTitle: Bool = true, imageName: String? = nil, onGlass: Bool = false,
-         onTap: (() -> Void)? = nil) {
+         size: CGFloat = 64, showsTitle: Bool = true, showsGrade: Bool = true, imageName: String? = nil,
+         onGlass: Bool = false, onTap: (() -> Void)? = nil) {
         self.key = key
         self.title = title
         self.amount = amount
@@ -1093,6 +1114,7 @@ struct RewardTile: View {
         self.relic = relic
         self.size = size
         self.showsTitle = showsTitle
+        self.showsGrade = showsGrade
         self.imageName = imageName
         self.onGlass = onGlass
         self.onTap = onTap
@@ -1174,7 +1196,7 @@ struct RewardTile: View {
                 }
             }
             .frame(width: size, height: size)
-            if let stars = relic?.grade ?? stars {
+            if showsGrade, let stars = relic?.grade ?? stars {
                 // Fitted to the socket's width: six stars at 12% of a
                 // 44-point tile were wider than the stone (run 216).
                 StarRow(stars: stars, size: Self.starSize(stars: stars, width: size))
@@ -1985,8 +2007,13 @@ struct GameScreen<Bar: View, Content: View>: View {
                 // too many controls, and the answer is fewer controls (the
                 // collection lost its ALL tile and its two-word layout
                 // switch), never a smaller title.
-                Text(title.uppercased())
-                    .font(Theme.display(19))
+                //
+                // Its figures in Manrope (`Text.inscribed`): Cinzel's 1 and
+                // 0 are a Roman I and O, and every strip that names a floor
+                // read "VAULT OF THE COLOSSUS BIO" (run 224, 34-sweep-
+                // briefing-dungeon) after round 4 had fixed the same on the
+                // room's headline, the hub and the tower.
+                Text.inscribed(title.uppercased(), letters: Theme.display(19), digits: Theme.numeric(18.4).weight(.heavy))
                     .tracking(1.4)
                     .carved(glow: false)
                     .lineLimit(1)
