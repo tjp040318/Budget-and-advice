@@ -104,6 +104,9 @@ struct TourView: View {
     /// `-tour-dungeon-sweep` opens the focused floor's sweep choices (the
     /// run count, the energy it costs), over a mastered floor.
     static var pinnedDungeonSweep: Bool { ProcessInfo.processInfo.arguments.contains("-tour-dungeon-sweep") }
+    /// The battle step's skill panel (`BattleView.showTourSkillPanel`): the
+    /// fight waits on its first turn instead of taking a command a tick.
+    static var pinnedSkillInfo: Bool { ProcessInfo.processInfo.arguments.contains("-tour-skill-info") }
 
     /// `-tour-labyrinth-wing halls|tower|raids` opens the building on that
     /// wing. Neither the Halls wing nor the Tower had ever been photographed
@@ -268,6 +271,12 @@ struct TourView: View {
             // waiting for a thumb. Auto-battle would win before the first
             // frame; one basic attack every four seconds is a fight in
             // progress for the whole step.
+            //
+            // Not while the skill panel is pinned (`-tour-skill-info`): the
+            // fight holds on its first turn with a skill chosen and what it
+            // does over the squares. A command a tick used the very skill the
+            // panel was showing, and run 229's frame caught the victory.
+            guard !Self.pinnedSkillInfo else { return }
             for model in [battleModel, arenaModel, realmModel].compactMap({ $0 }) {
                 model.selectSkill(0)
                 model.confirmTarget()
