@@ -11,6 +11,18 @@ final class ArenaTests: XCTestCase {
         XCTAssertEqual(ArenaTier.tier(forPoints: 99_999), .olympian)
     }
 
+    /// The player is the DEMIGOD everywhere the game names him, and an
+    /// unnamed one is called "Demigod", so no rank may wear that word: the
+    /// fifth rank did until round 5 (F46), and the leaderboard read
+    /// "Lysander · Lv.50 · Demigod" over the player's own row.
+    func testNoRankWearsThePlayersNoun() {
+        let unnamed: String = Player().displayName.lowercased()
+        let ranks: [String] = ArenaTier.allCases.map { $0.displayName.lowercased() }
+        XCTAssertFalse(ranks.contains(unnamed), "a rank is named like an unnamed player: \(ranks)")
+        XCTAssertFalse(ranks.contains("demigod"), "the demigod is the player, never a rank")
+        XCTAssertEqual(ArenaTier.tier(forPoints: 3_000), .ascendant)
+    }
+
     func testBeatingAStrongerOpponentIsWorthMore() {
         let easy = ArenaService.pointsForWin(playerPoints: 2_000, opponentPoints: 1_500)
         let hard = ArenaService.pointsForWin(playerPoints: 2_000, opponentPoints: 2_500)

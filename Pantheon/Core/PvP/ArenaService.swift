@@ -2,12 +2,19 @@ import Foundation
 
 /// Competitive tiers. Rank points move between them and never reset below the
 /// tier floor, so a bad night cannot undo a season.
+///
+/// The fifth rank is the ASCENDANT — the champion rising to Olympus, as
+/// Heracles rose from the pyre — and never "Demigod": that is the player's
+/// own noun and an unnamed player's name, and the leaderboard read
+/// "Lysander · Lv.50 · Demigod" over "Demigod · Lv.1 · Oracle" (round 5,
+/// F46). No save holds a tier — only `ArenaRecord.points`, from which every
+/// tier is derived — and the raw values are unchanged.
 enum ArenaTier: Int, Codable, CaseIterable, Identifiable, Sendable {
     case initiate = 0
     case acolyte
     case oracle
     case champion
-    case demigod
+    case ascendant
     case olympian
 
     var id: Int { rawValue }
@@ -18,7 +25,7 @@ enum ArenaTier: Int, Codable, CaseIterable, Identifiable, Sendable {
         case .acolyte: return "Acolyte"
         case .oracle: return "Oracle"
         case .champion: return "Champion"
-        case .demigod: return "Demigod"
+        case .ascendant: return "Ascendant"
         case .olympian: return "Olympian"
         }
     }
@@ -30,7 +37,7 @@ enum ArenaTier: Int, Codable, CaseIterable, Identifiable, Sendable {
         case .acolyte: return 1_200
         case .oracle: return 1_700
         case .champion: return 2_300
-        case .demigod: return 3_000
+        case .ascendant: return 3_000
         case .olympian: return 3_800
         }
     }
@@ -41,7 +48,7 @@ enum ArenaTier: Int, Codable, CaseIterable, Identifiable, Sendable {
         case .acolyte: return "#7FB88C"
         case .oracle: return "#5FA8D8"
         case .champion: return "#C08CE8"
-        case .demigod: return "#E8B04F"
+        case .ascendant: return "#E8B04F"
         case .olympian: return "#F25C4F"
         }
     }

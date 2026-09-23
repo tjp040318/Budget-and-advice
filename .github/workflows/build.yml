@@ -143,8 +143,9 @@ jobs:
           # on its stdout (line-buffered in a debug build), so a beat that runs
           # on the app's own clock is photographed on that clock and not the
           # launch's. The relic's rite is 2.8 s from its first frame to its
-          # close; run 223's frame caught its peak and run 224's the fade out,
-          # with the same sleep, because the launch alone varies by seconds.
+          # close (6 s under the tour since run 234's -a missed it); run 223's
+          # frame caught its peak and run 224's the fade out, with the same
+          # sleep, because the launch alone varies by seconds.
           cue() {
             local out="shots/$step-${names[$step]}-out.txt" ticks=0
             until grep -q "\[TourCue\] $1" "$out" 2>/dev/null; do
@@ -253,13 +254,24 @@ jobs:
               # The rite at its peak, then the awakened relic with its fifth
               # sub stat's choice up. The rite's own clock (RelicAwakeningRite
               # .play): the veil up by 0.35 s, the halo drawn by 1.2, AWAKENED
-              # and its caption settled by about 1.4, and the fade out from
-              # 2.8 to 3.15. The tour lets the screen settle, then performs the
-              # awakening and prints its cue (TourRite); 1.3 s after the cue
-              # plus the screenshot's own half second is the middle of the peak.
+              # and its caption settled by about 1.4, then held — under -tour
+              # it closes at 6 s, not 2.8 — and faded out by 6.35. The tour
+              # lets the screen settle, then performs the awakening and prints
+              # its cue (TourRite); the rite starts about 0.3 s after it.
+              # A screenshot here lands two to three seconds after it is
+              # asked for, not half a second: run 234's step took 15.3 s
+              # from launch to launch, 9.2 of them the cue and the sleeps,
+              # and its -a, asked for 1.3 s after the cue, missed the 2.8-s
+              # rite and came out byte for byte the -b. So -a is asked for
+              # 1.5 s after the cue and lands about 3.3–4.3 s into the rite,
+              # the middle of its hold (1.4 to 6 s); -b, asked for 6 s after
+              # -a is back, lands on the relic with the rite gone.
+              # Plain shoot for -a: the screen has stood for 2.5 s when the
+              # cue prints, so it is never the empty first frame shoot_lit
+              # guards against, and a retake 4 s on would miss the hold.
               relic_awaken)
                 cue rite 20
-                sleep 1.3; shoot_lit "$step-${names[$step]}-a"; sleep 4.5; shoot "$step-${names[$step]}-b" ;;
+                sleep 1.5; shoot "$step-${names[$step]}-a"; sleep 6; shoot "$step-${names[$step]}-b" ;;
               # Every chapter's map: the step is relaunched once per chapter
               # (-tour-chapter K) so each painted region is photographed with
               # its medallions and chests in place.

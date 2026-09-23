@@ -82,6 +82,17 @@ struct MissionsView: View {
     /// on an iPhone 16 Pro, 248 of it for a title.
     private static let cardColumn: CGFloat = 236
 
+    /// A row's measures, which its bar's room is read off (`row`): the gap
+    /// between its parts, the claim plate's column, and the reward at its
+    /// end — one tile at 46, a two-part bundle's pair at 40 with 4 between.
+    private static let rowSpacing: CGFloat = 12
+    private static let claimColumn: CGFloat = 92
+    private static let rewardTile: CGFloat = 46
+    private static let pairTile: CGFloat = 40
+    private static let pairGap: CGFloat = 4
+    /// The longest a row's bar grows, which a wide phone reaches.
+    private static let barCeiling: CGFloat = 190
+
     var body: some View {
         NavigationStack {
             GameScreen("Missions", subtitle: subtitle, dismiss: { dismiss() }) {
@@ -407,10 +418,15 @@ struct MissionsView: View {
     /// and the chevron at the foot says the list goes on.
     private var list: some View {
         let rows = entries
+        // What the list's tightest row carries — its widest reward — and its
+        // longest count, which every row's bar is measured against (`row`).
+        let widestReward: CGFloat = rows.map { Self.rewardWidth($0.grant) }.max() ?? Self.rewardTile
+        let longestGoal: Int = rows.map(\.goal).max() ?? 1
+        let widestCount: String = "\(longestGoal) / \(longestGoal)"
         return RestingList {
             LazyVStack(spacing: 5) {
                 ForEach(rows) { entry in
-                    row(entry)
+                    row(entry, widestReward: widestReward, widestCount: widestCount)
                         .restingRow()
                 }
             }
@@ -535,12 +551,28 @@ struct MissionsView: View {
     /// reward between them, and a row not yet earned carried an empty slot
     /// ninety points wide; the slot is only there now when it holds a plate,
     /// and the genre puts a button on a finished mission only.
-    private func row(_ entry: Entry) -> some View {
+    ///
+    /// The bar is ONE length on every row of a list, so the counts stand in
+    /// one column whether a row waits or is ready: run 234's Counsel had the
+    /// counts of its three ready rows 7 points left of the waiting rows',
+    /// because a ready row's claim plate took its bar's room. A fixed 190
+    /// does not fit — a ready row on an iPhone 16 Pro has 216 points for the
+    /// bar, its gap and its count, 178 with a two-part reward — so every
+    /// row's bar line is given the room of the list's tightest row (a ready
+    /// one with its widest reward: `barInset` is the claim column a waiting
+    /// row lacks and what its reward is narrower than that one), and the
+    /// count a slot as wide as the list's longest ("30 / 30"). On that phone
+    /// the Daily bars are 168, the first Counsel's 145, the Feats' 115; a
+    /// wide phone reaches `barCeiling`.
+    private func row(_ entry: Entry, widestReward: CGFloat, widestCount: String) -> some View {
         let lit = entry.complete && !entry.claimed
         let status = claimStatus(claimed: entry.claimed, ready: entry.complete)
         let fraction = "\(min(entry.progress, entry.goal)) / \(entry.goal)"
         let art = Self.rowArt(for: entry.icon, id: entry.id)
-        return HStack(spacing: 12) {
+        let claimRoom: CGFloat = status == .waiting ? Self.claimColumn + Self.rowSpacing : 0
+        let rewardRoom: CGFloat = widestReward - Self.rewardWidth(entry.grant)
+        let barInset: CGFloat = claimRoom + rewardRoom
+        return HStack(spacing: Self.rowSpacing) {
             if entry.claimed {
                 MedallionIcon(key: "", glyph: "checkmark", size: 38)
             } else {
@@ -559,13 +591,22 @@ struct MissionsView: View {
                         tint: entry.complete ? Theme.success : Theme.gold,
                         height: 7
                     )
-                    .frame(maxWidth: 190)
-                    Text(fraction)
-                        .font(Theme.numeric(12))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .fixedSize()
+                    .frame(maxWidth: Self.barCeiling)
+                    // The list's longest count, unseen, holds the slot open,
+                    // so a short count never lengthens its bar.
+                    ZStack(alignment: .leading) {
+                        Text(widestCount)
+                            .hidden()
+                            .accessibilityHidden(true)
+                        Text(fraction)
+                    }
+                    .font(Theme.numeric(12))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
                 }
+                // Only the bar line: the title keeps the row's whole width.
+                .padding(.trailing, barInset)
             }
             Spacer(minLength: 8)
             // The reward is the row's LAST thing on every row, so it stands
@@ -577,7 +618,7 @@ struct MissionsView: View {
                 claimSlot(status: status, waitingNote: fraction) {
                     claim(entry)
                 }
-                .frame(width: 92)
+                .frame(width: Self.claimColumn)
             }
             rewardTiles(entry.grant)
         }
@@ -595,14 +636,20 @@ struct MissionsView: View {
     private func rewardTiles(_ grant: ShopService.Grant) -> some View {
         let parts = Self.parts(of: grant)
         if parts.count == 2 {
-            HStack(spacing: 4) {
+            HStack(spacing: Self.pairGap) {
                 ForEach(Array(parts.enumerated()), id: \.offset) { _, part in
-                    RewardTile(grant: part, size: 40, showsTitle: false)
+                    RewardTile(grant: part, size: Self.pairTile, showsTitle: false)
                 }
             }
         } else {
-            RewardTile(grant: grant, size: 46, showsTitle: false)
+            RewardTile(grant: grant, size: Self.rewardTile, showsTitle: false)
         }
+    }
+
+    /// The width `rewardTiles` takes at a row's end.
+    private static func rewardWidth(_ grant: ShopService.Grant) -> CGFloat {
+        let pair: CGFloat = pairTile * 2 + pairGap
+        return parts(of: grant).count == 2 ? pair : rewardTile
     }
 
     /// The painting a row's socket wears, read off the row's own glyph: the
@@ -760,7 +807,12 @@ private let restingListSpace = "restingList"
 ///
 /// The content brings its own padding, and under its last row at least
 /// `RowRest.footFade`, so that row scrolls clear of the fade.
+///
+/// `onGlass` is for a list on dark glass over a painting — the bazaar's
+/// shelves, the mileage board (run 234) — whose chevron is the glass's own
+/// (`RestingChevron`).
 struct RestingList<Content: View>: View {
+    let onGlass: Bool
     let content: () -> Content
 
     /// The content's frame in the scroll's own space and the scroll's
@@ -768,7 +820,8 @@ struct RestingList<Content: View>: View {
     @State private var contentFrame: CGRect = .zero
     @State private var viewportHeight: CGFloat = 0
 
-    init(@ViewBuilder content: @escaping () -> Content) {
+    init(onGlass: Bool = false, @ViewBuilder content: @escaping () -> Content) {
+        self.onGlass = onGlass
         self.content = content
     }
 
@@ -807,16 +860,27 @@ struct RestingList<Content: View>: View {
         )
         .overlay(alignment: .bottom) {
             if moreBelow {
-                Image(systemName: "chevron.compact.down")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Theme.goldDim)
-                    .frame(width: 30, height: 12)
-                    .background(Capsule().fill(Theme.surfaceHigh.opacity(0.92)))
-                    .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 0.8))
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+                RestingChevron(onGlass: onGlass)
             }
         }
+    }
+}
+
+/// The cue at a resting list's foot while rows wait below it: a small
+/// chevron on a capsule — cream on marble; on glass, gold on a dark capsule
+/// with the glass's rim, the summon rail's and the Hall of Ka ledger's.
+struct RestingChevron: View {
+    var onGlass: Bool = false
+
+    var body: some View {
+        Image(systemName: "chevron.compact.down")
+            .font(.system(size: 13, weight: .bold))
+            .foregroundStyle(onGlass ? Theme.onGlassGold : Theme.goldDim)
+            .frame(width: 30, height: 12)
+            .background(Capsule().fill(onGlass ? Color.black.opacity(0.6) : Theme.surfaceHigh.opacity(0.92)))
+            .overlay(Capsule().strokeBorder(onGlass ? Theme.glassRim : Theme.gold.opacity(0.35), lineWidth: 0.8))
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
     }
 }
 

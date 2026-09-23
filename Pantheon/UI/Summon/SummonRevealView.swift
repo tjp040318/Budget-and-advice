@@ -293,8 +293,16 @@ struct SummonRevealView: View {
     /// takes over. The grade sets the scale (`grandeur`): a 3★'s rings are
     /// dim and slow and its beam thin, a 5★'s are bright, fast and wide.
     ///
-    /// No blend modes: this layer sits over the SceneKit view, and a blend
-    /// against a platform view is not something to find out on the phone.
+    /// One blend mode, on the beam alone (`chargeBeamLayer`): its light is
+    /// ADDED to the set, as a column of light is in every summon in the
+    /// genre. Drawn plainly over the set, run 234's 5★ beam peaked at
+    /// 201–225 with a core about 15 points wide and its ember flanks lost
+    /// on the Duat's orange — a streak, not a pillar. A blend over a
+    /// SceneKit view is not new here (the victory chest's flash is
+    /// `.plusLighter` over its SCNView), and should one ever be resolved
+    /// without the platform view under it, plus-lighter over nothing is the
+    /// beam drawn plainly, never black. Everything else is drawn plainly.
+    ///
     /// The rings are the painted `rune_ring` keyed to its drawn lines
     /// (`RuneLinesArt`) and used as a MASK over the element's colour, so the
     /// black and the painted glow between the lines are simply absent.
@@ -334,6 +342,11 @@ struct SummonRevealView: View {
         return ZStack {
             chargePool(look)
             chargeRings(look)
+            // The scroll's glow UNDER the beam and the scroll itself over it
+            // (run 234): drawn as the scroll's own shadow, the glow lay over
+            // the column and turned it red below the roll, so the pillar
+            // faded out before it reached the scroll it holds up.
+            chargeScrollGlow(result, look: look)
             // The beam, rising from the floor as the charge gathers: OVER the
             // rings, so the pillar of light runs through them to the scroll
             // (the genre's scroll burns in its column; run 221 drew the
@@ -409,15 +422,19 @@ struct SummonRevealView: View {
 
         // A 5★'s pillar is 0.28 of the frame's height across (run 221: at
         // 0.20, and drawn under the rings, it showed as a faint streak below
-        // them); a 3★'s stays a thin shaft.
+        // them); a 3★'s stays a thin shaft. Through the gather a 5★'s
+        // stands at 0.85, a 4★'s at 0.65 and a 3★'s at 0.45, and the flare
+        // lifts each by 15% more: run 234's 5★ gathered at 0.68, and its
+        // white never reached 230.
         let beamShare: CGFloat = 0.10 + 0.18 * grand
         let beamWidth: CGFloat = height * beamShare
         let beamRise: CGFloat = 0.30 + 0.70 * gather
         let beamHeight: CGFloat = feet * beamRise
         let beamCentre: CGFloat = feet - beamHeight / 2
-        let beamBase: CGFloat = 0.40 + 0.35 * grand
-        let beamFlare: CGFloat = 0.9 + 0.1 * flare
-        let beamOpacity: Double = Double(beamBase * beamFlare)
+        let beamBase: CGFloat = 0.45 + 0.40 * grand
+        let beamFlare: CGFloat = 1 + 0.15 * flare
+        let beamLight: CGFloat = min(1, beamBase * beamFlare)
+        let beamOpacity: Double = Double(beamLight)
         // The motes keep the sway they had with the narrower beam.
         let spreadShare: CGFloat = 0.10 + 0.10 * grand
         let moteSpread: CGFloat = height * spreadShare
@@ -503,10 +520,13 @@ struct SummonRevealView: View {
         }
     }
 
+    /// The beam, ADDED to whatever is under it: the set, the rings and the
+    /// scroll's glow (see `chargeLayer` for why this one layer blends).
     private func chargeBeamLayer(_ look: ChargeLook) -> some View {
         chargeBeam(colour: look.colour)
             .frame(width: look.beamWidth, height: look.beamHeight)
             .opacity(look.beamOpacity)
+            .blendMode(.plusLighter)
             .position(x: look.x, y: look.beamCentre)
     }
 
@@ -531,12 +551,27 @@ struct SummonRevealView: View {
             .position(x: look.x, y: look.heart)
     }
 
-    /// The scroll itself, straightening and swelling in the light.
+    /// The scroll's glow: its silhouette in the element's colour at 0.85,
+    /// blurred as far as its shadow was (`scrollGlow`), in the scroll's own
+    /// place and turn. It was the scroll's `.shadow` until run 234, and a
+    /// shadow is drawn with its view, so the glow could not go under the
+    /// beam while the scroll stayed over it (`chargeScene`).
+    private func chargeScrollGlow(_ result: SummonResult, look: ChargeLook) -> some View {
+        look.colour.opacity(0.85)
+            .frame(width: look.side, height: look.side)
+            .mask { chargeScroll(result, side: look.side, colour: look.colour) }
+            .rotationEffect(.degrees(look.scrollTilt))
+            .scaleEffect(look.scrollScale)
+            .blur(radius: look.scrollGlow)
+            .position(x: look.x, y: look.scrollY)
+    }
+
+    /// The scroll itself, straightening and swelling in the light, over the
+    /// beam; its glow is `chargeScrollGlow`, under it.
     private func chargeScrollLayer(_ result: SummonResult, look: ChargeLook) -> some View {
         chargeScroll(result, side: look.side, colour: look.colour)
             .rotationEffect(.degrees(look.scrollTilt))
             .scaleEffect(look.scrollScale)
-            .shadow(color: look.colour.opacity(0.85), radius: look.scrollGlow)
             .position(x: look.x, y: look.scrollY)
     }
 
@@ -545,23 +580,42 @@ struct SummonRevealView: View {
         CGFloat(min(2, max(0, stars - 3))) / 2
     }
 
-    /// A column of light: white at its core, the element's colour either
-    /// side, clear at the edges, fading out toward its top.
+    /// A column of light: white held flat across the middle fifth of its
+    /// width, the element's colour either side, clear at the edges; full
+    /// from the floor up behind the scroll, fading out over its top third.
+    /// Added to the set (`chargeBeamLayer`), so the core burns to white on
+    /// whatever stands behind it and the colour lights the set rather than
+    /// painting over it.
+    ///
+    /// Run 234's beam peaked at ONE stop, white at 0.95 between flanks of
+    /// the colour at 0.55, so only its centre line was white at all, and
+    /// its top half faded out: the scroll hangs at 0.42 of the frame's
+    /// height, inside that fade. The mock of the held charge (run 234's
+    /// frame with the old beam taken out and this one added) reads 252–255
+    /// on the axis from the floor to the inner ring, over 230 across 40–55
+    /// points; drawn plainly instead, 223–236 across 10–25.
     private func chargeBeam(colour: Color) -> some View {
-        LinearGradient(
-            stops: [
-                .init(color: colour.opacity(0), location: 0),
-                .init(color: colour.opacity(0.55), location: 0.28),
-                .init(color: Color.white.opacity(0.95), location: 0.5),
-                .init(color: colour.opacity(0.55), location: 0.72),
-                .init(color: colour.opacity(0), location: 1),
-            ],
-            startPoint: .leading, endPoint: .trailing
-        )
-        .mask {
-            LinearGradient(colors: [Color.white.opacity(0), Color.white, Color.white],
-                           startPoint: .top, endPoint: .bottom)
-        }
+        let across: [Gradient.Stop] = [
+            .init(color: colour.opacity(0), location: 0),
+            .init(color: colour.opacity(0.35), location: 0.20),
+            .init(color: Color.white.opacity(0.95), location: 0.40),
+            .init(color: Color.white.opacity(0.95), location: 0.60),
+            .init(color: colour.opacity(0.35), location: 0.80),
+            .init(color: colour.opacity(0), location: 1),
+        ]
+        // Top to foot. The last twentieth eases to half into the pool of
+        // light under the feet: added white stopping dead on the floor line
+        // read as the end of a bar in the mock, not light meeting the floor.
+        let upward: [Gradient.Stop] = [
+            .init(color: Color.white.opacity(0), location: 0),
+            .init(color: Color.white, location: 0.35),
+            .init(color: Color.white, location: 0.95),
+            .init(color: Color.white.opacity(0.5), location: 1),
+        ]
+        return LinearGradient(stops: across, startPoint: .leading, endPoint: .trailing)
+            .mask {
+                LinearGradient(stops: upward, startPoint: .top, endPoint: .bottom)
+            }
     }
 
     /// The painted rune ring in the element's colour, its drawn LINES only

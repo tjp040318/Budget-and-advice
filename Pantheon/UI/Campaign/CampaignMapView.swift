@@ -401,7 +401,10 @@ struct ChapterMapArt {
     /// the Colossus of the Sun as the Vault's Colossus, the Dragon of
     /// Longmen as the Dragon King in its element), or nil. Four of twelve
     /// bosses showed a bare pink lock in run 216 because only the first was
-    /// looked for; the Hydra and the Jötunn have no card of any kind yet.
+    /// looked for. The Hydra and the Jötunn had no card of any kind until
+    /// round 6: theirs (`portrait_boss_hydra`, `portrait_boss_jotunn`) are
+    /// renders of their shipped meshes, not paintings, so every chapter's
+    /// boss now wears a face.
     static func bossPortrait(for chapter: Chapter) -> String? {
         guard let boss = UnitDatabase.blueprint(chapter.bossBlueprintID) else { return nil }
         var names = [boss.model.portraitName(awakened: false)]

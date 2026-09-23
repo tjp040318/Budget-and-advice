@@ -1278,8 +1278,8 @@ private struct SocialInviteLine: View {
 }
 
 /// The foot of a scrolling list on the Allies screen: opaque down to its
-/// last `fade` points, then clear — the relic columns' and the bazaar's
-/// foot (`BazaarLayout.footFade`).
+/// last `fade` points, then clear — the relic columns' foot. (The bazaar's
+/// shelves rest on whole rows since run 234, `RestingList`.)
 private enum SocialScrollFoot {
     static let fade: CGFloat = 18
 

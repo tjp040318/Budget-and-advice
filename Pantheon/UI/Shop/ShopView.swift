@@ -34,6 +34,9 @@ struct ShopView: View {
     /// shown. `receiptID` lets a later receipt outlive an earlier one's timer.
     @State private var receipt: [ShopService.Grant] = []
     @State private var receiptID = UUID()
+    /// Whether a stall stands below the rail's fold, read off the last
+    /// stall's place in the rail's scroll (`stallFold`).
+    @State private var stallsBelow = false
 
     init(opening: ShopService.Section = .daily) {
         self.opening = opening
@@ -122,8 +125,8 @@ struct ShopView: View {
     }
 
     /// A stall with more wares than one screen of the shelf shows says how
-    /// many it has on its rail row ("10" on Scrolls), so the peek under the
-    /// shelf's fade is never the only cue that more is there.
+    /// many it has on its rail row ("10" on Scrolls), so the chevron at the
+    /// shelf's foot is never the only cue that more is there.
     private static func wareCount(_ stall: ShopService.Section) -> String? {
         let count = ShopService.items(in: stall).count
         return count > 6 ? "\(count)" : nil
@@ -195,17 +198,51 @@ struct ShopView: View {
     /// hub of stores); the dropdown hid seven of eight and the Daily stall's
     /// free gift with them. It opens scrolled to the stall the screen opened
     /// on, so the Arena's Laurel exchange is never under the fade.
+    ///
+    /// Its rows rest WHOLE, as the shelf beside them does: run 234 ended the
+    /// rail on "Essences" faded in the rail's foot, 77% of the row in view on
+    /// an iPhone 16 Pro, so a row shows only from 85% in view and is whole
+    /// from 98%, the rail's name ("STALLS") only whole, and while a stall
+    /// stands below the fold the glass's chevron says the rail goes on.
     private var stallRail: some View {
-        ScrollViewReader { proxy in
+        let stalls = Self.railOrder.filter { ShopService.visibleSections.contains($0) }
+        return ScrollViewReader { proxy in
             PlaceRail(width: Self.railWidth) {
                 PlaceRailLabel("Stalls")
-                ForEach(Self.railOrder.filter { ShopService.visibleSections.contains($0) }) { stall in
+                    .restingRow(goneBelow: 0.9, wholeFrom: 0.995)
+                ForEach(stalls) { stall in
                     railRow(stall)
+                        .restingRow(goneBelow: 0.85, wholeFrom: 0.98)
+                        .background {
+                            if stall == stalls.last {
+                                stallFold
+                            }
+                        }
                         .id(stall)
+                }
+            }
+            // Over the rail's fade, not under its mask.
+            .overlay(alignment: .bottom) {
+                if stallsBelow {
+                    RestingChevron(onGlass: true)
+                        .padding(.bottom, 6)
                 }
             }
             .onAppear { proxy.scrollTo(section, anchor: .center) }
         }
+    }
+
+    /// Reads, behind the last stall, whether it stands below the rail's
+    /// fold: its foot past the rail's scroll.
+    private var stallFold: some View {
+        GeometryReader { box in
+            let viewport: CGFloat = box.bounds(of: .scrollView)?.height ?? 0
+            let below: Bool = viewport > 0 && box.frame(in: .scrollView).maxY > viewport + 1
+            Color.clear
+                .onAppear { stallsBelow = below }
+                .onChange(of: below) { _, now in stallsBelow = now }
+        }
+        .allowsHitTesting(false)
     }
 
     /// The Night Market's row carries its clock, ticking; only that row is
@@ -586,14 +623,6 @@ enum BazaarWareStatus {
 /// `BazaarShelf` because a generic type cannot hold a stored static.
 enum BazaarLayout {
     static let spacing: CGFloat = 10
-    /// The foot fade: the last 28 points of a shelf, which the shelf's own
-    /// bottom padding fills when the wares fit, so a full 3 × 2 Night Market
-    /// is never dimmed and a longer stall fades out instead of being cut.
-    /// It was 12 and fell on the empty padding under the second row, so the
-    /// Scrolls stall's third row began wholly out of view with nothing to
-    /// say it was there (run 216); at 28, with 106-point tiles, the third
-    /// row's tops and art show through the fade.
-    static let fade: CGFloat = 28
 
     /// Three fixed columns, never adaptive: the Night Market's first shelf is
     /// six wares, and run 151's adaptive grid drew five and orphaned the
@@ -603,35 +632,37 @@ enum BazaarLayout {
         let count = width >= 470 ? 3 : 2
         return Array(repeating: GridItem(.flexible(), spacing: spacing), count: count)
     }
-
-    static var footFade: some View {
-        VStack(spacing: 0) {
-            Color.black
-            LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
-                .frame(height: fade)
-        }
-    }
 }
 
 /// A shelf of ware tiles over the painting: fixed columns chosen by the
-/// width it is given (a `GeometryReader`, never `ViewThatFits`), scrolling,
-/// ending in a fade. The day stalls and the Night Market are this one shelf.
+/// width it is given (a `GeometryReader`, never `ViewThatFits`), scrolling.
+/// The day stalls and the Night Market are this one shelf.
+///
+/// It rests on WHOLE rows (`RestingList`, with the glass's chevron), as
+/// Missions, the Lessons and the decor catalogue have since round 4. Run
+/// 234's Scrolls stall ended on the peek run 216 asked for — a faded third
+/// row of "SCROLL SCROLL SCROLL", the ? dots and the tops of three sockets,
+/// no names — the one list in the game still ending on part of a row. A
+/// tile shows only from 85% in view and is whole from 98%: its name and its
+/// price plate stand at its foot, and the third row is 27% in view at rest
+/// on an iPhone 16 Pro, over half on a Pro Max. The chevron says the stall
+/// goes on; a full 3 × 2 Night Market fits and shows none.
 struct BazaarShelf<Ware: Identifiable, Tile: View>: View {
     let wares: [Ware]
     @ViewBuilder let tile: (Ware) -> Tile
 
     var body: some View {
         GeometryReader { frame in
-            ScrollView(showsIndicators: false) {
+            RestingList(onGlass: true) {
                 LazyVGrid(columns: BazaarLayout.columns(for: frame.size.width), spacing: BazaarLayout.spacing) {
                     ForEach(wares) { ware in
                         tile(ware)
+                            .restingRow(goneBelow: 0.85, wholeFrom: 0.98)
                     }
                 }
                 .padding(.top, 2)
-                .padding(.bottom, BazaarLayout.fade)
+                .padding(.bottom, RowRest.footFade)
             }
-            .mask(BazaarLayout.footFade)
         }
     }
 }
@@ -644,10 +675,10 @@ struct BazaarShelf<Ware: Identifiable, Tile: View>: View {
 ///
 /// Every tile is `height` tall, so a row never staggers: a 12-point name on
 /// up to two lines, the 46-point art with its stars, the 32-point plate. Two
-/// rows, the header, the fade and the TOP of a third row fit the 329 points
-/// an iPhone 16 Pro gives the sheet's content — the peek that says a stall
-/// has more (run 216: 120-point tiles filled the box to its foot and the
-/// Scrolls stall's third row was wholly hidden).
+/// rows and the header fit the 329 points an iPhone 16 Pro gives the sheet's
+/// content (run 216: 120-point tiles filled the box to its foot); a third
+/// row is drawn only whole, and the shelf's chevron says a stall has more
+/// (`BazaarShelf`, run 234).
 ///
 /// The tile prints its `shelfName` — the name without what the socket
 /// already says (the count, the grade) — and the whole `name` is the

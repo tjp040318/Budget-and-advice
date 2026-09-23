@@ -1019,7 +1019,7 @@ private struct ArenaCrest: View {
         case .acolyte: return "II"
         case .oracle: return "III"
         case .champion: return "IV"
-        case .demigod: return "V"
+        case .ascendant: return "V"
         case .olympian: return "VI"
         }
     }

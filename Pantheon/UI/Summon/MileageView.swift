@@ -92,17 +92,13 @@ struct MileageSheet: View {
     /// than faces bigger than the counter's.
     private static let maximumFace: CGFloat = 84
     private static let gap: CGFloat = 8
-    /// The board's foot fade, and the room the last row keeps under it so it
-    /// can scroll clear of the fade.
-    private static let fade: CGFloat = 26
+    /// The room under the board's last row: the grid's own 10 and the
+    /// resting list's fade (`RowRest.footFade`), which the last row scrolls
+    /// clear of — and, at rest, where the chevron stands.
+    private static let foot: CGFloat = 10 + RowRest.footFade
     /// A cell's height over its face: the name at title 13 (18), the 22 bead,
     /// 4 and 4 between them and the row plate's 4 above and below.
     private static let cellChrome: CGFloat = 56
-    /// How much of a THIRD row stands in the plate at rest, under the fade:
-    /// the genre's "there is more below". Run 216's faces were sized so two
-    /// rows ended exactly on the plate's edge, and the fade covered empty
-    /// padding — nothing said the board scrolled.
-    private static let peek: CGFloat = 30
 
     private var points: Int { MileageService.points(on: banner, player: store.player) }
     /// The whole board, dearest first — the catalogue's own order, and what
@@ -217,11 +213,19 @@ struct MileageSheet: View {
     /// at its foot, so a row is never guillotined with nothing to say there
     /// is more (the frame of run 211).
     ///
-    /// The face is sized off the HEIGHT as well (run 216): two whole rows
-    /// and `peek` of a third under the fade, 70 points on an iPhone 16 Pro
-    /// — at 84 the two rows ended on the plate's edge and the board read as
-    /// all there was. The offer on the counter is scrolled into view when
-    /// the board opens, so a pinned or picked face is lit on the board.
+    /// It rests on WHOLE rows (`RestingList`, with the glass's chevron), as
+    /// the cream lists have since round 4: run 216 sized the faces to leave
+    /// a peek of a third row under the fade as the cue that the board goes
+    /// on, and run 234 photographed that peek as a 20-point sliver of
+    /// portrait tops and element badges with no names. The chevron is the
+    /// cue now, so the face is sized off the HEIGHT for two whole rows and
+    /// `foot` — about 75 points on an iPhone 16 Pro, where the peek left
+    /// about 70 — and a third row, 14% in view there, is not drawn; a grade
+    /// of two rows fits and shows no chevron. A face shows only from
+    /// 85% in view and is whole from 98%, the bazaar's rule: its name and
+    /// its price stand at its foot. The offer on the counter is scrolled
+    /// into view when the board opens, so a pinned or picked face is lit on
+    /// the board.
     private func grid(_ board: [MileageService.Offer], litID: String?) -> some View {
         GeometryReader { geometry in
             let width = geometry.size.width.isFinite ? geometry.size.width : 0
@@ -229,10 +233,10 @@ struct MileageSheet: View {
             let inner = max(Self.minimumCell, width - 20)
             let columns = max(1, Int((inner + Self.gap) / (Self.minimumCell + Self.gap)))
             let cell = ((inner - Self.gap * CGFloat(columns - 1)) / CGFloat(columns)).rounded(.down)
-            let byHeight = ((height - 10 - Self.peek - Self.gap * 2) / 2 - Self.cellChrome).rounded(.down)
+            let byHeight = ((height - 10 - Self.gap - Self.foot) / 2 - Self.cellChrome).rounded(.down)
             let face = max(56, min(Self.maximumFace, cell - 8, byHeight))
             ScrollViewReader { proxy in
-                ScrollView(showsIndicators: false) {
+                RestingList(onGlass: true) {
                     LazyVGrid(
                         columns: Array(repeating: GridItem(.fixed(cell), spacing: Self.gap), count: columns),
                         alignment: .leading,
@@ -240,19 +244,13 @@ struct MileageSheet: View {
                     ) {
                         ForEach(board) { offer in
                             tile(offer, face: face, cell: cell, isOn: offer.id == litID)
+                                .restingRow(goneBelow: 0.85, wholeFrom: 0.98)
                                 .id(offer.id)
                         }
                     }
                     .padding(10)
-                    .padding(.bottom, Self.fade)
+                    .padding(.bottom, RowRest.footFade)
                 }
-                .mask(
-                    VStack(spacing: 0) {
-                        Color.black
-                        LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-                            .frame(height: Self.fade)
-                    }
-                )
                 .onAppear {
                     // Only a face below the first two rows needs the move;
                     // the head of the board is already in view.

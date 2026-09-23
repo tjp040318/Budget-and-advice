@@ -1002,7 +1002,9 @@ struct TourView: View {
 
 /// The relic's rite, performed where the CI job can time it. The rite runs
 /// on its own clock — the veil up by 0.35 s, AWAKENED settled by about 1.4,
-/// the fade out from 2.8 — and awakening on appear put its start wherever
+/// the fade out from 2.8 (from 6 under the tour, `RelicAwakeningRite
+/// .closesAfter`, since a CI screenshot lands two to three seconds after it
+/// is asked for) — and awakening on appear put its start wherever
 /// the launch happened to finish: run 223's frame caught the peak and run
 /// 224's, with the same sleep, the fade out (a khaki wash, the caption at
 /// 70%). So the relic's screen is drawn first and left to settle, then the

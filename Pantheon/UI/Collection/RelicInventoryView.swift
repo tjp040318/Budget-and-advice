@@ -1077,8 +1077,9 @@ struct EfficiencyDial: View {
 /// The foot of a scrolling column on the relic screens (run 217): the
 /// column fades out over its last `fade` points instead of running on a
 /// hard line under the home indicator, and its content ends in as much
-/// clear space, so the last row can always scroll clear of the fade. The
-/// bazaar's shelves end the same way (`BazaarLayout.footFade`).
+/// clear space, so the last row can always scroll clear of the fade. (The
+/// bazaar's shelves ended the same way until run 234; they rest on whole
+/// rows now, `RestingList`.)
 private enum RelicColumn {
     /// Over the home indicator.
     static let fade: CGFloat = 20
@@ -2292,8 +2293,18 @@ struct RelicAwakeningRite: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.1) {
             Juice.haptic(.medium)
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 2.8) { onDone() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.closesAfter) { onDone() }
     }
+
+    /// How long the rite stands before it closes itself: 2.8 s, and 6 under
+    /// the CI tour, which photographs it. AWAKENED and its caption have
+    /// settled by about 1.4 s and nothing moves after but the rays, so the
+    /// tour's rite is the same peak held longer. A screenshot on CI's
+    /// runner lands two to three seconds after it is asked for, and the
+    /// 2.8-s rite was gone by then: run 234's 40-a, asked for 1.3 s after
+    /// the cue, came out byte for byte the 40-b.
+    private static let closesAfter: TimeInterval =
+        ProcessInfo.processInfo.arguments.contains("-tour") ? 6.0 : 2.8
 }
 
 /// Choosing a relic for one slot, the way the genre's rune screen does it:

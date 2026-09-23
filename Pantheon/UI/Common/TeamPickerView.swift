@@ -23,8 +23,9 @@ struct TeamPickerView: View {
     private let railWidth: CGFloat = 300
     private let rosterColumns = [GridItem(.adaptive(minimum: 70, maximum: 84), spacing: 8)]
     private static let faceGap: CGFloat = 6
-    /// How far the rail and the roster fade out at their foot, and the room
-    /// left after their last line so it can scroll clear of the fade.
+    /// How far the rail fades out at its foot, and the room left after its
+    /// last line so it can scroll clear of the fade. The roster's foot is
+    /// `RestingList`'s.
     private static let footFadeHeight: CGFloat = 18
 
     /// The lineup's face: the largest that puts `maxSize` of them in one
@@ -234,8 +235,15 @@ struct TeamPickerView: View {
 
     // MARK: - Roster
 
+    /// The roster rests on WHOLE rows (`RestingList`), as the cream lists
+    /// have since round 4. The foot fade alone left run 234's third row of
+    /// Shabti with its names and levels under the foot — 74% of a 108-point
+    /// card in view at rest on an iPhone 16 Pro, the name plate its lowest
+    /// third — so a card shows only from 85% in view and is whole from 98%,
+    /// and the chevron at the foot says the roster goes on. The room under
+    /// the last row lets it scroll up whole, clear of the fade.
     private var rosterGrid: some View {
-        ScrollView {
+        RestingList {
             LazyVGrid(columns: rosterColumns, spacing: 8) {
                 ForEach(roster) { unit in
                     Button {
@@ -248,20 +256,18 @@ struct TeamPickerView: View {
                         )
                     }
                     .buttonStyle(.plain)
+                    .restingRow(goneBelow: 0.85, wholeFrom: 0.98)
                 }
             }
             .padding(.vertical, 2)
-            .padding(.bottom, Self.footFadeHeight)
+            .padding(.bottom, RowRest.footFade)
         }
-        // The last visible row fades rather than stopping on a hard line
-        // with its names cut off (run 217's third row of Shabti).
-        .mask { footFade }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    /// A scroll's mask: opaque down to its last `footFadeHeight` points,
-    /// which fade to nothing — a fixed height, so a short rail and a tall
-    /// roster fade over the same distance.
+    /// The rail's mask: opaque down to its last `footFadeHeight` points,
+    /// which fade to nothing — a fixed height, so a short rail and a long
+    /// one fade over the same distance.
     private var footFade: some View {
         VStack(spacing: 0) {
             Color.black
