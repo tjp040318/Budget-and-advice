@@ -189,7 +189,10 @@ jobs:
                 # on its own (it played over an empty dusk until run 220).
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal-hold charge >/dev/null
                 sleep 5; shoot "$step-${names[$step]}-charge" ;;
-              battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d" ;;
+              battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d"
+                # The skill panel: the first player turn opens with a skill
+                # chosen and what it does over the skill squares.
+                again -tour-skill-info; sleep 12; shoot "$step-${names[$step]}-skill" ;;
               arena_battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c" ;;
               dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
               # The reckoning (about 3 s in), the chest with its lid coming

@@ -30,8 +30,15 @@ struct BattleView: View {
     @State private var showMenu = false
     @State private var showLog = false
     @State private var summary: BattleSummary?
-    /// A skill held down: its card shows until a tap or four seconds.
-    @State private var heldSkill: Skill?
+    /// The skill whose panel stands over the skill row: the square the
+    /// player last touched this turn — tapped, held, or tapped while it is
+    /// cooling down, just to read it. The genre's way (the owner, of the
+    /// fight: "when I click on a skill during battle, I need to see what it
+    /// does. Show me like Summoners War does"): a tap on a skill shows what
+    /// it does above the skills while it is chosen, and goes when it is
+    /// used or the turn passes. It was a card behind a HOLD in the middle of
+    /// the field, which nobody found.
+    @State private var inspectedSlot: Int?
 
     /// The skill under the player's finger, before the tap has committed to
     /// anything. A press on a tile sets it and a lift clears it, so the plate
@@ -74,7 +81,14 @@ struct BattleView: View {
                     controls
                     Spacer(minLength: 0)
                     if let actor = model.awaitingActor {
-                        skillRow(actor)
+                        VStack(alignment: .trailing, spacing: 8) {
+                            if let option = inspectedOption {
+                                skillCard(option.skill, cooldown: option.cooldown, actor: actor)
+                                    .transition(.opacity.combined(with: .offset(y: 6)))
+                            }
+                            skillRow(actor)
+                        }
+                        .animation(.easeOut(duration: 0.15), value: inspectedSlot)
                     } else if model.isPlayingBack {
                         skipButton
                     }
@@ -118,17 +132,6 @@ struct BattleView: View {
 
             if showLog, summary == nil { logOverlay }
 
-            if let heldSkill {
-                skillCard(heldSkill, actor: model.awaitingActor)
-                    .transition(.opacity.combined(with: .scale(scale: 0.96)))
-                    .onTapGesture { withAnimation { self.heldSkill = nil } }
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 4) {
-                            withAnimation { self.heldSkill = nil }
-                        }
-                    }
-            }
-
             if let banner = model.repeatBanner {
                 Text(banner)
                     .font(Theme.title(16))
@@ -168,7 +171,11 @@ struct BattleView: View {
             AudioLibrary.shared.playMusic(.island)
         }
         // A new actor means the old one's skill preview is meaningless.
-        .onChange(of: model.awaitingActor?.id) { _, _ in previewSlot = nil }
+        .onChange(of: model.awaitingActor?.id) { _, _ in
+            previewSlot = nil
+            inspectedSlot = nil
+            showTourSkillPanel()
+        }
         .onChange(of: model.outcome?.outcome) { _, newValue in
             guard newValue != nil else { return }
             // Let the last animation land before the result panel takes over.
@@ -179,7 +186,7 @@ struct BattleView: View {
                     // The plates and the floating numbers go with the HUD.
                     model.sceneController.setPlatesHidden(true)
                     withAnimation(.easeOut(duration: 0.35)) {
-                        heldSkill = nil
+                        inspectedSlot = nil
                         summary = concluded
                     }
                 }
@@ -348,9 +355,12 @@ struct BattleView: View {
                     element: actor.element,
                     ranged: !actor.model.melee,
                     iconKey: index < icons.count ? icons[index] : nil,
-                    onHold: { withAnimation { heldSkill = option.skill } },
+                    onHold: { inspectedSlot = option.slot },
                     onPreview: { pressed in
                         previewSlot = pressed ? option.slot : nil
+                        // A finger on a square shows its panel, even on a
+                        // skill that is cooling down and cannot be chosen.
+                        if pressed { inspectedSlot = option.slot }
                     }
                 ) {
                     model.selectSkill(option.slot)
@@ -700,40 +710,114 @@ struct BattleView: View {
         }
     }
 
-    /// The card a held skill shows: name, cooldown, what it does.
-    private func skillCard(_ skill: Skill, actor: Combatant?) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                if let actor {
-                    SkillIcon(skill: skill, element: actor.element, ranged: !actor.model.melee,
-                              size: 28, socket: true)
+    /// The skill the panel describes: the one touched this turn, while it
+    /// is the one chosen or it is cooling down (tapped only to read it).
+    /// Choosing another square, using the skill or the turn passing takes
+    /// the panel down.
+    private var inspectedOption: SkillOption? {
+        guard let slot = inspectedSlot,
+              let option = model.availableSkills.first(where: { $0.slot == slot })
+        else { return nil }
+        if option.cooldown > 0 || model.selectedSkillSlot == slot || previewSlot == slot {
+            return option
+        }
+        return nil
+    }
+
+    /// The genre's skill panel, over the skill squares at the bottom right:
+    /// the skill's art and name, its cooldown and what it lands on, the
+    /// estimate against the target aimed at, the words of what it does,
+    /// and how to use it from here. Dark glass, so it reads over any set;
+    /// it never takes a tap, so an enemy under it can still be chosen.
+    private func skillCard(_ skill: Skill, cooldown: Int, actor: Combatant) -> some View {
+        let ready = cooldown <= 0
+        let chosen = model.selectedSkillSlot == skill.slot
+        let hint: String
+        if !ready {
+            hint = cooldown == 1 ? "Ready next turn" : "Ready in \(cooldown) turns"
+        } else if !chosen {
+            hint = "Tap the skill to choose it"
+        } else if BattleViewModel.needsTarget(skill) {
+            hint = skill.target.hitsEnemies ? "Tap an enemy to use it" : "Tap an ally to use it"
+        } else {
+            hint = "Tap the skill again to use it"
+        }
+        return VStack(alignment: .leading, spacing: 7) {
+            HStack(alignment: .center, spacing: 9) {
+                SkillIcon(skill: skill, element: actor.element, ranged: !actor.model.melee,
+                          size: 34, socket: true)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(skill.name.uppercased())
+                        .font(Theme.title(14))
+                        .foregroundStyle(Theme.onGlassGold)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(Self.skillFacts(skill))
+                        .font(Theme.body(11))
+                        .foregroundStyle(Theme.onGlass.opacity(0.75))
                 }
-                Text(skill.name)
-                    .font(Theme.title(15))
-                    .foregroundStyle(Theme.gold)
-                Spacer()
+                Spacer(minLength: 6)
                 // What it would do to the unit aimed at — the estimate the
                 // squares used to print across their own art.
-                if let actor, let forecast = forecast(skill, actor: actor) {
+                if let forecast = forecast(skill, actor: actor) {
                     Text(forecast)
-                        .font(Theme.numeric(11).weight(.bold))
-                        .foregroundStyle(Theme.gold)
+                        .font(Theme.numeric(13).weight(.bold))
+                        .foregroundStyle(Theme.onGlassGold)
+                        .fixedSize()
                 }
-                Text(skill.cooldown > 0 ? "Cooldown \(skill.cooldown) turns" : "No cooldown")
-                    .font(Theme.numeric(10))
-                    .foregroundStyle(Theme.textSecondary)
             }
             Text(skill.description)
-                .font(Theme.body(12))
-                .foregroundStyle(Theme.textPrimary)
+                .font(Theme.body(12.5))
+                .foregroundStyle(Theme.onGlass)
                 .fixedSize(horizontal: false, vertical: true)
-            Text("Tap to close")
-                .font(Theme.body(9))
-                .foregroundStyle(Theme.textSecondary)
+            HStack(spacing: 5) {
+                Image(systemName: ready ? "hand.tap.fill" : "hourglass")
+                    .font(.system(size: 11, weight: .semibold))
+                Text(hint)
+                    .font(Theme.body(11).weight(.semibold))
+            }
+            .foregroundStyle(ready ? Theme.onGlassGold : Theme.onGlass.opacity(0.7))
         }
-        .padding(12)
-        .frame(maxWidth: 360)
-        .background(Theme.panel(Theme.tightCorner))
+        .padding(.horizontal, 13)
+        .padding(.vertical, 11)
+        .frame(width: 330, alignment: .leading)
+        .background(RoundedRectangle(cornerRadius: 12, style: .continuous).fill(Theme.glass))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).strokeBorder(Theme.glassRim, lineWidth: 1))
+        .shadow(color: .black.opacity(0.45), radius: 8, y: 3)
+        .allowsHitTesting(false)
+    }
+
+    /// Under the CI tour's `-tour-skill-info` the player's first turn opens
+    /// with a skill chosen — the second when it is ready, the basic when
+    /// not — and its panel up, as a tap would leave it, so a frame shows it.
+    private static let touringSkillPanel = ProcessInfo.processInfo.arguments.contains("-tour-skill-info")
+
+    private func showTourSkillPanel() {
+        guard Self.touringSkillPanel, inspectedSlot == nil, model.awaitingActor != nil else { return }
+        let slot = model.availableSkills.first(where: { $0.slot > 0 && $0.isReady })?.slot ?? 0
+        // Choosing the square already chosen would USE it (the second tap
+        // commits), so only a different one is chosen.
+        if model.selectedSkillSlot != slot { model.selectSkill(slot) }
+        inspectedSlot = slot
+    }
+
+    /// One line under the name: the cooldown and what the skill lands on.
+    private static func skillFacts(_ skill: Skill) -> String {
+        let cooldown = skill.cooldown > 0 ? "Cooldown \(skill.cooldown) turns" : "No cooldown"
+        let lands: String
+        switch skill.target {
+        case .singleEnemy: lands = "One enemy"
+        case .allEnemies: lands = "All enemies"
+        case .randomEnemies(let count): lands = "\(count) random enemies"
+        case .lowestHealthEnemy: lands = "The weakest enemy"
+        case .caster: lands = "Self"
+        case .singleAlly: lands = "One ally"
+        case .allAllies: lands = "All allies"
+        case .lowestHealthAlly: lands = "The weakest ally"
+        case .deadAlly: lands = "A fallen ally"
+        case .otherAllies: lands = "The other allies"
+        }
+        return cooldown + " · " + lands
     }
 
     // MARK: - Log
