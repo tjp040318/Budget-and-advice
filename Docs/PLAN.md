@@ -7326,3 +7326,33 @@ sweep, the Allies screen and the item shipper. Two checker rules were
 fixed: a `private(set) var` is a member, and a `var x = value` with no
 annotation is a memberwise parameter. Each was a false alarm on correct
 code, and a misspelt member still fails.
+
+**The area sheet met the floor (run 234).** Drawn once over the row, the
+slab was gone, but two faults were left. The sheet stood at chest height,
+up to 4.4 m across, so its lower half went below the floor, and the floor
+cut the burst with a hard straight line (aoe-b, c and d). And the
+sunburst's white core over the Duat's lit floor measured 9.5% blown in
+the middle band, with one 64-px patch at 76% (aoe-c) and 83% (aoe-d).
+Four ways out of the cut were weighed. (a) Lift the sheet until its lower
+edge clears the floor. At 36° of pitch a sheet reaches 0.41 of its side
+below its centre, so a 3.4 m burst would float at 1.4 m, over the heads
+instead of on the victims. (b) Stop the sheet reading depth. That is the
+2D look of the genre's sprites, but the sheet would then draw over every
+figure standing in front of it. (c) Only make it smaller and dimmer. The
+cut gets shorter but stays. (d) The depth fade engines use for a sprite
+meeting geometry: Unity's soft particles, Unreal's DepthFade. SceneKit's
+particle system has no depth fade, but the floor here is the plane
+y = 0, so fading a fragment by its world height over the floor is exactly
+that fade. (d) was chosen. A sheet whose lower edge would pass through
+the floor is now a camera-facing plane, not a particle
+(`VFXLibrary.standingFlipbook`). That means every sheet over a row, and a
+single victim's burst big enough to reach the floor. Its fragment
+modifier (`floorFadeModifier`) takes the fragment's view-space position
+to the world through `scn_frame.inverseViewTransform` and fades it from
+nothing at the floor to all of it 0.9 m up (`floorFadeHeight`). The
+frames are stepped on the main thread, as the ground ring's are, and the
+sheet holds for half its life and fades over the rest, as the particle
+did. The glare: a row sheet is tinted 0.6 toward the caster's colour and
+its paint scaled to half (`rowSheetStrength`, in the colour, so the
+additive blend is dimmed whatever it reads of the alpha), and
+`areaSheetLimit` is 3.4 m, down from 4.4.

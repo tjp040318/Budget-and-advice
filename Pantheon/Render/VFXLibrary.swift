@@ -26,14 +26,30 @@ enum VFXLibrary {
         /// the cast lights the row once.
         case member
         /// The whole row at once, drawn ONCE at its centre: the sheets off
-        /// white and as wide as the row asks up to `areaSheetLimit`, half
-        /// the sparks, one light at 0.6 strength no wider than 4 m.
+        /// white (0.6 of the caster's tint, at `rowSheetStrength`), as wide
+        /// as the row asks up to `areaSheetLimit` and faded into the floor
+        /// (`standingFlipbook`), half the sparks, one light at 0.6 strength
+        /// no wider than 4 m.
         case row(span: Float)
     }
 
     /// The widest a painted sheet is ever drawn over a row, in metres: one
-    /// additive layer of the sunburst wider than this reads as a wash.
-    static let areaSheetLimit: CGFloat = 4.4
+    /// additive layer of the sunburst wider than this reads as a wash. It
+    /// was 4.4 until run 234's aoe-c, where the Wrath of the Eye over the
+    /// team covered two fifths of the frame and its middle band was 9.5%
+    /// blown.
+    static let areaSheetLimit: CGFloat = 3.4
+
+    /// How much of a sheet's paint reaches the frame when it stands over a
+    /// row: the colour is scaled, not the alpha, so an additive sheet is
+    /// dimmed whatever the blend reads. At 0.7 a sunburst's white core over
+    /// the Duat's lit floor went past 240 across a 64-px patch (76%, run
+    /// 234); at half it adds about 100 of luminance at its brightest.
+    static let rowSheetStrength: CGFloat = 0.5
+
+    /// The height, in metres above the floor, over which a sheet standing
+    /// over a row fades out (`standingFlipbook`).
+    static let floorFadeHeight: Float = 0.9
 
     /// A cast on several victims: an element's hit, a heal or a blessing
     /// lands on each of them, quietly, with one light at the row's centre; a
@@ -122,15 +138,38 @@ enum VFXLibrary {
             spread = CGFloat(min(1.5, max(1, span / 4.8)))
         }
         func paintedTint(_ sheetTint: UIColor) -> UIColor {
-            guard crowded else { return sheetTint }
-            return sheetTint.mixed(with: tint, amount: 0.5).withAlphaComponent(0.7)
+            switch reach {
+            case .single:
+                return sheetTint
+            case .member:
+                return sheetTint.mixed(with: tint, amount: 0.5).withAlphaComponent(0.7)
+            case .row:
+                return sheetTint.mixed(with: tint, amount: 0.6).withAlphaComponent(rowSheetStrength)
+            }
         }
         func paintedSide(_ size: CGFloat) -> CGFloat {
             guard crowded else { return size }
             return min(areaSheetLimit, size * spread)
         }
         func drawSheet(_ name: String, tint sheetTint: UIColor, size: CGFloat, life: CGFloat, lift: Float = 0) {
-            addFlipbook(to: host, name, tint: paintedTint(sheetTint), size: paintedSide(size), life: life, lift: lift)
+            let side = paintedSide(size)
+            // A sheet whose lower edge would pass through the floor stands
+            // as a plane that fades into it: every sheet over a row, and a
+            // single victim's big burst (a camera-facing sheet reaches
+            // about 0.45 of its side below its centre at the home pitch).
+            let lowerEdge: Float = position.y + lift - Float(side) * 0.45
+            let reachesFloor: Bool
+            if case .row = reach {
+                reachesFloor = true
+            } else {
+                reachesFloor = lowerEdge < 0
+            }
+            if reachesFloor {
+                standingFlipbook(name, at: position, in: scene, tint: paintedTint(sheetTint),
+                                 size: side, life: TimeInterval(life), lift: lift)
+            } else {
+                addFlipbook(to: host, name, tint: paintedTint(sheetTint), size: side, life: life, lift: lift)
+            }
         }
         func drawGround(_ name: String, tint groundTint: UIColor, size: CGFloat, life: TimeInterval) {
             groundFlipbook(name, at: position, in: scene, tint: paintedTint(groundTint), size: paintedSide(size), life: life)
@@ -385,6 +424,82 @@ enum VFXLibrary {
         carrier.addParticleSystem(burst)
         host.addChildNode(carrier)
     }
+
+    /// A painted sheet standing over a ROW (`Reach.row`): a camera-facing
+    /// plane rather than a particle, so its material can fade it into the
+    /// floor. A screen-facing sheet 3–4 m wide centred at chest height
+    /// reaches below the floor, and the floor cut it with a hard straight
+    /// line through the burst (run 234's aoe-b, c and d). Engines hide that
+    /// seam with a depth fade — Unity's soft particles, Unreal's DepthFade —
+    /// and SceneKit's particle system has none; the floor here is the plane
+    /// y = 0, so fading by the fragment's height above it (`floorFade`) IS
+    /// the depth fade against it. The frames are stepped from the main
+    /// thread on a timer, as `groundFlipbook` steps its own, and the sheet
+    /// holds for half its life and fades over the rest, as the particle's
+    /// opacity curve did.
+    private static func standingFlipbook(_ name: String, at position: SCNVector3, in scene: SCNScene, tint: UIColor,
+                                         size: CGFloat, life: TimeInterval, lift: Float) {
+        let cut = frames(of: name, rows: 4, cols: 4)
+        guard !cut.isEmpty else { return }
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        tint.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let plane = SCNPlane(width: size, height: size)
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = cut[0]
+        // The strength goes into the colour: an additive sheet's alpha may
+        // or may not weigh it, the colour always does.
+        material.multiply.contents = UIColor(red: red * alpha, green: green * alpha, blue: blue * alpha, alpha: 1)
+        material.blendMode = .add
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
+        material.isDoubleSided = true
+        material.shaderModifiers = [.fragment: floorFadeModifier]
+        material.setValue(NSNumber(value: floorFadeHeight), forKey: "floorFade")
+        material.setValue(NSNumber(value: Float(1)), forKey: "sheetFade")
+        plane.firstMaterial = material
+        let node = SCNNode(geometry: plane)
+        node.position = SCNVector3(position.x, position.y + lift, position.z)
+        node.constraints = [SCNBillboardConstraint()]
+        node.castsShadow = false
+        scene.rootNode.addChildNode(node)
+        let count = cut.count
+        let start = CACurrentMediaTime()
+        var shown = 0
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak node] timer in
+            guard let node, node.parent != nil else { timer.invalidate(); return }
+            let elapsed = CACurrentMediaTime() - start
+            guard elapsed < life else {
+                timer.invalidate()
+                node.removeFromParentNode()
+                return
+            }
+            let index = min(count - 1, max(0, Int(elapsed / life * Double(count))))
+            if index != shown {
+                shown = index
+                node.geometry?.firstMaterial?.diffuse.contents = cut[index]
+            }
+            let remaining: Double = 2.0 - 2.0 * elapsed / life
+            let fade: Float = Float(min(1.0, max(0.0, remaining)))
+            node.geometry?.firstMaterial?.setValue(NSNumber(value: fade), forKey: "sheetFade")
+        }
+        RunLoop.main.add(timer, forMode: .common)
+    }
+
+    /// The fade `standingFlipbook` draws with: nothing at the floor, all of
+    /// the sheet `floorFade` metres above it (the fragment's position is in
+    /// view space; `inverseViewTransform` takes it to the world), times the
+    /// sheet's own fade over its life.
+    static let floorFadeModifier = """
+    #pragma arguments
+    float floorFade;
+    float sheetFade;
+    #pragma body
+    float4 world = scn_frame.inverseViewTransform * float4(_surface.position, 1.0);
+    float above = smoothstep(0.0, floorFade, world.y);
+    _output.color *= above * sheetFade;
+    """
 
     private static var frameCache: [String: [CGImage]] = [:]
 
