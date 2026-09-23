@@ -41,7 +41,11 @@ final class GameStore: ObservableObject {
     // MARK: - Lifecycle
 
     init(save: SaveGame, account: Account, cloudSave: CloudSaveSyncing? = nil) {
-        self.player = save.player
+        // A save written before units left their teams on removal can hold
+        // ids of units long gone (`Player.dropMissingUnitsFromTeams`).
+        var loaded = save.player
+        loaded.dropMissingUnitsFromTeams()
+        self.player = loaded
         self.account = account
         self.cloudSave = cloudSave
         self.seedStream = SeededRandom(seed: save.rngSeed)
@@ -343,6 +347,7 @@ final class GameStore: ObservableObject {
                 }
             }
             player.units.removeAll { fodderIDs.contains($0.id) && !$0.isLocked }
+            player.dropMissingUnitsFromTeams()
         }
     }
 
@@ -363,6 +368,7 @@ final class GameStore: ObservableObject {
                 }
             }
             player.units.removeAll { fodderIDs.contains($0.id) }
+            player.dropMissingUnitsFromTeams()
         }
     }
 

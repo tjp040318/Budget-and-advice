@@ -661,6 +661,9 @@ struct StageBriefingView: View {
     private static let rightColumn: CGFloat = 340
     /// The team's faces in its plate.
     private static let teamTile: CGFloat = 46
+    /// A campaign team's size: five, the genre's scenario team, and the
+    /// five the battle camera is solved for.
+    private static let teamLimit = 5
 
     /// The right column at its narrowest: five 48-point faces and the
     /// chevron (278) inside the plate's 20 points of padding. It widens to
@@ -914,7 +917,9 @@ struct StageBriefingView: View {
                         .buttonStyle(PlateButtonStyle())
                         .accessibilityLabel("Take \(unit.blueprint.name) out of the team")
                     }
-                    ForEach(0..<max(0, 5 - team.count), id: \.self) { _ in
+                    // A "+" only where a unit can go: the cap less the
+                    // units on the team, counted the way `toggle` counts.
+                    ForEach(0..<max(0, Self.teamLimit - team.count), id: \.self) { _ in
                         EmptyUnitSlot(size: Self.teamTile)
                     }
                     Spacer(minLength: 0)
@@ -1070,11 +1075,16 @@ struct StageBriefingView: View {
     /// is the leader.
     private func toggle(_ unit: ResolvedUnit) {
         var preset = store.teamPreset(for: .campaign)
+        // Only units still owned count toward the five: a ghost id left by a
+        // fed unit filled a slot the screen drew as empty (the owner's
+        // "I can only add three").
+        let owned = Set(store.player.units.map { $0.id })
+        preset.unitIDs.removeAll { !owned.contains($0) }
         if let index = preset.unitIDs.firstIndex(of: unit.id) {
             guard preset.unitIDs.count > 1 else { return }
             preset.unitIDs.remove(at: index)
         } else {
-            guard preset.unitIDs.count < 5 else { return }
+            guard preset.unitIDs.count < Self.teamLimit else { return }
             preset.unitIDs.append(unit.id)
         }
         withAnimation(.easeOut(duration: 0.15)) {

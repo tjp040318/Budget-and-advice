@@ -710,6 +710,7 @@ enum FusionService {
             }
         }
         player.units.removeAll { consumed.contains($0.id) }
+        player.dropMissingUnitsFromTeams()
 
         var unit = Unit(blueprint: blueprint)
         unit.acquiredFrom = "fusion"

@@ -155,5 +155,21 @@ struct Player: Codable, Equatable, Sendable {
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }
 
+    /// Every team keeps only units the player still owns. A unit fed to
+    /// another, spent on an evolution or fused left its id on every team it
+    /// stood in, and the prep screen drew three faces and two empty slots
+    /// for a campaign team of five ids and refused a fourth unit (the owner,
+    /// 2026-09-23: "You show two slots to add more characters on my team
+    /// but I can only add three"). Called after every removal and on load.
+    mutating func dropMissingUnitsFromTeams() {
+        let owned = Set(units.map { $0.id })
+        campaignTeam.unitIDs.removeAll { !owned.contains($0) }
+        arenaOffenseTeam.unitIDs.removeAll { !owned.contains($0) }
+        arenaDefenseTeam.unitIDs.removeAll { !owned.contains($0) }
+        for index in savedTeams.indices {
+            savedTeams[index].unitIDs.removeAll { !owned.contains($0) }
+        }
+    }
+
     var experienceToNextLevel: Int { 250 + level * 180 }
 }

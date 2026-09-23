@@ -424,3 +424,31 @@ final class TributeSaveTests: XCTestCase {
         XCTAssertNil(old.tributesClaimed)
     }
 }
+
+/// A unit that leaves the game leaves every team it stood in. A campaign
+/// team of five ids with two ghosts drew three faces and two empty slots on
+/// the prep screen and refused a fourth unit (the owner, 2026-09-23).
+final class TeamGhostTests: XCTestCase {
+
+    func testAUnitThatIsGoneLeavesEveryTeam() {
+        var player = Player()
+        let kept = Unit(blueprint: UnitDatabase.blueprint("anubis_umbra")!)
+        let gone = Unit(blueprint: UnitDatabase.blueprint("anubis_umbra")!)
+        player.units = [kept]
+        player.campaignTeam = TeamPreset(name: "Campaign", unitIDs: [kept.id, gone.id])
+        player.arenaOffenseTeam = TeamPreset(name: "Offense", unitIDs: [gone.id])
+        player.arenaDefenseTeam = TeamPreset(name: "Defense", unitIDs: [kept.id])
+        player.savedTeams = [TeamPreset(name: "Saved", unitIDs: [gone.id, kept.id])]
+
+        player.dropMissingUnitsFromTeams()
+
+        let campaign: [UUID] = player.campaignTeam.unitIDs
+        let offense: [UUID] = player.arenaOffenseTeam.unitIDs
+        let defense: [UUID] = player.arenaDefenseTeam.unitIDs
+        let saved: [UUID] = player.savedTeams[0].unitIDs
+        XCTAssertEqual(campaign, [kept.id])
+        XCTAssertTrue(offense.isEmpty)
+        XCTAssertEqual(defense, [kept.id])
+        XCTAssertEqual(saved, [kept.id])
+    }
+}
