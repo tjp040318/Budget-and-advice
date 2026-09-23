@@ -5187,10 +5187,49 @@ spent, and the rigger refuses a weapon held out; (b) a **weapon pass**,
 the skirt pass's reverse — measure every edge's stretch across the
 clips, find the rigid held pieces, and give the whole object to the
 hand that holds it, cutting the seam where it is welded to cloth or leg;
-(c) leave it. (b) is being built (`tools/weapon_pass.py`) and judged
-before it touches the bundle, on per-family pose sheets that skin the
-shipped base and the LOD with the shipped clips at eight frames each —
-the whole roster is being audited on those sheets at the same time.
+(c) leave it. (b) was chosen, because (a) costs what the roster just cost
+and (c) leaves the owner's island playing a strip on every tap.
+
+**The weapon pass as built (`tools/weapon_pass.py`, 2026-09-23, 23:00).**
+The mesh is welded by position and the arm's own skin cut away; what
+falls off a hand as its own piece, owned at least half by the arm, past
+the wrist and not wrapping it, is a held object. It is measured, not
+guessed: the shipped base skinned with its shipped clips at 48 frames of
+each, and a piece is re-bound only where an edge on it stretches past 2x
+while the body holds part of it. The fix binds the whole piece to the
+hand at 1.0, strips the forearm's leg share on a ramp from the elbow, and
+cuts the seam where the piece touches the body (`character.cut_seam`);
+the LOD takes the same verdict. Rejected on the way: a weapon bone (every
+clip re-made), and smoothing or clamping the weights (a blend is still a
+blend). Applied by name after a before/after board each
+(`character.WEAPON_FAMILIES`, nineteen): the awakened Ra (ankh 77x →
+3.4x), Horus (51 → 1.4), Ares, Freya, Zeus and Isis, the Siren (harp
+246 → 1.7), Thor, Taweret, the Gladiator, the Vestal (lamp 70 → 2.0),
+Sekhmet (15 → 1.2), Serqet, Ptah, the Einherjar, Athena, the Satyr, the
+Cobra Priestess and the Cyclops. Refused, and why, in the docstring: the
+awakened Osiris (his "stretched crook" is the kilt welded to the fist),
+Loki, Set, Nuwa, Ma'at and Isis (a hand sewn to a garment), five with no
+visible gain, and the Jiangshi's and Terracotta Soldier's sleeves, which
+read as held and tore when bound. `mesh.py` runs the pass on those names
+after a re-ship; the self-test holds a clean control at 0 moved.
+
+**The audit.** Every one of the 114 shipped bases was skinned with its
+clips on an eight-cell sheet (`scratchpad/audit/audit_sheet.py`: the
+stage idle, the basic, the heavy twice, the ultimate twice, the LOD the
+battle draws, the victory) and judged: 13 clean, 15 minor, 86 with a
+fault. The faults by kind: **cloth tearing** (85 findings, 56 severe:
+tunics, kilts, robes and sashes ripped or flying with an arm) is the
+largest; held weapons 55; then limb welds (a hand skinned to the thigh,
+so the fingers stretch into a spike), clips that do not fit the mesh
+(Baldr and the Cobra Priestess with both arms up in every clip,
+Hephaestus swinging his empty hand, Skadi drawing her bow backwards),
+floating splinters, and one mesh fault: Apollo carries a THIRD ARM
+holding his lyre. The second round — the weapon pass on the sixteen
+families it flagged but nobody judged, limb welds, mirrored clips, and a
+cloth pass that OPTIMISES the skinning weights against the clips (the
+family of Le & Deng's SSDR and as-rigid-as-possible skinning) rather
+than moving cloth by rule — is being built on scratch copies and judged
+the same way before it touches the bundle.
 
 ### Where the serious roster stands (2026-09-19, 03:45)
 
