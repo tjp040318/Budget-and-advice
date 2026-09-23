@@ -35,8 +35,10 @@ jobs:
     # The build is ~2 min, the test target ~6–10 (its compile, not its
     # tests, which run in twenty seconds), the tour ~25–28: run 161 sat at
     # 38–41 against a limit of 40. Phase B's 26 relaunches (2026-09-22) add
-    # about 3.5 minutes to the tour, so about 45 at the worst.
-    timeout-minutes: 55
+    # about 3.5 minutes to the tour, so about 45 at the worst — and run 222
+    # (2026-09-23) took 50: checkout 3, build 3, tests 7, the tour 37 on a
+    # slow simulator. 70 keeps a slow day from cancelling a green build.
+    timeout-minutes: 70
     steps:
       - uses: actions/checkout@v4
         with:
@@ -115,8 +117,19 @@ jobs:
           shoot() { xcrun simctl io "$UDID" screenshot "shots/$1.png" >/dev/null 2>&1 || true; }
           # Relaunches the step being photographed with more arguments — a
           # room, a tab, a ledger (phase B, 2026-09-22: twenty-six of them).
-          # Reads the loop's $step when it is called.
-          again() { xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step "$@" >/dev/null; }
+          # Reads the loop's $step when it is called. Each relaunch keeps its
+          # own stdout and stderr, appended to the step's console under the
+          # arguments it ran with: run 221's -umbra and -b10 rails, the two
+          # frames that round's rail fix was for, logged nothing.
+          relaunches=0
+          again() {
+            relaunches=$((relaunches + 1))
+            local tag="shots/$step-${names[$step]}-again$(printf %03d $relaunches)"
+            echo "$*" > "$tag-args.txt"
+            SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
+              --stdout="$PWD/$tag-out.txt" --stderr="$PWD/$tag-err.txt" \
+              "$UDID" com.pantheon.game -tour -tour-step $step "$@" >/dev/null
+          }
           xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step 0 >/dev/null
           sleep 8; shoot warmup
           echo "$(date -u +%T) warm"
@@ -358,7 +371,14 @@ jobs:
             base="shots/$step-${names[$step]}"
             { echo "== stdout"; cat "$base-out.txt" 2>/dev/null; echo; echo "== stderr"; cat "$base-err.txt" 2>/dev/null; } \
               | head -c 120000 > "$base-console.txt"
-            rm -f "$base-out.txt" "$base-err.txt"
+            for args in "$base"-again*-args.txt; do
+              [ -f "$args" ] || continue
+              tag="${args%-args.txt}"
+              { echo; echo "==== relaunched with: $(cat "$args")"
+                echo "== stdout"; head -c 60000 "$tag-out.txt" 2>/dev/null || true; echo
+                echo "== stderr"; head -c 30000 "$tag-err.txt" 2>/dev/null || true; } >> "$base-console.txt"
+            done
+            rm -f "$base-out.txt" "$base-err.txt" "$base"-again*
           done
           # The awakened reveal is a relaunch of its own, and its console —
           # the [ClothChain] lines for the awakened Ares — is kept beside it.
