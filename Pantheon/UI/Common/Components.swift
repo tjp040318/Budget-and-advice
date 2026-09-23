@@ -261,6 +261,52 @@ struct BundleImage: View {
     static func exists(_ name: String) -> Bool { BundleArt.exists(name) }
 }
 
+/// A card's painting in a square, zoomed to the bust when the painting is
+/// a whole small figure.
+///
+/// Every card in the bundle is a bust except seven families' (Horus, and
+/// Neptune, Mercury, the Vestal, Chang'e, the Jiangshi and the Terracotta
+/// Soldier from batch 4), which the painter returned as a full figure in
+/// A-pose. On a board of busts those read as the cheapest thing on it, so a
+/// square draws them at `zoom` with the painting's top `top` of the way
+/// down: the head and shoulders fill the square as every other card's do.
+/// Measured on a sheet of all seven against Anubis and Zeus (2026-09-23).
+/// A re-roll as a real bust is paid art on the owner's word; this is the
+/// free half, and it stops applying the moment a family leaves the list.
+struct PortraitPainting: View {
+    let name: String
+    let size: CGFloat
+
+    static let fullFigureFamilies: [String] = [
+        "horus", "neptune", "mercury", "vestal", "chang_e", "jiangshi", "terracotta_soldier",
+    ]
+    static let zoom: CGFloat = 1.9
+    static let top: CGFloat = 0.04
+
+    /// `portrait_<family>_<element>` or `…_awakened`.
+    static func isFullFigure(_ name: String) -> Bool {
+        fullFigureFamilies.contains { name.hasPrefix("portrait_\($0)_") }
+    }
+
+    var body: some View {
+        if Self.isFullFigure(name) {
+            let drawn = size * Self.zoom
+            // A larger view in a smaller frame is centred on it; this moves
+            // the painting's row `top` up to the square's top edge.
+            let drop = drawn / 2 - size / 2 - Self.top * drawn
+            BundleImage(name: name, renderedAt: drawn)
+                .aspectRatio(contentMode: .fill)
+                .frame(width: drawn, height: drawn)
+                .offset(y: drop)
+                .frame(width: size, height: size)
+                .clipped()
+        } else {
+            BundleImage(name: name, renderedAt: size)
+                .aspectRatio(contentMode: .fill)
+        }
+    }
+}
+
 /// A painting that covers exactly the space it is given and REPORTS exactly
 /// that size — the one way to put a painting behind a screen or across a
 /// band. `BundleImage(...).aspectRatio(contentMode: .fill)` reports the size
@@ -1247,9 +1293,8 @@ struct UnitCard: View {
             // Arena's lag: `UnitCard` is what a challenger row, a team slot,
             // a grid cell and a picker candidate are all made of, so every
             // list in the game was decoding full 1024-pixel paintings.
-            BundleImage(name: unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened),
-                        renderedAt: size)
-                .aspectRatio(contentMode: .fill)
+            PortraitPainting(name: unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened),
+                             size: size)
         } else {
             ZStack {
                 RadialGradient(

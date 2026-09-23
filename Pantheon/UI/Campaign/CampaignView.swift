@@ -997,13 +997,17 @@ struct StagePopup: View {
     var previewPlayer: Player? = nil
     let onPrepare: () -> Void
     let onFight: () -> Void
-    /// Sweep this stage as many times as the energy allows, up to the
-    /// maximum. The popup's Fight is one run, but a sweep of one is barely
-    /// worth the tap — the point of it is the twenty.
+    /// Sweep this stage the number of times chosen from the foot's
+    /// choices (once, five, ten, or as many as the energy pays for).
     let onSweep: (Int) -> Void
     let onClose: () -> Void
 
     @EnvironmentObject private var store: GameStore
+    /// Sweep opens a choice of counts over the foot, never spends by itself:
+    /// one tap used to sweep as many times as the energy paid for, which on
+    /// a full wallet was twenty runs the player never chose (the Labyrinth's
+    /// deck has the same chooser).
+    @State private var choosingSweep = false
 
     private static let maxWidth: CGFloat = 644
     /// 48, the smallest `UnitPortraitTile` whose tag hangs under the stars
@@ -1234,7 +1238,9 @@ struct StagePopup: View {
             }
             .frame(width: roomy ? Self.teamWide : Self.teamNarrow)
             if canSweep {
-                SweepButton(stage: stage, runs: SweepService.maximumRuns, onSweep: onSweep, onGlass: true)
+                SweepButton(stage: stage, runs: 1, onSweep: { _ in
+                    withAnimation(.easeOut(duration: 0.15)) { choosingSweep.toggle() }
+                }, onGlass: true)
                     .frame(width: Self.sweepWidth)
             }
             PrimaryButton(
@@ -1247,6 +1253,82 @@ struct StagePopup: View {
             }
             .frame(width: Self.fightWidth)
         }
+        // The choices float over the card above the foot, so opening them
+        // moves nothing.
+        .overlay(alignment: .bottomTrailing) {
+            if canSweep && choosingSweep {
+                sweepChoices
+                    .offset(y: -(PrimaryButton.height + 8))
+                    .transition(.opacity)
+            }
+        }
+    }
+
+    /// Once, five, ten, and as many as the energy pays for (never past
+    /// `SweepService.maximumRuns`), each with the energy it spends.
+    private var sweepChoices: some View {
+        let most = min(SweepService.maximumRuns, SweepService.affordableRuns(stage, player: player))
+        let short: [Int] = [1, 5, 10].filter { $0 < most }
+        let counts: [Int] = most >= 1 ? short + [most] : short
+        return HStack(spacing: 6) {
+            Text("SWEEP")
+                .font(Theme.title(13))
+                .tracking(1.2)
+                .carved(glow: false)
+                .lineLimit(1)
+                .fixedSize()
+                .padding(.trailing, 2)
+            ForEach(counts, id: \.self) { runs in
+                sweepChoice(runs: runs, isMost: runs == most && runs > 1)
+            }
+            Button {
+                withAnimation(.easeOut(duration: 0.15)) { choosingSweep = false }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .black))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .frame(width: 30, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Close")
+        }
+        .padding(.leading, 12)
+        .padding(.trailing, 4)
+        .padding(.vertical, 6)
+        .background(GlassPlate(radius: Theme.tightCorner, opacity: 0.92))
+        .fixedSize()
+    }
+
+    private func sweepChoice(runs: Int, isMost: Bool) -> some View {
+        let label = isMost ? "Max ×\(runs)" : "×\(runs)"
+        let spend = cost * runs
+        return Button {
+            Juice.haptic(.light)
+            withAnimation(.easeOut(duration: 0.15)) { choosingSweep = false }
+            onSweep(runs)
+        } label: {
+            HStack(spacing: 4) {
+                Text(label)
+                    .font(Theme.numeric(12).weight(.heavy))
+                    .foregroundStyle(Color(hex: "#FFE9A8"))
+                    .lineLimit(1)
+                    .fixedSize()
+                ItemIcon(key: "energy", size: 13, glow: false)
+                Text("\(spend)")
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(Theme.onGlass)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .padding(.horizontal, 10)
+            .frame(height: 32)
+            .background(Capsule().fill(Color.black.opacity(0.45)))
+            .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 1))
+            .contentShape(Capsule())
+        }
+        .buttonStyle(PlateButtonStyle())
+        .accessibilityLabel("Sweep \(runs) times for \(spend) energy")
     }
 
     /// The last wave's headliner, drawn after a rule beside the first wave:

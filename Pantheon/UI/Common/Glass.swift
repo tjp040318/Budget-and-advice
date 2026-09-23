@@ -933,14 +933,28 @@ struct UnitPortraitTile: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
     }
 
+    /// The card to draw: the unit's own, else the card of the mesh it
+    /// fights in (`ModelSpec.standInAsset`) — the Colossus of the Sun and
+    /// the Dragon of Longmen stand in as the Vault's Colossus and Apep and
+    /// have no card of their own, so the popup and the briefing drew their
+    /// initial. The same fallback as the chapter map's boss medallion
+    /// (`ChapterMapArt.bossPortrait`).
+    private var portraitName: String? {
+        let model = unit.blueprint.model
+        var names = [model.portraitName(awakened: unit.unit.isAwakened)]
+        if let standIn = model.standInAsset {
+            names.append("portrait_\(standIn)")
+            names.append("portrait_\(standIn)_\(unit.element.rawValue)")
+        }
+        return names.first(where: { BundleImage.exists($0) })
+    }
+
     /// The card's painting at the tile's own size, or the element-tinted
     /// initial `UnitCard` draws before a family has art.
     @ViewBuilder
     private var portrait: some View {
-        let name = unit.blueprint.model.portraitName(awakened: unit.unit.isAwakened)
-        if BundleImage.exists(name) {
-            BundleImage(name: name, renderedAt: size)
-                .aspectRatio(contentMode: .fill)
+        if let name = portraitName {
+            PortraitPainting(name: name, size: size)
         } else {
             ZStack {
                 RadialGradient(
