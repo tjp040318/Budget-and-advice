@@ -107,7 +107,7 @@ either number fails loudly instead of drifting.
 solves with every numeric overload in play, seconds each; forty of them in
 `BoonTests` and `ResonanceTests` took the test target's compile from six
 minutes to ten on 2026-09-16 and put run 161 over the job's 40-minute limit
-(now 70: run 222 took 50 of 55 on a slow simulator). Hoist into typed lets — `let lift: Double = …` — and assert the
+(70 after run 222 took 50 of 55 on a slow simulator; 90 since run 237, whose tour of 52 steps and a 5-minute checkout left ten minutes spare). Hoist into typed lets — `let lift: Double = …` — and assert the
 names. The tests themselves run in twenty seconds.
 
 The 3D tools need packages that are not preinstalled. PyPI is reachable, so at
