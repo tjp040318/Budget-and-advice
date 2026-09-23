@@ -340,6 +340,13 @@ final class FloatingLabel {
     /// and by its unit's plate, eased so a push slides rather than jumps.
     var push: CGFloat = 0
     var pushed = false
+    /// Points it is moved sideways off ANOTHER unit's plate (run 234: a
+    /// "RESIST" stopped under its own plate lay across its neighbour's
+    /// level badge). Out of a plate's way at once, eased back.
+    var slide: CGFloat = 0
+    /// 0…1: out of sight while it has no place clear of every other plate
+    /// within reach of its unit, faded back in when it has one.
+    var crowdAlpha: CGFloat = 1
 
     init(node: SKSpriteNode, unit: UnitNode?, lift: Float, side: Float, align: CGFloat, fallback: SCNVector3,
          born: TimeInterval, pop: Bool, scatter: CGFloat, rise: CGFloat) {
@@ -465,6 +472,13 @@ final class UnitPlate: SKNode {
     /// Whether a row of status tiles is up. Render thread.
     var wearsTiles: Bool { tilesRight > tilesLeft }
 
+    /// The plate's parts, in a node of their own under the plate, so the
+    /// declutter can fade a VISITING plate — its unit off its mark, leaping
+    /// at or standing over a victim — that has no clear place to stand
+    /// (`crowdAlpha`, run 234's 8-aoe-a). The plate's own alpha belongs to
+    /// the death, the revival and a wave's entry (`setDefeated`, `enter`),
+    /// whose fade actions would undo a fade written over them.
+    private let parts = SKNode()
     private let hpFill: SKSpriteNode
     private let hpMask: SKSpriteNode
     private let trailMask: SKSpriteNode
@@ -482,6 +496,14 @@ final class UnitPlate: SKNode {
     private var shownFraction: CGFloat = 1
     /// The overlay this plate is on, whose queue every change goes through.
     weak var host: UnitPlateOverlay?
+
+    /// 1 drawn, 0 out of sight by the declutter's word (`BattleSceneController.
+    /// layoutPlates`): a visiting plate is drawn only where it is clear of
+    /// every plate drawn, and fades back in there. Render thread.
+    var crowdAlpha: CGFloat {
+        get { parts.alpha }
+        set { parts.alpha = newValue }
+    }
 
     init(elementHex: String, wearsMarker: Bool = false) {
         let w = UnitPlate.barWidth
@@ -530,53 +552,59 @@ final class UnitPlate: SKNode {
         let hpY: CGFloat = (a + UnitPlate.barGap) / 2
         let atbY: CGFloat = -(h + UnitPlate.barGap) / 2
 
+        // Every part in `parts`, at the plate's origin and z, so where each
+        // is drawn is unchanged.
+        parts.position = .zero
+        parts.zPosition = 0
+        addChild(parts)
+
         rim.position = .zero
         rim.zPosition = 0
-        addChild(rim)
+        parts.addChild(rim)
 
         let hpTrack = SKSpriteNode(texture: PlateArt.track("plate_track", width: w + 2 * UnitPlate.trackPad + 2, height: track, radius: 4))
         hpTrack.size = CGSize(width: w + 2 * UnitPlate.trackPad + 2, height: track)
         hpTrack.position = .zero
         hpTrack.zPosition = 1
-        addChild(hpTrack)
+        parts.addChild(hpTrack)
 
         let trailCrop = SKCropNode()
         trailCrop.maskNode = trailMask
         trailCrop.addChild(trailFillNode)
         trailCrop.position = CGPoint(x: 0, y: hpY)
         trailCrop.zPosition = 2
-        addChild(trailCrop)
+        parts.addChild(trailCrop)
 
         let hpCrop = SKCropNode()
         hpCrop.maskNode = hpMask
         hpCrop.addChild(hpFill)
         hpCrop.position = CGPoint(x: 0, y: hpY)
         hpCrop.zPosition = 3
-        addChild(hpCrop)
+        parts.addChild(hpCrop)
 
         let atbCrop = SKCropNode()
         atbCrop.maskNode = atbMask
         atbCrop.addChild(atbFill)
         atbCrop.position = CGPoint(x: 0, y: atbY)
         atbCrop.zPosition = 3
-        addChild(atbCrop)
+        parts.addChild(atbCrop)
 
         // The level badge overlaps the track's left end, the genre's way.
         levelBadge.position = CGPoint(x: UnitPlate.badgeCentreX, y: 0)
         levelBadge.zPosition = 5
-        addChild(levelBadge)
+        parts.addChild(levelBadge)
         applyLevel(1)
 
         // The status tiles stand on the track.
         statusRow.position = CGPoint(x: 0, y: track / 2 + 1.5 + UnitPlate.tile / 2)
         statusRow.zPosition = 4
-        addChild(statusRow)
+        parts.addChild(statusRow)
 
         // The matchup marker beside the track's right end, level with the
         // bars, where it is read with the health it is about.
         badge.position = CGPoint(x: UnitPlate.markerCentreX, y: 0)
         badge.zPosition = 5
-        addChild(badge)
+        parts.addChild(badge)
     }
 
     /// The number in the badge: the unit's level.

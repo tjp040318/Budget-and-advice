@@ -7356,3 +7356,87 @@ did. The glare: a row sheet is tinted 0.6 toward the caster's colour and
 its paint scaled to half (`rowSheetStrength`, in the colour, so the
 additive blend is dimmed whatever it reads of the alpha), and
 `areaSheetLimit` is 3.4 m, down from 4.4.
+
+### Round 6: run 234's remaining faults (2026-09-23, evening)
+
+An agent judged all fifty of round 5's faults against run 234's frames:
+25 were fixed, 11 still showed, 5 showed in part, 7 could not be judged
+from those frames, and 2 wait on the owner. Five agents then took the
+ones still showing, each on its own files.
+
+- **Floats on other units' plates (F05).** `layoutFloats` knew only its
+  own unit's plate, so a "RESIST" stopped under its own plate could lie
+  across the next plate's level badge. `layoutPlates` now hands every
+  plate as drawn that frame (`plateBoxes`) to the floats. A rising float
+  stops under the first plate in its way, its own or a neighbour's. If
+  its letters (the picture less `floatEdge`) would still touch another
+  plate, it slides the least distance sideways that clears every plate,
+  no further than its half width plus `floatSlideSpare`, and it stays on
+  the side it is already on. With no such place it goes out at once and
+  fades back in when a place frees. Moving it higher was ruled out: that
+  is where the next plate up stands.
+- **A dashing unit's plate over another (F03).** The declutter eased a
+  plate's lift at 35% a frame, but `placed` recorded where each plate was
+  going, not where it was drawn. A dasher's clear spot jumps across a row
+  in one frame, so the eased plate was drawn over the plates between.
+  Every unit's mark is kept now (`homeMarks`). A plate more than 0.15 m
+  off its mark is a VISITOR: it is placed after the plates at home, which
+  never move for it. Where its drawn box would meet a plate, it goes out
+  of sight at once, jumps to its spot and fades back in over 0.12 s
+  (`UnitPlate.crowdAlpha`, on a `parts` node, so it cannot fight the
+  death and wave-entry fades on the plate itself).
+- **The lone badge (8-a).** Not fixed. In that frame every badge from
+  Thoth's plate onward wore the NEXT plate's picture, and the next frame
+  from the same launch was right: a one-frame SpriteKit fault. The two
+  candidates: a new `SKTexture(image:)` made on the render thread just
+  before it is drawn (status tiles, floats, markers; the fix is a
+  texture cache and `preload`), or the queued overlay changes drained in
+  SceneKit's `willRenderScene` rather than in the overlay's own
+  `update(_:)`. Neither is changed until a second frame shows it.
+- **The Colossus's arm (F06).** The spot light was already cut to 0.58.
+  Most of the arm's light was the set's own: the key, the fill, the
+  painting's environment and the braziers. A pale boss's paint now
+  answers every light by `UnitNode.paintResponse`, the square root of
+  `paleAlbedo` over its paint, never under 0.5. That gives the Colossus
+  0.76, the Dragon King 0.68 and the Unwrapped King 0.53. Two other ways
+  were rejected: a darker grade for the Vault would darken the floor and
+  the team for one figure, and the whole ratio on every light would paint
+  every pale boss the same grey. Run 234's arm patches, taken through the
+  camera's curve at 0.76, fall from 240–245 to about 220–225.
+- **The fjord's black block (F07).** Nothing in that corner of the set
+  is drawn black. The block is the same 38 × 72 device pixels in every
+  run, so it is a screen-space fault, and it appears only where a built
+  bowl's rim stands within a hand of the face behind it. Jötunheim's
+  block went once its bowl stood 0.39 m clear. A built bowl now keeps
+  half a metre of air (`StageBuilder.bowlClearance`).
+- **The 5★ charge (F11).** The beam is ADDED to the set
+  (`.plusLighter`, as the victory chest's flash already is over its
+  SCNView). Its white is a plateau from 0.40 to 0.60 across, its colour
+  flanks are at 0.35, and it is full from the floor to above the scroll.
+  Through the gather it is at 0.85 for a 5★, 0.65 for a 4★ and 0.45 for
+  a 3★. The scroll's glow is drawn under the beam (`chargeScrollGlow`),
+  so the column no longer turns red below the roll. On a mock of run
+  234's frame, the axis reads 252–255 from the floor to the inner ring.
+- **The rite's photograph (F18).** A CI screenshot lands two to three
+  seconds after it is asked for. Under `-tour` the rite holds until
+  6 s (`RelicAwakeningRite.closesAfter`), and `-a` is shot inside the
+  hold.
+- **Lists that rest on whole rows (F38, F50).** The bazaar's shelf and
+  its stall rail, the mileage board and the team picker now use
+  `RestingList` and `restingRow`: a row shows from 85% in view and is
+  whole from 98%. A glass chevron (`RestingChevron(onGlass:)`) sits at
+  the foot while more lies below.
+- **Counsel's counts (F35).** A fixed 190-point bar does not fit a ready
+  row on an iPhone 16 Pro. Every row's bar line now gets the room of the
+  list's tightest row: a waiting row reserves the claim column, and a row
+  with a narrower reward reserves the difference. The count sits in a
+  slot as wide as the list's longest.
+- **The Ascendant (F46).** The arena's fifth tier was "Demigod", the
+  player's own noun. It is `.ascendant` now; the raw value is unchanged,
+  and no save stores a tier.
+- **The divinity crystal and the two missing boss cards (F48, F49).**
+  The crystal was re-keyed with the scrolls' halo ramp. The Hydra and the
+  Jötunn, the two bosses without a card, get renders of their shipped
+  meshes on the boss cards' dark ground (`portrait_boss_hydra`,
+  `portrait_boss_jotunn`). A painted card each is about 9 Meshy credits,
+  on the owner's word.

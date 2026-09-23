@@ -167,6 +167,25 @@ final class UnitNode: SCNNode {
                 }
             }
         }
+        // And a pale boss's paint answers EVERY light a shade lower (run
+        // 234): with its spot already cut to 0.58, the Colossus's right arm
+        // and fist were still a flat cream plateau in 18-dungeon_battle-b/c —
+        // red clipped at 255, 55% and 64% of the worst 64-px patches over
+        // 240 — because the spot was never most of its light. The key, the
+        // fill, the painting's environment and the braziers are the SET's,
+        // tuned for figures of ordinary paint, and 0.24 of paint gives back
+        // 1.7 times what `paleAlbedo` does of each (`paintResponse`).
+        if combatant.isBoss, let albedo {
+            let response = UnitNode.paintResponse(albedo: albedo)
+            if response < 1 {
+                container.enumerateHierarchy { child, _ in
+                    for material in child.geometry?.materials ?? [] {
+                        material.diffuse.intensity = response
+                    }
+                }
+                print("[Boss] \(combatant.model.assetName): pale paint \(String(format: "%.3f", albedo)), answers \(String(format: "%.2f", Double(response))) of every light")
+            }
+        }
 
         // Health bar: a dark plate with a coloured fill that scales from its
         // left edge, parented to a billboard so it always faces the camera.
@@ -929,6 +948,38 @@ final class UnitNode: SCNNode {
     var bossLightScale: CGFloat {
         guard let paintAlbedo, paintAlbedo > 0.001 else { return 1 }
         return CGFloat(min(1, max(0.3, UnitNode.paleAlbedo / paintAlbedo)))
+    }
+
+    /// How much of every light a boss's paint answers, 0.5…1 — set as its
+    /// materials' diffuse intensity, so the painted base colour is what is
+    /// scaled and the rim that sets the figure off its painting, and the
+    /// stone's sheen, keep their strength. All of it up to `paleAlbedo`;
+    /// above it the square root of the ratio, which keeps HALF the paint's
+    /// excess over the calibration in stops (the paint answers as the
+    /// geometric mean of itself and `paleAlbedo`): the Colossus (0.24)
+    /// 0.76, the Dragon King (0.30) 0.68, the Unwrapped King (0.50) 0.53,
+    /// and the serpent, the Hydra and the Jötunn, under the line, all of
+    /// it. Never under half, so a misread paint cannot put a boss in the
+    /// dark (the owner: "it's hard to see the boss").
+    ///
+    /// Not the whole ratio, which `bossLightScale` takes for the spot: on
+    /// every light it would paint every pale boss the one grey of the
+    /// line, sandstone and linen wrappings alike. Not the Vault's grade:
+    /// 0.2 of a stop off the whole set darkens its floor, its props and the
+    /// team for one figure (18-dungeon_battle-d's painting band already
+    /// sits at 34), and leaves a pale boss in any other place to blow. Not
+    /// the aura: sixteen motes a second rising from feet sunk below the rim
+    /// are not what clips a fist. Run 234's arm patches taken back through
+    /// the camera's curve (Reinhard to the 1.85 white point) and forward
+    /// again at 0.76: the plateau falls from 240–245 to about 220–225, its
+    /// red channel off the clip (254 to about 234), no pixel of either
+    /// worst patch over 240 before the bloom (which only falls with them),
+    /// and the lit stone's median from about 220 to 200 — still nearly
+    /// twice the set beside it (110), the brightest thing in the upper frame.
+    static func paintResponse(albedo: Double?) -> CGFloat {
+        guard let albedo, albedo > paleAlbedo else { return 1 }
+        let halfTheExcess: Double = (paleAlbedo / albedo).squareRoot()
+        return CGFloat(max(0.5, halfTheExcess))
     }
 
     private static var albedoCache: [String: Double] = [:]

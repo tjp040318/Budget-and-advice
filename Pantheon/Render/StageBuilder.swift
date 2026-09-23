@@ -879,25 +879,42 @@ enum StageBuilder {
     }
 
     /// Where a brazier may stand: where it was put, or the nearest place
-    /// along the depth of the field where its bowl clears every set piece.
-    /// `clearOfTheWings` sends the wing braziers (±6.2) and the wing pieces
-    /// (±6.0 to ±7.0) to the same line at ±8.5, 0.2 to 0.8 m apart in depth,
-    /// so a bowl stood sunk in a stone. The fjord's is the case run 221 saw:
-    /// its BUILT bowl (the Norse brazier has not shipped) 8 cm deep in its
-    /// built rune stone, its fire 3 cm over a flat cap — the one place a
-    /// pure black rectangle has stood over the right-hand brazier since run
-    /// 217, and the one thing there no other photographed set has
-    /// (Jötunheim has the same pair, hidden inside a pillar). Only a built
-    /// bowl is moved: a shipped brazier's own mesh hides its overlap, and
-    /// moving those would re-dress the Duat and the Vault, which nobody
-    /// has asked for. It moves the shorter way, in front of the piece or
-    /// behind it, and never more than two metres.
+    /// along the depth of the field where its bowl stands HALF A METRE clear
+    /// of every set piece (`bowlClearance`). `clearOfTheWings` sends the
+    /// wing braziers (±6.2) and the wing pieces (±6.0 to ±7.0) to the same
+    /// line at ±8.5, 0.2 to 0.8 m apart in depth, so a bowl stood sunk in a
+    /// stone: the fjord's BUILT bowl (the Norse brazier has not shipped) 8
+    /// cm deep in its built rune stone, Jötunheim's in its pillar.
+    ///
+    /// THE FJORD'S BLACK BLOCK (runs 217–234). Over the right-hand bowl, a
+    /// rectangle of pure black against the frame's right edge, the same 38
+    /// × 72 device pixels in every run it showed in, and the same block in
+    /// the same place in Jötunheim's frame of run 223. It is not a thing in
+    /// the set: nothing drawn there is black (the bowl is cliff rock, the
+    /// stone sandstone, the fire additive), and no surface under an ambient
+    /// light comes out at 0–3 of 255. A fixed size, a hard edge and pure
+    /// black are a screen-space fault — a sample the post-process cannot
+    /// resolve, spread by a blur into a square that the frame's edge cuts —
+    /// seeded where a built bowl's rim stood within a hand of the face
+    /// behind it, on the frame's edge. Nor is it the overlap alone: stepped
+    /// 0.18 m to stand 0.1 m clear of its stone (run 224), the fjord's bowl
+    /// kept its block in every frame through run 234, 6 pixels lower with
+    /// the bowl; Jötunheim's, sunk in its pillar, showed it in one of two
+    /// runs, and the same step carried it 0.39 m clear of the shaft, where
+    /// it has not shown since. So a bowl stands off by more than the gap
+    /// that cured Jötunheim's: the fjord's 0.58 m forward of its old mark
+    /// (0.5 m of air to the stone, its fire 0.97 m from the stone's face
+    /// where Jötunheim's is 0.86 m from its shaft), Jötunheim's two another
+    /// 0.3–0.4 m. Only a built bowl is moved: a shipped brazier's own mesh
+    /// hides its overlap, and moving those would re-dress the Duat and the
+    /// Vault, which nobody has asked for. It moves the shorter way, in
+    /// front of the piece or behind it, and never more than two metres.
     static func standClear(_ brazier: SCNNode, of pieces: [SCNNode]) -> SCNVector3 {
         var position = brazier.position
         guard let box = ModelOrientation.bounds(of: brazier, in: brazier) else { return position }
         let radius = max(max(abs(box.min.x), abs(box.max.x)), max(abs(box.min.z), abs(box.max.z))) * brazier.scale.x
         guard radius > 0.01 else { return position }
-        let reach = radius + 0.1
+        let reach = radius + Self.bowlClearance
         // Twice, so a move clear of one piece is checked against the rest.
         for _ in 0..<2 {
             for piece in pieces {
@@ -913,6 +930,11 @@ enum StageBuilder {
         }
         return position
     }
+
+    /// The air a built bowl keeps between itself and any set piece, in
+    /// metres (`standClear`): 0.1 left the fjord's black block standing,
+    /// Jötunheim's 0.39 cured its own.
+    static let bowlClearance: Float = 0.5
 
     /// The ground a placed piece covers, in the stage's metres: the box round
     /// everything in it (a prop is a wrapper round the file's nodes, so its
