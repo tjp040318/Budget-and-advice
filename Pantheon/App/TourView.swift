@@ -1,4 +1,5 @@
 #if DEBUG
+import Combine
 import SwiftUI
 
 /// A self-driving pass through the app's screens, for a machine with no

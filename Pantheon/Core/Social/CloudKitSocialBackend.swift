@@ -86,16 +86,14 @@ final class CloudKitSocialBackend: SocialBackend, @unchecked Sendable {
 
     /// The iCloud user record's name: the player's identity everywhere.
     private func userID() async throws -> String {
-        lock.lock()
-        let cached = cachedUserID
-        lock.unlock()
+        // Scoped: `NSLock.lock()` is unavailable from an async function
+        // (a warning in the Swift 5 mode, an error in 6).
+        let cached = lock.withLock { cachedUserID }
         if let cached { return cached }
         do {
             let recordID = try await container.userRecordID()
             let userName = recordID.recordName
-            lock.lock()
-            cachedUserID = userName
-            lock.unlock()
+            lock.withLock { cachedUserID = userName }
             return userName
         } catch {
             throw CloudKitSocialBackend.map(error)

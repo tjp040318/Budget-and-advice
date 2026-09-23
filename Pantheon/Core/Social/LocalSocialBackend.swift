@@ -79,382 +79,407 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
     }
 
     // MARK: - SocialBackend
+    //
+    // Every call holds the lock through `lock.withLock`: `NSLock.lock()` is
+    // unavailable from an async function (a warning in the Swift 5 mode, an
+    // error in 6), and the owner's Xcode listed all twenty-one.
 
     func availability() async -> SocialAvailability { .offline(notice) }
 
     func myProfile() async throws -> SocialProfile? {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        return state.profile
+        return lock.withLock { () -> SocialProfile? in
+            ensureLoaded()
+            return state.profile
+        }
     }
 
     func publish(profile: SocialProfile) async throws -> SocialProfile {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        var stamped = profile
-        stamped.id = LocalSocialBackend.me
-        if let membership = state.members.first(where: { $0.userID == LocalSocialBackend.me }),
-           let guild = state.guilds.first(where: { $0.id == membership.guildID }) {
-            stamped.guildID = guild.id
-            stamped.guildName = guild.name
-        } else {
-            stamped.guildID = nil
-            stamped.guildName = nil
+        return lock.withLock { () -> SocialProfile in
+            ensureLoaded()
+            var stamped = profile
+            stamped.id = LocalSocialBackend.me
+            if let membership = state.members.first(where: { $0.userID == LocalSocialBackend.me }),
+               let guild = state.guilds.first(where: { $0.id == membership.guildID }) {
+                stamped.guildID = guild.id
+                stamped.guildName = guild.name
+            } else {
+                stamped.guildID = nil
+                stamped.guildName = nil
+            }
+            state.profile = stamped
+            // The member row wears the profile's numbers, as the roster shows them.
+            if let index = state.members.firstIndex(where: { $0.userID == LocalSocialBackend.me }) {
+                state.members[index].name = stamped.name
+                state.members[index].level = stamped.level
+                state.members[index].power = stamped.power
+            }
+            save()
+            return stamped
         }
-        state.profile = stamped
-        // The member row wears the profile's numbers, as the roster shows them.
-        if let index = state.members.firstIndex(where: { $0.userID == LocalSocialBackend.me }) {
-            state.members[index].name = stamped.name
-            state.members[index].level = stamped.level
-            state.members[index].power = stamped.power
-        }
-        save()
-        return stamped
     }
 
     func search(name: String) async throws -> [SocialProfile] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        let key = SocialProfile.key(name)
-        guard !key.isEmpty else { return [] }
-        return state.rivals
-            .filter { $0.nameKey.hasPrefix(key) }
-            .sorted { $0.arenaPoints > $1.arenaPoints }
+        return lock.withLock { () -> [SocialProfile] in
+            ensureLoaded()
+            let key = SocialProfile.key(name)
+            guard !key.isEmpty else { return [] }
+            return state.rivals
+                .filter { $0.nameKey.hasPrefix(key) }
+                .sorted { $0.arenaPoints > $1.arenaPoints }
+        }
     }
 
     func friends() async throws -> [Friendship] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        return state.friendships.sorted { $0.since > $1.since }
+        return lock.withLock { () -> [Friendship] in
+            ensureLoaded()
+            return state.friendships.sorted { $0.since > $1.since }
+        }
     }
 
     func friendRequests() async throws -> [FriendRequest] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        return state.incoming.filter { $0.status == .pending }.sorted { $0.sentAt > $1.sentAt }
+        return lock.withLock { () -> [FriendRequest] in
+            ensureLoaded()
+            return state.incoming.filter { $0.status == .pending }.sorted { $0.sentAt > $1.sentAt }
+        }
     }
 
     func sendFriendRequest(to profileID: String) async throws -> FriendRequest {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        guard let rival = state.rivals.first(where: { $0.id == profileID }) else {
-            throw SocialError.notFound("That demigod")
+        return try lock.withLock { () throws -> FriendRequest in
+            ensureLoaded()
+            guard let rival = state.rivals.first(where: { $0.id == profileID }) else {
+                throw SocialError.notFound("That demigod")
+            }
+            if state.friendships.contains(where: { $0.friend.id == profileID }) {
+                throw SocialError.conflict("\(rival.name) is already a friend.")
+            }
+            if state.outgoing.contains(where: { $0.toID == profileID && $0.status == .pending }) {
+                throw SocialError.conflict("A request to \(rival.name) is already waiting.")
+            }
+            let now = clock()
+            let me = state.profile?.name ?? "Demigod"
+            var request = FriendRequest(
+                id: FriendRequest.id(from: LocalSocialBackend.me, to: profileID),
+                fromID: LocalSocialBackend.me,
+                fromName: me,
+                toID: profileID,
+                status: .pending,
+                sentAt: now
+            )
+            // The rival answers at once: even hashes accept, odd ones decline.
+            let accepts = WarRules.hash(rival.name) % 2 == 0
+            request.status = accepts ? .accepted : .declined
+            state.outgoing.removeAll { $0.id == request.id }
+            state.outgoing.append(request)
+            if accepts {
+                befriend(rival, now: now)
+            }
+            save()
+            return request
         }
-        if state.friendships.contains(where: { $0.friend.id == profileID }) {
-            throw SocialError.conflict("\(rival.name) is already a friend.")
-        }
-        if state.outgoing.contains(where: { $0.toID == profileID && $0.status == .pending }) {
-            throw SocialError.conflict("A request to \(rival.name) is already waiting.")
-        }
-        let now = clock()
-        let me = state.profile?.name ?? "Demigod"
-        var request = FriendRequest(
-            id: FriendRequest.id(from: LocalSocialBackend.me, to: profileID),
-            fromID: LocalSocialBackend.me,
-            fromName: me,
-            toID: profileID,
-            status: .pending,
-            sentAt: now
-        )
-        // The rival answers at once: even hashes accept, odd ones decline.
-        let accepts = WarRules.hash(rival.name) % 2 == 0
-        request.status = accepts ? .accepted : .declined
-        state.outgoing.removeAll { $0.id == request.id }
-        state.outgoing.append(request)
-        if accepts {
-            befriend(rival, now: now)
-        }
-        save()
-        return request
     }
 
     func respond(request: FriendRequest, accept: Bool) async throws {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        guard let index = state.incoming.firstIndex(where: { $0.id == request.id }) else {
-            throw SocialError.notFound("That request")
+        try lock.withLock {
+            ensureLoaded()
+            guard let index = state.incoming.firstIndex(where: { $0.id == request.id }) else {
+                throw SocialError.notFound("That request")
+            }
+            state.incoming[index].status = accept ? .accepted : .declined
+            if accept, let rival = state.rivals.first(where: { $0.id == request.fromID }) {
+                befriend(rival, now: clock())
+            }
+            save()
         }
-        state.incoming[index].status = accept ? .accepted : .declined
-        if accept, let rival = state.rivals.first(where: { $0.id == request.fromID }) {
-            befriend(rival, now: clock())
-        }
-        save()
     }
 
     func mail() async throws -> [Mail] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        return state.mail.sorted { $0.sentAt > $1.sentAt }
+        return lock.withLock { () -> [Mail] in
+            ensureLoaded()
+            return state.mail.sorted { $0.sentAt > $1.sentAt }
+        }
     }
 
     func send(mail: Mail) async throws {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        guard let rival = state.rivals.first(where: { $0.id == mail.toID }) else {
-            throw SocialError.notFound("That demigod")
+        try lock.withLock {
+            ensureLoaded()
+            guard let rival = state.rivals.first(where: { $0.id == mail.toID }) else {
+                throw SocialError.notFound("That demigod")
+            }
+            // Nobody reads a rival's inbox here, so the greeting comes straight
+            // back: the genre's friendship points, both ways.
+            let reply = Mail(
+                id: "mail_\(UUID().uuidString.lowercased())",
+                toID: LocalSocialBackend.me,
+                fromID: rival.id,
+                fromName: rival.name,
+                subject: "\(rival.name) returns your greeting",
+                body: "\"Well met, \(mail.fromName). The island keeps you in mind.\"",
+                grants: [.scrolls(.mystical, 2)],
+                claimed: false,
+                sentAt: clock()
+            )
+            state.mail.append(reply)
+            save()
         }
-        // Nobody reads a rival's inbox here, so the greeting comes straight
-        // back: the genre's friendship points, both ways.
-        let reply = Mail(
-            id: "mail_\(UUID().uuidString.lowercased())",
-            toID: LocalSocialBackend.me,
-            fromID: rival.id,
-            fromName: rival.name,
-            subject: "\(rival.name) returns your greeting",
-            body: "\"Well met, \(mail.fromName). The island keeps you in mind.\"",
-            grants: [.scrolls(.mystical, 2)],
-            claimed: false,
-            sentAt: clock()
-        )
-        state.mail.append(reply)
-        save()
     }
 
     func claim(mail: Mail) async throws -> [ShopService.Grant] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        guard let index = state.mail.firstIndex(where: { $0.id == mail.id }) else {
-            throw SocialError.notFound("That mail")
+        return try lock.withLock { () throws -> [ShopService.Grant] in
+            ensureLoaded()
+            guard let index = state.mail.firstIndex(where: { $0.id == mail.id }) else {
+                throw SocialError.notFound("That mail")
+            }
+            guard !state.mail[index].claimed else {
+                throw SocialError.conflict("That mail was already claimed.")
+            }
+            state.mail[index].claimed = true
+            save()
+            return state.mail[index].grants
         }
-        guard !state.mail[index].claimed else {
-            throw SocialError.conflict("That mail was already claimed.")
-        }
-        state.mail[index].claimed = true
-        save()
-        return state.mail[index].grants
     }
 
     func guild() async throws -> Guild? {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        return currentGuild()
+        return lock.withLock { () -> Guild? in
+            ensureLoaded()
+            return currentGuild()
+        }
     }
 
     func findGuilds(name: String) async throws -> [Guild] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        let key = SocialProfile.key(name)
-        return state.guilds
-            .filter { key.isEmpty || $0.nameKey.hasPrefix(key) }
-            .sorted { $0.warPoints > $1.warPoints }
+        return lock.withLock { () -> [Guild] in
+            ensureLoaded()
+            let key = SocialProfile.key(name)
+            return state.guilds
+                .filter { key.isEmpty || $0.nameKey.hasPrefix(key) }
+                .sorted { $0.warPoints > $1.warPoints }
+        }
     }
 
     func createGuild(name: String, crest: String) async throws -> Guild {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard trimmed.count >= 2, trimmed.count <= 24 else {
-            throw SocialError.invalid("A guild's name is two to twenty-four characters.")
+        return try lock.withLock { () throws -> Guild in
+            ensureLoaded()
+            let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.count >= 2, trimmed.count <= 24 else {
+                throw SocialError.invalid("A guild's name is two to twenty-four characters.")
+            }
+            guard currentGuild() == nil else { throw SocialError.conflict("Leave your guild before founding another.") }
+            let key = SocialProfile.key(trimmed)
+            guard !state.guilds.contains(where: { $0.nameKey == key }) else {
+                throw SocialError.conflict("A guild called \(trimmed) already exists.")
+            }
+            let now = clock()
+            let guild = Guild(
+                id: "guild_\(UUID().uuidString.lowercased())",
+                name: trimmed,
+                crest: Guild.crests.contains(crest) ? crest : Guild.crests[0],
+                leaderID: LocalSocialBackend.me,
+                memberCount: 1,
+                warPoints: 0,
+                season: WarRules.seasonKey(for: now),
+                weekKey: WarRules.weekKey(for: now),
+                weekPoints: 0,
+                createdAt: now
+            )
+            state.guilds.append(guild)
+            state.members.append(membership(in: guild, role: .leader, now: now))
+            refreshProfileGuild()
+            save()
+            return guild
         }
-        guard currentGuild() == nil else { throw SocialError.conflict("Leave your guild before founding another.") }
-        let key = SocialProfile.key(trimmed)
-        guard !state.guilds.contains(where: { $0.nameKey == key }) else {
-            throw SocialError.conflict("A guild called \(trimmed) already exists.")
-        }
-        let now = clock()
-        let guild = Guild(
-            id: "guild_\(UUID().uuidString.lowercased())",
-            name: trimmed,
-            crest: Guild.crests.contains(crest) ? crest : Guild.crests[0],
-            leaderID: LocalSocialBackend.me,
-            memberCount: 1,
-            warPoints: 0,
-            season: WarRules.seasonKey(for: now),
-            weekKey: WarRules.weekKey(for: now),
-            weekPoints: 0,
-            createdAt: now
-        )
-        state.guilds.append(guild)
-        state.members.append(membership(in: guild, role: .leader, now: now))
-        refreshProfileGuild()
-        save()
-        return guild
     }
 
     func joinGuild(id: String) async throws -> Guild {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        guard currentGuild() == nil else { throw SocialError.conflict("Leave your guild before joining another.") }
-        guard let index = state.guilds.firstIndex(where: { $0.id == id }) else {
-            throw SocialError.notFound("That guild")
+        return try lock.withLock { () throws -> Guild in
+            ensureLoaded()
+            guard currentGuild() == nil else { throw SocialError.conflict("Leave your guild before joining another.") }
+            guard let index = state.guilds.firstIndex(where: { $0.id == id }) else {
+                throw SocialError.notFound("That guild")
+            }
+            guard !state.guilds[index].isFull else {
+                throw SocialError.conflict("\(state.guilds[index].name) is full.")
+            }
+            state.guilds[index].memberCount += 1
+            state.members.append(membership(in: state.guilds[index], role: .member, now: clock()))
+            refreshProfileGuild()
+            save()
+            return state.guilds[index]
         }
-        guard !state.guilds[index].isFull else {
-            throw SocialError.conflict("\(state.guilds[index].name) is full.")
-        }
-        state.guilds[index].memberCount += 1
-        state.members.append(membership(in: state.guilds[index], role: .member, now: clock()))
-        refreshProfileGuild()
-        save()
-        return state.guilds[index]
     }
 
     func leaveGuild() async throws {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        guard let guild = currentGuild(), let index = state.guilds.firstIndex(where: { $0.id == guild.id }) else {
-            throw SocialError.conflict("You are not in a guild.")
-        }
-        state.members.removeAll { $0.userID == LocalSocialBackend.me }
-        let remaining = state.members
-            .filter { $0.guildID == guild.id }
-            .sorted { $0.joinedAt < $1.joinedAt }
-        if remaining.isEmpty {
-            state.guilds.remove(at: index)
-            state.posts.removeAll { $0.guildID == guild.id }
-        } else {
-            state.guilds[index].memberCount = remaining.count
-            if guild.leaderID == LocalSocialBackend.me, let heir = remaining.first {
-                state.guilds[index].leaderID = heir.userID
-                if let heirIndex = state.members.firstIndex(where: { $0.id == heir.id }) {
-                    state.members[heirIndex].role = .leader
+        try lock.withLock {
+            ensureLoaded()
+            guard let guild = currentGuild(), let index = state.guilds.firstIndex(where: { $0.id == guild.id }) else {
+                throw SocialError.conflict("You are not in a guild.")
+            }
+            state.members.removeAll { $0.userID == LocalSocialBackend.me }
+            let remaining = state.members
+                .filter { $0.guildID == guild.id }
+                .sorted { $0.joinedAt < $1.joinedAt }
+            if remaining.isEmpty {
+                state.guilds.remove(at: index)
+                state.posts.removeAll { $0.guildID == guild.id }
+            } else {
+                state.guilds[index].memberCount = remaining.count
+                if guild.leaderID == LocalSocialBackend.me, let heir = remaining.first {
+                    state.guilds[index].leaderID = heir.userID
+                    if let heirIndex = state.members.firstIndex(where: { $0.id == heir.id }) {
+                        state.members[heirIndex].role = .leader
+                    }
                 }
             }
+            refreshProfileGuild()
+            save()
         }
-        refreshProfileGuild()
-        save()
     }
 
     func guildMembers() async throws -> [GuildMember] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        guard let guild = currentGuild() else { return [] }
-        return members(of: guild.id, now: clock())
+        return lock.withLock { () -> [GuildMember] in
+            ensureLoaded()
+            guard let guild = currentGuild() else { return [] }
+            return members(of: guild.id, now: clock())
+        }
     }
 
     func postToBoard(text: String) async throws -> BoardPost {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { throw SocialError.invalid("Write something first.") }
-        guard trimmed.count <= 200 else { throw SocialError.invalid("A post is two hundred characters at most.") }
-        guard let guild = currentGuild() else { throw SocialError.conflict("Join a guild to use its board.") }
-        let post = BoardPost(
-            id: "post_\(UUID().uuidString.lowercased())",
-            guildID: guild.id,
-            authorID: LocalSocialBackend.me,
-            authorName: state.profile?.name ?? "Demigod",
-            text: trimmed,
-            postedAt: clock()
-        )
-        state.posts.append(post)
-        save()
-        return post
+        return try lock.withLock { () throws -> BoardPost in
+            ensureLoaded()
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !trimmed.isEmpty else { throw SocialError.invalid("Write something first.") }
+            guard trimmed.count <= 200 else { throw SocialError.invalid("A post is two hundred characters at most.") }
+            guard let guild = currentGuild() else { throw SocialError.conflict("Join a guild to use its board.") }
+            let post = BoardPost(
+                id: "post_\(UUID().uuidString.lowercased())",
+                guildID: guild.id,
+                authorID: LocalSocialBackend.me,
+                authorName: state.profile?.name ?? "Demigod",
+                text: trimmed,
+                postedAt: clock()
+            )
+            state.posts.append(post)
+            save()
+            return post
+        }
     }
 
     func board() async throws -> [BoardPost] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        guard let guild = currentGuild() else { return [] }
-        return state.posts
-            .filter { $0.guildID == guild.id }
-            .sorted { $0.postedAt > $1.postedAt }
+        return lock.withLock { () -> [BoardPost] in
+            ensureLoaded()
+            guard let guild = currentGuild() else { return [] }
+            return state.posts
+                .filter { $0.guildID == guild.id }
+                .sorted { $0.postedAt > $1.postedAt }
+        }
     }
 
     func war() async throws -> GuildWar? {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        return currentWar(now: clock())
+        return lock.withLock { () -> GuildWar? in
+            ensureLoaded()
+            return currentWar(now: clock())
+        }
     }
 
     func reportWarAttack(result: WarAttackResult) async throws -> WarStanding {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        let now = clock()
-        guard let guild = currentGuild(), let index = state.guilds.firstIndex(where: { $0.id == guild.id }) else {
-            throw SocialError.conflict("Join a guild to fight its war.")
-        }
-        guard let war = currentWar(now: now) else {
-            throw SocialError.conflict("There is no war this week.")
-        }
-        guard result.targetGuildID == war.opponent.id,
-              war.targets.contains(where: { $0.id == result.targetID }) else {
-            throw SocialError.invalid("That demigod is not in the opposing guild.")
-        }
-        guard war.attacksLeftToday > 0 else {
-            throw SocialError.conflict("No war attacks left today. They return at midnight UTC.")
-        }
-        let week = WarRules.weekKey(for: now)
-        // A second win over a target already beaten this week scores nothing;
-        // the attack is still spent and recorded.
-        let alreadyBeaten = state.attacks.contains {
-            $0.week == week && $0.attackerID == LocalSocialBackend.me && $0.targetID == result.targetID && $0.won
-        }
-        let points = alreadyBeaten ? 0 : WarRules.points(
-            won: result.won,
-            attackerPower: state.profile?.power ?? 0,
-            targetPower: result.targetPower
-        )
-        state.attacks.append(
-            LocalWarAttack(
-                week: week,
-                day: WarRules.dayKey(for: now),
-                attackerID: LocalSocialBackend.me,
-                guildID: guild.id,
-                targetID: result.targetID,
-                targetGuildID: result.targetGuildID,
+        return try lock.withLock { () throws -> WarStanding in
+            ensureLoaded()
+            let now = clock()
+            guard let guild = currentGuild(), let index = state.guilds.firstIndex(where: { $0.id == guild.id }) else {
+                throw SocialError.conflict("Join a guild to fight its war.")
+            }
+            guard let war = currentWar(now: now) else {
+                throw SocialError.conflict("There is no war this week.")
+            }
+            guard result.targetGuildID == war.opponent.id,
+                  war.targets.contains(where: { $0.id == result.targetID }) else {
+                throw SocialError.invalid("That demigod is not in the opposing guild.")
+            }
+            guard war.attacksLeftToday > 0 else {
+                throw SocialError.conflict("No war attacks left today. They return at midnight UTC.")
+            }
+            let week = WarRules.weekKey(for: now)
+            // A second win over a target already beaten this week scores nothing;
+            // the attack is still spent and recorded.
+            let alreadyBeaten = state.attacks.contains {
+                $0.week == week && $0.attackerID == LocalSocialBackend.me && $0.targetID == result.targetID && $0.won
+            }
+            let points = alreadyBeaten ? 0 : WarRules.points(
                 won: result.won,
-                points: points,
-                foughtAt: now
+                attackerPower: state.profile?.power ?? 0,
+                targetPower: result.targetPower
             )
-        )
-        // The guild's points: this week's, and the season's, which start
-        // over with the first report of a new week or month.
-        var updated = state.guilds[index]
-        let season = WarRules.seasonKey(for: now)
-        if updated.season != season {
-            updated.season = season
-            updated.warPoints = 0
+            state.attacks.append(
+                LocalWarAttack(
+                    week: week,
+                    day: WarRules.dayKey(for: now),
+                    attackerID: LocalSocialBackend.me,
+                    guildID: guild.id,
+                    targetID: result.targetID,
+                    targetGuildID: result.targetGuildID,
+                    won: result.won,
+                    points: points,
+                    foughtAt: now
+                )
+            )
+            // The guild's points: this week's, and the season's, which start
+            // over with the first report of a new week or month.
+            var updated = state.guilds[index]
+            let season = WarRules.seasonKey(for: now)
+            if updated.season != season {
+                updated.season = season
+                updated.warPoints = 0
+            }
+            if updated.weekKey != week {
+                updated.weekKey = week
+                updated.weekPoints = 0
+            }
+            updated.weekPoints += points
+            updated.warPoints += points
+            state.guilds[index] = updated
+            save()
+            guard let mineNow = currentWar(now: now)?.mine else {
+                throw SocialError.unknown("The standings could not be read back.")
+            }
+            return mineNow
         }
-        if updated.weekKey != week {
-            updated.weekKey = week
-            updated.weekPoints = 0
-        }
-        updated.weekPoints += points
-        updated.warPoints += points
-        state.guilds[index] = updated
-        save()
-        guard let mineNow = currentWar(now: now)?.mine else {
-            throw SocialError.unknown("The standings could not be read back.")
-        }
-        return mineNow
     }
 
     func leaderboard(kind: LeaderboardKind) async throws -> [LeaderboardEntry] {
-        lock.lock(); defer { lock.unlock() }
-        ensureLoaded()
-        switch kind {
-        case .arena:
-            var everyone = state.rivals
-            if let profile = state.profile { everyone.append(profile) }
-            let ordered = everyone.sorted {
-                $0.arenaPoints == $1.arenaPoints ? $0.name < $1.name : $0.arenaPoints > $1.arenaPoints
-            }
-            return ordered.enumerated().map { offset, profile in
-                LeaderboardEntry(
-                    id: profile.id,
-                    rank: offset + 1,
-                    name: profile.name,
-                    detail: "Lv.\(profile.level) · \(profile.tier.displayName) · power \(profile.power.formatted())",
-                    score: profile.arenaPoints,
-                    crest: nil,
-                    isMine: profile.id == LocalSocialBackend.me
-                )
-            }
-        case .guild:
-            let mine = currentGuild()?.id
-            let ordered = state.guilds.sorted {
-                $0.warPoints == $1.warPoints ? $0.name < $1.name : $0.warPoints > $1.warPoints
-            }
-            return ordered.enumerated().map { offset, guild in
-                LeaderboardEntry(
-                    id: guild.id,
-                    rank: offset + 1,
-                    name: guild.name,
-                    detail: "\(guild.memberCount) member\(guild.memberCount == 1 ? "" : "s")",
-                    score: guild.warPoints,
-                    crest: guild.crest,
-                    isMine: guild.id == mine
-                )
+        return lock.withLock { () -> [LeaderboardEntry] in
+            ensureLoaded()
+            switch kind {
+            case .arena:
+                var everyone = state.rivals
+                if let profile = state.profile { everyone.append(profile) }
+                let ordered = everyone.sorted {
+                    $0.arenaPoints == $1.arenaPoints ? $0.name < $1.name : $0.arenaPoints > $1.arenaPoints
+                }
+                return ordered.enumerated().map { offset, profile in
+                    LeaderboardEntry(
+                        id: profile.id,
+                        rank: offset + 1,
+                        name: profile.name,
+                        detail: "Lv.\(profile.level) · \(profile.tier.displayName) · power \(profile.power.formatted())",
+                        score: profile.arenaPoints,
+                        crest: nil,
+                        isMine: profile.id == LocalSocialBackend.me
+                    )
+                }
+            case .guild:
+                let mine = currentGuild()?.id
+                let ordered = state.guilds.sorted {
+                    $0.warPoints == $1.warPoints ? $0.name < $1.name : $0.warPoints > $1.warPoints
+                }
+                return ordered.enumerated().map { offset, guild in
+                    LeaderboardEntry(
+                        id: guild.id,
+                        rank: offset + 1,
+                        name: guild.name,
+                        detail: "\(guild.memberCount) member\(guild.memberCount == 1 ? "" : "s")",
+                        score: guild.warPoints,
+                        crest: guild.crest,
+                        isMine: guild.id == mine
+                    )
+                }
             }
         }
     }
