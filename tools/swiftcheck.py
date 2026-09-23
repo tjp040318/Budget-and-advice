@@ -975,6 +975,9 @@ def check_unknown_types(files, declared, errors):
         # The premium pass (2026-09-22): a type-erased fill for a `?:` of two
         # ShapeStyles, and the Gradient a Canvas shading takes.
         "AnyShapeStyle","Gradient",
+        # The chapter map's haze (2026-09-23, round 5): Core Image's clamped
+        # blur and the gradient stops a feather mask is built from.
+        "CoreImage","CIContext","CIImage","CIFilter","CIVector","CIColor","Stop",
     }
     used = defaultdict(list)
     for path in files:

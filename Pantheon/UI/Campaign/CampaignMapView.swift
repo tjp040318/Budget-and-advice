@@ -1,4 +1,7 @@
 import SwiftUI
+import UIKit
+import CoreImage
+import ImageIO
 
 /// The world: one card per realm with its chapters. A shut chapter says which
 /// boss shuts it. Tapping an open chapter opens its map.
@@ -629,6 +632,107 @@ private struct MapHazeSides: Equatable {
     var trailing: Bool
 }
 
+/// A chapter's painting as the haze its map melts into under the safe
+/// insets: blurred with its edges CLAMPED — each edge column carried on
+/// outward before the blur, so the soft copy keeps the painting's own colour
+/// to its last column — and padded a fifth of its width on either side with
+/// that carried-on edge, going softer the further it runs from the painting,
+/// so an inset reads as the place's own air and not as streaks of its edge.
+/// SwiftUI's `.blur(radius:opaque:)` takes in BLACK at a view's bounds: run
+/// 224 blurred the whole map that way and every chapter's insets came out as
+/// charcoal pillars with the painting's last points burnt black. Built once
+/// per painting from a 512-pixel decode (a blur of seven points leaves
+/// nothing a larger one would add), from any thread; `warm` builds a set off
+/// the main thread before a map asks for one.
+enum SoftMapPainting {
+    struct Padded {
+        let image: UIImage
+        /// The thumbnail's size in pixels, and the pad on each side of it.
+        let sourceWidth: CGFloat
+        let sourceHeight: CGFloat
+        let margin: CGFloat
+        var paddedWidth: CGFloat { sourceWidth + margin * 2 }
+    }
+
+    /// The blur over the painting itself, as a share of its width: seven
+    /// points of a map drawn 734 wide (a 16 Pro's), the blur run 223's haze
+    /// had.
+    static let sigmaShare: CGFloat = 0.0095
+    /// The blur the pad goes to away from the painting: about 29 points, so
+    /// the edge's rows melt into one another instead of standing as bands.
+    static let mistSigmaShare: CGFloat = 0.04
+    /// The pad on each side, as a share of the width: a phone's 59-point
+    /// inset is 8% of its 734-point map, so a fifth covers any phone.
+    static let marginShare: CGFloat = 0.2
+    /// How far out into the pad the mist is whole, as a share of it: about
+    /// 51 points, most of an inset.
+    static let mistRampShare: CGFloat = 0.35
+
+    private static var built: [String: Padded] = [:]
+    private static let lock = NSLock()
+    private static let context = CIContext(options: [.cacheIntermediates: false])
+
+    /// The painting `name` soft and padded, or nil when the bundle has no
+    /// such painting or Core Image refuses it.
+    static func padded(_ name: String) -> Padded? {
+        lock.lock()
+        if let hit = built[name] { lock.unlock(); return hit }
+        lock.unlock()
+        // Decoded straight to 512 pixels and not kept: the soft copy is all
+        // the map needs, and `BundleArt`'s thumbnail cache would hold a
+        // second picture of every map for good.
+        let options: [CFString: Any] = [
+            kCGImageSourceCreateThumbnailFromImageAlways: true,
+            kCGImageSourceCreateThumbnailWithTransform: true,
+            kCGImageSourceThumbnailMaxPixelSize: 512,
+        ]
+        guard let url = BundleArt.url(name),
+              let file = CGImageSourceCreateWithURL(url as CFURL, nil),
+              let source = CGImageSourceCreateThumbnailAtIndex(file, 0, options as CFDictionary)
+        else { return nil }
+        let painting = CIImage(cgImage: source)
+        let width: CGFloat = painting.extent.width
+        let height: CGFloat = painting.extent.height
+        let margin: CGFloat = (width * marginShare).rounded()
+        let canvas = CGRect(x: -margin, y: 0, width: width + margin * 2, height: height)
+        let clamped = painting.clampedToExtent()
+        let soft = clamped.applyingGaussianBlur(sigma: Double(width * sigmaShare))
+        let mist = clamped.applyingGaussianBlur(sigma: Double(width * mistSigmaShare))
+        // Black over the painting, easing to white `ramp` pixels out past
+        // either edge: where it is white the pad is all mist.
+        let ramp: CGFloat = max(1, margin * mistRampShare)
+        let black = CIColor(red: 0, green: 0, blue: 0)
+        let white = CIColor(red: 1, green: 1, blue: 1)
+        guard let leftRamp = CIFilter(name: "CISmoothLinearGradient", parameters: [
+                  "inputPoint0": CIVector(x: 0, y: 0), "inputPoint1": CIVector(x: -ramp, y: 0),
+                  "inputColor0": black, "inputColor1": white,
+              ])?.outputImage,
+              let rightRamp = CIFilter(name: "CISmoothLinearGradient", parameters: [
+                  "inputPoint0": CIVector(x: width, y: 0), "inputPoint1": CIVector(x: width + ramp, y: 0),
+                  "inputColor0": black, "inputColor1": white,
+              ])?.outputImage
+        else { return nil }
+        let mask = leftRamp.applyingFilter("CIMaximumCompositing", parameters: ["inputBackgroundImage": rightRamp])
+        let blended = mist
+            .applyingFilter("CIBlendWithMask", parameters: ["inputBackgroundImage": soft, "inputMaskImage": mask])
+            .cropped(to: canvas)
+        guard let cg = context.createCGImage(blended, from: canvas) else { return nil }
+        let made = Padded(image: UIImage(cgImage: cg), sourceWidth: width, sourceHeight: height, margin: margin)
+        lock.lock()
+        built[name] = made
+        lock.unlock()
+        return made
+    }
+
+    /// Builds the soft paintings of `names` on a utility thread, so the
+    /// first map opened draws its haze in the first frame.
+    static func warm(_ names: [String]) {
+        DispatchQueue.global(qos: .utility).async {
+            for name in Set(names) { _ = padded(name) }
+        }
+    }
+}
+
 /// A chapter as a place: the chapter's own painted map fills the content,
 /// the stages stand on it as medallions — gold once cleared, dark glass and
 /// ringed where the player stands with his leader's face over it, shut with
@@ -737,7 +841,8 @@ struct ChapterMapView: View {
                         obstacles: ChapterMapArt.obstacles(nodes: placed.nodes, bosses: bosses, chests: placed.chests, in: size),
                         in: size
                     )
-                    painting(chapter, size: size)
+                    let soft = softPainting(chapter)
+                    painting(chapter, size: size, feathered: featherSides(soft, width: size.width))
                     // UNDER the road: where a map ever leaves it no clear
                     // ground, a medallion over it still draws and still
                     // takes its tap. Hidden while the scroll is open — the
@@ -791,7 +896,7 @@ struct ChapterMapView: View {
             // pillars between a strip and a tab bar that reach both edges).
             .background(alignment: .topLeading) {
                 if let chapter {
-                    bleed(chapter, size: size)
+                    bleed(chapter, size: size, soft: softPainting(chapter))
                 }
             }
         }
@@ -801,6 +906,8 @@ struct ChapterMapView: View {
                 pulse = true
             }
             announce(difficulty)
+            // The chapters an arrow leads to, soft before they are asked for.
+            SoftMapPainting.warm(ChapterMapArt.byChapter.values.map(\.image))
         }
         .onChange(of: chapterID) { _, _ in
             settleTier()
@@ -829,21 +936,23 @@ struct ChapterMapView: View {
     /// `.frame(width:height:)` off the GeometryReader is the safe way to fill
     /// it. The last 14 points darken to meet the tab bar softly: the foot
     /// shade was laid out under the bar until run 216 and the map met the
-    /// bar in a hard seam. The sides go soft into the haze the same way
-    /// (`edgeFeather`).
-    private func painting(_ chapter: Chapter, size: CGSize) -> some View {
+    /// bar in a hard seam. At a side the haze carries on past (`feathered`),
+    /// the painting's last `featherWidth` points fade out over the soft
+    /// painting drawn behind it (`bleed`), so the place melts into its haze
+    /// instead of stopping at a line.
+    private func painting(_ chapter: Chapter, size: CGSize, feathered: MapHazeSides) -> some View {
         ZStack {
-            paintingImage(chapter, size: size)
-            tierTint(size: size)
-            edgeFeather(chapter, size: size)
+            ZStack {
+                paintingImage(chapter, size: size)
+                tierTint(size: size)
+            }
+            .frame(width: size.width, height: size.height)
+            .overlay(alignment: .bottom) { Self.footShade }
+            .compositingGroup()
+            .mask { Self.featherMask(width: size.width, sides: feathered) }
             tierAir
         }
         .frame(width: size.width, height: size.height)
-        .overlay(alignment: .bottom) {
-            LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.42)],
-                           startPoint: .top, endPoint: .bottom)
-                .frame(height: 14)
-        }
         .clipped()
         .allowsHitTesting(false)
     }
@@ -867,17 +976,30 @@ struct ChapterMapView: View {
                     .fill(chapter.pantheon.color.opacity(0.25))
                     .frame(width: size.width, height: size.height)
             }
-            LinearGradient(
-                stops: [
-                    .init(color: Theme.ink.opacity(art == nil ? 0.32 : 0.26), location: 0),
-                    .init(color: .clear, location: 0.22),
-                    .init(color: .clear, location: 0.78),
-                    .init(color: Theme.ink.opacity(art == nil ? 0.4 : 0.20), location: 1),
-                ],
-                startPoint: .top, endPoint: .bottom
-            )
+            paintingShade
         }
         .frame(width: size.width, height: size.height)
+    }
+
+    /// The painting's top and foot shade, so the gold reads on any sky; the
+    /// haze beyond the painting wears the same, row for row.
+    private var paintingShade: some View {
+        LinearGradient(
+            stops: [
+                .init(color: Theme.ink.opacity(art == nil ? 0.32 : 0.26), location: 0),
+                .init(color: .clear, location: 0.22),
+                .init(color: .clear, location: 0.78),
+                .init(color: Theme.ink.opacity(art == nil ? 0.4 : 0.20), location: 1),
+            ],
+            startPoint: .top, endPoint: .bottom
+        )
+    }
+
+    /// The map's last 14 points darkening to meet the tab bar.
+    private static var footShade: some View {
+        LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.42)],
+                       startPoint: .top, endPoint: .bottom)
+            .frame(height: 14)
     }
 
     /// The tier's colour over the painting. A dark violet MULTIPLY alone only
@@ -885,9 +1007,11 @@ struct ChapterMapView: View {
     /// down", still orange-brown — so each tier also lays its hue over the
     /// painting's own light: a `.color` layer on Hell (the painting's
     /// luminance in violet), a crimson `.softLight` on Hard. The vignettes
-    /// close the rim in the tier's dark.
+    /// close the rim in the tier's dark. The haze beyond the painting takes
+    /// the same tint about the painting's own centre (`centre`), so the two
+    /// agree where they meet.
     @ViewBuilder
-    private func tierTint(size: CGSize) -> some View {
+    private func tierTint(size: CGSize, centre: UnitPoint = .center) -> some View {
         switch difficulty {
         case .normal:
             Color.clear
@@ -899,7 +1023,7 @@ struct ChapterMapView: View {
                     .blendMode(.softLight)
                 RadialGradient(
                     colors: [.clear, Color(hex: "#3A0810").opacity(0.45)],
-                    center: .center, startRadius: size.width * 0.30, endRadius: size.width * 0.75
+                    center: centre, startRadius: size.width * 0.30, endRadius: size.width * 0.75
                 )
             }
         case .hell:
@@ -910,7 +1034,7 @@ struct ChapterMapView: View {
                     .blendMode(.color)
                 RadialGradient(
                     colors: [.clear, Color(hex: "#12061F").opacity(0.60)],
-                    center: .center, startRadius: size.width * 0.30, endRadius: size.width * 0.75
+                    center: centre, startRadius: size.width * 0.30, endRadius: size.width * 0.75
                 )
             }
         }
@@ -933,21 +1057,25 @@ struct ChapterMapView: View {
     }
 
     /// The painting carried on under the side insets to the glass as HAZE:
-    /// each inset is the soft painting's outer column on that side
-    /// (`bleedColumn` points of it) stretched across the inset and darkened
-    /// toward the glass, in the tier's colour. It starts in the colour the
-    /// painting's feathered edge ends in, so the two meet with no seam, and
-    /// it holds no landmark. It was the painting MIRRORED about each edge until
-    /// run 217, which doubled the Duat's dome and serpent and folded the
-    /// Colosseum's stands and the Jade gate into kaleidoscope shapes about a
-    /// visible line — "a Rorschach reflection". It cannot simply be drawn
-    /// wider: a 21:9 painting covering the whole 852-point width crops twice
-    /// as much of its height, and thirty medallions would leave their
-    /// landmarks. So the marks stand where they stood and only the pillars
-    /// of cream go. Read off a GeometryReader that ignores the horizontal
-    /// safe area; it never takes a tap. It also tells the painting which
-    /// sides it carries on past (`hazeSides`), so only those edges feather.
-    private func bleed(_ chapter: Chapter, size: CGSize) -> some View {
+    /// the chapter's soft painting (`SoftMapPainting`) drawn across the whole
+    /// width behind the sharp one and lined up with it, so the painting's
+    /// feathered rim melts into the same picture the insets show — its own
+    /// edge colours, going to mist and darkening toward the glass, in the
+    /// tier's colour — and no landmark stands in an inset. It was the
+    /// painting MIRRORED about each edge until run 217, which doubled the
+    /// Duat's dome and serpent and folded the Colosseum's stands and the Jade
+    /// gate into kaleidoscope shapes about a visible line — "a Rorschach
+    /// reflection"; a two-point column of the painting stretched and blurred
+    /// in SwiftUI until run 223, which met the sharp painting in a seam; and
+    /// in run 224 a SwiftUI blur of the whole painting, which took in black
+    /// at its bounds and turned every inset into a charcoal pillar. It
+    /// cannot simply be drawn wider: a 21:9 painting covering the whole
+    /// 852-point width crops twice as much of its height, and thirty
+    /// medallions would leave their landmarks. Read off a GeometryReader that
+    /// ignores the horizontal safe area; it never takes a tap. It also tells
+    /// the painting which sides it carries on past (`hazeSides`), so only
+    /// those edges feather.
+    private func bleed(_ chapter: Chapter, size: CGSize, soft: SoftMapPainting.Padded?) -> some View {
         GeometryReader { outer in
             // The insets as reported, or the extra width split evenly (a
             // landscape phone's two insets are equal) if they read zero.
@@ -961,12 +1089,15 @@ struct ChapterMapView: View {
                     .frame(width: 1, height: 1)
                     .onAppear { hazeSides = sides }
                     .onChange(of: sides) { _, now in hazeSides = now }
-                if leading > 0 {
-                    edgeHaze(chapter, size: size, width: leading, towardLeading: true)
-                }
-                if trailing > 0 {
-                    edgeHaze(chapter, size: size, width: trailing, towardLeading: false)
-                        .offset(x: leading + size.width)
+                if sides.leading || sides.trailing {
+                    hazeBackdrop(chapter, size: size, soft: soft, width: outer.size.width, leading: leading)
+                    if sides.leading {
+                        insetShade(width: leading, height: size.height, towardLeading: true)
+                    }
+                    if sides.trailing {
+                        insetShade(width: trailing, height: size.height, towardLeading: false)
+                            .offset(x: leading + size.width)
+                    }
                 }
             }
         }
@@ -974,105 +1105,99 @@ struct ChapterMapView: View {
         .allowsHitTesting(false)
     }
 
-    /// How many points of the soft painting's edge the side haze is
-    /// stretched from: two, so every row carries its edge colour and
-    /// nothing more — a wider slice would drag a landmark's shape across the
-    /// inset.
-    private static let bleedColumn: CGFloat = 2
-
-    /// How soft the haze and the painting's feathered rim are: the one blur
-    /// both are cut from.
-    private static let hazeBlur: CGFloat = 7
-
-    /// How far in from an edge the painting starts to go soft: 24 points,
-    /// judged on a render of the Duat's map at 20 and 28. Only the painting
-    /// softens — a medallion, a chest or an arrow near the edge is drawn over
-    /// it and stays sharp.
+    /// How far in from a hazed edge the painting starts to go soft: 24
+    /// points, judged on a render of the Duat's map at 20 and 28. Only the
+    /// painting softens — a medallion, a chest or an arrow near the edge is
+    /// drawn over it and stays sharp.
     private static let featherWidth: CGFloat = 24
 
-    /// The painting as the haze sees it: the image and the tier's tint,
-    /// blurred at `hazeBlur` with its own edges kept opaque. The feather over
-    /// the painting's rim and the haze beyond it are both cut from this one
-    /// blur, so at the painting's edge they are the same colour.
-    private func softPainting(_ chapter: Chapter, size: CGSize) -> some View {
-        ZStack {
-            paintingImage(chapter, size: size)
-            tierTint(size: size)
+    /// The painting the map draws, by name: its own map, or the first
+    /// stage's backdrop; nil when the bundle has neither.
+    private func paintingName(_ chapter: Chapter) -> String? {
+        if let art { return art.image }
+        let backdrop = chapter.stages.first?.environment.backdropName ?? ""
+        return BundleImage.exists(backdrop) ? backdrop : nil
+    }
+
+    /// The soft painting the haze is cut from, when there is a painting.
+    private func softPainting(_ chapter: Chapter) -> SoftMapPainting.Padded? {
+        paintingName(chapter).flatMap { SoftMapPainting.padded($0) }
+    }
+
+    /// The sides whose rim melts into the haze: the ones the haze carries on
+    /// past, once there is a soft painting behind the rim to melt into.
+    private func featherSides(_ soft: SoftMapPainting.Padded?, width: CGFloat) -> MapHazeSides {
+        guard soft != nil, width > Self.featherWidth * 4 else {
+            return MapHazeSides(leading: false, trailing: false)
         }
-        .frame(width: size.width, height: size.height)
-        .blur(radius: Self.hazeBlur, opaque: true)
+        return hazeSides
+    }
+
+    /// Whole across the painting and clear at a hazed edge, over its last
+    /// `featherWidth` points, eased (a smoothstep in five stops) so the fade
+    /// has no line where it starts. An edge with no haze beyond it stays
+    /// whole to the last point.
+    private static func featherMask(width: CGFloat, sides: MapHazeSides) -> LinearGradient {
+        let edge: CGFloat = min(0.25, featherWidth / max(1, width))
+        let ease: [(at: CGFloat, alpha: Double)] = [(0, 0), (0.25, 0.16), (0.5, 0.5), (0.75, 0.84), (1, 1)]
+        let lead: [Gradient.Stop] = sides.leading
+            ? ease.map { Gradient.Stop(color: Color.black.opacity($0.alpha), location: $0.at * edge) }
+            : [Gradient.Stop(color: Color.black, location: 0)]
+        let trail: [Gradient.Stop] = sides.trailing
+            ? ease.reversed().map { Gradient.Stop(color: Color.black.opacity($0.alpha), location: 1 - $0.at * edge) }
+            : [Gradient.Stop(color: Color.black, location: 1)]
+        return LinearGradient(stops: lead + trail, startPoint: .leading, endPoint: .trailing)
+    }
+
+    /// The soft painting across the whole `width`, lined up with the sharp
+    /// one — the same fill, so every landmark's blur stands behind the
+    /// landmark — and shaded and tinted as the painting is: the same top and
+    /// foot shade, and the tier's tint about the painting's own centre, so a
+    /// Hard or Hell map's haze carries its tier. With no soft painting (none
+    /// in the bundle, or Core Image refused it) it is the chapter's colour,
+    /// and the rim does not feather.
+    private func hazeBackdrop(_ chapter: Chapter, size: CGSize, soft: SoftMapPainting.Padded?,
+                              width: CGFloat, leading: CGFloat) -> some View {
+        let centre = UnitPoint(x: (leading + size.width / 2) / max(1, width), y: 0.5)
+        return ZStack(alignment: .topLeading) {
+            Color.clear
+                .overlay(alignment: .topLeading) {
+                    if let soft {
+                        // The painting's fill as `paintingImage` draws it:
+                        // points per thumbnail pixel, and the pixels its
+                        // left and top edges fall on.
+                        let scale: CGFloat = max(size.width / soft.sourceWidth, size.height / soft.sourceHeight)
+                        let left: CGFloat = (soft.sourceWidth - size.width / scale) / 2
+                        let top: CGFloat = (soft.sourceHeight - size.height / scale) / 2
+                        Image(uiImage: soft.image)
+                            .resizable()
+                            .frame(width: soft.paddedWidth * scale, height: soft.sourceHeight * scale)
+                            .offset(x: leading - (soft.margin + left) * scale, y: -top * scale)
+                    } else {
+                        Rectangle().fill(chapter.pantheon.color.opacity(0.25))
+                    }
+                }
+            paintingShade
+            tierTint(size: size, centre: centre)
+        }
+        .frame(width: width, height: size.height)
+        .overlay(alignment: .bottom) { Self.footShade }
         .clipped()
     }
 
-    /// The painting's outer `featherWidth` points going soft toward a side
-    /// the haze carries on from: the soft painting laid over the sharp one,
-    /// masked from clear `featherWidth` in to whole at the edge, so a
-    /// landmark on the edge melts into the haze. The Duat's dome and its
-    /// serpent coil stopped dead against a blurred brown band, a hard seam at
-    /// each inset (runs 220 and 221): the haze was blurred and the painting
-    /// beside it was not. Under the tab, the road and the arrows, which stay
-    /// sharp; never takes a tap.
-    @ViewBuilder
-    private func edgeFeather(_ chapter: Chapter, size: CGSize) -> some View {
-        if hazeSides.leading || hazeSides.trailing, size.width > Self.featherWidth * 4 {
-            softPainting(chapter, size: size)
-                .mask { Self.featherMask(width: size.width, sides: hazeSides) }
-        }
-    }
-
-    /// Whole at a hazed edge, clear from `featherWidth` in: a straight ramp,
-    /// so the painting goes soft over its last points and not in a step.
-    private static func featherMask(width: CGFloat, sides: MapHazeSides) -> LinearGradient {
-        let edge: CGFloat = min(0.25, featherWidth / max(1, width))
-        return LinearGradient(
+    /// An inset's haze darkening from nothing at the painting's edge to deep
+    /// at the glass.
+    private func insetShade(width: CGFloat, height: CGFloat, towardLeading: Bool) -> some View {
+        LinearGradient(
             stops: [
-                .init(color: sides.leading ? Color.black : Color.clear, location: 0),
-                .init(color: Color.clear, location: edge),
-                .init(color: Color.clear, location: 1 - edge),
-                .init(color: sides.trailing ? Color.black : Color.clear, location: 1),
+                .init(color: Theme.ink.opacity(0), location: 0),
+                .init(color: Theme.ink.opacity(0.28), location: 0.4),
+                .init(color: Theme.ink.opacity(0.74), location: 1),
             ],
-            startPoint: .leading,
-            endPoint: .trailing
+            startPoint: towardLeading ? .trailing : .leading,
+            endPoint: towardLeading ? .leading : .trailing
         )
-    }
-
-    /// One side's haze, `width` wide: the soft painting's outer column on
-    /// that side (its left edge for the left inset, its right edge for the
-    /// right) stretched to the inset, and shaded from nothing at the
-    /// painting's edge to deep at the glass. It starts in exactly the colour
-    /// the feathered edge ends in. It was the SHARP painting's column,
-    /// blurred only after it was stretched, which is why the two did not
-    /// meet (runs 220 and 221).
-    private func edgeHaze(_ chapter: Chapter, size: CGSize, width: CGFloat, towardLeading: Bool) -> some View {
-        let column: CGFloat = Self.bleedColumn
-        let stretch: CGFloat = max(1, width / column)
-        return softPainting(chapter, size: size)
-            // The outer column only.
-            .frame(width: column, height: size.height, alignment: towardLeading ? .leading : .trailing)
-            .clipped()
-            // Stretched across the inset; the column is soft already, and a
-            // light blur rounds off the steps between its rows. `opaque`
-            // keeps the blur from fading the inset's own edges.
-            .scaleEffect(x: stretch, y: 1, anchor: .center)
-            .frame(width: width, height: size.height)
-            .blur(radius: 3, opaque: true)
-            .clipped()
-            .overlay(
-                LinearGradient(
-                    stops: [
-                        .init(color: Theme.ink.opacity(0), location: 0),
-                        .init(color: Theme.ink.opacity(0.28), location: 0.4),
-                        .init(color: Theme.ink.opacity(0.74), location: 1),
-                    ],
-                    startPoint: towardLeading ? .trailing : .leading,
-                    endPoint: towardLeading ? .leading : .trailing
-                )
-            )
-            .overlay(alignment: .bottom) {
-                LinearGradient(colors: [Theme.ink.opacity(0), Theme.ink.opacity(0.42)],
-                               startPoint: .top, endPoint: .bottom)
-                    .frame(height: 14)
-            }
+        .frame(width: width, height: height)
     }
 
     /// The medallions' and the chests' points: on a painted map the
@@ -1846,6 +1971,10 @@ struct WorldRoadMapView: View {
                     .frame(width: mapWidth, height: mapHeight)
                 }
                 .onAppear {
+                    // Every chapter map's haze, built while the player picks
+                    // a city, so the first map opened has it in its first
+                    // frame (`SoftMapPainting`).
+                    SoftMapPainting.warm(ChapterMapArt.byChapter.values.map(\.image))
                     // Open on the city the player is in, not on the top-left
                     // corner of a map three screens wide.
                     let here = CampaignView.currentChapter(for: store.player).id
