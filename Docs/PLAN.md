@@ -6988,3 +6988,41 @@ concept, about 770 for the ten — or accepting them as rigged. Pluto is
 the one where the ring's version (shoulder shards) is arguably less
 broken than what ships (a full-height wing); that swap is the owner's
 call, not made here.
+
+### Wave 1 as built, and the fix round (2026-09-23)
+
+Run 216 compiled wave 1 first time (249 tests) and its 116 frames were
+judged screen by screen by six agents. One fault sat under most of the
+others and had been on the phone since phase A: **the tab bar covered the
+bottom 58 points of every tab screen.** It was the TabView's bottom
+`.safeAreaInset`, and an inset applied outside a `NavigationStack` never
+reaches the content inside it, so every tab laid itself out to the full
+height and the bar was drawn over its foot — the arena's offence row, the
+collection's third row, the chapter map's chests, the popup's buttons.
+The fix is the plainest layout there is: `RootView` (and the tour's
+`tabbed`) is a `VStack(spacing: 0)` of the TabView and `GameTabBar`, so a
+tab screen's frame ENDS where the bar begins and a `GeometryReader` inside
+one reports the true size (402 − 21 home − 58 bar = 323 on the CI phone).
+The band still runs under the home indicator and out to both edges.
+
+What moved with it, each for a fault a frame showed:
+
+| Fault in run 216 | What changed |
+|---|---|
+| a card over a map left the bar bright and tappable | `GameStore.tabBarDimmed` + `View.dimsTabBar(_:)`: the bar lays black 0.55 over itself and takes no taps while a card is up (the stage popup, the sweep receipt) |
+| every place pillarboxed between the safe areas | `PlaceBackdrop`/`PlaceAmbience` bleed under them by default (`bleeds`); the strip's ground runs edge to edge |
+| the island's figures a fifth smaller once the bar stopped covering it | `IslandSceneView.stageHeight(paintingFrame:)`: figures, decorations and weather are sized off the painting's frame, not the view's height |
+| the Serpent Deep's rooms a black lake | a per-painting focus (`roomFocus`, the Deep at y 0.02) and lighter scrims on a dark painting |
+| one tap on Sweep spent the whole wallet | a choice of counts, ×1 / ×5 / ×10 / Max, each with its energy, over the Labyrinth's deck and the stage popup's foot |
+| the arena promised "+110/day" laurels nothing pays | the promise is gone; the ladder shows what a WIN pays, which the game does pay (the daily grant is the owner's call) |
+| the chapter scroll promised a 5★/6★ relic on every Hard/Hell stage | it prints each chapter's own floor from `CampaignDifficulty` |
+| medallions and chests on one another on eleven maps | 34 landmark points moved a few percent of the painting, each onto the next landmark or open ground; Duat I unchanged |
+| the Hall of Ka fed a team member for experience without a word | "Offer a unit worth keeping?" before a unit on a team, wearing relics or a boon, awakened, or any 4★+ is eaten |
+| the Night Market looked like the day stalls | a night wash and a moon glow over the same Forum (a painted day agora is paid art) |
+| seven families' cards a whole small figure on a board of busts | `PortraitPainting`: a square card or tile draws them at 1.9× from the top — the free half; a re-roll is paid |
+| the Colossus of the Sun and the Dragon of Longmen shown as an initial | `UnitPortraitTile` falls back to the stand-in mesh's card, as the map's boss medallion does |
+
+The tour grew three frames for states no frame had shown: `4-summon-root`
+(a tab screen inside the real root, so the bar's place is photographed
+every run), `3-training-evolve` opening on its offer, and
+`16-dungeon-sweep` (the chooser over a mastered floor).

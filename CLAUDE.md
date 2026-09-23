@@ -1618,8 +1618,10 @@ environment can and cannot do. The short version:
   at 21 and a bronze medallion for Back; `BarWallet`/`BarCount` sit in a
   dark `BarWell`; `GameTabBar` (RootView.swift) is the bottom bar — the
   system tab bar is hidden with `.toolbar(.hidden, for: .tabBar)` inside
-  `GameScreen` and on every tab, and the bar is the TabView's bottom
-  `safeAreaInset`; `PrimaryButton` is 46 tall with a gloss sweep on gold
+  `GameScreen` and on every tab, and the bar is laid out BELOW the
+  TabView in a `VStack` (it was the TabView's bottom `safeAreaInset`,
+  which never reaches content inside a `NavigationStack`, so the bar
+  covered the foot of every tab screen until run 217 — see phase B); `PrimaryButton` is 46 tall with a gloss sweep on gold
   and a `.glass` style; `LightShafts` and `Motes` are the ambience over a
   hero painting. The summon screen is the first screen rebuilt to it (the
   painting covers the frame, the banners a rail of cards on glass, the
@@ -1652,6 +1654,25 @@ environment can and cannot do. The short version:
   frame — the Labyrinth cards carried their names below the clip. And
   the unit sheet's columns scroll when taller than the frame: its strip
   was cut in half at the top from run 204 to 210.
+- **The premium pass, phase B (2026-09-22/23; PLAN.md *Phase B of the
+  premium pass* and *Wave 1 as built*).** Every PLACE — the arena, the
+  Labyrinth's rooms and wings, the Titans, the Hall of Ka, the chapter
+  map with its popup and briefing, the bazaar, missions, events, the
+  mileage and selector boards — is its painting full-bleed
+  (`PlaceBackdrop`, bleeding under the safe areas) with dark glass where
+  the words go; the shared parts are `Pantheon/UI/Common/Glass.swift`
+  (`GlassPlate`, `GlassSection`, `PlaceRail`, `GlassBead`, `GlassMeter`,
+  `UnitPortraitTile`, `CostWell`, `ClaimPlate`, `GrantReceipt`, …) and
+  the painted doors are `tab_<key>.png` (`tools/tab_icons.py`, nine
+  cells on Meshy). **A tab screen ends where the tab bar begins**:
+  `RootView` is a `VStack` of the TabView and `GameTabBar`, never an
+  inset; a card over a tab dims the bar with `.dimsTabBar(_:)`; the
+  island sizes its figures off the painting's frame
+  (`IslandSceneView.stageHeight`), not the view's height. Sweep never
+  spends on one tap — it opens a choice of counts. `PortraitPainting`
+  zooms the seven full-figure families' cards to a bust in a square. The
+  tour photographs `4-summon-root` (the bar in its real place),
+  `3-training-evolve` and `16-dungeon-sweep`.
 - **The skirt pass (2026-09-22).** `character.reweight_skirt` (in
   `mesh.py` after the cape pass; `tools/skirt_pass.py --survey | <names>
   | --all` over the SHIPPED base and `_lod` files): cloth that Meshy's
