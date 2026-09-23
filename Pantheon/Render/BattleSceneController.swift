@@ -1625,11 +1625,15 @@ enum FloatingTextRenderer {
         // The edge: about a sixteenth of the size outside the letters (1.4
         // points on a 22-point number, 2 on a crit). A stroke is centred on
         // the outline, so it is drawn twice as wide and the fill covers the
-        // inner half.
-        let edge = max(1.2, size / 16)
+        // inner half. A WORD's edge is a ninth, two points at least, over a
+        // darker, wider shadow: Cinzel's thin strokes in pale gold on the
+        // pale Olympus marble read at about 1.2 : 1 with the number's edge
+        // ("BULL RUSH", run 224's 29-a; "RESIST" on the Colossus's chin,
+        // run 221).
+        let edge: CGFloat = carved ? max(2.0, size / 9) : max(1.2, size / 16)
         let shadow = NSShadow()
-        shadow.shadowColor = UIColor.black.withAlphaComponent(0.7)
-        shadow.shadowBlurRadius = 3
+        shadow.shadowColor = UIColor.black.withAlphaComponent(carved ? 0.9 : 0.7)
+        shadow.shadowBlurRadius = carved ? 4.5 : 3
         shadow.shadowOffset = CGSize(width: 0, height: 1.5)
         let outline = NSAttributedString(string: text, attributes: [
             .font: font,

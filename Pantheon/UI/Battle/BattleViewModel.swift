@@ -57,8 +57,17 @@ final class BattleViewModel: ObservableObject {
     @Published private(set) var waveIndex = 1
     /// An ultimate's cut-in: the caster's card and the skill's name sweep
     /// across the screen for a second, the genre's announcement of a big
-    /// move. Cleared by the view.
-    @Published var cutIn: CutIn?
+    /// move. Cleared by the view. While it is up the field's plates are
+    /// dimmed to a quarter, so the band reads alone: it fades to clear at
+    /// its ends, and the bars and two status tiles showed through beside
+    /// the portrait and over its top rule (run 224, 18-b).
+    @Published var cutIn: CutIn? {
+        didSet {
+            if (cutIn == nil) != (oldValue == nil) {
+                sceneController.plates.setPlatesDimmed(cutIn != nil)
+            }
+        }
+    }
 
     struct CutIn: Equatable {
         var portrait: String

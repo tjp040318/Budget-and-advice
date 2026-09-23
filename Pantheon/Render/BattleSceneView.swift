@@ -178,6 +178,10 @@ final class UnitPlateOverlay: SKScene {
     /// Two layers so the reckoning can fade the whole field's chrome as one.
     private let plateLayer = SKNode()
     private let floatLayer = SKNode()
+    /// The plates themselves, inside `plateLayer`, dimmed while a cut-in's
+    /// band is up (`setPlatesDimmed`). A node of its own, so the band's dim
+    /// and the reckoning's fade (`setFieldHidden`) never undo each other.
+    private let dimLayer = SKNode()
     /// The words and numbers in flight. Render thread only: added through
     /// `perform`, moved and retired by `BattleSceneController.layoutFloats`.
     private(set) var floats: [FloatingLabel] = []
@@ -197,6 +201,7 @@ final class UnitPlateOverlay: SKScene {
         isUserInteractionEnabled = false
         plateLayer.zPosition = 0
         addChild(plateLayer)
+        plateLayer.addChild(dimLayer)
         floatLayer.zPosition = 100
         addChild(floatLayer)
     }
@@ -211,7 +216,7 @@ final class UnitPlateOverlay: SKScene {
         let plate = UnitPlate(elementHex: elementHex, wearsMarker: wearsMarker)
         plate.host = self
         plates[id] = plate
-        perform { [weak self] in self?.plateLayer.addChild(plate) }
+        perform { [weak self] in self?.dimLayer.addChild(plate) }
         return plate
     }
 
@@ -262,6 +267,17 @@ final class UnitPlateOverlay: SKScene {
                 layer.removeAction(forKey: "field")
                 layer.run(.fadeAlpha(to: hidden ? 0 : 1, duration: 0.25), withKey: "field")
             }
+        }
+    }
+
+    /// The plates at a quarter while a cut-in's band is up, and back as it
+    /// goes. The floating numbers stay: an ultimate's hits land as the band
+    /// leaves, and they are its payoff.
+    func setPlatesDimmed(_ dimmed: Bool) {
+        perform { [weak self] in
+            guard let self else { return }
+            self.dimLayer.removeAction(forKey: "dim")
+            self.dimLayer.run(.fadeAlpha(to: dimmed ? 0.25 : 1, duration: dimmed ? 0.15 : 0.3), withKey: "dim")
         }
     }
 

@@ -568,13 +568,18 @@ struct MissionsView: View {
                 }
             }
             Spacer(minLength: 8)
-            rewardTiles(entry.grant)
+            // The reward is the row's LAST thing on every row, so it stands
+            // in one column whether or not a claim plate is up: drawn before
+            // the plate, it jumped a plate's width between a ready row and a
+            // waiting one (run 224, 33-counsel). A row that comes ready gains
+            // its plate without its reward moving.
             if status != .waiting {
                 claimSlot(status: status, waitingNote: fraction) {
                     claim(entry)
                 }
                 .frame(width: 92)
             }
+            rewardTiles(entry.grant)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
@@ -610,8 +615,10 @@ struct MissionsView: View {
     ///
     /// `hexagon.fill` is two things, told apart by the row's id: the
     /// Counsel's relic power-ups ("Feed a relic to +3", +9, +15), which were
-    /// the one flat gold hexagon among the paintings (run 221) and wear the
-    /// relic chest now, and fusion, which has no painting and keeps it.
+    /// the one flat gold hexagon among the paintings (run 221), and fusion,
+    /// which has no painting and keeps it. A power-up wears the painted
+    /// level-up mark: in the relic chest it read as "Put a relic on a god"
+    /// again, one row under it (run 224).
     private static func rowArt(for glyph: String, id: String) -> (door: String, item: String?) {
         switch glyph {
         case "map.fill", "flag.fill", "checkmark.seal.fill", "bolt.shield.fill", "flame.circle.fill", "shippingbox.fill":
@@ -629,7 +636,7 @@ struct MissionsView: View {
         case "shield.lefthalf.filled", "circle.hexagongrid.fill", "diamond.fill":
             return ("", "relic_cache")
         case "hexagon.fill":
-            return ("", id.contains("relic") ? "relic_cache" : nil)
+            return ("", id.contains("relic") ? "level_up" : nil)
         case "flame.fill":
             return ("", "essence_magic_mid")
         case "crown.fill":
