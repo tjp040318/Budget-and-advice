@@ -43,13 +43,15 @@ struct LabyrinthView: View {
         _selectedRaidID = State(initialValue: raid)
     }
 
-    /// The building's rooms. A four-way choice, so it is `BarSegments` in the
-    /// strip rather than a row of capsules above the content.
+    /// The building's rooms. A five-way choice, so it is `BarSegments` in the
+    /// strip rather than a row of capsules above the content. The fifth, the
+    /// Hidden Shrines (2026-09-23; Docs/SHRINES.md), is `ShrinesWing`.
     enum Wing: Hashable {
         case dungeons
         case halls
         case tower
         case raids
+        case shrines
     }
 
     private let wings: [(value: Wing, title: String)] = [
@@ -57,6 +59,7 @@ struct LabyrinthView: View {
         (value: .halls, title: "Halls"),
         (value: .tower, title: "Tower"),
         (value: .raids, title: "Titans"),
+        (value: .shrines, title: "Shrines"),
     ]
 
     /// The Titan whose room is open; nil until one is picked, which reads as
@@ -76,15 +79,25 @@ struct LabyrinthView: View {
     /// WEIG…" (run 211), an ellipsis in a menu.
     private static let titanRailWidth: CGFloat = 222
 
+    /// The strip's second line. Five segments leave the title's column 147
+    /// points on an iPhone 16 Pro with a new wallet and 126 with a veteran's
+    /// ("158/158 · 9,999 · 999K"), measured with the bundled faces, and the
+    /// line never truncates — so every wing's is 116 points or under at
+    /// Manrope 11 ("100/100 floors climbed"; the Shrines' longest is "Hidden ·
+    /// an hour each", 110). The four wings' longer lines ("5 Titans · graded F to SSS,
+    /// paying aether" was 205) went when the Shrines segment came (2026-09-23);
+    /// what they said is on the rooms themselves.
     private var subtitle: String {
         switch wing {
-        case .dungeons: return "\(DungeonDatabase.labyrinths.count) dungeons · a relic every run"
-        case .halls: return "\(DungeonDatabase.halls.count) halls · the awakening essences"
+        case .dungeons: return "A relic every run"
+        case .halls: return "\(DungeonDatabase.halls.count) halls · the essences"
         case .tower:
             let cleared = TowerService.clearedFloor(player: store.player)
-            return "\(cleared)/\(DungeonDatabase.towerFloors) floors · one battle each"
+            return "\(cleared)/\(DungeonDatabase.towerFloors) floors climbed"
         case .raids:
-            return "\(StageDatabase.raids.count) Titans · graded F to SSS, paying aether"
+            return "\(StageDatabase.raids.count) Titans · F to SSS"
+        case .shrines:
+            return ShrinesWing.subtitle(player: store.player)
         }
     }
 
@@ -138,6 +151,8 @@ struct LabyrinthView: View {
             towerWing
         case .raids:
             titansWing
+        case .shrines:
+            ShrinesWing()
         }
     }
 
@@ -1154,18 +1169,30 @@ struct DungeonLevelsView: View {
     /// deck. A sweep never spends on one tap: run 216's "Sweep ×13" spent 78
     /// of 79 energy with no choice and no confirmation.
     @State private var sweepChoicesFor: String?
+    /// The Hidden Shrines (2026-09-23; Docs/SHRINES.md): the shrines open
+    /// before a fight or a sweep, so one it found is announced when it comes
+    /// back (`ShrineNoticeCard`, the genre's "Secret Dungeon discovered!"),
+    /// and the shrine whose room is open over this one.
+    @State private var shrinesBefore: Set<UUID> = []
+    @State private var shrineNotice: HiddenShrine?
+    @State private var shrineRoom: HiddenShrine?
+    /// The tour's: the notice over the room from the first frame, on the
+    /// first shrine open.
+    private let announcesShrine: Bool
 
     /// `focusFloor` opens the room on that floor rather than the player's
     /// current one; the CI tour pins it to photograph a mastered floor's deck.
     /// Every dungeon's and hall's stage ids are `<chapter>_<n>`.
     ///
     /// `opensSweep` opens the focused floor's sweep choices, so the tour can
-    /// photograph them over a mastered floor.
-    init(chapterID: String, focusFloor: Int? = nil, opensSweep: Bool = false) {
+    /// photograph them over a mastered floor. `announcesShrine` stands the
+    /// shrine notice over the room, so the tour can photograph it.
+    init(chapterID: String, focusFloor: Int? = nil, opensSweep: Bool = false, announcesShrine: Bool = false) {
         self.chapterID = chapterID
         let focus = focusFloor.map { "\(chapterID)_\($0)" }
         _focusedID = State(initialValue: focus)
         _sweepChoicesFor = State(initialValue: opensSweep ? focus : nil)
+        self.announcesShrine = announcesShrine
     }
 
     /// The floor rail's width: the summon rail's 204 plus room for a hall
@@ -1257,6 +1284,15 @@ struct DungeonLevelsView: View {
                   + "chapter=\(chapter?.id ?? "nil") stages=\(chapter?.stages.count ?? -1) "
                   + "focus=\(focusedID ?? "current") backdrop=\(environment?.backdropName ?? "nil")")
             #endif
+            if announcesShrine, shrineNotice == nil {
+                // The tour's notice frame seeds its own shrine, so the order
+                // the tour's and this room's appearances run in cannot leave
+                // the card with nothing to announce.
+                #if DEBUG
+                store.seedTourShrines()
+                #endif
+                shrineNotice = store.openShrines.first
+            }
         }
         .sheet(item: $selectedStage) { stage in
             StageBriefingView(
@@ -1271,7 +1307,7 @@ struct DungeonLevelsView: View {
                 }
             )
         }
-        .fullScreenCover(item: $battle) { context in
+        .fullScreenCover(item: $battle, onDismiss: announceShrine) { context in
             battleScreen(for: context)
         }
         .overlay {
@@ -1283,17 +1319,52 @@ struct DungeonLevelsView: View {
                     },
                     onClose: {
                         withAnimation(.easeOut(duration: 0.2)) { sweepReceipt = nil }
+                        announceShrine()
                     }
                 )
                 .transition(.opacity)
             }
         }
+        .overlay {
+            if let notice = shrineNotice {
+                ShrineNoticeCard(
+                    shrine: notice,
+                    onEnter: {
+                        shrineNotice = nil
+                        shrineRoom = notice
+                    },
+                    onClose: {
+                        withAnimation(.easeOut(duration: 0.2)) { shrineNotice = nil }
+                    }
+                )
+            }
+        }
+        .background {
+            Color.clear
+                .fullScreenCover(item: $shrineRoom) { shrine in
+                    ShrineRoomScreen(focus: shrine.id)
+                        .environmentObject(store)
+                }
+        }
+    }
+
+    /// A shrine a fight or a sweep found, announced over the room when it
+    /// comes back: the first one open now that was not open before it. Every
+    /// shrine open counts as seen afterwards, so none is announced twice.
+    private func announceShrine() {
+        let found = store.openShrines.first { !shrinesBefore.contains($0.id) }
+        shrinesBefore = Set(store.openShrines.map { $0.id })
+        guard let found else { return }
+        AudioLibrary.shared.play(.uiConfirm)
+        Juice.haptic(.medium)
+        withAnimation(.easeOut(duration: 0.25)) { shrineNotice = found }
     }
 
     /// Clears a mastered level without a battle. The relic grind is the one
     /// this matters most for: ten runs of a B10 is ten minutes of watching
     /// three waves resolve the same way.
     private func sweep(_ stage: Stage, runs: Int) {
+        shrinesBefore = Set(store.openShrines.map { $0.id })
         guard let receipt = store.sweep(stage: stage, runs: runs), receipt.runs > 0 else { return }
         AudioLibrary.shared.play(.uiConfirm)
         Juice.haptic(.medium)
@@ -2298,6 +2369,7 @@ struct DungeonLevelsView: View {
         guard let engine = store.startCampaignBattle(stage: stage) else { return }
         pendingEngines[stage.id] = engine
         pendingRuns[stage.id] = runs
+        shrinesBefore = Set(store.openShrines.map { $0.id })
         battle = .campaign(stage)
     }
 

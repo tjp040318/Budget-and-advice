@@ -46,7 +46,7 @@ struct TourView: View {
         ("sweep", 3), ("mileage", 2), ("selector", 2), ("relic_roll", 2),
         ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
         ("awaken", 2), ("island_decor", 2), ("events", 2), ("regalia", 2), ("demigods", 2),
-        ("sign_in", 2),
+        ("sign_in", 2), ("codex", 2), ("draft", 3), ("shrines", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -201,6 +201,23 @@ struct TourView: View {
     /// place the model board and the console went when they left More's
     /// front page (2026-09-22, phase B).
     static var pinnedMoreDiagnostics: Bool { argument(after: "-tour-more") == "diagnostics" }
+
+    /// `-tour-more notifications|graphics|delete` opens More on one of its
+    /// pages or on the account-deletion sheet (2026-09-23, Docs/SETTINGS.md),
+    /// so the CI job photographs what the settings build added.
+    static var pinnedMoreOpening: SettingsOpening {
+        switch argument(after: "-tour-more") ?? "" {
+        case "notifications": return .notifications
+        case "graphics": return .graphics
+        case "delete": return .deleteAccount
+        default: return .boards
+        }
+    }
+
+    /// `-tour-codex-page <blueprint id>` opens the Codex on that form's page;
+    /// `-tour-codex-awakened` on the awakened faces (Docs/CODEX.md).
+    static var pinnedCodexPage: String? { argument(after: "-tour-codex-page") }
+    static var pinnedCodexAwakened: Bool { ProcessInfo.processInfo.arguments.contains("-tour-codex-awakened") }
 
     /// `-tour-selector-pick first` puts the first candidate on the opening
     /// gift's counter, so the gold TAKE and the lit tile are in one frame.
@@ -466,6 +483,26 @@ struct TourView: View {
                 preview: 0.62, step: "Raising the stages",
                 art: BundleArt.exists(LaunchProgress.keyArt) ? LaunchProgress.keyArt : "banner_olympus_stirs"
             ))
+        case "codex":
+            // The Codex (Docs/CODEX.md): the book on its first page with a
+            // reward waiting, read off the tour's roster; `-tour-codex-page`
+            // opens one form's page, `-tour-codex-awakened` the awakened faces.
+            CodexView(awakened: Self.pinnedCodexAwakened,
+                      page: Self.pinnedCodexPage.flatMap {
+                          CodexPageRequest(blueprintID: $0, kind: Self.pinnedCodexAwakened ? .awakened : .base)
+                      })
+        case "shrines":
+            // The Labyrinth's Hidden Shrines (Docs/SHRINES.md): one shrine open
+            // and three piece stocks — one ready to summon, one part-way, one
+            // begun (`GameStore.seedTourShrines`).
+            LabyrinthView(opening: .shrines)
+                .onAppear { store.seedTourShrines() }
+        case "draft":
+            // The Draft Arena's board mid-draft on the tour's roster (a fixed
+            // seed, the player first): the ban phase by default, `-tour-draft
+            // picks` two picks each with the player's turn open, `-tour-draft
+            // leaders` both bans landed and both leaders chosen (Docs/DRAFT.md).
+            DraftView(tourStage: DraftTourStage(rawValue: Self.argument(after: "-tour-draft") ?? "") ?? .bans)
         case "sign_in":
             // The account door, as a first launch shows it once the loading
             // screen has dissolved: the key art, the wordmark, Apple's button
@@ -694,7 +731,7 @@ struct TourView: View {
             if Self.pinnedMoreDiagnostics {
                 NavigationStack { DiagnosticsDesk() }
             } else {
-                SettingsView()
+                SettingsView(opening: Self.pinnedMoreOpening)
             }
         default:
             SettingsView()

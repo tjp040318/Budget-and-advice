@@ -104,13 +104,14 @@ struct BattleView: View {
             .opacity(summary == nil ? 1 : 0)
             .allowsHitTesting(summary == nil)
 
-            // The frame goes white for a beat as an ultimate's cut-in lands.
+            // The frame goes white for a beat as an ultimate's cut-in lands —
+            // never under Reduce Motion (`MotionComfort`, iOS's or the game's).
             Color.white
                 .opacity(ultimateFlash)
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
                 .onChange(of: model.cutIn) { _, cutIn in
-                    guard let cutIn, !cutIn.isSpeech else { return }
+                    guard let cutIn, !cutIn.isSpeech, !MotionComfort.isReduced else { return }
                     ultimateFlash = 0.6
                     withAnimation(.easeOut(duration: 0.5)) { ultimateFlash = 0 }
                 }

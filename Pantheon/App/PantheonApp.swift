@@ -19,14 +19,21 @@ final class AppSession: ObservableObject {
     @Published private(set) var isOpening = false
 
     let accounts: AccountService
+    /// The reminders (`Docs/SETTINGS.md` §1): planned when the scene goes to
+    /// the background, cleared when it returns, and the one-time energy card.
+    let notifications: NotificationService
     private var forwarding: AnyCancellable?
+    private var forwardingReminders: AnyCancellable?
+    private var energyWatch: AnyCancellable?
     private var opening: Task<Void, Never>?
 
     init(accounts: AccountService) {
         self.accounts = accounts
+        self.notifications = NotificationService.shared
         // The service's changes (a dropped sign-in, a notice) re-render
         // through this object, which is the one the views hold.
         forwarding = accounts.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
+        forwardingReminders = notifications.objectWillChange.sink { [weak self] _ in self?.objectWillChange.send() }
         accounts.onDropped = { [weak self] in self?.dropStore() }
         if let account = accounts.account { open(account) }
     }
@@ -141,9 +148,74 @@ final class AppSession: ObservableObject {
         newStore.onSignedOut = { [weak self] in
             guard let self else { return }
             self.store = nil
+            self.energyWatch = nil
+            self.notifications.clearAll()
             self.accounts.signOut()
         }
         store = newStore
+        // The first time energy runs out, the game offers to say when it is
+        // full again (`NotificationService.noteEnergy`, Docs/SETTINGS.md §1).
+        energyWatch = newStore.$player
+            .map { $0.wallet.energy }
+            .removeDuplicates()
+            .sink { [weak self] energy in self?.notifications.noteEnergy(energy) }
+    }
+
+    // MARK: - Deleting the account (Docs/SETTINGS.md §3)
+
+    /// Delete account on the Account board, after its confirmation and — for
+    /// an Apple ID — Apple's own sheet, whose `credential` carries the
+    /// one-time code the `apple-revoke` function revokes with. The store is
+    /// retired first, so nothing saves or uploads while the account is taken
+    /// apart (`AccountDeletion` has the order), then the account leaves the
+    /// ledger and the reminders are cleared. The retired store stays
+    /// installed so the sheet that asked can say it is done;
+    /// `closeDeletedAccount` then shows the sign-in screen. When the cloud
+    /// could not be reached the deletion stops before the phone is touched
+    /// and the account opens again as it was. Nil when nothing is signed in.
+    func deleteAccount(apple credential: AppleCredential?) async -> AccountDeletionReport? {
+        guard let current = store, let account = accounts.account else { return nil }
+        opening?.cancel()
+        current.retire()
+        energyWatch = nil
+        let cloud = current.cloudSave
+        // Apple's sheet signs in with this iPhone's Apple ID; a code for any
+        // other would revoke someone else's authorisation.
+        let matching = credential.flatMap { $0.user == account.id ? $0 : nil }
+        let client = (cloud as? SupabaseSaveStore)?.client ?? AppSession.backendClient(for: account)
+        let deletion = AccountDeletion(
+            account: account,
+            cloudSave: cloud,
+            client: client,
+            cloudKit: CloudAccountEraser()
+        )
+        let report = await deletion.run(
+            appleAuthorizationCode: matching?.authorizationCode,
+            appleIdentityToken: matching?.identityToken
+        )
+        if report.stopped {
+            open(account)
+            return report
+        }
+        notifications.clearAll()
+        accounts.forget(account)
+        return report
+    }
+
+    /// The sign-in screen after a deletion, with the report's sentence under
+    /// Apple's button.
+    func closeDeletedAccount(_ report: AccountDeletionReport) {
+        store = nil
+        energyWatch = nil
+        accounts.notice = report.sentence
+    }
+
+    /// A client reading this account's session file, when the store's cloud
+    /// copy was not the backend's (a store opened before the backend was
+    /// configured) and a backend is configured now.
+    private static func backendClient(for account: Account) -> SupabaseClient? {
+        guard BackendConfig.isConfigured, let config = BackendConfig.shared else { return nil }
+        return SupabaseClient(config: config, storageKey: account.storageKey)
     }
 
     /// Apple said the sign-in is gone while the game was open: the store is
@@ -190,11 +262,23 @@ final class AppSession: ObservableObject {
     }
 
     /// On every return to the foreground: Apple is asked whether the sign-in
-    /// still stands (`onDropped` retires the store when it does not).
+    /// still stands (`onDropped` retires the store when it does not), and
+    /// the reminders planned on the way out are cleared — the player is back
+    /// — with iOS's permission read again for the Settings page.
     func sceneBecameActive() {
+        notifications.clearAll()
         Task { [weak self] in
+            await self?.notifications.refreshAccess()
             await self?.accounts.verifyCredentialState()
         }
+    }
+
+    /// On the way to the background (`PantheonApp`): the reminders the
+    /// player asked for, planned from this save as it stands. A retired store
+    /// (an account being deleted) plans nothing.
+    func sceneWentToBackground() {
+        let playing = store.flatMap { $0.retired ? nil : $0.player }
+        notifications.schedule(for: playing)
     }
 }
 
@@ -202,6 +286,9 @@ final class AppSession: ObservableObject {
 struct PantheonApp: App {
     @StateObject private var session: AppSession
     @StateObject private var launch: LaunchProgress
+    /// The app's phase: going to the background plans the reminders
+    /// (`AppSession.sceneWentToBackground`).
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Explicitly main-actor isolated: `GameStore` is `@MainActor`, and building
     /// it in a default property value would leave that isolation implicit.
@@ -312,12 +399,34 @@ struct PantheonApp: App {
                     onGuest: { session.continueAsGuest() }
                 )
             }
+            // The one-time offer of the energy reminder, the first time
+            // energy runs out (`Docs/SETTINGS.md` §1). A battle is a cover
+            // above this, so the card waits under it and is there when the
+            // fight ends.
+            if session.store != nil, session.notifications.showsEnergyAsk {
+                EnergyReminderCard(
+                    maxEnergy: session.store?.player.wallet.maxEnergy ?? 0,
+                    onAnswer: { remind in
+                        Task { @MainActor in await session.notifications.answerEnergyAsk(remind: remind) }
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(0.5)
+            }
             if !launch.finished {
                 LaunchView(progress: launch)
                     .transition(.opacity)
                     .zIndex(1)
             }
         }
-        .onAppear { launch.run() }
+        .onAppear {
+            launch.run()
+            // Nothing planned by the last session is still waiting: the
+            // player is here.
+            session.notifications.clearAll()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { session.sceneWentToBackground() }
+        }
     }
 }

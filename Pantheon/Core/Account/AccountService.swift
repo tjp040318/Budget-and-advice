@@ -12,6 +12,11 @@ struct AppleCredential: Equatable, Sendable {
     /// own session (`SupabaseClient.signInWithApple`; 2026-09-22). Present
     /// at a sign-in, never stored: the ledger keeps the account, not this.
     var identityToken: String? = nil
+    /// Apple's one-time authorization code — single use, five minutes —
+    /// which the `apple-revoke` Edge Function exchanges for a refresh token
+    /// and revokes when the account is deleted (`Docs/SETTINGS.md` §3).
+    /// Never stored.
+    var authorizationCode: String? = nil
 
     /// The name as one string, or nil when Apple sent none — which is every
     /// authorisation after the first.
@@ -26,7 +31,8 @@ struct AppleCredential: Equatable, Sendable {
             givenName: credential.fullName?.givenName,
             familyName: credential.fullName?.familyName,
             email: credential.email,
-            identityToken: credential.identityToken.flatMap { String(data: $0, encoding: .utf8) }
+            identityToken: credential.identityToken.flatMap { String(data: $0, encoding: .utf8) },
+            authorizationCode: credential.authorizationCode.flatMap { String(data: $0, encoding: .utf8) }
         )
     }
 }
@@ -155,6 +161,15 @@ final class AccountService: ObservableObject {
     /// progress.
     func signOut() {
         account = nil
+        write()
+    }
+
+    /// A DELETED account (`Docs/SETTINGS.md` §3): signed out and gone from
+    /// the ledger too, so its name and email are forgotten on this phone and
+    /// the next sign-in with the same Apple ID starts a new account.
+    func forget(_ gone: Account) {
+        known.removeAll { $0.id == gone.id }
+        if account?.id == gone.id { account = nil }
         write()
     }
 

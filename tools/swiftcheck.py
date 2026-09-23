@@ -128,6 +128,10 @@ DECL = re.compile(r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|final\s+
 TYPEALIAS = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+|fileprivate\s+)?typealias\s+([A-Za-z_][A-Za-z0-9_]*)")
 CASE = re.compile(r"^\s*case\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(")
 INIT = re.compile(r"^\s*(?:public\s+|private\s+|internal\s+)?init\s*\(")
+# Any init, failable or not, with its modifiers: read in extensions only.
+EXT_INIT = re.compile(r"^\s*(?:(?:public|private|internal|fileprivate|convenience)\s+)*init[?!]?\s*\(")
+# Labels of the inits declared in extensions, by the extended type's name.
+EXT_INIT_LABELS = defaultdict(set)
 
 FUNC_SIG = re.compile(
     r"^\s*(?:@\w+\s+)*(?:public\s+|private\s+|internal\s+|fileprivate\s+|"
@@ -230,6 +234,26 @@ def scan(files, verbose=False):
                         buf += ch
                     enum_cases.setdefault(name, {})[cm.group(1)] = len(split_top_level(buf))
 
+            # An init written in an EXTENSION keeps the memberwise one
+            # (Swift's rule), so a call may use either set of labels: the
+            # Codex's `CodexPageRequest(blueprintID:kind:)` (an
+            # `init?` in `extension CodexPageRequest`) was reported as an
+            # unknown label on 2026-09-23. Its labels are recorded here and
+            # accepted beside the stored properties in `check_calls`.
+            if kind == "extension" and EXT_INIT.match(ln):
+                inner = ln[ln.index("(") + 1:]
+                depth, buf = 1, ""
+                for ch in inner:
+                    if ch == "(": depth += 1
+                    elif ch == ")":
+                        depth -= 1
+                        if depth == 0: break
+                    buf += ch
+                for param in split_top_level(buf):
+                    first = param.strip().split(":")[0].split()
+                    if first and first[0] != "_":
+                        EXT_INIT_LABELS[name].add(first[0])
+
             if kind == "struct" and name in structs:
                 if INIT.match(ln): structs[name]["hasInit"] = True
                 pm = STORED.match(ln) or STORED_INFERRED.match(ln)
@@ -311,6 +335,16 @@ def check_calls(files, structs, errors):
                 if not labels: continue
                 line = src[:m.start()].count("\n") + 1
 
+                extension_labels = EXT_INIT_LABELS.get(name, set())
+                if extension_labels and any(l in extension_labels and l not in decl["props"] for l in labels):
+                    # A call to an init declared in an extension: its labels
+                    # are that init's, not the memberwise order.
+                    unknown = [l for l in labels if l not in extension_labels]
+                    if unknown:
+                        errors.append(f"{path}:{line}: {name}(...) unknown label(s) "
+                                      f"{unknown}; stored properties are {decl['props']}, "
+                                      f"extension inits take {sorted(extension_labels)}")
+                    continue
                 unknown = [l for l in labels if l not in decl["props"]]
                 if unknown:
                     errors.append(f"{path}:{line}: {name}(...) unknown label(s) "
@@ -988,6 +1022,16 @@ def check_unknown_types(files, declared, errors):
         # The chapter map's haze (2026-09-23, round 5): Core Image's clamped
         # blur and the gradient stops a feather mask is built from.
         "CoreImage","CIContext","CIImage","CIFilter","CIVector","CIColor","Stop",
+        # The settings side (2026-09-23, Docs/SETTINGS.md): local
+        # notifications, iOS's Reduce Motion and the app's own URL opening,
+        # the Apple re-authorisation an account deletion asks for, and the
+        # weak-keyed tables and associated object the graphics governor keeps
+        # its changes in.
+        "UserNotifications","UNUserNotificationCenter","UNMutableNotificationContent",
+        "UNCalendarNotificationTrigger","UNNotificationRequest","UIApplication","UIWindowScene",
+        "UIAccessibility","ASAuthorizationControllerDelegate",
+        "ASAuthorizationControllerPresentationContextProviding","NSMapTable",
+        "OBJC_ASSOCIATION_RETAIN_NONATOMIC",
     }
     used = defaultdict(list)
     for path in files:

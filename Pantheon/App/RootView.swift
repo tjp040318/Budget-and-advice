@@ -160,7 +160,15 @@ struct RootView: View {
 }
 
 /// The "More" menu: the places this screen leads to, and the three boards a
-/// player reads — the account, sound and camera, and support.
+/// player reads — the account, the settings, and support.
+///
+/// The settings side (2026-09-23, `Docs/SETTINGS.md`): the middle board is
+/// Sound and two pages pushed from it, Notifications and Graphics & comfort
+/// (the frame rate, the effects, the shadows, Reduce Motion, the cinematic
+/// camera that used to sit on the board); the Account board's foot is one
+/// row of Reset and Delete account (App Review 5.1.1(v)); the Support board
+/// carries the privacy policy and the terms once `LegalLinks.plist` names
+/// them. `init(opening:)` lets the CI tour open a page or the deletion sheet.
 ///
 /// Landscape shape: the strip carries the title, the demigod and the wallet;
 /// the five places are one row of painted doors across the top; the three
@@ -189,6 +197,7 @@ struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var session: AppSession
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
     @State private var showResetConfirm = false
     @State private var showSignOutConfirm = false
     @State private var showRestoreConfirm = false
@@ -197,10 +206,26 @@ struct SettingsView: View {
     @State private var showMissions = false
     @State private var showEvents = false
     @State private var showSocial = false
+    /// The Codex, the collection book (Docs/CODEX.md): a sheet here, as from
+    /// the Collection strip, since the book carries its own navigation.
+    @State private var showCodex = false
     @State private var warBattle: BattleContext?
     @State private var soundOn = !AudioLibrary.shared.isMuted
     @State private var musicOn = !AudioLibrary.shared.isMusicMuted
-    @AppStorage(CameraDirector.cinematicKey) private var cinematicCamera = false
+    /// The page pushed from the Settings board (`Docs/SETTINGS.md`).
+    @State private var page: SettingsPage?
+    @State private var showDelete = false
+    @ObservedObject private var reminders = NotificationService.shared
+    @AppStorage(GraphicsSettings.frameRateKey) private var frameRate: Int = FrameRateChoice.standard.rawValue
+    @AppStorage(GraphicsSettings.effectsKey) private var effects: String = EffectsQuality.full.rawValue
+    @AppStorage(MotionComfort.key) private var reduceMotion: Bool = false
+    /// Where the screen opens: its boards, or — for the CI tour — a page or
+    /// the deletion sheet.
+    private let opening: SettingsOpening
+
+    init(opening: SettingsOpening = .boards) {
+        self.opening = opening
+    }
 
     var body: some View {
         NavigationStack {
@@ -256,12 +281,19 @@ struct SettingsView: View {
                 ShopView()
                     .environmentObject(store)
             }
+            .sheet(isPresented: $showCodex) {
+                CodexView()
+                    .environmentObject(store)
+            }
             .confirmationDialog(
-                "Delete this account?",
+                "Reset this account?",
                 isPresented: $showResetConfirm,
                 titleVisibility: .visible
             ) {
-                Button("Delete everything", role: .destructive) {
+                // "Reset", not "Delete": the account itself is kept (the
+                // Player ID does not change), and Delete account below it is
+                // the one that removes it (`Docs/SETTINGS.md` §3).
+                Button("Reset everything", role: .destructive) {
                     // The sheet goes first, then the store: the new game's
                     // shell replaces the whole screen under it.
                     dismiss()
@@ -310,6 +342,42 @@ struct SettingsView: View {
                     Task { await session.bindGuestToApple(credential) }
                 }
             }
+            .sheet(isPresented: $showDelete) {
+                DeleteAccountSheet { report in
+                    // More goes first, the deletion sheet with it, then the
+                    // sign-in screen replaces the whole shell under them.
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                        Task { @MainActor in session.closeDeletedAccount(report) }
+                    }
+                }
+                .environmentObject(store)
+                .environmentObject(session)
+            }
+            .navigationDestination(item: $page) { destination in
+                switch destination {
+                case .notifications:
+                    NotificationSettingsView()
+                case .graphics:
+                    GraphicsSettingsView()
+                }
+            }
+            .onAppear(perform: applyOpening)
+        }
+    }
+
+    /// The tour's openings (`-tour-more …` in `TourView`); the boards
+    /// otherwise.
+    private func applyOpening() {
+        switch opening {
+        case .boards:
+            break
+        case .notifications:
+            page = .notifications
+        case .graphics:
+            page = .graphics
+        case .deleteAccount:
+            showDelete = true
         }
     }
 
@@ -371,6 +439,12 @@ struct SettingsView: View {
                     .environmentObject(store)
             } label: {
                 door(title: "Lessons", icon: "book.fill", itemKey: ItemArt.key(scroll: .unknown))
+            }
+            .buttonStyle(PlateButtonStyle())
+            // The Codex: every god in every element, with a reward for each
+            // one first owned — the badge is the rewards waiting.
+            Button { press { showCodex = true } } label: {
+                door(title: "Codex", icon: "book.closed.fill", badge: store.codexRewardsWaiting)
             }
             .buttonStyle(PlateButtonStyle())
         }
@@ -462,7 +536,7 @@ struct SettingsView: View {
                 }
                 VStack(spacing: 4) {
                     accountActions
-                    resetRow
+                    dangerRow
                 }
                 // Clear of the painted panel's lower acanthus, as the Sound
                 // and Support boards' last lines are: Reset account's outline
@@ -519,25 +593,45 @@ struct SettingsView: View {
         }
     }
 
-    /// Reset account (`AppSession.startOver`, behind its confirmation) as a
-    /// quiet outlined row at the foot of the Account board (2026-09-22,
-    /// phase B). It was a red-glyph door beside Missions and Bazaar in run
-    /// 211 — the one irreversible thing on the screen, as loud as the daily
-    /// ones. The genre keeps it inside the account's settings, and Apple asks
-    /// for an account's deletion to be found in the account's place.
-    private var resetRow: some View {
+    /// Reset (`AppSession.startOver`) and Delete account
+    /// (`AppSession.deleteAccount`, `Docs/SETTINGS.md` §3), each behind its
+    /// own confirmation, as ONE quiet outlined row at the foot of the Account
+    /// board (2026-09-22, phase B; deletion 2026-09-23). Reset was a red-glyph
+    /// door beside Missions and Bazaar in run 211 — the one irreversible
+    /// thing on the screen, as loud as the daily ones. The genre keeps both
+    /// inside the account's settings, and Apple asks for an account's
+    /// deletion to be found in the account's place (App Review 5.1.1(v)).
+    /// One row of two, not two rows: the board's foot had no 34 points to
+    /// give without scrolling the guest's rows under a fade, and "Reset"
+    /// needs no second word on a board titled Account.
+    private var dangerRow: some View {
+        HStack(spacing: 6) {
+            quietDangerButton(title: "Reset", glyph: "arrow.counterclockwise", label: "Reset account") {
+                showResetConfirm = true
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            quietDangerButton(title: "Delete account", glyph: "trash.fill", label: "Delete account") {
+                showDelete = true
+            }
+        }
+    }
+
+    /// One half of the danger row: the glyph and the word in the danger red
+    /// on the marble, a thin red outline, 30 points tall.
+    private func quietDangerButton(title: String, glyph: String, label: String, action: @escaping () -> Void) -> some View {
         Button {
-            press { showResetConfirm = true }
+            press(action)
         } label: {
             HStack(spacing: 6) {
-                Image(systemName: "trash.fill")
+                Image(systemName: glyph)
                     .font(.system(size: 12, weight: .black))
-                Text("Reset account")
+                Text(title)
                     .font(Theme.body(12).weight(.bold))
                     .lineLimit(1)
                     .fixedSize()
             }
             .foregroundStyle(Theme.danger)
+            .padding(.horizontal, 10)
             .frame(maxWidth: .infinity)
             // 30, the quiet row's height since run 221: four of the sixteen
             // points the board's foot now keeps clear of the acanthus.
@@ -549,6 +643,7 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(PlateButtonStyle())
+        .accessibilityLabel(label)
     }
 
     /// "iCloud" or "Pantheon Cloud": whichever keeps this account's copy.
@@ -561,12 +656,13 @@ struct SettingsView: View {
         return formatter
     }()
 
+    /// Sound, then the two pages (`Docs/SETTINGS.md`): Notifications, and
+    /// Graphics & comfort — the frame rate, the effects, the shadows, Reduce
+    /// Motion and the cinematic camera, which lived on this board until the
+    /// board had more to hold than its height (2026-09-23). Each page's row
+    /// says its state, so the board reads without opening either.
     private var soundPanel: some View {
-        SectionPanel(title: "Sound & camera", accessory: nil) {
-            // Four points between the rows, not seven, and the camera's two
-            // captions as one pair: the 18 points that buys are what keeps
-            // the last caption off the bottom-left acanthus with the board
-            // still whole at rest (run 217).
+        SectionPanel(title: "Settings", accessory: nil) {
             FadingBoard(foot: boardAcanthus) {
                 VStack(alignment: .leading, spacing: 4) {
                     Toggle(isOn: $soundOn) {
@@ -587,17 +683,18 @@ struct SettingsView: View {
                         AudioLibrary.shared.isMusicMuted = !on
                     }
                     caption("Effects mix with your own music and respect the silent switch.")
-                    Toggle(isOn: $cinematicCamera) {
-                        Text("Cinematic battle camera")
-                            .font(Theme.body(12))
-                            .foregroundStyle(Theme.textPrimary)
+                    Button {
+                        press { page = .notifications }
+                    } label: {
+                        pageRow(title: "Notifications", detail: notificationsLine, glyph: "bell.fill")
                     }
-                    // One line each (run 216 cut the old paragraph mid-word
-                    // at the board's foot).
-                    VStack(alignment: .leading, spacing: 1) {
-                        caption("Off: one fixed view, the genre's way.")
-                        caption("On: cuts, leans and orbits on skills.")
+                    .buttonStyle(PlateButtonStyle())
+                    Button {
+                        press { page = .graphics }
+                    } label: {
+                        pageRow(title: "Graphics", detail: graphicsLine, glyph: "sparkles")
                     }
+                    .buttonStyle(PlateButtonStyle())
                 }
                 // The game's switch: OFF a dark well with a bronze knob, ON
                 // lit gold. The system switch's OFF, a white knob on pale
@@ -606,6 +703,52 @@ struct SettingsView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    /// "Off", "2 of 3 on": short enough for an SE's board at the floor.
+    private var notificationsLine: String {
+        let on = ReminderKind.allCases.filter { reminders.isOn($0) }.count
+        return on == 0 ? "Off" : "\(on) of \(ReminderKind.allCases.count) on"
+    }
+
+    /// "60 FPS · Full", as the Graphics & comfort page stands; "· Calm"
+    /// while the game's Reduce Motion is on.
+    private var graphicsLine: String {
+        let rate = GraphicsSettings.offeredFrameRates.map { $0.rawValue }.contains(frameRate) ? frameRate : FrameRateChoice.standard.rawValue
+        let quality = (EffectsQuality(rawValue: effects) ?? .full) == .full ? "Full" : "Reduced"
+        let calm = reduceMotion || MotionComfort.isReduced ? " · Calm" : ""
+        return "\(rate) FPS · \(quality)\(calm)"
+    }
+
+    /// A page's row: the diagnostics row's shape — the glyph in the doors'
+    /// dark socket, the name in Cinzel and its state under it, a chevron.
+    /// Both lines at their floors and one word or a short state each, so
+    /// nothing shrinks or truncates on an SE's board.
+    private func pageRow(title: String, detail: String, glyph: String) -> some View {
+        HStack(spacing: 8) {
+            MedallionIcon(key: "", glyph: glyph, size: 30, glyphTint: Theme.onGlassGold)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title.uppercased())
+                    .font(Theme.title(13))
+                    .tracking(0.6)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .fixedSize()
+                Text(detail)
+                    .font(Theme.body(11))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            Spacer(minLength: 4)
+            Image(systemName: "chevron.right")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.goldDim)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(MarbleRowPlate(radius: Theme.tightCorner))
+        .contentShape(Rectangle())
     }
 
     /// What a player needs when something goes wrong: the build they are on
@@ -625,6 +768,25 @@ struct SettingsView: View {
                         diagnosticsRow
                     }
                     .buttonStyle(PlateButtonStyle())
+                    // The privacy policy and the terms (App Review 5.1.1(i);
+                    // `LegalLinks.plist`, Docs/SETTINGS.md §4): a row each
+                    // once its address is filled in, none before.
+                    if let privacy = legalLinks.privacyPolicy {
+                        Button {
+                            press { openURL(privacy) }
+                        } label: {
+                            linkRow("Privacy policy", glyph: "hand.raised.fill")
+                        }
+                        .buttonStyle(PlateButtonStyle())
+                    }
+                    if let terms = legalLinks.terms {
+                        Button {
+                            press { openURL(terms) }
+                        } label: {
+                            linkRow("Terms of use", glyph: "doc.text.fill")
+                        }
+                        .buttonStyle(PlateButtonStyle())
+                    }
                     caption("Something wrong? Diagnostics copies or shares the log; send it with your Player ID.")
                     caption("Set in Cinzel and Manrope, under the SIL Open Font License.")
                 }
@@ -658,6 +820,33 @@ struct SettingsView: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
+        .background(MarbleRowPlate(radius: Theme.tightCorner))
+        .contentShape(Rectangle())
+    }
+
+    /// The addresses the Support board links to (`LegalLinks.plist`).
+    private var legalLinks: LegalLinks { LegalLinks.shared }
+
+    /// A link out of the game: the glyph, the name, the arrow that says it
+    /// opens Safari.
+    private func linkRow(_ title: String, glyph: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: glyph)
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Theme.goldDim)
+                .frame(width: 18)
+            Text(title)
+                .font(Theme.body(12).weight(.semibold))
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(1)
+                .fixedSize()
+            Spacer(minLength: 4)
+            Image(systemName: "arrow.up.right")
+                .font(.system(size: 11, weight: .black))
+                .foregroundStyle(Theme.goldDim)
+        }
+        .padding(.horizontal, 8)
+        .frame(height: 30)
         .background(MarbleRowPlate(radius: Theme.tightCorner))
         .contentShape(Rectangle())
     }

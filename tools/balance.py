@@ -3654,6 +3654,248 @@ def report_events():
     print("     the wheel visits every Hall and every Labyrinth and never stalls over a year's end  -> correct")
 
 
+# ---------------------------------------------------------------------------
+# HIDDEN SHRINES AND SUMMONING PIECES (2026-09-23; Docs/SHRINES.md) — this
+# section is the shrine feature's own. Summoners War's Secret Dungeon: a clear
+# of a Labyrinth level or a Hall floor sometimes opens a hidden shrine for an
+# hour, keyed to one family FORM (never Radiance or Umbra), and every win in
+# it pays summoning pieces of that form — 20 summon a 3*, 40 a 4*, 100 a 5*.
+# Mirrored from Pantheon/Core/PvE/ShrineService.swift and pinned in
+# PantheonTests/ShrineTests.swift: change a number in all three.
+SHRINE_DISCOVERY_PER_ENERGY = 0.005        # ShrineService.discoveryPerEnergy: a clear's chance per point of its energy
+SHRINE_WINDOW_MINUTES = 60                 # ShrineService.windowMinutes: Summoners War's exact hour
+SHRINE_MAX_OPEN = 3                        # ShrineService.maxOpen
+SHRINE_PIECES_PER_SUMMON = {3: 20, 4: 40, 5: 100}   # ShrineService.piecesPerSummon
+SHRINE_PIECES_PER_RUN = 3                  # ShrineService.piecesPerRun
+SHRINE_BONUS_PIECE = 0.5                   # ShrineService.bonusPieceChance: a 4th piece one win in two
+SHRINE_RETURN_CHANCE = 0.5                 # ShrineService.returnChance: a new shrine is a form you hold pieces of
+SHRINE_GRADE_WEIGHTS = {                   # ShrineService.gradeWeights, by the found stage's relic grade
+    3: {3: 0.75, 4: 0.24, 5: 0.01},        # Labyrinth B1-3, Hall B1
+    4: {3: 0.63, 4: 0.35, 5: 0.02},        # Labyrinth B4-6, Hall B2
+    5: {3: 0.53, 4: 0.43, 5: 0.04},        # Labyrinth B7-9, Hall B3-5
+    6: {3: 0.44, 4: 0.51, 5: 0.05},        # Labyrinth B10
+}
+SHRINE_ESSENCE_CHANCE = 0.30               # ShrineService.essenceChance: the form's element, Mid
+SHRINE_SCROLL_CHANCE = 0.10                # ShrineService.scrollChance: an Unknown Scroll
+SHRINE_BOSS_MULTIPLIER = 1.6               # ShrineService.bossMultiplier, the Labyrinth boss's
+SHRINE_FUSION_PRIZES = {"sekhmet_tide", "ares_gale", "horus_ember", "zeus_tide", "thoth_gale", "hades_ember"}  # FusionService.recipes
+SHRINE_LAB_ENERGY = lambda level: 6 + level // 4                 # DungeonDatabase.labyrinth's energyCost
+# What "normal play" is, stated so it can be argued with. The day's
+# regenerated energy, three quarters of it in the Labyrinth and the Halls
+# once the campaign is walked (the rest to the Tower, the Titans and Hard and
+# Hell); the bar is the level's (80 + 2 a level, CampaignService), and a
+# shrine is farmed with what an hour of it holds: the bar and an hour's
+# regeneration. A 3* or 4* shrine is farmed until its unit is summoned; a 5*
+# until the hour's energy runs out.
+SHRINE_DUNGEON_SHARE = 0.75
+SHRINE_PROFILES = [  # name, energy a clear, the found stage's relic grade, demigod level
+    ("a new account, Hall B1", HALL_ENERGY(1), HALL_GRADE(1), 10),
+    ("normal play, Labyrinth B7", SHRINE_LAB_ENERGY(7), LAB_GRADE(7), 30),
+    ("normal play, Hall B3", HALL_ENERGY(3), HALL_GRADE(3), 30),
+    ("the endgame, Labyrinth B10", SHRINE_LAB_ENERGY(10), LAB_GRADE(10), 50),
+]
+SHRINE_NORMAL = 1                          # the profile the shape is asserted on
+# The free pulls a day on a pantheon banner, off QuestService: the missions'
+# divinity (arena 30, summon 10, offering 10), the all-missions bonus (a
+# Pantheon Scroll and 30 divinity) and the login week's 50 divinity and one
+# Pantheon Scroll. Mileage pays a point a pull, so this is also its rate.
+SHRINE_FREE_DIVINITY_A_DAY = 30 + 10 + 10 + 30 + 50 / 7
+SHRINE_FREE_PANTHEON_A_DAY = 1 + 1 / 7
+SHRINE_PANTHEON_RARE_PITY = 10             # Banner.olympusStirs (and three more) rarePity
+SHRINE_ENERGY_DIVINITY = 30 / 30           # the bazaar's "Energy x30" is 30 divinity
+
+
+def shrine_pool():
+    """Forms a shrine can be keyed to, by grade: every family's fire, water
+    and wind form (Banner.excludingLightDark over UnitDatabase.summonPool),
+    less the fusion prizes the pool has never held. Radiance and Umbra are
+    never in it — the Light & Dark scroll is their only road."""
+    families = [(key, stars) for key, _, stars, *_ in FAMILY_ROWS] + [(key, bp.stars) for key, bp in HANDWRITTEN]
+    pool = {3: [], 4: [], 5: []}
+    for key, stars in families:
+        for element in ("ember", "tide", "gale"):
+            form = f"{key}_{element}"
+            if form not in SHRINE_FUSION_PRIZES and stars in pool:
+                pool[stars].append(form)
+    return pool
+
+
+def shrine_pieces_a_win():
+    return SHRINE_PIECES_PER_RUN + SHRINE_BONUS_PIECE
+
+
+def shrine_sim(energy, depth, level, days, seed, pool):
+    """Normal play, day by day: the dungeon share of the day's energy spent
+    a clear at a time; each clear's chance; a shrine's grade off its depth and
+    its form off the stock rule; the shrine farmed at once with the hour's
+    energy. Returns the shrines and units by grade, the energy the shrines
+    took and the day the first 5* was summoned."""
+    from collections import Counter
+    rng = random.Random(seed)
+    window = 80 + 2 * (level - 1) + SHRINE_WINDOW_MINUTES // ENERGY_MINUTES
+    stock = {}
+    shrines, units, spent = Counter(), Counter(), Counter()
+    first_five = None
+    weights = SHRINE_GRADE_WEIGHTS[depth]
+    grades = sorted(weights)
+    for day in range(days):
+        left = ENERGY_PER_DAY * SHRINE_DUNGEON_SHARE
+        while left >= energy:
+            left -= energy
+            if rng.random() >= energy * SHRINE_DISCOVERY_PER_ENERGY:
+                continue
+            grade = rng.choices(grades, weights=[weights[g] for g in grades])[0]
+            held = [(form, n) for form, n in stock.items() if n > 0 and form in pool[grade]]
+            if held and rng.random() < SHRINE_RETURN_CHANCE:
+                form = rng.choices([f for f, _ in held], weights=[n for _, n in held])[0]
+            else:
+                form = rng.choice(pool[grade])
+            shrines[grade] += 1
+            budget = window
+            price = SHRINE_PIECES_PER_SUMMON[grade]
+            while budget >= energy and left >= energy:
+                if grade < 5 and stock.get(form, 0) >= price:
+                    break
+                budget -= energy
+                left -= energy
+                spent[grade] += energy
+                stock[form] = stock.get(form, 0) + SHRINE_PIECES_PER_RUN + (1 if rng.random() < SHRINE_BONUS_PIECE else 0)
+            while stock.get(form, 0) >= price:
+                stock[form] -= price
+                units[grade] += 1
+                if grade == 5 and first_five is None:
+                    first_five = day + 1
+    return shrines, units, spent, first_five
+
+
+def shrine_pantheon_rates(pulls=200_000):
+    """Mean pulls per 5* and per 4* on a pantheon banner — report_gacha's
+    walk (hard pity 90, soft from 67) with the 4* guarantee at ten."""
+    odds = SCROLL_ODDS["pantheonic"]
+    rng = random.Random(7)
+    since = rare = fives = fours = 0
+    for _ in range(pulls):
+        since += 1
+        rare += 1
+        r = rng.random()
+        stars = 5 if r < odds[5] else (4 if r < odds[5] + odds[4] else 3)
+        if since >= 90:
+            stars = 5
+        elif stars < 5 and since > 67 and rng.random() < min(0.9, (since - 67) * 0.06):
+            stars = 5
+        if stars < 4 and rare >= SHRINE_PANTHEON_RARE_PITY:
+            stars = 4
+        if stars >= 4:
+            rare = 0
+        if stars == 5:
+            fives += 1
+            since = 0
+        elif stars == 4:
+            fours += 1
+    return pulls / fives, pulls / fours
+
+
+def report_shrines(seeds=60, days=500, steady_days=5000):
+    print("\nHIDDEN SHRINES — a clear's chance of an hour-long shrine, and the pieces it pays")
+    pool = shrine_pool()
+    sizes = {grade: len(forms) for grade, forms in pool.items()}
+    print(f"  a clear finds one {SHRINE_DISCOVERY_PER_ENERGY * 100:.1f}% of the time for each point of energy it cost; "
+          f"open {SHRINE_WINDOW_MINUTES} minutes, {SHRINE_MAX_OPEN} at most")
+    print(f"  every win pays {SHRINE_PIECES_PER_RUN}, and a 4th {SHRINE_BONUS_PIECE * 100:.0f}% of the time "
+          f"({shrine_pieces_a_win():.1f} a win); a summon takes "
+          + ", ".join(f"{p} for a {g}*" for g, p in sorted(SHRINE_PIECES_PER_SUMMON.items())))
+    print(f"  the forms a shrine can be: {sizes[3]} at 3*, {sizes[4]} at 4*, {sizes[5]} at 5* "
+          f"(fire, water and wind; no Radiance, no Umbra, no fusion prize)")
+    print(f"  a new shrine is a form you hold pieces of {SHRINE_RETURN_CHANCE * 100:.0f}% of the time, "
+          "weighted by the pieces held — the rest a form of the pool at random")
+
+    # The shape's own guards on the tables.
+    for depth, weights in SHRINE_GRADE_WEIGHTS.items():
+        assert abs(sum(weights.values()) - 1) < 1e-9, f"depth {depth}: the grade weights must sum to 1"
+        assert weights[5] <= 0.05, f"depth {depth}: a 5* shrine is rare (5% at most)"
+        assert weights[3] + weights[4] >= 0.95, f"depth {depth}: shrines are weighted toward 3* and 4*"
+    assert all(not form.endswith(("_radiance", "_umbra")) for forms in pool.values() for form in forms), \
+        "no shrine is ever a Radiance or an Umbra form"
+    assert not any(form in SHRINE_FUSION_PRIZES for forms in pool.values() for form in forms)
+
+    # Scrolls, for the comparison: the random unit of a grade and the named one.
+    per_five, per_four = shrine_pantheon_rates()
+    pull = SCROLL_DIVINITY["pantheonic"]
+    random_cost = {3: 5_000 / DIVINITY_IN_DRACHMA, 4: per_four * pull, 5: per_five * pull}
+    random_source = {3: "an Unknown Scroll", 4: "a pantheon banner", 5: "a pantheon banner"}
+    named_cost = {g: mileage_price(g, "pantheonic") * pull for g in (3, 4, 5)}
+    free_pulls = SHRINE_FREE_PANTHEON_A_DAY + SHRINE_FREE_DIVINITY_A_DAY / pull
+
+    print(f"\n  a unit by pieces, farmed at {SHRINE_PROFILES[SHRINE_NORMAL][0]} "
+          f"({SHRINE_PROFILES[SHRINE_NORMAL][1]} energy a win; energy at the bazaar's {SHRINE_ENERGY_DIVINITY:.0f} divinity each),")
+    print("  against the scrolls' expected cost of the same grade:")
+    print(f"  {'grade':>5}{'pieces':>8}{'wins':>7}{'energy':>8}   {'a random one by scroll':<42}{'a NAMED one by mileage':>24}")
+    normal_energy = SHRINE_PROFILES[SHRINE_NORMAL][1]
+    unit_energy = {}
+    for grade in (3, 4, 5):
+        wins = SHRINE_PIECES_PER_SUMMON[grade] / shrine_pieces_a_win()
+        energy = wins * normal_energy
+        unit_energy[grade] = energy
+        scroll_words = f"{random_cost[grade]:,.0f} divinity ({random_source[grade]})"
+        print(f"  {grade:>4}*{SHRINE_PIECES_PER_SUMMON[grade]:>8}{wins:>7.1f}{energy:>8.0f}   "
+              f"{scroll_words:<42}{named_cost[grade]:>15,.0f} divinity")
+    print("  -> pieces are CHEAP in energy and DEAR in time: the energy a unit costs is small because the")
+    print("     form is not chosen and its shrine is rare; what a player waits on is the shrine, so the")
+    print("     honest comparison is in days of normal play, below.")
+
+    # Normal play, simulated.
+    print(f"\n  normal play: {ENERGY_PER_DAY} energy a day, {SHRINE_DUNGEON_SHARE * 100:.0f}% of it in the Labyrinth and the Halls, "
+          f"every shrine farmed at once with an hour's energy (the bar and {SHRINE_WINDOW_MINUTES // ENERGY_MINUTES} regenerated)")
+    print(f"  {'profile':<28}{'a clear':>8}{'shrines/day':>12}{'3*/wk':>7}{'4*/wk':>7}{'5*/wk':>7}"
+          f"{'energy/day':>11}{'5* shrine':>10}{'first 5*':>10}")
+    measured = []
+    for index, (name, energy, depth, level) in enumerate(SHRINE_PROFILES):
+        shrines, units, spent, _ = shrine_sim(energy, depth, level, steady_days, 90 + index, pool)
+        firsts = sorted((shrine_sim(energy, depth, level, days, seed, pool)[3] or days * 2) for seed in range(seeds))
+        first = statistics.median(firsts)
+        per_day = sum(shrines.values()) / steady_days
+        five_every = steady_days / max(1, shrines[5])
+        measured.append((name, per_day, units, spent, first, five_every))
+        print(f"  {name:<28}{energy * SHRINE_DISCOVERY_PER_ENERGY * 100:>7.1f}%{per_day:>12.2f}"
+              + "".join(f"{units[g] / steady_days * 7:>7.2f}" for g in (3, 4, 5))
+              + f"{sum(spent.values()) / steady_days:>11.0f}{five_every:>8.0f} d{first:>8.0f} d")
+
+    name, per_day, units, spent, first, _ = measured[SHRINE_NORMAL]
+    named_days = mileage_price(5, "pantheonic") / free_pulls
+    random_days = per_five / free_pulls
+    five_days = steady_days / max(1, units[5])
+    level = SHRINE_PROFILES[SHRINE_NORMAL][3]
+    window = 80 + 2 * (level - 1) + SHRINE_WINDOW_MINUTES // ENERGY_MINUTES
+    endgame_window = 80 + 2 * (SHRINE_PROFILES[-1][3] - 1) + SHRINE_WINDOW_MINUTES // ENERGY_MINUTES
+    endgame_energy = SHRINE_PIECES_PER_SUMMON[5] / shrine_pieces_a_win() * SHRINE_PROFILES[-1][1]
+    print(f"\n  the free pulls a day on a pantheon banner: {free_pulls:.2f} (the missions, their bonus and the login week)")
+    print(f"  a named 5* by mileage ({mileage_price(5, 'pantheonic')} points): {named_days:.0f} days; "
+          f"a random 5* from the same pulls: every {random_days:.0f} days")
+    print(f"  a 5* by pieces at {name}: the first in {first:.0f} days (the median of {seeds} players), "
+          f"then one every {five_days:.0f} days")
+    print(f"  a 4* by pieces: {unit_energy[4]:.0f} energy, inside one shrine's hour ({window} at level {level}); "
+          f"a 5*: {endgame_energy:.0f} at B10, more than an endgame hour's {endgame_window} — it takes a shrine that comes back")
+
+    # The shape.
+    assert 0.6 <= per_day <= 1.2, f"about one shrine a day of normal play ({per_day:.2f})"
+    assert unit_energy[3] * SHRINE_ENERGY_DIVINITY > random_cost[3], "the shrine must never be the cheapest fodder"
+    assert unit_energy[4] <= window, "a 4* is one shrine's hour of normal play"
+    assert endgame_energy > endgame_window, "no 5* is ever had from one shrine, however big the bar"
+    assert first > named_days, "a 5* by pieces is slower than naming one by mileage"
+    # And at every depth, the endgame's B10 included (the sim draws a Hall's
+    # shrine from the whole pool, not its element's third, which makes a
+    # Hall's forms come back LESS often than they will: a floor, not a
+    # forecast).
+    for profile_name, _, _, _, profile_first, _ in measured:
+        assert profile_first > named_days, f"{profile_name}: a 5* by pieces is slower than mileage"
+    assert five_days > 2 * random_days, "pieces are a supplement to the 5*s the free pulls bring, never the road"
+    energy_share = sum(spent.values()) / steady_days / (ENERGY_PER_DAY * SHRINE_DUNGEON_SHARE)
+    assert energy_share < 0.25, "the shrines take a share of the dungeon energy, never most of it"
+    print(f"  the shrines take {energy_share * 100:.0f}% of normal play's dungeon energy; the rest still hunts relics and essences")
+    print("  -> about one shrine a day, one 4* a shrine's hour, fodder dearer than an Unknown Scroll,")
+    print("     and a 5* by pieces slower than naming one by mileage  -> correct")
+
+
 if __name__ == "__main__":
     a = sys.argv[1:]
     if "--tune" in a: report_tune()
@@ -3682,10 +3924,12 @@ if __name__ == "__main__":
     elif "--drops" in a: report_drops()
     elif "--essences" in a: report_essences()
     elif "--events" in a: report_events()
+    elif "--shrines" in a: report_shrines()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids(); report_grades(); report_awakening(); report_boons()
         report_resonance(); report_regalia()
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
         report_sweep(); report_mileage(); report_targeting(); report_essences(); report_events()
+        report_shrines()
         print()

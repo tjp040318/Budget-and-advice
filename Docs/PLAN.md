@@ -7447,3 +7447,51 @@ ones still showing, each on its own files.
   meshes on the boss cards' dark ground (`portrait_boss_hydra`,
   `portrait_boss_jotunn`). A painted card each is about 9 Meshy credits,
   on the owner's word.
+
+## The feature day (2026-09-23, evening; the owner: "What other features do we need to work on? … work as long as you need today and build as much as possible")
+
+The list the owner was given, in priority order, and what he chose. Four
+items needed no decision: App Store readiness (in-app account deletion,
+the privacy manifest, the encryption flag, the legal links),
+notifications and comfort settings, a collection book, and two modes
+(a draft arena and secret dungeons). Four needed his word, and he gave it
+to all four: real-money purchases ("Build it today"), TestFlight from CI,
+anonymous analytics in his Supabase ("Yes, anonymous only") and the last
+cartoon-style characters ("I'll buy credits, remake them all"; 3,570
+credits). Each feature was researched, designed and built by one agent
+against its own files. The shared files (GameStore, the tour, the
+workflow, this plan, CLAUDE.md) were wired by one hand afterwards, the
+pattern of 2026-09-10. Each feature's options, its choice and its
+numbers are in its own document:
+
+- **The Codex** (`Docs/CODEX.md`): every family × five elements, plus
+  the awakened faces. Owned pages are lit, the rest are silhouettes. A
+  page holds the skills, the lore and where the form comes from. Each
+  new page pays divinity by grade (5 / 10 / 25, awakened 20 / 40), a
+  family's first page pays a bonus, and each pantheon has completion
+  tiers. The whole book is about 42,500 divinity, 6.4% of a first
+  month's income and 2.3% of a year's (`tools/codex_calib.py`).
+  `Player.codexClaims`. Tour step 49 (`codex`).
+- **The Draft Arena** (`Docs/DRAFT.md`): Summoners War's World Arena
+  draft against AI demigods. Picks go 1-2-2-2-2-1, each side bans one
+  and chooses a leader, then the fight is 4v4. The AI's picks and bans
+  are scored and said in words. Elo from 1,000, five tiers, a four-week
+  season. Five paid bouts a day in laurels, and a weekly chest that never
+  out-pays the arena (`DraftTests`). `BattleContext.draft`,
+  `Player.draft`. Tour step 50 (`draft`).
+- **Settings and App Store readiness** (`Docs/SETTINGS.md`,
+  `Docs/BACKEND.md` §7):
+  - Local reminders: energy full and one morning line, asked for only
+    from a toggle or the first empty energy.
+  - Performance: frame rate, effects and shadows through
+    `GraphicsSettings`; the defaults are today's look.
+  - Reduce Motion: no shake, no white flash, a gentler zoom.
+  - In-app account deletion: Supabase `delete_my_account()`, Sign in
+    with Apple revocation through the `apple-revoke` Edge Function, the
+    CloudKit records, then the phone.
+  - `PrivacyInfo.xcprivacy`, `ITSAppUsesNonExemptEncryption = NO`, and
+    the Privacy and Terms links (`LegalLinks.plist`).
+  - Photographed on step 9's relaunches (`-tour-more notifications |
+    graphics | delete`).
+- **Hidden Shrines**, **purchases**, **analytics**, **TestFlight** and
+  **the remakes** are recorded below as they land.

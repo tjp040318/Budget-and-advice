@@ -560,12 +560,32 @@ enum VFXLibrary {
         for row in 0..<rows {
             for col in 0..<cols {
                 if let frame = cg.cropping(to: CGRect(x: col * width, y: row * height, width: width, height: height)) {
-                    cut.append(frame)
+                    cut.append(premultiplied(frame) ?? frame)
                 }
             }
         }
         frameCache[name] = cut
         return cut
+    }
+
+    /// A cell with its colour multiplied by its alpha. The sheets ship
+    /// UNPREMULTIPLIED: under a clear pixel lies the painting's colour, a
+    /// mean of 100–200 of 255 (the lightning's cell border 197), and a plane
+    /// drawn `.add` adds the colour whatever the alpha — run 236's lightning
+    /// stood over the enemy row as a white rectangle the size of its cell,
+    /// 15% of the middle band and a whole 64-px patch blown
+    /// (18-dungeon_battle-a). A particle weighs its texture by its alpha; a
+    /// plane (`standingFlipbook`, `groundFlipbook`) needs it done here.
+    /// Drawn once per sheet, over clear, into a premultiplied context.
+    private static func premultiplied(_ image: CGImage) -> CGImage? {
+        let width = image.width
+        let height = image.height
+        let space = CGColorSpaceCreateDeviceRGB()
+        let info = CGImageAlphaInfo.premultipliedLast.rawValue
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+                                      bytesPerRow: 0, space: space, bitmapInfo: info) else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        return context.makeImage()
     }
 
     /// A painted sheet laid FLAT on the floor under `position` and stepped

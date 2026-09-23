@@ -46,6 +46,8 @@ struct CollectionView: View {
     @State private var pickingSlot: SlotPick?
     @State private var showTraining = false
     @State private var showRelics = false
+    /// The Codex, the collection book (`CodexView`, Docs/CODEX.md).
+    @State private var showCodex = false
     /// The stage figure's turn, in points of drag: what earlier drags left
     /// it at, and the drag in progress. Both go to zero with a new unit.
     @State private var spinBase: CGFloat = 0
@@ -167,6 +169,21 @@ struct CollectionView: View {
                 BarButton(title: "Relics", systemImage: "shield.lefthalf.filled", showsTitle: false) {
                     showRelics = true
                 }
+                // The Codex (2026-09-23): every form of every family, the
+                // roster's book. A glyph, as its two neighbours are — the
+                // strip has 44 points left for one more — and the book's gold
+                // mark on the well's shoulder while a page or a tier waits to
+                // be claimed. The closed book is the More screen's codex
+                // count's glyph too.
+                BarButton(title: "Codex", systemImage: "book.closed.fill", showsTitle: false) {
+                    showCodex = true
+                }
+                .overlay(alignment: .topTrailing) {
+                    if store.codexRewardsWaiting > 0 {
+                        CodexMark(size: 11)
+                            .offset(x: 3, y: 6)
+                    }
+                }
             } content: {
                 if store.player.units.isEmpty {
                     EmptyState(
@@ -211,6 +228,10 @@ struct CollectionView: View {
             }
             .sheet(isPresented: $showTraining) {
                 TrainingView(selectedUnitID: selectedID)
+                    .environmentObject(store)
+            }
+            .sheet(isPresented: $showCodex) {
+                CodexView()
                     .environmentObject(store)
             }
         }

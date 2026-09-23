@@ -863,6 +863,7 @@ final class GameStore: ObservableObject {
                 stage: stage, result: result, player: &player, rng: &rng
             )
         }
+        noteShrines(after: stage, result: result)   // Hidden Shrines: GameStore+Shrines.swift, Docs/SHRINES.md
         return outcome ?? StageOutcome(
             result: result, stars: 0, drachma: 0, playerExperience: 0, unitExperience: 0,
             relicsEarned: [], essencesEarned: [:], scrollsEarned: [:], divinityEarned: 0,

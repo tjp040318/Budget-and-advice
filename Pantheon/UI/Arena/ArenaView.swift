@@ -47,6 +47,9 @@ struct ArenaView: View {
     /// The bazaar's laurel exchange: what the arena's own currency buys, one
     /// tap from where it is won (there was no way from here to there).
     @State private var showExchange = false
+    /// The Draft Arena's board (`DraftView`), over the whole screen as a
+    /// battle is: it needs the full height for two columns of five.
+    @State private var showDraft = false
     @State private var defenseRating: Double?
     /// True while the challengers are being built off the main thread, so a
     /// second appearance does not start a second build over the top of the
@@ -116,6 +119,10 @@ struct ArenaView: View {
             }
             .fullScreenCover(item: $battle) { context in
                 battleScreen(for: context)
+            }
+            .fullScreenCover(isPresented: $showDraft) {
+                DraftView()
+                    .environmentObject(store)
             }
         }
     }
@@ -693,6 +700,7 @@ struct ArenaView: View {
     /// `offense` is the offence's power, summed once in `place`.
     private func challengerColumn(_ metrics: ArenaLobbyMetrics, offense: Int) -> some View {
         VStack(alignment: .leading, spacing: 6) {
+            draftDoor(metrics)
             GlassSectionHeader(
                 title: "Challengers",
                 accessory: "+\(laurelsPerWin) a win",
@@ -706,18 +714,12 @@ struct ArenaView: View {
                 // one is worse than saying nothing: the CI tour photographed
                 // this panel announcing "You have cleared the current pool" on
                 // a fresh account that had not fought anybody, because the
-                // challengers were still a few milliseconds away. Two short
-                // lines each, so the plate (about 206 points) fits a mini's
-                // 208 under the header.
-                EmptyState(
-                    icon: isRefreshing ? "hourglass" : "person.2.slash",
-                    title: isRefreshing ? "Finding challengers" : "No challengers",
-                    message: isRefreshing
-                        ? "Building five defence teams to fight."
-                        : "You have beaten today's challengers. New ones come as your points move.",
-                    onGlass: true
-                )
-                .background(GlassPlate(radius: 12))
+                // challengers were still a few milliseconds away. Since the
+                // Draft Arena's door stands above the header (2026-09-23), the
+                // house `EmptyState` (about 206 points) fits under the two on
+                // no phone — about 165 points are left on a 16 Pro, 138 on a
+                // mini — so the same words stand in a row (`quietChallengers`).
+                quietChallengers
             } else {
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 6) {
@@ -736,6 +738,130 @@ struct ArenaView: View {
                 .padding(.horizontal, -Self.shadowRoom)
             }
         }
+    }
+
+    /// The challengers' empty state as one row on the house's glass: the
+    /// icon beside the carved title and the words `EmptyState` said, about
+    /// 85 points tall where the column stack left it 165 on a 16 Pro and 138
+    /// on a mini under the Draft Arena's door and the header.
+    private var quietChallengers: some View {
+        let icon = isRefreshing ? "hourglass" : "person.2.slash"
+        let title: String = isRefreshing ? "Finding challengers" : "No challengers"
+        let message: String = isRefreshing
+            ? "Building five defence teams to fight."
+            : "You have beaten today's challengers. New ones come as your points move."
+        return HStack(alignment: .center, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 28, weight: .light))
+                .foregroundStyle(Theme.glassRim)
+                .frame(width: 36)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title.uppercased())
+                    .font(Theme.title(14))
+                    .tracking(1.2)
+                    .carved(glow: false)
+                    .lineLimit(1)
+                    .fixedSize()
+                Text(message)
+                    .font(Theme.body(12))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .shadow(color: .black.opacity(0.7), radius: 1, y: 1)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
+        .background(GlassPlate(radius: 12))
+    }
+
+    // MARK: - The Draft Arena's door
+
+    /// The door to the Draft Arena (2026-09-23, Docs/DRAFT.md), above the
+    /// challengers: its crest, its crown and the rating, a line of what it is
+    /// — or that a finished week's chest waits — and the gold DRAFT plate
+    /// with the day's paid bouts under it. The same glass and the same plate
+    /// as a challenger's card, so the column reads as one list of fights;
+    /// pinned above the list rather than in it, so it never scrolls away.
+    /// The line is at most 21 characters, and 32 while the box is too small
+    /// to draft, which a narrow column (93 points of name block on an SE)
+    /// still holds beside the 66-point plate.
+    private func draftDoor(_ metrics: ArenaLobbyMetrics) -> some View {
+        let record = store.draftRecord
+        let open = store.canDraft
+        let today = record.dayKey == EventCalendar.dayKey(Date()) ? record.paidToday : 0
+        let paidLeft = max(0, DraftService.paidBoutsPerDay - today)
+        let chestWaits = record.pendingChest != nil
+        let line: String
+        if !open {
+            line = "Five different monsters to draft"
+        } else if chestWaits {
+            line = "Last week's chest waits"
+        } else {
+            line = "Pick five, strike one"
+        }
+        return Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            showDraft = true
+        } label: {
+            HStack(spacing: 10) {
+                DraftCrest(tier: record.tier, size: 40)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("DRAFT ARENA")
+                        .font(Theme.title(14))
+                        .tracking(1.2)
+                        .carved(glow: false)
+                        .lineLimit(1)
+                        .fixedSize()
+                    HStack(spacing: 4) {
+                        Text(record.tier.displayName)
+                            .font(Theme.body(11).weight(.bold))
+                            .foregroundStyle(record.tier.color)
+                            .lineLimit(1)
+                            .fixedSize()
+                        Text(record.rating.formatted())
+                            .font(Theme.numeric(11.5))
+                            .foregroundStyle(Theme.onGlassDim)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    Text(line)
+                        .font(Theme.body(11))
+                        .foregroundStyle(chestWaits ? Theme.onGlassGold : Theme.onGlassDim)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .shadow(color: .black.opacity(0.7), radius: 1, y: 1)
+                Spacer(minLength: 4)
+                VStack(spacing: 0) {
+                    Text("DRAFT")
+                        .font(Theme.title(13))
+                        .tracking(1.2)
+                        .lineLimit(1)
+                        .fixedSize()
+                    Text("\(paidLeft)/\(DraftService.paidBoutsPerDay)")
+                        .font(Theme.numeric(11.5))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .foregroundStyle(open ? Theme.ink : Theme.onGlassDim)
+                .frame(width: metrics.fightWidth, height: 40)
+                .background(fightPlate(open))
+                .overlay(
+                    RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                        .strokeBorder(open ? Color(hex: "#FFE9A8").opacity(0.6) : Theme.glassRim, lineWidth: 1)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+                .shadow(color: open ? Theme.gold.opacity(0.35) : .clear, radius: 6, y: 2)
+            }
+            .padding(.horizontal, ArenaLobbyMetrics.cardPadding)
+            .padding(.vertical, 7)
+            .background(GlassPlate(radius: 10))
+        }
+        .buttonStyle(PlateButtonStyle())
+        .disabled(!open)
+        .accessibilityLabel("Draft Arena, \(record.tier.displayName), rating \(record.rating)")
     }
 
     /// One challenger: who they are (name, crest and tier, power tinted

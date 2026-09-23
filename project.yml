@@ -39,6 +39,11 @@ targets:
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_CFBundleDisplayName: Pantheon
+        # Export compliance (Docs/SETTINGS.md §4): the only encryption is
+        # Apple's own (HTTPS through URLSession, CloudKit, Sign in with Apple)
+        # and SHA-256 hashing, which is exempt, so App Store Connect stops
+        # asking at every upload.
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         INFOPLIST_KEY_UIUserInterfaceStyle: Dark
         INFOPLIST_KEY_UIStatusBarStyle: UIStatusBarStyleLightContent
         INFOPLIST_KEY_UIRequiresFullScreen: YES

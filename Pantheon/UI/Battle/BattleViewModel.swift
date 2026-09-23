@@ -10,19 +10,25 @@ enum BattleContext: Identifiable {
     /// fought as an arena attack but settled through the social layer —
     /// never through `.arena`, whose settle path moves rank points.
     case guildWar(WarTarget)
+    /// A Draft Arena bout (2026-09-23, Docs/DRAFT.md): the four each side
+    /// kept after the draft and the bans, leaders first, fought in the
+    /// arena's mode and settled through `GameStore.finishDraftBout` — never
+    /// through `.arena`, whose settle path moves the arena's rank points.
+    case draft(DraftBout)
 
     var id: String {
         switch self {
         case .campaign(let stage): return "campaign_\(stage.id)"
         case .arena(let opponent): return "arena_\(opponent.id)"
         case .guildWar(let target): return "war_\(target.id)"
+        case .draft(let bout): return "draft_\(bout.id)"
         }
     }
 
     var environment: BattleEnvironment {
         switch self {
         case .campaign(let stage): return stage.environment
-        case .arena, .guildWar: return .arenaOfSouls
+        case .arena, .guildWar, .draft: return .arenaOfSouls
         }
     }
 
@@ -31,6 +37,7 @@ enum BattleContext: Identifiable {
         case .campaign(let stage): return stage.name
         case .arena(let opponent): return "vs \(opponent.name)"
         case .guildWar(let target): return "vs \(target.profile.name)"
+        case .draft(let bout): return "vs \(bout.rivalName)"
         }
     }
 }
@@ -698,6 +705,32 @@ final class BattleViewModel: ObservableObject {
                 lines: lines,
                 stars: result.outcome == .victory ? 3 : 0,
                 title: "vs \(target.profile.name)", turns: result.turnsTaken,
+                damageDealt: result.totalDamageDealt, damageTaken: result.totalDamageTaken,
+                unitStats: stats, mvpID: mvp, loot: loot
+            )
+
+        case .draft(let bout):
+            // The Draft Arena's own ladder and purse (`DraftService
+            // .applyResult`): the rating's swing, and the laurels of a paid
+            // bout — none once the day's five are spent.
+            let settled = store.finishDraftBout(bout, result: result)
+            let swing = settled.ratingDelta >= 0 ? "+\(settled.ratingDelta)" : "\(settled.ratingDelta)"
+            let lines: [BattleSummary.Line] = [
+                .init(icon: "rosette", label: "Draft rating", value: swing),
+                .init(icon: "laurel.leading", label: "Laurels", value: "+\(settled.laurels)")
+            ]
+            var loot: [BattleSummary.Loot] = []
+            if result.outcome == .victory {
+                loot.append(.init(glyph: "rosette", title: "Draft Rating", amount: swing, tint: .gold, key: "rank_points"))
+                if settled.laurels > 0 {
+                    loot.append(.init(glyph: "laurel.leading", title: "Laurels", amount: "+\(settled.laurels)", tint: .laurel, key: "laurels"))
+                }
+            }
+            return BattleSummary(
+                outcome: result.outcome,
+                lines: lines,
+                stars: result.outcome == .victory ? 3 : 0,
+                title: "vs \(bout.rivalName)", turns: result.turnsTaken,
                 damageDealt: result.totalDamageDealt, damageTaken: result.totalDamageTaken,
                 unitStats: stats, mvpID: mvp, loot: loot
             )

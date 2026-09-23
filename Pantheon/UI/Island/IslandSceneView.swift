@@ -114,13 +114,16 @@ struct IslandSceneView: UIViewRepresentable {
         view.backgroundColor = .clear
         view.isOpaque = false
         view.antialiasingMode = .multisampling2X
-        view.preferredFramesPerSecond = 30
         view.rendersContinuously = true
         view.isPlaying = true
         view.allowsCameraControl = false
         view.autoenablesDefaultLighting = false
         view.isUserInteractionEnabled = false
         view.delegate = context.coordinator.cloth
+        // Thirty frames a second at every frame-rate choice (the island is
+        // ambient), and the effects and shadow choices applied live, since
+        // this view is never rebuilt (`Docs/SETTINGS.md` §2).
+        GraphicsSettings.configure(view, for: .island)
         return view
     }
 

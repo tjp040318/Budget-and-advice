@@ -1329,6 +1329,10 @@ struct SummonStageView: UIViewRepresentable {
         view.rendersContinuously = true
         view.isPlaying = true
         view.delegate = context.coordinator
+        // Sixty frames a second by default (SceneKit's own, which this view
+        // always drew at), and the Settings screen's effects and shadows
+        // (`Docs/SETTINGS.md` §2); the warm-up below draws whatever they leave.
+        GraphicsSettings.configure(view, for: .reveal)
 
         let tint = UIColor(hex: result.blueprint.model.auraHex) ?? .white
         let height = result.blueprint.model.height

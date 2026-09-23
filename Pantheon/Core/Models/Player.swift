@@ -152,6 +152,39 @@ struct Player: Codable, Equatable, Sendable {
     /// since the first.
     var eventGiftsClaimed: [String]? = nil
 
+    // MARK: The Draft Arena (2026-09-23; Docs/DRAFT.md)
+    /// The Draft Arena's standing (`DraftRecord`): the rating and its record,
+    /// the day's paid bouts, the week's count and a finished week's chest.
+    /// Optional, like every save field added since the first; nil until the
+    /// board first opens.
+    var draft: DraftRecord? = nil
+    // MARK: end of the Draft Arena's block
+
+    // MARK: The Codex (2026-09-23; Docs/CODEX.md)
+    /// The Codex's rewards already taken (`CodexService`): a form's page
+    /// (`form:<blueprint id>`), an awakened face's (`awakened:<blueprint
+    /// id>`), a family's first (`family:<family key>`) and a pantheon's
+    /// completion tier (`tier:<pantheon>:<percent>`), so each pays once. A
+    /// claimed page also keeps its form lit after the unit that earned it is
+    /// gone. Optional, like every save field added since the first; nil until
+    /// the first claim.
+    var codexClaims: Set<String>? = nil
+    // MARK: end of the Codex's block
+
+    // MARK: The Hidden Shrines (2026-09-23; Docs/SHRINES.md)
+    /// The hidden shrines open now (`HiddenShrine`): each found by a
+    /// Labyrinth or Hall win, open an hour, keyed to one fire, water or wind
+    /// form. Pruned when their hour is out (`ShrineService.prune`), so an
+    /// empty list is no key at all. Optional, like every save field added
+    /// since the first.
+    var shrines: [HiddenShrine]? = nil
+    /// Summoning pieces held, by blueprint id (`anubis_tide` → 26): paid by
+    /// a shrine's wins, spent 20 / 40 / 100 on a 3★ / 4★ / 5★ of that form
+    /// (`ShrineService.summon`), and never lost. Optional for the same
+    /// reason; nil until the first piece.
+    var shrinePieces: [String: Int]? = nil
+    // MARK: end of the Hidden Shrines' block
+
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }
 

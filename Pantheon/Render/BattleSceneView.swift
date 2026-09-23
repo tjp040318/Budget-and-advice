@@ -27,7 +27,6 @@ struct BattleSceneView: UIViewRepresentable {
         view.scene = controller.scene
         view.backgroundColor = .black
         view.antialiasingMode = .multisampling2X
-        view.preferredFramesPerSecond = 60
         view.rendersContinuously = true
         view.isJitteringEnabled = false
         // The camera is directed by CameraDirector; free orbit would fight it.
@@ -35,6 +34,10 @@ struct BattleSceneView: UIViewRepresentable {
         view.autoenablesDefaultLighting = false
         view.overlaySKScene = controller.plates
         view.delegate = context.coordinator
+        // The frame rate (60 by default, as it always was), the effects and
+        // the shadows the player chose in Settings (`Docs/SETTINGS.md` §2);
+        // after the delegate, which the helper's governor forwards to.
+        GraphicsSettings.configure(view, for: .battle)
 
         let tap = UITapGestureRecognizer(
             target: context.coordinator,

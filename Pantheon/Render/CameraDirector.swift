@@ -57,8 +57,10 @@ import UIKit
 final class CameraDirector {
 
     /// The player's choice, read at shot time. Off is the genre's fixed view.
+    /// Reduce Motion (`MotionComfort`) holds the cuts, leans and orbits off
+    /// whatever the switch says: the gentle zoom plays instead.
     static let cinematicKey = "cinematicCamera"
-    static var isCinematic: Bool { UserDefaults.standard.bool(forKey: cinematicKey) }
+    static var isCinematic: Bool { UserDefaults.standard.bool(forKey: cinematicKey) && !MotionComfort.isReduced }
 
     // MARK: - The home solve
 
@@ -779,7 +781,14 @@ final class CameraDirector {
             return
         }
         let distance = min(wanted, depth * 0.85)
-        let destination = SCNVector3(chest.x - dir.x * distance, chest.y - dir.y * distance, chest.z - dir.z * distance)
+        let full = SCNVector3(chest.x - dir.x * distance, chest.y - dir.y * distance, chest.z - dir.z * distance)
+        // Reduce Motion (`MotionComfort`, Docs/SETTINGS.md §2): the same
+        // dolly, a share of the way and a gentler ease — the push still
+        // says whose skill it is, without the rush.
+        let gentle = MotionComfort.isReduced
+        let destination = gentle ? lerp(homePosition, full, MotionComfort.zoomReach) : full
+        let easeIn: TimeInterval = gentle ? 0.22 * MotionComfort.zoomEase : 0.22
+        let easeOut: TimeInterval = gentle ? 0.30 * MotionComfort.zoomEase : 0.30
 
         shotGeneration += 1
         let generation = shotGeneration
@@ -793,8 +802,8 @@ final class CameraDirector {
         isOffHome = true
 
         let home = homePosition
-        let dollyIn = SCNAction.customAction(duration: 0.22) { node, elapsed in
-            let raw = Float(min(1, elapsed / 0.22))
+        let dollyIn = SCNAction.customAction(duration: easeIn) { node, elapsed in
+            let raw = Float(min(1, elapsed / CGFloat(easeIn)))
             let t = raw * raw * (3 - 2 * raw)
             node.position = SCNVector3(
                 home.x + (destination.x - home.x) * t,
@@ -803,8 +812,8 @@ final class CameraDirector {
             )
         }
         let settle = SCNAction.wait(duration: hold)
-        let dollyOut = SCNAction.customAction(duration: 0.30) { node, elapsed in
-            let raw = Float(min(1, elapsed / 0.30))
+        let dollyOut = SCNAction.customAction(duration: easeOut) { node, elapsed in
+            let raw = Float(min(1, elapsed / CGFloat(easeOut)))
             let t = raw * raw * (3 - 2 * raw)
             node.position = SCNVector3(
                 destination.x + (home.x - destination.x) * t,
@@ -818,7 +827,10 @@ final class CameraDirector {
     }
 
     /// A short shake, used on critical hits and on the ultimate's landing frame.
+    /// Never under Reduce Motion (`MotionComfort`): the hit's flash and sound
+    /// carry it.
     func shake(intensity: Float = 0.12, duration: TimeInterval = 0.3) {
+        guard !MotionComfort.isReduced else { return }
         let origin = cameraNode.position
         let shake = SCNAction.customAction(duration: duration) { node, elapsed in
             let t = Float(elapsed / CGFloat(duration))

@@ -983,6 +983,34 @@ environment can and cannot do. The short version:
   `.arena`), two leaderboards. `Pantheon/Pantheon.entitlements` is the
   app target's `CODE_SIGN_ENTITLEMENTS` (pbxproj and project.yml). The
   owner's Xcode/Dashboard steps are in SOCIAL.md. Tour step 47.
+- **The feature day (2026-09-23, evening; PLAN.md *The feature day*).**
+  Four features built by four agents on their own files and wired by one
+  hand. **The Codex** (`Docs/CODEX.md`: `CodexService`, `CodexView`, the
+  Collection strip's book button and More's door, `Player.codexClaims`):
+  every family × five elements plus the awakened faces, each new page
+  paying divinity by grade — and any new way of getting a unit must
+  insert into `player.codex`, which the book reads as "ever owned".
+  **The Draft Arena** (`Docs/DRAFT.md`: `DraftService`, `DraftView`,
+  `BattleContext.draft`, `Player.draft`): the World Arena's 1-2-2-2-2-1
+  draft with a ban each against AI demigods, Elo from 1,000, a week that
+  never out-pays the arena (`DraftTests`). **Hidden Shrines**
+  (`Docs/SHRINES.md`: `ShrineService`, the Labyrinth's Shrines wing,
+  `Player.shrines`, `Player.shrinePieces`): a Labyrinth or Hall win may
+  open an hour-long shrine of one fire, water or wind form, never Light or
+  Dark, paying pieces spent 20 / 40 / 100 on a 3★ / 4★ / 5★;
+  `balance.py --shrines` asserts a 5★ by pieces is slower than by mileage.
+  **Settings and App Store readiness** (`Docs/SETTINGS.md`,
+  `Docs/BACKEND.md` §7): local reminders (`NotificationService`, asked
+  only from a toggle or the first empty energy), `GraphicsSettings`
+  (frame rate, effects, shadows; the defaults are today's look), Reduce
+  Motion, in-app account deletion (`AccountDeletion`, the SQL
+  `delete_my_account()`, the `apple-revoke` Edge Function for Sign in
+  with Apple — the owner's setup steps are BACKEND.md §7),
+  `PrivacyInfo.xcprivacy`, `ITSAppUsesNonExemptEncryption = NO`,
+  `LegalLinks.plist`. Tour steps 49 `codex`, 50 `draft`, 51 `shrines`;
+  step 9 relaunches with `-tour-more notifications|graphics|delete`.
+  swiftcheck accepts the labels of an init declared in an EXTENSION (Swift
+  keeps the memberwise one beside it) and still fails a misspelt label.
 - **The paid programme of 2026-09-17** (PLAN.md, *The paid programme*):
   the five gods are meshy-7 now (`_m7`, judged on boards, better in every
   one), their bespoke motions re-applied, Zeus's ultimate remade (blow at

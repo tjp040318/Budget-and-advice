@@ -200,3 +200,132 @@ file in `Backend/supabase/migrations/`.
   `payload` column is `text`, which Postgres stores compressed out of
   line, so a thousand players are well under the free tier's database
   allowance.
+
+## 7. Deleting an account (2026-09-23; App Review Guideline 5.1.1(v))
+
+**More → Account → Delete account** deletes the account everywhere it
+lives: the list of what goes, the word DELETE typed, then — for an Apple ID
+— Apple's own Face ID sheet. `Docs/SETTINGS.md` §3 has the options weighed;
+`Pantheon/Core/Account/AccountDeletion.swift` has the order. On the backend
+it does three things, the last two of which need this section's steps:
+
+1. deletes the `saves` row (as a reset does);
+2. for an Apple ID, sends the one-time code of that fresh Apple sheet to
+   the Edge Function **`apple-revoke`**
+   (`Backend/supabase/functions/apple-revoke/index.ts`), which signs a
+   client secret with the team's Sign in with Apple key, exchanges the code
+   at Apple and revokes the token — Apple requires it of an app that offers
+   Sign in with Apple, and the key can only live on a server;
+3. calls **`delete_my_account()`**
+   (`Backend/supabase/migrations/20260923000000_delete_my_account.sql`),
+   which deletes the caller's save, player row and auth user — never anyone
+   else's: it reads only `auth.uid()`.
+
+Until the steps are done the app still deletes everything it can reach:
+without the function, Sign in with Apple is not revoked (one `[Account]`
+line in More → Diagnostics says so, and the sign-in screen tells the
+player how to stop using the Apple ID by hand); without the migration the
+save row goes but the auth user and the player row stay (logged the same
+way). A cloud that cannot be reached at all stops the deletion with
+nothing removed and says so — otherwise the cloud copy would restore on the
+next sign-in.
+
+The reset dialog of §2 now reads **Reset this account? → Reset
+everything**, so it cannot be mistaken for this.
+
+### The owner's steps (about twenty minutes, once)
+
+**A. The SQL function**
+
+1. Dashboard → **SQL Editor** → **New query**. Paste the whole of
+   `Backend/supabase/migrations/20260923000000_delete_my_account.sql` and
+   press **Run**. It ends with "Success. No rows returned"; running it again
+   is safe.
+2. Check: **Database** → **Functions** lists `delete_my_account`, with
+   security *definer*.
+
+**B. The Sign in with Apple key** (developer.apple.com)
+
+3. developer.apple.com/account → **Certificates, Identifiers & Profiles**
+   → **Keys** → the **+** beside the title.
+4. **Key Name** `Pantheon Sign in with Apple`; tick **Sign in with Apple**
+   → **Configure** → **Primary App ID** `com.pantheon.game` → **Save** →
+   **Continue** → **Register**.
+5. **Download** the key: a file `AuthKey_<KEYID>.p8`. Apple lets you
+   download it ONCE — put it in the password manager straight away. Write
+   down the **Key ID** printed on the same page (ten characters).
+6. The **Team ID**: developer.apple.com/account → **Membership details** →
+   **Team ID** (ten characters).
+
+**C. The Edge Function**
+
+7. Dashboard → left rail **Edge Functions** → **Deploy a new function** →
+   **Via Editor**. Name it exactly `apple-revoke`. Replace the template's
+   code with the whole of `Backend/supabase/functions/apple-revoke/index.ts`
+   and press **Deploy function** (ten to thirty seconds).
+   With the CLI instead: from the repository's `Backend` folder,
+   `supabase functions deploy apple-revoke --project-ref kqlblqnioumkdoudhibi`.
+8. On the function's page leave **Verify JWT** (JWT verification) **on**,
+   the default: only a signed-in player may call it.
+
+**D. The function's secrets**
+
+9. Dashboard → **Edge Functions** → **Secrets** → add these four, then
+   **Save**:
+   - `APPLE_TEAM_ID` — the Team ID from step 6;
+   - `APPLE_KEY_ID` — the Key ID from step 5;
+   - `APPLE_PRIVATE_KEY` — open the `.p8` file in a text editor and paste
+     ALL of it, the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE
+     KEY-----` lines included;
+   - `APPLE_CLIENT_ID` — `com.pantheon.game`.
+   With the CLI: `supabase secrets set APPLE_TEAM_ID=… APPLE_KEY_ID=…
+   APPLE_CLIENT_ID=com.pantheon.game --project-ref kqlblqnioumkdoudhibi`,
+   then `supabase secrets set APPLE_PRIVATE_KEY="$(cat AuthKey_<KEYID>.p8)"
+   --project-ref kqlblqnioumkdoudhibi`.
+
+**E. Check it**
+
+10. Without a phone: the function's page → **Test** → method POST, body
+    `{"authorization_code":"test"}`, and a signed-in user's token as the
+    authorization if the tester asks for one → **Send Request**. The answer
+    must be **502** "Apple refused the authorization code" (`invalid_grant`,
+    since "test" is no code): that proves the four secrets and the key were
+    read. A **500** names what is missing ("not configured", with the
+    secret's name) or says the key could not be read (step 9's paste).
+11. On a phone, with a test Apple ID: sign in with Apple, play a minute,
+    then **More → Account → Delete account** → type `DELETE` → **Delete
+    with Apple** → Face ID. The sign-in screen returns with "Your account
+    and its data were deleted." Then:
+    - iPhone **Settings → your name → Sign-In & Security → Sign in with
+      Apple**: Pantheon is no longer listed (the revocation worked);
+    - Dashboard → **Authentication → Users**: that user is gone;
+      **Table Editor → players / saves**: its rows are gone;
+    - **More → Diagnostics** (on the next account) shows the `[Account]`
+      lines of the deletion, step by step.
+12. A guest: **Continue without an account**, play, then **Delete
+    account** → `DELETE` → the anonymous user disappears from
+    **Authentication → Users** as well.
+
+**F. CloudKit, for a build signed for iCloud** (icloud.developer.apple.com)
+
+13. **Schema → Indexes**: add `BoardPost` → `authorID` QUERYABLE and
+    `Mail` → `fromID` QUERYABLE. Without them the deletion logs "…search:
+    Field 'authorID' is not marked queryable" and leaves the player's board
+    posts and sent mail behind.
+14. Optional — **Schema → Security Roles** → `Friendship` → give
+    **Authenticated** Write, so a player can also delete a friendship the
+    OTHER side accepted; without it those records stay (two opaque ids and a
+    date, pointing at a profile that no longer exists).
+15. **Deploy Schema Changes…** to **Production** before the next TestFlight
+    build.
+
+**G. Before submitting**
+
+16. Keep the Supabase project from pausing: a free project that sees no
+    requests for a week is paused, and a paused project makes a deletion
+    stop with "the cloud could not be reached". Upgrade it (or keep it busy)
+    before release.
+17. The privacy policy (Guideline 5.1.1(i)) and the other App Store
+    paperwork: `Docs/SETTINGS.md` §4 — the policy's address goes in
+    `Pantheon/Resources/LegalLinks.plist`, and the App Privacy answers must
+    match `Pantheon/PrivacyInfo.xcprivacy`.
