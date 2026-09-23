@@ -344,6 +344,10 @@ enum CampaignService {
         }
         // event: the mission counts what was actually charged.
         QuestService.record(.energySpent(EventCalendar.energyCost(for: stage, at: now)), player: &player)
+        // Every run, won or lost, fought or swept: what the anonymous play
+        // data reads a stage's difficulty from (`Docs/ANALYTICS.md`).
+        QuestService.record(.stageSettled(stage, result, stars: outcome.stars, firstClear: outcome.isFirstClear),
+                            player: &player)
         return outcome
     }
 

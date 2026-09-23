@@ -5,6 +5,13 @@ import SwiftUI
 /// day, and the Night Market's rolled shelf. Opens from the wallet on the
 /// island, from More, and from the Arena on its Laurel stall.
 ///
+/// And, first on its rail since 2026-09-23, the TREASURY: the one stall that
+/// sells for real money (`TreasuryStall`, Docs/STORE.md) — divinity, the
+/// starter and the Blessing of the Gods through the App Store. It is not a
+/// `ShopService.Section`, because nothing it sells is a `ShopService.Item`:
+/// its products and their rules are `StoreCatalog`'s, and a section would
+/// have put an empty stall into every switch over the bazaar's sections.
+///
 /// A PLACE since phase B (2026-09-22; PLAN.md, *Phase B of the premium
 /// pass*, option B). Run 211 photographed it as a 360-point cream plate alone
 /// in a cream void, SF glyphs where 48 painted items ship, "+2,0…" on a tile
@@ -30,6 +37,9 @@ struct ShopView: View {
     var opening: ShopService.Section = .daily
 
     @State private var section: ShopService.Section
+    /// True while the Treasury is the stall in view; `section` keeps the
+    /// game-currency stall the rail returns to.
+    @State private var inTreasury: Bool
     /// What the last purchase or claim paid, as tiles; empty when nothing is
     /// shown. `receiptID` lets a later receipt outlive an earlier one's timer.
     @State private var receipt: [ShopService.Grant] = []
@@ -38,10 +48,16 @@ struct ShopView: View {
     /// stall's place in the rail's scroll (`stallFold`).
     @State private var stallsBelow = false
 
-    init(opening: ShopService.Section = .daily) {
+    /// `treasury: true` opens on the Treasury (the CI tour's `treasury`
+    /// step); every other door opens on `opening`.
+    init(opening: ShopService.Section = .daily, treasury: Bool = false) {
         self.opening = opening
         _section = State(initialValue: opening)
+        _inTreasury = State(initialValue: treasury)
     }
+
+    /// The Treasury's row on the rail, for `ScrollViewReader`.
+    private static let treasuryRowID = "treasury"
 
     // MARK: - The room's measures
 
@@ -92,7 +108,7 @@ struct ShopView: View {
     /// the gift glowing.
     private static let lampColour = Color(hex: "#FFB35C")
 
-    private var isNight: Bool { section == .nightMarket }
+    private var isNight: Bool { !inTreasury && section == .nightMarket }
 
     /// The stalls as the rail lists them: Testing last, so the rows a player
     /// spends in come first. `ShopService.Section`'s own order is untouched.
@@ -210,6 +226,9 @@ struct ShopView: View {
             PlaceRail(width: Self.railWidth) {
                 PlaceRailLabel("Stalls")
                     .restingRow(goneBelow: 0.9, wholeFrom: 0.995)
+                treasuryRow
+                    .restingRow(goneBelow: 0.85, wholeFrom: 0.98)
+                    .id(Self.treasuryRowID)
                 ForEach(stalls) { stall in
                     railRow(stall)
                         .restingRow(goneBelow: 0.85, wholeFrom: 0.98)
@@ -228,7 +247,29 @@ struct ShopView: View {
                         .padding(.bottom, 6)
                 }
             }
-            .onAppear { proxy.scrollTo(section, anchor: .center) }
+            .onAppear {
+                if inTreasury {
+                    proxy.scrollTo(Self.treasuryRowID, anchor: .center)
+                } else {
+                    proxy.scrollTo(section, anchor: .center)
+                }
+            }
+        }
+    }
+
+    /// The Treasury's row, first under the rail's name: the painted crystal,
+    /// and the gold dot while a Blessing day waits to be claimed.
+    private var treasuryRow: some View {
+        PlaceRailRow(
+            title: "Treasury",
+            itemKey: "divinity",
+            systemImage: "sparkles",
+            isOn: inTreasury,
+            accessory: nil,
+            dot: store.treasuryHasClaim
+        ) {
+            withAnimation(.easeOut(duration: 0.2)) { inTreasury = true }
+            receipt = []
         }
     }
 
@@ -263,11 +304,14 @@ struct ShopView: View {
             title: Self.railTitle(stall),
             itemKey: Self.railArt(stall),
             systemImage: Self.railGlyph(stall),
-            isOn: stall == section,
+            isOn: !inTreasury && stall == section,
             accessory: accessory,
             dot: stall == .daily && ShopService.isDailyAvailable(player: store.player)
         ) {
-            withAnimation(.easeOut(duration: 0.2)) { section = stall }
+            withAnimation(.easeOut(duration: 0.2)) {
+                section = stall
+                inTreasury = false
+            }
             receipt = []
         }
     }
@@ -332,13 +376,19 @@ struct ShopView: View {
 
     private var roomHeader: some View {
         HStack(alignment: .top, spacing: 10) {
-            if section == .nightMarket {
+            if inTreasury {
+                TreasuryTitle(size: Self.titleSize)
+            } else if section == .nightMarket {
                 NightMarketTitle(size: Self.titleSize)
             } else {
                 PlaceTitle(eyebrow: Self.eyebrow(section), title: Self.headline(section), size: Self.titleSize)
             }
             Spacer(minLength: 8)
-            headerAccessory
+            if inTreasury {
+                TreasuryHeaderControls()
+            } else {
+                headerAccessory
+            }
         }
     }
 
@@ -409,6 +459,15 @@ struct ShopView: View {
 
     @ViewBuilder
     private var stallBody: some View {
+        if inTreasury {
+            TreasuryStall { grants in showReceipt(grants) }
+        } else {
+            sectionBody
+        }
+    }
+
+    @ViewBuilder
+    private var sectionBody: some View {
         switch section {
         case .daily:
             if let offering = offers.first {

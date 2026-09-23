@@ -27,6 +27,13 @@ enum QuestService {
         case unitFused
         case dailyOfferingClaimed
         case energySpent(Int)
+        /// Every run `CampaignService.settle` pays — won, lost, forfeited or
+        /// swept — with the stars it earned and whether it was the stage's
+        /// first clear. It counts toward no mission or feat (`stageCleared`
+        /// does that); it is recorded for a loss as well because the
+        /// anonymous play data reads it (`Docs/ANALYTICS.md`): a stage's fail
+        /// rate needs its failures.
+        case stageSettled(Stage, BattleResult, stars: Int, firstClear: Bool)
     }
 
     // MARK: - Missions
@@ -183,10 +190,16 @@ enum QuestService {
         case .energySpent(let amount):
             bump("spend_energy", amount)
             life("energy_spent", amount)
+        case .stageSettled:
+            break
         }
 
         player.quests = quests
         player.lifetimeCounters = lifetime
+        // The same record, anonymously, when the player shares play data
+        // (`Docs/ANALYTICS.md`): nothing at all when he does not, under the
+        // tour, in the tests or with no backend.
+        AnalyticsService.record(event, player: player, now: now)
     }
 
     // MARK: - Reading

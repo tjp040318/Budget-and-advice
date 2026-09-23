@@ -1,0 +1,196 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "7D3A91C4",
+  "nonRenewingSubscriptions" : [
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "B1E55ED0",
+      "localizations" : [
+        {
+          "description" : "300 divinity now, then 50 a day for 30 days.",
+          "displayName" : "Blessing of the Gods",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.pantheon.game.blessing30",
+      "referenceName" : "Blessing of the Gods",
+      "type" : "NonRenewingSubscription"
+    }
+  ],
+  "products" : [
+    {
+      "displayPrice" : "0.99",
+      "familyShareable" : false,
+      "internalID" : "D1A10001",
+      "localizations" : [
+        {
+          "description" : "40 divinity, doubled on the first purchase.",
+          "displayName" : "Phial of Divinity",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.pantheon.game.divinity.phial",
+      "referenceName" : "Phial of Divinity",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "D1A10002",
+      "localizations" : [
+        {
+          "description" : "200 divinity, doubled on the first purchase.",
+          "displayName" : "Chalice of Divinity",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.pantheon.game.divinity.chalice",
+      "referenceName" : "Chalice of Divinity",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "9.99",
+      "familyShareable" : false,
+      "internalID" : "D1A10003",
+      "localizations" : [
+        {
+          "description" : "400 divinity, doubled on the first purchase.",
+          "displayName" : "Amphora of Divinity",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.pantheon.game.divinity.amphora",
+      "referenceName" : "Amphora of Divinity",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "19.99",
+      "familyShareable" : false,
+      "internalID" : "D1A10004",
+      "localizations" : [
+        {
+          "description" : "800 divinity, doubled on the first purchase.",
+          "displayName" : "Coffer of Divinity",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.pantheon.game.divinity.coffer",
+      "referenceName" : "Coffer of Divinity",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "49.99",
+      "familyShareable" : false,
+      "internalID" : "D1A10005",
+      "localizations" : [
+        {
+          "description" : "2000 divinity, doubled on the first purchase.",
+          "displayName" : "Chest of Divinity",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.pantheon.game.divinity.chest",
+      "referenceName" : "Chest of Divinity",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "99.99",
+      "familyShareable" : false,
+      "internalID" : "D1A10006",
+      "localizations" : [
+        {
+          "description" : "4000 divinity, doubled on the first purchase.",
+          "displayName" : "Hoard of Divinity",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.pantheon.game.divinity.hoard",
+      "referenceName" : "Hoard of Divinity",
+      "type" : "Consumable"
+    },
+    {
+      "displayPrice" : "4.99",
+      "familyShareable" : false,
+      "internalID" : "5EA1C0DE",
+      "localizations" : [
+        {
+          "description" : "Divinity, scrolls and drachma, sold once.",
+          "displayName" : "A Demigod's Welcome",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.pantheon.game.starter.welcome",
+      "referenceName" : "A Demigod's Welcome",
+      "type" : "Consumable"
+    }
+  ],
+  "settings" : {
+    "_failTransactionsEnabled" : false,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

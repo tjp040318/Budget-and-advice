@@ -3896,6 +3896,166 @@ def report_shrines(seeds=60, days=500, steady_days=5000):
     print("     and a 5* by pieces slower than naming one by mileage  -> correct")
 
 
+# ---------------------------------------------------------------------------
+# THE TREASURY — real-money purchases (2026-09-23; Docs/STORE.md). This
+# section is the store feature's own. Mirrored from
+# Pantheon/Core/Store/StoreCatalog.swift, pinned in
+# PantheonTests/StoreTests.swift, and listed in Pantheon.storekit at the
+# repository's root, which `report_store` reads and checks against the rows
+# below: change a number in all four.
+# ---------------------------------------------------------------------------
+STORE_PACKS = [  # StoreCatalog.packs: (product id, name, US price tier, base divinity, bonus)
+    ("com.pantheon.game.divinity.phial", "Phial of Divinity", 0.99, 40, 0),
+    ("com.pantheon.game.divinity.chalice", "Chalice of Divinity", 4.99, 200, 10),
+    ("com.pantheon.game.divinity.amphora", "Amphora of Divinity", 9.99, 400, 30),
+    ("com.pantheon.game.divinity.coffer", "Coffer of Divinity", 19.99, 800, 80),
+    ("com.pantheon.game.divinity.chest", "Chest of Divinity", 49.99, 2_000, 300),
+    ("com.pantheon.game.divinity.hoard", "Hoard of Divinity", 99.99, 4_000, 1_000),
+]
+STORE_STARTER = ("com.pantheon.game.starter.welcome", "A Demigod's Welcome", 4.99)
+STORE_STARTER_GRANTS = {"divinity": 500, "pantheonic": 5, "divine": 1, "drachma": 100_000}  # StoreCatalog.starterGrants
+STORE_BLESSING = ("com.pantheon.game.blessing30", "Blessing of the Gods", 4.99)
+STORE_BLESSING_UP_FRONT = 300        # StoreCatalog.blessing.divinity
+STORE_BLESSING_DAILY = 50            # StoreCatalog.blessingDaily
+STORE_BLESSING_DAYS = 30             # StoreCatalog.blessingDays
+STORE_BLESSING_MOST_DAYS = 180       # StoreCatalog.blessingMostDaysAhead
+STORE_PULL = 100                     # a Pantheon Scroll: the pull the genre's prices are compared on
+STORE_GENSHIN_CLIMB = 80.8 / 60.6    # Genshin's ladder, 60 a dollar at $0.99 to 80.8 at $99.99 (Docs/STORE.md §1)
+STORE_GENSHIN_PASS = (300 + 30 * 90) / 4.99 / 80.8   # the Welkin Moon against Genshin's best pack: 7.4x
+
+# What each thing is worth in divinity: the convention the Codex and the
+# Counsel are measured in (Docs/CODEX.md) — a Pantheon Scroll 100, a Mystical
+# 75, a Divine 600, a Light & Dark 450, an Unknown 5,000 drachma, a divinity
+# 300 drachma, and energy one for one (the bazaar's "Energy x30" is 30).
+STORE_WORTH = {"divinity": 1, "pantheonic": 100, "mystical": 75, "divine": 600, "light_dark": 450,
+               "unknown": 5_000 / 300, "drachma": 1 / 300, "energy": 1}
+
+# The free income, off QuestService: a day with all eight missions done, the
+# all-missions bonus, the login week (QuestService.loginGifts) and the
+# bazaar's Daily Offering (ShopService's daily_offering).
+STORE_FREE_MISSIONS = {"unknown": 3, "mystical": 1, "divinity": 50, "drachma": 5_000, "energy": 10}
+STORE_FREE_BONUS = {"pantheonic": 1, "divinity": 30}
+STORE_FREE_LOGIN_WEEK = {"mystical": 3, "drachma": 5_000, "energy": 30, "unknown": 3, "divinity": 50, "pantheonic": 1}
+STORE_FREE_OFFERING = {"mystical": 1, "drachma": 2_000, "energy": 10}
+# A first month's one-offs, as `report_counsel` and Docs/CODEX.md measure
+# them: the twelve chapters' first clears and Normal chests, half of them on
+# Hard (report_counsel's month without its login gifts, which the steady
+# month already counts), Athena's road and the Codex's first month.
+STORE_FIRST_MONTH = [
+    ("first clears", 12 * (220 + 7_350 / 300)),
+    ("Normal chests", 12 * 460),
+    ("Hard chests", 6 * 580),
+    ("Athena's Counsel", 6_562),
+    ("the Codex", 1_540),
+]
+STORE_PANTHEON_MEAN_PULLS = 29.5     # report_gacha: the mean pulls to a pantheon banner's 5*, pity included
+STORE_LIGHT_DARK_PULLS = 125         # 1 / 0.8%: the Light & Dark scroll has no pity
+STORE_LIGHT_DARK_PRICE = 450         # ScrollType.lightDark.divinityPrice
+
+
+def store_worth(bundle):
+    return sum(STORE_WORTH[kind] * count for kind, count in bundle.items())
+
+
+def store_premium(bundle):
+    """The part of a bundle the Treasury sells: divinity and Pantheon Scrolls."""
+    return bundle.get("divinity", 0) + bundle.get("pantheonic", 0) * STORE_WORTH["pantheonic"]
+
+
+def store_free_month(days=30):
+    """A steady free month (the campaign walked): everything, and the part of
+    it in divinity and Pantheon Scrolls."""
+    daily = store_worth(STORE_FREE_MISSIONS) + store_worth(STORE_FREE_BONUS) + store_worth(STORE_FREE_OFFERING)
+    everything = (daily + store_worth(STORE_FREE_LOGIN_WEEK) / 7) * days
+    premium = (store_premium(STORE_FREE_MISSIONS) + store_premium(STORE_FREE_BONUS)
+               + store_premium(STORE_FREE_OFFERING) + store_premium(STORE_FREE_LOGIN_WEEK) / 7) * days
+    return everything, premium
+
+
+def store_config_products():
+    """Pantheon.storekit's products, id -> (type, price): the file Xcode's
+    StoreKit testing reads, beside the project."""
+    import json, os
+    path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Pantheon.storekit")
+    with open(path) as handle:
+        data = json.load(handle)
+    rows = {}
+    for product in data.get("products", []) + data.get("nonRenewingSubscriptions", []):
+        rows[product["productID"]] = (product["type"], float(product["displayPrice"]))
+    return rows
+
+
+def report_store():
+    """The Treasury: divinity a dollar by tier, what a pull and a 5* cost,
+    the Blessing and the starter against the best pack, and the Blessing
+    against a free month — the measure the owner asked for."""
+    print("\nTHE TREASURY — real money (Docs/STORE.md)")
+    print(f"  {'pack':<22}{'price':>7}{'base':>7}{'bonus':>7}{'total':>7}{'a $':>7}{'pulls/$':>9}"
+          f"{'first':>7}{'a $':>7}")
+    rates = []
+    for pid, name, price, base, bonus in STORE_PACKS:
+        total = base + bonus
+        rate = total / price
+        first = base * 2
+        rates.append(rate)
+        assert first > total, f"{name}: the first purchase must beat a repeat"
+        print(f"  {name:<22}{price:>7.2f}{base:>7,}{bonus:>7,}{total:>7,}{rate:>7.1f}{rate / STORE_PULL:>9.3f}"
+              f"{first:>7,}{first / price:>7.1f}")
+    for lower, higher, row in zip(rates, rates[1:], STORE_PACKS[1:]):
+        assert higher > lower, f"{row[1]} must pay more a dollar than the pack below it"
+    climb = rates[-1] / rates[0]
+    print(f"  every pack pays more a dollar than the one below; the ladder climbs {climb:.2f}x "
+          f"(Genshin's {STORE_GENSHIN_CLIMB:.2f}x)  -> correct")
+    top, bottom = rates[-1], rates[0]
+    print(f"  a Pantheon pull ({STORE_PULL} divinity) costs ${STORE_PULL / top:.2f} at the top, "
+          f"${STORE_PULL / bottom:.2f} at the bottom (the genre: about $2)")
+    pantheon_five = STORE_PANTHEON_MEAN_PULLS * STORE_PULL / top
+    light_dark_five = STORE_LIGHT_DARK_PULLS * STORE_LIGHT_DARK_PRICE / top
+    print(f"  a pantheon banner's 5* ({STORE_PANTHEON_MEAN_PULLS} pulls on average) costs about ${pantheon_five:,.0f} "
+          f"at the top; a Light & Dark 5* ({STORE_LIGHT_DARK_PULLS} scrolls, no pity) about ${light_dark_five:,.0f}")
+    whale = sum(base * 2 for _, _, _, base, _ in STORE_PACKS)
+    whale_price = sum(price for _, _, price, _, _ in STORE_PACKS)
+    print(f"  every pack's first purchase once: {whale:,} divinity for ${whale_price:.2f}")
+
+    blessing_total = STORE_BLESSING_UP_FRONT + STORE_BLESSING_DAYS * STORE_BLESSING_DAILY
+    blessing_rate = blessing_total / STORE_BLESSING[2]
+    starter_worth = store_worth(STORE_STARTER_GRANTS)
+    starter_rate = starter_worth / STORE_STARTER[2]
+    print(f"\n  {STORE_BLESSING[1]} (${STORE_BLESSING[2]:.2f}, non-renewing): {STORE_BLESSING_UP_FRONT} at once + "
+          f"{STORE_BLESSING_DAILY} a day x {STORE_BLESSING_DAYS} = {blessing_total:,} divinity, "
+          f"{blessing_rate:.1f} a dollar, {blessing_rate / top:.1f}x the Hoard (the Welkin Moon: {STORE_GENSHIN_PASS:.1f}x)")
+    print(f"  {STORE_STARTER[1]} (${STORE_STARTER[2]:.2f}, once): 500 divinity, 5 Pantheon, 1 Divine, 100,000 drachma "
+          f"= {starter_worth:,.0f} divinity-equivalent, {starter_rate:.1f} a dollar, {starter_rate / top:.1f}x the Hoard")
+    assert blessing_rate >= 5 * top, "the Blessing is the best repeatable value, as the genre's monthly pass is"
+    assert starter_rate >= 5 * top, "the starter is a real welcome, not a pack with a ribbon"
+    assert STORE_BLESSING_MOST_DAYS % STORE_BLESSING_DAYS == 0, "the cap is a whole number of Blessings"
+
+    everything, premium = store_free_month()
+    print(f"\n  a steady free month (the missions and their bonus, the login week, the Daily Offering):")
+    print(f"    {everything:,.0f} divinity-equivalent, {premium:,.0f} of it in divinity and Pantheon Scrolls, "
+          f"the part the Treasury sells ({premium / STORE_PULL:.0f} pulls)")
+    print(f"  the Blessing adds {blessing_total / premium * 100:.0f}% to a free month's divinity and scrolls "
+          f"({blessing_total / everything * 100:.0f}% of everything)")
+    print(f"  the Hoard is {STORE_PACKS[-1][3] + STORE_PACKS[-1][4]:,} divinity, "
+          f"{(STORE_PACKS[-1][3] + STORE_PACKS[-1][4]) / premium:.2f} of a free month's divinity and scrolls")
+    once = sum(value for _, value in STORE_FIRST_MONTH)
+    print("  a first month adds " + ", ".join(f"{label} {value:,.0f}" for label, value in STORE_FIRST_MONTH)
+          + f" = {once:,.0f}")
+    assert blessing_total <= premium / 2, "a Blessing never outweighs half a free month: playing stays the income"
+    assert STORE_PACKS[-1][3] + STORE_PACKS[-1][4] < premium, "a month of play is worth more than the Hoard"
+
+    config = store_config_products()
+    expected = {pid: ("Consumable", price) for pid, _, price, _, _ in STORE_PACKS}
+    expected[STORE_STARTER[0]] = ("Consumable", STORE_STARTER[2])
+    expected[STORE_BLESSING[0]] = ("NonRenewingSubscription", STORE_BLESSING[2])
+    assert set(config) == set(expected), (f"Pantheon.storekit lists {sorted(set(config) ^ set(expected))} "
+                                          f"that the catalog does not, or misses them")
+    for pid, (kind, price) in expected.items():
+        assert config[pid][0] == kind, f"{pid} is a {config[pid][0]} in Pantheon.storekit, not a {kind}"
+        assert abs(config[pid][1] - price) < 0.005, f"{pid} costs {config[pid][1]} in Pantheon.storekit, not {price}"
+    print(f"\n  Pantheon.storekit: {len(config)} products, every id, type and price the catalog's  -> correct")
+
+
 if __name__ == "__main__":
     a = sys.argv[1:]
     if "--tune" in a: report_tune()
@@ -3925,6 +4085,7 @@ if __name__ == "__main__":
     elif "--essences" in a: report_essences()
     elif "--events" in a: report_events()
     elif "--shrines" in a: report_shrines()
+    elif "--store" in a: report_store()
     else:
         report_curve(); report_elements(); report_duel(); report_campaign(); report_families(); report_chapters(); report_halls()
         report_labyrinths(); report_tower(); report_raids(); report_grades(); report_awakening(); report_boons()
@@ -3932,4 +4093,5 @@ if __name__ == "__main__":
         report_gacha(); report_economy(); report_relics(); report_shop(); report_counsel()
         report_sweep(); report_mileage(); report_targeting(); report_essences(); report_events()
         report_shrines()
+        report_store()
         print()

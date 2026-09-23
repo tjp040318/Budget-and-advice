@@ -1,8 +1,10 @@
 import Foundation
 
 /// The bazaar: what a player can buy with what the game itself pays out.
-/// There is no real-money purchase anywhere in this file or this game; every
-/// price is in divinity, drachma or laurels, and the daily offering is free.
+/// There is no real-money purchase in this file: every price here is in
+/// divinity, drachma or laurels, and the daily offering is free. Real money
+/// is the Treasury's alone (`PurchaseService`, `TreasuryService`,
+/// Docs/STORE.md), the bazaar's first stall.
 enum ShopService {
 
     enum Currency: String, Sendable {

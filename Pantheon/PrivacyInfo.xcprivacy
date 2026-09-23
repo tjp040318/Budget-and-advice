@@ -6,8 +6,8 @@
 	bundle's root with no project entry. Keep it in step with the App
 	Privacy answers in App Store Connect.
 
-	Collected, every one linked to the player, none used for tracking, all for
-	App Functionality:
+	Collected, none used for tracking. Linked to the player, for App
+	Functionality:
 	  User ID            the backend user, Apple's user id inside the identity
 	                     token, the Player ID
 	  Name               the name Apple sends at the first sign-in (players
@@ -16,7 +16,17 @@
 	                     auth user
 	  Gameplay Content   the save, the Allies defence snapshot, war results
 	  Other User Content guild board posts
-	  Product Interaction the player row's last launch
+	  Product Interaction the player row's last launch; ALSO for Analytics
+	  Purchase History   the save's treasury ledger (Docs/STORE.md), which
+	                     travels with the cloud copy; ALSO for Analytics
+
+	The anonymous play data (Docs/ANALYTICS.md), for Analytics: sessions,
+	stage results, summons, the first hour's steps (Product Interaction) and
+	purchases by product (Purchase History), under a random install number
+	(Device ID) that is never sent with the account. Apple answers "linked"
+	once per DATA TYPE, so Product Interaction and Purchase History stay
+	linked because their App Functionality use is; the one type only the
+	play data collects, Device ID, is declared not linked.
 
 	Required-reason APIs:
 	  UserDefaults       CA92.1  the app's own settings, read and written by
@@ -105,6 +115,32 @@
 			<key>NSPrivacyCollectedDataTypePurposes</key>
 			<array>
 				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypePurchaseHistory</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<true/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAppFunctionality</string>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
+			</array>
+		</dict>
+		<dict>
+			<key>NSPrivacyCollectedDataType</key>
+			<string>NSPrivacyCollectedDataTypeDeviceID</string>
+			<key>NSPrivacyCollectedDataTypeLinked</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypeTracking</key>
+			<false/>
+			<key>NSPrivacyCollectedDataTypePurposes</key>
+			<array>
+				<string>NSPrivacyCollectedDataTypePurposeAnalytics</string>
 			</array>
 		</dict>
 	</array>

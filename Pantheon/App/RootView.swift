@@ -219,6 +219,8 @@ struct SettingsView: View {
     @AppStorage(GraphicsSettings.frameRateKey) private var frameRate: Int = FrameRateChoice.standard.rawValue
     @AppStorage(GraphicsSettings.effectsKey) private var effects: String = EffectsQuality.full.rawValue
     @AppStorage(MotionComfort.key) private var reduceMotion: Bool = false
+    /// "Share anonymous play data" (`Docs/ANALYTICS.md`): on unless turned off.
+    @AppStorage(Analytics.shareKey) private var sharePlayData: Bool = true
     /// Where the screen opens: its boards, or — for the CI tour — a page or
     /// the deletion sheet.
     private let opening: SettingsOpening
@@ -768,6 +770,21 @@ struct SettingsView: View {
                         diagnosticsRow
                     }
                     .buttonStyle(PlateButtonStyle())
+                    // Anonymous play data (`Docs/ANALYTICS.md`): the switch,
+                    // and under it the whole of what it sends. Off forgets
+                    // this install's number and whatever was waiting.
+                    VStack(alignment: .leading, spacing: 2) {
+                        Toggle(isOn: $sharePlayData) {
+                            Text("Share anonymous play data")
+                                .font(Theme.body(12))
+                                .foregroundStyle(Theme.textPrimary)
+                        }
+                        .toggleStyle(GameToggleStyle())
+                        .onChange(of: sharePlayData) { _, on in
+                            AnalyticsService.shared.sharingChanged(on)
+                        }
+                        caption(Analytics.disclosure)
+                    }
                     // The privacy policy and the terms (App Review 5.1.1(i);
                     // `LegalLinks.plist`, Docs/SETTINGS.md §4): a row each
                     // once its address is filled in, none before.

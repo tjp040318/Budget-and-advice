@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+	How .github/workflows/testflight.yml signs an archive of Pantheon and
+	sends it to App Store Connect (Docs/TESTFLIGHT.md). The workflow copies
+	this file and adds `teamID` from the APPLE_TEAM_ID secret, so no account
+	detail is checked in.
+
+	method app-store-connect       the App Store and TestFlight (Xcode 15.3
+	                               renamed it from app-store)
+	destination upload             Xcode uploads the signed build itself
+	signingStyle automatic         Xcode re-signs the ad-hoc archive with the
+	                               team's cloud-managed Apple Distribution
+	                               certificate and an App Store profile it
+	                               makes from the App ID, through the App Store
+	                               Connect API key (an Admin key: cloud-managed
+	                               certificates are refused to any other role)
+	uploadSymbols                  the dSYMs go with the build, so crash
+	                               reports from TestFlight are symbolicated
+	manageAppVersionAndBuildNumber off: left on (the default), Xcode quietly
+	                               renumbers a build whose number is taken, and
+	                               then build N is no longer commit N on main
+-->
+<plist version="1.0">
+<dict>
+	<key>method</key>
+	<string>app-store-connect</string>
+	<key>destination</key>
+	<string>upload</string>
+	<key>signingStyle</key>
+	<string>automatic</string>
+	<key>uploadSymbols</key>
+	<true/>
+	<key>manageAppVersionAndBuildNumber</key>
+	<false/>
+</dict>
+</plist>

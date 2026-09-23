@@ -7493,5 +7493,46 @@ numbers are in its own document:
     the Privacy and Terms links (`LegalLinks.plist`).
   - Photographed on step 9's relaunches (`-tour-more notifications |
     graphics | delete`).
-- **Hidden Shrines**, **purchases**, **analytics**, **TestFlight** and
-  **the remakes** are recorded below as they land.
+- **Hidden Shrines** (`Docs/SHRINES.md`): a Labyrinth or Hall win may
+  open an hour-long shrine of one fire, water or wind form (never Light
+  or Dark), paying summoning pieces spent 20 / 40 / 100 on a 3★ / 4★ /
+  5★. `balance.py --shrines` asserts a 5★ by pieces is slower than by
+  mileage. Tour step 51 (`shrines`).
+- **The Treasury: real-money purchases** (`Docs/STORE.md`; the owner
+  chose "Build it today"). StoreKit 2 in one file
+  (`PurchaseService.swift`); what a transaction pays is
+  `TreasuryService` (`StoreCatalog.swift`); the delivery is
+  `GameStore+Store.swift`. The options weighed and the choice:
+  - The genre's shape, priced at the genre's cost per pull ($2.00–2.48):
+    six divinity packs, $0.99 to $99.99, each better per dollar than the
+    one below, doubled on each pack's first purchase; a $4.99 starter
+    sold once per SAVE (a consumable — a non-consumable would restore
+    into every account on the phone); and the Blessing, a $4.99 thirty
+    days of 50 divinity a day, as a NON-RENEWING subscription (no
+    renewal disclosures, no billing retry; its days bank and never
+    expire, so a changed clock earns nothing).
+  - No verifiable Summoners War daily-crystal pass, so the pass is the
+    Welkin / Express Supply shape. A season pass is designed in STORE.md
+    §7 as v2 and not built.
+  - Exactly once: verify → grant and record in one `update` → a
+    synchronous save → `finish()`. The ledger is a save field
+    (`Player.treasury`), so a crash on either side of the write still
+    pays once. Refunds take back what the transaction paid, never below
+    zero; restore brings back the Blessing's days ahead only, for the
+    account whose `appAccountToken` bought it.
+  - Against free play: the Hoard is 0.83 of a free month's divinity and
+    scrolls; the Blessing adds 30% to that part (`balance.py --store`,
+    which also checks `Pantheon.storekit` against the catalog).
+  - The Treasury is the bazaar's first stall; its odds sheet
+    (`TreasuryOddsSheet`) is Guideline 3.1.1's disclosure. `StoreTests`
+    (18). Tour step 52 (`treasury`, and `-tour-treasury-odds`). CI has
+    no StoreKit: a real purchase is tested in Xcode with
+    `Pantheon.storekit` or a sandbox account. The owner's App Store
+    Connect steps are STORE.md §8; the Testing stall must be off
+    (`ShopService.testingPacksEnabled = false`) before a review build.
+- **TestFlight from CI** (`Docs/TESTFLIGHT.md`,
+  `.github/workflows/testflight.yml`, `.github/ExportOptions.plist`):
+  dormant until the owner adds the App Store Connect API key and the
+  signing secrets; he may upload from his Mac instead ("the
+  Xcode/testflight stuff isn't as important").
+- **Analytics** and **the remakes** are recorded below as they land.

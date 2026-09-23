@@ -1,0 +1,714 @@
+# Sends every app change that reaches main to TestFlight, so it lands on the
+# owner's phone through the TestFlight app. Docs/TESTFLIGHT.md has his one-time
+# setup, the options weighed and why this one, and what each error means.
+#
+# main only receives a commit the branch has already built, tested and
+# photographed (build.yml; CLAUDE.md), so a push to main is a build that
+# passed. This workflow archives that commit for a device in Release, signs it
+# through Apple's cloud with an App Store Connect API key, uploads it, and then
+# waits for App Store Connect to accept it.
+#
+# The signing, in one paragraph: the archive is AD-HOC signed ("-"), the way
+# Xcode Cloud archives. That carries the entitlements (Sign in with Apple,
+# iCloud and CloudKit) in the signature with no certificate, no provisioning
+# profile and no registered device. The export then re-signs it with the team's
+# cloud-managed Apple Distribution certificate, which Xcode reaches with the
+# API key. No .p12, no profile and no key ever sits in the repository, and no
+# development certificate is minted per runner. Signing the archive for
+# development is what fails on an ephemeral runner: the first run mints a
+# certificate whose private key dies with the machine, so the next run is
+# refused ("private key is not installed") or the team hits the certificate
+# cap. An UNSIGNED archive exports green and uploads fine, but without the
+# entitlements, because they ride in the signature, and Sign in with Apple
+# is then dead on the phone.
+#
+# Until the owner has added the four secrets, the first job says so in a notice
+# and the other two are skipped. The run is never red for that.
+#
+# Cost: standard runners are free for a public repository (this one is). About
+# 30 minutes on macOS per upload, then up to an hour on Linux waiting for Apple.
+name: testflight
+
+on:
+  push:
+    branches:
+      - main
+    # Only a push that can change the app. A fast-forward of docs, tools or
+    # tests would upload the same app again under a new number.
+    paths:
+      - 'Pantheon/**'
+      - 'Pantheon.xcodeproj/**'
+      - '.github/workflows/testflight.yml'
+      - '.github/ExportOptions.plist'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  # A minute on Linux decides whether the Mac is needed at all.
+  preflight:
+    name: Check the setup
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ready: ${{ steps.check.outputs.ready }}
+    steps:
+      - name: Check the App Store Connect secrets
+        id: check
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          # main holds nothing the branch has not built and photographed, so
+          # TestFlight takes its builds from main and from nowhere else.
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::notice title=TestFlight skipped::TestFlight uploads come from main only; this run is on $GITHUB_REF_NAME."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          missing=""
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_KEY_P8 APPLE_TEAM_ID; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::notice title=TestFlight is not set up yet::Missing repository secrets:$missing. Docs/TESTFLIGHT.md has the steps. Nothing was built."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          # All four are set, so each must have the shape Apple gives it: a
+          # wrong paste is cheaper to catch here than half an hour into a Mac.
+          bad=0
+          key_id=$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')
+          issuer=$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')
+          team=$(printf '%s' "$APPLE_TEAM_ID" | tr -d '[:space:]')
+          if ! [[ "$key_id" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "::error title=ASC_KEY_ID::should be the key's 10-character Key ID (App Store Connect > Users and Access > Integrations > Team Keys)."
+            bad=1
+          fi
+          if ! [[ "$issuer" =~ ^[0-9a-fA-F]{8}-([0-9a-fA-F]{4}-){3}[0-9a-fA-F]{12}$ ]]; then
+            echo "::error title=ASC_ISSUER_ID::should be the Issuer ID, the UUID shown above the Team Keys table."
+            bad=1
+          fi
+          if ! [[ "$team" =~ ^[A-Z0-9]{10}$ ]]; then
+            echo "::error title=APPLE_TEAM_ID::should be the 10-character Team ID (developer.apple.com/account > Membership details)."
+            bad=1
+          fi
+          # The key is read into a file only this user can read, checked, and
+          # removed. Nothing prints it: this repository's logs are public.
+          umask 077
+          key="$RUNNER_TEMP/check.p8"
+          if [[ "$ASC_KEY_P8" == *"BEGIN PRIVATE KEY"* ]]; then
+            printf '%s\n' "$ASC_KEY_P8" | tr -d '\r' > "$key"
+          else
+            printf '%s' "$ASC_KEY_P8" | tr -d '[:space:]' | base64 --decode > "$key" 2>/dev/null || true
+          fi
+          if ! openssl pkey -in "$key" -noout 2>/dev/null; then
+            echo "::error title=ASC_KEY_P8::is not a private key. Paste the whole AuthKey_<Key ID>.p8 file, its BEGIN and END lines included."
+            bad=1
+          fi
+          rm -f "$key"
+          if [ "$bad" != 0 ]; then
+            exit 1
+          fi
+          echo "ready=true" >> "$GITHUB_OUTPUT"
+          echo "The four App Store Connect secrets are set and well formed."
+
+  upload:
+    name: Archive and upload
+    needs: preflight
+    if: needs.preflight.outputs.ready == 'true'
+    runs-on: macos-15
+    # Checkout 3, archive 5-10, export and upload of a 3 GB app 5-15; the rest
+    # is room for a slow runner, which build.yml has met (run 222).
+    timeout-minutes: 90
+    # One upload at a time. A newer push waits rather than cancelling one that
+    # is halfway to Apple; of several waiting, GitHub keeps only the newest.
+    concurrency:
+      group: testflight-upload
+      cancel-in-progress: false
+    outputs:
+      build: ${{ steps.number.outputs.build }}
+      notes: ${{ steps.notes.outputs.notes }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # As build.yml: Art/ holds the raw exports and is not in the app.
+          sparse-checkout: |
+            /*
+            !/Art/
+          sparse-checkout-cone-mode: false
+          # Every commit (but, with the sparse checkout, only the blobs of the
+          # files checked out), because the build number counts them.
+          fetch-depth: 0
+
+      # App Store Connect refuses a build from an SDK older than its floor
+      # (Xcode 26 and the iOS 26 SDK since 2026-04-28) and any build from a
+      # beta Xcode. This image defaults to Xcode 16.4, which build.yml uses,
+      # and carries 26.0.1-26.3 beside it. The newest release Xcode of 26 or
+      # later is taken; the repository variable TESTFLIGHT_XCODE (for example
+      # 26.2) pins one instead.
+      - name: Choose Xcode
+        env:
+          XCODE_PIN: ${{ vars.TESTFLIGHT_XCODE }}
+        run: |
+          candidates=""
+          for app in /Applications/Xcode_*.app; do
+            # The image also lists every Xcode under symlinked aliases.
+            if [ ! -d "$app" ] || [ -L "$app" ]; then continue; fi
+            case "$app" in *[Bb]eta*) continue ;; esac
+            version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$app/Contents/Info.plist" 2>/dev/null) || continue
+            [ "${version%%.*}" -ge 26 ] 2>/dev/null || continue
+            if [ -n "$XCODE_PIN" ] && [ "$version" != "$XCODE_PIN" ]; then continue; fi
+            candidates+="$version $app"$'\n'
+          done
+          chosen=$(printf '%s' "$candidates" | sort -V | tail -n 1)
+          if [ -z "$chosen" ]; then
+            echo "::error title=No Xcode for App Store Connect::This image has no release Xcode 26 or later${XCODE_PIN:+ matching TESTFLIGHT_XCODE=$XCODE_PIN}. Installed:"
+            ls -d /Applications/Xcode*.app
+            exit 1
+          fi
+          app=${chosen#* }
+          sudo xcode-select -s "$app/Contents/Developer"
+          echo "DEVELOPER_DIR=$app/Contents/Developer" >> "$GITHUB_ENV"
+          xcodebuild -version
+          xcodebuild -showsdks | grep -i "iphoneos" || true
+
+      # The build number is the number of commits on main. main only moves
+      # forward (it is fast-forwarded to commits the branch built), so the
+      # number only rises; one commit always gets the same number, so "build
+      # 412" names a commit (`git rev-list --count <sha>` finds it) and a
+      # second upload of the same commit is refused as a duplicate instead
+      # of reaching the phone twice. It also starts above anything uploaded
+      # by hand (the project says 1). The run number has none of that: it
+      # starts at 1 and counts re-runs. The repository variable
+      # TESTFLIGHT_BUILD_OFFSET is added when main's history is ever
+      # rewritten shorter, or a number was taken by hand.
+      - name: Number the build
+        id: number
+        env:
+          OFFSET: ${{ vars.TESTFLIGHT_BUILD_OFFSET }}
+        run: |
+          count=$(git rev-list --count HEAD)
+          offset=${OFFSET:-0}
+          if ! [[ "$offset" =~ ^[0-9]+$ ]]; then
+            echo "::error title=TESTFLIGHT_BUILD_OFFSET::must be a whole number, not '$offset'."
+            exit 1
+          fi
+          build=$((count + offset))
+          echo "build=$build" >> "$GITHUB_OUTPUT"
+          echo "BUILD_NUMBER=$build" >> "$GITHUB_ENV"
+          echo "Build $build is commit $(git rev-parse --short HEAD), commit $count on main (offset $offset)."
+
+      # What the TestFlight app shows under "What to Test": the build, its
+      # commit, and the commits this push brought to main. The last job
+      # writes it once App Store Connect has processed the build.
+      - name: Write What to Test
+        id: notes
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          head=$(git rev-parse --short HEAD)
+          if [ -n "$BEFORE" ] && [ "$BEFORE" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            intro="New on main since $(git rev-parse --short "$BEFORE"):"
+            log=$(git log --no-merges --format='- %s (%h)' "$BEFORE..HEAD" | head -n 40)
+          else
+            intro="The last twelve commits on main:"
+            log=$(git log --no-merges --format='- %s (%h)' -n 12 HEAD)
+          fi
+          delimiter="WHAT_TO_TEST_$(openssl rand -hex 8)"
+          {
+            echo "notes<<$delimiter"
+            echo "Build $BUILD_NUMBER, commit $head, $(git log -1 --format=%cs HEAD)"
+            echo "$intro"
+            echo "$log"
+            echo "$delimiter"
+          } >> "$GITHUB_OUTPUT"
+
+      # The app is about 3.1 GB. The archive holds it twice (Xcode's install
+      # location and the .xcarchive) beside the 6 GB checkout; the export makes
+      # two more (a re-signed copy and the .ipa) after the first two and the
+      # checkout's resources are cleared. GitHub promises only 14 GB free on
+      # this image (images have shipped with as little as 18 GB), so when the
+      # checkout leaves under 12 GB, older Xcodes go, oldest first, until it
+      # does not.
+      - name: Make room on the disk
+        run: |
+          free_gb() { df -k "$RUNNER_TEMP" | awk 'NR==2 {printf "%d", $4 / 1048576}'; }
+          need=12
+          echo "free after the checkout: $(free_gb) GB"
+          if [ "$(free_gb)" -lt "$need" ]; then
+            keep=$(cd "$(xcode-select -p)/../.." && pwd -P)
+            while IFS= read -r app; do
+              if [ -L "$app" ] || [ "$(cd "$app" && pwd -P)" = "$keep" ]; then continue; fi
+              echo "removing $app"
+              sudo rm -rf "$app"
+              if [ "$(free_gb)" -ge "$need" ]; then break; fi
+            done < <(printf '%s\n' /Applications/Xcode_*.app | sort -V)
+            echo "free now: $(free_gb) GB"
+          fi
+
+      # Ad-hoc, as Xcode Cloud archives (CODE_SIGN_IDENTITY=- with
+      # AD_HOC_CODE_SIGNING_ALLOWED): the entitlements are signed into the
+      # archive with no certificate, profile or Apple account, and the export
+      # below does the real signing. Everything is passed here, not set in the
+      # project, so the simulator job (which signs nothing) is untouched.
+      # Xcode Cloud's own parameters come first. Should Xcode refuse them over
+      # signing (never over code), the archive is made again with manual
+      # style and no profile, the recipe another production pipeline uploads
+      # to TestFlight with; its compile is reused, so the retry costs little.
+      - name: Archive for the App Store
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          team=$(printf '%s' "$APPLE_TEAM_ID" | tr -d '[:space:]')
+          attempt=0
+          archive() {
+            attempt=$((attempt + 1))
+            local log="$RUNNER_TEMP/archive-$attempt.log"
+            echo "==== archive, attempt $attempt: $*"
+            xcodebuild archive \
+              -project Pantheon.xcodeproj \
+              -scheme Pantheon \
+              -configuration Release \
+              -destination 'generic/platform=iOS' \
+              -archivePath "$RUNNER_TEMP/Pantheon.xcarchive" \
+              -derivedDataPath "$RUNNER_TEMP/DerivedData" \
+              CODE_SIGN_IDENTITY=- \
+              AD_HOC_CODE_SIGNING_ALLOWED=YES \
+              DEVELOPMENT_TEAM="$team" \
+              CURRENT_PROJECT_VERSION="$BUILD_NUMBER" \
+              COMPILER_INDEX_STORE_ENABLE=NO \
+              "$@" \
+              2>&1 | tee "$log" \
+              | grep -E "error:|warning: .*(sign|entitle|provision)|ARCHIVE (SUCCEEDED|FAILED)|BUILD FAILED" || true
+            cat "$log" >> "$RUNNER_TEMP/archive.log"
+            grep -q "ARCHIVE SUCCEEDED" "$log"
+          }
+          if archive CODE_SIGN_STYLE=Automatic; then
+            exit 0
+          fi
+          first="$RUNNER_TEMP/archive-1.log"
+          # A compile error is the code's, and a second archive would repeat it.
+          if grep -q -E "\.(swift|m|mm|c|h):[0-9]+:[0-9]+: error:" "$first"; then
+            exit 1
+          fi
+          if grep -q -i -E "provision|signing|sign to run locally|development team|conflicting" "$first"; then
+            echo "::warning title=Archive retried::Xcode refused the automatic ad-hoc archive over signing; archiving again in manual style."
+            archive CODE_SIGN_STYLE=Manual PROVISIONING_PROFILE_SPECIFIER=
+          else
+            exit 1
+          fi
+
+      # Nothing leaves the runner until the archive is what the phone needs.
+      - name: Check the archive
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          archive="$RUNNER_TEMP/Pantheon.xcarchive"
+          app="$archive/Products/Applications/Pantheon.app"
+          if [ ! -d "$app" ]; then
+            echo "::error title=No app in the archive::$app is missing."
+            exit 1
+          fi
+
+          # 1. Every entitlement of Pantheon/Pantheon.entitlements is in the
+          #    signature. The export keeps what the archive's signature
+          #    carries and nothing else, so a key missing here would upload
+          #    green and fail on the phone (Sign in with Apple's error 1000).
+          codesign -d --entitlements - --xml "$app" > "$RUNNER_TEMP/archived-entitlements.plist" 2>/dev/null || true
+          python3 - "$RUNNER_TEMP/archived-entitlements.plist" Pantheon/Pantheon.entitlements <<'PY'
+          import plistlib, sys
+          raw = open(sys.argv[1], "rb").read()
+          signed = plistlib.loads(raw) if raw.strip() else {}
+          with open(sys.argv[2], "rb") as source:
+              wanted = plistlib.load(source)
+          print("entitlements signed into the archive:")
+          for key in sorted(signed):
+              print(f"  {key} = {signed[key]!r}")
+          problems = []
+          for key, value in wanted.items():
+              if key not in signed:
+                  problems.append(f"{key} is not in the archive's signature")
+              elif "$(" not in repr(value) and signed[key] != value:
+                  problems.append(f"{key} is {signed[key]!r} in the signature, {value!r} in the project")
+          for problem in problems:
+              print(f"::error title=Entitlement lost::{problem}")
+          sys.exit(1 if problems else 0)
+          PY
+
+          # 2. The archive names its team. An ad-hoc archive may not, and an
+          #    export that finds none stops with "No Team Found in Archive".
+          info="$archive/Info.plist"
+          if ! /usr/libexec/PlistBuddy -c "Print :ApplicationProperties:Team" "$info" >/dev/null 2>&1; then
+            team=$(printf '%s' "$APPLE_TEAM_ID" | tr -d '[:space:]')
+            /usr/libexec/PlistBuddy -c "Add :ApplicationProperties:Team string $team" "$info"
+            echo "The archive named no team; the team was added to its Info.plist."
+          fi
+
+          # 3. The number and the version App Store Connect will read.
+          plist="$app/Info.plist"
+          number=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" "$plist")
+          version=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$plist")
+          if [ "$number" != "$BUILD_NUMBER" ]; then
+            echo "::error title=Wrong build number::The app says $number, not $BUILD_NUMBER."
+            exit 1
+          fi
+
+          # 4. Export compliance. Without ITSAppUsesNonExemptEncryption = NO
+          #    every build waits in TestFlight until someone answers the
+          #    encryption question for it in App Store Connect.
+          encryption=$(/usr/libexec/PlistBuddy -c "Print :ITSAppUsesNonExemptEncryption" "$plist" 2>/dev/null || echo missing)
+          if [ "$encryption" != "false" ]; then
+            echo "::warning title=Export compliance::ITSAppUsesNonExemptEncryption is $encryption, so this build will wait in TestFlight for the encryption answer. INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO in the target's settings ends that."
+          fi
+
+          # 5. Size. App Store Connect refuses an app over 4 GB uncompressed.
+          bytes=$(find "$app" -type f -print0 | xargs -0 stat -f%z | awk '{s += $1} END {printf "%.0f", s}')
+          limit=4000000000
+          share=$((bytes * 100 / limit))
+          size=$(awk -v b="$bytes" 'BEGIN {printf "%.2f GB", b / 1e9}')
+          echo "Pantheon.app is $size, $share% of App Store Connect's 4 GB limit."
+          if [ "$bytes" -ge "$limit" ]; then
+            echo "::error title=The app is over 4 GB::$size uncompressed; App Store Connect refuses it. Docs/TESTFLIGHT.md, 'The app's size'."
+            exit 1
+          elif [ "$share" -ge 90 ]; then
+            echo "::warning title=The app is near 4 GB::$size uncompressed, $share% of what App Store Connect accepts. Docs/TESTFLIGHT.md, 'The app's size'."
+          fi
+
+          {
+            echo "## TestFlight build $BUILD_NUMBER"
+            echo ""
+            echo "| | |"
+            echo "|-|-|"
+            echo "| Commit | \`$(git rev-parse --short HEAD)\` $(git log -1 --format=%s HEAD | cut -c1-90 | tr '|' '/') |"
+            echo "| Version | $version ($number) |"
+            echo "| Xcode | $(xcodebuild -version | tr '\n' ' ') |"
+            echo "| App size | $size, $share% of the 4 GB limit |"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # The archive has its own copy of every resource now.
+      - name: Free the disk for the export
+        run: |
+          rm -rf "$RUNNER_TEMP/DerivedData" Pantheon/Resources
+          df -h "$RUNNER_TEMP" | tail -n 1
+
+      - name: Write the App Store Connect key
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          key_id=$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')
+          umask 077
+          mkdir -p "$RUNNER_TEMP/asc"
+          key="$RUNNER_TEMP/asc/AuthKey_$key_id.p8"
+          if [[ "$ASC_KEY_P8" == *"BEGIN PRIVATE KEY"* ]]; then
+            printf '%s\n' "$ASC_KEY_P8" | tr -d '\r' > "$key"
+          else
+            printf '%s' "$ASC_KEY_P8" | tr -d '[:space:]' | base64 --decode > "$key"
+          fi
+          echo "ASC_KEY_PATH=$key" >> "$GITHUB_ENV"
+
+      # The real signing and the upload, in one call. With the API key and
+      # -allowProvisioningUpdates, Xcode makes or refreshes the App Store
+      # profile from the App ID's capabilities and signs with the team's
+      # cloud-managed Apple Distribution certificate (created the first time;
+      # it needs an Admin key). Options: .github/ExportOptions.plist.
+      - name: Sign and upload to App Store Connect
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        run: |
+          key_id=$(printf '%s' "$ASC_KEY_ID" | tr -d '[:space:]')
+          issuer=$(printf '%s' "$ASC_ISSUER_ID" | tr -d '[:space:]')
+          team=$(printf '%s' "$APPLE_TEAM_ID" | tr -d '[:space:]')
+          options="$RUNNER_TEMP/ExportOptions.plist"
+          cp .github/ExportOptions.plist "$options"
+          /usr/libexec/PlistBuddy -c "Add :teamID string $team" "$options"
+          status=0
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/Pantheon.xcarchive" \
+            -exportOptionsPlist "$options" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$key_id" \
+            -authenticationKeyIssuerID "$issuer" \
+            2>&1 | tee "$RUNNER_TEMP/export.log" || status=$?
+          if [ -f "$RUNNER_TEMP/export/DistributionSummary.plist" ]; then
+            echo "---- what was signed and sent ----"
+            plutil -p "$RUNNER_TEMP/export/DistributionSummary.plist" || true
+          fi
+          if [ "$status" != 0 ]; then
+            if grep -qiE "redundant binary|ITMS-4238|already been used|must be higher than the previously" "$RUNNER_TEMP/export.log"; then
+              echo "::error title=Build $BUILD_NUMBER is already on App Store Connect::This commit was uploaded before (a re-run), or the number was taken by an upload by hand. To go past it, set the repository variable TESTFLIGHT_BUILD_OFFSET (Docs/TESTFLIGHT.md)."
+            fi
+            exit "$status"
+          fi
+          echo "| Upload | sent; the job \"Wait for TestFlight\" follows it to the phone |" >> "$GITHUB_STEP_SUMMARY"
+
+      # Symbols for crash logs read by hand. App Store Connect has its own
+      # copy (uploadSymbols). The artifact is public, like the source.
+      - name: Pack the dSYMs
+        id: dsyms
+        run: |
+          zip="$RUNNER_TEMP/Pantheon-$BUILD_NUMBER-dSYMs.zip"
+          ditto -c -k --keepParent "$RUNNER_TEMP/Pantheon.xcarchive/dSYMs" "$zip"
+          bytes=$(stat -f%z "$zip")
+          echo "dSYMs: $((bytes / 1048576)) MB"
+          if [ "$bytes" -le $((250 * 1048576)) ]; then
+            echo "path=$zip" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice title=dSYMs not kept::They are $((bytes / 1048576)) MB, over the 250 MB kept as an artifact. App Store Connect has them."
+          fi
+
+      - name: Keep the dSYMs
+        if: steps.dsyms.outputs.path != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: dSYMs-build-${{ steps.number.outputs.build }}
+          path: ${{ steps.dsyms.outputs.path }}
+          retention-days: 30
+          compression-level: 0
+          if-no-files-found: ignore
+
+      - name: Remove the key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc" "$RUNNER_TEMP/ExportOptions.plist"
+
+      # Last, so the reason stands at the tail of the log, the only part the
+      # log API serves (CLAUDE.md), and in the run's summary.
+      - name: Explain a failure
+        if: failure()
+        run: |
+          {
+            echo "## Why build ${BUILD_NUMBER:-?} stopped"
+            for step in archive export; do
+              log="$RUNNER_TEMP/$step.log"
+              [ -f "$log" ] || continue
+              echo "### $step"
+              echo '```'
+              grep -n -E "error:|error [A-Z]|ITMS-[0-9]+|FAILED|No Team|No profiles|No signing certificate|doesn't (include|support|match)|not been given access|forbidden|Unsupported SDK|agreement|application record" "$log" \
+                | grep -v -i -E "authorization|bearer|eyJ" | head -n 40 || true
+              echo '```'
+            done
+            # Xcode's own distribution log names the refusal an export hides
+            # behind "exportArchive failed". Lines that could carry a token
+            # are dropped: these logs are public.
+            dist=$(grep -oE '/[^"]+\.xcdistributionlogs' "$RUNNER_TEMP/export.log" 2>/dev/null | tail -n 1 || true)
+            if [ -n "$dist" ] && [ -d "$dist" ]; then
+              echo "### IDEDistribution"
+              echo '```'
+              grep -h -i -E "error|forbidden|denied|refused|failed" "$dist"/*.log 2>/dev/null \
+                | grep -v -i -E "authorization|bearer|eyJ" | tail -n 40 || true
+              echo '```'
+            fi
+            echo "Free disk: $(df -h "$RUNNER_TEMP" | awk 'NR==2 {print $4}'). Docs/TESTFLIGHT.md, 'When a run is red', reads these lines."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+  # A green upload is not yet a build on the phone: App Store Connect
+  # processes it for 5-30 minutes and reports a refusal only by email. This
+  # waits on Linux (no reason to hold a Mac) until the build is VALID, then
+  # writes What to Test, makes sure an internal group can install it, and
+  # turns the run red only if Apple refused the build.
+  processing:
+    name: Wait for TestFlight
+    needs: upload
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Write the App Store Connect key
+        env:
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+        run: |
+          umask 077
+          mkdir -p "$RUNNER_TEMP/asc"
+          key="$RUNNER_TEMP/asc/key.p8"
+          if [[ "$ASC_KEY_P8" == *"BEGIN PRIVATE KEY"* ]]; then
+            printf '%s\n' "$ASC_KEY_P8" | tr -d '\r' > "$key"
+          else
+            printf '%s' "$ASC_KEY_P8" | tr -d '[:space:]' | base64 --decode > "$key"
+          fi
+          echo "ASC_KEY_PATH=$key" >> "$GITHUB_ENV"
+
+      - name: Wait for App Store Connect to process the build
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+          BUILD_NUMBER: ${{ needs.upload.outputs.build }}
+          NOTES: ${{ needs.upload.outputs.notes }}
+          BUNDLE_ID: com.pantheon.game
+        run: |
+          python3 - <<'PY'
+          # Standard library and the openssl command only: nothing to install.
+          # The App Store Connect API wants a JWT signed ES256 with the .p8 key,
+          # at most 20 minutes long, so each call mints its own.
+          import base64, json, os, subprocess, sys, time
+          import urllib.error, urllib.parse, urllib.request
+
+          API = "https://api.appstoreconnect.apple.com/v1"
+          KEY_ID = os.environ["ASC_KEY_ID"].strip()
+          ISSUER = os.environ["ASC_ISSUER_ID"].strip()
+          KEY = os.environ["ASC_KEY_PATH"]
+          BUNDLE = os.environ["BUNDLE_ID"]
+          BUILD = os.environ["BUILD_NUMBER"]
+          NOTES = os.environ.get("NOTES", "").strip()
+          WAIT = 60 * 60
+          POLL = 60
+
+          def annotate(kind, title, text):
+              text = text.replace("%", "%25").replace("\r", "").replace("\n", "%0A")
+              print(f"::{kind} title={title}::{text}", flush=True)
+
+          def b64url(data):
+              return base64.urlsafe_b64encode(data).rstrip(b"=").decode()
+
+          def raw_signature(der):
+              # openssl writes a DER SEQUENCE of two INTEGERs; a JWT wants r||s.
+              at = 2 if der[1] < 0x80 else 2 + (der[1] & 0x7F)
+              out = b""
+              for _ in range(2):
+                  length = der[at + 1]
+                  out += der[at + 2:at + 2 + length].lstrip(b"\x00").rjust(32, b"\x00")
+                  at += 2 + length
+              return out
+
+          def token():
+              now = int(time.time())
+              head = b64url(json.dumps({"alg": "ES256", "kid": KEY_ID, "typ": "JWT"}).encode())
+              body = b64url(json.dumps({"iss": ISSUER, "iat": now, "exp": now + 900,
+                                        "aud": "appstoreconnect-v1"}).encode())
+              der = subprocess.run(["openssl", "dgst", "-sha256", "-sign", KEY],
+                                   input=f"{head}.{body}".encode(), capture_output=True, check=True).stdout
+              return f"{head}.{body}.{b64url(raw_signature(der))}"
+
+          def call(method, path, body=None):
+              request = urllib.request.Request(
+                  API + path, method=method,
+                  data=None if body is None else json.dumps(body).encode(),
+                  headers={"Authorization": "Bearer " + token(), "Content-Type": "application/json"})
+              try:
+                  with urllib.request.urlopen(request, timeout=60) as response:
+                      text = response.read()
+                      return response.status, (json.loads(text) if text else {})
+              except urllib.error.HTTPError as error:
+                  try:
+                      return error.code, json.loads(error.read() or b"{}")
+                  except ValueError:
+                      return error.code, {}
+              except (urllib.error.URLError, TimeoutError, OSError) as error:
+                  return 0, {"errors": [{"detail": str(error)}]}
+
+          def reason(doc):
+              return "; ".join(e.get("detail") or e.get("title") or "" for e in doc.get("errors", [])) or "no detail"
+
+          def clock():
+              return time.strftime("%H:%M:%S", time.gmtime())
+
+          # The app record.
+          query = urllib.parse.urlencode({"filter[bundleId]": BUNDLE, "fields[apps]": "bundleId,name,primaryLocale"})
+          status, doc = call("GET", "/apps?" + query)
+          apps = [a for a in doc.get("data", []) if a.get("attributes", {}).get("bundleId") == BUNDLE]
+          if status != 200 or not apps:
+              annotate("warning", "Could not find the app",
+                       f"GET /apps answered {status} ({reason(doc)}). The upload itself succeeded; "
+                       "App Store Connect > Apps > TestFlight shows the build.")
+              sys.exit(0)
+          app_id = apps[0]["id"]
+          locale = apps[0]["attributes"].get("primaryLocale") or "en-US"
+          page = f"https://appstoreconnect.apple.com/apps/{app_id}/testflight/ios"
+          print(f"{clock()} waiting for build {BUILD} of {apps[0]['attributes'].get('name')} ({page})", flush=True)
+
+          # Processing: PROCESSING until VALID, or INVALID/FAILED when refused.
+          build = None
+          deadline = time.time() + WAIT
+          while time.time() < deadline:
+              query = urllib.parse.urlencode({
+                  "filter[app]": app_id, "filter[version]": BUILD, "sort": "-uploadedDate", "limit": "1",
+                  "fields[builds]": "version,processingState,uploadedDate,usesNonExemptEncryption"})
+              status, doc = call("GET", "/builds?" + query)
+              if status == 200 and doc.get("data"):
+                  build = doc["data"][0]
+                  state = build["attributes"].get("processingState")
+                  print(f"{clock()} build {BUILD}: {state}", flush=True)
+                  if state in ("VALID", "INVALID", "FAILED"):
+                      break
+              elif status == 200:
+                  print(f"{clock()} build {BUILD} is not listed yet", flush=True)
+              else:
+                  print(f"{clock()} GET /builds answered {status}: {reason(doc)}", flush=True)
+              time.sleep(POLL)
+
+          state = build["attributes"].get("processingState") if build else None
+          if state in ("INVALID", "FAILED"):
+              annotate("error", f"App Store Connect refused build {BUILD}",
+                       f"Processing ended {state}. Apple's email to the Account Holder names the ITMS code. {page}")
+              sys.exit(1)
+          if state != "VALID":
+              annotate("warning", f"Build {BUILD} is still processing",
+                       f"Not processed after {WAIT // 60} minutes; it reaches TestFlight when Apple finishes. {page}")
+              sys.exit(0)
+          build_id = build["id"]
+
+          # What to Test: the build, its commit and the commits it brought.
+          if NOTES:
+              status, doc = call("GET", f"/builds/{build_id}/betaBuildLocalizations?limit=50")
+              mine = [x for x in doc.get("data", []) if x.get("attributes", {}).get("locale") == locale]
+              text = NOTES[:4000]
+              if mine:
+                  status, doc = call("PATCH", f"/betaBuildLocalizations/{mine[0]['id']}", {"data": {
+                      "type": "betaBuildLocalizations", "id": mine[0]["id"], "attributes": {"whatsNew": text}}})
+              else:
+                  status, doc = call("POST", "/betaBuildLocalizations", {"data": {
+                      "type": "betaBuildLocalizations", "attributes": {"locale": locale, "whatsNew": text},
+                      "relationships": {"build": {"data": {"type": "builds", "id": build_id}}}}})
+              if status in (200, 201):
+                  print(f"{clock()} What to Test is written ({locale}).", flush=True)
+              else:
+                  annotate("warning", "What to Test was not written", f"{status}: {reason(doc)}")
+
+          # Internal testers see a build when their group distributes every
+          # build automatically, or when the build is added to the group.
+          query = urllib.parse.urlencode({"limit": "50", "fields[betaGroups]": "name,isInternalGroup,hasAccessToAllBuilds"})
+          status, doc = call("GET", f"/apps/{app_id}/betaGroups?" + query)
+          internal = [g for g in doc.get("data", []) if g.get("attributes", {}).get("isInternalGroup")]
+          if status == 200 and not internal:
+              annotate("warning", "No internal testing group",
+                       "Nobody can install the build until an internal group with you in it exists (Docs/TESTFLIGHT.md, section 1, steps 14-15).")
+          for group in internal:
+              name = group["attributes"].get("name")
+              if group["attributes"].get("hasAccessToAllBuilds"):
+                  print(f"{clock()} the internal group {name} gets every build automatically.", flush=True)
+                  continue
+              status, doc = call("POST", f"/betaGroups/{group['id']}/relationships/builds",
+                                 {"data": [{"type": "builds", "id": build_id}]})
+              if status == 204:
+                  print(f"{clock()} build {BUILD} added to the internal group {name}.", flush=True)
+              else:
+                  annotate("warning", f"Build not added to {name}", f"{status}: {reason(doc)}")
+
+          # The state TestFlight itself shows for internal testing.
+          status, doc = call("GET", f"/builds/{build_id}/buildBetaDetail")
+          beta = doc.get("data", {}).get("attributes", {}).get("internalBuildState") if status == 200 else None
+          if beta == "MISSING_EXPORT_COMPLIANCE":
+              annotate("warning", f"Build {BUILD} waits for export compliance",
+                       f"Answer the encryption question on the build's page ({page}), or commit "
+                       "INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO so no build asks again.")
+          annotate("notice", f"Build {BUILD} is on TestFlight", f"{beta or 'processed'}. {page}")
+          summary = os.environ.get("GITHUB_STEP_SUMMARY")
+          if summary:
+              with open(summary, "a") as out:
+                  out.write(f"## Build {BUILD} on TestFlight\n\n{beta or 'processed'}: [App Store Connect]({page})\n")
+          PY
+
+      - name: Remove the key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/asc"

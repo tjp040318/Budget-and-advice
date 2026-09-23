@@ -47,6 +47,7 @@ struct TourView: View {
         ("raid_grade", 4), ("raids", 2), ("relic_awaken", 3), ("boons", 2), ("resonance", 2),
         ("awaken", 2), ("island_decor", 2), ("events", 2), ("regalia", 2), ("demigods", 2),
         ("sign_in", 2), ("codex", 2), ("draft", 3), ("shrines", 2),
+        ("treasury", 2),
     ]
 
     /// `-tour-chapter K` picks which chapter the `chapter_maps` step opens;
@@ -497,6 +498,17 @@ struct TourView: View {
             // begun (`GameStore.seedTourShrines`).
             LabyrinthView(opening: .shrines)
                 .onAppear { store.seedTourShrines() }
+        case "treasury":
+            // The Treasury (Docs/STORE.md): the bazaar opened on its first
+            // stall, the Blessing twelve days into thirty and the Chalice's
+            // first-purchase double spent (`GameStore.seedTourTreasury`);
+            // `-tour-treasury-odds` photographs the odds disclosure instead.
+            if ProcessInfo.processInfo.arguments.contains("-tour-treasury-odds") {
+                TreasuryOddsSheet()
+            } else {
+                ShopView(treasury: true)
+                    .onAppear { store.seedTourTreasury() }
+            }
         case "draft":
             // The Draft Arena's board mid-draft on the tour's roster (a fixed
             // seed, the player first): the ban phase by default, `-tour-draft

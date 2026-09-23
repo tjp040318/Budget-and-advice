@@ -185,6 +185,16 @@ struct Player: Codable, Equatable, Sendable {
     var shrinePieces: [String: Int]? = nil
     // MARK: end of the Hidden Shrines' block
 
+    // MARK: The Treasury (2026-09-23; Docs/STORE.md)
+    /// Every App Store transaction this save has been paid for, and the
+    /// Blessing's days (`TreasuryLedger`): the record that makes a purchase
+    /// pay exactly once. Kept in the save rather than a file of its own so
+    /// the grant and its record are one atomic write, and so it travels with
+    /// the save's cloud copy. Optional, like every save field added since the
+    /// first; nil until the first purchase.
+    var treasury: TreasuryLedger? = nil
+    // MARK: end of the Treasury's block
+
     func unit(_ id: UUID) -> Unit? { units.first(where: { $0.id == id }) }
     func relic(_ id: UUID) -> Relic? { relics.first(where: { $0.id == id }) }
 

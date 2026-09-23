@@ -1032,6 +1032,16 @@ def check_unknown_types(files, declared, errors):
         "UIAccessibility","ASAuthorizationControllerDelegate",
         "ASAuthorizationControllerPresentationContextProviding","NSMapTable",
         "OBJC_ASSOCIATION_RETAIN_NONATOMIC",
+        # The Treasury (2026-09-23, Docs/STORE.md): StoreKit 2's product,
+        # its signed-transaction wrapper, the App Store's sync and payment
+        # switch, and its error type. `Transaction` is above (SwiftUI's name
+        # too).
+        "StoreKit","Product","VerificationResult","AppStore","StoreKitError",
+        # The anonymous play data (2026-09-23, Docs/ANALYTICS.md): the app's
+        # comings and goings, which start and end a session, the background
+        # task the last upload runs under, and the XCTest probe that keeps a
+        # test run from sending.
+        "NotificationCenter","UIBackgroundTaskIdentifier","NSClassFromString",
     }
     used = defaultdict(list)
     for path in files:

@@ -1011,6 +1011,16 @@ environment can and cannot do. The short version:
   step 9 relaunches with `-tour-more notifications|graphics|delete`.
   swiftcheck accepts the labels of an init declared in an EXTENSION (Swift
   keeps the memberwise one beside it) and still fails a misspelt label.
+  **The Treasury** (`Docs/STORE.md`, PLAN.md *The feature day*): real
+  money through StoreKit 2 — six divinity packs doubled on first
+  purchase, a once-per-save starter, the Blessing (a NON-renewing 30
+  days) — with `PurchaseService.swift` the one file that imports
+  StoreKit, `TreasuryService` the payout, and the order verify → grant
+  and record (`Player.treasury`) → synchronous save → `finish()`. It is
+  the bazaar's first stall; tour step 52 `treasury`; `balance.py
+  --store` checks the catalog against `Pantheon.storekit`; CI has no
+  StoreKit. Turn off the Testing stall
+  (`ShopService.testingPacksEnabled`) before any review build.
 - **The paid programme of 2026-09-17** (PLAN.md, *The paid programme*):
   the five gods are meshy-7 now (`_m7`, judged on boards, better in every
   one), their bespoke motions re-applied, Zeus's ultimate remade (blow at

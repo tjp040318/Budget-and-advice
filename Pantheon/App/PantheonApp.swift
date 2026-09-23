@@ -153,6 +153,12 @@ final class AppSession: ObservableObject {
             self.accounts.signOut()
         }
         store = newStore
+        // Purchases are delivered into the store that is open, and whatever
+        // waited while none was is swept in now (Docs/STORE.md §3.3).
+        PurchaseService.shared.attach(newStore)
+        // The anonymous play data watches the save that is open: the first
+        // hour's steps, level-ups, purchases (Docs/ANALYTICS.md).
+        AnalyticsService.shared.watch(newStore)
         // The first time energy runs out, the game offers to say when it is
         // full again (`NotificationService.noteEnergy`, Docs/SETTINGS.md §1).
         energyWatch = newStore.$player
@@ -227,11 +233,13 @@ final class AppSession: ObservableObject {
 
     func signInWithApple(_ credential: AppleCredential) {
         accounts.notice = nil
+        AnalyticsService.shared.noteAccount(apple: true)   // the first hour's first step (Docs/ANALYTICS.md)
         open(accounts.signInWithApple(credential), appleIdentityToken: credential.identityToken)
     }
 
     func continueAsGuest() {
         accounts.notice = nil
+        AnalyticsService.shared.noteAccount(apple: false)
         open(accounts.continueAsGuest())
     }
 
@@ -297,6 +305,12 @@ struct PantheonApp: App {
         // The two bundled faces, before any view asks `Theme` for a font.
         FontLibrary.registerBundledFonts()
 
+        // Real-money purchases (Docs/STORE.md): StoreKit's transaction
+        // listener from the first moment, as Apple asks — an unfinished
+        // purchase is handed over once, right after launch, and one a parent
+        // approves later arrives only there. The tour never touches StoreKit.
+        PurchaseService.shared.start()
+
         // The CI tour never signs in: it plays as a fixed guest, held in
         // memory, so every launch of the tour opens the same save and no
         // dialog, no Apple and no CloudKit stand between it and its screen.
@@ -327,6 +341,11 @@ struct PantheonApp: App {
         // The main-thread watchdog: any stall over a quarter second is
         // written to More → Diagnostics with its length and the time.
         Perf.startWatchdog()
+
+        // Anonymous play data (Docs/ANALYTICS.md): the install's first open
+        // and its sessions from here on. Nothing under the tour or the tests,
+        // nothing with no backend, nothing once the player turns it off.
+        AnalyticsService.shared.start()
 
         #if DEBUG
         // Line-buffered stdout. The CI tour writes the app's stdout to a
