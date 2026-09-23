@@ -45,6 +45,10 @@ struct IslandView: View {
     @State private var offering: OfferingToast?
     @State private var burst = false
     @State private var burstOut = false
+    /// Where the claimed bubble stood: the burst plays there, not where the
+    /// bubble would stand now — the scroll the offering pays gives the
+    /// circle a bubble of its own and moves the offering's spot.
+    @State private var burstAt: CGPoint = .zero
 
     /// The figure named for a breath after a tap or a stir.
     private struct NamedFigure: Equatable {
@@ -58,8 +62,14 @@ struct IslandView: View {
         let grants: [ShopService.Grant]
     }
 
-    /// Where the daily offering's bubble floats: over the pool's water.
-    static let offeringPoint = CGPoint(x: 0.44, y: 0.455)
+    /// The daily offering's bubble: its words, and its size as drawn —
+    /// Manrope-Bold at 12 sets "Daily Offering" in 79 points, and the painted
+    /// gift, the gap and the padding are 36 more. Measured rather than
+    /// reckoned at `IslandBubble.size`'s 7.6 a character, which is a
+    /// figure's width and errs thirty points wide on words: too wide to
+    /// stand the bubble six points from its neighbour (`offeringSpot`).
+    private static let offeringWords = "Daily Offering"
+    private static let offeringSize = CGSize(width: 116, height: 31)
 
     /// Where the team stands: open sand below the circle and the beach band
     /// in front of it, measured off the painting like the landmarks' anchors.
@@ -199,7 +209,7 @@ struct IslandView: View {
                         .frame(width: 44, height: 44)
                         .scaleEffect(burstOut ? 3.2 : 0.6)
                         .opacity(burstOut ? 0 : 0.9)
-                        .position(point(Self.offeringPoint, frame: frame, shift: shift))
+                        .position(burstAt)
                         .allowsHitTesting(false)
                 }
 
@@ -588,10 +598,14 @@ struct IslandView: View {
     /// (2026-09-23, run 216): at the tour's 1.5 the Hall of Ka's chip slid
     /// under the sensor housing ("all of Ka") and the temple's bubble under
     /// the header. Each is clamped across into the safe width and down under
-    /// the header, and a building whose own centre has left the frame (or
-    /// gone under the header) drops both rather than pinning them to an edge
-    /// over somewhere else. `plate` is the named figure's plate: a chip or a
-    /// bubble it lands on steps back while it is up.
+    /// the header, and a building mostly off the frame across (under
+    /// `inViewShare` of its footprint's width on it), or whose centre has
+    /// gone under the header or off the foot, drops both rather than pinning
+    /// them to an edge over somewhere else. It was the centre across as well
+    /// until run 221, whose 1.5 had the Arena of Souls filling the lower
+    /// right with neither its bubble nor its name, its centre just past the
+    /// edge. `plate` is the named figure's plate: a chip or a bubble it
+    /// lands on steps back while it is up.
     private func building(_ landmark: Landmark, frame: CGRect, shift: CGPoint, bounds: CGSize, plate: CGRect?) -> some View {
         let level = store.player.level
         let unlocked = landmark.isUnlocked(atLevel: level)
@@ -605,7 +619,8 @@ struct IslandView: View {
         let bottom = centre.y + size.height / 2
         let pop: CGFloat = pressed == landmark.id ? 1.12 : 1
         let shake: CGFloat = shaking == landmark.id ? 5 : 0
-        let inView = centre.x >= 0 && centre.x <= bounds.width
+        let across = min(centre.x + size.width / 2, bounds.width) - max(centre.x - size.width / 2, 0)
+        let inView = across >= size.width * Self.inViewShare
             && centre.y >= Self.headerBottom && centre.y <= bounds.height
         // The chip on the building's front step, four points under its
         // footprint's foot (it hung eleven under, on the sand where the
@@ -623,14 +638,23 @@ struct IslandView: View {
                 // (run 216: a salmon smear 1.3 times the footprint ran down
                 // to the band). A warm-white core and the accent, ADDED to
                 // the painting, the building's width and a third its height.
-                Ellipse()
+                // A round fall-off squashed to that ellipse, so it reaches
+                // nothing at the rim on both axes: a fall-off as wide as the
+                // building clipped to an ellipse a third as tall was still
+                // bright where the ellipse cut it top and bottom, and run
+                // 221 read the lights as stains — a pink band on the arena's
+                // wall, a mauve ellipse with hard edges on the Labyrinth's
+                // scrub, a cyan edge across the circle's front columns. The
+                // accent is held to 0.18 besides.
+                Circle()
                     .fill(
                         RadialGradient(
-                            colors: [Color(hex: "#FFF3D0").opacity(0.25), accent.opacity(pulse ? 0.32 : 0.16), .clear],
+                            colors: [Color(hex: "#FFF3D0").opacity(0.22), accent.opacity(pulse ? 0.18 : 0.10), .clear],
                             center: .center, startRadius: 0, endRadius: size.width * 0.5
                         )
                     )
-                    .frame(width: size.width, height: size.height * 0.32)
+                    .frame(width: size.width, height: size.width)
+                    .scaleEffect(x: 1, y: size.height * 0.32 / max(1, size.width))
                     .blendMode(.plusLighter)
                     .position(x: centre.x, y: bottom - size.height * 0.08)
                     .allowsHitTesting(false)
@@ -677,11 +701,15 @@ struct IslandView: View {
         }
     }
 
+    /// How much of a building's footprint must be across the frame for its
+    /// bubble and its name to show (`building`).
+    private static let inViewShare: CGFloat = 0.35
+
     /// A point moved just far enough that a thing of `size` centred on it
-    /// stands inside the island's safe frame with four points to spare, and
-    /// under the header.
+    /// stands inside the island's safe frame, eight points from either side
+    /// and four from the foot, and under the header.
     private static func held(_ point: CGPoint, size: CGSize, in bounds: CGSize) -> CGPoint {
-        let halfWidth = size.width / 2 + 4
+        let halfWidth = size.width / 2 + 8
         let halfHeight = size.height / 2 + 4
         let x = min(max(point.x, halfWidth), max(halfWidth, bounds.width - halfWidth))
         let y = min(max(point.y, headerBottom + halfHeight), max(headerBottom + halfHeight, bounds.height - halfHeight))
@@ -900,33 +928,68 @@ struct IslandView: View {
 
     // MARK: - The daily offering
 
-    /// The bazaar's free daily offering, waiting over the pool as a gold
-    /// bubble; a tap claims it where it stands — the same item through the
-    /// same `GameStore.buy`, so the two doors cannot pay differently — with
-    /// a burst of gold and the grants as tiles for a few seconds.
-    /// Held in the frame and under the header like the buildings' bubbles,
-    /// and gone while the pool itself is off the screen or under the header.
+    /// The bazaar's free daily offering, waiting by the pool as a bubble of
+    /// the island's glass, rimmed gold, with the painted gift; a tap claims
+    /// it where it stands — the same item through the same `GameStore.buy`,
+    /// so the two doors cannot pay differently — with a burst of gold and
+    /// the grants as tiles for a few seconds. Held in the frame and under the
+    /// header like the buildings' bubbles, and gone while the pool itself is
+    /// off the screen or under the header.
+    ///
+    /// It was a flat gold capsule floating over the water, between the
+    /// circle's scroll count and its name: three call-outs down one column,
+    /// the middle one in a material of its own (run 221). It is the same
+    /// glass as every bubble now, and it stands beside the scroll count
+    /// (`offeringSpot`), so the pool carries one row of bubbles over its name.
     private func offeringBubble(frame: CGRect, shift: CGPoint, bounds: CGSize, plate: CGRect?) -> some View {
-        let pool = point(Self.offeringPoint, frame: frame, shift: shift)
-        let inView = pool.x >= 0 && pool.x <= bounds.width && pool.y >= Self.headerBottom && pool.y <= bounds.height
-        let size = IslandBubble.size(for: "Daily offering")
-        let at = Self.held(pool, size: size, in: bounds)
-        let rect = CGRect(x: at.x - size.width / 2, y: at.y - size.height / 2, width: size.width, height: size.height)
-        let shown = inView && !(plate?.intersects(rect) ?? false)
-        return IslandBubble(glyph: "gift.fill", text: "Daily offering", tint: Theme.gold, filled: true,
+        let spot = offeringSpot(frame: frame, shift: shift, bounds: bounds)
+        let size = Self.offeringSize
+        let rect = CGRect(x: spot.centre.x - size.width / 2, y: spot.centre.y - size.height / 2,
+                          width: size.width, height: size.height)
+        let shown = spot.inView && !(plate?.intersects(rect) ?? false)
+        return IslandBubble(glyph: "gift.fill", text: Self.offeringWords, tint: Theme.gold,
                             art: ItemArt.imageName("bundle"))
             .offset(y: pulse ? -3 : 3)
             .opacity(shown ? 1 : 0)
             .allowsHitTesting(shown)
-            .onTapGesture { claimOffering() }
-            .position(at)
+            .onTapGesture { claimOffering(at: spot.centre) }
+            .position(spot.centre)
             .animation(.easeOut(duration: 0.2), value: shown)
     }
 
-    private func claimOffering() {
+    /// Where the offering's bubble stands: level with the Summoning Circle's
+    /// own bubble and on its left, six points short of it, or in that
+    /// bubble's place while the circle has none (no scroll to open); and
+    /// whether the circle is on the screen at all. The circle's bubble is
+    /// placed here as `building` places it.
+    private func offeringSpot(frame: CGRect, shift: CGPoint, bounds: CGSize) -> (centre: CGPoint, inView: Bool) {
+        guard let circle = IslandDatabase.landmarks.first(where: { $0.destination == .summon }) else {
+            return (centre: .zero, inView: false)
+        }
+        let pool = point(circle.footprint.centre, frame: frame, shift: shift)
+        let over = CGPoint(x: pool.x, y: pool.y - circle.footprint.size.height * frame.height / 2 - 16)
+        let inView = pool.x >= 0 && pool.x <= bounds.width && pool.y >= Self.headerBottom && pool.y <= bounds.height
+        let mine = Self.offeringSize
+        guard circle.isUnlocked(atLevel: store.player.level), hasSomethingToDo(circle),
+              let wants = badge(for: circle) else {
+            return (centre: Self.held(over, size: mine, in: bounds), inView: inView)
+        }
+        let theirs = IslandBubble.size(for: wants.text)
+        let beside = Self.held(over, size: theirs, in: bounds)
+        let left = CGPoint(x: beside.x - theirs.width / 2 - 6 - mine.width / 2, y: beside.y)
+        let heldLeft = Self.held(left, size: mine, in: bounds)
+        guard heldLeft.x > left.x + 0.5 else { return (centre: heldLeft, inView: inView) }
+        // Held off the screen's left edge it would stand on the circle's
+        // own bubble, so it stands on that bubble's right instead.
+        let right = CGPoint(x: beside.x + theirs.width / 2 + 6 + mine.width / 2, y: beside.y)
+        return (centre: Self.held(right, size: mine, in: bounds), inView: inView)
+    }
+
+    private func claimOffering(at spot: CGPoint) {
         guard let item = ShopService.item("daily_offering"), let grants = store.buy(item) else { return }
         Juice.notify(.success)
         AudioLibrary.shared.play(.uiConfirm)
+        burstAt = spot
         burstOut = false
         burst = true
         withAnimation(.easeOut(duration: 0.7)) { burstOut = true }
@@ -1000,10 +1063,12 @@ private struct IslandPurse: View {
                     }
                 }
             }
-            currency("divinity", tint: Theme.gold, value: "\(wallet.divinity)")
+            // Every amount through `BarWallet.compact`, grouped under ten
+            // thousand: run 221's purse printed "1240" laurels beside "200K".
+            currency("divinity", tint: Theme.gold, value: BarWallet.compact(wallet.divinity))
             currency("drachma", tint: Theme.onGlass, value: BarWallet.compact(wallet.drachma))
             if showsLaurels {
-                currency("laurels", tint: Theme.success, value: "\(wallet.laurels)")
+                currency("laurels", tint: Theme.success, value: BarWallet.compact(wallet.laurels))
             }
             Image(systemName: "plus")
                 .font(.system(size: 11, weight: .black))
@@ -1123,8 +1188,9 @@ struct IslandCamera: Equatable {
 // MARK: - Bubbles
 
 /// The genre's floating marker over a building: a small plate with the
-/// painted item and a count and a tail pointing down, bobbing. Gold and
-/// filled for the daily offering.
+/// painted item and a count and a tail pointing down, bobbing. The daily
+/// offering wears the same glass, rimmed gold: it was a flat gold plate, a
+/// material of its own among the bubbles, until run 221.
 ///
 /// On dark glass rimmed in the building's colour since run 216, the wallet
 /// well's material, with the item PAINTED (`art`, a bundle painting's name)
@@ -1134,7 +1200,6 @@ struct IslandBubble: View {
     let glyph: String
     let text: String
     var tint: Color = Theme.gold
-    var filled: Bool = false
     var art: String? = nil
 
     /// The island's glass: the chips', the bubbles' and the plates' ground.
@@ -1161,11 +1226,11 @@ struct IslandBubble: View {
                 } else {
                     Image(systemName: glyph)
                         .font(.system(size: 11, weight: .black))
-                        .foregroundStyle(filled ? Theme.ink : tint)
+                        .foregroundStyle(tint)
                 }
                 Text(text)
                     .font(Theme.numeric(12))
-                    .foregroundStyle(filled ? Theme.ink : Theme.onGlass)
+                    .foregroundStyle(Theme.onGlass)
                     .lineLimit(1)
                     .fixedSize()
             }
@@ -1174,40 +1239,30 @@ struct IslandBubble: View {
             .padding(.vertical, 4)
             .background(plate)
             BubbleTail()
-                .fill(filled ? Theme.gold : tint)
+                .fill(tint)
                 .frame(width: 10, height: 6)
         }
         .shadow(color: .black.opacity(0.35), radius: 3, y: 2)
     }
 
-    /// Gold for the offering; otherwise the glass, its colour on the rim and
-    /// a lit top edge, like the wallet's well.
-    @ViewBuilder
+    /// The glass, its colour on the rim and a lit top edge, like the
+    /// wallet's well.
     private var plate: some View {
-        if filled {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Theme.gold)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .strokeBorder(Theme.goldDeep.opacity(0.7), lineWidth: 1.5)
-                )
-        } else {
-            RoundedRectangle(cornerRadius: 9, style: .continuous)
-                .fill(Self.glassFill)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 9, style: .continuous)
-                        .strokeBorder(tint, lineWidth: 1.5)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(
-                            LinearGradient(colors: [Color.white.opacity(0.18), Color.white.opacity(0)],
-                                           startPoint: .top, endPoint: .center),
-                            lineWidth: 1
-                        )
-                        .padding(1.5)
-                )
-        }
+        RoundedRectangle(cornerRadius: 9, style: .continuous)
+            .fill(Self.glassFill)
+            .overlay(
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .strokeBorder(tint, lineWidth: 1.5)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(colors: [Color.white.opacity(0.18), Color.white.opacity(0)],
+                                       startPoint: .top, endPoint: .center),
+                        lineWidth: 1
+                    )
+                    .padding(1.5)
+            )
     }
 }
 

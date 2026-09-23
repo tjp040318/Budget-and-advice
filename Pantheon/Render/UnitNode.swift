@@ -38,6 +38,10 @@ final class UnitNode: SCNNode {
     }
     private let selectionRing: SCNNode
     private let elementTint: UIColor
+    /// A boss's paint, the mean of its diffuse texture in linear light
+    /// (`UnitNode.measurePaint(of:key:)`); nil for everyone else, and for a
+    /// boss whose paint is not a picture this can read.
+    let paintAlbedo: Double?
 
     /// Nil until the first clip plays. It used to start as `.idleCombat`, so
     /// the `play(.idleCombat)` in `init` was refused as "already running" and
@@ -150,6 +154,19 @@ final class UnitNode: SCNNode {
             // from the feet, for as long as the unit stands.
             container.addParticleSystem(VFXLibrary.aura(tint: tint, scale: Float(modelHeight) / 1.9))
         }
+        // A PALE boss keeps the rim and the aura but not the costume glow
+        // (run 221): the sandstone Colossus under its warm spot was paper
+        // white across the chest and arms, 12% of it clipped, and a glow
+        // added on top of pale paint is light it did not need. A dark boss
+        // — the serpent, the Hydra, the Jötunn — keeps all of it.
+        let albedo = combatant.isBoss ? UnitNode.measurePaint(of: container, key: combatant.model.assetName) : nil
+        if combatant.isBoss, !combatant.isAwakened, let albedo, albedo > UnitNode.paleAlbedo {
+            container.enumerateHierarchy { child, _ in
+                for material in child.geometry?.materials ?? [] {
+                    material.setValue(NSNumber(value: Float(0)), forKey: "costumeGlow")
+                }
+            }
+        }
 
         // Health bar: a dark plate with a coloured fill that scales from its
         // left edge, parented to a billboard so it always faces the camera.
@@ -224,6 +241,7 @@ final class UnitNode: SCNNode {
         // still on the way.
         self.clipAsset = ModelLibrary.shared.clipAsset(for: combatant.model, awakened: combatant.isAwakened)
         self.elementTint = tint
+        self.paintAlbedo = albedo
         self.modelContainer = container
         self.containerRest = container.position
         self.healthBarRoot = barRoot
@@ -889,6 +907,116 @@ final class UnitNode: SCNNode {
         return found
     }
 
+    // MARK: - A boss's paint
+
+    /// Where paint counts as pale, in linear light: the Jötunn's (0.13, pale
+    /// ice over a dark hide) is under it and the sandstone Colossus's (0.24)
+    /// well over. Measured off the shipped base colours
+    /// the way `measurePaint` reads them (32 × 32, box-averaged): the
+    /// serpent 0.03, the Hydra 0.06, the Jötunn 0.13, the Azure Dragon 0.19,
+    /// the Colossus 0.24, the Dragon King 0.30, the Unwrapped King 0.50.
+    static let paleAlbedo: Double = 0.14
+
+    /// How much of a boss's warm spot its paint wants, 0.3…1 of the full
+    /// light: all of it for a dark hide, which is what the spot is for (the
+    /// owner, of the serpent against a night painting: "it's hard to see the
+    /// boss"), and in proportion less as the paint is paler than
+    /// `paleAlbedo`, so every boss gives back the same light from it. The
+    /// Colossus takes 0.58 (about 1,390 of 2,400): at the full spot its
+    /// chest and arms were paper white, 79% of the worst patch clipped
+    /// (run 221). One for a unit that is not a boss or whose paint is
+    /// unread, which is the light it had before.
+    var bossLightScale: CGFloat {
+        guard let paintAlbedo, paintAlbedo > 0.001 else { return 1 }
+        return CGFloat(min(1, max(0.3, UnitNode.paleAlbedo / paintAlbedo)))
+    }
+
+    private static var albedoCache: [String: Double] = [:]
+
+    /// The mean brightness of a figure's paint in LINEAR light, 0…1 — what
+    /// a light multiplies — from its diffuse textures (`ModelLibrary`
+    /// leaves them decoded as images) or colours, each read off a 32 × 32
+    /// reduction the way `PaintingPalette` reads a painting and taken to
+    /// linear per pixel before the average. Cached by asset: every boss of a
+    /// kind wears the same texture. Nil when nothing on the figure is a
+    /// picture or a colour.
+    static func measurePaint(of model: SCNNode, key: String) -> Double? {
+        if let cached = albedoCache[key] { return cached }
+        var total = 0.0
+        var count = 0.0
+        model.enumerateHierarchy { child, _ in
+            for material in child.geometry?.materials ?? [] {
+                let contents = material.diffuse.contents
+                if let image = contents as? UIImage, let cg = image.cgImage,
+                   let mean = meanLinearLuminance(of: cg) {
+                    total += mean
+                    count += 1
+                } else if let colour = contents as? UIColor {
+                    var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+                    if colour.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
+                        total += 0.2126 * linearLight(Double(red)) + 0.7152 * linearLight(Double(green))
+                            + 0.0722 * linearLight(Double(blue))
+                        count += 1
+                    }
+                }
+            }
+        }
+        guard count > 0 else { return nil }
+        let mean = total / count
+        albedoCache[key] = mean
+        return mean
+    }
+
+    /// A picture's mean luminance in linear light, off a 32 × 32 reduction
+    /// averaged here: the picture is drawn at 256 and every 8 × 8 block
+    /// averaged by hand, because Core Graphics' filter at a sixty-fourfold
+    /// reduction is not guaranteed to average — a sampled 32 read the
+    /// Jötunn's dark hide and pale ice a third brighter — while any filter
+    /// at eightfold then the blocks give the calibration's own numbers
+    /// (`paleAlbedo`) to the third decimal.
+    private static func meanLinearLuminance(of image: CGImage) -> Double? {
+        let side = 256
+        let block = 8
+        let cells = side / block
+        var data = [UInt8](repeating: 0, count: side * side * 4)
+        let drawn = data.withUnsafeMutableBytes { buffer -> Bool in
+            guard let base = buffer.baseAddress,
+                  let context = CGContext(data: base, width: side, height: side, bitsPerComponent: 8,
+                                          bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.interpolationQuality = .high
+            context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+            return true
+        }
+        guard drawn else { return nil }
+        let perBlock = Double(block * block) * 255
+        var sum = 0.0
+        for cellY in 0..<cells {
+            for cellX in 0..<cells {
+                var red = 0
+                var green = 0
+                var blue = 0
+                for row in (cellY * block)..<(cellY * block + block) {
+                    for column in (cellX * block)..<(cellX * block + block) {
+                        let at = (row * side + column) * 4
+                        red += Int(data[at])
+                        green += Int(data[at + 1])
+                        blue += Int(data[at + 2])
+                    }
+                }
+                sum += 0.2126 * linearLight(Double(red) / perBlock)
+                    + 0.7152 * linearLight(Double(green) / perBlock)
+                    + 0.0722 * linearLight(Double(blue) / perBlock)
+            }
+        }
+        return sum / Double(cells * cells)
+    }
+
+    /// sRGB to linear light, one channel, 0…1.
+    private static func linearLight(_ value: Double) -> Double {
+        value <= 0.04045 ? value / 12.92 : pow((value + 0.055) / 1.055, 2.4)
+    }
+
     // MARK: - The cast ring and the swing's trail
 
     /// The node a blade hangs from: the rig's weapon attach point when it has
@@ -1061,11 +1189,94 @@ enum StatusIconRenderer {
         cache[key] = image
         return image
     }
+
+    /// A tile for the unit plate over a fighter's head, drawn at the size it
+    /// is shown (`UnitPlate.tile`, 16 points): the effect's glyph on its
+    /// colour, and the turns left as an 11-point Manrope digit on a dark
+    /// chip riding the tile's top-right corner. The 72-point picture above
+    /// shrunk to 12 points put the turns at about 3 (run 221, under the
+    /// 11-point floor), so the plate's tile is its own drawing. `anchor` is
+    /// where the tile's centre sits in the picture, as SpriteKit counts it.
+    struct PlateTile {
+        let image: UIImage
+        let anchor: CGPoint
+    }
+
+    private static var plateCache: [String: PlateTile] = [:]
+
+    static func plateTile(kind: StatusKind, turns: Int) -> PlateTile? {
+        let key = "\(kind.rawValue)|\(turns)"
+        if let cached = plateCache[key] { return cached }
+
+        let tile: CGFloat = 16
+        let chipHeight: CGFloat = 12
+        let font = UIFont(name: Theme.numberFace, size: Theme.bodyFloor)
+            ?? UIFont.systemFont(ofSize: Theme.bodyFloor, weight: .bold)
+        let digits = NSAttributedString(string: "\(turns)", attributes: [
+            .font: font,
+            .foregroundColor: UIColor.white,
+        ])
+        let chipWidth = turns > 0 ? max(chipHeight, ceil(digits.size().width) + 5) : 0
+        // The chip is centred on the tile's top-right corner, so it hangs
+        // half its height over the top and half its width past the side.
+        let over = chipHeight / 2
+        let size = CGSize(width: tile + chipWidth / 2, height: tile + over)
+        let tileRect = CGRect(x: 0, y: over, width: tile, height: tile)
+        let fill = kind.isBuff ? UIColor(hex: "#2E8FBF") ?? .systemBlue : UIColor(hex: "#B8403A") ?? .systemRed
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 3
+        format.opaque = false
+        let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            let square = UIBezierPath(roundedRect: tileRect.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 3.5)
+            fill.setFill()
+            square.fill()
+            UIColor.white.withAlphaComponent(0.85).setStroke()
+            square.lineWidth = 1
+            square.stroke()
+
+            let configuration = UIImage.SymbolConfiguration(pointSize: 9, weight: .bold)
+            if let symbol = UIImage(systemName: kind.glyph, withConfiguration: configuration)?
+                .withTintColor(.white, renderingMode: .alwaysOriginal) {
+                // A shade down and left of centre, clear of the chip.
+                let box: CGFloat = 9.5
+                let scale = min(box / max(1, symbol.size.width), box / max(1, symbol.size.height))
+                let drawn = CGSize(width: symbol.size.width * scale, height: symbol.size.height * scale)
+                symbol.draw(in: CGRect(
+                    x: tileRect.midX - drawn.width / 2 - 1, y: tileRect.midY - drawn.height / 2 + 1,
+                    width: drawn.width, height: drawn.height
+                ))
+            }
+
+            if turns > 0 {
+                let chip = CGRect(x: tile - chipWidth / 2, y: 0, width: chipWidth, height: chipHeight)
+                let pill = UIBezierPath(roundedRect: chip.insetBy(dx: 0.25, dy: 0.25), cornerRadius: chipHeight / 2)
+                (UIColor(hex: "#130E0A") ?? .black).withAlphaComponent(0.94).setFill()
+                pill.fill()
+                UIColor.white.withAlphaComponent(0.4).setStroke()
+                pill.lineWidth = 0.75
+                pill.stroke()
+                // The digit's cap height centred in the chip.
+                let width = digits.size().width
+                let baseline = chip.midY + font.capHeight / 2
+                digits.draw(at: CGPoint(x: chip.midX - width / 2, y: baseline - font.ascender))
+            }
+        }
+        // SpriteKit counts from the bottom left.
+        let result = PlateTile(
+            image: image,
+            anchor: CGPoint(x: tileRect.midX / size.width, y: 1 - tileRect.midY / size.height)
+        )
+        if plateCache.count > 200 { plateCache.removeAll() }
+        plateCache[key] = result
+        return result
+    }
 }
 
 /// The advantage arrow's pictures, one per matchup, drawn once: a green
-/// triangle pointing up, a yellow disc, a red triangle pointing down, each
-/// with a dark edge and a soft shadow so it reads over any floor.
+/// triangle pointing up, a yellow double chevron pointing both ways, a red
+/// triangle pointing down, each with a dark edge and a soft shadow so it
+/// reads over any floor. Even was a plain yellow disc until run 221, which
+/// read as a coin rather than as "neither up nor down".
 enum MatchupIconRenderer {
     private static var cache: [String: UIImage] = [:]
 
@@ -1091,8 +1302,20 @@ enum MatchupIconRenderer {
                 path.addLine(to: CGPoint(x: 10, y: 24))
                 path.close()
             case .neutral:
+                // A chevron each way on one shaft, as wide as the triangles
+                // and a little shorter, so the three weigh the same.
                 colour = UIColor(hex: "#F2C94C") ?? .yellow
-                path.append(UIBezierPath(ovalIn: CGRect(x: 24, y: 24, width: 48, height: 48)))
+                path.move(to: CGPoint(x: 8, y: 48))
+                path.addLine(to: CGPoint(x: 38, y: 18))
+                path.addLine(to: CGPoint(x: 38, y: 35))
+                path.addLine(to: CGPoint(x: 58, y: 35))
+                path.addLine(to: CGPoint(x: 58, y: 18))
+                path.addLine(to: CGPoint(x: 88, y: 48))
+                path.addLine(to: CGPoint(x: 58, y: 78))
+                path.addLine(to: CGPoint(x: 58, y: 61))
+                path.addLine(to: CGPoint(x: 38, y: 61))
+                path.addLine(to: CGPoint(x: 38, y: 78))
+                path.close()
             }
             canvas.setShadow(offset: .zero, blur: 7, color: UIColor.black.withAlphaComponent(0.85).cgColor)
             canvas.setFillColor(colour.cgColor)

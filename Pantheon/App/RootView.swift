@@ -183,7 +183,8 @@ struct RootView: View {
 /// — 402 less the 52-point strip and the 21-point home indicator is 329, 16
 /// of it padding. The doors take 74 since run 216 (their captions went) and
 /// a gap of 8, and the boards the 231 left; the Account board's buttons are
-/// a pinned foot of 85 under its scrolling rows.
+/// a pinned foot of 96 under its scrolling rows — 80 of buttons and the 16
+/// its corner scrolls keep clear (run 221).
 struct SettingsView: View {
     @EnvironmentObject private var store: GameStore
     @EnvironmentObject private var session: AppSession
@@ -447,9 +448,9 @@ struct SettingsView: View {
     /// subtitle, the codex its count.
     private var accountPanel: some View {
         SectionPanel(title: "Account", accessory: nil) {
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 FadingBoard {
-                    VStack(spacing: 5) {
+                    VStack(spacing: 4) {
                         row("Account", accountLine)
                         // The key's tail, in capitals: what a support request
                         // quotes, and the tail of the save's record name in
@@ -459,10 +460,17 @@ struct SettingsView: View {
                         accountCaptions
                     }
                 }
-                VStack(spacing: 5) {
+                VStack(spacing: 4) {
                     accountActions
                     resetRow
                 }
+                // Clear of the painted panel's lower acanthus, as the Sound
+                // and Support boards' last lines are: Reset account's outline
+                // ran into both bottom corners (run 221). The 16 points are
+                // paid by the spacings and the reset row's height, so the
+                // guest's rows still stand whole with no fade (about 3
+                // points to spare on an iPhone 16 Pro).
+                .padding(.bottom, boardAcanthus)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -531,7 +539,9 @@ struct SettingsView: View {
             }
             .foregroundStyle(Theme.danger)
             .frame(maxWidth: .infinity)
-            .frame(height: 34)
+            // 30, the quiet row's height since run 221: four of the sixteen
+            // points the board's foot now keeps clear of the acanthus.
+            .frame(height: 30)
             .background(
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .strokeBorder(Theme.danger.opacity(0.45), lineWidth: 1)
@@ -564,7 +574,6 @@ struct SettingsView: View {
                             .font(Theme.body(12))
                             .foregroundStyle(Theme.textPrimary)
                     }
-                    .tint(Theme.gold)
                     .onChange(of: soundOn) { _, on in
                         AudioLibrary.shared.isMuted = !on
                         if on { AudioLibrary.shared.play(.uiConfirm) }
@@ -574,7 +583,6 @@ struct SettingsView: View {
                             .font(Theme.body(12))
                             .foregroundStyle(Theme.textPrimary)
                     }
-                    .tint(Theme.gold)
                     .onChange(of: musicOn) { _, on in
                         AudioLibrary.shared.isMusicMuted = !on
                     }
@@ -584,7 +592,6 @@ struct SettingsView: View {
                             .font(Theme.body(12))
                             .foregroundStyle(Theme.textPrimary)
                     }
-                    .tint(Theme.gold)
                     // One line each (run 216 cut the old paragraph mid-word
                     // at the board's foot).
                     VStack(alignment: .leading, spacing: 1) {
@@ -592,6 +599,10 @@ struct SettingsView: View {
                         caption("On: cuts, leans and orbits on skills.")
                     }
                 }
+                // The game's switch: OFF a dark well with a bronze knob, ON
+                // lit gold. The system switch's OFF, a white knob on pale
+                // grey, read as disabled on the marble (run 221).
+                .toggleStyle(GameToggleStyle())
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -1057,16 +1068,24 @@ struct LaunchView: View {
                 )
                 LaunchEmbers()
                 VStack(spacing: 0) {
-                    // 0.58 of the height: on the key art the five figures fill
-                    // the top half and the summit's dark base is here; the
-                    // mock at 0.50 put the name across the thunder god's
-                    // waist and 0.64 crowded the bar.
-                    Spacer()
-                        .frame(height: geo.size.height * 0.58)
+                    // The name stands as low as the bar and the tip under it
+                    // allow: on the key art the five figures fill the top
+                    // half and the summit's dark base is below them; the mock
+                    // at 0.50 put the name across the thunder god's waist.
+                    // It was a spacer of 0.58 of the height, which with
+                    // everything under it came to 4 points more than an
+                    // iPhone 16 Pro has — so the realms line, the one view
+                    // allowed to shrink, went to 7.7 points (run 221). Built
+                    // up from the foot instead, the column always fits, and
+                    // the name's top lands at 0.54 of the height on a 16 Pro.
+                    Spacer(minLength: 0)
                     wordmark
-                    Spacer(minLength: 8)
                     footer
-                        .padding(.bottom, 14)
+                        .padding(.top, 8)
+                        // The 21-point home-indicator inset and 5 more: at 14
+                        // the tip's descenders stood 2 points off the
+                        // indicator (runs 217–221).
+                        .padding(.bottom, 26)
                 }
                 .padding(.horizontal, 24)
                 .frame(width: geo.size.width, height: geo.size.height)
@@ -1100,12 +1119,13 @@ struct LaunchView: View {
                 LinearGradient(colors: [Theme.gold, .clear], startPoint: .leading, endPoint: .trailing)
                     .frame(width: 110, height: 1)
             }
+            // At its own size, never shrunk: 400 points at the floor against
+            // the 826 the frame gives it.
             Text("EGYPT  ·  GREECE  ·  NORSE  ·  ROME  ·  THE JADE COURT")
-                .font(Theme.body(10).weight(.bold))
+                .font(Theme.body(11).weight(.bold))
                 .tracking(2.2)
                 .foregroundStyle(cream.opacity(0.85))
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
+                .fixedSize()
         }
         .opacity(revealed ? 1 : 0)
         .offset(y: revealed ? 0 : 12)
@@ -1302,6 +1322,13 @@ struct GameTabBar: View {
         .accessibilityAddTraits(isOn ? .isSelected : [])
     }
 
+    /// The band is the panels' own MARBLE with the panels' own gold line
+    /// along its top (`Chrome.panelMarble`, `Chrome.panelRule`: the flat
+    /// centre and the top edge of `ui_panel`, cut from the painting), where
+    /// it was a flat cream gradient under a hairline — the one surface on a
+    /// tab screen that was not a material (run 221). Over the marble, a lit
+    /// top and a warm foot, so the slab has a thickness under its doors. The
+    /// gradient under it is the whole band in a bundle without the kit.
     private var band: some View {
         ZStack(alignment: .top) {
             LinearGradient(
@@ -1309,16 +1336,47 @@ struct GameTabBar: View {
                 startPoint: .top,
                 endPoint: .bottom
             )
-            Rectangle()
-                .fill(
-                    LinearGradient(
-                        colors: [Theme.goldDeep.opacity(0.0), Theme.gold, Theme.goldDeep.opacity(0.0)],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
+            if let marble = Chrome.panelMarble {
+                // Covers the band and reports the band's size: the painting
+                // is an overlay on a clear view, as `PaintingFill` draws one.
+                Color.clear
+                    .overlay {
+                        Image(uiImage: marble)
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    }
+                    .clipped()
+                    // `.clipped()` does not clip hit-testing: filled to the
+                    // band's width the crop is ~564 points tall, and its
+                    // unseen overhang would stand over the foot of every tab
+                    // screen (the bar is drawn after the TabView) and take
+                    // its taps. A painting never takes a tap (`PaintingFill`).
+                    .allowsHitTesting(false)
+                LinearGradient(
+                    colors: [Color.white.opacity(0.12), Color.clear, Color(hex: "#5C4611").opacity(0.12)],
+                    startPoint: .top,
+                    endPoint: .bottom
                 )
-                .frame(height: 2)
+            }
+            if let rule = Chrome.panelRule {
+                Image(uiImage: rule)
+                    .resizable()
+                    .frame(height: rule.size.height)
+            } else {
+                Rectangle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Theme.goldDeep.opacity(0.0), Theme.gold, Theme.goldDeep.opacity(0.0)],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(height: 2)
+            }
         }
+        // One shadow for the slab: on the stack itself each layer cast its
+        // own, and there are four layers now.
+        .compositingGroup()
         .shadow(color: .black.opacity(0.22), radius: 8, y: -3)
         // Edge to edge: with the bottom alone, run 211's island frame showed
         // the painting down to the band's midline in both bottom corners and

@@ -607,8 +607,15 @@ struct LessonsView: View {
 
     // MARK: - The grid
 
+    /// The grid, resting on whole rows (`RestingList`, the Missions board's
+    /// list). It ends in a fade at its own foot, which is the top of the home
+    /// indicator's band, so nothing draws under it (run 220: "The wheel" ran
+    /// to the frame's bottom under the indicator); and a section's name that
+    /// would stand cut in half at the foot is not drawn at all (run 221:
+    /// "RELICS" and its "0 / 2" as the top half of their letters, ghosted in
+    /// the fade), while the chevron there says the book goes on.
     private var library: some View {
-        ScrollView(showsIndicators: false) {
+        RestingList {
             VStack(alignment: .leading, spacing: 12) {
                 ForEach(LessonTopic.allCases) { topic in
                     let lessons = LessonBook.all.filter { $0.topic == topic }
@@ -624,16 +631,6 @@ struct LessonsView: View {
             .padding(.top, 3)
             .padding(.bottom, 22)
         }
-        // The grid ends in a fade at its own foot, which is the top of the
-        // home indicator's band: nothing draws under it (run 220: "The
-        // wheel" ran to the frame's bottom under the indicator).
-        .mask(
-            VStack(spacing: 0) {
-                Color.black
-                LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 16)
-            }
-        )
     }
 
     /// A topic: its name and how many of its lessons are given over a rule,
@@ -665,6 +662,9 @@ struct LessonsView: View {
                     .fixedSize()
             }
             .padding(.horizontal, 2)
+            // A name shows only once nearly all of it is in view: 70% of a
+            // 17-point line is still a line cut through its letters.
+            .restingRow(goneBelow: 0.7, wholeFrom: 0.95)
             ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 HStack(alignment: .top, spacing: 8) {
                     ForEach(row) { lesson in
@@ -676,6 +676,7 @@ struct LessonsView: View {
                     }
                 }
                 .fixedSize(horizontal: false, vertical: true)
+                .restingRow()
             }
         }
     }

@@ -70,8 +70,24 @@ enum NightMarketService {
         var id: Int { slot }
     }
 
+    /// How many more draws a slot gets when it rolls a ware the shelf already
+    /// shows. The likeliest wares a shelf could already hold are about half
+    /// of every draw at any level, so twenty-four twins in a row is rarer
+    /// than one shelf in a million (`balance.py --shop` asserts it), and the
+    /// loop always ends. Mirrored as `MARKET_TWIN_REDRAWS`.
+    static let twinRedraws = 24
+
     /// The whole shelf, derived from the saved roll. Empty when the player has
     /// never opened the market — `GameStore` rolls one the first time.
+    ///
+    /// One of each (2026-09-23): a slot that rolls a ware already on the
+    /// shelf — the same grant, so the same relic grade, the same energy, the
+    /// same count of the same scroll — draws again from the same stream, so
+    /// the shelf is still a pure function of its seed. Run 221's shelf
+    /// offered +20 energy for 18,000 twice and run 220's three identical 3★
+    /// relics, which a relic's own roll at the purchase makes the same
+    /// ware: a shelf of twins reads as placeholder data, and no shop in the
+    /// genre shows one. A shelf with no twin derives exactly as it did.
     static func stalls(for player: Player) -> [Stall] {
         guard let stock = player.nightMarket else { return [] }
         var rng = SeededRandom(seed: stock.seed)
@@ -79,6 +95,11 @@ enum NightMarketService {
         var shelf: [Stall] = []
         for slot in 0..<count {
             var stall = ware(slot: slot, level: stock.level, rng: &rng)
+            var redraws = 0
+            while redraws < twinRedraws, shelf.contains(where: { $0.grant == stall.grant }) {
+                stall = ware(slot: slot, level: stock.level, rng: &rng)
+                redraws += 1
+            }
             stall.isSoldOut = stock.bought.contains(slot)
             shelf.append(stall)
         }

@@ -14,7 +14,7 @@ import UIKit
 /// scene drawn over the 3D view (`overlaySKScene`), the mechanism Apple's
 /// own SceneKit samples use for a HUD, so a bar is drawn in points, as crisp
 /// as the rest of the HUD and the same size in both rows. The coordinator is
-/// the renderer's delegate and places them under the units' feet on every
+/// the renderer's delegate and stands them over the units' heads on every
 /// frame, from the camera about to draw.
 struct BattleSceneView: UIViewRepresentable {
 
@@ -23,7 +23,7 @@ struct BattleSceneView: UIViewRepresentable {
     var onTapUnit: ((UUID) -> Void)?
 
     func makeUIView(context: Context) -> SCNView {
-        let view = SCNView()
+        let view = BattleStageView()
         view.scene = controller.scene
         view.backgroundColor = .black
         view.antialiasingMode = .multisampling2X
@@ -50,6 +50,7 @@ struct BattleSceneView: UIViewRepresentable {
         context.coordinator.controller = controller
         if view.scene !== controller.scene { view.scene = controller.scene }
         if view.overlaySKScene !== controller.plates { view.overlaySKScene = controller.plates }
+        (view as? BattleStageView)?.reportSafeArea()
     }
 
     func makeCoordinator() -> Coordinator {
@@ -93,10 +94,48 @@ struct BattleSceneView: UIViewRepresentable {
         }
 
         /// The frame is about to be drawn with the camera where it now
-        /// stands: put every plate under its unit's feet for it.
+        /// stands: stand every plate over its unit's head for it.
         func renderer(_ renderer: SCNSceneRenderer, willRenderScene scene: SCNScene, atTime time: TimeInterval) {
             controller?.layoutPlates(in: renderer)
         }
+    }
+}
+
+/// The battle's view, which tells the plate overlay where the phone's
+/// unsafe edges are. The view runs under the notch and the home indicator
+/// (`BattleView` ignores the safe area for it) while the HUD sits inside
+/// them, so a word held "eight points inside the frame" sat in the notch's
+/// inset, and a number whose unit was off the bottom of a skill zoom landed
+/// on the gear (run 221, "542 blocked"). Read on the main thread, where
+/// UIKit wants it, and handed to the overlay's render-thread queue.
+final class BattleStageView: SCNView {
+    private var reported: UIEdgeInsets?
+    private weak var reportedTo: UnitPlateOverlay?
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        reportSafeArea()
+    }
+
+    override func safeAreaInsetsDidChange() {
+        super.safeAreaInsetsDidChange()
+        reportSafeArea()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        reportSafeArea()
+    }
+
+    /// The window's insets: this view fills the window, and a view SwiftUI
+    /// lays out past the safe area is not guaranteed to be told its own.
+    func reportSafeArea() {
+        guard let overlay = overlaySKScene as? UnitPlateOverlay else { return }
+        let insets = window?.safeAreaInsets ?? safeAreaInsets
+        guard insets != reported || overlay !== reportedTo else { return }
+        reported = insets
+        reportedTo = overlay
+        overlay.setSafeArea(insets)
     }
 }
 
@@ -143,6 +182,14 @@ final class UnitPlateOverlay: SKScene {
     /// `perform`, moved and retired by `BattleSceneController.layoutFloats`.
     private(set) var floats: [FloatingLabel] = []
 
+    /// The view's unsafe edges, in the overlay's points (`BattleStageView`
+    /// reports them from the main thread). Render thread only.
+    private(set) var safeArea: UIEdgeInsets = .zero
+
+    func setSafeArea(_ insets: UIEdgeInsets) {
+        perform { [weak self] in self?.safeArea = insets }
+    }
+
     override init(size: CGSize) {
         super.init(size: size)
         backgroundColor = .clear
@@ -159,9 +206,9 @@ final class UnitPlateOverlay: SKScene {
     func plate(for id: UUID) -> UnitPlate? { plates[id] }
 
     @discardableResult
-    func addPlate(for id: UUID, elementHex: String) -> UnitPlate {
+    func addPlate(for id: UUID, elementHex: String, wearsMarker: Bool = false) -> UnitPlate {
         if let old = plates[id] { perform { old.removeFromParent() } }
-        let plate = UnitPlate(elementHex: elementHex)
+        let plate = UnitPlate(elementHex: elementHex, wearsMarker: wearsMarker)
         plate.host = self
         plates[id] = plate
         perform { [weak self] in self?.plateLayer.addChild(plate) }
@@ -170,8 +217,11 @@ final class UnitPlateOverlay: SKScene {
 
     /// A word or a number off a unit, over every plate. The picture is drawn
     /// by the caller; the node is made and placed on the render thread.
-    func addFloat(image: UIImage, over unit: UnitNode, lift: Float, lead: CGFloat, pop: Bool, scatter: CGFloat, rise: CGFloat) {
-        let anchor = unit.convertPosition(SCNVector3(0, lift, 0), to: nil)
+    /// `side` is metres across the unit (a boss's words stand beside its
+    /// head) and `align` −1 puts the label's trailing edge on that point.
+    func addFloat(image: UIImage, over unit: UnitNode, lift: Float, side: Float = 0, align: CGFloat = 0,
+                  pop: Bool, scatter: CGFloat, rise: CGFloat) {
+        let anchor = unit.convertPosition(SCNVector3(side, lift, 0), to: nil)
         let born = CACurrentMediaTime()
         perform { [weak self] in
             guard let self else { return }
@@ -179,8 +229,8 @@ final class UnitPlateOverlay: SKScene {
             sprite.size = image.size
             sprite.alpha = 0
             let label = FloatingLabel(
-                node: sprite, unit: unit, lift: lift, fallback: anchor,
-                born: born, pop: pop, scatter: scatter, lead: lead, rise: rise
+                node: sprite, unit: unit, lift: lift, side: side, align: align, fallback: anchor,
+                born: born, pop: pop, scatter: scatter, rise: rise
             )
             self.floatLayer.addChild(sprite)
             self.floats.append(label)
@@ -246,25 +296,46 @@ final class FloatingLabel {
     /// caster's leap — and the point it was raised from once it is gone.
     weak var unit: UnitNode?
     let lift: Float
+    /// Metres across the unit: a boss's words stand beside its head.
+    let side: Float
+    /// −1 sets the label's trailing edge on its anchor; 0 centres it.
+    let align: CGFloat
     let fallback: SCNVector3
     let born: TimeInterval
     let pop: Bool
     /// Points sideways off the anchor, so a multi-hit reads as a burst.
     let scatter: CGFloat
-    /// Points above the anchor it starts at, and how far it rises from there.
-    let lead: CGFloat
+    /// How far it rises, in points, before anything in its way stops it.
     let rise: CGFloat
 
-    init(node: SKSpriteNode, unit: UnitNode?, lift: Float, fallback: SCNVector3,
-         born: TimeInterval, pop: Bool, scatter: CGFloat, lead: CGFloat, rise: CGFloat) {
+    // The render thread's memory of it, frame to frame
+    // (`BattleSceneController.layoutFloats`).
+    /// 0…1: faded out while its anchor is off the frame, back when it returns.
+    var visibility: CGFloat = 1
+    /// Whether it has been placed on the frame at least once.
+    var placed = false
+    /// Whether a layout pass has seen it at all, on the frame or off it: a
+    /// float on the frame at its FIRST pass was born there and pops; one
+    /// first seen off it fades in when its unit arrives. Its age could not
+    /// say which — a float's first pass comes a frame after it is made, and
+    /// a slow frame (the simulator's, an ultimate's) outlasted any limit.
+    var laidOut = false
+    /// Points it is pushed up by the floats newer than it on the same unit
+    /// and by its unit's plate, eased so a push slides rather than jumps.
+    var push: CGFloat = 0
+    var pushed = false
+
+    init(node: SKSpriteNode, unit: UnitNode?, lift: Float, side: Float, align: CGFloat, fallback: SCNVector3,
+         born: TimeInterval, pop: Bool, scatter: CGFloat, rise: CGFloat) {
         self.node = node
         self.unit = unit
         self.lift = lift
+        self.side = side
+        self.align = align
         self.fallback = fallback
         self.born = born
         self.pop = pop
         self.scatter = scatter
-        self.lead = lead
         self.rise = rise
     }
 
@@ -273,6 +344,7 @@ final class FloatingLabel {
     /// Where in the world it hangs this frame.
     var anchor: SCNVector3 {
         guard let unit else { return fallback }
+        guard side == 0 else { return unit.convertPosition(SCNVector3(side, lift, 0), to: nil) }
         let feet = unit.worldPosition
         return SCNVector3(feet.x, feet.y + lift, feet.z)
     }
@@ -317,10 +389,12 @@ final class FloatingLabel {
 /// under it that fills toward the unit's turn and turns gold when it is
 /// ready; the LEVEL BADGE on the track's left end, a dark disc ringed in
 /// the element's colour with the number in it, the genre's mark; the
-/// status tiles above the track; the matchup arrow above those; and a gold
-/// rim while the unit acts. Every size here is in points and the same in
-/// both rows, which is what makes health comparable across the field and
-/// the bars as crisp as the HUD.
+/// status tiles above the track; the matchup arrow beside the track's
+/// right end, level with the bars (it floated 30 points over the plate
+/// until run 221, under the top edge on the far row); and a gold rim while
+/// the unit acts. Every size here is in points and the same in both rows,
+/// which is what makes health comparable across the field and the bars as
+/// crisp as the HUD.
 final class UnitPlate: SKNode {
 
     static let barWidth: CGFloat = 66
@@ -333,8 +407,37 @@ final class UnitPlate: SKNode {
     /// The track's bottom edge stands this far above the projected top of
     /// the head.
     static let riseAboveHead: CGFloat = 12
-    static let tile: CGFloat = 12
-    static let badgeSize: CGFloat = 19
+    /// A status tile, and the step from one tile's centre to the next: the
+    /// tile and the turn chip hanging past its corner. 12 points, with the
+    /// turns at about 3, until run 221 (under the 11-point floor).
+    static let tile: CGFloat = 16
+    static let tileStep: CGFloat = 21
+    /// The level badge: 22 points round an 11-point Manrope number (19 round
+    /// a 9-point one until run 221).
+    static let badgeSize: CGFloat = 22
+    /// The matchup marker beside the track's right end.
+    static let markerSize: CGFloat = 17
+    /// Half the dark track: the bars, their padding and a point each side.
+    static var trackHalfWidth: CGFloat { (barWidth + 2 * trackPad + 2) / 2 }
+    /// The badge's centre, over the track's left end, the genre's way; it
+    /// covers the bar's first five points, as the smaller one did.
+    static var badgeCentreX: CGFloat { -(barWidth / 2 + trackPad + 4.5) }
+    /// The marker's centre, a point and a half past the track's right end.
+    static var markerCentreX: CGFloat { trackHalfWidth + 1.5 + markerSize / 2 }
+    /// How far the plate draws left of its centre and below it: the badge.
+    static var reachLeft: CGFloat { -badgeCentreX + badgeSize / 2 }
+    static var reachBelow: CGFloat { badgeSize / 2 }
+    /// The most it draws above its centre: a row of status tiles with their
+    /// chips.
+    static var tallestReach: CGFloat { trackHeight / 2 + 1.5 + tile + 6 }
+    /// How far it draws right of its centre: the track's end, or the
+    /// marker's for a plate that wears one — an opponent's — reserved
+    /// whether or not one is up, so a row of plates does not re-stagger
+    /// every time the turn changes hands.
+    let reachRight: CGFloat
+    /// How far it draws above its centre now: the badge, or the tiles while
+    /// any are up. Render thread.
+    private(set) var reachAbove: CGFloat = UnitPlate.badgeSize / 2
 
     private let hpFill: SKSpriteNode
     private let hpMask: SKSpriteNode
@@ -354,11 +457,14 @@ final class UnitPlate: SKNode {
     /// The overlay this plate is on, whose queue every change goes through.
     weak var host: UnitPlateOverlay?
 
-    init(elementHex: String) {
+    init(elementHex: String, wearsMarker: Bool = false) {
         let w = UnitPlate.barWidth
         let h = UnitPlate.hpHeight
         let a = UnitPlate.atbHeight
         self.elementHex = elementHex
+        reachRight = wearsMarker
+            ? UnitPlate.markerCentreX + UnitPlate.markerSize / 2
+            : UnitPlate.trackHalfWidth
         let full = PlateArt.fill("hp", width: w, height: h, radius: 2, top: "#9CF2B0", bottom: "#3DB868")
         let low = PlateArt.fill("hp_low", width: w, height: h, radius: 2, top: "#FFD27A", bottom: "#E0762E")
         let trail = PlateArt.fill("hp_trail", width: w, height: h, radius: 2, top: "#FFF6E6", bottom: "#E8CBA8")
@@ -375,7 +481,7 @@ final class UnitPlate: SKNode {
         trailFillNode.size = CGSize(width: w, height: h)
         let atbFillNode = SKSpriteNode(texture: atb)
         atbFillNode.size = CGSize(width: w, height: a)
-        let badgeNode = SKSpriteNode(color: .clear, size: CGSize(width: 18, height: 18))
+        let badgeNode = SKSpriteNode(color: .clear, size: CGSize(width: UnitPlate.markerSize, height: UnitPlate.markerSize))
         badgeNode.isHidden = true
         let levelNode = SKSpriteNode(color: .clear, size: CGSize(width: UnitPlate.badgeSize, height: UnitPlate.badgeSize))
         let track = UnitPlate.trackHeight
@@ -430,18 +536,20 @@ final class UnitPlate: SKNode {
         addChild(atbCrop)
 
         // The level badge overlaps the track's left end, the genre's way.
-        levelBadge.position = CGPoint(x: -w / 2 - UnitPlate.trackPad - 3, y: 0)
+        levelBadge.position = CGPoint(x: UnitPlate.badgeCentreX, y: 0)
         levelBadge.zPosition = 5
         addChild(levelBadge)
         applyLevel(1)
 
-        // The status tiles stand on the track; the matchup arrow above them.
+        // The status tiles stand on the track.
         statusRow.position = CGPoint(x: 0, y: track / 2 + 1.5 + UnitPlate.tile / 2)
         statusRow.zPosition = 4
         addChild(statusRow)
 
-        badge.position = CGPoint(x: 0, y: track / 2 + 1.5 + UnitPlate.tile + 3 + 9)
-        badge.zPosition = 4
+        // The matchup marker beside the track's right end, level with the
+        // bars, where it is read with the health it is about.
+        badge.position = CGPoint(x: UnitPlate.markerCentreX, y: 0)
+        badge.zPosition = 5
         addChild(badge)
     }
 
@@ -452,6 +560,10 @@ final class UnitPlate: SKNode {
 
     private func applyLevel(_ level: Int) {
         levelBadge.texture = PlateArt.levelBadge(level: level, hex: elementHex)
+        // A level of three figures is a pill, grown leftward off the track.
+        let width = PlateArt.levelBadgeWidth(for: level)
+        levelBadge.size = CGSize(width: width, height: UnitPlate.badgeSize)
+        levelBadge.position = CGPoint(x: UnitPlate.badgeCentreX - (width - UnitPlate.badgeSize) / 2, y: 0)
     }
 
     required init?(coder: NSCoder) { fatalError("UnitPlate is created in code") }
@@ -487,15 +599,16 @@ final class UnitPlate: SKNode {
     }
 
     /// The buffs and debuffs as a row of tiles over the health bar: one per
-    /// kind, the longest-lasting of each, six at most. The pictures are
-    /// drawn here, on the caller's thread; the row is rebuilt on the
+    /// kind, the longest-lasting of each, five at most (a sixth at 16
+    /// points would run the row half a plate past either end). The pictures
+    /// are drawn here, on the caller's thread; the row is rebuilt on the
     /// renderer's.
     func setStatuses(_ statuses: [ActiveStatus]) {
         var byKind: [StatusKind: Int] = [:]
         for status in statuses { byKind[status.kind] = max(byKind[status.kind] ?? 0, status.turnsRemaining) }
-        let shown = byKind.sorted { $0.key.rawValue < $1.key.rawValue }.prefix(6)
-        let images = shown.compactMap { StatusIconRenderer.image(kind: $0.key, turns: $0.value) }
-        later { [self] in applyStatuses(images) }
+        let shown = byKind.sorted { $0.key.rawValue < $1.key.rawValue }.prefix(5)
+        let tiles = shown.compactMap { StatusIconRenderer.plateTile(kind: $0.key, turns: $0.value) }
+        later { [self] in applyStatuses(tiles) }
     }
 
     /// The advantage arrow at the bar's right end on a player's turn.
@@ -578,16 +691,22 @@ final class UnitPlate: SKNode {
         }
     }
 
-    private func applyStatuses(_ images: [UIImage]) {
+    private func applyStatuses(_ tiles: [StatusIconRenderer.PlateTile]) {
         statusRow.removeAllChildren()
-        guard !images.isEmpty else { return }
-        let spacing = UnitPlate.tile + 1
-        let totalWidth = spacing * CGFloat(images.count - 1)
-        for (index, image) in images.enumerated() {
-            let tile = SKSpriteNode(texture: SKTexture(image: image))
-            tile.size = CGSize(width: UnitPlate.tile, height: UnitPlate.tile)
-            tile.position = CGPoint(x: -totalWidth / 2 + spacing * CGFloat(index), y: 0)
-            statusRow.addChild(tile)
+        reachAbove = tiles.isEmpty ? UnitPlate.badgeSize / 2 : UnitPlate.tallestReach
+        guard !tiles.isEmpty else { return }
+        let step = UnitPlate.tileStep
+        let totalWidth = step * CGFloat(tiles.count - 1)
+        for (index, tile) in tiles.enumerated() {
+            // The picture is the tile and its chip; the anchor is the tile's
+            // centre, so the row lines up on the tiles.
+            let sprite = SKSpriteNode(texture: SKTexture(image: tile.image))
+            sprite.size = tile.image.size
+            sprite.anchorPoint = tile.anchor
+            sprite.position = CGPoint(x: -totalWidth / 2 + step * CGFloat(index), y: 0)
+            // Each chip over its right-hand neighbour's corner.
+            sprite.zPosition = CGFloat(tiles.count - index)
+            statusRow.addChild(sprite)
         }
     }
 
@@ -597,7 +716,7 @@ final class UnitPlate: SKNode {
             return
         }
         badge.texture = SKTexture(image: image)
-        badge.size = CGSize(width: 18, height: 18)
+        badge.size = CGSize(width: UnitPlate.markerSize, height: UnitPlate.markerSize)
         badge.isHidden = false
     }
 
@@ -701,35 +820,45 @@ enum PlateArt {
         }
     }
 
+    /// The level badge's width: the disc, or for a level of three figures a
+    /// pill a little wider, rather than a smaller number.
+    static func levelBadgeWidth(for level: Int) -> CGFloat {
+        level >= 100 ? UnitPlate.badgeSize + 8 : UnitPlate.badgeSize
+    }
+
     /// The level badge on the track's left end: a dark disc, a ring in the
-    /// element's colour, the level in white with a dark edge.
+    /// element's colour, the level in white Manrope at the 11-point floor
+    /// with a dark edge. It was 9-point system heavy, 7.5 for three figures
+    /// — about 8 on the phone (run 221) — in a 19-point disc.
     static func levelBadge(level: Int, hex: String) -> SKTexture {
-        let size = UnitPlate.badgeSize
-        return texture("level_\(level)_\(hex)", size: CGSize(width: size, height: size)) { context, rect in
+        let size = CGSize(width: levelBadgeWidth(for: level), height: UnitPlate.badgeSize)
+        return texture("level_\(level)_\(hex)", size: size) { context, rect in
             let disc = rect.insetBy(dx: 1.2, dy: 1.2)
-            let path = UIBezierPath(ovalIn: disc).cgPath
+            let path = UIBezierPath(roundedRect: disc, cornerRadius: disc.height / 2).cgPath
             paintGradient(context, in: disc, path: path, top: color("#3A2F24"), bottom: color("#130E0A"))
-            context.addPath(UIBezierPath(ovalIn: rect.insetBy(dx: 0.6, dy: 0.6)).cgPath)
+            let outer = rect.insetBy(dx: 0.6, dy: 0.6)
+            context.addPath(UIBezierPath(roundedRect: outer, cornerRadius: outer.height / 2).cgPath)
             context.setStrokeColor(UIColor.black.withAlphaComponent(0.7).cgColor)
             context.setLineWidth(1)
             context.strokePath()
-            context.addPath(UIBezierPath(ovalIn: rect.insetBy(dx: 1.6, dy: 1.6)).cgPath)
+            let ring = rect.insetBy(dx: 1.7, dy: 1.7)
+            context.addPath(UIBezierPath(roundedRect: ring, cornerRadius: ring.height / 2).cgPath)
             context.setStrokeColor(color(hex).cgColor)
-            context.setLineWidth(1.7)
+            context.setLineWidth(1.8)
             context.strokePath()
-            let text = "\(level)" as NSString
-            let font = UIFont.systemFont(ofSize: level >= 100 ? 7.5 : 9, weight: .heavy)
-            let paragraph = NSMutableParagraphStyle()
-            paragraph.alignment = .center
+            let font = UIFont(name: Theme.numberFace, size: Theme.bodyFloor)
+                ?? UIFont.systemFont(ofSize: Theme.bodyFloor, weight: .heavy)
             let shadow = NSShadow()
             shadow.shadowColor = UIColor.black.withAlphaComponent(0.9)
             shadow.shadowOffset = CGSize(width: 0, height: 0.6)
             shadow.shadowBlurRadius = 0.8
-            let attributes: [NSAttributedString.Key: Any] = [
-                .font: font, .foregroundColor: UIColor.white, .paragraphStyle: paragraph, .shadow: shadow,
-            ]
-            let height = font.lineHeight
-            text.draw(in: CGRect(x: rect.minX, y: rect.midY - height / 2 - 0.3, width: rect.width, height: height), withAttributes: attributes)
+            let text = NSAttributedString(string: "\(level)", attributes: [
+                .font: font, .foregroundColor: UIColor.white, .shadow: shadow,
+            ])
+            // The figures' cap height centred in the disc.
+            let width = text.size().width
+            let baseline = rect.midY + font.capHeight / 2
+            text.draw(at: CGPoint(x: rect.midX - width / 2, y: baseline - font.ascender))
         }
     }
 

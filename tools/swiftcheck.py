@@ -913,6 +913,10 @@ def check_unknown_types(files, declared, errors):
         "ScrollViewReader","ToolbarItem","WindowGroup","Label","ViewBuilder","ViewModifier","Shape",
         "ViewThatFits",
         "ButtonStyle","Environment","Configuration","Content","Context","Self","Never",
+        # Fix round 4 (2026-09-23): More's switches (GameToggleStyle), the
+        # battle overlay's safe-area insets, the reveal's colour space.
+        "ToggleStyle","UIEdgeInsets","CGColorSpace","CFTimeInterval","ObjectIdentifier",
+        "EllipticalGradient",
         "SCNHitTestSearchMode","SCNMatrix4MakeTranslation","SCNVector3Zero","AnimationImportPolicy",
         # SCNSceneSource.LoadingOption: the importer's options dictionary,
         # typed since every parse goes through ModelLibrary.parseScene.

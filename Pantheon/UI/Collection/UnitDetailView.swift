@@ -126,6 +126,67 @@ private struct SheetPanelScroll<Content: View>: View {
     }
 }
 
+/// The fade at the trailing end of the sets row when its chips run past it.
+private let chipLineFade: CGFloat = 16
+
+/// The coordinate space a `ChipLine` measures its chips in.
+private let chipLineSpace = "chipLine"
+
+/// The sets row's chips on one line that scrolls sideways — and says so
+/// only when it has to: `SheetPanelScroll`, turned on its side. Chips that
+/// fit are drawn whole with no fade; chips that do not end in a fade at the
+/// line's trailing edge, over the one the edge cuts, until the last chip
+/// has been scrolled into view (run 221: five sets, three chips, and nothing
+/// to say the other two were there).
+private struct ChipLine<Content: View>: View {
+    let content: () -> Content
+    /// The chips' frame in the scroll's own space: its width against the
+    /// viewport's says whether they overflow, its trailing edge whether
+    /// there is more to the right.
+    @State private var contentFrame: CGRect = .zero
+    @State private var viewportWidth: CGFloat = 0
+
+    init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+
+    private var overflows: Bool { contentFrame.width > viewportWidth + 1 }
+    private var moreRight: Bool { overflows && contentFrame.maxX > viewportWidth + 2 }
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 3) {
+                content()
+            }
+            .background(
+                GeometryReader { proxy in
+                    let frame = proxy.frame(in: .named(chipLineSpace))
+                    Color.clear
+                        .onAppear { contentFrame = frame }
+                        .onChange(of: frame) { _, now in contentFrame = now }
+                }
+            )
+        }
+        .coordinateSpace(name: chipLineSpace)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        .background(
+            GeometryReader { proxy in
+                let width = proxy.size.width
+                Color.clear
+                    .onAppear { viewportWidth = width }
+                    .onChange(of: width) { _, now in viewportWidth = now }
+            }
+        )
+        .mask(
+            HStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [Color.black, moreRight ? Color.clear : Color.black], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: chipLineFade)
+            }
+        )
+    }
+}
+
 /// The three figures at the foot of the relic ring, and the line under them.
 ///
 /// A type rather than three loose values so the arithmetic — resolving the
@@ -206,7 +267,10 @@ struct UnitDetailView: View {
                 ) {
                     showLore = true
                 }
-                BarButton(title: "Auto-equip", systemImage: "wand.and.stars", tint: Theme.info) {
+                // Gold on the well, as the strip's other live words are: in
+                // teal it was the one odd colour on a gold-and-cream strip
+                // (runs 220–221).
+                BarButton(title: "Auto-equip", systemImage: "wand.and.stars", tint: Theme.gold) {
                     store.autoEquip(unitID)
                 }
                 // The genre's "remove all", free: the six come off in one tap
@@ -757,7 +821,12 @@ struct UnitDetailView: View {
     /// their opacity under the fade; and "Thunder 4/2" — two complete
     /// Thunder sets — read as a counting bug. The stone names the set (the
     /// chip's accessibility label says it), and more sets than the line
-    /// holds scroll sideways.
+    /// holds scroll sideways — and SAY so (`ChipLine`): Zeus wore five sets
+    /// and the line showed three chips and the book, with nothing to say
+    /// there were two more (runs 220–221). The chips are cut so a fourth
+    /// stands half in view, fading, at the line's end; a second line of
+    /// chips was the other way, and it would have ended the ring panel in
+    /// the ghost row again.
     private func setsRow(_ unit: ResolvedUnit) -> some View {
         let tally = Dictionary(grouping: unit.relics, by: { $0.set }).mapValues(\.count)
         // Complete sets first, then the nearest to complete, then by name,
@@ -778,14 +847,11 @@ struct UnitDetailView: View {
                     .fixedSize()
                 Spacer(minLength: 0)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 4) {
-                        ForEach(entries) { relicSet in
-                            setChip(relicSet, count: tally[relicSet, default: 0])
-                        }
+                ChipLine {
+                    ForEach(entries) { relicSet in
+                        setChip(relicSet, count: tally[relicSet, default: 0])
                     }
                 }
-                .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
             }
             Button {
                 Juice.haptic(.light)
@@ -804,7 +870,7 @@ struct UnitDetailView: View {
                 }
                 .foregroundStyle(Theme.gold)
                 .padding(.horizontal, entries.isEmpty ? 8 : 0)
-                .frame(minWidth: 26)
+                .frame(minWidth: 24)
                 .frame(height: 22)
                 .background(Capsule().fill(Theme.surface))
                 .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
@@ -815,22 +881,25 @@ struct UnitDetailView: View {
         .frame(height: 22)
     }
 
-    /// One set on the chip line: its painted stone and its count. "Nemesis
-    /// ×2" is 36 points at the floor beside a 14-point stone, so four stand
-    /// in the column's 188 with the book.
+    /// One set on the chip line: its painted stone and its count. A "1/4"
+    /// chip is 43 points (4, the 13-point stone, 3, the count's 19, 4), so
+    /// three stand whole in the 160 the book leaves and a fourth starts at
+    /// 139 — about half of it in view, under the line's fade (run 221; at
+    /// 48 a chip, the fourth started two points short of the edge and could
+    /// not be seen at all).
     private func setChip(_ relicSet: RelicSet, count: Int) -> some View {
         let completions = count / relicSet.piecesRequired
         let complete = completions > 0
         let label: String = complete ? "×\(completions)" : "\(count)/\(relicSet.piecesRequired)"
         return HStack(spacing: 3) {
-            RelicSetEmblem(set: relicSet, size: 14, tint: complete ? Theme.gold : Theme.textSecondary)
+            RelicSetEmblem(set: relicSet, size: 13, tint: complete ? Theme.gold : Theme.textSecondary)
             Text(label)
                 .font(Theme.numeric(11.5))
                 .foregroundStyle(complete ? Theme.gold : Theme.textSecondary)
                 .lineLimit(1)
                 .fixedSize()
         }
-        .padding(.horizontal, 6)
+        .padding(.horizontal, 4)
         .frame(height: 22)
         .background(Capsule().fill(complete ? Theme.surfaceHigh : Theme.surface))
         .overlay(Capsule().strokeBorder(complete ? Theme.gold.opacity(0.45) : Theme.stroke.opacity(0.6), lineWidth: 1))
@@ -1056,9 +1125,11 @@ struct UnitDetailView: View {
     /// label costs nothing on a wide phone, where it simply gets more room.
     ///
     /// Nothing shrinks since phase B (2026-09-22): every column was scaled
-    /// to 0.7–0.8, under the type floor. At the floor the widest figures are
-    /// "12345" (37 of the 42) and "+10234" (40 of the 40), and "Resistance"
-    /// is 58 of the 61 an iPhone 16's group leaves the label.
+    /// to 0.7–0.8, under the type floor. The figures are grouped since run
+    /// 221, so the combat group's columns are 46 and 47: at the floor
+    /// "12,345" at 13 is 44 points and "+10,234" 46. The percentages keep
+    /// 42 and 40 ("300%", "+100%"), which leaves "Resistance" the 58 of 61
+    /// it needs on an iPhone 16.
     private func statRow(
         _ label: String, _ base: Double, _ total: Double,
         percent: Bool = false, strong: Bool = false
@@ -1067,6 +1138,8 @@ struct UnitDetailView: View {
         let shown = abs(bonus) >= (percent ? 0.005 : 0.5)
         let sign = bonus > 0 ? "+" : "−"
         let bonusText: String = shown ? sign + Self.statText(abs(bonus), percent: percent) : ""
+        let totalWidth: CGFloat = percent ? 42 : 46
+        let bonusWidth: CGFloat = percent ? 40 : 47
         return HStack(spacing: 3) {
             Text(label)
                 .font(Theme.body(11))
@@ -1077,17 +1150,23 @@ struct UnitDetailView: View {
                 .font(strong ? Theme.numeric(13) : Theme.numeric(11.5))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
-                .frame(width: 42, alignment: .trailing)
+                .frame(width: totalWidth, alignment: .trailing)
             Text(bonusText)
                 .font(Theme.numeric(11.5))
                 .foregroundStyle(bonus > 0 ? Theme.success : Theme.danger)
                 .lineLimit(1)
-                .frame(width: 40, alignment: .trailing)
+                .frame(width: bonusWidth, alignment: .trailing)
         }
     }
 
+    /// A stat as every screen prints it: grouped ("5,270", "+2,573"), or a
+    /// whole percentage. It printed the bare figure — "HP 7301", "5270
+    /// +2573" beside "2,983" and "0 / 8,232" on the same plate (runs
+    /// 220–221) — because a `String` handed to `Text` is not grouped the way
+    /// an integer interpolated into one is. The collection's plates and the
+    /// relic picker read it too.
     static func statText(_ value: Double, percent: Bool) -> String {
-        percent ? "\(Int((value * 100).rounded()))%" : "\(Int(value.rounded()))"
+        percent ? "\(Int((value * 100).rounded()))%" : Int(value.rounded()).formatted()
     }
 
     /// The stat a skill's damage is multiplied by, so a max-health or defence

@@ -6,6 +6,8 @@
     python3 tools/item_icons.py --paint all
     python3 tools/item_icons.py --split currencies          # key, trim, ship item_<key>.png
     python3 tools/item_icons.py --split all
+    python3 tools/item_icons.py --split scrolls --sheet scrolls_2k --px 512 --only scroll_
+                                                            # the eight scrolls from the 2K sheet, glow ramped
     python3 tools/item_icons.py --preview icons.jpg         # a contact sheet of what shipped
 
 GEMINI IS PAUSED (CLAUDE.md): `--paint` is run only on the owner's word for
@@ -18,7 +20,9 @@ on a plain black ground, painted in one hand so the set agrees with itself
 cuts the cells, keys each icon off the black by a flood fill from the
 cell's border (a dark line inside the icon is kept), trims it to its
 bounds, pads it square and writes `Pantheon/Resources/Portraits/
-item_<key>.png` at 256 px with a real alpha channel. `ItemArt` (in
+item_<key>.png` at 256 px with a real alpha channel. A sheet in HALO_RAMP
+(the scrolls, whose glows fade into the black) also has the fade's dark
+skirt ramped out (`halo_alpha`), or it ships as a dark rim round the icon. `ItemArt` (in
 Components.swift) finds a painting by that name and every `ItemIcon` and
 `RewardTile` in the game shows it the moment it is in the bundle; without
 one an item draws as its glyph, so a sheet can ship one at a time.
@@ -108,6 +112,14 @@ SHEETS = {
     ]),
 }
 
+# The sheets whose icons carry a painted GLOW, keyed with the halo ramp
+# (`halo_alpha`): the glow fades into the black ground, the flood fill keeps
+# everything brighter than 34, and the fade's dark skirt shipped as a rim of
+# ground round every scroll — a dirty black outline on the charge's bright
+# disc and the summon screen's painting (run 221). (lo, hi) is the ramp on
+# the max channel: under lo the skirt is gone, over hi it is paint.
+HALO_RAMP = {"scrolls": (70, 110)}
+
 
 def prompt(cols, rows, items):
     numbered = "; ".join(f"{i + 1}) {words}" for i, (_, words) in enumerate(items))
@@ -168,7 +180,54 @@ def key(cell_rgb):
     return icon & near
 
 
-def ship_cell(cell, path, px=256, margin=0.08):
+def _disk(r):
+    y, x = np.ogrid[-r:r + 1, -r:r + 1]
+    return (x * x + y * y) <= r * r
+
+
+def halo_alpha(cell_rgb, lo=70, hi=110, seed=40, tol=4.0, edge=8.0, close=3, reach=160):
+    """The glow's dark skirt as a ramp to transparent (2026-09-23): 1 on the
+    icon's paint, 0 on the skirt's darkest, a ramp from `lo` to `hi` between.
+
+    The skirt is what is reached from the cell's border by CLIMBING the glow:
+    it starts on the ground (darker than `seed`, touching the border) and
+    grows one pixel at a time into a pixel under `hi` that is no darker than
+    the brightest skirt pixel beside it less `tol`, on smooth paint (a
+    gradient under `edge` per pixel), and outside the icon's silhouette (its
+    bright paint and every painted edge, closed over `close`-pixel gaps and
+    filled). So a dark detail INSIDE the icon is never reached: the black half
+    of the Light & Dark scroll sits behind the violet glow's crest (the climb
+    would have to go down to reach it), and a dark ribbon, the shadow inside a
+    rolled end or a vine inside its outline is inside the filled silhouette.
+
+    Brightness is the MAX CHANNEL, not luma: a glow painted on black scales
+    every channel together, so the max channel is the glow's own strength
+    whatever its hue, while luma calls saturated paint dark — the mystical
+    scroll's royal-blue ribbon is luma 67 and max 200, and a luma ramp made
+    it transparent (the first cut here)."""
+    v = cell_rgb.astype(np.float32).max(-1)
+    vs = ndimage.gaussian_filter(v, 1.0)
+    grad = np.hypot(ndimage.sobel(vs, 1), ndimage.sobel(vs, 0)) / 8.0
+    solid = ndimage.binary_fill_holes(ndimage.binary_closing((grad >= edge) | (vs >= hi), structure=_disk(close)))
+    lab, _ = ndimage.label(vs < seed)
+    border = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]])))
+    border.discard(0)
+    skirt = np.isin(lab, list(border)) & ~solid
+    climbable = (vs < hi) & (grad < edge) & ~solid
+    for _ in range(reach):
+        crest = ndimage.maximum_filter(np.where(skirt, vs, -1e9), size=3)
+        grow = ~skirt & climbable & (crest > -1e8) & (vs >= crest - tol)
+        if not grow.any():
+            break
+        skirt |= grow
+    ramp = np.clip((v - lo) / float(hi - lo), 0.0, 1.0)
+    return np.where(skirt, ramp, 1.0).astype(np.float32)
+
+
+def ship_cell(cell, path, px=256, margin=0.08, ramp=None):
+    """`ramp` is (lo, hi) for a sheet in HALO_RAMP: the glow's dark skirt
+    fades out (`halo_alpha`) instead of shipping as a rim of ground. The
+    framing is the key's either way, so an icon keeps its size in the UI."""
     rgb = np.asarray(cell.convert("RGB"))
     mask = key(rgb)
     if not mask.any():
@@ -180,7 +239,10 @@ def ship_cell(cell, path, px=256, margin=0.08):
     pad = int(side * margin)
     side += 2 * pad
     canvas = np.zeros((side, side, 4), dtype=np.float32)
-    alpha = ndimage.gaussian_filter(mask.astype(np.float32), 0.7)
+    if ramp:
+        alpha = ndimage.gaussian_filter(mask.astype(np.float32) * halo_alpha(rgb, *ramp), 0.7)
+    else:
+        alpha = ndimage.gaussian_filter(mask.astype(np.float32), 0.7)
     h, w = y1 - y0, x1 - x0
     oy, ox = pad + (side - 2 * pad - h) // 2, pad + (side - 2 * pad - w) // 2
     canvas[oy:oy + h, ox:ox + w, :3] = rgb[y0:y1, x0:x1] / 255.0
@@ -191,13 +253,18 @@ def ship_cell(cell, path, px=256, margin=0.08):
     return True
 
 
-def split(name, px=256, sheet_name=None):
+def split(name, px=256, sheet_name=None, ramp="sheet", only=None):
     """Ships every cell of `sheet_<name>.png` (or of `sheet_<sheet_name>.png`
     laid out as `name` — the scrolls' 2K repaint, `sheet_scrolls_2k.png`, is
     the scrolls sheet's own nine cells painted again as a `--ref` edit of it,
     2026-09-17) at `px` pixels. The scrolls ship at 512 because the summoning
-    circle draws one at a quarter of the ring; everything else at 256."""
+    circle draws one at a quarter of the ring; everything else at 256.
+    `ramp` is the sheet's own HALO_RAMP entry unless given ((lo, hi), or None
+    for the plain key); `only` ships just the keys starting with one of its
+    prefixes (`--only scroll_` leaves the sheet's relic cache as it is)."""
     cols, rows, items = SHEETS[name]
+    if ramp == "sheet":
+        ramp = HALO_RAMP.get(name)
     src = ART / f"sheet_{sheet_name or name}.png"
     if not src.exists():
         sys.exit(f"no {src}; paint it first")
@@ -206,9 +273,11 @@ def split(name, px=256, sheet_name=None):
     cw, ch = w / cols, h / rows
     OUT.mkdir(parents=True, exist_ok=True)
     for i, (item_key, _) in enumerate(items):
+        if only and not any(item_key.startswith(p) for p in only):
+            continue
         r, c = divmod(i, cols)
         cell = sheet.crop((int(c * cw), int(r * ch), int((c + 1) * cw), int((r + 1) * ch)))
-        ship_cell(cell, OUT / f"item_{item_key}.png", px=px)
+        ship_cell(cell, OUT / f"item_{item_key}.png", px=px, ramp=ramp)
 
 
 def preview(out):
@@ -242,7 +311,12 @@ def main():
     ap.add_argument("--preview", help="write a contact sheet of the shipped icons here")
     ap.add_argument("--px", type=int, default=256, help="the shipped size (the scrolls ship at 512)")
     ap.add_argument("--sheet", help="split this painted sheet instead (e.g. scrolls_2k for --split scrolls)")
+    ap.add_argument("--ramp", help="LO,HI: key the glow's dark skirt with this ramp (HALO_RAMP gives the scrolls 70,110)")
+    ap.add_argument("--no-ramp", action="store_true", help="the plain flood-fill key even for a sheet in HALO_RAMP")
+    ap.add_argument("--only", help="comma-separated key prefixes: ship just these cells (e.g. scroll_)")
     args = ap.parse_args()
+    ramp = None if args.no_ramp else (tuple(float(x) for x in args.ramp.split(",")) if args.ramp else "sheet")
+    only = [p for p in args.only.split(",") if p] if args.only else None
     if args.list:
         for name, (cols, rows, items) in SHEETS.items():
             print(f"{name} ({cols}x{rows}): " + ", ".join(k for k, _ in items))
@@ -253,7 +327,7 @@ def main():
     if args.split:
         for name in (SHEETS if args.split == "all" else [args.split]):
             print(name)
-            split(name, px=args.px, sheet_name=args.sheet)
+            split(name, px=args.px, sheet_name=args.sheet, ramp=ramp, only=only)
     if args.preview:
         preview(args.preview)
 

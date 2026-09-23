@@ -140,6 +140,7 @@ struct CampaignView: View {
                         previewPlayer: previewPlayer,
                         difficulty: $difficulty,
                         openingScroll: openingScroll,
+                        cardUp: popupStage != nil || sweepReceipt != nil,
                         onSelect: { stage in
                             Juice.haptic(.light)
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.85)) { popupStage = stage }
@@ -418,26 +419,34 @@ private struct StageDrop: Identifiable {
 /// One drop as a tile: the painted socket with the chance on its corner,
 /// the grade's stars INSIDE the socket's top edge (under it they pushed the
 /// relic's name 16 points below its neighbours', run 216), the second set's
-/// stone hung on the socket's left side, and the name under it in two lines
-/// at most.
+/// stone small in the socket's top-left corner, and the name under it in two
+/// lines at most.
 private struct StageDropTile: View {
     let drop: StageDrop
     let tile: CGFloat
     let titled: Bool
     let footprint: CGFloat
 
-    /// The second stone: 0.40 of the tile, hung 0.10 of it off the socket's
-    /// left edge with its centre at 0.38 of the height — so it spans
-    /// −0.10…0.30 across and 0.18…0.58 down. The chance on the bottom-right
-    /// corner starts no higher than 0.59 ("Sure", "8.0%" at the numeric
-    /// floor) and the star row ends by 0.16, so the stone meets neither. It
-    /// stood on the bottom-left corner until run 217 and covered the "S" of
-    /// "Sure" on the boss's popup and the Labyrinth's briefing. The 0.10
-    /// overhang is 4.4 points of a 44-point tile: inside the popup's name
-    /// margin and the briefing's glass padding.
-    private static let secondScale: CGFloat = 0.40
-    private static let secondOverhang: CGFloat = 0.10
-    private static let secondLift: CGFloat = 0.12
+    /// The second stone: 0.30 of the tile, INSIDE the socket, 3 points in
+    /// from its left edge and a point under the star row (`secondTop`) — a
+    /// badge pinned on the first stone's upper-left corner, the same place on
+    /// every grade. In the corner itself it touched a 3★ row's first star
+    /// and sat under a 4★ one (drawn at 6× off the shipped stones). The
+    /// chance sits on the bottom-right corner, so the stone never meets it.
+    /// It hung 0.10 of the tile off the socket's left rim until run 221,
+    /// onto the panel and over the Eye stone's left edge; before run 217 it
+    /// stood on the bottom-left corner and covered the "S" of "Sure".
+    private static let secondScale: CGFloat = 0.30
+    private static let secondInset: CGFloat = 3
+
+    /// How far down the second stone stands: a point under the star row —
+    /// 2 points down, a line of stars about 1.25 of their point size tall —
+    /// or the corner's inset on a tile with no stars.
+    static func secondTop(stars: Int?, tile: CGFloat) -> CGFloat {
+        guard let stars, stars > 0 else { return secondInset }
+        let size = RewardTile.starSize(stars: stars, width: tile * 0.8)
+        return 2 + size * 1.25 + 1
+    }
 
     var body: some View {
         let spoken = "\(drop.title), \(drop.amount ?? "")"
@@ -445,13 +454,15 @@ private struct StageDropTile: View {
         VStack(spacing: 3) {
             RewardTile(key: drop.key, amount: drop.amount, size: tile, showsTitle: false,
                        imageName: drop.imageName, onGlass: true)
-                .overlay(alignment: .leading) {
+                .overlay(alignment: .topLeading) {
                     if let secondName = drop.secondImage, BundleArt.exists(secondName) {
                         BundleImage(name: secondName, renderedAt: second)
                             .aspectRatio(contentMode: .fit)
                             .frame(width: second, height: second)
-                            .shadow(color: .black.opacity(0.8), radius: 2, y: 1)
-                            .offset(x: -tile * Self.secondOverhang, y: -tile * Self.secondLift)
+                            .shadow(color: .black.opacity(0.8), radius: 1.5, y: 1)
+                            .padding(.leading, Self.secondInset)
+                            .padding(.top, Self.secondTop(stars: drop.stars, tile: tile))
+                            .allowsHitTesting(false)
                     }
                 }
                 .overlay(alignment: .top) {
@@ -607,8 +618,8 @@ struct StageBriefingView: View {
     private static let sweepWidth: CGFloat = 140
     private static let beginWidth: CGFloat = 212
     /// The deck's line of explanation is shown only where it has at least
-    /// this much room — three lines of the longest refusal at 11 points.
-    /// 149 on the CI phone; an SE (82) goes without it.
+    /// this much room — two lines of the longer hint at 11 points inside
+    /// its plate. About 141 on the CI phone; an SE (82) goes without it.
     private static let hintMinimum: CGFloat = 140
 
     private var team: [ResolvedUnit] { store.team(store.player.campaignTeam) }
@@ -942,8 +953,10 @@ struct StageBriefingView: View {
     /// Begin, on the painting's dark foot with no tray: the runs are a
     /// dark well like every other choice of its kind, and the cost of the
     /// runs is on Begin ("BEGIN ×20 · 80"), where it was a sentence. The
-    /// line between them says why something is dark — no energy, the sweep
-    /// not earned — where there is room for it.
+    /// line between them says why Begin is dark, or what the runs do, on a
+    /// plate of glass where there is room for it; why the SWEEP is dark is
+    /// on the sweep itself ("0/3 ★" under a lock). That reason was loose
+    /// words on the painting with no plate (runs 220 and 221).
     private func launchDeck(width: CGFloat) -> some View {
         let hintWidth = width - Self.runsWidth - Self.sweepWidth - Self.beginWidth - 40 - 8
         let hint = deckHint
@@ -953,12 +966,17 @@ struct StageBriefingView: View {
                 selection: $runs
             )
             if hintWidth >= Self.hintMinimum, let hint {
+                // Two lines at 11 in the plate's 125 points (each hint wraps
+                // to two, measured in Manrope): 42 points of plate in the
+                // 46-point deck.
                 Text(hint.text)
                     .font(Theme.body(11))
                     .foregroundStyle(hint.tint)
-                    .shadow(color: .black.opacity(0.7), radius: 1, y: 1)
                     .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(GlassPlate(radius: Theme.tightCorner, opacity: 0.78))
                     .frame(width: hintWidth, alignment: .leading)
             }
             Spacer(minLength: 0)
@@ -977,12 +995,11 @@ struct StageBriefingView: View {
         .frame(height: Self.deckHeight)
     }
 
-    /// The deck's one line: what stops Begin, what the runs do, or why the
-    /// sweep is dark.
+    /// The deck's one line: what stops Begin, or what the runs do. Why the
+    /// sweep is dark is the sweep's own to say.
     private var deckHint: (text: String, tint: Color)? {
         if !hasEnergy { return ("Not enough energy: a run costs \(cost).", Theme.onGlassDanger) }
         if runs > 1 { return ("On auto until done, a loss, or no energy.", Theme.onGlassDim) }
-        if let refusal = SweepService.refusal(stage, player: store.player) { return (refusal, Theme.onGlassDim) }
         return nil
     }
 }

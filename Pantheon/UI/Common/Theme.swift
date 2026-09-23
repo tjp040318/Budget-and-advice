@@ -601,6 +601,29 @@ enum Chrome {
         guard let ui = image(name) else { return nil }
         return Image(uiImage: ui).resizable(capInsets: insets, resizingMode: .stretch)
     }
+
+    /// The panels' marble without the panel: `ui_panel`'s flat centre,
+    /// inside its gold line and between its corner scrolls (x 14–498 and
+    /// y 100–412 of the 512 px painting, where the scrolls reach 95 px in),
+    /// for a marble surface that is not a panel. The tab bar's band was a
+    /// flat cream gradient beside the painted panels on every tab screen
+    /// (run 221); it is this, cover-cropped. Nil without the kit.
+    static let panelMarble: UIImage? = panelCrop(CGRect(x: 14, y: 100, width: 484, height: 312))
+
+    /// The panels' gold line alone: `ui_panel`'s top edge between its corner
+    /// scrolls, 13 px of dark bronze, gold and light, for an edge that is
+    /// not a panel's (the tab bar's top). Stretched along its length only;
+    /// its height is its own, 3.1 points at `shrink`.
+    static let panelRule: UIImage? = panelCrop(CGRect(x: 100, y: 0, width: 312, height: 13))
+
+    /// A rectangle of `ui_panel`, in its pixels, at the kit's own scale.
+    private static func panelCrop(_ rect: CGRect) -> UIImage? {
+        guard !awaitingCreamRepaint.contains("ui_panel"),
+              let source = image("ui_panel"),
+              let pixels = source.cgImage,
+              let crop = pixels.cropping(to: rect) else { return nil }
+        return UIImage(cgImage: crop, scale: source.scale, orientation: .up)
+    }
 }
 
 // MARK: - Rarity
@@ -764,8 +787,14 @@ struct Chip: View {
     }
 }
 
-/// A moving band of light across a surface. Used only on the rarest frames and
+/// A glint of light crossing a surface. Used only on the rarest frames and
 /// on the summon reveal, where the whole point is spectacle.
+///
+/// A GLINT, not a stripe (run 220, on the phone): the band was a third of
+/// the card's diagonal wide at 0.42 white, and it photographed as a white
+/// bar laid across every 5★ card. It is a sixth of it now, soft at both
+/// edges, 0.3 at its core, the height of the whole diagonal so it crosses
+/// the card corner to corner; the timing is the old one.
 struct Sheen: View {
     var cornerRadius: CGFloat = Theme.tightCorner
     @State private var phase: CGFloat = -1
@@ -774,12 +803,19 @@ struct Sheen: View {
         GeometryReader { geometry in
             let span = geometry.size.width + geometry.size.height
             LinearGradient(
-                colors: [.clear, .white.opacity(0.42), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
+                stops: [
+                    .init(color: .clear, location: 0),
+                    .init(color: .white.opacity(0.08), location: 0.3),
+                    .init(color: .white.opacity(0.3), location: 0.5),
+                    .init(color: .white.opacity(0.08), location: 0.7),
+                    .init(color: .clear, location: 1),
+                ],
+                startPoint: .leading,
+                endPoint: .trailing
             )
-            .frame(width: span * 0.35)
+            .frame(width: span * 0.16, height: span)
             .rotationEffect(.degrees(28))
+            .position(x: geometry.size.width / 2, y: geometry.size.height / 2)
             .offset(x: phase * span)
             .blendMode(.plusLighter)
             .allowsHitTesting(false)

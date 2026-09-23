@@ -401,25 +401,25 @@ struct MissionsView: View {
 
     // MARK: - The list
 
+    /// The rows, resting on whole ones (`RestingList`): run 221 ended the
+    /// Daily list on a ten-point sliver of its sixth row under the fade, and
+    /// the Counsel on five. A row that would show as a sliver is not drawn,
+    /// and the chevron at the foot says the list goes on.
     private var list: some View {
-        ScrollView(showsIndicators: false) {
+        let rows = entries
+        return RestingList {
             LazyVStack(spacing: 5) {
-                ForEach(entries) { entry in
+                ForEach(rows) { entry in
                     row(entry)
+                        .restingRow()
                 }
             }
-            // Room for a lit row's glow, which the scroll view would clip.
+            // Room for a lit row's glow, which the scroll view would clip,
+            // and for the last row to scroll clear of the fade.
             .padding(.horizontal, 3)
             .padding(.top, 3)
-            .padding(.bottom, 16)
+            .padding(.bottom, RowRest.footFade)
         }
-        .mask(
-            VStack(spacing: 0) {
-                Color.black
-                LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
-                    .frame(height: 16)
-            }
-        )
     }
 
     private var entries: [Entry] {
@@ -525,14 +525,21 @@ struct MissionsView: View {
     /// in a bronze socket (gold-rimmed and glowing when there is something to
     /// take; its glyph where no painting fits), the title at 14 on up to two
     /// lines — the longest counsel is "Claim a tribute chest on a chapter's
-    /// road", 268 points against the row's 248 — the bar, the painted reward
-    /// and the claim slot: the gold claim when ready, the count ("0 / 3")
-    /// while not. Rows are 54 at least, so about six show beside the cards.
+    /// road", 268 points against the row's 248 — the bar with its count at
+    /// its end ("0 / 3"), the painted reward, and the gold claim once there
+    /// is something to take (DONE once taken). Rows are 54 at least, so
+    /// about six show beside the cards.
+    ///
+    /// The count reads off the bar's own end. It stood in the claim slot at
+    /// the row's far end until run 221, 180 points from the bar with the
+    /// reward between them, and a row not yet earned carried an empty slot
+    /// ninety points wide; the slot is only there now when it holds a plate,
+    /// and the genre puts a button on a finished mission only.
     private func row(_ entry: Entry) -> some View {
         let lit = entry.complete && !entry.claimed
         let status = claimStatus(claimed: entry.claimed, ready: entry.complete)
         let fraction = "\(min(entry.progress, entry.goal)) / \(entry.goal)"
-        let art = Self.rowArt(for: entry.icon)
+        let art = Self.rowArt(for: entry.icon, id: entry.id)
         return HStack(spacing: 12) {
             if entry.claimed {
                 MedallionIcon(key: "", glyph: "checkmark", size: 38)
@@ -545,20 +552,29 @@ struct MissionsView: View {
                     .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
-                StatBar(
-                    value: Double(entry.progress),
-                    maximum: Double(max(1, entry.goal)),
-                    tint: entry.complete ? Theme.success : Theme.gold,
-                    height: 7
-                )
-                .frame(maxWidth: 190)
+                HStack(spacing: 8) {
+                    StatBar(
+                        value: Double(entry.progress),
+                        maximum: Double(max(1, entry.goal)),
+                        tint: entry.complete ? Theme.success : Theme.gold,
+                        height: 7
+                    )
+                    .frame(maxWidth: 190)
+                    Text(fraction)
+                        .font(Theme.numeric(12))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
             }
             Spacer(minLength: 8)
             rewardTiles(entry.grant)
-            claimSlot(status: status, waitingNote: fraction) {
-                claim(entry)
+            if status != .waiting {
+                claimSlot(status: status, waitingNote: fraction) {
+                    claim(entry)
+                }
+                .frame(width: 92)
             }
-            .frame(width: 92)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 5)
@@ -591,7 +607,12 @@ struct MissionsView: View {
     /// A glyph with neither — the Labyrinth, the Tower, the codex, fusion —
     /// keeps its glyph, drawn legibly on the dark socket. Run 216's list was
     /// a column of flat SF glyphs, "a settings screen".
-    private static func rowArt(for glyph: String) -> (door: String, item: String?) {
+    ///
+    /// `hexagon.fill` is two things, told apart by the row's id: the
+    /// Counsel's relic power-ups ("Feed a relic to +3", +9, +15), which were
+    /// the one flat gold hexagon among the paintings (run 221) and wear the
+    /// relic chest now, and fusion, which has no painting and keeps it.
+    private static func rowArt(for glyph: String, id: String) -> (door: String, item: String?) {
         switch glyph {
         case "map.fill", "flag.fill", "checkmark.seal.fill", "bolt.shield.fill", "flame.circle.fill", "shippingbox.fill":
             return ("campaign", nil)
@@ -607,6 +628,8 @@ struct MissionsView: View {
             return ("", "energy")
         case "shield.lefthalf.filled", "circle.hexagongrid.fill", "diamond.fill":
             return ("", "relic_cache")
+        case "hexagon.fill":
+            return ("", id.contains("relic") ? "relic_cache" : nil)
         case "flame.fill":
             return ("", "essence_magic_mid")
         case "crown.fill":
@@ -710,5 +733,115 @@ struct GiftDayPip: View {
         .frame(width: size, height: size)
         .shadow(color: isToday && !taken ? Theme.gold.opacity(0.45) : Color.clear, radius: 4)
         .accessibilityHidden(true)
+    }
+}
+
+// MARK: - A list that rests on whole rows
+
+/// `RestingList`'s scroll space, for its content's frame.
+private let restingListSpace = "restingList"
+
+/// A cream list's scroll that comes to rest on whole rows (2026-09-23): run
+/// 221's Missions board ended on a sliver of its next row under the foot's
+/// fade, and the Lessons grid on the top half of a section's name. Each row
+/// that wears `restingRow()` is drawn only while enough of it is in view, so
+/// a sliver at either edge is not drawn at all; the foot still fades, so a
+/// row scrolling out goes softly; and while anything is below the fold a
+/// small chevron stands at the foot to say so — the unit sheet's and the
+/// settings board's cue (`SheetPanelScroll`, `FadingBoard`), because a list
+/// resting on whole rows no longer shows that it goes on.
+///
+/// The content brings its own padding, and under its last row at least
+/// `RowRest.footFade`, so that row scrolls clear of the fade.
+struct RestingList<Content: View>: View {
+    let content: () -> Content
+
+    /// The content's frame in the scroll's own space and the scroll's
+    /// height: whether there is more below.
+    @State private var contentFrame: CGRect = .zero
+    @State private var viewportHeight: CGFloat = 0
+
+    init(@ViewBuilder content: @escaping () -> Content) {
+        self.content = content
+    }
+
+    private var moreBelow: Bool {
+        contentFrame.height > viewportHeight + 1 && contentFrame.maxY > viewportHeight + 2
+    }
+
+    var body: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            content()
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .background(
+                    GeometryReader { proxy in
+                        let frame = proxy.frame(in: .named(restingListSpace))
+                        Color.clear
+                            .onAppear { contentFrame = frame }
+                            .onChange(of: frame) { _, now in contentFrame = now }
+                    }
+                )
+        }
+        .coordinateSpace(name: restingListSpace)
+        .background(
+            GeometryReader { proxy in
+                let height = proxy.size.height
+                Color.clear
+                    .onAppear { viewportHeight = height }
+                    .onChange(of: height) { _, now in viewportHeight = now }
+            }
+        )
+        .mask(
+            VStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [Color.black, Color.black.opacity(0)], startPoint: .top, endPoint: .bottom)
+                    .frame(height: RowRest.footFade)
+            }
+        )
+        .overlay(alignment: .bottom) {
+            if moreBelow {
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(Theme.goldDim)
+                    .frame(width: 30, height: 12)
+                    .background(Capsule().fill(Theme.surfaceHigh.opacity(0.92)))
+                    .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 0.8))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
+            }
+        }
+    }
+}
+
+/// The arithmetic of `restingRow()`, outside any view so the visual effect's
+/// closure, which runs off the main actor, can call it.
+enum RowRest {
+    /// A resting list's foot fade, and the least padding under its last row.
+    static let footFade: CGFloat = 16
+
+    /// A row's opacity from how much of it is inside its scroll: none while
+    /// `goneBelow` of its height or less shows, whole from `wholeFrom`, and
+    /// a straight ramp between. A row with no scroll above it is whole.
+    static func opacity(frame: CGRect, viewport: CGFloat?, goneBelow: CGFloat, wholeFrom: CGFloat) -> Double {
+        guard let viewport, viewport > 0, frame.height > 0, wholeFrom > goneBelow else { return 1 }
+        let shown = (min(frame.maxY, viewport) - max(frame.minY, 0)) / frame.height
+        return Double(min(1, max(0, (shown - goneBelow) / (wholeFrom - goneBelow))))
+    }
+}
+
+extension View {
+    /// A row of a `RestingList`: not drawn while a third of it or less is in
+    /// view at the scroll's top or foot, whole from three quarters in. A
+    /// section's name passes a higher `goneBelow`, so it is never shown cut
+    /// through its letters.
+    func restingRow(goneBelow: CGFloat = 0.35, wholeFrom: CGFloat = 0.75) -> some View {
+        visualEffect { content, place in
+            content.opacity(RowRest.opacity(
+                frame: place.frame(in: .scrollView),
+                viewport: place.bounds(of: .scrollView)?.height,
+                goneBelow: goneBelow,
+                wholeFrom: wholeFrom
+            ))
+        }
     }
 }

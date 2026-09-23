@@ -353,7 +353,10 @@ final class BattleSceneController: NSObject {
         // asks for: a pale painting is pulled down up to half a stop, a
         // night lifted a quarter (`PaintingPalette.exposureCompensation`),
         // so each set is lit to MATCH its backdrop rather than on top of it.
-        camera.exposureOffset = grade.exposure + palette.exposureCompensation
+        // A set of pale marble takes no more than a tenth of a stop of that
+        // lift (`Grade.maxLift`): the Forum's night painting lifted its
+        // marble to a sunlit cream in the skill zoom (run 221).
+        camera.exposureOffset = grade.exposure + min(grade.maxLift, palette.exposureCompensation)
         camera.vignettingIntensity = grade.vignette
         camera.vignettingPower = 1.2
         camera.screenSpaceAmbientOcclusionIntensity = 0.6
@@ -427,7 +430,10 @@ final class BattleSceneController: NSObject {
             if !combatant.isBoss {
                 // The unit's bars, on the overlay: a boss keeps the HUD's
                 // wide bar and wears no plate.
-                let plate = plates.addPlate(for: combatant.id, elementHex: combatant.element.accentHex)
+                // An opponent's plate keeps room at its right end for the
+                // matchup marker a player's turn puts there.
+                let plate = plates.addPlate(for: combatant.id, elementHex: combatant.element.accentHex,
+                                            wearsMarker: combatant.side == .opponent)
                 node.plate = plate
                 plate.setLevel(combatant.level)
                 plate.setHealth(combatant.healthFraction, animated: false)
@@ -454,7 +460,14 @@ final class BattleSceneController: NSObject {
                 // three and a half metres wide with margin and nothing else,
                 // and the light is gone by 14 m — before the player's row,
                 // which is behind it anyway.
-                spot.intensity = 2_400
+                // Full for a dark hide, less for pale paint (run 221): the
+                // sandstone Colossus under all 2,400 was paper white across
+                // the chest and arms, 79% of its worst patch clipped, so the
+                // spot is scaled by what the paint gives back
+                // (`UnitNode.bossLightScale`: the Colossus about 1,390, the
+                // serpent, the Hydra and the Jötunn the whole 2,400).
+                spot.intensity = 2_400 * node.bossLightScale
+                print("[Boss] \(combatant.model.assetName): paint \(node.paintAlbedo.map { String(format: "%.3f", $0) } ?? "unread") linear, warm spot \(Int(spot.intensity.rounded()))")
                 spot.spotInnerAngle = 22
                 spot.spotOuterAngle = 46
                 spot.attenuationStartDistance = 5
@@ -1146,23 +1159,25 @@ final class BattleSceneController: NSObject {
         // plate — up a plate's height over its neighbour, or a little down
         // under a neighbour that was itself lifted — which staggers a crowded
         // row, the genre's answer. The box is the level badge's left edge to
-        // the track's right end and the badge's height; a badge grazing the
-        // rounded end of the next track (under 3 points) is left alone, or
-        // every row of five abreast would zigzag. Nothing is lifted past the
-        // top of the frame, and the move is eased, so a dash past a
-        // neighbour slides its plate rather than popping it.
-        let reach = UnitPlate.barWidth + 2 * UnitPlate.trackPad + 3 + UnitPlate.badgeSize / 2 - 3
+        // the track's right end — or, for an opponent's, the matchup marker
+        // beside it (`UnitPlate.reachRight`) — and the badge's height; a
+        // badge grazing the rounded end of the next track (under 3 points)
+        // is left alone, or every row of five abreast would zigzag. Nothing
+        // is lifted past the top of the frame, and the move is eased, so a
+        // dash past a neighbour slides its plate rather than popping it.
         let clear = UnitPlate.badgeSize + 3
         let deepestDrop: CGFloat = 10
-        let headroom = UnitPlate.badgeSize / 2 + UnitPlate.tile + 4
-        var placed: [CGPoint] = []
+        let headroom = UnitPlate.tallestReach + 4
+        var placed: [(x: CGFloat, y: CGFloat, left: CGFloat, right: CGFloat)] = []
         for entry in standing.sorted(by: { $0.point.x < $1.point.x }) {
             let key = entry.id
             var lift: CGFloat = 0
             if entry.blocks {
                 let x = entry.point.x
                 let baseY = entry.point.y
-                let beside = placed.filter { abs(x - $0.x) < reach }
+                let left = x - UnitPlate.reachLeft
+                let right = x + entry.plate.reachRight
+                let beside = placed.filter { min(right, $0.right) - max(left, $0.left) > 3 }
                 let isClear: (CGFloat) -> Bool = { y in
                     !beside.contains { abs(y - $0.y) < clear - 3 }
                 }
@@ -1174,14 +1189,18 @@ final class BattleSceneController: NSObject {
                     }
                     // The nearest spot that clears everything placed and
                     // stays on the frame; failing that the nearest that
-                    // clears; failing that, where it stands.
+                    // clears and stays on it, however far down (a far row's
+                    // plates are near the top edge, and a lift there put a
+                    // plate off it); failing that the nearest that clears;
+                    // failing that, where it stands.
                     let clearing = candidates
                         .filter { isClear(baseY + $0) }
                         .sorted { abs($0) < abs($1) }
-                    let fitting = clearing.filter { $0 >= -deepestDrop && baseY + $0 + headroom < height }
-                    lift = fitting.first ?? clearing.first ?? 0
+                    let onFrame = clearing.filter { baseY + $0 + headroom < height }
+                    let fitting = onFrame.filter { $0 >= -deepestDrop }
+                    lift = fitting.first ?? onFrame.first ?? clearing.first ?? 0
                 }
-                placed.append(CGPoint(x: x, y: baseY + lift))
+                placed.append((x: x, y: baseY + lift, left: left, right: right))
             }
             let eased = (plateLifts[key] ?? lift) * 0.65 + lift * 0.35
             let shown = abs(eased - lift) < 0.25 ? lift : eased
@@ -1255,6 +1274,35 @@ final class BattleSceneController: NSObject {
     private static let floatFloor: CGFloat = 14
     private static let floatCap: CGFloat = 32
 
+    /// The HUD's corners as `BattleView` lays them out (read there, never
+    /// set from here): inside the safe area with 8 points of padding at the
+    /// sides and the bottom; the gear, the speed and auto three 36-point
+    /// squares 6 apart at the bottom left (`controls`, `squareControl`); the
+    /// skills three 60-point squares 10 apart at the bottom right
+    /// (`skillRow`, `SkillButton`), a picked one 6% larger, with Skip (36
+    /// tall) in their place while a turn plays. At the top, 4 points down:
+    /// the stage and wave chips (`hudChip`, 30 tall), their row about 250
+    /// points long, and over them while a boss stands its bar — its name on
+    /// a 30-point chip, 4 points, then the channels, 18.5 points with a
+    /// raid's barrier row 24 — so the bar ends 62 points down at most and
+    /// the chips under it 98. Change one there, change it here.
+    private static let hudPadding: CGFloat = 8
+    private static let hudControls = CGSize(width: 3 * 36 + 2 * 6, height: 36)
+    private static let hudSkills = CGSize(width: 3 * 60 + 2 * 10, height: 64)
+    private static let hudChipsLength: CGFloat = 250
+    /// How far a float keeps from the HUD.
+    private static let hudClearance: CGFloat = 6
+    /// How far a float keeps from its unit's plate and from the float under
+    /// it on the same unit. The pictures carry about six points of clear
+    /// edge of their own, so the letters stand eight from the plate and
+    /// about fifteen from each other.
+    private static let floatGap: CGFloat = 2
+    /// Seconds a float takes to fade out when its unit leaves the frame, and
+    /// back in when it returns.
+    private static let floatFade: CGFloat = 0.15
+    /// The render thread's clock for those fades.
+    private var lastFloatLayout: TimeInterval = 0
+
     /// A number or a word off a unit, on the plate overlay (run 220): a
     /// fixed size in points whatever the camera does, drawn OVER every plate
     /// — the 3D planes were under the overlay, so a plate covered "810!" —
@@ -1267,35 +1315,67 @@ final class BattleSceneController: NSObject {
         // moment, and only a number grows to the cap.
         let points = min(isNumber ? Self.floatCap : 20, max(Self.floatFloor, Self.floatBase * scale))
         guard let image = FloatingTextRenderer.image(text: text, color: color, size: points, carved: !isNumber) else { return }
-        // A boss's head is at the top edge of its own framing, under the
-        // HUD's bar, so its numbers come off its chest; everyone else's off
-        // the head and shoulders, rising into its plate.
-        let lift = node.spec.height * (node.isBoss ? 0.6 : 0.85)
-        // Damage numbers scatter a little sideways so a multi-hit reads as a
-        // burst rather than a stack; a word starts a line above where a
-        // number would, so a status landing with a hit is not on top of it.
+        let tall = node.spec.height
+        if node.isBoss {
+            // BESIDE THE HEAD (run 221). Off the chest, at 0.6 of its height,
+            // a boss's words sat on the brightest thing in the frame — the
+            // spot-lit chest — and "RESIST" all but vanished into the
+            // Colossus's chin. They stand to the head's left now, on the dark
+            // of the set behind it, their trailing edge a stride clear of the
+            // headdress, and a newer one lifts the older toward the bar.
+            plates.addFloat(image: image, over: node, lift: tall * 0.9, side: -tall * 0.16, align: -1,
+                            pop: pop, scatter: 0, rise: 24)
+            return
+        }
+        // OVER THE BODY, the genre's place (run 221): every float pops at the
+        // chest and rises toward the plate, and stops under it
+        // (`layoutFloats`). Off the head at 0.85 of the height, a 30-point
+        // rise carried "1520!" across its own plate's bar. A newer float
+        // lifts the unit's older ones by its own height, so a word and a
+        // number never share a line. Numbers scatter a little sideways so a
+        // multi-hit reads as a burst rather than a column.
         let scatter: CGFloat = pop ? CGFloat.random(in: -14...14) : 0
-        plates.addFloat(image: image, over: node, lift: lift, lead: isNumber ? 0 : 18,
-                        pop: pop, scatter: scatter, rise: 30)
+        plates.addFloat(image: image, over: node, lift: tall * 0.55, pop: pop, scatter: scatter, rise: 30)
     }
 
     /// Every floating word and number for the frame about to be drawn: over
-    /// the unit it came off, popped, risen and faded by its age, and held
-    /// INSIDE the frame — eight points in from every edge, under the boss's
-    /// bar when a boss stands, under the stage's chips at the top left.
-    /// Render thread, from `layoutPlates`, after the queue has drained.
+    /// the unit it came off, popped, risen and faded by its age, stacked on
+    /// its unit's other floats and stopped under its plate, and held INSIDE
+    /// the frame — inside the safe area, clear of the HUD at every corner.
+    /// Render thread, from `layoutPlates`, after the plates are placed.
     private func layoutFloats(in renderer: SCNSceneRenderer, bossStands: Bool) {
         let size = plates.size
         guard size.width > 2, size.height > 2 else { return }
         let now = CACurrentMediaTime()
-        let inset: CGFloat = 8
-        // The HUD's top, measured off run 220's frames: the boss's bar ends
-        // about 40 points down, the stage and wave chips 34 points down (78
-        // under a boss's bar) and about 300 points in from the left.
-        let barFoot: CGFloat = bossStands ? 40 : 0
-        let chipsFoot: CGFloat = bossStands ? 78 : 34
-        let chipsReach: CGFloat = 300
+        let step = CGFloat(min(0.1, max(0, now - lastFloatLayout)))
+        lastFloatLayout = now
+
+        // The frame a float is held inside. The view runs under the notch
+        // and the home indicator and the HUD does not, so the sides are the
+        // safe area and the HUD's padding: a flat eight points from the
+        // view's edge put "542 blocked" in the notch's inset (run 221).
+        let safe = plates.safeArea
+        let pad = Self.hudPadding
+        let leftEdge = safe.left + pad
+        let rightEdge = size.width - safe.right - pad
+        // The overlay's origin is at the bottom: a ceiling is a height.
+        let top = size.height - safe.top - pad
+        let barFoot: CGFloat = bossStands ? 62 : 0
+        let chipsFoot: CGFloat = bossStands ? 98 : 34
+        let chipsReach = leftEdge + Self.hudChipsLength
+        // And the floor over the bottom corners, the way the chips make a
+        // ceiling at the top: the controls at the left, the skills and Skip
+        // at the right.
+        let bottom = safe.bottom + pad
+        let controlsRight = leftEdge + Self.hudControls.width + Self.hudClearance
+        let controlsTop = bottom + Self.hudControls.height + Self.hudClearance
+        let skillsLeft = rightEdge - Self.hudSkills.width - Self.hudClearance
+        let skillsTop = bottom + Self.hudSkills.height + Self.hudClearance
+
         var finished: [FloatingLabel] = []
+        // What is on the frame, and where each would stand by itself.
+        var shown: [(label: FloatingLabel, x: CGFloat, natural: CGFloat, start: CGFloat,
+                     halfWidth: CGFloat, halfHeight: CGFloat)] = []
         for label in plates.floats {
             let age = now - label.born
             guard age < label.life else {
@@ -1303,24 +1383,137 @@ final class BattleSceneController: NSObject {
                 continue
             }
             let projected = renderer.projectPoint(label.anchor)
-            guard projected.z > 0, projected.z < 1 else {
-                label.node.isHidden = true
-                continue
+            let px = CGFloat(projected.x)
+            let py = CGFloat(projected.y)
+            // OFF THE FRAME, IT FADES WHERE IT STANDS (run 221). A float whose
+            // unit had left the frame — the skill camera's zoom leaves most
+            // of the field outside it — was pinned eight points inside the
+            // nearest edge, so every number off a zoom landed on an edge and
+            // one in a corner on the gear. Behind the camera or past any edge
+            // it goes out over `floatFade`, and comes back when its unit does.
+            let inFrame = projected.z > 0 && projected.z < 1
+                && px >= 0 && px <= size.width && py >= 0 && py <= size.height
+            if inFrame {
+                if label.placed {
+                    label.visibility = min(1, label.visibility + step / Self.floatFade)
+                } else {
+                    // Born on the frame it shows at once; born off it, it
+                    // fades in when its unit arrives.
+                    label.visibility = label.laidOut ? 0 : 1
+                }
+            } else {
+                label.visibility = label.placed ? max(0, label.visibility - step / Self.floatFade) : 0
             }
-            label.node.isHidden = false
+            label.laidOut = true
             let scale = label.scale(at: age)
             label.node.setScale(scale)
-            label.node.alpha = label.alpha(at: age)
+            label.node.alpha = label.alpha(at: age) * label.visibility
+            label.node.isHidden = label.visibility < 0.01
+            guard inFrame else { continue }
+            label.placed = true
             let halfWidth = label.node.size.width / 2 * scale
             let halfHeight = label.node.size.height / 2 * scale
-            var x = CGFloat(projected.x) + label.scatter
-            x = min(size.width - inset - halfWidth, max(inset + halfWidth, x))
-            var y = size.height - CGFloat(projected.y) + label.lead + label.risen(at: age)
-            // The overlay's origin is at the bottom: the ceiling is a height.
-            var ceiling = size.height - inset - barFoot
-            if x - halfWidth < chipsReach { ceiling = min(ceiling, size.height - inset - chipsFoot) }
-            y = min(ceiling - halfHeight, max(inset + halfHeight, y))
-            label.node.position = CGPoint(x: x, y: y)
+            let start = size.height - py
+            shown.append((label: label,
+                          x: px + label.scatter + label.align * (halfWidth + 4),
+                          natural: start + label.risen(at: age),
+                          start: start,
+                          halfWidth: halfWidth,
+                          halfHeight: halfHeight))
+        }
+
+        // PER UNIT, NEWEST AT THE BOTTOM (run 221: "1138!" and "SCALES OF
+        // MA'AT" on one line over Anubis's plate). Each float stands at least
+        // its own height over the one newer than it on the same unit, and
+        // stops under the unit's plate — its rise capped there — unless the
+        // floats under it leave it no room, when it goes over the plate
+        // instead. Nothing a float does covers its own bar.
+        // A float whose unit has left the field stands alone.
+        var owners: [UUID: [Int]] = [:]
+        var strays: [[Int]] = []
+        for (index, entry) in shown.enumerated() {
+            if let unit = entry.label.unit {
+                owners[unit.combatantID, default: []].append(index)
+            } else {
+                strays.append([index])
+            }
+        }
+        // Where each float stands across, and the band of heights its centre
+        // must keep inside: under the boss bar and the chips, over the
+        // bottom corners' controls and skills.
+        var across = [CGFloat](repeating: 0, count: shown.count)
+        var highest = [CGFloat](repeating: 0, count: shown.count)
+        var lowestAllowed = [CGFloat](repeating: 0, count: shown.count)
+        for (index, entry) in shown.enumerated() {
+            let x = min(rightEdge - entry.halfWidth, max(leftEdge + entry.halfWidth, entry.x))
+            var ceiling = top - barFoot
+            if x - entry.halfWidth < chipsReach { ceiling = min(ceiling, top - chipsFoot) }
+            var ground = bottom
+            if x - entry.halfWidth < controlsRight { ground = max(ground, controlsTop) }
+            if x + entry.halfWidth > skillsLeft { ground = max(ground, skillsTop) }
+            across[index] = x
+            highest[index] = ceiling - entry.halfHeight
+            lowestAllowed[index] = ground + entry.halfHeight
+        }
+
+        var targets = [CGFloat](repeating: 0, count: shown.count)
+        for members in Array(owners.values) + strays {
+            let ordered = members.sorted { shown[$0].label.born > shown[$1].label.born }
+            // The plate the unit wears, where it stands this frame.
+            var zone: (bottom: CGFloat, top: CGFloat, left: CGFloat, right: CGFloat)?
+            if let first = ordered.first, let plate = shown[first].label.unit?.plate,
+               plate.parent != nil, !plate.isHidden, plate.alpha > 0.05 {
+                let centre = plate.position
+                zone = (bottom: centre.y - UnitPlate.reachBelow, top: centre.y + plate.reachAbove,
+                        left: centre.x - UnitPlate.reachLeft, right: centre.x + plate.reachRight)
+            }
+            var below: CGFloat?
+            for index in ordered {
+                let entry = shown[index]
+                let stacked = below.map { $0 + Self.floatGap + entry.halfHeight }
+                var y = max(entry.natural, stacked ?? entry.natural)
+                if let zone, entry.x - entry.halfWidth < zone.right, entry.x + entry.halfWidth > zone.left {
+                    let under = zone.bottom - Self.floatGap - entry.halfHeight
+                    if y > under {
+                        if entry.start <= under + 0.5, (stacked ?? under) <= under {
+                            // Risen as far as it may: it stops under the plate.
+                            y = under
+                        } else if y - entry.halfHeight < zone.top + Self.floatGap {
+                            // No room under the plate: over it.
+                            y = zone.top + Self.floatGap + entry.halfHeight
+                        }
+                    }
+                }
+                targets[index] = y
+                below = y + entry.halfHeight
+            }
+            // A stack that reaches past the HUD moves WHOLE, so the newest
+            // stays lowest and none lands on another: clamped float by float,
+            // every float over a boss — whose head stands just under the bar —
+            // was pinned to the one line under it, a word on its number.
+            // Raised off the bottom corners first, then brought under the
+            // top, which wins: nothing is drawn under the boss bar.
+            let short = ordered.map { lowestAllowed[$0] - targets[$0] }.max() ?? 0
+            if short > 0 { for index in ordered { targets[index] += short } }
+            let over = ordered.map { targets[$0] - highest[$0] }.max() ?? 0
+            if over > 0 { for index in ordered { targets[index] -= over } }
+        }
+
+        for (index, entry) in shown.enumerated() {
+            let label = entry.label
+            // A push slides rather than jumps: a float lifted by a newer one
+            // eases up over a tenth of a second. A float's first frame takes
+            // its place outright.
+            let push = targets[index] - entry.natural
+            if label.pushed {
+                label.push += (push - label.push) * 0.35
+                if abs(push - label.push) < 0.3 { label.push = push }
+            } else {
+                label.push = push
+                label.pushed = true
+            }
+            let y = min(highest[index], max(lowestAllowed[index], entry.natural + label.push))
+            label.node.position = CGPoint(x: across[index], y: y)
         }
         plates.retireFloats(finished)
     }

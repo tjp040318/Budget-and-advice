@@ -85,12 +85,14 @@ struct SummonView: View {
             }
             .sheet(isPresented: $showMileage) {
                 MileageSheet(banner: selectedBanner) { result in
+                    warmFirstFigure([result])
                     revealResults = [result]
                 }
                 .environmentObject(store)
             }
             .sheet(isPresented: $showSelector) {
                 SelectorSheet { result in
+                    warmFirstFigure([result])
                     revealResults = [result]
                 }
                 .environmentObject(store)
@@ -101,6 +103,9 @@ struct SummonView: View {
             // is a selector most players never find.
             .onAppear {
                 if SelectorService.isOwed(store.player) { showSelector = true }
+                // The charge's rune rings are keyed off the main thread
+                // before the first summon needs them.
+                RuneLinesArt.prepare()
             }
         }
     }
@@ -290,9 +295,14 @@ struct SummonView: View {
     }
 
 
+    /// The banner's mileage, said as what it is and what it is for (run
+    /// 221: a ticket and a bare "118" said neither): the word, and the
+    /// points against the price of the dearest unit the exchange sells —
+    /// the thing a player is saving for, the first row of its catalogue.
     private var mileageChip: some View {
         let points = MileageService.points(on: selectedBanner, player: store.player)
         let best = MileageService.catalogue(for: selectedBanner).first
+        let reading: String = best.map { "\(points)/\($0.price)" } ?? "\(points)"
         return Button {
             Juice.haptic(.light)
             AudioLibrary.shared.play(.uiTap)
@@ -300,17 +310,22 @@ struct SummonView: View {
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: "ticket.fill")
-                    .font(.system(size: 9, weight: .black))
+                    .font(.system(size: 11, weight: .black))
                     .foregroundStyle(Theme.gold)
-                Text("\(points)")
+                Text("Mileage")
+                    .font(Theme.body(11).weight(.semibold))
+                    .foregroundStyle(Theme.onGlassDim)
+                Text(reading)
                     .font(Theme.numeric(11))
                     .foregroundStyle(Theme.onGlass)
                 if let best, points >= best.price {
                     Image(systemName: "checkmark.seal.fill")
-                        .font(.system(size: 10, weight: .black))
+                        .font(.system(size: 11, weight: .black))
                         .foregroundStyle(Theme.success)
                 }
             }
+            .lineLimit(1)
+            .fixedSize()
             .padding(.horizontal, 9)
             .frame(height: 28)
             .background(chipPlate)
@@ -579,6 +594,7 @@ struct SummonView: View {
     private func perform(count: Int) {
         let results = store.summon(banner: selectedBanner, count: count)
         guard !results.isEmpty else { return }
+        warmFirstFigure(results)
         AudioLibrary.shared.play(.summonCharge)
         Juice.haptic(.medium)
         withAnimation(.easeIn(duration: 0.2)) { isCharging = true }
@@ -586,6 +602,19 @@ struct SummonView: View {
             isCharging = false
             revealResults = results
         }
+    }
+
+    /// The first figure the reveal will stand on its beam starts parsing
+    /// the moment the summon returns (2026-09-23, run 221): the wind-up and
+    /// the cover's presentation are most of a second, and the reveal's
+    /// stage then clones it from the cache instead of parsing it on the
+    /// main thread (1.2 s of it on the CI's simulator). The FIRST only: the
+    /// warm pass parses its list in no set order, and a ten-pull's second
+    /// figure would contend with its first for the importer. The reveal
+    /// warms each next pull while the one before is on the beam.
+    private func warmFirstFigure(_ results: [SummonResult]) {
+        guard let first = results.first else { return }
+        ModelLibrary.shared.warm([first.blueprint.model])
     }
 }
 
@@ -752,7 +781,16 @@ struct SummoningCircle: View {
             let artWidth = scale * 16
             let artHeight = scale * 9
             let originX = (frame.size.width - artWidth) / 2
-            let originY = frame.size.height - artHeight
+            // Hung three quarters of the way from its top edge to its foot
+            // (2026-09-23), not by the foot alone: run 221's crop cut the
+            // right-hand brazier at the strip, a bare dark tripod with its
+            // fire above the frame. Only as far down as keeps the painted
+            // floor ring's centre above the summon plates — on the phone
+            // that is 26 points lower, the brazier's bowl and the foot of
+            // its fire in view.
+            let footAnchored = frame.size.height - artHeight
+            let ringAbovePlates = frame.size.height - deckClearance - Self.floorCentre.y * artHeight
+            let originY = min(footAnchored * 0.75, max(footAnchored, ringAbovePlates))
             // The ring stands in the room to the right of the rail.
             let centre = CGPoint(
                 x: originX + Self.floorCentre.x * artWidth + leadingInset * 0.42,

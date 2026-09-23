@@ -108,45 +108,36 @@ struct SocialView: View {
 
     // MARK: - Friends
 
+    /// Finding a demigod and the requests waiting are ONE painted panel down
+    /// the left, two sections of it: as two panels each stood under the
+    /// painted panel's 118-point floor and drew the plain gold-rimmed plate,
+    /// beside the acanthus-cornered Friends (runs 220 and 221). It hangs from
+    /// the top at its own height, as Found a guild does on the Guild tab, and
+    /// scrolls under its field only when a search fills it. The friends
+    /// hang from the top of theirs and end in a line that says where the
+    /// next one comes from — one friend's row stood over two thirds of
+    /// empty marble.
     private var friendsTab: some View {
         HStack(alignment: .top, spacing: 8) {
-            VStack(spacing: 8) {
-                SectionPanel(title: "Find demigods") {
-                    VStack(spacing: 6) {
-                        SocialField(placeholder: "A demigod's name", draft: $friendQuery, submitLabel: "Search") {
-                            Task { await social.search(name: friendQuery) }
+            SectionPanel(title: "Find demigods") {
+                VStack(alignment: .leading, spacing: 6) {
+                    SocialField(placeholder: "A demigod's name", draft: $friendQuery, submitLabel: "Search") {
+                        Task { await social.search(name: friendQuery) }
+                    }
+                    // The field stays out of the choice, so a search that
+                    // fills the panel never takes the keyboard away.
+                    ViewThatFits(in: .vertical) {
+                        findings
+                        ScrollView {
+                            findings
+                                .padding(.bottom, SocialScrollFoot.fade)
                         }
-                        if social.searchResults.isEmpty {
-                            Text(friendQuery.isEmpty ? "Search by name. A friend's row sends a greeting a day." : "Nobody by that name yet.")
-                                .font(Theme.body(10))
-                                .foregroundStyle(Theme.textSecondary)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            ForEach(social.searchResults.prefix(6)) { found in
-                                SocialProfileRow(profile: found, state: requestState(for: found)) {
-                                    Task { await social.sendFriendRequest(to: found) }
-                                }
-                            }
-                        }
+                        .mask { SocialScrollFoot.footMask }
                     }
                 }
-                SectionPanel(title: "Requests", accessory: "\(social.requests.count)") {
-                    if social.requests.isEmpty {
-                        Text("Nobody is waiting on you.")
-                            .font(Theme.body(10))
-                            .foregroundStyle(Theme.textSecondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        ForEach(social.requests) { request in
-                            SocialRequestRow(request: request) { accept in
-                                Task { await social.respond(request, accept: accept) }
-                            }
-                        }
-                    }
-                }
-                Spacer(minLength: 0)
+                .modifier(SocialPanelInset())
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
             SectionPanel(title: "Friends", accessory: "\(social.friends.count)") {
                 if social.friends.isEmpty {
@@ -163,11 +154,49 @@ struct SocialView: View {
                                     Task { await social.sendGreeting(to: friendship) }
                                 }
                             }
+                            SocialInviteLine(text: "Find more demigods by name on the left.")
                         }
+                        .padding(.bottom, SocialScrollFoot.fade)
                     }
+                    .mask { SocialScrollFoot.footMask }
+                    .modifier(SocialPanelInset())
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    /// Under the find field: what the search found (or how to search), then
+    /// the requests waiting, headed like the panel's own first section.
+    private var findings: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if social.searchResults.isEmpty {
+                Text(friendQuery.isEmpty ? "Search by name. A friend's row sends a greeting a day." : "Nobody by that name yet.")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ForEach(social.searchResults.prefix(6)) { found in
+                    SocialProfileRow(profile: found, state: requestState(for: found)) {
+                        Task { await social.sendFriendRequest(to: found) }
+                    }
+                }
+            }
+            SocialSubheader(title: "Requests", accessory: "\(social.requests.count)")
+                .padding(.top, 6)
+            if social.requests.isEmpty {
+                Text("Nobody is waiting on you.")
+                    .font(Theme.body(10))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            } else {
+                ForEach(social.requests) { request in
+                    SocialRequestRow(request: request) { accept in
+                        Task { await social.respond(request, accept: accept) }
+                    }
+                }
+            }
         }
     }
 
@@ -261,7 +290,11 @@ struct SocialView: View {
                 // One way to found it: the field's own "Found" pill did what
                 // FOUND THE GUILD under the crests does (run 217). The return
                 // key still submits. Both panels hang from the top, so their
-                // headers stand on one line; the short one was centred.
+                // headers stand on one line; the short one was centred. Both
+                // keep their contents inside the painted corners
+                // (`SocialPanelInset`): the bottom scrolls painted over
+                // FOUND THE GUILD's two lower corners and the last guild
+                // row's (run 221).
                 SectionPanel(title: "Found a guild") {
                     VStack(spacing: 8) {
                         SocialField(placeholder: "The guild's name", draft: $newGuildName, submitLabel: nil) {
@@ -276,6 +309,7 @@ struct SocialView: View {
                             Task { await social.createGuild(name: newGuildName, crest: newGuildCrest) }
                         }
                     }
+                    .modifier(SocialPanelInset())
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
 
@@ -290,20 +324,34 @@ struct SocialView: View {
                                 .foregroundStyle(Theme.textSecondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         } else {
-                            ScrollView {
-                                VStack(spacing: 4) {
-                                    ForEach(social.guildsFound) { candidate in
-                                        SocialGuildRow(guild: candidate) {
-                                            Task { await social.joinGuild(candidate) }
-                                        }
-                                    }
+                            // Whole rows while they fit — the four strongest
+                            // do, on the CI phone — and a list that scrolls
+                            // and fades at its foot once they do not.
+                            ViewThatFits(in: .vertical) {
+                                guildRows
+                                ScrollView {
+                                    guildRows
+                                        .padding(.bottom, SocialScrollFoot.fade)
                                 }
+                                .mask { SocialScrollFoot.footMask }
                             }
                         }
                     }
+                    .modifier(SocialPanelInset())
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 .onAppear { Task { await social.findGuilds(name: "") } }
+            }
+        }
+    }
+
+    /// The guilds a search found, strongest first, each with its Join.
+    private var guildRows: some View {
+        VStack(spacing: 3) {
+            ForEach(social.guildsFound) { candidate in
+                SocialGuildRow(guild: candidate) {
+                    Task { await social.joinGuild(candidate) }
+                }
             }
         }
     }
@@ -353,13 +401,38 @@ struct SocialView: View {
 
     // MARK: - Ranks
 
+    /// Each table ends in the player's own standing when the list's window
+    /// does not show it; the guilds' table, for a demigod in none, in a line
+    /// that says where one is found.
     private var ranksTab: some View {
         HStack(alignment: .top, spacing: 8) {
             SocialRankTable(title: "Arena", entries: social.arenaLeaderboard, unit: "pts")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
-            SocialRankTable(title: "Guilds", entries: social.guildLeaderboard, unit: "war pts")
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            SocialRankTable(
+                title: "Guilds",
+                entries: social.guildLeaderboard,
+                unit: "war pts",
+                ownOutsideList: ownGuildEntry,
+                withoutOwnRow: social.guild == nil ? "No guild yet · found or join one on the Guild tab" : nil
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    /// The player's guild as a row of the table, unranked, for a guild the
+    /// table does not reach (the strongest fifty in the cloud); nil when he
+    /// has none.
+    private var ownGuildEntry: LeaderboardEntry? {
+        guard let guild = social.guild else { return nil }
+        return LeaderboardEntry(
+            id: guild.id,
+            rank: 0,
+            name: guild.name,
+            detail: "\(guild.memberCount) member\(guild.memberCount == 1 ? "" : "s")",
+            score: guild.warPoints,
+            crest: guild.crest,
+            isMine: true
+        )
     }
 }
 
@@ -812,7 +885,11 @@ private struct SocialGuildRow: View {
             Spacer(minLength: 4)
             SocialPillButton(title: guild.isFull ? "Full" : "Join", enabled: !guild.isFull, action: join)
         }
-        .padding(6)
+        // Four points top and bottom (the Join pill is 25 in a 34-point
+        // pair of lines): the four strongest guilds stand whole above the
+        // panel's painted corners, 42 points a row.
+        .padding(.horizontal, 6)
+        .padding(.vertical, 4)
         .background(
             RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
                 .fill(Theme.surface)
@@ -931,11 +1008,37 @@ private struct SocialTargetRow: View {
     }
 }
 
-/// A ranking table with the player's own row lit.
+/// A ranking table with the player's own row lit — and pinned under the
+/// list, after a rule, while the list's window does not show it whole: the
+/// genre's "your rank" line. Run 221's arena said "top 13" and never showed
+/// the thirteenth, the player's own. A table with no row of his (a demigod
+/// in no guild) ends in a line that says where one is found, where the
+/// guilds' four rows stood over 65 points of empty marble.
 private struct SocialRankTable: View {
     let title: String
     let entries: [LeaderboardEntry]
     let unit: String
+    /// The player's own row for a table that does not list it: his guild
+    /// outside the strongest the table holds.
+    var ownOutsideList: LeaderboardEntry? = nil
+    /// What the foot says when the player has no row here at all.
+    var withoutOwnRow: String? = nil
+
+    /// Whether the player's own row stands whole in the list's window, above
+    /// its fade — read as the list scrolls, written only when it flips — and
+    /// how tall the window is.
+    @State private var ownRowShown = false
+    @State private var window: CGFloat = 0
+
+    private static let space = "socialRankWindow"
+
+    /// The player's row, in the list or from outside it.
+    private var mine: LeaderboardEntry? { entries.first(where: \.isMine) ?? ownOutsideList }
+
+    /// A row at `frame` in the list's window stands whole above the fade.
+    private func inWindow(_ frame: CGRect) -> Bool {
+        window > 0 && frame.minY >= -1 && frame.maxY <= window - SocialScrollFoot.fade + 1
+    }
 
     var body: some View {
         SectionPanel(title: title, accessory: "top \(entries.filter { $0.rank > 0 }.count)") {
@@ -946,21 +1049,130 @@ private struct SocialRankTable: View {
                     message: "The table fills as demigods publish their standing."
                 )
             } else {
-                // The list fades at its foot and ends in as much clear
-                // space, so a row under the fold reads as a scroll: the
-                // arena's sixth row was cut hard at the panel's inner rule
-                // with nothing to say there were seven more (run 220).
-                ScrollView {
-                    VStack(spacing: 3) {
-                        ForEach(entries) { entry in
-                            SocialRankRow(entry: entry, unit: unit)
+                VStack(spacing: 6) {
+                    // The list fades at its foot and ends in as much clear
+                    // space, so a row under the fold reads as a scroll: the
+                    // arena's sixth row was cut hard at the panel's inner rule
+                    // with nothing to say there were seven more (run 220).
+                    ScrollView {
+                        VStack(spacing: 3) {
+                            ForEach(entries) { entry in
+                                SocialRankRow(entry: entry, unit: unit)
+                                    .background {
+                                        if entry.isMine {
+                                            GeometryReader { row in
+                                                let shown = inWindow(row.frame(in: .named(Self.space)))
+                                                Color.clear
+                                                    .onAppear { ownRowShown = shown }
+                                                    .onChange(of: shown) { _, now in ownRowShown = now }
+                                            }
+                                        }
+                                    }
+                            }
+                        }
+                        .padding(.bottom, SocialScrollFoot.fade)
+                    }
+                    .coordinateSpace(name: Self.space)
+                    .background {
+                        GeometryReader { box in
+                            Color.clear
+                                .onAppear { window = box.size.height }
+                                .onChange(of: box.size.height) { _, now in window = now }
                         }
                     }
-                    .padding(.bottom, SocialScrollFoot.fade)
+                    .mask { SocialScrollFoot.footMask }
+                    foot
                 }
-                .mask { SocialScrollFoot.footMask }
+                .modifier(SocialPanelInset())
             }
         }
+    }
+
+    /// Under the list: a rule and the player's own row while the window
+    /// does not show it, or the dashed line for a table with no row of his —
+    /// 37 points, so the guilds' four rows still stand whole above the
+    /// list's fade on the CI phone (165 of the 185 left them).
+    @ViewBuilder
+    private var foot: some View {
+        if let mine, !(ownRowShown && entries.contains(where: \.isMine)) {
+            SocialSubheader(title: "Your standing")
+            SocialRankRow(entry: mine, unit: unit)
+        } else if mine == nil, let withoutOwnRow {
+            SocialInviteLine(text: withoutOwnRow, systemImage: "flag")
+        }
+    }
+}
+
+/// What a painted panel's contents keep clear of: its acanthus corners
+/// reach about 18 points in, and the panel pads only 8 — the header takes 12
+/// more across for the same reason. So the contents take 4 more across and
+/// 10 more at the foot, and a last row or a button ends inside the corners
+/// (run 221: FOUND THE GUILD's lower corners and the last guild row's were
+/// painted over).
+private struct SocialPanelInset: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .padding(.horizontal, 4)
+            .padding(.bottom, 10)
+    }
+}
+
+/// A second section inside one panel, headed the way `SectionPanel` heads
+/// its first: the name in small black capitals, a rule, the count — at the
+/// header's own 20 points from the plate's edge.
+private struct SocialSubheader: View {
+    let title: String
+    var accessory: String? = nil
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text(title.uppercased())
+                .font(Theme.body(10).weight(.black))
+                .tracking(1.0)
+                .foregroundStyle(Theme.goldDim)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+            Rectangle()
+                .fill(Theme.stroke.opacity(0.7))
+                .frame(height: 1)
+            if let accessory {
+                Text(accessory)
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+        .padding(.horizontal, 8)
+    }
+}
+
+/// A line at the end of a list that says what goes there: where the next
+/// friend comes from, why a table has no row of the player's. Drawn in the
+/// list's own row shape, dashed, so it reads as the next row's place.
+private struct SocialInviteLine: View {
+    let text: String
+    var systemImage: String = "person.badge.plus"
+
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: systemImage)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(Theme.goldDim)
+                .frame(width: 26)
+            Text(text)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 6)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+                .strokeBorder(Theme.stroke, style: StrokeStyle(lineWidth: 1, dash: [5, 4]))
+        )
+        .accessibilityElement(children: .combine)
     }
 }
 

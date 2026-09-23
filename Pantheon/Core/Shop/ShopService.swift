@@ -195,7 +195,7 @@ enum ShopService {
                              .stones("gem_rare", 10), .stones("gem_hero", 10), .stones("gem_legend", 10)]),
              section: .testing),
 
-        Item(id: "daily_offering", title: "Daily offering",
+        Item(id: "daily_offering", title: "Daily Offering",
              subtitle: "A mystical scroll, 2,000 drachma and 10 energy. Free, once a day.",
              icon: "gift.fill", price: .free,
              grant: .bundle([.scrolls(.mystical, 1), .drachma(2_000), .energy(10)]),
@@ -235,14 +235,14 @@ enum ShopService {
         Item(id: "energy_30", title: "Energy ×30", subtitle: "Thirty energy, over the cap if need be.",
              icon: "bolt.fill", price: Price(currency: .divinity, amount: 30),
              grant: .energy(30), section: .energy),
-        Item(id: "energy_refill", title: "Full refill", subtitle: "Back to the cap.",
+        Item(id: "energy_refill", title: "Full Refill", subtitle: "Back to the cap.",
              icon: "bolt.circle.fill", price: Price(currency: .divinity, amount: 60),
              grant: .energyRefill, section: .energy),
 
-        Item(id: "relic_pack_4", title: "Relic pack, 4★", subtitle: "One random 4★ relic, any set, any slot.",
+        Item(id: "relic_pack_4", title: "Relic Pack, 4★", subtitle: "One random 4★ relic, any set, any slot.",
              icon: "shield.lefthalf.filled", price: Price(currency: .drachma, amount: 25_000),
              grant: .relic(grade: 4), section: .relics),
-        Item(id: "relic_pack_5", title: "Relic pack, 5★", subtitle: "One random 5★ relic, any set, any slot.",
+        Item(id: "relic_pack_5", title: "Relic Pack, 5★", subtitle: "One random 5★ relic, any set, any slot.",
              icon: "shield.lefthalf.filled", price: Price(currency: .divinity, amount: 150),
              grant: .relic(grade: 5), section: .relics),
 
@@ -278,7 +278,7 @@ enum ShopService {
              grant: .bundle(ShopService.awakeningCache(.umbra)),
              section: .essences),
 
-        Item(id: "relic_laurels_6", title: "Champion's relic, 6★", subtitle: "One random 6★ relic, for arena laurels.",
+        Item(id: "relic_laurels_6", title: "Champion's Relic, 6★", subtitle: "One random 6★ relic, for arena laurels.",
              icon: "shield.lefthalf.filled", price: Price(currency: .laurels, amount: 300),
              grant: .relic(grade: 6), section: .laurels),
         Item(id: "gem_laurels_legend", title: "Legend Gem", subtitle: "Replaces one sub stat with a stat of your choosing, at the top range.",

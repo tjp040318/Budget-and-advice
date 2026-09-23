@@ -252,7 +252,7 @@ final class BattleViewModel: ObservableObject {
             loot.append(.init(glyph: "sparkles", title: "Divinity", amount: "+\(session.divinity)", tint: .marble))
         }
         for relic in session.relics {
-            loot.append(.init(glyph: relic.set.glyph, title: relic.displayName, amount: "Slot \(relic.slot)", tint: .gold, stars: relic.grade, relic: relic))
+            loot.append(.init(glyph: relic.set.glyph, title: relic.displayName, amount: nil, tint: .gold, stars: relic.grade, relic: relic))
         }
         for (id, count) in session.stones.sorted(by: { $0.key < $1.key }) {
             guard let stone = RelicStone.from(id: id) else { continue }
@@ -756,7 +756,12 @@ struct BattleSummary {
         var id = UUID()
         var glyph: String
         var title: String
-        var amount: String
+        /// The count printed on the tile's corner. Nil for a relic: it is
+        /// one stone, and its slot is the badge on the stone's own corner.
+        /// "Slot 3" printed as the amount lay in large outlined type across
+        /// the lower half of the painted stone, over its seal, and read as a
+        /// count (runs 220 and 221).
+        var amount: String? = nil
         var tint: LootTint
         var stars: Int? = nil
         var relic: Relic? = nil
@@ -809,9 +814,10 @@ struct BattleSummary {
             items.append(.init(glyph: "sparkles", title: "Divinity",
                                amount: "+\(stageOutcome.divinityEarned)", tint: .marble, key: "divinity"))
         }
+        // No amount: a relic's slot is the badge on its stone (`Loot.amount`).
         for relic in stageOutcome.relicsEarned {
             items.append(.init(glyph: relic.set.glyph, title: relic.displayName,
-                               amount: "Slot \(relic.slot)", tint: .gold, stars: relic.grade, relic: relic))
+                               amount: nil, tint: .gold, stars: relic.grade, relic: relic))
         }
         for (id, count) in stageOutcome.stonesEarned.sorted(by: { $0.key < $1.key }) {
             guard let stone = RelicStone.from(id: id) else { continue }

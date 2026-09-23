@@ -2588,6 +2588,71 @@ BAZAAR_SCROLL_PRICE = {
 MARKET_UNIT_PRICE = {3: 40_000, 4: 250_000}     # drachma; a 5* is never on the shelf
 MARKET_UNIT_FOUR_STAR_CHANCE = 0.28             # from level 12
 
+# One of each (2026-09-23): a slot that rolls a ware already on the shelf
+# draws again, up to NightMarketService.twinRedraws times. What each kind's
+# stall draws, so a twin can be told from a neighbour:
+MARKET_TWIN_REDRAWS = 24                        # NightMarketService.twinRedraws
+MARKET_ENERGY = (20, 30, 50)                    # energyStall
+MARKET_ESSENCE_IDS = 8                          # marketEssences, 2...6 of one
+MARKET_ESSENCE_COUNTS = (2, 6)
+MARKET_SCROLL_MULTI = ("unknown", "mystical")   # the two a slot sells 1...3 of
+
+
+def market_slots(level):
+    return max(n for floor, n in MARKET_SLOTS if level >= floor)
+
+
+def market_relic_grades(level):
+    """relicStall: never more than two grades over what the campaign pays."""
+    ceiling = max(3, min(6, 3 + level // 12))
+    return list(range(max(3, ceiling - 1), ceiling + 1))
+
+
+def market_stone_tiers(level):
+    return ["rare", "hero", "legend"] if level >= 30 else (["rare", "hero"] if level >= 15 else ["rare"])
+
+
+def market_unit_pool(stars):
+    """marketUnits: the fire, water and wind forms of every family of the
+    grade (light and dark are the Light & Dark scroll's alone)."""
+    families = (sum(1 for row in FAMILY_ROWS if row[2] == stars)
+                + sum(1 for _key, bp in HANDWRITTEN if bp.stars == stars))
+    return 3 * families
+
+
+def market_ware(level, rng):
+    """One slot's roll (NightMarketService.ware) as a hashable grant: equal
+    tuples are the same ware, as equal `Grant`s are in the Swift."""
+    kinds = list(MARKET_WEIGHTS)
+    kind = rng.choices(kinds, weights=[MARKET_WEIGHTS[k] for k in kinds])[0]
+    if kind == "relic":
+        return ("relic", rng.choice(market_relic_grades(level)))
+    if kind == "scroll":
+        scrolls = list(MARKET_SCROLL_WEIGHTS)
+        scroll = rng.choices(scrolls, weights=[MARKET_SCROLL_WEIGHTS[s] for s in scrolls])[0]
+        return ("scroll", scroll, rng.randint(1, 3) if scroll in MARKET_SCROLL_MULTI else 1)
+    if kind == "essence":
+        return ("essence", rng.randrange(MARKET_ESSENCE_IDS), rng.randint(*MARKET_ESSENCE_COUNTS))
+    if kind == "stone":
+        return ("stone", rng.choice(market_stone_tiers(level)), rng.choice(("whetstone", "gem")))
+    if kind == "energy":
+        return ("energy", rng.choice(MARKET_ENERGY))
+    stars = 4 if level >= 12 and rng.random() < MARKET_UNIT_FOUR_STAR_CHANCE else 3
+    return ("unit", stars, rng.randrange(market_unit_pool(stars)))
+
+
+def market_shelf(level, rng, redraws=MARKET_TWIN_REDRAWS):
+    """A whole shelf, slot by slot, each twin drawn again (NightMarketService.stalls)."""
+    shelf = []
+    for _ in range(market_slots(level)):
+        ware = market_ware(level, rng)
+        tries = 0
+        while tries < redraws and ware in shelf:
+            ware = market_ware(level, rng)
+            tries += 1
+        shelf.append(ware)
+    return shelf
+
 
 # ---------------------------------------------------------------------------
 # Athena's Counsel (CounselService.swift). Change a number in both files.
@@ -2671,6 +2736,39 @@ def report_shop():
         share = weight / total
         print(f"  {kind:>9}{weight:>8}{share*100:>7.0f}%   {share*8:>5.1f}")
 
+    # One of each. Before the rule a shelf could hold the same ware twice —
+    # run 221's showed +20 energy for 18,000 twice, run 220's three 3★
+    # relics, and at level 1 a relic slot has one grade to roll. Measured on
+    # rolled shelves, with and without the redraw: how often a shelf had a
+    # twin, and how many relics a shelf holds (the relic is the ware the rule
+    # thins, since it has the fewest faces at a level).
+    rng = random.Random(2551)
+    trials = 10_000
+    print(f"\n  one of each: a slot that rolls a ware already on the shelf draws again"
+          f" (up to {MARKET_TWIN_REDRAWS} times)")
+    print(f"  {'level':>7}{'slots':>7}{'a twin, before':>16}{'after':>7}   relics a shelf, before -> after")
+    for level in (1, 12, 24, 40):
+        before = [market_shelf(level, rng, redraws=0) for _ in range(trials)]
+        after = [market_shelf(level, rng) for _ in range(trials)]
+        twins_before = sum(len(set(s)) < len(s) for s in before) / trials
+        twins_after = sum(len(set(s)) < len(s) for s in after) / trials
+        relics_before = sum(sum(w[0] == "relic" for w in s) for s in before) / trials
+        relics_after = sum(sum(w[0] == "relic" for w in s) for s in after) / trials
+        print(f"  {level:>7}{market_slots(level):>7}{twins_before * 100:>15.0f}%{twins_after * 100:>6.0f}%"
+              f"   {relics_before:.2f} -> {relics_after:.2f}")
+        assert twins_after == 0, f"level {level}: a rolled shelf still shows a ware twice"
+    # The redraw always ends: the chance a draw repeats the shelf is at most
+    # the five or nine likeliest wares' share, and twenty-four of those in a
+    # row must be vanishingly rare.
+    for level in (1, 12, 24, 40):
+        faces = {}
+        for _ in range(trials * 4):
+            ware = market_ware(level, rng)
+            faces[ware] = faces.get(ware, 0) + 1
+        worst = sum(sorted(faces.values(), reverse=True)[:market_slots(level) - 1]) / (trials * 4)
+        assert worst ** MARKET_TWIN_REDRAWS < 1e-6, f"level {level}: the redraw can run out ({worst:.2f} a draw)"
+    print("  -> no rolled shelf shows a ware twice  -> correct")
+
     print("\n  scroll slot, and the bazaar's price beside it")
     scroll_total = sum(MARKET_SCROLL_WEIGHTS.values())
     for scroll, weight in MARKET_SCROLL_WEIGHTS.items():
@@ -2694,8 +2792,13 @@ def report_shop():
     # the shelf; how much divinity does re-rolling until one appears cost,
     # against buying it outright in the bazaar?
     slots = 8
-    per_shelf = 1 - (1 - (MARKET_WEIGHTS["scroll"] / total)
-                     * (MARKET_SCROLL_WEIGHTS["divine"] / scroll_total)) ** slots
+    per_shelf_weights = 1 - (1 - (MARKET_WEIGHTS["scroll"] / total)
+                             * (MARKET_SCROLL_WEIGHTS["divine"] / scroll_total)) ** slots
+    # With one of each, a twin's redraw is one more chance at the Divine
+    # Scroll, so the shelf's own rate is measured on rolled shelves (level 20,
+    # eight slots) and never read off the weights alone.
+    rolled = [market_shelf(20, rng) for _ in range(trials * 4)]
+    per_shelf = sum(("scroll", "divine", 1) in s for s in rolled) / len(rolled)
     shelves = 1 / per_shelf
     # The re-roll price climbs, so the bill for N re-rolls in one day is the
     # head of the table plus 500 for the rest.
@@ -2703,7 +2806,8 @@ def report_shop():
         return sum(MARKET_REROLLS[min(i, len(MARKET_REROLLS) - 1)] for i in range(int(n)))
     bill = reroll_bill(shelves)
     outright = BAZAAR_SCROLL_PRICE["divine"][1] + MARKET_SCROLL_PRICE["divine"][1]
-    print(f"\n  a Divine Scroll is on {per_shelf*100:.1f}% of shelves, so {shelves:.0f} re-rolls to find one:")
+    print(f"\n  a Divine Scroll is on {per_shelf*100:.1f}% of rolled shelves ({per_shelf_weights*100:.1f}% by the"
+          f" weights alone), so {shelves:.0f} re-rolls to find one:")
     print(f"    {bill:,} divinity of re-rolls, then {MARKET_SCROLL_PRICE['divine'][1]} to buy it"
           f"  = {bill + MARKET_SCROLL_PRICE['divine'][1]:,}")
     print(f"    the bazaar sells it outright for {BAZAAR_SCROLL_PRICE['divine'][1]}")
@@ -2711,6 +2815,8 @@ def report_shop():
         else "CHASING IS CHEAPER THAN BUYING — raise the re-roll price"
     print(f"    → {verdict}")
     print(f"    (waiting out the free hourly refresh finds one in about {shelves:.0f} hours, which is the intended way)")
+    assert bill + MARKET_SCROLL_PRICE["divine"][1] > BAZAAR_SCROLL_PRICE["divine"][1], \
+        "re-rolling the market for a Divine Scroll must cost more than the bazaar's own"
     _ = outright
 
     print("\n  the unit row, the one that makes a player look")

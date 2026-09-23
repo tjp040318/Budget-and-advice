@@ -25,10 +25,12 @@ import SwiftUI
 /// three currencies the arena touches.
 ///
 /// Run 216's judges found it still wall-to-wall glass over brown murk, so
-/// the standing came off its plate (it is carved on the painting now, with
-/// the painting open under it down to the teams), the painting bleeds to
-/// both edges of the glass, and the "+110/day" laurels nothing pays left
-/// the screen (`standingBlock`).
+/// the standing came off its plate onto the painting, the painting bleeds to
+/// both edges of the glass, and the "+110/day" laurels nothing pays left the
+/// screen (`standingBlock`). Run 221's found the carved standing running
+/// across the painted Anubis's face, so it is on glass again — a plate as
+/// tall as the standing and no taller, with the painting open below it down
+/// to the teams (`standingColumn`).
 ///
 /// Two controls left the strip. Refresh was dead: `ArenaService.pool` is a
 /// pure function of the points and the UTC day, so it brought back the list
@@ -323,46 +325,48 @@ struct ArenaView: View {
 
     // MARK: - Standing
 
-    /// Your side: the standing carved on the painting at the top, the two
-    /// teams on glass at the foot, and the painting open between them.
+    /// Your side: the standing on its own glass at the top, the two teams on
+    /// glass at the foot, and the painting open between them.
     ///
     /// Run 216 had the standing on a plate that took every spare point, so
     /// 40% of it was empty glass (run 211's "half empty marble" again, in
     /// dark glass) and both columns were wall-to-wall plates over a brown
-    /// murk, with Anubis a ghost behind the glass. Now the standing has no
-    /// plate — the crest and the tier stand on the painting the way the
-    /// banner's name stands on the summon hall — the teams plate sits on the
-    /// column's foot level with the challengers' fade, and what is left
-    /// between them is the Arena of Souls itself, with its dust rising in it.
-    /// The dust is here and nowhere else, so no mote drifts under glass.
+    /// murk, with Anubis a ghost behind the glass. So the standing came off
+    /// its plate and stood carved on the painting — where run 221 found the
+    /// meter, "CHAMPION IN 440" and the record running across the jackal's
+    /// muzzle and chest, and a mote sitting on the meter's track. The
+    /// painting cannot be moved from under it: a square painting across the
+    /// whole band shows its full width, so the god stands where he is
+    /// whatever the focus, and lower he is the same god's chest. Now the
+    /// standing is on glass that hugs it (`standingBlock`), the teams plate
+    /// sits on the column's foot level with the challengers' fade, and what
+    /// is left between the two is the Arena of Souls itself, with its dust
+    /// rising in it. The dust is there and nowhere else, so no mote drifts
+    /// under glass.
     private func standingColumn(_ metrics: ArenaLobbyMetrics, defence: [ResolvedUnit], offence: [ResolvedUnit]) -> some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 6) {
             standingBlock(metrics)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .background(
-                    // Out into the leading margin, and clipped at the
-                    // column's trailing edge so a swaying mote never drifts
-                    // under the challengers' glass.
-                    Motes(count: 12, color: Color(hex: "#FFDFA0"), seed: 930)
-                        .padding(.leading, -ScreenChrome.contentPadding)
-                        .clipped()
-                )
-            Color.clear.frame(height: 6)
+            // The open painting between the plates, with the dust rising in
+            // it, clipped to the gap: no mote drifts under either plate or
+            // across the challengers' glass.
+            Motes(count: 10, color: Color(hex: "#FFDFA0"), seed: 930)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .clipped()
             teamsPlate(metrics, defence: defence, offence: offence)
         }
     }
 
     /// The crest and the tier carved in gold, the points, the climb to the
-    /// next tier as a meter, and the record — carved on the painting, not on
-    /// glass. Four readings, where run 211 spread six lines of 11-point text
+    /// next tier as a meter, and the record, on a plate of glass that hugs
+    /// them. Four readings, where run 211 spread six lines of 11-point text
     /// down a 290-point box with two Spacers. The ladder and the full record
     /// are behind the little ?: words come on a tap.
     ///
-    /// On the painting the words need their own dark: the carved gold has
-    /// its edge and glow, the cream and the dim lines a close black shadow,
-    /// and the block stands in a soft pool of shade (black 0.32, blurred to
-    /// nothing at its edges) over what the top scrim already darkens. The
-    /// pool is a background, never measured.
+    /// Glass again since run 221 (`standingColumn` says why): carved on the
+    /// painting in a soft pool of shade, the words ran across the painted
+    /// Anubis's face. The plate is as tall as the block and no taller, so the
+    /// painting stays open below it; the cream and dim lines keep their
+    /// close shadow, which the glass does not need and does not mind.
     ///
     /// Run 216's "+110/day" is gone: `ArenaTier.dailyLaurels` is paid by
     /// nothing in the game, so the screen stopped promising it (reported to
@@ -413,16 +417,9 @@ struct ArenaView: View {
                 }
             }
         }
-        .padding(.horizontal, 4)
-        .padding(.top, 4)
-        .background(
-            Ellipse()
-                .fill(Color.black.opacity(0.32))
-                .padding(.horizontal, -18)
-                .padding(.vertical, -10)
-                .blur(radius: 18)
-                .allowsHitTesting(false)
-        )
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(GlassPlate(radius: 12))
     }
 
     /// The line under the meter: how far the next tier is, and the record.

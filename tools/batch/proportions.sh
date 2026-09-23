@@ -14,8 +14,9 @@ cd "$(dirname "$0")/../.."
 S=${PROPORTIONS_DIR:-/tmp/proportions2}; mkdir -p "$S"
 RECIPE=${PROPORTIONS_RECIPE:-serious2}   # character.PROPORTIONS; serious2 since 2026-09-18 (longer legs, narrower body)
 # A family whose texture came back off its cards is graded on the way
-# (character.GRADES): the Ares family, olive against two gold cards.
-declare -A GRADE=( [ares]="--grade gold" [ares_awakened]="--grade gold" )
+# (character.GRADES): the Ares family, olive against two gold cards; the
+# awakened Ares's pink-white skin to a tan as well (gold_skin, 2026-09-23).
+declare -A GRADE=( [ares]="--grade gold" [ares_awakened]="--grade gold_skin" )
 declare -A SRC=( [zeus]=zeus_m7 [sekhmet]=sekhmet_m7 [anubis]=anubis_m7 [ares]=ares_m7 [thoth]=thoth_m7
                  [neptune]=neptune_v2 [terracotta_soldier]=terracotta_soldier_v2 [hades]=hades_v2 [ptah]=ptah_v2
                  [sentinel]=sentinel_v2 [jotunn]=jotunn_v2 [bastet]=bastet_v3 [hathor]=hathor_v2 [thoth_awakened]=thoth_awakened_v2 )

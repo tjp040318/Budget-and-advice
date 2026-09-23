@@ -575,7 +575,7 @@ final class CloudKitSocialBackend: SocialBackend, @unchecked Sendable {
                     id: profile.id,
                     rank: offset + 1,
                     name: profile.name,
-                    detail: "Lv.\(profile.level) · \(profile.tier.displayName) · power \(profile.power)",
+                    detail: "Lv.\(profile.level) · \(profile.tier.displayName) · power \(profile.power.formatted())",
                     score: profile.arenaPoints,
                     crest: nil,
                     isMine: profile.id == me
@@ -589,7 +589,7 @@ final class CloudKitSocialBackend: SocialBackend, @unchecked Sendable {
                         id: own.id,
                         rank: 0,
                         name: own.name,
-                        detail: "Lv.\(own.level) · \(own.tier.displayName) · power \(own.power)",
+                        detail: "Lv.\(own.level) · \(own.tier.displayName) · power \(own.power.formatted())",
                         score: own.arenaPoints,
                         crest: nil,
                         isMine: true

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 /// The sweep control, and the receipt it leaves.
 ///
@@ -21,8 +22,9 @@ struct SweepButton: View {
     /// The sweep over art (2026-09-22, phase B): dark glass as tall as a
     /// `PrimaryButton`, the words in pale gold, and NO footnote. The
     /// footnote is brown on cream — invisible on glass — and 30 points of
-    /// height the stage popup and the briefing's deck do not have; a caller
-    /// on glass words the refusal itself (the briefing's deck line). The
+    /// height the stage popup and the briefing's deck do not have. A sweep
+    /// not yet earned says why ON the button, in a few words under a lock
+    /// (`shutLine`); the whole sentence is its accessibility hint. The
     /// Labyrinth's deck can take the same button.
     var onGlass: Bool = false
 
@@ -33,6 +35,11 @@ struct SweepButton: View {
     /// What a tap will actually do: what was asked for, or what the energy pays for.
     private var effectiveRuns: Int { max(1, min(runs, affordable)) }
 
+    /// How strongly a shut sweep's plate and title are drawn: a ghost of the
+    /// open button, so the two cannot be mistaken — the shut one was dimmer
+    /// glass with dimmer words and read as the same button (runs 220 and 221).
+    private static let shutOpacity: Double = 0.45
+
     var body: some View {
         if onGlass {
             glassButton
@@ -41,45 +48,92 @@ struct SweepButton: View {
         }
     }
 
-    /// Dark glass when it can sweep, dimmer glass when it cannot; the label
-    /// is the count the energy actually pays for.
+    /// The refusal in the words the button's second line holds: the stars
+    /// the stage has of the three it needs, the power it asks, or the energy
+    /// a run costs. Nil when the sweep is open.
+    private var shutLine: String? {
+        let player = store.player
+        guard refusal != nil else { return nil }
+        if !SweepService.isMastered(stage, player: player) {
+            let pips = min(3, player.stageStars?[stage.id] ?? 0)
+            return "\(pips)/3 ★"
+        }
+        if !SweepService.isPowered(stage, player: player) {
+            return "Needs \(stage.recommendedPower.formatted()) power"
+        }
+        return "\(EventCalendar.energyCost(for: stage)) energy a run"
+    }
+
+    /// Dark glass when it can sweep, the label the count the energy actually
+    /// pays for; shut, a ghost of it with a lock and the reason under the
+    /// word.
     private var glassButton: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
         let open = refusal == nil
         return Button {
             onSweep(effectiveRuns)
         } label: {
-            HStack(spacing: 6) {
-                Image(systemName: "forward.fill")
-                    .font(.system(size: 13, weight: .black))
-                Text(runs > 1 ? "SWEEP ×\(effectiveRuns)" : "SWEEP")
-                    .font(Theme.title(14))
-                    .tracking(1.2)
-                    .lineLimit(1)
-                    .fixedSize()
+            Group {
+                if open {
+                    HStack(spacing: 6) {
+                        Image(systemName: "forward.fill")
+                            .font(.system(size: 13, weight: .black))
+                        Text(runs > 1 ? "SWEEP ×\(effectiveRuns)" : "SWEEP")
+                            .font(Theme.title(14))
+                            .tracking(1.2)
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .foregroundStyle(Color(hex: "#FFE9A8"))
+                } else {
+                    shutLabel
+                }
             }
-            .foregroundStyle(open ? Color(hex: "#FFE9A8") : Theme.onGlassDim)
             .frame(maxWidth: .infinity)
             .frame(height: PrimaryButton.height)
             .background(
-                // A gradient and a colour will not unify in a ternary.
-                Group {
-                    if open {
-                        shape.fill(LinearGradient(
-                            colors: [Color(hex: "#3A2C1A").opacity(0.92), Color(hex: "#150F0A").opacity(0.92)],
-                            startPoint: .top, endPoint: .bottom
-                        ))
-                    } else {
-                        shape.fill(Color(hex: "#17120E").opacity(0.5))
-                    }
-                }
+                shape.fill(LinearGradient(
+                    colors: [Color(hex: "#3A2C1A").opacity(0.92), Color(hex: "#150F0A").opacity(0.92)],
+                    startPoint: .top, endPoint: .bottom
+                ))
+                .opacity(open ? 1 : Self.shutOpacity)
             )
-            .overlay(shape.strokeBorder(open ? Theme.glassRim : Theme.glassRim.opacity(0.35), lineWidth: 1))
+            .overlay(
+                shape.strokeBorder(Theme.glassRim, lineWidth: 1)
+                    .opacity(open ? 1 : Self.shutOpacity)
+            )
             .contentShape(shape)
         }
         .buttonStyle(PlateButtonStyle())
         .disabled(!open)
         .accessibilityHint(refusal ?? "")
+    }
+
+    /// A shut sweep's words: the lock and SWEEP as faint as the plate, and
+    /// the reason under them in gold at full strength — "0/3 ★" — because
+    /// it is the one thing on the button the player can act on.
+    private var shutLabel: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 5) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 11, weight: .black))
+                Text("SWEEP")
+                    .font(Theme.title(14))
+                    .tracking(1.2)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundStyle(Theme.onGlass)
+            .opacity(Self.shutOpacity + 0.15)
+            if let shutLine {
+                Text(shutLine)
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(Theme.onGlassEyebrow)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+        .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
     }
 
     private var creamButton: some View {
@@ -159,17 +213,28 @@ struct SweepReceiptCard: View {
     let onClose: () -> Void
     var onRelic: (Relic) -> Void = { _ in }
 
-    /// About 80% of the CI phone's map, so the map shows round it.
-    private static let maxWidth: CGFloat = 580
+    /// The card is as wide as what it holds — the title row with its
+    /// stars, or the row of spoils, whichever is wider — with 56 points of
+    /// air across (the padding's 28 and 14 more a side), never under
+    /// `minimumWidth` and never wider than the map less 16 a side. It was
+    /// 580 whatever it held, so four or five spoils sat in a band of empty
+    /// glass 110 to 150 points wide on either side (runs 220 and 221).
+    private static let minimumWidth: CGFloat = 460
+    private static let air: CGFloat = 56
     private static let tile: CGFloat = 52
     /// A tile's name frame: 1.3 of the tile, and "Whetstone" (60 at 11).
     private static let footprint: CGFloat = 68
     private static let gap: CGFloat = 8
     private static let chevron: CGFloat = 18
+    /// The header's fixed parts: the chest (44), the stars (three at 14,
+    /// about 57), and the HStack's three gaps of 12 with the spacer's 8.
+    private static let chestWidth: CGFloat = 44
+    private static let starsWidth: CGFloat = 57
+    private static let headerGaps: CGFloat = 12 * 3 + 8
 
     var body: some View {
         GeometryReader { frame in
-            let width = min(Self.maxWidth, max(0, frame.size.width - 32))
+            let width = min(max(0, frame.size.width - 32), max(Self.minimumWidth, contentWidth + Self.air))
             ZStack {
                 Color.black.opacity(0.55)
                     .ignoresSafeArea()
@@ -180,6 +245,28 @@ struct SweepReceiptCard: View {
             }
             .frame(width: frame.size.width, height: frame.size.height)
         }
+    }
+
+    /// The wider of the header — its eyebrow or the stage's name, whichever
+    /// is longer, in the faces they are set in, with the chest and the stars
+    /// — and the row of spoils.
+    private var contentWidth: CGFloat {
+        let count = CGFloat(loot.count)
+        let tiles = count * Self.footprint + max(0, count - 1) * Self.gap
+        let eyebrow = Self.measured(eyebrowText, face: "Manrope-ExtraBold", size: 11, tracking: 1.4)
+        let name = Self.measured(receipt.stage.name.uppercased(), face: Theme.carvedHeavyFace, size: 20, tracking: 0.8)
+        let header = Self.chestWidth + Self.headerGaps + max(eyebrow, name) + Self.starsWidth
+        return max(header, tiles)
+    }
+
+    /// A line's width as CoreText sets it in a bundled face with its
+    /// tracking, so the card is sized before it is laid out; a face that did
+    /// not register measures in the system's heavy. A long name that makes
+    /// the card wider than the map still shrinks to fit (its scale floor).
+    private static func measured(_ text: String, face: String, size: CGFloat, tracking: CGFloat) -> CGFloat {
+        let font = UIFont(name: face, size: size) ?? UIFont.systemFont(ofSize: size, weight: .heavy)
+        let width = (text as NSString).size(withAttributes: [.font: font, .kern: tracking]).width
+        return ceil(width)
     }
 
     /// About 44 + 10 + 88 + 10 + 46 and the padding — 226 points, or 246
@@ -212,17 +299,20 @@ struct SweepReceiptCard: View {
         .shadow(color: .black.opacity(0.6), radius: 22, y: 10)
     }
 
+    /// What the sweep cost, as the header's gold eyebrow.
+    private var eyebrowText: String {
+        let runs = receipt.runs
+        let runWord = runs == 1 ? "RUN" : "RUNS"
+        return "SWEPT · \(runs) \(runWord) · \(receipt.energySpent) ENERGY"
+    }
+
     /// The chest, what the sweep cost as a gold eyebrow, the stage's name
     /// carved, and its three stars — a swept stage is three-starred.
     private var header: some View {
-        let runs = receipt.runs
-        let runWord = runs == 1 ? "RUN" : "RUNS"
-        let energy = receipt.energySpent
-        let eyebrow = "SWEPT · \(runs) \(runWord) · \(energy) ENERGY"
-        return HStack(spacing: 12) {
-            TributeChestImage(size: 44)
+        HStack(spacing: 12) {
+            TributeChestImage(size: Self.chestWidth)
             VStack(alignment: .leading, spacing: 1) {
-                Text(eyebrow)
+                Text(eyebrowText)
                     .font(Theme.body(11).weight(.black))
                     .tracking(1.4)
                     .foregroundStyle(Theme.onGlassEyebrow)

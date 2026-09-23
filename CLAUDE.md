@@ -107,7 +107,7 @@ either number fails loudly instead of drifting.
 solves with every numeric overload in play, seconds each; forty of them in
 `BoonTests` and `ResonanceTests` took the test target's compile from six
 minutes to ten on 2026-09-16 and put run 161 over the job's 40-minute limit
-(now 55). Hoist into typed lets — `let lift: Double = …` — and assert the
+(now 70: run 222 took 50 of 55 on a slow simulator). Hoist into typed lets — `let lift: Double = …` — and assert the
 names. The tests themselves run in twenty seconds.
 
 The 3D tools need packages that are not preinstalled. PyPI is reachable, so at
@@ -145,7 +145,9 @@ has no detail left (the target is under 2% over 240 with the mean in
 70-130) — and a launch that died leaves
 its crash report beside the frames (`crash-*.txt`, the host's report for
 the app, its crashed thread printed by `ciframes.py`; `system-log.txt`
-covers the whole tour). Never push without reading the
+covers the whole tour; a relaunch within a step, the workflow's `again`,
+appends its own output to the step's console under the arguments it ran
+with, since run 223). Never push without reading the
 run that follows; a push while a run is in progress cancels it, so wait for
 the frames first.
 
@@ -862,7 +864,14 @@ environment can and cannot do. The short version:
   maxHeight: .infinity)` inside `.frame(height: 104)`, the square painting's
   fill size grew the ZStack to its own height, and the label aligned to the
   stack's bottom was carried below the clip — a black slab with no name on
-  it for two runs of frames (2026-09-16).
+  it for two runs of frames (2026-09-16). And a `.shadow` on a stack is
+  cast by EVERY child, so a glow meant for a rim falls inward over
+  whatever the stack holds: the chosen tab's socket photographed khaki
+  for six runs until `.compositingGroup()` went before its halo
+  (2026-09-23). A fill painting clipped to a band still takes the taps
+  of everything its overhang covers — the tab bar's marble, 240 points
+  over the foot of every tab screen, was caught by a reviewer before it
+  shipped — so it carries `.allowsHitTesting(false)` like `PaintingFill`.
   And a camera node looks along its own −Z: orient it with
   `SCNNode.look(at:)`, never `atan2(dx, dz)` (that was half a turn off and
   the orbit shot showed the empty side of the stage). **And a clip
@@ -1307,11 +1316,25 @@ environment can and cannot do. The short version:
   SpriteKit labels in the plate overlay, ABOVE the plates (2026-09-23)**
   (`FloatingLabel`, `UnitPlateOverlay.floatLayer`, placed by
   `BattleSceneController.layoutFloats` from `projectPoint`): Manrope
-  numbers and Cinzel words with a dark edge, clamped inside the edges and
-  under the boss bar, a crit capped near 32 pt; they were SceneKit planes
-  under the plates, and a crit grew to 75 pt off the top of the frame.
-  The skill camera has no motion blur (it smeared the frame on every
-  push-in), and a boss's matchup arrow is in the boss bar, never on it.
+  numbers and Cinzel words with a dark edge, a crit capped near 32 pt;
+  they were SceneKit planes under the plates, and a crit grew to 75 pt
+  off the top of the frame. **Since fix round 4 (run 221):** a float
+  starts at its unit's chest and stops under its plate, a unit's floats
+  stack newest lowest, a float whose unit leaves the frame (a skill zoom)
+  FADES where it stands instead of being pinned to an edge — "542
+  blocked" sat on the gear — and on-frame floats are clamped inside the
+  window's safe area (`BattleStageView` reports it) and above the HUD's
+  bottom corners, whose sizes `BattleSceneController` mirrors from
+  `BattleView` by hand; a boss's floats stand beside its head. The
+  boss's warm spot is scaled by its own paint (`UnitNode.measurePaint`,
+  the texture's mean in linear light: 2,400 × min(1, max(0.3, 0.14 /
+  albedo)) — the Colossus about 1,390, the Unwrapped King the 720
+  floor), and a pale boss drops the awakened costume glow. The plate's
+  level is Manrope-Bold 11 in a 22-pt badge, the status tiles 16 pt with
+  an 11-pt turn chip, and the matchup marker sits beside the track's
+  right end (even is a double arrow). The skill camera has no motion
+  blur (it smeared the frame on every push-in), and a boss's matchup
+  arrow is in the boss bar, never on it.
 - **Motion.** A melee unit's dash is a 0.3 s leap (the model container
   hops while the node moves), clips cross-fade over 0.22/0.30 s
   (`ModelLibrary`), one-shot clips are never sped past 2× (the contracts in
@@ -1684,9 +1707,19 @@ environment can and cannot do. The short version:
   island sizes its figures off the painting's frame
   (`IslandSceneView.stageHeight`), not the view's height. Sweep never
   spends on one tap — it opens a choice of counts. `PortraitPainting`
-  zooms the seven full-figure families' cards to a bust in a square. The
+  zooms thirty-eight full-figure families' cards to a bust in a square
+  (every base card was looked at on contact sheets on 2026-09-23; the
+  mummy's crop starts lower, `topOverride`, for its white sheet). The
   tour photographs `4-summon-root` (the bar in its real place),
-  `3-training-evolve` and `16-dungeon-sweep`.
+  `3-training-evolve`, `16-dungeon-sweep` and `11-relics-legend` (the
+  fullest worn relic, `-tour-relic legend`). **A rail lands on whole
+  rows by re-planning**: `WholeRowRail` (Glass.swift; the Labyrinth's
+  floors and Titans and the Hall of Ka's roster) re-plans on every height
+  change until the player takes it, because a rail passes through
+  heights on its way to its own (87 and 259 points against 304 in run
+  221's consoles) and one plan on the first of them landed nowhere. Lists
+  rest on whole rows (`RestingList`, `restingRow()`), and the Night
+  Market never shows a ware twice (`NightMarketService.twinRedraws`).
 - **The skirt pass (2026-09-22).** `character.reweight_skirt` (in
   `mesh.py` after the cape pass; `tools/skirt_pass.py --survey | <names>
   | --all` over the SHIPPED base and `_lod` files): cloth that Meshy's
@@ -1746,6 +1779,18 @@ environment can and cannot do. The short version:
   `ClothRing` is `tools/patches/robe_ring_swift.patch`, out of the build
   until a family passes. The fix left is a remake (about 77 credits a
   family); the simulation added nothing on the attack and hurt the death.
+- **A stage draws a dramatic beat once out of sight first (2026-09-23).**
+  A shader compiles the first time something is DRAWN with it: run 221's
+  5★ reveal showed its name card over an empty dais because the figure,
+  the beam's column and the contact shadow were first drawn at the flash,
+  SceneKit compiled 21 shaders there and the main thread stalled a
+  second behind them. `SummonStageView` now draws all three at alpha
+  0.01 before the charge's clock starts, the words are timed from the
+  figure's first drawn frame (`onShown`), and the flash runs on the wall
+  clock in a `TimelineView`. `SCNSceneRenderer.prepare` was weighed and
+  not trusted: it is documented to upload textures and geometry, not to
+  build the pipelines a frame needs. Never read the scene graph from the
+  main thread on a timer during such a beat.
 - **The figure stages are exposed and coloured (2026-09-22).**
   `FigureStageLighting`: key 1,150, fill 320, rim 420, ambient 140, the
   studio map at 1.0 (brighter softboxes; the old map is `studio_ibl_v1`),
@@ -1801,7 +1846,10 @@ environment can and cannot do. The short version:
   so a lighting change is judged against its control. And a mesh whose
   texture came back off its cards is graded at shipping, not re-textured:
   `mesh.py <asset> --grade gold` (`character.GRADES`; the Ares family was
-  olive with magenta runes against two gold cards).
+  olive with magenta runes against two gold cards). The awakened Ares's
+  paper-white skin (#F7DAD4, value 0.96) was paint too: `gold_skin`
+  takes it to #A37B69 beside the base Ares's own, applied on 2026-09-23
+  to the shipped textures alone, and `proportions.sh` names it.
 - **Every family has a standing idle now, and the stages play it
   (2026-09-18).** No family shipped a plain `idle` (0 of 116), so the
   reveal, the altar, the collection's Stage and the island had always

@@ -7075,3 +7075,140 @@ fired before the rows were measured), and pure aether's new pale colour
 vanished on the cream reward socket. Round 3 fixed all three. A judge
 that compares the pair catches these; a judge of the new frame alone
 would have passed them.
+
+### Round 4: run 221's faults, nine groups at once (2026-09-23)
+
+Run 221's judges passed every group "yes with polish" and named nine
+VISIBLE faults; round 4 took those and most of the carried polish, split
+into nine disjoint groups of files (a container of four processors runs
+two agents to a workflow, so the nine ran as five workflows side by
+side), then a compile reviewer per group read the finished diffs. The
+reviewers found one real regression before it shipped: the tab bar's new
+marble was a fill-aspect painting clipped to the band, and `.clipped()`
+does not clip hit-testing — about 240 invisible points of it stood over
+the foot of every tab screen and would have eaten the summon deck's
+taps. It carries `.allowsHitTesting(false)` now, as `PaintingFill` does.
+
+**The reveal's first frame on the beam.** Run 221's three-second frame
+was the name card over an EMPTY dais under a 28% white veil. The figure,
+the beam's column and the contact shadow were first DRAWN at the flash,
+so SceneKit compiled 21 shaders over 2.4 s there; the main thread waited
+955 ms behind it, every word's timer then fired at once (five star ticks
+inside 70 ms), and the flash's fade started a second late. Three ways
+were weighed: (a) `SCNSceneRenderer.prepare(_:completionHandler:)`, which
+Apple documents as uploading textures and geometry but not as building
+every pipeline this frame needs (the skinned figure in the shadow pass,
+the deferred shadow, the additive column); (b) a figure at opacity 0.001
+through the charge, rejected because the shadow pass ignores opacity and
+the dais would carry the shadow of an invisible Sekhmet; (c) draw
+everything once out of sight — chosen. The stage view comes up at alpha
+0.01 with the figure whole, its shadow and a particle-free twin of the
+beam's column; two frames are drawn, the three go out of sight, one more
+frame is drawn, and only then does the view fade in and the charge's
+clock start (`SummonStageView.Coordinator`, a 4 s give-up). The words are
+timed from the figure's first drawn frame (`onShown`, from
+`didRenderScene`, with a 2.5 s fallback), the flash is a function of the
+wall clock inside a `TimelineView`, and the first figure is warmed the
+moment a summon returns. On CI's simulator the compiles now come before
+the charge, so frame `5-reveal-a` shows the charge and `-b`/`-c` the
+landing. The rule: a shader compiles the first time something is drawn
+with it, so a stage draws a dramatic beat's contents once out of sight
+first.
+
+The charge's rune rings were the painting's teal glow (luminance
+0.45–0.55) filled into a disc; they are `rune_ring` keyed to its LINES at
+runtime (a smoothstep 0.60–0.85, the hub cleared), and the beam is drawn
+over them with a white core. A light unit's reveal is trimmed 0.3 stop.
+
+**The awakened Ares's skin was paint.** Its skin islands were #F7DAD4,
+value 0.96 — paper under any light. A light or shader change could not
+fix an albedo that clips under every rig; a Meshy retexture is about 10
+credits on the owner's word; a grade is free — chosen: `gold_skin`
+(`character.GRADES`, the gold moves plus five skin moves, 8.5% of the
+atlas) takes the skin to #A37B69, beside the base Ares's #9F7460,
+multiplying saturation and value so the painted shading stays. It was
+applied to the shipped texture only (both packages rebuilt with every
+point, weight and joint identical by hash), and `proportions.sh` names it
+so a re-ship keeps it. The eight scroll paintings and the relic cache
+lost the dark skirt of their unkeyed glow (`item_icons.py`'s
+`HALO_RAMP`: a border-connected ramp on the max channel, 70 → 110).
+
+**Busts.** `PortraitPainting` zooms 38 families' cards to a bust, not 7:
+every base card of all 99 families was looked at on contact sheets with
+a measured second opinion (the figure reaching the card's foot, or
+standing narrow at 85% of its height), and the two agreed on every one.
+The awakened cards follow their base cards. The mummy's cards are a
+painting on a white sheet, so its crop starts lower (`topOverride`).
+
+**The fight.**
+
+| Fault (run 221) | What changed |
+|---|---|
+| the number of a unit outside a skill zoom pinned onto the gear | a float whose anchor leaves the frame fades out where it stands; only on-frame anchors are clamped, inside the window's safe area (`BattleStageView`) and above the HUD's bottom corners |
+| numbers rising onto their own plate; a word and a crit on one line | floats start at the chest and stop under the plate; a unit's floats stack, newest lowest |
+| the Colossus blown out under its warm spot (3.1% of the band clipped) | the spot is 2,400 × min(1, max(0.3, 0.14 / albedo)), the albedo read off the boss's own texture in linear light: the serpent, the Hydra and the Jötunn keep 2,400, the Colossus gets about 1,390, the Unwrapped King the 720 floor; a pale boss drops the awakened costume glow; its floats stand beside its head |
+| the MVP's name cut "…ASH R…" | the MVP capsule ends the Dealt/Taken line and the name wraps to two lines |
+| the boss bar's name bare on the painting, its spent health a paler fill | the name row on the HUD's glass capsule; a dark socket like the plates' |
+| the plate's level at 8 pt, status turns at 3 pt | Manrope-Bold 11 in a 22-pt badge; 16-pt tiles with an 11-pt turn chip; the matchup marker beside the track, even as a double arrow |
+| the dark hit a grey disc | violet smoke and 70 violet motes |
+| the Forum's zoom a sunlit floor | a pale-marble set takes at most +0.10 of its painting's lift; the Forum's grade −0.56 |
+
+The fjord's black rectangle is likeliest a built brazier bowl 8 cm inside
+its built rune stone; the bowl steps clear now (`standClear`), unproven
+until the frame shows it. Shipped braziers still overlap wing pieces in
+the Duat, the Vault and the Greek sets; moving them re-dresses those sets
+and waits for a decision.
+
+**The rails.** Run 221's relaunch consoles (captured from this round on:
+`again()` in the workflow keeps each relaunch's output) showed a rail
+passing through heights on its way to its own — 87 points on the Titans
+rail, 259 on the floors', against about 304 — and planning once, on the
+first. `WholeRowRail` (Glass.swift now, shared with the Hall of Ka's
+roster) re-plans on every height change until the player takes the rail,
+skips a height too short for the focused row, builds each scroll's
+anchor from the height measured then, and says "missed" when it misses.
+iOS 17's `.scrollPosition(id:anchor:)` is held in reserve (unverified
+here that the anchor respects a content margin); a simultaneous drag as
+the "touched" flag was rejected (it stops a ScrollView's own scrolling on
+iOS 18). The five Titans cannot fit a 304-point rail unscrolled (409
+points); fitting them is a design call.
+
+**The Night Market shows one of each.** Run 221's shelf offered +20
+energy for 18,000 twice and run 220's three identical 3★ relics — a
+relic is rolled when bought, so twins are the same ware. Redrawing a twin
+from the same seeded stream (`NightMarketService.twinRedraws`, 24) was
+chosen over drawing kinds without replacement (it would change every
+shelf's odds) and over relabelling (the twins are the fault):
+`balance.py --shop` measured 69–87% of shelves with a twin before, none
+after; the relic row thins (1.68 → 0.88 a shelf at level 1) and a Divine
+Scroll shows on 6.7% of shelves instead of 5.6%. A ware whose name would
+only repeat its kind says what sets it apart ("Any set, any slot",
+"For drachma").
+
+**The relic screens** are sized by arithmetic on the fonts' own line
+heights, not by whichever relic the tour picks: the worst relic (worn,
+awakened, five subs, a four-piece set) needs 171.4 of the panel's 176.7
+points once the quality became the first word of the slot line and OPEN
+went to 38. A roll waiting shows the choice and one line of power-up; the
+awakening's chips and button wait for +15; a delta is the difference of
+the figures as printed. The tour relaunches step 11 on the fullest worn
+relic (`-tour-relic legend`).
+
+**The rest:** the chosen tab's socket is composited before its halo (a
+`.shadow` on a stack is cast by every child — six runs of a khaki
+socket); the tab band is the panels' marble and gold line; More's
+switches are the game's own (`GameToggleStyle`); a card's lock, crown and
+sun sit on ink discs; stats and the wallet group their thousands; the
+launch column is built from the foot, so the realms line is 11 points,
+not 7.7; the chapter map's side haze is cut from the painting's own blur,
+so its seam is gone, and its chapter tab hides under a card; the sweep's
+receipt fits its spoils; the Allies tables pin the player's own row; the
+island's lights fade to nothing at their rims, its offering is a glass
+bubble, and its zoomed buildings keep their bubbles; lists rest on whole
+rows (`RestingList`); the Arena's standing is back on glass; motes are
+light (a halo added over the painting), never grit.
+
+Left for the owner, each with its price: the wisp and ring sprites
+repainted on black (about 6 Meshy credits each), the day bazaar's own
+painting (`bazaar_bg`, about 9), the six aether icons (about 6), and
+real busts for the mummy's and the cobra priestess's white-sheet cards.

@@ -23,8 +23,9 @@ struct SummonRevealView: View {
     // frame, drawn before the stage has been built, is already the charge.
     @State private var charging = true
     /// When the charge's clock started: the moment its stage finished
-    /// building (`stageReady`). Nil while the stage is still being built, and
-    /// the charge holds its opening pose until then.
+    /// building and drawing itself once (`stageReady`). Nil until then, and
+    /// the charge holds its opening pose — its rings still turning — while
+    /// it waits.
     @State private var chargeStart: Date?
     /// How long this charge runs: 1.25 s for a 4★ or better, 0.8 s under.
     @State private var chargeDuration: TimeInterval = 1.25
@@ -33,13 +34,23 @@ struct SummonRevealView: View {
     /// The stage in the view tree (`stageKey`). It goes in a beat AFTER the
     /// reveal's first frame, so that frame is the charge, not a stall.
     @State private var mountedStage: String?
-    /// The stage that has finished building.
+    /// The stage that has finished building and its warm-up.
     @State private var readyStage: String?
-    @State private var flash: Double = 0
+    /// When the flash went off, and how long it takes to clear (see
+    /// `flashOpacity`). Nil when there is no flash on the screen.
+    @State private var flashAt: Date?
+    @State private var flashSpan: TimeInterval = 0.55
+    /// When this pull's charge came on the screen. The rings turn and the
+    /// motes climb from here, before the stage is ready and the charge's own
+    /// clock (`chargeStart`) begins, so the wait is never a frozen picture.
+    @State private var ambientStart = Date()
     @State private var revealed = false
     @State private var shownStars = 0
     @State private var nameSlam = false
     @State private var detailsShown = false
+    /// The sequence whose words have been set going (`startWords`), so the
+    /// figure's first frame and the fallback cannot start them twice.
+    @State private var wordsFor: Int?
     @State private var rays: Double = 0
     /// Bumped whenever a sequence is started or cut short, so a stale timer
     /// from a skipped reveal cannot land on the next one.
@@ -68,9 +79,14 @@ struct SummonRevealView: View {
             if !showAll, let current {
                 let key = stageKey(current)
                 if mountedStage == key {
-                    SummonStageView(result: current, revealed: revealed, onReady: { stageReady(key) })
-                        .id(key)
-                        .ignoresSafeArea()
+                    SummonStageView(
+                        result: current,
+                        revealed: revealed,
+                        onReady: { stageReady(key) },
+                        onShown: { stageShown(key) }
+                    )
+                    .id(key)
+                    .ignoresSafeArea()
                 }
                 // The charge stands OVER the set, where the figure will
                 // land, so it reads whether the set has drawn yet or not.
@@ -86,11 +102,23 @@ struct SummonRevealView: View {
             }
 
             // The flash on reveal. White over the rarity tint, gone in half a
-            // second; long enough to hide the figure popping in.
-            Color.white
-                .opacity(flash * 0.85)
+            // second; it covers the figure arriving whole on the beam.
+            //
+            // Read off the wall clock (2026-09-23, run 221), not animated:
+            // a SwiftUI fade starts on the first frame after its change, so
+            // a main thread held up behind the stage started it a second
+            // late and froze it at 28% — the 3-second frame was the words
+            // under a white veil. Drawn as a function of the time since it
+            // went off, it is wherever it should be the moment a frame is
+            // drawn at all.
+            if let flashAt {
+                TimelineView(.animation) { timeline in
+                    Color.white
+                        .opacity(Self.flashOpacity(at: timeline.date, since: flashAt, span: flashSpan))
+                }
                 .ignoresSafeArea()
                 .allowsHitTesting(false)
+            }
 
             VStack {
                 HStack {
@@ -237,6 +265,17 @@ struct SummonRevealView: View {
     private static let duskEmber = Color(hex: "#9C5F33")
     private static let duskGround = Color(hex: "#15110F")
     private static let duskInk = Color(hex: "#D9CDB3")
+    /// The name's gold, pale at the top of the letters and deeper at their
+    /// foot; NEW and AWAKENED wear it too.
+    private static let nameGold = LinearGradient(colors: [Color(hex: "#FFF3C4"), Color(hex: "#E2C15E")],
+                                                 startPoint: .top, endPoint: .bottom)
+
+    /// The flash's white at `date`: 0.85 when it goes off, falling straight
+    /// to nothing over `span`, whatever the frames in between were doing.
+    private static func flashOpacity(at date: Date, since start: Date, span: TimeInterval) -> Double {
+        let elapsed = max(0, date.timeIntervalSince(start))
+        return 0.85 * max(0, 1 - elapsed / max(0.05, span))
+    }
 
     // MARK: - The charge
 
@@ -256,14 +295,21 @@ struct SummonRevealView: View {
     ///
     /// No blend modes: this layer sits over the SceneKit view, and a blend
     /// against a platform view is not something to find out on the phone.
-    /// The rings are the painted `rune_ring` (runes on black) used as a
-    /// MASK by luminance over the element's colour, so the black is simply
-    /// absent. Everything is a pure function of the charge's clock, read off
-    /// a `TimelineView`, so a stale animation cannot retarget it.
+    /// The rings are the painted `rune_ring` keyed to its drawn lines
+    /// (`RuneLinesArt`) and used as a MASK over the element's colour, so the
+    /// black and the painted glow between the lines are simply absent.
+    /// Everything is a pure function of two clocks read off a
+    /// `TimelineView`, so a stale animation cannot retarget it: the charge's
+    /// own (`chargeClock`), which gathers it, and the ambient one, which
+    /// turns the rings and lifts the motes from the first frame, while the
+    /// stage is still being built and drawn.
     private func chargeLayer(_ result: SummonResult) -> some View {
         GeometryReader { frame in
             TimelineView(.animation) { timeline in
-                chargeScene(result, clock: chargeClock(at: timeline.date), size: frame.size)
+                chargeScene(result,
+                            clock: chargeClock(at: timeline.date),
+                            ambient: max(0, timeline.date.timeIntervalSince(ambientStart)),
+                            size: frame.size)
             }
         }
         .ignoresSafeArea()
@@ -277,7 +323,8 @@ struct SummonRevealView: View {
         return max(0, date.timeIntervalSince(chargeStart))
     }
 
-    private func chargeScene(_ result: SummonResult, clock: TimeInterval, size: CGSize) -> some View {
+    private func chargeScene(_ result: SummonResult, clock: TimeInterval, ambient: TimeInterval,
+                             size: CGSize) -> some View {
         let grand: CGFloat = Self.grandeur(stars: result.stars)
         let colour: Color = result.blueprint.element.color
         let span: TimeInterval = max(0.1, chargeDuration)
@@ -299,12 +346,17 @@ struct SummonRevealView: View {
         let feet: CGFloat = height * 0.93
         let heart: CGFloat = height * 0.42
 
-        let beamWidth: CGFloat = height * (0.10 + 0.10 * grand)
+        // A 5★'s pillar is 0.28 of the frame's height across (run 221: at
+        // 0.20, and drawn under the rings, it showed as a faint streak below
+        // them); a 3★'s stays a thin shaft.
+        let beamWidth: CGFloat = height * (0.10 + 0.18 * grand)
         let beamHeight: CGFloat = feet * (0.30 + 0.70 * gather)
+        // The motes keep the sway they had with the narrower beam.
+        let moteSpread: CGFloat = height * (0.10 + 0.10 * grand)
         let ringSize: CGFloat = height * (0.44 + 0.18 * grand)
-        let turn: Double = clock * Double(24 + 36 * grand)
+        let turn: Double = ambient * Double(24 + 36 * grand)
         let side: CGFloat = height * (0.24 + 0.07 * grand)
-        let bob: CGFloat = CGFloat(sin(clock * 2.6)) * 4 * rest
+        let bob: CGFloat = CGFloat(sin(ambient * 2.6)) * 4 * rest
         let motes: Int = 4 + Int((8 * grand).rounded())
 
         return ZStack {
@@ -319,12 +371,6 @@ struct SummonRevealView: View {
                 .opacity(Double(0.45 + 0.45 * gather))
                 .position(x: x, y: feet)
 
-            // The beam, rising from the floor as the charge gathers.
-            chargeBeam(colour: colour)
-                .frame(width: beamWidth, height: beamHeight)
-                .opacity(Double((0.40 + 0.35 * grand) * (0.9 + 0.1 * flare)))
-                .position(x: x, y: feet - beamHeight / 2)
-
             // Two rings, turning opposite ways, closing in as it gathers.
             chargeRing(colour: colour, diameter: ringSize)
                 .scaleEffect(1.10 - 0.12 * gather)
@@ -337,10 +383,19 @@ struct SummonRevealView: View {
                 .opacity(Double(0.36 + 0.40 * grand))
                 .position(x: x, y: heart)
 
+            // The beam, rising from the floor as the charge gathers: OVER the
+            // rings, so the pillar of light runs through them to the scroll
+            // (the genre's scroll burns in its column; run 221 drew the
+            // column under the rings and lost it).
+            chargeBeam(colour: colour)
+                .frame(width: beamWidth, height: beamHeight)
+                .opacity(Double((0.40 + 0.35 * grand) * (0.9 + 0.1 * flare)))
+                .position(x: x, y: feet - beamHeight / 2)
+
             // Motes climbing the beam.
             ForEach(0..<motes, id: \.self) { mote in
-                chargeMote(mote, clock: clock, grand: grand, colour: colour)
-                    .position(Self.motePoint(mote, clock: clock, grand: grand, x: x, feet: feet, spread: beamWidth))
+                chargeMote(mote, clock: ambient, grand: grand, colour: colour)
+                    .position(Self.motePoint(mote, clock: ambient, grand: grand, x: x, feet: feet, spread: moteSpread))
             }
 
             // The flare the flash takes over.
@@ -376,7 +431,7 @@ struct SummonRevealView: View {
             stops: [
                 .init(color: colour.opacity(0), location: 0),
                 .init(color: colour.opacity(0.55), location: 0.28),
-                .init(color: Color.white.opacity(0.9), location: 0.5),
+                .init(color: Color.white.opacity(0.95), location: 0.5),
                 .init(color: colour.opacity(0.55), location: 0.72),
                 .init(color: colour.opacity(0), location: 1),
             ],
@@ -388,23 +443,23 @@ struct SummonRevealView: View {
         }
     }
 
-    /// The painted rune ring in the element's colour: the painting's
-    /// luminance is the mask, so its black ground draws nothing. The
-    /// contrast first drops the painting's soft halos between the bands,
-    /// which as a mask filled the ring into one flat disc (judged on a mock
-    /// at the charge's own fractions, 2026-09-23).
+    /// The painted rune ring in the element's colour, its drawn LINES only
+    /// (`RuneLinesArt`), with a glow of the same colour round them: 4 points
+    /// at 0.7, where 6 at 0.9 merged the glows of the dense rune bands and
+    /// moved the stone between the lines by 20 levels (measured on the mock
+    /// of the held charge; 14 at this).
     @ViewBuilder
     private func chargeRing(colour: Color, diameter: CGFloat) -> some View {
-        if BundleImage.exists("rune_ring") {
+        if let lines = RuneLinesArt.image {
             colour
                 .frame(width: diameter, height: diameter)
                 .mask {
-                    BundleImage(name: "rune_ring", renderedAt: diameter)
+                    Image(uiImage: lines)
+                        .resizable()
+                        .interpolation(.high)
                         .aspectRatio(contentMode: .fit)
-                        .contrast(1.6)
-                        .luminanceToAlpha()
                 }
-                .shadow(color: colour.opacity(0.9), radius: 6)
+                .shadow(color: colour.opacity(0.7), radius: 4)
         } else {
             Circle()
                 .strokeBorder(colour.opacity(0.85), style: StrokeStyle(lineWidth: 2, dash: [6, 10]))
@@ -468,19 +523,20 @@ struct SummonRevealView: View {
         return CGPoint(x: x + sway * spread * 0.8, y: feet - rise * feet * 0.85)
     }
 
+    /// A mote of light: one soft falloff, white at its heart through the
+    /// element's colour to nothing (run 221: a hard white dot on a flat
+    /// disc of colour read as a bullet, not as light).
     private func chargeMote(_ mote: Int, clock: TimeInterval, grand: CGFloat, colour: Color) -> some View {
         let rise: CGFloat = Self.moteRise(mote, clock: clock, grand: grand)
         let dot: CGFloat = 3 + 2 * grand + CGFloat(mote % 3)
         let fade: CGFloat = min(1, rise * 5) * (1 - rise)
-        return ZStack {
-            Circle()
-                .fill(colour.opacity(0.55))
-                .frame(width: dot * 2.6, height: dot * 2.6)
-            Circle()
-                .fill(Color.white)
-                .frame(width: dot, height: dot)
-        }
-        .opacity(Double(fade))
+        return Circle()
+            .fill(RadialGradient(
+                colors: [Color.white, colour.opacity(0.7), colour.opacity(0)],
+                center: .center, startRadius: 0, endRadius: dot * 1.3
+            ))
+            .frame(width: dot * 2.6, height: dot * 2.6)
+            .opacity(Double(fade))
     }
 
     /// `-tour-reveal-hold charge` (DEBUG only): the charge plays and never
@@ -531,10 +587,7 @@ struct SummonRevealView: View {
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(
-                        LinearGradient(colors: [Color(hex: "#FFF3C4"), Color(hex: "#E2C15E")],
-                                       startPoint: .top, endPoint: .bottom)
-                    )
+                    .foregroundStyle(Self.nameGold)
                     .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
                     .shadow(color: tint(for: result).opacity(0.9), radius: 14)
                     .scaleEffect(nameSlam ? 1 : 1.9)
@@ -557,18 +610,21 @@ struct SummonRevealView: View {
                     }
                     .padding(.top, 2)
 
+                    // In the name's own gold with a hard black edge (run
+                    // 221): `Theme.gold` in a gold glow measured (157,118,63)
+                    // on the dusk, about 3:1, the dimmest thing on the card.
                     if result.isAwakening {
                         Text("AWAKENED")
                             .font(Theme.title(14))
                             .tracking(3.0)
-                            .foregroundStyle(Theme.gold)
-                            .shadow(color: Theme.gold.opacity(0.9), radius: 6)
+                            .foregroundStyle(Self.nameGold)
+                            .shadow(color: .black.opacity(0.9), radius: 1, y: 1)
                     } else if result.isNew {
                         Text("NEW")
                             .font(Theme.title(14))
                             .tracking(3.0)
-                            .foregroundStyle(Theme.gold)
-                            .shadow(color: Theme.gold.opacity(0.9), radius: 6)
+                            .foregroundStyle(Self.nameGold)
+                            .shadow(color: .black.opacity(0.9), radius: 1, y: 1)
                     } else {
                         // Cream on the dusk: the interface's ink-brown
                         // secondary sat on the dark sky at about 2:1.
@@ -590,11 +646,15 @@ struct SummonRevealView: View {
             .frame(maxWidth: .infinity)
             }
 
+            // On a glass plate over the lit floor of the set: bare text there
+            // read as a caption lost on the stone (runs 217–221).
             Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
                 .font(Theme.body(13))
-                .foregroundStyle(Color.white.opacity(0.78))
-                // Over the lit floor of the set now, not a dark gradient.
-                .shadow(color: .black.opacity(0.9), radius: 3, y: 1)
+                .foregroundStyle(Theme.onGlass)
+                .fixedSize()
+                .padding(.horizontal, 12)
+                .padding(.vertical, 5)
+                .background(GlassPlate(radius: 12))
                 .opacity(isFullyRevealed ? 1 : 0)
                 .padding(.bottom, 12)
         }
@@ -628,10 +688,11 @@ struct SummonRevealView: View {
         charging = false
         awaitingStage = nil
         revealed = true
+        wordsFor = sequence
         shownStars = result.stars
         nameSlam = true
         detailsShown = true
-        flash = 0
+        flashAt = nil
     }
 
     /// What is on the beam: the pull's place in the list, the family and
@@ -651,9 +712,11 @@ struct SummonRevealView: View {
     /// time frozen: on the next pull of a ten-pull the build ate the whole
     /// beat and the figure popped in with no anticipation at all. So the
     /// stage goes into the tree a beat after this frame (the charge's
-    /// opening pose is what is on screen while it builds), tells
-    /// `stageReady` when it is done, and the beat starts then; a fallback
-    /// starts it anyway should that word never come.
+    /// opening pose, its rings turning on the ambient clock, is what is on
+    /// screen while it builds and draws itself once out of sight — see
+    /// `SummonStageView.makeUIView`), tells `stageReady` when it is done,
+    /// and the beat starts then; a fallback starts it anyway should that
+    /// word never come.
     private func revealNext() {
         guard let result = current else { return }
         sequence += 1
@@ -665,7 +728,9 @@ struct SummonRevealView: View {
         shownStars = 0
         nameSlam = false
         detailsShown = false
-        flash = 0
+        wordsFor = nil
+        flashAt = nil
+        ambientStart = Date()
         chargeStart = nil
         chargeDuration = Self.chargeTime(stars: result.stars)
 
@@ -686,13 +751,16 @@ struct SummonRevealView: View {
                 mountedStage = key
             }
         }
-        after(2.5) {
+        // Past the stage's own give-up (`SummonStageView.warmUpLimit`, from
+        // the end of its build), so this only fires for a stage that never
+        // built at all.
+        after(Self.stageFallback) {
             guard awaitingStage == mine else { return }
             beginCharge(mine)
         }
     }
 
-    /// The stage has built its set and its figure.
+    /// The stage has built its set and its figure and drawn them once.
     private func stageReady(_ key: String) {
         readyStage = key
         guard let waiting = awaitingStage, waiting == sequence,
@@ -700,14 +768,24 @@ struct SummonRevealView: View {
         beginCharge(waiting)
     }
 
-    /// Starts the charge's clock and times the rest of the reveal from it.
+    /// The figure has been DRAWN on the beam: the words land on it now.
+    private func stageShown(_ key: String) {
+        guard revealed, let current, stageKey(current) == key else { return }
+        startWords(sequence)
+    }
+
+    /// Starts the charge's clock, and at its end the flash and the figure.
+    /// The words wait for the figure (`stageShown`), never for a timer
+    /// started here: run 221 timed them from this moment, a main thread
+    /// held up behind the stage let every timer fire at once — all five
+    /// star ticks inside 70 ms — and the 3-second frame was the name card
+    /// over an empty dais.
     private func beginCharge(_ mine: Int) {
         guard mine == sequence, let result = current else { return }
         awaitingStage = nil
         chargeStart = Date()
-        let stars = result.stars
-        let big = stars >= 4
-        let chargeTime = Self.chargeTime(stars: stars)
+        let big = result.stars >= 4
+        let chargeTime = Self.chargeTime(stars: result.stars)
 
         AudioLibrary.shared.play(.summonCharge, volume: big ? 1.0 : 0.7)
         if Self.holdsCharge { return }
@@ -715,14 +793,35 @@ struct SummonRevealView: View {
         after(chargeTime) {
             guard mine == sequence else { return }
             charging = false
-            flash = 1
-            withAnimation(.easeOut(duration: big ? 0.55 : 0.4)) { flash = 0 }
+            let stamp = Date()
+            let span: TimeInterval = big ? 0.55 : 0.4
+            flashSpan = span
+            flashAt = stamp
             revealed = true
             AudioLibrary.shared.play(.summonBurst, volume: big ? 1.0 : 0.75)
             Juice.haptic(big ? .heavy : .medium)
+            // Off the screen once it has faded, so nothing redraws it.
+            after(span + 0.1) {
+                if flashAt == stamp { flashAt = nil }
+            }
+            // Should the stage never say its figure has drawn, the words
+            // land anyway rather than never.
+            after(Self.wordsFallback) { startWords(mine) }
         }
+    }
 
-        let starStart = chargeTime + 0.35
+    /// The stars tick in one at a time, the name slams down, the details
+    /// follow: timed from the figure's first drawn frame (or the fallback),
+    /// once per sequence. The first star lands 0.3 s after the figure, as
+    /// the flash clears, which is where it landed when the flash and the
+    /// figure were one timer.
+    private func startWords(_ mine: Int) {
+        guard mine == sequence, wordsFor != mine, let result = current else { return }
+        wordsFor = mine
+        let stars = result.stars
+        let big = stars >= 4
+
+        let starStart: TimeInterval = 0.3
         for i in 0..<stars {
             after(starStart + Double(i) * 0.14) {
                 guard mine == sequence else { return }
@@ -749,6 +848,14 @@ struct SummonRevealView: View {
     private static func chargeTime(stars: Int) -> TimeInterval {
         stars >= 4 ? 1.25 : 0.8
     }
+
+    /// How long a pull waits on a stage that never reports before its charge
+    /// starts anyway: past the stage's build and its own warm-up limit.
+    private static let stageFallback: TimeInterval = 6.5
+
+    /// How long after the flash the words land if the figure never reports
+    /// its first frame.
+    private static let wordsFallback: TimeInterval = 2.5
 
     private func after(_ seconds: TimeInterval, _ body: @escaping () -> Void) {
         DispatchQueue.main.asyncAfter(deadline: .now() + seconds, execute: body)
@@ -842,24 +949,47 @@ struct SummonStageView: UIViewRepresentable {
     let result: SummonResult
     /// Flips true when the charge ends; the figure appears on the beam then.
     var revealed: Bool = true
-    /// Called once the set and the figure are built, on the next turn of
-    /// the main queue (after the frame that carries them is committed): the
+    /// Called once, on the main queue, when the set and the figure are built
+    /// AND have been drawn once out of sight (the warm-up, `makeUIView`): the
     /// reveal starts its charge's clock from here, not from `onAppear`.
     var onReady: (() -> Void)? = nil
+    /// Called once, on the main queue, after the first frame that DREW the
+    /// figure on the beam: the reveal times its stars and its name from
+    /// here, so they can never land on an empty dais.
+    var onShown: (() -> Void)? = nil
 
     /// Where the figure's centre line stands, as a fraction of the width
     /// from the left: the camera is solved for it (`frameCamera`) and the
     /// reveal's SwiftUI charge is drawn on it.
     static let figureLine: CGFloat = 0.26
 
-    final class Coordinator {
+    /// How long, from the end of the build, the stage waits for its warm-up
+    /// to be drawn before it comes in anyway. The CI's simulator compiled
+    /// this set and figure in about two and a half seconds; a phone takes a
+    /// fraction of one.
+    static let warmUpLimit: TimeInterval = 4.0
+
+    /// The stage's state, and its render delegate (the view holds its
+    /// delegate weakly; SwiftUI holds this): it steps the cape, runs the
+    /// warm-up and reports the figure's first frame on the beam. The render
+    /// thread only reads the figure and sends work to the main queue; every
+    /// change to the scene or to the reveal is made there.
+    final class Coordinator: NSObject, SCNSceneRendererDelegate {
         var figure: SCNNode?
-        /// Steps the figure's cape each frame; the view's delegate is weak.
+        /// Steps the figure's cape each frame, from this delegate.
         let cloth = ClothStepper()
         var spinnerStarted = false
-        var shown = false
         var tint: UIColor = .white
         var scene: SCNScene?
+        /// The contact shadow under the feet: built with the set, drawn in
+        /// the warm-up, faded in by `show`.
+        var contactShadow: SCNNode?
+        /// The summon beam's column, drawn in the warm-up only
+        /// (`warmBeamTwin`).
+        var warmBeam: SCNNode?
+        weak var view: SCNView?
+        var onReady: (() -> Void)?
+        var onShown: (() -> Void)?
         /// The camera and the three numbers its framing was solved from, kept
         /// so the push-in on the reveal and a re-frame after a layout can both
         /// work from the same solve rather than each guessing at it.
@@ -873,6 +1003,124 @@ struct SummonStageView: UIViewRepresentable {
         /// every SwiftUI update would fight the push-in, so it is re-applied
         /// only when the shape actually changes.
         var framedAspect: Float = 0
+
+        /// Read and written on the render thread and the main one, so only
+        /// under `lock`.
+        private let lock = NSLock()
+        private var phase: RevealStageWarmUp = .drawing
+        private var framesDrawn = 0
+        private var onStage = false
+        private var shownReported = false
+        /// The main queue's alone.
+        private var readied = false
+
+        /// Whether `show` has put the figure on the beam.
+        var shown: Bool {
+            lock.lock()
+            defer { lock.unlock() }
+            return onStage
+        }
+
+        func markShown() {
+            lock.lock()
+            onStage = true
+            lock.unlock()
+        }
+
+        func renderer(_ renderer: SCNSceneRenderer, didApplyAnimationsAtTime time: TimeInterval) {
+            cloth.renderer(renderer, didApplyAnimationsAtTime: time)
+        }
+
+        /// The render thread's half of the warm-up and of the figure's first
+        /// frame on the beam: a frame has just been drawn, and what it drew
+        /// is the presentation tree.
+        func renderer(_ renderer: SCNSceneRenderer, didRenderScene rendered: SCNScene, atTime time: TimeInterval) {
+            guard let figure else { return }
+            let opacity = figure.presentation.opacity
+            lock.lock()
+            switch phase {
+            case .drawing:
+                // The first frame compiles every shader it needs; the second
+                // is drawn with all of them in hand.
+                framesDrawn += 1
+                let drawn = framesDrawn >= 2
+                if drawn { phase = .drawn }
+                lock.unlock()
+                if drawn {
+                    DispatchQueue.main.async { [weak self] in self?.clearWarmUp() }
+                }
+            case .drawn:
+                lock.unlock()
+            case .clearing:
+                let clear = onStage || opacity < 0.01
+                if clear { phase = .ready }
+                lock.unlock()
+                if clear {
+                    DispatchQueue.main.async { [weak self] in self?.finishWarmUp() }
+                }
+            case .ready:
+                let first = onStage && !shownReported && opacity > 0.5
+                if first { shownReported = true }
+                lock.unlock()
+                if first {
+                    DispatchQueue.main.async { [weak self] in self?.figureShown() }
+                }
+            }
+        }
+
+        /// The warm-up has been drawn: whatever waits for the flash goes back
+        /// out of sight — unless the reveal has asked for it already — and
+        /// the stage waits for a frame drawn that way before it comes in.
+        func clearWarmUp() {
+            lock.lock()
+            guard phase == .drawn else {
+                lock.unlock()
+                return
+            }
+            let keep = onStage
+            lock.unlock()
+            // The twin carries no particles, so it can go at once (a host
+            // taken down while its motes lived crashed the fight twice).
+            warmBeam?.removeFromParentNode()
+            warmBeam = nil
+            if !keep {
+                figure?.opacity = 0
+                contactShadow?.opacity = 0
+            }
+            lock.lock()
+            phase = .clearing
+            lock.unlock()
+        }
+
+        /// The stage is drawn with nothing on the beam: it comes in over the
+        /// charge, and the reveal starts the charge's clock.
+        func finishWarmUp() {
+            guard !readied else { return }
+            readied = true
+            if let view {
+                UIView.animate(withDuration: 0.25) { view.alpha = 1 }
+            }
+            onReady?()
+        }
+
+        /// A warm-up that has not reported in `warmUpLimit` (a view that is
+        /// not drawing) is cleared and the stage comes in anyway.
+        func giveUpWarmUp() {
+            lock.lock()
+            if phase == .drawing { phase = .drawn }
+            lock.unlock()
+            clearWarmUp()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
+                self?.finishWarmUp()
+            }
+        }
+
+        /// The first frame with the figure on the beam: it settles toward the
+        /// player from here, and the reveal's words are timed from here.
+        func figureShown() {
+            if let figure { SummonStageView.settle(figure) }
+            onShown?()
+        }
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -905,7 +1153,7 @@ struct SummonStageView: UIViewRepresentable {
         view.allowsCameraControl = false
         view.rendersContinuously = true
         view.isPlaying = true
-        view.delegate = context.coordinator.cloth
+        view.delegate = context.coordinator
 
         let tint = UIColor(hex: result.blueprint.model.auraHex) ?? .white
         let height = result.blueprint.model.height
@@ -921,7 +1169,8 @@ struct SummonStageView: UIViewRepresentable {
             node.addParticleSystem(VFXLibrary.aura(tint: tint, scale: height / 1.9))
         }
         node.position = SCNVector3(0, 0, 0)
-        node.opacity = 0
+        // Whole for the warm-up (below), then out of sight until the flash.
+        node.opacity = 1
         scene.rootNode.addChildNode(node)
         context.coordinator.figure = node
         context.coordinator.tint = tint
@@ -950,6 +1199,17 @@ struct SummonStageView: UIViewRepresentable {
         // summoned unit's pantheon and element colour. The SwiftUI glow and
         // rays show through between the pillars.
         StageBuilder.buildSummoningCircle(pantheon: result.blueprint.pantheon, tint: tint, into: scene)
+
+        // What the flash brings, built now so the warm-up draws it: the
+        // shadow under the feet, and a twin of the beam's column (the beam
+        // itself is spawned at the reveal, motes and all).
+        let shadow = contactShadowNode()
+        shadow.opacity = 0.8
+        scene.rootNode.addChildNode(shadow)
+        context.coordinator.contactShadow = shadow
+        let twin = Self.warmBeamTwin(tint: tint)
+        scene.rootNode.addChildNode(twin)
+        context.coordinator.warmBeam = twin
 
         // MARK: The framing
         //
@@ -1120,16 +1380,44 @@ struct SummonStageView: UIViewRepresentable {
         // the figure the only caster (2026-09-18).
         FigureStageLighting.applyEnvironment(to: scene)
         FigureStageLighting.restrictShadows(in: scene, to: node)
-        camera.exposureOffset = FigureStageLighting.exposureOffset
+        // A light unit's reveal a third of a stop down (run 221): its white
+        // and gold light on a marble temple blew the column behind the
+        // awakened Ares — 3.1% of the left half over 240, one patch two
+        // thirds clipped — where the lab's frame 0.4 under clipped 0.01%.
+        let radianceTrim: CGFloat = result.blueprint.element == .radiance ? -0.3 : 0
+        camera.exposureOffset = FigureStageLighting.exposureOffset + radianceTrim
 
+        // THE WARM-UP (2026-09-23, run 221). Everything the flash will show —
+        // the figure, its shadow on the dais, the beam's column — is drawn
+        // once while this view is all but invisible, then put out of sight
+        // again, and only then is the reveal told the stage is ready. A
+        // shader is compiled the first time something is drawn with it, and
+        // run 221 drew the figure, the beam and the shadow for the first time
+        // AT the flash: 21 compiles on SceneKit's thread, the main thread
+        // held up 955 ms and then 419 ms behind them, and the three-second
+        // frame was the name card over an empty dais under a stalled veil.
+        // Drawing them, rather than `prepare(_:completionHandler:)`, is what
+        // makes certain of it: the shadow pass, the deferred shadow and a
+        // blended material's pipelines are built for the frame that draws
+        // them, and a frame is what the warm-up is. The figure arrives whole
+        // at the flash (`show`), so its opaque pipeline is the one it needs.
+        // The charge's opening pose, its rings already turning, covers the
+        // wait; the render delegate (`Coordinator`) runs it, and
+        // `warmUpLimit` ends it should the view never draw.
+        view.alpha = 0.01
+        context.coordinator.view = view
+        context.coordinator.onReady = onReady
+        context.coordinator.onShown = onShown
         if revealed { show(context.coordinator) }
-        if let onReady {
-            DispatchQueue.main.async { onReady() }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.warmUpLimit) { [weak coordinator = context.coordinator] in
+            coordinator?.giveUpWarmUp()
         }
         return view
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
+        context.coordinator.onReady = onReady
+        context.coordinator.onShown = onShown
         frameCamera(view, context.coordinator)
         if revealed { show(context.coordinator) }
     }
@@ -1168,45 +1456,23 @@ struct SummonStageView: UIViewRepresentable {
         cameraNode.look(at: SCNVector3(x, coordinator.aimY, 0))
     }
 
-    /// The figure fades in on the beam, once.
+    /// The figure arrives on the beam, once: whole and at once, under the
+    /// flash (2026-09-23). It faded in over a third of a second until run
+    /// 221, which the flash hid anyway, and the fade drew it through
+    /// SceneKit's blended pass — its far arm through its chest — on a
+    /// pipeline of its own, compiled at the flash. The shadow and the beam
+    /// were drawn in the warm-up, so nothing here is drawn for the first
+    /// time.
     private func show(_ coordinator: Coordinator) {
         guard !coordinator.shown, let figure = coordinator.figure, let scene = coordinator.scene else { return }
-        coordinator.shown = true
-        figure.runAction(.sequence([.wait(duration: 0.05), .fadeIn(duration: 0.35)]))
+        coordinator.markShown()
+        figure.opacity = 1
+        coordinator.contactShadow?.runAction(.fadeOpacity(to: 0.8, duration: 0.3))
         VFXLibrary.summonBeam(at: SCNVector3(0, 0, 0), in: scene, tint: coordinator.tint)
-        addContactShadow(to: scene)
-        // The beam's quads and the shadow patch arrived after the figure:
-        // they cast nothing.
+        // The beam's quads arrived after the figure: they cast nothing.
         FigureStageLighting.restrictShadows(in: scene, to: figure)
-
-        // The figure settles out of its three-quarter stance to face the player
-        // as the stars tick in, then breathes: a slow sway of a fifth of a
-        // radian either way, which is enough to keep the silhouette alive
-        // without ever turning the face away. A reveal is the most-looked-at
-        // second in the game and a dead-still model is the tell that it is a
-        // prop rather than a character.
-        // "Face the player" is read off the FEET, not assumed (2026-09-18):
-        // a family with no `idle` plays its combat idle here, a guard stance
-        // whose feet point off the mesh's forward — Sekhmet showed her
-        // profile and the awakened Ares his back on three runs of frames,
-        // lit by the cool fill on the side the camera saw. The correction
-        // turns the feet toward the lens and the sway swings about it.
-        // Read a beat AFTER the first frame: the joints' presentation
-        // positions are all zero until the renderer has posed the figure
-        // once, and run 186 read a zero heel-to-toe vector off joints it had
-        // found by name ("no foot joints found" was the wrong message for it).
-        // The settle takes 1.5 s; starting it 0.15 s late is invisible.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { [weak figure] in
-            guard let figure else { return }
-            let facing = Self.facingCorrection(for: figure)
-            let settle = SCNAction.rotateTo(x: 0, y: CGFloat(facing), z: 0, duration: 1.5, usesShortestUnitArc: true)
-            settle.timingMode = .easeOut
-            let swayRight = SCNAction.rotateTo(x: 0, y: CGFloat(facing + 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
-            swayRight.timingMode = .easeInEaseOut
-            let swayLeft = SCNAction.rotateTo(x: 0, y: CGFloat(facing - 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
-            swayLeft.timingMode = .easeInEaseOut
-            figure.runAction(.sequence([settle, .repeatForever(.sequence([swayRight, swayLeft]))]), forKey: "turn")
-        }
+        // The turn toward the player waits for the figure's first frame on
+        // the beam (`settle`, from the coordinator's `figureShown`).
 
         // A slow push toward the figure over the beat the name lands on. It is
         // small — a twelfth of the distance — and it eases out, so it reads as
@@ -1226,6 +1492,37 @@ struct SummonStageView: UIViewRepresentable {
         }
     }
 
+    /// The figure settles out of its three-quarter stance to face the player
+    /// as the stars tick in, then breathes: a slow sway of a fifth of a
+    /// radian either way, which is enough to keep the silhouette alive
+    /// without ever turning the face away. A reveal is the most-looked-at
+    /// second in the game and a dead-still model is the tell that it is a
+    /// prop rather than a character.
+    ///
+    /// "Face the player" is read off the FEET, not assumed (2026-09-18):
+    /// a family with no `idle` plays its combat idle here, a guard stance
+    /// whose feet point off the mesh's forward — Sekhmet showed her
+    /// profile and the awakened Ares his back on three runs of frames,
+    /// lit by the cool fill on the side the camera saw. The correction
+    /// turns the feet toward the lens and the sway swings about it.
+    /// Called on the figure's first frame on the beam (`figureShown`): the
+    /// joints' presentation positions are all zero until the renderer has
+    /// posed the figure once, and run 186 read a zero heel-to-toe vector
+    /// off joints it had found by name. Reading them there, rather than on
+    /// a timer, also keeps the main thread off the scene while SceneKit's
+    /// thread is busy — run 221's timer read them in the middle of the
+    /// flash's shader compiles and waited 955 ms.
+    nonisolated private static func settle(_ figure: SCNNode) {
+        let facing = facingCorrection(for: figure)
+        let turn = SCNAction.rotateTo(x: 0, y: CGFloat(facing), z: 0, duration: 1.5, usesShortestUnitArc: true)
+        turn.timingMode = .easeOut
+        let swayRight = SCNAction.rotateTo(x: 0, y: CGFloat(facing + 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
+        swayRight.timingMode = .easeInEaseOut
+        let swayLeft = SCNAction.rotateTo(x: 0, y: CGFloat(facing - 0.20), z: 0, duration: 4.5, usesShortestUnitArc: true)
+        swayLeft.timingMode = .easeInEaseOut
+        figure.runAction(.sequence([turn, .repeatForever(.sequence([swayRight, swayLeft]))]), forKey: "turn")
+    }
+
     /// The yaw that turns the figure's feet toward the camera (+Z), read off
     /// the animated pose at the moment of the reveal: the heel-to-toe
     /// direction of both feet, averaged, in world space (the rigs are
@@ -1236,7 +1533,7 @@ struct SummonStageView: UIViewRepresentable {
     /// case blind: an exact `childNode(withName: "LeftFoot")` found nothing
     /// on runs 184 and 185 — SceneKit names a USD joint node by more than
     /// its last path component — and the whole correction sat idle.
-    private static func facingCorrection(for figure: SCNNode) -> Float {
+    nonisolated private static func facingCorrection(for figure: SCNNode) -> Float {
         var seen: [String] = []
         func point(_ suffix: String) -> SCNVector3? {
             let wanted = suffix.lowercased()
@@ -1280,7 +1577,10 @@ struct SummonStageView: UIViewRepresentable {
     /// figure looking pasted onto the stone. It is drawn with a real alpha
     /// channel and composited normally rather than additively, for the reason
     /// written beside this view's clear background.
-    private func addContactShadow(to scene: SCNScene) {
+    ///
+    /// Built with the set, out of sight (the warm-up draws it once first);
+    /// `show` fades it in.
+    private func contactShadowNode() -> SCNNode {
         let size = CGFloat(result.blueprint.model.height) * 0.75
         let plane = SCNPlane(width: size, height: size)
         let material = SCNMaterial()
@@ -1297,8 +1597,30 @@ struct SummonStageView: UIViewRepresentable {
         node.position = SCNVector3(0, 0.012, 0)
         node.renderingOrder = 5
         node.opacity = 0
-        scene.rootNode.addChildNode(node)
-        node.runAction(.sequence([.wait(duration: 0.05), .fadeOpacity(to: 0.8, duration: 0.4)]))
+        return node
+    }
+
+    /// The column of `VFXLibrary.summonBeam` — the same cylinder under the
+    /// same material, which is what its shader is compiled for — drawn in
+    /// the warm-up only and taken down after it. The beam itself is spawned
+    /// at the reveal, as it always was: its motes rise from a particle
+    /// system, and a node carrying one may not leave the scene while its
+    /// motes live (the fight's two crashes of 2026-09-15). The twin carries
+    /// none; the motes draw with the braziers' particle shader, which the
+    /// set's own flames have compiled. Should the beam's material change,
+    /// change it here too.
+    private static func warmBeamTwin(tint: UIColor) -> SCNNode {
+        let beam = SCNCylinder(radius: 0.8, height: 14)
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = tint.withAlphaComponent(0.25)
+        material.emission.contents = tint
+        material.blendMode = .add
+        material.writesToDepthBuffer = false
+        beam.firstMaterial = material
+        let node = SCNNode(geometry: beam)
+        node.position = SCNVector3(0, 7, 0)
+        return node
     }
 
     /// Black in the middle, transparent at the rim, with the alpha channel the
@@ -1319,4 +1641,103 @@ struct SummonStageView: UIViewRepresentable {
                                                  options: [])
         }
     }()
+}
+
+/// Where a reveal stage's warm-up stands (`SummonStageView.makeUIView`).
+private enum RevealStageWarmUp {
+    /// Out of sight, drawing everything the flash will show.
+    case drawing
+    /// Drawn; the main queue is putting it all out of sight again.
+    case drawn
+    /// Waiting for a frame drawn with nothing on the beam.
+    case clearing
+    /// In view: the charge's clock has started, and the first frame with
+    /// the figure on the beam is reported.
+    case ready
+}
+
+/// The charge's rune rings, keyed once per launch (`SummonRevealView`'s
+/// `chargeRing` draws the element's colour through it).
+enum RuneLinesArt {
+    /// `rune_ring` keyed to its drawn lines, as a white mask (2026-09-23).
+    ///
+    /// Run 221 masked the painting by its luminance through a 1.6 contrast,
+    /// and the charge's rings printed as one filled red disc about 210
+    /// points across, laid over the temple like a film: the painting is
+    /// gold lines at luminance 0.78–1.0 over a teal GLOW at 0.45–0.55 that
+    /// fills its bands, and any mask that lets the glow through fills the
+    /// ring. Keyed here instead — alpha a smoothstep of the luminance from
+    /// 0.60 to 0.85, so the glow and the gold lines' soft shoulders go and
+    /// the lines stay, and nothing inside 0.44–0.48 of the radius, where
+    /// the spokes and the star converge into a blot at this size and the
+    /// scroll stands anyway. Judged on a mock of the held charge over the
+    /// run's own set against the old mask and the thresholds either side.
+    /// Once per launch (`prepare`, off the main thread); the SwiftUI filters
+    /// it replaces ran every frame.
+    static let image: UIImage? = keyed()
+
+    /// Keys the rings on a background queue, so the charge's first frame
+    /// never pays for it: the loop is a million pixels, a tenth of a
+    /// second or more in the Debug build a phone runs from Xcode. Called
+    /// when the summon room appears; the charge reads whatever is ready.
+    static func prepare() {
+        DispatchQueue.global(qos: .utility).async { _ = image }
+    }
+
+    private static func keyed() -> UIImage? {
+        guard let source = BundleArt.image("rune_ring")?.cgImage else { return nil }
+        let width = source.width
+        let height = source.height
+        // Device RGB is sRGB on iOS: the levels read below are the file's
+        // own, the ones the thresholds were measured on.
+        guard width > 0, height > 0,
+              let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8,
+                                      bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let data = context.data else { return nil }
+        context.draw(source, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let rowBytes = context.bytesPerRow
+        let pixels = data.bindMemory(to: UInt8.self, capacity: rowBytes * height)
+
+        // The line ramp as a table over the 256 luminance levels.
+        let lineFloor = 0.60
+        let lineFull = 0.85
+        var ramp = [UInt8](repeating: 0, count: 256)
+        for level in 0..<256 {
+            let t = min(1, max(0, (Double(level) / 255 - lineFloor) / (lineFull - lineFloor)))
+            ramp[level] = UInt8((t * t * (3 - 2 * t) * 255).rounded())
+        }
+        // The hub, as squared distances from the centre in pixels.
+        let half = Double(min(width, height)) / 2
+        let hubClear = (half * 0.44) * (half * 0.44)
+        let hubOpen = (half * 0.48) * (half * 0.48)
+        let centreX = Double(width) / 2
+        let centreY = Double(height) / 2
+
+        ramp.withUnsafeBufferPointer { table in
+            for y in 0..<height {
+                let dy = Double(y) + 0.5 - centreY
+                let row = pixels + y * rowBytes
+                for x in 0..<width {
+                    let dx = Double(x) + 0.5 - centreX
+                    let reach = dx * dx + dy * dy
+                    let pixel = row + x * 4
+                    // Rec. 709 luminance in integers (the weights sum to 256).
+                    let level = (54 * Int(pixel[0]) + 183 * Int(pixel[1]) + 19 * Int(pixel[2])) >> 8
+                    var alpha = Double(table[min(255, level)])
+                    if reach < hubOpen {
+                        alpha = reach <= hubClear ? 0 : alpha * (reach - hubClear) / (hubOpen - hubClear)
+                    }
+                    // White at that alpha, premultiplied.
+                    let value = UInt8(min(255, max(0, alpha.rounded())))
+                    pixel[0] = value
+                    pixel[1] = value
+                    pixel[2] = value
+                    pixel[3] = value
+                }
+            }
+        }
+        guard let keyed = context.makeImage() else { return nil }
+        return UIImage(cgImage: keyed)
+    }
 }

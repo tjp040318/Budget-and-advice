@@ -499,16 +499,16 @@ struct CollectionView: View {
         }
         .frame(width: Self.portraitSize, height: Self.portraitSize)
         .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
+        .overlay(paintedFrame(rarity))
+        // The lock on its dark disc, as the cards wear it (`CardMark`, run
+        // 221: an ink glyph vanished on a dark painting), and over the
+        // carved frame rather than under its corner scroll.
         .overlay(alignment: .topTrailing) {
             if unit.unit.isLocked {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Theme.textPrimary.opacity(0.9))
-                    .shadow(color: .black, radius: 2)
+                CardMark(systemName: "lock.fill", size: 18, gold: false)
                     .padding(6)
             }
         }
-        .overlay(paintedFrame(rarity))
         .rarityFrame(rarity, radius: Theme.tightCorner)
         // A painting scaled to fill overhangs its frame, and `clipShape` does
         // not clip hit-testing: without this it takes the taps meant for the
@@ -642,9 +642,11 @@ struct CollectionView: View {
         }
     }
 
-    /// One stat: "HP 5270" over "+2573". Every figure is at its own width
-    /// (`fixedSize`) and at or over its floor — a 70-point cell holds
-    /// "HP 12345" (56) and "+10234" (40), so nothing is shrunk or cut.
+    /// One stat: "HP 5,270" over "+2,573", grouped as every other number on
+    /// the plate is (`UnitDetailView.statText`; run 221 printed "HP 7301"
+    /// beside "2,983 POWER"). Every figure is at its own width (`fixedSize`)
+    /// and at or over its floor — a 70-point cell holds "HP 12,345" (64) and
+    /// "+10,234" (46), so nothing is shrunk or cut.
     private func statCell(_ label: String, _ base: Double, _ total: Double, ink: PlateInk) -> some View {
         let bonus = total - base
         // A blank line when the relics add nothing, so the four cells keep

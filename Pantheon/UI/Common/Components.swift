@@ -74,6 +74,12 @@ struct ElementBadge: View {
     /// big? We can't see the picture" — the owner, 2026-09-14).
     var scale: CGFloat = 1
 
+    /// Radiance's capsule is pale gold, and white on it measured about
+    /// 1.4:1: the reveal's RADIANCE read as a blank gold pill (run 221). Its
+    /// glyph and word are ink, with a light edge instead of a dark one; the
+    /// other four keep white on their deeper colours.
+    private var isPale: Bool { element == .radiance }
+
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: element.glyph)
@@ -84,8 +90,8 @@ struct ElementBadge: View {
                     .tracking(0.6)
             }
         }
-        .foregroundStyle(.white)
-        .shadow(color: .black.opacity(0.7), radius: 1, x: 0, y: 0.5)
+        .foregroundStyle(isPale ? Theme.ink : Color.white)
+        .shadow(color: isPale ? Color.white.opacity(0.35) : Color.black.opacity(0.7), radius: 1, x: 0, y: 0.5)
         .padding(.horizontal, compact ? max(3, 5 * scale) : 8)
         .padding(.vertical, compact ? max(2, 3 * scale) : 4)
         .background(
@@ -287,13 +293,18 @@ struct BundleImage: View {
 /// A card's painting in a square, zoomed to the bust when the painting is
 /// a whole small figure.
 ///
-/// Every card in the bundle is a bust except seven families' (Horus, and
-/// Neptune, Mercury, the Vestal, Chang'e, the Jiangshi and the Terracotta
-/// Soldier from batch 4), which the painter returned as a full figure in
-/// A-pose. On a board of busts those read as the cheapest thing on it, so a
-/// square draws them at `zoom` with the painting's top `top` of the way
-/// down: the head and shoulders fill the square as every other card's do.
-/// Measured on a sheet of all seven against Anubis and Zeus (2026-09-23).
+/// Most cards in the bundle are busts, but thirty-eight families' came back
+/// from the painter as a whole small figure. On a board of busts those read
+/// as the cheapest thing on it, so a square draws them at `zoom` with the
+/// painting's top `top` of the way down: the head and shoulders fill the
+/// square as every other card's do. The list was first the seven batch-4
+/// families the eye caught; on 2026-09-23 every base card of all 99
+/// families was looked at on contact sheets, with a measured second opinion
+/// (the figure's detail reaching the card's bottom edge, or standing narrow
+/// at 85% of its height), and the two agreed on every one. The awakened
+/// cards follow their base cards, so the prefix covers both forms. The
+/// mummy's cards are a painting inset on a white sheet, so its crop starts
+/// lower (`topOverride`) to keep the sheet's edge out of the square.
 /// A re-roll as a real bust is paid art on the owner's word; this is the
 /// free half, and it stops applying the moment a family leaves the list.
 struct PortraitPainting: View {
@@ -301,10 +312,22 @@ struct PortraitPainting: View {
     let size: CGFloat
 
     static let fullFigureFamilies: [String] = [
-        "horus", "neptune", "mercury", "vestal", "chang_e", "jiangshi", "terracotta_soldier",
+        "amazon", "apollo", "artemis", "athena", "bellona", "berserker", "bragi",
+        "chang_e", "cobra_priestess", "cyclops", "demeter", "frigg", "frost_troll",
+        "heimdall", "hel", "hera", "heracles", "horus", "jiangshi", "khnum", "maat",
+        "medusa", "mercury", "minotaur", "mummy", "neptune", "odin", "osiris",
+        "poseidon", "ptah", "scarab_knight", "skadi", "sobek", "terracotta_soldier",
+        "thor", "ullr", "valkyrie", "vestal",
     ]
     static let zoom: CGFloat = 1.9
     static let top: CGFloat = 0.04
+    /// Families whose crop starts lower than `top`: the mummy's painting sits
+    /// on a white sheet, which a 0.04 crop brings into the square's top.
+    static let topOverride: [String: CGFloat] = ["mummy": 0.10]
+
+    static func cropTop(for name: String) -> CGFloat {
+        topOverride.first { name.hasPrefix("portrait_\($0.key)_") }?.value ?? Self.top
+    }
 
     /// `portrait_<family>_<element>` or `…_awakened`.
     static func isFullFigure(_ name: String) -> Bool {
@@ -316,7 +339,7 @@ struct PortraitPainting: View {
             let drawn = size * Self.zoom
             // A larger view in a smaller frame is centred on it; this moves
             // the painting's row `top` up to the square's top edge.
-            let drop = drawn / 2 - size / 2 - Self.top * drawn
+            let drop = drawn / 2 - size / 2 - Self.cropTop(for: name) * drawn
             BundleImage(name: name, renderedAt: drawn)
                 .aspectRatio(contentMode: .fill)
                 .frame(width: drawn, height: drawn)
@@ -961,7 +984,8 @@ enum ChromeArt {
 /// Selected (`isOn`), the socket STAYS DARK — the painted object keeps the
 /// ground every icon was painted on — and the selection is the metal: the
 /// gold plate at 3 points round it with a pale gold hairline inside, a warm
-/// gold halo tight to the rim and a dark drop shadow under it, so the chosen
+/// gold halo tight to the rim, OUTSIDE it (the medallion is one composited
+/// layer before its shadows), and a dark drop shadow under it, so the chosen
 /// door reads strongest on the cream band. Run 216 measured the old selected
 /// socket, a #FFD678 light at half over the dark, as a muddy khaki (≈130,
 /// 108, 70 against ≈50, 40, 28 at rest) that took the dark ground from the
@@ -1015,6 +1039,13 @@ struct MedallionIcon: View {
             }
         }
         .frame(width: size, height: size)
+        // One layer before the halo. A shadow on a stack is cast by EVERY
+        // child, so the painting and the inner rims each threw the 5-point
+        // gold glow inward over the dark socket: the chosen door's socket
+        // photographed khaki behind its object on every tab screen (runs
+        // 216–221). Composited first, the disc is opaque and the glow can
+        // only fall outside it.
+        .compositingGroup()
         .shadow(color: Color(hex: "#E8B84A").opacity(isOn ? 0.9 : 0), radius: isOn ? 5 : 0)
         .shadow(color: Color.black.opacity(isOn ? 0.35 : 0.28), radius: isOn ? 4 : 2.5, y: isOn ? 2 : 1.5)
         .accessibilityHidden(true)
@@ -1079,13 +1110,20 @@ struct RewardTile: View {
     /// socket at the corner's own size, the short form ("+15K") when it
     /// would overhang. A digit of Manrope-Black is about 0.62 of its point
     /// size and a comma 0.3; the socket leaves its width less the corner's
-    /// padding.
+    /// padding, and the figure may take `cornerShare` of that. At the whole
+    /// of it, "+5,000" (39.1 points) passed on a 46-point tile with 0.7 to
+    /// spare and ran edge to edge across the coins while the Counsel tiles
+    /// beside it printed "+25K" (run 221); with the margin it is "+5K".
     private func cornerAmount(_ amount: String) -> String {
         let points = max(Theme.numericFloor, max(10.5, size * 0.21) * Theme.fontScale)
         let room = size - max(3, size * 0.07) - 3
         let ems: CGFloat = amount.reduce(0) { total, character in total + (character == "," ? 0.3 : 0.62) }
-        return ems * points > room ? ItemArt.compactAmount(amount) : amount
+        return ems * points > room * Self.cornerShare ? ItemArt.compactAmount(amount) : amount
     }
+
+    /// How much of the socket's width a corner count may cover before it
+    /// is written short: the painting keeps a margin either side of it.
+    static let cornerShare: CGFloat = 0.85
 
     /// A star row's point size that fits `width`: a star and its gap are
     /// about 1.2 of the point size, and it never grows past 12% of the tile.
@@ -1106,7 +1144,9 @@ struct RewardTile: View {
                 socket
                 Group {
                     if let relic {
-                        RelicIcon(relic: relic, size: size * 0.78, showsStars: false, showsLevel: false)
+                        // The slot as the inventory grid wears it, a small
+                        // number on the stone's top-left corner.
+                        RelicIcon(relic: relic, size: size * 0.78, showsStars: false, showsLevel: false, showsSlot: true)
                     } else if let imageName, BundleArt.exists(imageName) {
                         BundleImage(name: imageName, renderedAt: size * 0.8)
                             .aspectRatio(contentMode: .fit)
@@ -1116,7 +1156,11 @@ struct RewardTile: View {
                     }
                 }
                 .frame(width: size, height: size)
-                if let amount {
+                // A relic is one stone and its slot is the badge on it, so
+                // its tile prints no count: the spoils passed "Slot 3" as the
+                // amount and it covered the stone's seal in large outlined
+                // type (runs 220–221).
+                if relic == nil, let amount {
                     OutlinedText(
                         text: cornerAmount(amount),
                         font: Theme.numeric(max(10.5, size * 0.21)).weight(.black),
@@ -1205,6 +1249,10 @@ struct UnitCard: View {
     /// the portrait is what a small card shows.
     private var wear: CGFloat { max(0.6, min(1, size / 80)) }
 
+    /// The discs the sun, the lock and the crown sit on: the compact element
+    /// badge's height, so the four marks in the top corners are one family.
+    private var markSize: CGFloat { max(12, 17 * wear) }
+
     var body: some View {
         VStack(spacing: 0) {
             ZStack(alignment: .topLeading) {
@@ -1231,23 +1279,24 @@ struct UnitCard: View {
                     paintedFrame
                 }
 
+                // The marks on the art each sit on a small dark disc (run
+                // 221): the ink lock all but vanished on the fire Anubis's
+                // dark painting, and the sun floated on it with nothing
+                // under it.
                 VStack(alignment: .leading, spacing: max(2, 3 * wear)) {
                     ElementBadge(element: unit.element, compact: true, scale: wear)
                     if unit.unit.isAwakened {
-                        Image(systemName: "sun.max.fill")
-                            .font(.system(size: max(7, 10 * wear), weight: .black))
-                            .foregroundStyle(Theme.gold)
-                            .shadow(color: Theme.gold.opacity(0.9), radius: 4)
+                        CardMark(systemName: "sun.max.fill", size: markSize)
                     }
                 }
                 .padding(max(3, 5 * wear))
 
-                VStack(alignment: .trailing, spacing: max(2, 3 * wear)) {
+                // The lock and the crown side by side, the crown in the
+                // corner: stacked, the lock pushed the crown down onto the
+                // portrait's face.
+                HStack(spacing: max(2, 3 * wear)) {
                     if unit.unit.isLocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: max(7, 9 * wear), weight: .bold))
-                            .foregroundStyle(Theme.textPrimary.opacity(0.9))
-                            .shadow(color: .black, radius: 2)
+                        CardMark(systemName: "lock.fill", size: markSize, gold: false)
                     }
                     // A unit with a leader skill wears a crown, the genre's
                     // mark for it, so the leader is picked off the grid
@@ -1255,10 +1304,7 @@ struct UnitCard: View {
                     // know leader skills if there's no symbol for it on the
                     // character?", the owner, 2026-09-12).
                     if unit.blueprint.leaderSkill != nil {
-                        Image(systemName: "crown.fill")
-                            .font(.system(size: max(7, size * 0.12), weight: .black))
-                            .foregroundStyle(Theme.gold)
-                            .shadow(color: .black.opacity(0.9), radius: 2)
+                        CardMark(systemName: "crown.fill", size: markSize)
                     }
                 }
                 .padding(max(3, 5 * wear))
@@ -1389,6 +1435,37 @@ struct UnitCard: View {
     }
 }
 
+/// A mark a card wears on its painting — the awakened sun, the lock, the
+/// leader's crown — the way the genre wears one: its glyph on a small dark
+/// disc, gold (or cream, for the lock) with a hairline rim, so it reads on
+/// any art, pale or dark. A bare glyph with a shadow read on some paintings
+/// and vanished on others (run 221: the ink lock on the fire Anubis).
+/// `size` is the disc; the glyph is a little over half of it.
+struct CardMark: View {
+    let systemName: String
+    var size: CGFloat = 16
+    var gold: Bool = true
+
+    var body: some View {
+        // A gradient and a colour: a Group, never a ternary.
+        Group {
+            if gold {
+                glyph.foregroundStyle(Theme.goldTextFlat)
+            } else {
+                glyph.foregroundStyle(Theme.onGlass)
+            }
+        }
+        .frame(width: size, height: size)
+        .background(Circle().fill(Theme.ink.opacity(0.7)))
+        .overlay(Circle().strokeBorder((gold ? Theme.gold : Theme.onGlassDim).opacity(0.6), lineWidth: 0.5))
+    }
+
+    private var glyph: some View {
+        Image(systemName: systemName)
+            .font(.system(size: max(6.5, size * 0.56), weight: .black))
+    }
+}
+
 /// An empty slot in a team lineup.
 struct EmptyTeamSlot: View {
     var size: CGFloat = 76
@@ -1463,6 +1540,82 @@ struct PlateButtonStyle: ButtonStyle {
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .brightness(configuration.isPressed ? -0.06 : 0)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+    }
+}
+
+/// The game's switch (run 221), for every `Toggle`:
+/// `.toggleStyle(GameToggleStyle())`. OFF is the strip's dark well
+/// (`BarWell`) with a bronze knob at its left, ON the lit gold of the
+/// primary button with a pale gold knob at its right, the knob sliding
+/// between them on a spring. The system switch drew OFF as a white knob on a
+/// pale grey track, which on cream marble read as a disabled control, not
+/// as "off". Still a toggle to VoiceOver: the label, "On" or "Off", and the
+/// toggle trait; the whole row is the tap, as the system's is.
+struct GameToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        let state: String = configuration.isOn ? "On" : "Off"
+        return Button {
+            Juice.haptic(.light)
+            withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+                configuration.isOn.toggle()
+            }
+        } label: {
+            HStack(spacing: 8) {
+                configuration.label
+                Spacer(minLength: 8)
+                GameSwitch(isOn: configuration.isOn)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityValue(Text(state))
+        .accessibilityAddTraits(.isToggle)
+    }
+}
+
+/// The switch's track and knob: 44 × 24, the knob 18 across and 10 either
+/// side of the middle.
+private struct GameSwitch: View {
+    let isOn: Bool
+
+    private static let width: CGFloat = 44
+    private static let height: CGFloat = 24
+    private static let knob: CGFloat = 18
+    private static var travel: CGFloat { width / 2 - 3 - knob / 2 }
+
+    /// The lit track: the gold `PrimaryButton` and the lit Evolve row wear
+    /// these four stops, so ON is the same gold as every live control.
+    private static let litTrack = LinearGradient(
+        colors: [Color(hex: "#FFE9A8"), Color(hex: "#E2BF62"), Theme.gold, Color(hex: "#7A5B1C")],
+        startPoint: .top, endPoint: .bottom
+    )
+    private static let knobOff = LinearGradient(
+        colors: [Color(hex: "#D6BE86"), Theme.bronze, Theme.goldDeep],
+        startPoint: .top, endPoint: .bottom
+    )
+    private static let knobOn = LinearGradient(
+        colors: [Color(hex: "#FFF8E0"), Color(hex: "#F1D586"), Color(hex: "#C9A24A")],
+        startPoint: .top, endPoint: .bottom
+    )
+
+    var body: some View {
+        ZStack {
+            BarWell()
+            Capsule()
+                .fill(Self.litTrack)
+                .overlay(Capsule().strokeBorder(Color(hex: "#FFE9A8").opacity(0.55), lineWidth: 1).padding(1))
+                .overlay(Capsule().strokeBorder(Theme.goldDeep.opacity(0.8), lineWidth: 1))
+                .opacity(isOn ? 1 : 0)
+            Circle()
+                .fill(isOn ? Self.knobOn : Self.knobOff)
+                .overlay(Circle().strokeBorder(Color.white.opacity(0.4), lineWidth: 0.75).padding(0.75))
+                .overlay(Circle().strokeBorder(Theme.goldDeep.opacity(0.85), lineWidth: 0.75))
+                .frame(width: Self.knob, height: Self.knob)
+                .shadow(color: Color.black.opacity(0.45), radius: 1.5, y: 1)
+                .offset(x: isOn ? Self.travel : -Self.travel)
+        }
+        .frame(width: Self.width, height: Self.height)
+        .animation(.spring(response: 0.28, dampingFraction: 0.78), value: isOn)
     }
 }
 
@@ -2187,9 +2340,11 @@ struct BarWallet: View {
     private func value(_ kind: Kind) -> String {
         switch kind {
         case .energy: return "\(wallet.energy)/\(wallet.maxEnergy)"
-        case .divinity: return "\(wallet.divinity)"
+        // Every figure through `compact`, grouped as the drachma is: the
+        // bazaar's well printed "1240" laurels beside "200K" (run 221).
+        case .divinity: return BarWallet.compact(wallet.divinity)
         case .drachma: return BarWallet.compact(wallet.drachma)
-        case .laurels: return "\(wallet.laurels)"
+        case .laurels: return BarWallet.compact(wallet.laurels)
         }
     }
 

@@ -492,24 +492,23 @@ struct BattleView: View {
     }
 
     /// Buffs and debuffs as chips: blue for a buff, red for a debuff, the
-    /// turns left last. `compact` drops the name and keeps the glyph, and it
-    /// stops at four rather than six: compact or not, four chips are 105
-    /// points, and these now share the actor plate's health line rather than
-    /// having a line of their own. The rest are counted in a `+n`.
-    private func statusChips(_ statuses: [ActiveStatus], compact: Bool = false) -> some View {
-        let limit = 4
-        return HStack(spacing: 3) {
+    /// turns left last. `compact` drops the name and keeps the glyph; at most
+    /// `limit` of them, the rest counted in a `+n`. They ride in the boss
+    /// bar's glass capsule now (the actor plate they were cut for is gone),
+    /// so the glyph is at the type floor and the count is cream on glass.
+    private func statusChips(_ statuses: [ActiveStatus], compact: Bool = false, limit: Int = 4) -> some View {
+        HStack(spacing: 3) {
             ForEach(Array(statuses.prefix(limit).enumerated()), id: \.offset) { _, status in
                 HStack(spacing: 2) {
                     Image(systemName: status.kind.glyph)
-                        .font(.system(size: 9, weight: .bold))
+                        .font(.system(size: 11, weight: .bold))
                     if !compact {
                         Text(status.kind.displayName)
-                            .font(Theme.body(9).weight(.semibold))
+                            .font(Theme.body(11).weight(.semibold))
                             .lineLimit(1)
                     }
                     Text("\(status.turnsRemaining)")
-                        .font(Theme.numeric(9))
+                        .font(Theme.numeric(11))
                 }
                 .foregroundStyle(.white)
                 .padding(.horizontal, 4)
@@ -519,8 +518,8 @@ struct BattleView: View {
             }
             if statuses.count > limit {
                 Text("+\(statuses.count - limit)")
-                    .font(Theme.numeric(9))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Theme.numeric(11))
+                    .foregroundStyle(Theme.onGlassDim)
             }
         }
     }
@@ -528,48 +527,73 @@ struct BattleView: View {
     /// The boss's bar across the whole top of the frame, the genre's: its
     /// name and its numbers on a line, then a gold health bar with the blue
     /// attack bar under it in one dark track; a raid's barrier over the
-    /// health in the weakness's colour; its chips at the right.
+    /// health in the weakness's colour; its chips beside its name.
+    ///
+    /// The name row stands on the HUD's own dark glass (`hudChip`, the
+    /// capsule the stage and the wave wear under it) and the bars lie in a
+    /// dark socket (`BossChannel`). Run 221's frame had the crown and the
+    /// name bare on a torchlit painting, the 10-point crown lost in the
+    /// flames, and the spent 43% of the Colossus's health in the cream UI's
+    /// pale channel, where it read as a second, paler fill and not as health
+    /// gone.
     private func bossBar(_ boss: Combatant) -> some View {
-        VStack(spacing: 3) {
+        let weakness = model.raidWeakness(boss.id)
+        let enrage = model.raidEnrage(boss.id)
+        // Only above 1: an enrage that has not started yet is not news.
+        let enraged = enrage > 1.001
+        let raidChips = (weakness == nil ? 0 : 1) + (enraged ? 1 : 0)
+        // The capsule is its own width (`hudChip` fixes it, so nothing in
+        // it is ever cut to an ellipsis), so it must never be wider than
+        // the row. Two chips in all keep their names; past two, the statuses
+        // shrink to their glyph and turns, and a raid's own chips take the
+        // place of some of them. The widest case — a raid's weakness and
+        // enrage beside "LERNAEAN HYDRA" with statuses on — is about 477
+        // points, against the 501 an SE leaves beside the numbers.
+        let compact = boss.statuses.count + raidChips > 2
+        let statusLimit = compact ? 3 - raidChips : 4
+        return VStack(spacing: 4) {
             HStack(spacing: 8) {
-                Image(systemName: "crown.fill")
-                    .font(.system(size: 10, weight: .bold))
-                    .foregroundStyle(Theme.gold)
-                Text(boss.name.uppercased())
-                    .font(Theme.body(10).weight(.black))
-                    .tracking(1.4)
-                    .foregroundStyle(.white)
-                    .lineLimit(1)
-                    .layoutPriority(1)
-                    .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
-                // The genre's arrow for the unit whose turn it is, beside the
-                // name: green up, yellow even, red down.
-                if let matchup = bossMatchups[boss.id] {
-                    Image(uiImage: MatchupIconRenderer.image(for: matchup))
-                        .resizable()
-                        .frame(width: 18, height: 18)
-                        .accessibilityLabel(matchupWord(matchup))
+                hudChip {
+                    HStack(spacing: 6) {
+                        Image(systemName: "crown.fill")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Theme.onGlassGold)
+                        Text(boss.name.uppercased())
+                            .font(Theme.body(11).weight(.black))
+                            .tracking(1.4)
+                            .foregroundStyle(Theme.onGlass)
+                            .lineLimit(1)
+                        // The genre's arrow for the unit whose turn it is,
+                        // beside the name: green up, yellow even, red down.
+                        if let matchup = bossMatchups[boss.id] {
+                            Image(uiImage: MatchupIconRenderer.image(for: matchup))
+                                .resizable()
+                                .frame(width: 18, height: 18)
+                                .accessibilityLabel(matchupWord(matchup))
+                        }
+                        if let weakness {
+                            Chip(text: "Open to \(weakness.displayName)", systemImage: weakness.glyph, tint: weakness.color)
+                        }
+                        if enraged {
+                            Chip(
+                                text: String(format: "Enraged ×%.1f", enrage),
+                                systemImage: "flame.fill",
+                                tint: Theme.danger,
+                                filled: true
+                            )
+                        }
+                        if !boss.statuses.isEmpty {
+                            statusChips(boss.statuses, compact: compact, limit: statusLimit)
+                        }
+                    }
                 }
-                if let weakness = model.raidWeakness(boss.id) {
-                    Chip(text: "Open to \(weakness.displayName)", systemImage: weakness.glyph, tint: weakness.color)
+                Spacer(minLength: 6)
+                hudChip {
+                    Text("\(Int(boss.currentHealth.rounded())) / \(Int(boss.maxHealth.rounded()))")
+                        .font(Theme.numeric(11).weight(.bold))
+                        .foregroundStyle(Theme.onGlassGold)
+                        .lineLimit(1)
                 }
-                // Only above 1: an enrage that has not started yet is not news.
-                if model.raidEnrage(boss.id) > 1.001 {
-                    Chip(
-                        text: String(format: "Enraged ×%.1f", model.raidEnrage(boss.id)),
-                        systemImage: "flame.fill",
-                        tint: Theme.danger,
-                        filled: true
-                    )
-                }
-                if !boss.statuses.isEmpty {
-                    statusChips(boss.statuses)
-                }
-                Spacer(minLength: 0)
-                Text("\(Int(boss.currentHealth.rounded())) / \(Int(boss.maxHealth.rounded()))")
-                    .font(Theme.numeric(10).weight(.bold))
-                    .foregroundStyle(.white)
-                    .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
             }
             VStack(spacing: 1.5) {
                 // A raid boss's barrier sits ON the health bar, because it is
@@ -577,15 +601,26 @@ struct BattleView: View {
                 // first, and the health underneath does not move until it
                 // breaks. Drawn in the boss's current weakness colour.
                 if let barrier = model.raidBarrierFraction(boss.id) {
-                    let tint = model.raidWeakness(boss.id)?.color ?? Theme.gold
-                    StatBar(value: barrier, maximum: 1, tint: tint, height: 4)
+                    let tint = weakness?.color ?? Theme.gold
+                    BossChannel(fraction: barrier, top: tint, bottom: tint.opacity(0.78), height: 4)
                 }
-                StatBar(value: boss.currentHealth, maximum: boss.maxHealth, tint: Theme.gold, height: 9)
-                StatBar(value: boss.attackBar, maximum: 1, tint: Color(hex: "#5CC4F0"), height: 3)
+                BossChannel(
+                    fraction: boss.maxHealth > 0 ? boss.currentHealth / boss.maxHealth : 0,
+                    top: Color(hex: "#F3D688"), bottom: Color(hex: "#B8872C"), height: 9
+                )
+                // The unit plates' own attack-bar blues.
+                BossChannel(fraction: boss.attackBar, top: Color(hex: "#B4EEFF"), bottom: Color(hex: "#3AA6DE"), height: 3)
             }
             .padding(.horizontal, 3)
             .padding(.vertical, 2.5)
-            .background(RoundedRectangle(cornerRadius: 5, style: .continuous).fill(Color.black.opacity(0.6)))
+            // The unit plates' track (`PlateArt.track`): dark from top to
+            // foot, so the frame and the empty channels read as one socket.
+            .background(
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .fill(LinearGradient(colors: [Color(hex: "#2A211A"), Color(hex: "#120D09")],
+                                         startPoint: .top, endPoint: .bottom))
+                    .opacity(0.92)
+            )
             .overlay(RoundedRectangle(cornerRadius: 5, style: .continuous).strokeBorder(Theme.goldDeep.opacity(0.7), lineWidth: 1))
         }
         .padding(.horizontal, 2)
@@ -732,6 +767,44 @@ struct BattleView: View {
             .padding(.bottom, 96)
         }
         .transition(.move(edge: .bottom).combined(with: .opacity))
+    }
+}
+
+/// One channel of the boss bar: an EMPTY SOCKET in the unit plates' dark
+/// (#130E0A) with the fill lying in it, lit along its top the way the
+/// plates' fills are (`PlateArt.fill`), and eased to a new value as the
+/// plates ease theirs. `StatBar` is the cream UI's recessed channel, a pale
+/// sunken groove that belongs on marble; over the fight the Colossus's spent
+/// health read in it as a second, paler fill (run 221).
+private struct BossChannel: View {
+    let fraction: Double
+    let top: Color
+    let bottom: Color
+    let height: CGFloat
+
+    private var filled: CGFloat { CGFloat(min(1, max(0, fraction))) }
+
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Capsule().fill(Color(hex: "#130E0A").opacity(0.85))
+                Capsule().strokeBorder(Color.black.opacity(0.55), lineWidth: 0.75)
+                Capsule()
+                    .fill(LinearGradient(colors: [top, bottom], startPoint: .top, endPoint: .bottom))
+                    .overlay(
+                        Capsule()
+                            .fill(Color.white.opacity(0.35))
+                            .frame(height: max(0.8, height * 0.16))
+                            .padding(.horizontal, height * 0.3)
+                            .frame(maxHeight: .infinity, alignment: .top)
+                            .padding(.top, height * 0.12)
+                    )
+                    .frame(width: geometry.size.width * filled)
+                    .shadow(color: bottom.opacity(0.6), radius: 2.5)
+            }
+        }
+        .frame(height: height)
+        .animation(.easeOut(duration: 0.3), value: fraction)
     }
 }
 
@@ -953,6 +1026,14 @@ struct BattleResultView: View {
                 unitRows
                     .frame(maxWidth: .infinity)
             }
+            // Its own height, always. When the unit rows stood taller than
+            // the verdict (four rows, no raid grade), this row had no give
+            // at all, tied with the spoils line below it, and the stack
+            // offered it half the screen: the verdict got 171 points of its
+            // 186 and shrank what could shrink — VICTORY to 0.8 and the
+            // three numbers to 0.7 (run 221's 20-a, against 38-a, 18-d and
+            // 6-a, whose verdicts were the taller column and never shrank).
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 26)
             .padding(.top, 12)
 
@@ -1046,6 +1127,10 @@ struct BattleResultView: View {
                 .font(Theme.body(8).weight(.black))
                 .tracking(1.4)
                 .foregroundStyle(Theme.goldDim)
+            // One size on every result screen: the reckoning's top row keeps
+            // its own height, so this shrinks only for a figure wider than
+            // the tile's 92 points — never a real one (eight digits and their
+            // commas are about 80; run 221's "32,810" measured 49).
             Text(value)
                 .font(Theme.numeric(15))
                 .foregroundStyle(Theme.textPrimary)
@@ -1102,27 +1187,43 @@ struct BattleResultView: View {
                         .offset(x: 6, y: -6)
                 }
             }
+            // The fallen mark is on the greyed portrait, the laurel's twin at
+            // the other corner, and no longer a chip on the name's line: a
+            // defeat puts it on every row, where it took 66 points from each
+            // name and would wrap every awakened title in a five-unit team
+            // (17 points a line), which is a reckoning taller than the phone.
+            .overlay(alignment: .bottomTrailing) {
+                if !unit.survived {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .black))
+                        .foregroundStyle(Theme.onGlass)
+                        .padding(3)
+                        .background(Circle().fill(Theme.wine))
+                        .offset(x: 6, y: 6)
+                        .accessibilityLabel("Fallen")
+                }
+            }
             VStack(alignment: .leading, spacing: 3) {
-                HStack(spacing: 6) {
+                // The name has its line to itself but for the kills, and it
+                // WRAPS: an awakened title runs to 36 characters ("Sekhmet,
+                // Bringer of the Seven Arrows", about 257 points against the
+                // 238 the CI phone's column leaves it), and with the MVP
+                // capsule on this line run 221 printed "ANUBIS, KEEPER OF THE
+                // ASH R…". The kills chip keeps its own width, so the name is
+                // what gives: two lines hold every name in the roster on every
+                // phone down to an SE, and a third is allowed rather than an
+                // ellipsis. The chip sits on its first line.
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(unit.name)
                         .font(Theme.title(12))
                         .foregroundStyle(isMVP ? Theme.gold : Theme.textPrimary)
-                        .lineLimit(1)
-                    if isMVP {
-                        Text("MVP")
-                            .font(Theme.body(8).weight(.black))
-                            .tracking(1)
-                            .foregroundStyle(Theme.ink)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 1)
-                            .background(Capsule().fill(Theme.gold))
-                    }
-                    if !unit.survived {
-                        Chip(text: "Fallen", systemImage: "xmark", tint: Theme.wine)
-                    }
+                        .lineLimit(3)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .layoutPriority(1)
                     Spacer(minLength: 0)
                     if unit.kills > 0 {
                         Chip(text: "\(unit.kills) \(unit.kills == 1 ? "kill" : "kills")", systemImage: "bolt.fill", tint: Theme.gold)
+                            .fixedSize()
                     }
                 }
                 GeometryReader { geo in
@@ -1134,10 +1235,28 @@ struct BattleResultView: View {
                     }
                 }
                 .frame(height: 5)
-                HStack(spacing: 10) {
-                    Text("Dealt \(Int(unit.dealt).formatted())")
-                    if unit.healed > 0 { Text("Healed \(Int(unit.healed).formatted())") }
-                    Text("Taken \(Int(unit.taken).formatted())")
+                // The MVP capsule ends the numbers, which leave it room: a
+                // healer's three at five digits are about 248 of the CI
+                // phone's 305-point column, and the capsule with its gap 46.
+                // Nested, so the gap is the spacer's 8 and not the numbers'
+                // own spacing twice over.
+                HStack(spacing: 0) {
+                    HStack(spacing: 10) {
+                        Text("Dealt \(Int(unit.dealt).formatted())")
+                        if unit.healed > 0 { Text("Healed \(Int(unit.healed).formatted())") }
+                        Text("Taken \(Int(unit.taken).formatted())")
+                    }
+                    if isMVP {
+                        Spacer(minLength: 8)
+                        Text("MVP")
+                            .font(Theme.body(11).weight(.black))
+                            .tracking(1)
+                            .foregroundStyle(Theme.ink)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1)
+                            .background(Capsule().fill(Theme.gold))
+                            .fixedSize()
+                    }
                 }
                 .font(Theme.numeric(9))
                 .foregroundStyle(Theme.textSecondary)
@@ -1484,7 +1603,10 @@ struct SpoilsPanel: View {
                         RewardTile(
                             key: item.key ?? "",
                             title: item.title,
-                            amount: item.amount,
+                            // A relic's tile prints no amount whatever the
+                            // loot carries: its slot is the badge on the
+                            // stone, never a count across its seal.
+                            amount: item.relic == nil ? item.amount : nil,
                             stars: item.relic == nil ? item.stars : nil,
                             relic: item.relic,
                             size: tileSize,

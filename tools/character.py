@@ -2836,6 +2836,41 @@ GRADES = {
     ],
 }
 
+# The gold moves, then the SKIN (2026-09-23; the awakened Ares). His arms,
+# thighs, fists and toes were painted pink-white — #F7DAD4, hue 10, sat .14,
+# val .96, 8.4% of the atlas — and under the reveal's lights an albedo of
+# 0.96 clipped to paper with no shading (run 221; the owner, of this
+# reveal: "If awakened characters look like this we have a HUGE problem").
+# The paint, not the light: the concept is pale too. The moves take it to a
+# warm tan beside the base Ares's own skin (#9F7460, hue 19, sat .40) and
+# the cards' tan at the neck: hue 19, sat .35, val .64, #A37B69 at the
+# median. Every texel is SCALED (sat and val multiplied), never set, so the
+# painted shading stays. Saturation stops under 0.50 (max .486): the figure
+# shader recolours anything over 0.5 within 32 degrees of the costume hue
+# (35 for Ares) to the element's colour, which would have spotted a tide
+# Ares's arms blue — so the skin's saturated tail and rim get smaller
+# multipliers, the rim first, so no move re-takes another's output. Taken
+# on the shipped atlas (share of the texels): rim 0.022%, tail 0.043%,
+# skin 8.311%, palest 0.033%, strokes 0.085%; the gold armour, the crimson
+# cape, the runes and the dark leather 0 texels each; the blade's highlights
+# (sat under .05) none. Applied after `gold` to the raw export it gives the
+# shipped texture exactly (max difference 0), so a re-ship keeps it.
+GRADES["gold_skin"] = GRADES["gold"] + [
+    # The skin's rim, blended into the cape: less lift, bright only (the
+    # mid-value mauve shading beside the armour is left alone).
+    dict(band=(342, 24), sat=(0.21, 0.26), val=(0.75, 1.0), hue=20, pull=0.85, sat_mul=1.85, val_mul=0.66),
+    # The skin's more saturated tail.
+    dict(band=(342, 24), sat=(0.19, 0.21), val=(0.55, 1.0), hue=20, pull=0.85, sat_mul=2.3, val_mul=0.66),
+    # The skin.
+    dict(band=(342, 24), sat=(0.06, 0.19), val=(0.55, 1.0), hue=20, pull=0.85, sat_mul=2.5, val_mul=0.66),
+    # Its palest texels, bright ones only: the blade's stray warm greys are
+    # darker than 0.80.
+    dict(band=(342, 24), sat=(0.03, 0.06), val=(0.80, 1.0), hue=20, pull=0.85, sat_mul=4.0, val_mul=0.70),
+    # The near-white strokes painted on the skin, yellow-white rather than
+    # pink: nothing else in this atlas is that pale and that warm.
+    dict(band=(24, 75), sat=(0.02, 0.20), val=(0.86, 1.0), hue=20, pull=0.9, sat_mul=2.4, val_mul=0.72),
+]
+
 
 def grade_texture(img, grade):
     """Applies one named grade to a PIL image (RGB or RGBA), returning a new

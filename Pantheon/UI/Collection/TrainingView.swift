@@ -399,19 +399,25 @@ struct TrainingView: View {
     /// on a pale plate, could not be read in either of run 211's frames, and
     /// a card's name strip cut "Anubis, Keep…"; a face has neither. In Fuse
     /// the rail is the six prizes instead, because fusion trains nobody.
+    ///
+    /// The roster opens on the unit on the dais, with whole faces at its top
+    /// (`WholeRowRail`, the Labyrinth's rail): run 221's Awaken frame had
+    /// Sekhmet on the altar and the rail showing Thoth to Perseus, so no face
+    /// on it said who was being trained. A unit picked on the rail leaves the
+    /// rail where it is, under the finger.
+    @ViewBuilder
     private var rail: some View {
-        let chosenPlan = selectedPlan?.id
-        let onAltar = target?.id
-        let all = mode == .fuse ? plans : []
-        return PlaceRail(width: railWidth) {
-            if mode == .fuse {
-                ForEach(all) { plan in
+        if mode == .fuse {
+            let chosenPlan = selectedPlan?.id
+            PlaceRail(width: railWidth) {
+                ForEach(plans) { plan in
                     prizeRow(plan, isOn: plan.id == chosenPlan)
                 }
-            } else {
-                ForEach(units) { unit in
-                    rosterRow(unit, isOn: unit.id == onAltar)
-                }
+            }
+        } else {
+            let onAltar = target?.id
+            WholeRowRail(width: railWidth, items: units, focus: onAltar) { unit in
+                rosterRow(unit, isOn: unit.id == onAltar)
             }
         }
     }
@@ -558,7 +564,10 @@ struct TrainingView: View {
             // The motes rise here and nowhere else: over the figure and the
             // dais, never through the rail's or the ledger's glass.
             .background {
-                PlaceAmbience(shafts: [], motes: 18, seed: 944, bleeds: false)
+                // Clear of the column's foot by the motes' own 40, not a
+                // place's 80: the column has no deck under it, and 80 would
+                // lift them off the painted dais they rise from.
+                PlaceAmbience(shafts: [], motes: 18, seed: 944, bleeds: false, moteClearance: 40)
                     .clipped()
             }
             .overlay(alignment: .topLeading) {

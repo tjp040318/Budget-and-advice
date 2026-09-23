@@ -364,14 +364,24 @@ enum StageBuilder {
         // open in the middle and framed at the sides and the back. The back
         // row (the two columns, the ruin, the statues at z −6.3, the
         // braziers at ±3.8) is beyond the deepest mark and stays.
+        var pieces: [SCNNode] = []
         for placement in recipe.props {
             var placed = placement
             placed.position = Self.clearOfTheWings(placement.position)
-            stage.addChildNode(prop(placed))
+            let piece = prop(placed)
+            stage.addChildNode(piece)
+            pieces.append(piece)
         }
         let flame = UIColor(hex: recipe.flameHex) ?? .orange
         for position in recipe.braziers {
-            stage.addChildNode(brazier(asset: recipe.brazierAsset, at: Self.clearOfTheWings(position), flame: flame))
+            let placed = Self.clearOfTheWings(position)
+            let fire = brazier(asset: recipe.brazierAsset, at: placed, flame: flame)
+            // A built bowl sent out to the wing line steps clear of the piece
+            // already standing there (`standClear`).
+            if placed.x != position.x, fire.childNode(withName: Self.builtBowl, recursively: false) != nil {
+                fire.position = Self.standClear(fire, of: pieces)
+            }
+            stage.addChildNode(fire)
         }
 
         let mist = UIColor(hex: recipe.mistHex) ?? .white
@@ -759,6 +769,14 @@ enum StageBuilder {
         var contrast: CGFloat
         var exposure: CGFloat
         var vignette: CGFloat
+        /// The most the painting may LIFT the exposure
+        /// (`PaintingPalette.exposureCompensation` is +0.25 at its highest,
+        /// for a night). A set of pale marble takes a tenth of a stop at most:
+        /// its floor is the brightest thing in its frame whatever the
+        /// painting behind it, and the Forum's night painting (+0.22) lifted
+        /// its marble to a sunlit cream in the skill zoom (run 221, a middle
+        /// band of 177). A darkening is never capped.
+        var maxLift: CGFloat = 0.25
     }
 
     static func grade(for environment: BattleEnvironment) -> Grade {
@@ -782,9 +800,11 @@ enum StageBuilder {
         // makes it a weak one near the top: a model of that curve on the
         // frame put −0.30 at about 140 and −0.55 at 126–132 depending on the
         // curve, the near floor near 100 — so −0.55. The Aegean cliffs share
-        // it; their darker painting adds +0.15 back.
+        // it; their darker painting adds +0.15 back, held to +0.10 since
+        // round 4 (`maxLift`, the pale-marble sets' cap): 0.05 of a stop,
+        // and no tour frame fights on the cliffs yet.
         case .olympusGate, .aegeanCliffs:
-            return Grade(saturation: 0.98, contrast: 0.08, exposure: -0.55, vignette: 0.24)
+            return Grade(saturation: 0.98, contrast: 0.08, exposure: -0.55, vignette: 0.24, maxLift: 0.10)
         case .lernaMarsh, .hydraLair, .yggdrasilRoots:
             return Grade(saturation: 0.94, contrast: 0.12, exposure: -0.05, vignette: 0.38)
         case .midgardFjord:
@@ -793,8 +813,18 @@ enum StageBuilder {
             return Grade(saturation: 0.96, contrast: 0.10, exposure: 0.08, vignette: 0.32)
         case .jotunheimHall, .dragonGate:
             return Grade(saturation: 0.96, contrast: 0.10, exposure: 0.0, vignette: 0.32)
+        // The Forum at MIDNIGHT, on the same pale marble (run 221): at −0.08
+        // with its painting's +0.22 on top, the skill zoom read as a sunlit
+        // cream floor, its middle band 177 against a 155 ceiling, while the
+        // home framing sat at 129 / 128 / 89. The tone curve (Reinhard to
+        // the 1.85 white point, which put Olympus's −0.6 at 130 against a
+        // measured 131) wants about −0.55 of a stop off the zoom for 155,
+        // and allows −0.75 before the home framing's near floor falls under
+        // 70: −0.60 lands the zoom near 150 and the near floor near 74. Of
+        // that, capping the painting's lift at +0.10 is 0.12; the grade
+        // gives the rest.
         case .forumRome:
-            return Grade(saturation: 0.92, contrast: 0.12, exposure: -0.08, vignette: 0.4)
+            return Grade(saturation: 0.92, contrast: 0.12, exposure: -0.56, vignette: 0.4, maxLift: 0.10)
         }
     }
 
@@ -843,6 +873,70 @@ enum StageBuilder {
         let out = abs(position.x)
         guard position.z > -6.0, out > 4.5, out < 8.0 else { return position }
         return SCNVector3(position.x < 0 ? -8.5 : 8.5, position.y, position.z)
+    }
+
+    /// Where a brazier may stand: where it was put, or the nearest place
+    /// along the depth of the field where its bowl clears every set piece.
+    /// `clearOfTheWings` sends the wing braziers (±6.2) and the wing pieces
+    /// (±6.0 to ±7.0) to the same line at ±8.5, 0.2 to 0.8 m apart in depth,
+    /// so a bowl stood sunk in a stone. The fjord's is the case run 221 saw:
+    /// its BUILT bowl (the Norse brazier has not shipped) 8 cm deep in its
+    /// built rune stone, its fire 3 cm over a flat cap — the one place a
+    /// pure black rectangle has stood over the right-hand brazier since run
+    /// 217, and the one thing there no other photographed set has
+    /// (Jötunheim has the same pair, hidden inside a pillar). Only a built
+    /// bowl is moved: a shipped brazier's own mesh hides its overlap, and
+    /// moving those would re-dress the Duat and the Vault, which nobody
+    /// has asked for. It moves the shorter way, in front of the piece or
+    /// behind it, and never more than two metres.
+    static func standClear(_ brazier: SCNNode, of pieces: [SCNNode]) -> SCNVector3 {
+        var position = brazier.position
+        guard let box = ModelOrientation.bounds(of: brazier, in: brazier) else { return position }
+        let radius = max(max(abs(box.min.x), abs(box.max.x)), max(abs(box.min.z), abs(box.max.z))) * brazier.scale.x
+        guard radius > 0.01 else { return position }
+        let reach = radius + 0.1
+        // Twice, so a move clear of one piece is checked against the rest.
+        for _ in 0..<2 {
+            for piece in pieces {
+                guard let area = standingArea(of: piece),
+                      position.x + reach > area.minX, position.x - reach < area.maxX,
+                      position.z + reach > area.minZ, position.z - reach < area.maxZ else { continue }
+                let forward = area.maxZ + reach - position.z
+                let back = position.z - (area.minZ - reach)
+                let move = forward <= back ? forward : -back
+                guard abs(move) <= 2.0 else { continue }
+                position.z += move
+            }
+        }
+        return position
+    }
+
+    /// The ground a placed piece covers, in the stage's metres: the box round
+    /// everything in it (a prop is a wrapper round the file's nodes, so its
+    /// own `boundingBox` says nothing), scaled and turned as `prop` placed
+    /// it. Nil for a piece with nothing in it.
+    private static func standingArea(of piece: SCNNode) -> (minX: Float, maxX: Float, minZ: Float, maxZ: Float)? {
+        guard let box = ModelOrientation.bounds(of: piece, in: piece) else { return nil }
+        let low = box.min
+        let high = box.max
+        guard high.x > low.x, high.z > low.z else { return nil }
+        let yaw = piece.eulerAngles.y
+        let cosine = cos(yaw)
+        let sine = sin(yaw)
+        var minX = Float.greatestFiniteMagnitude, maxX = -Float.greatestFiniteMagnitude
+        var minZ = Float.greatestFiniteMagnitude, maxZ = -Float.greatestFiniteMagnitude
+        for x in [low.x * piece.scale.x, high.x * piece.scale.x] {
+            for z in [low.z * piece.scale.z, high.z * piece.scale.z] {
+                // A turn about Y: x' = x cos + z sin, z' = −x sin + z cos.
+                let worldX = piece.position.x + x * cosine + z * sine
+                let worldZ = piece.position.z - x * sine + z * cosine
+                minX = min(minX, worldX)
+                maxX = max(maxX, worldX)
+                minZ = min(minZ, worldZ)
+                maxZ = max(maxZ, worldZ)
+            }
+        }
+        return (minX: minX, maxX: maxX, minZ: minZ, maxZ: maxZ)
     }
 
     /// The battle ground: a square slab this wide, its far face at
@@ -1126,6 +1220,10 @@ enum StageBuilder {
         return node
     }
 
+    /// The name of the stone bowl a brazier is built with when its prop has
+    /// not shipped (`standClear` moves only those).
+    static let builtBowl = "brazier_bowl"
+
     /// A brazier prop (or a stone bowl) with a flame and a flickering light.
     static func brazier(asset: String, at position: SCNVector3, flame: UIColor) -> SCNNode {
         let height = propHeights[asset] ?? 1.4
@@ -1134,6 +1232,7 @@ enum StageBuilder {
             let bowl = SCNCylinder(radius: CGFloat(height) * 0.36, height: CGFloat(height) * 0.18)
             bowl.firstMaterial = rockMaterial("rock_cliff", repeats: SCNVector3(2, 1, 1))
             let bowlNode = SCNNode(geometry: bowl)
+            bowlNode.name = builtBowl
             bowlNode.position = SCNVector3(0, height * 0.91, 0)
             node.addChildNode(bowlNode)
             let stem = SCNCylinder(radius: CGFloat(height) * 0.12, height: CGFloat(height) * 0.82)

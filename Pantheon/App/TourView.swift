@@ -212,6 +212,12 @@ struct TourView: View {
     /// awakening line, where the Zeus frame shows the regalia locked.
     static var pinnedDetailAwakened: Bool { argument(after: "-tour-detail") == "awakened" }
 
+    /// `-tour-relic legend` opens the relic inventory with a worn four-sub
+    /// Legend of a four-piece set picked: the fullest panel an ordinary 6★
+    /// relic asks for, where run 221's set line was cut above OPEN. The
+    /// plain frame keeps whichever relic the tour's rolls happen to pick.
+    static var pinnedRelicPick: String? { argument(after: "-tour-relic") }
+
     /// Seconds per tick. The runner screenshots on the same period, so every
     /// step is caught at least once.
     static let tickSeconds: TimeInterval = 4
@@ -583,7 +589,7 @@ struct TourView: View {
                     .onAppear { startRealmBattle() }
             }
         case "relics":
-            RelicInventoryView()
+            RelicInventoryView(openingRelic: Self.pinnedRelicPick == "legend" ? fullestWornRelic : nil)
         case "shop":
             // The Daily stall, or the one `-tour-shop-stall` names.
             ShopView(opening: Self.pinnedShopStall ?? .daily)
@@ -756,6 +762,19 @@ struct TourView: View {
             .max(by: { ($0.grade, $0.level) < ($1.grade, $1.level) })
     }
 
+    /// The worn relic with the most for the inventory's panel to hold: four
+    /// subs, then a four-piece set (its effect wraps), then Legend, then the
+    /// grade. The seed's rolls differ run to run, so it is found, not named.
+    private var fullestWornRelic: UUID? {
+        store.player.relics
+            .filter { $0.equippedBy != nil }
+            .max(by: { a, b in
+                let left = (a.subStats.count, a.set.piecesRequired, a.resolvedQuality.rawValue, a.grade)
+                let right = (b.subStats.count, b.set.piecesRequired, b.resolvedQuality.rawValue, b.grade)
+                return left < right
+            })?.id
+    }
+
     private func tick() {
         ticksOnStep += 1
         guard ticksOnStep >= Self.schedule[min(index, Self.schedule.count - 1)].ticks else { return }
@@ -914,7 +933,7 @@ struct TourView: View {
             .init(glyph: "circle.hexagongrid.fill", title: "Drachma", amount: "+1,240", tint: .gold, key: "drachma"),
             .init(glyph: "arrow.up.circle.fill", title: "Unit EXP", amount: "+860", tint: .verdigris, key: "unit_exp"),
             .init(glyph: "sparkles", title: "Divinity", amount: "+15", tint: .marble, key: "divinity"),
-            .init(glyph: RelicSet.fury.glyph, title: relic?.displayName ?? "Hero Fury Relic", amount: "Slot \(relic?.slot ?? 4)",
+            .init(glyph: RelicSet.fury.glyph, title: relic?.displayName ?? "Hero Fury Relic", amount: nil,
                   tint: .gold, stars: relic?.grade ?? 5, relic: relic),
             .init(glyph: "drop.triangle.fill", title: "Mid Ember Essence", amount: "+3", tint: .element(.ember), key: "essence_ember_mid"),
             .init(glyph: ScrollType.unknown.glyph, title: ScrollType.unknown.displayName, amount: "+1", tint: .scroll(.unknown), key: ItemArt.key(scroll: .unknown)),
@@ -957,7 +976,7 @@ struct TourView: View {
         summary.loot = [
             .init(glyph: "circle.hexagongrid.fill", title: "Drachma", amount: "+12,000", tint: .gold, key: "drachma"),
             .init(glyph: "arrow.up.circle.fill", title: "Unit EXP", amount: "+2,400", tint: .verdigris, key: "unit_exp"),
-            .init(glyph: RelicSet.fury.glyph, title: relic?.displayName ?? "Legend Fury Relic", amount: "Slot \(relic?.slot ?? 2)",
+            .init(glyph: RelicSet.fury.glyph, title: relic?.displayName ?? "Legend Fury Relic", amount: nil,
                   tint: .gold, stars: relic?.grade ?? 6, relic: relic),
             .init(glyph: "circle.hexagonpath.fill", title: Aether.name(for: elemental), amount: "+\(pay.elemental)",
                   tint: .element(RaidGradeService.element(of: raid)), key: elemental),

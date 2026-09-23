@@ -154,10 +154,24 @@ struct LightShafts: View {
 
 /// Rising motes of light over a painting — the launch screen's embers, for
 /// any hero screen. Drawn on one canvas, so a mote costs nothing.
+///
+/// Each mote is LIGHT, not a dot (run 221's judges: "hard, flat dots … in a
+/// still frame they read as dust on the screen", beside the Titan's card, on
+/// the Arena's meter, above SWEEP): a soft halo three times its size at a
+/// quarter of its brightness under a small bright core, both radial falloffs
+/// with no edge, ADDED to the painting (`plusLighter`) as the light shafts
+/// are. They can be born `footClearance` points above the canvas's foot —
+/// halo and all — and rise from there, so none drifts through the band
+/// under it: `PlaceAmbience` keeps a place's motes out of its deck and the
+/// home indicator's band that way, where a speck read as a mark on the
+/// glass. Called directly (the Arena's gap between two plates, Hell's
+/// embers on the chapter map) a canvas uses all of its height.
 struct Motes: View {
     var count: Int = 22
     var color: Color = Color(hex: "#FFD678")
     var seed: UInt64 = 900
+    /// The band at the canvas's foot the motes never enter.
+    var footClearance: CGFloat = 0
 
     private struct Mote {
         let x: Double
@@ -182,20 +196,45 @@ struct Motes: View {
 
     var body: some View {
         let motes = self.motes
+        let color = self.color
+        let clearance = Double(max(0, footClearance))
         return TimelineView(.animation(minimumInterval: 1.0 / 30.0)) { timeline in
             Canvas { context, size in
                 let t = timeline.date.timeIntervalSinceReferenceDate
+                let width = Double(size.width)
+                let height = Double(size.height)
                 for (index, mote) in motes.enumerated() {
+                    let halo: Double = mote.size * 3
+                    // Born with the whole halo above the clear band, gone a
+                    // little past the top.
+                    let start: Double = height - clearance - halo
+                    guard start > 0 else { continue }
                     let travel = (t * mote.speed + mote.phase).truncatingRemainder(dividingBy: 1)
-                    let y = size.height * (1.05 - travel * 1.1)
-                    let x = size.width * mote.x + sin(t * 0.7 + Double(index)) * mote.sway
+                    let y: Double = start - travel * (start + height * 0.05)
+                    let x: Double = width * mote.x + sin(t * 0.7 + Double(index)) * mote.sway
                     let pulse = 0.25 + 0.55 * (0.5 + 0.5 * sin(t * 2.1 + Double(index) * 1.3))
                     let fade = travel < 0.1 ? travel / 0.1 : (travel > 0.85 ? (1 - travel) / 0.15 : 1)
-                    let rect = CGRect(x: x - mote.size, y: y - mote.size, width: mote.size * 2, height: mote.size * 2)
-                    context.fill(Path(ellipseIn: rect), with: .color(color.opacity(pulse * fade)))
+                    let alpha: Double = pulse * fade
+                    let centre = CGPoint(x: x, y: y)
+                    context.fill(
+                        Path(ellipseIn: CGRect(x: x - halo, y: y - halo, width: halo * 2, height: halo * 2)),
+                        with: .radialGradient(
+                            Gradient(colors: [color.opacity(0.25 * alpha), color.opacity(0)]),
+                            center: centre, startRadius: 0, endRadius: CGFloat(halo)
+                        )
+                    )
+                    let core: Double = max(0.9, mote.size * 0.7)
+                    context.fill(
+                        Path(ellipseIn: CGRect(x: x - core, y: y - core, width: core * 2, height: core * 2)),
+                        with: .radialGradient(
+                            Gradient(colors: [color.opacity(alpha), color.opacity(alpha * 0.55), color.opacity(0)]),
+                            center: centre, startRadius: 0, endRadius: CGFloat(core)
+                        )
+                    )
                 }
             }
         }
+        .blendMode(.plusLighter)
         .allowsHitTesting(false)
     }
 }
@@ -205,7 +244,7 @@ struct Motes: View {
 ///
 /// It is the summon hall's private `HallAmbience` made shared, and its
 /// defaults ARE the hall's (the three hall shafts, 26 motes of #FFE29A, seed
-/// 910), so `PlaceAmbience()` is the summon screen exactly as it was. The
+/// 910), so `PlaceAmbience()` is the summon screen's air. The
 /// Arena lays dust over its sand (`shafts: []`, 24, #F2C987, seed 930), the
 /// Hall of Ka its one sanctuary shaft (`LightShaft.sanctuary`, 18, seed 944),
 /// the Labyrinth its key light's motes (`shafts: []`, 18), and the bazaar its
@@ -214,12 +253,19 @@ struct Motes: View {
 ///
 /// It bleeds to the glass with the backdrop it lies over (`bleeds`, on by
 /// default since run 216), so the air and the painting share one frame.
+///
+/// The motes keep out of the place's foot (`moteClearance`, 80 points of the
+/// bled frame): the deck — a 46-point button row, its 10 points of padding
+/// and the 21-point home indicator — is where a mote drifting over a button
+/// or under the gesture bar read as dust (run 221: above SWEEP on the
+/// briefing). A place whose foot is not a deck says less.
 struct PlaceAmbience: View {
     var shafts: [LightShaft] = LightShaft.hall
     var motes: Int = 26
     var moteColor: Color = Color(hex: "#FFE29A")
     var seed: UInt64 = 910
     var bleeds: Bool = true
+    var moteClearance: CGFloat = 80
 
     var body: some View {
         ZStack {
@@ -227,7 +273,7 @@ struct PlaceAmbience: View {
                 LightShafts(shafts: shafts)
             }
             if motes > 0 {
-                Motes(count: motes, color: moteColor, seed: seed)
+                Motes(count: motes, color: moteColor, seed: seed, footClearance: moteClearance)
             }
         }
         .allowsHitTesting(false)
@@ -374,8 +420,12 @@ struct GlassRailPlate: View {
         .allowsHitTesting(false)
         // Out under the left inset when the rail stands on the safe edge, so
         // the glass meets the glass of the phone rather than a strip of bare
-        // painting beside the sensor housing.
-        .ignoresSafeArea(.container, edges: .leading)
+        // painting beside the sensor housing; and down under the home
+        // indicator for the same reason — the bazaar's stalls ended on a hard
+        // line 21 points above the foot with bare painting under it (run
+        // 221). A rail over a tab bar does not touch the bottom inset, so
+        // nothing there moves.
+        .ignoresSafeArea(.container, edges: [.leading, .bottom])
     }
 }
 
@@ -408,12 +458,20 @@ struct GlassRowPlate: View {
 /// `PlaceRailLabel`s and `PlaceRailRow`s (or a screen's own rows on
 /// `GlassRowPlate`s) inside. Used by the bazaar's stalls, the Labyrinth's
 /// floors, the Titans and the Hall of Ka's roster.
+///
+/// `footSpace` lengthens the room after the last row past its 24 points —
+/// what a `WholeRowRail` near its end asks for, so it can scroll its top row
+/// whole to the top. It is part of the last clear rather than a row of its
+/// own, which would add the rows' 5-point gap on top of what was asked
+/// (run 221's plan over-provided by exactly that).
 struct PlaceRail<Content: View>: View {
     let width: CGFloat
+    let footSpace: CGFloat
     let content: () -> Content
 
-    init(width: CGFloat, @ViewBuilder content: @escaping () -> Content) {
+    init(width: CGFloat, footSpace: CGFloat = 0, @ViewBuilder content: @escaping () -> Content) {
         self.width = width
+        self.footSpace = footSpace
         self.content = content
     }
 
@@ -421,7 +479,7 @@ struct PlaceRail<Content: View>: View {
         ScrollView(showsIndicators: false) {
             VStack(alignment: .leading, spacing: 5) {
                 content()
-                Color.clear.frame(height: 24)
+                Color.clear.frame(height: 24 + max(0, footSpace))
             }
             .padding(.horizontal, 9)
             .padding(.top, 8)
@@ -529,6 +587,417 @@ struct PlaceRailRow: View {
     }
 }
 
+// MARK: - A rail that opens on whole rows
+
+/// A `PlaceRail` that opens on WHOLE rows, on the row the screen is about
+/// (run 217): the Labyrinth's floors and Titans, and the Hall of Ka's roster.
+/// Centring the focused row left the row above it cut in half under the
+/// rail's head — B4's disc sliced through its label on frame 16, the Gale
+/// Titan without its eyebrow or its rim on frame 39. Now the focused row
+/// opens third from the top, the row at the top standing exactly where the
+/// first stands at rest; near the end, where the rail could not scroll that
+/// far, its foot is lengthened (`PlaceRail.footSpace`) so it can; and the
+/// focused row always clears the foot's fade. The rows are measured, since a
+/// Titan's name runs to two lines or three.
+///
+/// The opening follows the MEASUREMENTS, never a clock (run 220), and it
+/// follows them until the player takes the rail (run 221). A rail passes
+/// through heights on its way to its own — 87 points on the Titans rail and
+/// 259 on the floors' against the 304 they came to — and a plan made once,
+/// on the first of them, never landed: the Titans opened unscrolled with
+/// the chosen Umbra under the foot, and B10's rail, scrolled while short,
+/// was clamped past its top row when it grew. So the rail plans again
+/// whenever its height or a row's changes; a height that cannot hold the
+/// tallest row with a lead above and below it is one it is passing through,
+/// and is not planned on; every scroll, first or repeated, is built from the
+/// height measured at that moment, never the one planned on; and the landing
+/// is read back 0.3 s after each scroll and repeated, twice at most, with
+/// "missed" in the console when the third read still misses.
+///
+/// The player takes the rail by picking a row, or by scrolling it — the
+/// landed row moving while the rail's height stands still — and from then on
+/// nothing re-plans until the rail appears again. No drag gesture is laid
+/// over the scroll to learn that: a simultaneous drag on a scroll view stops
+/// it scrolling, or makes it jitter, on iOS 18 and iOS 26 (Apple's developer
+/// forums, 2024–25), and this game ships to a phone on the newest iOS. A
+/// rail with a row never measured a second after it appears centres the
+/// focused row, the old behaviour, rather than showing it nowhere. Each step
+/// prints a `[Rail]` line to the console.
+///
+/// The top edge is soft: a row scrolled up past where the top row stands
+/// fades out over `WholeRowPlan.fadeSpan` of travel (`rowOpacity`, read off
+/// the row's place in the scroll), so a row passing under the head dissolves
+/// rather than being cut at full brightness on the rail's 8-point mask, and
+/// the sliver of the row above an opened top row is not drawn at all. Only
+/// the rows fade; the rail's glass stays whole.
+struct WholeRowRail<Item: Identifiable, Row: View>: View {
+    let width: CGFloat
+    let items: [Item]
+    /// The row to open on; nil opens at the top.
+    let focus: Item.ID?
+    let row: (Item) -> Row
+
+    /// The rows' heights and places, the rail's height and where the opening
+    /// stands, in a class so a measurement never lays the rail out again.
+    @State private var gauge = RailRowGauge<Item.ID>()
+    /// The room after the last row that lets the top row be whole at the
+    /// rail's end (`PlaceRail.footSpace`).
+    @State private var tail: CGFloat = 0
+
+    init(width: CGFloat, items: [Item], focus: Item.ID?, @ViewBuilder row: @escaping (Item) -> Row) {
+        self.width = width
+        self.items = items
+        self.focus = focus
+        self.row = row
+    }
+
+    var body: some View {
+        GeometryReader { geometry in
+            // Read with each row's own place, in the same pass, so a row
+            // that moved can be told from a rail that changed height.
+            let railHeight = geometry.size.height
+            ScrollViewReader { proxy in
+                PlaceRail(width: width, footSpace: tail) {
+                    ForEach(items) { item in
+                        row(item)
+                            .background {
+                                GeometryReader { box in
+                                    let place = RailRowPlace(
+                                        height: box.size.height,
+                                        top: box.frame(in: .scrollView).minY,
+                                        viewport: railHeight
+                                    )
+                                    Color.clear
+                                        .onAppear { measured(item.id, place, proxy: proxy) }
+                                        .onChange(of: place) { _, now in
+                                            measured(item.id, now, proxy: proxy)
+                                        }
+                                }
+                                .allowsHitTesting(false)
+                            }
+                            .visualEffect { content, place in
+                                content.opacity(WholeRowPlan.rowOpacity(top: place.frame(in: .scrollView).minY))
+                            }
+                            .id(item.id)
+                    }
+                }
+                .onAppear {
+                    gauge.pass += 1
+                    gauge.touched = false
+                    gauge.viewport = railHeight
+                    settle(proxy, from: "appear")
+                    let pass = gauge.pass
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                        centreIfUnsettled(proxy, pass: pass)
+                    }
+                }
+                .onChange(of: geometry.size.height) { _, height in
+                    gauge.viewport = height
+                    settle(proxy, from: "viewport")
+                }
+                .onChange(of: tail) { _, _ in
+                    // The room at the foot is laid out by the next turn of
+                    // the run loop; scrolled to before it, the scroll stops
+                    // at the old end.
+                    DispatchQueue.main.async { issue(proxy) }
+                }
+                .onChange(of: focus) { _, _ in
+                    // A row picked on the rail: the rail stays under the
+                    // finger that picked it.
+                    gauge.touched = true
+                }
+                .onDisappear {
+                    gauge.pass += 1
+                    gauge.opened = false
+                    gauge.waiting = false
+                    gauge.landedID = nil
+                }
+            }
+        }
+        .frame(width: width)
+    }
+
+    /// One row's measurements, kept; a row whose height is new plans the
+    /// opening again. The landed row moving while the rail's height stands
+    /// still is a finger on the rail, and the rail is the player's.
+    private func measured(_ id: Item.ID, _ place: RailRowPlace, proxy: ScrollViewProxy) {
+        let resized = gauge.heights[id].map { abs($0 - place.height) > 0.5 } ?? true
+        gauge.heights[id] = place.height
+        gauge.tops[id] = place.top
+        if !resized, !gauge.touched, !gauge.waiting, id == gauge.landedID,
+           abs(place.viewport - gauge.landedViewport) < 0.5,
+           abs(place.top - WholeRowPlan.lead) > 3 {
+            gauge.touched = true
+            #if DEBUG
+            print("[Rail] focus=\(Self.describe(focus)) scrolled by the player; it is his now")
+            #endif
+        }
+        if resized {
+            settle(proxy, from: "row")
+        }
+    }
+
+    /// Plans the opening from what is measured now, and issues it or sets the
+    /// room it needs at the foot first. Called by every measurement; it does
+    /// nothing once the player has the rail, while a planned scroll waits for
+    /// its room, or when nothing has moved since the last scroll.
+    private func settle(_ proxy: ScrollViewProxy, from source: String) {
+        guard !gauge.touched, !gauge.waiting,
+              let heights = measuredHeights(), let plan = currentPlan(heights) else { return }
+        if gauge.opened, abs(gauge.viewport - gauge.plannedViewport) < 0.5, Self.same(heights, gauge.plannedHeights) {
+            return
+        }
+        gauge.opened = false
+        gauge.landedID = nil
+        gauge.waiting = true
+        gauge.source = source
+        if abs(plan.tail - tail) < 0.5 {
+            DispatchQueue.main.async { issue(proxy) }
+        } else {
+            // `onChange(of: tail)` issues the scroll once the room is in.
+            tail = plan.tail
+        }
+    }
+
+    /// Scrolls to the plan as it stands NOW — the rail may have changed
+    /// height while the room at the foot was laid out — and reads the
+    /// landing back.
+    private func issue(_ proxy: ScrollViewProxy) {
+        guard gauge.waiting else { return }
+        guard !gauge.touched, let heights = measuredHeights(), let plan = currentPlan(heights) else {
+            // A later measurement plans again.
+            gauge.waiting = false
+            return
+        }
+        if abs(plan.tail - tail) >= 0.5 {
+            // The rail moved under the plan: its room first, and
+            // `onChange(of: tail)` comes back here.
+            tail = plan.tail
+            return
+        }
+        gauge.waiting = false
+        gauge.opened = true
+        scroll(proxy, to: plan, heights: heights)
+        #if DEBUG
+        print("[Rail] focus=\(Self.describe(focus)) planned from \(gauge.source): viewport=\(Int(gauge.viewport.rounded())) "
+              + "measured=\(heights.count)/\(items.count) top=\(Self.describe(items[plan.top].id)) "
+              + "tail=\(Int(plan.tail.rounded())) anchor=\(plan.anchor)")
+        #endif
+        let pass = gauge.pass
+        let issued = gauge.issued
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            check(proxy, attempt: 1, pass: pass, issued: issued)
+        }
+    }
+
+    /// The top row should stand `WholeRowPlan.lead` below the rail's top. The
+    /// plan is built again from the height measured now, and a scroll lost
+    /// to a layout still in flight is repeated from it, twice at most.
+    private func check(_ proxy: ScrollViewProxy, attempt: Int, pass: Int, issued: Int) {
+        guard pass == gauge.pass, issued == gauge.issued, !gauge.touched, !gauge.waiting,
+              let heights = measuredHeights(), let plan = currentPlan(heights) else { return }
+        if abs(plan.tail - tail) >= 0.5 {
+            // The rail changed height since the scroll: plan it again.
+            gauge.opened = false
+            gauge.waiting = true
+            gauge.source = "check"
+            tail = plan.tail
+            return
+        }
+        let id = items[plan.top].id
+        let top = gauge.tops[id]
+        let miss = top.map { abs($0 - WholeRowPlan.lead) } ?? .infinity
+        #if DEBUG
+        let stood = top.map { "\(Int($0.rounded()))" } ?? "unmeasured"
+        #endif
+        if miss <= 1.5 {
+            gauge.landedID = id
+            gauge.landedViewport = gauge.viewport
+            #if DEBUG
+            print("[Rail] \(Self.describe(id)) landed at \(stood) after \(attempt) check(s)")
+            #endif
+        } else if attempt < 3 {
+            #if DEBUG
+            print("[Rail] \(Self.describe(id)) stood at \(stood), not \(Int(WholeRowPlan.lead)); "
+                  + "scrolling again (\(attempt)) at viewport=\(Int(gauge.viewport.rounded()))")
+            #endif
+            scroll(proxy, to: plan, heights: heights)
+            let again = gauge.issued
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                check(proxy, attempt: attempt + 1, pass: pass, issued: again)
+            }
+        } else {
+            #if DEBUG
+            print("[Rail] \(Self.describe(id)) missed at \(stood) after \(attempt) checks: "
+                  + "viewport=\(Int(gauge.viewport.rounded())) anchor=\(plan.anchor)")
+            #endif
+        }
+    }
+
+    /// One scroll to a plan, noted as the rail's latest.
+    private func scroll(_ proxy: ScrollViewProxy, to plan: WholeRowPlan, heights: [CGFloat]) {
+        gauge.plannedViewport = gauge.viewport
+        gauge.plannedHeights = heights
+        gauge.issued += 1
+        proxy.scrollTo(items[plan.top].id, anchor: UnitPoint(x: 0, y: plan.anchor))
+    }
+
+    /// A second after the rail appears, a planned scroll still waiting is
+    /// issued, and a rail with a row never measured centres the focused row
+    /// rather than leaving it anywhere. Neither is expected; the console
+    /// says which ran.
+    private func centreIfUnsettled(_ proxy: ScrollViewProxy, pass: Int) {
+        guard pass == gauge.pass, !gauge.opened, !gauge.touched, let focus else { return }
+        if gauge.waiting {
+            issue(proxy)
+            return
+        }
+        if let heights = measuredHeights(), currentPlan(heights) != nil {
+            settle(proxy, from: "late")
+            return
+        }
+        #if DEBUG
+        let measured = items.filter { (gauge.heights[$0.id] ?? 0) > 0 }.count
+        print("[Rail] focus=\(Self.describe(focus)) unsettled after 1 s: viewport=\(Int(gauge.viewport.rounded())) "
+              + "measured=\(measured)/\(items.count); centring")
+        #endif
+        proxy.scrollTo(focus, anchor: .center)
+    }
+
+    /// Every row's height in order, or nil while one is unmeasured.
+    private func measuredHeights() -> [CGFloat]? {
+        let heights = items.map { gauge.heights[$0.id] ?? 0 }
+        return heights.contains(where: { $0 <= 0 }) ? nil : heights
+    }
+
+    /// Where the rail opens at its height now; nil with no focus, or at a
+    /// height the rail is only passing through — one that cannot hold the
+    /// tallest row with a lead above and below it (87 points on run 221's
+    /// Titans rail, whose rows run to 82).
+    private func currentPlan(_ heights: [CGFloat]) -> WholeRowPlan? {
+        guard let focus, let index = items.firstIndex(where: { $0.id == focus }) else { return nil }
+        guard gauge.viewport >= (heights.max() ?? 0) + 2 * WholeRowPlan.lead else { return nil }
+        return WholeRowPlan(heights: heights, focus: index, viewport: gauge.viewport)
+    }
+
+    private static func same(_ a: [CGFloat], _ b: [CGFloat]) -> Bool {
+        a.count == b.count && zip(a, b).allSatisfy { abs($0 - $1) < 0.5 }
+    }
+
+    private static func describe(_ id: Item.ID?) -> String {
+        id.map { "\($0)" } ?? "nil"
+    }
+}
+
+/// One row as its background reads it, in ONE layout pass: its height, its
+/// top in the scroll's own space, and the rail's height at that moment.
+private struct RailRowPlace: Equatable {
+    let height: CGFloat
+    let top: CGFloat
+    let viewport: CGFloat
+}
+
+/// What a `WholeRowRail` has measured and where its opening stands, kept out
+/// of its view state.
+private final class RailRowGauge<ID: Hashable> {
+    var heights: [ID: CGFloat] = [:]
+    /// Each row's top in the scroll's own space: `lead` for the top row once
+    /// the rail has opened.
+    var tops: [ID: CGFloat] = [:]
+    /// The rail's height, from its reader.
+    var viewport: CGFloat = 0
+    /// What the latest scroll was planned from, and why it was planned.
+    var plannedViewport: CGFloat = 0
+    var plannedHeights: [CGFloat] = []
+    var source = ""
+    /// A planned scroll waits for its room at the foot.
+    var waiting = false
+    /// A scroll has been issued for what is measured now.
+    var opened = false
+    /// The row the last read found standing at `lead`, and the rail's height
+    /// then.
+    var landedID: ID?
+    var landedViewport: CGFloat = 0
+    /// The player has picked a row or scrolled the rail: nothing re-plans.
+    var touched = false
+    /// Bumped on every appearance and disappearance, and on every scroll, so
+    /// a late read of an earlier one does nothing.
+    var pass = 0
+    var issued = 0
+}
+
+/// Where a `WholeRowRail` opens, from its rows' heights and its own height.
+/// The layout numbers are `PlaceRail`'s: 8 over the first row, 5 between
+/// rows, 5 and 24 after the last (and `footSpace` past that), the foot
+/// fading from 88% of the height — change them here if `PlaceRail` changes.
+private struct WholeRowPlan {
+    /// Where the first row stands at rest, and where the top row stands once
+    /// opened: `PlaceRail`'s top padding.
+    static let lead: CGFloat = 8
+    static let rowGap: CGFloat = 5
+    static let trail: CGFloat = 5 + 24
+    static let fadeFrom: CGFloat = 0.88
+    /// How far into the foot's fade the focused row may reach: four points
+    /// of a 36-point fade is 89% bright.
+    static let fadeGrace: CGFloat = 4
+    /// The travel over which a row scrolled up past `lead` fades out. The
+    /// row above an opened top row is at least a row and a gap past it
+    /// (51 points on the floor rail), so it is never drawn.
+    static let fadeSpan: CGFloat = 28
+
+    /// A row's opacity from its top edge in the scroll's own space: whole at
+    /// `lead` and below, gone `fadeSpan` above it.
+    static func rowOpacity(top: CGFloat) -> Double {
+        let lift = WholeRowPlan.lead - top
+        return Double(min(1, max(0, 1 - lift / WholeRowPlan.fadeSpan)))
+    }
+
+    /// The row that opens at the top.
+    let top: Int
+    /// The scroll anchor that puts that row `lead` below the rail's top:
+    /// `scrollTo` lines up the same unit point of the row and of the rail,
+    /// so the row's top lands at `lead` when y is lead / (rail − row).
+    let anchor: CGFloat
+    /// The room past the rail's own foot (`PlaceRail.footSpace`), zero while
+    /// the rail reaches anyway: exactly what brings the rail's end to the
+    /// top row's offset. It is part of the foot's clear, not a row of its
+    /// own — as a row it added the 5-point gap on top (run 221).
+    let tail: CGFloat
+
+    init(heights: [CGFloat], focus: Int, viewport: CGFloat) {
+        guard !heights.isEmpty, heights.indices.contains(focus) else {
+            top = 0
+            anchor = 0
+            tail = 0
+            return
+        }
+        var tops: [CGFloat] = []
+        var y = Self.lead
+        for height in heights {
+            tops.append(y)
+            y += height + Self.rowGap
+        }
+        let last = heights.count - 1
+        // How far the rail scrolls with no room added.
+        let reach = max(0, tops[last] + heights[last] + Self.trail - viewport)
+        let clear = viewport * Self.fadeFrom + Self.fadeGrace
+        let offsets = tops.map { $0 - Self.lead }
+        // The focused row third from the top, but no further down the rail
+        // than the first row-aligned stop at or past its natural end.
+        var row = max(0, focus - 2)
+        if let end = offsets.firstIndex(where: { $0 >= reach - 0.5 }) {
+            row = min(row, end)
+        }
+        // And the focused row whole above the foot's fade.
+        while row < focus, tops[focus] + heights[focus] - offsets[row] > clear {
+            row += 1
+        }
+        top = row
+        anchor = Self.lead / max(1, viewport - heights[row])
+        tail = max(0, offsets[row] - reach)
+    }
+}
+
 // MARK: - Beads and titles
 
 /// A reading, or a quiet action, on glass: a capsule of glass with a painted
@@ -631,8 +1100,8 @@ struct PlaceTitle: View {
     var body: some View {
         VStack(alignment: centered ? .center : .leading, spacing: 0) {
             if let eyebrow {
-                Text(eyebrow.uppercased())
-                    .font(Theme.title(13))
+                // Its figures in Manrope: "LV.14" read "LV.I4" in Cinzel.
+                Text.inscribed(eyebrow.uppercased(), letters: Theme.title(13), digits: Theme.numeric(12.6))
                     .tracking(2.4)
                     .foregroundStyle(Theme.onGlassEyebrow)
                     .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
@@ -645,6 +1114,35 @@ struct PlaceTitle: View {
                 .lineLimit(1)
                 .minimumScaleFactor(shrink)
         }
+    }
+}
+
+extension Text {
+    /// Words in a carved face with their figures in Manrope. Cinzel's figures
+    /// are inscriptional — its 1 is a Roman I — so the Labyrinth's "B1" read
+    /// "BI", "B10" "BIO" and "LV.14" "LV.I4" at phone size (runs 220–221).
+    /// The letters take `letters`, every run of 0–9 takes `digits`, which
+    /// the caller sets a shade under the letters' size: Manrope's lining
+    /// figures stand 0.72 of the em against Cinzel's 0.70 capitals, so 0.97
+    /// of the size stands them level. One `Text`, so a modifier after it
+    /// (`carved`, `tracking`) dresses both faces alike.
+    static func inscribed(_ string: String, letters: Font, digits: Font) -> Text {
+        var text = Text(verbatim: "")
+        var run = ""
+        var runIsFigures = false
+        for character in string {
+            let isFigure = character.isASCII && character.isNumber
+            if isFigure != runIsFigures, !run.isEmpty {
+                text = text + Text(verbatim: run).font(runIsFigures ? digits : letters)
+                run = ""
+            }
+            runIsFigures = isFigure
+            run.append(character)
+        }
+        if !run.isEmpty {
+            text = text + Text(verbatim: run).font(runIsFigures ? digits : letters)
+        }
+        return text
     }
 }
 
@@ -682,8 +1180,17 @@ struct InfoGlyph: View {
 /// so the answer appears next to the question with the room still behind it,
 /// where a sheet would cover the room to answer a question about it. Moved
 /// out of SummonView.swift unchanged (2026-09-22).
+///
+/// `seated` sits the ? in the strip's own dark well (`ScreenChrome.well`, 34
+/// points with its gold rim, the mark in pale gold) inside a 44 × 40 target,
+/// for a ? that stands alone on a painting: the Labyrinth's rooms had the
+/// bare 14-point glyph floating over the torchlight at the top right, with
+/// no plate and a thumb-sized miss round it (run 221). Forty tall, not 44:
+/// the room's title row is 42, and a taller ? would have grown it and taken
+/// the two points a B10's drops plate has to spare in the room's middle.
 struct InfoDot<Detail: View>: View {
     let title: String
+    var seated: Bool = false
     @ViewBuilder var detail: () -> Detail
     @State private var isOpen = false
 
@@ -693,7 +1200,17 @@ struct InfoDot<Detail: View>: View {
             AudioLibrary.shared.play(.uiTap)
             isOpen = true
         } label: {
-            InfoGlyph()
+            if seated {
+                Image(systemName: "questionmark")
+                    .font(.system(size: 14, weight: .black))
+                    .foregroundStyle(Theme.onGlassGold)
+                    .frame(width: ScreenChrome.control, height: ScreenChrome.control)
+                    .background(ScreenChrome.well)
+                    .frame(width: 44, height: 40)
+                    .contentShape(Rectangle())
+            } else {
+                InfoGlyph()
+            }
         }
         .buttonStyle(.plain)
         .popover(isPresented: $isOpen) {

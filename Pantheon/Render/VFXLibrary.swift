@@ -97,21 +97,28 @@ enum VFXLibrary {
             // The smoke stands on its own: the wisp was painted on white too,
             // and `sprite` refuses it (an opaque square, additive, eight to a
             // hit), so rising motes take its place until it is repainted.
+            // In the dark element's VIOLET, not the caster's aura (run 221):
+            // a draugr's blue-grey aura taken 30% to black, alpha-blended and
+            // grown twice over, laid a flat grey see-through disc a hundred
+            // points across over Anubis. The smoke is violet with a tenth of
+            // black, three puffs grown 1.4 times, and more of the motes, so
+            // the hit reads as shadow in the element's colour.
+            let violet = (UIColor(hex: Element.umbra.accentHex) ?? tint).mixed(with: tint, amount: 0.25)
             if let smoke = sprite("smoke") {
-                host.addParticleSystem(puff(smoke, tint: tint.mixed(with: .black, amount: 0.3), count: 5, speed: 0.8,
+                host.addParticleSystem(puff(smoke, tint: violet.mixed(with: .black, amount: 0.1), count: 3, speed: 0.8,
                                             size: 0.9 * CGFloat(scale), life: 0.8, spread: 90, lift: 0.6, spin: 0.6,
-                                            blend: .alpha, grow: 2.0))
+                                            blend: .alpha, grow: 1.4))
                 if let wisp = sprite("wisp") {
-                    host.addParticleSystem(puff(wisp, tint: tint, count: 8, speed: 1.6, size: 0.5 * CGFloat(scale),
+                    host.addParticleSystem(puff(wisp, tint: violet, count: 8, speed: 1.6, size: 0.5 * CGFloat(scale),
                                                 life: 0.7, spread: 60, lift: 1.8, spin: 1.5))
                 } else {
-                    host.addParticleSystem(rising(tint: tint, count: 40, scale: scale))
+                    host.addParticleSystem(rising(tint: violet.mixed(with: .white, amount: 0.15), count: 70, scale: scale))
                 }
             } else {
-                host.addParticleSystem(falling(tint: tint, count: 50, scale: scale * 1.2))
-                host.addParticleSystem(sparks(tint: tint, count: 30, speed: 3, scale: scale))
+                host.addParticleSystem(falling(tint: violet, count: 50, scale: scale * 1.2))
+                host.addParticleSystem(sparks(tint: violet, count: 30, speed: 3, scale: scale))
             }
-            flash(at: position, in: scene, color: tint, radius: 1.2 * scale, duration: 0.22)
+            flash(at: position, in: scene, color: violet, radius: 1.2 * scale, duration: 0.22)
         // The stroke of a closing strike: a bright arc across the victim that
         // grows in and fades in a quarter of a second.
         case "slash":

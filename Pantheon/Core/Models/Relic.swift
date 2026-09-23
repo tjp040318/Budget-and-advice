@@ -425,14 +425,16 @@ struct Relic: Codable, Equatable, Identifiable, Sendable {
     /// The quality rim, a template the app tints with the quality's metal.
     static let rimImageName = "relic_rim"
 
-    /// A slot's main stat in a word, for the chips and captions that name a
-    /// slot: the odd slots are fixed, the even ones the decision.
+    /// A slot's main stat in a word, for the filter's slot chips — a slot,
+    /// not a relic: the odd slots are fixed, the even ones "any main". A
+    /// real relic prints its own main stat instead; "Free" beside "Worn by
+    /// Zeus" and the picker's "Free only" read as unworn (run 221).
     static func slotLabel(forSlot slot: Int) -> String {
         switch slot {
         case 1: return "ATK"
         case 3: return "DEF"
         case 5: return "HP"
-        default: return "Free"
+        default: return "any main"
         }
     }
 

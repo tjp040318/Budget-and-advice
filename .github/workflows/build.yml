@@ -152,33 +152,38 @@ jobs:
               # frame of 2026-09-17: "If awakened characters look like this
               # we have a HUGE problem"), shot at the b moment, seven seconds
               # in, so the figure has turned and the words are up.
-              reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 4; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
+              # Since round 4 (2026-09-23) the stage draws its figure, beam
+              # and shadow once out of sight before the charge starts, so on
+              # CI's simulator the flash lands about 2.5 s later than it did:
+              # a is the charge, b and c the landing, and the awakened lab
+              # frames wait 10 s, not 7, for the words to be up.
+              reveal) sleep 3; shoot "$step-${names[$step]}-a"; sleep 5; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
                 SIMCTL_CHILD_OS_ACTIVITY_DT_MODE=YES xcrun simctl launch --terminate-running-process \
                   --stdout="$PWD/shots/$step-${names[$step]}-awakened-out.txt" \
                   --stderr="$PWD/shots/$step-${names[$step]}-awakened-err.txt" \
                   "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened"
+                sleep 10; shoot "$step-${names[$step]}-awakened"
                 # The lighting lab (2026-09-18): the same awakened Ares two
                 # thirds of a stop under, with the bare rig (Lambert, no
                 # environment, no shadow), and with the ramp of 2026-09-17
                 # on the bare rig — the control every other frame is judged
                 # against. Docs/PLAN.md, "The figure stages' light".
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab dark >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened-dark"
+                sleep 10; shoot "$step-${names[$step]}-awakened-dark"
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab bare >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened-bare"
+                sleep 10; shoot "$step-${names[$step]}-awakened-bare"
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab bare -tour-shading legacy >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened-legacy"
+                sleep 10; shoot "$step-${names[$step]}-awakened-legacy"
                 # And the Lambert ramp of 2026-09-18 on the full rig
                 # (2026-09-20): the frame the physically based figure is
                 # judged against. Docs/PLAN.md, "The serious look in the light".
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-shading ramp >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened-ramp"
+                sleep 10; shoot "$step-${names[$step]}-awakened-ramp"
                 # And the rig of 2026-09-18 (key 900, environment 0.5, the
                 # paint at 0.85, satin gold): the control for the brighter
                 # rig of 2026-09-22. Docs/PLAN.md, "The figure on the phone".
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab previous >/dev/null
-                sleep 7; shoot "$step-${names[$step]}-awakened-previous"
+                sleep 10; shoot "$step-${names[$step]}-awakened-previous"
                 # The 5★'s charge (2026-09-23): the painted scroll over the
                 # turning rings, held, so the beat before a reveal is judged
                 # on its own (it played over an empty dusk until run 220).
@@ -258,6 +263,11 @@ jobs:
               more)
                 sleep 5; shoot "$step-${names[$step]}"
                 again -tour-more diagnostics; sleep 5; shoot "$step-${names[$step]}-diagnostics" ;;
+              # The inventory with its fullest worn relic picked (four subs,
+              # a four-piece set): the panel run 221 cut above OPEN.
+              relics)
+                sleep 5; shoot "$step-${names[$step]}"
+                again -tour-relic legend; sleep 5; shoot "$step-${names[$step]}-legend" ;;
               # The Halls on the brightest painting (Radiance, Olympus: can
               # the glass be read?) and the darkest (Umbra, the Serpent Deep).
               halls)

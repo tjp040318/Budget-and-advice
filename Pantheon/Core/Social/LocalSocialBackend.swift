@@ -434,7 +434,7 @@ final class LocalSocialBackend: SocialBackend, @unchecked Sendable {
                     id: profile.id,
                     rank: offset + 1,
                     name: profile.name,
-                    detail: "Lv.\(profile.level) · \(profile.tier.displayName) · power \(profile.power)",
+                    detail: "Lv.\(profile.level) · \(profile.tier.displayName) · power \(profile.power.formatted())",
                     score: profile.arenaPoints,
                     crest: nil,
                     isMine: profile.id == LocalSocialBackend.me

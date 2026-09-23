@@ -24,12 +24,12 @@ struct RegaliaPips: View {
 
 /// One family's regalia (`Regalia`, `RegaliaService`; `Docs/PLAN.md`,
 /// *Artifacts — the last item on the order*): opened from the plate under
-/// the unit sheet's relic ring. The left is the item — the card, the name,
-/// the template, the level, the blurb and the line at this level, or what
-/// unlocks it; the right is the ladder of five levels with the current one
-/// marked, and what raises it. Nothing here is bought or rolled: the
-/// regalia is the one thing on a unit a player can plan, and this sheet
-/// is the plan.
+/// the unit sheet's relic ring. The left is the item — the card with the
+/// name, the template, the level and the line at this level (or what
+/// unlocks it) beside it, and the item's story under them; the right is the
+/// ladder of five levels with the current one marked, and what raises it.
+/// Nothing here is bought or rolled: the regalia is the one thing on a unit
+/// a player can plan, and this sheet is the plan.
 struct RegaliaSheet: View {
     let unitID: UUID
 
@@ -54,8 +54,14 @@ struct RegaliaSheet: View {
             } content: {
                 if let unit, let regalia {
                     HStack(alignment: .top, spacing: 8) {
-                        item(unit, regalia)
-                            .frame(width: 300)
+                        // Whole when it fits, as the column beside it; a
+                        // locked Oracle with a level banked runs about 310
+                        // points, over the 308 of a 393-point iPhone's
+                        // plate, and scrolls there instead of spilling.
+                        RegaliaColumnScroll {
+                            item(unit, regalia)
+                        }
+                        .frame(width: 300)
                         // The ladder and what raises it fit the phone's
                         // height whole (run 217 cut "What raises it" through
                         // its second row), and "What raises it" runs to the
@@ -81,6 +87,19 @@ struct RegaliaSheet: View {
 
     // MARK: - The item
 
+    /// The card with the item's words beside it — its name, template and
+    /// level, then what it does NOW (or what unlocks it) — and under them
+    /// the item's story as its inscription, which takes the rest of the
+    /// plate.
+    ///
+    /// Run 221's judge: the plate left a blank block right of the card
+    /// under "Level III of V" and about 50 points of bare cream at its foot,
+    /// under the effect. The effect stands beside the card now, in the
+    /// block that was blank; and the words are short of the plate's height
+    /// (about 317 points on the 16 Pro) whatever order they stand in, so the story is not
+    /// a paragraph left above an empty foot but a recessed plate that fills
+    /// it — the item's glyph on a gold rule, the lines centred under it.
+    /// The plate ends 18 points up, clear of the panel's lower acanthus.
     private func item(_ unit: ResolvedUnit, _ regalia: Regalia) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .top, spacing: 10) {
@@ -99,47 +118,85 @@ struct RegaliaSheet: View {
                     HStack(spacing: 6) {
                         RegaliaPips(level: regalia.level, lit: unlocked, size: 7)
                         Text("Level \(regalia.levelLabel) of \(Regalia.numeral(RegaliaTemplate.levels))")
-                            .font(Theme.body(10).weight(.bold))
+                            .font(Theme.body(11).weight(.bold))
                             .foregroundStyle(Theme.textSecondary)
                     }
+                    effect(unit, regalia)
+                        .padding(.top, 4)
                 }
                 Spacer(minLength: 0)
             }
-            Text(regalia.blurb)
-                .font(Theme.body(10))
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
-            Rectangle()
-                .fill(Theme.stroke.opacity(0.7))
-                .frame(height: 1)
-            if unlocked {
+            inscription(regalia)
+        }
+        .padding(.horizontal, Theme.panelInset)
+        .padding(.top, Theme.panelInset)
+        .padding(.bottom, 18)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .panelBackground(radius: Theme.tightCorner)
+    }
+
+    /// What the item does at this level and where the engine reads it — or,
+    /// locked, what unlocks it and what it will do.
+    @ViewBuilder
+    private func effect(_ unit: ResolvedUnit, _ regalia: Regalia) -> some View {
+        if unlocked {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(regalia.line)
-                    .font(Theme.numeric(11))
+                    .font(Theme.numeric(11.5))
                     .foregroundStyle(Theme.gold)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(regalia.template.hookName)
-                    .font(Theme.body(9).weight(.bold))
+                    .font(Theme.body(11).weight(.bold))
                     .foregroundStyle(Theme.goldDim)
-            } else {
-                HStack(spacing: 6) {
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 5) {
                     Image(systemName: "lock.fill")
                         .font(.system(size: 11, weight: .black))
-                        .foregroundStyle(Theme.textSecondary)
                     Text(RegaliaService.unlockLine(for: unit.blueprint).uppercased())
                         .font(Theme.title(12))
                         .tracking(1.0)
-                        .foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
+                .foregroundStyle(Theme.textSecondary)
                 Text(lockedLine(regalia))
-                    .font(Theme.body(10))
+                    .font(Theme.body(11))
                     .foregroundStyle(Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            Spacer(minLength: 0)
         }
-        .padding(Theme.panelInset)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .panelBackground(radius: Theme.tightCorner)
+    }
+
+    /// The item's story: its glyph on a short gold rule and the blurb
+    /// centred under it, on a recessed plate that takes whatever height the
+    /// words above leave — so the plate ends on the column's foot, level
+    /// with "What raises it" beside it, with nothing blank under it.
+    private func inscription(_ regalia: Regalia) -> some View {
+        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+        return VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                LinearGradient(colors: [Theme.goldDim.opacity(0), Theme.goldDim.opacity(0.7)], startPoint: .leading, endPoint: .trailing)
+                    .frame(height: 1)
+                Image(systemName: regalia.template.glyph)
+                    .font(.system(size: 13, weight: .black))
+                    .foregroundStyle(unlocked ? Theme.gold : Theme.textSecondary)
+                LinearGradient(colors: [Theme.goldDim.opacity(0.7), Theme.goldDim.opacity(0)], startPoint: .leading, endPoint: .trailing)
+                    .frame(height: 1)
+            }
+            .frame(maxWidth: 170)
+            Text(regalia.blurb)
+                .font(Theme.body(11))
+                .foregroundStyle(Theme.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(shape.fill(Theme.surface.opacity(0.7)))
+        .overlay(shape.strokeBorder(Theme.stroke.opacity(0.8), lineWidth: 0.75))
     }
 
     /// What a locked item will do once it is lit, with the banked level

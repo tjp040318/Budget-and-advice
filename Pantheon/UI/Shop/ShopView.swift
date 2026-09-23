@@ -14,7 +14,7 @@ import SwiftUI
 /// genre's shop (Epic Seven's Secret Shop is a painted room with its goods on
 /// dark glass): the stalls a glass rail down the left, the summon screen's
 /// shape, so the two read as one game; the stall's name carved over the
-/// painting; the Daily offering floating as the painted gift over a glass
+/// painting; the Daily Offering floating as the painted gift over a glass
 /// deck; every other stall a shelf of glass ware tiles in fixed columns.
 ///
 /// A bespoke day agora (`bazaar_bg`, option C) is the better result and is
@@ -684,7 +684,7 @@ struct BazaarWareTile: View {
                         .padding(.trailing, 16)
                     // Two lines hold every shelf name at the 97 points
                     // the column has (measured in Manrope, 2026-09-23).
-                    Text(shelfName)
+                    Text(Self.nameLine(shelfName, kind: kind, price: price))
                         .font(Theme.body(12).weight(.semibold))
                         .foregroundStyle(Theme.onGlass)
                         .lineLimit(2)
@@ -714,12 +714,16 @@ struct BazaarWareTile: View {
     /// A unit shows its face — a ware is only worth a look because the player
     /// can see whose face is on the shelf. Everything else is the game's one
     /// reward tile, on its dark glass socket.
+    ///
+    /// The face is `PortraitPainting`'s, never a bare fill of the card: a
+    /// family whose cards are whole figures stood horns to hooves in the
+    /// 46-point socket with a face of eight pixels (run 221's Minotaur), and
+    /// the painting draws such a card as the bust every other card is.
     @ViewBuilder
     private var art: some View {
         if let portraitName, BundleImage.exists(portraitName) {
             VStack(spacing: 2) {
-                BundleImage(name: portraitName, renderedAt: Self.artSize)
-                    .aspectRatio(contentMode: .fill)
+                PortraitPainting(name: portraitName, size: Self.artSize)
                     .frame(width: Self.artSize, height: Self.artSize)
                     .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                     .rarityFrame(Rarity(stars: stars ?? 3), radius: 8, painted: false)
@@ -750,10 +754,11 @@ struct BazaarWareTile: View {
     }
 
     /// A ware's name on the shelf, without what the socket already prints:
-    /// "Energy ×50" beside a "+50" socket is "Energy", "Champion's relic, 6★"
-    /// over six stars is "Champion's relic", the Night Market's "3★ relic"
+    /// "Energy ×50" beside a "+50" socket is "Energy", "Champion's Relic, 6★"
+    /// over six stars is "Champion's Relic", the Night Market's "3★ relic"
     /// is "Relic", and "The stonecutter's crate" loses its article so it
-    /// fits two lines. The whole title stays behind the ?.
+    /// fits two lines. The whole title stays behind the ?. A name that comes
+    /// out as its own kind is `nameLine`'s to replace.
     static func shelfName(_ title: String, grant: ShopService.Grant) -> String {
         var name = title
         if cornerAmount(for: grant) != nil, let cut = name.range(of: " ×", options: .backwards) {
@@ -773,6 +778,30 @@ struct BazaarWareTile: View {
             name = capitalisedFirst(String(name.dropFirst(4)))
         }
         return name
+    }
+
+    /// The line under the kind, which never says the kind again. Stripped of
+    /// what the socket prints, "Energy ×20" is "Energy" and the Night
+    /// Market's "3★ relic" is "Relic": run 221's shelf read "ENERGY / Energy"
+    /// three times and "RELIC / Relic" once, which is placeholder data. Such
+    /// a ware says what sets it apart instead, from its own terms: a relic is
+    /// rolled when it is bought, any set and any slot (broken after the comma,
+    /// or the column would break it after "any"); energy for drachma is the
+    /// Night Market's own trade, since the bazaar sells energy only for
+    /// divinity; and the bazaar's own goes over the cap. Anything else that
+    /// ever comes out as its kind says what it is paid in.
+    static func nameLine(_ shelfName: String, kind: String, price: ShopService.Price) -> String {
+        guard shelfName.caseInsensitiveCompare(kind) == .orderedSame else { return shelfName }
+        if kind == Self.kind(for: .relic(grade: 3)) {
+            return "Any set,\nany slot"
+        }
+        if kind == Self.kind(for: .energy(1)) {
+            return price.currency == .drachma ? "For drachma" : "Over the cap"
+        }
+        switch price.currency {
+        case .free: return "Free"
+        case .divinity, .drachma, .laurels: return "For " + price.currency.displayName
+        }
     }
 
     /// "relic" → "Relic": the first letter up, the rest as written.

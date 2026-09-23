@@ -172,9 +172,10 @@ struct LabyrinthView: View {
                 .allowsHitTesting(false)
                 VStack(alignment: .leading, spacing: 6) {
                     // Where the player stands, not the wing's own name said
-                    // three times over (run 216): "NEXT B7 · 5★ RELIC".
-                    Text(standing)
-                        .font(Theme.title(13))
+                    // three times over (run 216): "NEXT B7 · 5★ RELIC". Its
+                    // figures in Manrope: Cinzel's 1 is a Roman I, and
+                    // "NEXT B1" read "NEXT BI" (run 221).
+                    Text.inscribed(standing, letters: Theme.title(13), digits: Theme.numeric(12.6))
                         .tracking(1.2)
                         .foregroundStyle(Theme.onGlassEyebrow)
                         .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
@@ -183,11 +184,14 @@ struct LabyrinthView: View {
                     // Two lines, shrinking to the title floor before either
                     // is cut: "Necropolis of the Unwrapped King" is the long
                     // one. The flat gold keeps the second line as light as
-                    // the first (run 216 carved it in dark bronze).
+                    // the first (run 216 carved it in dark bronze). Every
+                    // card reserves both lines, so the three eyebrows share
+                    // one line: the Lair's one-line name dropped its eyebrow
+                    // 24 points below the others' (run 221).
                     Text(labyrinth.name)
                         .font(Theme.display(18))
                         .carved(multiline: true)
-                        .lineLimit(2)
+                        .lineLimit(2, reservesSpace: true)
                         .minimumScaleFactor(Theme.titleFloor / 18)
                         .fixedSize(horizontal: false, vertical: true)
                     setStones(labyrinth.sets)
@@ -418,11 +422,7 @@ struct LabyrinthView: View {
         let warden = DungeonDatabase.isTowerBossFloor(floor)
         return VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 12) {
-                Text("F\(floor)")
-                    .font(Theme.display(30))
-                    .carved()
-                    .lineLimit(1)
-                    .fixedSize()
+                Self.floorNumber("F", floor)
                 PlaceTitle(
                     eyebrow: "Lv.\(DungeonDatabase.towerLevel(floor: floor)) · \(DungeonDatabase.towerGrade(floor: floor))★ foes",
                     title: tier.name,
@@ -470,6 +470,16 @@ struct LabyrinthView: View {
     /// Stood Up". The full name is on the battle's plates.
     private static func bareName(_ name: String) -> String {
         name.split(separator: ",", maxSplits: 1).first.map { String($0) } ?? name
+    }
+
+    /// A floor's number carved at display size — the tower's "F12" — the
+    /// letter in Cinzel and the figures in Manrope (`Text.inscribed`):
+    /// Cinzel's 1 is a Roman I, and "F1" read "FI" (run 221).
+    fileprivate static func floorNumber(_ letter: String, _ number: Int) -> some View {
+        Text.inscribed("\(letter)\(number)", letters: Theme.display(30), digits: Theme.numeric(29).weight(.heavy))
+            .carved()
+            .lineLimit(1)
+            .fixedSize()
     }
 
     /// A tower floor's pay as tiles: drachma and unit experience with the
@@ -778,7 +788,7 @@ struct LabyrinthView: View {
             HStack(alignment: .center, spacing: 10) {
                 PlaceTitle(eyebrow: "Titan of \(element.displayName)", title: raid.name, size: 20)
                 Spacer(minLength: 6)
-                InfoDot(title: raid.name) {
+                InfoDot(title: raid.name, seated: true) {
                     Text(raid.summary)
                         .font(Theme.body(11))
                         .foregroundStyle(Theme.textPrimary)
@@ -1505,7 +1515,11 @@ struct DungeonLevelsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 floorTitle(chapter, stage: stage)
                 ScrollView(.vertical, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 14) {
+                    // 10 between the boss and the plate, and a 90-point boss
+                    // column (the 84-point face; "Unwrapped", its widest
+                    // word, is 81): the ten points go to the drops, whose
+                    // six names on a B10 have no room to spare (run 221).
+                    HStack(alignment: .top, spacing: 10) {
                         bossColumn(stage)
                         floorDrops(stage)
                     }
@@ -1535,12 +1549,31 @@ struct DungeonLevelsView: View {
             ?? hall.map { EventCalendar.isActive(.doubleEssence($0.element)) }
             ?? false
         return HStack(alignment: .center, spacing: 12) {
-            Text("B\(stage.index)")
-                .font(Theme.display(30))
-                .carved()
-                .lineLimit(1)
-                .fixedSize()
-            PlaceTitle(eyebrow: eyebrow, title: floorHeadline(stage), size: 18)
+            // The number and the words as one block, for the scrim under it.
+            HStack(spacing: 12) {
+                LabyrinthView.floorNumber("B", stage.index)
+                PlaceTitle(eyebrow: eyebrow, title: floorHeadline(stage), size: 18)
+            }
+            // A soft dark pool behind the words: the Vault's torch burns
+            // right behind "5★" and the headline's comma, and the gold
+            // glyphs merged with the flame (run 221). Blurred, so it has no
+            // edge; drawn wider than the words and never measured.
+            .background(alignment: .leading) {
+                LinearGradient(
+                    stops: [
+                        .init(color: Color.black.opacity(0.5), location: 0),
+                        .init(color: Color.black.opacity(0.34), location: 0.6),
+                        .init(color: .clear, location: 1),
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+                .padding(.leading, -6)
+                .padding(.trailing, -24)
+                .padding(.vertical, -6)
+                .blur(radius: 8)
+                .allowsHitTesting(false)
+            }
             Spacer(minLength: 6)
             if eventOn {
                 GlassBead(
@@ -1549,7 +1582,7 @@ struct DungeonLevelsView: View {
                     tint: Theme.onGlassEyebrow
                 )
             }
-            InfoDot(title: labyrinth != nil ? "This dungeon" : "This hall") {
+            InfoDot(title: labyrinth != nil ? "This dungeon" : "This hall", seated: true) {
                 dungeonInfo(chapter)
             }
         }
@@ -1661,7 +1694,7 @@ struct DungeonLevelsView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .frame(width: 96)
+        .frame(width: 90)
     }
 
     /// The floor's drops as tiles on one glass plate — they follow the floor
@@ -1679,21 +1712,29 @@ struct DungeonLevelsView: View {
     /// stones with their names, the hub card's treatment; and a floor that
     /// pays two things left 400 points of empty glass beside them, so a
     /// relic dungeon floor of three tiles or fewer lays the tiles and the
-    /// sets side by side.
+    /// sets side by side. There the first clear is a TILE of its own (the
+    /// divinity, "+20", "First clear") rather than the header's accessory:
+    /// in a column two tiles wide the accessory left the Drops rule a stub,
+    /// ran into the sets' title and stood over an empty block (run 221).
+    ///
+    /// The tiles ask for `dropSpacing` between them: a tile's name is as
+    /// wide as its frame (`RewardTile`, 1.35 of the socket), and at 4 points
+    /// two "Whetstone"s read as one phrase on a B10 (run 221). In the grid a
+    /// B10's six 59-point names get about 7.6 of it on the CI phone — six
+    /// cannot stand 10 apart in 392 points; the side-by-side row gets all 10.
     private func floorDrops(_ stage: Stage) -> some View {
-        let firstClear: String? = !CampaignService.isCleared(stage, player: store.player) && stage.rewards.firstClearDivinity > 0
-            ? "+\(stage.rewards.firstClearDivinity) first clear"
-            : nil
+        let firstClearPays = !CampaignService.isCleared(stage, player: store.player) && stage.rewards.firstClearDivinity > 0
+        let firstClear: String? = firstClearPays ? "+\(stage.rewards.firstClearDivinity) first clear" : nil
         let tiles = dropTiles(stage)
+        let besideSets = firstClearPays ? tiles + [Self.firstClearTile(stage)] : tiles
         let awakened = stage.rewards.awakenedChance.map { "\(DungeonDrop.percent($0)) awakened" }
         return VStack(alignment: .leading, spacing: 7) {
-            if let labyrinth, tiles.count <= 3 {
+            if let labyrinth, besideSets.count <= 3 {
                 HStack(alignment: .top, spacing: 14) {
                     VStack(alignment: .leading, spacing: 7) {
-                        GlassSectionHeader(title: "Drops", accessory: firstClear,
-                                           accessoryItemKey: firstClear == nil ? nil : "divinity")
-                        HStack(alignment: .top, spacing: 4) {
-                            ForEach(tiles) { drop in
+                        GlassSectionHeader(title: "Drops")
+                        HStack(alignment: .top, spacing: Self.dropSpacing) {
+                            ForEach(besideSets) { drop in
                                 dropRewardTile(drop)
                             }
                         }
@@ -1706,7 +1747,11 @@ struct DungeonLevelsView: View {
                 }
             } else {
                 GlassSectionHeader(title: "Drops", accessory: firstClear, accessoryItemKey: firstClear == nil ? nil : "divinity")
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 58, maximum: 66), spacing: 4, alignment: .top)],
+                // Six to a row at the CI phone's 392 points: 6 × 54 + 5 × 10
+                // is 374, and a minimum of 58 at this spacing made it five
+                // and sent a B10's sixth tile to a second row, past the
+                // room's middle.
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 54, maximum: 66), spacing: Self.dropSpacing, alignment: .top)],
                           alignment: .leading, spacing: 6) {
                     ForEach(tiles) { drop in
                         dropRewardTile(drop)
@@ -1733,6 +1778,16 @@ struct DungeonLevelsView: View {
     private func dropRewardTile(_ drop: DungeonDrop) -> some View {
         RewardTile(key: drop.key, title: drop.title, amount: drop.amount, stars: drop.stars,
                    size: 44, imageName: drop.imageName, onGlass: true)
+    }
+
+    /// Between two drop tiles. The names under them are as wide as the
+    /// tiles' frames, so this is all the air two names get.
+    private static let dropSpacing: CGFloat = 10
+
+    /// A floor's first-clear divinity as a drop tile.
+    private static func firstClearTile(_ stage: Stage) -> DungeonDrop {
+        DungeonDrop(id: "first_clear", key: "divinity", title: "First clear",
+                    amount: "+\(stage.rewards.firstClearDivinity)", stars: nil)
     }
 
     /// The dungeon's sets as their painted stones with their names under
@@ -2184,302 +2239,6 @@ private struct LabyrinthRailHead: View {
                 .ignoresSafeArea(.container, edges: .leading)
                 .allowsHitTesting(false)
             )
-    }
-}
-
-/// A `PlaceRail` that opens on WHOLE rows (run 217). The Labyrinth's rails
-/// scrolled the focused row to their centre, which left the row above it cut
-/// in half under the pinned head: B4's disc sliced through its label on
-/// frame 16, B5's on the B10 frame, the Gale Titan without its eyebrow or its
-/// rim on frame 39. Now the focused row opens third from the top, the row at
-/// the top standing exactly where the first stands at rest; near the end,
-/// where the rail could not scroll that far, a spacer after the last row
-/// lets it (the scroll's own end cut the top row too); and the focused row
-/// always clears the foot's fade. The rows are measured, since a Titan's
-/// name runs to two lines or three.
-///
-/// The opening is driven by the MEASUREMENTS, never by a clock (run 220).
-/// One 0.05 s timer after `onAppear` planned the scroll then, and on run
-/// 220 it never landed: the floor rails fell back to the old centring
-/// (something was not yet measured at the tick) and the Titans rail did not
-/// scroll at all, the chosen Umbra off the bottom. Now every row's height
-/// and the rail's own height try the plan as they arrive
-/// (`settleIfMeasured`), the plan runs once everything is measured, the
-/// scroll is issued after the spacer it needs is laid out (`onChange` of
-/// `tail`), and the rail counts as opened only once that scroll was issued.
-/// Then the top row's place in the scroll is read back and the scroll
-/// repeated, twice at most, if the row is not standing at `lead`
-/// (`checkLanding`). A rail that still has an unmeasured row a second after
-/// it appears centres the focused row, the old behaviour, rather than
-/// showing it nowhere. Each step prints a `[Rail]` line to the console.
-///
-/// The top edge is soft: a row scrolled up past where the top row stands
-/// fades out over `WholeRowPlan.fadeSpan` of travel (`rowOpacity`, read off
-/// the row's place in the scroll), so a row passing under the head dissolves
-/// rather than being cut at full brightness on the rail's 8-point mask, and
-/// the sliver of the row above an opened top row is not drawn at all. Only
-/// the rows fade; the rail's glass stays whole.
-private struct WholeRowRail<Item: Identifiable, Row: View>: View where Item.ID == String {
-    let width: CGFloat
-    let items: [Item]
-    /// The row to open on; nil opens at the top.
-    let focus: String?
-    let row: (Item) -> Row
-
-    /// The rows' heights and places, the rail's height and whether it has
-    /// opened, in a class so a measurement never lays the rail out again.
-    @State private var gauge = RailRowGauge()
-    /// The spacer after the last row that lets the top row be whole at the
-    /// rail's end.
-    @State private var tail: CGFloat = 0
-
-    init(width: CGFloat, items: [Item], focus: String?, @ViewBuilder row: @escaping (Item) -> Row) {
-        self.width = width
-        self.items = items
-        self.focus = focus
-        self.row = row
-    }
-
-    var body: some View {
-        GeometryReader { geometry in
-            ScrollViewReader { proxy in
-                PlaceRail(width: width) {
-                    ForEach(items) { item in
-                        row(item)
-                            .background {
-                                GeometryReader { box in
-                                    Color.clear
-                                        .onAppear {
-                                            gauge.heights[item.id] = box.size.height
-                                            gauge.tops[item.id] = box.frame(in: .scrollView).minY
-                                            settleIfMeasured(proxy, from: "row")
-                                        }
-                                        .onChange(of: box.size.height) { _, height in
-                                            gauge.heights[item.id] = height
-                                            settleIfMeasured(proxy, from: "row")
-                                        }
-                                        // Where the row stands in the scroll,
-                                        // for `checkLanding`.
-                                        .onChange(of: box.frame(in: .scrollView).minY) { _, top in
-                                            gauge.tops[item.id] = top
-                                        }
-                                }
-                                .allowsHitTesting(false)
-                            }
-                            .visualEffect { content, place in
-                                content.opacity(WholeRowPlan.rowOpacity(top: place.frame(in: .scrollView).minY))
-                            }
-                            .id(item.id)
-                    }
-                    if tail > 0 {
-                        Color.clear.frame(height: tail)
-                    }
-                }
-                .onAppear {
-                    gauge.pass += 1
-                    let pass = gauge.pass
-                    gauge.viewport = geometry.size.height
-                    settleIfMeasured(proxy, from: "appear")
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                        centreIfUnsettled(proxy, pass: pass)
-                    }
-                }
-                .onChange(of: geometry.size.height) { _, height in
-                    gauge.viewport = height
-                    settleIfMeasured(proxy, from: "viewport")
-                }
-                .onChange(of: tail) { _, _ in
-                    // The spacer is laid out by the next turn of the run
-                    // loop; scrolled to before it, the scroll stops at the
-                    // old end.
-                    DispatchQueue.main.async { issueRailScroll(proxy) }
-                }
-                .onDisappear {
-                    gauge.pass += 1
-                    gauge.opened = false
-                    gauge.target = nil
-                }
-            }
-        }
-        .frame(width: width)
-    }
-
-    /// Plans the opening once the rail and every row are measured, and
-    /// issues it, or sets the spacer it needs first. Called by every
-    /// measurement; it does nothing once the rail has opened or while a
-    /// planned scroll waits for its spacer.
-    private func settleIfMeasured(_ proxy: ScrollViewProxy, from source: String) {
-        guard !gauge.opened, gauge.target == nil,
-              let focus, let index = items.firstIndex(where: { $0.id == focus }) else { return }
-        let heights = items.map { gauge.heights[$0.id] ?? 0 }
-        guard gauge.viewport > 0, !heights.contains(where: { $0 <= 0 }) else { return }
-        let plan = WholeRowPlan(heights: heights, focus: index, viewport: gauge.viewport)
-        gauge.target = RailLanding(
-            id: items[plan.top].id,
-            anchor: UnitPoint(x: 0, y: plan.anchor),
-            source: source,
-            viewport: gauge.viewport,
-            tail: plan.tail
-        )
-        if abs(plan.tail - tail) < 0.5 {
-            DispatchQueue.main.async { issueRailScroll(proxy) }
-        } else {
-            // `onChange(of: tail)` issues the scroll once the spacer is in.
-            tail = plan.tail
-        }
-    }
-
-    /// Scrolls to the planned row and marks the rail opened; then reads the
-    /// landing back.
-    private func issueRailScroll(_ proxy: ScrollViewProxy) {
-        guard let target = gauge.target else { return }
-        gauge.target = nil
-        gauge.opened = true
-        proxy.scrollTo(target.id, anchor: target.anchor)
-        #if DEBUG
-        print("[Rail] focus=\(focus ?? "nil") planned from \(target.source): viewport=\(Int(target.viewport.rounded())) "
-              + "measured=\(items.count)/\(items.count) top=\(target.id) tail=\(Int(target.tail.rounded())) anchor=\(target.anchor.y)")
-        #endif
-        let pass = gauge.pass
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            checkLanding(target, proxy: proxy, attempt: 1, pass: pass)
-        }
-    }
-
-    /// The top row should stand `WholeRowPlan.lead` below the rail's top. A
-    /// scroll lost to a layout still in flight is repeated, twice at most.
-    private func checkLanding(_ target: RailLanding, proxy: ScrollViewProxy, attempt: Int, pass: Int) {
-        guard pass == gauge.pass else { return }
-        let top = gauge.tops[target.id]
-        let miss = top.map { abs($0 - WholeRowPlan.lead) } ?? .infinity
-        #if DEBUG
-        let stood = top.map { "\(Int($0.rounded()))" } ?? "unmeasured"
-        #endif
-        if miss > 1.5, attempt < 3 {
-            #if DEBUG
-            print("[Rail] \(target.id) stood at \(stood), not \(Int(WholeRowPlan.lead)); scrolling again (\(attempt))")
-            #endif
-            proxy.scrollTo(target.id, anchor: target.anchor)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                checkLanding(target, proxy: proxy, attempt: attempt + 1, pass: pass)
-            }
-        } else {
-            #if DEBUG
-            print("[Rail] \(target.id) landed at \(stood) after \(attempt) check(s)")
-            #endif
-        }
-    }
-
-    /// A second after the rail appears, a planned scroll still waiting for
-    /// its spacer is issued, and a rail with a row never measured centres
-    /// the focused row rather than leaving it anywhere. Neither is expected;
-    /// the console says which ran.
-    private func centreIfUnsettled(_ proxy: ScrollViewProxy, pass: Int) {
-        guard pass == gauge.pass, !gauge.opened else { return }
-        if gauge.target != nil {
-            issueRailScroll(proxy)
-            return
-        }
-        guard let focus else { return }
-        #if DEBUG
-        let measured = items.filter { (gauge.heights[$0.id] ?? 0) > 0 }.count
-        print("[Rail] focus=\(focus) unsettled after 1 s: viewport=\(Int(gauge.viewport.rounded())) "
-              + "measured=\(measured)/\(items.count); centring")
-        #endif
-        proxy.scrollTo(focus, anchor: .center)
-    }
-}
-
-/// What a `WholeRowRail` has measured, kept out of its view state.
-private final class RailRowGauge {
-    var heights: [String: CGFloat] = [:]
-    /// Each row's top in the scroll's own space: `lead` for the top row once
-    /// the rail has opened.
-    var tops: [String: CGFloat] = [:]
-    var viewport: CGFloat = 0
-    /// The planned scroll, waiting for its spacer.
-    var target: RailLanding?
-    var opened = false
-    /// Bumped on every appearance and disappearance, so a late check from
-    /// an earlier one does nothing.
-    var pass = 0
-}
-
-/// Where a `WholeRowRail` scrolls to open, and what it was planned from.
-private struct RailLanding {
-    let id: String
-    let anchor: UnitPoint
-    let source: String
-    let viewport: CGFloat
-    let tail: CGFloat
-}
-
-/// Where a `WholeRowRail` opens, from its rows' heights and its own height.
-/// The layout numbers are `PlaceRail`'s: 8 over the first row, 5 between
-/// rows, 5 and 24 after the last, the foot fading from 88% of the height —
-/// change them here if `PlaceRail` changes.
-private struct WholeRowPlan {
-    /// Where the first row stands at rest, and where the top row stands once
-    /// opened: `PlaceRail`'s top padding.
-    static let lead: CGFloat = 8
-    static let rowGap: CGFloat = 5
-    static let trail: CGFloat = 5 + 24
-    static let fadeFrom: CGFloat = 0.88
-    /// How far into the foot's fade the focused row may reach: four points
-    /// of a 36-point fade is 89% bright.
-    static let fadeGrace: CGFloat = 4
-    /// The travel over which a row scrolled up past `lead` fades out. The
-    /// row above an opened top row is at least a row and a gap past it
-    /// (51 points on the floor rail), so it is never drawn.
-    static let fadeSpan: CGFloat = 28
-
-    /// A row's opacity from its top edge in the scroll's own space: whole at
-    /// `lead` and below, gone `fadeSpan` above it.
-    static func rowOpacity(top: CGFloat) -> Double {
-        let lift = WholeRowPlan.lead - top
-        return Double(min(1, max(0, 1 - lift / WholeRowPlan.fadeSpan)))
-    }
-
-    /// The row that opens at the top.
-    let top: Int
-    /// The scroll anchor that puts that row `lead` below the rail's top:
-    /// `scrollTo` lines up the same unit point of the row and of the rail,
-    /// so the row's top lands at `lead` when y is lead / (rail − row).
-    let anchor: CGFloat
-    /// The spacer after the last row, zero while the rail reaches anyway.
-    let tail: CGFloat
-
-    init(heights: [CGFloat], focus: Int, viewport: CGFloat) {
-        guard !heights.isEmpty, heights.indices.contains(focus) else {
-            top = 0
-            anchor = 0
-            tail = 0
-            return
-        }
-        var tops: [CGFloat] = []
-        var y = Self.lead
-        for height in heights {
-            tops.append(y)
-            y += height + Self.rowGap
-        }
-        let last = heights.count - 1
-        // How far the rail scrolls with no spacer.
-        let reach = max(0, tops[last] + heights[last] + Self.trail - viewport)
-        let clear = viewport * Self.fadeFrom + Self.fadeGrace
-        let offsets = tops.map { $0 - Self.lead }
-        // The focused row third from the top, but no further down the rail
-        // than the first row-aligned stop at or past its natural end.
-        var row = max(0, focus - 2)
-        if let end = offsets.firstIndex(where: { $0 >= reach - 0.5 }) {
-            row = min(row, end)
-        }
-        // And the focused row whole above the foot's fade.
-        while row < focus, tops[focus] + heights[focus] - offsets[row] > clear {
-            row += 1
-        }
-        top = row
-        anchor = Self.lead / max(1, viewport - heights[row])
-        tail = max(0, offsets[row] - reach)
     }
 }
 
