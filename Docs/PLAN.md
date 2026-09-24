@@ -8223,6 +8223,33 @@ also prints `gpu N MB` (`MTLDevice.currentAllocatedSize`, the one device the
 process draws with), so the next run says whether that is GPU memory that
 outlives its renderers or something on the CPU.
 
+**Run 246: the leak is SceneKit's, and what it holds (2026-09-24).** The
+summon stress ran a third time with every cache of ours emptied after each
+reveal (`-tour-stress-purge`: `ModelLibrary.purge()` and `purgeClips()`, so
+one file and no clip sets were cached at any moment) and the footprint
+climbed anyway — 172 → 518 MB over thirty singles, about 40 MB for each NEW
+family and next to nothing for a repeat, then 827, 1,094 and 1,301 MB after
+the three ten-pulls. What is kept is kept below the app. The shipped files
+say what: every serious-roster family carries FOUR 2048-pixel maps
+(`base_color`, `normal`, `metallic`, `roughness`, all RGB PNG), and
+`predecodeTextures` decoded the first two into our cache and looked for the
+last two under the one name no file has, `metallic_roughness`. SceneKit
+loaded both itself at the first frame, from the file, and never let them go:
+two maps of 16 MB decoded plus their textures — the ~40 MB a new family
+costs. **The fix (commit 88cb54b):** the loader reads `metallic.png` and
+`roughness.png` by their own names and decodes each to ONE 8-bit channel
+(the three channels are equal in all 512 maps, checked), 4 MB instead of
+16, kept in our bounded cache and shared between a family's base file and
+its `_lod`, tagged linear grey as the USD tags them; SceneKit is handed no
+texture it has to load itself. Options weighed: downsampling the maps to
+1024 in the shipped files (a 3 GB re-export for a quarter of the memory
+again, and a softer highlight on the reveal's close-up), loading every
+texture as our own `MTLTexture` (the largest change, and SceneKit's shader
+path for a raw Metal texture in these slots is unmeasured here), and
+purging SceneKit by rebuilding the view's renderer (no API reaches its
+image cache). Run 247's summon stress must now plateau once the model cache
+is full, and its purged launch stay flat.
+
 **The battle's first frame (2026-09-24).** Run 243 photographed a fight's
 first moment as white under the HUD: the main thread built the stage for
 about five seconds in CI and the first frames compiled for about four more,
