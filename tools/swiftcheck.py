@@ -945,7 +945,7 @@ def check_unknown_types(files, declared, errors):
         "ForEach","Binding","State","StateObject","EnvironmentObject","Published","MainActor",
         "SCNNode","SCNScene","SCNView","SCNVector3","SCNVector4","SCNMatrix4","SCNCamera","SCNLight",
         "SCNMaterial","SCNGeometry","SCNPlane","SCNBox","SCNSphere","SCNCapsule","SCNCone","SCNTorus",
-        "SCNCylinder","SCNPyramid","SCNFloor","SCNText","SCNAction","SCNBillboardConstraint",
+        "SCNCylinder","SCNPyramid","SCNFloor","SCNText","SCNAction","SCNBillboardConstraint","SCNAntialiasingMode",
         "SCNLookAtConstraint","SCNParticleSystem","SCNSceneSource","SCNSkinner","CAAnimation","CAAnimationGroup","UIColor","UIImage",
         "UIFont","UIView","UIViewRepresentable","UITapGestureRecognizer","UIScreen","NSCoder","NSObject",
         "NSAttributedString","UIGraphicsImageRenderer","CGPoint","CGSize","CGRect","Bundle",
@@ -979,6 +979,8 @@ def check_unknown_types(files, declared, errors):
         "ObservedObject","TimelineView",
         "SpriteKit","SKScene","SKNode","SKSpriteNode","SKCropNode","SKTexture","SKAction",
         "SKShapeNode","SKLabelNode","SCNSceneRenderer","SCNSceneRendererDelegate","CGPath",
+        # The arena medallion's drawing and geometry (2026-09-24).
+        "CGMutablePath","CGLineCap","CGColorSpaceCreateDeviceGray","SCNTube","SCNMaterialProperty",
         "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",
         "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",

@@ -71,32 +71,51 @@ struct BattleView: View {
             // skills and the descriptions like the bottom left UI and more
             // I just don't like."
             let boss = model.displayedCombatants.first { $0.isBoss && $0.isAlive }
-            VStack(spacing: 6) {
-                if let boss {
-                    bossBar(boss)
-                }
-                topStrip
-                Spacer(minLength: 0)
-                HStack(alignment: .bottom, spacing: 10) {
-                    controls
-                    Spacer(minLength: 0)
-                    if let actor = model.awaitingActor {
-                        VStack(alignment: .trailing, spacing: 8) {
-                            if let option = inspectedOption {
-                                skillCard(option.skill, cooldown: option.cooldown, actor: actor)
-                                    .transition(.opacity.combined(with: .offset(y: 6)))
-                            }
-                            skillRow(actor)
+            // THE BOTTOM CORNERS ON THE SAFE AREA'S EDGES (2026-09-24). The
+            // owner's Summoners War frame, measured on his phone (956 × 440
+            // points, insets 62 at the sides and 21 at the foot): its skills'
+            // right edge 61.5 points from the glass and its controls' left
+            // edge 61, i.e. ON the safe area's sides, and both rows 15–18
+            // points off the foot. Ours stood 8 points inside the safe area
+            // all round. The corners now stand on the safe area itself where
+            // the phone has an inset — never under the notch's side or the
+            // home indicator's band — and `cornerFloor` points off the glass
+            // where it has none (a Touch ID phone), so no button ever meets
+            // the screen's edge. The top keeps its 8 and 4.
+            GeometryReader { geometry in
+                let insets = geometry.safeAreaInsets
+                VStack(spacing: 6) {
+                    VStack(spacing: 6) {
+                        if let boss {
+                            bossBar(boss)
                         }
-                        .animation(.easeOut(duration: 0.15), value: inspectedSlot)
-                    } else if model.isPlayingBack {
-                        skipButton
+                        topStrip
                     }
+                    .padding(.horizontal, 8)
+                    Spacer(minLength: 0)
+                    HStack(alignment: .bottom, spacing: 10) {
+                        controls
+                        Spacer(minLength: 0)
+                        if let actor = model.awaitingActor {
+                            VStack(alignment: .trailing, spacing: 8) {
+                                if let option = inspectedOption {
+                                    skillCard(option.skill, cooldown: option.cooldown, actor: actor)
+                                        .transition(.opacity.combined(with: .offset(y: 6)))
+                                }
+                                skillRow(actor)
+                            }
+                            .animation(.easeOut(duration: 0.15), value: inspectedSlot)
+                        } else if model.isPlayingBack {
+                            skipButton
+                        }
+                    }
+                    .padding(.leading, Self.cornerMargin(insets.leading))
+                    .padding(.trailing, Self.cornerMargin(insets.trailing))
+                    .padding(.bottom, Self.cornerMargin(insets.bottom))
                 }
+                .padding(.top, 4)
+                .frame(width: geometry.size.width, height: geometry.size.height)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 4)
-            .padding(.bottom, 8)
             // The reckoning takes the field: the chips, the controls and the
             // skills fade with its arrival (it is set inside an animation)
             // rather than showing through its scrim, as they did in run 220
@@ -294,51 +313,82 @@ struct BattleView: View {
         }
     }
 
+    /// How far a bottom corner stands inside the safe area: nothing where
+    /// the phone has an inset on that side (Summoners War's own place), and
+    /// what it takes to stand `cornerFloor` points off the glass where it
+    /// has none. `BattleSceneController.hudControls`/`hudSkills` mirror the
+    /// corners for the floating numbers.
+    private static func cornerMargin(_ inset: CGFloat) -> CGFloat {
+        max(0, cornerFloor - inset)
+    }
+    /// His rows stand 15–18 points off the foot of the glass.
+    private static let cornerFloor: CGFloat = 16
+
     /// The genre's three: a gear (the log, forfeit), the speed, and auto.
+    /// Centres 58 points apart, his 0.0605 of the width (2026-09-24; 6
+    /// apart on 36-point squares before).
     private var controls: some View {
-        HStack(spacing: 6) {
-            squareControl(active: showLog) {
+        HStack(spacing: Self.controlGap) {
+            squareControl {
                 showMenu = true
             } label: {
                 Image(systemName: "gearshape.fill")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.system(size: 20, weight: .bold))
             }
-            squareControl(active: model.speed > 1) {
+            squareControl {
                 model.speed = model.speed >= 3 ? 1 : model.speed * 2
             } label: {
                 Text("×\(Int(model.speed))")
-                    .font(Theme.numeric(13).weight(.black))
+                    .font(Theme.numeric(15).weight(.black))
             }
-            squareControl(active: model.autoBattle) {
+            // His auto shows the pause glyph while it runs, and nothing else
+            // changes: the glyph IS the state, as ×3 is the speed's.
+            squareControl {
                 model.autoBattle.toggle()
             } label: {
                 Image(systemName: model.autoBattle ? "pause.fill" : "play.fill")
-                    .font(.system(size: 14, weight: .black))
+                    .font(.system(size: 17, weight: .black))
             }
             .accessibilityAddTraits(model.autoBattle ? .isSelected : [])
         }
     }
 
-    /// One control: a 36-point square of dark glass with its glyph in pale
-    /// gold, and a lit gold plate with ink when it is on (the cream plate at
-    /// 0.7 it was read as washed-out chrome over the set, run 217).
-    private func squareControl<L: View>(active: Bool, action: @escaping () -> Void, @ViewBuilder label: () -> L) -> some View {
+    /// The controls' size and gap: his are 42 points with 15.7 between.
+    private static let controlSide: CGFloat = 42
+    private static let controlGap: CGFloat = 16
+
+    /// One control, the genre's (2026-09-24; the owner's frames): a 42-point
+    /// square of SEE-THROUGH dark — the set shows through it — in a 2-point
+    /// white outline, the glyph in white. His outline is 1.7 points of pure
+    /// white; his fill darkens the floor under it by a fifth to a third.
+    /// Ours was a 36-point square of near-opaque dark glass with a gold
+    /// hairline and a pale gold glyph, lit gold when on — a jewel, where his
+    /// are a window. The dark is 0.45 (over his ~0.3) because our sets run
+    /// paler than his and the glyph is white; a soft shadow under the glyph
+    /// and the outline keeps both off a sunlit floor.
+    private func squareControl<L: View>(action: @escaping () -> Void, @ViewBuilder label: () -> L) -> some View {
         Button(action: action) {
             label()
-                .foregroundStyle(active ? Theme.ink : Theme.onGlassGold)
-                .frame(width: 36, height: 36)
+                .foregroundStyle(Color.white)
+                .shadow(color: .black.opacity(0.55), radius: 1.5, y: 0.5)
+                .frame(width: Self.controlSide, height: Self.controlSide)
                 .background(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .fill(active ? Theme.gold.opacity(0.92) : Theme.glass)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .fill(Color.black.opacity(0.45))
                 )
                 .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .strokeBorder(active ? Theme.goldDeep : Theme.glassRim, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(Color.white, lineWidth: 2)
+                        .shadow(color: .black.opacity(0.45), radius: 1.5)
                 )
-                .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
+
+    /// The skill squares' gap: his centres stand 78.3 points apart on
+    /// 65.5-point squares (2026-09-24; 10 apart on 60 before).
+    private static let skillGap: CGFloat = 13
 
     /// The skills as the genre's squares at the bottom right: no plate
     /// behind them, the caster's element lighting each.
@@ -347,7 +397,7 @@ struct BattleView: View {
         // square (Zeus's bolt, clap and keraunos all named a bolt).
         let icons = SkillArt.keys(for: model.availableSkills.map(\.skill),
                                   element: actor.element, ranged: !actor.model.melee)
-        return HStack(spacing: 10) {
+        return HStack(spacing: Self.skillGap) {
             ForEach(Array(model.availableSkills.enumerated()), id: \.element.id) { index, option in
                 SkillButton(
                     skill: option.skill,
@@ -370,27 +420,35 @@ struct BattleView: View {
         }
     }
 
-    /// Skip, on the same dark glass as the controls and the same 36 points
-    /// tall: cream words and a pale gold glyph, because the caption grey it
-    /// wore on the cream plate read as a disabled button (run 217).
+    /// Skip, in the controls' own material and height (2026-09-24): the
+    /// see-through dark in a 2-point white outline, white words and glyph.
+    /// It was the old controls' dark glass in cream and pale gold (the
+    /// caption grey before that read as a disabled button, run 217).
     private var skipButton: some View {
         Button {
             model.skipAnimation()
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "forward.fill")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(Theme.onGlassGold)
+                    .font(.system(size: 13, weight: .black))
                 Text("Skip")
-                    .font(Theme.body(13).weight(.bold))
-                    .foregroundStyle(Theme.onGlass)
+                    .font(Theme.body(14).weight(.bold))
                     .lineLimit(1)
             }
+            .foregroundStyle(Color.white)
+            .shadow(color: .black.opacity(0.55), radius: 1.5, y: 0.5)
             .padding(.horizontal, 16)
-            .frame(height: 36)
-            .background(Capsule().fill(Theme.glass))
-            .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 1))
-            .shadow(color: .black.opacity(0.35), radius: 3, y: 1)
+            .frame(height: Self.controlSide)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(Color.black.opacity(0.45))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .strokeBorder(Color.white, lineWidth: 2)
+                    .shadow(color: .black.opacity(0.45), radius: 1.5)
+            )
+            .contentShape(Rectangle())
             .fixedSize()
         }
         .buttonStyle(.plain)
@@ -619,13 +677,15 @@ struct BattleView: View {
                     fraction: boss.maxHealth > 0 ? boss.currentHealth / boss.maxHealth : 0,
                     top: Color(hex: "#F3D688"), bottom: Color(hex: "#B8872C"), height: 9
                 )
-                // The unit plates' own attack-bar blues.
-                BossChannel(fraction: boss.attackBar, top: Color(hex: "#B4EEFF"), bottom: Color(hex: "#3AA6DE"), height: 3)
+                // The unit plates' own attack-bar blue (`PlateArt.attackStops`,
+                // his (44, 187, 235) since 2026-09-24).
+                BossChannel(fraction: boss.attackBar, top: Color(hex: "#6ECFE8"), bottom: Color(hex: "#1FA6D2"), height: 3)
             }
             .padding(.horizontal, 3)
             .padding(.vertical, 2.5)
-            // The unit plates' track (`PlateArt.track`): dark from top to
-            // foot, so the frame and the empty channels read as one socket.
+            // Dark from top to foot, as the unit plates' well is inside its
+            // silver (`PlateArt.frame`), so the frame and the empty channels
+            // read as one socket.
             .background(
                 RoundedRectangle(cornerRadius: 5, style: .continuous)
                     .fill(LinearGradient(colors: [Color(hex: "#2A211A"), Color(hex: "#120D09")],
@@ -894,11 +954,10 @@ private struct BossChannel: View {
 }
 
 /// One skill, the genre's square: a dark socket lit from behind in the
-/// caster's element, the glyph large and white, the name small under it,
-/// the estimate printed on the bottom edge, a gold frame that brightens
+/// caster's element, the painted art large, a gold frame that brightens
 /// and grows on the skill in hand, a dark veil with the turns left while
-/// it cools. 60 points, three abreast at the bottom right, no plate
-/// behind them.
+/// it cools. 65 points (60 until 2026-09-24: his measure 65.3–66 on the
+/// owner's phone), three abreast at the bottom right, no plate behind them.
 struct SkillButton: View {
     let skill: Skill
     let cooldown: Int
@@ -923,7 +982,9 @@ struct SkillButton: View {
 
     private var isReady: Bool { cooldown <= 0 }
     private var tint: Color { element.color }
-    private static let corner: CGFloat = 10
+    /// The square's side; the art, the light and the corner scale with it.
+    private static let side: CGFloat = 65
+    private static let corner: CGFloat = 11
 
     var body: some View {
         Button {
@@ -939,17 +1000,17 @@ struct SkillButton: View {
             ZStack {
                 RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
                     .fill(LinearGradient(colors: [Color(hex: "#3B2F22"), Color(hex: "#160F09")], startPoint: .top, endPoint: .bottom))
-                RadialGradient(colors: [tint.opacity(isReady ? 0.55 : 0.18), .clear], center: .center, startRadius: 2, endRadius: 38)
+                RadialGradient(colors: [tint.opacity(isReady ? 0.55 : 0.18), .clear], center: .center, startRadius: 2, endRadius: 41)
                 SkillIcon(skill: skill, element: element, ranged: ranged, resolvedKey: iconKey,
-                          size: 50, tint: .white, dimmed: !isReady)
+                          size: 54, tint: .white, dimmed: !isReady)
                     .shadow(color: tint.opacity(isReady ? 0.8 : 0), radius: 7)
                 if !isReady {
                     RoundedRectangle(cornerRadius: Self.corner, style: .continuous)
                         .fill(Color.black.opacity(0.55))
-                    OutlinedText(text: "\(cooldown)", font: Theme.display(26), fill: .white, width: 1.2)
+                    OutlinedText(text: "\(cooldown)", font: Theme.display(28), fill: .white, width: 1.2)
                 }
             }
-            .frame(width: 60, height: 60)
+            .frame(width: Self.side, height: Self.side)
             .clipShape(RoundedRectangle(cornerRadius: Self.corner, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: Self.corner, style: .continuous)

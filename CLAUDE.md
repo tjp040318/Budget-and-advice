@@ -221,9 +221,38 @@ environment can and cannot do. The short version:
   with its head at the top edge, the team large at the bottom, and a warm
   spot light riding with every boss aimed at its chest ("it's hard to
   see the boss"). The numbers before them (−15°/26°, −12°/20°, the boss
-  at −9.8 sunk 42%) are the paragraph above and the git history. The
-  summon reveal is stage left and words right, and the island painting
-  is 16:9.
+  at −9.8 sunk 42%) are the paragraph above and the git history.
+  **Since 2026-09-24 (the owner's two Summoners War frames, measured:
+  pitch 19° off the arena's gold ring for any lens, yaw 0, a 24–30°
+  lens, the rows ten metres apart and the team a third of the frame
+  tall; PLAN.md *The owner's angle and the clean frame*)** the camera
+  stands square BEHIND the team: `homeYaw` 0, `homePitch` 19°, a 28°
+  lens, its distance solved in closed form from two feet lines, the
+  team's on `nearFeetLine` 0.72 (86% down) and the enemies' on
+  `farFeetLine` 0.26 (37%) — about 18 m out, the team 0.30 of the frame
+  tall and the enemies 0.18, the team's feet held inside 0.24–0.76 of the
+  width (`teamWidthMargin` 0.64; a five-a-side stands 2.0 m apart); the
+  boss `bossYaw` 0, `bossPitch` 9°, `bossFeetLine` 0.92, `bossTopLine`
+  0.88, every boss's head 7–17% down. The rows stand
+  `StageBuilder.arenaRowDepth` 5.2 m either side of `arenaCentre` z +1.8
+  (the team +7.0, the enemies −3.4: the whole field moved toward the
+  camera, not the enemies into the sets' back row), the team 2.4 m apart
+  with every other mark 0.5 m nearer, the enemies 3.2 m apart with every
+  other one 1.0 m further back, no sideways push; a wave walks on from
+  2 m behind its marks. The far edge is −11 (`battleFloorFarEdge`, the
+  parapet 24% down), the boss on it and the sets' back row carried back
+  with it (`StageBuilder.withTheFarEdge`); the side walls stand at ±11.3
+  (`arenaHalfWidth`, clear of the long wing pieces); the floor under the
+  fight is a medallion per pantheon built at runtime as geometry
+  (`StageBuilder+Arena.swift`: stone courses, a raised gold band round
+  both rows, the pantheon's emblem; it replaced `arenaInlay`); and every
+  battle unit stands on a soft oval (`UnitNode.attachGroundShadow`) and
+  casts no key-light shadow of its own. `tools/camera_solve.py` is the
+  solve's Python port: change a camera number, a mark or the far edge
+  there and in Swift together. The older numbers in this bullet
+  (−15°/26°, −32°/36°, −8°/8°, the rows at ±3, the edge at −8.4, the boss
+  at −9.8) are history. The summon reveal is stage left and words right,
+  and the island painting is 16:9.
 - Battle, summon, collection, arena, campaign and the Hall of Ka (training:
   power-up, skill-ups from duplicates, evolution, awakening) all work. So do
   the **Labyrinth** (a building on the island, `LabyrinthView`: three
@@ -1365,23 +1394,31 @@ environment can and cannot do. The short version:
   the figure (`spec.height` over the node's feet; view points, origin
   top; the overlay's origin is bottom, so y is flipped by the scene
   height), the track's bottom 12 pt above it. The plate is the genre's:
-  ONE dark track (66 × 14.5) holding the 6.5-pt green health bar
-  (gradient fill, amber under 30%, a cream trail that drains 0.35 s after
-  a hit) and the 3-pt light-blue **attack bar** under it (tweened to the
+  ONE track in a silver bevelled frame (65 × 17.5 since 2026-09-24,
+  measured off the owner's Summoners War frame; a see-through dark
+  66 × 14.5 before) holding the 6.5-pt glossy green health bar (seven
+  stops, amber under 30%, a cream trail that drains 0.35 s after a hit)
+  and the 4-pt blue **attack bar** under it (3 pt before; tweened to the
   engine's value when playback settles — `syncPlates` — and on
-  `attackBarChanged`; gold and pulsing at 100%), the **level badge** on
-  the track's left end (a dark disc ringed in the element's colour with
-  `Combatant.level` in it, `PlateArt.levelBadge`), the status tiles on
-  the track, the matchup arrow above them, a gold rim on the acting
-  unit. Green for both sides, as the genre has it. **The HUD is the
-  genre's (2026-09-15):** the boss bar the full width of the very top
+  `attackBarChanged`; gold and pulsing at 100%), the **level badge** over
+  the frame's left end (a 27-pt metal sphere in the element's colour,
+  ringed in the frame's silver, with `Combatant.level` on it in heavy
+  white figures, `PlateArt.levelBadge`; a 22-pt dark disc before), the
+  status tiles on the frame, the matchup arrow above them, a gold rim on
+  the acting unit. Green for both sides, as the genre has it. **The HUD
+  is the genre's (2026-09-15):** the boss bar the full width of the very top
   (gold health over blue attack in one track), the stage and the wave
-  small at the top left, three 36-pt controls at the bottom left (gear →
-  log or forfeit, ×N, play/pause), the three 60-pt skill squares at the
-  bottom right (`SkillButton`: a dark socket lit in the caster's element,
-  a gold frame, the estimate on the bottom edge, a veil with the turns
-  left) with nothing behind them. The actor plate, the team column, the
-  combat feed, the turn gauge and the target strip were deleted — the
+  small at the top left, three 42-pt controls 16 apart at the bottom left
+  (gear → log or forfeit, ×N, play/pause; see-through black in a 2-pt
+  white outline, the white glyph the state — 36 pt and 6 apart before
+  2026-09-24), the three 65-pt skill squares 13 apart at the bottom right
+  (60 and 10 before; `SkillButton`: a dark socket lit in the caster's
+  element, a gold frame, the estimate on the bottom edge, a veil with the
+  turns left) with nothing behind them, both bottom corners standing ON
+  the safe area's edges (16 pt off the glass where the phone has no
+  inset; 8 pt inside the safe area before). The actor plate, the team
+  column, the combat feed, the turn gauge and the target strip were
+  deleted — the
   owner: "the UI of the skills and the descriptions like the bottom left
   UI and more I just don't like." The 3D bar in `UnitNode` still exists for the
   island and the Hall of Ka and is hidden the moment a plate is attached;
@@ -1411,15 +1448,19 @@ environment can and cannot do. The short version:
   blocked" sat on the gear — and on-frame floats are clamped inside the
   window's safe area (`BattleStageView` reports it) and above the HUD's
   bottom corners, whose sizes `BattleSceneController` mirrors from
-  `BattleView` by hand; a boss's floats stand beside its head. The
-  boss's warm spot is scaled by its own paint (`UnitNode.measurePaint`,
+  `BattleView` by hand (`hudControls` 158 × 42, `hudSkills` 223 × 67
+  since 2026-09-24; the plates keep under the top strip's chips and boss
+  bar by the same mirror, `hudChipsFoot` and `hudBarFoot`); a boss's
+  floats stand beside its head. The boss's warm spot is scaled by its
+  own paint (`UnitNode.measurePaint`,
   the texture's mean in linear light: 2,400 × min(1, max(0.3, 0.14 /
   albedo)) — the Colossus about 1,390, the Unwrapped King the 720
   floor), and a pale boss drops the awakened costume glow. The plate's
-  level is Manrope-Bold 11 in a 22-pt badge, the status tiles 16 pt with
-  an 11-pt turn chip, and the matchup marker sits beside the track's
-  right end (even is a double arrow). The skill camera has no motion
-  blur (it smeared the frame on every push-in), and a boss's matchup
+  level is Manrope-ExtraBold 13 with a 1.7-pt dark edge in the 27-pt
+  badge (Manrope-Bold 11 in a 22-pt one before 2026-09-24), the status
+  tiles 16 pt with an 11-pt turn chip, and the matchup marker sits beside
+  the frame's right end (even is a double arrow). The skill camera has no
+  motion blur (it smeared the frame on every push-in), and a boss's matchup
   arrow is in the boss bar, never on it.
 - **Motion.** A melee unit's dash is a 0.3 s leap (the model container
   hops while the node moves), clips cross-fade over 0.22/0.30 s

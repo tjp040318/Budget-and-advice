@@ -79,6 +79,10 @@ enum StageBuilder {
         // down the frame with the painted distance beyond it. The first set
         // was a metre and a half wider and its edge never came into frame,
         // so the platform read as a floor, not as a thing in the air.
+        // The coordinates below are still written against that −8.4 edge
+        // (`setsDressedForFarEdge`): since 2026-09-24 the floor ends at
+        // `battleFloorFarEdge` −11 and `withTheFarEdge` carries the back
+        // row (everything deeper than z −5.5) back with it.
         let colossi = [
             Placement(asset: "prop_anubis_colossus", position: SCNVector3(-5.3, 0, -6.3), scale: 0.85, standIn: .block),
             Placement(asset: "prop_anubis_colossus", position: SCNVector3(5.3, 0, -6.3), scale: 0.85, standIn: .block),
@@ -86,7 +90,9 @@ enum StageBuilder {
         // The +x obelisk (and the Greek column and Norse stone on the same
         // mark) stands at the back of its wing, not beside the line: from
         // the camera's side of the field a wing prop at z = −2.4 is a
-        // foreground pillar.
+        // foreground pillar. (That camera stood round to the +x side; from
+        // the square camera of 2026-09-24 neither wing is nearer the lens,
+        // and the marks stay as dressed.)
         let obelisks = [
             Placement(asset: "prop_obelisk", position: SCNVector3(-6.9, 0, -2.4), standIn: .obelisk),
             Placement(asset: "prop_obelisk", position: SCNVector3(7.0, 0, -5.0), standIn: .obelisk),
@@ -101,6 +107,9 @@ enum StageBuilder {
         // of the first frames and hid the enemy column's front mark behind
         // its head. The left wing is the far side, where a prop adds depth
         // behind the player's column and stands in front of nothing.
+        // History since 2026-09-24: the camera is square behind the team
+        // (`homeYaw` 0), so neither wing is the foreground; the avenue stays
+        // on the left, both pieces on the wing line `clearOfTheWings` sets.
         let sphinxes = [
             Placement(asset: "prop_sphinx", position: SCNVector3(-6.0, 0, -0.4), yaw: 90, standIn: .block),
             Placement(asset: "prop_sphinx", position: SCNVector3(-6.4, 0, -4.2), yaw: 90, standIn: .block),
@@ -226,7 +235,9 @@ enum StageBuilder {
             // the camera and the enemy line once the camera moved to the
             // +x side, and the owner photographed the Hall of Sentinels with
             // a pillar down the middle of the fight. The +x wing is the
-            // foreground now; nothing tall stands in it.
+            // foreground now; nothing tall stands in it. (Since 2026-09-24
+            // the camera is square behind the team and neither wing is the
+            // foreground; the hall keeps its three.)
             let hall = [
                 Placement(asset: "prop_lotus_column", position: SCNVector3(-5.6, 0, -5.2)),
                 Placement(asset: "prop_lotus_column", position: SCNVector3(5.6, 0, -5.2)),
@@ -284,7 +295,9 @@ enum StageBuilder {
         // — stone lions in the far wing, pagoda lanterns at the back corners
         // — each placed with a stand-in so the set has no hole until they
         // ship (`propHeights` has no entry for them: the stand-in is the 3 m
-        // default, scaled here). Nothing tall in the +x wing at z > -5.
+        // default, scaled here). Nothing tall in the +x wing at z > -5 — the
+        // rule of the camera that stood on the +x side; from the square
+        // camera of 2026-09-24 the two wings are alike.
         case .peachGarden:
             let lions = [
                 Placement(asset: "prop_stone_lion", position: SCNVector3(-6.0, 0, -0.4), yaw: 90, scale: 0.6, standIn: .block),
@@ -319,7 +332,8 @@ enum StageBuilder {
     /// The battle platform's radius. 7.6 showed its near rim in every frame.
 
     /// The whole set for a battle, added to `scene`. The camera is at +Z
-    /// looking toward -Z; units stand between z = +2.2 and z = -5.4.
+    /// looking toward -Z; units stand between z = +7.5 and z = −4.4 since
+    /// 2026-09-24 (`arenaCentre` ± `arenaRowDepth`), a boss on the far edge.
     /// Returns the painting's palette so the lights can be built to match it.
     @discardableResult
     static func buildBattleStage(_ environment: BattleEnvironment, into scene: SCNScene) -> PaintingPalette {
@@ -340,20 +354,24 @@ enum StageBuilder {
         // a boulder ring, rocks hanging in a void, and the whole world
         // turned 58° so the grid ran diagonally. So the ground is a 44 m
         // square slab whose far face is at `battleFloorFarEdge`, where the
-        // boss stands a stride beyond it (`BattleSceneController.bossMark`),
-        // and the camera looks straight up the field (`CameraDirector.homeYaw`
-        // is 0). Nothing under or beside the slab is drawn; the painting is
-        // hung beyond the far edge.
+        // boss stands (`BattleSceneController.bossMark`: a stride beyond it
+        // until 2026-09-15, on it since), and the camera looks straight up
+        // the field — `CameraDirector.homeYaw` was 0 then, turned to −15°
+        // and −32° after, and is 0 again since 2026-09-24. Nothing under or
+        // beside the slab is drawn; the painting is hung beyond the far edge.
         stage.addChildNode(slab(size: Self.battleFloorSize, thickness: 1.8, farEdge: Self.battleFloorFarEdge,
                                 floor: recipe.floor, repeats: recipe.floorRepeats * 2.86,
-                                tint: recipe.floorTint, rock: recipe.rock))
+                                tint: recipe.floorTint, rock: recipe.rock, saturation: Self.arenaFloorSaturation))
         // THE ARENA DRESSED (2026-09-15, part 4 of "I want THAT level of
         // detail"): its sides walled, its floor inlaid, its air moving —
         // the free half of the pass; the painted tiles and the Meshy set
         // pieces are the half that costs (Docs/PLAN.md).
         stage.addChildNode(sideWalls(rock: recipe.rock, farEdge: Self.battleFloorFarEdge, nearEnd: 9.0))
-        let groove = (UIColor(hex: recipe.floorTint ?? "#9C8468") ?? .brown).mixed(with: .black, amount: 0.55)
-        stage.addChildNode(arenaInlay(radius: 6.6, groove: groove, at: SCNVector3(0.3, 0, 0)))
+        // The floor under the fight is a designed medallion since
+        // 2026-09-24 (StageBuilder+Arena.swift): stone courses, a broad
+        // gold band round both rows, the pantheon's emblem at the centre.
+        // It replaced a 6.6 m multiply quad of thin grooves.
+        stage.addChildNode(arenaMedallion(for: environment, floorTint: recipe.floorTint))
 
         // The sets were dressed for two lines abreast at z = ±3.4, with the
         // statues, obelisks and braziers standing 5–7 m out to the sides at
@@ -364,18 +382,24 @@ enum StageBuilder {
         // open in the middle and framed at the sides and the back. The back
         // row (the two columns, the ruin, the statues at z −6.3, the
         // braziers at ±3.8) is beyond the deepest mark and stays.
+        // It goes back with the far edge since 2026-09-24 (`withTheFarEdge`):
+        // with the enemy row at −3.4/−4.4 the colossi, the Lair's trees and
+        // the roots at −6.3 and the Duat's back braziers stood in a
+        // four-a-side's outer marks, and a wave walked on out of the braziers.
         var pieces: [SCNNode] = []
         for placement in recipe.props {
             var placed = placement
-            placed.position = Self.clearOfTheWings(placement.position)
+            placed.position = Self.withTheFarEdge(Self.clearOfTheWings(placement.position))
             let piece = prop(placed)
             stage.addChildNode(piece)
             pieces.append(piece)
         }
         let flame = UIColor(hex: recipe.flameHex) ?? .orange
         for position in recipe.braziers {
-            let placed = Self.clearOfTheWings(position)
-            let fire = brazier(asset: recipe.brazierAsset, at: placed, flame: flame)
+            // Only depth moves with the edge, so `placed.x != position.x`
+            // below still means "sent out to the wing line".
+            let placed = Self.withTheFarEdge(Self.clearOfTheWings(position))
+            let fire = brazier(asset: recipe.brazierAsset, at: placed, flame: flame, glow: Self.battleBrazierGlow)
             // A built bowl sent out to the wing line steps clear of the piece
             // already standing there (`standClear`).
             if placed.x != position.x, fire.childNode(withName: Self.builtBowl, recursively: false) != nil {
@@ -390,6 +414,9 @@ enum StageBuilder {
         // ground is behind the camera.
         for plane in mistPlanes(count: recipe.mistCount * 2, radius: -Self.battleFloorFarEdge + 1.2, tint: mist, seed: environment.rawValue.hashValue)
         where plane.position.z < Self.battleFloorFarEdge * 0.45 {
+            // At half its haze since 2026-09-24 (`battleMistShare`): the
+            // owner's frames are clean to the far wall.
+            plane.opacity *= Self.battleMistShare
             stage.addChildNode(plane)
         }
         stage.addChildNode(dust(tint: UIColor(hex: recipe.dustHex) ?? .white,
@@ -428,10 +455,14 @@ enum StageBuilder {
         let hand = UIColor(hex: environment.fogHex) ?? .darkGray
         let fog = palette.horizon.mixed(with: hand, amount: 0.35)
         scene.background.contents = palette.sky.mixed(with: fog, amount: 0.3)
-        scene.fogStartDistance = 45
-        scene.fogEndDistance = 170
+        // 60 → 240 (was 45 → 170) since 2026-09-24: the owner's frames have
+        // a crisp sky; the painting takes a sixteenth of the horizon colour
+        // at 70 m instead of a tenth.
+        scene.fogStartDistance = 60
+        scene.fogEndDistance = 240
         scene.fogColor = fog
         scene.fogDensityExponent = 1.4
+        sharpenTextures(in: stage)
         return palette
     }
 
@@ -505,7 +536,26 @@ enum StageBuilder {
     /// between the floor and the painting, the near-side one lies along the
     /// frame's right edge (inside it only for a five-a-side), and from the
     /// boss camera both flank the boss.
-    static let arenaHalfWidth: Float = 9.8
+    /// From the square camera of 2026-09-24 the two walls are a pair: each
+    /// leaves the far parapet about a sixth of the way in from its side of
+    /// the frame (0.16 and 0.84 of the width, −11 m, 17% down) and runs out
+    /// through the frame's side a third of the way down (z −1.4 to +0.3 for
+    /// a two- to five-a-side). The outermost marks are the enemy row's now,
+    /// ±4.8 for the four-a-side the game fields (±6.4 for a five).
+    ///
+    /// ±11.3 since 2026-09-24 (it was ±9.8). At ±9.8 the coping's inner
+    /// face stood at 9.4 and the long pieces on the wing line at 8.5 ran
+    /// THROUGH it, below the coping's height, in the frame's sides 0.3–0.45
+    /// down: the sphinx to 10.71 (the Duat, the Serpent's Deep, the Vault,
+    /// the Necropolis, the Reed Fields), the broken column to 10.37 (the
+    /// Aegean, the marsh, the Lair, Rome), the Vault's pharaoh head to 10.25,
+    /// the Lair's tree and both bone piles to 9.7–9.8, Egypt's wing braziers
+    /// to 9.48 — measured on the shipped meshes' points below 1.3 m, turned
+    /// and scaled as placed. Nothing of that length fits between a
+    /// four-a-side's outer marks (±4.8) and 9.4, so the walls moved rather
+    /// than the pieces: the coping's inner face is at 10.9 now, 0.19 m clear
+    /// of the sphinx, and every wing piece stands inside the arena's flanks.
+    static let arenaHalfWidth: Float = 11.3
 
     static func sideWalls(rock: String, farEdge: Float, nearEnd: Float) -> SCNNode {
         let node = SCNNode()
@@ -537,86 +587,6 @@ enum StageBuilder {
             }
         }
         return node
-    }
-
-    /// The arena's floor inlay: rings and a compass star cut into the stone
-    /// under the fight, the genre's circular battleground (every Summoners
-    /// War scenario floor has one). A quad a finger above the slab whose
-    /// grooves are MULTIPLIED over the tiles, so they darken the stone the
-    /// way a cut does and the relief still shows through them; the image is
-    /// white everywhere else and changes nothing there. 6.6 m round, so the
-    /// outer band passes just outside both rows (marks at r ≈ 3–3.9) and
-    /// the near arc leaves the frame under the HUD.
-    static func arenaInlay(radius: CGFloat, groove: UIColor, at centre: SCNVector3) -> SCNNode {
-        let plane = SCNPlane(width: radius * 2, height: radius * 2)
-        let material = SCNMaterial()
-        material.lightingModel = .constant
-        material.diffuse.contents = inlayImage(groove: groove)
-        material.blendMode = .multiply
-        // Writes colour only: a quad that darkens what is under it has no
-        // business changing the frame buffer's alpha (see `runeRing`).
-        material.colorBufferWriteMask = [.red, .green, .blue]
-        material.writesToDepthBuffer = false
-        material.readsFromDepthBuffer = true
-        material.isDoubleSided = false
-        plane.firstMaterial = material
-        let node = SCNNode(geometry: plane)
-        node.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
-        node.position = SCNVector3(centre.x, 0.02, centre.z)
-        node.castsShadow = false
-        node.name = "inlay"
-        return node
-    }
-
-    private static var inlayCache: [String: UIImage] = [:]
-
-    /// The inlay's drawing: an outer band, a ring of ticks inside it, a
-    /// thin ring, an inner ring just inside the rows, and an eight-point
-    /// star of thin spokes at the centre. Geometry only — a device drawn
-    /// here would be the thing the owner called clip art; the stone's own
-    /// carving is the tiles' relief.
-    private static func inlayImage(groove: UIColor) -> UIImage {
-        let key = groove.description
-        if let cached = inlayCache[key] { return cached }
-        let size: CGFloat = 1024
-        let image = UIGraphicsImageRenderer(size: CGSize(width: size, height: size)).image { context in
-            let cg = context.cgContext
-            UIColor.white.setFill()
-            cg.fill(CGRect(x: 0, y: 0, width: size, height: size))
-            let centre = CGPoint(x: size / 2, y: size / 2)
-            let radius = size / 2
-            func ring(_ r: CGFloat, width: CGFloat, alpha: CGFloat) {
-                cg.setStrokeColor(groove.withAlphaComponent(alpha).cgColor)
-                cg.setLineWidth(width)
-                cg.strokeEllipse(in: CGRect(x: centre.x - r, y: centre.y - r, width: r * 2, height: r * 2))
-            }
-            func spoke(angle: CGFloat, from inner: CGFloat, to outer: CGFloat, width: CGFloat, alpha: CGFloat) {
-                cg.setStrokeColor(groove.withAlphaComponent(alpha).cgColor)
-                cg.setLineWidth(width)
-                cg.setLineCap(.round)
-                cg.move(to: CGPoint(x: centre.x + cos(angle) * inner, y: centre.y + sin(angle) * inner))
-                cg.addLine(to: CGPoint(x: centre.x + cos(angle) * outer, y: centre.y + sin(angle) * outer))
-                cg.strokePath()
-            }
-            ring(radius * 0.93, width: radius * 0.06, alpha: 0.5)
-            ring(radius * 0.885, width: radius * 0.012, alpha: 0.45)
-            for index in 0..<36 {
-                let share: CGFloat = CGFloat(index) / 36
-                let angle: CGFloat = share * 2 * CGFloat.pi
-                spoke(angle: angle, from: radius * 0.845, to: radius * 0.87, width: radius * 0.012, alpha: 0.45)
-            }
-            ring(radius * 0.83, width: radius * 0.012, alpha: 0.45)
-            ring(radius * 0.42, width: radius * 0.02, alpha: 0.45)
-            ring(radius * 0.09, width: radius * 0.012, alpha: 0.45)
-            for index in 0..<8 {
-                let share: CGFloat = CGFloat(index) / 8
-                let half: CGFloat = CGFloat.pi / 8
-                let angle: CGFloat = share * 2 * CGFloat.pi + half
-                spoke(angle: angle, from: radius * 0.1, to: radius * 0.40, width: radius * 0.009, alpha: 0.42)
-            }
-        }
-        inlayCache[key] = image
-        return image
     }
 
     /// What the painting says the light is: the average colour of its sky
@@ -786,19 +756,86 @@ enum StageBuilder {
         var maxLift: CGFloat = 0.25
     }
 
+    ///
+    /// TO THE OWNER'S FRAMES (2026-09-24). His two Summoners War battle
+    /// frames, measured beside ours: a mean brightness of 110–125 (the Duat
+    /// and the arena 87 and 91), the top and bottom thirds equally bright
+    /// (the Duat's bottom third 46% darker than its top), a whole frame 28–35%
+    /// saturated (the Duat 70%, the arena 68%) with its figures at 45–60%,
+    /// and local contrast of 26–33 (ours 15–24). So: the vignette is a
+    /// trace everywhere (0.12–0.22, from 0.24–0.42 — it was most of the dark
+    /// foreground), the warm sets take a fifth of a stop more and give up a
+    /// sixth of their saturation (the floor's orange is the frame's, and the
+    /// figures keep 45–55%), and the contrast is 0.14–0.18 — the reveal's
+    /// scale, still a fraction of the 1.03–1.12 that crushed the shade. The
+    /// night and the dungeon sets keep their lower exposure but lose the
+    /// murk: no set sits under 0.0 but the two pale-marble ones, which are
+    /// pulled down a little further for the key's new 1,300.
     static func grade(for environment: BattleEnvironment) -> Grade {
+        gradeTable(environment)
+    }
+
+    /// The share of its haze a mist plane keeps on a battle set (2026-09-24).
+    static let battleMistShare: CGFloat = 0.5
+
+    /// A battle brazier's light at rest (2026-09-24; 300 before, and still on
+    /// the summoning circle): the warm pools at the back of the set were what
+    /// made the far third of every frame brighter and more orange than the
+    /// near one, where the genre's frames are even top to bottom.
+    static let battleBrazierGlow: CGFloat = 220
+
+    /// Texture filtering for everything a battle draws (2026-09-24): trilinear
+    /// mips and 16× anisotropy on every image a material samples. At 19° the
+    /// floor is seen at a grazing angle, and a texture sampled without
+    /// anisotropy blurs toward the far edge along its depth — the near floor
+    /// of our frames measured a Laplacian variance of 130–590 against the
+    /// genre's 1,088. On Apple's GPUs 16× costs a few percent of the fill of
+    /// the surfaces it reaches and no memory; a mip chain costs a third more
+    /// of a texture's memory, which SceneKit already pays wherever a mip
+    /// filter was set (the floors, the rock, the figures' diffuse). A
+    /// property holding a colour or a number is left alone.
+    ///
+    /// A FIGURE (`mipsBeyondDiffuse` false, from `BattleSceneController.
+    /// place`) gets the anisotropy on every map but a new mip chain on none
+    /// (2026-09-24, review): its normal, roughness, metal and glow maps are
+    /// 2048 on a hero's LOD, a chain on each is about 5 MB more a map, and
+    /// the crashes of 2026-09-23 were memory. Its diffuse already has one
+    /// (`ModelLibrary`), and the figure is small enough in the frame that a
+    /// map read without mips shimmers less than the floor would.
+    static func sharpenTextures(in root: SCNNode, mipsBeyondDiffuse: Bool = true) {
+        root.enumerateHierarchy { node, _ in
+            // The painting hangs face-on and is magnified, not minified: a
+            // mip chain would be a third more of a 2048 texture for nothing.
+            if node.name == "backdrop" { return }
+            for material in node.geometry?.materials ?? [] {
+                for property in [material.diffuse, material.normal, material.roughness,
+                                 material.metalness, material.emission, material.multiply,
+                                 material.ambientOcclusion] {
+                    guard let contents = property.contents,
+                          contents is UIImage || contents is URL || contents is String
+                    else { continue }
+                    if mipsBeyondDiffuse || property === material.diffuse {
+                        property.mipFilter = .linear
+                    }
+                    property.maxAnisotropy = 16
+                }
+            }
+        }
+    }
+
+    private static func gradeTable(_ environment: BattleEnvironment) -> Grade {
         switch environment {
         // The warm sets began at 1.12 and 1.15: with the braziers' orange
         // light on a mottled sandstone floor the first frames were a sheet
         // of orange, so the push is gentler there.
         case .duatGate, .hallOfTwoTruths, .arenaOfSouls, .colosseumSands:
-            return Grade(saturation: 1.0, contrast: 0.10, exposure: 0.0, vignette: 0.32)
+            return Grade(saturation: 0.84, contrast: 0.18, exposure: 0.2, vignette: 0.12)
         case .reedFields, .peachGarden:
-            return Grade(saturation: 1.0, contrast: 0.06, exposure: 0.05, vignette: 0.26)
+            return Grade(saturation: 0.9, contrast: 0.14, exposure: 0.12, vignette: 0.12)
         case .serpentDeep, .necropolis:
-            return Grade(saturation: 0.98, contrast: 0.14, exposure: -0.1, vignette: 0.42)
+            return Grade(saturation: 0.92, contrast: 0.18, exposure: 0.0, vignette: 0.22)
         case .colossusVault:
-            return Grade(saturation: 0.98, contrast: 0.12, exposure: -0.05, vignette: 0.4)
+            return Grade(saturation: 0.9, contrast: 0.18, exposure: 0.05, vignette: 0.2)
         // The sunlit marble sets, pulled down (run 220): Olympus measured
         // 152 / 152 / 120 over its three bands at +0.05 against a 70–130
         // target, pale floor and sky round figures with little left to stand
@@ -811,15 +848,15 @@ enum StageBuilder {
         // round 4 (`maxLift`, the pale-marble sets' cap): 0.05 of a stop,
         // and no tour frame fights on the cliffs yet.
         case .olympusGate, .aegeanCliffs:
-            return Grade(saturation: 0.98, contrast: 0.08, exposure: -0.55, vignette: 0.24, maxLift: 0.10)
+            return Grade(saturation: 0.96, contrast: 0.14, exposure: -0.62, vignette: 0.12, maxLift: 0.10)
         case .lernaMarsh, .hydraLair, .yggdrasilRoots:
-            return Grade(saturation: 0.94, contrast: 0.12, exposure: -0.05, vignette: 0.38)
+            return Grade(saturation: 0.9, contrast: 0.18, exposure: 0.08, vignette: 0.18)
         case .midgardFjord:
             // A night fjord under a grey sky: lifted a little, or the floor
             // is only what the braziers reach.
-            return Grade(saturation: 0.96, contrast: 0.10, exposure: 0.08, vignette: 0.32)
+            return Grade(saturation: 0.92, contrast: 0.16, exposure: 0.12, vignette: 0.14)
         case .jotunheimHall, .dragonGate:
-            return Grade(saturation: 0.96, contrast: 0.10, exposure: 0.0, vignette: 0.32)
+            return Grade(saturation: 0.92, contrast: 0.16, exposure: 0.08, vignette: 0.14)
         // The Forum at MIDNIGHT, on the same pale marble (run 221): at −0.08
         // with its painting's +0.22 on top, the skill zoom read as a sunlit
         // cream floor, its middle band 177 against a 155 ceiling, while the
@@ -831,7 +868,7 @@ enum StageBuilder {
         // that, capping the painting's lift at +0.10 is 0.12; the grade
         // gives the rest.
         case .forumRome:
-            return Grade(saturation: 0.92, contrast: 0.12, exposure: -0.56, vignette: 0.4, maxLift: 0.10)
+            return Grade(saturation: 0.9, contrast: 0.16, exposure: -0.62, vignette: 0.16, maxLift: 0.10)
         }
     }
 
@@ -876,10 +913,46 @@ enum StageBuilder {
     /// at ±5.4 (`BattleSceneController.position(for:teamSize:)`); the back
     /// row of every set is deeper than the enemy row and the centre pieces
     /// are inside 4.5 m.
+    /// Since 2026-09-24 the widest line is the enemy's four-a-side, its outer
+    /// marks at ±4.8 (3.2 m apart; the team's are 2.4 and 2.0): the pieces
+    /// on this line leave those figures a metre of air or more (the Duat's
+    /// sphinx 1.03 m, the Vault's head 1.27, the broken column 1.38),
+    /// measured footprint by footprint on the shipped meshes. A FIVE-wide
+    /// enemy line (±6.4) would stand in the long pieces — the sphinx, the
+    /// broken column, the Vault's head — and no stage fields one: the arena,
+    /// the draft and a guild war are four, every wave three, a raid's guard
+    /// two. The side walls stand outside this line (`arenaHalfWidth`).
     static func clearOfTheWings(_ position: SCNVector3) -> SCNVector3 {
         let out = abs(position.x)
         guard position.z > -6.0, out > 4.5, out < 8.0 else { return position }
         return SCNVector3(position.x < 0 ? -8.5 : 8.5, position.y, position.z)
+    }
+
+    /// The far edge every recipe's coordinates were written against. The
+    /// back row keeps its distance to the parapet whatever the edge is.
+    static let setsDressedForFarEdge: Float = -8.4
+
+    /// The set's back row — every piece and brazier deeper than this, which
+    /// in every recipe is the columns, the statues and colossi, the ruin,
+    /// the corner pieces and the ±3.8 braziers, and no wing piece.
+    static let backRowFrom: Float = -5.5
+
+    /// A back-row piece moved back with the far edge (2026-09-24). The floor
+    /// ends at −11 now so the parapet lands a quarter of the way down the
+    /// frame, the owner's Summoners War arena; left where they were dressed,
+    /// with the enemy row brought forward to −3.4/−4.4 the same day, the
+    /// colossi, the Lair's dead trees, the world tree's roots and the Duat's
+    /// ±3.8 braziers stood IN a four-a-side's outer enemy marks (±4.8,
+    /// −4.4: 0.09–0.28 m of overlap, footprint by footprint on the shipped
+    /// meshes), the braziers across the medallion's gold rim, and a wave's
+    /// outer arrivals walked on out of the braziers. Moved by the edge's own
+    /// shift, every piece keeps its place against the parapet and the boss's
+    /// breach exactly as it was dressed; the nearest back-row piece (a
+    /// colossus) now leaves every enemy figure 2.4 m of air (a wing piece,
+    /// the sphinx, is the nearest of all at 1.03 m).
+    static func withTheFarEdge(_ position: SCNVector3) -> SCNVector3 {
+        guard position.z < backRowFrom else { return position }
+        return SCNVector3(position.x, position.y, position.z + battleFloorFarEdge - setsDressedForFarEdge)
     }
 
     /// Where a brazier may stand: where it was put, or the nearest place
@@ -974,22 +1047,33 @@ enum StageBuilder {
     /// camera. The far edge is where the old disc's far rim was, so the boss
     /// mark (0, −9.8) is still a stride beyond it and the breach still reads
     /// as a cliff it has climbed to.
+    ///
+    /// −11 since 2026-09-24 (it was −8.4): the owner's Summoners War arena
+    /// frame has its far wall 23–25% down, and from the square camera of
+    /// the same day −8.4 landed at 28%. At −11 the parapet's foot is 24%
+    /// down for a two- to three-a-side (23% for 1v1, 25% for a four, 27%
+    /// for a five, whose camera stands further back — `tools/camera_solve.py`);
+    /// the boss mark rides on it (`BattleSceneController.bossMark`) and the
+    /// heads of every boss from 6 to 8 m land 7–17% down; the set's back row
+    /// comes with it (`withTheFarEdge`), the side walls start at it, and the
+    /// slab's near face (+33) is still behind every camera (z ≤ +20). The
+    /// medallion's rim (7.64 m round z +1.8) ends at −5.8, 5 m short of it.
     static let battleFloorSize: CGFloat = 44
-    static let battleFloorFarEdge: Float = -8.4
+    static let battleFloorFarEdge: Float = -11.0
 
     /// The ground as a slab: the painted floor on top, cliff rock on the
     /// faces, a row of boulders along the far edge. Square, so the tiles
     /// repeat the same in both directions whatever way the box's top face
     /// runs its texture coordinates.
     static func slab(size: CGFloat, thickness: CGFloat, farEdge: Float, floor: String, repeats: Float,
-                     tint: String?, rock: String) -> SCNNode {
+                     tint: String?, rock: String, saturation: CGFloat? = nil) -> SCNNode {
         let node = SCNNode()
         node.name = "platform"
         let body = SCNBox(width: size, height: thickness, length: size, chamferRadius: 0)
         // The tint as clouds of shade (`mottle`), 1.6 repeats across the
         // slab, so fourteen identical tiles each way stop reading as
         // wallpaper.
-        let top = floorMaterial(floor, repeats: repeats, tint: tint, mottleRepeats: 1.6)
+        let top = floorMaterial(floor, repeats: repeats, tint: tint, mottleRepeats: 1.6, saturation: saturation)
         let side = rockMaterial(rock, repeats: SCNVector3(Float(size) * 0.35, 1, 1))
         // SCNBox: front (+z), right (+x), back (−z), left (−x), top, bottom.
         body.materials = [side, side, side, side, top, rockMaterial(rock, repeats: SCNVector3(4, 4, 1))]
@@ -1260,7 +1344,9 @@ enum StageBuilder {
     static let builtBowl = "brazier_bowl"
 
     /// A brazier prop (or a stone bowl) with a flame and a flickering light.
-    static func brazier(asset: String, at position: SCNVector3, flame: UIColor) -> SCNNode {
+    /// `glow`: the fire's light at rest, 300 as it was built; the battle
+    /// passes `battleBrazierGlow`.
+    static func brazier(asset: String, at position: SCNVector3, flame: UIColor, glow: CGFloat = 300) -> SCNNode {
         let height = propHeights[asset] ?? 1.4
         let node = prop(Placement(asset: asset, position: position, standIn: .none))
         if node.childNodes.isEmpty {
@@ -1282,17 +1368,18 @@ enum StageBuilder {
         let light = SCNLight()
         light.type = .omni
         light.color = flame
-        light.intensity = 300
+        light.intensity = glow
         light.attenuationStartDistance = 0.5
         light.attenuationEndDistance = 6
         fire.light = light
         // Each term typed on its own line: as one expression it took the
         // type checker two seconds on CI (run 229's slowest).
+        let rest = Float(glow)
         let flicker = SCNAction.customAction(duration: 2.3) { node, elapsed in
             let t = Float(elapsed)
-            let quick: Float = 70 * sin(t * 11.3)
-            let slow: Float = 40 * sin(t * 4.7 + 1.3)
-            let level: Float = 300 + quick + slow
+            let quick: Float = rest * 0.233 * sin(t * 11.3)
+            let slow: Float = rest * 0.133 * sin(t * 4.7 + 1.3)
+            let level: Float = rest + quick + slow
             node.light?.intensity = CGFloat(level)
         }
         fire.runAction(.repeatForever(flicker))
@@ -1424,6 +1511,13 @@ enum StageBuilder {
     /// square to the world, as it was, a camera 55° round to the side saw
     /// its edge a third of the way across the frame and the bare sky colour
     /// beyond.
+    ///
+    /// Checked against the far edge at −11 (2026-09-24) and left where it
+    /// was: it hangs 59 m beyond the parapet, and from the home camera the
+    /// frame shows its rows 41–48% of the way down the picture above the
+    /// parapet (41–49% with the edge at −8.4), from a boss's 33–46% — the
+    /// parapet covers about one row in a hundred more, and the frame is
+    /// the painting's to the sides at every camera (±48 m of 85 m).
     static func farBackdrop(_ image: UIImage, yaw: Float = 0) -> SCNNode {
         let plane = SCNPlane(width: 170, height: 170)
         let material = SCNMaterial()
@@ -1458,18 +1552,30 @@ enum StageBuilder {
     /// flat tint, repeated that many times across the surface; nil keeps the
     /// flat tint, which is what the dais, a stand-in column and a thrown
     /// tile want.
-    static func floorMaterial(_ texture: String, repeats: Float, tint: String?, mottleRepeats: Float? = nil) -> SCNMaterial {
+    ///
+    /// `saturation`: the share of its colour the painted tile and the tint
+    /// keep (`calmedFloorImage`, `calmedTint`); nil keeps them as painted.
+    /// The battle slab passes `arenaFloorSaturation` since 2026-09-24.
+    static func floorMaterial(_ texture: String, repeats: Float, tint: String?, mottleRepeats: Float? = nil,
+                              saturation: CGFloat? = nil) -> SCNMaterial {
         let material = SCNMaterial()
         material.lightingModel = .physicallyBased
-        material.diffuse.contents = UIImage(named: texture) ?? UIColor(hex: "#B08A5A")
+        let calmed = saturation.flatMap { calmedFloorImage(texture, saturation: $0) }
+        // Typed in two steps: three optionals of three types in one `??`
+        // chain is a solver search the compiler need not be given.
+        let tile: UIImage? = calmed ?? UIImage(named: texture)
+        material.diffuse.contents = tile ?? UIColor(hex: "#B08A5A")
         material.diffuse.wrapS = .repeat
         material.diffuse.wrapT = .repeat
         material.diffuse.contentsTransform = SCNMatrix4MakeScale(repeats, repeats, 1)
         material.diffuse.mipFilter = .linear
+        material.diffuse.maxAnisotropy = 16
         material.roughness.contents = floorRoughness[texture] ?? 0.8
         material.metalness.contents = 0.0
         applyRelief(texture, to: material, repeats: SCNVector3(repeats, repeats, 1))
-        if let tint, let colour = UIColor(hex: tint) {
+        material.normal.maxAnisotropy = 16
+        if let tint, let painted = UIColor(hex: tint) {
+            let colour = saturation.map { calmedTint(painted, keep: $0) } ?? painted
             if let mottleRepeats {
                 material.multiply.contents = mottle(tint: colour)
                 material.multiply.wrapS = .repeat

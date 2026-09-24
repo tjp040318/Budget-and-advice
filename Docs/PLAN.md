@@ -2695,6 +2695,523 @@ and it made everything else hard to see instead. The lamp stands about
 Both lamps are the same lesson, and `framelight.py`'s worst-patch column
 plus the band means are what will catch the third one.
 
+## The owner's angle and the clean frame (2026-09-24)
+
+The owner sent two Summoners War battle frames from his phone: "Btw this
+is the camera angle I like", and under them, "Look how clean the game
+looks and how the 3D models and details are so detailed. I want THIS
+level. Do it now please for the next two hours, upgrading everything."
+Then: "Make these upgrades REALLY well and really focus and put your best
+design hat on. I really want this to have a premium feel." One frame is a
+walkway: three beasts and a girl across the bottom with their backs to
+the camera, five enemies in a staggered row across the middle. The other
+is a round arena laid in stone, a gold band inlaid round the fight and a
+pillar at either side. Both are 2868 × 1320 pixels, his phone's 956 × 440
+points at three pixels a point.
+
+This pass is the FRAME: the camera, the field the units stand on, the
+floor, the light, the contact shadows and the plates. The figures are the
+serious roster's and the motion roll-out's (`Docs/MOTION.md`), and the
+rest of the premium feel is `Docs/FEEL.md`. Everything below was measured
+on his frames and on run 241's before it was built, and every framing
+number was solved in the Python port before it was tried. The measuring
+scripts were written for the day in the session's scratch (`sw/`: the
+ring fit, the back-solve, the brightness and shadow reads); the method is
+written here, and `tools/camera_solve.py` is the part that ships. None of
+it has been compiled or photographed yet.
+
+### What his frames measure
+
+**The camera.**
+- **Pitch 19°.** The arena's gold band, picked out by its colour and
+  fitted as two ellipses (the outer edge 2269 × 763 px, the inner
+  1970 × 671, both level to 0.0°), solves as a circle on the floor to
+  19.0° for any lens from 15° to 35°. The ring pins the pitch and says
+  little about the lens. The shadow ovals under his units agree from
+  another direction: an oval 3.3–3.6 times wider than tall is a floor
+  seen at 16–18°. Ours was 36°.
+- **A 24–30° lens, so 28°.** The left pillar's two edges lean 0.084 and
+  0.154 toward the frame's foot, which at 19° is a 28.8° vertical lens.
+  The walkway's rails meet about a third of the frame's height above its
+  top edge, about 24°, and rough, since the path curves. Ours was 30°.
+- **Yaw 0.** His rows run level across the screen within 2–4°, the
+  ring's axes are square to the frame, and its centre is 0.497 of the way
+  across. Ours was −32°, the team's row running 12° downhill to the right.
+- **The rows ten metres apart.** Back-solved from the ring in units of
+  its radius R: the camera 0.8 R up and 2.4 R out, the rows 1.39 R apart,
+  the team's marks 0.33 R apart and the enemies' 0.44 R, 1.3 times wider.
+  Scaled so his team stands 2.4 m apart, as ours does, R is 7.3 m: the
+  rows are ten metres apart, the enemies 3.2 m apart, the enemy row
+  staggered about ±1.8 m in depth and the team ±0.6 m. On the same scale
+  his figures are 1.5 m (the smallest of his team) to 2.5 m (the winged
+  one) and his enemies 1.75–2.0 m. Ours are 1.85–2.3 m, so our figures
+  fit his field at our own spacing.
+- **The figures on his screen**, as fractions of the height from the
+  top: the team's feet at 0.84–0.87 and the team 0.30 of the frame tall;
+  the enemies' feet at 0.36–0.38 and 0.18 tall; a four-a-side across
+  0.23–0.77 of the width and the enemies across 0.30–0.70; the far wall
+  23–25% down. Run 241 had the team's feet at 0.78–0.89 on a diagonal,
+  the team 0.21–0.26 tall and the enemies 0.16.
+
+**The look.** His arena frame against run 241's Duat and arena, all read
+at 1300 × 598 with ours turned to landscape:
+
+| | his arena | ours, Duat / arena |
+|---|---|---|
+| mean brightness | 123 (the walkway 96) | 87 / 91 (Olympus 120) |
+| top / middle / bottom third | 120 / 124 / 126 | the Duat 115 / 84 / 62, its bottom 46% darker |
+| saturation, whole frame | 29% (the walkway 34%) | 70% / 68% |
+| the floor | grey stone, 3–6% saturated | the Duat's sandstone, 77% |
+| local contrast (16-px tiles) | 26–33 | 15–24 |
+| inside a figure: spread, brightest 2% | 42–66, 211–241 | 21–38, 98–170 |
+| a figure's edges (99th-percentile gradient) | 680–750 | 320–370 |
+| the near floor's detail (Laplacian variance) | 1,088 | 130–590 |
+| the highlights | (224, 225, 183): hue 61°, 18% saturated | hue 34–39°, 62%: orange |
+| the shadows | a near-neutral grey, 19% saturated | a brown, 73–80% saturated |
+| under each unit | a soft oval, 37–38% darker on average, 46% at its core, 0.8 of the body wide | 2–5% darker (Zeus's 15–24% is mostly his robe) |
+
+His arena is brighter than ours and evenly lit top to bottom. It has
+well under half our saturation, twice our contrast inside every figure
+and twice our edge strength, it is sharp at every depth, and every unit
+stands on a shadow. Ours was dark and orange at the bottom and soft, and
+every figure floated.
+
+### Why 20° and 26° failed where 19° works
+
+His camera is lower than both of the cameras the owner turned down: the
+20° of 2026-09-11, whose floor "continues to look angled", and the 26°
+that replaced it. The pitch was never the fault on its own; the field
+was. At 20° the two sides stood as wings six metres apart across the
+field. At 26°, and at 36° from 2026-09-15, they stood as two rows six
+metres apart in depth (z ±3.0). The 26° camera stood about 14 m out with
+the team a quarter of the frame tall, and run 241's 36° had the team
+0.21–0.26 tall and the enemies 0.16.
+
+A low camera over six metres of floor has no good distance. In the
+Python port, at 19° through a 28° lens with the team's feet 86% down:
+- A team 0.30 of the frame tall puts the enemies' feet 53% down, just
+  above the team's heads, with a third of the frame's height of floor
+  between the rows.
+- Bringing the enemies' feet up to his 37% puts the camera 5.8 m behind
+  the team, which then stands 0.61 of the frame tall and a three-a-side
+  spreads 0.16–0.84 of the width.
+
+Ten metres of floor gives both at once: the team 0.30 tall, the enemies'
+feet 35–38% down, and 46% of the frame's height of floor between the
+rows. It is that floor, seen across rather than along, that makes a low
+camera read as an arena rather than a ramp. So the camera and the field
+changed together.
+
+### The camera, as built (`CameraDirector`)
+
+- **The numbers:** `homeYaw` −32° → 0, `homePitch` 36° → 19°,
+  `lensFieldOfView` 30 → 28, `nearFeetLine` 0.82 → 0.72 (the team's feet
+  86% down), and a new `farFeetLine` of 0.26 (the enemies' feet 37%
+  down).
+- **The distance comes from the two feet lines.** It used to fall out of
+  the solve's first pass: the near feet were held to their line while the
+  aim was still the field's centre, and nothing said how far above the
+  team the enemies should stand. At 19° that put the camera 21 m out and
+  the team a fifth of the frame tall. Now the two lines fix the camera's
+  height H and its distance Z behind the near feet in closed form,
+  H = tan(e1)·Z = tan(e2)·(Z + gap), where e1 and e2 are the angles below
+  the horizon at which the two lines leave the lens and the gap is the
+  depth from the near row's feet to the mean of the far row's. The width
+  and the heads can still step the camera back (a five-a-side, a giant in
+  the far row). A boss fight keeps its old rules.
+- **The far row is the enemy's own marks** (the review, the same day).
+  The field is a high-water mark that never shrinks, and a melee unit
+  measured where its dash landed, about z −2 in front of the enemy row,
+  joined the far row's mean for good and walked the camera in a few
+  percent at every drain. The mean now takes only feet on or behind
+  `arenaCentre.z − arenaRowDepth`, and `playNext()` sends the units home
+  before the camera re-measures instead of after.
+- **The team's feet within 0.24–0.76 of the width** (`teamWidthMargin`
+  0.64 of the half-frame, ordinary fights only). At the frame-wide margin
+  a five-a-side's outer figures stood at 0.15 and 0.85, the right one
+  under the skill squares.
+  - The band does not keep the team clear of the squares, and never
+    could. On an 852 × 393 phone the squares run 0.67–0.93 of the width
+    from 78% down, so on the player's turn the right-hand figure's shins
+    and feet stand behind the first square (a three-a-side's at 0.68, a
+    four's or five's at 0.76, reaching the second square's edge), and a
+    four-a-side's left feet touch the top of the controls.
+  - That is his frame kept: his four-a-side reaches 0.77 under Summoners
+    War's own squares. What the band buys is the outer figures off the
+    frame's edges and out from under the squares' middle.
+  - Holding the whole figure clear would take an asymmetric margin, the
+    team centred between 0.26 and 0.67 of the width. That is a different
+    frame, to be judged on CI frames before it is built.
+- **A five-wide team stands 2.0 m apart**
+  (`BattleSceneController.position`). Held in the band at 2.4 m it
+  stepped the camera back to a team 0.22 of the frame tall; at 2.0 m it
+  is 0.27.
+- **The boss:** `bossYaw` −8° → 0, `bossPitch` 8° → 9°, `bossFeetLine`
+  0.94 → 0.92, `bossTopLine` 0.98 → 0.88.
+  - Square to the field like the home camera, so a boss arriving with the
+    third wave changes the pitch and the distance and never turns the
+    floor's lines (the rule since 2026-09-11: a frame whose floor runs
+    another way is a bug).
+  - At 0.98 Apep's head ran behind the boss bar, 5% down.
+  - Not held to the width band: with it, a four- or five-a-side's boss
+    head drops to 20–30% down in the port, and the boss is what that
+    shot is for.
+- **Also:** `minDistance` 12 → 8 (an ordinary fight's aim is 16–18 m out
+  and a boss's 14–20 m, so the floor is only a guard), `measureField`'s
+  clamp −11…+7 → −15…+9, and `backdropYaw` 0, the painting square to the
+  field. The skill zoom is unchanged: it still dollies along the home
+  line of sight.
+
+`python3 tools/camera_solve.py` is the solve in Python (`pitch=20 fov=30`
+tries other numbers; its docstring lists every constant to keep in
+step). For the shipped numbers, ordinary fights:
+
+| line-up | camera | team's feet | team tall | team across | enemies' feet | enemies tall | far edge |
+|---|---|---|---|---|---|---|---|
+| 1v1 | (0, 5.6, 17.0) | 0.86 | 0.34 | 0.50 | 0.37 | 0.19 | 0.23 |
+| 2v2 | (0, 6.0, 18.3) | 0.82–0.86 | 0.30 | 0.41–0.59 | 0.35–0.38 | 0.17 | 0.24 |
+| 3v3 | (0, 6.0, 18.2) | 0.82–0.86 | 0.31 | 0.32–0.68 | 0.35–0.38 | 0.18 | 0.24 |
+| 4v4 | (0.1, 6.3, 18.8) | 0.82–0.86 | 0.29 | 0.24–0.75 | 0.37–0.39 | 0.17 | 0.25 |
+| 5v5 | (0, 6.8, 19.6) | 0.82–0.86 | 0.27 | 0.24–0.76 | 0.39–0.41 | 0.16 | 0.27 |
+| his arena | | 0.84–0.87 | 0.30 | 0.23–0.77 (four) | 0.36–0.38 | 0.18 | 0.23–0.25 |
+
+In the boss fights (two adds each, behind a three-, four- or
+five-a-side) every boss from 6 to 8 m puts its head 7–17% down: the
+Unwrapped King 12–14%, the Longmen dragon 9–11%, the Hydra 7–9%, Apep
+7–11%, the Jötunn 8–13%, the Colossus 13–17%. The team's feet stand
+92–96% down, the team is 0.28–0.45 of the frame tall, and the rim is
+43–51% down.
+
+### The field: two ways to open ten metres
+
+1. **Push the enemies back**, to rows at ±5.2 about the origin. The enemy
+   row at −5.2, and its staggered marks at −6.2, would stand inside every
+   set's back row — the Duat's braziers at (±3.8, −5.6), the columns at
+   (±2.4, −7), the temple ruin at (0, −7.6) — and 2 m from the far edge
+   at −8.4.
+2. **Move the whole field toward the camera** (chosen).
+   `StageBuilder.arenaCentre` is z +1.8 and the rows stand
+   `arenaRowDepth` 5.2 m either side of it: the team at +7.0, the enemies
+   at −3.4. Every set keeps its dressing, and the medallion (below) is
+   drawn round the same two numbers, so the rows and its gold band cannot
+   drift apart.
+
+The marks: the team 2.4 m apart with every other unit 0.5 m nearer the
+camera, the enemies 3.2 m apart (1.3 times the team's, as his are) with
+every other one 1.0 m further back. The 0.6 m sideways push is gone: from
+straight behind, the enemies' feet land above the team's heads, and with
+the enemy marks 1.3 times as wide only a centre mark ever lines up with
+one of the team's.
+
+A melee leap now crosses about nine metres, half as far again as on the
+old field, and at 0.30 s it read as a teleport. Its duration stretches
+with its length, `dashDuration` × clamp(travel / 6 m, 1…1.6)
+(`dashReach`, `dashStretchCap`), so a 9 m leap takes 0.45 s; the swing
+waits for the stretched leap, and the walk back stays 0.30 s.
+
+### The far edge, the back row, the walls and the walk-on
+
+- **The far edge, −8.4 → −11** (`battleFloorFarEdge`). From the square
+  camera −8.4 landed 28% down; his far wall is 23–25% down. At −11 the
+  parapet's foot is 24% down for a two- or three-a-side (23% for a 1v1,
+  25% for a four, 27% for a five, whose camera stands further back). The
+  boss mark rides on it (`bossMark` reads the constant). The breach's
+  thrown tiles now end at −6.17; with the field moved and the edge left
+  at −8.4 they reached −3.57, onto the enemy marks. The painting at −70
+  is 59 m beyond the parapet and loses about one row in a hundred more
+  behind it. The key's `maximumShadowDistance` went 30 → 34, because the
+  back row is 28–31 m from the camera.
+- **The back row goes with the edge** (`withTheFarEdge`, after
+  `clearOfTheWings`). Measured footprint by footprint on the shipped
+  meshes, the second option was not clear either: the colossi, the
+  Lair's dead trees, the world tree's roots and the Duat's ±3.8 braziers
+  overlapped a four-a-side's outer enemy marks (±4.8, −4.4) by
+  0.09–0.28 m, and the braziers stood across the medallion's gold rim.
+  Every piece and brazier dressed deeper than −5.5 (`backRowFrom`) now
+  moves back by the edge's own shift, 2.6 m: the columns −7.0 → −9.6, the
+  colossi and statues −6.3 → −8.9, the ruin −7.6 → −10.2, the braziers
+  −5.6 → −8.2. Each keeps its place against the parapet and the breach
+  exactly as it was dressed, and the recipes are still written against
+  −8.4 (`setsDressedForFarEdge`). The nearest back-row piece now leaves
+  every enemy figure 2.4 m of air.
+- **The side walls, ±9.8 → ±11.3** (`arenaHalfWidth`). At ±9.8 the
+  coping's inner face stood at 9.4, and the long pieces on the wing line
+  at 8.5 ran through it, below the coping's height, in the frame's sides
+  0.3–0.45 down: the sphinx to 10.71, the broken column to 10.37, the
+  Vault's pharaoh head to 10.25, the Lair's tree and bone piles to
+  9.7–9.8, Egypt's wing braziers to 9.48 — ten of the eighteen sets.
+  Nothing that long fits between a four-a-side's outer marks (±4.8) and
+  9.4, so the walls moved rather than the pieces: the coping's inner face
+  is at 10.9, 0.19 m clear of the sphinx. The walls still read as the
+  arena's sides: they meet the parapet 0.16 and 0.84 of the way across,
+  17% down, and leave the frame's sides a third of the way down.
+- **The walk-on, 3 m → 2 m behind the mark.** From three metres a
+  three-a-side's outer arrivals started inside the ±3.8 braziers, and
+  even with the back row moved, three metres would start a four-a-side's
+  outer arrivals inside the colossi and the trees. Measured along the
+  whole walk against every footprint, a figure taken as a 0.45 m circle:
+  from two metres the widest line that walks on (three) keeps 1.45 m of
+  air and a raid's guard 0.82 m, and a four-a-side, which never walks on
+  today, keeps 0.18 m from the Lair's tree while it is still fading in.
+
+### The arena medallion: three ways to his floor
+
+His arena stands on a designed floor: radial stone courses with crisp
+grout, a broad inlaid gold band running round both teams, a gold emblem
+at the centre and enamel discs on the inner ring, in grey stone 3–6%
+saturated and sharp at every depth. Ours was the slab's painted tile
+(the Duat's sandstone 77% saturated) under `arenaInlay`, a 6.6 m
+multiply quad of thin dark rings drawn at 1024 px.
+
+1. **A painted top-down arena per realm, through Meshy's picture
+   endpoint.** 6 credits a picture, and seven at most fit over the
+   owner's floor. One 2048-pixel picture over the 15 m medallion is about
+   135 texels a metre, soft at the team's feet, and it cannot be re-cut
+   per realm without painting it again.
+2. **One large procedural image of the whole medallion.** The same
+   ceiling: a 4096 texture is about 270 texels a metre, and about 85 MB
+   with its mips.
+3. **The medallion as geometry** (chosen, `arenaMedallion` in
+   `StageBuilder+Arena.swift`): one mesh per course, each course a ring of
+   stones whose texture is ONE stone repeated round it, so the resolution
+   comes from repetition rather than size.
+   - A stone is 512 pixels across about a metre and the band's ornament
+     256 pixels across 0.9 m: 270–500 texels a metre wherever the camera
+     looks, more than the screen shows at the team's row, for about 8 MB
+     of textures with their mips. Only the last realm's drawings are
+     cached, about 6 MB.
+   - Each stone's shade is a vertex colour, so no two neighbours match.
+   - Every stone, the band and the emblem carry a relief map drawn from
+     their own drawing, so the key catches every grout line and every
+     edge of the ornament.
+   - The band stands 2 cm proud of the stone, with real walls.
+   - Free, and drawn at runtime for every realm.
+
+From the centre out, at the 5.2 m row depth: the emblem disc (1.5 m) and
+a gold line; sixteen stones; a band of gold beads on enamel (2.9–3.2 m);
+twenty-four stones with four enamel plaques on the diagonals; thirty-two
+stones and a gold line; the broad band (5.62–6.52 m), raised 2 cm, its
+ornament repeated twelve times round, with four gems at the cardinals;
+forty-eight darker kerb stones; and a gold rim at 7.64 m. The band runs
+round both rows, as his does, and the rim ends at z −5.84, 5.2 m in
+front of the parapet. The stone is the realm's floor tint with 40% of
+its saturation kept (at most 0.14), at a brightness of 0.60–0.78, and
+the slab round the medallion keeps half its colour
+(`arenaFloorSaturation` 0.5, `calmedFloorImage`), so the realm's hue
+survives as a hint.
+
+| pantheon | band | emblem | enamel |
+|---|---|---|---|
+| Egypt | lotus and bud | a lotus rosette | lapis |
+| Greece | the meander | a sixteen-rayed sun | teal |
+| the Norse | a two-strand braid, over and under | three interlaced triangles | steel blue |
+| Rome | a running laurel | a wreath round an eight-point star | Roman red |
+| the Jade Court | the square fret | a taiji in its eight trigrams | jade |
+
+### Clarity: five levers
+
+His figures have twice our edge strength and his near floor several
+times our detail (the table above). At 19° the floor is seen at a
+grazing angle, and a texture sampled without anisotropy blurs along its
+depth toward the far edge.
+
+1. **Temporal jittering** (`isJitteringEnabled`): SceneKit's
+   supersampler for a still frame, and the fight never holds still. It
+   stays off.
+2. **Screen-space ambient occlusion:** kept at 0.6 with a 0.6 m radius.
+   It is one half-size pass over the depth the deferred shadow already
+   writes, and it is what seats a sole on the stone and darkens the grout
+   between the tiles. Wider, it rings the figures in grey halos.
+3. **A bigger shadow map, or a second cascade:** memory and a pass on
+   every frame, for a shadow the figures no longer throw (below).
+   Rejected.
+4. **4× multisampling, gated on memory:** 4× on a phone with 6 GB or more
+   (read as over 5 GB, since a phone reports a little under its rating),
+   2× below it. At 19° the grout and the far parapet are long
+   near-horizontal edges that 2× leaves stepped. On Apple's tile GPUs the
+   samples resolve on the tile; if the buffers are ever kept off it,
+   which the deferred shadows and the ambient occlusion may force,
+   half-float colour and depth are twelve bytes a sample — about 145 MB
+   at a Pro's 2556 × 1179 against 72 MB at 2×, and 173 against 87 on a
+   Pro Max, 70–90 MB more. The crashes of 2026-09-23 were memory, so the
+   4 GB phones keep 2×, and the number is an estimate until CI measures
+   it.
+5. **16× anisotropy with trilinear mips** on every image a battle
+   material samples (`StageBuilder.sharpenTextures`), except the backdrop
+   painting, which is magnified rather than minified: a chain would be a
+   third more of a 2048 texture for nothing. A figure takes the
+   anisotropy on every map but a new mip chain only on its diffuse
+   (`mipsBeyondDiffuse: false`): its normal, roughness, metal and glow
+   maps are 2048 on a hero's LOD, and a chain on each is about 5 MB more
+   a map.
+
+Taken: 2, 4 and 5. The colour fringe went as well (0.12 → 0): a soft
+red-blue edge on every silhouette is the opposite of his edges.
+
+### Contact: the key's shadow, or an oval per unit
+
+His frames put a soft dark oval under every unit. Ours had almost
+nothing under a figure: the key stands on the camera's side, so a
+figure's cast shadow falls right and back of it, where the lens barely
+sees it.
+
+1. **Sharpen the key's shadow:** a bigger map or a second cascade on
+   every frame, and the shadow still in the wrong place.
+2. **One soft oval per unit** (chosen, `UnitNode.attachGroundShadow`): a
+   plane with a radial gradient, 0.55 at its centre, half the unit's
+   height across, 4 cm over the floor (clear of the band's 2 cm). It is a
+   child of the unit, so it follows every step; it shrinks to 0.7 and
+   fades as the figure leaps, and drops to half strength on a death. A
+   dozen triangles and one shared texture; a boss, sunk in the rim, has
+   none. It ignores the graphics setting's shadows switch on purpose: it
+   is the genre's contact cue, and with shadows off it is the only thing
+   seating a figure.
+
+**And battle figures no longer cast the key's shadow** (measured from the
+solved camera, with the key's direction from `buildLighting`). The key's
+shadow falls 1.76–2.53 m right and back of a figure, and 9–21% of the
+visible oval lay inside it as well: a crescent
+beside the right leg about 48% darker than the lit floor on average and
+62% at worst, against the oval's own 45% and his 46%. The rest of the
+streak showed as a soft grey band off every figure on the marble, which
+his frames never have. So the key's shadow is the set's — the columns,
+the statues, the parapet — and the shadow pass no longer draws the
+skinned figures. A figure gives up its faint self-shadow. A boss, which
+has no oval, still casts; the cast ring and the swing trail cast
+nothing; and the figure stages (the reveal, the altar, the collection)
+cast from the figure alone, as before.
+
+### The light and the grade, before → after
+
+The lights (`BattleSceneController`):
+
+| | before | after | why |
+|---|---|---|---|
+| key | 1,150, the realm's colour 45% of the way to white | 1,300, 70% to white | his highlights are (224, 225, 183), a sun barely warm, and ours were orange; his figures have twice our contrast, which is a stronger key over a weaker fill, not more light everywhere |
+| fill | 400, the painting's sky 55% to white | 330, 62% to white | the same |
+| ambient | the horizon 50% to white | 60% to white (150 with the painting's environment map, 240 without, as before) | his shadows are a near-neutral grey, ours were brown |
+| bloom | 0.22 over 0.975, radius 10 | 0.14 over 0.975, radius 8 | his frames glow on a real highlight and nowhere else; Olympus's back row photographed as a pale bloom |
+| colour fringe | 0.12 | 0 | clarity, above |
+| key shadow distance | 30 m | 34 m | the back row is 28–31 m from the camera |
+| fog | 45 → 170 m | 60 → 240 m | a crisp sky: the painting takes a sixteenth of the horizon's colour at 70 m instead of a tenth |
+| battle mist | full | half (`battleMistShare` 0.5) | his frames are clean to the far wall |
+| battle braziers | 300 | 220 (`battleBrazierGlow`; the summoning circle keeps 300) | the warm pools at the back made the far third of every frame brighter and more orange than the near |
+| white point | 1.85 | 1.85 | it is what lets the key rise without clipping |
+
+The grades (`StageBuilder.grade(for:)`: saturation / contrast / exposure
+/ vignette):
+
+| sets | before | after |
+|---|---|---|
+| Duat Gate, Hall of Two Truths, Arena of Souls, Colosseum Sands | 1.0 / 0.10 / 0 / 0.32 | 0.84 / 0.18 / +0.2 / 0.12 |
+| Reed Fields, Peach Garden | 1.0 / 0.06 / +0.05 / 0.26 | 0.9 / 0.14 / +0.12 / 0.12 |
+| Serpent Deep, Necropolis | 0.98 / 0.14 / −0.1 / 0.42 | 0.92 / 0.18 / 0 / 0.22 |
+| Colossus Vault | 0.98 / 0.12 / −0.05 / 0.40 | 0.9 / 0.18 / +0.05 / 0.20 |
+| Olympus Gate, Aegean Cliffs | 0.98 / 0.08 / −0.55 / 0.24 | 0.96 / 0.14 / −0.62 / 0.12 |
+| Lerna Marsh, Hydra's Lair, Yggdrasil's Roots | 0.94 / 0.12 / −0.05 / 0.38 | 0.9 / 0.18 / +0.08 / 0.18 |
+| Midgard Fjord | 0.96 / 0.10 / +0.08 / 0.32 | 0.92 / 0.16 / +0.12 / 0.14 |
+| Jötunheim Hall, Dragon Gate | 0.96 / 0.10 / 0 / 0.32 | 0.92 / 0.16 / +0.08 / 0.14 |
+| the Forum at midnight | 0.92 / 0.12 / −0.56 / 0.40 | 0.9 / 0.16 / −0.62 / 0.16 |
+
+The vignette is a trace everywhere, because it was most of the dark
+foreground. The warm sets take a fifth of a stop more and give up a
+sixth of their saturation, because the floor's orange was the frame's.
+The contrast is 0.14–0.18, still a fraction of the 1.03–1.12 that
+crushed the shade before 2026-09-20. The night and dungeon sets keep
+their lower exposure but lose the murk. The three pale-marble sets come
+down a little further for the key's new 1,300, their painting's lift
+still capped at +0.10.
+
+### The plates and the HUD, before → after
+
+His plate, measured at three pixels a point: a silver bevelled frame 16
+points from top to foot; a 6.4-point glossy green bar, lit
+(146, 233, 115), its body (80, 215, 36) and its foot (48, 168, 19); a
+1.3-point dark rule; a 4-point blue bar (44, 187, 235); 65 points of bar;
+and a 28-point sphere ringed in the same silver with the level on it in
+fat white figures. Ours read as a web page's progress bar beside it.
+
+| | before | after | his |
+|---|---|---|---|
+| the plate's frame (`UnitPlate`) | 66 × 14.5, a see-through dark track | 65 × 17.5: a dark edge, a 1.5-pt silver bevel, a near-opaque well | 65 × 16 |
+| health bar | 6.5 pt, mint, two stops | 6.5 pt, glossy green, seven stops | 6.4 pt |
+| attack bar | 3 pt, a pale sky | 4 pt, (44, 187, 235) | 4 pt |
+| level badge | 22 pt, a flat dark disc ringed in the element; Manrope-Bold 11 | 27 pt, a metal sphere in the element's colour in a silver ring; Manrope-ExtraBold 13 with a 1.7-pt dark edge | 28 pt |
+| skill squares | 60 pt, 10 apart | 65 pt, 13 apart (centres 78 apart) | 65 pt, centres 78.3 apart |
+| controls | 36 pt, 6 apart, dark glass, lit gold when on | 42 pt, 16 apart, black at 0.45 in a 2-pt white outline with a white glyph; the glyph is the state | 42 pt, 15.7 apart |
+| Skip | 36 tall, dark glass | 42 tall, the controls' material | |
+| bottom corners | 8 pt inside the safe area | on the safe area's edges; 16 pt off the glass where the phone has no inset | his controls' left edge 61 pt from the glass and his skills' right edge 61.5, on a 62-pt inset |
+
+- **The bottom rows stand 3–5 points higher than his.** His are 16–17.7
+  points off the glass, inside the 21-point home-indicator band, and
+  nothing of ours may land there.
+- **The controls' fill is 0.45 black**, where his darkens the floor by a
+  fifth to a third, because our sets run paler and the glyph is white.
+- **The badges keep the game's own element colours.** His light
+  element's sphere is lavender-white; ours is gold.
+- **`BattleSceneController` mirrors the corners by hand** for the
+  floating numbers: `hudControls` 120 × 36 → 158 × 42, `hudSkills`
+  200 × 64 → 223 × 67.
+- **The plates keep under the top strip now.** With the far row's feet
+  37% down, a left-hand enemy's status tiles reached the stage and wave
+  chips, and a 2.6 m enemy's badge sat on them. `layoutPlates` holds a
+  plate's top under the chips over their length (`hudChipsFoot` 34) and
+  under the boss bar across the width while a boss stands (`hudBarFoot`
+  62, the chips under it `hudChipsFootUnderBar` 98). It does this before
+  the declutter, which may no longer lift a plate back into that strip,
+  and `layoutFloats` reads the same three numbers.
+
+### What is left open
+
+1. **Boss fights with four or five.** The team spreads 0.12–0.89 of the
+   width with its feet 92–96% down, and the outer figures' legs stand
+   behind the HUD's bottom corners; their plates and upper bodies stay
+   clear. The width band would cure it by dropping the boss's head to
+   20–30% down.
+2. **A five-a-side's far edge lands at 27%**, outside his 23–25%,
+   because the width band steps that camera back.
+3. **The medallion's kerb runs under some wing pieces**, by 0.03–1.2 m,
+   the sphinx most. The medallion lies flush, so the piece stands on it.
+4. **The right-hand figure's feet stand behind the first skill square on
+   the player's turn**, and a four-a-side's left feet touch the controls
+   (the camera's section says why).
+5. **A plate held under the chips drops about 19 points**, without
+   easing, when its first status tile appears.
+6. **The brightness is unproven either way.** The key is 1,300 at 70%
+   white and the grades are stronger. The Duat is the riskiest, at about
+   half a stop: +0.2 in its grade and up to +0.25 of its painting's lift.
+7. **The boss bar's channel sits about 9–14% down**, so the tops of the
+   Hydra's and Apep's heads meet its lower half. Lower `bossTopLine` if a
+   frame shows a face behind it.
+8. **The medallion's relief maps** rely on SceneKit working out tangents
+   for the custom rings, and the 4× multisampling's memory is an
+   estimate.
+
+### How to judge it
+
+Read the first run's frames with `python3 tools/ciframes.py`, then
+`python3 tools/framelight.py` on frames 6, 8, 18 and 29. The target is
+his arena frame: a mean of 110–125, under 2% of any band above 240, the
+bottom third as bright as the top, and no blown 64 × 64 patch on the
+medallion's near arc.
+
+- **`6-battle`:** the team's feet 82–86% down and the enemies' 35–41%.
+  The right-hand figure's feet are behind the first square, with the
+  square's middle clear. No enemy plate or status tile touches the chips.
+- **`8-arena_battle`**, a four-a-side, and its `-aoe` frames: the camera
+  is the same size in every frame (a frame closer than the one before
+  means the creep is back); the four enemy plates stagger under the
+  chips; the leap reads as a jump; the left-hand feet only touch the
+  controls.
+- **`18-dungeon_battle`**, four frames: the frame does not change between
+  waves until the boss arrives; the boss's head is 7–17% down, under the
+  bar; the adds' plates stay under the bar and the chips.
+- **`29-realm_battle`**, all six realms: `framelight.py` on every frame,
+  since the pale marble and the snow are where clipping would show, and
+  each realm's medallion looks right.
+- **MEMORY, step 53 (`stress`):** the battle peak against the last run's.
+  More than about 60 MB over it moves the 4× gate to 7 GB.
+
 ## The tutorial, and a guide called Athena (2026-09-15, planned)
 
 The owner: "The next thing im going to want to work on is a full tutorial

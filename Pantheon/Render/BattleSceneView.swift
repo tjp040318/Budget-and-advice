@@ -26,7 +26,7 @@ struct BattleSceneView: UIViewRepresentable {
         let view = BattleStageView()
         view.scene = controller.scene
         view.backgroundColor = .black
-        view.antialiasingMode = .multisampling2X
+        view.antialiasingMode = Self.antialiasing
         view.rendersContinuously = true
         view.isJitteringEnabled = false
         // The camera is directed by CameraDirector; free orbit would fight it.
@@ -46,6 +46,27 @@ struct BattleSceneView: UIViewRepresentable {
         view.addGestureRecognizer(tap)
         context.coordinator.view = view
         return view
+    }
+
+    /// 4× multisampling on a phone with 6 GB or more (read as over 5 GB,
+    /// since a phone reports a little under its rating), 2× below it
+    /// (2026-09-24). The genre's figures measure twice our edge strength, and
+    /// at 19° the floor's grout and the far parapet are long near-horizontal
+    /// edges that 2× leaves stepped. On Apple's tile GPUs the extra samples
+    /// are resolved on the tile, so 4× costs little time; what it can cost is
+    /// memory if the sample buffers are ever kept off the tile, which the
+    /// deferred shadows and the ambient occlusion may force — half-float
+    /// colour and depth, twelve bytes a sample, about 145 MB at a Pro's
+    /// 2556 × 1179 against 72 MB at 2×, and 173 against 87 on a Pro Max: 70
+    /// to 90 MB more (2026-09-24, review; the first note said 50 and left
+    /// the depth out) — and the crashes of 2026-09-23 were memory. So the
+    /// 4 GB phones keep 2×, and CI's `-tour-stress battle` footprint
+    /// (`shots/memory.txt`) is read against the last run's before this ships: a
+    /// battle peak more than about 60 MB over it moves the gate to 7 GB.
+    /// Jittering stays off: it is a still-frame supersampler, and the fight
+    /// never holds still.
+    static var antialiasing: SCNAntialiasingMode {
+        ProcessInfo.processInfo.physicalMemory >= 5 * 1_024 * 1_024 * 1_024 ? .multisampling4X : .multisampling2X
     }
 
     func updateUIView(_ view: SCNView, context: Context) {
@@ -409,28 +430,48 @@ final class FloatingLabel {
 
 /// One fighter's bars, the genre's way — and OVER THE HEAD, where the genre
 /// keeps them (2026-09-15; the owner, with Summoners War's frame beside
-/// ours: "The health bars are not above the heads"). One dark rounded
-/// track holding a green health bar with a gradient fill and a cream trail
-/// that lingers a beat after a hit, and the thinner light-blue attack bar
-/// under it that fills toward the unit's turn and turns gold when it is
-/// ready; the LEVEL BADGE on the track's left end, a dark disc ringed in
-/// the element's colour with the number in it, the genre's mark; the
-/// status tiles above the track; the matchup arrow beside the track's
-/// right end, level with the bars (it floated 30 points over the plate
-/// until run 221, under the top edge on the far row); and a gold rim while
-/// the unit acts. Every size here is in points and the same in both rows,
-/// which is what makes health comparable across the field and the bars as
-/// crisp as the HUD.
+/// ours: "The health bars are not above the heads"). A SILVER FRAME round a
+/// dark well holding a glossy green health bar and a cream trail that
+/// lingers a beat after a hit, and the blue attack bar under it that fills
+/// toward the unit's turn and turns gold when it is ready; the LEVEL BADGE
+/// over the frame's left end, a metal sphere in the element's colour with
+/// the number in heavy white on it, the genre's mark; the status tiles
+/// above the frame; the matchup arrow beside its right end, level with the
+/// bars (it floated 30 points over the plate until run 221, under the top
+/// edge on the far row); and a gold rim while the unit acts. Every size
+/// here is in points and the same in both rows, which is what makes health
+/// comparable across the field and the bars as crisp as the HUD.
+///
+/// SUMMONERS WAR'S PLATE, MEASURED (2026-09-24; the owner, with two of his
+/// frames: "I want THIS level"). His phone's pixels, at 3 to the point: a
+/// frame 16 points from the silver's top edge to its foot (a bevel of 1.3
+/// light over 1.7 warm, a dark line inside it and a point of dark shadow
+/// outside), a 6.4-point green bar lit at its top (146, 233, 115) and shaded
+/// at its foot (48, 168, 19) over (80, 215, 36), a 1.3-point dark rule, a
+/// 4-point blue bar (44, 187, 235), 65 points of bar from the badge to the
+/// frame's end; and a 28-point sphere ringed in the same silver. Ours was a
+/// 14.5-point see-through dark track with a mint bar, a 3-point attack bar
+/// and a 22-point flat disc — a plate that read as a web page's progress
+/// bar next to his.
 final class UnitPlate: SKNode {
 
-    static let barWidth: CGFloat = 66
+    static let barWidth: CGFloat = 65
     static let hpHeight: CGFloat = 6.5
-    static let atbHeight: CGFloat = 3
-    /// The gap between the two bars, and the track's padding round them.
-    static let barGap: CGFloat = 1.5
-    static let trackPad: CGFloat = 1.75
-    static var trackHeight: CGFloat { hpHeight + barGap + atbHeight + 2 * trackPad }
-    /// The track's bottom edge stands this far above the projected top of
+    /// 4 (was 3): the genre's attack bar is two thirds of the health bar's
+    /// height, read at a glance for who moves next.
+    static let atbHeight: CGFloat = 4
+    /// The dark rule between the two bars, and the well's padding round them.
+    static let barGap: CGFloat = 1
+    static let trackPad: CGFloat = 0.75
+    /// The silver bevel round the well, and the dark edge outside it.
+    static let bevel: CGFloat = 1.5
+    static let frameEdge: CGFloat = 0.75
+    /// The dark well the bars lie in.
+    static var wellHeight: CGFloat { hpHeight + barGap + atbHeight + 2 * trackPad }
+    /// The whole frame, edge to edge: 16 points of silver and well, and the
+    /// dark edge round them (17.5).
+    static var trackHeight: CGFloat { wellHeight + 2 * (bevel + frameEdge) }
+    /// The frame's bottom edge stands this far above the projected top of
     /// the head.
     static let riseAboveHead: CGFloat = 12
     /// A status tile, and the step from one tile's centre to the next: the
@@ -438,16 +479,21 @@ final class UnitPlate: SKNode {
     /// turns at about 3, until run 221 (under the 11-point floor).
     static let tile: CGFloat = 16
     static let tileStep: CGFloat = 21
-    /// The level badge: 22 points round an 11-point Manrope number (19 round
-    /// a 9-point one until run 221).
-    static let badgeSize: CGFloat = 22
-    /// The matchup marker beside the track's right end.
+    /// The level badge: 27 points (22 until 2026-09-24; his is 28), the
+    /// sphere and its silver ring.
+    static let badgeSize: CGFloat = 27
+    /// The matchup marker beside the frame's right end.
     static let markerSize: CGFloat = 17
-    /// Half the dark track: the bars, their padding and a point each side.
-    static var trackHalfWidth: CGFloat { (barWidth + 2 * trackPad + 2) / 2 }
-    /// The badge's centre, over the track's left end, the genre's way; it
-    /// covers the bar's first five points, as the smaller one did.
-    static var badgeCentreX: CGFloat { -(barWidth / 2 + trackPad + 4.5) }
+    /// The frame's reach right of the plate's centre: the bars, the well's
+    /// padding, the bevel and the edge.
+    static var trackHalfWidth: CGFloat { barWidth / 2 + trackPad + bevel + frameEdge }
+    /// The badge's centre, over the frame's left end, the genre's way: its
+    /// ring meets the green half a point short of the bar's start, as his
+    /// does, so the whole bar shows. The frame runs on under the badge to
+    /// its centre (`frameLeft`), so no gap opens at the badge's shoulders.
+    static var badgeCentreX: CGFloat { -(barWidth / 2 + 0.5 + badgeSize / 2) }
+    /// Where the frame starts, under the badge.
+    static var frameLeft: CGFloat { badgeCentreX }
     /// The marker's centre, a point and a half past the track's right end.
     static var markerCentreX: CGFloat { trackHalfWidth + 1.5 + markerSize / 2 }
     /// How far the plate draws left of its centre and below it: the badge.
@@ -516,11 +562,13 @@ final class UnitPlate: SKNode {
         reachRight = wearsMarker
             ? UnitPlate.markerCentreX + UnitPlate.markerSize / 2
             : UnitPlate.trackHalfWidth
-        let full = PlateArt.fill("hp", width: w, height: h, radius: 2, top: "#9CF2B0", bottom: "#3DB868")
-        let low = PlateArt.fill("hp_low", width: w, height: h, radius: 2, top: "#FFD27A", bottom: "#E0762E")
-        let trail = PlateArt.fill("hp_trail", width: w, height: h, radius: 2, top: "#FFF6E6", bottom: "#E8CBA8")
-        let atb = PlateArt.fill("atb", width: w, height: a, radius: 1.25, top: "#B4EEFF", bottom: "#3AA6DE")
-        let ready = PlateArt.fill("atb_ready", width: w, height: a, radius: 1.25, top: "#FFF3C4", bottom: "#E8B44A")
+        // Glossy, the genre's (2026-09-24): lit along the top, deep at the
+        // foot — his green, not the mint (114, 216, 140) that read as flat.
+        let full = PlateArt.gloss("hp", width: w, height: h, radius: 1.5, stops: PlateArt.healthStops)
+        let low = PlateArt.gloss("hp_low", width: w, height: h, radius: 1.5, stops: PlateArt.lowHealthStops)
+        let trail = PlateArt.fill("hp_trail", width: w, height: h, radius: 1.5, top: "#FFF6E6", bottom: "#E8CBA8")
+        let atb = PlateArt.gloss("atb", width: w, height: a, radius: 1.5, stops: PlateArt.attackStops)
+        let ready = PlateArt.gloss("atb_ready", width: w, height: a, radius: 1.5, stops: PlateArt.readyStops)
         fullTexture = full
         lowTexture = low
         atbTexture = atb
@@ -536,8 +584,11 @@ final class UnitPlate: SKNode {
         badgeNode.isHidden = true
         let levelNode = SKSpriteNode(color: .clear, size: CGSize(width: UnitPlate.badgeSize, height: UnitPlate.badgeSize))
         let track = UnitPlate.trackHeight
-        let rimNode = SKSpriteNode(texture: PlateArt.rim("rim_acting", width: w + 12, height: track + 8, radius: 7, hex: "#F2C75C"))
-        rimNode.size = CGSize(width: w + 12, height: track + 8)
+        // The rim's crisp line half a point outside the frame's right end
+        // and its top and foot; its left side runs under the badge.
+        let rimSize = CGSize(width: 2 * UnitPlate.trackHalfWidth + 7, height: track + 7)
+        let rimNode = SKSpriteNode(texture: PlateArt.rim("rim_acting", width: rimSize.width, height: rimSize.height, radius: 7, hex: "#F2C75C"))
+        rimNode.size = rimSize
         rimNode.isHidden = true
 
         hpFill = hpFillNode
@@ -550,8 +601,8 @@ final class UnitPlate: SKNode {
         rim = rimNode
         super.init()
 
-        // One track for both bars, its centre on the node's origin: the
-        // health bar in the upper part, the attack bar under it.
+        // One frame for both bars, its well centred on the node's origin:
+        // the health bar in the upper part, the attack bar under it.
         let hpY: CGFloat = (a + UnitPlate.barGap) / 2
         let atbY: CGFloat = -(h + UnitPlate.barGap) / 2
 
@@ -565,11 +616,13 @@ final class UnitPlate: SKNode {
         rim.zPosition = 0
         parts.addChild(rim)
 
-        let hpTrack = SKSpriteNode(texture: PlateArt.track("plate_track", width: w + 2 * UnitPlate.trackPad + 2, height: track, radius: 4))
-        hpTrack.size = CGSize(width: w + 2 * UnitPlate.trackPad + 2, height: track)
-        hpTrack.position = .zero
-        hpTrack.zPosition = 1
-        parts.addChild(hpTrack)
+        // The silver frame, from under the badge's centre to its right end.
+        let frameWidth: CGFloat = UnitPlate.trackHalfWidth - UnitPlate.frameLeft
+        let frameNode = SKSpriteNode(texture: PlateArt.frame("plate_frame", width: frameWidth, height: track))
+        frameNode.size = CGSize(width: frameWidth, height: track)
+        frameNode.position = CGPoint(x: (UnitPlate.trackHalfWidth + UnitPlate.frameLeft) / 2, y: 0)
+        frameNode.zPosition = 1
+        parts.addChild(frameNode)
 
         let trailCrop = SKCropNode()
         trailCrop.maskNode = trailMask
@@ -592,18 +645,18 @@ final class UnitPlate: SKNode {
         atbCrop.zPosition = 3
         parts.addChild(atbCrop)
 
-        // The level badge overlaps the track's left end, the genre's way.
+        // The level badge over the frame's left end, the genre's way.
         levelBadge.position = CGPoint(x: UnitPlate.badgeCentreX, y: 0)
         levelBadge.zPosition = 5
         parts.addChild(levelBadge)
         applyLevel(1)
 
-        // The status tiles stand on the track.
+        // The status tiles stand on the frame.
         statusRow.position = CGPoint(x: 0, y: track / 2 + 1.5 + UnitPlate.tile / 2)
         statusRow.zPosition = 4
         parts.addChild(statusRow)
 
-        // The matchup marker beside the track's right end, level with the
+        // The matchup marker beside the frame's right end, level with the
         // bars, where it is read with the health it is about.
         badge.position = CGPoint(x: UnitPlate.markerCentreX, y: 0)
         badge.zPosition = 5
@@ -617,7 +670,7 @@ final class UnitPlate: SKNode {
 
     private func applyLevel(_ level: Int) {
         levelBadge.texture = PlateArt.levelBadge(level: level, hex: elementHex)
-        // A level of three figures is a pill, grown leftward off the track.
+        // A level of three figures is a pill, grown leftward off the frame.
         let width = PlateArt.levelBadgeWidth(for: level)
         levelBadge.size = CGSize(width: width, height: UnitPlate.badgeSize)
         levelBadge.position = CGPoint(x: UnitPlate.badgeCentreX - (width - UnitPlate.badgeSize) / 2, y: 0)
@@ -802,7 +855,7 @@ final class UnitPlate: SKNode {
 }
 
 /// The plates' pictures, drawn once each with Core Graphics at 3× and kept:
-/// a track, a fill, a pip and a rim.
+/// the frame, the fills, the level badge, a pip and a rim.
 enum PlateArt {
 
     private static var cache: [String: SKTexture] = [:]
@@ -856,17 +909,108 @@ enum PlateArt {
         context.restoreGState()
     }
 
-    /// The dark rounded track a bar sits in, with a hairline of shadow round
-    /// it so it reads over a bright floor.
-    static func track(_ key: String, width: CGFloat, height: CGFloat, radius: CGFloat) -> SKTexture {
+    /// A vertical gradient of several stops, clipped to `path`: the gloss
+    /// on a bar and the bevel of the silver, which two stops cannot draw.
+    private static func paintStops(_ context: CGContext, in rect: CGRect, path: CGPath, stops: [(CGFloat, String)]) {
+        context.saveGState()
+        context.addPath(path)
+        context.clip()
+        let colors = stops.map { color($0.1).cgColor } as CFArray
+        let locations: [CGFloat] = stops.map { $0.0 }
+        if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: locations) {
+            context.drawLinearGradient(
+                gradient,
+                start: CGPoint(x: rect.midX, y: rect.minY),
+                end: CGPoint(x: rect.midX, y: rect.maxY),
+                options: []
+            )
+        }
+        context.restoreGState()
+    }
+
+    private static func capsule(_ rect: CGRect) -> CGPath {
+        UIBezierPath(roundedRect: rect, cornerRadius: rect.height / 2).cgPath
+    }
+
+    /// The genre's glossy greens, read off the owner's frame row by row
+    /// (2026-09-24): a darker first row where the bar meets the frame's
+    /// line, the light at a tenth down (146, 233, 115), the body
+    /// (80, 215, 36) and the foot (48, 168, 19).
+    static let healthStops: [(CGFloat, String)] = [
+        (0, "#6FB957"), (0.09, "#92E973"), (0.22, "#7CF454"), (0.45, "#50D724"),
+        (0.72, "#30C80E"), (0.88, "#26BD05"), (1, "#2A9A12"),
+    ]
+    /// Under 30%: the same gloss in amber.
+    static let lowHealthStops: [(CGFloat, String)] = [
+        (0, "#C99240"), (0.09, "#FFE3A0"), (0.22, "#FFD467"), (0.45, "#FFB43C"),
+        (0.72, "#F2901F"), (0.88, "#E57A12"), (1, "#B85E10"),
+    ]
+    /// His attack bar's blue (44, 187, 235), lit at the top and deep at the
+    /// foot, where ours was a pale sky (129, 199, 235).
+    static let attackStops: [(CGFloat, String)] = [
+        (0, "#54A0AE"), (0.12, "#6ECFE8"), (0.3, "#3FC0EC"), (0.5, "#2CBBEB"),
+        (0.7, "#12B6E0"), (0.85, "#2EA7C6"), (1, "#2B8AA3"),
+    ]
+    /// A full attack bar: the same gloss in gold.
+    static let readyStops: [(CGFloat, String)] = [
+        (0, "#B0893A"), (0.12, "#FFF0B8"), (0.3, "#FFDD7A"), (0.5, "#F5C64E"),
+        (0.7, "#E8B03A"), (0.85, "#D69A2A"), (1, "#A8751C"),
+    ]
+    /// The frame's silver, top to foot: a cool light edge (his (201, 192,
+    /// 193)) and a warm foot (his (173, 158, 140)), the bevel being the
+    /// first and last tenth; the middle is under the well.
+    private static let frameSilverStops: [(CGFloat, String)] = [
+        (0, "#A89EA0"), (0.04, "#DDD6D6"), (0.094, "#B4ADAC"), (0.5, "#A0978F"),
+        (0.906, "#A28F7E"), (0.95, "#BDA990"), (1, "#7C6A5C"),
+    ]
+    /// The badge's ring, the same silver over its own height.
+    private static let ringSilverStops: [(CGFloat, String)] = [
+        (0, "#A69C9C"), (0.03, "#DDD6D6"), (0.07, "#BDB6B4"), (0.5, "#A89F9A"),
+        (0.93, "#AB9882"), (0.965, "#BCA88F"), (1, "#7A685A"),
+    ]
+    /// The dark line inside the silver, round the well and the sphere.
+    private static let innerLineHex = "#211917"
+    /// The dark edge outside the silver: its shadow on whatever it stands over.
+    private static let outerEdgeHex = "#1C1512"
+
+    /// A bar's gloss: several stops, no painted highlight over them.
+    static func gloss(_ key: String, width: CGFloat, height: CGFloat, radius: CGFloat, stops: [(CGFloat, String)]) -> SKTexture {
         texture(key, size: CGSize(width: width, height: height)) { context, rect in
-            let inner = rect.insetBy(dx: 0.5, dy: 0.5)
-            let path = UIBezierPath(roundedRect: inner, cornerRadius: radius).cgPath
-            paintGradient(context, in: inner, path: path, top: color("#2A211A").withAlphaComponent(0.92), bottom: color("#120D09").withAlphaComponent(0.92))
-            context.addPath(path)
-            context.setStrokeColor(UIColor.black.withAlphaComponent(0.55).cgColor)
-            context.setLineWidth(1)
+            let path = UIBezierPath(roundedRect: rect, cornerRadius: radius).cgPath
+            paintStops(context, in: rect, path: path, stops: stops)
+        }
+    }
+
+    /// THE FRAME (2026-09-24, the owner's plate): a dark edge, a bevel of
+    /// silver (`UnitPlate.bevel`) with a bright crown along its middle, a dark
+    /// line inside it, and the well the bars lie in — near-opaque, his dark
+    /// warm grey (61, 52, 53), where ours let the floor through at 8%.
+    static func frame(_ key: String, width: CGFloat, height: CGFloat) -> SKTexture {
+        texture(key, size: CGSize(width: width, height: height)) { context, rect in
+            let edge = UnitPlate.frameEdge
+            let bevel = UnitPlate.bevel
+            context.addPath(UIBezierPath(roundedRect: rect, cornerRadius: 4).cgPath)
+            context.setFillColor(color(outerEdgeHex).withAlphaComponent(0.8).cgColor)
+            context.fillPath()
+            let silver = rect.insetBy(dx: edge, dy: edge)
+            let silverRadius: CGFloat = 3.25
+            paintStops(context, in: silver, path: UIBezierPath(roundedRect: silver, cornerRadius: silverRadius).cgPath,
+                       stops: frameSilverStops)
+            // The crown: the tube's light, all the way round — his frame's
+            // right end peaks at (240, 230, 228).
+            let crownInset: CGFloat = bevel * 0.45
+            let crown = silver.insetBy(dx: crownInset, dy: crownInset)
+            context.addPath(UIBezierPath(roundedRect: crown, cornerRadius: silverRadius - crownInset).cgPath)
+            context.setStrokeColor(UIColor.white.withAlphaComponent(0.26).cgColor)
+            context.setLineWidth(0.6)
             context.strokePath()
+            let well = silver.insetBy(dx: bevel, dy: bevel)
+            context.addPath(UIBezierPath(roundedRect: well, cornerRadius: 1.75).cgPath)
+            context.setFillColor(color(innerLineHex).cgColor)
+            context.fillPath()
+            let floor = well.insetBy(dx: 0.5, dy: 0.5)
+            paintGradient(context, in: floor, path: UIBezierPath(roundedRect: floor, cornerRadius: 1.25).cgPath,
+                          top: color("#3D3434"), bottom: color("#2E2626"))
         }
     }
 
@@ -901,46 +1045,121 @@ enum PlateArt {
         }
     }
 
-    /// The level badge's width: the disc, or for a level of three figures a
-    /// pill a little wider, rather than a smaller number.
+    /// The level badge's width: the sphere, or for a level of three figures
+    /// a pill a little wider, rather than a smaller number.
     static func levelBadgeWidth(for level: Int) -> CGFloat {
-        level >= 100 ? UnitPlate.badgeSize + 8 : UnitPlate.badgeSize
+        level >= 100 ? UnitPlate.badgeSize + 10 : UnitPlate.badgeSize
     }
 
-    /// The level badge on the track's left end: a dark disc, a ring in the
-    /// element's colour, the level in white Manrope at the 11-point floor
-    /// with a dark edge. It was 9-point system heavy, 7.5 for three figures
-    /// — about 8 on the phone (run 221) — in a 19-point disc.
+    /// The badge's figures: Manrope's heaviest cut, the genre's fat numerals.
+    private static let badgeFace = "Manrope-ExtraBold"
+    private static let badgeFigures: CGFloat = 13
+    /// The figures' dark edge OUTSIDE the letters, his umber (65, 39, 2).
+    private static let badgeFigureEdge: CGFloat = 1.7
+
+    /// THE LEVEL BADGE (2026-09-24, the owner's plate): a metal sphere in
+    /// the element's colour — lit at its upper left, deep at its foot, the
+    /// floor's light thrown back on its underside and a glint — in a ring of
+    /// the frame's silver, and the level in heavy white figures with a thick
+    /// dark edge drawn under them (a stroke pass, then the fill, so the edge
+    /// never eats the letters), 13 points with a 1.7-point edge: his are
+    /// 11.7 points tall and 19.7 across "40". It was a flat dark disc ringed
+    /// in the element with 11-point Manrope-Bold in it — his is read from
+    /// across the field, ours had to be looked for.
     static func levelBadge(level: Int, hex: String) -> SKTexture {
         let size = CGSize(width: levelBadgeWidth(for: level), height: UnitPlate.badgeSize)
         return texture("level_\(level)_\(hex)", size: size) { context, rect in
-            let disc = rect.insetBy(dx: 1.2, dy: 1.2)
-            let path = UIBezierPath(roundedRect: disc, cornerRadius: disc.height / 2).cgPath
-            paintGradient(context, in: disc, path: path, top: color("#3A2F24"), bottom: color("#130E0A"))
-            let outer = rect.insetBy(dx: 0.6, dy: 0.6)
-            context.addPath(UIBezierPath(roundedRect: outer, cornerRadius: outer.height / 2).cgPath)
-            context.setStrokeColor(UIColor.black.withAlphaComponent(0.7).cgColor)
-            context.setLineWidth(1)
+            let edge = rect.insetBy(dx: 0.25, dy: 0.25)
+            context.addPath(capsule(edge))
+            context.setFillColor(color(outerEdgeHex).withAlphaComponent(0.85).cgColor)
+            context.fillPath()
+            let ring = edge.insetBy(dx: 0.75, dy: 0.75)
+            paintStops(context, in: ring, path: capsule(ring), stops: ringSilverStops)
+            let crown = ring.insetBy(dx: 0.7, dy: 0.7)
+            context.addPath(capsule(crown))
+            context.setStrokeColor(UIColor.white.withAlphaComponent(0.26).cgColor)
+            context.setLineWidth(0.6)
             context.strokePath()
-            let ring = rect.insetBy(dx: 1.7, dy: 1.7)
-            context.addPath(UIBezierPath(roundedRect: ring, cornerRadius: ring.height / 2).cgPath)
-            context.setStrokeColor(color(hex).cgColor)
-            context.setLineWidth(1.8)
-            context.strokePath()
-            let font = UIFont(name: Theme.numberFace, size: Theme.bodyFloor)
-                ?? UIFont.systemFont(ofSize: Theme.bodyFloor, weight: .heavy)
+            let socket = ring.insetBy(dx: 1.6, dy: 1.6)
+            context.addPath(capsule(socket))
+            context.setFillColor(color(innerLineHex).cgColor)
+            context.fillPath()
+            paintSphere(context, in: socket.insetBy(dx: 0.55, dy: 0.55), tint: color(hex))
+
+            let points = badgeFigures
+            let font = UIFont(name: badgeFace, size: points)
+                ?? UIFont(name: Theme.numberFace, size: points)
+                ?? UIFont.systemFont(ofSize: points, weight: .heavy)
             let shadow = NSShadow()
-            shadow.shadowColor = UIColor.black.withAlphaComponent(0.9)
-            shadow.shadowOffset = CGSize(width: 0, height: 0.6)
+            shadow.shadowColor = UIColor.black.withAlphaComponent(0.55)
+            shadow.shadowOffset = CGSize(width: 0, height: 0.5)
             shadow.shadowBlurRadius = 0.8
-            let text = NSAttributedString(string: "\(level)", attributes: [
-                .font: font, .foregroundColor: UIColor.white, .shadow: shadow,
+            let outline = NSAttributedString(string: "\(level)", attributes: [
+                .font: font,
+                .strokeColor: color("#3A2206"),
+                .strokeWidth: 2 * badgeFigureEdge / points * 100,
+                .shadow: shadow,
             ])
-            // The figures' cap height centred in the disc.
-            let width = text.size().width
+            let fill = NSAttributedString(string: "\(level)", attributes: [
+                .font: font, .foregroundColor: UIColor.white,
+            ])
+            // The figures' cap height centred on the sphere.
+            let width = fill.size().width
             let baseline = rect.midY + font.capHeight / 2
-            text.draw(at: CGPoint(x: rect.midX - width / 2, y: baseline - font.ascender))
+            let origin = CGPoint(x: rect.midX - width / 2, y: baseline - font.ascender)
+            context.setLineJoin(.round)
+            outline.draw(at: origin)
+            fill.draw(at: origin)
         }
+    }
+
+    /// A metal sphere (or, for three figures, a capsule) in `tint`: a radial
+    /// light from its upper left through the colour to a deep shade, the
+    /// floor's bounce on its underside, and a glint. His light sphere runs
+    /// (230, 239, 255) at the top to (103, 102, 113) at the foot, with the
+    /// bounce lifting its last rows to (142, 144, 171).
+    private static func paintSphere(_ context: CGContext, in rect: CGRect, tint: UIColor) {
+        let space = CGColorSpaceCreateDeviceRGB()
+        let h = rect.height
+        context.saveGState()
+        context.addPath(capsule(rect))
+        context.clip()
+        // The colour itself from a fifth of the way out: his spheres are
+        // deep and saturated with a small light, and a first cut that mixed
+        // white through the middle read as pastel beside them.
+        let body = [
+            tint.mixed(with: .white, amount: 0.72).cgColor,
+            tint.mixed(with: .white, amount: 0.14).cgColor,
+            tint.mixed(with: .black, amount: 0.12).cgColor,
+            tint.mixed(with: .black, amount: 0.68).cgColor,
+        ] as CFArray
+        let bodyStops: [CGFloat] = [0, 0.22, 0.52, 1]
+        let focus = CGPoint(x: rect.midX - 0.14 * h, y: rect.minY + 0.3 * h)
+        let reach: CGFloat = hypot(rect.maxX - focus.x, rect.maxY - focus.y)
+        if let gradient = CGGradient(colorsSpace: space, colors: body, locations: bodyStops) {
+            context.drawRadialGradient(gradient, startCenter: focus, startRadius: 0,
+                                       endCenter: focus, endRadius: reach, options: [.drawsAfterEndLocation])
+        }
+        let fade: [CGFloat] = [0, 1]
+        let bounce = CGPoint(x: rect.midX, y: rect.maxY + 0.1 * h)
+        let bounceColors = [
+            tint.mixed(with: .white, amount: 0.35).withAlphaComponent(0.4).cgColor,
+            tint.withAlphaComponent(0).cgColor,
+        ] as CFArray
+        if let gradient = CGGradient(colorsSpace: space, colors: bounceColors, locations: fade) {
+            context.drawRadialGradient(gradient, startCenter: bounce, startRadius: 0,
+                                       endCenter: bounce, endRadius: 0.5 * h, options: [])
+        }
+        let glint = CGPoint(x: rect.midX - 0.17 * h, y: rect.minY + 0.24 * h)
+        let glintColors = [
+            UIColor.white.withAlphaComponent(0.85).cgColor,
+            UIColor.white.withAlphaComponent(0).cgColor,
+        ] as CFArray
+        if let gradient = CGGradient(colorsSpace: space, colors: glintColors, locations: fade) {
+            context.drawRadialGradient(gradient, startCenter: glint, startRadius: 0,
+                                       endCenter: glint, endRadius: 0.2 * h, options: [])
+        }
+        context.restoreGState()
     }
 
     /// A soft gold rim round the acting unit's plate.

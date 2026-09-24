@@ -47,6 +47,14 @@ final class BattleSceneController: NSObject {
 
     /// How long a melee unit takes to close on its victim.
     private static let dashDuration: TimeInterval = 0.30
+    /// The leap `dashDuration` was tuned for, in metres of travel, and the
+    /// most a longer one may stretch it (2026-09-24, review). With the rows
+    /// about ten metres apart (`position(for:)`) a leap covers about nine,
+    /// half as far again as on the old six-metre field, and at 0.30 s it
+    /// flew at some 43 m/s, which reads as a teleport; stretched by its
+    /// length over this, to at most 1.6 times, it keeps near the old pace.
+    private static let dashReach: Float = 6
+    private static let dashStretchCap: Double = 1.6
 
     /// Where in a clip the blow actually lands, as a fraction of the clip's
     /// contract duration.
@@ -352,14 +360,33 @@ final class BattleSceneController: NSObject {
         // figure the set's colour — Zeus green in the marsh, blue in
         // Jötunheim on the first run of frames. The genre keeps its
         // monsters their own colours inside a tinted world.
-        key.color = (UIColor(hex: environment.keyLightHex) ?? .white).mixed(with: .white, amount: 0.45)
-        key.intensity = 1_150
+        // 70% of the way to white since 2026-09-24: the owner's Summoners War
+        // frames measure their highlights at (224, 225, 183) — hue 61°, 18%
+        // saturated, a sun barely warm — where ours were hue 34–39° at 62%,
+        // orange. The set keeps its hue in the fill, the ambient and the
+        // painting; the sun that shapes every figure is nearly white.
+        key.color = (UIColor(hex: environment.keyLightHex) ?? .white).mixed(with: .white, amount: 0.70)
+        // 1,300 (was 1,150) against a fill and an ambient taken DOWN: the
+        // genre's figures measure twice our contrast (a spread of 42–66
+        // against 21–38, their brightest 2% at 215–240 against 98–170), which
+        // is a stronger key over a weaker fill, not more light everywhere.
+        // The 1.85 white point is what lets the key rise without clipping.
+        key.intensity = 1_300
         key.castsShadow = true
         key.shadowMode = .deferred
         key.shadowRadius = 6
         key.shadowSampleCount = 16
         key.shadowColor = UIColor.black.withAlphaComponent(0.55)
-        key.maximumShadowDistance = 30
+        // 34 (was 30) since 2026-09-24: the camera stands square behind the
+        // team at z ≈ +18, and the sets' back row (the columns at −7, the
+        // statues at −6.3, the far parapet at −8.4) is 25–27 m out, on the
+        // edge of 30. The contact under a figure is its own oval now
+        // (`UnitNode.attachGroundShadow`), so this shadow is for the set.
+        // With the far edge at −11 and the back row carried back with it
+        // (`StageBuilder.withTheFarEdge`, the same day) the statues stand
+        // at −8.9, the columns at −9.6 and the parapet at −11: 28–31 m from
+        // every ordinary camera, still inside 34.
+        key.maximumShadowDistance = 34
         key.automaticallyAdjustsShadowProjection = true
 
         let keyNode = SCNNode()
@@ -375,8 +402,9 @@ final class BattleSceneController: NSObject {
         // per place is what the genre's sets have.
         let fill = SCNLight()
         fill.type = .directional
-        fill.color = palette.sky.mixed(with: .white, amount: 0.55)
-        fill.intensity = 400
+        fill.color = palette.sky.mixed(with: .white, amount: 0.62)
+        // 330 (was 400): see the key.
+        fill.intensity = 330
         let fillNode = SCNNode()
         fillNode.light = fill
         fillNode.position = SCNVector3(7, 5, -5)
@@ -389,7 +417,10 @@ final class BattleSceneController: NSObject {
         let ambient = SCNLight()
         ambient.type = .ambient
         let hand = UIColor(hex: environment.fogHex) ?? .darkGray
-        ambient.color = palette.horizon.mixed(with: hand, amount: 0.35).mixed(with: .white, amount: 0.5)
+        // Lifted 60% toward white (was 50%): the genre's shadows are a
+        // near-neutral grey (19% saturated in the arena frame) where ours
+        // were a 73–80% saturated brown.
+        ambient.color = palette.horizon.mixed(with: hand, amount: 0.35).mixed(with: .white, amount: 0.6)
         // Lower where the painting's environment map now fills the shadow
         // side (2026-09-20); the flat-colour fallback keeps the old floor.
         ambient.intensity = palette.environment != nil ? 150 : 240
@@ -429,11 +460,19 @@ final class BattleSceneController: NSObject {
         // floor became a sheet of light and a boss's glow a wall of yellow,
         // and 0.3 over 0.94 still spread a clipped floor over the figures
         // standing on it.
-        camera.bloomIntensity = 0.22
+        // 0.14 over 0.975, radius 8 (was 0.22, 10) since 2026-09-24: the
+        // owner's frames are CLEAN — a glow on a real highlight and no haze
+        // round the braziers — and Olympus's back row photographed as a pale
+        // bloom of bowls and columns.
+        camera.bloomIntensity = 0.14
         camera.bloomThreshold = 0.975
-        camera.bloomBlurRadius = 10
+        camera.bloomBlurRadius = 8
         // Chromatic aberration at 0.35 read as a filter (2026-09-20): a trace.
-        camera.colorFringeStrength = 0.12
+        // None since 2026-09-24: a colour fringe is a soft red-blue edge on
+        // every figure's silhouette, and the genre's figures measure twice
+        // our edge strength (a 99th-percentile gradient of 680–750 against
+        // 320–370). Nothing in a clean frame is fringed.
+        camera.colorFringeStrength = 0
         // One grade per place (2026-09-15): the genre's sets are each one
         // hue, pushed. `StageBuilder.grade(for:)` holds the numbers.
         let grade = StageBuilder.grade(for: environment)
@@ -449,6 +488,11 @@ final class BattleSceneController: NSObject {
         camera.exposureOffset = grade.exposure + min(grade.maxLift, palette.exposureCompensation)
         camera.vignettingIntensity = grade.vignette
         camera.vignettingPower = 1.2
+        // Kept, and weighed (2026-09-24): SceneKit's SSAO is one half-size
+        // pass over the depth the deferred shadow already writes, and it is
+        // what seats a sole on the stone and darkens the grout between the
+        // tiles — the contact the genre's frames have everywhere. Its radius
+        // stays at 0.6 m: wider, it rings the figures in grey halos.
         camera.screenSpaceAmbientOcclusionIntensity = 0.6
         camera.screenSpaceAmbientOcclusionRadius = 0.6
         // NO motion blur (run 220). SceneKit blurs by velocity, and the
@@ -483,6 +527,10 @@ final class BattleSceneController: NSObject {
         for combatant in combatants {
             let node = UnitNode(combatant: combatant, detail: detail)
             node.playbackSpeed = speedMultiplier
+            // The genre's soft oval under the feet, and the figure's textures
+            // filtered like the set's (2026-09-24).
+            node.attachGroundShadow()
+            StageBuilder.sharpenTextures(in: node, mipsBeyondDiffuse: false)
             let home = position(for: combatant, teamSize: lineWidth[combatant.side] ?? 1)
             homeMarks[combatant.id] = home
             // A model is authored facing +Z: the player's line turns its back
@@ -507,8 +555,22 @@ final class BattleSceneController: NSObject {
                 rise.timingMode = .easeOut
                 node.runAction(.group([rise, .fadeIn(duration: beat(0.6))]))
             } else if entering {
-                // A later wave walks on from the far side of the field.
-                node.position = SCNVector3(home.x, home.y, home.z - 3.0)
+                // A later wave walks on from the far side of the field —
+                // from two metres behind its mark since 2026-09-24 (three
+                // before). The enemy row came forward to −3.4/−4.4 that day,
+                // and from three metres a three-a-side's outer arrivals
+                // started inside the ±3.8 braziers; even with the back row
+                // carried back to the new far edge
+                // (`StageBuilder.withTheFarEdge`) three metres would start a
+                // four-a-side's outer arrivals inside the colossi and the
+                // Lair's trees. Measured against every set's pieces,
+                // footprint by footprint on the shipped meshes: from two
+                // metres the widest line that ever walks on (three; a raid's
+                // guard is two) starts 1.45 m clear of everything, the
+                // guard 0.82 m, and even a four-a-side's outer start keeps
+                // 0.18 m from the Lair's dead tree, where the figure is
+                // still fading in.
+                node.position = SCNVector3(home.x, home.y, home.z - 2.0)
                 node.opacity = 0
                 let walk = SCNAction.move(to: home, duration: beat(0.7))
                 walk.timingMode = .easeOut
@@ -644,7 +706,12 @@ final class BattleSceneController: NSObject {
     /// frame, and the camera is solved low and near for it
     /// (`CameraDirector.bossPitch`). Sunk 32% rather than 42% for the same
     /// reason: more of it above the floor.
-    private static let bossMark = SCNVector3(0, 0, -8.4)
+    /// On the floor's far edge wherever the floor puts it
+    /// (`StageBuilder.battleFloorFarEdge`, −8.4 when this was written, −11
+    /// since 2026-09-24: 6.6 m behind the enemy row's deeper marks, the breach's thrown
+    /// tiles no longer reaching the adds' marks, and the columns it stands
+    /// between carried back with it by `StageBuilder.withTheFarEdge`).
+    private static let bossMark = SCNVector3(0, 0, StageBuilder.battleFloorFarEdge)
     static let bossSink: Float = 0.32
 
     /// TWO ROWS ABREAST, the team's nearest the camera (2026-09-11, the
@@ -665,6 +732,14 @@ final class BattleSceneController: NSObject {
     /// no enemy ever stands straight behind a player; a side of more than
     /// five falls back to a second rank rather than spreading wider than
     /// the camera will frame.
+    ///
+    /// SUPERSEDED IN ITS NUMBERS (2026-09-24): the paragraph above is the
+    /// history. The camera is square behind the team now (`homeYaw` 0,
+    /// `homePitch` 19°), the rows stand `StageBuilder.arenaRowDepth` either
+    /// side of `StageBuilder.arenaCentre` (team z +7.0, enemies −3.4, ten
+    /// metres apart), the team 2.4 m and the enemies 3.2 m from mark to
+    /// mark, every other mark staggered in depth, and no sideways push —
+    /// see the body.
     private func position(for combatant: Combatant, teamSize: Int) -> SCNVector3 {
         let sideSign: Float = combatant.side == .player ? 1 : -1
         if combatant.isBoss {
@@ -681,14 +756,49 @@ final class BattleSceneController: NSObject {
         let rank = Float(mark / perRank)
         let indexInRank = mark % perRank
         let inThisRank = max(1, min(perRank, teamSize - Int(rank) * perRank))
-        let spacing: Float = 2.4
+        // THE OWNER'S FIELD (2026-09-24, with `CameraDirector.homeYaw` 0 and
+        // `homePitch` 19°): his Summoners War arena frame, back-solved, has
+        // the rows about ten metres apart, the team's marks 2.4–2.6 m apart
+        // and the enemy's 1.3 times wider, each row staggered in depth. So
+        // the team stands at z +7.0 and the enemy row at −3.4 (below) — the field
+        // moved toward the camera rather than the enemies pushed back, so
+        // the sets' back rows (the columns at −7, the braziers at −5.6, the
+        // statues at −6.3) stay clear of every mark — the team 2.4 m apart
+        // with every other unit half a metre nearer the camera, the enemies
+        // 3.2 m apart with every other one a metre further back. From
+        // straight behind, the enemy row's feet land above the team's heads
+        // on screen, so no lateral stagger is needed to keep an enemy
+        // findable; the old 0.6 m would only have pushed the enemy row off
+        // the centre of the frame.
+        // Measured by footprint, those back rows did NOT stay clear: the
+        // colossi, statues, trees and roots at −6.3 reach forward to −4.6,
+        // onto a four-a-side's outer marks at (±4.8, −4.4). They go back
+        // with the far edge now (`StageBuilder.withTheFarEdge`), a metre
+        // clear of every enemy mark.
+        // A FIVE-wide team stands 2.0 m apart (2026-09-24): at 2.4 its outer
+        // figures stood at 0.15 and 0.85 of the width, the right one under
+        // the skill squares, and holding them inside 0.24–0.76
+        // (`CameraDirector.teamWidthMargin`) at 2.4 m would have stepped the
+        // camera back to a team 0.22 of the frame tall; at 2.0 it is 0.27.
+        // Inside 0.24–0.76 the right-hand figure's feet still stand behind
+        // the first skill square on the player's turn (it starts at 0.67);
+        // `teamWidthMargin` says why that is kept.
+        let isPlayer = combatant.side == .player
+        let spacing: Float = isPlayer ? (inThisRank >= 5 ? 2.0 : 2.4) : 3.2
         let centred = Float(indexInRank) - Float(inThisRank - 1) / 2
-        let stagger: Float = combatant.side == .player ? 0 : 0.6
+        let odd = indexInRank % 2 == 1
+        // Positive is away from the centre line: the team's nearer the camera,
+        // the enemy's further from it.
+        let staggerDepth: Float = odd ? (isPlayer ? 0.5 : 1.0) : 0
         // A second rank stands further from the camera than the first and
         // half a step over, so nobody hides behind the unit in front.
         let halfStep: Float = rank.truncatingRemainder(dividingBy: 2) == 0 ? 0 : spacing / 2
-        let depth = 3.0 + rank * 1.7
-        return SCNVector3(centred * spacing + stagger + halfStep, 0, sideSign * depth)
+        // Each row `arenaRowDepth` (5.2 m) from the arena's centre, which is
+        // at z +1.8 (`StageBuilder.arenaCentre`): the floor's medallion is
+        // drawn round the same two numbers, so the rows and its gold band
+        // cannot drift apart.
+        let depth = StageBuilder.arenaRowDepth + staggerDepth + rank * 1.7
+        return SCNVector3(centred * spacing + halfStep, 0, StageBuilder.arenaCentre.z + sideSign * depth)
     }
 
     // MARK: - Playback
@@ -733,8 +843,12 @@ final class BattleSceneController: NSObject {
     private func playNext() {
         guard !queue.isEmpty else {
             isPlaying = false
-            director?.returnHome()
+            // The units first (2026-09-24): a melee attacker still standing
+            // where its dash landed has its walk back running by the time the
+            // camera re-measures the field, so it is skipped rather than
+            // measured at its landing spot (`CameraDirector.measureField`).
             returnEveryoneHome()
+            director?.returnHome()
             delegate?.battleSceneDidFinishPlayback(self)
             return
         }
@@ -839,7 +953,14 @@ final class BattleSceneController: NSObject {
             director?.perform(shot, on: casterNode, target: targetNode, focus: landing)
             var walkUp: TimeInterval = 0
             if let targetNode, closes {
-                casterNode.dash(toward: targetNode, duration: beat(Self.dashDuration))
+                let from = casterNode.position
+                let to = landing ?? from
+                let dx = to.x - from.x
+                let dz = to.z - from.z
+                let travel: Float = (dx * dx + dz * dz).squareRoot()
+                let stretch: Double = max(1, min(Self.dashStretchCap, Double(travel / Self.dashReach)))
+                let leap: TimeInterval = Self.dashDuration * stretch
+                casterNode.dash(toward: targetNode, duration: beat(leap))
                 // The swing waits for the feet. These two lines used to be
                 // consecutive statements, so the clip and the leap started on
                 // the same frame and the wind-up — the only part of an attack
@@ -848,7 +969,7 @@ final class BattleSceneController: NSObject {
                 // own cut. The 80 ms overlap is deliberate: the wind-up begins
                 // as the weight comes down, which is what ties a leap and a
                 // swing into one motion.
-                walkUp = max(0, Self.dashDuration
+                walkUp = max(0, leap
                     * (UnitNode.dashGather + UnitNode.dashFlight) - 0.08)
             }
             casterNode.play(animation, after: beat(walkUp))
@@ -1231,9 +1352,23 @@ final class BattleSceneController: NSObject {
         let now = CACurrentMediaTime()
         let step = CGFloat(min(0.1, max(0, now - lastPlateLayout)))
         lastPlateLayout = now
+        // The HUD's top strip, as a ceiling a plate's top keeps under
+        // (2026-09-24, review): with the far row's feet 37% down
+        // (`CameraDirector.farFeetLine`) a left-hand enemy's status tiles
+        // reached the stage and wave chips, and a 2.6 m enemy's badge sat
+        // on them. The same corners `layoutFloats` keeps its words under:
+        // the chips over the row's length, and the boss bar, while a boss
+        // stands, across the whole width. The overlay's origin is at the
+        // bottom, so a ceiling is a height.
+        let safe = plates.safeArea
+        let bossStands = bosses.contains { !$0.isDefeated }
+        let hudTop = height - safe.top - Self.hudPadding
+        let chipsRoof = hudTop - (bossStands ? Self.hudChipsFootUnderBar : Self.hudChipsFoot)
+        let barRoof = bossStands ? hudTop - Self.hudBarFoot : height
+        let chipsReach = safe.left + Self.hudPadding + Self.hudChipsLength
 
         // Each plate where it would stand on its own.
-        var standing: [(plate: UnitPlate, id: UUID, point: CGPoint, blocks: Bool, visiting: Bool)] = []
+        var standing: [(plate: UnitPlate, id: UUID, point: CGPoint, roof: CGFloat, blocks: Bool, visiting: Bool)] = []
         for (plate, node, headJoint) in targets {
             // Over the head: the top of the figure, projected, and the
             // track's bottom edge a little above it (the genre's place;
@@ -1272,10 +1407,17 @@ final class BattleSceneController: NSObject {
             let projected = renderer.projectPoint(top)
             let onScreen = projected.z > 0 && projected.z < 1 && !insideBoss
             plate.isHidden = !onScreen
-            let point = CGPoint(
+            var point = CGPoint(
                 x: CGFloat(projected.x),
                 y: height - CGFloat(projected.y) + UnitPlate.riseAboveHead + UnitPlate.trackHeight / 2
             )
+            // Held under the chips and the boss bar: the plate's top — its
+            // badge, or its status tiles while any are up — no higher than
+            // the ceiling over its left end, before the declutter, so the
+            // neighbours stagger round where it really stands.
+            let plateLeft = point.x + min(-UnitPlate.reachLeft, plate.tilesLeft)
+            let roof = plateLeft < chipsReach ? min(chipsRoof, barRoof) : barRoof
+            point.y = min(point.y, roof - plate.reachAbove)
             // Off its MARK (`homeMarks`) — leaping at a victim, standing over
             // it through the hits, walking back, or a later wave walking on
             // — a unit's plate is a VISITOR to the declutter below.
@@ -1287,7 +1429,7 @@ final class BattleSceneController: NSObject {
             }
             // A plate on its way out (its unit has fallen) or off the frame
             // stands in nobody's way.
-            standing.append((plate, key, point, onScreen && !node.isDefeated, visiting))
+            standing.append((plate, key, point, roof, onScreen && !node.isDefeated, visiting))
         }
 
         // The declutter (run 217's arena: four challengers abreast put each
@@ -1377,7 +1519,11 @@ final class BattleSceneController: NSObject {
                     let clearing = candidates
                         .filter { isClear(baseY + $0) }
                         .sorted { abs($0) < abs($1) }
-                    let onFrame = clearing.filter { baseY + $0 + headroom < height }
+                    // Nor lifted back up into the HUD's top strip.
+                    let onFrame = clearing.filter { candidate in
+                        let lifted: CGFloat = baseY + candidate
+                        return lifted + headroom < height && lifted + reachUp <= entry.roof
+                    }
                     let fitting = onFrame.filter { $0 >= -deepestDrop }
                     lift = fitting.first ?? onFrame.first ?? clearing.first ?? 0
                 }
@@ -1426,7 +1572,7 @@ final class BattleSceneController: NSObject {
         }
         // The floating words and numbers, over the plates just placed and
         // off every one of them.
-        layoutFloats(in: renderer, bossStands: bosses.contains { !$0.isDefeated }, plateBoxes: drawn)
+        layoutFloats(in: renderer, bossStands: bossStands, plateBoxes: drawn)
         // Forget the plates that have left (a fallen wave's), now and then.
         if plateLifts.count > standing.count + 8 {
             let live = Set(standing.map { $0.id })
@@ -1493,24 +1639,38 @@ final class BattleSceneController: NSObject {
     private static let floatCap: CGFloat = 32
 
     /// The HUD's corners as `BattleView` lays them out (read there, never
-    /// set from here): inside the safe area with 8 points of padding at the
-    /// sides and the bottom; the gear, the speed and auto three 36-point
-    /// squares 6 apart at the bottom left (`controls`, `squareControl`); the
-    /// skills three 60-point squares 10 apart at the bottom right
-    /// (`skillRow`, `SkillButton`), a picked one 6% larger, with Skip (36
+    /// set from here): the top inside the safe area with 8 points of
+    /// padding at the sides; the gear, the speed and auto three 42-point
+    /// squares 16 apart at the bottom left (`controls`, `squareControl`); the
+    /// skills three 65-point squares 13 apart at the bottom right
+    /// (`skillRow`, `SkillButton`), a picked one 6% larger, with Skip (42
     /// tall) in their place while a turn plays. At the top, 4 points down:
     /// the stage and wave chips (`hudChip`, 30 tall), their row about 250
     /// points long, and over them while a boss stands its bar — its name on
     /// a 30-point chip, 4 points, then the channels, 18.5 points with a
     /// raid's barrier row 24 — so the bar ends 62 points down at most and
     /// the chips under it 98. Change one there, change it here.
+    ///
+    /// The BOTTOM corners stand ON the safe area's edges since 2026-09-24
+    /// (Summoners War's place, `BattleView.cornerMargin`), and 16 points off
+    /// the glass on a phone with no inset there. `layoutFloats` still adds
+    /// `hudPadding` at the corners, so on a Face ID phone a float keeps 14
+    /// points from them rather than 6 — the safe side — and on a phone with
+    /// no insets may reach 2 points over them, which is inside the float's
+    /// own clear edge (its outline and five points of air).
     private static let hudPadding: CGFloat = 8
     /// Plain numbers: as `3 * 36 + 2 * 6` inside `CGSize` (or `CGFloat(…)`)
     /// the literals' types were solved against every numeric overload,
     /// 0.3 s, then 1.4 s wrapped, on CI's type checker (runs 229 and 233).
-    private static let hudControls = CGSize(width: 120, height: 36)    // three 36-point controls, two 6-point gaps
-    private static let hudSkills = CGSize(width: 200, height: 64)      // three 60-point squares, two 10-point gaps
+    private static let hudControls = CGSize(width: 158, height: 42)    // three 42-point controls, two 16-point gaps
+    private static let hudSkills = CGSize(width: 223, height: 67)      // three 65-point squares, two 13-point gaps, a picked end one 2 points out
     private static let hudChipsLength: CGFloat = 250
+    /// How far down the top strip ends: the chips alone, the boss bar, and
+    /// the chips under the bar. `layoutPlates` and `layoutFloats` both keep
+    /// under them.
+    private static let hudChipsFoot: CGFloat = 34
+    private static let hudBarFoot: CGFloat = 62
+    private static let hudChipsFootUnderBar: CGFloat = 98
     /// How far a float keeps from the HUD.
     private static let hudClearance: CGFloat = 6
     /// How far a float keeps from its unit's plate and from the float under
@@ -1595,8 +1755,8 @@ final class BattleSceneController: NSObject {
         let rightEdge = size.width - safe.right - pad
         // The overlay's origin is at the bottom: a ceiling is a height.
         let top = size.height - safe.top - pad
-        let barFoot: CGFloat = bossStands ? 62 : 0
-        let chipsFoot: CGFloat = bossStands ? 98 : 34
+        let barFoot: CGFloat = bossStands ? Self.hudBarFoot : 0
+        let chipsFoot: CGFloat = bossStands ? Self.hudChipsFootUnderBar : Self.hudChipsFoot
         let chipsReach = leftEdge + Self.hudChipsLength
         // And the floor over the bottom corners, the way the chips make a
         // ceiling at the top: the controls at the left, the skills and Skip

@@ -320,6 +320,109 @@ final class UnitNode: SCNNode {
         ModelLibrary.shared.animation(.idle, for: clipAsset) != nil ? .idle : .idleCombat
     }
 
+    // MARK: - The ground shadow
+
+    /// The soft dark oval on the floor under the figure (2026-09-24), the
+    /// genre's contact shadow: the owner's Summoners War frames put one under
+    /// every unit — centre 46% darker than the floor, 37% on average, about
+    /// 0.8 of the body's width — where ours measured 2–5% under a figure,
+    /// because the key light's cast shadow falls BEHIND a figure lit from
+    /// behind the camera and nothing sat under its feet. Nil on the island,
+    /// the Hall of Ka and for a boss (sunk in the rim; nothing to stand on).
+    private var groundShadow: SCNNode?
+
+    /// Lays the shadow under the figure. One plane with a radial gradient,
+    /// alpha-blended, reading the depth buffer and writing none, four
+    /// centimetres over the floor so it never fights the tiles or the
+    /// medallion's band (2 cm proud); a child of the unit, so it follows
+    /// every step and dash, and `dash(toward:duration:)` shrinks and fades
+    /// it as the figure leaps.
+    /// Chosen over the key light's shadow alone: that shadow is a sample of
+    /// a map spread over the whole set, soft and displaced, and a sharper
+    /// one would cost a bigger map or a second cascade on every frame; a
+    /// quad per unit costs a dozen triangles and one shared texture.
+    ///
+    /// ONE SHADOW PER FIGURE, AND IT IS THIS ONE (2026-09-24). The oval
+    /// ignores `GraphicsSettings.shadows` on purpose: it is not a light's
+    /// shadow but the genre's contact cue — Summoners War draws one under
+    /// every unit on every phone — and with shadows off it is the only thing
+    /// seating a figure on the stone. And a battle figure casts NO key-light
+    /// shadow of its own, shadows on or off (the last line below). The key
+    /// stands on the camera's side, so a figure's cast shadow falls right
+    /// and back of it: measured from the solved camera, 9–21% of the oval
+    /// the lens can see lay inside that shadow too, a crescent beside the
+    /// right leg about 48% darker than the lit floor on average and 62% at
+    /// worst (the key's shadow takes about a third off the floor it falls
+    /// on), where the oval alone is 45% at its centre and the owner's
+    /// Summoners War frames 46%; and the rest of the streak showed as a soft
+    /// grey band off every figure on the marble, which those frames never
+    /// have.
+    /// So the key's shadow is the set's (the columns, the statues, the
+    /// parapet), as `BattleSceneController.buildLighting` already says, and
+    /// the shadow pass no longer draws the skinned figures (a boss, which
+    /// has no oval, still casts). What a figure gives up is its self-shadow,
+    /// faint on a map spread over 34 m and cast mostly onto faces turned
+    /// from the lens, since the key is behind the camera. The figure stages
+    /// (the reveal, the altar, the collection) cast from the figure alone
+    /// and never call this.
+    func attachGroundShadow() {
+        guard groundShadow == nil, !isBoss else { return }
+        let diameter = CGFloat(spec.height) * 0.5
+        let plane = SCNPlane(width: diameter, height: diameter)
+        plane.firstMaterial = UnitNode.groundShadowMaterial
+        let node = SCNNode(geometry: plane)
+        node.name = "ground_shadow"
+        // An SCNPlane faces +Z; a quarter turn back about X lays it face up.
+        node.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        node.position = SCNVector3(0, 0.04, 0)
+        node.castsShadow = false
+        addChildNode(node)
+        groundShadow = node
+        // The figure throws no key-light shadow (above). Every node of the
+        // model, once, before the unit is in the scene: `castsShadow` is a
+        // node's own and no child takes it from its parent.
+        modelContainer.enumerateHierarchy { child, _ in child.castsShadow = false }
+    }
+
+    /// Back to full size and strength, on the floor under the figure.
+    private func settleGroundShadow() {
+        guard let shadow = groundShadow else { return }
+        shadow.removeAllActions()
+        shadow.scale = SCNVector3(1, 1, 1)
+        shadow.opacity = isDefeated ? 0.5 : 1
+    }
+
+    /// One material for every unit's shadow: black, its alpha a radial
+    /// falloff from 0.55 at the centre to nothing at the rim.
+    private static let groundShadowMaterial: SCNMaterial = {
+        let side: CGFloat = 128
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = false
+        let image = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { context in
+            let colours = [
+                UIColor.black.withAlphaComponent(0.55).cgColor,
+                UIColor.black.withAlphaComponent(0.46).cgColor,
+                UIColor.black.withAlphaComponent(0.22).cgColor,
+                UIColor.black.withAlphaComponent(0.0).cgColor,
+            ] as CFArray
+            let stops: [CGFloat] = [0, 0.4, 0.72, 1]
+            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colours, locations: stops) {
+                let centre = CGPoint(x: side / 2, y: side / 2)
+                context.cgContext.drawRadialGradient(gradient, startCenter: centre, startRadius: 0,
+                                                     endCenter: centre, endRadius: side / 2, options: [])
+            }
+        }
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = image
+        material.diffuse.mipFilter = .linear
+        material.blendMode = .alpha
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
+        return material
+    }()
+
     /// Starts the idle again from nothing, for a figure built before it was
     /// in a live scene: an idle attached to a detached node and carried
     /// into a scene that is already rendering never starts (the Hall of
@@ -691,12 +794,25 @@ final class UnitNode: SCNNode {
                 lean = 0.16 * (1 - min(1, l))
             }
             node.position.y = rest + height
+            // The shadow stays on the floor and shrinks and fades as the
+            // figure rises off it (`attachGroundShadow`).
+            if let shadow = self?.groundShadow {
+                let lift = max(0, height) / max(0.01, apex)
+                let size = 1 - 0.3 * lift
+                shadow.scale = SCNVector3(size, size, 1)
+                shadow.opacity = CGFloat(1 - 0.45 * lift)
+            }
             // The height is the arc's alone; the pitch is only its while no
             // procedural clip has taken it over. See `dashOwnsPitch`.
             if self?.dashOwnsPitch == true { node.eulerAngles.x = lean }
         }
         modelContainer.runAction(.sequence([arc, SCNAction.run { [weak self] node in
             node.position.y = rest
+            // Scale and strength only: this runs on the render thread.
+            if let self, let shadow = self.groundShadow {
+                shadow.scale = SCNVector3(1, 1, 1)
+                shadow.opacity = self.isDefeated ? 0.5 : 1
+            }
             if self?.dashOwnsPitch == true { node.eulerAngles.x = 0 }
         }]), forKey: "hop")
     }
@@ -723,6 +839,7 @@ final class UnitNode: SCNNode {
         // forcing it flat underneath that would leave the figure tilted for
         // the rest of the fight.
         if dashOwnsPitch { modelContainer.eulerAngles.x = 0 }
+        settleGroundShadow()
         let move = SCNAction.move(to: home, duration: duration)
         move.timingMode = .easeInEaseOut
         let turn = SCNAction.rotateTo(x: 0, y: CGFloat(homeYaw), z: 0, duration: duration, usesShortestUnitArc: true)
@@ -895,6 +1012,7 @@ final class UnitNode: SCNNode {
         plate?.setMatchup(nil)
         matchupBadge.isHidden = true
         healthBarRoot.runAction(.fadeOut(duration: 0.4))
+        groundShadow?.runAction(.fadeOpacity(to: 0.5, duration: 0.8))
         selectionRing.runAction(.fadeOut(duration: 0.3))
     }
 
@@ -911,6 +1029,7 @@ final class UnitNode: SCNNode {
         modelContainer.opacity = 1
         plate?.setDefeated(false)
         healthBarRoot.runAction(.fadeIn(duration: 0.3))
+        settleGroundShadow()
         setHealth(fraction: healthFraction, animated: false)
         play(restingIdle)
     }
@@ -1095,6 +1214,10 @@ final class UnitNode: SCNNode {
         ring.name = "cast_ring"
         ring.opacity = 0
         ring.position = SCNVector3(0, 0.03, 0)
+        // Light throws no shadow (2026-09-24): an additive ring left in the
+        // key's shadow pass lays a dark disc under its own glow, and a
+        // battle figure throws none now (`attachGroundShadow`).
+        ring.enumerateHierarchy { child, _ in child.castsShadow = false }
         addChildNode(ring)
         ring.runAction(.sequence([
             .wait(duration: delay),
@@ -1129,6 +1252,8 @@ final class UnitNode: SCNNode {
         guard let hand = weaponNode, let stage = parent else { return }
         let trail = SCNNode()
         trail.name = "swing_trail"
+        // A ribbon of light casts nothing (the cast ring's reason, above).
+        trail.castsShadow = false
         let material = SCNMaterial()
         material.lightingModel = .constant
         material.diffuse.contents = UIColor.white

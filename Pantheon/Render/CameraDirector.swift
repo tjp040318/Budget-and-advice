@@ -37,6 +37,15 @@ import UIKit
 /// That is the whole argument for solving rather than writing a camera down:
 /// one set of rules, and the frame follows the fight it is given.
 ///
+/// **The owner's angle (2026-09-24).** Everything above about yaw is history:
+/// the camera now stands square BEHIND the team (`homeYaw` 0), 19° down
+/// through a 28° lens, the team's backs a third of the frame tall across the
+/// bottom and the enemy row ten metres beyond it across the middle — the two
+/// Summoners War frames the owner sent ("this is the camera angle I like"),
+/// measured. The solve is the same solve; its distance is now set by two feet
+/// lines (`nearFeetLine`, `farFeetLine`) instead of falling out of its first
+/// pass. `tools/camera_solve.py` is its Python port.
+///
 /// **A skill zooms; nothing turns the camera.** The owner's standing rule is
 /// that the camera is fixed — a basic attack, an enemy's turn and the hits
 /// never touch the frame — and since 2026-09-11 (late) the rule is exact: the
@@ -74,7 +83,11 @@ final class CameraDirector {
     /// and the wider lens brings the camera four metres closer for the
     /// same rows, which is what makes the near figures a quarter of the
     /// frame tall instead of a fifth.
-    private static let lensFieldOfView: CGFloat = 30
+    ///
+    /// 28° since 2026-09-24: the owner's Summoners War arena frame, whose
+    /// gold ring and pillars fit a 24–30° vertical lens (the pillar lean
+    /// gives 28.8°, the walkway's rails 24°).
+    private static let lensFieldOfView: CGFloat = 28
 
     /// 16° down. The genre's battle camera is LOW: you look across the
     /// field at the figures, not down onto a table of them. The old 21° was
@@ -105,7 +118,21 @@ final class CameraDirector {
     /// down the frame across its left third, the enemies' 45% down across
     /// its right third, both about a sixth of the frame tall, the far rim
     /// 23% down.
-    private static let homePitch: Float = 36 * .pi / 180
+    ///
+    /// 19° since 2026-09-24, and straight behind the team (`homeYaw` 0): the
+    /// owner sent two Summoners War battle frames — "this is the camera angle
+    /// I like" — and the arena's gold ring, fitted as an ellipse (2269 × 763
+    /// px, level to 0.0°), solves to 19.0° for any lens from 15° to 35°; the
+    /// units' shadow ovals, 3.3–3.6 times wider than tall, say 16–18°. The
+    /// 20° of 2026-09-11 was called a ramp and the 26° after it no better,
+    /// and both had the two rows six metres apart with the figures a sixth
+    /// of the frame tall: what makes 19° read in the genre's frame is that
+    /// its rows stand TEN metres apart and its team is a third of the frame
+    /// tall, which is what `farFeetLine` and `BattleSceneController`'s marks
+    /// now give (the team's feet 84% down, the enemies' 37%, the team 0.30
+    /// of the frame tall and the enemies 0.18 — the arena frame's own
+    /// numbers, solved in the Python port before it was tried).
+    private static let homePitch: Float = 19 * .pi / 180
 
     /// 58° of yaw, camera on the right, well round toward the side of the
     /// field. This is the composition, and it is the third attempt at it.
@@ -143,13 +170,50 @@ final class CameraDirector {
     /// he sent after it shows the rows on a diagonal, which takes twice
     /// the yaw and a higher pitch, and is not the 58° that turned the
     /// whole world and was called slanted.
-    static let homeYaw: Float = -32 * .pi / 180
+    /// 0° since 2026-09-24: the owner's own reference frames are square to
+    /// the field, the rows level across the screen within 2–4°, the ring's
+    /// centre at 0.497 of the width. Nobody hides behind anybody at 0° now
+    /// for a reason the −15° never had: the enemy row stands so far back
+    /// (`BattleSceneController.position`) that its feet are above the
+    /// team's heads on screen, and its marks are 1.3 times as wide apart,
+    /// so only a centre mark ever lines up with one of the team's.
+    static let homeYaw: Float = 0
 
     /// How much of the half-frame the outermost figure may reach, and the
     /// metres of air left beside it. A figure is about 0.9 m across, so 0.9 m
     /// of shoulder room leaves half a figure of air outside the outer unit.
     private static let widthMargin: Float = 0.98
     private static let shoulderRoom: Float = 0.9
+
+    /// How much of the half-frame the TEAM's row may reach, shoulder room
+    /// included, in an ordinary fight (2026-09-24). The team's feet stand
+    /// 82–86% down, in the band the HUD's bottom corners take: the three
+    /// skill squares from 0.67 to 0.935 of the width and the three controls
+    /// out to 0.18, both rising to about 80–85% down. The owner's Summoners
+    /// War arena frame keeps a four-a-side between 0.23 and 0.77, and at the
+    /// frame-wide `widthMargin` our five-a-side's outer figures stood at
+    /// 0.15 and 0.85 — the right one under the skill squares. 0.64 of the
+    /// half-frame at the shoulder is a figure's feet within 0.24–0.76; the
+    /// camera steps back when a row needs more (a four-a-side by a percent,
+    /// a five by a tenth, whose marks are also closer —
+    /// `BattleSceneController.position`). It does NOT keep the team clear
+    /// of the skill squares, and was never going to (2026-09-24, review):
+    /// on an 852 × 393 phone the row runs 0.67–0.93 of the width from 78%
+    /// down, so on the player's turn the right-hand figure's shins and feet
+    /// stand behind the first square — a three-a-side's at 0.68, a four's
+    /// or five's at 0.76, reaching the second square's edge — and a
+    /// four-a-side's left feet touch the top of the controls. That is the
+    /// owner's frame kept (his four-a-side reaches 0.77 under Summoners
+    /// War's own squares); what the margin buys is the outer figures off
+    /// the frame's edges and out from under the squares' middle. Holding
+    /// the whole figure clear would be an asymmetric margin (the right
+    /// shoulder at 0.28 of the half-frame) with the team centred in the
+    /// free span 0.26–0.67 — a different frame, judged on CI frames first.
+    /// A boss fight does not take it:
+    /// backing off with the feet held low drops the boss's head down the
+    /// frame (to 25–37% for a four- or five-a-side in the Python port), and
+    /// the boss is what that shot is for.
+    private static let teamWidthMargin: Float = 0.64
 
     /// Where the near column's front feet sit, as a fraction of the half-frame
     /// below centre: 0.68 is 84% of the frame height, which clears the actor
@@ -166,7 +230,23 @@ final class CameraDirector {
     /// 0.82 since the plates moved over the heads (2026-09-15): nothing
     /// hangs under the feet any more, so the team stands low in the frame
     /// with the bottom-left controls beside it, the genre's way.
-    private static let nearFeetLine: Float = 0.82
+    /// 0.72 since 2026-09-24 (86% down the frame, the arena frame's 0.84–0.87):
+    /// the controls and the skill squares stand beside the feet at the
+    /// bottom, as the genre's do.
+    private static let nearFeetLine: Float = 0.72
+
+    /// Where the far row's feet stand, as a fraction of the half-frame ABOVE
+    /// centre: 0.26 is 37% down the frame, the arena frame's 0.36–0.38.
+    /// With the near feet on `nearFeetLine` this is the second of the two
+    /// lines that fix the camera's height and distance (2026-09-24). Before
+    /// it, the distance fell out of the solve's first pass — the near feet
+    /// held to their line while the aim was still the field's centre — and
+    /// nothing said how far above the team the enemies should stand; at 19°
+    /// that put the camera 21 m out and the team a fifth of the frame tall.
+    /// The width and the heads still step the camera back when they need
+    /// to (a five-a-side, a giant in the far row); this only brings it IN
+    /// to the genre's framing when nothing forbids it.
+    private static let farFeetLine: Float = 0.26
 
     /// The ceiling for an ordinary unit: nothing goes above 10% of the frame
     /// height. A BOSS gets a ceiling of its own, `bossTopLine`: its head may
@@ -180,7 +260,16 @@ final class CameraDirector {
     /// down, behind the wave chip).
     /// 0.98 since 2026-09-15: the head runs to the frame's top edge under
     /// the full-width boss bar, the genre's boss shot.
-    private static let bossTopLine: Float = 0.98
+    /// 0.88 since 2026-09-24: with the team at z +7 the boss stands fifteen
+    /// metres beyond it, and at 0.98 Apep's head ran behind the boss bar
+    /// (5% down); at 0.88 it lands 9–17% down, under the bar.
+    /// With the far edge at −11 (`StageBuilder.battleFloorFarEdge`, the same
+    /// day) every boss from 6 to 8 m, behind a team of three to five, lands
+    /// 7–17% down: the Hydra and Apep highest (7–11%), the Colossus lowest
+    /// (13–17%). The boss bar's own channel sits about 9–14% down, so the
+    /// top of the Hydra's and Apep's heads meet its lower half — lower this
+    /// line if a frame shows a face behind it.
+    private static let bossTopLine: Float = 0.88
 
     /// A boss fight is framed from BEHIND the player's team: 12° of yaw
     /// instead of 58°, 19° down, and further back, so the whole of a boss
@@ -201,8 +290,20 @@ final class CameraDirector {
     /// camera 13 m out and 3.4 m up, the boss 46% of the frame tall with
     /// its head a tenth down, the team 39% tall. At 20° from 18 m the boss
     /// was 30% and the team 23%, and the owner could not see the boss.
-    static let bossYaw: Float = -8 * .pi / 180
-    private static let bossPitch: Float = 8 * .pi / 180
+    /// 0° and 9° since 2026-09-24: square to the field like the home
+    /// camera, so a boss arriving with the third wave changes the pitch and
+    /// the distance and never turns the floor's lines (the rule since
+    /// 2026-09-11: a frame whose floor runs another way is a bug). Solved in
+    /// the Python port on the new marks: Apep (7.2 m, sunk 32% on the rim)
+    /// with the head 9% down, the team 0.39 of the frame tall at the bottom;
+    /// the Colossus (8 m) with the head 17% down and the team 0.28.
+    /// On the rim at −11 instead of −8.4: Apep's head 7% down behind a
+    /// three-a-side (0.43 tall) to 11% behind a five (0.38), the Colossus's
+    /// 13–17% (the team 0.31–0.28). A four- or five-a-side spreads 0.12–0.89
+    /// of the width in this shot, the outer figures' legs behind the bottom
+    /// corners' controls; `teamWidthMargin` says why it is not held in.
+    static let bossYaw: Float = 0
+    private static let bossPitch: Float = 9 * .pi / 180
     /// The near feet a little higher up the frame in a boss fight, so the
     /// boss has the frame and the team is the foreground.
     /// Solved, not dialled: a Python port of `solve` swept pitch, feet line
@@ -225,19 +326,23 @@ final class CameraDirector {
     /// hairline of floor, the same room an ordinary fight has.
     /// 0.94 since the plates moved over the heads: the feet may stand at
     /// the frame's bottom edge, the genre's boss shot.
-    private static let bossFeetLine: Float = 0.94
+    /// 0.92 since 2026-09-24 (the feet 96% down), with the pitch at 9°.
+    private static let bossFeetLine: Float = 0.92
 
     /// The painting is hung between the two yaws (`StageBuilder`), 17° off
     /// either camera, which a painting seventy metres out does not show: a
     /// boss can arrive with a later wave, after the set is built, and the
     /// camera swings to meet it.
+    /// Both are 0 since 2026-09-24, so the painting hangs square to the field.
     static var backdropYaw: Float { (homeYaw + bossYaw) / 2 }
 
 
     /// Distance bounds. The far end is generous because a 4.5 m boss on a
-    /// narrow iPad frame needs it; the scene's fog does not begin until 55 m,
+    /// narrow iPad frame needs it; the scene's fog does not begin until 60 m,
     /// so nothing in the fight hazes over at any distance in this range.
-    private static let minDistance: Float = 12
+    /// 8 since 2026-09-24: the two feet lines put an ordinary fight's aim
+    /// 16–18 m out and a boss's 14–20 m, so the floor is only a guard now.
+    private static let minDistance: Float = 8
     private static let maxDistance: Float = 40
 
     /// Two cuts in quick succession read as a mistake rather than as cutting,
@@ -275,10 +380,13 @@ final class CameraDirector {
         /// 1v1 is framed as a stage rather than as a close-up.
         static let standard: FieldBounds = {
             var points: [FramePoint] = []
-            // A three-a-side pair of rows: 2.4 m apart across, six metres
-            // apart in depth, the enemy row a little to the right.
+            // A three-a-side pair of rows on the marks of 2026-09-24
+            // (`BattleSceneController.position`): each `arenaRowDepth` from
+            // the arena's centre — the team's at z +7.0, the enemy's at −3.4.
+            let centre = StageBuilder.arenaCentre.z
+            let depth = StageBuilder.arenaRowDepth
             for x in [Float(-3.0), 3.0] {
-                for z in [Float(-3.0), 3.0] {
+                for z in [centre - depth, centre + depth] {
                     points.append(FramePoint(position: SCNVector3(x, 0, z), topLine: CameraDirector.fieldTopLine))
                     points.append(FramePoint(position: SCNVector3(x, 1.9, z), topLine: CameraDirector.fieldTopLine))
                 }
@@ -372,12 +480,14 @@ final class CameraDirector {
     /// arriving with a later wave widens the frame the moment it is on the
     /// field. Its POSITION is read only while it is standing on its mark. An
     /// action running on the `UnitNode` itself says it is not: it is walking
-    /// on from three metres behind the far line
-    /// (`place(combatants:entering:)`), dashing at a victim, or fading out
+    /// on from behind the far line (three metres then, two since 2026-09-24,
+    /// `place(combatants:entering:)`), dashing at a victim, or fading out
     /// with a cleared wave. The field is a high-water mark that never comes
     /// back down, so measuring one of those transients steps the camera back
     /// for the rest of the fight — the walk-on stands a unit at −6.8 m, which
-    /// the clamp below only trims to −6.5, and `playNext()` drains and calls
+    /// the clamp below only trims to −6.5 (then; since 2026-09-24 it starts
+    /// at −5.4 or −6.4, well inside the −15…+9 clamp, so skipping the walk
+    /// is the only guard), and `playNext()` drains and calls
     /// `returnHome()` in the same frame the wave is placed, so the walk WAS
     /// being measured; in the Labyrinth, where every level is three waves,
     /// the camera stepped back at each one and never came in again. The idle
@@ -399,7 +509,9 @@ final class CameraDirector {
             // put the Colossus wherever the team's column left the aim.
             guard !unit.hasActions || unit.isBoss else { continue }
             let x = max(-9, min(9, unit.position.x))
-            let z = max(-11, min(7, unit.position.z))
+            // The team's row stands at +7.0 to +7.5 since 2026-09-24 and a
+            // boss on the far rim wherever the floor's edge is.
+            let z = max(-15, min(9, unit.position.z))
             // A boss stands sunk below the platform's rim, so what has to be
             // framed is the rim at its feet and the head above it — its
             // full box would be half hidden rock — at its resting height,
@@ -453,6 +565,43 @@ final class CameraDirector {
         let tanV = tan(Float(Self.lensFieldOfView) * .pi / 360)
         let tanH = tanV * Self.aspect
         let points = field.points.isEmpty ? FieldBounds.standard.points : field.points
+        // THE TWO FEET LINES (2026-09-24). An ordinary fight is framed the
+        // genre's way: the near row's feet on `nearFeetLine` below centre,
+        // the far row's on `farFeetLine` above it. At a fixed pitch and lens
+        // those two lines fix where the camera stands relative to the rows —
+        // its height H and its distance Z behind the near feet from
+        // H = tan(e1)·Z = tan(e2)·(Z + gap), e1 and e2 the angles below the
+        // horizon at which the two lines leave the lens — and so the depth
+        // at which the near feet stand in front of it, `gapDepth`. A boss
+        // fight keeps its own rules below.
+        var gapDepth: Float?
+        var nearFootZ: Float = 0
+        if !field.hasBoss {
+            let feetZ = points.filter { $0.position.y < 0.01 }.map { $0.position.z }
+            // The far row: the feet on the enemy's own marks, `arenaRowDepth`
+            // beyond the arena's centre and the staggered back line behind
+            // it — never a foot merely beyond the centre (2026-09-24). The
+            // field is a union that never shrinks, and a melee player unit
+            // measured where its dash landed (about z −2, in front of the
+            // enemy row, with its return not yet started) would join the
+            // MEAN below for good, walking the camera in a few percent at
+            // every drain and cutting the frame between turns.
+            let farRow = StageBuilder.arenaCentre.z - StageBuilder.arenaRowDepth + 0.01
+            let farZ = feetZ.filter { $0 <= farRow }
+            if let near = feetZ.max(), !farZ.isEmpty {
+                let far = farZ.reduce(0, +) / Float(farZ.count)
+                let gap = near - far
+                let below = atan(feetLine * tanV)
+                let above = atan(Self.farFeetLine * tanV)
+                let e1 = pitch + below
+                let e2 = pitch - above
+                if gap > 0, e2 > 0, tan(e1) > tan(e2) {
+                    let behind = tan(e2) * gap / (tan(e1) - tan(e2))
+                    gapDepth = behind / cos(e1) * cos(below)
+                    nearFootZ = near
+                }
+            }
+        }
 
         // Start on the field's centre, a metre up.
         var aim = SCNVector3(0, 1, 0)
@@ -463,6 +612,15 @@ final class CameraDirector {
         var distance = Float(16)
         for _ in 0..<8 {
             var required = Self.minDistance
+            if let gapDepth {
+                // The aim only ever slides across and up the frame, never
+                // along the line of sight, so the near feet's depth in front
+                // of the lens is the distance plus a constant: this is the
+                // distance that stands them `gapDepth` from it.
+                let nearFoot = SCNVector3(0, 0, nearFootZ)
+                let offset = SCNVector3(nearFoot.x - aim.x, nearFoot.y - aim.y, nearFoot.z - aim.z)
+                required = max(required, gapDepth - dot(offset, forward))
+            }
             for point in points {
                 let p = point.position
                 let offset = SCNVector3(p.x - aim.x, p.y - aim.y, p.z - aim.z)
@@ -470,9 +628,18 @@ final class CameraDirector {
                 let vertical = dot(offset, up)
                 let depth = dot(offset, forward)
                 required = max(required, abs(across) / (Self.widthMargin * tanH) - depth)
+                // The team's feet — the near side of the arena's centre —
+                // clear of the HUD's bottom corners (`teamWidthMargin`).
+                if !field.hasBoss, p.y < 0.01, p.z > StageBuilder.arenaCentre.z {
+                    required = max(required, abs(across) / (Self.teamWidthMargin * tanH) - depth)
+                }
                 if vertical > 0 {
                     required = max(required, vertical / (point.topLine * tanV) - depth)
-                } else {
+                } else if gapDepth == nil {
+                    // The near feet are rested on their line by the aim's
+                    // slide below whatever the distance, so with the two feet
+                    // lines in charge this is no limit; a boss fight keeps it
+                    // as it was tuned.
                     required = max(required, -vertical / (feetLine * tanV) - depth)
                 }
             }
