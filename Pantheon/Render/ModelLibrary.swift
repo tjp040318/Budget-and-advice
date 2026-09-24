@@ -105,7 +105,7 @@ final class ModelLibrary {
         let bytes = cache.values.reduce(0) { $0 + $1.bytes }
         let pinned = cache.values.filter { $0.inUse }.count
         let clones = cache.values.reduce(0) { $0 + $1.liveClones }
-        return "cache \(cache.count) files, \(bytes / 1_048_576) MB, \(pinned) pinned, \(clones) clones, \(animationCache.count) clip sets; \(Self.decodedLiveSummary())"
+        return "cache \(cache.count) files, \(bytes / 1_048_576) MB, \(pinned) pinned, \(clones) clones, \(animationCache.count) clip sets; \(Self.decodedLiveSummary(cached: Set(cache.keys)))"
     }
 
     /// Every texture this loader decoded, held WEAKLY (2026-09-24, the
@@ -116,18 +116,65 @@ final class ModelLibrary {
     private static let decodedLive = NSHashTable<UIImage>.weakObjects()
     private static let decodedLiveLock = NSLock()
 
-    private static func noteDecoded(_ image: UIImage) {
+    /// Which file each live decoded image came from, and every prototype,
+    /// figure clone and tinted material copy made since launch, all held
+    /// WEAKLY under `decodedLiveLock` (2026-09-24, run 250): the decoded
+    /// images outlived the cache — 104 of them, 1,064 MB, at the summon
+    /// stress's end with 424 MB cached, and the same after a memory warning
+    /// had emptied it — so one of the objects that point at them outlives
+    /// its stage. A decoded image whose file is no longer cached is
+    /// STRANDED; the [Mem] line names those files and counts the three
+    /// kinds of holder still alive.
+    private static let decodedFrom = NSMapTable<UIImage, NSString>.weakToStrongObjects()
+    private static let prototypesLive = NSHashTable<SCNNode>.weakObjects()
+    private static let clonesLive = NSHashTable<SCNNode>.weakObjects()
+    private static let tintedLive = NSHashTable<SCNMaterial>.weakObjects()
+
+    private static func noteDecoded(_ image: UIImage, from label: String) {
         decodedLiveLock.lock()
         decodedLive.add(image)
+        decodedFrom.setObject(label as NSString, forKey: image)
         decodedLiveLock.unlock()
     }
 
-    static func decodedLiveSummary() -> String {
+    private static func noteLive(prototype: SCNNode) {
+        decodedLiveLock.lock()
+        prototypesLive.add(prototype)
+        decodedLiveLock.unlock()
+    }
+
+    private static func noteLive(clone: SCNNode) {
+        decodedLiveLock.lock()
+        clonesLive.add(clone)
+        decodedLiveLock.unlock()
+    }
+
+    /// A material the element tint copied for one figure (`MaterialTuner`).
+    static func noteTinted(_ material: SCNMaterial) {
+        decodedLiveLock.lock()
+        tintedLive.add(material)
+        decodedLiveLock.unlock()
+    }
+
+    static func decodedLiveSummary(cached: Set<String> = []) -> String {
         decodedLiveLock.lock()
         let alive = decodedLive.allObjects
+        var stranded: [String: Int] = [:]
+        for image in alive {
+            let label: String = decodedFrom.object(forKey: image).map { $0 as String } ?? "?"
+            if !cached.contains(label) { stranded[label, default: 0] += 1 }
+        }
+        let prototypes = prototypesLive.allObjects.count
+        let clones = clonesLive.allObjects.count
+        let tinted = tintedLive.allObjects.count
         decodedLiveLock.unlock()
         let bytes = alive.reduce(0) { $0 + byteCost(of: $1) }
-        return "decoded alive \(alive.count), \(bytes / 1_048_576) MB"
+        let named = stranded.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+        var strandedText = named.prefix(12).map { "\($0.key)x\($0.value)" }.joined(separator: " ")
+        if named.count > 12 { strandedText += " +\(named.count - 12) more" }
+        if named.isEmpty { strandedText = "none" }
+        let strandedCount = stranded.values.reduce(0, +)
+        return "decoded alive \(alive.count), \(bytes / 1_048_576) MB; alive prototypes \(prototypes), clones \(clones), tinted materials \(tinted), cloth chains \(ClothSimulation.shared.liveCount); stranded \(strandedCount): \(strandedText)"
     }
 
     private struct WeakClone {
@@ -373,6 +420,7 @@ final class ModelLibrary {
         var isPortraitSprite = false
         if let loaded = loadOrCached(assetName) {
             model = loaded.clone()
+            Self.noteLive(clone: model)
             adopt(model, from: assetName)
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
         } else if let standIn = spec.standInAsset,
@@ -382,6 +430,7 @@ final class ModelLibrary {
             // whose own mesh is still on the way fights as a giant of its
             // kind rather than as the primitive rig.
             model = loaded.clone()
+            Self.noteLive(clone: model)
             adopt(model, from: standIn)
             MaterialTuner.applyElementTint(model, hex: spec.auraHex, sourceHue: CGFloat(spec.costumeHue))
             if !orientationLogged.contains(assetName) {
@@ -661,6 +710,7 @@ final class ModelLibrary {
             wrapper.addChildNode(child)
         }
         MaterialTuner.tune(wrapper)
+        Self.noteLive(prototype: wrapper)
         let bytes = Self.predecodeTextures(in: wrapper, label: name)
         describe(wrapper, label: name)
         return (wrapper, bytes)
@@ -776,7 +826,7 @@ final class ModelLibrary {
                                 property.contents = ready
                                 decoded += 1
                                 bytes += Self.byteCost(of: ready)
-                                Self.noteDecoded(ready)
+                                Self.noteDecoded(ready, from: label)
                                 if let identity = archive?.identity(of: name) {
                                     decodedTexturesLock.lock()
                                     decodedTextures.setObject(ready, forKey: identity as NSString)
@@ -793,7 +843,7 @@ final class ModelLibrary {
                         property.contents = ready
                         decoded += 1
                         bytes += Self.byteCost(of: ready)
-                        Self.noteDecoded(ready)
+                        Self.noteDecoded(ready, from: label)
                     }
                 }
             }
@@ -1380,6 +1430,7 @@ enum MaterialTuner {
                   let unique = geometry.copy() as? SCNGeometry else { return }
             unique.materials = geometry.materials.map { source in
                 guard let material = source.copy() as? SCNMaterial else { return source }
+                ModelLibrary.noteTinted(material)
                 if material.diffuse.contents != nil && !(material.diffuse.contents is UIColor) {
                     textured += 1
                 }

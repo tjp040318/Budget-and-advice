@@ -8298,6 +8298,28 @@ is ours to find by type; a held-but-free heap is the allocator's and
 harmless on a phone that asks for it back; memory outside the heap is
 SceneKit's renderer or Metal, which the warning either empties or does not.
 
+**Run 250: it is our own decoded textures, and something keeps them
+(2026-09-24).** The counters answered. At the plain summon stress's end the
+footprint was 1,663 MB with the model cache at 424 MB, and the loader's
+decoded textures still alive were 104 images, 1,064 MB; the heap's live
+bytes were 488 MB, so the images are not heap (a display-ready bitmap is
+its own mapping) and they ARE the residue. Until the cache filled, live
+images matched it exactly (48 images, twelve files of four maps); after,
+most evicted families were freed and some were not (the Minotaur's and the
+Shabti's four maps, one map of others), and each ten-pull stranded six to
+nineteen more. The warning launch settled what is NOT holding them: the
+simulator's memory warning emptied the model cache to 0-40 MB after every
+reveal and the same 104 images, 1,070 MB, stayed alive; `malloc` pressure
+relief gave back nothing that mattered. Neither the card caches (13 MB)
+nor the heap explain anything. Since an image lives exactly as long as a
+material pointing at it, one of three holders outlives its stage: a
+prototype the cache dropped (`CachedModel.node`), a figure cloned from one
+(every clone gets its own geometry and material COPIES from the element
+tint, which point at the same images), or one of those tinted copies on its
+own. Run 251 counts each kind weakly and names the files whose images are
+stranded (`ModelLibrary.decodedLiveSummary`), with the cloth simulation's
+live chains beside them.
+
 **Where a fight's build time goes (run 247, task #138).** Every build now
 prints one line: cold, the arena's was stage 1.4–1.9 s and 0.5–0.9 s a unit
 (each parsed on the main thread), 3.5–4.9 s in all. In play the stage popup

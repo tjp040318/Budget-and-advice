@@ -999,7 +999,7 @@ def check_unknown_types(files, declared, errors):
         # The press and the motion tokens (2026-09-24, FEEL.md W1.8): iOS 17's
         # keyframes and springs, and the environment key the press sets.
         "ButtonStyleConfiguration","KeyframeTrack","CubicKeyframe","SpringKeyframe",
-        "LinearKeyframe","MoveKeyframe","Spring","EnvironmentKey","EnvironmentValues",
+        "LinearKeyframe","MoveKeyframe","Spring","EnvironmentKey","EnvironmentValues","KeyframeAnimator",
         # The reveal's Skip follows the finger through the gesture's own state,
         # which SwiftUI resets on a CANCELLED press, where onEnded never comes
         # (2026-09-24, FEEL.md W2.23).

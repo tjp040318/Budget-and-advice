@@ -478,6 +478,13 @@ final class ClothSimulation {
 
     private init() {}
 
+    /// The chains whose figures are still alive (the memory log's count).
+    var liveCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return chains.filter { $0.isAlive }.count
+    }
+
     func register(_ chain: ClothChain) {
         lock.lock()
         chains.removeAll { !$0.isAlive }

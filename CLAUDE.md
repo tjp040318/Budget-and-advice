@@ -1505,7 +1505,14 @@ environment can and cannot do. The short version:
   `RevealNameCard`: a plaque in the grade's metal, the element's crest, stars
   stamped on two `keyframeAnimator`s (the arrival from the figure's first
   drawn frame, the naming from the high point); under Reduce Motion no
-  spring on it rings. Skip goes to the next 5★ or NEW 4★ and says so, but
+  spring on it rings. **The card was never seen until run 251:** its two
+  animators wrote their values into the environment on the animator's
+  placeholder and the card's body read them back, and run 250 photographed
+  every reveal with no words at all while the console printed the name
+  landing. The values are PARAMETERS now (two nested `KeyframeAnimator`
+  views), and the card rests at the end of each beat 1.2 s after it
+  whatever a timeline reports (`RevealNameCard.settled`). Never hand a
+  timeline's value to a view through `.environment` on the placeholder. Skip goes to the next 5★ or NEW 4★ and says so, but
   NEVER names the pull on the beam before its rung: a single's reads plain
   Skip, and a pull of several changes its words only when a pull lands
   (`RevealSkip.label`) — plain Skip on the stop's own charge would be the

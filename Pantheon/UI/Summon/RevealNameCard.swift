@@ -156,25 +156,37 @@ struct RevealNamingFrame: Equatable {
     }
 }
 
-private struct RevealArrivalKey: EnvironmentKey {
-    static let defaultValue = RevealArrivalFrame()
-}
-
-private struct RevealNamingKey: EnvironmentKey {
-    static let defaultValue = RevealNamingFrame()
-}
-
-extension EnvironmentValues {
-    /// The reveal card's arrival, as its timeline stands this frame.
-    var revealArrival: RevealArrivalFrame {
-        get { self[RevealArrivalKey.self] }
-        set { self[RevealArrivalKey.self] = newValue }
+extension RevealArrivalFrame {
+    /// This frame, raised to at least `floor` on every track: the card once
+    /// its arrival has had the time to run is never below its resting
+    /// state, whatever the timeline reports (`RevealNameCard.settled`).
+    func atLeast(_ floor: RevealArrivalFrame) -> RevealArrivalFrame {
+        RevealArrivalFrame(
+            plaque: max(plaque, floor.plaque),
+            crest: max(crest, floor.crest),
+            starClock: max(starClock, floor.starClock)
+        )
     }
+}
 
-    /// The reveal card's naming, as its timeline stands this frame.
-    var revealNaming: RevealNamingFrame {
-        get { self[RevealNamingKey.self] }
-        set { self[RevealNamingKey.self] = newValue }
+extension RevealNamingFrame {
+    /// This frame, or its resting state once the naming has had the time to
+    /// run: the name and the details in, the slam's scale and the flash
+    /// spent, the sweep past.
+    func settled(on beat: RevealCardBeat) -> RevealNamingFrame {
+        switch beat {
+        case .hidden, .arrived:
+            return self
+        case .named, .complete:
+            let rest: RevealNamingFrame = RevealNamingFrame.resting(beat)
+            return RevealNamingFrame(
+                name: max(name, rest.name),
+                nameScale: rest.nameScale,
+                sweep: max(sweep, rest.sweep),
+                flash: rest.flash,
+                details: max(details, rest.details)
+            )
+        }
     }
 }
 
@@ -198,6 +210,20 @@ struct RevealNameCard: View {
     let result: SummonResult
     let beat: RevealCardBeat
     let timing: RevealCardTiming
+
+    /// The beat the card has had the time to finish, `settleDelay` behind
+    /// `beat`: below it the card is never drawn short of that beat's resting
+    /// state (`RevealArrivalFrame.atLeast`, `RevealNamingFrame.settled(on:)`),
+    /// so a timeline that stalls or restarts can cost the motion but never
+    /// the words.
+    @State private var settled: RevealCardBeat = .hidden
+    /// The latest `settleLater` call's number: a pending catch-up that a
+    /// newer beat overtook (or a return to hidden cancelled) does nothing.
+    @State private var settleToken: Int = 0
+    /// Longer than the longest timeline on the card: the arrival's plaque
+    /// (0.6 s) and stars (0.26 s + a 5★'s 0.68 s), the naming's details
+    /// (0.58 s).
+    static let settleDelay: TimeInterval = 1.2
 
     /// The crest's side, and the column's place: its left edge at 55% of
     /// the screen's width, clear of the figure standing on the 26% line.
@@ -283,28 +309,16 @@ struct RevealNameCard: View {
         let crestSpring: Spring = calm ? panel : pop
         let nameSpring: Spring = calm ? panel : settle
 
-        return RevealCardBody(result: result, timing: timing)
-            .keyframeAnimator(initialValue: RevealArrivalFrame.resting(arrival, timing: timing), trigger: arrival) { content, frame in
-                content.environment(\.revealArrival, frame)
-            } keyframes: { _ in
-                KeyframeTrack(\.plaque) {
-                    MoveKeyframe(plaque.from)
-                    LinearKeyframe(plaque.from, duration: plaque.hold)
-                    SpringKeyframe(plaque.to, duration: plaque.run, spring: panel)
-                }
-                KeyframeTrack(\.crest) {
-                    MoveKeyframe(crest.from)
-                    LinearKeyframe(crest.from, duration: crest.hold)
-                    SpringKeyframe(crest.to, duration: crest.run, spring: crestSpring)
-                }
-                KeyframeTrack(\.starClock) {
-                    MoveKeyframe(stars.from)
-                    LinearKeyframe(stars.from, duration: stars.hold)
-                    LinearKeyframe(stars.to, duration: stars.run)
-                }
-            }
-            .keyframeAnimator(initialValue: RevealNamingFrame.resting(naming), trigger: naming) { content, frame in
-                content.environment(\.revealNaming, frame)
+        let settledBeat: RevealCardBeat = settled
+        let arrivalFloor: RevealArrivalFrame = RevealArrivalFrame.resting(settledBeat.arrival, timing: timing)
+        return KeyframeAnimator(initialValue: RevealArrivalFrame.resting(arrival, timing: timing), trigger: arrival) { arrivalFrame in
+            KeyframeAnimator(initialValue: RevealNamingFrame.resting(naming), trigger: naming) { namingFrame in
+                RevealCardBody(
+                    result: result,
+                    timing: timing,
+                    arrival: arrivalFrame.atLeast(arrivalFloor),
+                    naming: namingFrame.settled(on: settledBeat.naming)
+                )
             } keyframes: { _ in
                 KeyframeTrack(\.name) {
                     MoveKeyframe(name.from)
@@ -332,6 +346,47 @@ struct RevealNameCard: View {
                     CubicKeyframe(details.to, duration: details.run)
                 }
             }
+        } keyframes: { _ in
+            KeyframeTrack(\.plaque) {
+                MoveKeyframe(plaque.from)
+                LinearKeyframe(plaque.from, duration: plaque.hold)
+                SpringKeyframe(plaque.to, duration: plaque.run, spring: panel)
+            }
+            KeyframeTrack(\.crest) {
+                MoveKeyframe(crest.from)
+                LinearKeyframe(crest.from, duration: crest.hold)
+                SpringKeyframe(crest.to, duration: crest.run, spring: crestSpring)
+            }
+            KeyframeTrack(\.starClock) {
+                MoveKeyframe(stars.from)
+                LinearKeyframe(stars.from, duration: stars.hold)
+                LinearKeyframe(stars.to, duration: stars.run)
+            }
+        }
+        .onAppear {
+            // A card built in the middle of a reveal (a new pull's card, or
+            // one rebuilt) starts from where the reveal stands.
+            if settled == .hidden, beat != .hidden { settleLater(beat) }
+        }
+        .onChange(of: beat) { _, newBeat in
+            settleLater(newBeat)
+        }
+    }
+
+    /// `settled` catches up with `beat` once its timelines have had the
+    /// time to run. A newer beat cancels the catch-up still pending, and a
+    /// return to hidden takes effect at once.
+    private func settleLater(_ target: RevealCardBeat) {
+        let mine: Int = settleToken + 1
+        settleToken = mine
+        if target == .hidden {
+            settled = .hidden
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay) {
+            guard settleToken == mine else { return }
+            settled = target
+        }
     }
 
     // The three helpers below are pure and `nonisolated`: a `View` is
@@ -382,13 +437,18 @@ struct RevealNameCard: View {
     )
 }
 
-/// The card itself, drawn from the two timelines' values in the
-/// environment.
+/// The card itself, drawn from the two timelines' values, handed in as
+/// values. Until run 250 the animators wrote them into the environment and
+/// this view read them from there, and the card never showed: every reveal
+/// frame of that run had the figure and no words, while the tour's console
+/// printed the name landing. The values are parameters now, and the card
+/// rests at the end of each beat whatever a timeline reports
+/// (`RevealNameCard.settled`).
 private struct RevealCardBody: View {
     let result: SummonResult
     let timing: RevealCardTiming
-    @Environment(\.revealArrival) private var arrival
-    @Environment(\.revealNaming) private var naming
+    let arrival: RevealArrivalFrame
+    let naming: RevealNamingFrame
 
     var body: some View {
         let calm: Bool = Motion.isCalm
