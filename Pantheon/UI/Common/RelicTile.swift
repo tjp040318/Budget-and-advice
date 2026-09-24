@@ -925,8 +925,8 @@ enum RelicReading {
 
     /// A change as the player reads it: the difference of the two figures
     /// as `StatKind.format` prints them, so "+12% → +17%" says 5%, not the
-    /// raw difference's 6% (the arithmetic of RelicInventoryView's private
-    /// `StatKind.shownChange`, which no other file can reach). No sign.
+    /// raw difference's 6% (the arithmetic of the old relic picker's
+    /// `StatKind.shownChange`, deleted with it on 2026-09-24). No sign.
     static func shownChange(_ kind: StatKind, from before: Double, to after: Double) -> String {
         let scale: Double = kind.isPercentage ? 100 : 1
         let shown = Int((after * scale).rounded()) - Int((before * scale).rounded())

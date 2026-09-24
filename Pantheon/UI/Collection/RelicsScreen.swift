@@ -724,8 +724,9 @@ struct RelicsScreen: View {
         return chips
     }
 
-    /// `StatDeltaTable.sets`' rule: an entry is held when the other side
-    /// completes the same set at least as many times.
+    /// The rule the relic card reads as well (`RelicCardFigures.setChips`):
+    /// an entry is held when the other side completes the same set at least
+    /// as many times (the old stat table's rule, deleted 2026-09-24).
     private static func holds(_ entries: [ActiveRelicSet], _ entry: ActiveRelicSet) -> Bool {
         entries.contains { $0.set == entry.set && $0.completions >= entry.completions }
     }
@@ -1716,6 +1717,8 @@ struct RelicsScreen: View {
                 confirmed(confirm)
             }, onCancel: {
                 cancelled(confirm)
+            }, onStay: {
+                self.confirm = nil
             })
         }
     }
@@ -1734,7 +1737,8 @@ struct RelicsScreen: View {
     }
 
     /// Cancel keeps the screen; the draft card's cancel is LEAVE, which
-    /// leaves without applying.
+    /// leaves without applying. A tap on the dimmed room is neither: it
+    /// closes the card and keeps the draft (`onStay`).
     private func cancelled(_ ask: RelicConfirm) {
         confirm = nil
         if case .leaveDraft = ask {

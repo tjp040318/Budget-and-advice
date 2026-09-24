@@ -1361,6 +1361,11 @@ struct RelicConfirmCard: View {
     let confirm: RelicConfirm
     let onConfirm: () -> Void
     let onCancel: () -> Void
+    /// A tap on the dimmed room: no answer, the card away and the screen
+    /// kept. It is `onCancel` when not given, which keeps the screen for
+    /// every card but the draft's, whose cancel is LEAVE: a stray tap
+    /// beside that card threw the draft away (the review of 2026-09-24).
+    var onStay: (() -> Void)? = nil
 
     @EnvironmentObject private var store: GameStore
     @State private var cardRisen = false
@@ -1391,7 +1396,7 @@ struct RelicConfirmCard: View {
             .ignoresSafeArea()
             .contentShape(Rectangle())
             .onTapGesture {
-                answer(onCancel)
+                answer(onStay ?? onCancel)
             }
             .accessibilityLabel("Close")
             .accessibilityAddTraits(.isButton)

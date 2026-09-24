@@ -2684,32 +2684,35 @@ private enum RelicCardFigures {
         percent ? "\(shown)%" : shown.formatted()
     }
 
-    /// The sets a change completes, breaks and keeps, by the old stat
-    /// table's rule: a set counts as held when the other side has it at
-    /// least as many times over.
+    /// The sets a change completes, breaks and keeps, by the rule Manage
+    /// reads as well (`RelicsScreen.setChips`): a set counts as held when
+    /// the other side completes it at least as many times over, and a set
+    /// that drops from two completions to one shows its loss AND the one
+    /// kept ("− GUARD ×2", "GUARD"). A lone "− GUARD" read as losing Guard
+    /// outright while one still stood.
     static func setChips(before: [ActiveRelicSet], after: [ActiveRelicSet]) -> [RelicCardSetChip] {
-        let gained = after.filter { entry in
-            !before.contains(where: { $0.set == entry.set && $0.completions >= entry.completions })
-        }
-        let lost = before.filter { entry in
-            !after.contains(where: { $0.set == entry.set && $0.completions >= entry.completions })
-        }
-        // A set that loses one of two completions is a loss, never also a
-        // kept chip beside it.
-        let kept = after.filter { entry in
-            !gained.contains(where: { $0.set == entry.set }) && !lost.contains(where: { $0.set == entry.set })
-        }
         var chips: [RelicCardSetChip] = []
-        for entry in gained {
-            chips.append(RelicCardSetChip(text: "+ \(entry.set.displayName.uppercased())", tint: RelicPalette.gain))
+        for entry in after where !holds(before, entry) {
+            chips.append(RelicCardSetChip(text: "+ " + setWord(entry), tint: RelicPalette.gain))
         }
-        for entry in lost {
-            chips.append(RelicCardSetChip(text: "− \(entry.set.displayName.uppercased())", tint: RelicPalette.loss))
+        for entry in before where !holds(after, entry) {
+            chips.append(RelicCardSetChip(text: "− " + setWord(entry), tint: RelicPalette.loss))
         }
-        for entry in kept {
-            chips.append(RelicCardSetChip(text: entry.set.displayName.uppercased(), tint: RelicPalette.eyebrow))
+        for entry in after where holds(before, entry) {
+            chips.append(RelicCardSetChip(text: setWord(entry), tint: RelicPalette.eyebrow))
         }
         return chips
+    }
+
+    /// Held: the other side completes the same set at least as many times.
+    private static func holds(_ entries: [ActiveRelicSet], _ entry: ActiveRelicSet) -> Bool {
+        entries.contains { $0.set == entry.set && $0.completions >= entry.completions }
+    }
+
+    /// A set's chip word, with its count when it is complete more than once.
+    private static func setWord(_ entry: ActiveRelicSet) -> String {
+        let name = entry.set.displayName.uppercased()
+        return entry.completions > 1 ? "\(name) ×\(entry.completions)" : name
     }
 }
 
