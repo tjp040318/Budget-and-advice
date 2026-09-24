@@ -9053,3 +9053,39 @@ with `colorBufferWriteMask` red, green, blue only; it opens from a sliver
 over 0.35 s, holds 0.5 s and narrows away as it fades. The reveal's warm-up
 draws the same builder's column (`warmBeamTwin`), so the flash compiles
 nothing new.
+
+**Run 251: nothing of ours holds the stranded textures — so hand SceneKit
+textures, not images (2026-09-24, the experiment for run 252).** Run 251's
+counters closed the question they were built for. At the summon stress's
+end the model cache held 14 files and exactly 14 prototypes were alive, 0
+figure clones, 0 tinted material copies and 0 cloth chains — and still 104
+decoded images, 1,064 MB, were alive, 48 of them STRANDED (the four maps of
+eleven families the cache had dropped: the Centurion's, the dark elf's, the
+Einherjar's, the fox spirit's…). Every object of ours that could point at
+an image was counted and none did; an image lives exactly as long as
+something holds it; so SceneKit keeps the images it was handed after every
+material holding them has gone, and run 250 showed a memory warning does
+not make it let go. The options: (a) clear every material's contents before
+a prototype or a stage lets go — cheap, but it guesses at SceneKit's
+internals and a cache keyed by the image would keep the image anyway;
+(b) decode smaller textures for the reveal — a quarter of the leak and a
+softer god in the one close-up that sells him; (c) hand SceneKit
+`MTLTexture`s the loader makes itself (`ModelLibrary.metalTexture`: the
+pixels drawn byte for byte into a staging buffer, blitted to a GPU-private
+texture with its mipmaps made on the GPU, sRGB for the colour maps, raw
+for the normal map, one channel for the metallic and roughness maps read
+from their red channel) and keep no image at all. (c) was built: SceneKit
+then has nothing to convert and nothing to cache, and every texture lives
+once instead of twice — today the decoded image AND the texture SceneKit
+made from it are both in memory, so it should roughly halve what a family
+costs even if SceneKit's cache were not the holder. It is behind a switch
+(`ModelLibrary.textureHandover`, `.image` by default; `-tour-textures
+metal` under the tour) until run 252 judges it two ways: the summon stress
+runs both ways (the plain launch, and the texture launch in place of the
+memory-warning launch, whose question is answered) with the texture
+launch's [Mem] lines counting "textures alive" and "stranded" beside the
+images', and the reveal photographs the awakened Ares with Metal textures
+(`5-reveal-awakened-metal`) beside the frame drawn from images, to show
+that nothing is flipped, washed out or lost. A boss's warm spot, which read
+the paint off the decoded image (`UnitNode.measurePaint`), reads the mean
+measured when the texture was made (`ModelLibrary.paintMean`).

@@ -1,6 +1,7 @@
 import Accelerate
 import Foundation
 import ImageIO
+import Metal
 import SceneKit
 import simd
 import UIKit
@@ -175,6 +176,29 @@ final class ModelLibrary {
         if named.isEmpty { strandedText = "none" }
         let strandedCount = stranded.values.reduce(0, +)
         return "decoded alive \(alive.count), \(bytes / 1_048_576) MB; alive prototypes \(prototypes), clones \(clones), tinted materials \(tinted), cloth chains \(ClothSimulation.shared.liveCount); stranded \(strandedCount): \(strandedText)"
+            + texturesLiveSummary(cached: cached)
+    }
+
+    /// The Metal textures' own count (run 252's experiment), in the same
+    /// terms as the images': how many made here are alive, their bytes, and
+    /// how many belong to a file the cache no longer holds. Empty when none
+    /// were ever made.
+    private static func texturesLiveSummary(cached: Set<String>) -> String {
+        decodedLiveLock.lock()
+        let alive: [AnyObject] = texturesLive.allObjects
+        var stranded: [String: Int] = [:]
+        for texture in alive {
+            let label: String = textureFrom.object(forKey: texture).map { $0 as String } ?? "?"
+            if !cached.contains(label) { stranded[label, default: 0] += 1 }
+        }
+        decodedLiveLock.unlock()
+        guard !alive.isEmpty else { return "" }
+        let bytes: Int = alive.reduce(0) { total, texture in total + ((texture as? MTLTexture)?.allocatedSize ?? 0) }
+        let named = stranded.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
+        var text = named.prefix(8).map { "\($0.key)x\($0.value)" }.joined(separator: " ")
+        if named.count > 8 { text += " +\(named.count - 8) more" }
+        if named.isEmpty { text = "none" }
+        return "; textures alive \(alive.count), \(bytes / 1_048_576) MB, stranded \(stranded.values.reduce(0, +)): \(text)"
     }
 
     private struct WeakClone {
@@ -716,6 +740,143 @@ final class ModelLibrary {
         return (wrapper, bytes)
     }
 
+    // MARK: - Textures handed over as Metal textures (2026-09-24, run 252)
+
+    /// How a model's decoded texture reaches SceneKit.
+    enum TextureHandover {
+        /// The decoded `UIImage` as the material's contents, as every build
+        /// before run 252 did.
+        case image
+        /// An `MTLTexture` this loader made (`metalTexture(member:role:gray:label:)`),
+        /// and no image kept at all.
+        case metal
+    }
+
+    /// Run 251's counters: at the summon stress's end 104 decoded images
+    /// (1,064 MB) were alive while nothing of ours pointed at them — no
+    /// prototype beyond the cache's 14, no clone, no tinted copy — so
+    /// SceneKit keeps an image it was handed after every material holding it
+    /// has gone, and the simulator's memory warning does not make it let go
+    /// (run 250). A texture made here is handed over AS a texture: SceneKit
+    /// has nothing to convert and nothing to cache, and the pixels live once
+    /// instead of twice (the decoded image and the texture SceneKit made
+    /// from it). `.image` stays the default until the stress curve and the
+    /// frames have judged `.metal`: CI runs the summon stress both ways and
+    /// photographs the awakened Ares both ways (`-tour-textures metal`).
+    static let textureHandover: TextureHandover = {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-tour"), let at = arguments.firstIndex(of: "-tour-textures"),
+           at + 1 < arguments.count, arguments[at + 1] == "metal" {
+            return .metal
+        }
+        #endif
+        return .image
+    }()
+
+    /// The device SceneKit draws with — the system's default, the one GPU
+    /// an iPhone has — and one queue for the uploads' blits.
+    private static let metalDevice: MTLDevice? = MTLCreateSystemDefaultDevice()
+    private static let metalQueue: MTLCommandQueue? = metalDevice?.makeCommandQueue()
+
+    /// The Metal twin of `decodedTextures`: a member's texture by its
+    /// identity, held weakly, so a family's `_lod` shares its base file's
+    /// textures while anything still holds them.
+    private static let sharedTextures = NSMapTable<NSString, AnyObject>.strongToWeakObjects()
+
+    /// Every texture made here, which file it came from, and the paint's
+    /// mean in linear light for a base colour map (`paintMean(of:)`), all
+    /// held weakly under `decodedLiveLock`, for the [Mem] line's count and
+    /// for `UnitNode.measurePaint`, which read the decoded image before.
+    private static let texturesLive = NSHashTable<AnyObject>.weakObjects()
+    private static let textureFrom = NSMapTable<AnyObject, NSString>.weakToStrongObjects()
+    private static let paintMeans = NSMapTable<AnyObject, NSNumber>.weakToStrongObjects()
+
+    /// The mean of a base colour texture's paint in linear light, measured
+    /// from its pixels when this loader made it; nil for anything else.
+    static func paintMean(of contents: AnyObject) -> Double? {
+        decodedLiveLock.lock()
+        defer { decodedLiveLock.unlock() }
+        return paintMeans.object(forKey: contents).map { $0.doubleValue }
+    }
+
+    /// A member of a model's archive as a texture for SceneKit: a metallic
+    /// or roughness map as ONE channel (`grayscaleMap`), anything else as
+    /// four, sRGB for the colour roles and raw for the numbers (a normal
+    /// map), noted for the [Mem] line and, for a base colour, measured for
+    /// `paintMean(of:)`. Nil if Metal is not there or the member cannot be
+    /// read; the caller then decodes an image as before.
+    private static func metalTexture(member data: Data, role: String, gray: Bool,
+                                     label: String) -> (texture: MTLTexture, oneChannel: Bool)? {
+        var image: CGImage?
+        var oneChannel = false
+        if gray, let map = grayscaleMap(from: data)?.cgImage {
+            image = map
+            oneChannel = true
+        } else if let source = CGImageSourceCreateWithData(data as CFData, nil) {
+            image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+        }
+        guard let image else { return nil }
+        let srgb = role == "base_color" || role == "emissive"
+        guard let texture = metalTexture(from: image, srgb: srgb, oneChannel: oneChannel) else { return nil }
+        let mean: Double? = role == "base_color" ? UnitNode.meanLinearLuminance(of: image) : nil
+        decodedLiveLock.lock()
+        texturesLive.add(texture)
+        textureFrom.setObject(label as NSString, forKey: texture)
+        if let mean { paintMeans.setObject(NSNumber(value: mean), forKey: texture) }
+        decodedLiveLock.unlock()
+        return (texture, oneChannel)
+    }
+
+    /// `image`'s pixels as a GPU-private texture with its whole chain of
+    /// mipmaps: drawn byte for byte into a shared staging buffer in the
+    /// image's own colour space (so no conversion moves a number), copied up
+    /// by a blit — the simulator refuses shared textures — and the chain
+    /// made on the GPU; the buffer goes when the blit is done. SceneKit made
+    /// its own chain from an image; a texture handed over must carry one.
+    private static func metalTexture(from image: CGImage, srgb: Bool, oneChannel: Bool) -> MTLTexture? {
+        guard let device = metalDevice, let queue = metalQueue else { return nil }
+        let width = image.width
+        let height = image.height
+        guard width > 0, height > 0 else { return nil }
+        let bytesPerRow = width * (oneChannel ? 1 : 4)
+        guard let staging = device.makeBuffer(length: bytesPerRow * height, options: .storageModeShared) else { return nil }
+        let space: CGColorSpace
+        let info: UInt32
+        if oneChannel {
+            space = image.colorSpace ?? CGColorSpaceCreateDeviceGray()
+            info = CGImageAlphaInfo.none.rawValue
+        } else {
+            if let own = image.colorSpace, own.model == .rgb {
+                space = own
+            } else {
+                space = CGColorSpace(name: CGColorSpace.sRGB) ?? CGColorSpaceCreateDeviceRGB()
+            }
+            info = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+        }
+        guard let context = CGContext(data: staging.contents(), width: width, height: height, bitsPerComponent: 8,
+                                      bytesPerRow: bytesPerRow, space: space, bitmapInfo: info) else { return nil }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let format: MTLPixelFormat = oneChannel ? .r8Unorm : (srgb ? .rgba8Unorm_srgb : .rgba8Unorm)
+        let descriptor = MTLTextureDescriptor.texture2DDescriptor(pixelFormat: format, width: width,
+                                                                  height: height, mipmapped: true)
+        descriptor.usage = .shaderRead
+        descriptor.storageMode = .private
+        guard let texture = device.makeTexture(descriptor: descriptor),
+              let commands = queue.makeCommandBuffer(),
+              let blit = commands.makeBlitCommandEncoder() else { return nil }
+        blit.copy(from: staging, sourceOffset: 0, sourceBytesPerRow: bytesPerRow,
+                  sourceBytesPerImage: bytesPerRow * height,
+                  sourceSize: MTLSize(width: width, height: height, depth: 1),
+                  to: texture, destinationSlice: 0, destinationLevel: 0,
+                  destinationOrigin: MTLOrigin(x: 0, y: 0, z: 0))
+        blit.generateMipmaps(for: texture)
+        blit.endEncoding()
+        commands.commit()
+        commands.waitUntilCompleted()
+        return commands.status == .completed ? texture : nil
+    }
+
     /// Decoded textures by the archive member's CRC-32 and size, held
     /// WEAKLY: a family's base mesh and its `_lod` carry byte-identical
     /// base colour and normal maps (the same members, the same CRC), and
@@ -793,12 +954,19 @@ final class ModelLibrary {
                         let own = ["textures/\(role).png", "textures/\(role).jpg"]
                         let combined = ["textures/metallic_roughness.png", "textures/metallic_roughness.jpg"]
                         let candidates = url.fragment.map { [$0] } ?? (grayRole ? own + combined : own)
+                        let metal = Self.textureHandover == .metal
                         for name in candidates {
+                            let ownMap = grayRole && !name.contains("metallic_roughness")
                             // The same member already decoded for another
                             // file (the base mesh and its `_lod`).
                             if let identity = archive?.identity(of: name) {
                                 decodedTexturesLock.lock()
-                                let known = decodedTextures.object(forKey: identity as NSString)
+                                let known: AnyObject?
+                                if metal {
+                                    known = sharedTextures.object(forKey: identity as NSString)
+                                } else {
+                                    known = decodedTextures.object(forKey: identity as NSString)
+                                }
                                 decodedTexturesLock.unlock()
                                 if let known {
                                     // Charged to the file that decoded it:
@@ -806,11 +974,26 @@ final class ModelLibrary {
                                     // the island and in a fight would weigh
                                     // twice against the budget.
                                     property.contents = known
+                                    if metal, ownMap { property.textureComponents = .red }
                                     shared += 1
                                     break
                                 }
                             }
                             guard let data = archive?.member(named: name) else { continue }
+                            // Handed over as a texture (run 252's experiment):
+                            // a one-channel map is read from its red channel.
+                            if metal, let made = Self.metalTexture(member: data, role: role, gray: ownMap, label: label) {
+                                property.contents = made.texture
+                                if made.oneChannel { property.textureComponents = .red }
+                                decoded += 1
+                                bytes += made.texture.allocatedSize
+                                if let identity = archive?.identity(of: name) {
+                                    decodedTexturesLock.lock()
+                                    sharedTextures.setObject(made.texture, forKey: identity as NSString)
+                                    decodedTexturesLock.unlock()
+                                }
+                                break
+                            }
                             // A map of its own is one channel of numbers;
                             // a combined map keeps its channels apart, so it
                             // is decoded for display like a colour.

@@ -1723,6 +1723,11 @@ final class UnitNode: SCNNode {
                    let mean = meanLinearLuminance(of: cg) {
                     total += mean
                     count += 1
+                } else if let contents, let mean = ModelLibrary.paintMean(of: contents as AnyObject) {
+                    // A texture the loader handed over (run 252's experiment),
+                    // measured from its pixels when it was made.
+                    total += mean
+                    count += 1
                 } else if let colour = contents as? UIColor {
                     var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
                     if colour.getRed(&red, green: &green, blue: &blue, alpha: &alpha) {
@@ -1746,7 +1751,7 @@ final class UnitNode: SCNNode {
     /// Jötunn's dark hide and pale ice a third brighter — while any filter
     /// at eightfold then the blocks give the calibration's own numbers
     /// (`paleAlbedo`) to the third decimal.
-    private static func meanLinearLuminance(of image: CGImage) -> Double? {
+    static func meanLinearLuminance(of image: CGImage) -> Double? {
         let side = 256
         let block = 8
         let cells = side / block

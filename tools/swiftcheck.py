@@ -984,6 +984,10 @@ def check_unknown_types(files, declared, errors):
         "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",
         # The memory probe's GPU line (2026-09-24).
         "Metal","MTLDevice","MTLCreateSystemDefaultDevice",
+        # Textures handed to SceneKit as Metal textures (ModelLibrary, run 252).
+        "MTLTexture","MTLTextureDescriptor","MTLPixelFormat","MTLCommandQueue","MTLCommandBuffer",
+        "MTLBlitCommandEncoder","MTLBuffer","MTLSize","MTLOrigin","MTLResourceOptions","MTLStorageMode",
+        "MTLTextureUsage","MTLCommandBufferStatus","SCNColorMask","NSMapTable",
         # One-channel metallic and roughness maps (ModelLibrary, 2026-09-24).
         "Accelerate","CFData","CGImageSourceCreateWithData","CGImageSourceCreateImageAtIndex",
         "NSCacheDelegate","NSHashTable","NSSelectorFromString",
