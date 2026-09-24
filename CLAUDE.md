@@ -89,6 +89,13 @@ island's coordinator keeps its constants as instance lets (2026-09-17, twice).
 And no constant or variable may be named with a keyword: `let internal =
 info.internal` failed run 249 (the member after a dot is fine, the binding is
 not), and `check_keyword_bindings` reads every `let`/`var` for one.
+And a bare call to one of our functions must fill every parameter that has no
+default (`check_func_arity`, beside the init rule): batch B gave
+`applyStatuses` two parameters, `leaving:` and `calm:`, and a call written the
+same day as `applyStatuses([])` failed the build of ff8c531; a name the tree
+also declares as a value (SwiftUI's `dismiss`, an enum case, a closure
+parameter) is not checked, and trailing closures fill the closure parameters
+left at the end.
 Every rule in the checker was
 proven by reintroducing a real bug and watching it fail.
 

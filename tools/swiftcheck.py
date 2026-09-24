@@ -149,6 +149,35 @@ def parse_params(sig_body):
         labels.append(names[0] if names else "_")
     return labels
 
+# Which parameters of each function have no default, for the missing-argument
+# check (run 252, 2026-09-24): a batch B fix gave `UnitPlate.applyStatuses` two
+# parameters with no default, `leaving:` and `calm:`, and a call written the
+# same day as `applyStatuses([])` failed the build. The init check read only
+# initialisers; this reads every `func` whose name and required set are the
+# same wherever it is declared.
+FUNC_REQUIRED = {}
+FUNC_REQUIRED_AMBIGUOUS = set()
+
+def parse_required(sig_body):
+    """[(label, is_closure)] for the parameters with no default, variadics left out."""
+    required = []
+    for part in split_top_level(sig_body):
+        part = part.strip()
+        if not part or ":" not in part: continue
+        head, rest = part.split(":", 1)
+        names = [n for n in head.split() if not n.startswith("@")]
+        label = names[0] if names else "_"
+        depth, has_default = 0, False
+        for ch in rest:
+            if ch in "([{<": depth += 1
+            elif ch in ")]}>": depth -= 1
+            elif ch == "=" and depth == 0:
+                has_default = True
+                break
+        if has_default or rest.rstrip().endswith("..."): continue
+        required.append((label, "->" in rest))
+    return tuple(required)
+
 def scan(files, verbose=False):
     structs = {}         # name -> {"props": [...], "hasInit": bool, "file": path}
     enum_cases = {}      # EnumName -> {case: arity}
@@ -178,6 +207,10 @@ def scan(files, verbose=False):
             if fname in funcs and funcs[fname] != labels:
                 overloaded.add(fname)     # cannot disambiguate by name alone
             funcs[fname] = labels
+            required = parse_required(src[m.end():i-1])
+            if fname in FUNC_REQUIRED and FUNC_REQUIRED[fname] != required:
+                FUNC_REQUIRED_AMBIGUOUS.add(fname)
+            FUNC_REQUIRED[fname] = required
 
         lines = src.split("\n")
         stack = []            # [kind, name, indent, member_indent]
@@ -304,6 +337,69 @@ def check_func_calls(files, funcs, errors):
                     errors.append(
                         f"{path}:{line}: {name}(...) arguments out of declaration order "
                         f"at {bad}; the signature is ({', '.join(labels)})")
+
+def check_func_arity(files, funcs, errors):
+    """A bare call to one of our functions must fill every parameter that has
+    no default: each labelled one by its label, the unlabelled ones by count,
+    a trailing closure filling the closure parameters left at the end.
+    Strings are MASKED, not deleted, so `pair("thor_ember", level: 40)` keeps
+    its first argument."""
+    # A name the tree also declares as a value — a `let`/`var` (SwiftUI's
+    # `@Environment(\\.dismiss) var dismiss`), an enum case with a payload, a
+    # parameter or property of a function type — may be what a bare call
+    # calls, so a function of that name is not checked.
+    shadowed = set()
+    sources = {path: strip_noise(open(path).read(), mask_strings=True) for path in files}
+    for text in sources.values():
+        shadowed.update(re.findall(r"\b(?:let|var)\s+([A-Za-z_][A-Za-z0-9_]*)", text))
+        shadowed.update(re.findall(r"\bcase\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(", text))
+        shadowed.update(re.findall(
+            r"\b([a-z][A-Za-z0-9_]*)\s*:\s*(?:@[A-Za-z]+\s+)*\((?:[^()]|\([^()]*\))*\)\s*(?:async\s+)?(?:throws\s+)?->", text))
+    for path in files:
+        src = sources[path]
+        for name, required in FUNC_REQUIRED.items():
+            if name in FUNC_REQUIRED_AMBIGUOUS or name not in funcs or not required: continue
+            if name in shadowed: continue
+            labels = funcs[name]
+            known = set(l for l in labels if l != "_")
+            for m in re.finditer(r"(?<![A-Za-z0-9_.])" + re.escape(name) + r"\s*\(", src):
+                # The declaration itself.
+                if re.search(r"func\s+$", src[max(0, m.start() - 40):m.start()]): continue
+                start = m.end(); depth, i = 1, start
+                while i < len(src) and depth:
+                    if src[i] == "(": depth += 1
+                    elif src[i] == ")": depth -= 1
+                    i += 1
+                if depth: continue
+                args = [a for a in split_top_level(src[start:i-1]) if a.strip()]
+                seen, unlabelled = [], 0
+                for a in args:
+                    lm = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:(?!:)", a)
+                    if lm: seen.append(lm.group(1))
+                    else: unlabelled += 1
+                if any(l not in known for l in seen): continue   # not this function
+                trailing = re.match(r"\s*\{", src[i:i + 40]) is not None
+                missing, need_unlabelled = [], 0
+                for label, closure in required:
+                    if label == "_":
+                        need_unlabelled += 1
+                    elif label not in seen:
+                        missing.append((label, closure))
+                if trailing:
+                    # One or more trailing closures (`{ … } label: { … }`)
+                    # fill the closure parameters left at the end.
+                    while missing and missing[-1][1]:
+                        missing.pop()
+                if trailing and not missing and need_unlabelled > unlabelled:
+                    unlabelled += 1
+                if missing or unlabelled < need_unlabelled:
+                    line = src[:m.start()].count("\n") + 1
+                    what = [l for l, _ in missing]
+                    if unlabelled < need_unlabelled:
+                        what.append(f"{need_unlabelled - unlabelled} unlabelled")
+                    errors.append(
+                        f"{path}:{line}: {name}(...) leaves {', '.join(what)} unfilled, and "
+                        f"{'it has' if len(what) == 1 else 'they have'} no default; the signature is ({', '.join(labels)})")
 
 # ---------------------------------------------------------------------------
 # Call-site checks
@@ -1781,6 +1877,7 @@ def main():
     structs, enum_cases, funcs, declared, errors = scan(files, verbose)
     check_calls(files, structs, errors)
     check_func_calls(files, funcs, errors)
+    check_func_arity(files, funcs, errors)
     if "--members" in sys.argv:
         check_static_members(files, collect_static_members(files), errors)
     check_patterns(files, enum_cases, errors)

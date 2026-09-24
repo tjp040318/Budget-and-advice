@@ -1473,7 +1473,7 @@ final class UnitPlate: SKNode {
     private func applyExperience(from: Double, to: Double, levels: Int, delay: TimeInterval, banner: UIImage?,
                                  calm: Bool) {
         bars.isHidden = true
-        applyStatuses([])
+        applyStatuses([], leaving: .expire, calm: calm)
         badge.isHidden = true
         applyActing(false)
         expCrop.isHidden = false
