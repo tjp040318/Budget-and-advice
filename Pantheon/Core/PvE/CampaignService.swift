@@ -28,10 +28,26 @@ struct StageOutcome: Sendable {
     /// The calendar's multipliers this clear took (`EventCalendar`), so a
     /// receipt can say why a number is twice its usual. Flat by default.
     var eventBoosts: EventBoosts = .flat
+    /// The demigod levels this clear raised (Docs/FEEL.md W1.6): the battle's
+    /// level-up beat reads it, and the island's header ring. Zero on a loss
+    /// and on a clear that levelled nobody; defaulted, like everything added
+    /// since the first fields, so the places that build an outcome by hand
+    /// need not say so.
+    var playerLevelsGained: Int = 0
+    /// The demigod's level after the clear. Zero where the outcome does not
+    /// say — a loss, or a total summed over several runs (`SweepService`).
+    var newPlayerLevel: Int = 0
 }
 
 /// PvE progression: which stages are open, and what a clear pays.
 enum CampaignService {
+
+    /// What a demigod level pays on top of the refill: two more energy in the
+    /// bar and 25 divinity, the genre's way of paying a level. Named so the
+    /// battle's level-up beat prints the numbers the settle paid, never a
+    /// copy of them (Docs/FEEL.md W1.6).
+    static let maxEnergyPerLevel = 2
+    static let divinityPerLevel = 25
 
     /// A stage is available once the previous one in its chapter is cleared, a
     /// chapter opens once the previous chapter's boss falls, and a harder
@@ -196,7 +212,7 @@ enum CampaignService {
             player.experience -= player.experienceToNextLevel
             player.level += 1
             levelsGained += 1
-            player.wallet.maxEnergy += 2
+            player.wallet.maxEnergy += maxEnergyPerLevel
             player.wallet.energy = player.wallet.maxEnergy
         }
 
@@ -260,7 +276,7 @@ enum CampaignService {
 
         // A summoner level is worth 25 divinity, the way the genre pays
         // levelling, on top of the first clear's own.
-        var divinity = levelsGained * 25
+        var divinity = levelsGained * divinityPerLevel
         player.wallet.divinity += divinity
         if isFirstClear {
             divinity += rewards.firstClearDivinity
@@ -295,7 +311,9 @@ enum CampaignService {
             stonesEarned: stones,
             aetherEarned: aether, raidGrade: grade,
             boonCachesEarned: caches,
-            eventBoosts: boosts
+            eventBoosts: boosts,
+            playerLevelsGained: levelsGained,
+            newPlayerLevel: player.level
         )
     }
 

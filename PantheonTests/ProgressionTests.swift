@@ -457,3 +457,140 @@ final class TributeTests: XCTestCase {
         XCTAssertEqual(TributeService.payout(.flawless, tier: .hell).relicQuality, .legend)
     }
 }
+
+/// The end of a fight, the player's side (Docs/FEEL.md W1.6, W1.7): a clear
+/// says what demigod levels it raised, the level-up beat prints what the
+/// settle paid and names what the level opened, the island is left one
+/// celebration however many clears raised it, and a plate's gold EXP bar
+/// reads the unit's own experience.
+final class LevelUpTests: XCTestCase {
+
+    private func win() -> BattleResult {
+        BattleResult(outcome: .victory, turnsTaken: 9, survivorFraction: 1, totalDamageDealt: 1, totalDamageTaken: 0, seed: 1)
+    }
+
+    /// One experience short of the next level, the first gate's 30 cross it:
+    /// the outcome says one level and names the level reached, the bar is
+    /// two longer and full, and the divinity the beat prints for the level
+    /// is exactly what the settle paid for it beside the first clear's own.
+    func testAWinThatLevelsTheDemigodSaysSoAndPaysTheLevel() throws {
+        let stage = try XCTUnwrap(StageDatabase.stage("duat_1_1"))
+        var player = NewGame.create().player
+        player.experience = max(0, player.experienceToNextLevel - 1)
+        let levelBefore: Int = player.level
+        let barBefore: Int = player.wallet.maxEnergy
+        let divinityBefore: Int = player.wallet.divinity
+        var rng = SeededRandom(seed: 5)
+
+        let outcome = CampaignService.applyRewards(stage: stage, result: win(), player: &player, rng: &rng)
+        let levelAfter: Int = levelBefore + 1
+        let barAfter: Int = barBefore + CampaignService.maxEnergyPerLevel
+        XCTAssertEqual(outcome.playerLevelsGained, 1)
+        XCTAssertEqual(outcome.newPlayerLevel, levelAfter)
+        XCTAssertEqual(player.level, levelAfter)
+        XCTAssertEqual(player.wallet.maxEnergy, barAfter)
+        XCTAssertEqual(player.wallet.energy, player.wallet.maxEnergy, "a level-up fills the bar")
+
+        let levelUp = PlayerLevelUp.between(levelBefore, outcome.newPlayerLevel, maxEnergy: player.wallet.maxEnergy)
+        XCTAssertEqual(levelUp.levelsGained, 1)
+        XCTAssertEqual(levelUp.maxEnergyGained, CampaignService.maxEnergyPerLevel)
+        let paid: Int = player.wallet.divinity - divinityBefore
+        let paidForTheLevel: Int = paid - stage.rewards.firstClearDivinity
+        XCTAssertEqual(levelUp.divinity, paidForTheLevel, "the beat prints the divinity the settle paid for the level")
+
+        // The next clear raises nothing, and still names the level it leaves.
+        let again = CampaignService.applyRewards(stage: stage, result: win(), player: &player, rng: &rng)
+        XCTAssertEqual(again.playerLevelsGained, 0)
+        XCTAssertEqual(again.newPlayerLevel, player.level)
+        // A loss pays nothing and names no level.
+        let loss = BattleResult(outcome: .defeat, turnsTaken: 9, survivorFraction: 0, totalDamageDealt: 1, totalDamageTaken: 1, seed: 1)
+        let lost = CampaignService.applyRewards(stage: stage, result: loss, player: &player, rng: &rng)
+        XCTAssertEqual(lost.playerLevelsGained, 0)
+        XCTAssertEqual(lost.newPlayerLevel, 0)
+    }
+
+    /// A level names what it opens: the sphinx on the level that sells it,
+    /// the Hall of Ka's next tier on the level that raises it — and a span
+    /// of no levels names nothing.
+    func testALevelNamesWhatItOpens() throws {
+        let sphinx = try XCTUnwrap(IslandDatabase.decoration("sphinx"))
+        let sphinxEve: Int = sphinx.unlockLevel - 1
+        let sold = LevelUnlock.between(sphinxEve, sphinx.unlockLevel)
+        let sphinxNamed: Bool = sold.contains { $0.value == sphinx.title && $0.art == sphinx.thumbnail }
+        XCTAssertTrue(sphinxNamed, "the sphinx is named, with its thumbnail, on the level that sells it")
+
+        let hall = try XCTUnwrap(IslandDatabase.landmarks.first { $0.id == "hall" })
+        let tierLevel = try XCTUnwrap(hall.upgradeLevels.first)
+        let tierEve: Int = tierLevel - 1
+        let grown = LevelUnlock.between(tierEve, tierLevel)
+        let hallNamed: Bool = grown.contains { $0.label == hall.title }
+        XCTAssertTrue(hallNamed, "the Hall of Ka's tier is named on the level it grows")
+
+        let noLevels = LevelUnlock.between(tierLevel, tierLevel)
+        XCTAssertTrue(noLevels.isEmpty, "no level, nothing opened")
+        let soldEarlier: Bool = sphinx.unlockLevel <= tierEve
+        let namedAgain: Bool = grown.contains { $0.value == sphinx.title }
+        if soldEarlier {
+            XCTAssertFalse(namedAgain, "a decoration sold on an earlier level is not named again")
+        }
+    }
+
+    /// The island is left ONE celebration: from the level it last showed to
+    /// the level now, merged across every clear before its visit, and taken
+    /// once.
+    @MainActor
+    func testALevelUpWaitsForTheIslandOnceAndMergesAcrossClears() throws {
+        let stage = try XCTUnwrap(StageDatabase.stage("duat_1_1"))
+        var game = NewGame.create()
+        game.player.experience = max(0, game.player.experienceToNextLevel - 1)
+        let startLevel: Int = game.player.level
+        let store = GameStore(save: game, account: Account.guest(), cloudSave: nil)
+        defer { store.retire() }
+        XCTAssertNil(store.pendingLevelCelebration)
+
+        _ = store.finishCampaignBattle(stage: stage, result: win())
+        let first = try XCTUnwrap(store.pendingLevelCelebration)
+        XCTAssertEqual(first.from, startLevel)
+        XCTAssertEqual(first.to, store.player.level)
+
+        // A second level before the island is visited.
+        store.update { player in
+            player.experience = max(0, player.experienceToNextLevel - 1)
+        }
+        _ = store.finishCampaignBattle(stage: stage, result: win())
+        let merged = try XCTUnwrap(store.takeLevelCelebration())
+        let twoUp: Int = startLevel + 2
+        XCTAssertEqual(merged.from, startLevel, "one celebration, from the first level")
+        XCTAssertEqual(merged.to, twoUp, "to the last")
+        XCTAssertNil(store.takeLevelCelebration(), "the island takes it once")
+    }
+
+    /// A plate's gold bar reads the unit's own experience: empty at the start
+    /// of a level, half at half, full at its grade's cap (where experience is
+    /// zeroed); a fight's gain runs bar to bar with the levels between.
+    func testTheEXPBarReadsTheUnitsOwnExperience() {
+        let blueprint = UnitDatabase.starter
+        var unit = Unit(blueprint: blueprint, level: 5, stars: 3)
+        let needed = ProgressionService.experienceForNextLevel(level: 5, stars: 3)
+        let empty: Double = BattleSummary.experienceShare(of: unit)
+        XCTAssertEqual(empty, 0, accuracy: 1e-9)
+
+        unit.experience = needed / 2
+        let half: Double = BattleSummary.experienceShare(of: unit)
+        let expectedHalf: Double = Double(needed / 2) / Double(needed)
+        XCTAssertEqual(half, expectedHalf, accuracy: 1e-9)
+
+        var capped = Unit(blueprint: blueprint, level: 1, stars: 3)
+        ProgressionService.grantExperience(10_000_000, to: &capped)
+        let full: Double = BattleSummary.experienceShare(of: capped)
+        XCTAssertEqual(full, 1, accuracy: 1e-9)
+
+        var after = unit
+        ProgressionService.grantExperience(needed, to: &after)
+        let gain = BattleSummary.experienceGain(before: unit, after: after)
+        let afterShare: Double = BattleSummary.experienceShare(of: after)
+        XCTAssertEqual(gain.levelsGained, 1)
+        XCTAssertEqual(gain.from, half, accuracy: 1e-9)
+        XCTAssertEqual(gain.to, afterShare, accuracy: 1e-9)
+    }
+}

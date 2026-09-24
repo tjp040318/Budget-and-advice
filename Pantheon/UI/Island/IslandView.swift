@@ -54,6 +54,15 @@ struct IslandView: View {
     @State private var offering: OfferingToast?
     @State private var burst = false
     @State private var burstOut = false
+    /// A demigod level-up the island is showing (Docs/FEEL.md W1.6,
+    /// `GameStore.pendingLevelCelebration`): the number the header shows
+    /// while it rolls from the old level to the new, and a count the ring's
+    /// burst plays on.
+    @State private var rollingLevel: Int?
+    @State private var levelBurst = 0
+    /// Between the island's `onAppear` and `onDisappear`: a level-up waits
+    /// for the island to be in sight, not merely the selected tab.
+    @State private var onScreen = false
     /// Where the claimed bubble stood: the burst plays there, not where the
     /// bubble would stand now — the scroll the offering pays gives the
     /// circle a bubble of its own and moves the offering's spot.
@@ -265,6 +274,19 @@ struct IslandView: View {
             withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) {
                 pulse = true
             }
+            onScreen = true
+            celebrateLevelIfWaiting()
+        }
+        // A full-screen cover over the shell (the Labyrinth, the Hall of Ka)
+        // takes the island off the screen; its return is a visit.
+        .onDisappear { onScreen = false }
+        // The island is a tab: coming back to it is a visit too.
+        .onChange(of: isActive) { _, active in
+            if active { celebrateLevelIfWaiting() }
+        }
+        // A level-up while the island is up and in sight.
+        .onChange(of: store.pendingLevelCelebration) { _, pending in
+            if pending != nil { celebrateLevelIfWaiting() }
         }
         .sheet(isPresented: $showShop) {
             ShopView()
@@ -454,11 +476,18 @@ struct IslandView: View {
                     // bar the glass's own meter (run 216: goldDim on the
                     // cream capsule was faint).
                     HStack(spacing: 8) {
-                        Text("Lv.\(player.level)")
+                        // Rolls from the old level to the new on the visit
+                        // after a level-up (`celebrateLevelIfWaiting`); the
+                        // old one stands until then, so the roll is the
+                        // first the header shows of the new.
+                        let waitingFrom: Int? = store.pendingLevelCelebration?.from
+                        let shownLevel: Int = rollingLevel ?? waitingFrom ?? player.level
+                        Text("Lv.\(shownLevel)")
                             .font(Theme.numeric(12))
                             .foregroundStyle(Theme.onGlassGold)
                             .lineLimit(1)
                             .fixedSize()
+                            .contentTransition(.numericText(value: Double(shownLevel)))
                         GlassMeter(
                             value: Double(player.experience),
                             maximum: Double(player.experienceToNextLevel),
@@ -576,6 +605,11 @@ struct IslandView: View {
     /// own art. The card is cropped to its top, where the face is.
     private var leaderPortrait: some View {
         let leader = standingUnits.first
+        // Under Reduce Motion the ring glows and nothing travels.
+        let calm: Bool = Motion.isCalm
+        let swellTo: Double = calm ? 1 : 1.14
+        let burstTo: Double = calm ? 1 : 2.3
+        let ringFrom: Double = calm ? 0 : 0.95
         return ZStack {
             Circle().fill(Theme.surface)
             if let leader {
@@ -591,7 +625,64 @@ struct IslandView: View {
         }
         .frame(width: 40, height: 40)
         .overlay(Circle().strokeBorder(Theme.goldPlate, lineWidth: 2))
+        // A level-up's visit: the ring swells and a second ring of gold
+        // light bursts out of it (`celebrateLevelIfWaiting`).
+        .keyframeAnimator(initialValue: LevelRingFrame(), trigger: levelBurst) { content, frame in
+            content
+                .scaleEffect(frame.swell)
+                .shadow(color: Color(hex: "#FFD678").opacity(frame.glow), radius: 9)
+        } keyframes: { _ in
+            KeyframeTrack(\.swell) {
+                MoveKeyframe(1.0)
+                CubicKeyframe(swellTo, duration: 0.14)
+                SpringKeyframe(1.0, duration: 0.5, spring: Motion.popSpring.spring)
+            }
+            KeyframeTrack(\.glow) {
+                MoveKeyframe(0)
+                LinearKeyframe(0.95, duration: 0.1)
+                CubicKeyframe(0, duration: 0.9)
+            }
+        }
+        .overlay {
+            Circle()
+                .strokeBorder(Theme.goldText, lineWidth: 3)
+                .keyframeAnimator(initialValue: LevelRingFrame(), trigger: levelBurst) { content, frame in
+                    content
+                        .scaleEffect(frame.burst)
+                        .opacity(frame.ring)
+                } keyframes: { _ in
+                    KeyframeTrack(\.burst) {
+                        MoveKeyframe(1.0)
+                        CubicKeyframe(burstTo, duration: 0.75)
+                    }
+                    KeyframeTrack(\.ring) {
+                        MoveKeyframe(ringFrom)
+                        CubicKeyframe(0, duration: 0.75)
+                    }
+                }
+                .allowsHitTesting(false)
+        }
         .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+    }
+
+    /// The level-up's visit (Docs/FEEL.md W1.6): once, on the first visit
+    /// after a level-up, the header shows the old level for a breath, then
+    /// its ring bursts and the number rolls over to the new one with a tick
+    /// and a knock in the hand. Taken from the store, so it plays on one
+    /// visit only; while another tab or a cover is up it waits.
+    private func celebrateLevelIfWaiting() {
+        guard isActive, onScreen, rollingLevel == nil,
+              let celebration = store.takeLevelCelebration() else { return }
+        rollingLevel = celebration.from
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            levelBurst += 1
+            AudioLibrary.shared.play(.starTick, volume: 0.7)
+            Juice.haptic(.medium)
+            withAnimation(Motion.celebrate) { rollingLevel = celebration.to }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                rollingLevel = nil
+            }
+        }
     }
 
     // MARK: - The buildings
@@ -1541,4 +1632,15 @@ struct ChapterIntroCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
+
+/// The header's level ring on the visit after a level-up
+/// (`IslandView.leaderPortrait`, Docs/FEEL.md W1.6): the portrait's swell
+/// and gold glow, and the burst ring's reach and brightness. Nothing is lit
+/// at rest; a keyframe animation ends where it stands, so it rests unlit.
+private struct LevelRingFrame {
+    var swell: Double = 1
+    var glow: Double = 0
+    var burst: Double = 1
+    var ring: Double = 0
 }

@@ -93,8 +93,15 @@ final class BattleViewModel: ObservableObject {
             if autoBattle, awaitingActor != nil { takeAutoTurn() }
         }
     }
-    @Published var speed: Double = 1.0 {
-        didSet { sceneController.speedMultiplier = speed }
+    /// ×1, ×2 or ×3 (`BattleSpeed`, Docs/FEEL.md W1.1): the speed the last
+    /// fight on this device was left at, and remembered again with every
+    /// change, so a player who watches at ×2 is not set back to ×1 by each
+    /// new fight. The scene reads it only through `speedMultiplier`.
+    @Published var speed: Double = BattleSpeed.remembered() {
+        didSet {
+            sceneController.speedMultiplier = speed
+            BattleSpeed.remember(speed)
+        }
     }
     /// Set when the player taps a unit while choosing a target.
     @Published var highlightedTarget: UUID?
@@ -129,6 +136,9 @@ final class BattleViewModel: ObservableObject {
             autoBattle = true
             engine.autoBattle = true
         }
+        // The team as it stands before the fight, for the plates' EXP bars
+        // at the end; `restart` takes it again for every run of a repeat.
+        snapshotTeam()
     }
 
     // MARK: - Auto-repeat
@@ -151,6 +161,14 @@ final class BattleViewModel: ObservableObject {
         var aether: [String: Int] = [:]
         var boonCaches: [BoonCache] = []
         var stoppedBecause: String?
+        /// The demigod levels every run raised and the level the last of
+        /// them reached: ONE level-up beat at the session's end, never one a
+        /// run (Docs/FEEL.md W1.6).
+        var playerLevelsGained = 0
+        var newPlayerLevel = 0
+        /// The last run's stars, for the VICTORY stamp over its field; a
+        /// session's reckoning shows none (W1.7).
+        var lastStars = 0
 
         var isFinished: Bool { completed >= requested || stoppedBecause != nil }
     }
@@ -186,6 +204,9 @@ final class BattleViewModel: ObservableObject {
         for (id, count) in stageOutcome.stonesEarned { session.stones[id, default: 0] += count }
         for (id, count) in stageOutcome.aetherEarned { session.aether[id, default: 0] += count }
         session.boonCaches += stageOutcome.boonCachesEarned
+        session.playerLevelsGained += stageOutcome.playerLevelsGained
+        if stageOutcome.playerLevelsGained > 0 { session.newPlayerLevel = stageOutcome.newPlayerLevel }
+        session.lastStars = stageOutcome.stars
 
         if result.outcome != .victory {
             session.stoppedBecause = "Stopped after a defeat."
@@ -209,6 +230,9 @@ final class BattleViewModel: ObservableObject {
     /// the scene is rebuilt, the HUD reset, the log kept.
     private func restart(with next: BattleEngine) {
         engine = next
+        // This run's team, as the settle of the last one left it: the level
+        // its plates' badges start at.
+        snapshotTeam()
         engine.autoBattle = true
         autoBattle = true
         outcome = nil
@@ -300,13 +324,69 @@ final class BattleViewModel: ObservableObject {
         }
         let (stats, mvp) = reckoning()
         let won = session.wins > 0
-        return BattleSummary(
+        var summary = BattleSummary(
             outcome: won ? .victory : .defeat, lines: lines, stars: 0,
             title: "\(session.wins) of \(session.completed) runs won",
             turns: outcome?.turnsTaken ?? 0,
             damageDealt: outcome?.totalDamageDealt ?? 0, damageTaken: outcome?.totalDamageTaken ?? 0,
             unitStats: stats, mvpID: mvp, loot: won ? loot : []
         )
+        // The beat at the end is the LAST run's field, with the last run's
+        // bars on its plates (`unitsAtStart` is taken again for every run);
+        // the demigod's level-up is the whole session's, as one (W1.6, W1.7).
+        summary.experience = experienceGains()
+        summary.levelUp = levelUp(gained: session.playerLevelsGained, newLevel: session.newPlayerLevel)
+        summary.stampStars = session.lastStars
+        return summary
+    }
+
+    // MARK: - The end of the fight on the field (Docs/FEEL.md W1.6, W1.7)
+
+    /// Each of the player's units as it stood when THIS run began, by the
+    /// unit's own id: where its plate's gold bar starts in the triumph.
+    /// Campaign fights only. Taken at `init` and again by `restart` for every
+    /// run of an auto-repeat, because the plate's badge shows the level the
+    /// run's own engine was built with (`Combatant.level`): measured from the
+    /// session's start, a unit that levelled in runs 3 and 8 of ten had its
+    /// badge bumped two levels past its real one in the last run's triumph
+    /// (review, 2026-09-24).
+    private var unitsAtStart: [UUID: Unit] = [:]
+
+    private func snapshotTeam() {
+        unitsAtStart = [:]
+        guard case .campaign = context else { return }
+        for combatant in engine.combatants where combatant.side == .player {
+            guard let id = combatant.sourceUnitID, let unit = store.player.unit(id) else { continue }
+            unitsAtStart[id] = unit
+        }
+    }
+
+    /// What the fight did to each SURVIVOR's experience, for the gold bars
+    /// its plate fills on the field (`BattleSceneController.celebrate`):
+    /// keyed by the COMBATANT's id — the scene's own key, fresh every run —
+    /// and measured from the unit as it stood at the start to the unit as
+    /// the settle left it. Call it after the settle. The arena, a guild war
+    /// and a draft bout pay no unit experience, so their survivors pose with
+    /// their health still up (an empty map: "units missing from the map just
+    /// pose").
+    private func experienceGains() -> [UUID: ExperienceGain] {
+        guard case .campaign = context else { return [:] }
+        var gains: [UUID: ExperienceGain] = [:]
+        for combatant in displayedCombatants where combatant.side == .player && combatant.isAlive {
+            guard let id = combatant.sourceUnitID,
+                  let before = unitsAtStart[id],
+                  let after = store.player.unit(id) else { continue }
+            gains[combatant.id] = BattleSummary.experienceGain(before: before, after: after)
+        }
+        return gains
+    }
+
+    /// The demigod's level-up for the beat between the reckoning and the
+    /// chest, or nil when the settle raised no level. The bar it names is
+    /// the wallet the settle left: every level-up fills it.
+    private func levelUp(gained: Int, newLevel: Int) -> PlayerLevelUp? {
+        guard gained > 0, newLevel > gained else { return nil }
+        return PlayerLevelUp.between(newLevel - gained, newLevel, maxEnergy: store.player.wallet.maxEnergy)
     }
 
     /// `onAppear` can fire more than once for the same view; starting the
@@ -506,7 +586,22 @@ final class BattleViewModel: ObservableObject {
 
     /// Abandons the battle. Campaign energy is not refunded once a turn has
     /// resolved, which is the standard rule and is stated on the confirm dialog.
+    ///
+    /// The fight stops where it stands: the turn waiting for the player is
+    /// withdrawn, and `settleAfterPlayback` hands out no other (a forfeit on
+    /// auto used to play on underneath, and since the end of a fight is shown
+    /// on the field — DEFEAT over the drained set, Docs/FEEL.md W1.7 — that
+    /// would be the enemies fighting on under the word, and a win arriving
+    /// after the loss had been settled).
     func forfeit() {
+        guard outcome == nil else { return }
+        awaitingActor = nil
+        selectedSkillSlot = nil
+        highlightedTarget = nil
+        // And the turn being played stops where it stands, rather than
+        // playing on under DEFEAT (`BattleSceneController.halt`).
+        sceneController.halt()
+        isPlayingBack = false
         outcome = BattleResult(
             outcome: .defeat,
             turnsTaken: engine.turnNumber,
@@ -524,9 +619,14 @@ final class BattleViewModel: ObservableObject {
         refreshTurnOrder()
 
         if let result = engine.result {
-            outcome = result
+            // A forfeit during the last turn's playback has already ended
+            // the fight; the engine's own end does not overwrite the loss
+            // (it would be settled a second time).
+            if outcome == nil { outcome = result }
             return
         }
+        // Forfeited: no turn is handed out after the loss (`forfeit`).
+        guard outcome == nil else { return }
 
         if let waitingID = engine.awaitingActor,
            let actor = engine.combatants.first(where: { $0.id == waitingID }) {
@@ -672,7 +772,9 @@ final class BattleViewModel: ObservableObject {
                 loot: result.outcome == .victory || graded ? loot(from: stageOutcome) : [],
                 isFirstClear: stageOutcome.isFirstClear,
                 raidGrade: stageOutcome.raidGrade,
-                raidGradeLine: RaidGradeService.caption(for: stage, result: result) ?? ""
+                raidGradeLine: RaidGradeService.caption(for: stage, result: result) ?? "",
+                experience: result.outcome == .victory ? experienceGains() : [:],
+                levelUp: levelUp(gained: stageOutcome.playerLevelsGained, newLevel: stageOutcome.newPlayerLevel)
             )
 
         case .arena(let opponent):
@@ -845,6 +947,41 @@ struct BattleSummary {
     /// for every other fight.
     var raidGrade: RaidGrade? = nil
     var raidGradeLine: String = ""
+    /// Each surviving player unit's experience across the fight, keyed by
+    /// its COMBATANT id: the gold bars its plate fills on the field while
+    /// the survivors pose (Docs/FEEL.md W1.7). Empty where the fight paid no
+    /// unit experience (the arena, a guild war, a draft bout, a loss).
+    var experience: [UUID: ExperienceGain] = [:]
+    /// The demigod's level-up, for the beat between the reckoning and the
+    /// chest (W1.6); nil when the fight raised no level. An auto-repeat's is
+    /// every run's levels as one.
+    var levelUp: PlayerLevelUp? = nil
+    /// The stars the VICTORY stamp slams in over the field when they are not
+    /// `stars`: an auto-repeat's reckoning shows none (a session has no
+    /// stars), and its stamp shows the last run's. Nil reads `stars`.
+    var stampStars: Int? = nil
+
+    /// How full a unit's EXP bar stands, 0...1 of the level it is at: its
+    /// experience over what the next level needs (`ProgressionService`). A
+    /// unit at its grade's cap reads full; the cap zeroes its experience.
+    static func experienceShare(of unit: Unit) -> Double {
+        let cap = ProgressionService.maxLevel(stars: unit.stars)
+        guard unit.level < cap else { return 1 }
+        let needed = ProgressionService.experienceForNextLevel(level: unit.level, stars: unit.stars)
+        guard needed > 0 else { return 1 }
+        let share = Double(unit.experience) / Double(needed)
+        return min(1, max(0, share))
+    }
+
+    /// One unit's fight on its plate: the bar before, the bar after, and the
+    /// levels between them.
+    static func experienceGain(before: Unit, after: Unit) -> ExperienceGain {
+        ExperienceGain(
+            from: experienceShare(of: before),
+            to: experienceShare(of: after),
+            levelsGained: max(0, after.level - before.level)
+        )
+    }
 
     /// The chest's contents for one settled stage, as tiles.
     ///
@@ -910,6 +1047,98 @@ struct BattleSummary {
                                amount: "+\(levels)", tint: .laurel, key: "level_up"))
         }
         return items
+    }
+}
+
+/// The battle's speeds, the genre's three (Docs/FEEL.md W1.1): the control
+/// steps ×1 → ×2 → ×3 → ×1, as Summoners War's does. It stepped 1 → 2 → 4,
+/// and at ×4 the juice's skip threshold turned every freeze, shake and
+/// haptic off, so a player who tapped it twice lost the fight's whole feel
+/// without knowing why. Skip is the one way to watch a turn with no feedback.
+///
+/// The choice is remembered between fights on THIS device (`key` in
+/// UserDefaults — how a player likes to watch, never part of the save), and
+/// not under the CI tour: its battle frames start at ×1 whatever an earlier
+/// launch of the tour chose, and a step that wants another speed sets it.
+enum BattleSpeed {
+    static let key = "battleSpeed"
+    /// The fastest the control goes; the stress tour runs its fights at it.
+    static let top: Double = 3
+
+    /// The control's next step.
+    static func next(after speed: Double) -> Double {
+        let step = settled(speed)
+        return step >= top ? 1 : step + 1
+    }
+
+    /// Any speed as one of the three: rounded, and held inside ×1…×3.
+    static func settled(_ speed: Double) -> Double {
+        guard speed.isFinite else { return 1 }
+        return min(top, max(1, speed.rounded()))
+    }
+
+    /// The speed the last fight on this device was left at; ×1 when none
+    /// was, or under the tour.
+    static func remembered(in defaults: UserDefaults = .standard) -> Double {
+        guard remembers, let stored = defaults.object(forKey: key) as? Double else { return 1 }
+        return settled(stored)
+    }
+
+    static func remember(_ speed: Double, in defaults: UserDefaults = .standard) {
+        guard remembers else { return }
+        defaults.set(settled(speed), forKey: key)
+    }
+
+    /// False under the CI tour (`-tour`).
+    static let remembers = !ProcessInfo.processInfo.arguments.contains("-tour")
+}
+
+/// The demigod's level-up as the battle's beat shows it (Docs/FEEL.md W1.6):
+/// the level reached, what the levels paid, and what they opened. What they
+/// paid is read off the settle's own per-level numbers
+/// (`CampaignService.maxEnergyPerLevel`, `divinityPerLevel`), never a copy.
+struct PlayerLevelUp: Equatable, Sendable {
+    let fromLevel: Int
+    let level: Int
+    /// The energy bar every level-up fills (`CampaignService.applyRewards`
+    /// sets the energy to it), as the settle left it.
+    let maxEnergy: Int
+    let unlocks: [LevelUnlock]
+
+    var levelsGained: Int { max(0, level - fromLevel) }
+    var maxEnergyGained: Int { levelsGained * CampaignService.maxEnergyPerLevel }
+    var divinity: Int { levelsGained * CampaignService.divinityPerLevel }
+
+    static func between(_ from: Int, _ to: Int, maxEnergy: Int) -> PlayerLevelUp {
+        PlayerLevelUp(fromLevel: from, level: to, maxEnergy: maxEnergy, unlocks: LevelUnlock.between(from, to))
+    }
+}
+
+/// Something a demigod level opens, for the level-up beat's last row: a
+/// building that opens, a decoration the island's chisel now sells, or a
+/// building that takes its next tier (the diamonds on its name chip).
+struct LevelUnlock: Equatable, Sendable {
+    let label: String
+    let value: String
+    let glyph: String
+    /// A bundle painting for the chip — a decoration's thumbnail — when the
+    /// thing has one; the glyph otherwise.
+    let art: String?
+
+    /// Everything that opens on the way from `from` to `to`, in the order a
+    /// player would care: a building, a decoration, a building's tier.
+    static func between(_ from: Int, _ to: Int) -> [LevelUnlock] {
+        guard to > from else { return [] }
+        let opened = IslandDatabase.landmarks
+            .filter { $0.unlockLevel > from && $0.unlockLevel <= to }
+            .map { LevelUnlock(label: "Now open", value: $0.title, glyph: $0.systemImage, art: nil) }
+        let pieces = IslandDatabase.decorations
+            .filter { $0.unlockLevel > from && $0.unlockLevel <= to }
+            .map { LevelUnlock(label: "New decoration", value: $0.title, glyph: $0.glyph, art: $0.thumbnail) }
+        let tiers = IslandDatabase.landmarks
+            .filter { $0.tier(atLevel: to) > $0.tier(atLevel: from) }
+            .map { LevelUnlock(label: $0.title, value: "Tier \($0.tier(atLevel: to))", glyph: $0.systemImage, art: nil) }
+        return opened + pieces + tiers
     }
 }
 

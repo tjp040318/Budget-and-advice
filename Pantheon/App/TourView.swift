@@ -21,6 +21,8 @@ struct TourView: View {
     @State private var realmModel: BattleViewModel?
     @State private var arenaModel: BattleViewModel?
     @State private var dungeonModel: BattleViewModel?
+    /// The victory step's real fight (`-tour-victory field`).
+    @State private var victoryModel: BattleViewModel?
     @State private var seeded = false
     /// Ticks since the step appeared, for its `[Mem]` curve. Not `@State`:
     /// a state change re-renders the tour every tick, and several steps
@@ -113,6 +115,23 @@ struct TourView: View {
     /// The battle step's skill panel (`BattleView.showTourSkillPanel`): the
     /// fight waits on its first turn instead of taking a command a tick.
     static var pinnedSkillInfo: Bool { ProcessInfo.processInfo.arguments.contains("-tour-skill-info") }
+
+    /// `-tour-victory field` fights the victory step's win for real
+    /// (Docs/FEEL.md W1.6, W1.7): the Duat's first gate on auto at the top
+    /// speed, the demigod seeded one experience short of his next level and
+    /// the team's leader one short of hers, so the CI job photographs
+    /// VICTORY stamped over the live field (`20-victory-0`), the survivors
+    /// posing to the camera with their EXP bars filled and LEVEL UP over the
+    /// leader (`20-victory-triumph`), and the level-up between the reckoning
+    /// and the chest (`20-victory-levelup`). The battle screen holds the beat
+    /// and prints `[TourCue] triumph` and `[TourCue] levelup` for the job's
+    /// clock. `-tour-victory defeat` is the same gate fought by nobody and
+    /// forfeited seven seconds in — the one loss a tour can play for certain —
+    /// for DEFEAT in wine over the drained field (`20-victory-defeat`,
+    /// `[TourCue] fallen`). The plain step keeps the demo's reckoning, chest
+    /// and spoils.
+    static var pinnedVictory: String? { argument(after: "-tour-victory") }
+    static var pinnedVictoryField: Bool { pinnedVictory == "field" || pinnedVictory == "defeat" }
 
     /// `-tour-labyrinth-wing halls|tower|raids` opens the building on that
     /// wing. Neither the Halls wing nor the Tower had ever been photographed
@@ -294,6 +313,7 @@ struct TourView: View {
             if current == "arena_battle" { startArenaBattle() }
             if current == "dungeon_battle" { startDungeonBattle() }
             if current == "realm_battle" { startRealmBattle() }
+            if current == "victory", Self.pinnedVictoryField { startVictoryField() }
         }
         .onReceive(timer) { _ in
             if Self.pinnedStep == nil { tick() }
@@ -715,11 +735,22 @@ struct TourView: View {
             // The Daily list, or the one `-tour-missions-tab` names.
             MissionsView(opening: Self.pinnedMissionsTab ?? .missions)
         case "victory":
-            // The two acts of a win without fighting one: the reckoning,
-            // then the chest opening on its spoils. `autoplay` taps through
-            // for the camera.
-            BattleResultView(summary: Self.demoVictory(relic: bestRelic), onDismiss: {}, autoplay: true, store: store)
-                .background(Color.black.ignoresSafeArea())
+            if Self.pinnedVictoryField {
+                // A real win's end (`-tour-victory field`): the beat on the
+                // field, the reckoning over it, the level-up, the chest.
+                if let victoryModel {
+                    BattleView(model: victoryModel)
+                } else {
+                    Theme.surface.ignoresSafeArea()
+                        .onAppear { startVictoryField() }
+                }
+            } else {
+                // The two acts of a win without fighting one: the reckoning,
+                // then the chest opening on its spoils. `autoplay` taps
+                // through for the camera.
+                BattleResultView(summary: Self.demoVictory(relic: bestRelic), onDismiss: {}, autoplay: true, store: store)
+                    .background(Color.black.ignoresSafeArea())
+            }
         case "raid_grade":
             // A raid's win: the same two acts with the grade stamped on the
             // reckoning and the aether on the shelf. The grade and its line
@@ -951,6 +982,46 @@ struct TourView: View {
         // clears the first in a few turns.
         model.autoBattle = true
         dungeonModel = model
+    }
+
+    /// The victory step's real win (`pinnedVictoryField`). The seed makes the
+    /// win level the demigod and the leader, so the level-up and a LEVEL UP
+    /// over a plate are both in the frames: the first gate pays 30 demigod
+    /// experience and 240 a unit, and each is set one short of its next
+    /// level. The save persists between the tour's launches, so the steps
+    /// after this one see both a level higher — as they would after any win.
+    private func startVictoryField() {
+        guard victoryModel == nil, let stage = StageDatabase.stage("duat_1_1") else { return }
+        seedIfNeeded()
+        let losing = Self.pinnedVictory == "defeat"
+        store.update { player in
+            if !losing {
+                player.experience = max(0, player.experienceToNextLevel - 1)
+                if let leader = player.campaignTeam.leaderID,
+                   let index = player.units.firstIndex(where: { $0.id == leader }),
+                   !player.units[index].isMaxLevel {
+                    let unit = player.units[index]
+                    let needed = ProgressionService.experienceForNextLevel(level: unit.level, stars: unit.stars)
+                    player.units[index].experience = max(0, needed - 1)
+                }
+            }
+            player.wallet.energy = max(player.wallet.energy, 40)
+        }
+        guard let engine = store.startCampaignBattle(stage: stage) else { return }
+        let model = BattleViewModel(engine: engine, context: .campaign(stage), store: store)
+        victoryModel = model
+        if losing {
+            // Waiting for a command nobody gives, then the gear's Forfeit:
+            // the game's own way to lose, settled as a loss.
+            model.autoBattle = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 7) {
+                model.forfeit()
+            }
+            return
+        }
+        // On auto at the top speed: the frames are of the fight's END.
+        model.autoBattle = true
+        model.speed = BattleSpeed.top
     }
 
     private func startArenaBattle() {
@@ -1261,8 +1332,9 @@ private final class TourStressDriver: ObservableObject {
     /// Stages the tour's save has cleared (`GameStore.grantTourRoster`), so
     /// the level-12 team wins and every run is played to its end.
     static let battlePlan: [(stage: String, runs: Int)] = [("duat_1_1", 2), ("duat_1_2", 2), ("duat_1_3", 2)]
-    /// The battle's speed button cycles ×1 → ×2 → ×4, so ×4 is its top.
-    static let topSpeed: Double = 4
+    /// The battle's speed control steps ×1 → ×2 → ×3 (Docs/FEEL.md W1.1;
+    /// it stepped to ×4 until 2026-09-24), so ×3 is its top.
+    static let topSpeed: Double = BattleSpeed.top
     /// A run still going after this is forfeited, so a stuck fight cannot
     /// hold the step past the job's wait.
     static let runLimit: Double = 70

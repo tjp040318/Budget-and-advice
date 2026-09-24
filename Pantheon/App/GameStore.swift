@@ -17,6 +17,13 @@ final class GameStore: ObservableObject {
     /// cannot switch screens under an open card (run 216). Set only through
     /// `View.dimsTabBar(_:)`; never saved.
     @Published var tabBarDimmed = false
+    /// A demigod level-up the island has not shown yet (Docs/FEEL.md W1.6):
+    /// on the next visit the header's level ring bursts once and its number
+    /// rolls from `from` to `to`. Set by every settle that raised the level
+    /// (a fought clear, a sweep), merged across several, and taken by the
+    /// island (`takeLevelCelebration`). Never saved: a level-up the island
+    /// has not shown by the next launch is simply not replayed there.
+    @Published private(set) var pendingLevelCelebration: LevelCelebration?
 
     /// The account this store plays as. Its save goes under
     /// `account.storageKey` and nowhere else, so a store retired at sign-out
@@ -858,17 +865,36 @@ final class GameStore: ObservableObject {
     func finishCampaignBattle(stage: Stage, result: BattleResult) -> StageOutcome {
         var rng = makeRandom()
         var outcome: StageOutcome?
+        let levelBefore = player.level
         update { player in
             outcome = CampaignService.settle(
                 stage: stage, result: result, player: &player, rng: &rng
             )
         }
+        noteLevelUp(from: levelBefore)
         noteShrines(after: stage, result: result)   // Hidden Shrines: GameStore+Shrines.swift, Docs/SHRINES.md
         return outcome ?? StageOutcome(
             result: result, stars: 0, drachma: 0, playerExperience: 0, unitExperience: 0,
             relicsEarned: [], essencesEarned: [:], scrollsEarned: [:], divinityEarned: 0,
             isFirstClear: false, leveledUnits: [:]
         )
+    }
+
+    /// Leaves the island a level-up to show when the level has risen since
+    /// `before` (Docs/FEEL.md W1.6). Several before a visit — an auto-repeat,
+    /// a sweep of twenty — are ONE celebration from the first level to the
+    /// last, the way the battle shows one combined beat.
+    private func noteLevelUp(from before: Int) {
+        guard player.level > before else { return }
+        pendingLevelCelebration = LevelCelebration(from: pendingLevelCelebration?.from ?? before, to: player.level)
+    }
+
+    /// The island's claim on the level-up waiting for it: returned once and
+    /// forgotten, so the ring bursts on one visit and never again.
+    func takeLevelCelebration() -> LevelCelebration? {
+        guard let pending = pendingLevelCelebration else { return nil }
+        pendingLevelCelebration = nil
+        return pending
     }
 
     /// Clears a mastered stage `runs` times without a battle, and hands back
@@ -897,6 +923,8 @@ final class GameStore: ObservableObject {
         guard SweepService.canSweep(stage, player: player) else { return nil }
         var rng = makeRandom()
         var receipt: SweepReceipt?
+        let levelBefore = player.level
+        defer { noteLevelUp(from: levelBefore) }
         update { player in
             var outcomes: [StageOutcome] = []
             var energySpent = 0
@@ -1289,4 +1317,12 @@ final class GameStore: ObservableObject {
         }
     }
     #endif
+}
+
+/// A demigod level-up the island has yet to show (`GameStore
+/// .pendingLevelCelebration`, Docs/FEEL.md W1.6): the level the header last
+/// showed and the level it rolls to.
+struct LevelCelebration: Equatable, Sendable {
+    let from: Int
+    let to: Int
 }

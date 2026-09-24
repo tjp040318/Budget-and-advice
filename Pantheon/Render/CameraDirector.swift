@@ -429,8 +429,25 @@ final class CameraDirector {
     private var shotGeneration = 0
     private var lastCutAt: TimeInterval = -100
 
+    /// The realm's grade on the camera, read when this director was made.
+    private let restSaturation: CGFloat
+    private let restContrast: CGFloat
+    private let restExposure: CGFloat
+    /// Bumped by every impact frame and by the drain, so an impact frame's
+    /// restore that a newer one overtook steps aside.
+    private var gradeGeneration = 0
+    /// Set once the field's colour is draining: nothing puts the grade back
+    /// over it (a new run builds a new camera).
+    private var draining = false
+
     init(cameraNode: SCNNode) {
         self.cameraNode = cameraNode
+        // The realm's grade as `BattleSceneController.buildCamera` set it
+        // from `StageBuilder.grade(for:)`: what the impact frame punches and
+        // puts back exactly, and what a lost field drains from.
+        restSaturation = cameraNode.camera?.saturation ?? 1
+        restContrast = cameraNode.camera?.contrast ?? 0
+        restExposure = cameraNode.camera?.exposureOffset ?? 0
         // The lens and the framing are one solve, so this class owns both
         // rather than reading a field of view off the node and hoping the two
         // agree. The projection direction is stated rather than assumed:
@@ -725,7 +742,7 @@ final class CameraDirector {
     /// no longer end a turn somewhere unexpected.
     func returnHome(duration: TimeInterval = 0.5) {
         shotGeneration += 1
-        cameraNode.removeAllActions()
+        stopMoves()
         // Nothing sets a constraint on this node any more — shots aim with
         // `look(at:)` frame by frame — but an old one left in place used to
         // turn the home framing into a stare at the last victim's chest, so
@@ -784,7 +801,7 @@ final class CameraDirector {
         }
 
         shotGeneration += 1
-        cameraNode.removeAllActions()
+        stopMoves()
         cameraNode.constraints = []
         isOffHome = true
 
@@ -959,7 +976,7 @@ final class CameraDirector {
 
         shotGeneration += 1
         let generation = shotGeneration
-        cameraNode.removeAllActions()
+        stopMoves()
         cameraNode.constraints = []
         // Orientation set once, from home, and never again during the shot:
         // the move below changes the position only.
@@ -1017,6 +1034,223 @@ final class CameraDirector {
         recover.timingMode = .easeOut
         cameraNode.runAction(.sequence([shake, recover]), forKey: "shake")
     }
+
+    /// Stops whatever is moving the camera — a shot, a shake, a lens change —
+    /// and nothing else: the grade's own action (`drainColour`) is not a
+    /// move, and a return home must not undo a field's colour draining.
+    private func stopMoves() {
+        for key in ["shot", "shake", "fov"] {
+            cameraNode.removeAction(forKey: key)
+        }
+    }
+
+    // MARK: - The impact frame (Docs/FEEL.md W1.3)
+
+    /// The saturation, and what the contrast and the exposure gain, for the
+    /// two frames of a crit's or a kill's impact frame: the anime cut of a
+    /// big hit, the colour knocked out of the world and the light pushed,
+    /// before everything snaps back.
+    static let impactSaturation: CGFloat = 0.25
+    static let impactContrast: CGFloat = 0.35
+    static let impactExposure: CGFloat = 0.3
+
+    /// Main thread: the realm's grade punched for `duration` — two frames at
+    /// 60 Hz — then put back exactly as `StageBuilder.grade(for:)` set it
+    /// (read when this director was made). Set straight on the camera, not
+    /// through an action: it lands at the start of the hit's freeze, when
+    /// every action in the scene is paused and the view is still drawing.
+    /// Never under Reduce Motion, and not over a field whose colour is
+    /// draining.
+    func impactFrame(duration: TimeInterval = 2.0 / 60.0) {
+        guard !MotionComfort.isReduced, !draining, let camera = cameraNode.camera else { return }
+        gradeGeneration += 1
+        let generation = gradeGeneration
+        camera.saturation = Self.impactSaturation
+        camera.contrast = restContrast + Self.impactContrast
+        camera.exposureOffset = restExposure + Self.impactExposure
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) { [weak self] in
+            guard let self, self.gradeGeneration == generation, !self.draining else { return }
+            self.restoreGrade()
+        }
+    }
+
+    /// The realm's grade, exactly.
+    private func restoreGrade() {
+        guard let camera = cameraNode.camera else { return }
+        camera.saturation = restSaturation
+        camera.contrast = restContrast
+        camera.exposureOffset = restExposure
+    }
+
+    // MARK: - The end of the fight (Docs/FEEL.md W1.7)
+
+    /// Main thread, on a loss: the colour eases out of the field to
+    /// `saturation` over `duration`, from the realm's grade, and stays out
+    /// until a new run builds a new camera. An action on the camera under
+    /// its own key (`stopMoves` leaves it), easing by smoothstep.
+    func drainColour(to saturation: CGFloat, over duration: TimeInterval) {
+        guard let camera = cameraNode.camera else { return }
+        gradeGeneration += 1
+        draining = true
+        restoreGrade()
+        let from = restSaturation
+        let span: TimeInterval = max(0.01, duration)
+        cameraNode.removeAction(forKey: "grade")
+        let drain = SCNAction.customAction(duration: span) { _, elapsed in
+            let raw = min(1, CGFloat(elapsed) / CGFloat(span))
+            let eased = raw * raw * (3 - 2 * raw)
+            camera.saturation = from + (saturation - from) * eased
+        }
+        cameraNode.runAction(drain, forKey: "grade")
+    }
+
+    /// The final blow's camera (W1.7): from wherever the camera is — a
+    /// skill's zoom may hold it — it eases along the home line of sight
+    /// toward the victim over `easeIn`, the victim 42% of the frame tall at
+    /// most, and back home over `back`. The same yaw, pitch and lens as
+    /// every frame of the fight: the floor never turns. Its actions run in
+    /// scene time, so they wait out the blow's freeze with everything else.
+    func easeToward(_ victim: UnitNode, over easeIn: TimeInterval, back easeOut: TimeInterval) {
+        let sight = SCNVector3(homeAim.x - homePosition.x, homeAim.y - homePosition.y, homeAim.z - homePosition.z)
+        let length = max(0.001, (sight.x * sight.x + sight.y * sight.y + sight.z * sight.z).squareRoot())
+        let dir = SCNVector3(sight.x / length, sight.y / length, sight.z / length)
+        let height = victim.spec.height
+        let halfLens = Float(Self.lensFieldOfView) / 2 * .pi / 180
+        let wanted = (height / Self.finalBlowFraction) / (2 * tan(halfLens))
+        let standing = victim.position
+        let chest = SCNVector3(standing.x, standing.y + height * 0.55, standing.z)
+        let depth = dot(SCNVector3(chest.x - homePosition.x, chest.y - homePosition.y, chest.z - homePosition.z), dir)
+        guard depth > 3 else { return }
+        let distance = min(wanted, depth * 0.85)
+        let destination = SCNVector3(chest.x - dir.x * distance, chest.y - dir.y * distance, chest.z - dir.z * distance)
+        let start = cameraNode.position
+        let home = homePosition
+        shotGeneration += 1
+        let generation = shotGeneration
+        stopMoves()
+        cameraNode.constraints = []
+        cameraNode.camera?.fieldOfView = Self.lensFieldOfView
+        isOffHome = true
+        let inSpan: TimeInterval = max(0.01, easeIn)
+        let outSpan: TimeInterval = max(0.01, easeOut)
+        let dollyIn = SCNAction.customAction(duration: inSpan) { node, elapsed in
+            let raw = Float(min(1, elapsed / CGFloat(inSpan)))
+            let t = raw * raw * (3 - 2 * raw)
+            node.position = SCNVector3(
+                start.x + (destination.x - start.x) * t,
+                start.y + (destination.y - start.y) * t,
+                start.z + (destination.z - start.z) * t
+            )
+        }
+        let dollyOut = SCNAction.customAction(duration: outSpan) { node, elapsed in
+            let raw = Float(min(1, elapsed / CGFloat(outSpan)))
+            let t = raw * raw * (3 - 2 * raw)
+            node.position = SCNVector3(
+                destination.x + (home.x - destination.x) * t,
+                destination.y + (home.y - destination.y) * t,
+                destination.z + (home.z - destination.z) * t
+            )
+        }
+        cameraNode.runAction(.sequence([dollyIn, dollyOut]), forKey: "shot") { [weak self] in
+            self?.afterShot(generation, nil)
+        }
+    }
+
+    /// How much of the frame's height the final blow's victim may stand.
+    private static let finalBlowFraction: Float = 0.42
+
+    /// The triumph's framing (W1.7): the camera comes in along the home line
+    /// of sight on the survivors — `team`, each at the mark it is walking
+    /// onto, with its height — until they stand `teamFraction` of the frame
+    /// tall, no nearer than keeps every one of them and a shoulder's room
+    /// inside `teamSpread` of the half-width, and holds there. The team's
+    /// chests sit well under the frame's centre (`teamLowering`), leaving the
+    /// upper frame to the VICTORY stamp. The same yaw, pitch and lens: the floor
+    /// never turns. Reduce Motion goes `MotionComfort.zoomReach` of the way.
+    /// Returns where the camera ends, so each figure can turn to face it.
+    @discardableResult
+    func frameTeam(_ team: [(position: SCNVector3, height: Float)], over duration: TimeInterval) -> SCNVector3 {
+        guard !team.isEmpty else { return cameraNode.position }
+        let sight = SCNVector3(homeAim.x - homePosition.x, homeAim.y - homePosition.y, homeAim.z - homePosition.z)
+        let length = max(0.001, (sight.x * sight.x + sight.y * sight.y + sight.z * sight.z).squareRoot())
+        let dir = SCNVector3(sight.x / length, sight.y / length, sight.z / length)
+        // The frame's right and up, from the home camera: level, and square
+        // to the line of sight.
+        let flat = max(0.001, (dir.x * dir.x + dir.z * dir.z).squareRoot())
+        let right = SCNVector3(-dir.z / flat, 0, dir.x / flat)
+        let up = SCNVector3(
+            right.y * dir.z - right.z * dir.y,
+            right.z * dir.x - right.x * dir.z,
+            right.x * dir.y - right.y * dir.x
+        )
+        var centreX: Float = 0
+        var centreZ: Float = 0
+        var tallest: Float = 0
+        for member in team {
+            centreX += member.position.x / Float(team.count)
+            centreZ += member.position.z / Float(team.count)
+            tallest = max(tallest, member.height)
+        }
+        let chest = SCNVector3(centreX, tallest * 0.55, centreZ)
+        let tanV = tan(Float(Self.lensFieldOfView) * .pi / 360)
+        let tanH = tanV * Self.aspect
+        let forHeight = (tallest / Self.teamFraction) / (2 * tanV)
+        var reach: Float = 0
+        for member in team {
+            let offset = SCNVector3(member.position.x - chest.x, 0, member.position.z - chest.z)
+            reach = max(reach, abs(dot(offset, right)) + Self.shoulderRoom)
+        }
+        let forWidth = reach / (Self.teamSpread * tanH)
+        let depth = dot(SCNVector3(chest.x - homePosition.x, chest.y - homePosition.y, chest.z - homePosition.z), dir)
+        guard depth > 3 else { return cameraNode.position }
+        let distance = min(max(forHeight, forWidth), depth * 0.85)
+        // The team well under the centre: the frame's centre is set on a
+        // point above the chest.
+        let lift = distance * tanV * Self.teamLowering
+        let focus = SCNVector3(chest.x + up.x * lift, chest.y + up.y * lift, chest.z + up.z * lift)
+        let full = SCNVector3(focus.x - dir.x * distance, focus.y - dir.y * distance, focus.z - dir.z * distance)
+        let destination = MotionComfort.isReduced ? lerp(homePosition, full, MotionComfort.zoomReach) : full
+        let start = cameraNode.position
+        shotGeneration += 1
+        stopMoves()
+        cameraNode.constraints = []
+        cameraNode.camera?.fieldOfView = Self.lensFieldOfView
+        isOffHome = true
+        let span: TimeInterval = max(0.01, duration)
+        let dolly = SCNAction.customAction(duration: span) { node, elapsed in
+            let raw = Float(min(1, elapsed / CGFloat(span)))
+            let t = raw * raw * (3 - 2 * raw)
+            node.position = SCNVector3(
+                start.x + (destination.x - start.x) * t,
+                start.y + (destination.y - start.y) * t,
+                start.z + (destination.z - start.z) * t
+            )
+        }
+        // Held: no way back is queued. A new run builds a new camera.
+        cameraNode.runAction(dolly, forKey: "shot")
+        return destination
+    }
+
+    /// The team's share of the frame's height in the triumph, how much of
+    /// the half-width its outermost shoulders may reach, and how far under
+    /// the centre (as a share of the half-frame) its chests stand.
+    ///
+    /// 0.42 under, not 0.22 (review, 2026-09-24): the VICTORY stamp takes
+    /// the frame's top 136 points (`VictoryStamp`: its stars, then its
+    /// 84-point band), and at 0.22 the team's heads stood 150–190 points
+    /// down, which put every plate's LEVEL UP (its words stand 72 points
+    /// over the head: `UnitPlate.riseAboveHead`, the track, a gap and the
+    /// words) under the band and the tallest badge on its rule. At 0.42 —
+    /// solved in a port of this and of the home camera for one to five
+    /// survivors of 1.9–2.2 m on an 852 × 393 frame — the words' letters
+    /// stand 139 points down or lower and the feet 375 or higher; a 2.6-m
+    /// giant's words touch the band's foot and its feet reach 390. The
+    /// camera still comes in to `teamFraction` (or as far as the width
+    /// allows), and never less than 15% of its depth: a push onto a team
+    /// that keeps the lower half of the frame while the stamp has the upper.
+    private static let teamFraction: Float = 0.40
+    private static let teamSpread: Float = 0.8
+    private static let teamLowering: Float = 0.42
 
     // MARK: - Helpers
 

@@ -41,8 +41,12 @@ jobs:
     # run 237 (the feature day's 52 steps) left ten minutes spare: 90. The
     # memory stress (step 53, 2026-09-24) adds about seven minutes and at
     # most fifteen, when both of its waits run out (a summon run's own
-    # worst case is 212 s before a stall, a battle run's 480): 105.
-    timeout-minutes: 105
+    # worst case is 212 s before a stall, a battle run's 480): 105. The
+    # premium feel's Wave 1 (the same day) adds the battle step's
+    # -layers-off relaunch and the victory step's real win and forfeit
+    # (-tour-victory field|defeat): about two minutes, and five when the
+    # victory's three cue waits (120 + 45 + 60 s) all run out: 110.
+    timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
         with:
@@ -156,6 +160,21 @@ jobs:
               ticks=$((ticks + 1))
               if [ $ticks -gt $(( $2 * 10 )) ]; then
                 echo "$(date -u +%T) no '$1' cue from step $step in $2 s"
+                return 0
+              fi
+              sleep 0.1
+            done
+          }
+          # The same wait as cue(), on the LATEST relaunch's stdout (again,
+          # below): a beat a relaunch plays on its own clock — the victory
+          # step's real win (-tour-victory field) ends when the fight does,
+          # which no sleep can know.
+          cue_again() {
+            local out="shots/$step-${names[$step]}-again$(printf %03d $relaunches)-out.txt" ticks=0
+            until grep -q "\[TourCue\] $1" "$out" 2>/dev/null; do
+              ticks=$((ticks + 1))
+              if [ $ticks -gt $(( $2 * 10 )) ]; then
+                echo "$(date -u +%T) no '$1' cue from step $step's relaunch in $2 s"
                 return 0
               fi
               sleep 0.1
@@ -277,7 +296,12 @@ jobs:
               battle) sleep 7; shoot "$step-${names[$step]}-a"; sleep 8; shoot "$step-${names[$step]}-b"; sleep 8; shoot "$step-${names[$step]}-c"; sleep 8; shoot "$step-${names[$step]}-d"
                 # The skill panel: the first player turn opens with a skill
                 # chosen and what it does over the skill squares.
-                again -tour-skill-info; sleep 12; shoot "$step-${names[$step]}-skill" ;;
+                again -tour-skill-info; sleep 12; shoot "$step-${names[$step]}-skill"
+                # The fight under the light rig from before the figures and
+                # the set had lights of their own (Docs/FEEL.md L1): the
+                # control 6-battle-a is judged against, as the reveal's
+                # 5-reveal-awakened-layers-off is for its stage.
+                again -tour-layers off; sleep 9; shoot "$step-${names[$step]}-layers-off" ;;
               # Then an enemy's area ultimate on the team, cast once a second
               # by -tour-aoe through the path a real one takes (run 224's b
               # caught Fenrir's by chance: four white sheets, one slab over
@@ -293,7 +317,34 @@ jobs:
               # or more, which is in these numbers. The old 4/5/8 landed the
               # first frame on the very instant the chest's SceneKit view was
               # made, and photographed a black screen with TAP TO OPEN on it.
-              victory|raid_grade) sleep 2; shoot "$step-${names[$step]}-a"; sleep 3; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
+              raid_grade) sleep 2; shoot "$step-${names[$step]}-a"; sleep 3; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c" ;;
+              # The victory step's demo acts as above, then a REAL win's end
+              # (Docs/FEEL.md W1.6, W1.7; -tour-victory field): the Duat's
+              # first gate on auto at x3, seeded so the win levels the
+              # demigod and the team's leader. When the fight ends the app
+              # prints [TourCue] triumph and holds the beat nine seconds:
+              # -0 is VICTORY stamped over the live field with its stars,
+              # the HUD gone; -triumph, a few seconds on, the survivors
+              # turned to the camera in their own victory poses with gold
+              # EXP bars on their plates and LEVEL UP over the leader. A
+              # screenshot lands two to three seconds after it is asked for
+              # (relic_awaken's note, below), so under the tour the pose is
+              # played at a quarter of its pace (BattleSceneController
+              # .tourPosePace: eight seconds, not two) and -triumph is asked
+              # for a second after -0 is back, landing inside it. The
+              # reckoning then plays itself on to the level-up, printing
+              # [TourCue] levelup and holding it seven seconds: -levelup is
+              # LEVEL N in carved gold over the light shafts with its chips.
+              # Then the same gate forfeited seven seconds in (-tour-victory
+              # defeat, [TourCue] fallen, held six seconds): -defeat is DEFEAT
+              # in wine over the field drained to grey.
+              victory) sleep 2; shoot "$step-${names[$step]}-a"; sleep 3; shoot "$step-${names[$step]}-b"; sleep 5; shoot "$step-${names[$step]}-c"
+                again -tour-victory field
+                cue_again triumph 120; shoot "$step-${names[$step]}-0"
+                sleep 1; shoot "$step-${names[$step]}-triumph"
+                cue_again levelup 45; sleep 1; shoot "$step-${names[$step]}-levelup"
+                again -tour-victory defeat
+                cue_again fallen 60; shoot "$step-${names[$step]}-defeat" ;;
               # The rite at its peak, then the awakened relic with its fifth
               # sub stat's choice up. The rite's own clock (RelicAwakeningRite
               # .play): the veil up by 0.35 s, the halo drawn by 1.2, AWAKENED
@@ -486,7 +537,8 @@ jobs:
               # crashes"). The plain launch is the summon screen at rest, the
               # baseline. Then thirty singles and three ten-pulls through the
               # summon screen's calls and reveal, and six campaign runs on
-              # auto-repeat at x4, each relaunch printing [Mem] after every
+              # auto-repeat at x3 (the speed control's top since W1.1; x4
+              # before 2026-09-24), each relaunch printing [Mem] after every
               # pull or run and [TourCue] stress-done at the end. A frame 40 s
               # in (a reveal or a fight in progress) and one at the end. The
               # whole curve is shots/memory.txt (below).

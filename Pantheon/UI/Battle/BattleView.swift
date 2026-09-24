@@ -54,6 +54,62 @@ struct BattleView: View {
     /// 3D arrow landed on its body (run 220).
     @State private var bossMatchups: [UUID: Element.Matchup] = [:]
 
+    // MARK: The end of the fight (Docs/FEEL.md W1.7)
+
+    /// Where the fight's end stands. The fight; then a beat ON THE FIELD —
+    /// the survivors turned to the camera and posing under VICTORY while
+    /// their plates fill with experience, or the colour draining out under
+    /// DEFEAT — and only then the reckoning, over a scrim light enough that
+    /// the team stays in sight behind it. The victory used to be played by
+    /// survivors facing away from the camera, a second before a 0.84 scrim
+    /// covered them: 115 families' victory clips that nobody had seen.
+    private enum FieldBeat { case fighting, triumph, fallen, reckoning }
+    @State private var beat: FieldBeat = .fighting
+    /// The last fight's own result — what the field shows — which an
+    /// auto-repeat's summary (every run's) can differ from.
+    @State private var fieldOutcome: BattleOutcome = .victory
+    /// Bumped as each beat begins, so a timer that outlived its beat steps
+    /// aside rather than moving a later one on.
+    @State private var beatSequence = 0
+    @State private var beatBegan: Date?
+
+    // MARK: The skill squares' answers (Docs/FEEL.md W1.9)
+
+    /// Per slot, a count bumped each time the player arms that skill: the
+    /// square's gold ring plays on it (`SkillButton.armPulse`).
+    @State private var armPulses: [Int: Int] = [:]
+    /// Per slot, a count bumped when the skill comes off cooldown: the
+    /// square's gloss sweeps on it (`SkillButton.readyGlint`).
+    @State private var readyGlints: [Int: Int] = [:]
+    /// Each player unit's skills that were cooling when its last turn opened:
+    /// the diff a skill ready again is found by (`noteCooldowns`).
+    @State private var coolingSlots: [UUID: Set<Int>] = [:]
+
+    /// The reckoning waits this long after the outcome lands, so the last
+    /// blow and the scene's own end of the fight are seen first.
+    private static let settleDelay: TimeInterval = 0.8
+    /// A loss: the colour drains over this long, and DEFEAT sits over the
+    /// grey field until `fallenHold` before the reckoning.
+    private static let drainDuration: TimeInterval = 0.8
+    private static let fallenHold: TimeInterval = 2.0
+    /// The reckoning's scrim over the field (0.84 until 2026-09-24, which
+    /// hid the team the beat had just posed).
+    private static let reckoningScrim: Double = 0.55
+    /// A tap hurries the beat to the reckoning, but not before the stamp and
+    /// its stars have landed (the third star lands about 1.03 s in): the
+    /// moment is shortened, never cut, and the taps that ended the fight
+    /// are not read as a wish to skip it.
+    private static let beatTapGrace: TimeInterval = 1.2
+    /// `-tour-victory field|defeat` (TourView): the CI job photographs the
+    /// beat, and a simulator screenshot lands seconds after it is asked for,
+    /// so the triumph holds long enough for two frames and the fall for one,
+    /// the reckoning plays itself on to the level-up and the chest
+    /// (`BattleResultView.autoplay`), and `[TourCue] triumph` or `[TourCue]
+    /// fallen` tells the job when the beat began.
+    private static let touringVictory = ProcessInfo.processInfo.arguments.contains("-tour-victory")
+    private static let tourTriumphHold: TimeInterval = 9
+    private static let tourFallenHold: TimeInterval = 6
+
     var body: some View {
         ZStack {
             BattleSceneView(controller: model.sceneController) { id in
@@ -116,12 +172,12 @@ struct BattleView: View {
                 .padding(.top, 4)
                 .frame(width: geometry.size.width, height: geometry.size.height)
             }
-            // The reckoning takes the field: the chips, the controls and the
-            // skills fade with its arrival (it is set inside an animation)
-            // rather than showing through its scrim, as they did in run 220
-            // behind the VICTORY wordmark and under its tiles.
-            .opacity(summary == nil ? 1 : 0)
-            .allowsHitTesting(summary == nil)
+            // The fight's end takes the field: the chips, the controls and
+            // the skills fade as its beat arrives (it is set inside an
+            // animation) rather than showing through it, as they did in run
+            // 220 behind the VICTORY wordmark and under its tiles.
+            .opacity(beat == .fighting ? 1 : 0)
+            .allowsHitTesting(beat == .fighting)
 
             // The frame goes white for a beat as an ultimate's cut-in lands —
             // never under Reduce Motion (`MotionComfort`, iOS's or the game's).
@@ -150,7 +206,7 @@ struct BattleView: View {
                     }
             }
 
-            if showLog, summary == nil { logOverlay }
+            if showLog, beat == .fighting { logOverlay }
 
             if let banner = model.repeatBanner {
                 Text(banner)
@@ -169,9 +225,19 @@ struct BattleView: View {
                     }
             }
 
-            if let summary {
-                BattleResultView(summary: summary, onDismiss: { dismiss() }, store: model.store)
-                    .transition(.opacity.combined(with: .scale(scale: 0.95)))
+            // The beat on the field, over the live scene (W1.7).
+            fieldBeatLayer
+
+            // The reckoning, over a scrim that keeps the team in sight; its
+            // panels slide in on their own (`BattleResultView.arrived`). The
+            // stars the stamp slammed in over the field stand lit in it
+            // rather than ticking in a second time.
+            if beat == .reckoning, let summary {
+                BattleResultView(
+                    summary: summary, onDismiss: { dismiss() }, autoplay: Self.touringVictory,
+                    store: model.store, scrim: Self.reckoningScrim, starsLanded: fieldOutcome == .victory
+                )
+                .transition(.opacity)
             }
         }
         .preferredColorScheme(.dark)
@@ -188,27 +254,27 @@ struct BattleView: View {
         }
         .onDisappear {
             model.sceneController.onBossMatchups = nil
+            // A beat still counting when the screen goes steps aside.
+            beatSequence += 1
             AudioLibrary.shared.playMusic(.island)
         }
-        // A new actor means the old one's skill preview is meaningless.
+        // A new actor means the old one's skill preview is meaningless; its
+        // skills are diffed against its last turn for the ones ready again.
         .onChange(of: model.awaitingActor?.id) { _, _ in
             previewSlot = nil
             inspectedSlot = nil
             showTourSkillPanel()
+            if let actor = model.awaitingActor { noteCooldowns(of: actor) }
         }
         .onChange(of: model.outcome?.outcome) { _, newValue in
             guard newValue != nil else { return }
-            // Let the last animation land before the result panel takes over.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                // On a repeat run this banks the loot and starts the next
-                // fight instead of returning a panel.
+            // Let the last blow land before the end of the fight begins.
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.settleDelay) {
+                // On a repeat run with runs still to go this banks the loot
+                // and starts the next fight instead of returning a summary,
+                // and no beat plays: the beat is the LAST run's (W1.7).
                 if let concluded = model.conclude() {
-                    // The plates and the floating numbers go with the HUD.
-                    model.sceneController.setPlatesHidden(true)
-                    withAnimation(.easeOut(duration: 0.35)) {
-                        inspectedSlot = nil
-                        summary = concluded
-                    }
+                    endFight(concluded)
                 }
             }
         }
@@ -221,6 +287,94 @@ struct BattleView: View {
         } message: {
             Text("Forfeiting counts as a loss, and energy already spent is not refunded.")
         }
+    }
+
+    // MARK: - The end of the fight (Docs/FEEL.md W1.7)
+
+    /// The beat over the live field: VICTORY stamped over the posing team,
+    /// or DEFEAT in wine over the drained one, with a layer over the whole
+    /// screen that takes a tap to hurry on to the reckoning.
+    @ViewBuilder
+    private var fieldBeatLayer: some View {
+        switch beat {
+        case .triumph:
+            VictoryStamp(stars: stampStars)
+                .transition(.opacity)
+            beatTapCatcher
+        case .fallen:
+            DefeatStamp(outcome: fieldOutcome)
+                .transition(.opacity)
+            beatTapCatcher
+        case .fighting, .reckoning:
+            EmptyView()
+        }
+    }
+
+    /// The stars the stamp slams in: the fight's own, or an auto-repeat's
+    /// last run's (`BattleSummary.stampStars`).
+    private var stampStars: Int {
+        guard let summary else { return 0 }
+        return summary.stampStars ?? summary.stars
+    }
+
+    /// A tap during the beat moves it on to the reckoning: the moment is
+    /// shortened for a player who has seen it, never deleted (FEEL.md,
+    /// principle 8).
+    private var beatTapCatcher: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .ignoresSafeArea()
+            .onTapGesture { hurryToReckoning() }
+    }
+
+    /// The fight is over and settled (`conclude()` has paid it): the beat on
+    /// the field, then the reckoning. A win turns the survivors to the camera
+    /// to pose in their own victory clips, the camera framing them, their
+    /// plates' health swapped for the gold EXP bar filling from where it
+    /// stood (`celebrate(experience:)`), and VICTORY slams down over them
+    /// with the stars; the plates stay up through it. A loss drains the
+    /// field's colour and DEFEAT settles over it in wine. The victory's
+    /// fanfare stays the reckoning's, played once as its ribbon lands.
+    private func endFight(_ concluded: BattleSummary) {
+        beatSequence += 1
+        let mine = beatSequence
+        let field = model.outcome?.outcome ?? concluded.outcome
+        fieldOutcome = field
+        previewSlot = nil
+        inspectedSlot = nil
+        showLog = false
+        summary = concluded
+        beatBegan = Date()
+        let hold: TimeInterval
+        if field == .victory {
+            model.sceneController.celebrate(experience: concluded.experience)
+            withAnimation(.easeOut(duration: 0.35)) { beat = .triumph }
+            hold = Self.touringVictory ? Self.tourTriumphHold : BattleSceneController.triumphDuration
+            if Self.touringVictory { print("[TourCue] triumph") }
+        } else {
+            model.sceneController.drainColour(duration: Self.drainDuration)
+            withAnimation(.easeOut(duration: 0.5)) { beat = .fallen }
+            hold = Self.touringVictory ? Self.tourFallenHold : Self.fallenHold
+            if Self.touringVictory { print("[TourCue] fallen") }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + hold) {
+            guard mine == beatSequence else { return }
+            reckon()
+        }
+    }
+
+    /// The reckoning takes over from the beat. The plates, which stood
+    /// through the beat with their EXP bars, leave with it now.
+    private func reckon() {
+        guard beat == .triumph || beat == .fallen else { return }
+        beatSequence += 1
+        model.sceneController.setPlatesHidden(true)
+        withAnimation(.easeOut(duration: 0.35)) { beat = .reckoning }
+    }
+
+    private func hurryToReckoning() {
+        guard let began = beatBegan, Date().timeIntervalSince(began) >= Self.beatTapGrace else { return }
+        reckon()
     }
 
     // MARK: - Top bar
@@ -335,12 +489,17 @@ struct BattleView: View {
                 Image(systemName: "gearshape.fill")
                     .font(.system(size: 20, weight: .bold))
             }
+            // ×1 → ×2 → ×3 → ×1, the genre's three, remembered between fights
+            // (`BattleSpeed`, Docs/FEEL.md W1.1). ×3 keeps the fight's feel,
+            // scaled; Skip is the one way to watch a turn without it.
             squareControl {
-                model.speed = model.speed >= 3 ? 1 : model.speed * 2
+                model.speed = BattleSpeed.next(after: model.speed)
             } label: {
                 Text("×\(Int(model.speed))")
                     .font(Theme.numeric(15).weight(.black))
             }
+            .accessibilityLabel("Battle speed")
+            .accessibilityValue("×\(Int(model.speed))")
             // His auto shows the pause glyph while it runs, and nothing else
             // changes: the glyph IS the state, as ×3 is the speed's.
             squareControl {
@@ -366,6 +525,11 @@ struct BattleView: View {
     /// are a window. The dark is 0.45 (over his ~0.3) because our sets run
     /// paler than his and the glyph is white; a soft shadow under the glyph
     /// and the outline keeps both off a sunlit floor.
+    ///
+    /// The game's one press (`GamePressStyle`, Docs/FEEL.md W1.8) since
+    /// 2026-09-24: the square sinks, ticks and taps under the thumb and
+    /// springs back — the speed above all, stepped a fight at a time now
+    /// that it is remembered (W1.1). The three were `.plain` and silent.
     private func squareControl<L: View>(action: @escaping () -> Void, @ViewBuilder label: () -> L) -> some View {
         Button(action: action) {
             label()
@@ -383,7 +547,7 @@ struct BattleView: View {
                 )
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(GamePressStyle(.plate))
     }
 
     /// The skill squares' gap: his centres stand 78.3 points apart on
@@ -406,6 +570,8 @@ struct BattleView: View {
                     element: actor.element,
                     ranged: !actor.model.melee,
                     iconKey: index < icons.count ? icons[index] : nil,
+                    armPulse: armPulses[option.slot] ?? 0,
+                    readyGlint: readyGlints[option.slot] ?? 0,
                     onHold: { inspectedSlot = option.slot },
                     onPreview: { pressed in
                         previewSlot = pressed ? option.slot : nil
@@ -414,9 +580,51 @@ struct BattleView: View {
                         if pressed { inspectedSlot = option.slot }
                     }
                 ) {
-                    model.selectSkill(option.slot)
+                    press(option.slot)
                 }
             }
+        }
+    }
+
+    /// A tap on a skill's square: the view model arms it, or — armed
+    /// already — uses it. Arming answers in the hand, the ear and the eye at
+    /// once (Docs/FEEL.md W1.9): a selection tick and a gold ring pulsing
+    /// out of the square. A use answers with the cast itself; the basic
+    /// armed for the player as a turn opens (`armBasicAttack`) makes no
+    /// sound, because nobody chose it.
+    private func press(_ slot: Int) {
+        let wasArmed = model.selectedSkillSlot == slot
+        model.selectSkill(slot)
+        guard !wasArmed, model.selectedSkillSlot == slot else { return }
+        armPulses[slot, default: 0] += 1
+        Juice.haptic(.light)
+        AudioLibrary.shared.play(.uiTap, volume: 0.8)
+    }
+
+    /// The skills ready again since this unit's last turn (Docs/FEEL.md
+    /// W1.9): those cooling when its last turn opened and ready at this one
+    /// gloss over and chime, a beat after the squares appear. The first turn
+    /// a unit is seen only sets its record. Every skill with a cooldown of
+    /// two or more passes through the record — the engine counts a cooldown
+    /// down as the turn it was set in ENDS, so the skill is still cooling
+    /// when its caster's next turn opens; a cooldown of one never takes the
+    /// skill away, and there is nothing to announce. On auto the squares are
+    /// not up and nothing plays, but the record is kept.
+    private func noteCooldowns(of actor: Combatant) {
+        let cooling = Set(actor.cooldowns.indices.filter { actor.cooldowns[$0] > 0 })
+        let before = coolingSlots[actor.id]
+        coolingSlots[actor.id] = cooling
+        guard let before, !model.autoBattle else { return }
+        let usable = Set(model.availableSkills.map(\.slot))
+        let ready = before.subtracting(cooling).intersection(usable)
+        guard !ready.isEmpty else { return }
+        let actorID = actor.id
+        // A beat after the row is made: a count bumped with the square's
+        // making would be its first value, and nothing would play.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            guard model.awaitingActor?.id == actorID else { return }
+            for slot in ready { readyGlints[slot, default: 0] += 1 }
+            AudioLibrary.shared.play(.starTick, volume: 0.55)
         }
     }
 
@@ -970,6 +1178,12 @@ struct SkillButton: View {
     var ranged: Bool = false
     /// The icon chosen for this slot with the caster's other skills in mind.
     var iconKey: String? = nil
+    /// Bumped each time the player arms this skill (Docs/FEEL.md W1.9): a
+    /// gold ring pulses out of the square with the selection tick.
+    var armPulse: Int = 0
+    /// Bumped when the skill comes off cooldown: a gloss sweeps across the
+    /// art with the chime.
+    var readyGlint: Int = 0
     /// Held down: show what the skill does.
     var onHold: (() -> Void)? = nil
     /// True the moment a finger lands on the tile, false when it lifts.
@@ -1009,6 +1223,9 @@ struct SkillButton: View {
                         .fill(Color.black.opacity(0.55))
                     OutlinedText(text: "\(cooldown)", font: Theme.display(28), fill: .white, width: 1.2)
                 }
+                // Ready again: a pale band sweeps across the art, inside the
+                // square's clip.
+                SkillGloss(trigger: readyGlint)
             }
             .frame(width: Self.side, height: Self.side)
             .clipShape(RoundedRectangle(cornerRadius: Self.corner, style: .continuous))
@@ -1035,6 +1252,10 @@ struct SkillButton: View {
                         .overlay(Circle().strokeBorder(Theme.glassRim, lineWidth: 0.8))
                         .padding(4)
                 }
+            }
+            // Armed: a gold ring goes out of the square, outside its clip.
+            .overlay {
+                SkillArmRing(trigger: armPulse, corner: Self.corner)
             }
             .shadow(color: isSelected ? Theme.gold.opacity(0.9) : Color.black.opacity(0.5), radius: isSelected ? 10 : 4, y: isSelected ? 0 : 2)
             .scaleEffect(isSelected ? 1.06 : 1)
@@ -1083,6 +1304,301 @@ struct SkillButton: View {
     }
 }
 
+// MARK: - The skill squares' answers (Docs/FEEL.md W1.9)
+
+/// The animated values of a ring that goes out and fades: the arm ring on a
+/// skill square and the ring the VICTORY stamp sends out as it lands.
+/// Hidden at rest; a keyframe animation ends where it stands, so it rests
+/// hidden again after every play.
+private struct PulseRingFrame {
+    var scale: Double = 1
+    var opacity: Double = 0
+}
+
+/// The gold ring that pulses out of a skill's square as the player arms it
+/// (`SkillButton.armPulse`): the rim of the square, gone out a third past
+/// it and faded in under half a second. Under Reduce Motion it brightens
+/// and fades where it stands.
+private struct SkillArmRing: View {
+    let trigger: Int
+    let corner: CGFloat
+
+    var body: some View {
+        let reach: Double = Motion.isCalm ? 1.0 : 1.32
+        RoundedRectangle(cornerRadius: corner + 2, style: .continuous)
+            .strokeBorder(Theme.goldText, lineWidth: 3)
+            .shadow(color: Color(hex: "#FFD678").opacity(0.9), radius: 6)
+            .keyframeAnimator(initialValue: PulseRingFrame(), trigger: trigger) { content, frame in
+                content
+                    .scaleEffect(frame.scale)
+                    .opacity(frame.opacity)
+            } keyframes: { _ in
+                KeyframeTrack(\.scale) {
+                    MoveKeyframe(1.0)
+                    CubicKeyframe(reach, duration: 0.45)
+                }
+                KeyframeTrack(\.opacity) {
+                    MoveKeyframe(0)
+                    LinearKeyframe(1, duration: 0.05)
+                    CubicKeyframe(0, duration: 0.42)
+                }
+            }
+            .allowsHitTesting(false)
+    }
+}
+
+/// Where the ready gloss's band stands across the square, in squares from
+/// its centre: off the left edge at rest, off the right once it has swept.
+private struct GlossSweepFrame {
+    var travel: Double = -1.3
+}
+
+/// The level-up numerals' animated values (`BattleResultView.levelUpAct`):
+/// small, low and clear before the fanfare's chord; up to full on it.
+private struct LevelNumeralFrame {
+    var scale: Double = 0.35
+    var opacity: Double = 0
+    var rise: Double = 22
+}
+
+/// A skill ready again (`SkillButton.readyGlint`): a pale band sweeps
+/// across the art corner to corner, the genre's glint on a thing that has
+/// come back. Drawn inside the square's clip, added to the art. Under
+/// Reduce Motion it still passes — a light crossing a button, not the
+/// field moving — but slower.
+private struct SkillGloss: View {
+    let trigger: Int
+
+    var body: some View {
+        let sweep: TimeInterval = Motion.isCalm ? 0.9 : 0.6
+        GeometryReader { geometry in
+            let side: CGFloat = geometry.size.width
+            let bandWidth: CGFloat = side * 0.42
+            let bandHeight: CGFloat = side * 1.9
+            LinearGradient(
+                colors: [Color.white.opacity(0), Color.white.opacity(0.65), Color.white.opacity(0)],
+                startPoint: .leading, endPoint: .trailing
+            )
+            .frame(width: bandWidth, height: bandHeight)
+            .rotationEffect(.degrees(22))
+            .keyframeAnimator(initialValue: GlossSweepFrame(), trigger: trigger) { content, frame in
+                content.offset(x: side * CGFloat(frame.travel))
+            } keyframes: { _ in
+                KeyframeTrack(\.travel) {
+                    MoveKeyframe(-1.3)
+                    CubicKeyframe(1.3, duration: sweep)
+                }
+            }
+            .frame(width: side, height: side)
+        }
+        .blendMode(.plusLighter)
+        .allowsHitTesting(false)
+    }
+}
+
+// MARK: - The beat on the field (Docs/FEEL.md W1.7)
+
+/// VICTORY stamped over the live field, the genre's: the word slams down
+/// out of the air onto a dark band ruled in gold, a ring of gold light goes
+/// out from it, and the stars the fight earned slam in over it one by one in
+/// a shallow arc, each with its tick and its knock in the hand; the stars
+/// not earned stand as empty sockets. It keeps to the top of the frame —
+/// the stars first, the band under them — so the team the camera is framing
+/// and the gold EXP bars over their heads stay clear, and it never takes a
+/// tap. Under Reduce Motion nothing travels: the word and the stars fade in
+/// where they stand, and no ring goes out.
+struct VictoryStamp: View {
+    let stars: Int
+
+    @State private var landed = false
+    @State private var shownStars = 0
+
+    private var earned: Int { min(3, max(0, stars)) }
+
+    /// The band's gold rules, bright in the middle and gone at the ends.
+    private static let rule = LinearGradient(
+        colors: [Color(hex: "#EDCB6C").opacity(0), Color(hex: "#FFF3C8"), Color(hex: "#EDCB6C").opacity(0)],
+        startPoint: .leading, endPoint: .trailing
+    )
+
+    var body: some View {
+        let calm: Bool = Motion.isCalm
+        let ringFrom: Double = calm ? 0 : 0.95
+        let wordScale: CGFloat = landed || calm ? 1 : 2.1
+        VStack(spacing: 2) {
+            // The arc: the middle star larger and a little higher.
+            HStack(alignment: .bottom, spacing: 12) {
+                star(1, size: 30)
+                star(2, size: 38)
+                    .offset(y: -6)
+                star(3, size: 30)
+            }
+            .opacity(landed ? 1 : 0)
+            ZStack {
+                StampBand(rule: VictoryStamp.rule, shade: 0.8)
+                    .scaleEffect(x: landed ? 1 : 0.25, y: 1)
+                    .opacity(landed ? 1 : 0)
+                Ellipse()
+                    .strokeBorder(Theme.goldText, lineWidth: 3)
+                    .frame(width: 320, height: 84)
+                    .shadow(color: Color(hex: "#FFD678").opacity(0.8), radius: 10)
+                    .keyframeAnimator(initialValue: PulseRingFrame(), trigger: landed) { content, frame in
+                        content
+                            .scaleEffect(frame.scale)
+                            .opacity(frame.opacity)
+                    } keyframes: { _ in
+                        KeyframeTrack(\.scale) {
+                            MoveKeyframe(0.7)
+                            CubicKeyframe(1.9, duration: 0.6)
+                        }
+                        KeyframeTrack(\.opacity) {
+                            MoveKeyframe(ringFrom)
+                            CubicKeyframe(0, duration: 0.6)
+                        }
+                    }
+                Text("VICTORY")
+                    .font(Theme.display(62))
+                    .tracking(8)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .carved()
+                    .scaleEffect(wordScale)
+                    .opacity(landed ? 1 : 0)
+            }
+            .frame(height: 84)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 14)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Victory, \(earned) of 3 stars")
+        .onAppear(perform: play)
+    }
+
+    /// A star's socket, and over it the gold star once it has slammed in.
+    private func star(_ index: Int, size: CGFloat) -> some View {
+        let lit = index <= shownStars
+        let slam: CGFloat = lit || Motion.isCalm ? 1 : 2.6
+        return ZStack {
+            Image(systemName: "star.fill")
+                .font(.system(size: size, weight: .black))
+                .foregroundStyle(Color.black.opacity(0.55))
+            Image(systemName: "star")
+                .font(.system(size: size, weight: .black))
+                .foregroundStyle(Theme.goldDim)
+            if index <= earned {
+                Image(systemName: "star.fill")
+                    .font(.system(size: size, weight: .black))
+                    .foregroundStyle(Theme.goldText)
+                    .shadow(color: Color(hex: "#FFD678").opacity(0.85), radius: 10)
+                    .scaleEffect(slam)
+                    .opacity(lit ? 1 : 0)
+            }
+        }
+    }
+
+    /// The word lands a breath after the HUD has gone, then the stars, a
+    /// quarter second apart — the reckoning's own cadence, heavier.
+    private func play() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+            withAnimation(Motion.pop) { landed = true }
+            Juice.haptic(.heavy)
+            AudioLibrary.shared.play(.hitHeavy, volume: 0.55)
+        }
+        let count = earned
+        for index in 0..<count {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.55 + Double(index) * 0.24) {
+                withAnimation(Motion.pop) { shownStars = index + 1 }
+                AudioLibrary.shared.play(.starTick, volume: 0.85)
+                Juice.haptic(index == count - 1 ? .medium : .light)
+            }
+        }
+    }
+}
+
+/// DEFEAT over the grey field (Docs/FEEL.md W1.7): the scene's colour
+/// drains (`BattleSceneController.drainColour`) while the word settles onto
+/// its band in wine — sinking a little, never slamming, and with no ring: a
+/// loss is not an event to ring. A draw says DRAW in marble.
+struct DefeatStamp: View {
+    let outcome: BattleOutcome
+
+    @State private var shown = false
+
+    private var word: String { outcome == .draw ? "DRAW" : "DEFEAT" }
+
+    var body: some View {
+        let settled: Bool = shown || Motion.isCalm
+        let glow: Double = outcome == .draw ? 0 : 0.7
+        ZStack {
+            StampBand(rule: DefeatStamp.ruleFill(for: outcome), shade: 0.72)
+            Text(word)
+                .font(Theme.display(62))
+                .tracking(8)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .foregroundStyle(DefeatStamp.wordFill(for: outcome))
+                .shadow(color: Color.black.opacity(0.8), radius: 1, y: 1)
+                .shadow(color: Theme.wine.opacity(glow), radius: 14)
+                .scaleEffect(settled ? 1 : 1.12)
+                .offset(y: settled ? 0 : -10)
+        }
+        .frame(height: 84)
+        .opacity(shown ? 1 : 0)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 48)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(word.capitalized)
+        .onAppear {
+            withAnimation(Motion.respecting(.easeOut(duration: 0.7))) { shown = true }
+        }
+    }
+
+    /// The word: wine for a defeat, from a lit rose at its crown to the
+    /// deep wine at its foot; marble for a draw.
+    private static func wordFill(for outcome: BattleOutcome) -> LinearGradient {
+        if outcome == .draw {
+            return LinearGradient(colors: [Color(hex: "#F4F1EA"), Theme.marble, Color(hex: "#A9A396")],
+                                  startPoint: .top, endPoint: .bottom)
+        }
+        return LinearGradient(colors: [Color(hex: "#E58A9C"), Color(hex: "#B8405A"), Theme.wine],
+                              startPoint: .top, endPoint: .bottom)
+    }
+
+    private static func ruleFill(for outcome: BattleOutcome) -> LinearGradient {
+        if outcome == .draw {
+            return LinearGradient(colors: [Theme.marble.opacity(0), Theme.marble, Theme.marble.opacity(0)],
+                                  startPoint: .leading, endPoint: .trailing)
+        }
+        return LinearGradient(colors: [Theme.wine.opacity(0), Color(hex: "#B8405A"), Theme.wine.opacity(0)],
+                              startPoint: .leading, endPoint: .trailing)
+    }
+}
+
+/// The band a stamp's word lies on: dark across the middle and clear at
+/// both ends, the way the ultimate's cut-in band is, with a rule of `rule`
+/// along each edge. As tall as the stamp makes it.
+private struct StampBand: View {
+    let rule: LinearGradient
+    let shade: Double
+
+    var body: some View {
+        LinearGradient(
+            colors: [Color.black.opacity(0), Theme.ink.opacity(shade), Theme.ink.opacity(shade), Color.black.opacity(0)],
+            startPoint: .leading, endPoint: .trailing
+        )
+        .overlay(alignment: .top) {
+            Rectangle().fill(rule).frame(height: 2)
+        }
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(rule).frame(height: 2)
+        }
+    }
+}
+
 /// The end of a battle, in two acts.
 ///
 /// The owner: "when we win a battle, it should first show the stats of the
@@ -1095,6 +1611,13 @@ struct SkillButton: View {
 /// a laurel on the one that did the most. A defeat gets the same reckoning in
 /// wine instead of gold, and a Continue button, because there is no chest to
 /// open after losing.
+///
+/// BETWEEN THEM, THE LEVEL (2026-09-24, Docs/FEEL.md W1.6). When the fight
+/// raised the demigod's level, the tap on the reckoning brings the level-up
+/// on its own: LEVEL 8 in carved gold springing in over light shafts on the
+/// fanfare's downbeat, then what it paid — the energy refilled, the bar's
+/// new length, the divinity — and what it opened, one chip at a time. The
+/// refill used to happen with no word at all.
 ///
 /// ACT TWO, THE CHEST. One tap and the reckoning gives way to a marble
 /// strongbox bound in bronze, shut, waiting. A second tap lifts the lid: a
@@ -1115,10 +1638,28 @@ struct BattleResultView: View {
     /// The store, for the relic drop card a spoil tile opens; without one
     /// the tiles are not tappable.
     var store: GameStore? = nil
+    /// The reckoning's scrim. The battle lays it over the live field at 0.55
+    /// (Docs/FEEL.md W1.7) so the team the victory beat posed stays in sight
+    /// behind the panels; the level-up and the chest deepen it to
+    /// `stageScrim`, because their light is additive and a lit field under
+    /// it washes it out. 0.84 alone, over black, for the tour's demo.
+    var scrim: Double = 0.84
+    /// The stars have already slammed in over the field (`VictoryStamp`):
+    /// the verdict shows them lit rather than ticking them in a second time.
+    var starsLanded: Bool = false
 
-    private enum Phase { case reckoning, chest, opened }
+    private enum Phase { case reckoning, levelUp, chest, opened }
 
     @State private var phase: Phase = .reckoning
+    /// The reckoning's panels have slid in over the scrim.
+    @State private var arrived = false
+    /// The level-up's numerals have landed (they spring in on it) and how
+    /// many of its chips are in.
+    @State private var levelLanded = false
+    @State private var levelChipsShown = 0
+    /// When the level-up began: a tap in its first second is the one that
+    /// opened it, still under the thumb, not a wish to leave it.
+    @State private var levelBegan: Date?
     @State private var shownStars = 0
     @State private var rowsShown = 0
     @State private var lidOpen = false
@@ -1139,21 +1680,50 @@ struct BattleResultView: View {
     /// as well as a kill, and the model puts nothing else on a lost raid's
     /// shelf. Every other defeat has an empty shelf, as it always did.
     private var hasSpoils: Bool { !summary.loot.isEmpty }
+    /// The fight raised the demigod's level: the level-up comes between the
+    /// reckoning and the chest.
+    private var hasLevelUp: Bool { summary.levelUp != nil }
+    /// The stars the verdict shows lit.
+    private var litStars: Int { starsLanded && won ? summary.stars : shownStars }
+
+    /// The scrim under the level-up and the chest, whatever the reckoning's.
+    private static let stageScrim: Double = 0.84
+    /// How long the tour holds the level-up before the chest, so the CI
+    /// job's frame lands on it (`[TourCue] levelup`).
+    private static let tourLevelUpHold: TimeInterval = 7
 
     var body: some View {
         ZStack {
-            // The scrim. Darker than the old 0.78 because the stage under it is
-            // sunlit now, and the two acts are read against it. It stays dark
-            // on a cream interface on purpose: the chest's beam, the flash and
-            // the rays are additive light and vanish on cream, and everything
-            // written straight on it is gold or marble, never ink — the panels
-            // carry the ink.
-            Color.black.opacity(0.84).ignoresSafeArea()
+            // The scrim. It stays dark on a cream interface on purpose: the
+            // chest's beam, the flash and the rays are additive light and
+            // vanish on cream, and everything written straight on it is gold
+            // or marble, never ink — the panels carry the ink. Over the live
+            // field the reckoning's is lighter (`scrim`), and it deepens as
+            // the reckoning gives way.
+            Color.black
+                .opacity(phase == .reckoning ? scrim : max(scrim, Self.stageScrim))
+                .ignoresSafeArea()
+                .animation(.easeInOut(duration: 0.45), value: phase)
+            // Over the live field the verdict's gold and marble words stand
+            // on the set, not on black: a little more dark under the left
+            // column, gone by the middle, where the team the beat posed is.
+            if phase == .reckoning, scrim < Self.stageScrim {
+                LinearGradient(colors: [Color.black.opacity(0.4), Color.black.opacity(0)],
+                               startPoint: .leading, endPoint: .center)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
 
             switch phase {
             case .reckoning:
                 reckoning
                     .transition(.opacity.combined(with: .scale(scale: 0.97)))
+            case .levelUp:
+                if let levelUp = summary.levelUp {
+                    levelUpAct(levelUp)
+                        .transition(.opacity)
+                }
             case .chest, .opened:
                 chestAct
                     .transition(.opacity)
@@ -1164,7 +1734,15 @@ struct BattleResultView: View {
 
     // MARK: - Act one
 
+    /// The panels slide in from below over the scrim (Docs/FEEL.md W1.7):
+    /// the reckoning arrives on the field rather than replacing it.
     private var reckoning: some View {
+        reckoningBody
+            .offset(y: arrived ? 0 : 44)
+            .opacity(arrived ? 1 : 0)
+    }
+
+    private var reckoningBody: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 18) {
                 verdict
@@ -1185,8 +1763,9 @@ struct BattleResultView: View {
 
             Spacer(minLength: 6)
 
-            if hasSpoils {
-                Text("TAP TO CLAIM YOUR SPOILS")
+            if hasSpoils || hasLevelUp {
+                // A level-up comes first, and it is not the spoils yet.
+                Text(hasLevelUp ? "TAP TO CONTINUE" : "TAP TO CLAIM YOUR SPOILS")
                     .font(Theme.body(11).weight(.black))
                     .tracking(2.2)
                     .foregroundStyle(Theme.gold)
@@ -1200,8 +1779,8 @@ struct BattleResultView: View {
         }
         .contentShape(Rectangle())
         .onTapGesture {
-            guard hasSpoils else { return }
-            advanceToChest()
+            guard hasSpoils || hasLevelUp else { return }
+            leaveReckoning()
         }
     }
 
@@ -1227,10 +1806,10 @@ struct BattleResultView: View {
                     ForEach(1...3, id: \.self) { index in
                         Image(systemName: "star.fill")
                             .font(.system(size: 24))
-                            .foregroundStyle(index <= shownStars ? Theme.gold : Theme.stroke)
-                            .scaleEffect(index <= shownStars ? 1 : 0.7)
-                            .shadow(color: Theme.gold.opacity(index <= shownStars ? 0.7 : 0), radius: 8)
-                            .animation(.spring(response: 0.32, dampingFraction: 0.55), value: shownStars)
+                            .foregroundStyle(index <= litStars ? Theme.gold : Theme.stroke)
+                            .scaleEffect(index <= litStars ? 1 : 0.7)
+                            .shadow(color: Theme.gold.opacity(index <= litStars ? 0.7 : 0), radius: 8)
+                            .animation(Motion.pop, value: litStars)
                     }
                     if summary.isFirstClear {
                         Chip(text: "First clear", systemImage: "seal.fill", tint: Theme.verdigris, filled: true)
@@ -1413,6 +1992,201 @@ struct BattleResultView: View {
         .background(Theme.panel(Theme.tightCorner))
     }
 
+    // MARK: - Between the acts: the level (Docs/FEEL.md W1.6)
+
+    /// One chip of the level-up: what the level paid or opened.
+    private struct LevelUpChip: Identifiable {
+        let id: Int
+        let label: String
+        let value: String
+        /// A painted item (`ItemArt`: the energy's bolt, divinity).
+        let itemKey: String?
+        /// A bundle painting — a decoration's thumbnail.
+        let art: String?
+        let glyph: String
+    }
+
+    /// What the level paid, then what it opened: at most three of those,
+    /// the rest counted on the last chip, so the act keeps to two rows on
+    /// the smallest phone.
+    private func levelChips(_ levelUp: PlayerLevelUp) -> [LevelUpChip] {
+        var chips: [LevelUpChip] = [
+            LevelUpChip(id: 0, label: "Energy refilled", value: "\(levelUp.maxEnergy)/\(levelUp.maxEnergy)",
+                        itemKey: "energy", art: nil, glyph: "bolt.fill"),
+            LevelUpChip(id: 1, label: "Max energy", value: "+\(levelUp.maxEnergyGained)",
+                        itemKey: "energy", art: nil, glyph: "bolt.fill"),
+            LevelUpChip(id: 2, label: "Divinity", value: "+\(levelUp.divinity)",
+                        itemKey: "divinity", art: nil, glyph: "sparkles"),
+        ]
+        let shown = Array(levelUp.unlocks.prefix(3))
+        for (index, unlock) in shown.enumerated() {
+            let more = index == shown.count - 1 ? levelUp.unlocks.count - shown.count : 0
+            chips.append(LevelUpChip(
+                id: 3 + index,
+                label: more > 0 ? "\(unlock.label) · +\(more) more" : unlock.label,
+                value: unlock.value, itemKey: nil, art: unlock.art, glyph: unlock.glyph
+            ))
+        }
+        return chips
+    }
+
+    /// The level-up, on the deepened scrim: shafts of light standing over
+    /// the middle, a gold bloom behind the word, LEVEL UP small and spaced,
+    /// then LEVEL 8 in carved gold springing up out of itself on the
+    /// fanfare's chord; under it what the level paid, and a row of what it
+    /// opened. A tap goes on to the chest.
+    private func levelUpAct(_ levelUp: PlayerLevelUp) -> some View {
+        let chips = levelChips(levelUp)
+        let paid = chips.filter { $0.id < 3 }
+        let opened = chips.filter { $0.id >= 3 }
+        // Under Reduce Motion the numerals fade in where they stand.
+        let calm: Bool = Motion.isCalm
+        let fromScale: Double = calm ? 1 : 0.35
+        let fromRise: Double = calm ? 0 : 22
+        return ZStack {
+            LightShafts(shafts: Self.levelShafts)
+                .ignoresSafeArea()
+                .opacity(levelLanded ? 1 : 0)
+                .animation(.easeOut(duration: 0.9), value: levelLanded)
+            RadialGradient(
+                colors: [Theme.gold.opacity(0.34), Theme.gold.opacity(0.1), Color.clear],
+                center: .init(x: 0.5, y: 0.34), startRadius: 0, endRadius: 320
+            )
+            .blendMode(.plusLighter)
+            .ignoresSafeArea()
+            .opacity(levelLanded ? 1 : 0)
+            .animation(.easeOut(duration: 0.6), value: levelLanded)
+            .allowsHitTesting(false)
+
+            VStack(spacing: 0) {
+                Spacer(minLength: 8)
+                Text("LEVEL UP")
+                    .font(Theme.body(13).weight(.black))
+                    .tracking(5)
+                    .foregroundStyle(Theme.onGlassEyebrow)
+                    .opacity(levelLanded ? 1 : 0)
+                    .animation(.easeOut(duration: 0.3), value: levelLanded)
+                Text("LEVEL \(levelUp.level)")
+                    .font(Theme.display(64))
+                    .tracking(3)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .carved()
+                    .keyframeAnimator(initialValue: LevelNumeralFrame(), trigger: levelLanded) { content, frame in
+                        content
+                            .scaleEffect(frame.scale)
+                            .opacity(frame.opacity)
+                            .offset(y: frame.rise)
+                    } keyframes: { _ in
+                        KeyframeTrack(\.scale) {
+                            MoveKeyframe(fromScale)
+                            SpringKeyframe(1.0, duration: 0.6, spring: Motion.celebrateSpring.spring)
+                        }
+                        KeyframeTrack(\.opacity) {
+                            MoveKeyframe(0)
+                            LinearKeyframe(1, duration: 0.14)
+                        }
+                        KeyframeTrack(\.rise) {
+                            MoveKeyframe(fromRise)
+                            SpringKeyframe(0, duration: 0.5, spring: Motion.popSpring.spring)
+                        }
+                    }
+                    .padding(.top, 2)
+                if levelUp.levelsGained > 1 {
+                    Text("\(levelUp.levelsGained) levels at once")
+                        .font(Theme.body(12).weight(.bold))
+                        .foregroundStyle(Theme.onGlassGold)
+                        .opacity(levelLanded ? 1 : 0)
+                        .animation(.easeOut(duration: 0.3).delay(0.3), value: levelLanded)
+                }
+                VStack(spacing: 8) {
+                    levelChipRow(paid, from: 0)
+                    if !opened.isEmpty {
+                        levelChipRow(opened, from: paid.count)
+                    }
+                }
+                .padding(.top, 16)
+                Spacer(minLength: 6)
+                Group {
+                    if hasSpoils {
+                        Text("TAP TO CLAIM YOUR SPOILS")
+                            .font(Theme.body(11).weight(.black))
+                            .tracking(2.2)
+                            .foregroundStyle(Theme.gold)
+                            .opacity(pulse ? 1 : 0.45)
+                            .padding(.bottom, 14)
+                    } else {
+                        PrimaryButton(title: "Continue", action: onDismiss)
+                            .frame(width: 220)
+                            .padding(.bottom, 12)
+                    }
+                }
+                .opacity(levelChipsShown >= chips.count ? 1 : 0)
+                .animation(.easeOut(duration: 0.3), value: levelChipsShown)
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { leaveLevelUp() }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Level up: level \(levelUp.level)")
+    }
+
+    private func levelChipRow(_ chips: [LevelUpChip], from start: Int) -> some View {
+        HStack(spacing: 10) {
+            ForEach(Array(chips.enumerated()), id: \.element.id) { offset, chip in
+                levelChip(chip, shown: start + offset < levelChipsShown)
+            }
+        }
+    }
+
+    /// One chip on dark glass: the item, then its words over its number.
+    private func levelChip(_ chip: LevelUpChip, shown: Bool) -> some View {
+        let settled: Bool = shown || Motion.isCalm
+        return HStack(spacing: 8) {
+            Group {
+                if let key = chip.itemKey {
+                    ItemIcon(key: key, size: 26)
+                } else if let art = chip.art, BundleImage.exists(art) {
+                    BundleImage(name: art, renderedAt: 26)
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 26, height: 26)
+                } else {
+                    Image(systemName: chip.glyph)
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(Theme.onGlassGold)
+                        .frame(width: 26, height: 26)
+                }
+            }
+            VStack(alignment: .leading, spacing: 1) {
+                Text(chip.label)
+                    .font(Theme.body(11).weight(.semibold))
+                    .foregroundStyle(Theme.onGlassDim)
+                    .lineLimit(1)
+                Text(chip.value)
+                    .font(Theme.numeric(15))
+                    .foregroundStyle(Theme.onGlassGold)
+                    .lineLimit(1)
+            }
+        }
+        .padding(.leading, 9)
+        .padding(.trailing, 14)
+        .padding(.vertical, 6)
+        .background(Capsule().fill(Theme.glass))
+        .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 1))
+        .fixedSize()
+        .scaleEffect(settled ? 1 : 0.6)
+        .offset(y: settled ? 0 : 10)
+        .opacity(shown ? 1 : 0)
+    }
+
+    /// The level-up's light: three shafts standing over the middle of the
+    /// frame, brighter than a hall's, where the word is.
+    private static let levelShafts: [LightShaft] = [
+        LightShaft(x: 0.36, width: 0.07, alpha: 0.2),
+        LightShaft(x: 0.48, width: 0.11, alpha: 0.26),
+        LightShaft(x: 0.62, width: 0.06, alpha: 0.18),
+    ]
+
     // MARK: - Act two
 
     private var chestAct: some View {
@@ -1527,12 +2301,15 @@ struct BattleResultView: View {
         sequence += 1
         let mine = sequence
         withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+        withAnimation(Motion.panel) { arrived = true }
         // A forfeit never reaches `.battleEnded`, so the music stops here too.
         AudioLibrary.shared.stopMusic(fade: 0.4)
         AudioLibrary.shared.play(won ? .victory : .defeat, volume: 0.9)
         Juice.haptic(won ? .heavy : .medium)
 
-        let stars = won ? summary.stars : 0
+        // Stars that slammed in over the field stand lit (`litStars`); only
+        // a reckoning with no beat before it ticks them in.
+        let stars = won && !starsLanded ? summary.stars : 0
         for i in 0..<stars {
             after(0.45 + Double(i) * 0.18) {
                 guard mine == sequence else { return }
@@ -1548,9 +2325,25 @@ struct BattleResultView: View {
                 rowsShown = i + 1
             }
         }
-        if autoplay, hasSpoils {
+        if autoplay, hasSpoils || hasLevelUp {
             after(rowStart + Double(summary.unitStats.count) * 0.09 + 3.2) {
                 guard mine == sequence else { return }
+                if hasLevelUp {
+                    // The tour's level-up (`-tour-victory field`): held for
+                    // its frame, then the chest as below.
+                    beginLevelUp()
+                    let levelSequence = sequence
+                    after(Self.tourLevelUpHold) {
+                        guard levelSequence == sequence, hasSpoils else { return }
+                        advanceToChest()
+                        let chestSequence = sequence
+                        after(2.2) {
+                            guard chestSequence == sequence else { return }
+                            openChest()
+                        }
+                    }
+                    return
+                }
                 advanceToChest()
                 // `advanceToChest()` has just bumped the sequence, so the
                 // second step must guard on the NEW number: guarding on
@@ -1566,8 +2359,56 @@ struct BattleResultView: View {
         }
     }
 
-    private func advanceToChest() {
+    /// The tap on the reckoning: the level-up when the fight raised one,
+    /// the chest otherwise.
+    private func leaveReckoning() {
         guard phase == .reckoning else { return }
+        if hasLevelUp {
+            beginLevelUp()
+        } else {
+            advanceToChest()
+        }
+    }
+
+    /// The level-up (Docs/FEEL.md W1.6). The fanfare (`level_up.wav`) opens
+    /// on a three-note pickup and lands its chord at 0.3 s; the numerals land
+    /// WITH the chord, the shafts rise under them, and the chips follow a
+    /// sixth of a second apart, each with its tick.
+    private func beginLevelUp() {
+        guard phase == .reckoning, let levelUp = summary.levelUp else { return }
+        sequence += 1
+        let mine = sequence
+        levelBegan = Date()
+        AudioLibrary.shared.play(.levelUp, volume: 0.95)
+        withAnimation(.easeInOut(duration: 0.35)) { phase = .levelUp }
+        if autoplay { print("[TourCue] levelup") }
+        after(0.3) {
+            guard mine == sequence else { return }
+            levelLanded = true
+            Juice.haptic(.heavy)
+        }
+        let chips = levelChips(levelUp).count
+        for index in 0..<chips {
+            after(1.0 + Double(index) * 0.16) {
+                guard mine == sequence else { return }
+                withAnimation(Motion.pop) { levelChipsShown = index + 1 }
+                AudioLibrary.shared.play(.starTick, volume: 0.6)
+                Juice.haptic(.light)
+            }
+        }
+    }
+
+    /// The tap on the level-up: on to the chest, once the level has had its
+    /// second (`levelBegan`). Without spoils its own Continue is the way
+    /// out, and a tap elsewhere does nothing.
+    private func leaveLevelUp() {
+        guard phase == .levelUp, hasSpoils,
+              let began = levelBegan, Date().timeIntervalSince(began) >= 1.0 else { return }
+        advanceToChest()
+    }
+
+    private func advanceToChest() {
+        guard phase == .reckoning || phase == .levelUp else { return }
         sequence += 1
         AudioLibrary.shared.play(.uiConfirm, volume: 0.6)
         Juice.haptic(.light)

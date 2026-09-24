@@ -11,6 +11,16 @@ protocol BattleSceneDelegate: AnyObject {
     func battleSceneDidFinishPlayback(_ controller: BattleSceneController)
 }
 
+/// One survivor's experience across a won fight, for the gold bar its plate
+/// fills on the field while the team poses (Docs/FEEL.md W1.7,
+/// `BattleSceneController.celebrate(experience:)`). The battle's view builds
+/// these from the settle; the scene only draws them.
+struct ExperienceGain: Equatable, Sendable {
+    let from: Double          // the unit's EXP bar before the fight, 0...1
+    let to: Double            // after it, 0...1 of the level it ended on
+    let levelsGained: Int
+}
+
 /// Owns the 3D battle: the stage, the lighting, the units, and the playback of
 /// the engine's event stream.
 ///
@@ -30,12 +40,19 @@ final class BattleSceneController: NSObject {
     /// released`, with the cache's files and live clones beside the
     /// footprint.
     deinit {
+        // The slow motion's tick holds its target, not this; it is stopped
+        // here so it does not tick once more into nothing — on the main
+        // queue, where it runs.
+        let ticker = slowTicker
+        DispatchQueue.main.async { ticker?.stop() }
         #if DEBUG
         MemoryProbe.log("battle stage released")
         #endif
     }
 
-    /// 1.0 is normal, 2.0 is the fast-forward toggle, 4.0 is "skip animation".
+    /// The speed the player picked: ×1, ×2 or ×3 (Docs/FEEL.md W1.1; the
+    /// stress tour runs ×4). `BattleViewModel.speed` sets it, and it is the
+    /// only way the player's speed reaches the feel (`Juice`).
     ///
     /// It used to divide the event queue's holds and nothing else: every
     /// skeletal clip still played at its authored speed, so at the x2 the
@@ -45,17 +62,32 @@ final class BattleSceneController: NSObject {
     /// is SpriteKit), so the units are told and scale their own clips and
     /// actions by hand.
     var speedMultiplier: Double = 1.0 {
-        didSet {
-            for node in unitNodes.values { node.playbackSpeed = speedMultiplier }
-        }
+        didSet { applyPace() }
     }
 
-    /// Authored seconds at the current playback speed. Every duration in this
-    /// file is written for x1 and passes through here on its way to a timer,
-    /// so fast-forward shortens the whole fight by one factor rather than by
+    /// The final blow's slow motion (W1.7): 1 at rest, `slowestShare` at its
+    /// deepest, tweened by a main-thread tick (`stepSlowMotion`). It multiplies
+    /// the player's speed rather than replacing it, so the pace comes back to
+    /// exactly the speed the player picked, whatever he picked meanwhile.
+    private var timeScale: Double = 1.0 {
+        didSet { applyPace() }
+    }
+
+    /// What every clip and every timer in the fight runs at: the player's
+    /// speed through the slow motion.
+    private var pace: Double { speedMultiplier * timeScale }
+
+    private func applyPace() {
+        let now = pace
+        for node in unitNodes.values { node.playbackSpeed = now }
+    }
+
+    /// Authored seconds at the current pace. Every duration in this file is
+    /// written for x1 and passes through here on its way to a timer, so
+    /// fast-forward shortens the whole fight by one factor rather than by
     /// several that drift apart.
     private func beat(_ seconds: TimeInterval) -> TimeInterval {
-        seconds / max(0.25, speedMultiplier)
+        seconds / max(0.25, pace)
     }
 
     /// How long a melee unit takes to close on its victim.
@@ -205,20 +237,55 @@ final class BattleSceneController: NSObject {
     /// swing and its walk back to its mark.
     private var castRecovery: TimeInterval = 0
 
+    /// The multi-hit runs still open, for the gold TOTAL each earns after its
+    /// last hit (Docs/FEEL.md W1.2, `MultiHitLedger`).
+    private var hitLedger = MultiHitLedger()
+    /// Whether this cast has spent its one impact frame (W1.3): a crit or a
+    /// kill punches the grade once per cast at most. Cleared by every cast.
+    private var impactFrameSpent = false
+    /// The last caster's element: the colour of a kill's speed lines and of
+    /// a normal hit's rim when the attacker has left the field.
+    private var lastCasterElement: Element = .radiance
+    /// Whether the last cast was an ultimate: its hits keep their haptic at ×3.
+    private var lastCastWasUltimate = false
+    /// The unit whose turn it is (`highlight`), for the reticle's colour and
+    /// whether a tap may stamp one.
+    private var actingID: UUID?
+    /// Each unit's skills by id, with the painted icon its square wears
+    /// (`SkillArt.keys`, resolved over the kit as the battle's squares are),
+    /// for the skill banner over a caster (W1.9).
+    private var skillArt: [UUID: [String: String]] = [:]
+    /// Set once the triumph has played (`celebrate`), and cleared by a new run.
+    private var celebrated = false
+
     // MARK: - Setup
 
     func build(combatants: [Combatant], environment: BattleEnvironment) {
         self.environment = environment
         scene.rootNode.removeAction(forKey: "cast_impact")
+        // A new run of an auto-repeat is built in the same scene: whatever
+        // the last one's end changed goes back. The slow motion stops and the
+        // pace returns to the player's; a freeze or a tremble still pending
+        // lets go; the camera — its colour drained on a loss, its framing on
+        // the team after a win — is built anew below with the realm's grade;
+        // the plates, their EXP bars and every float go with the old units.
+        endSlowMotion()
+        Juice.release(scene)
         retirePreviousStage()
         ledge = nil
         unitNodes.removeAll()
         homeMarks.removeAll()
+        skillArt.removeAll()
         plates.removeAllPlates()
         plates.removeAllFloats()
         refreshPlateTargets()
         holdOverride = nil
         castRecovery = 0
+        hitLedger = MultiHitLedger()
+        impactFrameSpent = false
+        lastCastWasUltimate = false
+        actingID = nil
+        celebrated = false
 
         buildStage()
         buildLighting()
@@ -226,6 +293,7 @@ final class BattleSceneController: NSObject {
         registerMaxHealth(combatants)
         place(combatants: combatants)
         startTourAreaDrill()
+        startTourTriumph()
     }
 
     /// Takes the last run's stage out of a scene the view is still drawing,
@@ -413,11 +481,21 @@ final class BattleSceneController: NSObject {
         // halfway to white so a night sky still fills): the fixed blue it
         // was pulled every warm set toward the same neutral, and one hue
         // per place is what the genre's sets have.
+        //
+        // The SET's since 2026-09-24 (Docs/FEEL.md L1, `StageBuilder.
+        // lightLayers`): the figures have a fill and an ambient of their own,
+        // the same strength from the same side, 80% of the way to white, so
+        // the realm's hue stays in the stone and the figures keep their own
+        // paint. The key above lights both, and casts the set's shadows as
+        // one light. Under `-tour-layers off` the rig is the shared one of
+        // before, for the CI lab's control frame.
+        let layered = StageBuilder.lightLayers
         let fill = SCNLight()
         fill.type = .directional
         fill.color = palette.sky.mixed(with: .white, amount: 0.62)
         // 330 (was 400): see the key.
         fill.intensity = 330
+        if layered { fill.categoryBitMask = StageBuilder.setLights }
         let fillNode = SCNNode()
         fillNode.light = fill
         fillNode.position = SCNVector3(7, 5, -5)
@@ -433,14 +511,47 @@ final class BattleSceneController: NSObject {
         // Lifted 60% toward white (was 50%): the genre's shadows are a
         // near-neutral grey (19% saturated in the arena frame) where ours
         // were a 73–80% saturated brown.
-        ambient.color = palette.horizon.mixed(with: hand, amount: 0.35).mixed(with: .white, amount: 0.6)
+        let horizon = palette.horizon.mixed(with: hand, amount: 0.35)
+        ambient.color = horizon.mixed(with: .white, amount: 0.6)
         // Lower where the painting's environment map now fills the shadow
         // side (2026-09-20); the flat-colour fallback keeps the old floor.
         ambient.intensity = palette.environment != nil ? 150 : 240
+        if layered { ambient.categoryBitMask = StageBuilder.setLights }
         let ambientNode = SCNNode()
         ambientNode.light = ambient
         scene.rootNode.addChildNode(ambientNode)
+
+        guard layered else { return }
+        // The figures' pair: the same fill and ambient, near-neutral.
+        let figureFill = SCNLight()
+        figureFill.type = .directional
+        figureFill.color = palette.sky.mixed(with: .white, amount: Self.figureFillWhite)
+        figureFill.intensity = fill.intensity
+        figureFill.categoryBitMask = StageBuilder.figureLights
+        let figureFillNode = SCNNode()
+        figureFillNode.light = figureFill
+        figureFillNode.position = fillNode.position
+        figureFillNode.eulerAngles = fillNode.eulerAngles
+        scene.rootNode.addChildNode(figureFillNode)
+
+        let figureAmbient = SCNLight()
+        figureAmbient.type = .ambient
+        figureAmbient.color = horizon.mixed(with: .white, amount: Self.figureFillWhite)
+        figureAmbient.intensity = ambient.intensity
+        figureAmbient.categoryBitMask = StageBuilder.figureLights
+        let figureAmbientNode = SCNNode()
+        figureAmbientNode.light = figureAmbient
+        scene.rootNode.addChildNode(figureAmbientNode)
     }
+
+    /// How far toward white the figures' own fill and ambient are taken from
+    /// the set's hue (Docs/FEEL.md L1): the realm's colour a hint on the
+    /// figures, their own paint the colour.
+    static let figureFillWhite: CGFloat = 0.8
+
+    /// The turn circle's peak on the pale marble sets: 60% of the 0.9 it
+    /// stands at elsewhere (`UnitNode.turnDiscPeak`, W1.9).
+    static let paleDiscPeak: CGFloat = 0.54
 
     private func buildCamera() {
         let camera = SCNCamera()
@@ -537,9 +648,22 @@ final class BattleSceneController: NSObject {
         // export has been shipped.
         let detail = ModelLibrary.detail(forCombatantCount: combatants.count + (entering ? unitNodes.count : 0))
         noteLineWidth(combatants)
+        let paleSet = StageBuilder.isPaleSet(environment)
         for combatant in combatants {
             let node = UnitNode(combatant: combatant, detail: detail)
-            node.playbackSpeed = speedMultiplier
+            node.playbackSpeed = pace
+            // The turn circle at 60% on the pale marble (W1.9).
+            if paleSet { node.turnDiscPeak = Self.paleDiscPeak }
+            // The icon each skill's square wears, for the banner over the
+            // caster: resolved over the kit the squares resolve over (the
+            // skills that are not passive, in order), so the two match.
+            let kit = combatant.skills.filter { !$0.isPassive }
+            let icons = SkillArt.keys(for: kit, element: combatant.element, ranged: !combatant.model.melee)
+            var art: [String: String] = [:]
+            for (index, skill) in kit.enumerated() where index < icons.count {
+                art[skill.id] = icons[index]
+            }
+            skillArt[combatant.id] = art
             // The genre's soft oval under the feet, and the figure's textures
             // filtered like the set's (2026-09-24).
             node.attachGroundShadow()
@@ -649,6 +773,11 @@ final class BattleSceneController: NSObject {
                 aim.isGimbalLockEnabled = true
                 lamp.constraints = [aim]
                 node.addChildNode(lamp)
+                // The spot is the boss's, a figure light (Docs/FEEL.md L1):
+                // it no longer reaches the stone round the breach at all,
+                // and the lamp and its aim join the figure's layer.
+                if StageBuilder.lightLayers { spot.categoryBitMask = StageBuilder.figureLights }
+                node.markFigure()
             }
             if combatant.isBoss, ledge == nil {
                 let recipe = StageBuilder.recipe(for: environment)
@@ -656,6 +785,8 @@ final class BattleSceneController: NSObject {
                     rock: recipe.rock, floor: recipe.floor, floorRepeats: recipe.floorRepeats,
                     floorTint: recipe.floorTint, at: home
                 )
+                // Built after the set, so it joins the set's layer here.
+                if StageBuilder.lightLayers { StageBuilder.separateBattleSet(rock) }
                 scene.rootNode.addChildNode(rock)
                 ledge = rock
             }
@@ -836,9 +967,38 @@ final class BattleSceneController: NSObject {
         // belonged to is gone, so it would otherwise land a lone attack over
         // a battle that has already been resolved.
         for node in unitNodes.values { node.cancelPendingClip() }
+        // Skip is the one way to watch a turn with no feedback (W1.1): no
+        // freeze, no tremble, no slow motion left running, and no TOTAL
+        // owed to a multi-hit whose last hit will never be shown.
+        endSlowMotion()
         Juice.release(scene)
+        hitLedger = MultiHitLedger()
         sync(combatants: combatants)
         delegate?.battleSceneDidFinishPlayback(self)
+    }
+
+    /// Stops the fight where it stands, for a forfeit (review, 2026-09-24):
+    /// what `flush` does for a skip, without jumping the field to the turn's
+    /// end and without handing the turn back. The end of a fight is shown on
+    /// the field now (DEFEAT over the drained set, Docs/FEEL.md W1.7), and a
+    /// forfeit in the middle of a turn's playback left the rest of that turn
+    /// playing under the word — its blows, a final blow's slow motion and
+    /// camera ease, a win's `.battleEnded` haptic. Everyone walks back to
+    /// their mark and the camera goes home; the health stands as last shown.
+    func halt() {
+        playbackGeneration += 1
+        queue.removeAll()
+        isPlaying = false
+        holdOverride = nil
+        castRecovery = 0
+        scene.rootNode.removeAction(forKey: "cast_impact")
+        scene.rootNode.removeAction(forKey: "cast_projectile")
+        for node in unitNodes.values { node.cancelPendingClip() }
+        endSlowMotion()
+        Juice.release(scene)
+        hitLedger = MultiHitLedger()
+        returnEveryoneHome()
+        director?.returnHome()
     }
 
     /// Forces every node to match engine truth. Called after a skip and at the
@@ -925,6 +1085,9 @@ final class BattleSceneController: NSObject {
                                      ? .bossArrival : .waveCall(for: environment.pantheon), volume: 0.85)
 
         case .turnBegan(let actor, _):
+            // A random-target multi-hit's victim missed on its last hit
+            // still earns its TOTAL, as the turn ends.
+            closeOpenTotals()
             returnEveryoneHome()
             highlight(actor)
             showMatchups(for: actor)
@@ -938,7 +1101,7 @@ final class BattleSceneController: NSObject {
             floatText("SKIPPED", over: node, color: UIColor(hex: "#C8C8C8")!)
             if speedMultiplier < 3 { AudioLibrary.shared.play(.status(reason), volume: 0.45) }
 
-        case .skillCast(let actor, _, let name, let targets, let shot, let animation, let vfx):
+        case .skillCast(let actor, let skillID, let name, let targets, let shot, let animation, let vfx):
             guard let casterNode = unitNodes[actor] else { return 0 }
             let targetNode = targets.first.flatMap { unitNodes[$0] }
             // Stamped, so a console that ends mid-fight says which cast it
@@ -946,6 +1109,10 @@ final class BattleSceneController: NSObject {
             // clip loaded, which is a poorer clock).
             Perf.note("cast \(name) by \(casterNode.spec.assetName) as \(animation) on \(targets.count) target(s)")
             lastCastClip = animation
+            lastCasterElement = casterNode.element
+            lastCastWasUltimate = animation == .ultimate
+            // One impact frame per cast at most (W1.3).
+            impactFrameSpent = false
             // A melee unit swinging is steel or stone; anything else is its
             // element. `castRelease` and the ultimate are always the element,
             // because that is what the effect on screen already shows.
@@ -1014,12 +1181,15 @@ final class BattleSceneController: NSObject {
                 casterNode.swingTrail(tint: animation == .ultimate ? elementTint : steel,
                                       duration: clipLength, after: beat(walkUp), in: scene)
             }
-            // The skill's name over its caster, followed through the leap
-            // (it hung over the EMPTY mark a closing caster had left, run
-            // 220), in the HUD's pale gold. Not for an ultimate: the cut-in
-            // is its name, and the two at once put it on the screen twice.
+            // The skill's BANNER over its caster (Docs/FEEL.md W1.9, the
+            // owner's Summoners War frame): its painted icon in a gold frame
+            // beside its name, followed through the leap (a plain name hung
+            // over the EMPTY mark a closing caster had left, run 220). It
+            // replaces the plain name that floated here in pale gold. Not for
+            // an ultimate: the cut-in is its name, and the two at once put it
+            // on the screen twice.
             if animation != .ultimate {
-                floatText(name, over: casterNode, color: UIColor(hex: "#F3DFA6") ?? .white, scale: 0.7)
+                floatBanner(name, iconKey: skillArt[actor]?[skillID], over: casterNode)
             }
 
             // The frame the blade lands, measured from the start of the CLIP
@@ -1129,12 +1299,13 @@ final class BattleSceneController: NSObject {
                 }
             ]), forKey: "cast_impact")
 
-        case .damage(_, let target, let amount, let isCritical, let isGlancing, let matchup, let remaining, _, _):
+        case .damage(let source, let target, let amount, let isCritical, let isGlancing, _, let remaining, let hitIndex, let hitCount):
             guard let node = unitNodes[target] else { return 0 }
 
             // How hard did that land? Lethal beats critical beats the clip.
+            let lethal = remaining <= 0
             let weight: HitWeight
-            if remaining <= 0 {
+            if lethal {
                 weight = .lethal
             } else if isCritical {
                 weight = .critical
@@ -1146,6 +1317,31 @@ final class BattleSceneController: NSObject {
                 weight = .normal
             }
             let profile = Juice.profile(for: weight)
+            let early = Self.isEarlyHit(hitIndex: hitIndex, hitCount: hitCount)
+            // THE FINAL BLOW (W1.7): the kill that leaves its side with no
+            // one standing, which ends a wave or the fight.
+            let standing = unitNodes.values.filter { $0 !== node && $0.side == node.side && !$0.isDefeated }.count
+            let finalBlow = Self.endsItsSide(lethal: lethal, othersStanding: standing)
+            // THE IMPACT FRAME (W1.3): on a crit or a kill, ONCE a cast,
+            // never under Reduce Motion. The final blow owns the cast's frame
+            // (W1.7): a crit or a kill earlier in a cast that goes on to end
+            // its side leaves the frame for it. The final blow used to punch
+            // past the once-a-cast rule, so an area ultimate that crit or
+            // killed and then wiped the wave punched twice inside a second
+            // (review, 2026-09-24).
+            let calm = MotionComfort.isReduced
+            let punches: Bool
+            if calm || impactFrameSpent {
+                punches = false
+            } else if finalBlow {
+                punches = true
+            } else if isCritical || lethal {
+                punches = !finalBlowComing(on: node.side, standingAfter: lethal ? standing : standing + 1)
+            } else {
+                punches = false
+            }
+            if punches { impactFrameSpent = true }
+            let attackerElement = unitNodes[source]?.element ?? lastCasterElement
 
             // Everything a blow does now happens on ONE frame: the burst and
             // the slash arc (spawned by the cast, timed to this instant), the
@@ -1153,28 +1349,41 @@ final class BattleSceneController: NSObject {
             // haptic and the freeze. They used to be spread over more than a
             // second, which is why a hit read as a light show followed by a
             // bookkeeping update. The shove is the part that was missing
-            // altogether: a body that never moves is not being hit.
-            node.play(.hitReact)
-            node.flashHit()
+            // altogether: a body that never moves is not being hit. The final
+            // blow's victim begins to FALL on the blow, so the slow motion
+            // after its freeze has the fall to slow.
+            if finalBlow {
+                node.beginFinalFall()
+            } else {
+                node.play(.hitReact)
+            }
+            node.flashHit(strength: punches ? Self.impactBurn : 1)
             node.recoil(strength: Self.recoilStrength(for: weight))
             node.setHealth(fraction: healthFraction(remaining: remaining, node: node))
 
-            let color: UIColor
-            var label = "\(Int(amount.rounded()))"
             if isCritical {
-                color = UIColor(hex: "#FFD24F")!
-                label = "\(label)!"
-                VFXLibrary.spawn("crit", at: node.chestWorldPosition, in: scene, tint: color)
-            } else if isGlancing {
-                color = UIColor(hex: "#9AA3B0")!
-                label = "\(label) glance"
-            } else if matchup == .advantage {
-                color = UIColor(hex: "#7FE8A0")!
-            } else {
-                color = .white
+                VFXLibrary.spawn("crit", at: node.chestWorldPosition, in: scene, tint: UIColor(hex: "#FFD24F") ?? .yellow)
             }
-            floatText(label, over: node, color: color, scale: profile.numberScale, pop: true)
+            // The number (W1.2): CRITICAL or GLANCING as a word over it, a
+            // crit in gold to orange, anything else cream edged in the
+            // attacker's colour — never the heal's green, whatever the
+            // matchup (the arrow over the plate already says that) — and a
+            // multi-hit's early hits fainter, its run closed by a gold TOTAL.
+            floatHit(amount, on: node, critical: isCritical, glancing: isGlancing,
+                     weightScale: profile.numberScale, early: early, rim: attackerElement)
+            if let total = hitLedger.record(source: source, target: target, amount: amount,
+                                            hitIndex: hitIndex, hitCount: hitCount, lethal: lethal) {
+                floatTotal(total, on: node)
+            }
             if isGlancing { AudioLibrary.shared.play(.dodge, volume: 0.5) }
+            if punches {
+                director?.impactFrame()
+                // A kill's speed lines, in the striker's colour.
+                if lethal {
+                    plates.burstSpeedLines(over: node, lift: node.spec.height * 0.55,
+                                           tint: UIColor(hex: attackerElement.accentHex) ?? .white)
+                }
+            }
 
             // A heavy blow is worth dwelling on. The freeze punctuates the
             // frame of contact itself; this holds the frame just after it, so
@@ -1188,7 +1397,21 @@ final class BattleSceneController: NSObject {
             case .normal, .light: break
             }
 
-            return Juice.impact(weight, colour: lastCastColour, scene: scene, director: director, speed: speedMultiplier)
+            guard finalBlow else {
+                return Juice.impact(weight, colour: lastCastColour, share: damageShare(amount, of: target),
+                                    early: early, ultimate: lastCastWasUltimate, victim: node,
+                                    scene: scene, director: director, speed: speedMultiplier)
+            }
+            // The final blow: a fifth of a second held with the impact frame,
+            // then the slow motion, and only then the next event — the
+            // victim's `.defeated`, the wave or the end — so nothing is
+            // presented while time runs slow.
+            let freeze = Juice.scaledFreeze(Juice.finalBlowFreeze, speed: speedMultiplier)
+            Juice.impact(weight, colour: lastCastColour, ultimate: lastCastWasUltimate, freezeFor: freeze,
+                         shakes: false, victim: node, scene: scene, director: director, speed: speedMultiplier)
+            let slow = beginSlowMotion(on: node, after: freeze)
+            holdOverride = Self.afterTheFinalBlow
+            return freeze + slow
 
         case .healed(_, let target, let amount, let remaining):
             guard let node = unitNodes[target] else { return 0 }
@@ -1214,7 +1437,11 @@ final class BattleSceneController: NSObject {
 
         case .statusResisted(_, let target, _):
             guard let node = unitNodes[target] else { return 0 }
-            floatText("RESIST", over: node, color: UIColor(hex: "#C8C8C8")!, scale: 0.8)
+            // In the carved word style of CRITICAL and GLANCING (W1.2); a unit
+            // wearing Immunity resisted nothing — it was immune.
+            let immune = node.hasStatus(.immunity)
+            floatWord(immune ? "IMMUNE" : "RESIST", over: node,
+                      colour: UIColor(hex: immune ? Self.immuneHex : Self.resistHex) ?? .white)
             if speedMultiplier < 3 { AudioLibrary.shared.play(.block, volume: 0.6) }
 
         case .statusExpired(let target, let kind), .statusRemoved(let target, let kind, _):
@@ -1228,6 +1455,10 @@ final class BattleSceneController: NSObject {
 
         case .counterattack(let actor, _):
             guard let node = unitNodes[actor] else { return 0 }
+            // A counter is an attack of its own: its crit, its kill or its
+            // final blow may take an impact frame (W1.3) whatever the cast
+            // it answered spent.
+            impactFrameSpent = false
             floatText("COUNTER", over: node, color: UIColor(hex: "#FFD24F")!, scale: 0.9)
             AudioLibrary.shared.play(.counter)
             node.play(.attackBasic)
@@ -1267,8 +1498,10 @@ final class BattleSceneController: NSObject {
                 node.runAction(.fadeOut(duration: 0.3))
                 VFXLibrary.retire(node, after: 0.3, reportsLive: false)
                 unitNodes[id] = nil
+                skillArt[id] = nil
                 plates.removePlate(for: id)
             }
+            closeOpenTotals()
             registerMaxHealth(opponents)
             place(combatants: opponents, entering: true)
             AudioLibrary.shared.play(opponents.contains(where: \.isBoss) ? .bossArrival : .waveCall(for: environment.pantheon))
@@ -1281,20 +1514,42 @@ final class BattleSceneController: NSObject {
             Juice.haptic(.light)
 
         case .battleEnded(let result):
+            closeOpenTotals()
             director?.returnHome()
             Juice.notify(result.outcome == .victory ? .success : .error)
             // The fanfare is the reckoning's, played once with its ribbon
             // (`BattleView.beginReckoning`); played here as well, victory
             // sounded twice. The fight's music stops under it.
             AudioLibrary.shared.stopMusic(fade: 0.6)
+            // The victors pose. The ENEMY's face the camera already; the
+            // player's team poses in the triumph instead (W1.7,
+            // `celebrate(experience:)`), turned to the lens — posed here it
+            // played facing away and was covered a second later, so no one
+            // had ever seen a victory clip from the front. An auto-repeat's
+            // runs before its last go straight on and do not pose.
             for (_, node) in unitNodes where !node.isDefeated {
-                if (result.outcome == .victory && node.side == .player)
-                    || (result.outcome == .defeat && node.side == .opponent) {
+                if result.outcome == .defeat && node.side == .opponent {
                     node.play(.victory)
                 }
             }
         }
         return 0
+    }
+
+    /// The share of its victim's maximum health a blow took (W1.3's freeze
+    /// grows with it); 0 for a unit whose maximum is unknown.
+    private func damageShare(_ amount: Double, of target: UUID) -> Double {
+        guard let maximum = maxHealthByUnit[target], maximum > 0 else { return 0 }
+        return amount / maximum
+    }
+
+    /// The TOTALs still owed at the end of a turn (a random-target
+    /// multi-hit whose victim was missed on the last hit), each on its unit.
+    private func closeOpenTotals() {
+        for owed in hitLedger.closeAll() {
+            guard let node = unitNodes[owed.target], !node.isDefeated else { continue }
+            floatTotal(owed.total, on: node)
+        }
     }
 
     /// The engine reports absolute remaining health; the node only knows its
@@ -1311,7 +1566,28 @@ final class BattleSceneController: NSObject {
     }
 
     private func highlight(_ actorID: UUID) {
+        actingID = actorID
         for (id, node) in unitNodes { node.setHighlighted(id == actorID) }
+    }
+
+    // MARK: - The reticle (Docs/FEEL.md W1.9)
+
+    /// A tap on an enemy while the player's unit waits for its command stamps
+    /// a reticle on it in the acting unit's element — the colour its skill
+    /// squares are lit in — from `BattleSceneView.Coordinator.handleTap`, the
+    /// main thread, with the view that was tapped. Not on the fallen, not on
+    /// the player's own, and not while a turn plays (the queue is running:
+    /// the tap commits nothing then).
+    func stampReticle(on unit: UnitNode, in view: SCNView) {
+        guard unit.side == .opponent, !unit.isDefeated, !isPlaying,
+              let actor = actingID.flatMap({ unitNodes[$0] }), actor.side == .player, !actor.isDefeated else { return }
+        let projected = view.projectPoint(unit.chestWorldPosition)
+        guard projected.z > 0, projected.z < 1 else { return }
+        let height = view.bounds.height
+        guard height > 2 else { return }
+        // The overlay's origin is at the bottom.
+        let point = CGPoint(x: CGFloat(projected.x), y: height - CGFloat(projected.y))
+        plates.stampReticle(at: point, tint: UIColor(hex: actor.element.accentHex) ?? .white)
     }
 
     // MARK: - Unit plates
@@ -1378,6 +1654,8 @@ final class BattleSceneController: NSObject {
         plates.drainPending()
         let height = plates.size.height
         guard height > 2 else { return }
+        // A kill's speed lines, where its unit stands in this frame.
+        plates.placeBursts(in: renderer)
         plateLock.lock()
         let targets = plateTargets
         let bosses = plateBosses
@@ -1660,6 +1938,129 @@ final class BattleSceneController: NSObject {
         for node in unitNodes.values { node.returnHome(duration: beat(0.30)) }
     }
 
+    // MARK: - The final blow's slow motion (Docs/FEEL.md W1.7)
+    //
+    // When a blow ends a wave or the fight: a fifth of a second held with the
+    // impact frame (`Juice.finalBlowFreeze`), then time at 0.3 for 0.6 s while
+    // the camera eases toward the victim along the home line of sight (the
+    // floor never turns: `CameraDirector.easeToward`), then back to the
+    // player's speed with a low whoomp. *Juice it or lose it* says to dwell on
+    // a kill, and the genre's last blow of a stage is its slowest moment.
+    //
+    // The slow motion is `timeScale`, tweened by a main-thread tick and
+    // multiplied into the player's speed (`pace`): every clip already running
+    // follows it (`UnitNode.playbackSpeed`, which re-times a running clip and
+    // its ending), every particle system in the scene is slowed with it
+    // (`speedFactor`), and the queue presents nothing while it runs — the
+    // blow's hold covers it (`beginSlowMotion` returns its length) — so no
+    // event's hold is stretched by a pace that is gone a moment later. At ×2
+    // and ×3 the whole beat is shorter by the speed; under Reduce Motion the
+    // camera stays where it is and time still slows.
+
+    /// The deepest the slow motion goes, as a share of the player's speed.
+    static let slowestShare: Double = 0.3
+    /// Its three spans at ×1: into the slow, held, and back.
+    static let slowIn: TimeInterval = 0.06
+    static let slowHold: TimeInterval = 0.6
+    static let slowOut: TimeInterval = 0.25
+
+    /// The slow motion's whole length at the player's speed.
+    static func slowMotionSpan(speed: Double) -> TimeInterval {
+        let divisor: Double = max(1, speed)
+        let span: TimeInterval = slowIn + slowHold + slowOut
+        return span / divisor
+    }
+
+    /// The share of the player's speed time runs at, `t` seconds after the
+    /// freeze released: eased down to `slowestShare`, held, eased back to 1.
+    static func slowMotionShare(at t: TimeInterval, speed: Double) -> Double {
+        let divisor: Double = max(1, speed)
+        let into: TimeInterval = slowIn / divisor
+        let held: TimeInterval = into + slowHold / divisor
+        let done: TimeInterval = held + slowOut / divisor
+        guard t > 0 else { return 1 }
+        if t < into {
+            let raw: Double = t / into
+            let eased: Double = raw * raw * (3 - 2 * raw)
+            return 1 - (1 - slowestShare) * eased
+        }
+        if t < held { return slowestShare }
+        if t < done {
+            let raw: Double = (t - held) / (done - held)
+            let eased: Double = raw * raw * (3 - 2 * raw)
+            return slowestShare + (1 - slowestShare) * eased
+        }
+        return 1
+    }
+
+    /// The tick driving it (its target holds this weakly: `FrameTicker`).
+    private var slowTicker: FrameTicker?
+    /// When the slow began (the freeze's release), on `CACurrentMediaTime`'s
+    /// clock, and the player's speed it was scaled for.
+    private var slowBegins: CFTimeInterval = 0
+    private var slowSpeed: Double = 1
+    private var whoomped = false
+    /// Every particle system in the scene when it began, with its own speed.
+    private var slowedSystems: [(system: SCNParticleSystem, speed: CGFloat)] = []
+
+    /// Starts the slow motion on the final blow's victim, `freeze` seconds
+    /// from now (the freeze's release), and returns how long it lasts.
+    private func beginSlowMotion(on victim: UnitNode, after freeze: TimeInterval) -> TimeInterval {
+        endSlowMotion()
+        slowSpeed = speedMultiplier
+        slowBegins = CACurrentMediaTime() + freeze
+        whoomped = false
+        var systems: [(system: SCNParticleSystem, speed: CGFloat)] = []
+        scene.rootNode.enumerateHierarchy { node, _ in
+            for system in node.particleSystems ?? [] {
+                systems.append((system: system, speed: system.speedFactor))
+            }
+        }
+        slowedSystems = systems
+        slowTicker = FrameTicker { [weak self] in
+            self?.stepSlowMotion() ?? false
+        }
+        let span = Self.slowMotionSpan(speed: slowSpeed)
+        // The camera eases in through the slow and back out as time returns;
+        // its action waits out the freeze with the scene.
+        if !MotionComfort.isReduced {
+            let divisor: Double = max(1, slowSpeed)
+            director?.easeToward(victim, over: (Self.slowIn + Self.slowHold) / divisor, back: Self.slowOut / divisor)
+        }
+        return span
+    }
+
+    /// One frame of the slow motion; false once it is over.
+    private func stepSlowMotion() -> Bool {
+        let t: TimeInterval = CACurrentMediaTime() - slowBegins
+        let divisor: Double = max(1, slowSpeed)
+        if !whoomped, t >= (Self.slowIn + Self.slowHold) / divisor {
+            // Time comes back with a low whoomp.
+            whoomped = true
+            AudioLibrary.shared.play(.whoosh, volume: 0.9)
+        }
+        guard t < Self.slowMotionSpan(speed: slowSpeed) else {
+            endSlowMotion()
+            return false
+        }
+        let share = Self.slowMotionShare(at: t, speed: slowSpeed)
+        if abs(share - timeScale) > 0.0005 { timeScale = share }
+        let factor = CGFloat(share)
+        for entry in slowedSystems { entry.system.speedFactor = entry.speed * factor }
+        return true
+    }
+
+    /// Ends the slow motion where it stands: the pace back to the player's,
+    /// every particle system to its own speed, the tick stopped. Called as
+    /// it finishes, by a skip, and by every new run.
+    private func endSlowMotion() {
+        slowTicker?.stop()
+        slowTicker = nil
+        for entry in slowedSystems { entry.system.speedFactor = entry.speed }
+        slowedSystems = []
+        if timeScale != 1 { timeScale = 1 }
+    }
+
     // MARK: - Floating text
 
     /// The size of a floating number or word at weight 1, and its floor and
@@ -1764,6 +2165,186 @@ final class BattleSceneController: NSObject {
         let scatter: CGFloat = pop ? CGFloat.random(in: -14...14) : 0
         plates.addFloat(image: image, over: node, lift: tall * 0.55, pop: pop, scatter: scatter, rise: 30)
     }
+
+    // MARK: - The numbers that read (Docs/FEEL.md W1.2)
+
+    /// A hit's number off its victim: bold Manrope under a small carved word
+    /// — CRITICAL in orange-gold over a gold-to-orange number 1.8 times the
+    /// size, popping past it and trembling a moment; GLANCING in slate over a
+    /// slate one — or, for an ordinary blow, cream edged thinly in the
+    /// ATTACKER's element colour. Green is the heal's alone: an advantage hit
+    /// takes no colour, the matchup arrow says it. A multi-hit's early hits
+    /// are 0.85 of the size at 80% (`multiHitLook`). `weightScale` is the
+    /// blow's weight (`Juice.Profile.numberScale`).
+    private func floatHit(_ amount: Double, on node: UnitNode, critical: Bool, glancing: Bool,
+                          weightScale: CGFloat, early: Bool, rim: Element) {
+        let look = Self.multiHitLook(early: early)
+        let digits = Self.digits(amount)
+        let word: HitWord?
+        let ink: FloatInk
+        let size: CGFloat
+        if critical {
+            word = .critical
+            ink = .critical
+            size = min(Self.critCap, Self.floatBase * Self.critScale * look.scale)
+        } else if glancing {
+            word = .glancing
+            ink = .glancing
+            size = max(Self.floatFloor, Self.floatBase * weightScale * look.scale)
+        } else {
+            word = nil
+            ink = .rimmed(UIColor(hex: rim.accentHex) ?? .white)
+            size = min(Self.floatCap, max(Self.floatFloor, Self.floatBase * weightScale * look.scale))
+        }
+        guard let image = FloatingTextRenderer.number(digits, word: word, ink: ink, size: size,
+                                                      opacity: look.opacity) else { return }
+        placeNumber(image, on: node, punch: critical)
+    }
+
+    /// The gold TOTAL after a multi-hit's last hit (W1.2): the run's sum
+    /// under the word, a quarter again the size of a hit, popped.
+    private func floatTotal(_ total: Double, on node: UnitNode) {
+        let size = min(Self.floatCap, Self.floatBase * Self.totalScale)
+        guard let image = FloatingTextRenderer.number(Self.digits(total), word: .total, ink: .total,
+                                                      size: size, opacity: 1) else { return }
+        placeNumber(image, on: node, punch: false)
+    }
+
+    /// A number where every number stands: popped at the chest and risen
+    /// toward the plate (`floatText` says why), beside the head of a boss.
+    /// `punch` is a crit's: a bigger overshoot and a tremble as it lands.
+    private func placeNumber(_ image: UIImage, on node: UnitNode, punch: Bool) {
+        let tall = node.spec.height
+        // A crit's tremble is a shake, and its big spring a lunge at the
+        // eye: neither under Reduce Motion, where the camera's shake is off
+        // too (it lands as any number does).
+        let hard: Bool = punch && !MotionComfort.isReduced
+        let overshoot: CGFloat = hard ? Self.critOvershoot : FloatingLabel.standardOvershoot
+        let jitter: TimeInterval = hard ? Self.critJitter : 0
+        if node.isBoss {
+            plates.addFloat(image: image, over: node, lift: tall * 0.9, side: -tall * 0.16, align: -1,
+                            pop: true, scatter: 0, rise: 24, overshoot: overshoot, jitter: jitter)
+            return
+        }
+        let scatter = CGFloat.random(in: -14...14)
+        plates.addFloat(image: image, over: node, lift: tall * 0.55, pop: true, scatter: scatter, rise: 30,
+                        overshoot: overshoot, jitter: jitter)
+    }
+
+    /// A word on its own in the carved style of the words over the numbers
+    /// (RESIST, IMMUNE; W1.2), a little larger since it stands alone.
+    private func floatWord(_ text: String, over node: UnitNode, colour: UIColor) {
+        guard let image = FloatingTextRenderer.word(text, colour: colour, size: Self.wordAloneSize) else { return }
+        let tall = node.spec.height
+        if node.isBoss {
+            plates.addFloat(image: image, over: node, lift: tall * 0.9, side: -tall * 0.16, align: -1,
+                            pop: false, scatter: 0, rise: 24)
+            return
+        }
+        plates.addFloat(image: image, over: node, lift: tall * 0.55, pop: false, scatter: 0, rise: 30)
+    }
+
+    /// The skill's banner over its caster (W1.9): the painted icon its square
+    /// wears (`SkillArt`, the kit's own resolution) in a gold frame beside
+    /// its name at 20 points, on a dark ribbon. It hangs a little longer than
+    /// a number and barely rises: it is read, not felt. The float's clamps
+    /// read the picture's own size, so the banner's full width is held
+    /// inside the frame and off the HUD like any other float.
+    private func floatBanner(_ name: String, iconKey: String?, over node: UnitNode) {
+        let key = iconKey ?? SkillArt.elementMark(node.element)
+        let painting: UIImage? = SkillArt.hasPainting(key)
+            ? BundleArt.thumbnail(SkillArt.imageName(key), maxPixel: 128)
+            : nil
+        guard let image = FloatingTextRenderer.banner(name, icon: painting, glyph: SkillArt.glyph(key),
+                                                      key: key, tint: UIColor(hex: node.element.accentHex) ?? .white)
+        else { return }
+        let tall = node.spec.height
+        if node.isBoss {
+            plates.addFloat(image: image, over: node, lift: tall * 0.9, side: -tall * 0.16, align: -1,
+                            pop: false, scatter: 0, rise: 12, hold: Self.bannerHold)
+            return
+        }
+        plates.addFloat(image: image, over: node, lift: tall * 0.62, pop: false, scatter: 0, rise: 12,
+                        hold: Self.bannerHold)
+    }
+
+    /// A hit's figures, whole and ungrouped, as the genre prints them.
+    static func digits(_ amount: Double) -> String {
+        String(Int(amount.rounded()))
+    }
+
+    /// A multi-hit's hit before its last: every hit of a run of two or more
+    /// but the final one.
+    static func isEarlyHit(hitIndex: Int, hitCount: Int) -> Bool {
+        hitCount > 1 && hitIndex < hitCount - 1
+    }
+
+    /// How an early hit is drawn against a whole one (W1.2): 0.85 of the
+    /// size at 80%. The last hit, and a lone one, are drawn whole.
+    static func multiHitLook(early: Bool) -> (scale: CGFloat, opacity: CGFloat) {
+        early ? (0.85, 0.8) : (1, 1)
+    }
+
+    /// Whether a blow is the FINAL one (W1.7): a kill that leaves its side
+    /// with no one else standing, which ends a wave or the fight.
+    static func endsItsSide(lethal: Bool, othersStanding: Int) -> Bool {
+        lethal && othersStanding == 0
+    }
+
+    /// Whether a later blow of the cast ends the side (W1.3, W1.7): as many
+    /// of that side's units die later in the cast as will be standing after
+    /// this blow, and at least one is.
+    static func finalBlowFollows(standingAfter: Int, killedLater: Int) -> Bool {
+        standingAfter > 0 && killedLater >= standingAfter
+    }
+
+    /// Whether the final blow is still to come in the cast being played:
+    /// the kills on `side` in the queue up to the next cast, counter or turn
+    /// (each its own impact frame), against the units of the side standing
+    /// after this blow. The engine appends a kill's `.defeated` right after
+    /// its `.damage`, so a lethal `.damage` read here is a unit that falls.
+    private func finalBlowComing(on side: BattleSide, standingAfter: Int) -> Bool {
+        guard standingAfter > 0 else { return false }
+        var doomed = Set<UUID>()
+        for event in queue {
+            switch event {
+            case .skillCast, .counterattack, .turnBegan, .battleEnded:
+                return false
+            case .damage(_, let target, _, _, _, _, let remaining, _, _):
+                guard remaining <= 0, unitNodes[target]?.side == side else { continue }
+                doomed.insert(target)
+                if Self.finalBlowFollows(standingAfter: standingAfter, killedLater: doomed.count) { return true }
+            default:
+                continue
+            }
+        }
+        return false
+    }
+
+    /// A crit's number: 1.8 times a hit's, up to 40 points (the genre draws
+    /// its crits at 150–200%; the 32-point cap is every other number's).
+    static let critScale: CGFloat = 1.8
+    static let critCap: CGFloat = 40
+    /// A crit pops a quarter past its size, where a hit pops an eighth, and
+    /// trembles for 0.15 s as it lands.
+    static let critOvershoot: CGFloat = 1.28
+    static let critJitter: TimeInterval = 0.15
+    /// The TOTAL, a quarter again a hit's size.
+    static let totalScale: CGFloat = 1.25
+    /// RESIST and IMMUNE, alone: 16 points.
+    static let wordAloneSize: CGFloat = 16
+    /// How much longer the skill banner hangs than a word.
+    static let bannerHold: TimeInterval = 0.45
+    /// The two words' colours: a cool silver for a resist, the shield's cyan
+    /// for an immunity.
+    static let resistHex = "#C9D3DE"
+    static let immuneHex = "#8FE3F5"
+    /// The impact frame's burn on its victim (`UnitNode.flashHit`): fully
+    /// white at 1.4 times the flash's strength, for two frames.
+    static let impactBurn: CGFloat = 1.4
+    /// What the queue holds after the final blow's slow motion before the
+    /// victim's fall is presented and the wave or the fight moves on.
+    static let afterTheFinalBlow: TimeInterval = 0.15
 
     /// Every floating word and number for the frame about to be drawn: over
     /// the unit it came off, popped, risen and faded by its age, stacked on
@@ -2021,10 +2602,172 @@ final class BattleSceneController: NSObject {
             let age = now - label.born
             label.node.alpha = label.alpha(at: age) * label.visibility * label.crowdAlpha
             label.node.isHidden = label.visibility * label.crowdAlpha < 0.01
-            label.node.position = CGPoint(x: x + label.slide, y: y)
+            // A crit's tremble as it lands (W1.2), a couple of points either
+            // way round the place the clamps gave it.
+            let shake = label.shake(at: age)
+            label.node.position = CGPoint(x: x + label.slide + shake.x, y: y + shake.y)
         }
         plates.retireFloats(finished)
     }
+}
+
+// MARK: - The end of the fight on the field (Docs/FEEL.md W1.7)
+
+extension BattleSceneController {
+
+    /// The victory beat on the field before the reckoning: the survivors
+    /// turned to the lens in their victory clips, the camera on the team,
+    /// the EXP bars filling (`celebrate`). `BattleView` holds its reckoning
+    /// this long.
+    static let triumphDuration: TimeInterval = 2.4
+
+    /// How long the survivors take to turn to the lens, and how long the
+    /// camera takes to come in on them.
+    static let triumphTurn: TimeInterval = 0.45
+    static let triumphFraming: TimeInterval = 0.9
+    /// When the EXP bars begin to fill: once the turn has settled.
+    static let experienceDelay: TimeInterval = 0.5
+
+    /// The pace the survivors pose at: their own (×1), whatever speed the
+    /// fight was watched at (`UnitNode.celebrate`). Under the CI tour's
+    /// victory beat (`-tour-victory`, or this file's `-tour-triumph` lab) a
+    /// quarter of it, so the 2.0-s pose lasts about eight: a simulator
+    /// screenshot lands two to three seconds after it is asked for
+    /// (build.yml's relic_awaken note, run 234), and at ×1 the pose was over
+    /// before either of the step's frames landed. A still of the slowed clip
+    /// is the clip's own picture at that moment — the battle camera has no
+    /// motion blur — so the frame judges the pose the player sees.
+    static var triumphPosePace: Double {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        if arguments.contains("-tour"), arguments.contains("-tour-victory") || arguments.contains("-tour-triumph") {
+            return tourPosePace
+        }
+        #endif
+        return 1
+    }
+    static let tourPosePace: Double = 0.25
+
+    /// Main thread, once, on a WIN's last run: survivors turn to face the
+    /// camera (look(at:), yaw only) and play their own victory clip at ×1
+    /// (`triumphPosePace`), whatever the fight's speed was; the
+    /// camera frames the team along the home line of sight (the floor never
+    /// turns); each plate swaps health for a gold EXP bar that fills from ->
+    /// to, with LEVEL UP rising over a unit whose levelsGained > 0. Units
+    /// missing from the map just pose.
+    func celebrate(experience: [UUID: ExperienceGain]) {
+        guard !celebrated else { return }
+        celebrated = true
+        endSlowMotion()
+        let survivors = unitNodes.values.filter { $0.side == .player && !$0.isDefeated }
+        guard !survivors.isEmpty else { return }
+        // Where each stands when it has walked the last of the way home.
+        let team = survivors.map { node in
+            (position: homeMarks[node.combatantID] ?? node.position, height: node.spec.height)
+        }
+        let lens = director?.frameTeam(team, over: Self.triumphFraming) ?? cameraNode.position
+        // The plates stand through the beat (the reckoning takes them).
+        plates.setFieldHidden(false)
+        let posePace = Self.triumphPosePace
+        for node in survivors {
+            node.setHighlighted(false)
+            node.setMatchup(nil)
+            node.celebrate(facing: lens, turn: Self.triumphTurn, pace: posePace)
+            guard let gain = experience[node.combatantID] else { continue }
+            node.plate?.showExperience(from: gain.from, to: gain.to, levels: gain.levelsGained,
+                                       after: Self.experienceDelay)
+        }
+    }
+
+    /// Main thread, on a LOSS: the camera's saturation eases to 0.15 over
+    /// the duration (restored when a new run is built).
+    func drainColour(duration: TimeInterval) {
+        endSlowMotion()
+        director?.drainColour(to: Self.drainedSaturation, over: duration)
+    }
+
+    /// What a lost field's colour drains to.
+    static let drainedSaturation: CGFloat = 0.15
+
+    /// Under the CI tour's `-tour-triumph` (`win`, the default, or `loss`),
+    /// the end of a fight is played on the field six seconds in, whatever
+    /// the fight is doing, so a run photographs the scene's half of the
+    /// beat without winning one: the survivors turned to the lens in their
+    /// victory clips with the camera on them, a bar filling on every plate
+    /// and one unit levelling — or, for `loss`, the colour draining.
+    func startTourTriumph() {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("-tour"), let flag = arguments.firstIndex(of: "-tour-triumph") else { return }
+        let loss = flag + 1 < arguments.count && arguments[flag + 1] == "loss"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 6) { [weak self] in
+            guard let self else { return }
+            if loss {
+                self.drainColour(duration: 1.2)
+                return
+            }
+            let team = self.unitNodes.values
+                .filter { $0.side == .player && !$0.isDefeated }
+                .sorted { $0.position.x < $1.position.x }
+            var gains: [UUID: ExperienceGain] = [:]
+            for (index, node) in team.enumerated() {
+                let from: Double = 0.18 + 0.17 * Double(index % 4)
+                let levelled = index == 0
+                let to: Double = levelled ? 0.32 : min(1, from + 0.38)
+                gains[node.combatantID] = ExperienceGain(from: from, to: to, levelsGained: levelled ? 1 : 0)
+            }
+            print("[TourCue] scene triumph")
+            self.celebrate(experience: gains)
+        }
+        #endif
+    }
+}
+
+/// The TOTAL a multi-hit earns (Docs/FEEL.md W1.2): each run of hits one
+/// source lands on one target is summed as it lands, and the run closes on
+/// its last hit (`hitIndex == hitCount - 1`) or on a kill, which ends it
+/// early. A run of two hits or more earns its total; a lone hit, a skill of
+/// one hit, and a run cut to one by a kill earn none. Keyed by source AND
+/// target, so a counter landed in the middle of a run is a run of its own.
+/// A random-target skill can miss a victim on its last hit, so a turn's end
+/// closes what is still open (`closeAll`).
+struct MultiHitLedger {
+    private struct HitRunKey: Hashable {
+        let source: UUID
+        let target: UUID
+    }
+
+    private var runs: [HitRunKey: (sum: Double, hits: Int)] = [:]
+
+    /// Records one hit; the total to show after it, when it closes a run of
+    /// two or more.
+    mutating func record(source: UUID, target: UUID, amount: Double, hitIndex: Int, hitCount: Int,
+                         lethal: Bool) -> Double? {
+        guard hitCount > 1 else { return nil }
+        let key = HitRunKey(source: source, target: target)
+        let before = runs[key] ?? (sum: 0, hits: 0)
+        let run = (sum: before.sum + amount, hits: before.hits + 1)
+        let closes: Bool = hitIndex >= hitCount - 1 || lethal
+        guard closes else {
+            runs[key] = run
+            return nil
+        }
+        runs[key] = nil
+        return run.hits >= 2 ? run.sum : nil
+    }
+
+    /// Closes every run still open: the totals owed, by target.
+    mutating func closeAll() -> [(target: UUID, total: Double)] {
+        var owed: [(target: UUID, total: Double)] = []
+        for (key, run) in runs where run.hits >= 2 {
+            owed.append((target: key.target, total: run.sum))
+        }
+        runs.removeAll()
+        return owed
+    }
+
+    /// How many runs are open.
+    var openRuns: Int { runs.count }
 }
 
 /// Renders damage numbers and words to a picture for the plate overlay.
@@ -2086,8 +2829,393 @@ enum FloatingTextRenderer {
 
         // Bound the cache: strings are mostly numbers and repeat heavily, but a
         // long battle should not grow it without limit.
+        remember(image, as: key)
+        return image
+    }
+
+    private static func remember(_ image: UIImage, as key: String) {
         if cache.count > 400 { cache.removeAll() }
         cache[key] = image
+    }
+
+    // MARK: - The numbers that read (Docs/FEEL.md W1.2)
+
+    /// The small carved word over a number: 13 points, over the 11-point
+    /// floor, tracked out as an inscription is.
+    static let wordSize: CGFloat = 13
+    private static let wordTracking: CGFloat = 1.3
+
+    /// A hit's number with its word over it (`HitWord`), in its ink
+    /// (`FloatInk`): Manrope-Bold for the figures, Cinzel for the word, each
+    /// with the dark OUTER edge every float carries and the same clear edge
+    /// round the whole picture (the letters' edge and five points), which
+    /// `BattleSceneController.floatEdge` counts on. `opacity` is baked in (a
+    /// multi-hit's early hits are drawn at 80%), composited once, so the
+    /// outline does not show through the fill.
+    static func number(_ digits: String, word: HitWord?, ink: FloatInk, size: CGFloat, opacity: CGFloat) -> UIImage? {
+        let key = "n|\(digits)|\(word?.text ?? "")|\(ink.key)|\(Int(size * 2))|\(Int(opacity * 100))"
+        if let cached = cache[key] { return cached }
+        let font = UIFont(name: Theme.numberFace, size: size) ?? UIFont.systemFont(ofSize: size, weight: .bold)
+        let edge: CGFloat = max(1.2, size / 16)
+        let image = lettering(digits, font: font, edge: edge, tracking: 0, ink: ink, word: word, opacity: opacity)
+        if let image { remember(image, as: key) }
         return image
+    }
+
+    /// A carved word in a number's ink, for a moment the word itself is:
+    /// LEVEL UP over a plate (W1.7).
+    static func flourish(_ text: String, ink: FloatInk, size: CGFloat) -> UIImage? {
+        let key = "f|\(text)|\(ink.key)|\(Int(size * 2))"
+        if let cached = cache[key] { return cached }
+        let font = UIFont(name: Theme.carvedFace, size: size) ?? UIFont.systemFont(ofSize: size, weight: .heavy)
+        let edge: CGFloat = max(2.0, size / 9)
+        let image = lettering(text, font: font, edge: edge, tracking: 1.1, ink: ink, word: nil, opacity: 1)
+        if let image { remember(image, as: key) }
+        return image
+    }
+
+    /// A word alone in the style of the words over the numbers: RESIST,
+    /// IMMUNE (W1.2).
+    static func word(_ text: String, colour: UIColor, size: CGFloat) -> UIImage? {
+        let key = "w|\(text)|\(rgbaKey(colour))|\(Int(size * 2))"
+        if let cached = cache[key] { return cached }
+        let font = UIFont(name: Theme.carvedFace, size: size) ?? UIFont.systemFont(ofSize: size, weight: .heavy)
+        let edge: CGFloat = max(2.0, size / 9)
+        let image = lettering(text, font: font, edge: edge, tracking: wordTracking, ink: .solid(colour), word: nil, opacity: 1)
+        if let image { remember(image, as: key) }
+        return image
+    }
+
+    /// The dark edge's colour, and the shadow under the letters.
+    private static let edgeColour = UIColor(red: 0.07, green: 0.05, blue: 0.03, alpha: 0.95)
+
+    private static func letterShadow(carved: Bool) -> NSShadow {
+        let shadow = NSShadow()
+        shadow.shadowColor = UIColor.black.withAlphaComponent(carved ? 0.9 : 0.7)
+        shadow.shadowBlurRadius = carved ? 4.5 : 3
+        shadow.shadowOffset = CGSize(width: 0, height: 1.5)
+        return shadow
+    }
+
+    /// One line of letters and, over it, its word: measured, then drawn in
+    /// passes — the dark edge with its shadow, the ink's own rim if it has
+    /// one, then the fill, a gradient through a transparency layer (the
+    /// letters in white, the gradient laid over them `sourceIn`).
+    private static func lettering(_ text: String, font: UIFont, edge: CGFloat, tracking: CGFloat, ink: FloatInk,
+                                  word: HitWord?, opacity: CGFloat) -> UIImage? {
+        let size = font.pointSize
+        let carved = font.fontName == Theme.carvedFace
+        let fill = NSAttributedString(string: text, attributes: [
+            .font: font, .foregroundColor: UIColor.white, .kern: tracking,
+        ])
+        let measured = fill.size()
+        guard measured.width > 0, measured.height > 0 else { return nil }
+        let outline = NSAttributedString(string: text, attributes: [
+            .font: font, .kern: tracking,
+            .strokeColor: edgeColour,
+            .strokeWidth: 2 * edge / size * 100,
+            .shadow: letterShadow(carved: carved),
+        ])
+
+        // The word over it: Cinzel at `wordSize`, its own edge.
+        let wordFont = UIFont(name: Theme.carvedFace, size: wordSize) ?? UIFont.systemFont(ofSize: wordSize, weight: .heavy)
+        let wordEdge: CGFloat = max(2.0, wordSize / 9)
+        var wordFill: NSAttributedString?
+        var wordOutline: NSAttributedString?
+        var wordMeasured = CGSize.zero
+        if let word {
+            let colour = UIColor(hex: word.colourHex) ?? .white
+            let lettered = NSAttributedString(string: word.text, attributes: [
+                .font: wordFont, .foregroundColor: colour, .kern: wordTracking,
+            ])
+            wordFill = lettered
+            wordOutline = NSAttributedString(string: word.text, attributes: [
+                .font: wordFont, .kern: wordTracking,
+                .strokeColor: edgeColour,
+                .strokeWidth: 2 * wordEdge / wordSize * 100,
+                .shadow: letterShadow(carved: true),
+            ])
+            wordMeasured = lettered.size()
+        }
+        // The word sits a fifth into the figures' ascent, so the two read as
+        // one label rather than two lines.
+        let overlap: CGFloat = word == nil ? 0 : wordMeasured.height * 0.22
+        let pad: CGFloat = max(edge, word == nil ? 0 : wordEdge) + 5
+        let wordBlock: CGFloat = word == nil ? 0 : wordMeasured.height - overlap
+        let width: CGFloat = ceil(max(measured.width, wordMeasured.width) + 2 * pad)
+        let height: CGFloat = ceil(measured.height + wordBlock + 2 * pad)
+        let wordOrigin = CGPoint(x: (width - wordMeasured.width) / 2, y: pad)
+        let origin = CGPoint(x: (width - measured.width) / 2, y: pad + wordBlock)
+        let gradient: UIImage? = ink.gradient.map { stops in gradientImage(stops, size: measured) }
+
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 3
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format).image { context in
+            let cg = context.cgContext
+            cg.setLineJoin(.round)
+            cg.setAlpha(opacity)
+            cg.beginTransparencyLayer(auxiliaryInfo: nil)
+            if let wordOutline, let wordFill {
+                wordOutline.draw(at: wordOrigin)
+                wordFill.draw(at: wordOrigin)
+            }
+            outline.draw(at: origin)
+            if let rim = ink.rim {
+                // A thin rim in the attacker's colour just outside the
+                // letters, inside the dark edge.
+                let rimmed = NSAttributedString(string: text, attributes: [
+                    .font: font, .kern: tracking,
+                    .strokeColor: rim,
+                    .strokeWidth: 2 * (edge * 0.6) / size * 100,
+                ])
+                rimmed.draw(at: origin)
+            }
+            if let gradient {
+                cg.beginTransparencyLayer(auxiliaryInfo: nil)
+                fill.draw(at: origin)
+                gradient.draw(in: CGRect(origin: origin, size: measured), blendMode: .sourceIn, alpha: 1)
+                cg.endTransparencyLayer()
+            } else {
+                let solid = NSAttributedString(string: text, attributes: [
+                    .font: font, .foregroundColor: ink.fill, .kern: tracking,
+                ])
+                solid.draw(at: origin)
+            }
+            cg.endTransparencyLayer()
+        }
+    }
+
+    /// A vertical gradient the size of a line of letters.
+    private static func gradientImage(_ stops: [(CGFloat, String)], size: CGSize) -> UIImage {
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 3
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: size, format: format).image { context in
+            let colours = stops.map { (UIColor(hex: $0.1) ?? .white).cgColor } as CFArray
+            let locations: [CGFloat] = stops.map { $0.0 }
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colours,
+                                            locations: locations) else { return }
+            context.cgContext.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 0, y: size.height), options: [])
+        }
+    }
+
+    /// A colour as a cache key.
+    static func rgbaKey(_ colour: UIColor) -> String {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        colour.getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        return "\(Int(red * 255)),\(Int(green * 255)),\(Int(blue * 255)),\(Int(alpha * 255))"
+    }
+
+    // MARK: - The skill banner (Docs/FEEL.md W1.9)
+
+    /// The banner a caster wears as its skill goes off: the skill's painted
+    /// icon (or its glyph until the painting ships) in a dark socket lit in
+    /// the caster's element, framed in gold, beside its name in Cinzel at 20
+    /// points, on a dark ribbon that fades out past the name — Summoners
+    /// War's banner in the owner's frame. The same clear edge round it as
+    /// every float, so the float's clamps hold it by its own size.
+    static func banner(_ name: String, icon: UIImage?, glyph: String, key iconKey: String, tint: UIColor) -> UIImage? {
+        let key = "b|\(name)|\(iconKey)|\(icon == nil ? "g" : "p")|\(rgbaKey(tint))"
+        if let cached = cache[key] { return cached }
+        let size: CGFloat = bannerNameSize
+        let font = UIFont(name: Theme.carvedFace, size: size) ?? UIFont.systemFont(ofSize: size, weight: .heavy)
+        let edge: CGFloat = max(2.0, size / 9)
+        let title = NSAttributedString(string: name, attributes: [
+            .font: font, .foregroundColor: UIColor(hex: "#F7E7B4") ?? .white, .kern: 0.6,
+        ])
+        let titleOutline = NSAttributedString(string: name, attributes: [
+            .font: font, .kern: 0.6,
+            .strokeColor: edgeColour,
+            .strokeWidth: 2 * edge / size * 100,
+            .shadow: letterShadow(carved: true),
+        ])
+        let measured = title.size()
+        guard measured.width > 0, measured.height > 0 else { return nil }
+        let frame: CGFloat = 34
+        let gap: CGFloat = 8
+        let pad: CGFloat = edge + 5
+        let width: CGFloat = ceil(pad + frame + gap + measured.width + 14 + pad)
+        let height: CGFloat = ceil(max(frame, measured.height) + 2 * pad)
+        let midY: CGFloat = height / 2
+        let socketRect = CGRect(x: pad, y: midY - frame / 2, width: frame, height: frame)
+
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 3
+        format.opaque = false
+        let image = UIGraphicsImageRenderer(size: CGSize(width: width, height: height), format: format).image { context in
+            let cg = context.cgContext
+            let space = CGColorSpaceCreateDeviceRGB()
+            // The ribbon: dark glass from under the frame to past the name,
+            // fading out, with a gold hairline along each edge.
+            let ribbon = CGRect(x: socketRect.midX, y: midY - 13, width: width - pad - socketRect.midX, height: 26)
+            let shade = [
+                UIColor.black.withAlphaComponent(0.62).cgColor,
+                UIColor.black.withAlphaComponent(0.45).cgColor,
+                UIColor.black.withAlphaComponent(0).cgColor,
+            ] as CFArray
+            let shadeStops: [CGFloat] = [0, 0.7, 1]
+            if let gradient = CGGradient(colorsSpace: space, colors: shade, locations: shadeStops) {
+                cg.saveGState()
+                cg.clip(to: ribbon)
+                cg.drawLinearGradient(gradient, start: CGPoint(x: ribbon.minX, y: midY),
+                                      end: CGPoint(x: ribbon.maxX, y: midY), options: [])
+                cg.restoreGState()
+            }
+            let hairlines = [
+                (UIColor(hex: "#E8C877") ?? .yellow).withAlphaComponent(0.7).cgColor,
+                (UIColor(hex: "#E8C877") ?? .yellow).withAlphaComponent(0).cgColor,
+            ] as CFArray
+            let hairlineStops: [CGFloat] = [0, 1]
+            if let gradient = CGGradient(colorsSpace: space, colors: hairlines, locations: hairlineStops) {
+                for y in [ribbon.minY, ribbon.maxY - 1] {
+                    let line = CGRect(x: ribbon.minX, y: y, width: ribbon.width, height: 1)
+                    cg.saveGState()
+                    cg.clip(to: line)
+                    cg.drawLinearGradient(gradient, start: CGPoint(x: line.minX, y: y),
+                                          end: CGPoint(x: line.maxX, y: y), options: [])
+                    cg.restoreGState()
+                }
+            }
+
+            // The gold frame, the dark socket, the element's light in it.
+            let outer = UIBezierPath(roundedRect: socketRect, cornerRadius: 8)
+            cg.saveGState()
+            cg.setShadow(offset: CGSize(width: 0, height: 1.5), blur: 4, color: UIColor.black.withAlphaComponent(0.8).cgColor)
+            (UIColor(hex: "#5C4611") ?? .brown).setFill()
+            outer.fill()
+            cg.restoreGState()
+            let goldStops = [
+                (UIColor(hex: "#FBE7A1") ?? .yellow).cgColor,
+                (UIColor(hex: "#D2A844") ?? .yellow).cgColor,
+                (UIColor(hex: "#8C6D22") ?? .brown).cgColor,
+            ] as CFArray
+            let goldLocations: [CGFloat] = [0, 0.5, 1]
+            if let gradient = CGGradient(colorsSpace: space, colors: goldStops, locations: goldLocations) {
+                cg.saveGState()
+                outer.addClip()
+                cg.drawLinearGradient(gradient, start: CGPoint(x: socketRect.midX, y: socketRect.minY),
+                                      end: CGPoint(x: socketRect.midX, y: socketRect.maxY), options: [])
+                cg.restoreGState()
+            }
+            let socket = socketRect.insetBy(dx: 2.5, dy: 2.5)
+            let well = UIBezierPath(roundedRect: socket, cornerRadius: 6)
+            (UIColor(hex: "#15100B") ?? .black).setFill()
+            well.fill()
+            let glowStops = [tint.withAlphaComponent(0.6).cgColor, tint.withAlphaComponent(0).cgColor] as CFArray
+            let glowLocations: [CGFloat] = [0, 1]
+            if let gradient = CGGradient(colorsSpace: space, colors: glowStops, locations: glowLocations) {
+                cg.saveGState()
+                well.addClip()
+                let centre = CGPoint(x: socket.midX, y: socket.midY)
+                cg.drawRadialGradient(gradient, startCenter: centre, startRadius: 0,
+                                      endCenter: centre, endRadius: socket.width * 0.62, options: [])
+                cg.restoreGState()
+            }
+            // The icon: the painting fitted, or the glyph in white.
+            let art = socket.insetBy(dx: 2, dy: 2)
+            let glyphLook = UIImage.SymbolConfiguration(pointSize: 15, weight: .bold)
+            let glyphImage: UIImage? = UIImage(systemName: glyph, withConfiguration: glyphLook)
+            cg.saveGState()
+            well.addClip()
+            if let icon, icon.size.width > 0, icon.size.height > 0 {
+                let fit = min(art.width / icon.size.width, art.height / icon.size.height)
+                let drawn = CGSize(width: icon.size.width * fit, height: icon.size.height * fit)
+                icon.draw(in: CGRect(x: art.midX - drawn.width / 2, y: art.midY - drawn.height / 2,
+                                     width: drawn.width, height: drawn.height))
+            } else if let symbol = glyphImage?.withTintColor(.white, renderingMode: .alwaysOriginal) {
+                let box: CGFloat = 18
+                let fit = min(box / max(1, symbol.size.width), box / max(1, symbol.size.height))
+                let drawn = CGSize(width: symbol.size.width * fit, height: symbol.size.height * fit)
+                symbol.draw(in: CGRect(x: art.midX - drawn.width / 2, y: art.midY - drawn.height / 2,
+                                       width: drawn.width, height: drawn.height))
+            }
+            cg.restoreGState()
+
+            // The name, carved, centred on the ribbon.
+            cg.setLineJoin(.round)
+            let origin = CGPoint(x: socketRect.maxX + gap, y: midY - measured.height / 2)
+            titleOutline.draw(at: origin)
+            title.draw(at: origin)
+        }
+        remember(image, as: key)
+        return image
+    }
+
+    /// The skill's name on its banner: 20 points (W1.9).
+    static let bannerNameSize: CGFloat = 20
+}
+
+/// The small carved word a number wears over it (Docs/FEEL.md W1.2): it
+/// replaces the "!" a crit wore and the "glance" suffix, in the word's own
+/// colour, and the gold TOTAL that closes a multi-hit.
+enum HitWord {
+    case critical, glancing, total
+
+    var text: String {
+        switch self {
+        case .critical: return "CRITICAL"
+        case .glancing: return "GLANCING"
+        case .total: return "TOTAL"
+        }
+    }
+
+    var colourHex: String {
+        switch self {
+        case .critical: return "#FFB43A"
+        case .glancing: return "#A6AFBC"
+        case .total: return "#F5D57A"
+        }
+    }
+}
+
+/// The ink a number is drawn in (W1.2): an ordinary blow cream with a thin
+/// rim in the attacker's element colour; a crit a gradient from gold to
+/// orange; a glance slate; a multi-hit's TOTAL a gradient of gold; a word
+/// alone its own colour. Green is the heal's (`floatText`) and nothing here
+/// is green.
+enum FloatInk {
+    case rimmed(UIColor)
+    case critical
+    case glancing
+    case total
+    case solid(UIColor)
+
+    /// The fill, for an ink that is one colour.
+    var fill: UIColor {
+        switch self {
+        case .rimmed: return UIColor(hex: "#FFF4DE") ?? .white
+        case .critical: return UIColor(hex: "#FFC53D") ?? .yellow
+        case .glancing: return UIColor(hex: "#A6AFBC") ?? .gray
+        case .total: return UIColor(hex: "#F6D06A") ?? .yellow
+        case .solid(let colour): return colour
+        }
+    }
+
+    /// The rim just outside the letters, for the ink that has one.
+    var rim: UIColor? {
+        switch self {
+        case .rimmed(let colour): return colour
+        case .critical, .glancing, .total, .solid: return nil
+        }
+    }
+
+    /// The gradient's stops, top to foot, for an ink that is one.
+    var gradient: [(CGFloat, String)]? {
+        switch self {
+        case .critical: return [(0, "#FFF1A8"), (0.45, "#FFC53D"), (1, "#FF7A1F")]
+        case .total: return [(0, "#FFF6CF"), (0.5, "#F6D06A"), (1, "#D9A12E")]
+        case .rimmed, .glancing, .solid: return nil
+        }
+    }
+
+    var key: String {
+        switch self {
+        case .rimmed(let colour): return "r\(FloatingTextRenderer.rgbaKey(colour))"
+        case .critical: return "c"
+        case .glancing: return "g"
+        case .total: return "t"
+        case .solid(let colour): return "s\(FloatingTextRenderer.rgbaKey(colour))"
+        }
     }
 }

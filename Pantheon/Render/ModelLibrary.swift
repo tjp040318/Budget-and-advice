@@ -1335,6 +1335,67 @@ enum MaterialTuner {
     static let rimStrength: Double = 0.12
     static var paintSaturation: Double { FigureStageLighting.paintSaturation }
 
+    // MARK: - The battle set's paint (2026-09-24, Docs/FEEL.md L1)
+
+    /// The share of its saturation a battle set's paint keeps, the figures
+    /// keeping all of theirs: the genre's set is quiet stone and its colour
+    /// is spent on the monsters (a median saturation of 0.20–0.24 in the
+    /// owner's Summoners War frames). The summon reveal's temple takes the
+    /// same (`SummonStageView.setSaturation`).
+    static let setSaturation: Double = 0.80
+    /// A prop's white rim on a battle set: 0.06, under the figures' 0.12
+    /// (`rimStrength`), where `StageBuilder.loadProp` gives it 0.18 — so a
+    /// column no longer has a brighter edge than the god standing before it.
+    static let setPropRim: Double = 0.06
+
+    /// A prop's OWN copy of a material, in the set's paint and rim. The
+    /// uniforms `tune` binds are bound again by value, as `tune` binds them
+    /// — a prop is never tinted — so the copy renders as the shared material
+    /// did whatever `copy()` keeps of them; then the two the set changes.
+    static func tuneSetProp(_ material: SCNMaterial) {
+        let metalMap: Bool = material.metalness.contents != nil && !(material.metalness.contents is NSNumber)
+        material.setValue(NSNumber(value: Float(metalMap ? 1 : 0)), forKey: "hasMetalMap")
+        material.setValue(NSNumber(value: Float(FigureStageLighting.metalShine ? 1 : 0)), forKey: "metalShine")
+        material.setValue(NSNumber(value: Float(0)), forKey: "costumeHue")
+        material.setValue(NSNumber(value: Float(0)), forKey: "costumeSaturation")
+        material.setValue(NSNumber(value: Float(0)), forKey: "costumeMix")
+        material.setValue(NSNumber(value: Float(45.0 / 360.0)), forKey: "costumeSourceHue")
+        material.setValue(NSNumber(value: Float(32.0 / 360.0)), forKey: "costumeBand")
+        material.setValue(NSNumber(value: Float(0)), forKey: "costumeGlow")
+        material.setValue(NSValue(scnVector3: SCNVector3(1, 1, 1)), forKey: "rimColor")
+        material.setValue(NSNumber(value: Float(rimPower)), forKey: "rimPower")
+        material.setValue(NSNumber(value: Float(setSaturation)), forKey: "paintSaturation")
+        material.setValue(NSNumber(value: Float(setPropRim)), forKey: "rimStrength")
+    }
+
+    /// The set's saturation on a lit material that carries no modifier of
+    /// its own — the rock, the walls, the medallion, the parapet — by the
+    /// figures' own luma mix (`surfaceModifier`), on the sampled base colour
+    /// before any light touches it. The battle slab's top is passed by
+    /// (`calmedAtBuild`): its painted tile AND its tint are calmed where it
+    /// is built (`StageBuilder.arenaFloorSaturation`, 0.5, measured against
+    /// the owner's frames), and this pass on top of it left the stone at 0.4
+    /// (review, 2026-09-24). A further calming of the floor is a change to
+    /// that one number.
+    static func calmSet(_ material: SCNMaterial) {
+        guard material.shaderModifiers == nil, material.name != calmedAtBuild else { return }
+        material.shaderModifiers = [.surface: setSurfaceModifier]
+    }
+
+    /// The name `StageBuilder.floorMaterial` gives a material whose painted
+    /// tile it has already calmed.
+    static let calmedAtBuild = "calmed_at_build"
+
+    /// Metal: the base colour taken to sRGB for the mix, as the figures'
+    /// modifier does, pulled toward its own luma to `setSaturation`, and back.
+    static let setSurfaceModifier = """
+    #pragma body
+    float3 setPaint = pow(max(_surface.diffuse.rgb, float3(0.0)), float3(1.0 / 2.2));
+    float setLuma = dot(setPaint, float3(0.299, 0.587, 0.114));
+    setPaint = mix(float3(setLuma), setPaint, \(setSaturation));
+    _surface.diffuse.rgb = pow(setPaint, float3(2.2));
+    """
+
     private static func report(_ node: SCNNode, _ message: String) {
         #if DEBUG
         let key = (node.name ?? "?") + message

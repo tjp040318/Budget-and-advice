@@ -1397,6 +1397,42 @@ environment can and cannot do. The short version:
   the victory's chest in three frames, the collection's Stage layout
   (21), the relic drop card (22), the relic filter sheet (23) and the
   loading screen (24), the relic set reference (25), a tribute chest's card (26), a stage's popup over the chapter map (27), every chapter's painted map (28, twelve frames a–l) and a fight on six other realms' sets (29, `realm_battle`, relaunched with `-tour-environment <rawValue>`: Olympus, the marsh, the fjord, Jötunheim, Rome, the Peach Garden — the other battle steps only ever show Egypt).
+- **The premium feel's battle half (2026-09-24; `Docs/FEEL.md` W1.1–W1.3,
+  W1.6, W1.7, W1.9, L1, each with its *As built*).** The speed steps ×1 → ×2
+  → ×3 (`BattleSpeed`, remembered in `UserDefaults` under `battleSpeed`,
+  never under `-tour`); ×3 SCALES the juice (a third of each freeze over a 20
+  ms floor, half the shake, haptics only for a crit, a kill or an ultimate)
+  and Skip (`flush`) is the one mode with no feedback — `Juice.skipThreshold`
+  is gone. The hit-stop's tremble (`Tremor`) and the final blow's slow motion
+  (`timeScale`, multiplied into the speed as `pace`) tick on `FrameTicker`s,
+  120-Hz main-run-loop `Timer`s through a `WeakTickTarget` (the display
+  link's stand-in: swiftcheck's `--types` list has no `CADisplayLink`) that
+  stop themselves once their owner has gone; `Juice.stopTremor` (every impact
+  and release, and `Juice.release` in `flush`, `halt` and `build`) and
+  `endSlowMotion` (its own end, a new one, `flush`, `halt`, `build`,
+  `celebrate`, `drainColour`) and the controller's deinit invalidate them.
+  `CameraDirector` reads the realm's grade at init; `impactFrame()` punches
+  it for two frames and restores it EXACTLY (a generation guard; never over a
+  drain or under Reduce Motion), and `stopMoves()` (shot, shake, fov)
+  replaced `removeAllActions` so a return home never cancels `drainColour`'s
+  `grade` action. One impact frame per cast, the final blow's when the cast
+  has one. Lights: figures on category 2 (`UnitNode.markFigure`; a category
+  is not inherited, so mark anything hung on a unit again), the set on 4
+  (`StageBuilder.separateBattleSet`, a prop's materials COPIED before they
+  are tuned), figure lights 2 | 1, set lights 4; `-tour-layers off` builds
+  the old shared rig. The scene's contract with `BattleView`:
+  `celebrate(experience:)` once on the last run's win (keyed by COMBATANT id:
+  the survivors turn to the lens and pose at ×1, `frameTeam`, gold EXP bars,
+  LEVEL UP), `drainColour(duration:)` on a loss or a draw, `triumphDuration`
+  2.4 s; `forfeit()` calls `halt()`. The level-up beat (`BattleResultView`'s
+  `.levelUp`, `PlayerLevelUp`) comes between the reckoning and the chest, one
+  per auto-repeat, and `GameStore.pendingLevelCelebration` (never saved;
+  `takeLevelCelebration()`) bursts the island's level ring once. Tour frames:
+  `6-battle-layers-off`; `-tour-victory field` (a real Duat 1-1 win at ×3,
+  the pose slowed to `tourPosePace` 0.25 because a screenshot lands two to
+  three seconds late) gives `20-victory-0`, `-triumph` and `-levelup`, and
+  `-tour-victory defeat` gives `20-victory-defeat`; `-tour-triumph win|loss`
+  is a lab nobody photographs. The job's limit is 110 minutes.
 - **The fight reads.** **Every unit's bars are a screen-space plate OVER
   ITS HEAD (2026-09-15; under the feet from 2026-09-11 until the owner,
   with Summoners War's frame beside ours: "The health bars are not above

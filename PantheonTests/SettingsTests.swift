@@ -150,6 +150,39 @@ final class SettingsTests: XCTestCase {
         XCTAssertEqual(camera.bloomIntensity, bloom, accuracy: 0.000_1)
     }
 
+    // MARK: - The battle's speed (Docs/FEEL.md W1.1)
+
+    /// The control steps ×1 → ×2 → ×3 → ×1 — never ×4, where the juice
+    /// turned itself off — and the device remembers a speed only as one of
+    /// those three. A suite of its own, so the player's choice is untouched.
+    func testTheBattleSpeedStepsOneTwoThreeAndRemembersOnlyThose() throws {
+        let second: Double = BattleSpeed.next(after: 1)
+        let third: Double = BattleSpeed.next(after: second)
+        let wrapped: Double = BattleSpeed.next(after: third)
+        let fromTheOldTop: Double = BattleSpeed.next(after: 4)
+        XCTAssertEqual(second, 2)
+        XCTAssertEqual(third, 3)
+        XCTAssertEqual(wrapped, 1, "×3 steps back round to ×1")
+        XCTAssertEqual(fromTheOldTop, 1, "a ×4 from before W1.1 reads as the top, and steps round")
+        XCTAssertEqual(BattleSpeed.top, 3, "the stress tour runs its fights at the top")
+
+        let suite = "PantheonTests.battleSpeed"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        defaults.removePersistentDomain(forName: suite)
+        defer { defaults.removePersistentDomain(forName: suite) }
+        let unset: Double = BattleSpeed.remembered(in: defaults)
+        XCTAssertEqual(unset, 1, "a device that never chose watches at ×1")
+        BattleSpeed.remember(2, in: defaults)
+        let kept: Double = BattleSpeed.remembered(in: defaults)
+        XCTAssertEqual(kept, 2, "the next fight opens at the speed the last was left at")
+        defaults.set(4.0, forKey: BattleSpeed.key)
+        let old: Double = BattleSpeed.remembered(in: defaults)
+        XCTAssertEqual(old, 3, "a stored ×4 comes back as ×3")
+        defaults.set(0.5, forKey: BattleSpeed.key)
+        let low: Double = BattleSpeed.remembered(in: defaults)
+        XCTAssertEqual(low, 1)
+    }
+
     // MARK: - Comfort
 
     func testTheGamesOwnReduceMotionHoldsTheCameraStill() {

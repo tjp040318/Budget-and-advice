@@ -129,6 +129,10 @@ struct BattleSceneView: UIViewRepresentable {
                 var node: SCNNode? = hit.node
                 while let current = node {
                     if let unitNode = current as? UnitNode {
+                        // An enemy tapped on the player's turn wears a
+                        // reticle in the acting unit's colour (Docs/FEEL.md
+                        // W1.9); the controller decides whether it may.
+                        controller?.stampReticle(on: unitNode, in: view)
                         onTapUnit(unitNode.combatantID)
                         return
                     }
@@ -228,6 +232,9 @@ final class UnitPlateOverlay: SKScene {
     /// Two layers so the reckoning can fade the whole field's chrome as one.
     private let plateLayer = SKNode()
     private let floatLayer = SKNode()
+    /// Between the plates and the words: a kill's speed lines and a tapped
+    /// enemy's reticle (Docs/FEEL.md W1.3, W1.9).
+    private let burstLayer = SKNode()
     /// The plates themselves, inside `plateLayer`, dimmed while a cut-in's
     /// band is up (`setPlatesDimmed`). A node of its own, so the band's dim
     /// and the reckoning's fade (`setFieldHidden`) never undo each other.
@@ -252,6 +259,8 @@ final class UnitPlateOverlay: SKScene {
         plateLayer.zPosition = 0
         addChild(plateLayer)
         plateLayer.addChild(dimLayer)
+        burstLayer.zPosition = 90
+        addChild(burstLayer)
         floatLayer.zPosition = 100
         addChild(floatLayer)
     }
@@ -274,8 +283,14 @@ final class UnitPlateOverlay: SKScene {
     /// by the caller; the node is made and placed on the render thread.
     /// `side` is metres across the unit (a boss's words stand beside its
     /// head) and `align` −1 puts the label's trailing edge on that point.
+    /// `overshoot` is how far past its size a popped label springs (a
+    /// crit's further than a hit's), `jitter` how long it trembles as it
+    /// lands, and `hold` how much longer than a word it hangs (the skill
+    /// banner's).
     func addFloat(image: UIImage, over unit: UnitNode, lift: Float, side: Float = 0, align: CGFloat = 0,
-                  pop: Bool, scatter: CGFloat, rise: CGFloat) {
+                  pop: Bool, scatter: CGFloat, rise: CGFloat,
+                  overshoot: CGFloat = FloatingLabel.standardOvershoot, jitter: TimeInterval = 0,
+                  hold: TimeInterval = 0) {
         let anchor = unit.convertPosition(SCNVector3(side, lift, 0), to: nil)
         let born = CACurrentMediaTime()
         perform { [weak self] in
@@ -285,10 +300,115 @@ final class UnitPlateOverlay: SKScene {
             sprite.alpha = 0
             let label = FloatingLabel(
                 node: sprite, unit: unit, lift: lift, side: side, align: align, fallback: anchor,
-                born: born, pop: pop, scatter: scatter, rise: rise
+                born: born, pop: pop, scatter: scatter, rise: rise,
+                overshoot: overshoot, jitter: jitter, hold: hold
             )
             self.floatLayer.addChild(sprite)
             self.floats.append(label)
+        }
+    }
+
+    // MARK: A kill's speed lines and the reticle (Docs/FEEL.md W1.3, W1.9)
+
+    /// A kill's speed lines waiting for their unit's place on the screen,
+    /// which only the renderer knows (`placeBursts`). Render thread only.
+    private var pendingBursts: [SpeedLineBurst] = []
+
+    /// A burst of thin speed lines in `tint` round a unit struck dead (the
+    /// impact frame of a kill), `lift` metres up it. Main thread; placed on
+    /// the render thread when the next frame is laid out.
+    func burstSpeedLines(over unit: UnitNode, lift: Float, tint: UIColor) {
+        let burst = SpeedLineBurst(unit: unit, lift: lift, tint: tint)
+        perform { [weak self] in self?.pendingBursts.append(burst) }
+    }
+
+    /// The bursts asked for since the last frame, drawn where their units
+    /// stand in it. Render thread, from `BattleSceneController.layoutPlates`.
+    func placeBursts(in renderer: SCNSceneRenderer) {
+        guard !pendingBursts.isEmpty else { return }
+        let bursts = pendingBursts
+        pendingBursts.removeAll()
+        let height = size.height
+        for burst in bursts {
+            guard let unit = burst.unit else { continue }
+            let feet = unit.worldPosition
+            let projected = renderer.projectPoint(SCNVector3(feet.x, feet.y + burst.lift, feet.z))
+            guard projected.z > 0, projected.z < 1 else { continue }
+            spawnSpeedLines(at: CGPoint(x: CGFloat(projected.x), y: height - CGFloat(projected.y)), tint: burst.tint)
+        }
+    }
+
+    /// The lines themselves: sixteen thin strokes of light round the point,
+    /// each a random length, flying outward and gone in a quarter second
+    /// over a flash at the heart — the anime impact frame's lines.
+    private func spawnSpeedLines(at centre: CGPoint, tint: UIColor) {
+        let line = PlateArt.speedLine()
+        let count = 16
+        for index in 0..<count {
+            let angle: CGFloat = CGFloat(index) / CGFloat(count) * 2 * .pi + CGFloat.random(in: -0.12...0.12)
+            let direction = CGVector(dx: cos(angle), dy: sin(angle))
+            let start: CGFloat = CGFloat.random(in: 34...52)
+            let travel: CGFloat = CGFloat.random(in: 36...58)
+            let stroke = SKSpriteNode(texture: line)
+            stroke.size = CGSize(width: 3.2, height: CGFloat.random(in: 46...82))
+            stroke.color = tint
+            stroke.colorBlendFactor = 0.7
+            stroke.blendMode = .add
+            stroke.position = CGPoint(x: centre.x + direction.dx * start, y: centre.y + direction.dy * start)
+            stroke.zRotation = angle - .pi / 2
+            stroke.alpha = 0
+            let move = SKAction.moveBy(x: direction.dx * travel, y: direction.dy * travel, duration: 0.26)
+            move.timingMode = .easeOut
+            let show = SKAction.sequence([.fadeAlpha(to: 1, duration: 0.03), .fadeOut(withDuration: 0.23)])
+            stroke.run(.sequence([.group([move, show]), .removeFromParent()]))
+            burstLayer.addChild(stroke)
+        }
+        let core = SKSpriteNode(texture: PlateArt.burstCore())
+        core.size = CGSize(width: 72, height: 72)
+        core.color = tint
+        core.colorBlendFactor = 0.45
+        core.blendMode = .add
+        core.position = centre
+        core.setScale(0.6)
+        core.run(.sequence([
+            .group([.scale(to: 1.3, duration: 0.18), .fadeOut(withDuration: 0.18)]),
+            .removeFromParent(),
+        ]))
+        burstLayer.addChild(core)
+    }
+
+    /// The last reticle stamped, so a new stamp takes its place. Render thread.
+    private weak var reticle: SKSpriteNode?
+
+    /// A reticle stamped on a tapped enemy (W1.9), at `point` in the
+    /// overlay's points (origin at the bottom), in `tint`: it lands from a
+    /// size and a half and a quarter turn, holds a third of a second, and
+    /// fades. Main thread; drawn on the render thread.
+    func stampReticle(at point: CGPoint, tint: UIColor) {
+        // Under Reduce Motion it fades in where it lands, at its size and
+        // square, rather than spinning down out of a larger one. Read here,
+        // on the main thread.
+        let calm = MotionComfort.isReduced
+        perform { [weak self] in
+            guard let self else { return }
+            self.reticle?.removeFromParent()
+            let mark = SKSpriteNode(texture: PlateArt.reticle())
+            mark.size = CGSize(width: 60, height: 60)
+            mark.color = tint
+            mark.colorBlendFactor = 0.85
+            mark.position = point
+            mark.alpha = 0
+            mark.setScale(calm ? 1 : 1.7)
+            mark.zRotation = calm ? 0 : CGFloat.pi / 4
+            let land = SKAction.group([
+                .fadeAlpha(to: 1, duration: 0.13),
+                .scale(to: 1, duration: 0.13),
+                .rotate(toAngle: 0, duration: 0.13, shortestUnitArc: true),
+            ])
+            land.timingMode = .easeOut
+            mark.run(.sequence([land, .wait(forDuration: 0.32), .fadeOut(withDuration: 0.25), .removeFromParent()]))
+            self.burstLayer.addChild(mark)
+            self.reticle = mark
         }
     }
 
@@ -304,6 +424,10 @@ final class UnitPlateOverlay: SKScene {
             guard let self else { return }
             for label in self.floats { label.node.removeFromParent() }
             self.floats.removeAll()
+            // A new run's field has none of the last one's speed lines or
+            // reticle either.
+            self.pendingBursts.removeAll()
+            self.burstLayer.removeAllChildren()
         }
     }
 
@@ -313,7 +437,7 @@ final class UnitPlateOverlay: SKScene {
     func setFieldHidden(_ hidden: Bool) {
         perform { [weak self] in
             guard let self else { return }
-            for layer in [self.plateLayer, self.floatLayer] {
+            for layer in [self.plateLayer, self.burstLayer, self.floatLayer] {
                 layer.removeAction(forKey: "field")
                 layer.run(.fadeAlpha(to: hidden ? 0 : 1, duration: 0.25), withKey: "field")
             }
@@ -341,6 +465,20 @@ final class UnitPlateOverlay: SKScene {
         let gone = Array(plates.values)
         plates.removeAll()
         perform { for plate in gone { plate.removeFromParent() } }
+    }
+}
+
+/// A kill's speed lines waiting for their unit's place on the screen
+/// (`UnitPlateOverlay.placeBursts`): the unit, how far up it, the colour.
+struct SpeedLineBurst {
+    weak var unit: UnitNode?
+    let lift: Float
+    let tint: UIColor
+
+    init(unit: UnitNode, lift: Float, tint: UIColor) {
+        self.unit = unit
+        self.lift = lift
+        self.tint = tint
     }
 }
 
@@ -398,8 +536,19 @@ final class FloatingLabel {
     /// within reach of its unit, faded back in when it has one.
     var crowdAlpha: CGFloat = 1
 
+    /// How far past its size a popped label springs before it settles: an
+    /// eighth for a number, a quarter for a crit (Docs/FEEL.md W1.2).
+    static let standardOvershoot: CGFloat = 1.12
+    let overshoot: CGFloat
+    /// Seconds a crit trembles as it lands (0 for everything else).
+    let jitter: TimeInterval
+    /// Seconds it hangs past a word's life before it fades: the skill
+    /// banner's (W1.9).
+    let hold: TimeInterval
+
     init(node: SKSpriteNode, unit: UnitNode?, lift: Float, side: Float, align: CGFloat, fallback: SCNVector3,
-         born: TimeInterval, pop: Bool, scatter: CGFloat, rise: CGFloat) {
+         born: TimeInterval, pop: Bool, scatter: CGFloat, rise: CGFloat,
+         overshoot: CGFloat = FloatingLabel.standardOvershoot, jitter: TimeInterval = 0, hold: TimeInterval = 0) {
         self.node = node
         self.unit = unit
         self.lift = lift
@@ -410,9 +559,25 @@ final class FloatingLabel {
         self.pop = pop
         self.scatter = scatter
         self.rise = rise
+        self.overshoot = overshoot
+        self.jitter = jitter
+        self.hold = hold
     }
 
-    var life: TimeInterval { (pop ? FloatingLabel.popTime : 0) + FloatingLabel.riseTime }
+    var life: TimeInterval { (pop ? FloatingLabel.popTime : 0) + FloatingLabel.riseTime + hold }
+
+    /// A crit's tremble as it lands, in points: two and a half at first,
+    /// dying away over `jitter`, at a rate the eye reads as a shudder.
+    func shake(at age: TimeInterval) -> CGPoint {
+        guard jitter > 0 else { return .zero }
+        let into: TimeInterval = age - FloatingLabel.popTime * 0.5
+        guard into > 0, into < jitter else { return .zero }
+        let left = CGFloat(1 - into / jitter)
+        let amplitude: CGFloat = 2.5 * left
+        let x: CGFloat = amplitude * CGFloat(sin(into * 2 * Double.pi * 28))
+        let y: CGFloat = amplitude * 0.6 * CGFloat(cos(into * 2 * Double.pi * 23))
+        return CGPoint(x: x, y: y)
+    }
 
     /// Where in the world it hangs this frame.
     var anchor: SCNVector3 {
@@ -427,14 +592,15 @@ final class FloatingLabel {
     func scale(at age: TimeInterval) -> CGFloat {
         guard pop else { return 1 }
         let grow = 0.07
+        let peak = overshoot
         if age < grow {
             let t = CGFloat(age / grow)
             let eased = 1 - (1 - t) * (1 - t)
-            return 0.35 + (1.12 - 0.35) * eased
+            return 0.35 + (peak - 0.35) * eased
         }
         if age < FloatingLabel.popTime {
             let t = CGFloat((age - grow) / (FloatingLabel.popTime - grow))
-            return 1.12 - 0.12 * t
+            return peak - (peak - 1) * t
         }
         return 1
     }
@@ -494,12 +660,18 @@ final class UnitPlate: SKNode {
     static let frameEdge: CGFloat = 0.75
     /// The dark well the bars lie in.
     static var wellHeight: CGFloat { hpHeight + barGap + atbHeight + 2 * trackPad }
+    /// The EXP bar the triumph lays in the well: both bars' height and the
+    /// rule between them, so it reads as one gold bar (W1.7).
+    static var expHeight: CGFloat { hpHeight + barGap + atbHeight }
     /// The whole frame, edge to edge: 16 points of silver and well, and the
     /// dark edge round them (17.5).
     static var trackHeight: CGFloat { wellHeight + 2 * (bevel + frameEdge) }
     /// The frame's bottom edge stands this far above the projected top of
     /// the head.
     static let riseAboveHead: CGFloat = 12
+    /// How far the triumph's LEVEL UP rises out of the plate into its place
+    /// just over the track (`levelUpMoment`).
+    static let levelUpRise: CGFloat = 16
     /// A status tile, and the step from one tile's centre to the next: the
     /// tile and the turn chip hanging past its corner. 12 points, with the
     /// turns at about 3, until run 221 (under the 11-point floor).
@@ -554,6 +726,15 @@ final class UnitPlate: SKNode {
     /// the death, the revival and a wave's entry (`setDefeated`, `enter`),
     /// whose fade actions would undo a fade written over them.
     private let parts = SKNode()
+    /// The health bar, its trail and the attack bar, as one node, so the
+    /// triumph can swap them for the EXP bar in one move (`showExperience`).
+    private let bars = SKNode()
+    /// The gold EXP bar the triumph fills (Docs/FEEL.md W1.7): the whole
+    /// well's height, hidden until then.
+    private let expCrop = SKCropNode()
+    private let expMask: SKSpriteNode
+    /// The level on the badge. Render thread.
+    private(set) var level: Int = 1
     private let hpFill: SKSpriteNode
     private let hpMask: SKSpriteNode
     private let trailMask: SKSpriteNode
@@ -622,6 +803,7 @@ final class UnitPlate: SKNode {
         trailMask = UnitPlate.mask(width: w, height: h)
         atbFill = atbFillNode
         atbMask = UnitPlate.mask(width: w, height: a)
+        expMask = UnitPlate.mask(width: w, height: UnitPlate.expHeight)
         badge = badgeNode
         levelBadge = levelNode
         rim = rimNode
@@ -650,26 +832,45 @@ final class UnitPlate: SKNode {
         frameNode.zPosition = 1
         parts.addChild(frameNode)
 
+        // The bars in a node of their own at the plate's origin and z, so
+        // where each is drawn is unchanged and the triumph can hide all
+        // three at once.
+        bars.position = .zero
+        bars.zPosition = 2
+        parts.addChild(bars)
+
         let trailCrop = SKCropNode()
         trailCrop.maskNode = trailMask
         trailCrop.addChild(trailFillNode)
         trailCrop.position = CGPoint(x: 0, y: hpY)
-        trailCrop.zPosition = 2
-        parts.addChild(trailCrop)
+        trailCrop.zPosition = 0
+        bars.addChild(trailCrop)
 
         let hpCrop = SKCropNode()
         hpCrop.maskNode = hpMask
         hpCrop.addChild(hpFill)
         hpCrop.position = CGPoint(x: 0, y: hpY)
-        hpCrop.zPosition = 3
-        parts.addChild(hpCrop)
+        hpCrop.zPosition = 1
+        bars.addChild(hpCrop)
 
         let atbCrop = SKCropNode()
         atbCrop.maskNode = atbMask
         atbCrop.addChild(atbFill)
         atbCrop.position = CGPoint(x: 0, y: atbY)
-        atbCrop.zPosition = 3
-        parts.addChild(atbCrop)
+        atbCrop.zPosition = 1
+        bars.addChild(atbCrop)
+
+        // The EXP bar: the well's whole height, gold, hidden until the
+        // triumph fills it.
+        let expFillNode = SKSpriteNode(texture: PlateArt.gloss("exp", width: w, height: UnitPlate.expHeight,
+                                                               radius: 2, stops: PlateArt.experienceStops))
+        expFillNode.size = CGSize(width: w, height: UnitPlate.expHeight)
+        expCrop.maskNode = expMask
+        expCrop.addChild(expFillNode)
+        expCrop.position = .zero
+        expCrop.zPosition = 3
+        expCrop.isHidden = true
+        parts.addChild(expCrop)
 
         // The level badge over the frame's left end, the genre's way.
         levelBadge.position = CGPoint(x: UnitPlate.badgeCentreX, y: 0)
@@ -695,6 +896,7 @@ final class UnitPlate: SKNode {
     }
 
     private func applyLevel(_ level: Int) {
+        self.level = level
         levelBadge.texture = PlateArt.levelBadge(level: level, hex: elementHex)
         // A level of three figures is a pill, grown leftward off the frame.
         let width = PlateArt.levelBadgeWidth(for: level)
@@ -771,6 +973,23 @@ final class UnitPlate: SKNode {
         later { [self] in
             alpha = 0
             run(.fadeIn(withDuration: duration), withKey: "fade")
+        }
+    }
+
+    /// THE TRIUMPH'S EXP BAR (Docs/FEEL.md W1.7): the health and attack bars
+    /// give way to one gold bar that stands at `from` and, `delay` seconds
+    /// on, fills to `to`; a unit that levelled fills to the end first, the
+    /// badge takes its new level, LEVEL UP rises over the plate and the bar
+    /// runs on from empty. The status tiles, the matchup marker and the
+    /// acting rim leave with the health it replaces. The picture of LEVEL UP
+    /// is drawn here, on the caller's (the main) thread, where the float
+    /// renderer's cache lives; the bar is set on the renderer's.
+    func showExperience(from: Double, to: Double, levels: Int, after delay: TimeInterval) {
+        let banner: UIImage? = levels > 0 ? FloatingTextRenderer.flourish("LEVEL UP", ink: .total, size: 18) : nil
+        // Read here, on the main thread, for the render thread's moment.
+        let calm = MotionComfort.isReduced
+        later { [self] in
+            applyExperience(from: from, to: to, levels: levels, delay: delay, banner: banner, calm: calm)
         }
     }
 
@@ -878,6 +1097,87 @@ final class UnitPlate: SKNode {
         }
     }
 
+    private func applyExperience(from: Double, to: Double, levels: Int, delay: TimeInterval, banner: UIImage?,
+                                 calm: Bool) {
+        bars.isHidden = true
+        applyStatuses([])
+        badge.isHidden = true
+        applyActing(false)
+        expCrop.isHidden = false
+        let start = CGFloat(min(1, max(0, from)))
+        let end = CGFloat(min(1, max(0, to)))
+        expMask.removeAction(forKey: "exp")
+        expMask.xScale = max(0.001, start)
+        var steps: [SKAction] = [.wait(forDuration: max(0, delay))]
+        if levels > 0 {
+            // To the end, the level taken, then on from empty.
+            let rest: CGFloat = 1 - start
+            let fillUp = SKAction.scaleX(to: 1, duration: TimeInterval(0.2 + 0.5 * rest))
+            fillUp.timingMode = .easeIn
+            let onward = SKAction.scaleX(to: max(0.001, end), duration: TimeInterval(0.25 + 0.5 * end))
+            onward.timingMode = .easeOut
+            steps.append(fillUp)
+            steps.append(.run { [weak self] in self?.levelUpMoment(levels: levels, banner: banner, calm: calm) })
+            steps.append(.wait(forDuration: 0.18))
+            steps.append(.scaleX(to: 0.001, duration: 0))
+            steps.append(onward)
+        } else {
+            let fill = SKAction.scaleX(to: max(0.001, end), duration: TimeInterval(0.35 + 0.6 * abs(end - start)))
+            fill.timingMode = .easeOut
+            steps.append(fill)
+        }
+        expMask.run(.sequence(steps), withKey: "exp")
+    }
+
+    /// The moment a unit's bar reaches the end of its level: the badge takes
+    /// the new level with a pop, a flash runs over the full bar, and LEVEL
+    /// UP rises from the plate and STAYS over it, breathing, until the
+    /// reckoning takes the plates — the triumph is under two and a half
+    /// seconds, and a word that faded a second after it landed left the
+    /// beat's last second with no sign of who had levelled. Render thread
+    /// (an action's block).
+    ///
+    /// The words rise OUT OF the plate into their place just over the track
+    /// (2026-09-24, review): they rose 16 points past it, and with the heads
+    /// where the triumph framed them the words stood under the VICTORY
+    /// stamp's band (`CameraDirector.teamLowering` says where they are now).
+    /// Under Reduce Motion (`calm`, read on the main thread) the badge takes
+    /// its level without the bump and the words fade in where they rest.
+    private func levelUpMoment(levels: Int, banner: UIImage?, calm: Bool) {
+        applyLevel(level + levels)
+        levelBadge.removeAction(forKey: "bump")
+        if !calm {
+            levelBadge.run(.sequence([.scale(to: 1.35, duration: 0.08), .scale(to: 1, duration: 0.2)]), withKey: "bump")
+        }
+        let flash = SKSpriteNode(color: .white, size: CGSize(width: UnitPlate.barWidth, height: UnitPlate.expHeight))
+        flash.blendMode = .add
+        flash.alpha = 0.85
+        flash.zPosition = 4
+        flash.run(.sequence([.fadeOut(withDuration: 0.3), .removeFromParent()]))
+        parts.addChild(flash)
+        guard let banner else { return }
+        let words = SKSpriteNode(texture: SKTexture(image: banner))
+        words.size = banner.size
+        let rest: CGFloat = UnitPlate.trackHeight / 2 + banner.size.height / 2 + 4
+        let travel: CGFloat = calm ? 0 : UnitPlate.levelUpRise
+        words.position = CGPoint(x: 0, y: rest - travel)
+        words.zPosition = 6
+        words.alpha = 0
+        words.setScale(calm ? 1 : 0.6)
+        let rise = SKAction.moveBy(x: 0, y: travel, duration: 0.5)
+        rise.timingMode = .easeOut
+        let pop: SKAction = calm
+            ? .wait(forDuration: 0)
+            : .sequence([.scale(to: 1.15, duration: 0.1), .scale(to: 1, duration: 0.12)])
+        let arrive = SKAction.group([rise, pop, .fadeIn(withDuration: calm ? 0.3 : 0.1)])
+        let dim = SKAction.fadeAlpha(to: 0.82, duration: 0.7)
+        dim.timingMode = .easeInEaseOut
+        let lift = SKAction.fadeAlpha(to: 1, duration: 0.7)
+        lift.timingMode = .easeInEaseOut
+        words.run(.sequence([arrive, .repeatForever(.sequence([dim, lift]))]), withKey: "levelUp")
+        parts.addChild(words)
+    }
+
 }
 
 /// The plates' pictures, drawn once each with Core Graphics at 3× and kept:
@@ -982,6 +1282,78 @@ enum PlateArt {
         (0, "#B0893A"), (0.12, "#FFF0B8"), (0.3, "#FFDD7A"), (0.5, "#F5C64E"),
         (0.7, "#E8B03A"), (0.85, "#D69A2A"), (1, "#A8751C"),
     ]
+    /// The triumph's EXP bar (W1.7): a deeper, warmer gold than a full
+    /// attack bar, lit along its top.
+    static let experienceStops: [(CGFloat, String)] = [
+        (0, "#A67A26"), (0.08, "#FFF3C4"), (0.24, "#FFE08A"), (0.5, "#F2BE45"),
+        (0.76, "#DC9C2C"), (0.9, "#C1851F"), (1, "#8C5E14"),
+    ]
+
+    // MARK: The effects' strokes (W1.3, W1.9), white, tinted where they are used
+
+    /// A speed line: a thin stroke of light, bright in its middle and gone
+    /// at both ends.
+    static func speedLine() -> SKTexture {
+        texture("speed_line", size: CGSize(width: 4, height: 64)) { context, rect in
+            let path = UIBezierPath(roundedRect: rect.insetBy(dx: 0.6, dy: 0), cornerRadius: 1.7).cgPath
+            paintStops(context, in: rect, path: path, stops: [
+                (0, "#FFFFFF00"), (0.3, "#FFFFFFB0"), (0.55, "#FFFFFFFF"), (0.8, "#FFFFFF90"), (1, "#FFFFFF00"),
+            ])
+        }
+    }
+
+    /// The flash at the heart of a kill's burst: a soft round glow.
+    static func burstCore() -> SKTexture {
+        texture("burst_core", size: CGSize(width: 64, height: 64)) { context, rect in
+            let colours = [
+                UIColor.white.withAlphaComponent(0.95).cgColor,
+                UIColor.white.withAlphaComponent(0.35).cgColor,
+                UIColor.white.withAlphaComponent(0).cgColor,
+            ] as CFArray
+            let locations: [CGFloat] = [0, 0.4, 1]
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colours,
+                                            locations: locations) else { return }
+            let centre = CGPoint(x: rect.midX, y: rect.midY)
+            context.drawRadialGradient(gradient, startCenter: centre, startRadius: 0,
+                                       endCenter: centre, endRadius: rect.width / 2, options: [])
+        }
+    }
+
+    /// The reticle a tap stamps on an enemy: a ring with four ticks pointing
+    /// in at the quarters and a dot at its heart, over a dark edge so it
+    /// reads on pale stone.
+    static func reticle() -> SKTexture {
+        texture("reticle", size: CGSize(width: 60, height: 60)) { context, rect in
+            let centre = CGPoint(x: rect.midX, y: rect.midY)
+            let radius: CGFloat = 21
+            let ring = UIBezierPath(arcCenter: centre, radius: radius, startAngle: 0, endAngle: 2 * .pi, clockwise: true)
+            let ticks = UIBezierPath()
+            for quarter in 0..<4 {
+                let angle: CGFloat = CGFloat(quarter) * .pi / 2
+                let outer = CGPoint(x: centre.x + cos(angle) * (radius + 7), y: centre.y + sin(angle) * (radius + 7))
+                let inner = CGPoint(x: centre.x + cos(angle) * (radius - 8), y: centre.y + sin(angle) * (radius - 8))
+                ticks.move(to: outer)
+                ticks.addLine(to: inner)
+            }
+            context.setLineCap(.round)
+            // The dark edge under the strokes.
+            context.setStrokeColor(UIColor.black.withAlphaComponent(0.55).cgColor)
+            context.setLineWidth(4.6)
+            context.addPath(ring.cgPath)
+            context.strokePath()
+            context.addPath(ticks.cgPath)
+            context.strokePath()
+            // The strokes, white, tinted by the sprite.
+            context.setStrokeColor(UIColor.white.cgColor)
+            context.setLineWidth(2.2)
+            context.addPath(ring.cgPath)
+            context.strokePath()
+            context.addPath(ticks.cgPath)
+            context.strokePath()
+            context.setFillColor(UIColor.white.cgColor)
+            context.fillEllipse(in: CGRect(x: centre.x - 2.2, y: centre.y - 2.2, width: 4.4, height: 4.4))
+        }
+    }
     /// The frame's silver, top to foot: a cool light edge (his (201, 192,
     /// 193)) and a warm foot (his (173, 158, 140)), the bevel being the
     /// first and last tenth; the middle is under the well.

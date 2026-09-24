@@ -8245,7 +8245,89 @@ per hour, and what costs money. Wave 1 as built so far:
   idling, in a dark glass well on the sheet (`CollectionStageView`'s
   `.column` framing).
 
-Still to build, the battle's half: W1.1 speed ×1/×2/×3 with the juice kept,
-W1.2 damage numbers, W1.3 the hit-stop and impact frame, W1.9 the turn
-circle and skill banner, W1.7 the end of a fight, W1.6 the level-up
-fanfare, and L1's battle half.
+The battle's half, built on 2026-09-24 by two agents on disjoint files (the
+scene's: `BattleSceneController`, `BattleSceneView`, `CameraDirector`,
+`Juice`, `UnitNode`, `StageBuilder`, `MaterialTuner`; the screens':
+`BattleView`, `BattleViewModel`, `GameStore`, `CampaignService`,
+`IslandView`, `TourView`, build.yml) against one contract, then reviewed
+adversarially and eight findings fixed. `Docs/FEEL.md` has an *As built*
+paragraph under each item.
+
+- **W1.1 speed:** `BattleSpeed` steps ×1 → ×2 → ×3 → ×1, remembered under
+  the `UserDefaults` key `battleSpeed` (never under `-tour`).
+  `Juice.skipThreshold` is gone; ×3 keeps a third of each freeze over a 20
+  ms floor (`scaledFreeze`), half the shake and the haptic for a crit, a
+  kill or an ultimate (`hapticFires`); Skip (`flush`) is the one way to
+  watch with no feedback. The stress tour runs at ×3.
+- **W1.2 numbers:** CRITICAL and GLANCING as 13-pt Cinzel words over the
+  number (`HitWord`, `FloatInk`); a normal hit cream rimmed in the
+  attacker's colour, a crit a gold-to-orange gradient at 1.8× (≤ 40 pt) with
+  a 1.28 overshoot and a 0.15-s tremble; no advantage green; early
+  multi-hits at 0.85×/80% and a gold TOTAL at 1.25× (`MultiHitLedger`, by
+  source and target); RESIST and IMMUNE as carved words.
+- **W1.3 hit-stop:** the freeze is the weight's pause + 0.10 s × min(1, 3 ×
+  share), ≤ 0.22 s, 60% on early hits; the victim trembles 2–10 cm at 30 Hz
+  inside it (`Tremor` on a `FrameTicker`, a 120-Hz main-run-loop `Timer` —
+  no `CADisplayLink`, which swiftcheck's list lacks); the impact frame
+  (`CameraDirector.impactFrame`, saturation 0.25, contrast +0.35, exposure
+  +0.3 for two frames, the grade restored exactly) with a two-frame white
+  burn (`flashHit(strength: 1.4)`) and, on a kill, speed lines in the plate
+  overlay; one per cast, the final blow's when the cast has one.
+- **W1.9 turn circle and banner:** a rune disc 0.6 × the height in the
+  element's colour under the actor (peak 0.9, 0.54 on the pale sets); the
+  skill's painted icon in a gold frame beside its name in 20-pt Cinzel over
+  the caster (not for an ultimate, whose cut-in names it); a tick, a haptic
+  and a gold ring on arming (`SkillArmRing`); a gloss and a chime on a skill
+  ready again (`SkillGloss`); a 60-pt reticle on the enemy tapped.
+- **W1.7 the end of a fight:** the final blow falls on the blow, holds 0.2 s
+  with the impact frame, then time at 0.3 for 0.6 s (`timeScale` × the
+  player's speed = `pace`; particles slowed; a whoosh as it returns) while
+  the camera eases toward the victim on the home line of sight. A win:
+  `celebrate(experience:)` turns the survivors to the lens (yaw only), poses
+  them at ×1 (0.25 under the tour, whose screenshots land two to three
+  seconds late), frames the team (`frameTeam`: 0.40 of the frame, chests
+  0.42 under the centre, clear of the stamp) and fills gold EXP bars with
+  LEVEL UP; `VictoryStamp` over the live field for 2.4 s
+  (`triumphDuration`). A loss: `drainColour` to saturation 0.15 under
+  `DefeatStamp` for 2.0 s. The reckoning then slides in over a 0.55 scrim
+  (0.84 before). A forfeit halts the turn in playback
+  (`BattleSceneController.halt`).
+- **W1.6 level-up:** `StageOutcome.playerLevelsGained`/`newPlayerLevel`,
+  `BattleSummary.levelUp` (`PlayerLevelUp`, `LevelUnlock`), a
+  `Phase.levelUp` between the reckoning and the chest (LEVEL N in carved
+  gold on the fanfare's chord over light shafts; energy refilled, max energy
+  +2 a level, +25 divinity, what opened), one beat per auto-repeat; the
+  island's level ring bursts once on the next visit
+  (`GameStore.pendingLevelCelebration`, never saved). `LevelUpTests`.
+- **L1's battle half:** figures on light category 2, the set on 4; the set's
+  fill and ambient the set's alone, the figures' own 80% toward white, one
+  key over both; the braziers the set's, the boss's spot the figure's; the
+  set's paint at 0.80 and a prop's rim 0.06 (the slab's top keeps its own
+  0.5, not 0.4); `-tour-layers off` for the control frame.
+
+The review's eight, all fixed: an auto-repeat's triumph measured the plates
+from the SESSION's start and bumped a badge past the unit's level
+(`unitsAtStart` is taken again each run); the victory pose ran at the
+fight's ×3 (0.67 s); LEVEL UP stood under the VICTORY band (the framing
+lowered, the words rise into their place instead of past it); the slab's top
+was calmed twice; a forfeit left the turn playing under DEFEAT; a cast could
+punch two impact frames; Reduce Motion missed the crit's tremble, the
+reticle, the disc and LEVEL UP; and the CI job's limit is 110 minutes for
+the new relaunches.
+
+Still to do:
+
+- **Judge the CI frames** — `6-battle-a`–`d`, `-skill`, `-layers-off`
+  (`framelight.py` both), `8-arena_battle-aoe-*`, `18-dungeon_battle`,
+  `29-realm_battle`, `20-victory-0`, `-triumph`, `-levelup`, `-defeat` — and
+  send them to the owner before he tests (rule 1).
+- **On the phone only:** the motion, the haptics and the sound; whether
+  `SCNAnimationPlayer.speed` re-times a running clip on top of the
+  animation's own speed; whether `speedFactor` slows the effects; whether
+  the image-based light still reaches the category-2 figures; the set
+  modifier's first-frame compile.
+- **The owner's calls:** a real Crushing Hit (W1.2); energy above the bar at
+  a level-up (the settle sets it TO the bar); the enemies' victory pose
+  under DEFEAT (they pose at `.battleEnded`, at the fight's speed); the
+  heal, shield, status and block sounds, off at ×3 by W1.4's rule.
+- **Not photographed:** the scene's lab `-tour-triumph win|loss`.

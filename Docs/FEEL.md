@@ -410,6 +410,24 @@ stands where it ranks.
 - **Cost:** free, a few hours.
 - **Risk:** very low. Players who liked ×4 have Skip.
 
+**As built (2026-09-24):** `BattleSpeed` (BattleViewModel.swift) steps ×1 → ×2
+→ ×3 → ×1 (`next(after:)`, `top` 3; `settled` rounds and clamps, so an old
+stored ×4 reads ×3) and is remembered under the `UserDefaults` key
+`battleSpeed`: `BattleViewModel.speed` starts from it and saves every change,
+never under `-tour`, so every tour fight starts at ×1 and a step that wants
+another speed sets it (the stress fights and the victory step run at
+`BattleSpeed.top`). The speed reaches the feel only through
+`BattleSceneController.speedMultiplier`. `Juice.skipThreshold` is gone and no
+`isSkipping` flag replaced it: Skip is `flush`, which presents no hit at all,
+so it needs none to be silent. ×2 halves every freeze and shake as it always
+did; ×3 (`Juice.isFast`, over `fastSpeed` 2.5) keeps a third of the freeze over
+a 20 ms floor (`scaledFreeze`), half the shake (`shake(for:speed:)`) and the
+haptic only for a crit, a kill or an ultimate's hit (`hapticFires`). The heal,
+shield, status, resist and SKIPPED sounds stay off at ×3, as W1.4 says. The
+gear, speed and auto squares press with `GamePressStyle(.plate)`; they were
+silent `.plain` buttons. Tests: the speed rows of `HitFeelTests`, and
+`SettingsTests.testTheBattleSpeedStepsOneTwoThreeAndRemembersOnlyThose`.
+
 **W1.2 Damage numbers that read.**
 - **Already there, and kept:** a crit is gold with a "!" at 1.4×, a glance is
   slate with "glance", and RESIST floats as a word
@@ -445,6 +463,24 @@ stands where it ranks.
   and needs `DamageCalculator`, `BattleEvent`, `balance.py` and the tests
   changed together (about a day more).
 
+**As built (2026-09-24):**
+`FloatingTextRenderer.number(_:word:ink:size:opacity:)` draws a number with a
+13-pt Cinzel word over it when it has one (`HitWord`: CRITICAL in `#FFB43A`,
+GLANCING in `#A6AFBC`, TOTAL) in an ink (`FloatInk`): a normal hit is cream
+`#FFF4DE` with a thin rim in the ATTACKER's element colour inside its dark
+edge; a crit is a `#FFF1A8` → `#FFC53D` → `#FF7A1F` gradient at 1.8×
+(`critScale`, capped at 40 pt) that springs to 1.28 (`critOvershoot`) and
+trembles for 0.15 s (`critJitter`), neither under Reduce Motion; a glance is
+slate. No hit is green any more: `#7FE8A0` is the heal's alone. A multi-hit's
+early hits draw at 0.85× and 80% (`multiHitLook`), and `MultiHitLedger`, keyed
+by source AND target, sums each run and floats a gold TOTAL at 1.25× after its
+last hit or a kill; a run still open when a turn, a wave or the battle ends is
+paid then (`closeOpenTotals`), so a random-target skill whose last hit missed
+its victim still earns one. RESIST and IMMUNE (IMMUNE when the victim wears
+Immunity) float as carved words at 16 pt (`floatWord`). The two-line labels go
+through the same clamps as every float, which read the picture's own size. Not
+built: a real Crushing Hit, the owner's call.
+
 **W1.3 A hit-stop that grips, and an impact frame.**
 - **What:**
   - **The victim trembles inside the freeze:** 2–3 cm at about 30 Hz along and
@@ -478,6 +514,34 @@ stands where it ranks.
 - **Risk:** `Juice.release` must also stop the display link, or a figure could
   be left off its mark. Two of about 120 CI frames may catch the flash, so read
   `framelight.py` knowing that.
+
+**As built (2026-09-24):** `Juice.freeze(for:share:early:speed:)` is the
+weight's pause plus 0.10 s × min(1, 3 × damage ÷ max health), capped at 0.22 s
+(`longestFreeze`), 60% on a multi-hit's early hits, then scaled by the speed;
+`Juice.impact` takes `share:`, `early:`, `ultimate:`, `freezeFor:`, `shakes:`
+and `victim:`. The victim trembles inside the freeze (`Tremor`: 0.013 of its
+height held to 2–10 cm, so 2.5 cm on a 1.9-m figure, at 30 Hz across and a
+little along the blow, dying by the release; `modelContainer`'s x and z only,
+put back on its rest position before `isPaused` goes false; not in a freeze
+under 30 ms, never under Reduce Motion). The plan's `CADisplayLink` is a
+`FrameTicker`, a 120-Hz `Timer` in the main run loop's common modes whose
+target is a `WeakTickTarget` holding only the step, because swiftcheck's
+`--types` list of the frameworks' names has no `CADisplayLink`;
+`Juice.stopTremor` ends it on every new impact, on the release, and in
+`Juice.release` (every skip, forfeit and new run). The impact frame is
+`CameraDirector.impactFrame(duration: 2/60)`: saturation 0.25, contrast +0.35
+and exposure +0.3 on the realm's grade, which the director reads when it is
+made and puts back exactly (a generation guard; never under Reduce Motion or
+over a draining field), with the victim burnt white for two frames
+(`UnitNode.flashHit(strength: 1.4)`). A kill adds sixteen speed lines and a
+core in the striker's colour for about a quarter of a second, drawn in the
+plate overlay's SpriteKit burst layer rather than a SwiftUI `Canvas`, because
+that overlay already projects every unit each frame. One impact frame per cast,
+a counter counting as a cast of its own, and the FINAL blow owns it: a crit or
+a kill earlier in a cast that goes on to end its side leaves the frame to the
+final blow (`finalBlowFollows`, read off the queue). The final blow used to
+punch past the limit, so an area ultimate that crit and then wiped a wave
+punched twice inside a second (review, the same day).
 
 **W1.4 The silent fight gets its sounds.**
 - **What:** about eighteen short sounds, one per silent event:
@@ -572,6 +636,31 @@ stands where it ranks.
 - **Risk:** an auto-repeat of twenty runs must show one combined beat at the
   end, not twenty.
 
+**As built (2026-09-24):** `StageOutcome.playerLevelsGained` and
+`newPlayerLevel` (defaulted); the settle's per-level numbers named
+(`CampaignService.maxEnergyPerLevel` 2, `divinityPerLevel` 25, the values
+unchanged); and `BattleSummary.levelUp`, a `PlayerLevelUp` (the levels, the bar
+the settle left, `maxEnergyGained`, `divinity`, and `LevelUnlock.between`: a
+building that opens, a decoration the chisel now sells, a building's next
+tier). `BattleResultView`'s `Phase.levelUp` stands between the reckoning, whose
+line then reads TAP TO CONTINUE, and the chest: LEVEL N in carved gold
+springing in on the `.levelUp` fanfare's chord at 0.3 s (`LevelNumeralFrame`,
+`.keyframeAnimator`) over `LightShafts`, then the chips — Energy refilled N/N,
+Max energy +N, +25 Divinity, and at most three unlocks with the rest counted on
+the last. A tap in its first second is ignored. An auto-repeat banks every
+run's levels in `RepeatSession` and shows ONE beat at its end.
+`GameStore.pendingLevelCelebration` (a `LevelCelebration`, never saved) is set
+by `finishCampaignBattle` and `sweep`, merged across clears and taken once
+(`takeLevelCelebration`): the island's header ring swells, a ring of gold
+bursts out of it and Lv. rolls from the old level to the new (`.numericText`)
+once the island is both the selected tab and on screen. Unlike the plan, the
+tour photographs a REAL win's level-up (`-tour-victory field`: Duat 1-1 on auto
+at ×3, the demigod and the team's leader seeded one experience short;
+`20-victory-levelup` on `[TourCue] levelup`) rather than a seeded summary. Left
+to the owner: a level-up sets the energy TO the new bar, the rule before this,
+so a player holding more than the bar loses the excess while the chip reads
+N/N. Tests: `LevelUpTests` (four, in ProgressionTests.swift).
+
 **W1.7 The end of a fight: final-blow slow motion, and victory on the field.**
 - **What:**
   - **The final blow:** when a blow ends a wave or the fight, a 0.2 s freeze and
@@ -614,6 +703,48 @@ stands where it ranks.
     each family's own pose.
   - An auto-repeat plays it on the last run only.
   - Check that `playbackSpeed` re-times a clip that is already running.
+
+**As built (2026-09-24):** The final blow (`endsItsSide`: a kill that leaves
+its side empty) starts the victim's fall on the blow (`beginFinalFall`), holds
+0.2 s (`Juice.finalBlowFreeze`, ÷ the speed) with the impact frame, then runs
+time at 0.3 for 0.6 s (0.06 s in, 0.25 s out, all ÷ the speed). The slow motion
+is its own `timeScale`, multiplied into the player's speed as `pace`, not a
+tween of `speedMultiplier`, so the player's pick is never written over; every
+running clip follows it (`UnitNode.playbackSpeed` re-times an animation player
+and the counted clock that ends a one-shot, `ClipPace`), every particle
+system's `speedFactor` slows with it, `.whoosh` plays at 0.9 as time returns,
+and the camera eases toward the victim along the home line of sight and back
+(`easeToward`, the victim at most 42% of the frame). The queue holds through
+all of it. The triumph is `BattleSceneController.celebrate(experience:)`,
+called once by `BattleView` on the last run's win: the slow motion ended, every
+survivor steps onto its mark, turns to the lens with a yaw-only
+`look(at:up:localFront:)` in one `SCNTransaction` (0.45 s) and plays its
+victory clip at ×1 whatever the fight's speed (`triumphPosePace`: at ×3 the
+2.0-s pose had played in two thirds of a second, review), then its standing
+idle. `frameTeam` brings the camera in along the home line of sight over 0.9 s
+and holds, the team's chests 0.42 of the half-frame under the centre (0.22 put
+every LEVEL UP under the VICTORY band, review). Each plate's bars give way to a
+gold EXP bar filling from `ExperienceGain.from` to `.to`, keyed by COMBATANT id
+and measured by `BattleViewModel.experienceGains()` from the unit as THIS run
+began (taken again for every run of a repeat, since the badge shows the run's
+own level; review); a unit that levelled fills to the end, bumps its badge,
+flashes, and LEVEL UP rises out of the plate into its place over the track and
+stays, breathing. `BattleView`'s `FieldBeat` goes fighting → triumph or fallen
+→ reckoning. The HUD fades; a win stamps `VictoryStamp` (VICTORY slams onto a
+gold-ruled band, a ring goes out, the stars slam in an arc) and holds
+`triumphDuration`, 2.4 s; a loss or a draw calls `drainColour(duration: 0.8)` —
+saturation to 0.15 (`drainedSaturation`) as the grade's own action, which
+`stopMoves` leaves alone — under `DefeatStamp` (wine; DRAW in marble) for 2.0
+s; a tap after 1.2 s hurries on. The reckoning slides in over 0.55 (0.84
+before), its stars already lit, and the level-up and the chest deepen it to
+0.84. A forfeit stops the fight where it stands: the waiting turn withdrawn, no
+other handed out, and the turn in playback halted
+(`BattleSceneController.halt`; review). Unlike the plan, the team poses in
+`celebrate`, not at `.battleEnded` (the enemies still pose there on a loss, at
+the fight's speed), and the tour adds `20-victory-defeat`. Under the tour the
+pose plays at a quarter of its pace (`tourPosePace`), because a simulator
+screenshot lands two to three seconds after it is asked for; the scene's own
+lab, `-tour-triumph win|loss`, is not photographed.
 
 **W1.8 One press language, and one set of motion curves.**
 - **What:**
@@ -687,6 +818,25 @@ stands where it ranks.
     brightness there.
   - The banner is wider than the name, so the float clamp must include it.
   - Check `6-battle` and `29-realm_battle`.
+
+**As built (2026-09-24):** The torus is the turn disc
+(`UnitNode.makeTurnDisc`): `StageBuilder.runeRing` in the element's colour,
+additive and writing no depth, over a soft pool half as wide again, 0.6 of the
+unit's height across (about 0.95 of its width). It pops in from 0.55 as the
+turn begins, breathes between 72% and 100% of `turnDiscPeak` (0.9; 0.54 on
+Olympus, the Aegean cliffs and the Forum, `StageBuilder.isPaleSet`), and fades
+on a death and at the triumph; under Reduce Motion it fades in at its size. The
+skill banner (`floatBanner`, `FloatingTextRenderer.banner`) is the square's own
+painted icon, resolved over the kit exactly as the HUD resolves it
+(`SkillArt.keys`), in a gold frame beside the name in 20-pt Cinzel, held 0.45
+s; it replaces the name float for every cast but an ultimate, whose cut-in
+already names it. Arming a skill plays `.uiTap`, a light haptic and a gold ring
+out of the square (`SkillArmRing`); a skill ready again gets a gloss
+(`SkillGloss`) and a `.starTick` 0.3 s after the squares appear, found by
+diffing each unit's cooling slots from its last turn (`noteCooldowns`; nothing
+plays on auto). A tap on an enemy stamps a 60-pt reticle in the acting unit's
+element colour (`stampReticle(on:in:)` → `UnitPlateOverlay.stampReticle`),
+landing from 1.7× and 45°, or fading in alone under Reduce Motion.
 
 **W1.10 The unit sheet stands the god up.**
 - **What:**
@@ -779,6 +929,30 @@ W3.27 (the boss pocket) are built on it. Its summon-reveal half
 **Timing note for L1.** The lighting job is doing the clean lighting now. If
 it has already split the lights, L1 is done and W2.9 can start. If it has not,
 L1 is the first battle item after that job commits.
+
+**As built (2026-09-24), the battle's half:** the figures on light category 2
+(`StageBuilder.figureCategory`; `UnitNode.markFigure` in `init`, `restartIdle`,
+and after a boss's lamp is hung, since a category is not inherited) and the set
+on 4 (`StageBuilder.separateBattleSet` at the end of `buildBattleStage`, and on
+the boss's breach, which is built later). The set's fill and ambient light the
+set alone (`setLights` 4); the figures get a fill and an ambient of their own
+at the same strength and from the same side, 80% of the way to white
+(`figureFillWhite`; `figureLights` 2 | 1, so anything added to the field
+unmarked is lit as a figure is); the key stays one light over both and casts
+the set's shadows; the braziers light the set; the boss's warm spot is a figure
+light and no longer reaches the stone round the breach; an effect's own light
+keeps every category. A prop's materials are copied before they are changed
+(`MaterialTuner.tuneSetProp`: paint at 0.80, `setSaturation`, and a rim of
+0.06, `setPropRim`), so `propCache` is untouched; every other lit set material
+takes a short surface modifier to 0.80 (`calmSet`) — except the battle slab's
+top, whose painted tile and tint are already calmed to 0.5 where it is built
+(`arenaFloorSaturation`; `calmedAtBuild`): the two passes together had left the
+stone at 0.4 (review, the same day), and a calmer floor is a change to that one
+number. `-tour-layers off` builds the shared rig of before, photographed as
+`6-battle-layers-off` beside `6-battle-a`. To confirm on the frames: the
+image-based light (`scene.lightingEnvironment`) has no mask and should still
+reach the figures; the set's modifier adds shader variants, so a battle's first
+frame may compile a little longer.
 
 ### Wave 2: the next week, still free
 

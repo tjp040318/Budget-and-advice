@@ -463,7 +463,107 @@ enum StageBuilder {
         scene.fogColor = fog
         scene.fogDensityExponent = 1.4
         sharpenTextures(in: stage)
+        // The set as a light layer of its own (Docs/FEEL.md L1), unless the
+        // CI lab asked for the shared rig (`-tour-layers off`).
+        if lightLayers { separateBattleSet(stage) }
         return palette
+    }
+
+    // MARK: - Figure-first light (2026-09-24, Docs/FEEL.md L1)
+    //
+    // Principle 1 of the genre, measured on the owner's Summoners War frames:
+    // the figure is the most coloured, best-separated thing on the screen,
+    // and the set is quiet stone (a median saturation of 0.20–0.24 there,
+    // 0.73–0.76 on our warm sets, whose figures had nothing to stand out
+    // by). So the battle has two light layers, as the summon reveal has had
+    // since the same morning: the FIGURES on category 2 and the SET on 4. A
+    // node is lit by a light only when their masks share a bit, and a
+    // category is NOT inherited, so every node of both is marked
+    // (`UnitNode.markFigure`, `separateBattleSet`). The set keeps the
+    // realm-tinted fill and ambient; the figures get a fill and an ambient
+    // of their own 80% of the way to white; the key light, which casts the
+    // set's shadows, stays ONE light over both (its mask is every category);
+    // the braziers light the set alone; the set's paint keeps 0.80 of its
+    // saturation (`MaterialTuner.setSaturation`) while the figures keep all
+    // of theirs; and a prop's white rim goes from 0.18 to 0.06, under the
+    // figures' 0.12 (`MaterialTuner.setPropRim`). The image-based light
+    // (`scene.lightingEnvironment`) is not a light node and has no mask: it
+    // reaches every physically based material, figures and set alike, as
+    // before. An effect's own light (`VFXLibrary.flash`) keeps every
+    // category: a hit lights its victim and the stone under it.
+
+    /// The figures' light category, and the set's. The same numbers as the
+    /// summon reveal's (`SummonStageView.figureCategory`, `setCategory`).
+    static let figureCategory: Int = 2
+    static let setCategory: Int = 4
+    /// A figure light's mask: the figures' layer and SceneKit's default
+    /// category (1), so anything added to the field unmarked — an effect's
+    /// lit sprite — is lit as a figure is rather than left in the dark.
+    static let figureLights: Int = figureCategory | 1
+    /// A set light's mask: the set's layer alone.
+    static let setLights: Int = setCategory
+
+    /// Whether the battle's lights are layered: always, but under the CI
+    /// tour's `-tour-layers off`, which builds the shared rig of before so a
+    /// run can photograph both (read once; the process's arguments do not
+    /// change).
+    static let lightLayers: Bool = {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard arguments.contains("-tour"), let flag = arguments.firstIndex(of: "-tour-layers"),
+              flag + 1 < arguments.count else { return true }
+        return arguments[flag + 1] != "off"
+    }()
+
+    /// The pale marble sets (Olympus, the Aegean cliffs, the Forum), where
+    /// anything additive laid on the floor blows it: the turn circle stands
+    /// at 60% there (Docs/FEEL.md W1.9).
+    static func isPaleSet(_ environment: BattleEnvironment) -> Bool {
+        switch environment {
+        case .olympusGate, .aegeanCliffs, .forumRome:
+            return true
+        case .duatGate, .reedFields, .hallOfTwoTruths, .serpentDeep, .arenaOfSouls:
+            return false
+        case .lernaMarsh, .midgardFjord, .yggdrasilRoots, .jotunheimHall:
+            return false
+        case .colossusVault, .hydraLair, .necropolis:
+            return false
+        case .colosseumSands, .peachGarden, .dragonGate:
+            return false
+        }
+    }
+
+    /// A battle set, or a piece added to it later (the boss's breach), as the
+    /// set's light layer: every node in the set's category; every light it
+    /// carries (the braziers' fires) lighting the set alone; every PROP's
+    /// materials its own copies in the set's paint and rim — a prop is a
+    /// clone of `propCache`'s and shares its geometry and materials with the
+    /// summoning circle and every other stage that stands it, so they are
+    /// never re-tuned in place; and every other lit material (the floors,
+    /// the rock, the walls, the medallion, the built stand-ins — made fresh
+    /// for this stage) calmed to the set's saturation by a short surface
+    /// modifier. A constant material is a light of its own (the painting,
+    /// the mist, the rune rings) and is left as it is.
+    static func separateBattleSet(_ root: SCNNode) {
+        root.enumerateHierarchy { node, _ in
+            node.categoryBitMask = setCategory
+            node.light?.categoryBitMask = setLights
+            guard let geometry = node.geometry else { return }
+            let tuned = geometry.materials.contains { $0.shaderModifiers?[.fragment] != nil }
+            if tuned {
+                guard let own = geometry.copy() as? SCNGeometry else { return }
+                own.materials = geometry.materials.map { shared in
+                    guard shared.shaderModifiers?[.fragment] != nil,
+                          let material = shared.copy() as? SCNMaterial else { return shared }
+                    MaterialTuner.tuneSetProp(material)
+                    return material
+                }
+                node.geometry = own
+            } else {
+                for material in geometry.materials where material.lightingModel != .constant {
+                    MaterialTuner.calmSet(material)
+                }
+            }
+        }
     }
 
     // MARK: - The summoning circle
@@ -1561,6 +1661,10 @@ enum StageBuilder {
         let material = SCNMaterial()
         material.lightingModel = .physicallyBased
         let calmed = saturation.flatMap { calmedFloorImage(texture, saturation: $0) }
+        // A tile calmed here keeps the number it was measured at: the set's
+        // light layer passes it by rather than calming it again (0.5 × 0.8;
+        // `MaterialTuner.calmSet`).
+        if calmed != nil { material.name = MaterialTuner.calmedAtBuild }
         // Typed in two steps: three optionals of three types in one `??`
         // chain is a solver search the compiler need not be given.
         let tile: UIImage? = calmed ?? UIImage(named: texture)

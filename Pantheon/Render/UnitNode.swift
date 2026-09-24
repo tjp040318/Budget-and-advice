@@ -36,7 +36,21 @@ final class UnitNode: SCNNode {
     weak var plate: UnitPlate? {
         didSet { if plate != nil { healthBarRoot.isHidden = true } }
     }
-    private let selectionRing: SCNNode
+    /// THE TURN CIRCLE (2026-09-24, Docs/FEEL.md W1.9): a flat rune disc
+    /// under the acting unit, 0.95 of its width, in its element's colour,
+    /// turning slowly over a soft pool of the same light, popped in as its
+    /// turn begins (`setHighlighted`). It was a torus 2.8 cm thick that read
+    /// as a thin purple ellipse (`6-battle-a`); the owner's Summoners War
+    /// frames put a large glowing circle there.
+    private let turnDisc: SCNNode
+    /// Whether the turn disc is up (the acting unit's), so the others are
+    /// not faded again on every turn.
+    private var discLit = false
+    /// How bright the turn disc stands at its peak: 0.9 on most sets and
+    /// 60% of that on the pale marble ones (`StageBuilder.isPaleSet`), where
+    /// an additive disc blew the floor. Set by the battle before the first
+    /// turn.
+    var turnDiscPeak: CGFloat = 0.9
     private let elementTint: UIColor
     /// A boss's paint, the mean of its diffuse texture in linear light
     /// (`UnitNode.measurePaint(of:key:)`); nil for everyone else, and for a
@@ -80,7 +94,9 @@ final class UnitNode: SCNNode {
     /// the lean through the whole landing.
     private var dashOwnsPitch = false
 
-    /// 1.0 normally, 2.0 on the fast-forward toggle, 4.0 on skip.
+    /// 1.0 normally, 2.0 or 3.0 on the speed control (Docs/FEEL.md W1.1),
+    /// and under 1 through the final blow's slow motion
+    /// (`BattleSceneController`, W1.7).
     ///
     /// SceneKit has no per-node speed multiplier — that is SpriteKit's `speed`
     /// — so the scale is applied by hand: to the CAAnimations in `play` and to
@@ -89,13 +105,49 @@ final class UnitNode: SCNNode {
     /// finished when the next event replaced it and the field twitched between
     /// fragments of motion. The mode the player spends most of his time in had
     /// the worst motion in the game.
+    ///
+    /// A clip ALREADY RUNNING follows the pace too (2026-09-24,
+    /// `retimeRunningClip`): its animation player's speed is set to the new
+    /// pace over the one it began at, and so is the clock that hands a
+    /// one-shot back to the idle (`scheduleClipEnd`). This re-seated a
+    /// running LOOP instead, which the slow motion — a new pace every frame
+    /// for a second — would have turned into every figure's breath restarted
+    /// at a random phase sixty times a second.
     var playbackSpeed: Double = 1.0 {
-        didSet {
-            guard abs(playbackSpeed - oldValue) > 0.01, let clip = currentClip, clip.loops else { return }
+        didSet { retimeRunningClip(from: oldValue) }
+    }
+
+    /// The pace the clip in hand began at: what its animation's own speed
+    /// was set for in `play`.
+    private var clipBaseSpeed: Double = 1.0
+    /// The share of that pace the clip runs at now, read on the render
+    /// thread by the clock that ends a one-shot (`scheduleClipEnd`).
+    private let clipPace = ClipPace()
+    /// A change of pace this big or bigger — a step of the speed control —
+    /// re-seats a PROCEDURAL loop, which has no animation player to re-time;
+    /// the slow motion's small steps never do.
+    private static let reseatStep: Double = 0.25
+    /// The slowest pace the fight runs at: `beat`'s floor, under the slow
+    /// motion's 0.3. A one-shot's clock is long enough for its clip at it.
+    static let slowestPace: Double = 0.25
+
+    /// Keeps the clip in hand to the pace: its player's speed, the clock of
+    /// its ending, and — for a procedural clip — its action's speed, or a
+    /// fresh start for a loop on a big step.
+    private func retimeRunningClip(from oldSpeed: Double) {
+        let change: Double = abs(playbackSpeed - oldSpeed)
+        guard change > 0.0005, let clip = currentClip else { return }
+        let ratio: Double = playbackSpeed / max(0.05, clipBaseSpeed)
+        clipPace.set(ratio)
+        if let player = modelContainer.animationPlayer(forKey: clip.rawValue) {
+            player.speed = CGFloat(ratio)
+        } else if clip.loops, change >= Self.reseatStep {
             // `play` refuses to restart a loop that is already running, so the
-            // idle is re-seated by hand to pick up the new pace.
+            // procedural idle is re-seated by hand to pick up the new pace.
             currentClip = nil
             play(clip)
+        } else if let running = modelContainer.action(forKey: "clip") {
+            running.speed = CGFloat(ratio)
         }
     }
 
@@ -243,12 +295,9 @@ final class UnitNode: SCNNode {
         badge.position = SCNVector3(Float(width / 2) + 0.36, 0, 0.01)
         barRoot.addChildNode(badge)
 
-        // Ground ring under the unit — the readable "who is this" cue.
-        let ringGeometry = SCNTorus(ringRadius: modelHeight * 0.27, pipeRadius: 0.028)
-        ringGeometry.firstMaterial = UnitNode.flatMaterial(tint.withAlphaComponent(0.85))
-        let ring = SCNNode(geometry: ringGeometry)
-        ring.position = SCNVector3(0, 0.01, 0)
-        ring.opacity = 0.0
+        // The turn circle under the unit — the readable "whose turn is this"
+        // cue (`turnDisc`), hidden until its turn begins.
+        let disc = UnitNode.makeTurnDisc(diameter: modelHeight * CGFloat(UnitNode.turnDiscShare), tint: tint)
 
         self.combatantID = combatant.id
         self.spec = combatant.model
@@ -266,7 +315,7 @@ final class UnitNode: SCNNode {
         self.healthBarRoot = barRoot
         self.healthFill = fill
         self.statusRow = statuses
-        self.selectionRing = ring
+        self.turnDisc = disc
         self.matchupBadge = badge
 
         super.init()
@@ -274,15 +323,37 @@ final class UnitNode: SCNNode {
         name = "combatant_\(combatant.id.uuidString)"
         addChildNode(container)
         addChildNode(barRoot)
-        addChildNode(ring)
+        addChildNode(disc)
         if isBoss {
             barRoot.isHidden = true
-            ring.isHidden = true
+            disc.isHidden = true
         }
+        // The figure's own light layer (Docs/FEEL.md L1), on every node.
+        markFigure()
 
         play(.idleCombat)
         setHealth(fraction: combatant.healthFraction, animated: false)
     }
+
+    // MARK: - The figure's light layer (Docs/FEEL.md L1)
+
+    /// Every node of the unit in the figures' light category
+    /// (`StageBuilder.figureCategory`), so the battle's figure fill and
+    /// ambient light it and the set's do not. A category is NOT inherited, so
+    /// this is called as the unit is built, when its idle is restarted on a
+    /// new model's nodes, and by the battle after it hangs anything lit on
+    /// the unit (a boss's spot and its aim). Harmless where no light is
+    /// layered: every light's own mask is all categories until the battle
+    /// splits them.
+    func markFigure() {
+        enumerateHierarchy { node, _ in
+            node.categoryBitMask = StageBuilder.figureCategory
+        }
+    }
+
+    /// The node that trembles inside a hit's freeze (`Juice`, `Tremor`): the
+    /// model's container, which the recoil drives along the same ground.
+    var tremorBody: SCNNode { modelContainer }
 
     required init?(coder: NSCoder) { fatalError("UnitNode is created in code") }
 
@@ -304,10 +375,10 @@ final class UnitNode: SCNNode {
         matchupBadge.isHidden = false
     }
 
-    /// For the island: no health bar and no selection ring, just the figure.
+    /// For the island: no health bar and no turn circle, just the figure.
     func hideBattleDecorations() {
         healthBarRoot.isHidden = true
-        selectionRing.isHidden = true
+        turnDisc.isHidden = true
     }
 
     /// The clip a figure AT REST plays on a stage — the island, and a
@@ -433,6 +504,9 @@ final class UnitNode: SCNNode {
         currentClip = nil
         modelContainer.removeAllAnimations()
         modelContainer.removeAllActions()
+        // A figure rebuilt into a live scene may carry nodes it did not have
+        // when it was built; the light layer is every node's own.
+        markFigure()
         play(.idleCombat)
     }
 
@@ -446,6 +520,10 @@ final class UnitNode: SCNNode {
         // idle that is already running is left alone.
         guard clip != currentClip || !clip.loops else { completion?(); return }
         currentClip = clip
+        // The clip begins at the pace of the moment; `retimeRunningClip`
+        // keeps it to the pace from here.
+        clipBaseSpeed = playbackSpeed
+        clipPace.set(1)
         // A clip that has not started yet and the previous clip's own ending
         // are both stale the moment a new clip begins. The ending used to be a
         // wall-clock timer with no idea what was running when it fired, so on
@@ -533,22 +611,58 @@ final class UnitNode: SCNNode {
     /// nearly half a second off the end of its clip and the caster was yanked
     /// to idle before its follow-through. And an action is keyed, so the next
     /// clip cancels it instead of leaving a stale ending to fire mid-swing.
+    ///
+    /// COUNTED, not waited (2026-09-24). A wait of the clip's length at the
+    /// pace it began at ended it early whenever the pace dropped under it —
+    /// the final blow's slow motion (W1.7) runs a clip at 0.3 of its pace for
+    /// most of a second, and the attacker would have been handed to its idle
+    /// in the middle of its follow-through. The clock adds each frame's scene
+    /// time at the pace the clip runs at now (`clipPace`, set with the
+    /// player's speed by `retimeRunningClip`), so the ending lands where the
+    /// clip does whatever the pace did on the way. It counts on the render
+    /// thread and only hops to main to act, and it goes quiet once it has
+    /// fired; the next clip takes it off.
     private func scheduleClipEnd(_ clip: AnimationClip, after duration: TimeInterval, completion: (() -> Void)?) {
-        modelContainer.runAction(.sequence([
-            .wait(duration: duration),
-            SCNAction.run { [weak self] _ in
-                // SceneKit runs this on its rendering thread, part-way through
-                // the node's own action update, and everything below touches
-                // the scene graph. Hop to main first, exactly as
-                // `playProcedural` documents at the bottom of this file.
-                DispatchQueue.main.async {
-                    completion?()
-                    guard let self, !self.isDefeated, self.currentClip == clip else { return }
-                    self.play(.idleCombat)
-                }
+        let pace = clipPace
+        let progress = ClipProgress()
+        let length: TimeInterval = max(0.01, duration)
+        // Long enough for the clip at the slowest pace the fight runs at, and
+        // a second more; a clip slowed further still (the speed control
+        // stepped down in the middle of it as well) ends with the clock
+        // rather than never.
+        let span: TimeInterval = length / Self.slowestPace + 1
+        let deadline: TimeInterval = span - 0.05
+        let clock = SCNAction.customAction(duration: span) { [weak self] _, elapsed in
+            // SceneKit runs this on its rendering thread, part-way through
+            // the node's own action update, and everything the ending does
+            // touches the scene graph. It counts here and hops to main to
+            // act, exactly as `playProcedural` documents at the bottom of
+            // this file.
+            guard !progress.fired else { return }
+            let now = Double(elapsed)
+            progress.done += (now - progress.last) * pace.value
+            progress.last = now
+            guard progress.done >= length || now >= deadline else { return }
+            progress.fired = true
+            DispatchQueue.main.async {
+                completion?()
+                // A death holds its last frame for good.
+                guard let self, clip != .death, !self.isDefeated, self.currentClip == clip else { return }
+                self.play(self.idleAfterClip)
             }
-        ]), forKey: "clip_end")
+        }
+        modelContainer.runAction(clock, forKey: "clip_end")
     }
+
+    /// The loop a one-shot hands back to: the combat crouch through the
+    /// fight, and the family's standing idle once it has posed for the
+    /// triumph (`celebrate(facing:turn:)`).
+    private var idleAfterClip: AnimationClip {
+        celebrating ? restingIdle : .idleCombat
+    }
+
+    /// Set by the triumph (W1.7): the unit has turned to the lens and posed.
+    private var celebrating = false
 
     /// Plays a clip once the feet are down.
     ///
@@ -885,22 +999,71 @@ final class UnitNode: SCNNode {
     /// A white flash over the whole model on the frame a hit lands, fading
     /// over a fifth of a second. The emission is what the tint left there,
     /// and it is put back.
-    func flashHit() {
-        modelContainer.enumerateHierarchy { child, _ in
-            guard let materials = child.geometry?.materials else { return }
-            for material in materials {
-                let previous = material.emission.contents
+    ///
+    /// `strength` over 1 is the IMPACT FRAME's burn (Docs/FEEL.md W1.3, a
+    /// crit or a kill): the figure goes fully white, its emission `strength`
+    /// times as bright, for `burnHold` — the two frames the camera's grade is
+    /// punched for (`CameraDirector.impactFrame`) — and then falls to the
+    /// ordinary flash and fades as that does.
+    ///
+    /// The emission it puts back is the one the figure was BUILT with
+    /// (`restEmission`), not whatever it holds when the flash lands: a
+    /// second flash inside the first's burn read the burn's white as the
+    /// colour to return to.
+    func flashHit(strength: CGFloat = 1) {
+        flashGeneration += 1
+        let generation = flashGeneration
+        let burns = strength > 1
+        let rest = restEmission
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = 0
+        for entry in rest {
+            entry.material.emission.contents = UIColor(white: burns ? 1 : 0.8, alpha: 1)
+            entry.material.emission.intensity = burns ? strength : entry.intensity
+        }
+        SCNTransaction.commit()
+        let fade: () -> Void = { [weak self] in
+            guard let self, self.flashGeneration == generation else { return }
+            if burns {
                 SCNTransaction.begin()
                 SCNTransaction.animationDuration = 0
-                material.emission.contents = UIColor(white: 0.8, alpha: 1)
-                SCNTransaction.commit()
-                SCNTransaction.begin()
-                SCNTransaction.animationDuration = 0.22
-                material.emission.contents = previous
+                for entry in rest {
+                    entry.material.emission.contents = UIColor(white: 0.8, alpha: 1)
+                    entry.material.emission.intensity = entry.intensity
+                }
                 SCNTransaction.commit()
             }
+            SCNTransaction.begin()
+            SCNTransaction.animationDuration = 0.22
+            for entry in rest {
+                entry.material.emission.contents = entry.contents
+            }
+            SCNTransaction.commit()
+        }
+        if burns {
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.burnHold) { fade() }
+        } else {
+            fade()
         }
     }
+
+    /// How long the impact frame's burn holds: two frames at 60 Hz.
+    static let burnHold: TimeInterval = 2.0 / 60.0
+
+    /// Bumped by every flash, so a burn's fade that a newer flash overtook
+    /// steps aside.
+    private var flashGeneration = 0
+
+    /// Every material of the model with the emission it was built with.
+    private lazy var restEmission: [(material: SCNMaterial, contents: Any?, intensity: CGFloat)] = {
+        var found: [(material: SCNMaterial, contents: Any?, intensity: CGFloat)] = []
+        modelContainer.enumerateHierarchy { child, _ in
+            for material in child.geometry?.materials ?? [] {
+                found.append((material: material, contents: material.emission.contents, intensity: material.emission.intensity))
+            }
+        }
+        return found
+    }()
 
     // MARK: - State
 
@@ -930,19 +1093,106 @@ final class UnitNode: SCNNode {
             clamped < 0.3 ? danger : full
     }
 
+    /// The acting unit's marks: its plate's gold rim, and the turn circle
+    /// under it, popped in — from just over half its size to a touch past
+    /// full and back, as it fades up — then breathing slowly between 72% and
+    /// all of `turnDiscPeak` while the rune ring turns. Only a change does
+    /// anything, so the others are not faded again on every turn.
     func setHighlighted(_ highlighted: Bool) {
         plate?.setActing(highlighted)
-        selectionRing.removeAllActions()
-        if highlighted {
-            selectionRing.opacity = 1.0
-            selectionRing.runAction(.repeatForever(.sequence([
-                .fadeOpacity(to: 0.45, duration: 0.6),
-                .fadeOpacity(to: 1.0, duration: 0.6)
-            ])))
-        } else {
-            selectionRing.runAction(.fadeOpacity(to: 0, duration: 0.2))
+        guard highlighted != discLit else { return }
+        discLit = highlighted
+        turnDisc.removeAction(forKey: "turn")
+        guard highlighted, !isDefeated else {
+            turnDisc.runAction(.fadeOpacity(to: 0, duration: 0.2), forKey: "turn")
+            return
         }
+        let peak = turnDiscPeak
+        turnDisc.opacity = 0
+        // Under Reduce Motion the disc fades in at its size; it pops out of
+        // a smaller one otherwise.
+        let calm = MotionComfort.isReduced
+        let start: Float = calm ? 1 : 0.55
+        turnDisc.scale = SCNVector3(start, start, start)
+        let grow = SCNAction.scale(to: calm ? 1.0 : 1.08, duration: 0.14)
+        grow.timingMode = .easeOut
+        let settle = SCNAction.scale(to: 1.0, duration: 0.12)
+        settle.timingMode = .easeInEaseOut
+        let pop = SCNAction.group([.fadeOpacity(to: peak, duration: calm ? 0.26 : 0.12), .sequence([grow, settle])])
+        let dim = SCNAction.fadeOpacity(to: peak * 0.72, duration: 0.9)
+        dim.timingMode = .easeInEaseOut
+        let lift = SCNAction.fadeOpacity(to: peak, duration: 0.9)
+        lift.timingMode = .easeInEaseOut
+        turnDisc.runAction(.sequence([pop, .repeatForever(.sequence([dim, lift]))]), forKey: "turn")
     }
+
+    /// The turn disc's diameter over the unit's height: 0.95 of a figure's
+    /// width, which the ground shadow puts at about 0.625 of its height.
+    static let turnDiscShare: Float = 0.6
+
+    /// The turn circle: the rune ring the cast ring and the summon dais draw
+    /// (`StageBuilder.runeRing`, additive, turning once in forty seconds,
+    /// writing no depth) in the element's colour, over a soft pool of the
+    /// same light half as wide again. It lies a few centimetres over the
+    /// floor and is drawn after the ground shadow (`renderingOrder`), so the
+    /// light lies on the darkened stone rather than under it. It throws no
+    /// shadow, and starts hidden.
+    private static func makeTurnDisc(diameter: CGFloat, tint: UIColor) -> SCNNode {
+        let disc = SCNNode()
+        disc.name = "turn_disc"
+        disc.opacity = 0
+        disc.position = SCNVector3(0, 0.012, 0)
+
+        let pool = SCNPlane(width: diameter * 1.5, height: diameter * 1.5)
+        let glow = SCNMaterial()
+        glow.lightingModel = .constant
+        glow.diffuse.contents = turnGlow
+        glow.multiply.contents = tint
+        glow.blendMode = .add
+        // Adds light and writes no alpha, as every additive quad here must
+        // (`StageBuilder.runeRing` says why).
+        glow.colorBufferWriteMask = [.red, .green, .blue]
+        glow.writesToDepthBuffer = false
+        glow.isDoubleSided = true
+        pool.firstMaterial = glow
+        let poolNode = SCNNode(geometry: pool)
+        poolNode.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        poolNode.position = SCNVector3(0, 0.016, 0)
+        poolNode.opacity = 0.45
+        disc.addChildNode(poolNode)
+
+        disc.addChildNode(StageBuilder.runeRing(radius: diameter / 2, tint: tint))
+        disc.enumerateHierarchy { node, _ in
+            node.castsShadow = false
+            node.renderingOrder = 5
+        }
+        return disc
+    }
+
+    /// The pool of light under the turn circle: white at the centre falling
+    /// to black at the rim, opaque, so an additive quad adds only its middle.
+    private static let turnGlow: UIImage = {
+        let side: CGFloat = 128
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = true
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { context in
+            let cg = context.cgContext
+            cg.setFillColor(UIColor.black.cgColor)
+            cg.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            let colours = [
+                UIColor(white: 0.85, alpha: 1).cgColor,
+                UIColor(white: 0.35, alpha: 1).cgColor,
+                UIColor(white: 0.0, alpha: 1).cgColor,
+            ] as CFArray
+            let stops: [CGFloat] = [0, 0.5, 1]
+            if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colours, locations: stops) {
+                let centre = CGPoint(x: side / 2, y: side / 2)
+                cg.drawRadialGradient(gradient, startCenter: centre, startRadius: 0,
+                                      endCenter: centre, endRadius: side / 2, options: [])
+            }
+        }
+    }()
 
     /// Rebuilds the little status pips above the health bar.
     /// What the unit is under right now, drawn as icons over its bar.
@@ -1006,14 +1256,73 @@ final class UnitNode: SCNNode {
 
     func markDefeated() {
         guard !isDefeated else { return }
-        play(.death)
+        // The final blow starts the fall on the blow itself
+        // (`beginFinalFall`); it is not played a second time.
+        if currentClip != .death { play(.death) }
         isDefeated = true
         plate?.setDefeated(true)
         plate?.setMatchup(nil)
         matchupBadge.isHidden = true
         healthBarRoot.runAction(.fadeOut(duration: 0.4))
         groundShadow?.runAction(.fadeOpacity(to: 0.5, duration: 0.8))
-        selectionRing.runAction(.fadeOut(duration: 0.3))
+        discLit = false
+        turnDisc.runAction(.fadeOpacity(to: 0, duration: 0.3), forKey: "turn")
+    }
+
+    /// The final blow's fall (Docs/FEEL.md W1.7) begins on the blow itself,
+    /// not when the engine's `.defeated` is presented after the slow motion:
+    /// the fall is what the slow motion slows.
+    func beginFinalFall() {
+        guard !isDefeated else { return }
+        play(.death)
+    }
+
+    /// Whether a status of this kind is on the unit now (a resisted status
+    /// on a unit wearing Immunity reads IMMUNE, not RESIST).
+    func hasStatus(_ kind: StatusKind) -> Bool {
+        activeStatuses.contains { $0.kind == kind }
+    }
+
+    // MARK: - The triumph (Docs/FEEL.md W1.7)
+
+    /// The survivor's pose on a won field: it steps the last of the way onto
+    /// its mark (a melee unit may still be walking back from its last
+    /// blow), turns to face the lens at `lens` — a turn about the vertical
+    /// alone, the lens taken at the figure's own height, with
+    /// `look(at:up:localFront:)` and the model's authored front (+Z) — and
+    /// plays its own victory clip; after it, it stands in its resting idle
+    /// rather than the combat crouch. The turn is one implicit animation
+    /// over `duration`; nothing here runs inside an action.
+    ///
+    /// The pose runs at `pace`, never the fight's: the beat is not the
+    /// fight, and at ×3 the clip's 2.0-s contract played in two thirds of a
+    /// second, over before the turn to the lens had finished, and left the
+    /// figure breathing at three times for the rest of the beat (review,
+    /// 2026-09-24). Nothing re-paces a unit once the HUD has gone: the
+    /// controller calls this after ending the slow motion, and the speed
+    /// control is hidden with the HUD.
+    func celebrate(facing lens: SCNVector3, turn duration: TimeInterval, pace: Double = 1) {
+        guard !isDefeated else { return }
+        celebrating = true
+        cancelPendingClip()
+        removeAction(forKey: "dash")
+        modelContainer.removeAction(forKey: "hop")
+        modelContainer.position.y = containerRest.y
+        if dashOwnsPitch {
+            dashOwnsPitch = false
+            modelContainer.eulerAngles.x = 0
+        }
+        settleGroundShadow()
+        let mark = homePosition ?? position
+        let target = SCNVector3(lens.x, mark.y, lens.z)
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = max(0, duration)
+        SCNTransaction.animationTimingFunction = .init(name: .easeInEaseOut)
+        position = mark
+        look(at: target, up: SCNVector3(0, 1, 0), localFront: SCNVector3(0, 0, 1))
+        SCNTransaction.commit()
+        playbackSpeed = pace
+        play(.victory)
     }
 
     func revive(healthFraction: Double) {
@@ -1540,4 +1849,33 @@ enum MatchupIconRenderer {
         cache[key] = image
         return image
     }
+}
+
+/// The pace a running clip is kept to, as a share of the pace it began at
+/// (`UnitNode.retimeRunningClip`): written on the main thread as the pace
+/// changes, read by the clip's ending on SceneKit's render thread, so only
+/// under the lock.
+final class ClipPace {
+    private let lock = NSLock()
+    private var ratio: Double = 1
+
+    func set(_ value: Double) {
+        lock.lock()
+        ratio = value
+        lock.unlock()
+    }
+
+    var value: Double {
+        lock.lock()
+        defer { lock.unlock() }
+        return ratio
+    }
+}
+
+/// How far a one-shot's ending clock has counted (`UnitNode.scheduleClipEnd`).
+/// The render thread's alone: the clock's block is its only reader and writer.
+final class ClipProgress {
+    var done: Double = 0
+    var last: Double = 0
+    var fired = false
 }
