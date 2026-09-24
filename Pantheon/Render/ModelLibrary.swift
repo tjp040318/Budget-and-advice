@@ -193,7 +193,7 @@ final class ModelLibrary {
         }
         decodedLiveLock.unlock()
         guard !alive.isEmpty else { return "" }
-        let bytes: Int = alive.reduce(0) { total, texture in total + ((texture as? MTLTexture)?.allocatedSize ?? 0) }
+        let bytes: Int = alive.reduce(0) { total, texture in total + ((texture as? MTLTexture).map { textureBytes(of: $0) } ?? 0) }
         let named = stranded.sorted { $0.value == $1.value ? $0.key < $1.key : $0.value > $1.value }
         var text = named.prefix(8).map { "\($0.key)x\($0.value)" }.joined(separator: " ")
         if named.count > 8 { text += " +\(named.count - 8) more" }
@@ -760,19 +760,31 @@ final class ModelLibrary {
     /// (run 250). A texture made here is handed over AS a texture: SceneKit
     /// has nothing to convert and nothing to cache, and the pixels live once
     /// instead of twice (the decoded image and the texture SceneKit made
-    /// from it). `.image` stays the default until the stress curve and the
-    /// frames have judged `.metal`: CI runs the summon stress both ways and
-    /// photographs the awakened Ares both ways (`-tour-textures metal`).
+    /// from it). Run 252 judged it: the summon stress ended at 356 MB (peak
+    /// 495) with nothing stranded, against 1,413 MB (peak 1,465) and 27
+    /// stranded images handed over as images, and the awakened Ares drawn
+    /// from Metal textures is the same figure. `.metal` is the default since;
+    /// `-tour-textures image` keeps the old path for CI's control.
     static let textureHandover: TextureHandover = {
         #if DEBUG
         let arguments = ProcessInfo.processInfo.arguments
         if arguments.contains("-tour"), let at = arguments.firstIndex(of: "-tour-textures"),
-           at + 1 < arguments.count, arguments[at + 1] == "metal" {
-            return .metal
+           at + 1 < arguments.count, arguments[at + 1] == "image" {
+            return .image
         }
         #endif
-        return .image
+        return .metal
     }()
+
+    /// What a texture made here holds, for the cache's budget and the
+    /// [Mem] line: its pixels and the chain of mipmaps, a third again.
+    /// Read off the texture's size, not `allocatedSize`, which the simulator
+    /// reports as 0 for a GPU-private texture (run 252: "textures alive 56,
+    /// 0 MB"), and which would leave the cache's byte budget blind.
+    static func textureBytes(of texture: MTLTexture) -> Int {
+        let perPixel: Int = texture.pixelFormat == .r8Unorm ? 1 : 4
+        return texture.width * texture.height * perPixel * 4 / 3
+    }
 
     /// The device SceneKit draws with — the system's default, the one GPU
     /// an iPhone has — and one queue for the uploads' blits.
@@ -986,7 +998,7 @@ final class ModelLibrary {
                                 property.contents = made.texture
                                 if made.oneChannel { property.textureComponents = .red }
                                 decoded += 1
-                                bytes += made.texture.allocatedSize
+                                bytes += Self.textureBytes(of: made.texture)
                                 if let identity = archive?.identity(of: name) {
                                     decodedTexturesLock.lock()
                                     sharedTextures.setObject(made.texture, forKey: identity as NSString)

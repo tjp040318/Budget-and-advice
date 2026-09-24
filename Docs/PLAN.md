@@ -9089,3 +9089,209 @@ images', and the reveal photographs the awakened Ares with Metal textures
 that nothing is flipped, washed out or lost. A boss's warm spot, which read
 the paint off the decoded image (`UnitNode.measurePaint`), reads the mean
 measured when the texture was made (`ModelLibrary.paintMean`).
+
+## Relics the genre's way (2026-09-24)
+
+The owner, with five screenshots — Summoners War's monster sheet, its Rune
+tab, its Manage screen, its island, and his phone's shot of our relic card:
+"Look at our rune system vs summoners war. I want something more like
+theirs, without exact copying. Look how easy it is to see everything, and
+to understand what's going on. And look how clean and detailed the graphics
+are. THATS what I want."
+
+Research came first (rule 2), in two passes: one read every relic surface
+in the code and in the last run's frames and listed 55 pain points against
+his words [ours]; the other measured his four Summoners War frames at their
+native 2868 × 1320 — the palette, the type scale, the grid's pitch
+[measured]. The genre's own pages are refused by the proxy again, so Epic
+Seven and Raid are what is recalled of them [recalled]. Then the design was
+mocked here at 852 × 393 with the real stones, the real painting and the
+bundled faces before a word of it was written down: the tile at three
+sizes, the unit sheet's Relics tab, Manage, and the relic card. The two
+studies (`audit.md`, `genre.md`), the four mocks and the builders' spec
+(`design_spec.md`, written to be built to the letter) are in the session's
+scratchpad under `relic_research/`. Nothing is built yet.
+
+### What the study found
+
+- **Theirs is legible because it is dark and big.** Summoners War's stats
+  sit in a well of #271E19: the labels at 12.5:1, the values (#FEF6D8) at
+  15.1:1 and the runes' bonus (#B3F266) at 12.3:1, in digits 11.7 points
+  tall — a 16-point font [measured]. On his phone our relic card's main
+  stat is 8.7 points tall and a sub stat 7.3, and every secondary signal
+  of ours is a pigment on cream: the gold main stat at 3.1:1, the relic
+  bonus's green at 3.5:1, the carved titles at 1.5:1 along their pale
+  half, Radiance's aether chip at 1.15:1 [ours]. Colour reads at full
+  strength only on dark: our quality glows measure 6.3–12.5:1 on basalt,
+  bright, while on cream a quality has to be darkened to its ink to be
+  legible at all and then reads as mud at 4.3–6.6:1.
+- **One object, the same corners everywhere.** Their rune tile says five
+  things with no words at 46 points — the grade (six stars riding the top
+  edge), the level ("+15", bottom left), the set (the glyph), the slot (the
+  silhouette) and the wearer (a face, bottom right) — and it is the same
+  tile in the flower, in Before/After and in the grid [measured]. Ours is
+  a 38-point stone with 5-point stars under it, a pale "+N" capsule, a
+  slot disc and a 16-point face crowding three of its corners, and the
+  unit sheet's ring draws no stars at all [ours].
+- **One screen per job.** Their Manage holds the filters, the grid,
+  Before → After of all six, and Apply [measured]. Ours spreads the same
+  job over the inventory, the filter sheet, the picker, the optimiser and
+  the card, four sheets deep at worst, and a worn slot opens the card on
+  the unit sheet but the picker on the collection [ours].
+- **Numbers, not sentences.** Their densest screen carries about 36 words
+  against 72 tiles; our relic card carries about 80 against one stone, 30
+  of them a paragraph about aether.
+- **The subject is on screen, and large.** Their monster stands in about
+  41% of the width on a dark stage; ours is a 120 × 134-point well, 14%.
+- **What we already do better, and keep:** painted stones with sculpted
+  devices (legible from 36 points up, only the colour under about 22 —
+  judged on a sheet of all sixteen on basalt and on cream, where the pale
+  sets lose their edges), the choice of two on every roll, free removal,
+  the filter's complete axes, named loadouts, the set reference, and a
+  centre that means something: the Boon's socket.
+
+### The options
+
+1. **Restyle the screens in place.** Dark wells inside the cream panels,
+   type at 13–16, stones at 48, stars on every tile. About two days, one
+   lane per file. It buys most of the contrast and none of the structure:
+   the job stays spread over five sheets, the unit sheet stays three cream
+   columns round a 120-point figure, and the card stays a sentence panel
+   beside a stone.
+2. **The genre's structure in our materials.** The unit sheet becomes a
+   PLACE: the Hall of Ka's sanctuary with the unit's own figure on its
+   dais (`AltarStageView` already stands one there), a rail of faces, five
+   bronze tablets (Info, Skills, Relics, Boon, Regalia) and one dark glass
+   panel. Its Relics tab is a rosette of six sockets round the Boon, the
+   sets the six complete in two words each, and four plates with counts —
+   MANAGE, BEST SIX, RELICS 214, STONES 23. The inventory, the picker, the
+   optimiser and the filter sheet become ONE screen, the genre's Manage, in
+   two modes (a unit's build, or the bag): the filters inline (a slot
+   rosette and dark wells), the grid, NOW → THEN of all six with the stats
+   moving as tiles are tapped, and Apply. The relic card becomes numbers on
+   basalt: the main stat at 24 points and the subs at 16 with their roll
+   marks, the cost as painted tiles, the awakening as "4 → 5" and
+   "+93 → +112", five action plates. Five system dialogs become one game
+   card. One tile and one socket everywhere. About five to six days in five
+   lanes, all code: no art bought, no save field, no number changed;
+   thirteen new tour relaunches, about 2.5 minutes of the job.
+3. **Option 2, and every collection screen dark** — the Collection's card
+   grid, the Boons sheet, the Regalia sheet. A day or two more, and it
+   overturns the cream-and-gold chrome he chose on screens he did not
+   point at.
+4. **Option 2 with paid art.** A painted sheet of the relic actions
+   (change, remove, reroll, lock, sell, manage, best six, loadouts,
+   stones), a sheet of the six aethers (which have no art at all) and a
+   reliquary painting for Manage's back wall: about 25 Meshy credits
+   through `meshy.py picture`. The balance is 594 against his floor of
+   2,000, so none of it goes ahead without his word; option 2 draws each in
+   code or with an SF symbol meanwhile, and every one of those places
+   already takes an item key.
+
+### The choice, and why
+
+**Option 2, with option 4 offered.** He asked to SEE everything and to
+UNDERSTAND what is going on. Option 1 fixes the seeing and leaves the
+understanding where it was: the before and after of a change, the set a
+piece belongs to and the six relics as one build are structure, not
+colour. Option 2 is the genre's structure, which a player of the genre
+reads without learning it, in our materials rather than theirs — one
+hexagon for every slot (his rule of 2026-09-12), painted devices and never
+letter glyphs (his rule of 2026-09-14), basalt, bronze and gold leaf rather
+than wood and leather, gold stars rather than pink, no removal cost.
+
+Three decisions inside it:
+
+- **The rule for dark.** Phase B's test was PLACE → painting and glass,
+  DATA → cream; the relic screens were filed as data, and that is what he
+  is looking at. The amendment: a screen whose content is ART — painted
+  stones, faces, rarity colours — is dark, because that art reads at full
+  strength only on dark; a list of words (Missions, Settings) stays cream;
+  the chrome (the strip, the tab bar) stays cream marble everywhere. The
+  unit sheet is a place outright. Manage, the card, the drop, the wearer
+  chooser, the stone bench and the set reference are "the reliquary": the
+  Hall of Ka's painting veiled to about a quarter of its light under
+  OPAQUE basalt panels with bronze frames, because thirty stones seen
+  through translucent glass over a painting is busy. Phase B's one
+  argument against a dark card — the drop card's glass had no edge on the
+  victory's black — is answered by the bronze frame.
+- **The rosette.** Seven hexagons edge to edge, the Boon at the centre.
+  The stone is a pointy-top hexagon, so its socket is one, and seven of
+  them tile with nothing between: one object like the genre's flower and,
+  unlike it, the real Pantheon's cut-stone floor. A pointy-top rosette has
+  no neighbour at twelve o'clock, so slot 1 stands at the upper left and
+  the rest follow clockwise in reading order; the fixed-main slots 1, 3
+  and 5 make one triangle and the free ones the other. The same geometry
+  is Manage's slot filter.
+- **Roll marks without a save field.** How many times a sub stat has
+  rolled is not stored, but each roll is its grade's base times
+  0.75–1.25, so a sub's count is its value over the base, and the relic's
+  own quality, levels and awakening fix the total. In a simulation of this
+  game's generator (20,000 relics a case) the constrained estimate was
+  exact on 99.8% of 6★ Legends at +12, the hardest case, and on every Rare
+  and below; the plain one on 94.6%. A stored count would be exact, but it
+  costs an Optional field and five mutation points in `RelicService`; the
+  estimate is the free half, pinned by a test.
+
+The smaller calls, each argued in the spec: Legend turns amber-orange on
+the relic screens (#FFB547 on a #FFD27A → #D9731C enamel), because gold is
+the chrome's colour and Legend was the least distinct quality on cream —
+the 5★ unit cards keep their gold; the unit sheet's rites open the Hall of
+Ka in that mode instead of the cream fodder picker and awakening sheet;
+Auto-equip, like every change to a build, is previewed in Manage and
+applied there — one tap more, and nothing changes unseen; and the drop
+card's five role dials give way to one "best fit" dial beside the best
+relic owned for that slot. Every function a player has today keeps a door;
+the spec's §5 maps each one.
+
+### What is left for later
+
+- The paid art (option 4), on his word.
+- `BoonPickerView` and `RegaliaSheet` to glass; their tabs on the unit
+  sheet carry their essentials now.
+- The victory's relic tile to the new tile (`SpoilsPanel` is the battle
+  lane's file), and with it the sweep receipt's relic tap, which does
+  nothing today (`SweepReceiptCard.onRelic` is never passed).
+- NEW marks on fresh relics: an Optional field and the four places a relic
+  is granted.
+- The Collection's Cards grid, the one grid of paintings left on cream:
+  his call.
+- W3.2's in-shell presenter (every relic screen stays a sheet) and W3.23's
+  game dialog for the eight alerts outside the relic screens, with
+  `RelicConfirmCard` as the model.
+- The new sheet on the SE and the iPad (W2.27's frames).
+
+### The build
+
+Five lanes on disjoint files, the kit first. **0, the kit:**
+`RelicKit.swift` and `RelicTile.swift` in `Pantheon/UI/Common`, and
+`RelicKitTests`. **A, the unit sheet and the collection's plates:**
+`UnitDetailView.swift`, `CollectionView.swift` and two defaulted
+parameters on `AltarStageView`. **B, the Relics screen:**
+`RelicsScreen.swift`. **C, the card, the drop, the wearer chooser, the
+stone bench and the set reference:** `RelicCard.swift`. **D, one agent
+integrating:** the replaced types out of `RelicInventoryView.swift` (which
+keeps `RelicIcon`, `RelicSetEmblem`, `WearerBadge`, `RelicQualityTag`,
+`RelicFilter` and `RelicAwakeningRite`), `BattleView`'s one line, the tour
+with its thirteen relaunches, build.yml and CLAUDE.md. The entry points are
+frozen in the spec so that A, B and C build in parallel; every frame that
+judges a lane, and the eleven risks, are listed there.
+
+**Run 252: Metal textures hold nothing back — the default since (2026-09-24).**
+The summon stress, thirty singles and three ten-pulls, both ways in the same
+run: handed over as decoded images it ended at 1,413 MB (peak 1,465) with 83
+images alive, 848 MB, 27 of them stranded; handed over as Metal textures the
+loader made, it ended at 356 MB (peak 495) with nothing stranded. The
+awakened Ares drawn from Metal textures (`5-reveal-awakened-metal`) is the
+same figure as the one drawn from images — paint, gold, the red of the kilt,
+nothing flipped or washed. So `ModelLibrary.textureHandover` is `.metal` by
+default and `-tour-textures image` keeps the old path as the CI's control
+(the stress's second summon launch and `5-reveal-awakened-images`). The same
+run caught one crash in the image path, in a fight's build: SceneKit's
+`-[SCNMaterial copyWithZone:]`, called by the element tint's material copy,
+read a source out of its own image cache (`C3DResourceCacheCopySourceForResource`)
+that was no longer there and faulted (a SIGSEGV at 0x8) — the same cache that
+kept the images alive, and one the Metal path never enters. The simulator
+reports a GPU-private texture's `allocatedSize` as 0, so the cache's byte
+budget and the [Mem] line count a texture by its size and its mipmaps
+(`textureBytes(of:)`), never by `allocatedSize`.

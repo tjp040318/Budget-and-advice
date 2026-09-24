@@ -1011,6 +1011,15 @@ environment can and cannot do. The short version:
   (`BattleView.stageShown`) until the renderer has drawn three frames of the
   built stage (`BattleSceneController.onStageShown`), five seconds at most:
   run 243's first battle frame was white under the HUD.
+  **And SceneKit is handed Metal textures, never decoded images (run 252):**
+  it kept every image it was given after the materials holding it had gone
+  (the summon stress ended at 1,413 MB with 27 images stranded) and once
+  crashed copying a material out of that same image cache; the loader makes
+  each model texture itself (`ModelLibrary.metalTexture`: GPU-private, its
+  mipmaps made on the GPU, sRGB colour, raw normals, one-channel metallic and
+  roughness read from red) and the same stress ended at 356 MB with nothing
+  stranded. `-tour-textures image` is the control; count a texture's bytes
+  with `textureBytes(of:)`, never `allocatedSize` (0 in the simulator).
 - **A card's wear scales with the card (2026-09-14).** The owner, of the
   popup's 50-point enemy cards: "Do the elemental symbols need to be so
   big? We can't see the picture." `UnitCard.wear` is `size / 80` clamped

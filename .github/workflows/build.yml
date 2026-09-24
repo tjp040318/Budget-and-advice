@@ -294,12 +294,11 @@ jobs:
                 # rig of 2026-09-22. Docs/PLAN.md, "The figure on the phone".
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-reveal-lab previous >/dev/null
                 sleep 10; shoot "$step-${names[$step]}-awakened-previous"
-                # The awakened Ares with his textures handed to SceneKit as
-                # Metal textures (run 252's experiment): judged against
-                # 5-reveal-awakened, it must be the same figure — the same
-                # paint, the same metal, nothing flipped or washed out.
-                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-textures metal >/dev/null
-                sleep 10; shoot "$step-${names[$step]}-awakened-metal"
+                # The awakened Ares drawn the old way, his textures handed to
+                # SceneKit as decoded images (the control since run 252 made
+                # Metal textures the default): the two must be the same figure.
+                xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal awakened -tour-textures image >/dev/null
+                sleep 10; shoot "$step-${names[$step]}-awakened-images"
                 # The 5★'s charge (2026-09-23): the painted scroll over the
                 # turning rings, held, so the beat before a reveal is judged
                 # on its own (it played over an empty dusk until run 220).
@@ -663,17 +662,15 @@ jobs:
                 again -tour-stress battle
                 sleep 40; shoot "$step-${names[$step]}-battle-mid"
                 await_stress 480; shoot "$step-${names[$step]}-battle"
-                # The texture experiment (2026-09-24, run 252): run 251's
-                # counters found the summon residue in our decoded images,
-                # kept by SceneKit after every material holding them had
-                # gone (a memory warning freed none of it, run 250). This
-                # runs the summons again with each texture handed to
-                # SceneKit as a Metal texture the loader made, and no image
-                # kept (ModelLibrary.textureHandover): the [Mem] lines'
-                # "textures alive" and "stranded" against the plain run's
-                # "decoded alive" say which way holds (PLAN.md, run 252).
-                again -tour-stress summon -tour-textures metal
-                await_stress 500; shoot "$step-${names[$step]}-metal" ;;
+                # The texture control (2026-09-24): run 252 found the summon
+                # residue in decoded images SceneKit kept, and the summons
+                # handed over as Metal textures ended at 356 MB with nothing
+                # stranded against 1,413 MB as images, so Metal textures are
+                # the default (ModelLibrary.textureHandover). This runs the
+                # summons again the old way, as the control the plain run is
+                # judged against (PLAN.md, run 252).
+                again -tour-stress summon -tour-textures image
+                await_stress 500; shoot "$step-${names[$step]}-images" ;;
               # An ordinary week's band, a week after the Festival Monday.
               events)
                 sleep 5; shoot_lit "$step-${names[$step]}"
