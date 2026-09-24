@@ -1,5 +1,6 @@
 import Foundation
 import UIKit
+import Metal
 import os
 
 extension Notification.Name {
@@ -68,6 +69,18 @@ enum MemoryProbe {
         return info.phys_footprint
     }
 
+    /// What the one Metal device the process draws with has allocated, in
+    /// MB (2026-09-24): every texture, buffer and render target SceneKit has
+    /// made. Run 244's summon stress climbed about 16 MB a reveal outside
+    /// the model cache with a single live reveal view, and a device-level
+    /// cache that outlives its renderers would show here and nowhere else.
+    private static let metalDevice: MTLDevice? = MTLCreateSystemDefaultDevice()
+
+    static func gpuMB() -> Int {
+        let bytes: Int = metalDevice?.currentAllocatedSize ?? 0
+        return bytes / 1_048_576
+    }
+
     /// Bytes the process may still take before iOS kills it; 0 where the OS
     /// gives no figure (the simulator).
     static func availableBytes() -> UInt64 {
@@ -84,7 +97,7 @@ enum MemoryProbe {
     static func log(_ label: String) -> Reading {
         let reading = read()
         state.note(reading, label: label)
-        let line = "[Mem] \(label) footprint \(reading.footprintMB) MB, available \(reading.availableText) MB, peak \(state.peakMB) MB; \(ModelLibrary.shared.cacheSummary()); \(StageRenderGovernor.liveViewSummary())"
+        let line = "[Mem] \(label) footprint \(reading.footprintMB) MB, available \(reading.availableText) MB, peak \(state.peakMB) MB, gpu \(gpuMB()) MB; \(ModelLibrary.shared.cacheSummary()); \(StageRenderGovernor.liveViewSummary())"
         print(line)
         DiagnosticsLog.shared.record(line)
         return reading

@@ -991,6 +991,16 @@ environment can and cannot do. The short version:
   links: the model owns the controller's scene). A new stage gets the same;
   `[Mem] reveal stage released` and `[Mem] battle stage released` say in the
   console that one really went (PLAN.md, *The random crashes, part two*).
+  Every `[Mem]` line also counts the live 3D views (`views battle N, island
+  N, reveal N`, from `StageRenderGovernor`, the view's own associated
+  object) and the Metal device's allocations (`gpu N MB`): runs 243–244 had
+  one live view per stage throughout and the summon curve unchanged, so the
+  ~16 MB a reveal still unaccounted for is neither the views, the graphs nor
+  the card images (`BundleArt` reads a JPEG from its file, never through
+  `UIImage(named:)`'s system cache). And a fight opens under a black veil
+  (`BattleView.stageShown`) until the renderer has drawn three frames of the
+  built stage (`BattleSceneController.onStageShown`), five seconds at most:
+  run 243's first battle frame was white under the HUD.
 - **A card's wear scales with the card (2026-09-14).** The owner, of the
   popup's 50-point enemy cards: "Do the elemental symbols need to be so
   big? We can't see the picture." `UnitCard.wear` is `size / 80` clamped

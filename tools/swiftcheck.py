@@ -982,6 +982,8 @@ def check_unknown_types(files, declared, errors):
         # The arena medallion's drawing and geometry (2026-09-24).
         "CGMutablePath","CGLineCap","CGColorSpaceCreateDeviceGray","SCNTube","SCNMaterialProperty",
         "UIGraphicsImageRendererFormat","UIGraphicsImageRendererContext",
+        # The memory probe's GPU line (2026-09-24).
+        "Metal","MTLDevice","MTLCreateSystemDefaultDevice",
         "AVFoundation","AVAudioPlayer","AVAudioSession","UIImpactFeedbackGenerator",
         "UINotificationFeedbackGenerator","FeedbackStyle","FeedbackType",
         "UITabBar","UINavigationBar","UserDefaults","NSLock","NSString","Int64","UInt64","Thread","DateFormatter","CFAbsoluteTime","CFAbsoluteTimeGetCurrent","CACurrentMediaTime","RunLoop","PreferenceKey","GeometryProxy","Anchor","CAKeyframeAnimation","SCNParticleBlendMode","SCNParticlePropertyController",

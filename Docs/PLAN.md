@@ -8208,6 +8208,30 @@ summon stress must plateau with one release line per reveal; the battle
 stress must print one release line per closed stage, and the cache
 summary says how much of the climb is the cache.
 
+**Runs 243 and 244: what the leak is NOT.** Run 243 printed a release line
+after every reveal and every battle, and the summon curve did not move
+(1,074 MB after thirty singles, 1,439 MB at the end, against run 242's 1,015
+and 1,439): the stage graphs go, and the leak is not them. Run 244 counted
+the live 3D views on every line (`StageRenderGovernor.liveViewSummary`) —
+one reveal view and one battle view the whole way through, so dismissed
+views do not pile up — and read every painting from its file so our bounded
+cache is the only one holding it (`BundleArt`): the curve did not move
+either. With the model cache capped at 14 files, what lies OUTSIDE it still
+grows from about 360 MB to 1,100 MB over the stress, about 16 MB a reveal;
+the battle path grows about 10 MB a stage beyond the cache. Every line now
+also prints `gpu N MB` (`MTLDevice.currentAllocatedSize`, the one device the
+process draws with), so the next run says whether that is GPU memory that
+outlives its renderers or something on the CPU.
+
+**The battle's first frame (2026-09-24).** Run 243 photographed a fight's
+first moment as white under the HUD: the main thread built the stage for
+about five seconds in CI and the first frames compiled for about four more,
+and the view showed no stage until then. The battle view keeps a black veil
+over the scene until the renderer has drawn three frames of the built stage
+(`BattleSceneController.onStageShown`, `frameDrawn`, forwarded from the
+coordinator's `didRenderScene`), five seconds after the build at the latest;
+an auto-repeat's later runs never bring it back.
+
 ## The premium feel, Wave 1 (2026-09-24; `Docs/FEEL.md`)
 
 The owner: "do more research and really study games and summoners war and

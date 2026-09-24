@@ -856,9 +856,15 @@ extension StageBuilder {
                         let ny = dyDown * scale
                         let length = (nx * nx + ny * ny + 1).squareRoot()
                         let at = (y * width + x) * 4
-                        out[at] = UInt8(max(0, min(255, (nx / length * 0.5 + 0.5) * 255)))
-                        out[at + 1] = UInt8(max(0, min(255, (ny / length * 0.5 + 0.5) * 255)))
-                        out[at + 2] = UInt8(max(0, min(255, (1 / length * 0.5 + 0.5) * 255)))
+                        // Typed lets: written as one expression each, these
+                        // three lines took 1.1-4.6 s apiece to type-check
+                        // (runs 243 and 244's slowest-to-compile list).
+                        let red: Float = (nx / length * 0.5 + 0.5) * 255
+                        let green: Float = (ny / length * 0.5 + 0.5) * 255
+                        let blue: Float = (1 / length * 0.5 + 0.5) * 255
+                        out[at] = UInt8(max(Float(0), min(Float(255), red)))
+                        out[at + 1] = UInt8(max(Float(0), min(Float(255), green)))
+                        out[at + 2] = UInt8(max(Float(0), min(Float(255), blue)))
                     }
                 }
             }

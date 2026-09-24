@@ -152,6 +152,12 @@ struct BattleSceneView: UIViewRepresentable {
         func renderer(_ renderer: SCNSceneRenderer, willRenderScene scene: SCNScene, atTime time: TimeInterval) {
             controller?.layoutPlates(in: renderer)
         }
+
+        /// A frame was drawn: the veil over a new fight lifts a few frames
+        /// after its stage is built (`BattleSceneController.frameDrawn`).
+        func renderer(_ renderer: SCNSceneRenderer, didRenderScene scene: SCNScene, atTime time: TimeInterval) {
+            controller?.frameDrawn()
+        }
     }
 }
 

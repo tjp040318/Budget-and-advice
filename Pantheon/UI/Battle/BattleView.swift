@@ -110,12 +110,27 @@ struct BattleView: View {
     private static let tourTriumphHold: TimeInterval = 9
     private static let tourFallenHold: TimeInterval = 6
 
+    /// A dark veil over the stage until the renderer has drawn the built
+    /// stage (2026-09-24; `BattleSceneController.onStageShown`): run 243's
+    /// first battle frame was white under the HUD while the stage built and
+    /// its shaders compiled. It lifts on those first frames, or `veilLimit`
+    /// after the build at the latest, and an auto-repeat's later runs never
+    /// bring it back.
+    @State private var stageShown = false
+    private static let veilLimit: TimeInterval = 5
+    private static let veilLift: Animation = .easeOut(duration: 0.35)
+
     var body: some View {
         ZStack {
             BattleSceneView(controller: model.sceneController) { id in
                 model.tapUnit(id)
             }
             .ignoresSafeArea()
+
+            Color.black
+                .ignoresSafeArea()
+                .opacity(stageShown ? 0 : 1)
+                .allowsHitTesting(false)
 
             // The genre's HUD and nothing else on the field (2026-09-15): a
             // boss's bar across the very top, the stage's name small under
@@ -246,7 +261,15 @@ struct BattleView: View {
             // closure holding the model would keep the whole fight alive.
             let matchups = $bossMatchups
             model.sceneController.onBossMatchups = { matchups.wrappedValue = $0 }
+            let shown = $stageShown
+            model.sceneController.onStageShown = {
+                withAnimation(Self.veilLift) { shown.wrappedValue = true }
+            }
             model.begin()
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.veilLimit) {
+                guard !shown.wrappedValue else { return }
+                withAnimation(Self.veilLift) { shown.wrappedValue = true }
+            }
             // A chapter boss or a raid says its one line as the fight opens;
             // every other stage returns from this without doing anything.
             model.announceBoss(ifPresentIn: model.displayedCombatants)
@@ -254,6 +277,7 @@ struct BattleView: View {
         }
         .onDisappear {
             model.sceneController.onBossMatchups = nil
+            model.sceneController.onStageShown = nil
             // A beat still counting when the screen goes steps aside.
             beatSequence += 1
             AudioLibrary.shared.playMusic(.island)

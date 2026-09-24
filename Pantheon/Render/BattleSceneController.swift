@@ -294,6 +294,7 @@ final class BattleSceneController: NSObject {
         place(combatants: combatants)
         startTourAreaDrill()
         startTourTriumph()
+        awaitFirstFrames()
     }
 
     /// Takes the last run's stage out of a scene the view is still drawing,
@@ -1924,6 +1925,50 @@ final class BattleSceneController: NSObject {
     /// bar's arrow. Main thread (`present` runs there). The view sets and
     /// clears it; it holds nothing of the view model's, so no cycle.
     var onBossMatchups: (([UUID: Element.Matchup]) -> Void)?
+
+    // MARK: The first frames (2026-09-24)
+    //
+    // Run 243 photographed the fight's first moment as a white frame under
+    // the HUD: the main thread builds the stage (about five seconds in CI)
+    // and the first frames then compile their shaders (about four more),
+    // and until a frame of the built stage is drawn the view shows no stage
+    // at all. The battle view keeps a dark veil over the scene until the
+    // renderer has drawn a few frames of it, and this is what tells it.
+
+    /// Called once, on the main thread, when the first build's stage has
+    /// been drawn (`framesBeforeShown` frames after the build). The view
+    /// sets it; an auto-repeat's later builds find it spent.
+    var onStageShown: (() -> Void)?
+    /// Frames the renderer draws after a build before the veil lifts: the
+    /// first one can still be compiling what it draws.
+    static let framesBeforeShown = 3
+    private let firstFramesLock = NSLock()
+    /// Frames still to draw before `onStageShown`; nil when not waiting.
+    private var framesToShow: Int?
+
+    /// The renderer's thread, after every frame (`BattleSceneView`).
+    func frameDrawn() {
+        firstFramesLock.lock()
+        guard let left = framesToShow else {
+            firstFramesLock.unlock()
+            return
+        }
+        let remaining = left - 1
+        framesToShow = remaining > 0 ? remaining : nil
+        firstFramesLock.unlock()
+        guard remaining <= 0 else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self, let told = self.onStageShown else { return }
+            self.onStageShown = nil
+            told()
+        }
+    }
+
+    private func awaitFirstFrames() {
+        firstFramesLock.lock()
+        framesToShow = Self.framesBeforeShown
+        firstFramesLock.unlock()
+    }
 
     /// The field's chrome — the plates and the floating words — faded out
     /// while the reckoning is up, and back (run 220: three plates showed
