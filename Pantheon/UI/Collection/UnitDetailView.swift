@@ -1,65 +1,29 @@
 import SwiftUI
 import UIKit
 
-/// What one fodder unit costs to feed. `GameStore.levelUp` charges the same
-/// figure (`let cost = fodder.count * 500`, GameStore.swift); the two are kept
-/// in step by hand, so change both together — the picker's footer reads this
-/// one constant rather than a literal of its own. (The Power up row printed
-/// it too until phase B made that row the gold `PrimaryButton`, 2026-09-22.)
-private let fodderDrachmaPerUnit = 500
-
-/// What a painted panel's LAST row has to clear at the bottom.
-///
-/// `Theme.panelInset` is the horizontal figure and `Theme.panelPadding` the
-/// vertical one, but they are measured against `ui_panel`'s flat gold band,
-/// which is 7.6 points thick. The bottom corner ornament is not flat: it
-/// reaches 16.9 points up and 18.6 in (71 and 78 px of the 512 px @3x texture
-/// at `Chrome.shrink`), so a panel whose last row is text or a full-width
-/// plate at the leading edge — which is every panel on this sheet — prints on
-/// the ornament at anything less. Photographed: the skill panel's "Next
-/// skill-up ..." line drawn across the bottom border on CI frame 2-detail.jpg.
-///
-/// It belongs beside `panelInset` in Theme as `panelBottomInset`; it lives
-/// here until the file that owns Theme takes it, so this sheet's four panels
-/// at least agree with each other.
-private let panelBottomInset: CGFloat = 18
-
-/// The middle column. `relicRing` draws its ring to the panel's inner width
-/// off this same figure, so the ring and the column cannot drift apart and
-/// leave a tile sitting on the painted band.
-private let ringColumnWidth: CGFloat = 212
-
-/// One relic slot in the ring. Named because the ring's height is derived
-/// from it: half a tile plus the radius plus the slot badge is what the
-/// frame has to hold.
-private let slotTileSize: CGFloat = 60
-
-/// The left column: the figure's well, the level and the three rows.
-private let identityColumnWidth: CGFloat = 158
-
-/// The figure's well across (2026-09-24): the card's old footprint. The
-/// column's 158 less the panel's 12 a side is 134, but the painted panel's
-/// corner ornaments reach 18.6 points in and 16.9 down (`panelBottomInset`'s
-/// measurement, and the top corners are the same scroll), so a well at the
-/// full 134, 8 points under the top band, would stand its corners on them;
-/// at 120 they are 19 in, where the card's were.
-private let wellWidth: CGFloat = 120
-
-/// The well's greatest height, one and a half times its width. No phone
-/// reaches it — a Pro Max gives the well 162, a family with no awakening 170
-/// on an iPhone 16 Pro — but an iPad's sheet would stand the figure, whose
-/// size the width sets (`Framing.column`), at the foot of a shaft; past it
-/// the spacer over the rows takes the room, as it did for the card.
-private let wellTallest: CGFloat = 180
-
-/// The well's corner: the glass plates' tight corner and a little more, so
-/// the thumbnail inside it, 5 points in, sits concentric with it.
-private let wellCorner: CGFloat = Theme.tightCorner + 2
-
-/// The card's thumbnail in the well's top-left corner: the 44 points of
-/// Apple's smallest touch target, the whole of it the tap.
-private let wellThumbnail: CGFloat = 44
-private let wellThumbnailInset: CGFloat = 5
+// MARK: - The unit sheet as a PLACE (2026-09-24, Docs/PLAN.md *Relics the genre's way*)
+//
+// The owner, with Summoners War's monster sheet beside ours: "Look how easy it
+// is to see everything, and to understand what's going on." Ours was three
+// cream columns round a 120-point well: the figure a seventh of the width, the
+// relics a ring of bare stones, the stats in 11-point figures on marble. The
+// genre's sheet is a room with the monster standing in it and one dark panel
+// of numbers beside it, and the builders' spec (§4.1) makes ours that room in
+// our own materials: the Hall of Ka's sanctuary full-bleed with the unit's own
+// figure on its painted dais (`AltarStageView`, the Hall's recipe exactly), a
+// rail of faces down the left to page through the roster, five bronze tablets
+// — INFO, SKILLS, RELICS, BOON, REGALIA — and one dark glass panel for the tab
+// they name. The relics are a rosette of six sockets round the Boon
+// (`RelicRosette`), the sets in two words each, and four plates with counts:
+// MANAGE, BEST SIX, RELICS, STONES.
+//
+// Everything the old sheet did has a door here (spec §5): Power up, Evolve and
+// Awaken open the Hall of Ka in that mode on this unit; the skills and their
+// ladders are the SKILLS tab; a worn socket opens the relic's card and an
+// empty one Manage on that slot; Auto-equip and Unequip all are Manage's (Best
+// six ▾ → Fill empty slots, and All off), previewed before anything moves; the
+// boon and the regalia have tabs of their own; the lore and the lock stay in
+// the strip.
 
 /// The fade at the foot of a panel body that scrolls (`SheetPanelScroll`),
 /// and the room its last line keeps under it so it can scroll clear.
@@ -71,19 +35,15 @@ private let sheetPanelSpace = "sheetPanelScroll"
 /// A panel's body that scrolls INSIDE its panel — and says so only when it
 /// has to.
 ///
-/// The unit sheet is one frame since phase B (2026-09-22): three columns,
-/// each exactly the frame's height, the painted panels fixed and only what
-/// cannot fit scrolling inside them. The things a player acts on (the
-/// buttons, the ring, the skill icons) are pinned outside the scroll.
-///
-/// Run 216's judge: both panels ended in a GHOST ROW — set chips at a fifth
-/// of their opacity, the skill's last line fading mid-sentence — which read
-/// as clipped, with nothing to say it scrolled. So the body is measured:
-/// content that fits is drawn whole, with no fade at all; content that does
-/// not fades at the foot AND wears a small chevron there, which goes when
-/// the last line has been scrolled into view. And the panels were cut so
-/// that at rest they fit: the ring panel's footer and the skills' notes
-/// moved to popovers and a tile of their own.
+/// The unit sheet is one frame: the panel is fixed and only what cannot fit
+/// scrolls inside it; the things a player acts on (the skill icons) are
+/// pinned outside the scroll. Run 216's judge: a panel that ended in a GHOST
+/// ROW — the skill's last line fading mid-sentence — read as clipped, with
+/// nothing to say it scrolled. So the body is measured: content that fits is
+/// drawn whole, with no fade at all; content that does not fades at the foot
+/// AND wears a small chevron there, which goes when the last line has been
+/// scrolled into view. On the dark panel since 2026-09-24, so the chevron's
+/// capsule is dark glass with the glass rim.
 private struct SheetPanelScroll<Content: View>: View {
     let content: () -> Content
     /// The content's frame in the scroll's own space: its height against
@@ -138,10 +98,10 @@ private struct SheetPanelScroll<Content: View>: View {
             if moreBelow {
                 Image(systemName: "chevron.compact.down")
                     .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(Theme.goldDim)
+                    .foregroundStyle(Theme.onGlassEyebrow)
                     .frame(width: 30, height: 12)
-                    .background(Capsule().fill(Theme.surfaceHigh.opacity(0.92)))
-                    .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 0.8))
+                    .background(Capsule().fill(Color.black.opacity(0.6)))
+                    .overlay(Capsule().strokeBorder(Theme.glassRim, lineWidth: 0.8))
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -149,366 +109,218 @@ private struct SheetPanelScroll<Content: View>: View {
     }
 }
 
-/// The fade at the trailing end of the sets row when its chips run past it.
-private let chipLineFade: CGFloat = 16
+// MARK: - The tabs
 
-/// The coordinate space a `ChipLine` measures its chips in.
-private let chipLineSpace = "chipLine"
+/// The unit sheet's five tabs, in the order their tablets hang.
+enum UnitSheetTab: String, CaseIterable {
+    case info, skills, relics, boon, regalia
 
-/// The sets row's chips on one line that scrolls sideways — and says so
-/// only when it has to: `SheetPanelScroll`, turned on its side. Chips that
-/// fit are drawn whole with no fade; chips that do not end in a fade at the
-/// line's trailing edge, over the one the edge cuts, until the last chip
-/// has been scrolled into view (run 221: five sets, three chips, and nothing
-/// to say the other two were there). Since run 224 a chip carries its
-/// pieces as pips, and six sets fit the line, so the scroll is only the
-/// fallback for a line the arithmetic did not foresee.
-private struct ChipLine<Content: View>: View {
-    let content: () -> Content
-    /// The chips' frame in the scroll's own space: its width against the
-    /// viewport's says whether they overflow, its trailing edge whether
-    /// there is more to the right.
-    @State private var contentFrame: CGRect = .zero
-    @State private var viewportWidth: CGFloat = 0
-
-    init(@ViewBuilder content: @escaping () -> Content) {
-        self.content = content
-    }
-
-    private var overflows: Bool { contentFrame.width > viewportWidth + 1 }
-    private var moreRight: Bool { overflows && contentFrame.maxX > viewportWidth + 2 }
-
-    var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 3) {
-                content()
-            }
-            .background(
-                GeometryReader { proxy in
-                    let frame = proxy.frame(in: .named(chipLineSpace))
-                    Color.clear
-                        .onAppear { contentFrame = frame }
-                        .onChange(of: frame) { _, now in contentFrame = now }
-                }
-            )
+    /// The word carved on the tablet.
+    var title: String {
+        switch self {
+        case .info: return "Info"
+        case .skills: return "Skills"
+        case .relics: return "Relics"
+        case .boon: return "Boon"
+        case .regalia: return "Regalia"
         }
-        .coordinateSpace(name: chipLineSpace)
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-        .background(
-            GeometryReader { proxy in
-                let width = proxy.size.width
-                Color.clear
-                    .onAppear { viewportWidth = width }
-                    .onChange(of: width) { _, now in viewportWidth = now }
-            }
-        )
-        .mask(
-            HStack(spacing: 0) {
-                Color.black
-                LinearGradient(colors: [Color.black, moreRight ? Color.clear : Color.black], startPoint: .leading, endPoint: .trailing)
-                    .frame(width: chipLineFade)
-            }
-        )
     }
 }
 
-/// A set's pieces as pips under its stone on the sets row: a gold pip for
-/// each piece that completes the set (both pairs of a 2-piece set worn
-/// twice), a filled grey pip for a piece of a set still short, and a hollow
-/// one for each piece it still wants — so "1 of 4" is one grey pip and
-/// three hollow, a row 19.6 points wide under the stone, where "1/4" in
-/// figures stood 19 wide BESIDE it. The regalia's pips (`RegaliaPips`) in
-/// the set's terms: gold, the unlit cream, the same hairline.
-private struct SetPiecePips: View {
-    let count: Int
-    let needed: Int
+/// What the unit sheet presents over itself — one thing at a time, so the
+/// altar knows when nothing covers it (`AltarStageView.playing`).
+private enum UnitSheetCover: Identifiable, Equatable {
+    /// The Hall of Ka in that mode, on this unit.
+    case training(TrainingView.Mode)
+    /// Manage, this unit's build.
+    case manage
+    /// Manage, filtered to one slot: an empty socket's door.
+    case manageSlot(Int)
+    /// Manage with THEN set to the optimiser's six for a goal.
+    case bestSix(RelicService.OptimiserGoal)
+    /// Manage with THEN set to what Auto-equip would put in the empty slots.
+    case fillEmpty
+    /// The bag: every relic, no unit.
+    case bag
+    /// One relic's card: a worn socket's door.
+    case card(UUID)
+    /// The set reference, counting this unit's pieces.
+    case sets
+    /// The boons, with this unit's socket.
+    case boons
+    /// The regalia's ladder.
+    case regalia
 
-    static let pip: CGFloat = 4
-    static let gap: CGFloat = 1.2
-
-    /// A row of `pips` pips, end to end.
-    static func rowWidth(_ pips: Int) -> CGFloat {
-        CGFloat(pips) * pip + CGFloat(max(0, pips - 1)) * gap
-    }
-
-    /// Whole sets' worth of pips: the set once, or as many times as the
-    /// pieces worn reach into.
-    private var shown: Int {
-        let size = max(1, needed)
-        return max(size, (count + size - 1) / size * size)
-    }
-
-    /// The pieces that make whole sets.
-    private var completing: Int {
-        let size = max(1, needed)
-        return count / size * size
-    }
-
-    var body: some View {
-        HStack(spacing: Self.gap) {
-            ForEach(0..<shown, id: \.self) { index in
-                Circle()
-                    .fill(index < completing ? Theme.gold : (index < count ? Theme.textSecondary : Theme.surfaceHigh))
-                    .overlay(
-                        Circle().strokeBorder(index < completing ? Theme.goldDim.opacity(0.8) : Theme.stroke, lineWidth: 0.5)
-                    )
-                    .frame(width: Self.pip, height: Self.pip)
-            }
+    var id: String {
+        switch self {
+        case .training(let mode): return "training-\(mode.rawValue)"
+        case .manage: return "manage"
+        case .manageSlot(let slot): return "manage-slot-\(slot)"
+        case .bestSix(let goal): return "best-six-\(goal.rawValue)"
+        case .fillEmpty: return "fill-empty"
+        case .bag: return "bag"
+        case .card(let relicID): return "card-\(relicID.uuidString)"
+        case .sets: return "sets"
+        case .boons: return "boons"
+        case .regalia: return "regalia"
         }
-        .accessibilityHidden(true)
     }
 }
 
-/// The three figures at the foot of the relic ring, and the line under them.
+/// A set with a piece on the unit, and how many pieces: one line of the
+/// Relics tab's SET EFFECTS column.
+private struct UnitSheetSetEntry: Identifiable {
+    let relicSet: RelicSet
+    let pieces: Int
+
+    var id: String { relicSet.rawValue }
+    /// Whole sets' worth of pieces worn.
+    var completions: Int { pieces / max(1, relicSet.piecesRequired) }
+}
+
+// MARK: - The sheet
+
+/// One unit in its own room, the genre's way (the builders' spec §4.1): the
+/// Hall of Ka's painting full-bleed with the unit's figure on the painted dais,
+/// a rail of faces down the left, the nameplate over the figure, five bronze
+/// tablets, and the chosen tab on one dark glass panel.
 ///
-/// A type rather than three loose values so the arithmetic — resolving the
-/// unit bare and scoring its six relics — is done once per pass, outside the
-/// builder. (It was offered to `ViewThatFits` in three sizes until phase B,
-/// which built every candidate; the footer scrolls in its panel now.)
-private struct RelicFigures {
-    /// How many of the six slots are filled.
-    var worn: Int
-    /// What the six slots are worth: the unit's power less the power it would
-    /// have with them empty, so a completed set's bonus is counted.
-    var gained: Int
-    /// The mean of `RelicService.efficiency` over what is worn, 0...1.
-    var quality: Double
-    /// What to farm next, or nil when there is nothing left to say.
-    var note: String?
-}
-
-/// What stands behind the figure in the unit sheet's well (2026-09-24): the
-/// summoning hall's floor, soft, under dark glass.
-///
-/// A figure on the cream panel reads as a cut-out (FEEL.md W1.10), and the
-/// premium pass's rule is cream for chrome and dark glass over art. The
-/// ground is the painting the collection's Stage stands its figures in, so
-/// the two screens are one place: its floor medallion — measured with a grid
-/// at (0.50, 0.82) of the painting, `CollectionView.stageGround` — is laid
-/// under the figure's feet, the painting drawn at 1.4 times the well's
-/// height so the floor and the columns' bases fill it, and blurred, so the
-/// figure is the one sharp thing in it. Decoded at 512 pixels, since a blur
-/// of five points leaves nothing a larger one would add. Over it, the
-/// glass: darker at the top, where the head stands, as a lit floor under a
-/// dark hall is. Never takes a tap.
-private struct FigureWellGround: View {
-    /// Where the figure's feet stand in the well, in 0…1 of it.
-    let feet: UnitPoint
-
-    private static let painting = "summon_hall_bg"
-    private static let medallion = CGPoint(x: 0.5, y: 0.82)
-    private static let paintingAspect: CGFloat = 2048.0 / 1152.0
-    private static let zoom: CGFloat = 1.4
-
-    var body: some View {
-        let shape = RoundedRectangle(cornerRadius: wellCorner, style: .continuous)
-        let feet = self.feet
-        return ZStack {
-            shape.fill(Color(hex: "#0E0B08"))
-            // Covers any well up to two and a half times as wide as it is
-            // tall: at 1.4, with the feet at 0.86, the painting's top is
-            // 0.29 of the well's height above the well's top and its foot
-            // 0.11 below the well's foot.
-            GeometryReader { frame in
-                let height: CGFloat = frame.size.height * Self.zoom
-                let width: CGFloat = height * Self.paintingAspect
-                BundleImage(name: Self.painting, renderedAt: 160)
-                    .frame(width: width, height: height)
-                    .offset(x: frame.size.width * feet.x - width * Self.medallion.x,
-                            y: frame.size.height * feet.y - height * Self.medallion.y)
-            }
-            .clipped()
-            .blur(radius: 5)
-            LinearGradient(colors: [Color.black.opacity(0.4), Color.black.opacity(0)],
-                           startPoint: .top, endPoint: .center)
-            GlassPlate(radius: wellCorner, opacity: 0.55)
-        }
-        .clipShape(shape)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-}
-
-/// One unit on one screen, the way the genre lays it out: the unit's own
-/// figure (its card a tap away) and its progress on the left, the six relic
-/// slots in a ring in the middle, the stats with their relic bonuses on the
-/// right, and the skills along the bottom with their words a tap away. The
-/// sheet is one landscape frame; only a panel's overflow scrolls, inside the
-/// panel (`SheetPanelScroll`). The lore sits behind the book, and the fodder
-/// pickers open as sheets. A relic slot opens the picker for that slot.
+/// `roster` is the order the rail pages through — the collection passes its
+/// own filtered and sorted list; nil is every owned unit by power. The tab is
+/// `openingTab` when one is given, else the last one the player chose
+/// (`unitSheetTab`, never read or written under `-tour`), else INFO; the
+/// tour, with no opening, shows RELICS.
 struct UnitDetailView: View {
     let unitID: UUID
+    let roster: [UUID]?
+    let openingTab: UnitSheetTab?
 
     @EnvironmentObject private var store: GameStore
     @Environment(\.dismiss) private var dismiss
-    @State private var pickingSlot: SlotPick?
-    /// A worn relic opened from its slot: the power-up screen.
-    @State private var openingRelic: RelicPick?
-    @State private var showFodderPicker = false
-    @State private var fodderPurpose: FodderPurpose = .levelUp
-    @State private var showAwakening = false
+
+    /// The unit on the dais: `unitID` until a face on the rail is picked.
+    @State private var shownID: UUID
+    @State private var tab: UnitSheetTab
+    /// What covers the sheet, one at a time; nil while the room is in view.
+    @State private var presented: UnitSheetCover?
     @State private var showLore = false
-    @State private var showSets = false
-    @State private var showBoons = false
-    @State private var showRegalia = false
-    /// The popover off the ring's POWER: what the six slots and the boon
-    /// are worth (the footer the ring panel scrolled to until run 216).
-    @State private var showWorth = false
+    /// The card over the whole sheet, from the nameplate's thumbnail.
+    @State private var showCard = false
+    /// The six stones, as a popover off the STONES plate.
+    @State private var showStones = false
     /// The skill whose words are shown, by its place in the kit — or
     /// `leaderSlot` for the leader skill's own tile.
     @State private var selectedSkill = 0
-    /// The figure's turn in its well, in points of drag: what earlier drags
-    /// left it at, and the drag in progress (the collection Stage's pair).
+    /// The figure's turn, in points of drag: what earlier drags left it at,
+    /// and the drag in progress (the collection Stage's pair).
     @State private var spinBase: CGFloat = 0
     @State private var spinDrag: CGFloat = 0
-    /// The well's turn, in degrees about its upright: 0 with the figure to
-    /// the front, 180 with the card; 90 is edge on, where the faces swap
-    /// (`flipWell`).
-    @State private var wellTurn: Double = 0
-    /// Which face of the well is up: the card, or the figure.
-    @State private var showsCard = false
-    /// A turn in progress, which a second tap does not start again.
-    @State private var wellTurning = false
-    /// Whether the figure stands in the well yet: a beat after the sheet
+    /// Whether the figure stands on the dais yet: a beat after the sheet
     /// opens (`standFigure`).
     @State private var figureStands = false
 
-    /// A slot number that can drive a sheet.
-    struct SlotPick: Identifiable {
-        let id: Int
+    init(unitID: UUID, roster: [UUID]? = nil, openingTab: UnitSheetTab? = nil) {
+        self.unitID = unitID
+        self.roster = roster
+        self.openingTab = openingTab
+        _shownID = State(initialValue: unitID)
+        _tab = State(initialValue: Self.startingTab(openingTab))
     }
 
-    struct RelicPick: Identifiable {
-        let id: UUID
+    // MARK: Measures
+
+    /// The rail of faces: a 54-point face on its 4-point row plate, and
+    /// `PlaceRail`'s 9 a side — 80. The spec's 76 would cut the row plates by
+    /// two points a side (`PlaceRail` pads 9 both ways), so the rail keeps its
+    /// faces whole and the figure's column gives up the four points.
+    private static let railWidth: CGFloat = 80
+    private static let railFace: CGFloat = 54
+    private static let tabletWidth: CGFloat = 80
+    private static let tabletHeight: CGFloat = 50
+    private static let tabletGap: CGFloat = 8
+    /// Between the figure's column and the tablets, and the tablets and the
+    /// panel.
+    private static let gutter: CGFloat = 6
+    /// The panel: 360 where the safe frame is at least 720 wide, 336 on a
+    /// narrower one (an iPhone SE), and 12 of glass before the screen's edge.
+    private static let panelWide: CGFloat = 360
+    private static let panelNarrow: CGFloat = 336
+    private static let trailingEdge: CGFloat = 12
+    /// The nameplate over the figure: at most 184 wide, and 5 points clear of
+    /// the column's edges.
+    private static let nameplateWidest: CGFloat = 184
+    /// The Relics tab's middle row: the rosette (R 28 and a 3-point gap:
+    /// 151.5 × 146.4) beside the set effects — an 18-point header over three
+    /// 40-point rows, 4 apart.
+    private static let relicRowHeight: CGFloat = 150
+    private static let rosetteColumn: CGFloat = 152
+    /// The experience bar's fill: the Hall of Ka's own verdigris.
+    private static let experienceTint = Color(hex: "#4FB3A0")
+    /// A chosen skill's rim, the tile's selection gold.
+    private static let chosenRim = Color(hex: "#FFE08A")
+    /// The leader skill's place in `selectedSkill`: its tile stands after
+    /// the kit's.
+    private static let leaderSlot = -1
+
+    // MARK: The remembered tab
+
+    private static let tabKey = "unitSheetTab"
+
+    private static var touring: Bool {
+        ProcessInfo.processInfo.arguments.contains("-tour")
     }
 
-    enum FodderPurpose { case levelUp, evolve }
+    /// `openingTab`, else the tab the player last chose (never under the
+    /// tour, whose relaunches would otherwise bleed into each other), else
+    /// INFO; the tour with no opening shows RELICS.
+    private static func startingTab(_ opening: UnitSheetTab?) -> UnitSheetTab {
+        if let opening { return opening }
+        if touring { return .relics }
+        guard let stored = UserDefaults.standard.string(forKey: tabKey),
+              let remembered = UnitSheetTab(rawValue: stored) else { return .info }
+        return remembered
+    }
 
-    private var unit: ResolvedUnit? { store.resolved(unitID) }
-    private var isLocked: Bool { unit?.unit.isLocked == true }
+    // MARK: Body
 
     var body: some View {
+        let shown = store.resolved(shownID)
+        let locked = shown?.unit.isLocked == true
         NavigationStack {
             // The short name and ONE epithet under it — the awakened name's
             // own when it has one — as every plate in the build prints a
             // unit; run 216 stacked "ANUBIS, KEEPER OF THE ASH ROAD" over
             // "of the Burning Sands".
             GameScreen(
-                unit?.nameWithoutEpithet ?? "Unit",
-                subtitle: unit?.epithetUnderName,
+                shown?.nameWithoutEpithet ?? "Unit",
+                subtitle: shown?.epithetUnderName,
                 dismiss: { dismiss() }
             ) {
-                BarButton(
-                    title: "Lore",
-                    systemImage: "book.fill",
-                    tint: Theme.textSecondary,
-                    showsTitle: false
-                ) {
+                BarButton(title: "Lore", systemImage: "book.fill", tint: Theme.textSecondary, showsTitle: false) {
                     showLore = true
                 }
-                // Gold on the well, as the strip's other live words are: in
-                // teal it was the one odd colour on a gold-and-cream strip
-                // (runs 220–221).
-                BarButton(title: "Auto-equip", systemImage: "wand.and.stars", tint: Theme.gold) {
-                    store.autoEquip(unitID)
-                }
-                // The genre's "remove all", free: the six come off in one tap
-                // so another unit can wear them. Worded since run 216: a bare
-                // ⊖ read as "remove", not as the relics coming off, and the
-                // strip has the room now that its title is the short name.
-                // No sound in the action (2026-09-24): `BarButton` taps on
-                // touch-down now (`GamePressStyle(.plate)`), and a second tap
-                // on the release played the press twice.
-                BarButton(title: "Unequip all", systemImage: "minus.circle", tint: Theme.textSecondary) {
-                    store.unequipAll(unitID)
-                }
                 BarButton(
-                    title: isLocked ? "Locked" : "Unlocked",
-                    systemImage: isLocked ? "lock.fill" : "lock.open",
-                    tint: isLocked ? Theme.gold : Theme.textSecondary,
+                    title: locked ? "Locked" : "Unlocked",
+                    systemImage: locked ? "lock.fill" : "lock.open",
+                    tint: locked ? Theme.gold : Theme.textSecondary,
                     showsTitle: false
                 ) {
-                    store.toggleLock(unitID)
+                    store.toggleLock(shownID)
                 }
             } content: {
-                if let unit {
-                    // Three columns: card and actions, the ring, then stats
-                    // over skills — and the sheet is ONE frame, every column
-                    // exactly its height (2026-09-22, phase B). The whole
-                    // sheet scrolled from run 204, because a column taller
-                    // than the frame overflowed the VStack it sits in, which
-                    // centred it and pushed the strip's top half off the
-                    // screen; but all three columns were taller than the
-                    // phone, so the frame cut the regalia row, the Evolve and
-                    // Awaken rows and the skills' words at its foot (run 211,
-                    // frame 2). Now each panel is the frame's height and only
-                    // what does not fit scrolls INSIDE it, ending in a fade
-                    // (`SheetPanelScroll`); the buttons, the ring and the
-                    // skill icons are pinned, and the regalia is the first
-                    // thing in the ring's scroll, whole. The GeometryReader
-                    // reports exactly the space it is given, so nothing here
-                    // can push the strip again.
-                    //
-                    // The frame is a sheet's (no tab bar): 402 − 21 − 52 − 16
-                    // = 313 points on an iPhone 16 Pro, 304 on an iPhone 16.
-                    GeometryReader { geometry in
-                        let height = geometry.size.height.isFinite ? max(0, geometry.size.height) : 0
-                        HStack(alignment: .top, spacing: 8) {
-                            identity(unit, height: height)
-                                .frame(width: identityColumnWidth)
-                            relicRing(unit)
-                                .frame(width: ringColumnWidth)
-                            VStack(spacing: 8) {
-                                stats(unit)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                skills(unit)
-                            }
-                            .frame(maxWidth: .infinity)
-                        }
-                        .frame(height: height, alignment: .top)
-                    }
-                    .padding(.horizontal, ScreenChrome.contentPadding)
-                    .padding(.vertical, 8)
-                } else {
-                    EmptyState(icon: "questionmark", title: "Gone", message: "This unit is no longer in your collection.")
-                }
+                sheetContent(shown)
             }
-            .sheet(isPresented: $showFodderPicker) {
-                if let unit {
-                    FodderPickerView(target: unit, purpose: fodderPurpose)
-                        .environmentObject(store)
-                }
+            .overlay {
+                cardOverlay(shown)
             }
-            .sheet(item: $pickingSlot) { pick in
-                RelicPickerView(unitID: unitID, slot: pick.id)
+            .sheet(item: $presented) { cover in
+                coverView(cover)
                     .environmentObject(store)
             }
-            .sheet(item: $openingRelic) { pick in
-                RelicDetailView(relicID: pick.id, role: unit?.role ?? .attacker)
-                    .environmentObject(store)
-            }
-            .sheet(isPresented: $showAwakening) {
-                if let unit {
-                    AwakeningSheet(unit: unit)
-                        .environmentObject(store)
-                }
-            }
-            .sheet(isPresented: $showSets) {
-                RelicSetsSheet(unitID: unitID)
-                    .environmentObject(store)
-            }
-            .sheet(isPresented: $showBoons) {
-                BoonPickerView(unitID: unitID)
-                    .environmentObject(store)
-            }
-            .sheet(isPresented: $showRegalia) {
-                RegaliaSheet(unitID: unitID)
-                    .environmentObject(store)
-            }
-            .alert(unit?.blueprint.epithet ?? "", isPresented: $showLore) {
+            .alert(shown?.blueprint.epithet ?? "", isPresented: $showLore) {
                 Button("Close", role: .cancel) {}
             } message: {
-                Text(unit?.blueprint.lore ?? "")
+                Text(shown?.blueprint.lore ?? "")
             }
             .task {
                 await standFigure()
@@ -516,1140 +328,854 @@ struct UnitDetailView: View {
         }
     }
 
-    // MARK: - Left: the figure and what to do with it
-
-    /// The figure, its level, and the three things to do with a unit.
-    ///
-    /// Fitted to the frame rather than scrolled: the buttons are pinned at
-    /// the panel's foot and the figure's WELL takes what they leave — 120
-    /// across and 134 tall on an iPhone 16 Pro with all three rows, 125 on
-    /// an iPhone 16, 170 on a 16 Pro for a family with no awakening.
-    ///
-    /// The well was the card's face (`UnitPortraitTile`, up to 120 points)
-    /// until 2026-09-24 (FEEL.md W1.10): the whole roster was remade in the
-    /// serious style between the 18th and the 23rd, the owner's largest
-    /// spend on the game, and the screen a player opens most still showed
-    /// the chibi bust. The unit stands there now in its own figure, and the
-    /// face is the well's thumbnail and its back (`figureWell`). No caption
-    /// and no level on either: the strip prints the name, the bar under the
-    /// well the level and the ring the power (run 216).
-    private func identity(_ unit: ResolvedUnit, height: CGFloat) -> some View {
-        // The fixed parts: the panel's 8 and 18, the level bar's 23, the 6
-        // over it and the spacer's least 6 under it, and the rows — Power
-        // up's 46 and 32 for each row under it with 4 between.
-        let rows: CGFloat = unit.blueprint.awakening != nil ? 118 : 82
-        let room = height - 61 - rows
-        let well = CGSize(width: wellWidth, height: min(wellTallest, max(64, room.rounded(.down))))
-        // `grantExperience` zeroes the stored experience at the cap, so a
-        // maxed unit's bar read "0 / 1400" under a full level — the same
-        // lie the fodder footer was fixed for. Fill it and say MAX.
-        let toNextLevel = Double(ProgressionService.experienceForNextLevel(
-            level: unit.level, stars: unit.stars
-        ))
-        return VStack(spacing: 0) {
-            figureWell(unit, size: well)
-                .padding(.bottom, 6)
-            StatBar(
-                value: unit.unit.isMaxLevel ? toNextLevel : Double(unit.unit.experience),
-                maximum: toNextLevel,
-                tint: unit.unit.isMaxLevel ? Theme.gold : Theme.info,
-                height: 5,
-                label: unit.unit.isMaxLevel
-                    ? "Lv.\(unit.level) · MAX"
-                    : "Lv.\(unit.level) / \(unit.unit.maxLevel)"
-            )
-            Spacer(minLength: 6)
-            VStack(spacing: 4) {
-                // The gold `PrimaryButton`, the screen's one main action
-                // (2026-09-22, phase B): it was a teal plate, a third button
-                // material beside gold and glass. Its name is the Hall of
-                // Ka's for the same rite; the picker it opens says what a
-                // maxed unit gains (skill-ups from duplicates). No glyph:
-                // "POWER UP" is 97 points of Cinzel at 15, and with a glyph
-                // it would not fit the column's 134 without shrinking its
-                // title under the floor.
-                PrimaryButton(title: "Power up") {
-                    fodderPurpose = .levelUp
-                    showFodderPicker = true
-                }
-                actionButton(
-                    "Evolve", evolveSubtitle(unit),
-                    "star.circle.fill", enabled: unit.unit.canEvolve
-                ) {
-                    fodderPurpose = .evolve
-                    showFodderPicker = true
-                }
-                if let awakening = unit.blueprint.awakening {
-                    let ready = awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
-                    // Awakened is an ACHIEVEMENT, not a disabled row: it was
-                    // drawn exactly like the unavailable Evolve above it and
-                    // could not be pressed (run 216). It is the achieved
-                    // plate now, and it opens the sheet with both forms.
-                    actionButton(
-                        unit.unit.isAwakened ? "Awakened" : "Awaken",
-                        unit.unit.isAwakened
-                            ? "Form unlocked ✓"
-                            : (ready ? "Essences ready" : "Essences short"),
-                        "sun.max.fill",
-                        achieved: unit.unit.isAwakened
-                    ) {
-                        warmAwakenedForm(unit)
-                        showAwakening = true
-                    }
-                }
+    @ViewBuilder
+    private func sheetContent(_ shown: ResolvedUnit?) -> some View {
+        if let shown {
+            // The rail, the figure's column, the tablets and the panel in the
+            // safe frame; the stage under them out to the glass. The reader
+            // is how the nameplate knows where the stage put the figure.
+            GeometryReader { geometry in
+                sheetLayout(shown, geometry: geometry)
             }
+            .background { altarStage(shown) }
+        } else {
+            EmptyState(icon: "questionmark", title: "Gone", message: "This unit is no longer in your collection.")
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.horizontal, Theme.panelInset)
-        .padding(.top, Theme.panelPadding)
-        // The last row is the Awaken plate, full width and at the leading
-        // edge, so it needs the ornament's 17 points rather than the band's 8.
-        .padding(.bottom, panelBottomInset)
-        .panelBackground(radius: Theme.tightCorner)
     }
 
-    // MARK: - The well: the figure, and the card behind it
+    private func sheetLayout(_ shown: ResolvedUnit, geometry: GeometryProxy) -> some View {
+        let faces = railUnits(including: shown)
+        let panelWidth: CGFloat = geometry.size.width >= 720 ? Self.panelWide : Self.panelNarrow
+        let figureX = figureInColumn(geometry)
+        return HStack(spacing: 0) {
+            faceRail(faces)
+            figureColumn(shown, figureX: figureX)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            tabletColumn(shown)
+                .padding(.horizontal, Self.gutter)
+            tabPanel(shown)
+                .frame(width: panelWidth)
+                .frame(maxHeight: .infinity)
+        }
+        .padding(.trailing, Self.trailingEdge)
+        .padding(.vertical, 8)
+    }
 
-    /// The unit's own figure in a dark glass well, and the card on the
-    /// well's back (2026-09-24; FEEL.md W1.10).
-    ///
-    /// The figure is the collection's stage in a narrow framing
-    /// (`CollectionStageView`, `Framing.column`): the serious mesh, the
-    /// awakened one with its own rig's clips for an awakened unit, the
-    /// figure stages' light and shadow, and its resting idle started the
-    /// `startLoop` way — the figure is stood in the live scene a beat after
-    /// the sheet opens (`standFigure`), the order that plays. It is turned a
-    /// three-quarter toward the relic ring, and a drag across the well turns
-    /// it at the collection's rate. The card is a 44-point thumbnail in the
-    /// well's top-left corner; a tap turns the well over to the card, and a
-    /// tap on the card turns it back — the genre's card-and-figure pair,
-    /// the card one tap away rather than gone.
-    ///
-    /// Both faces stay in the hierarchy and only the one that is up is
-    /// drawn, takes taps and is read to VoiceOver: taking the figure's face
-    /// out while the card showed would dismantle its stage, and the turn
-    /// back would parse and fade the figure in afresh.
-    private func figureWell(_ unit: ResolvedUnit, size: CGSize) -> some View {
+    /// Where the figure's centre line stands in the figure's column, in
+    /// points from the column's leading edge. The stage is the whole glass,
+    /// so the dais is solved on that frame — the safe frame widened by its
+    /// side insets and lengthened by the home indicator — and brought back
+    /// into the column's coordinates: the Hall of Ka's `figureInColumn`.
+    private func figureInColumn(_ geometry: GeometryProxy) -> CGFloat {
+        let insets = geometry.safeAreaInsets
+        let stage = CGSize(
+            width: geometry.size.width + insets.leading + insets.trailing,
+            height: geometry.size.height + insets.bottom
+        )
+        let across = AltarStageView.placement(in: stage).across
+        return stage.width * across - insets.leading - Self.railWidth
+    }
+
+    // MARK: - The stage
+
+    /// The sanctuary, the figure on its dais and the light falling on both,
+    /// in ONE frame that runs under the side insets and the home indicator to
+    /// the glass — the Hall of Ka's `hallStage`, layer for layer, so the feet
+    /// stand on the painted stone on any phone. The figure turns with the
+    /// drag across its column and stops drawing while anything covers the
+    /// sheet (`playing`), so the Hall of Ka opened from here is the one stage
+    /// running.
+    private func altarStage(_ shown: ResolvedUnit) -> some View {
         ZStack {
-            figureFace(unit, size: size)
-                .opacity(showsCard ? 0 : 1)
-                .allowsHitTesting(!showsCard)
-                .accessibilityHidden(showsCard)
-            // The well's back: a half turn of its own, so it reads the right
-            // way round once the well has turned it to the front — and none
-            // while the well stands square, which is where a Reduce Motion
-            // cross-fade shows it.
-            cardFace(unit, size: size)
-                .rotation3DEffect(.degrees(wellTurn == 0 ? 0 : 180), axis: (x: 0, y: 1, z: 0))
-                .opacity(showsCard ? 1 : 0)
-                .allowsHitTesting(showsCard)
-                .accessibilityHidden(!showsCard)
-        }
-        .frame(width: size.width, height: size.height)
-        .rotation3DEffect(.degrees(wellTurn), axis: (x: 0, y: 1, z: 0), perspective: 0.6)
-    }
-
-    /// Where the column framing stands the figure's feet in the well, for
-    /// the ground to lay the hall's floor medallion under them.
-    private static var wellFeet: UnitPoint {
-        let framing = CollectionStageView.Framing.column
-        return UnitPoint(x: CGFloat(framing.across), y: CGFloat(framing.down))
-    }
-
-    /// The front: the figure over the hall's floor, the drag across it, the
-    /// card's thumbnail in the corner and the turn's hint in the other.
-    private func figureFace(_ unit: ResolvedUnit, size: CGSize) -> some View {
-        let shape = RoundedRectangle(cornerRadius: wellCorner, style: .continuous)
-        return ZStack {
-            FigureWellGround(feet: Self.wellFeet)
-            CollectionStageView(
-                unit: figureStands ? unit : nil,
-                spin: Float((spinBase + spinDrag) * CollectionStageView.spinPerPoint),
-                framing: .column,
-                // Stopped while the card is up: nobody can see the figure.
-                playing: !showsCard
+            hallBackdrop
+                .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
+            AltarStageView(
+                blueprint: figureStands ? shown.blueprint : nil,
+                awakened: shown.unit.isAwakened,
+                ceremony: nil,
+                spin: spinRadians,
+                playing: presented == nil
             )
             .allowsHitTesting(false)
-            // The drag turns the figure about its own axis, left for left,
-            // and it stays where the finger left it — the collection's
-            // Stage's gesture on the collection's Stage's figure.
-            Color.clear
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 4)
-                        .onChanged { value in
-                            spinDrag = value.translation.width
-                        }
-                        .onEnded { value in
-                            spinBase += value.translation.width
-                            spinDrag = 0
-                        }
+            .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
+            PlaceAmbience(shafts: LightShaft.sanctuary, motes: 0, seed: 944)
+                .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
+        }
+        .ignoresSafeArea(.container, edges: [.horizontal, .bottom])
+    }
+
+    /// The Hall of Ka's painting with its scrims, darker toward the panel's
+    /// side of the room.
+    private var hallBackdrop: some View {
+        PlaceBackdrop(painting: "hall_of_ka_bg", topScrim: 0.45, footScrim: 0.45)
+            .overlay(
+                LinearGradient(
+                    stops: [
+                        .init(color: .clear, location: 0),
+                        .init(color: .clear, location: 0.5),
+                        .init(color: Color.black.opacity(0.35), location: 1),
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
                 )
-                .accessibilityHidden(true)
-        }
-        .frame(width: size.width, height: size.height)
-        .clipShape(shape)
-        // The hint the collection's Stage spells out as DRAG TO TURN, as its
-        // glyph alone: the well is 120 points across, and a capsule of words
-        // would stand on the figure's ring. Top right, level with the
-        // thumbnail: the ring's ellipse reaches into both bottom corners
-        // (on the feet's line its tips are 6 points from the right edge and
-        // 13 from the left), and the figure's head and shoulders stand 30
-        // points clear of this one.
-        .overlay(alignment: .topTrailing) {
-            Image(systemName: "arrow.left.and.right")
-                .font(.system(size: 11, weight: .black))
-                .foregroundStyle(Theme.onGlassDim.opacity(0.75))
-                .shadow(color: .black.opacity(0.6), radius: 1, y: 0.5)
-                .padding(7)
-                .allowsHitTesting(false)
-                .accessibilityHidden(true)
-        }
-        // Outside the clip, so the grade's glow round the thumbnail is not
-        // cut at the well's edge.
-        .overlay(alignment: .topLeading) {
-            Button {
-                flipWell()
-            } label: {
-                UnitPortraitTile(unit: unit, size: wellThumbnail, showsLevel: false)
-                    .shadow(color: .black.opacity(0.55), radius: 3, y: 1)
-            }
-            .buttonStyle(GamePressStyle(.plate))
-            .accessibilityLabel("Show the card of \(unit.nameWithoutEpithet)")
-            .padding(wellThumbnailInset)
-        }
+            )
+            .allowsHitTesting(false)
     }
 
-    /// The back: the card as the sheet drew it before the figure stood
-    /// here — the face in its grade's metal with its element and stars — on
-    /// the same glass, the whole well a tap that turns it back.
-    private func cardFace(_ unit: ResolvedUnit, size: CGSize) -> some View {
-        let shape = RoundedRectangle(cornerRadius: wellCorner, style: .continuous)
-        // Four points of glass round it: 112 on a 120-point well.
-        let card = max(wellThumbnail, min(size.width, size.height) - 8)
-        return Button {
-            flipWell()
-        } label: {
-            ZStack {
-                FigureWellGround(feet: Self.wellFeet)
-                UnitPortraitTile(unit: unit, size: card, showsLevel: false)
-                    .shadow(color: .black.opacity(0.5), radius: 6, y: 3)
-            }
-            .frame(width: size.width, height: size.height)
-            .contentShape(shape)
-        }
-        .buttonStyle(GamePressStyle(.plate))
-        .accessibilityLabel("Show the figure of \(unit.nameWithoutEpithet)")
+    /// The figure's turn about its upright, at the collection Stage's rate.
+    private var spinRadians: Float {
+        Float((spinBase + spinDrag) * CollectionStageView.spinPerPoint)
     }
 
-    /// Turns the well over: to the card from the figure, to the figure from
-    /// the card, and back the way it came.
-    ///
-    /// A quarter turn to edge on, gathering speed; the faces swap there,
-    /// where neither is seen; then the rest of the turn, settling — 0.4 s
-    /// in all, a card turned over on a table. The swap waits on the first
-    /// quarter's completion rather than on a clock, so a slow frame cannot
-    /// show the wrong face at an angle. Under Reduce Motion the well stands
-    /// square and the faces cross-fade. The turn away is `Motion.exit` and
-    /// the cross-fade `Motion.calm` (FEEL.md W1.8); the settle is the
-    /// turn's own 0.22-second ease-out.
-    private func flipWell() {
-        guard !wellTurning else { return }
-        // No tick or tap here (2026-09-24): both buttons that call this wear
-        // `GamePressStyle(.plate)`, which answers on touch-down.
-        // A card that faded up under Reduce Motion stands square, unturned,
-        // and fades back down even if Reduce Motion has been turned off since:
-        // turned from there, its own half turn would show it mirrored.
-        if MotionComfort.isReduced || (showsCard && wellTurn == 0) {
-            wellTurn = 0
-            withAnimation(Motion.calm) {
-                showsCard.toggle()
-            }
-            return
-        }
-        wellTurning = true
-        let toCard = !showsCard
-        withAnimation(Motion.exit) {
-            wellTurn = 90
-        } completion: {
-            showsCard = toCard
-            withAnimation(.easeOut(duration: 0.22)) {
-                wellTurn = toCard ? 180 : 0
-            } completion: {
-                wellTurning = false
-            }
-        }
-    }
-
-    /// Stands the figure in its well a beat after the sheet opens.
+    /// Stands the figure on the dais a beat after the sheet opens.
     ///
     /// The unit's mesh is parsed off the main thread from the moment the
-    /// sheet appears (`ModelLibrary.warm(forms:)`, the form the unit has,
-    /// the way the collection warms its Stage), and the figure is placed
-    /// 0.35 s later, when the sheet has finished rising. Placed at once, in
-    /// the stage's `makeUIView`, a family not yet in the cache would be
-    /// parsed on the main thread inside the sheet's first layout, before the
-    /// sheet could start to move; a warm pass started in `onAppear` comes
-    /// after that layout, too late to help. A family already cached is
-    /// cloned in a moment either way. The figure then goes into a scene that
-    /// is already rendering, which is the order `SCNNode.startLoop` exists
-    /// for, and fades in over the stage's own 0.35 s. On the main actor
-    /// whatever the SDK makes of a view's methods, so the state it sets is
-    /// set there.
+    /// sheet appears, with the next three faces' on the rail, and the figure
+    /// is placed 0.35 s later, when the sheet has finished rising. Placed at
+    /// once, in the stage's `makeUIView`, a family not yet in the cache would
+    /// be parsed on the main thread inside the sheet's first layout, before
+    /// the sheet could start to move. Meshes only, as the Hall of Ka and the
+    /// collection warm: the sheet plays one clip, the idle, whose small file
+    /// the altar reads as it places the figure — warming a family's twelve
+    /// clips would hold the importer for eleven it never plays. The figure
+    /// then goes into a scene that is already rendering, which is the order
+    /// `SCNNode.startLoop` exists for.
     @MainActor
     private func standFigure() async {
-        if let unit {
-            ModelLibrary.shared.warm(forms: [(spec: unit.blueprint.model, awakened: unit.unit.isAwakened)],
+        if let shown = store.resolved(shownID) {
+            ModelLibrary.shared.warm(forms: [(spec: shown.blueprint.model, awakened: shown.unit.isAwakened)],
                                      crowded: false, clips: false)
+            warmAhead(of: shown.id, in: railUnits(including: shown))
         }
         try? await Task.sleep(nanoseconds: 350_000_000)
         guard !Task.isCancelled else { return }
         figureStands = true
     }
 
-    /// The awakened form's mesh and clips, parsed off the main thread while
-    /// the awakening sheet is up: the well swaps its figure for the awakened
-    /// one the moment `store.awaken` returns, into a live scene, on the main
-    /// thread. The Hall of Ka's `warmAwakening`, for the same rite reached
-    /// from here.
-    private func warmAwakenedForm(_ unit: ResolvedUnit) {
-        guard !unit.unit.isAwakened, unit.blueprint.awakening != nil else { return }
-        ModelLibrary.shared.warm(forms: [(spec: unit.blueprint.model, awakened: true)], crowded: false, clips: true)
+    /// The next three faces on the rail after `id`, parsed off the main
+    /// thread (the Hall of Ka's rail warms its top six the same way), so a
+    /// thumb running down the rail clones from the cache.
+    private func warmAhead(of id: UUID, in faces: [ResolvedUnit]) {
+        guard let index = faces.firstIndex(where: { $0.id == id }) else { return }
+        let ahead = faces.dropFirst(index + 1).prefix(3)
+        guard !ahead.isEmpty else { return }
+        ModelLibrary.shared.warm(forms: ahead.map { (spec: $0.blueprint.model, awakened: $0.unit.isAwakened) },
+                                 crowded: false, clips: false)
     }
 
-    /// Why the Evolve row is lit or dark. `canEvolve` is false for two
-    /// different reasons — short of the level cap, and already 6★ — and the
-    /// one line of copy told a maxed 6★ to "Reach Lv.65 first" while it stood
-    /// at Lv.65.
-    private func evolveSubtitle(_ unit: ResolvedUnit) -> String {
-        if unit.stars >= 6 { return "Fully evolved · 6★" }
-        guard unit.unit.canEvolve else { return "Reach Lv.\(unit.unit.maxLevel) first" }
-        let fodder = ProgressionService.evolutionFodderRequired(currentStars: unit.stars)
-        let cost = ProgressionService.drachmaCostToEvolve(currentStars: unit.stars)
-        // "5 × 5★ · 150K": the word "drachma" made the 5★ line 109 points
-        // in a row of 100 at the type floor. The fodder picker's footer
-        // spells the bill out in full before anything is spent.
-        return "\(fodder) × \(unit.stars)★ · \(BarWallet.compact(cost))"
+    /// The awakened form's mesh and clips, parsed off the main thread before
+    /// the Hall of Ka opens in Awaken: the altar there swaps its figure for
+    /// the awakened one the moment `store.awaken` returns, and so does this
+    /// one under it. The Hall's `warmAwakening`, a beat earlier.
+    private func warmAwakenedForm(_ shown: ResolvedUnit) {
+        guard !shown.unit.isAwakened, shown.blueprint.awakening != nil else { return }
+        ModelLibrary.shared.warm(forms: [(spec: shown.blueprint.model, awakened: true)], crowded: false, clips: true)
     }
 
-    /// Evolve and Awaken: a row with its word and why it is lit, dark or
-    /// done. THREE states since run 216, so the three read apart at a glance:
-    ///
-    /// - lit: the drawn gold of the gold `PrimaryButton` above it — the same
-    ///   four stops and gloss, so the column is ONE gold (run 216 had the
-    ///   painted copper bar over `goldPlate`'s bronze), ink on it;
-    /// - dark: the cream surface, secondary ink — not yet;
-    /// - achieved: the dark bronze socket of a painted icon with a gold rim
-    ///   and gold words — done, and still a door (the awakened unit's row
-    ///   opens the sheet with both forms).
-    private func actionButton(
-        _ title: String, _ subtitle: String, _ symbol: String,
-        enabled: Bool = true, achieved: Bool = false, action: @escaping () -> Void
-    ) -> some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-        let ink: Color = achieved ? Theme.onGlassGold : (enabled ? Theme.ink : Theme.textSecondary)
-        return Button(action: action) {
-            HStack(spacing: 6) {
-                Image(systemName: symbol)
-                    .font(.system(size: 14, weight: .bold))
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(title)
-                        .font(Theme.body(11).weight(.bold))
-                        .lineLimit(1)
-                    // Every subtitle is written to fit the row's 100 points
-                    // at the floor — the longest, "Fully evolved · 6★" and
-                    // "Reach Lv.65 first", are 86 — so nothing shrinks: a
-                    // scale factor would take body 11 under the floor.
-                    Text(subtitle)
-                        .font(Theme.body(11))
-                        .foregroundStyle(achieved ? Theme.onGlass : ink)
-                        .lineLimit(1)
-                }
-                Spacer(minLength: 0)
-            }
-            .foregroundStyle(ink)
-            .padding(.horizontal, 7)
-            .frame(height: 32)
-            .background(
-                // Gradient or colour: a Group, never a ternary.
-                Group {
-                    if achieved {
-                        shape.fill(Theme.socketFill)
-                            .overlay(shape.strokeBorder(Theme.gold, lineWidth: 1.2))
-                            .overlay(shape.inset(by: 2).strokeBorder(Color(hex: "#FFE9A8").opacity(0.25), lineWidth: 0.6))
-                    } else if enabled {
-                        shape.fill(
-                            LinearGradient(
-                                colors: [Color(hex: "#FFE9A8"), Color(hex: "#E2BF62"), Theme.gold, Color(hex: "#7A5B1C")],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            )
-                        )
-                        .overlay(
-                            shape.fill(LinearGradient(colors: [Color.white.opacity(0.35), .clear],
-                                                      startPoint: .top, endPoint: .center))
-                        )
-                        .overlay(shape.strokeBorder(Color(hex: "#FFE9A8").opacity(0.55), lineWidth: 1))
-                    } else {
-                        shape.fill(Theme.surface)
-                            .overlay(shape.strokeBorder(Theme.stroke, lineWidth: 1))
-                    }
-                }
-            )
+    // MARK: - The rail
+
+    /// The faces the rail pages through: the roster given, in its order (any
+    /// unit it names that is gone since is left out, and the unit on the dais
+    /// is always there), or every owned unit by power.
+    private func railUnits(including shown: ResolvedUnit) -> [ResolvedUnit] {
+        guard let roster else {
+            return store.resolvedUnits.sorted { $0.power > $1.power }
         }
-        // The plate's press (2026-09-24): its actions never sounded, so the
-        // silent `PlateButtonStyle()` left these three rows mute.
-        .buttonStyle(GamePressStyle(.plate))
-        .disabled(!enabled && !achieved)
-    }
-
-    // MARK: - Middle: the relic ring
-
-    /// Six slots around the element's emblem, slot 1 at the top and the
-    /// rest clockwise — the arrangement every player of the genre knows.
-    private func relicRing(_ unit: ResolvedUnit) -> some View {
-        let radius: CGFloat = 67
-        // The ring is drawn to the panel's inner width rather than to a flat
-        // 196, so it and the sets row under it share a centre line and neither
-        // can reach the painted band: a tile's far corner is 88 points from
-        // the centre and its slot badge 92, against the 94 the box allows.
-        let width = ringColumnWidth - Theme.panelInset * 2
-        // Tall enough to hold a slot badge, which is drawn four points up and
-        // left of its tile's corner. The old square 196 held the tiles with a
-        // point to spare but not their badges, so the top slot's badge was
-        // drawn three points into the panel's painted top band — measured on
-        // CI frame 2-detail.jpg, badge top at 69 px against the band's inner
-        // edge at 74.
-        //
-        // The five points are paid at the TOP only (run 216): the bottom
-        // tile's badge hangs off its top-left corner, inside the ring, so
-        // the frame ends at the bottom tile's edge and the centre sits 2.5
-        // below the middle — five points handed to the words under it.
-        let height = (radius + slotTileSize / 2) * 2 + 5
-        let centre = CGPoint(x: width / 2, y: radius + slotTileSize / 2 + 5)
-        let figures = relicFigures(unit)
-        return VStack(spacing: 4) {
-            ZStack {
-                // The rune hexagon: one thin line through the six sockets.
-                Path { path in
-                    for slot in 0..<6 {
-                        let angle = (Double(slot) * 60 - 90) * Double.pi / 180
-                        let point = CGPoint(x: centre.x + CGFloat(cos(angle)) * radius, y: centre.y + CGFloat(sin(angle)) * radius)
-                        if slot == 0 { path.move(to: point) } else { path.addLine(to: point) }
-                    }
-                    path.closeSubpath()
-                }
-                .stroke(Theme.goldDim.opacity(0.35), lineWidth: 1)
-                // The largest clear space on the sheet carries the number the
-                // whole sheet exists to raise, and over it the BOON SOCKET —
-                // the one earned line a unit carries (`BoonPickerView`) —
-                // where a second copy of the element used to sit.
-                //
-                // The power is a door too (run 216): a tap opens what the
-                // ring is worth — the boon's line, the slots filled, the
-                // power the relics bought and their quality — the footer
-                // that scrolled under the ring and ended the panel in a
-                // ghost row.
-                VStack(spacing: 2) {
-                    boonSocket(unit)
-                    Button {
-                        showWorth = true
-                    } label: {
-                        VStack(spacing: 2) {
-                            Text("\(unit.power)")
-                                .font(Theme.numeric(16))
-                                .foregroundStyle(Theme.gold)
-                                // The clear disc inside the ring is 74pt
-                                // across; five monospaced digits at 16 are 43
-                                // of them and six would touch the tiles at 2
-                                // and 6 o'clock. It may shrink, but only to
-                                // the numeric floor.
-                                .lineLimit(1)
-                                .minimumScaleFactor(Theme.numericFloor / 16)
-                                .frame(maxWidth: 74)
-                            HStack(spacing: 2) {
-                                Text("POWER")
-                                    .font(Theme.body(8).weight(.black))
-                                    .tracking(1)
-                                Image(systemName: "info.circle")
-                                    .font(.system(size: 7, weight: .bold))
-                            }
-                            .foregroundStyle(Theme.textSecondary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(GamePressStyle(.plate))
-                    .accessibilityLabel("Power \(unit.power), what the relics are worth")
-                    .popover(isPresented: $showWorth) {
-                        ringWorth(unit, figures: figures)
-                            .padding(14)
-                            .frame(width: 272)
-                            .background(Theme.surface)
-                            .presentationCompactAdaptation(.popover)
-                    }
-                }
-                .position(centre)
-                ForEach(1...6, id: \.self) { slot in
-                    let angle = (Double(slot - 1) * 60 - 90) * Double.pi / 180
-                    slotTile(slot: slot, unit: unit)
-                        .position(
-                            x: centre.x + CGFloat(cos(angle)) * radius,
-                            y: centre.y + CGFloat(sin(angle)) * radius
-                        )
-                }
-            }
-            .frame(width: width, height: height)
-            // Under the ring: the regalia and ONE line of set chips, which at
-            // rest FIT (run 216). They sat in a scroll with the boon's line
-            // and the relic arithmetic under them, and the panel ended in a
-            // ghost row — the chips at a fifth of their opacity — with the
-            // rest out of sight; the arithmetic and the boon are the
-            // power's popover now. On an iPhone 16 Pro the panel has 287
-            // points inside its paddings, the ring 199 and 4 of them, and
-            // this 84: the regalia's two or three lines (40–55) and the chip
-            // line (22). A regalia whose name AND line both wrap is taller,
-            // and then the body scrolls with the chevron that says so.
-            //
-            // The regalia was a one-line row that could not hold the
-            // longest names ("Potter's Wheel of Elephantine", 159 points)
-            // beside its pips and its line without shrinking them under the
-            // floor; it has two lines now. And the footer was offered to
-            // `ViewThatFits` in three sizes, shedding its note, its
-            // captions, then itself as the chips grew; it is a popover now,
-            // always whole.
-            SheetPanelScroll {
-                VStack(spacing: 6) {
-                    regaliaLine(unit)
-                    setsRow(unit)
-                }
-            }
+        var faces = roster.compactMap { store.resolved($0) }
+        if !faces.contains(where: { $0.id == shown.id }) {
+            faces.insert(shown, at: 0)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-        .padding(.horizontal, Theme.panelInset)
-        .padding(.top, Theme.panelPadding)
-        // The scroll's last line fades out over the corner ornament rather
-        // than printing on it; the ornament's clearance keeps the fade's
-        // foot off the painted band too.
-        .padding(.bottom, panelBottomInset)
-        .panelBackground(radius: Theme.tightCorner)
+        return faces
     }
 
-    private func slotTile(slot: Int, unit: ResolvedUnit) -> some View {
-        let relic = unit.unit.equippedRelics[slot].flatMap { store.player.relic($0) }
-        return RelicSlotTile(slot: slot, relic: relic, size: slotTileSize) {
-            // A worn relic opens its power-up screen (Change is on it);
-            // an empty slot opens the picker.
-            if let relic {
-                openingRelic = RelicPick(id: relic.id)
-            } else {
-                pickingSlot = SlotPick(id: slot)
-            }
+    /// The roster as a rail of faces down the left edge, opening on whole
+    /// rows with the unit on the dais in them (`WholeRowRail`, the Hall of
+    /// Ka's own), on the rail's dark glass.
+    private func faceRail(_ faces: [ResolvedUnit]) -> some View {
+        WholeRowRail(width: Self.railWidth, items: faces, focus: shownID) { unit in
+            railRow(unit, faces: faces)
         }
     }
 
-    /// The socket at the ring's centre: the boon's glyph in its colour on
-    /// the ring's own hexagon, or a ghost reading BOON. A tap opens the
-    /// picker (`BoonPickerView`), where the caches open and the boons are
-    /// pushed and socketed.
-    private func boonSocket(_ unit: ResolvedUnit) -> some View {
-        let boon = unit.boon
-        let socket: CGFloat = 36
-        return Button {
-            showBoons = true
+    private func railRow(_ unit: ResolvedUnit, faces: [ResolvedUnit]) -> some View {
+        Button {
+            // A face of a scrolling rail: the quiet press, its tick and tap
+            // here, on a finished tap.
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            standOnDais(unit, from: faces)
         } label: {
-            ZStack {
-                BoonHexagon()
-                    .fill(boon.map { $0.kind.tint.opacity(0.22) } ?? Theme.surface.opacity(0.9))
-                    .frame(width: socket, height: socket)
-                BoonHexagon()
-                    .stroke(boon != nil ? Theme.gold : Theme.goldDim.opacity(0.5), lineWidth: 1)
-                    .frame(width: socket, height: socket)
-                if let boon {
-                    Image(systemName: boon.kind.glyph)
-                        .font(.system(size: 14, weight: .black))
-                        .foregroundStyle(boon.kind.tint)
-                } else {
-                    Text("BOON")
-                        .font(Theme.body(8).weight(.black))
-                        .tracking(0.5)
-                        .foregroundStyle(Theme.goldDim.opacity(0.85))
+            UnitPortraitTile(unit: unit, size: Self.railFace)
+                .padding(4)
+                .background(GlassRowPlate(isOn: unit.id == shownID))
+                // The face and its plate's rim are the tap.
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(GamePressStyle(.quiet))
+    }
+
+    /// A face picked on the rail stands on the dais, met face on, on its
+    /// first skill; the three faces after it are warmed.
+    private func standOnDais(_ unit: ResolvedUnit, from faces: [ResolvedUnit]) {
+        guard unit.id != shownID else { return }
+        shownID = unit.id
+        spinBase = 0
+        spinDrag = 0
+        selectedSkill = 0
+        figureStands = true
+        warmAhead(of: unit.id, in: faces)
+    }
+
+    // MARK: - The figure's column
+
+    /// Over the figure: the nameplate at the top, centred on the figure and
+    /// kept inside the column; under it the whole column is the turntable a
+    /// drag turns the figure on; the turn's hint at the foot.
+    private func figureColumn(_ shown: ResolvedUnit, figureX: CGFloat) -> some View {
+        GeometryReader { column in
+            let width = column.size.width
+            let plateWidth = max(0, min(Self.nameplateWidest, width - 10))
+            let lowest = plateWidth / 2 + 5
+            let highest = max(lowest, width - plateWidth / 2 - 5)
+            let centre = min(max(figureX, lowest), highest)
+            VStack(spacing: 0) {
+                nameplate(shown)
+                    .frame(width: plateWidth)
+                    .offset(x: centre - width / 2)
+                    .frame(width: width)
+                turntable
+            }
+        }
+        .overlay(alignment: .bottom) {
+            turnHint
+        }
+    }
+
+    /// The drag that turns the figure about its own axis, left for left; it
+    /// stays where the finger left it until the next drag or the next unit.
+    private var turntable: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 4)
+                    .onChanged { value in
+                        spinDrag = value.translation.width
+                    }
+                    .onEnded { value in
+                        spinBase += value.translation.width
+                        spinDrag = 0
+                    }
+            )
+            .accessibilityHidden(true)
+    }
+
+    /// The turn's hint, centred at the column's foot 12 points above the
+    /// safe bottom (the column ends 8 above it).
+    private var turnHint: some View {
+        Image(systemName: "arrow.left.and.right")
+            .font(.system(size: 11, weight: .black))
+            .foregroundStyle(Theme.onGlassDim.opacity(0.75))
+            .shadow(color: .black.opacity(0.6), radius: 1, y: 0.5)
+            .frame(height: 8)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+    }
+
+    /// Who stands on the dais, on a small glass plate over the figure's
+    /// head: the card's thumbnail (the door to the card), the element and
+    /// the stars, the level, and the power.
+    private func nameplate(_ shown: ResolvedUnit) -> some View {
+        HStack(spacing: 8) {
+            cardThumbnail(shown)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 5) {
+                    ElementBadge(element: shown.element, compact: true)
+                    // Bright on the glass: the natural stars' dim bronze
+                    // could not be counted (run 217).
+                    StarRow(stars: shown.stars, size: 11)
+                }
+                // Measured in the bundled faces: "Lv.40/55" is 53 points and
+                // "11,423" 55, so the row is 114 of the 120 an iPhone 16's
+                // plate leaves them; MAX stands over the level as POWER
+                // stands over its figure, since beside it (63) the row
+                // would be 123 and spill out of the plate.
+                HStack(alignment: .lastTextBaseline, spacing: 0) {
+                    nameplateLevel(shown)
+                    Spacer(minLength: 6)
+                    nameplatePower(shown)
                 }
             }
+        }
+        .padding(6)
+        .background(GlassPlate(radius: 10, opacity: 0.72))
+    }
+
+    private func cardThumbnail(_ shown: ResolvedUnit) -> some View {
+        Button {
+            withAnimation(Motion.pop) {
+                showCard = true
+            }
+        } label: {
+            UnitPortraitTile(unit: shown, size: 40, showsLevel: false)
         }
         .buttonStyle(GamePressStyle(.plate))
+        .accessibilityLabel("Show the card")
     }
 
-    /// The boon's line under the sets row: "Bane of Tide" over "+18.3% vs
-    /// Tide". Two lines since phase B (2026-09-22): on one, "Bane of
-    /// Radiance" and "+18.3% vs Radiance" are 210 points in a column of 188
-    /// and fitted only by shrinking both under the type floor.
-    private func boonLine(_ boon: Boon) -> some View {
-        HStack(alignment: .top, spacing: 5) {
-            Image(systemName: boon.kind.glyph)
-                .font(.system(size: 11, weight: .black))
-                .foregroundStyle(boon.kind.tint)
-                .frame(width: 14)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(boon.displayName)
-                    .font(Theme.body(11).weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
-                Text(boon.shortLine)
-                    .font(Theme.numeric(11.5))
-                    .foregroundStyle(Theme.gold)
-            }
-            .lineLimit(2)
-            .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-    }
-
-    /// The family's regalia (`Regalia`, `RegaliaSheet`), the first thing
-    /// under the ring: the item's glyph, its name, its level as five pips
-    /// and its line at that level — or a lock and what unlocks it. A tap
-    /// opens the sheet.
-    ///
-    /// Two lines, whole (2026-09-22, phase B). It was one 20-point row
-    /// that shrank its name and its line to 0.7 — under the type floor —
-    /// and still could not hold the longest ("Potter's Wheel of
-    /// Elephantine", 159 points at the floor, beside five pips and "+12%
-    /// ACC · debuffs +1 turn", 147); run 211's frame cut it in half at the
-    /// foot of the sheet. Run 176 photographed the one-line form as
-    /// "Thunderbolt of… Awaken to u…".
+    /// "Lv.40/55", or at the cap "Lv.60" under a green MAX — the level's
+    /// own eyebrow, level with POWER's.
     @ViewBuilder
-    private func regaliaLine(_ unit: ResolvedUnit) -> some View {
-        if let regalia = RegaliaService.regalia(forBlueprint: unit.blueprint.id, level: RegaliaService.level(of: unit.unit)) {
-            let unlocked = unit.regalia != nil
-            let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-            Button {
-                Juice.haptic(.light)
-                showRegalia = true
-            } label: {
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: regalia.template.glyph)
-                        .font(.system(size: 12, weight: .black))
-                        .foregroundStyle(unlocked ? Theme.gold : Theme.textSecondary)
-                        .frame(width: 14)
-                        .padding(.top, 1)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(regalia.name)
-                            .font(Theme.body(11).weight(.bold))
-                            .foregroundStyle(unlocked ? Theme.textPrimary : Theme.textSecondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                        HStack(alignment: .center, spacing: 5) {
-                            RegaliaPips(level: regalia.level, lit: unlocked, size: 5)
-                            if unlocked {
-                                Text(regalia.shortLine)
-                                    .font(Theme.numeric(11.5))
-                                    .foregroundStyle(Theme.gold)
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            } else {
-                                Image(systemName: "lock.fill")
-                                    .font(.system(size: 9, weight: .bold))
-                                Text(RegaliaService.unlockLine(for: unit.blueprint))
-                                    .font(Theme.body(11))
-                                    .lineLimit(2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        .foregroundStyle(Theme.textSecondary)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, 6)
-                .padding(.vertical, 3)
-                .background(shape.fill(unlocked ? Theme.gold.opacity(0.12) : Theme.surface))
-                .overlay(shape.strokeBorder(unlocked ? Theme.gold.opacity(0.6) : Theme.stroke.opacity(0.6), lineWidth: 0.5))
-                .contentShape(shape)
+    private func nameplateLevel(_ shown: ResolvedUnit) -> some View {
+        if shown.unit.isMaxLevel {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("MAX")
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(0.8)
+                    .foregroundStyle(RelicPalette.gain)
+                Text("Lv.\(shown.level)")
+                    .font(Theme.numeric(13))
+                    .foregroundStyle(RelicPalette.value)
             }
-            // A row of the panel's scroll (`SheetPanelScroll`): the quiet
-            // press, and its tick stays in the action (2026-09-24).
-            .buttonStyle(GamePressStyle(.quiet))
-            .accessibilityLabel("\(regalia.name), level \(regalia.level)")
+            .lineLimit(1)
+            .fixedSize()
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                Text("Lv.\(shown.level)")
+                    .font(Theme.numeric(13))
+                    .foregroundStyle(RelicPalette.value)
+                Text("/\(shown.unit.maxLevel)")
+                    .font(Theme.numeric(11.5))
+                    .foregroundStyle(RelicPalette.dim)
+            }
+            .lineLimit(1)
+            .fixedSize()
         }
     }
 
-    /// Every set with a piece on the ring as ONE line of chips — the set's
-    /// stone over its pieces as pips, gold where the set is complete (twice
-    /// over, two gold pairs), one grey and three hollow for "1 of 4" — and
-    /// a book at the end that opens the set reference counting this unit's
-    /// pieces, where the names are.
-    ///
-    /// One line since run 216: the named chips were a grid of two a row
-    /// that the ring panel could not hold at rest, so they sat at a fifth of
-    /// their opacity under the fade; and "Thunder 4/2" — two complete
-    /// Thunder sets — read as a counting bug. The stone names the set (the
-    /// chip's accessibility label says it). Zeus wore five sets and the line
-    /// showed three chips and the book (runs 220–221), then three and a
-    /// fourth cut to a lone grey stone in the fade (run 224): the counts in
-    /// figures were 43 points a chip. As pips a chip is 23.6 points and
-    /// every set a unit can wear stands whole on the line; a second line of
-    /// chips would have ended the ring panel in the ghost row again.
-    private func setsRow(_ unit: ResolvedUnit) -> some View {
-        let tally = Dictionary(grouping: unit.relics, by: { $0.set }).mapValues(\.count)
-        // Complete sets first, then the nearest to complete, then by name,
-        // so the order is the same on every launch.
-        let entries = tally.keys.sorted { a, b in
-            let ca = tally[a, default: 0] / a.piecesRequired, cb = tally[b, default: 0] / b.piecesRequired
-            if ca != cb { return ca > cb }
-            let ra = tally[a, default: 0] % a.piecesRequired, rb = tally[b, default: 0] % b.piecesRequired
-            if ra != rb { return ra > rb }
-            return a.displayName < b.displayName
-        }
-        return HStack(spacing: 4) {
-            if entries.isEmpty {
-                Text("Nothing worn")
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-                    .fixedSize()
-                Spacer(minLength: 0)
-            } else {
-                ChipLine {
-                    ForEach(entries) { relicSet in
-                        setChip(relicSet, count: tally[relicSet, default: 0])
-                    }
-                }
-            }
-            Button {
-                Juice.haptic(.light)
-                showSets = true
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "book.closed.fill")
-                        .font(.system(size: 10, weight: .bold))
-                    // The word only when there are no chips to explain it.
-                    if entries.isEmpty {
-                        Text("Set effects")
-                            .font(Theme.body(11).weight(.bold))
-                            .lineLimit(1)
-                            .fixedSize()
-                    }
-                }
-                .foregroundStyle(Theme.gold)
-                .padding(.horizontal, entries.isEmpty ? 8 : 0)
-                .frame(minWidth: 24)
-                .frame(height: 22)
-                .background(Capsule().fill(Theme.surface))
-                .overlay(Capsule().strokeBorder(Theme.gold.opacity(0.35), lineWidth: 1))
-            }
-            // In the panel's scroll: quiet, the tick kept (2026-09-24).
-            .buttonStyle(GamePressStyle(.quiet))
-            .accessibilityLabel("Set effects")
-        }
-        .frame(height: 22)
-    }
-
-    /// One set on the chip line: its painted stone over its pieces as pips
-    /// (`SetPiecePips`) — "1/4" is ●○○○, a complete set all gold. A chip
-    /// is a 4-piece set's row of pips and 2 a side, 23.6 points, so six
-    /// sets, the most six slots can wear, stand whole in the 160 the book
-    /// leaves (156.6). The count in figures was 43 points a chip (the
-    /// numeric floor is 11.5), three stood whole, and the fourth was cut to
-    /// a lone grey stone in the fade with Zeus's fifth out of sight (runs
-    /// 221 and 224, 2-detail). A figure small enough to sit on the stone's
-    /// corner would be under the floor; a pip is not type.
-    private func setChip(_ relicSet: RelicSet, count: Int) -> some View {
-        let needed = relicSet.piecesRequired
-        let completions = count / needed
-        let complete = completions > 0
-        let shape = RoundedRectangle(cornerRadius: 6, style: .continuous)
-        return VStack(spacing: 2) {
-            RelicSetEmblem(set: relicSet, size: 14, tint: complete ? Theme.gold : Theme.textSecondary)
-            SetPiecePips(count: count, needed: needed)
-        }
-        .padding(.horizontal, 2)
-        // One width for every chip, a 4-piece set's, so the line reads as a
-        // row of sockets; only a set worn past its second copy is wider.
-        .frame(minWidth: SetPiecePips.rowWidth(4) + 4)
-        .frame(height: 22)
-        .background(shape.fill(complete ? Theme.surfaceHigh : Theme.surface))
-        .overlay(shape.strokeBorder(complete ? Theme.gold.opacity(0.45) : Theme.stroke.opacity(0.6), lineWidth: 1))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(
-            complete
-                ? "\(relicSet.displayName), complete\(completions > 1 ? " \(completions) times" : "")"
-                : "\(relicSet.displayName), \(count) of \(needed)"
-        )
-    }
-
-    /// What the ring is worth, in the popover off its POWER: the boon's
-    /// line when one is socketed, then the three figures and the note of
-    /// what is empty (`relicSummary`).
-    private func ringWorth(_ unit: ResolvedUnit, figures: RelicFigures) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("WHAT THE RING IS WORTH")
+    /// POWER over the figure. It rolls to its new value when the unit's
+    /// power moves (a relic worn from Manage); a new unit on the dais is a
+    /// new figure (`id`), not a roll from the last one's.
+    private func nameplatePower(_ shown: ResolvedUnit) -> some View {
+        VStack(alignment: .trailing, spacing: 0) {
+            Text("POWER")
                 .font(Theme.body(11).weight(.black))
-                .tracking(1.0)
-                .foregroundStyle(Theme.goldDim)
-            if let boon = unit.boon {
-                boonLine(boon)
-            }
-            relicSummary(figures)
-        }
-    }
-
-    /// The three figures the footer prints, worked out once per pass.
-    private func relicFigures(_ unit: ResolvedUnit) -> RelicFigures {
-        // The same unit with nothing equipped. `power` is a function of the
-        // stats alone, so resolving with an empty relic list gives the bare
-        // figure and the difference is what the six slots are worth — set
-        // bonuses included, which is why this resolves rather than adding up
-        // the relics' own modifiers.
-        let bare = ProgressionService.resolve(unit.unit, blueprint: unit.blueprint, equipped: [])
-        // The inventory's efficiency, averaged over what is worn: the same
-        // 0...1 score the dials there show, so a player who has learned to
-        // read one number has not been given a second.
-        let scored = unit.relics.reduce(0.0) { $0 + RelicService.efficiency($1, for: unit.role) }
-        return RelicFigures(
-            worn: unit.relics.count,
-            gained: unit.power - bare.power,
-            quality: unit.relics.isEmpty ? 0 : scored / Double(unit.relics.count),
-            note: setProgressNote(unit)
-        )
-    }
-
-    /// The bottom of the ring panel: what the six slots are actually worth.
-    ///
-    /// The ring is a fixed frame and the sets row is at most three lines, so
-    /// under them sat the largest dead area on the sheet — 97 points of bare
-    /// metal on CI frame 2-detail.jpg, more than a quarter of the panel. What
-    /// belongs there is the arithmetic the ring cannot show: how much of the
-    /// power in its centre the relics bought, how good the pieces on it are
-    /// for this unit's role, and which set is a piece short. None of the three
-    /// is anywhere else in the app — the inventory scores one relic at a time,
-    /// and the stats panel shows the bonus per stat but never the total.
-    ///
-    /// In the power's popover since run 216 (`ringWorth`), where it is
-    /// always drawn whole and carries the note of what is empty under it.
-    private func relicSummary(_ figures: RelicFigures) -> some View {
-        VStack(spacing: 4) {
-            Divider().overlay(Theme.stroke)
-            HStack(alignment: .top, spacing: 4) {
-                summaryFigure(
-                    Text("\(figures.worn)/6"), "SLOTS",
-                    tint: figures.worn == 6 ? Theme.gold : Theme.textPrimary
-                )
-                summaryFigure(
-                    figures.gained > 0 ? Text("+\(figures.gained)") : Text("—"), "FROM RELICS",
-                    tint: figures.gained > 0 ? Theme.success : Theme.textSecondary
-                )
-                summaryFigure(
-                    figures.worn == 0 ? Text("—") : Text("\(Int((figures.quality * 100).rounded()))%"),
-                    "QUALITY",
-                    tint: figures.worn == 0 ? Theme.textSecondary : qualityTint(figures.quality)
-                )
-            }
-            if let note = figures.note {
-                Text(note)
-                    .font(Theme.body(11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity)
-            }
-        }
-    }
-
-    /// One figure over its name. `Text` rather than `String` so the number
-    /// keeps its thousands separator: SwiftUI groups an integer interpolated
-    /// into a `Text`, and a pre-built `String` would read "1240" beside the
-    /// ring's own "1,240".
-    ///
-    /// Nothing shrinks (both were at 0.6, under the floor): the figure is at
-    /// most "+12,345", 50 points in a column of 60, and a caption too wide
-    /// for its column ("FROM RELICS") takes a second line.
-    private func summaryFigure(_ value: Text, _ caption: String, tint: Color) -> some View {
-        VStack(spacing: 0) {
-            value
-                .font(Theme.numeric(12))
-                .foregroundStyle(tint)
+                .tracking(0.8)
+                .foregroundStyle(RelicPalette.eyebrow)
                 .lineLimit(1)
                 .fixedSize()
-            Text(caption)
-                .font(Theme.body(11).weight(.black))
-                .tracking(0.6)
-                .foregroundStyle(Theme.textSecondary)
-                .multilineTextAlignment(.center)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    /// The efficiency dial's own thresholds (`EfficiencyDial.tint`), so a
-    /// relic that reads green in the inventory reads green here too.
-    private func qualityTint(_ value: Double) -> Color {
-        value >= 0.7 ? Theme.success : (value >= 0.45 ? Theme.gold : Theme.textSecondary)
-    }
-
-    /// The slots that are simply empty, in one line. The sets in progress
-    /// used to be here too; the sets row's chips count them now, against
-    /// each set's need, so the footer says only what the chips cannot.
-    ///
-    /// Nil when the ring is full: there is nothing left to say.
-    private func setProgressNote(_ unit: ResolvedUnit) -> String? {
-        let empty = 6 - unit.relics.count
-        guard empty > 0 else { return nil }
-        return "\(empty) slot\(empty == 1 ? "" : "s") empty · Auto-equip fills them"
-    }
-
-    // MARK: - Right: the stats
-
-    /// The grade and the tags, then the eight stats with what the relics
-    /// add — and nothing else, so the panel is its natural height (132
-    /// points) and the skills under it get the rest of the column. The
-    /// leader skill and the awakening lines were here and made the column
-    /// taller than the phone; the leader skill is the skill row's crown tile
-    /// and the awakening the Awaken row's sheet (run 216).
-    private func stats(_ unit: ResolvedUnit) -> some View {
-        // Base is grade, level and awakening; the difference to the final
-        // number is the relics, shown beside it the way the genre does, so
-        // equipping a relic is visible on the sheet and not only in battle.
-        let base = ProgressionService.baseStats(for: unit.unit, blueprint: unit.blueprint)
-        return VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 5) {
-                StarRow(stars: unit.stars, natural: unit.blueprint.naturalStars, size: 10)
-                tag(unit.pantheon.displayName, color: unit.pantheon.color, ink: Self.inked(unit.pantheon.color))
-                tag(unit.archetype.displayName, color: Theme.textSecondary)
-                tag(unit.role.displayName, color: Theme.textSecondary)
-            }
-            .padding(.bottom, 3)
-            HStack(alignment: .top, spacing: 6) {
-                VStack(spacing: 3) {
-                    statRow("HP", base.hp, unit.stats.hp, strong: true)
-                    statRow("ATK", base.atk, unit.stats.atk, strong: true)
-                    statRow("DEF", base.def, unit.stats.def, strong: true)
-                    statRow("SPD", base.spd, unit.stats.spd, strong: true)
-                }
-                .frame(maxWidth: .infinity)
-                VStack(spacing: 3) {
-                    statRow("CRIT Rate", base.critRate, unit.stats.critRate, percent: true)
-                    statRow("CRIT DMG", base.critDamage, unit.stats.critDamage, percent: true)
-                    statRow("Accuracy", base.accuracy, unit.stats.accuracy, percent: true)
-                    statRow("Resistance", base.resistance, unit.stats.resistance, percent: true)
-                }
-                .frame(maxWidth: .infinity)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        // The first row here is the star row and the three tags, drawn corner
-        // to corner: at the old flat 8 the leading star was inside the top-left
-        // ornament (18.6 x 16.9 points) and the Controller tag inside the
-        // top-right one. The last row is "SPD" and "Resistance" at the
-        // leading edge, so the bottom takes the ornament's clearance too.
-        .padding(.horizontal, Theme.panelInset)
-        .padding(.top, Theme.panelPadding)
-        .padding(.bottom, panelBottomInset)
-        .panelBackground(radius: Theme.tightCorner)
-    }
-
-    /// A pantheon, archetype or role, in a tinted capsule. At the type floor
-    /// "Egyptian", "Primordial" and "Controller" beside a 6★ star row are
-    /// 269 points against the panel's 316 on an iPhone 16 Pro and 300 on an
-    /// iPhone 16, so nothing shrinks (it was 0.75, under the floor).
-    ///
-    /// `ink` is the word's colour when it is not the tint's own: the
-    /// pantheon colours were chosen for dark grounds, and "Greek" in its pale
-    /// gold on its own pale gold tint on cream marble was all but invisible
-    /// (run 216). The capsule keeps the tint; the word is the tint taken
-    /// most of the way to ink (`inked`), 4.8:1 for the Greek gold.
-    private func tag(_ text: String, color: Color, ink: Color? = nil) -> some View {
-        Text(text)
-            .font(Theme.body(11).weight(.semibold))
-            .lineLimit(1)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
-            .background(Capsule().fill(color.opacity(0.18)))
-            .foregroundStyle(ink ?? color)
-    }
-
-    /// A colour taken 60% of the way to `Theme.ink`, so a word in it reads on
-    /// cream and on the colour's own tint and still says which colour it is.
-    private static func inked(_ color: Color) -> Color {
-        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
-        guard UIColor(color).getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return Theme.textPrimary }
-        var inkRed: CGFloat = 0, inkGreen: CGFloat = 0, inkBlue: CGFloat = 0, inkAlpha: CGFloat = 0
-        _ = UIColor(Theme.ink).getRed(&inkRed, green: &inkGreen, blue: &inkBlue, alpha: &inkAlpha)
-        let keep: CGFloat = 0.4
-        let mixedRed: Double = Double(red * keep + inkRed * (1 - keep))
-        let mixedGreen: Double = Double(green * keep + inkGreen * (1 - keep))
-        let mixedBlue: Double = Double(blue * keep + inkBlue * (1 - keep))
-        return Color(red: mixedRed, green: mixedGreen, blue: mixedBlue)
-    }
-
-    /// Three columns — label, total, relic bonus — so the numbers line up down
-    /// the group instead of landing on a ragged edge that moves per row.
-    /// `strong` weights the four combat stats over the four percentages.
-    ///
-    /// The two number columns are fixed and the label takes what is left. All
-    /// three were fixed at 54/44/36, which is 142 a group and 292 for the pair:
-    /// the stats panel is 245 points wide inside its padding on a 667-point
-    /// landscape phone, and a fixed frame does not shrink — the relic-bonus
-    /// column was drawn 47 points past the panel and off the screen. A flexible
-    /// label costs nothing on a wide phone, where it simply gets more room.
-    ///
-    /// Nothing shrinks since phase B (2026-09-22): every column was scaled
-    /// to 0.7–0.8, under the type floor. The figures are grouped since run
-    /// 221, so the combat group's columns are 46 and 47: at the floor
-    /// "12,345" at 13 is 44 points and "+10,234" 46. The percentages keep
-    /// 42 and 40 ("300%", "+100%"), which leaves "Resistance" the 58 of 61
-    /// it needs on an iPhone 16.
-    private func statRow(
-        _ label: String, _ base: Double, _ total: Double,
-        percent: Bool = false, strong: Bool = false
-    ) -> some View {
-        let bonus = total - base
-        let shown = abs(bonus) >= (percent ? 0.005 : 0.5)
-        let sign = bonus > 0 ? "+" : "−"
-        let bonusText: String = shown ? sign + Self.statText(abs(bonus), percent: percent) : ""
-        let totalWidth: CGFloat = percent ? 42 : 46
-        let bonusWidth: CGFloat = percent ? 40 : 47
-        return HStack(spacing: 3) {
-            Text(label)
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textSecondary)
+            Text(shown.power.formatted())
+                .font(Theme.numeric(16))
+                .foregroundStyle(RelicPalette.star)
                 .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            Text(Self.statText(total, percent: percent))
-                .font(strong ? Theme.numeric(13) : Theme.numeric(11.5))
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(1)
-                .frame(width: totalWidth, alignment: .trailing)
-            Text(bonusText)
+                .fixedSize()
+                .contentTransition(.numericText(value: Double(shown.power)))
+                .animation(Motion.select, value: shown.power)
+                .id(shown.id)
+        }
+    }
+
+    // MARK: - The card
+
+    /// The unit's card over the whole sheet, from the nameplate's
+    /// thumbnail: the painting in its grade's metal and the name under it; a
+    /// tap anywhere puts it away. It replaces the old well's flip.
+    @ViewBuilder
+    private func cardOverlay(_ shown: ResolvedUnit?) -> some View {
+        if showCard, let shown {
+            ZStack {
+                Color.black.opacity(0.7)
+                    .ignoresSafeArea()
+                VStack(spacing: 10) {
+                    cardPainting(shown)
+                    Text(shown.nameWithoutEpithet.uppercased())
+                        .font(Theme.display(19))
+                        .tracking(1.4)
+                        .carved()
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(Motion.exit) {
+                    showCard = false
+                }
+            }
+            .transition(.asymmetric(insertion: .scale(scale: 0.94).combined(with: .opacity), removal: .opacity))
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("The card of \(shown.nameWithoutEpithet)")
+            .accessibilityHint("Tap to close")
+            .accessibilityAddTraits(.isButton)
+        }
+    }
+
+    @ViewBuilder
+    private func cardPainting(_ shown: ResolvedUnit) -> some View {
+        let name = shown.blueprint.model.portraitName(awakened: shown.unit.isAwakened)
+        let rarity = Rarity(stars: shown.stars)
+        if BundleImage.exists(name) {
+            PortraitPainting(name: name, size: 220)
+                .frame(width: 220, height: 220)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .overlay {
+                    // The carved frame for the grade, as a large card wears
+                    // it; `rarityFrame` strokes the metal when it has not
+                    // shipped.
+                    if let frame = Chrome.image(rarity.frameImageName) {
+                        Image(uiImage: frame)
+                            .resizable()
+                    }
+                }
+                .rarityFrame(rarity, radius: 12)
+                .allowsHitTesting(false)
+        } else {
+            UnitPortraitTile(unit: shown, size: 220, showsLevel: false)
+                .allowsHitTesting(false)
+        }
+    }
+
+    // MARK: - The tablets
+
+    /// Five bronze tablets on their fluted rod, top-aligned with the panel;
+    /// the chosen one gold leaf, and a red dot on any whose tab has
+    /// something to do.
+    private func tabletColumn(_ shown: ResolvedUnit) -> some View {
+        let tabs = UnitSheetTab.allCases
+        let stackHeight = CGFloat(tabs.count) * Self.tabletHeight + CGFloat(max(0, tabs.count - 1)) * Self.tabletGap
+        return ZStack(alignment: .top) {
+            TabletRod(height: stackHeight)
+            VStack(spacing: Self.tabletGap) {
+                ForEach(tabs, id: \.self) { each in
+                    UnitSheetTablet(title: each.title, isOn: each == tab, waiting: isWaiting(each, shown)) {
+                        choose(each)
+                    }
+                }
+            }
+        }
+        .frame(width: Self.tabletWidth)
+        .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// A new tab, cross-faded; remembered for the next sheet, except under
+    /// the tour.
+    private func choose(_ next: UnitSheetTab) {
+        guard next != tab else { return }
+        withAnimation(Motion.select) {
+            tab = next
+        }
+        if !Self.touring {
+            UserDefaults.standard.set(next.rawValue, forKey: Self.tabKey)
+        }
+    }
+
+    /// Whether a tab has something to do: INFO a rite the unit is ready for,
+    /// RELICS an empty slot with a free relic of that slot, BOON a cache to
+    /// open or, with the socket empty, a free boon.
+    private func isWaiting(_ which: UnitSheetTab, _ shown: ResolvedUnit) -> Bool {
+        switch which {
+        case .info:
+            return riteWaits(shown)
+        case .relics:
+            return relicWaits(shown)
+        case .boon:
+            return boonWaits(shown)
+        case .skills, .regalia:
+            return false
+        }
+    }
+
+    private func riteWaits(_ shown: ResolvedUnit) -> Bool {
+        if shown.unit.canEvolve { return true }
+        return shown.blueprint.awakening != nil && !shown.unit.isAwakened && essencesMet(shown)
+    }
+
+    private func relicWaits(_ shown: ResolvedUnit) -> Bool {
+        let relics = store.player.relics
+        for slot in 1...6 where shown.unit.equippedRelics[slot] == nil {
+            if relics.contains(where: { $0.slot == slot && $0.equippedBy == nil }) {
+                return true
+            }
+        }
+        return false
+    }
+
+    private func boonWaits(_ shown: ResolvedUnit) -> Bool {
+        if !(store.player.boonCaches ?? []).isEmpty { return true }
+        guard shown.boon == nil else { return false }
+        return (store.player.boons ?? []).contains { $0.equippedBy == nil }
+    }
+
+    // MARK: - The panel
+
+    /// The chosen tab on one dark glass plate, 12 points in; a new tab
+    /// cross-fades in over the old, no slide.
+    private func tabPanel(_ shown: ResolvedUnit) -> some View {
+        ZStack(alignment: .topLeading) {
+            tabContent(shown)
+                .id(tab)
+                .transition(.opacity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .padding(12)
+        .background(GlassPlate(radius: 12, opacity: 0.78))
+    }
+
+    @ViewBuilder
+    private func tabContent(_ shown: ResolvedUnit) -> some View {
+        switch tab {
+        case .info:
+            infoTab(shown)
+        case .skills:
+            skillsTab(shown)
+        case .relics:
+            relicsTab(shown)
+        case .boon:
+            boonTab(shown)
+        case .regalia:
+            regaliaTab(shown)
+        }
+    }
+
+    private func present(_ cover: UnitSheetCover) {
+        presented = cover
+    }
+
+    /// Everything the sheet opens, as sheets over it, on the unit on the
+    /// dais.
+    @ViewBuilder
+    private func coverView(_ cover: UnitSheetCover) -> some View {
+        switch cover {
+        case .training(let mode):
+            TrainingView(initialMode: mode, selectedUnitID: shownID)
+        case .manage:
+            RelicsScreen(unitID: shownID)
+        case .manageSlot(let slot):
+            RelicsScreen(unitID: shownID, opening: .slot(slot))
+        case .bestSix(let goal):
+            RelicsScreen(unitID: shownID, opening: .bestSix(goal))
+        case .fillEmpty:
+            RelicsScreen(unitID: shownID, opening: .fillEmpty)
+        case .bag:
+            RelicsScreen()
+        case .card(let relicID):
+            RelicCard(relicID: relicID)
+        case .sets:
+            RelicSetsReference(unitID: shownID)
+        case .boons:
+            BoonPickerView(unitID: shownID)
+        case .regalia:
+            RegaliaSheet(unitID: shownID)
+        }
+    }
+
+    // MARK: - INFO
+
+    /// The level with its bar and the power-up medallion, the eight stats
+    /// with what the relics add, the unit's tags, and the two rites.
+    private func infoTab(_ shown: ResolvedUnit) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            levelRow(shown)
+            Color.clear
+                .frame(height: 8)
+            HStack(alignment: .top, spacing: 8) {
+                StatLedger(rows: statRows(shown), style: .info)
+                Spacer(minLength: 0)
+                tagColumn(shown)
+            }
+            Spacer(minLength: 10)
+            riteRow(shown)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// "Lv.40 / 55", the experience bar, "0 / 8,232" and the gold (+) that
+    /// opens the Hall of Ka to power the unit up. `grantExperience` zeroes
+    /// the stored experience at the cap, so a maxed unit's bar is drawn full
+    /// with the level's own figure, and says MAX.
+    private func levelRow(_ shown: ResolvedUnit) -> some View {
+        let toNext = ProgressionService.experienceForNextLevel(level: shown.level, stars: shown.stars)
+        let isMax = shown.unit.isMaxLevel
+        let experience = isMax ? toNext : shown.unit.experience
+        return HStack(spacing: 8) {
+            infoLevel(shown)
+            GlassMeter(
+                value: Double(experience),
+                maximum: Double(toNext),
+                tint: isMax ? Theme.gold : Self.experienceTint,
+                height: 6
+            )
+            Text("\(experience.formatted()) / \(toNext.formatted())")
                 .font(Theme.numeric(11.5))
-                .foregroundStyle(bonus > 0 ? Theme.success : Theme.danger)
+                .foregroundStyle(RelicPalette.dim)
                 .lineLimit(1)
-                .frame(width: bonusWidth, alignment: .trailing)
+                .fixedSize()
+            powerUpMedallion
         }
+        .frame(height: 34)
     }
 
-    /// A stat as every screen prints it: grouped ("5,270", "+2,573"), or a
-    /// whole percentage. It printed the bare figure — "HP 7301", "5270
-    /// +2573" beside "2,983" and "0 / 8,232" on the same plate (runs
-    /// 220–221) — because a `String` handed to `Text` is not grouped the way
-    /// an integer interpolated into one is. The collection's plates and the
-    /// relic picker read it too.
-    static func statText(_ value: Double, percent: Bool) -> String {
-        percent ? "\(Int((value * 100).rounded()))%" : Int(value.rounded()).formatted()
-    }
-
-    /// The stat a skill's damage is multiplied by, so a max-health or defence
-    /// skill no longer advertises the figure it would hit for off ATK.
-    static func scalingStat(_ scaling: DamageScaling, _ stats: Stats) -> Double {
-        switch scaling {
-        case .attack: return stats.atk
-        case .maxHealth: return stats.hp
-        case .defense: return stats.def
-        case .speed: return stats.spd
-        }
-    }
-
-    // MARK: - Bottom: the skills
-
-    /// The leader skill's place in `selectedSkill`: its tile stands after
-    /// the kit's.
-    private static let leaderSlot = -1
-
-    /// The skills: the icons pinned along the top — the kit's, then the
-    /// leader skill's crown — and under them, in a scroll that fades at the
-    /// panel's foot only when the words do not fit (`SheetPanelScroll`), the
-    /// chosen one's words.
-    ///
-    /// ICONS ALONE since run 216, the genre's way. Each tile held its name
-    /// in 70 points and three of Anubis's four were cut ("Verdict of A…",
-    /// "Rite of the…", "Scales of M…"); Summoners War's row is icons, and
-    /// the chosen skill's name is in the words under it, which this panel
-    /// already printed. The icons are painted, never greyed — the gold rim
-    /// is the selection. The level is in the words beside the name, a door
-    /// to the skill-up ladder (`SkillLevelButton`). The leader skill, which
-    /// ended the scroll under the words with the awakening, is the crown's
-    /// tile — the genre puts it in the skill row too — and the awakening is
-    /// the Awaken row's sheet.
-    private func skills(_ unit: ResolvedUnit) -> some View {
-        let leader = unit.blueprint.leaderSkill
-        let index: Int = (selectedSkill == Self.leaderSlot && leader != nil)
-            ? Self.leaderSlot
-            : min(max(0, selectedSkill), max(0, unit.skills.count - 1))
-        let icons = SkillArt.keys(for: unit.skills, element: unit.element, ranged: !unit.blueprint.model.melee)
-        let tileCount = unit.skills.count + (leader == nil ? 0 : 1)
-        // 44 while four tiles share the row, 40 for five: a tile is the
-        // icon and 4 a side, and five of them are 58 wide in the 316 of an
-        // iPhone 16 Pro.
-        let icon: CGFloat = tileCount > 4 ? 40 : 44
-        return VStack(alignment: .leading, spacing: 5) {
-            HStack(spacing: 6) {
-                ForEach(unit.skills.indices, id: \.self) { slot in
-                    Button {
-                        selectedSkill = slot
-                    } label: {
-                        skillTile(
-                            unit.skills[slot],
-                            selected: slot == index,
-                            element: unit.element,
-                            ranged: !unit.blueprint.model.melee,
-                            iconKey: slot < icons.count ? icons[slot] : nil,
-                            icon: icon
-                        )
-                    }
-                    .buttonStyle(GamePressStyle(.plate))
-                    .accessibilityLabel(unit.skills[slot].name)
-                }
-                if leader != nil {
-                    Button {
-                        selectedSkill = Self.leaderSlot
-                    } label: {
-                        leaderTile(selected: index == Self.leaderSlot, icon: icon)
-                    }
-                    .buttonStyle(GamePressStyle(.plate))
-                    .accessibilityLabel("Leader skill")
-                }
+    @ViewBuilder
+    private func infoLevel(_ shown: ResolvedUnit) -> some View {
+        if shown.unit.isMaxLevel {
+            HStack(spacing: 0) {
+                Text("Lv.\(shown.level) · ")
+                    .foregroundStyle(RelicPalette.value)
+                Text("MAX")
+                    .foregroundStyle(RelicPalette.gain)
             }
+            .font(Theme.numeric(13))
+            .lineLimit(1)
+            .fixedSize()
+        } else {
+            Text("Lv.\(shown.level) / \(shown.unit.maxLevel)")
+                .font(Theme.numeric(13))
+                .foregroundStyle(RelicPalette.value)
+                .lineLimit(1)
+                .fixedSize()
+        }
+    }
+
+    /// The gold (+): the Hall of Ka in Power up, on this unit.
+    private var powerUpMedallion: some View {
+        Button {
+            present(.training(.powerUp))
+        } label: {
+            ZStack {
+                Circle()
+                    .fill(RelicPalette.goldLeaf)
+                Circle()
+                    .strokeBorder(Color(hex: "#5C4611"), lineWidth: 1)
+                Image(systemName: "plus")
+                    .font(.system(size: 15, weight: .black))
+                    .foregroundStyle(RelicPalette.goldInk)
+            }
+            .frame(width: 34, height: 34)
+            .compositingGroup()
+            .shadow(color: Color.black.opacity(0.4), radius: 2, y: 1.5)
+            .contentShape(Circle())
+        }
+        .buttonStyle(GamePressStyle(.medallion))
+        .accessibilityLabel("Power up")
+    }
+
+    /// HP, ATK, DEF, SPD, then the four percentages: each the total, and
+    /// the total less the base — grade, level and awakening — which is what
+    /// the relics add.
+    private func statRows(_ shown: ResolvedUnit) -> [StatLedgerRow] {
+        let base = ProgressionService.baseStats(for: shown.unit, blueprint: shown.blueprint)
+        let total = shown.stats
+        return [
+            Self.ledgerRow("HP", base.hp, total.hp, percent: false),
+            Self.ledgerRow("ATK", base.atk, total.atk, percent: false),
+            Self.ledgerRow("DEF", base.def, total.def, percent: false),
+            Self.ledgerRow("SPD", base.spd, total.spd, percent: false),
+            Self.ledgerRow("CRIT Rate", base.critRate, total.critRate, percent: true),
+            Self.ledgerRow("CRIT DMG", base.critDamage, total.critDamage, percent: true),
+            Self.ledgerRow("Accuracy", base.accuracy, total.accuracy, percent: true),
+            Self.ledgerRow("Resistance", base.resistance, total.resistance, percent: true),
+        ]
+    }
+
+    /// One ledger line: the change is shown from half a point (half a
+    /// percent), green for a gain and rose for a loss.
+    private static func ledgerRow(_ label: String, _ base: Double, _ total: Double, percent: Bool) -> StatLedgerRow {
+        let bonus = total - base
+        let threshold: Double = percent ? 0.005 : 0.5
+        let value = statText(total, percent: percent)
+        guard abs(bonus) >= threshold else {
+            return StatLedgerRow(label: label, value: value, change: nil, tone: .none)
+        }
+        let sign = bonus > 0 ? "+" : "−"
+        let tone: LedgerTone = bonus > 0 ? .gain : .loss
+        return StatLedgerRow(label: label, value: value, change: sign + statText(abs(bonus), percent: percent), tone: tone)
+    }
+
+    /// The role in quiet capitals, the pantheon in its colour, the
+    /// archetype in a well — SW's quiet "Support" under the name.
+    private func tagColumn(_ shown: ResolvedUnit) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(shown.role.displayName.uppercased())
+                .font(Theme.body(11).weight(.black))
+                .tracking(0.8)
+                .foregroundStyle(RelicPalette.dim)
+                .lineLimit(1)
+                .fixedSize()
+            tagCapsule(shown.pantheon.displayName, ink: shown.pantheon.color, ground: shown.pantheon.color.opacity(0.22))
+            tagCapsule(shown.archetype.displayName, ink: RelicPalette.dim, ground: RelicPalette.well)
+        }
+        .frame(width: 100, alignment: .topLeading)
+    }
+
+    private func tagCapsule(_ word: String, ink: Color, ground: Color) -> some View {
+        Text(word)
+            .font(Theme.body(11).weight(.semibold))
+            .foregroundStyle(ink)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 8)
+            .frame(height: 22)
+            .background(Capsule().fill(ground))
+    }
+
+    /// EVOLVE and, for a family that has one, AWAKEN: each opens the Hall
+    /// of Ka in that mode on this unit, where the rite is chosen and paid.
+    private func riteRow(_ shown: ResolvedUnit) -> some View {
+        HStack(spacing: 8) {
+            RelicPlateButton(
+                title: "Evolve",
+                count: evolveSubtitle(shown),
+                systemImage: "star.circle.fill",
+                height: 44,
+                isEnabled: shown.unit.canEvolve
+            ) {
+                present(.training(.evolve))
+            }
+            if shown.blueprint.awakening != nil {
+                awakenPlate(shown)
+            }
+        }
+    }
+
+    /// AWAKEN is always a door: before the rite it says whether the
+    /// essences are in; after it, the awakened unit still sees both forms
+    /// in the Hall.
+    private func awakenPlate(_ shown: ResolvedUnit) -> some View {
+        let reading = awakeningReading(shown)
+        return RelicPlateButton(
+            title: shown.unit.isAwakened ? "Awakened" : "Awaken",
+            count: reading.words,
+            countTint: reading.tint,
+            systemImage: "sun.max.fill",
+            height: 44
+        ) {
+            warmAwakenedForm(shown)
+            present(.training(.awaken))
+        }
+    }
+
+    private func awakeningReading(_ shown: ResolvedUnit) -> (words: String, tint: Color) {
+        if shown.unit.isAwakened {
+            return (words: "Form unlocked", tint: RelicPalette.gain)
+        }
+        if essencesMet(shown) {
+            return (words: "Essences ready ✓", tint: RelicPalette.gain)
+        }
+        return (words: "Essences short", tint: RelicPalette.partial)
+    }
+
+    private func essencesMet(_ shown: ResolvedUnit) -> Bool {
+        guard let awakening = shown.blueprint.awakening else { return false }
+        return awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
+    }
+
+    /// Why EVOLVE is lit or dark. `canEvolve` is false for two different
+    /// reasons — short of the level cap, and already 6★ — and one line of
+    /// copy once told a maxed 6★ to "Reach Lv.65 first" while it stood at
+    /// Lv.65.
+    private func evolveSubtitle(_ shown: ResolvedUnit) -> String {
+        if shown.stars >= 6 { return "Fully evolved · 6★" }
+        guard shown.unit.canEvolve else { return "Reach Lv.\(shown.unit.maxLevel) first" }
+        let fodder = ProgressionService.evolutionFodderRequired(currentStars: shown.stars)
+        let cost = ProgressionService.drachmaCostToEvolve(currentStars: shown.stars)
+        // "5 × 5★ · 150K": the Hall of Ka's ledger spells the bill out in
+        // full before anything is spent.
+        return "\(fodder) × \(shown.stars)★ · \(BarWallet.compact(cost))"
+    }
+
+    // MARK: - SKILLS
+
+    /// The icons pinned along the top — the kit's, then the leader skill's
+    /// crown — and under them, in a scroll that fades only when the words do
+    /// not fit, the chosen one's words.
+    private func skillsTab(_ shown: ResolvedUnit) -> some View {
+        let index = shownSkillIndex(shown)
+        return VStack(alignment: .leading, spacing: 8) {
+            skillRow(shown, index: index)
             // A new skill is a new page, met at its top.
             SheetPanelScroll {
-                if index == Self.leaderSlot, let leader {
-                    leaderWords(leader)
-                } else if unit.skills.indices.contains(index) {
-                    skillWords(unit.skills[index], index: index, unit: unit)
-                }
+                skillPage(shown, index: index)
             }
             .id(index)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .padding(.horizontal, Theme.panelInset)
-        .padding(.top, Theme.panelPadding)
-        // The photographed overlap. The skill-up hint was this panel's last
-        // row and started at its leading edge — the worst corner there is —
-        // so at the old flat 8 its first word was drawn on the bottom-left
-        // ornament (CI frame 2-detail.jpg). The scroll's fade ends above the
-        // ornament now for the same reason.
-        .padding(.bottom, panelBottomInset)
-        .panelBackground(radius: Theme.tightCorner)
     }
 
-    /// One skill's tile: its painted icon in the dark socket, in a plate
-    /// rimmed gold when it is the one whose words are shown.
-    private func skillTile(_ skill: Skill, selected: Bool, element: Element,
-                           ranged: Bool, iconKey: String?, icon: CGFloat) -> some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-        return SkillIcon(skill: skill, element: element, ranged: ranged, resolvedKey: iconKey,
-                         size: icon, socket: true)
-            .padding(4)
-            // The tiles divide the row rather than sitting at a fixed width
-            // with a Spacer holding the rest of it open — which also
-            // overflowed on a narrower phone.
-            .frame(maxWidth: .infinity)
-            .background(shape.fill(selected ? Theme.surfaceHigh : Theme.surface))
-            .overlay(shape.strokeBorder(selected ? Theme.gold : Theme.stroke, lineWidth: selected ? 1.5 : 1))
-            .contentShape(Rectangle())
+    private func shownSkillIndex(_ shown: ResolvedUnit) -> Int {
+        if selectedSkill == Self.leaderSlot, shown.blueprint.leaderSkill != nil {
+            return Self.leaderSlot
+        }
+        return min(max(0, selectedSkill), max(0, shown.skills.count - 1))
+    }
+
+    /// The painted icons in wells, the chosen one rimmed in gold. 44 while
+    /// four tiles share the row, 40 for five.
+    private func skillRow(_ shown: ResolvedUnit, index: Int) -> some View {
+        let ranged = !shown.blueprint.model.melee
+        let icons = SkillArt.keys(for: shown.skills, element: shown.element, ranged: ranged)
+        let hasLeader = shown.blueprint.leaderSkill != nil
+        let tiles = shown.skills.count + (hasLeader ? 1 : 0)
+        let icon: CGFloat = tiles > 4 ? 40 : 44
+        return HStack(spacing: 6) {
+            ForEach(shown.skills.indices, id: \.self) { slot in
+                skillButton(
+                    shown.skills[slot],
+                    slot: slot,
+                    selected: slot == index,
+                    element: shown.element,
+                    ranged: ranged,
+                    iconKey: slot < icons.count ? icons[slot] : nil,
+                    icon: icon
+                )
+            }
+            if hasLeader {
+                leaderButton(selected: index == Self.leaderSlot, icon: icon)
+            }
+        }
+        .frame(height: 52)
+    }
+
+    private func skillButton(
+        _ skill: Skill, slot: Int, selected: Bool, element: Element,
+        ranged: Bool, iconKey: String?, icon: CGFloat
+    ) -> some View {
+        Button {
+            selectedSkill = slot
+        } label: {
+            SkillIcon(skill: skill, element: element, ranged: ranged, resolvedKey: iconKey, size: icon, socket: true)
+                .padding(4)
+                .frame(maxWidth: .infinity)
+                .background(skillWell(selected: selected))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(GamePressStyle(.plate))
+        .accessibilityLabel(skill.name)
+    }
+
+    private func leaderButton(selected: Bool, icon: CGFloat) -> some View {
+        Button {
+            selectedSkill = Self.leaderSlot
+        } label: {
+            leaderGlyph(icon: icon)
+                .padding(4)
+                .frame(maxWidth: .infinity)
+                .background(skillWell(selected: selected))
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(GamePressStyle(.plate))
+        .accessibilityLabel("Leader skill")
+    }
+
+    private func skillWell(selected: Bool) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 8, style: .continuous)
+        return shape
+            .fill(RelicPalette.well)
+            .overlay(shape.strokeBorder(selected ? Self.chosenRim : RelicPalette.bronze, lineWidth: selected ? 1.5 : 1))
     }
 
     /// The leader skill's tile: a gold crown in the same socket as the
     /// skills' icons.
-    private func leaderTile(selected: Bool, icon: CGFloat) -> some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
+    private func leaderGlyph(icon: CGFloat) -> some View {
         let socket = RoundedRectangle(cornerRadius: icon * 0.22, style: .continuous)
         return ZStack {
             socket.fill(Theme.socketFill)
@@ -1660,109 +1186,681 @@ struct UnitDetailView: View {
                 .shadow(color: .black.opacity(0.6), radius: 1, y: 1)
         }
         .frame(width: icon, height: icon)
-        .padding(4)
-        .frame(maxWidth: .infinity)
-        .background(shape.fill(selected ? Theme.surfaceHigh : Theme.surface))
-        .overlay(shape.strokeBorder(selected ? Theme.gold : Theme.stroke, lineWidth: selected ? 1.5 : 1))
-        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func skillPage(_ shown: ResolvedUnit, index: Int) -> some View {
+        if index == Self.leaderSlot, let leader = shown.blueprint.leaderSkill {
+            leaderWords(leader)
+        } else if shown.skills.indices.contains(index) {
+            skillWords(shown.skills[index], index: index, shown: shown)
+        }
+    }
+
+    /// The chosen skill: its name with its level (a door to the skill-up
+    /// ladder), what it costs and hits for, and what it does.
+    private func skillWords(_ skill: Skill, index: Int, shown: ResolvedUnit) -> some View {
+        let level = shown.unit.skillLevels.indices.contains(index) ? shown.unit.skillLevels[index] : 1
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .center, spacing: 8) {
+                Text(skill.name)
+                    .font(Theme.body(15).weight(.bold))
+                    .foregroundStyle(RelicPalette.value)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 4)
+                SkillLevelButton(skill: skill, level: level)
+            }
+            skillFacts(skill, stats: shown.stats)
+            Text(skill.description)
+                .font(Theme.body(13))
+                .foregroundStyle(RelicPalette.dim)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// PASSIVE, the cooldown, and the damage estimate, on one line.
+    @ViewBuilder
+    private func skillFacts(_ skill: Skill, stats: Stats) -> some View {
+        let estimate = damageLine(skill, stats: stats)
+        if skill.isPassive || skill.cooldown > 0 || estimate != nil {
+            HStack(spacing: 10) {
+                if skill.isPassive {
+                    passiveChip
+                }
+                if skill.cooldown > 0 {
+                    cooldownLabel(skill.cooldown)
+                }
+                if let estimate {
+                    Text(estimate)
+                        .font(Theme.numeric(13))
+                        .foregroundStyle(RelicPalette.star)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+        }
+    }
+
+    /// "≈ 243 dmg · 2 hits". `previewDamage` already multiplies by the hit
+    /// count, so the hits are said, never multiplied again.
+    private func damageLine(_ skill: Skill, stats: Stats) -> String? {
+        guard let damage = skill.damage else { return nil }
+        let estimate = DamageCalculator.previewDamage(attackStat: Self.scalingStat(damage.scaling, stats), spec: damage)
+        let hits = damage.hits > 1 ? " · \(damage.hits) hits" : ""
+        return "≈ \(Int(estimate).formatted()) dmg" + hits
+    }
+
+    private var passiveChip: some View {
+        Text("PASSIVE")
+            .font(Theme.body(11).weight(.black))
+            .tracking(0.6)
+            .foregroundStyle(RelicPalette.partial)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 6)
+            .frame(height: 18)
+            .background(Capsule().fill(RelicPalette.partial.opacity(0.16)))
+    }
+
+    private func cooldownLabel(_ turns: Int) -> some View {
+        let words: String = turns == 1 ? "1 turn" : "\(turns) turns"
+        return HStack(spacing: 3) {
+            Image(systemName: "clock.fill")
+                .font(.system(size: 11, weight: .bold))
+            Text(words)
+                .font(Theme.numeric(12))
+        }
+        .foregroundStyle(RelicPalette.dim)
+        .lineLimit(1)
+        .fixedSize()
     }
 
     /// The leader skill's words: what it gives, to whom, and where it
     /// counts. It works for the unit that LEADS — the first of a team
     /// (`BattleEngine.buildSide`).
     private func leaderWords(_ leader: LeaderSkill) -> some View {
-        let reach: String
-        if leader.appliesInArena && leader.appliesInCampaign {
-            reach = "When this unit leads — the first of the team — in any fight."
-        } else if leader.appliesInArena {
-            reach = "When this unit leads — the first of the team — in the Arena only."
-        } else if leader.appliesInCampaign {
-            reach = "When this unit leads — the first of the team — anywhere but the Arena."
-        } else {
-            reach = "It applies nowhere yet."
-        }
-        return VStack(alignment: .leading, spacing: 3) {
-            HStack(spacing: 5) {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
                 Image(systemName: "crown.fill")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(Theme.gold)
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(RelicPalette.star)
                 Text("Leader skill")
-                    .font(Theme.body(12).weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Theme.body(15).weight(.bold))
+                    .foregroundStyle(RelicPalette.value)
                     .lineLimit(1)
             }
             Text(leader.description)
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textSecondary)
+                .font(Theme.body(13))
+                .foregroundStyle(RelicPalette.dim)
                 .fixedSize(horizontal: false, vertical: true)
-            Text(reach)
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.goldDim)
+            Text(Self.leaderReach(leader))
+                .font(Theme.body(12))
+                .foregroundStyle(RelicPalette.eyebrow)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The chosen skill: its name with its level (a door to the skill-up
-    /// ladder), what it costs and hits for, and what it does. In the
-    /// panel's scroll, so a long name takes a second line rather than
-    /// shrinking under the floor; the "Next skill-up" line that ended it is
-    /// the ladder's popover, so a skill of two lines of words fits at rest.
-    private func skillWords(_ skill: Skill, index: Int, unit: ResolvedUnit) -> some View {
-        let level = unit.unit.skillLevels.indices.contains(index) ? unit.unit.skillLevels[index] : 1
-        return VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .center, spacing: 6) {
-                Text(skill.name)
-                    .font(Theme.body(12).weight(.bold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-                Spacer(minLength: 4)
-                SkillLevelButton(skill: skill, level: level)
+    private static func leaderReach(_ leader: LeaderSkill) -> String {
+        if leader.appliesInArena && leader.appliesInCampaign {
+            return "When this unit leads — the first of the team — in any fight."
+        }
+        if leader.appliesInArena {
+            return "When this unit leads — the first of the team — in the Arena only."
+        }
+        if leader.appliesInCampaign {
+            return "When this unit leads — the first of the team — anywhere but the Arena."
+        }
+        return "It applies nowhere yet."
+    }
+
+    // MARK: - RELICS
+
+    /// The owner's screen: the six relics as ONE object round the Boon, the
+    /// sets they make in two words each, and four plates — MANAGE (the
+    /// tab's one gold), BEST SIX ▾, RELICS with the bag's count and STONES
+    /// with the stones'.
+    private func relicsTab(_ shown: ResolvedUnit) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            GlassSectionHeader(title: "Relics", accessory: relicsAccessory(shown))
+            Color.clear
+                .frame(height: 8)
+            HStack(alignment: .top, spacing: 12) {
+                relicRosette(shown)
+                    .frame(width: Self.rosetteColumn, height: Self.relicRowHeight)
+                setEffectsColumn(shown)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .frame(height: Self.relicRowHeight, alignment: .top)
+            }
+            Spacer(minLength: 4)
+            relicPlates
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// "5/6 worn · +1,240 power": what the six slots are worth is the unit's
+    /// power less the power it would have with them empty, so a completed
+    /// set's bonus is counted.
+    private func relicsAccessory(_ shown: ResolvedUnit) -> String {
+        let worn = shown.relics.count
+        guard worn > 0 else { return "0/6 worn" }
+        let bare = ProgressionService.resolve(shown.unit, blueprint: shown.blueprint, equipped: [])
+        let gained = shown.power - bare.power
+        let sign = gained < 0 ? "−" : "+"
+        return "\(worn)/6 worn · \(sign)\(abs(gained).formatted()) power"
+    }
+
+    /// The worn relics by the slot they are worn in.
+    private func relicsBySlot(_ shown: ResolvedUnit) -> [Int: Relic] {
+        var slots: [Int: Relic] = [:]
+        for (slot, relicID) in shown.unit.equippedRelics {
+            if let relic = store.player.relic(relicID) {
+                slots[slot] = relic
+            }
+        }
+        return slots
+    }
+
+    private func relicRosette(_ shown: ResolvedUnit) -> some View {
+        RelicRosette(
+            slots: relicsBySlot(shown),
+            activeSets: Set(shown.activeRelicSets.map { $0.set }),
+            boon: shown.boon,
+            radius: 28,
+            gap: 3,
+            onSlot: { slot in
+                openSlot(slot, of: shown)
+            },
+            onCentre: {
+                present(.boons)
+            }
+        )
+    }
+
+    /// A worn socket opens the relic's card; an empty one opens Manage on
+    /// that slot — the same rule as the collection's plates.
+    private func openSlot(_ slot: Int, of shown: ResolvedUnit) {
+        if let relicID = shown.unit.equippedRelics[slot], store.player.relic(relicID) != nil {
+            present(.card(relicID))
+        } else {
+            present(.manageSlot(slot))
+        }
+    }
+
+    /// SET EFFECTS: every set with a piece on the unit, complete first, then
+    /// by pieces worn, then by name — up to three whole lines, or two and a
+    /// line of chips for the rest. The (i) and the lines open the set
+    /// reference counting this unit's pieces.
+    private func setEffectsColumn(_ shown: ResolvedUnit) -> some View {
+        let entries = Self.setEntries(shown)
+        return VStack(alignment: .leading, spacing: 4) {
+            setEffectsHeader
+            if entries.isEmpty {
+                Text("No relics worn")
+                    .font(Theme.body(12))
+                    .foregroundStyle(RelicPalette.dim)
+                    .lineLimit(1)
+                    .fixedSize()
+            } else {
+                setEffectsList(entries)
+            }
+        }
+    }
+
+    private var setEffectsHeader: some View {
+        HStack(spacing: 6) {
+            Text("SET EFFECTS")
+                .font(Theme.body(11).weight(.black))
+                .tracking(0.8)
+                .foregroundStyle(RelicPalette.eyebrow)
+                .lineLimit(1)
+                .fixedSize()
+            Spacer(minLength: 4)
+            setsInfoButton
+        }
+        // The 22-point (i) stands two points past the row above and below:
+        // the column's three lines keep their 40.
+        .frame(height: 18)
+    }
+
+    private var setsInfoButton: some View {
+        Button {
+            present(.sets)
+        } label: {
+            ZStack {
+                Circle()
+                    .strokeBorder(RelicPalette.eyebrow, lineWidth: 1.2)
+                Text("i")
+                    .font(Theme.body(11).weight(.black))
+                    .foregroundStyle(RelicPalette.eyebrow)
+            }
+            .frame(width: 22, height: 22)
+            .contentShape(Circle())
+        }
+        .buttonStyle(GamePressStyle(.medallion))
+        .accessibilityLabel("Set effects")
+    }
+
+    private func setEffectsList(_ entries: [UnitSheetSetEntry]) -> some View {
+        let full: [UnitSheetSetEntry] = entries.count > 3 ? Array(entries.prefix(2)) : entries
+        let rest: [UnitSheetSetEntry] = entries.count > 3 ? Array(entries.dropFirst(2)) : []
+        return Button {
+            Juice.haptic(.light)
+            AudioLibrary.shared.play(.uiTap)
+            present(.sets)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(full) { entry in
+                    SetEffectRow(set: entry.relicSet, piecesOnUnit: entry.pieces, style: .full)
+                }
+                if !rest.isEmpty {
+                    setChipLine(rest)
+                }
+            }
+            .contentShape(Rectangle())
+        }
+        // Lines of words, not a plate: the quiet press, its tick and tap in
+        // the action.
+        .buttonStyle(GamePressStyle(.quiet))
+        .accessibilityHint("Opens the set effects")
+    }
+
+    /// The third line when more than three sets have a piece on: the rest
+    /// as chips, each set's stone and its count. Three fit the column; past
+    /// that, two and a count of the others, which the set reference lists.
+    private func setChipLine(_ rest: [UnitSheetSetEntry]) -> some View {
+        let chips: [UnitSheetSetEntry] = rest.count > 3 ? Array(rest.prefix(2)) : rest
+        let others = rest.count - chips.count
+        return HStack(spacing: 4) {
+            ForEach(chips) { entry in
+                setChip(entry)
+            }
+            if others > 0 {
+                moreSetsChip(others)
+            }
+        }
+        .frame(height: 40, alignment: .leading)
+    }
+
+    private func setChip(_ entry: UnitSheetSetEntry) -> some View {
+        let required = entry.relicSet.piecesRequired
+        let complete = entry.completions > 0
+        return HStack(spacing: 3) {
+            RelicSetEmblem(set: entry.relicSet, size: 20)
+            Text("\(entry.pieces)/\(required)")
+                .font(Theme.numeric(11.5))
+                .foregroundStyle(complete ? RelicPalette.gain : RelicPalette.partial)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 5)
+        .frame(height: 22)
+        .background(Capsule().fill(RelicPalette.well))
+        .overlay(Capsule().strokeBorder(RelicPalette.bronze, lineWidth: 1))
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(entry.relicSet.displayName), \(entry.pieces) of \(required)")
+    }
+
+    private func moreSetsChip(_ others: Int) -> some View {
+        Text("+\(others)")
+            .font(Theme.numeric(11.5))
+            .foregroundStyle(RelicPalette.dim)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 7)
+            .frame(height: 22)
+            .background(Capsule().fill(RelicPalette.well))
+            .overlay(Capsule().strokeBorder(RelicPalette.bronze, lineWidth: 1))
+            .accessibilityLabel("\(others) more sets")
+    }
+
+    /// Complete sets first (twice over before once), then the most pieces
+    /// worn, then by name, so the order is the same on every launch.
+    private static func setEntries(_ shown: ResolvedUnit) -> [UnitSheetSetEntry] {
+        var tally: [RelicSet: Int] = [:]
+        for relic in shown.relics {
+            tally[relic.set, default: 0] += 1
+        }
+        let entries = tally.map { UnitSheetSetEntry(relicSet: $0.key, pieces: $0.value) }
+        return entries.sorted(by: setOrder)
+    }
+
+    private static func setOrder(_ first: UnitSheetSetEntry, _ second: UnitSheetSetEntry) -> Bool {
+        if first.completions != second.completions { return first.completions > second.completions }
+        if first.pieces != second.pieces { return first.pieces > second.pieces }
+        return first.relicSet.displayName < second.relicSet.displayName
+    }
+
+    /// MANAGE and BEST SIX ▾ over RELICS and STONES, two halves a row.
+    private var relicPlates: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 8) {
+                PrimaryButton(title: "Manage", systemImage: "square.grid.3x3.fill") {
+                    present(.manage)
+                }
+                bestSixMenu
             }
             HStack(spacing: 8) {
-                if skill.isPassive {
-                    Text("PASSIVE")
-                        .font(Theme.body(11).weight(.black))
-                        .padding(.horizontal, 5).padding(.vertical, 1)
-                        .background(Capsule().fill(Theme.gold.opacity(0.25)))
-                        .foregroundStyle(Theme.gold)
-                        .fixedSize()
+                RelicPlateButton(
+                    title: "Relics",
+                    count: store.player.relics.count.formatted(),
+                    itemKey: "relic_cache",
+                    height: 44
+                ) {
+                    present(.bag)
                 }
-                if skill.cooldown > 0 {
-                    Label("\(skill.cooldown) turns", systemImage: "clock.fill")
-                        .font(Theme.numeric(11.5))
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .fixedSize()
-                }
-                if let damage = skill.damage {
-                    // previewDamage already multiplies by the hit count, so the
-                    // old " × 3" read as an instruction to triple the figure.
-                    let estimate = DamageCalculator.previewDamage(
-                        attackStat: Self.scalingStat(damage.scaling, unit.stats), spec: damage
-                    )
-                    Text("≈ \(Int(estimate)) dmg" + (damage.hits > 1 ? " · \(damage.hits) hits" : ""))
-                        .font(Theme.numeric(11.5))
-                        .foregroundStyle(Theme.gold)
-                        .lineLimit(1)
-                        .fixedSize()
+                stonesPlate
+            }
+        }
+    }
+
+    /// The optimiser's goals and Auto-equip's fill, each opening Manage with
+    /// THEN set to that build — previewed, and applied there.
+    private var bestSixMenu: some View {
+        Menu {
+            ForEach(RelicService.OptimiserGoal.allCases) { goal in
+                Button {
+                    present(.bestSix(goal))
+                } label: {
+                    Label("Best for \(goal.displayName)", systemImage: goal.glyph)
                 }
             }
-            Text(skill.description)
-                .font(Theme.body(11))
-                .foregroundStyle(Theme.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            Divider()
+            Button {
+                present(.fillEmpty)
+            } label: {
+                Label("Fill empty slots", systemImage: "square.dashed")
+            }
+        } label: {
+            RelicPlateLabel(
+                title: "Best six",
+                systemImage: "wand.and.stars",
+                height: PrimaryButton.height,
+                trailingSystemImage: "chevron.down"
+            )
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .menuStyle(.borderlessButton)
+        .accessibilityLabel("Best six")
+    }
+
+    /// Every whetstone and gem held, and the six of them in a popover.
+    private var stonesPlate: some View {
+        RelicPlateButton(
+            title: "Stones",
+            count: stoneTotal.formatted(),
+            itemKey: "whetstone_legend",
+            height: 44
+        ) {
+            showStones = true
+        }
+        .popover(isPresented: $showStones) {
+            RelicStonesPopover()
+                .environmentObject(store)
+        }
+    }
+
+    private var stoneTotal: Int {
+        (store.player.relicStones ?? [:]).values.reduce(0, +)
+    }
+
+    // MARK: - BOON
+
+    /// The socket's boon — its glyph in a hexagon of the rosette's own
+    /// metal, its name, its line and its pushes — or the socket empty with
+    /// the caches to open and the boons owned; BOONS opens the list, and
+    /// REMOVE takes a socketed one out.
+    private func boonTab(_ shown: ResolvedUnit) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            GlassSectionHeader(title: "Boon", accessory: boonAccessory(shown.boon))
+            Color.clear
+                .frame(height: 14)
+            boonBody(shown)
+            Spacer(minLength: 10)
+            boonFoot(shown)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func boonAccessory(_ boon: Boon?) -> String? {
+        guard let boon else { return nil }
+        return "\(boon.grade)★ · pushed \(boon.pushes)/\(BoonService.maxPushes)"
+    }
+
+    @ViewBuilder
+    private func boonBody(_ shown: ResolvedUnit) -> some View {
+        if let boon = shown.boon {
+            socketedBoon(boon)
+        } else {
+            emptyBoon
+        }
+    }
+
+    private func socketedBoon(_ boon: Boon) -> some View {
+        HStack(spacing: 14) {
+            hexWell(radius: 36)
+                .overlay {
+                    Image(systemName: boon.kind.glyph)
+                        .font(.system(size: 30, weight: .black))
+                        .foregroundStyle(boon.kind.tint)
+                        .shadow(color: boon.kind.tint.opacity(0.8), radius: 6)
+                }
+                .accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(boon.displayName.uppercased())
+                    .font(Theme.title(17))
+                    .carved(glow: false, multiline: true)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(boon.shortLine)
+                    .font(Theme.numeric(16))
+                    .foregroundStyle(RelicPalette.star)
+                    .lineLimit(1)
+                    .fixedSize()
+                RollMarks(count: boon.pushes)
+                Text("PUSHES")
+                    .font(Theme.body(11).weight(.black))
+                    .tracking(0.8)
+                    .foregroundStyle(RelicPalette.eyebrow)
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+        }
+    }
+
+    private var emptyBoon: some View {
+        let caches = (store.player.boonCaches ?? []).count
+        let loose = (store.player.boons ?? []).filter { $0.equippedBy == nil }.count
+        return HStack(spacing: 14) {
+            hexWell(radius: 36)
+                .overlay {
+                    Text("EMPTY")
+                        .font(Theme.title(13))
+                        .foregroundStyle(RelicPalette.quiet)
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+                .accessibilityLabel("Boon socket, empty")
+            VStack(alignment: .leading, spacing: 6) {
+                countLine(caches, words: "to open")
+                countLine(loose, words: "owned")
+            }
+        }
+    }
+
+    private func countLine(_ count: Int, words: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 5) {
+            Text(count.formatted())
+                .font(Theme.numeric(13))
+                .foregroundStyle(RelicPalette.value)
+            Text(words)
+                .font(Theme.body(12))
+                .foregroundStyle(RelicPalette.dim)
+        }
+        .lineLimit(1)
+        .fixedSize()
+    }
+
+    private func boonFoot(_ shown: ResolvedUnit) -> some View {
+        let caches = (store.player.boonCaches ?? []).count
+        return HStack(spacing: 8) {
+            RelicPlateButton(
+                title: "Boons",
+                count: caches > 0 ? "\(caches) to open" : nil,
+                systemImage: "seal.fill",
+                height: 44
+            ) {
+                present(.boons)
+            }
+            if shown.boon != nil {
+                RelicPlateButton(title: "Remove", systemImage: "minus.circle", height: 44) {
+                    store.unequipBoon(from: shown.id)
+                }
+            }
+        }
+    }
+
+    /// A pointy-top hexagon of `RelicSocket`'s rings — dark bronze, bronze
+    /// light, bronze — round a basalt floor, framed as the square
+    /// `BoonHexagon` reads its radius from.
+    private func hexWell(radius: CGFloat) -> some View {
+        ZStack {
+            hexagon(radius, RelicPalette.bronzeDark)
+            hexagon(radius - 0.8, RelicPalette.bronzeMid)
+            hexagon(radius - 2.2, RelicPalette.bronze)
+            hexagon(radius - 3.2, RelicPalette.basaltFoot)
+        }
+        .frame(width: radius * 2, height: radius * 2)
+    }
+
+    private func hexagon(_ radius: CGFloat, _ colour: Color) -> some View {
+        BoonHexagon()
+            .fill(colour)
+            .frame(width: radius * 2, height: radius * 2)
+    }
+
+    // MARK: - REGALIA
+
+    /// The family's own item: its glyph on a gold-rimmed medallion, its
+    /// name, its template, its level as five pips and its line at that level
+    /// — or the lock and what unlocks it. LADDER opens the five levels.
+    private func regaliaTab(_ shown: ResolvedUnit) -> some View {
+        let regalia = RegaliaService.regalia(forBlueprint: shown.blueprint.id, level: RegaliaService.level(of: shown.unit))
+        let unlocked = shown.regalia != nil
+        return VStack(alignment: .leading, spacing: 0) {
+            GlassSectionHeader(title: "Regalia", accessory: regaliaAccessory(regalia, unlocked: unlocked))
+            Color.clear
+                .frame(height: 14)
+            regaliaBody(regalia, unlocked: unlocked, blueprint: shown.blueprint)
+            Spacer(minLength: 10)
+            RelicPlateButton(title: "Ladder", systemImage: "list.number", height: 44) {
+                present(.regalia)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private func regaliaAccessory(_ regalia: Regalia?, unlocked: Bool) -> String? {
+        guard let regalia else { return nil }
+        return unlocked ? "Level \(regalia.levelLabel) of V" : "Locked"
+    }
+
+    @ViewBuilder
+    private func regaliaBody(_ regalia: Regalia?, unlocked: Bool, blueprint: UnitBlueprint) -> some View {
+        if let regalia {
+            HStack(alignment: .top, spacing: 14) {
+                regaliaMedallion(regalia.template.glyph)
+                VStack(alignment: .leading, spacing: 5) {
+                    Text(regalia.name.uppercased())
+                        .font(Theme.title(17))
+                        .carved(glow: false, multiline: true)
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    templateChip(regalia.template.displayName)
+                    RegaliaPips(level: regalia.level, lit: unlocked, size: 10)
+                    regaliaLine(regalia, unlocked: unlocked, blueprint: blueprint)
+                }
+            }
+        } else {
+            Text("This family has no regalia.")
+                .font(Theme.body(12))
+                .foregroundStyle(RelicPalette.dim)
+        }
+    }
+
+    private func regaliaMedallion(_ glyph: String) -> some View {
+        ZStack {
+            Circle()
+                .fill(Theme.socketFill)
+            Circle()
+                .strokeBorder(RelicPalette.goldLeaf, lineWidth: 3)
+            Image(systemName: glyph)
+                .font(.system(size: 30, weight: .black))
+                .foregroundStyle(RelicPalette.star)
+        }
+        .frame(width: 72, height: 72)
+        .accessibilityHidden(true)
+    }
+
+    private func templateChip(_ name: String) -> some View {
+        Text(name)
+            .font(Theme.body(12))
+            .foregroundStyle(RelicPalette.dim)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, 8)
+            .frame(height: 22)
+            .background(Capsule().fill(RelicPalette.well))
+    }
+
+    @ViewBuilder
+    private func regaliaLine(_ regalia: Regalia, unlocked: Bool, blueprint: UnitBlueprint) -> some View {
+        if unlocked {
+            Text(regalia.line)
+                .font(Theme.body(13))
+                .foregroundStyle(RelicPalette.value)
+                .fixedSize(horizontal: false, vertical: true)
+        } else {
+            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 11, weight: .bold))
+                Text(RegaliaService.unlockLine(for: blueprint))
+                    .font(Theme.body(13))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(RelicPalette.partial)
+        }
+    }
+
+    // MARK: - Shared figures
+
+    /// A stat as every screen prints it: grouped ("5,270", "+2,573"), or a
+    /// whole percentage. It printed the bare figure — "HP 7301" beside
+    /// "2,983" on the same plate (runs 220–221) — because a `String` handed
+    /// to `Text` is not grouped the way an integer interpolated into one is.
+    /// The collection's plates and the relic screens read it too.
+    static func statText(_ value: Double, percent: Bool) -> String {
+        percent ? "\(Int((value * 100).rounded()))%" : Int(value.rounded()).formatted()
+    }
+
+    /// The stat a skill's damage is multiplied by, so a max-health or defence
+    /// skill never advertises the figure it would hit for off ATK.
+    static func scalingStat(_ scaling: DamageScaling, _ stats: Stats) -> Double {
+        switch scaling {
+        case .attack: return stats.atk
+        case .maxHealth: return stats.hp
+        case .defense: return stats.def
+        case .speed: return stats.spd
+        }
     }
 }
 
 /// A skill's level beside its name, and the door to its ladder: every
 /// skill-up with what it adds, the ones gained ticked, and where the next
-/// one comes from. It replaced the five pips and the "Next skill-up: …"
-/// line that ended the skill's words and ran them past the panel's foot
-/// (run 216). A skill with no skill-ups prints its level and opens nothing.
+/// one comes from. A skill with no skill-ups prints its level and opens
+/// nothing. The badge is a dark well on the panel since 2026-09-24, its
+/// figures in star gold once every skill-up is in.
 private struct SkillLevelButton: View {
     let skill: Skill
     let level: Int
@@ -1799,19 +1897,22 @@ private struct SkillLevelButton: View {
         let label: String = "Lv.\(level)/\(skill.maxSkillLevel)"
         return HStack(spacing: 3) {
             Text(label)
-                .font(Theme.numeric(11.5))
+                .font(Theme.body(11).weight(.bold))
+                .foregroundStyle(isMax ? RelicPalette.star : RelicPalette.value)
                 .lineLimit(1)
                 .fixedSize()
             if !skill.levelUpBonuses.isEmpty {
+                // The kit's wells' chevron: 10 points, never the 8 that read
+                // as a speck (the audit's #9).
                 Image(systemName: "chevron.down")
-                    .font(.system(size: 8, weight: .black))
+                    .font(.system(size: 10, weight: .black))
+                    .foregroundStyle(RelicPalette.eyebrow)
             }
         }
-        .foregroundStyle(isMax ? Theme.gold : Theme.textSecondary)
         .padding(.horizontal, 7)
-        .frame(height: 20)
-        .background(Capsule().fill(Theme.surfaceHigh))
-        .overlay(Capsule().strokeBorder(isMax ? Theme.gold.opacity(0.5) : Theme.stroke, lineWidth: 1))
+        .frame(height: 22)
+        .background(Capsule().fill(RelicPalette.well))
+        .overlay(Capsule().strokeBorder(RelicPalette.bronze, lineWidth: 1))
     }
 
     private var ladder: some View {
@@ -1842,291 +1943,5 @@ private struct SkillLevelButton: View {
                 .foregroundStyle(Theme.goldDim)
                 .fixedSize(horizontal: false, vertical: true)
         }
-    }
-}
-
-/// Awakening in one sheet: the form it has and the form it becomes, what the
-/// change is worth, and the essences it costs.
-struct AwakeningSheet: View {
-    let unit: ResolvedUnit
-
-    @EnvironmentObject private var store: GameStore
-    @Environment(\.dismiss) private var dismiss
-
-    var body: some View {
-        NavigationStack {
-            GameScreen("Awakening", subtitle: unit.name, dismiss: { dismiss() }) {
-                EmptyView()
-            } content: {
-                ScrollView {
-                    if let awakening = unit.blueprint.awakening {
-                        let costs = awakening.essenceCost.sorted { $0.key < $1.key }
-                        let affordable = awakening.essenceCost.allSatisfy { (store.player.essences[$0.key] ?? 0) >= $0.value }
-                        HStack(alignment: .top, spacing: 14) {
-                            formTile(unit.blueprint.model.portraitName(awakened: false), caption: unit.blueprint.name)
-                            Image(systemName: "arrow.right")
-                                .font(.system(size: 18, weight: .bold))
-                                .foregroundStyle(Theme.gold)
-                                .frame(height: 136)
-                            formTile(unit.blueprint.model.portraitName(awakened: true), caption: awakening.awakenedName)
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(awakening.awakenedName)
-                                    .font(Theme.title(16))
-                                    .foregroundStyle(Theme.gold)
-                                Text(awakening.bonusDescription)
-                                    .font(Theme.body(12))
-                                    .foregroundStyle(Theme.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                                ForEach(costs.indices, id: \.self) { costIndex in
-                                    let id = costs[costIndex].key
-                                    let needed = costs[costIndex].value
-                                    let have = store.player.essences[id] ?? 0
-                                    HStack {
-                                        Text(EssenceCatalog.name(for: id))
-                                            .font(Theme.body(12))
-                                            .foregroundStyle(Theme.textSecondary)
-                                        Spacer()
-                                        Text("\(have) / \(needed)")
-                                            .font(Theme.numeric(12))
-                                            .foregroundStyle(have >= needed ? Theme.success : Theme.danger)
-                                    }
-                                }
-                                if unit.unit.isAwakened {
-                                    Text("Already awakened.")
-                                        .font(Theme.body(12))
-                                        .foregroundStyle(Theme.gold)
-                                } else {
-                                    PrimaryButton(title: "Awaken", systemImage: "sun.max.fill", isEnabled: affordable) {
-                                        store.awaken(unit.id)
-                                        dismiss()
-                                    }
-                                    Text("The element's essence drops in its Hall of Essence, in the Labyrinth; Magic essence in the campaign.")
-                                        .font(Theme.body(10))
-                                        .foregroundStyle(Theme.textSecondary)
-                                }
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .padding(.horizontal, ScreenChrome.contentPadding)
-                        .padding(.vertical, 10)
-                    }
-                }
-            }
-        }
-    }
-
-    private func formTile(_ portrait: String, caption: String) -> some View {
-        VStack(spacing: 4) {
-            if BundleImage.exists(portrait) {
-                BundleImage(name: portrait, renderedAt: 136)
-                    .aspectRatio(contentMode: .fill)
-                    .frame(width: 104, height: 136)
-                    .clipShape(RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous))
-                    // A near-square portrait filled into a 104x136 frame hangs
-                    // ~30 points past each side, and clipShape does not clip
-                    // hit-testing: without this the art swallows taps meant for
-                    // the Awaken button beside it.
-                    .allowsHitTesting(false)
-            } else {
-                RoundedRectangle(cornerRadius: Theme.tightCorner, style: .continuous)
-                    .fill(Theme.surface)
-                    .frame(width: 104, height: 136)
-            }
-            Text(caption)
-                .font(Theme.body(11).weight(.semibold))
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(1)
-        }
-    }
-}
-
-/// Picks units to consume for levelling or evolution.
-struct FodderPickerView: View {
-    let target: ResolvedUnit
-    let purpose: UnitDetailView.FodderPurpose
-
-    @EnvironmentObject private var store: GameStore
-    @Environment(\.dismiss) private var dismiss
-    @State private var selection: Set<UUID> = []
-
-    private var candidates: [ResolvedUnit] {
-        store.resolvedUnits.filter { candidate in
-            guard candidate.id != target.id, !candidate.unit.isLocked else { return false }
-            if purpose == .evolve { return candidate.stars == target.stars }
-            return true
-        }
-        .sorted { $0.power < $1.power }
-    }
-
-    private var required: Int {
-        purpose == .evolve
-            ? ProgressionService.evolutionFodderRequired(currentStars: target.stars)
-            : 0
-    }
-
-    var body: some View {
-        NavigationStack {
-            GameScreen(
-                purpose == .evolve ? "Evolve" : "Power up",
-                subtitle: target.name,
-                dismiss: { dismiss() }
-            ) {
-                EmptyView()
-            } content: {
-                ScrollView {
-                    if candidates.isEmpty {
-                        EmptyState(
-                            icon: "tray",
-                            title: "No fodder available",
-                            message: purpose == .evolve
-                                ? "Evolution needs \(required) unlocked units at exactly \(target.stars)★."
-                                : "Every other unit you own is locked."
-                        )
-                    } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 76, maximum: 96), spacing: 8)], spacing: 10) {
-                            ForEach(candidates) { candidate in
-                                Button {
-                                    Juice.haptic(.light)
-                                    toggle(candidate.id)
-                                } label: {
-                                    UnitCard(unit: candidate, isSelected: selection.contains(candidate.id), size: 76)
-                                }
-                                // The system's automatic style drew these; a
-                                // card of a scrolling grid wears the quiet
-                                // press, its tick in the action (2026-09-24).
-                                .buttonStyle(GamePressStyle(.quiet))
-                            }
-                        }
-                        .padding(.horizontal, ScreenChrome.contentPadding)
-                        .padding(.vertical, 8)
-                    }
-                }
-                .safeAreaInset(edge: .bottom) {
-                    VStack(spacing: 6) {
-                        let cost = purpose == .evolve
-                            ? ProgressionService.drachmaCostToEvolve(currentStars: target.stars)
-                            : selection.count * fodderDrachmaPerUnit
-                        if purpose == .evolve {
-                            Text("\(selection.count) / \(required) selected · \(cost) drachma")
-                                .font(Theme.body(12))
-                                .foregroundStyle(Theme.textSecondary)
-                        } else {
-                            let xp = candidates
-                                .filter { selection.contains($0.id) }
-                                .reduce(0) { $0 + ProgressionService.feedValue(of: $1.unit) }
-                            let duplicates = candidates.filter {
-                                selection.contains($0.id) && $0.unit.blueprintID == target.unit.blueprintID
-                            }.count
-                            // A unit at its cap gains no experience — the old
-                            // "+18,400 EXP" was a lie and the fodder vanished
-                            // for nothing unless it was a duplicate.
-                            Text(target.unit.isMaxLevel
-                                 ? "Max level · no EXP · \(duplicates) duplicate\(duplicates == 1 ? "" : "s") will skill up"
-                                 : "+\(xp) EXP · \(cost) drachma")
-                                .font(Theme.body(12))
-                                .foregroundStyle(Theme.textSecondary)
-                        }
-                        // GameStore bails silently when the drachma is short,
-                        // so the button says so rather than closing on nothing.
-                        Text("You have \(store.player.wallet.drachma) drachma")
-                            .font(Theme.numeric(10))
-                            .foregroundStyle(store.player.wallet.drachma >= cost ? Theme.textSecondary : Theme.danger)
-                        PrimaryButton(
-                            title: purpose == .evolve ? "Evolve" : "Consume",
-                            isEnabled: (purpose == .evolve ? selection.count == required : !selection.isEmpty)
-                                && store.player.wallet.drachma >= cost
-                        ) {
-                            commit()
-                        }
-                    }
-                    .padding(10)
-                    .background(Theme.surfaceRaised)
-                }
-            }
-        }
-    }
-
-    private func toggle(_ id: UUID) {
-        if selection.contains(id) {
-            selection.remove(id)
-        } else if purpose != .evolve || selection.count < required {
-            selection.insert(id)
-        }
-    }
-
-    private func commit() {
-        let ids = Array(selection)
-        switch purpose {
-        case .levelUp: store.levelUp(target.id, feeding: ids)
-        case .evolve: store.evolve(target.id, fodderIDs: ids)
-        }
-        dismiss()
-    }
-}
-
-/// One relic socket: the stone alone in a soft recess, its level on its
-/// corner — or, empty, the slot's silhouette as a ghost with the slot's
-/// number on it. The genre's rune hexagon is bare stones; the numbers are
-/// read on a tap.
-///
-/// It was a bordered tile with two badges (the slot's number, the level),
-/// a stone a third its size and three lines of seven-point text under it,
-/// and the owner sent a crop of the ring with "look how ugly this is"
-/// (2026-09-12). Shared by the unit sheet's ring, the collection's plate
-/// and its stage layout; what a tap does is the caller's.
-///
-/// `onGlass` sinks the recess into the dark (2026-09-22, phase B): on the
-/// collection Stage's glass plate the cream recess was six pale discs
-/// glaring on a dark ground — the phase B mocks' "cream socket on glass" —
-/// so there the socket is `Theme.socketFill`'s bronze-black with a glass rim
-/// and the ghost in the on-glass gold.
-struct RelicSlotTile: View {
-    let slot: Int
-    let relic: Relic?
-    var size: CGFloat = 60
-    var onGlass: Bool = false
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            ZStack {
-                // The recess: darker towards the rim, no border.
-                if onGlass {
-                    Circle()
-                        .fill(Theme.socketFill)
-                    Circle()
-                        .strokeBorder(Theme.glassRim.opacity(0.8), lineWidth: 0.8)
-                } else {
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Theme.surfaceRaised.opacity(0.9), Theme.stroke.opacity(0.45)],
-                                center: .center, startRadius: size * 0.12, endRadius: size * 0.5
-                            )
-                        )
-                    Circle()
-                        .strokeBorder(Theme.stroke.opacity(0.5), lineWidth: 0.5)
-                }
-                if let relic {
-                    RelicIcon(relic: relic, size: size * 0.74, showsStars: false, showsLevel: true)
-                } else {
-                    if let ghost = BundleArt.image(Relic.rimImageName) {
-                        Image(uiImage: ghost)
-                            .renderingMode(.template)
-                            .resizable()
-                            .aspectRatio(contentMode: .fit)
-                            .foregroundStyle(onGlass ? Theme.onGlassEyebrow.opacity(0.35) : Theme.goldDim.opacity(0.35))
-                            .frame(width: size * 0.64, height: size * 0.64)
-                    }
-                    Text("\(slot)")
-                        .font(Theme.title(13))
-                        .foregroundStyle(onGlass ? Theme.onGlassEyebrow.opacity(0.9) : Theme.goldDim.opacity(0.85))
-                }
-            }
-            .frame(width: size, height: size)
-        }
-        // The plate's press answers on touch-down (2026-09-24); every
-        // caller's action dropped the tick it played.
-        .buttonStyle(GamePressStyle(.plate))
     }
 }

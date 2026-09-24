@@ -292,15 +292,50 @@ struct TourView: View {
     static var pinnedMileagePick: Bool { argument(after: "-tour-mileage-pick") == "dearest" }
 
     /// `-tour-detail awakened` opens the unit sheet on the seed's awakened
-    /// unit, whose regalia is at III: the unlocked regalia plate and the
-    /// awakening line, where the Zeus frame shows the regalia locked.
+    /// unit, whose regalia is at III: its awakened figure on the dais, where
+    /// the plain frame stands Zeus there.
     static var pinnedDetailAwakened: Bool { argument(after: "-tour-detail") == "awakened" }
 
-    /// `-tour-relic legend` opens the relic inventory with a worn four-sub
-    /// Legend of a four-piece set picked: the fullest panel an ordinary 6★
-    /// relic asks for, where run 221's set line was cut above OPEN. The
-    /// plain frame keeps whichever relic the tour's rolls happen to pick.
+    /// `-tour-detail-tab info|skills|boon|regalia` opens the unit sheet on
+    /// that tablet (2026-09-24, the relic redesign). Under the tour the sheet
+    /// opens on RELICS otherwise, and never reads or writes the tab it
+    /// remembers for a player.
+    static var pinnedDetailTab: UnitSheetTab? {
+        argument(after: "-tour-detail-tab").flatMap { UnitSheetTab(rawValue: $0) }
+    }
+
+    /// `-tour-relic legend` opens the bag (`RelicsScreen`) with a worn
+    /// four-sub Legend of a four-piece set in its panel: the fullest panel an
+    /// ordinary 6★ relic asks for, where run 221's set line was cut above
+    /// OPEN. The plain frame keeps whichever relic the grid's order puts
+    /// first.
     static var pinnedRelicPick: String? { argument(after: "-tour-relic") }
+
+    /// `-tour-relics select|confirm|kit` (2026-09-24): the bag in select mode
+    /// with the grid's first four unlocked relics chosen — the Sell panel,
+    /// its total and the wearers' faces; the same with the sell card up; and
+    /// the relic kit's gallery, every part of the reliquary in every state.
+    /// A word of its own, not `-tour-relic`'s, which picks the panel's relic.
+    static var pinnedRelicsMode: String? { argument(after: "-tour-relics") }
+
+    /// `-tour-manage draft|best` (2026-09-24): Manage on Zeus with a draft of
+    /// two — the best free relic for his role in slots 2 and 4 — so the
+    /// deltas, the set chips and APPLY · 2 show; or Best for Power's six
+    /// previewed. The plain frame is Manage filtered to slot 2, the old
+    /// slot picker's job.
+    static var pinnedManage: String? { argument(after: "-tour-manage") }
+
+    /// `-tour-card awaken|stones|wearer` (2026-09-24): the relic card in its
+    /// AWAKEN state on the seed's 6★ +15 (before step 40 awakens it), the
+    /// stone bench, and the wearer chooser comparing the strongest unit that
+    /// does not already wear the relic. The relic steps' word only: the
+    /// battle step's bare `-tour-card` (its stage card) is read by
+    /// `BattleView`, which no relic step builds.
+    static var pinnedCard: String? { argument(after: "-tour-card") }
+
+    /// `-tour-relic-filter set` (2026-09-24): the bag with its SET popover up
+    /// instead of MORE.
+    static var pinnedRelicFilter: String? { argument(after: "-tour-relic-filter") }
 
     /// Seconds per tick. The runner screenshots on the same period, so every
     /// step is caught at least once.
@@ -445,11 +480,12 @@ struct TourView: View {
             // switch; the `collection` step above keeps the Cards.
             tabbed(.collection, CollectionView(initialLayout: .stage))
         case "detail":
-            // Zeus, the regalia locked; `-tour-detail awakened` is the seed's
-            // awakened unit, its regalia at III, for the unlocked plate and
-            // the awakening line in the skills.
+            // The unit sheet as a place (2026-09-24): Zeus on the Hall of Ka's
+            // dais, on the RELICS tablet — the rosette, the sets and the four
+            // plates; `-tour-detail awakened` is the seed's awakened unit, and
+            // `-tour-detail-tab` opens another tablet.
             if let unit = detailUnit {
-                UnitDetailView(unitID: unit.id)
+                UnitDetailView(unitID: unit.id, openingTab: Self.pinnedDetailTab ?? .relics)
             } else {
                 CollectionView()
             }
@@ -528,30 +564,33 @@ struct TourView: View {
                                   opensSweep: Self.pinnedDungeonSweep)
             }
         case "relic_picker":
+            // Manage (2026-09-24): Zeus's build filtered to slot 2, the old
+            // slot picker's job; `-tour-manage draft` a draft of two with its
+            // deltas and set chips, `-tour-manage best` Best for Power's six
+            // previewed.
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
-                RelicPickerView(unitID: unit.id, slot: 2)
+                RelicsScreen(unitID: unit.id, opening: manageOpening)
             } else {
-                RelicInventoryView()
+                RelicsScreen()
             }
         case "relic_powerup":
-            // The power-up screen on the best relic the roster owns.
-            if let relic = bestRelic {
-                RelicDetailView(relicID: relic.id)
-            } else {
-                RelicInventoryView()
-            }
+            // The relic card on the best relic the roster owns, in its CLIMB
+            // state; `-tour-card awaken|stones|wearer` for its AWAKEN state,
+            // the stone bench and the wearer chooser.
+            relicCardStep
         case "relic_drop":
-            // The card a relic drop opens from the chest's shelf: Sell, Keep,
-            // Lock and keep.
+            // The sheet a relic drop opens from the chest's shelf: Keep,
+            // Equip, Lock and Sell.
             if let relic = bestRelic {
-                RelicDropCard(relicID: relic.id)
+                RelicDropSheet(relicID: relic.id)
                     .background(Color.black.ignoresSafeArea())
             } else {
-                RelicInventoryView()
+                RelicsScreen()
             }
         case "relic_filter":
-            // The inventory with its filter sheet open.
-            RelicInventoryView(openingFilter: true)
+            // The bag with its MORE popover up (grade, quality, worn, lock and
+            // awakening), or with `-tour-relic-filter set` its SET popover.
+            RelicsScreen(opening: filterOpening)
         case "launch":
             // The loading screen, frozen part way along its bar, on the key
             // art when it is in the bundle.
@@ -704,14 +743,14 @@ struct TourView: View {
             // The same screen as step 19, in the state it spends most of a
             // player's attention in.
             if let relic = store.player.relics.first(where: { $0.hasPendingRoll }) ?? bestRelic {
-                RelicDetailView(relicID: relic.id)
+                RelicCard(relicID: relic.id)
             }
         case "relic_sets":
             // The set reference, opened from a unit so its counts show.
             if let unit = store.player.units.first(where: { $0.blueprintID.hasPrefix("zeus") }) ?? store.player.units.first {
-                RelicSetsSheet(unitID: unit.id)
+                RelicSetsReference(unitID: unit.id)
             } else {
-                RelicSetsSheet()
+                RelicSetsReference()
             }
         case "dungeon_battle":
             // A Labyrinth run on auto, so the frames catch the second and
@@ -733,7 +772,16 @@ struct TourView: View {
                     .onAppear { startRealmBattle() }
             }
         case "relics":
-            RelicInventoryView(openingRelic: Self.pinnedRelicPick == "legend" ? fullestWornRelic : nil)
+            // The bag (2026-09-24): the grid, the filters inline and the
+            // picked relic's panel; `-tour-relic legend` picks the fullest
+            // worn relic, `-tour-relics select|confirm` is select mode with
+            // four chosen and then the sell card up, and `-tour-relics kit`
+            // the relic kit's gallery.
+            if Self.pinnedRelicsMode == "kit" {
+                NavigationStack { RelicKitGallery() }
+            } else {
+                RelicsScreen(opening: relicsOpening)
+            }
         case "shop":
             // The Daily stall, or the one `-tour-shop-stall` names.
             ShopView(opening: Self.pinnedShopStall ?? .daily)
@@ -849,7 +897,7 @@ struct TourView: View {
             if let relic = store.player.relics.first(where: { $0.grade >= 6 && $0.isMaxLevel }) {
                 TourRite(relicID: relic.id, awakens: !relic.isAwakened)
             } else if let relic = bestRelic {
-                RelicDetailView(relicID: relic.id)
+                RelicCard(relicID: relic.id)
             }
         case "boons":
             // The socket's picker, opened on the tour save's shut cache: its
@@ -950,9 +998,9 @@ struct TourView: View {
             .max(by: { ($0.grade, $0.level) < ($1.grade, $1.level) })
     }
 
-    /// The worn relic with the most for the inventory's panel to hold: four
-    /// subs, then a four-piece set (its effect wraps), then Legend, then the
-    /// grade. The seed's rolls differ run to run, so it is found, not named.
+    /// The worn relic with the most for the bag's panel to hold: four subs,
+    /// then a four-piece set (its effect wraps), then Legend, then the grade.
+    /// The seed's rolls differ run to run, so it is found, not named.
     private var fullestWornRelic: UUID? {
         store.player.relics
             .filter { $0.equippedBy != nil }
@@ -961,6 +1009,83 @@ struct TourView: View {
                 let right = (b.subStats.count, b.set.piecesRequired, b.resolvedQuality.rawValue, b.grade)
                 return left < right
             })?.id
+    }
+
+    /// How the relics step opens the bag: the fullest worn relic in the
+    /// panel (`-tour-relic legend`), select mode with four chosen
+    /// (`-tour-relics select`), the same with the sell card up (`confirm`),
+    /// or plainly, on the grid's first.
+    private var relicsOpening: RelicsOpening {
+        if Self.pinnedRelicPick == "legend", let relicID = fullestWornRelic {
+            return .picked(relicID)
+        }
+        switch Self.pinnedRelicsMode ?? "" {
+        case "select": return .tourSelect
+        case "confirm": return .tourConfirmSell
+        default: return .plain
+        }
+    }
+
+    /// How the relic_picker step opens Manage (`-tour-manage`).
+    private var manageOpening: RelicsOpening {
+        switch Self.pinnedManage ?? "" {
+        case "draft": return .tourDraft
+        case "best": return .bestSix(.power)
+        default: return .slot(2)
+        }
+    }
+
+    /// Which popover the relic_filter step opens (`-tour-relic-filter`).
+    private var filterOpening: RelicsOpening {
+        Self.pinnedRelicFilter == "set" ? .tourSetPicker : .tourMoreFilters
+    }
+
+    /// The relic_powerup step's screen: the relic card in CLIMB on the best
+    /// relic, or what `-tour-card` names — the card in AWAKEN, the stone
+    /// bench, the wearer chooser. Each falls back to the bag with no relic.
+    @ViewBuilder
+    private var relicCardStep: some View {
+        switch Self.pinnedCard ?? "" {
+        case "awaken":
+            if let relic = awakenableRelic ?? bestRelic {
+                RelicCard(relicID: relic.id)
+            } else {
+                RelicsScreen()
+            }
+        case "stones":
+            if let relic = bestRelic {
+                RelicStoneBench(relicID: relic.id)
+            } else {
+                RelicsScreen()
+            }
+        case "wearer":
+            if let relic = bestRelic {
+                RelicWearerChooser(relicID: relic.id, initialUnitID: strongestUnit(notWearing: relic)?.id)
+            } else {
+                RelicsScreen()
+            }
+        default:
+            if let relic = bestRelic {
+                RelicCard(relicID: relic.id)
+            } else {
+                RelicsScreen()
+            }
+        }
+    }
+
+    /// The seed's 6★ +15 not yet awakened, for the card's AWAKEN state
+    /// (`-tour-card awaken`). Step 40 awakens it, later in the tour.
+    private var awakenableRelic: Relic? {
+        store.player.relics.first { $0.grade == 6 && $0.isMaxLevel && !$0.isAwakened }
+    }
+
+    /// The unit the wearer chooser compares for `-tour-card wearer`: the
+    /// strongest one NOT already wearing the relic. On its own wearer NOW and
+    /// THEN are the same six, no change shows, and the button is a dim Worn.
+    private func strongestUnit(notWearing relic: Relic) -> ResolvedUnit? {
+        store.resolvedUnits
+            .filter { $0.id != relic.equippedBy }
+            .max { $0.power < $1.power }
     }
 
     private func tick() {
@@ -1267,9 +1392,9 @@ private struct TourRite: View {
     var body: some View {
         Group {
             if armed {
-                RelicDetailView(relicID: relicID, awakenOnAppear: true)
+                RelicCard(relicID: relicID, awakenOnAppear: true)
             } else {
-                RelicDetailView(relicID: relicID)
+                RelicCard(relicID: relicID)
             }
         }
         .onAppear {

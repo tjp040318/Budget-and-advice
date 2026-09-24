@@ -1481,7 +1481,8 @@ time and keeps the pitch, so it cannot climb a scale, and six recorded notes
 are the real instrument at every step. An awakening's reveal sounds its
 grade's burst; its rite rings at the altar (`TrainingView`'s Awaken), the
 evolution's in `commitEvolution` and the relic's in
-`RelicDetailView.performAwakening`. `summon_charge.wav` stays in the bundle,
+`RelicCard.performAwakening` (`RelicDetailView`'s until the relic redesign
+of 2026-09-24). `summon_charge.wav` stays in the bundle,
 unused. Tests: the sound rows of `SummonRevealFeelTests`.
 
 **W2.8 Deaths that leave the field.**

@@ -1338,8 +1338,8 @@ private struct SocialRankRow: View {
 }
 
 /// A colour taken 60% of the way to `Theme.ink`, so a tier's word reads on
-/// the cream rows and still says which tier it is (the unit sheet's tags
-/// do the same, `UnitDetailView.inked`).
+/// the cream rows and still says which tier it is (the cream unit sheet's
+/// tags did the same until it went dark on 2026-09-24).
 private enum SocialInk {
     static func inked(_ color: Color) -> Color {
         var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0

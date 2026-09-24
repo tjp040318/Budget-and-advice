@@ -9110,7 +9110,8 @@ bundled faces before a word of it was written down: the tile at three
 sizes, the unit sheet's Relics tab, Manage, and the relic card. The two
 studies (`audit.md`, `genre.md`), the four mocks and the builders' spec
 (`design_spec.md`, written to be built to the letter) are in the session's
-scratchpad under `relic_research/`. Nothing is built yet.
+scratchpad under `relic_research/`. It was built the same day, in the
+five lanes below; *As built* says where the build left the spec and why.
 
 ### What the study found
 
@@ -9276,6 +9277,106 @@ keeps `RelicIcon`, `RelicSetEmblem`, `WearerBadge`, `RelicQualityTag`,
 with its thirteen relaunches, build.yml and CLAUDE.md. The entry points are
 frozen in the spec so that A, B and C build in parallel; every frame that
 judges a lane, and the eleven risks, are listed there.
+
+### As built
+
+All five lanes are in, and nothing of the model moved: no save field, no
+change to `RelicService`, `Relic`, `GameStore` or a tuning number, and
+`balance.py` prints byte for byte what it printed before. The kit is
+`RelicKit.swift` (1,693 lines) and `RelicTile.swift` (1,415) with
+`RelicKitTests` (13 tests; the roll estimator was run first through a
+Python port of the game's generator: 400 of 400 on seed 7, never under 398
+on seeds 1–200). `UnitDetailView.swift` was rewritten as the place
+(1,947 lines), `CollectionView.swift` draws the rosette with the new tap
+rule and the Stage plate's door, and `AltarStageView` took `spin` and
+`playing` with defaults, so the Hall of Ka passes neither. The Relics
+screen is `RelicsScreen.swift` (2,506 lines) and the card family
+`RelicCard.swift` (2,762). `RelicInventoryView.swift` went from 4,093
+lines to 365: eighteen types went — `RelicInventoryView`, `RelicRow`,
+`EfficiencyDial`, `RelicDetailView`, `RelicPickerView`, `StatDeltaTable`,
+`RelicOptimiserView`, `FilterChip`, `RelicFilterSheet`, `RelicStoneSheet`,
+`RelicWearerPicker`, `RelicDropCard`, `RelicSetsSheet` and the private
+`RelicColumn`, `RelicSubOpening`, `RelicFitScroll`, `RelicWearer` and
+`RelicCompactGoldButton` — with the fileprivate `StatKind.shownChange` and
+the private `relicColumnFade`, which read `RelicColumn`. Each was grepped
+for across `Pantheon/` and `PantheonTests/` first; the last callers were
+the tour and `SpoilsPanel`'s one line, which opens `RelicDropSheet` now.
+The file keeps
+its name, since the spec and the new files point at it for `RelicFilter`.
+swiftcheck (`--members --types`) is clean over the whole tree: 190 files,
+599 structs.
+
+Where the build left the spec, and why — every one of them a measurement
+the spec's own numbers did not survive, or a behaviour it had not
+foreseen:
+
+- **The kit.** The rosette's frame is 151.5 × 145.2 at R 28, not 146.4:
+  the spec's own formula gives 145.2, and its other figure (98.4 at R 19)
+  agrees with the formula. Numerals the spec set in Cinzel — an empty
+  socket's slot, a plate title's digits — are Manrope, because Cinzel
+  draws 1 as a Roman I (runs 220–224). The confirm card's Cancel is 46
+  tall like `PrimaryButton` beside it; its sell row shows seven tiles and
+  a +n chip past eight, because eight and a chip are 356 points against
+  the card's 348 inside. The stones popover's tiles are about 80 tall, not
+  74: a 48-point socket and two lines at the type floors do not fit 74.
+  The additions (`RelicPlateLabel` for a Menu's label, unlabelled
+  convenience inits, `RelicConfirm.title`) change no frozen signature.
+- **The unit sheet.** The rail is 80 wide, not 76 — `PlaceRail` pads 9 a
+  side and a 62-point row clipped in 76 — so the figure's column is 190 on
+  the design phone and 206 on CI's. The nameplate is its natural 69 points,
+  not 52: its badge-and-stars row over POWER cannot sit in 52 without type
+  under the floors. At the level cap MAX stands over "Lv.60", because
+  beside it the row needs 123 points of the plate's 120. The figure stands
+  0.35 s after the sheet opens (its mesh warmed off the main thread, the
+  old sheet's no-hitch opening); a pick on the rail stands at once. Six
+  different sets worn make the chip line two chips and a "+n". The Stage
+  plate's door stands beside the rosette rather than over slot 2, so no
+  socket is covered.
+- **Manage and the bag.** The grid's columns are `max(4, Int((inner + 4) /
+  52))`: the spec's `(inner + 6) / 54` gives 6 and 8 on 852 and 956
+  against the 7 and 9 it states and the mock draws. REVERT is 78 and ALL
+  OFF 80 (REVERT's carved word and the plate's padding measure 76.5); the
+  MORE well is its measured 93–96, not 84, where its chevron stood outside
+  the rim; the wells' values are measured and shortened the genre's way
+  ("CRI Rate", "ACC", then "n stats", then a count) rather than cut. The
+  bag panel's lock plate always reads LOCK — UNLOCK is 61 points in a
+  50-point plate — and the padlock's shape and the tile's mark say which.
+  The SET popover's cells are 72 × 62, not 58, and MAIN and SUB have an
+  ANY chip. THEN follows NOW in every slot the player has not touched, so
+  a relic removed from its card behind the draft is never counted as a
+  change of the draft's, and Apply never undoes it.
+- **The card family.** While a roll waits, the choice of two stands in the
+  right panel and the left's next row reads "choose one →". A Power up to
+  +N that stops at a waiting roll is a success (the ring, not the crack),
+  its line over the choice. The stone bench's three tiers share the
+  panel's width (about 93 × 84; three of 96 and their gaps are 304 against
+  296) and its column scrolls with only the price and HONE/GEM pinned. The
+  drop's showcase is 300 wide, 260 under a 720-point frame, and its fit
+  row 40 tall, since a 36-point "Your best" tile does not fit 28. The
+  wearer chooser gives the relic's own wearer a dim "Worn" rather than a
+  "Replace & equip" that would do nothing. The climb's hint reads the
+  relic's own multiplier (×3.6 on an awakened relic still climbing).
+- **The tour and the doors.** The thirteen relaunches are the spec's,
+  every sleep five seconds. `-tour-card awaken|stones|wearer` shares its
+  flag with the battle step's bare `-tour-card` (its stage card): that one
+  is read by `BattleView`, which no relic step builds, and the word is read
+  only by the relic steps. The wearer frame compares the strongest unit
+  NOT wearing the relic (on its own wearer nothing would show). The
+  regalia tablet is photographed on Zeus, locked, as the spec's loop has
+  it; the unlocked regalia of `-tour-detail awakened` is not. The optional
+  door from the sweep receipt's relic tile to `RelicDropSheet` is NOT
+  wired: it is three lines in each of `CampaignView` and `LabyrinthView` —
+  a `@State`, the card's `onRelic`, and a `.sheet` on their long modifier
+  chains — not the two the spec allowed, so the tap still does nothing
+  (*What is left for later* already lists it).
+
+Left open, each for the frames or the owner to settle: the leave-draft
+card sends a tap on its scrim to LEAVE (the kit's rule: a scrim tap is
+Cancel, and the draft card's Cancel is Leave), so Back and then a stray
+tap outside the card leaves Manage without applying — the card should
+close on a scrim tap instead; the long press on the grid (risk 2); the
+SE, whose nameplate and set rows overrun their columns (risk 5, W2.27);
+and `RelicQualityTag`, kept as the spec asks and drawn by nothing.
 
 **Run 252: Metal textures hold nothing back — the default since (2026-09-24).**
 The summon stress, thirty singles and three ten-pulls, both ways in the same

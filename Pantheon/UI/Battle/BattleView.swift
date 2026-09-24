@@ -2575,10 +2575,10 @@ struct BattleResultView: View {
             if phase == .chest { openChest() } else if phase == .opened, !continueShown { finishOpeningNow() }
         }
         // The genre's rune-obtained card: a tap on a relic's tile shows it
-        // large with Sell, Keep or Lock and keep, before the inventory.
+        // large with Keep, Equip, Lock and Sell, before the bag.
         .sheet(item: $openedRelic) { relic in
             if let store {
-                RelicDropCard(relicID: relic.id)
+                RelicDropSheet(relicID: relic.id)
                     .environmentObject(store)
             }
         }

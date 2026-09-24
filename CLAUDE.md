@@ -276,8 +276,9 @@ environment can and cannot do. The short version:
   one path a fought run takes as well, so the two cannot pay differently;
   `balance.py --sweep`; tour step 34), **auto-repeat**
   (the briefing asks for 1/5/10/20 runs; `BattleViewModel.conclude()`
-  swaps engines and tots up the loot), the **relic inventory** (Collection
-  → Relics: sell, lock, reappraise, efficiency; `RelicInventoryView`), the
+  swaps engines and tots up the loot), the **relic bag** (the collection's
+  Relics glyph and the unit sheet's RELICS plate: filter, sell, lock, fit;
+  `RelicsScreen` with no unit, 2026-09-24), the
   **bazaar** (tap the wallet on the island, or More; `ShopService`, game
   currency only, a free daily offering; since 2026-09-11 a **Testing**
   stall gives every essence free and an **Essences** stall sells one
@@ -469,9 +470,10 @@ environment can and cannot do. The short version:
   hundred floors of one battle, three mobs and a warden with two adds every
   tenth, five themed tiers cycled twice, progress a high-water mark; the
   curve is `balance.py --tower`. **The relic optimiser and named loadouts**
-  (`RelicService.OptimiserGoal`, `RelicInventoryView`): a loadout saves relic
-  IDs, never relics, so a relic sold since cannot leave a stale copy in a
-  save. **Raids** (`RaidBossProfile` on an `EnemySpawn`, `StageDatabase.raids`,
+  (`RelicService.OptimiserGoal`; Manage's BEST SIX ▾ and LOADOUTS ▾ in
+  `RelicsScreen` since 2026-09-24, each loaded into THEN and put on by
+  Apply): a loadout saves relic IDs, never relics, so a relic sold since
+  cannot leave a stale copy in a save. **Raids** (`RaidBossProfile` on an `EnemySpawn`, `StageDatabase.raids`,
   the Raids wing): a barrier that regenerates and stuns when broken, guard
   adds that come back and drain the boss while they live, enrage stacks on a
   clock, and a weakness that rotates; the raid stages are deliberately NOT in
@@ -499,8 +501,9 @@ environment can and cannot do. The short version:
   39 (`raids`). **Relic awakening (2026-09-16, phase 2):** `Relic.awakened`
   (Optional; `isAwakened`, `subStatCap` 5 instead of 4 — EVERY place that
   adds a sub stat reads `subStatCap`, never a literal 4), the +15 main stat
-  at `Relic.awakenedPeak` 3.6× instead of `peak` 3.0×, a halo on
-  `RelicIcon`, an Awakened chip and filter. `RelicService.awaken` on a 6★
+  at `Relic.awakenedPeak` 3.6× instead of `peak` 3.0×, a halo on the stone
+  (`RelicTile`, `RelicIcon`), AWAKENED beside the quality, and a filter.
+  `RelicService.awaken` on a 6★
   +15 only: 60 aether of the set's own colour (`RelicSet.aetherElement`) or
   90 of any other, plus 15 pure — the colour is a PRICE, not a gate, so
   every set is awakenable from the two Titans that exist — and the fifth
@@ -508,8 +511,9 @@ environment can and cannot do. The short version:
   awakened DROP (`generate(awakened:)`, one more sub than its quality;
   `StageRewards.awakenedChance`: Labyrinth B10 4%, Tower F90+ 6%, Hell from
   chapter 7 2%, raids SS 8% / SSS 15%). The panel and the rite
-  (`RelicAwakeningRite`) are on `RelicDetailView`, not the Hall of Ka — a
-  relic is a stone, not a figure for the dais; PLAN.md says why.
+  (`RelicAwakeningRite`) are on the relic card (`RelicCard`'s AWAKEN state
+  since 2026-09-24), not the Hall of Ka — a relic is a stone, not a figure
+  for the dais; PLAN.md says why.
   `balance.py --awakening` asserts a well-rolled ordinary 6★ still beats a
   badly-rolled awakened one and the average premium sits in 1.05–1.40×.
   Tour step 40 (`relic_awaken`, two frames). **The five Titans (2026-09-16,
@@ -528,8 +532,8 @@ environment can and cannot do. The short version:
   steps pointing at the landmark each wants, with a skip chip and a chapter
   intro card shown once. Five new save fields, every one Optional with a nil
   default.
-- **Boons: the earned socket (2026-09-16).** The disc at the centre of a
-  unit's relic ring is a SOCKET holding ONE conditional line — a `Boon`
+- **Boons: the earned socket (2026-09-16).** The centre of a unit's relic
+  rosette is a SOCKET holding ONE conditional line — a `Boon`
   (`Boon.swift`: nine `BoonFamily`s, a Bane and a Ward in the five
   colours, so seventeen `BoonKind`s; grade 4–6★; a rolled `magnitude`;
   up to five `pushes`). A `BoonCache` opens as THREE DOORS derived from
@@ -541,7 +545,8 @@ environment can and cannot do. The short version:
   hits) and it changes no stat. Caches come from a Titan at S+ (25%,
   6★), Labyrinth B10 (10%, 5★), the Tower's milestones and Hell's
   Judgment; never the Halls. `BoonPickerView` is the list and the panel
-  (tour step 41); the Relics menu opens it as the inventory. Every base
+  (tour step 41); the rosette's centre, the unit sheet's BOON tab and the
+  relic bag's strip open it. Every base
   is MEASURED: `balance.py --boons` plays each kind on five fights and
   asserts every kind's best fight lifts 6–18% and none tops more than
   two — change a base in `BoonFamily.base` and `BOONS` together, and
@@ -613,14 +618,20 @@ environment can and cannot do. The short version:
 - **The collection has two layouts (2026-09-11)**, switched in the strip and
   remembered (`collectionLayout`): **Cards** — the grid at 55% of the width
   and a plate on the right for the unit picked (portrait, grade, level,
-  power, the four stats with the relics' share, the six slots as a 3×2 of
-  `RelicSlotTile`s, the sets, Full sheet / Train); **Stage** — a rail of
-  small cards along the bottom, the unit's real model on a rune ring in
-  the right half of the summoning hall (`CollectionStageView`, the Hall
-  of Ka's altar without the rites; a drag across that half turns it) and
-  the same words and slots on a cream plate over the left. A tap on a
-  card PICKS; Full sheet opens the unit sheet, a slot opens the picker for
-  that slot. The tour's step 21 photographs the Stage.
+  power, the four stats with the relics' share, the unit sheet's rosette
+  of six basalt sockets round the Boon at R 19 (`RelicRosette`, since
+  2026-09-24; a 3×2 of `RelicSlotTile`s before), the sets, Full sheet /
+  Train); **Stage** — a rail of small cards along the bottom, the unit's
+  real model on a rune ring in the right half of the summoning hall
+  (`CollectionStageView`, the Hall of Ka's altar without the rites; a
+  drag across that half turns it) and the same words and rosette on a
+  glass plate over the left, with a 34-point well door to the unit sheet
+  beside the rosette (the carved name opens it too). A tap on a card
+  PICKS; Full sheet opens the unit sheet paging in the collection's own
+  order; a socket follows the unit sheet's rule — a worn one opens the
+  relic's card, an empty one Manage on that slot (every tap opened the
+  picker before) — and the strip's Relics glyph opens the bag. The tour's
+  step 21 photographs the Stage.
 - **The UI is cream and gold (2026-09-11)** — "like a Greek temple", the
   owner said of the black. Every token in `Theme.swift` turned: ink
   #1F1912 is the text, the grounds are `surface` #EBE2CF, `surfaceRaised`
@@ -637,16 +648,42 @@ environment can and cannot do. The short version:
   acanthus corners that reach 95 px in (`Chrome.panelInsets` 98), and a
   cream plate with a gold border and 19 px gold ends (`darkButtonInsets`
   22); the hold-back set is empty and every piece of the kit draws.
-- **The unit sheet is one landscape screen** (`UnitDetailView`): the card,
-  level bar, power and the Power up / Evolve / Awaken buttons on the left,
-  the six relic slots in a ring around the element in the middle (slot 1
-  at the top, clockwise), the stats with their relic bonuses on the right,
-  the skills along the bottom with the selected one's words, cooldown,
-  estimated damage and skill-up dots; the lore is behind the book, the
-  awakening panel is `AwakeningSheet`, auto-equip is in the toolbar. A
-  slot opens `RelicPickerView`: candidates best-fit-first on the left,
-  and on the right the relic now, the relic picked, every stat before →
-  after with the delta, and the sets completed or broken, before Equip.
+- **The unit sheet is a PLACE (2026-09-24; PLAN.md *Relics the genre's
+  way*; the owner, with Summoners War's monster sheet beside ours: "Look
+  how easy it is to see everything, and to understand what's going
+  on").** `UnitDetailView(unitID:roster:openingTab:)` is the Hall of Ka's
+  sanctuary full-bleed with the unit's own 3D figure standing on its
+  painted dais — `AltarStageView`, the Hall's recipe exactly, which gained
+  `spin` (a drag across the figure's column turns it) and `playing`
+  (false while anything covers the sheet, so its altar stops drawing
+  under a Hall of Ka opened from it); the figure stands 0.35 s after the
+  sheet opens, its mesh warmed off the main thread. Down the left a rail
+  of faces (`WholeRowRail`, 80 wide) pages the roster in place — the
+  collection's own order, or every unit by power; over the figure a
+  nameplate (the card's thumbnail opens the card large, the level,
+  POWER); then five bronze tablets on a fluted rod — INFO, SKILLS,
+  RELICS, BOON, REGALIA (`UnitSheetTab`; the last one chosen is
+  remembered as `unitSheetTab`, never under `-tour`, which opens on
+  RELICS), a red dot on one with something to do — and ONE dark glass
+  panel for the tab. **INFO**: the level bar with the power-up medallion,
+  the eight stats with the relics' share in green (`StatLedger`), the
+  role and tags, and EVOLVE / AWAKEN, which open the Hall of Ka in that
+  mode on this unit (the cream fodder picker and `AwakeningSheet` are
+  gone). **SKILLS**: the icons and the chosen one's words, cooldown,
+  estimate and ladder. **RELICS**: the rosette of six hexagonal sockets
+  round the Boon (`RelicRosette`, R 28: a worn socket opens the relic's
+  card, an empty one Manage on that slot, the centre the boons), SET
+  EFFECTS in two words each with the (i) to the set reference, and four
+  plates — MANAGE (the tab's one gold button), BEST SIX ▾ (the
+  optimiser's four goals and Fill empty slots, each opening Manage with
+  the six previewed), RELICS n (the bag) and STONES n (a popover of the
+  six). **BOON**: the socketed boon, its pushes, BOONS and REMOVE.
+  **REGALIA**: the item, its level and line, LADDER. The strip keeps the
+  lore and the lock; Auto-equip and Unequip all left it for Manage (BEST
+  SIX ▾ → Fill empty slots, ALL OFF), where they are previewed before
+  anything moves. Everything the sheet opens is a `.sheet`, one at a time
+  (`UnitSheetCover`). Tour step 2 photographs RELICS and, relaunched with
+  `-tour-detail-tab`, the other four tablets.
 - **The Hall of Ka is a place (2026-09-10).** `TrainingView` is the summon
   screen's shape: the sanctuary painting `hall_of_ka_bg` (16:9, its
   altar dais in the left third, centre 29% across and top 80% down) as
@@ -662,15 +699,16 @@ environment can and cannot do. The short version:
   the words of the moment (`AltarStamp`: LEVEL UP!, EVOLVED) spring in
   over it. The fusion board keeps its row of panels over the painting.
 - **Relic power-up is the genre's rune power-up** (`RelicService.upgrade`
-  → `PowerUpOutcome`; `RelicDetailView` is the screen, opened from a worn
-  slot on the unit sheet and from the inventory): an attempt costs drachma
-  either way and succeeds at `powerUpChances[level - 1]` — sure to +3,
-  then a step down a level to 40% at +15; +3, +6, +9 and +12 add a sub
-  stat while there are fewer than four, then grow one; +15 rolls nothing
-  and lifts the main stat to 3× (`Relic.effectiveMainStat` is linear to
-  +14). The screen shows the odds, the cost, the next main-stat value, the
-  level track with the sub-stat levels ringed, and the last roll marked;
-  a success glows, a failure shakes. The chance table is modelled on the
+  → `PowerUpOutcome`; the relic card's CLIMB state is the screen, opened
+  from a worn socket, the bag's panel and Manage's tiles): an attempt
+  costs drachma either way and succeeds at `powerUpChances[level - 1]` —
+  sure to +3, then a step down a level to 40% at +15; +3, +6, +9 and +12
+  add a sub stat while there are fewer than four, then grow one; +15
+  rolls nothing and lifts the main stat to 3× (`Relic.effectiveMainStat`
+  is linear to +14). The card shows the odds as a dial, the cost, the
+  next and the +15 main stat, the level rail with the sub-stat levels
+  studded, and the last roll lit; a success glows, a failure shakes, and
+  TO ▾ runs on to +3/+6/+9/+12/+15. The chance table is modelled on the
   genre's published rules (the data sites are refused by the network
   policy, so the per-level numbers are ours); `balance.py --economy`
   prints the expected drachma to +15 with the odds. Change the table in
@@ -704,18 +742,19 @@ environment can and cannot do. The short version:
   pointy-top hexagon — the ring's own shape — in the set's colour with
   the set's seal, `relic_<set>.png` ×16 and one `relic_rim.png`
   (`tools/relic_art.py --ship` clears the old per-slot files); the slot
-  is a number badge on the stone's top-left corner wherever it stands
-  alone (`RelicIcon.showsSlot`, on in the inventory grid) and the
-  socket's place on the ring, and a filter chip says "Slot 1 · ATK".
-  **The set reference** (`RelicSetsSheet`, the end of
-  `RelicInventoryView.swift`): every set with its seal, its pieces, its
-  effect, and owned/worn counts; opened from "Set effects" on the
-  inventory's rail and in its menu, and from the unit sheet's sets row,
-  where it also counts that unit's pieces per set. The unit sheet's sets
-  row is progress chips — "Fury 2/2" lit, "Fates 1/4" dim — and a worn
-  relic in the grid wears its wearer's face (`WearerBadge`); the card
-  prints the +15 main stat (`Relic.projectedMainStat(atLevel:)`). Tour
-  step 25 photographs the reference. **Cards** (`UnitCard`): the carved
+  is a numeral on the tile's left wherever the stone stands alone
+  (`RelicTile.showsSlot`, on in the grids unless they are filtered to one
+  slot; `RelicIcon.showsSlot` on the reward tile) and the socket's place
+  in the rosette. **The set reference** (`RelicSetsReference`,
+  RelicCard.swift, dark since 2026-09-24; `RelicSetsSheet` before): every
+  set with its stone, its pieces, its effect in two words (in full as
+  well for an effect set), and owned/worn counts, a unit's pieces per set
+  when opened from its sheet; opened from the unit sheet's SET EFFECTS (i), the bag's Sets,
+  the SET popover's book and the relic card's set line, and a tap on a
+  row opens the bag filtered to that set. A worn relic in the grids wears
+  its wearer's face (`WearerBadge`); the card prints the +15 main stat
+  (`Relic.projectedMainStat(atLevel:)`). Tour step 25 photographs the
+  reference. **Cards** (`UnitCard`): the carved
   frame texture was an overlay on the whole card and hid the star row
   under its gold bar ("why can I not see how many stars"); it is drawn
   under the badges now and only on cards of 90 points and up
@@ -782,8 +821,9 @@ environment can and cannot do. The short version:
   ringed pentagon for Wards, an eye, a bolt, waves, links, a mountain,
   wind, a flame (the first cut's filled symbols were "clip art", the
   owner's word) — the QUALITY the rim, the grade the stars under it, the
-  level a badge — `RelicIcon` in `RelicInventoryView.swift`, on every
-  screen a relic appears. **The stones are PAINTED (2026-09-14):** the owner, "Do the painted
+  level a badge — `RelicIcon` in `RelicInventoryView.swift`, then on every
+  screen a relic appeared (since 2026-09-24 the relic screens draw
+  `RelicTile`, below). **The stones are PAINTED (2026-09-14):** the owner, "Do the painted
   relics. I want those to look better." `tools/relic_paint.py` put the
   sixteen rendered stones on black as ONE reference sheet and had Gemini
   repaint it as one image (14 cents; one hand across all sixteen, every
@@ -813,13 +853,11 @@ environment can and cannot do. The short version:
   --sheet x.jpg`, `--only fury,aegis`) are the reference and the fallback:
   `--ship` writes the rim and the emblems only, and `--ship --ship-stones`
   would put the renders back over the paintings. **The
-  inventory is the genre's grid** (2026-09-12, evening): the stones at
-  38 pt, eight a row, ONE panel at the right for the relic tapped (name,
-  quality, main, subs, set, fit, wearer; Open, Equip on…/Change, Lock,
-  Sell), a second tap opens the card, the set rail is sixteen emblems
-  with a count; the bar is four controls (Filter, Sort, Select, a glyph
-  menu for the fit and the optimiser). The text rows it replaced showed
-  forty-eight sub stats at once and were called overwhelming. **Quality** (`RelicQuality`: Normal, Magic, Rare,
+  inventory became the genre's grid** (2026-09-12, evening: the stones at
+  38 pt, ONE panel for the relic tapped, a second tap for the card) after
+  text rows that showed forty-eight sub stats at once were called
+  overwhelming; since 2026-09-24 it is the bag of `RelicsScreen` (below).
+  **Quality** (`RelicQuality`: Normal, Magic, Rare,
   Hero, Legend = 0–4 sub stats at the drop) is rolled by grade
   (`RelicQuality.weights`, a 6★ Legend one in eight), floored at Magic on
   Hell tiers and Rare from raids (`StageRewards.qualityFloor`), stored as
@@ -831,17 +869,83 @@ environment can and cannot do. The short version:
   one per relic); they drop from the raids, Hell bosses, Labyrinth B7+
   and the Tower's milestones (`StageRewards.stoneChances`,
   `Grant.stones`), live in `Player.relicStones`, and are spent on the
-  relic card's Hone & gem sheet (`RelicStoneSheet`). The inventory has a
-  **filter sheet** (`RelicFilter`: slot, grade, quality, main, subs —
-  every ticked sub must be on the relic — set, worn, locked), eight
-  sorts, "All shown" while selecting; a relic's card has **Equip on…**
-  (`RelicWearerPicker`, the roster with the delta) and **Power up to +N**
-  (`GameStore.powerUpRelic(_:to:)`); a relic on the chest's shelf opens
-  the **drop card** (`RelicDropCard`: Sell, Keep, Lock and keep); the unit
-  sheet has Unequip all. Removal is free on purpose. Every number is
+  stone bench (`RelicStoneBench`, the relic card's HONE). The filter
+  (`RelicFilter`: slot, grade, quality, main, subs — every ticked sub must
+  be on the relic — set, worn, locked, awakened), eight sorts, "All shown"
+  while selecting, **Equip on…** (`RelicWearerChooser`), **Power up to +N**
+  (`GameStore.powerUpRelic(_:to:)`, the card's TO ▾), the **drop sheet**
+  (`RelicDropSheet`) and Unequip all (Manage's ALL OFF) are the
+  reliquary's since 2026-09-24 (below). Removal is free on purpose. Every number is
   mirrored in `balance.py` (`QUALITY_WEIGHTS`, `STONE_RANGES`,
   `STONE_COSTS`; `--relics` prints the odds, the stone spans and the bill
   to each milestone).
+- **Relics the genre's way: the reliquary (2026-09-24; PLAN.md *Relics
+  the genre's way*; the owner, with Summoners War's rune screens beside
+  ours: "Look how easy it is to see everything, and to understand what's
+  going on. And look how clean and detailed the graphics are. THATS what
+  I want.").** The relic screens are DARK: the Hall of Ka's painting
+  veiled to a quarter of its light (`ReliquaryBackdrop`) under OPAQUE
+  basalt panels in bronze frames (`BasaltPanel`), because a painted stone
+  and a quality's colour read at full strength only on dark (8.4–11.3:1
+  on basalt against 4.3–6.6:1 and muddy on cream); the strip stays cream
+  marble. **The kit** (`RelicKit.swift`, `RelicTile.swift`,
+  `RelicKitTests`): `RelicPalette`; the qualities on dark
+  (`RelicQuality.tone`, `enamel` — Legend is AMBER here, #FFB547, since
+  gold is the chrome's colour; the 5★ cards keep theirs); ONE tile for
+  every grid, row and card (`RelicTile` at 60/48/36: the grade's six
+  stars riding the top edge, the level bottom-left, the wearer's face
+  bottom-right, the quality an enamel band inside the bronze rim, the
+  lock or the draft's check on the right); the hexagonal socket and the
+  rosette of six round the Boon (`RelicSocket`, `RelicRosette`: slot 1
+  at eleven o'clock and clockwise, the fixed-main slots 1, 3, 5 one
+  triangle); bronze plates and dark wells; `StatLedger`; `SetEffectRow`
+  (every set in two words, `RelicReading.shortEffect`, pinned to the
+  descriptions by a test); `RollMarks` (a sub's rolls read off its value
+  against its grade's base with the relic's own roll count as the
+  constraint, `RelicReading.rollCounts`: exact on 99.8% of 6★ Legends at
+  +12 in a simulation, and no save field); and `RelicConfirmCard`, the
+  game card that replaced the relic screens' five system dialogs.
+  **`RelicsScreen`** (`unitID:opening:`) is ONE screen for what the
+  inventory, the slot picker, the optimiser and the filter sheet did.
+  With a unit it is MANAGE: the unit's stats as THEN would make them with
+  each change from NOW beside it, the sets a change completes (+) or
+  breaks (−) and the faces of any unit it takes a relic from, the six as
+  NOW over THEN (`BuildRows`, a × on each THEN tile), and REVERT / ALL OFF /
+  APPLY · n through `applyRelicLoadout`, so nothing moves until Apply;
+  BEST SIX ▾, LOADOUTS ▾ and SORT in the strip, and Back with a draft
+  asks. With none it is the BAG: the picked relic's panel (fit dial,
+  POWER UP, EQUIP or MOVE, LOCK, SELL) or, selecting, the Sell panel with
+  its total and the faces that lose a piece; Select, Sort, Sets and Boons
+  in the strip. Both share the right panel — the filters inline (the
+  slot rosette; SET, MAIN, SUB and MORE wells, each a popover over
+  `RelicFilter`) over the grid of 48-point tiles — and a long press on a
+  tile opens its card (risk 2 in the spec: the first thing to remove if a
+  frame shows the grid's scroll broken). The openings (`RelicsOpening`)
+  are every door's: `.slot`, `.bestSix`, `.fillEmpty`, `.withRelic`,
+  `.set`, `.picked`, and five for the tour. **`RelicCard`** (RelicCard.swift)
+  is a relic as numbers — the main stat at 24 points with its next and
+  +15 values, every sub at 16 with its roll marks and the last roll lit,
+  the set's line, the level rail — beside the state it is in: CLIMB (the
+  odds dial, the cost, POWER UP, TO ▾), ROLL (the choice of two), AWAKEN
+  (subs 4 → 5, the +15 main before → after, the aether as tiles, PAY WITH
+  any colour) or PEAK, over CHANGE / REMOVE or EQUIP, HONE, REROLL and
+  SELL (the lock and the drachma in the strip); the awakening plays
+  `RelicAwakeningRite`, unchanged. Beside it `RelicDropSheet` (the chest's
+  shelf: ONE best-fit dial beside the best relic owned for the slot;
+  KEEP, EQUIP, LOCK, SELL), `RelicWearerChooser` (the roster ordered by
+  what the relic would add to each), `RelicStoneBench` (hone and gem) and
+  `RelicSetsReference`. `RelicInventoryView.swift` keeps only what other
+  screens still share: `RelicIcon` (the reward tile, the tribute card,
+  the rite), `RelicSetEmblem`, `WearerBadge`, `RelicQualityTag` (unused
+  for now), `RelicFilter` and the rite. Tour frames: 2-detail (and -b by
+  `-tour-detail awakened`; -info, -skills, -boon, -regalia by
+  `-tour-detail-tab`), 11-relics (and
+  -legend by `-tour-relic legend`; -select, -confirm, -kit by
+  `-tour-relics`), 17-relic_picker
+  (Manage on slot 2; -draft, -best by `-tour-manage`), 19-relic_powerup
+  (CLIMB; -awaken, -stones, -wearer by `-tour-card`), 22-relic_drop,
+  23-relic_filter (MORE; -set by `-tour-relic-filter`), 25-relic_sets,
+  37-relic_roll and 40-relic_awaken.
 - **The detail pass (2026-09-09).** The playtest called the characters too
   cartoony and the attacks ugly (a leg thrown out). Four things changed, all
   in one place each: the Meshy texture prompt in `tools/batch/wave_launch.sh`
@@ -1063,8 +1167,8 @@ environment can and cannot do. The short version:
   templates by kit, `RegaliaTemplate.magnitudes`), `RegaliaService`,
   `Unit.regaliaLevel` (Optional), the names and blurbs beside
   `elementalSkillNames`, hooks in `BattleEngine` and `DamageCalculator`
-  for the player's units and the arena defender only, the plate on the
-  unit sheet and `RegaliaSheet` (tour step 46). `balance.py --regalia`
+  for the player's units and the arena defender only, the unit sheet's
+  REGALIA tab and `RegaliaSheet` (tour step 46). `balance.py --regalia`
   measures every template (Heavy Hand V 15.3%, under the 16% rank-II cap);
   change a magnitude in `RegaliaTemplate.magnitudes`, `REGALIA` and
   `RegaliaTests` together.
@@ -1421,11 +1525,11 @@ environment can and cannot do. The short version:
   Awaken panel (43, `awaken`: the seed's strongest unawakened unit with
   the bill met, since the training step opens on Power up), an arena battle
   (step 8) as well as the campaign one, the Labyrinth, a dungeon's
-  levels, the relic picker, a Labyrinth run on auto (`dungeon_battle`,
-  four frames, so the waves are seen walking on), the power-up screen,
-  the victory's chest in three frames, the collection's Stage layout
-  (21), the relic drop card (22), the relic filter sheet (23) and the
-  loading screen (24), the relic set reference (25), a tribute chest's card (26), a stage's popup over the chapter map (27), every chapter's painted map (28, twelve frames a–l) and a fight on six other realms' sets (29, `realm_battle`, relaunched with `-tour-environment <rawValue>`: Olympus, the marsh, the fjord, Jötunheim, Rome, the Peach Garden — the other battle steps only ever show Egypt).
+  levels, Manage on slot 2 (17, `relic_picker`), a Labyrinth run on auto (`dungeon_battle`,
+  four frames, so the waves are seen walking on), the relic card (19,
+  `relic_powerup`), the victory's chest in three frames, the collection's
+  Stage layout (21), the relic drop sheet (22), the bag's filter popovers
+  (23) and the loading screen (24), the relic set reference (25), a tribute chest's card (26), a stage's popup over the chapter map (27), every chapter's painted map (28, twelve frames a–l) and a fight on six other realms' sets (29, `realm_battle`, relaunched with `-tour-environment <rawValue>`: Olympus, the marsh, the fjord, Jötunheim, Rome, the Peach Garden — the other battle steps only ever show Egypt).
 - **The premium feel's battle half (2026-09-24; `Docs/FEEL.md` W1.1–W1.3,
   W1.6, W1.7, W1.9, L1, each with its *As built*).** The speed steps ×1 → ×2
   → ×3 (`BattleSpeed`, remembered in `UserDefaults` under `battleSpeed`,

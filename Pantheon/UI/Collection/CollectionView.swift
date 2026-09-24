@@ -16,9 +16,9 @@ import SwiftUI
 ///
 /// - **Cards**: the grid on the left, 55% of the width, and a plate on the
 ///   right for the unit picked — portrait, name, grade, level, power, the
-///   four combat stats with what the relics add, then the six relic slots as
-///   a 3×2 of the unit sheet's own tiles with the sets they complete beside
-///   them, and Full sheet / Train at the foot. The genre's side panel in the
+///   four combat stats with what the relics add, then the six relics as the
+///   unit sheet's own rosette with the sets they complete beside it, and
+///   Full sheet / Train at the foot. The genre's side panel in the
 ///   game's own marble and bronze rather than a copy of anyone's: this is
 ///   the DATA layout, and it stays cream.
 /// - **Stage**: the roster as a rail of faces along the bottom, the
@@ -29,9 +29,13 @@ import SwiftUI
 ///   side, not to copy Summoners War". This is the PLACE layout, so since
 ///   phase B (2026-09-22) the plate and the rail are dark glass.
 ///
-/// Both share the selection and the sheets: a slot opens the relic picker for
-/// that slot, Full sheet opens the unit sheet as a tap used to, and Train
-/// opens the Hall of Ka on the unit.
+/// Both share the selection and the sheets. The six slots are the unit
+/// sheet's rosette round the Boon (`RelicRosette`, 2026-09-24) and follow its
+/// rule: a worn socket opens that relic's card, an empty one opens Manage on
+/// that slot (it opened the picker either way, the audit's #25). The
+/// portrait, the Full-sheet door and, on the Stage, the carved name and the
+/// door in the plate's corner open the unit sheet, paging through this list;
+/// Train opens the Hall of Ka on the unit.
 struct CollectionView: View {
     @EnvironmentObject private var store: GameStore
     @AppStorage("collectionLayout") private var layout: CollectionLayout = .cards
@@ -44,6 +48,8 @@ struct CollectionView: View {
     @State private var selectedID: UUID?
     @State private var fullSheet: UnitPick?
     @State private var pickingSlot: SlotPick?
+    /// A worn relic opened from its socket: the relic's card.
+    @State private var openedRelic: CollectionRelicPick?
     @State private var showTraining = false
     @State private var showRelics = false
     /// The Codex, the collection book (`CodexView`, Docs/CODEX.md).
@@ -83,11 +89,16 @@ struct CollectionView: View {
         let id: UUID
     }
 
-    /// A slot on a unit, for the picker sheet: the slot is the identity, the
-    /// unit is who wears it.
+    /// An empty slot on a unit, for Manage on that slot: the slot is the
+    /// identity, the unit is who would wear it.
     struct SlotPick: Identifiable {
         let id: Int
         let unitID: UUID
+    }
+
+    /// A worn relic, for its card.
+    struct CollectionRelicPick: Identifiable {
+        let id: UUID
     }
 
     private var units: [ResolvedUnit] {
@@ -214,16 +225,22 @@ struct CollectionView: View {
             .onChange(of: layout) { _, now in
                 if now == .stage { warmStage(list) }
             }
+            // The unit sheet pages through this screen's own list, in its
+            // order, filters and all.
             .sheet(item: $fullSheet) { pick in
-                UnitDetailView(unitID: pick.id)
+                UnitDetailView(unitID: pick.id, roster: list.map(\.id))
                     .environmentObject(store)
             }
             .sheet(item: $pickingSlot) { pick in
-                RelicPickerView(unitID: pick.unitID, slot: pick.id)
+                RelicsScreen(unitID: pick.unitID, opening: .slot(pick.id))
+                    .environmentObject(store)
+            }
+            .sheet(item: $openedRelic) { pick in
+                RelicCard(relicID: pick.id)
                     .environmentObject(store)
             }
             .sheet(isPresented: $showRelics) {
-                RelicInventoryView()
+                RelicsScreen()
                     .environmentObject(store)
             }
             .sheet(isPresented: $showTraining) {
@@ -396,14 +413,17 @@ struct CollectionView: View {
     /// The card's art beside the words on the Cards plate: 84, the words'
     /// own height, so the block is no taller than its text.
     private static let portraitSize: CGFloat = 84
-    /// The relic tiles, in both layouts: 44, so the six stand as a 3×2 of
-    /// 144 × 94 beside the words — what a plate that shares its frame with a
-    /// grid or a stage, UNDER the tab bar, can spend on them.
-    private static let slotSize: CGFloat = 44
-    private static let slotGap: CGFloat = 6
+    /// The six relics in both layouts: the unit sheet's rosette at R 19 with
+    /// a 2-point gap, 102.7 × 98.4 (2026-09-24) — 41 points narrower than the
+    /// 3×2 of 44-point tiles it replaced and four taller, which is what a
+    /// plate that shares its frame with a grid or a stage, UNDER the tab
+    /// bar, can spend on them.
+    private static let rosetteRadius: CGFloat = 19
+    private static let rosetteGap: CGFloat = 2
     /// What the painted panel's last row has to clear at the bottom: its
-    /// corner ornament reaches 17 points up, against the band's 8 (the unit
-    /// sheet's `panelBottomInset`, measured there).
+    /// corner ornament reaches 16.9 points up and 18.6 in, against the band's
+    /// 8 — 71 and 78 px of the 512 px @3x `ui_panel` at `Chrome.shrink`,
+    /// measured for the cream unit sheet's panels before it became a place.
     private static let plateBottomInset: CGFloat = 18
 
     /// The Cards layout's right side: the portrait and the words, the four
@@ -422,7 +442,11 @@ struct CollectionView: View {
     /// heights), the stats row 34, the slots 96, with 4 between: 224. The
     /// block it replaces was 300 tall — the type floor had grown the words
     /// from 128 to 175 — and fitted only because the tour's frame had no
-    /// tab bar.
+    /// tab bar. The rosette (2026-09-24) is 98.4 where the tiles and their
+    /// badges' 2 points were 96: the iPhone 16's plate runs 2.4 points into
+    /// its 18 of bottom clearance, where the rosette's lower corners are
+    /// empty (pointed hexagons) and TRAIN's rounded corner is inside the
+    /// ornament's 17 by a point — nothing meets the carving.
     ///
     /// Train was a teal plate, a third button material beside gold and
     /// glass, and "Full sheet" was cut to "Full…" (run 211, frame 1); the
@@ -436,7 +460,9 @@ struct CollectionView: View {
             }
             statsRow(unit, ink: .cream)
             HStack(alignment: .top, spacing: 7) {
-                slotGrid(unit, onGlass: false)
+                // Basalt sockets on the cream plate, on purpose: a relic
+                // always lies on dark, where its colour reads.
+                relicRosette(unit)
                 VStack(alignment: .leading, spacing: 4) {
                     Text("SETS · \(unit.relics.count)/6 WORN")
                         .font(Theme.body(11).weight(.black))
@@ -460,7 +486,6 @@ struct CollectionView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             }
-            .padding(.top, 2)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(.horizontal, Theme.panelInset)
@@ -583,13 +608,24 @@ struct CollectionView: View {
             // the Hall of Ka carves it on its plate (run 216: a 15-point name
             // on a place screen read as a data box beside the Hall's 26). It
             // shrinks to the title floor before anything gives: "Perseus
-            // Gorgon-Bane" is 264 points at 22 in the 189 it has, 0.72.
+            // Gorgon-Bane" is 264 points at 22 in the 182 it has on an
+            // iPhone 16 beside the rosette and the door, 0.69. There it is
+            // also a door to the unit sheet (2026-09-24, the audit's #23:
+            // the Stage had none).
             Group {
                 if ink.isGlass {
-                    Text(unit.nameWithoutEpithet)
-                        .font(Theme.display(22))
-                        .carved(glow: false)
-                        .minimumScaleFactor(Theme.titleFloor / 22)
+                    Button {
+                        fullSheet = UnitPick(id: unit.id)
+                    } label: {
+                        Text(unit.nameWithoutEpithet)
+                            .font(Theme.display(22))
+                            .carved(glow: false)
+                            .minimumScaleFactor(Theme.titleFloor / 22)
+                            .lineLimit(1)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(GamePressStyle(.plate))
+                    .accessibilityLabel("\(unit.name), full sheet")
                 } else {
                     Text(unit.nameWithoutEpithet)
                         .font(Theme.title(15))
@@ -700,32 +736,45 @@ struct CollectionView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// The six slots as two rows of three, 1–3 over 4–6, in the unit sheet's
-    /// own tiles — dark sockets on the Stage's glass. A tap opens the picker
-    /// for that slot, worn or empty: the picker shows the relic there now
-    /// beside the one picked, so it is the right screen for a change as well
-    /// as for a first fit.
-    private func slotGrid(_ unit: ResolvedUnit, onGlass: Bool) -> some View {
-        VStack(spacing: Self.slotGap) {
-            ForEach(0..<2, id: \.self) { row in
-                HStack(spacing: Self.slotGap) {
-                    ForEach(1...3, id: \.self) { column in
-                        let slot = row * 3 + column
-                        RelicSlotTile(
-                            slot: slot,
-                            relic: unit.unit.equippedRelics[slot].flatMap { store.player.relic($0) },
-                            size: Self.slotSize,
-                            onGlass: onGlass
-                        ) {
-                            pickingSlot = SlotPick(id: slot, unitID: unit.id)
-                        }
-                    }
-                }
+    /// The six relics as the unit sheet draws them: the rosette of basalt
+    /// sockets round the Boon, slot 1 at eleven o'clock and clockwise, a
+    /// complete set's sockets ringed in gold — the same object on the Cards
+    /// plate's cream and the Stage's glass, since a relic always lies on
+    /// dark. The centre shows the Boon and is not a door here (the unit
+    /// sheet's is).
+    private func relicRosette(_ unit: ResolvedUnit) -> some View {
+        RelicRosette(
+            slots: wornRelics(unit),
+            activeSets: Set(unit.activeRelicSets.map { $0.set }),
+            boon: unit.boon,
+            radius: Self.rosetteRadius,
+            gap: Self.rosetteGap,
+            onSlot: { slot in
+                openSlot(slot, of: unit)
+            }
+        )
+    }
+
+    /// The worn relics by the slot they are worn in.
+    private func wornRelics(_ unit: ResolvedUnit) -> [Int: Relic] {
+        var slots: [Int: Relic] = [:]
+        for (slot, relicID) in unit.unit.equippedRelics {
+            if let relic = store.player.relic(relicID) {
+                slots[slot] = relic
             }
         }
-        // The slot badge hangs four points up and left of each tile; the
-        // plate's inset is what it hangs over.
-        .padding(.top, 2)
+        return slots
+    }
+
+    /// The unit sheet's rule: a worn socket opens the relic's card, an empty
+    /// one opens Manage on that slot, where the grid is that slot's relics
+    /// by fit and NOW → THEN says what a pick would change.
+    private func openSlot(_ slot: Int, of unit: ResolvedUnit) {
+        if let relicID = unit.unit.equippedRelics[slot], store.player.relic(relicID) != nil {
+            openedRelic = CollectionRelicPick(id: relicID)
+        } else {
+            pickingSlot = SlotPick(id: slot, unitID: unit.id)
+        }
     }
 
     /// The sets the worn relics complete, in a line: "Fury ×2 · Guard".
@@ -779,6 +828,8 @@ struct CollectionView: View {
     /// padding). An iPhone 16 gives it 166. The set line the plate carried
     /// under the words went for the carved name (run 216's judge: the Cards
     /// plate says it, and the stones on the slots wear their sets' colours).
+    /// The rosette (2026-09-24) is 98.4 against the tiles' 96, so the plate
+    /// is 158.4 of its 175.
     private func stageLayout(_ list: [ResolvedUnit], selected: ResolvedUnit) -> some View {
         VStack(spacing: 0) {
             GeometryReader { geo in
@@ -839,21 +890,41 @@ struct CollectionView: View {
         }
     }
 
-    /// The words, the sets and the slots over the left half, on dark glass
-    /// with the on-glass colours — the rule for words over a painting. The
-    /// slots are dark sockets (`RelicSlotTile(onGlass:)`): a cream socket on
-    /// glass glared in the phase B mocks.
+    /// The words and the relics over the left half, on dark glass with the
+    /// on-glass colours — the rule for words over a painting — and in the
+    /// plate's top-trailing corner the door to the unit sheet (2026-09-24,
+    /// the audit's #23: the Stage had none). The door stands beside the
+    /// rosette rather than on it, so no socket is covered.
     private func stagePlate(_ unit: ResolvedUnit) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: 8) {
                 header(unit, ink: .glass)
                     .frame(maxWidth: .infinity, alignment: .topLeading)
-                slotGrid(unit, onGlass: true)
+                relicRosette(unit)
+                stageSheetDoor(unit)
             }
             statsRow(unit, ink: .glass)
         }
         .padding(10)
         .background(GlassPlate(radius: 12, opacity: 0.72))
+    }
+
+    /// The Stage plate's door to the unit sheet: the strip's own dark well,
+    /// a 34-point circle, with the sheet's figure on it in pale gold.
+    private func stageSheetDoor(_ unit: ResolvedUnit) -> some View {
+        Button {
+            fullSheet = UnitPick(id: unit.id)
+        } label: {
+            Image(systemName: "person.text.rectangle")
+                .font(.system(size: 13, weight: .black))
+                .foregroundStyle(Theme.onGlassGold)
+                .frame(width: ScreenChrome.control, height: ScreenChrome.control)
+                .background(ScreenChrome.well)
+                .contentShape(Circle())
+        }
+        // Answers on touch-down, so the action plays nothing.
+        .buttonStyle(GamePressStyle(.plate))
+        .accessibilityLabel("\(unit.name), full sheet")
     }
 
     /// The roster as a rail of faces along the bottom, the picked one on the
@@ -1002,29 +1073,28 @@ enum CollectionLayout: String, CaseIterable {
 /// screen sets from the drag across that half. The figure is rebuilt when the
 /// unit or its form changes, and the screen zeroes the spin with it.
 ///
-/// Since 2026-09-24 it is also the unit sheet's figure (FEEL.md, W1.10): the
-/// sheet a player opens most showed a card of the chibi bust while the whole
-/// roster had been remade serious, and the figure now stands in a dark glass
-/// well in the sheet's left column. Only WHERE the figure stands differs
-/// (`Framing`); the rig, the idle, the awakened mesh and its clips are this
-/// stage's, so the two screens cannot light or pose a figure differently.
+/// It was also the unit sheet's figure for a day (FEEL.md, W1.10), in a dark
+/// glass well in the sheet's left column; since the relic redesign of the
+/// same day the sheet is a place of its own and stands its figure on the Hall
+/// of Ka's painted dais (`AltarStageView`), turned at this stage's rate
+/// (`spinPerPoint`). `Framing` keeps its measures general for a stage that
+/// wants its figure somewhere else.
 struct CollectionStageView: UIViewRepresentable {
     let unit: ResolvedUnit?
     /// The turn about Y, in radians, on top of the stance.
     let spin: Float
     /// Where the figure stands in this stage's frame: the collection's by
-    /// default, the unit sheet's well (`Framing.column`) since 2026-09-24.
+    /// default.
     var framing: Framing = .collection
-    /// Whether the stage runs. False while it is out of sight — the unit
-    /// sheet's well turned over to the card — so a view nobody can see stops
-    /// drawing sixty frames a second; the figure holds its pose and takes it
-    /// up again as it turns back into view.
+    /// Whether the stage runs. False while it is out of sight, so a view
+    /// nobody can see stops drawing sixty frames a second; the figure holds
+    /// its pose and takes it up again as it comes back into view.
     var playing: Bool = true
 
     /// Radians of turn per point of drag: one full turn across a landscape
     /// phone's width, which is what a finger expects of a turntable. The
-    /// stage's since 2026-09-24, so the unit sheet's well turns at the
-    /// collection's rate — one gesture, one feel.
+    /// unit sheet's altar turns its figure at the same rate — one gesture,
+    /// one feel.
     static let spinPerPoint: CGFloat = .pi * 2 / 800
 
     /// Where the figure stands in the stage's frame, in shares of it: its
@@ -1038,8 +1108,7 @@ struct CollectionStageView: UIViewRepresentable {
     /// right, away from the plate on the left — run 241's frame 21 has
     /// Thoth's beak pointing right — though the note this replaces said it
     /// turned toward the words; the number is kept, since it is the frame
-    /// the owner has judged. The unit sheet's 0.3 turns the figure toward
-    /// the relic ring, as W1.10 asks.
+    /// the owner has judged.
     ///
     /// `ringRoom`, when set, is the most of the frame's width, measured from
     /// the centre line to the nearer edge, the rune ring may take; a ring
@@ -1085,21 +1154,6 @@ struct CollectionStageView: UIViewRepresentable {
         /// still clears the plate by 30 points.
         static let collection = Framing(across: 0.66, down: 0.78, fill: 0.70, stance: 0.3, ringRoom: nil,
                                         fillByWidth: nil, firstAspect: 736 / 204, name: "collection")
-
-        /// The unit sheet's well, a column 120 points wide and as tall as the
-        /// buttons under it leave (134 on an iPhone 16 Pro). FEEL.md's
-        /// narrow column — the feet 86% down, 78% of the height tall — with
-        /// the centre line at 0.53 rather than 0.5: the card's 44-point
-        /// thumbnail stands in the well's top-left corner, and at 0.5 the
-        /// shoulder of a figure 104 points tall — about 28 across at seven
-        /// and a half heads — would reach some three points under it. The
-        /// ring may take nine tenths of the half-width, the rest is the
-        /// well's dark glass round it. The figure's height is at most 0.87
-        /// of the well's width, which the 120 × 134 well meets at 0.78 of
-        /// its height: taller wells keep that figure, 104 points, and gain
-        /// headroom.
-        static let column = Framing(across: 0.53, down: 0.86, fill: 0.78, stance: 0.3, ringRoom: 0.9,
-                                    fillByWidth: 0.87, firstAspect: 120 / 134, name: "unit sheet")
     }
 
     private static let lens: Float = 30
@@ -1331,8 +1385,7 @@ struct CollectionStageView: UIViewRepresentable {
     }
 
     /// Places the camera so the figure stands where the framing says — the
-    /// right half of the collection's frame, the middle of the unit sheet's
-    /// well.
+    /// right half of the collection's frame.
     ///
     /// The vertical lens makes the frame's height a known quantity: the
     /// figure is `fill` of it, the feet sit `down` of the way down, and the

@@ -2124,6 +2124,16 @@ struct AltarStageView: UIViewRepresentable {
     /// figure's key, so an awakening on the altar rebuilds the figure.
     let awakened: Bool
     let ceremony: AltarCeremony?
+    /// The turn about the figure's upright, in radians, on top of its
+    /// three-quarter stance: the unit sheet's drag across the figure's column
+    /// (2026-09-24). The Hall of Ka passes none.
+    var spin: Float = 0
+    /// Whether the stage runs. False while something covers it — the unit
+    /// sheet's Hall of Ka, Manage or a card over it — so a stage nobody can
+    /// see stops drawing, and the stage on top is the one running; the figure
+    /// holds its pose and takes it up again when the cover goes. The Hall of
+    /// Ka passes none, and is never touched by it.
+    var playing: Bool = true
 
     /// Where the figure's feet stand on the painting, in 0…1 of the PAINTING
     /// (`hall_of_ka_bg`, 2048 × 1152): 29% across, 73.4% down — the front of
@@ -2144,6 +2154,8 @@ struct AltarStageView: UIViewRepresentable {
     /// 202 and its head about 88 points down, under the nameplate's foot at 74.
     static let fillOfPainting: CGFloat = 0.41
     private static let lens: Float = 30
+    /// The figure's three-quarter stance about its upright, before `spin`.
+    private static let stance: Float = -0.3
 
     /// Where the dais lands in a frame of `size` that draws the painting the
     /// way `PaintingFill` does — a centred cover crop — as fractions of that
@@ -2337,6 +2349,15 @@ struct AltarStageView: UIViewRepresentable {
         let coordinator = context.coordinator
         place(blueprint, awakened: awakened, in: coordinator)
         frameCamera(view, coordinator)
+        // The drag, applied every pass: one float on one node.
+        coordinator.figure?.eulerAngles.y = Self.stance + spin
+        // Out of sight, the stage stops: no scene time, no frames. Only a
+        // change is written, so the Hall of Ka's stage, which always plays,
+        // is never touched here.
+        if view.isPlaying != playing {
+            view.isPlaying = playing
+            view.rendersContinuously = playing
+        }
         if let ceremony, ceremony.stamp != coordinator.playedStamp {
             coordinator.playedStamp = ceremony.stamp
             play(ceremony, coordinator)
@@ -2371,8 +2392,9 @@ struct AltarStageView: UIViewRepresentable {
         if awakened {
             node.addParticleSystem(VFXLibrary.aura(tint: tint, scale: height / 1.9))
         }
-        // A three-quarter stance, turned a little toward the panel.
-        node.eulerAngles.y = -0.3
+        // A three-quarter stance, turned a little toward the panel, and the
+        // unit sheet's drag on top of it.
+        node.eulerAngles.y = Self.stance + spin
         node.opacity = 0
         scene.rootNode.addChildNode(node)
         // The idle AFTER the figure is in the scene, through a player told

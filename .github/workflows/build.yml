@@ -52,6 +52,11 @@ jobs:
     # chapter-map relaunches and the missions' Claim All: about two minutes,
     # and under seven when every new cue wait (40 + 40, 30 + 40 + 30 + 30 s)
     # and both longer stress waits (420 and 500 s) run out — inside 110.
+    # The relic redesign (the same day) adds thirteen relaunches with no cue
+    # to wait on — the unit sheet's four tablets, the bag's select, confirm
+    # and kit, Manage's draft and best, the card's awaken, stones and wearer,
+    # the filter's set — each a five-second sleep and a shot: about two and
+    # a half minutes against run 253's 81.
     timeout-minutes: 110
     steps:
       - uses: actions/checkout@v4
@@ -504,10 +509,13 @@ jobs:
               # are new names beside it. About 26 relaunches, 3.5 minutes.
               #
               # The unit sheet on the seed's awakened unit (its regalia at
-              # III): the unlocked regalia plate and the awakening line.
+              # III), and since the relic redesign (2026-09-24) the sheet's
+              # other four tablets on Zeus: the plain frame and -b open on
+              # RELICS, the tour's default (-tour-detail-tab).
               detail)
                 sleep 5; shoot_lit "$step-${names[$step]}"
-                again -tour-detail awakened; sleep 5; shoot "$step-${names[$step]}-b" ;;
+                again -tour-detail awakened; sleep 5; shoot "$step-${names[$step]}-b"
+                for t in info skills boon regalia; do again -tour-detail-tab $t; sleep 5; shoot "$step-${names[$step]}-$t"; done ;;
               # The Hall of Ka's other three ledgers: the offering Auto chose,
               # the evolution, and the fusion board — six seconds, so the
               # prize's mesh has loaded onto the altar.
@@ -542,11 +550,35 @@ jobs:
               treasury)
                 sleep 5; shoot_lit "$step-${names[$step]}"
                 again -tour-treasury-odds; sleep 5; shoot "$step-${names[$step]}-odds" ;;
-              # The inventory with its fullest worn relic picked (four subs,
-              # a four-piece set): the panel run 221 cut above OPEN.
+              # The bag with its fullest worn relic picked (four subs, a
+              # four-piece set): the panel run 221 cut above OPEN. Then
+              # (2026-09-24, the relic redesign) select mode with four relics
+              # chosen — the Sell panel, its total, the wearers' faces — the
+              # same with the sell card up, and the relic kit's gallery.
               relics)
                 sleep 5; shoot_lit "$step-${names[$step]}"
-                again -tour-relic legend; sleep 5; shoot "$step-${names[$step]}-legend" ;;
+                again -tour-relic legend; sleep 5; shoot "$step-${names[$step]}-legend"
+                for m in select confirm kit; do again -tour-relics $m; sleep 5; shoot "$step-${names[$step]}-$m"; done ;;
+              # Manage on Zeus (2026-09-24): filtered to slot 2, the old
+              # picker's job; with a draft of two (slots 2 and 4), for the
+              # deltas, the set chips and APPLY · 2; and Best for Power's six
+              # previewed.
+              relic_picker)
+                sleep 5; shoot_lit "$step-${names[$step]}"
+                again -tour-manage draft; sleep 5; shoot "$step-${names[$step]}-draft"
+                again -tour-manage best; sleep 5; shoot "$step-${names[$step]}-best" ;;
+              # The relic card in CLIMB on the best climbing relic, then its
+              # AWAKEN state on the seed's 6★ +15 (step 40 awakens it later),
+              # the stone bench, and the wearer chooser comparing the
+              # strongest unit that does not wear the relic (2026-09-24).
+              relic_powerup)
+                sleep 5; shoot_lit "$step-${names[$step]}"
+                for m in awaken stones wearer; do again -tour-card $m; sleep 5; shoot "$step-${names[$step]}-$m"; done ;;
+              # The bag's MORE popover, then its SET popover (2026-09-24):
+              # each opens 0.4 s after the screen, well inside the sleep.
+              relic_filter)
+                sleep 5; shoot_lit "$step-${names[$step]}"
+                again -tour-relic-filter set; sleep 5; shoot "$step-${names[$step]}-set" ;;
               # The Halls on the brightest painting (Radiance, Olympus: can
               # the glass be read?) and the darkest (Umbra, the Serpent Deep).
               halls)

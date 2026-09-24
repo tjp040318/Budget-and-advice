@@ -57,11 +57,11 @@ struct BoonPickerView: View {
     }
 
     /// What the panel's last row clears at its foot: the marble's lower
-    /// acanthus reaches about 17 points up (the unit sheet's
-    /// `panelBottomInset`, measured there). This padding is inside the
-    /// scroll, so when the three doors run a point or two past the plate
-    /// the overflow comes off it: 20, and the last door still clears the
-    /// scrolls by the unit sheet's 18.
+    /// acanthus reaches about 17 points up (measured on the cream unit
+    /// sheet, whose inset for it went with that sheet on 2026-09-24). This
+    /// padding is inside the scroll, so when the three doors run a point or
+    /// two past the plate the overflow comes off it: 20, and the last door
+    /// still clears the scrolls by the 18 that sheet kept.
     private static let panelFoot: CGFloat = 20
 
     private static let sources = "Caches fall from a Titan at S or better (one kill in four, a 6★), the Labyrinth's "
