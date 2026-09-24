@@ -22,7 +22,6 @@ import UIKit
 ///   out the skill in hand before it is committed rather than after.
 struct BattleView: View {
 
-    @State private var ultimateFlash: Double = 0
     @StateObject var model: BattleViewModel
     @Environment(\.dismiss) private var dismiss
 
@@ -84,6 +83,19 @@ struct BattleView: View {
     /// Each player unit's skills that were cooling when its last turn opened:
     /// the diff a skill ready again is found by (`noteCooldowns`).
     @State private var coolingSlots: [UUID: Set<Int>] = [:]
+
+    // MARK: The beats over the field (Docs/FEEL.md W2.1, W2.10, W2.11)
+
+    /// What the scene has put over the field (`BattleSceneController.
+    /// onFieldCue`, written through bindings by `receive`): an ultimate's
+    /// splash while the world is held for it, a wave's stamp, a boss's
+    /// entrance — the HUD gone while it lasts — its ribbon once it roars,
+    /// and its bar's fill from empty (0...1 of the health it shows).
+    @State private var splash: UltimateSplashCue?
+    @State private var waveStamp: WaveStampCue?
+    @State private var entrance: BossEntranceCue?
+    @State private var ribbonShown = false
+    @State private var bossBarReveal: Double = 1
 
     /// The reckoning waits this long after the outcome lands, so the last
     /// blow and the scene's own end of the fight are seen first.
@@ -158,6 +170,9 @@ struct BattleView: View {
             // skills and the descriptions like the bottom left UI and more
             // I just don't like."
             let boss = model.displayedCombatants.first { $0.isBoss && $0.isAlive }
+            // A boss's entrance takes the HUD off the field until it has
+            // roared; its own bar comes back with its ribbon, filling (W2.11).
+            let entering: Bool = entrance != nil
             // THE BOTTOM CORNERS ON THE SAFE AREA'S EDGES (2026-09-24). The
             // owner's Summoners War frame, measured on his phone (956 × 440
             // points, insets 62 at the sides and 21 at the foot): its skills'
@@ -175,8 +190,10 @@ struct BattleView: View {
                     VStack(spacing: 6) {
                         if let boss {
                             bossBar(boss)
+                                .opacity(entering && !ribbonShown ? 0 : 1)
                         }
                         topStrip
+                            .opacity(entering ? 0 : 1)
                     }
                     .padding(.horizontal, 8)
                     Spacer(minLength: 0)
@@ -199,6 +216,7 @@ struct BattleView: View {
                     .padding(.leading, Self.cornerMargin(insets.leading))
                     .padding(.trailing, Self.cornerMargin(insets.trailing))
                     .padding(.bottom, Self.cornerMargin(insets.bottom))
+                    .opacity(entering ? 0 : 1)
                 }
                 .padding(.top, 4)
                 .frame(width: geometry.size.width, height: geometry.size.height)
@@ -208,33 +226,56 @@ struct BattleView: View {
             // animation) rather than showing through it, as they did in run
             // 220 behind the VICTORY wordmark and under its tiles.
             .opacity(beat == .fighting ? 1 : 0)
-            .allowsHitTesting(beat == .fighting)
+            .allowsHitTesting(beat == .fighting && !entering)
 
-            // The frame goes white for a beat as an ultimate's cut-in lands —
-            // never under Reduce Motion (`MotionComfort`, iOS's or the game's).
-            Color.white
-                .opacity(ultimateFlash)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-                .onChange(of: model.cutIn) { _, cutIn in
-                    guard let cutIn, !cutIn.isSpeech, !MotionComfort.isReduced else { return }
-                    ultimateFlash = 0.6
-                    withAnimation(.easeOut(duration: 0.5)) { ultimateFlash = 0 }
-                }
+            // AN ULTIMATE OWNS THE SCREEN (Docs/FEEL.md W2.1): the scene holds
+            // the world and tells this view (`onFieldCue`), and the splash
+            // stands over everything on the field until the scene lets go —
+            // then the scene's own light punches through (W2.9), where a
+            // white full-screen flash used to fire as the old band landed.
+            if let splash {
+                UltimateSplashView(cue: splash)
+                    .id(splash.serial)
+                    .transition(.opacity)
+            }
 
-            if let cutIn = model.cutIn {
-                cutInBanner(cutIn)
+            // A chapter boss's line, in a band of its own (a giant says it on
+            // its ribbon instead, W2.11) — after its wave's stamp, never over
+            // it: FINAL WAVE lands, then the boss speaks. The two bands stood
+            // one over the other on seven chapters' last stages, whose bosses
+            // are no giants (review, 2026-09-24). A splash owns the screen
+            // while it lasts, the line with it; the line's 2.4 s count from
+            // when it is first seen.
+            if let speech = model.bossSpeech, waveStamp == nil, splash == nil {
+                speechBand(speech)
                     .transition(.opacity)
                     .allowsHitTesting(false)
                     .onAppear {
-                        // A skill's name is read at a glance; a sentence is
-                        // not, so a boss's line is held nearly twice as long.
-                        DispatchQueue.main.asyncAfter(deadline: .now() + (cutIn.isSpeech ? 2.4 : 1.15)) {
+                        // A sentence is not read at a glance: it stands 2.4 s.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.4) {
                             withAnimation(.easeIn(duration: 0.2)) {
-                                if model.cutIn == cutIn { model.cutIn = nil }
+                                if model.bossSpeech == speech { model.bossSpeech = nil }
                             }
                         }
                     }
+            }
+
+            // A wave's stamp over its arrivals walking on (W2.10), and a
+            // boss's ribbon over its roar (W2.11).
+            if let waveStamp {
+                WaveStampView(cue: waveStamp)
+                    .id(waveStamp.serial)
+                    .onAppear {
+                        let serial = waveStamp.serial
+                        DispatchQueue.main.asyncAfter(deadline: .now() + waveStamp.duration + waveStamp.frozenFor) {
+                            if self.waveStamp?.serial == serial { self.waveStamp = nil }
+                        }
+                    }
+            }
+            if let entrance, ribbonShown, let card = model.entranceCard(for: entrance.bossID) {
+                BossRibbonView(card: card)
+                    .id(entrance.serial)
+                    .transition(.opacity)
             }
 
             if showLog, beat == .fighting { logOverlay }
@@ -277,6 +318,17 @@ struct BattleView: View {
             // closure holding the model would keep the whole fight alive.
             let matchups = $bossMatchups
             model.sceneController.onBossMatchups = { matchups.wrappedValue = $0 }
+            // The beats the scene draws over the field, through bindings for
+            // the same reason (Docs/FEEL.md W2.1, W2.10, W2.11).
+            let splashCue = $splash
+            let stampCue = $waveStamp
+            let entranceCue = $entrance
+            let ribbon = $ribbonShown
+            let reveal = $bossBarReveal
+            model.sceneController.onFieldCue = { cue in
+                Self.receive(cue, splash: splashCue, stamp: stampCue, entrance: entranceCue,
+                             ribbon: ribbon, reveal: reveal)
+            }
             let shown = $stageShown
             model.sceneController.onStageShown = {
                 withAnimation(Self.veilLift) { shown.wrappedValue = true }
@@ -296,6 +348,7 @@ struct BattleView: View {
         .onDisappear {
             model.sceneController.onBossMatchups = nil
             model.sceneController.onStageShown = nil
+            model.sceneController.onFieldCue = nil
             // A beat still counting when the screen goes steps aside.
             beatSequence += 1
             AudioLibrary.shared.playMusic(.island)
@@ -418,6 +471,50 @@ struct BattleView: View {
         guard let began = beatBegan, Date().timeIntervalSince(began) >= Self.beatTapGrace else { return }
         reckon()
     }
+
+    // MARK: - The beats over the field (Docs/FEEL.md W2.1, W2.10, W2.11)
+
+    /// A cue from the scene (`BattleSceneController.onFieldCue`), written
+    /// into the view's state through bindings, so the closure the controller
+    /// keeps holds nothing of the view model's. An end that arrives for an
+    /// older beat (its serial) leaves a newer one standing.
+    private static func receive(_ cue: FieldCue, splash: Binding<UltimateSplashCue?>, stamp: Binding<WaveStampCue?>,
+                                entrance: Binding<BossEntranceCue?>, ribbon: Binding<Bool>, reveal: Binding<Double>) {
+        switch cue {
+        case .splash(let next):
+            splash.wrappedValue = next
+        case .splashEnded(let serial):
+            guard splash.wrappedValue?.serial == serial else { return }
+            withAnimation(.easeOut(duration: 0.12)) { splash.wrappedValue = nil }
+        case .waveStamp(let next):
+            stamp.wrappedValue = next
+        case .bossEntrance(let next):
+            // The bar is emptied out of sight, to fill as the boss roars.
+            reveal.wrappedValue = 0
+            ribbon.wrappedValue = false
+            withAnimation(.easeOut(duration: 0.3)) { entrance.wrappedValue = next }
+        case .bossRibbon(let serial):
+            guard entrance.wrappedValue?.serial == serial else { return }
+            withAnimation(Motion.pop) { ribbon.wrappedValue = true }
+            withAnimation(.easeOut(duration: Self.bossBarFill).delay(0.25)) { reveal.wrappedValue = 1 }
+        case .entranceEnded(let serial):
+            guard entrance.wrappedValue?.serial == serial else { return }
+            reveal.wrappedValue = 1
+            withAnimation(.easeOut(duration: 0.35)) {
+                entrance.wrappedValue = nil
+                ribbon.wrappedValue = false
+            }
+        case .clear:
+            splash.wrappedValue = nil
+            stamp.wrappedValue = nil
+            entrance.wrappedValue = nil
+            ribbon.wrappedValue = false
+            reveal.wrappedValue = 1
+        }
+    }
+
+    /// How long a boss's bar takes to fill from empty as it roars (W2.11).
+    private static let bossBarFill: TimeInterval = 0.9
 
     // MARK: - Top bar
 
@@ -858,6 +955,9 @@ struct BattleView: View {
     private func bossBar(_ boss: Combatant) -> some View {
         let weakness = model.raidWeakness(boss.id)
         let enrage = model.raidEnrage(boss.id)
+        // The channels ease at the fill's pace while an entrance fills them
+        // from empty, and at their own everywhere else.
+        let fillEase: TimeInterval = entrance == nil ? BossChannel.standardEase : Self.bossBarFill
         // Only above 1: an enrage that has not started yet is not news.
         let enraged = enrage > 1.001
         let raidChips = (weakness == nil ? 0 : 1) + (enraged ? 1 : 0)
@@ -921,11 +1021,14 @@ struct BattleView: View {
                 // breaks. Drawn in the boss's current weakness colour.
                 if let barrier = model.raidBarrierFraction(boss.id) {
                     let tint = weakness?.color ?? Theme.gold
-                    BossChannel(fraction: barrier, top: tint, bottom: tint.opacity(0.78), height: 4)
+                    BossChannel(fraction: barrier * bossBarReveal, top: tint, bottom: tint.opacity(0.78), height: 4,
+                                ease: fillEase)
                 }
+                // Filled from empty as the boss roars (W2.11,
+                // `bossBarReveal`), at the pace of the fill.
                 BossChannel(
-                    fraction: boss.maxHealth > 0 ? boss.currentHealth / boss.maxHealth : 0,
-                    top: Color(hex: "#F3D688"), bottom: Color(hex: "#B8872C"), height: 9
+                    fraction: (boss.maxHealth > 0 ? boss.currentHealth / boss.maxHealth : 0) * bossBarReveal,
+                    top: Color(hex: "#F3D688"), bottom: Color(hex: "#B8872C"), height: 9, ease: fillEase
                 )
                 // The unit plates' own attack-bar blue (`PlateArt.attackStops`,
                 // his (44, 187, 235) since 2026-09-24).
@@ -959,16 +1062,12 @@ struct BattleView: View {
         }
     }
 
-    /// An ultimate's announcement: a dark band across the field, the
-    /// caster's card sliding in from the left and the skill's name from the
-    /// right, gone in a second.
-    private func cutInBanner(_ cutIn: BattleViewModel.CutIn) -> some View {
-        let accent = Color(hex: cutIn.accentHex)
-        // Annotated rather than inferred inside the modifier: nil is the
-        // "leave it alone" value for both, and a bare ternary against nil is
-        // the sort of thing that needs a compiler to settle.
-        let speechLines: Int? = cutIn.isSpeech ? 3 : nil
-        let speechWidth: CGFloat? = cutIn.isSpeech ? 420 : nil
+    /// A chapter boss's one line: a dark band across the field, the
+    /// speaker's card at the left and the sentence beside it, for 2.4 s.
+    /// The band the ultimates used to share; theirs is the splash now
+    /// (Docs/FEEL.md W2.1, `UltimateSplashView`).
+    private func speechBand(_ speech: BattleViewModel.BossSpeech) -> some View {
+        let accent = Color(hex: speech.accentHex)
         return VStack {
             Spacer().frame(height: 90)
             ZStack {
@@ -979,8 +1078,8 @@ struct BattleView: View {
                 Rectangle().fill(accent.opacity(0.9)).frame(height: 2).frame(maxHeight: .infinity, alignment: .top)
                 Rectangle().fill(accent.opacity(0.9)).frame(height: 2).frame(maxHeight: .infinity, alignment: .bottom)
                 HStack(spacing: 16) {
-                    if BundleImage.exists(cutIn.portrait) {
-                        BundleImage(name: cutIn.portrait, renderedAt: 64)
+                    if BundleImage.exists(speech.portrait) {
+                        BundleImage(name: speech.portrait, renderedAt: 64)
                             .aspectRatio(contentMode: .fill)
                             .frame(width: 64, height: 64)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
@@ -989,28 +1088,21 @@ struct BattleView: View {
                             .transition(.move(edge: .leading).combined(with: .opacity))
                     }
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(cutIn.unitName.uppercased())
+                        Text(speech.speaker.uppercased())
                             .font(Theme.body(11).weight(.bold))
                             .tracking(1.6)
                             .foregroundStyle(accent)
-                        // A skill's name is two or three words and wears the
-                        // display face; a boss's line is a sentence, and at 26pt
-                        // an eighty-character one runs straight out of the 84pt
-                        // band. It is set smaller, allowed three lines and given
-                        // a width to wrap inside.
-                        // Pale gold on the dark band (a line of speech cream):
-                        // `textPrimary` is the cream UI's INK, and run 220's
-                        // "BREATH OF PLAGUE" was near-black on near-black.
-                        Text(cutIn.skillName)
-                            .font(cutIn.isSpeech ? Theme.title(15) : Theme.display(26))
-                            .foregroundStyle(cutIn.isSpeech ? Theme.onGlass : Theme.onGlassGold)
-                            // Every one of these is written so that it is the
-                            // no-op it used to be when this is not speech: the
-                            // ultimate's announcement must look exactly as it did.
-                            .lineLimit(speechLines)
-                            .minimumScaleFactor(cutIn.isSpeech ? 0.8 : 1)
-                            .fixedSize(horizontal: false, vertical: cutIn.isSpeech)
-                            .frame(maxWidth: speechWidth, alignment: .leading)
+                        // A sentence, and at 26pt an eighty-character one
+                        // runs straight out of the 84pt band: it is set at
+                        // 15, allowed three lines and given a width to wrap
+                        // inside, in cream on the dark band.
+                        Text(speech.line)
+                            .font(Theme.title(15))
+                            .foregroundStyle(Theme.onGlass)
+                            .lineLimit(3)
+                            .minimumScaleFactor(0.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: 420, alignment: .leading)
                             .shadow(color: accent.opacity(0.9), radius: 10)
                     }
                     .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -1176,6 +1268,11 @@ private struct BossChannel: View {
     let top: Color
     let bottom: Color
     let height: CGFloat
+    /// How long a new value takes to ease in: `standardEase`, or a boss's
+    /// entrance's fill from empty (W2.11).
+    var ease: TimeInterval = BossChannel.standardEase
+
+    static let standardEase: TimeInterval = 0.3
 
     private var filled: CGFloat { CGFloat(min(1, max(0, fraction))) }
 
@@ -1199,7 +1296,7 @@ private struct BossChannel: View {
             }
         }
         .frame(height: height)
-        .animation(.easeOut(duration: 0.3), value: fraction)
+        .animation(.easeOut(duration: ease), value: fraction)
     }
 }
 
@@ -1621,9 +1718,10 @@ struct DefeatStamp: View {
 }
 
 /// The band a stamp's word lies on: dark across the middle and clear at
-/// both ends, the way the ultimate's cut-in band is, with a rule of `rule`
-/// along each edge. As tall as the stamp makes it.
-private struct StampBand: View {
+/// both ends, the way a boss's speech band is, with a rule of `rule` along
+/// each edge. As tall as the stamp makes it. The field's other stamps lie on
+/// it too — a wave's, a boss's ribbon, the ×3 splash (FieldBeatViews.swift).
+struct StampBand: View {
     let rule: LinearGradient
     let shade: Double
 

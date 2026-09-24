@@ -62,29 +62,26 @@ final class BattleViewModel: ObservableObject {
     @Published private(set) var outcome: BattleResult?
     /// The wave on the field, 1-based; a dungeon run has three.
     @Published private(set) var waveIndex = 1
-    /// An ultimate's cut-in: the caster's card and the skill's name sweep
-    /// across the screen for a second, the genre's announcement of a big
-    /// move. Cleared by the view. While it is up the field's plates are
-    /// dimmed to a quarter, so the band reads alone: it fades to clear at
-    /// its ends, and the bars and two status tiles showed through beside
-    /// the portrait and over its top rule (run 224, 18-b).
-    @Published var cutIn: CutIn? {
+    /// A chapter boss's one line, in a band across the field for a couple
+    /// of seconds as it arrives (`announceBoss`). Cleared by the view. While
+    /// it is up the field's plates are dimmed to a quarter, so the band
+    /// reads alone (run 224, 18-b). An ultimate's announcement is no longer
+    /// here: it is the scene's splash (Docs/FEEL.md W2.1,
+    /// `BattleSceneController.onFieldCue`), with the world held under it;
+    /// and a giant's line rides its entrance's ribbon (W2.11).
+    @Published var bossSpeech: BossSpeech? {
         didSet {
-            if (cutIn == nil) != (oldValue == nil) {
-                sceneController.plates.setPlatesDimmed(cutIn != nil)
+            if (bossSpeech == nil) != (oldValue == nil) {
+                sceneController.plates.setPlatesDimmed(bossSpeech != nil)
             }
         }
     }
 
-    struct CutIn: Equatable {
+    struct BossSpeech: Equatable {
         var portrait: String
-        var unitName: String
-        var skillName: String
+        var speaker: String
+        var line: String
         var accentHex: String
-        /// A boss's opening line rather than a skill's name. The band is the
-        /// same; the words are a sentence, so the view sets them smaller, lets
-        /// them wrap and holds them longer.
-        var isSpeech: Bool = false
     }
     @Published private(set) var log: [String] = []
     @Published var autoBattle = false {
@@ -397,36 +394,79 @@ final class BattleViewModel: ObservableObject {
         guard !hasBegun else { return }
         hasBegun = true
         sceneController.build(combatants: engine.combatants, environment: context.environment)
+        warmArrivals()
         consume(engine.start())
+    }
+
+    /// Every later wave's figures and clips — the walk its arrivals take
+    /// onto their marks among them (Docs/FEEL.md W2.10) — parsed off the
+    /// main thread while the first wave fights, as the briefing's warm pass
+    /// already does for a fight it launches (`CampaignView.warmModels`); a
+    /// fight begun any other way arrived with nothing warmed and parsed each
+    /// wave on the main thread as it walked on. Cheap when warm: the caches
+    /// answer first.
+    private func warmArrivals() {
+        guard case .campaign(let stage) = context, !stage.laterWaves.isEmpty else { return }
+        let forms = stage.laterWaves.flatMap { $0 }.compactMap { spawn -> (spec: ModelSpec, awakened: Bool)? in
+            guard let blueprint = UnitDatabase.blueprint(spawn.blueprintID) else { return nil }
+            // Drawn awakened when awakened or a boss, as `UnitNode` draws it.
+            let lit = spawn.awakened || blueprint.archetype == .primordial || blueprint.model.height >= 3.0
+            return (spec: blueprint.model, awakened: lit)
+        }
+        let crowded = ModelLibrary.detail(forCombatantCount: engine.combatants.count) == .low
+        ModelLibrary.shared.warm(forms: forms, crowded: crowded)
     }
 
     /// Set the first time a boss speaks, for the reason `hasBegun` exists.
     private var hasSpoken = false
 
-    /// The boss's line, once, into the band the ultimates use.
+    /// The boss's line, once, the moment the boss is on the field: at the
+    /// opening when it stands in the first wave, and otherwise when its wave
+    /// walks on — a boss that spoke before it arrived was announcing a mob
+    /// fight.
     ///
     /// Only a chapter's boss stage and a raid have one (`StageDatabase.bossLine`);
-    /// everything else returns without touching `cutIn`, so an ordinary fight is
-    /// exactly as it was. Guarded on `hasSpoken` for the same reason `begin()`
-    /// is guarded: `onAppear` fires more than once, and an auto-repeat run keeps
-    /// this view alive across fights — the line belongs to walking in, not to
-    /// every lap.
-    /// The boss's line, the moment the boss is on the field: at the opening
-    /// when it stands in the first wave, and otherwise when its wave walks
-    /// on — a boss that spoke before it arrived was announcing a mob fight.
+    /// everything else returns without touching `bossSpeech`, so an ordinary
+    /// fight is exactly as it was. Guarded on `hasSpoken` for the same reason
+    /// `begin()` is guarded: `onAppear` fires more than once, and an
+    /// auto-repeat run keeps this view alive across fights — the line belongs
+    /// to walking in, not to every lap. A GIANT (`Combatant.isBoss`) says it
+    /// on its entrance's ribbon (Docs/FEEL.md W2.11, `entranceCard(for:)`)
+    /// rather than in a band of its own over the ribbon.
     func announceBoss(ifPresentIn combatants: [Combatant]) {
         guard !hasSpoken else { return }
         guard case .campaign(let stage) = context,
               let boss = StageDatabase.bossLine(for: stage),
-              combatants.contains(where: { $0.blueprintID == boss.blueprintID && $0.side == .opponent }),
+              waveIndex == stage.speakerWave(of: boss.blueprintID),
+              let speaker = combatants.first(where: { $0.blueprintID == boss.blueprintID && $0.side == .opponent }),
               let blueprint = UnitDatabase.blueprint(boss.blueprintID) else { return }
         hasSpoken = true
-        cutIn = CutIn(
+        guard !speaker.isBoss else { return }
+        bossSpeech = BossSpeech(
             portrait: blueprint.model.portraitName(awakened: false),
-            unitName: blueprint.name,
-            skillName: boss.line,
-            accentHex: blueprint.element.accentHex,
-            isSpeech: true
+            speaker: blueprint.name,
+            line: boss.line,
+            accentHex: blueprint.element.accentHex
+        )
+    }
+
+    /// The words on a boss's entrance ribbon (W2.11): its name and epithet,
+    /// its line when it is the stage's speaker, and a Titan's weakness at
+    /// this moment. Read off the engine, which has placed the boss before
+    /// the HUD's copy of the field has caught up with it.
+    func entranceCard(for id: UUID) -> BossEntranceCard? {
+        guard let boss = engine.combatants.first(where: { $0.id == id })
+                ?? displayedCombatants.first(where: { $0.id == id }) else { return nil }
+        var line: String?
+        if case .campaign(let stage) = context, let spoken = StageDatabase.bossLine(for: stage),
+           spoken.blueprintID == boss.blueprintID {
+            line = spoken.line
+        }
+        return BossEntranceCard(
+            name: boss.name,
+            epithet: UnitDatabase.blueprint(boss.blueprintID)?.epithet ?? "",
+            line: line,
+            weakness: engine.raidWeakness(for: id)
         )
     }
 
@@ -576,7 +616,34 @@ final class BattleViewModel: ObservableObject {
         }
         pendingEvents = events
         isPlayingBack = true
+        // The cards of the splashes these events may bring, decoded while
+        // the turn plays up to them (Docs/FEEL.md W2.1).
+        sceneController.warmSplashCards(for: splashCasters(in: events))
         sceneController.enqueue(events)
+    }
+
+    /// The fighters whose ultimate's splash may play before the next batch
+    /// (Docs/FEEL.md W2.1): every one these events cast, and the unit the
+    /// engine now waits on when its ultimate is ready — the player may
+    /// choose it, and auto may, and its cast is presented the moment it is
+    /// chosen, so its card must be decoded before then. Read off the
+    /// engine, which is already at the turn these events end on; a later
+    /// wave's arrival is there too, before the scene has placed it.
+    private func splashCasters(in events: [BattleEvent]) -> [Combatant] {
+        var ids: [UUID] = []
+        for event in events {
+            if case .skillCast(let actor, _, _, _, _, let animation, _) = event, animation == .ultimate,
+               !ids.contains(actor) {
+                ids.append(actor)
+            }
+        }
+        if let waiting = engine.awaitingActor, !ids.contains(waiting),
+           let actor = engine.combatants.first(where: { $0.id == waiting }),
+           let slot = actor.skills.firstIndex(where: { $0.animation == .ultimate && !$0.isPassive }),
+           actor.isSkillReady(slot) {
+            ids.append(waiting)
+        }
+        return ids.compactMap { id in engine.combatants.first(where: { $0.id == id }) }
     }
 
     /// Jumps to the end of the current turn's animation.
@@ -634,12 +701,38 @@ final class BattleViewModel: ObservableObject {
             if autoBattle {
                 takeAutoTurn()
             } else {
+                #if DEBUG
+                if castTourUltimate(for: actor) { return }
+                #endif
                 // One soft chime: the player's turn, heard (FEEL.md W1.4).
                 AudioLibrary.shared.play(.turnChime, volume: 0.35)
                 armBasicAttack(for: actor)
             }
         }
     }
+
+    #if DEBUG
+    /// Under the CI tour's `-tour-cutin` the player's first turn with an
+    /// ultimate ready casts it at once — aimed as a tap on its square would
+    /// aim it — so the step photographs a real cast's splash and its
+    /// spotlight (`BattleSceneController`'s lab holds each for its frame).
+    private static let touringCutIn = ProcessInfo.processInfo.arguments.contains("-tour")
+        && ProcessInfo.processInfo.arguments.contains("-tour-cutin")
+    private var tourUltimateCast = false
+
+    private func castTourUltimate(for actor: Combatant) -> Bool {
+        guard Self.touringCutIn, !tourUltimateCast,
+              let slot = actor.skills.indices.first(where: { index in
+                  let skill = actor.skills[index]
+                  return !skill.isPassive && skill.animation == .ultimate && actor.isSkillReady(index)
+              }),
+              let skill = actor.skill(at: slot) else { return false }
+        tourUltimateCast = true
+        let target = Self.needsTarget(skill) ? defaultTarget(for: skill, actor: actor) : nil
+        submit(slot: slot, target: target)
+        return true
+    }
+    #endif
 
     /// The basic attack is in hand the moment a turn opens, aimed at the
     /// obvious target, so one tap on an enemy attacks — the genre's rhythm,
@@ -1150,15 +1243,6 @@ extension BattleViewModel: BattleSceneDelegate {
         Task { @MainActor in
             self.record(event)
             self.applyToDisplay(event)
-            if case .skillCast(let actor, _, let skillName, _, _, let animation, _) = event, animation == .ultimate,
-               let caster = self.displayedCombatants.first(where: { $0.id == actor }) {
-                self.cutIn = CutIn(
-                    portrait: caster.model.portraitName(awakened: caster.isAwakened),
-                    unitName: caster.name,
-                    skillName: skillName,
-                    accentHex: caster.element.accentHex
-                )
-            }
         }
     }
 
@@ -1264,5 +1348,26 @@ extension BattleViewModel: BattleSceneDelegate {
             log.append(line)
             if log.count > 200 { log.removeFirst(log.count - 200) }
         }
+    }
+}
+
+// MARK: - The boss's line
+
+extension Stage {
+    /// The wave `blueprintID` stands in as the stage's speaker, 1-based: the
+    /// LAST wave that fields it. A chapter's boss is appended to the final
+    /// wave (`StageDatabase.generatedChapter`, and Duat 1's Apep by hand),
+    /// and the same creature may walk on earlier as one of the mobs — the
+    /// cyclops, the medusa, the berserker and the frost troll all do — which
+    /// is no reason to speak the boss's line: the first mob of the kind said
+    /// it, a wave early, and on top of that wave's stamp (review,
+    /// 2026-09-24). A raid's Titan stands in the first wave; a blueprint
+    /// the stage never fields answers 1.
+    func speakerWave(of blueprintID: String) -> Int {
+        let waves: [[EnemySpawn]] = [enemies] + laterWaves
+        let fielding: [Int] = waves.indices.filter { index in
+            waves[index].contains(where: { $0.blueprintID == blueprintID })
+        }
+        return (fielding.last ?? 0) + 1
     }
 }

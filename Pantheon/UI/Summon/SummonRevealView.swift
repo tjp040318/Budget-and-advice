@@ -47,12 +47,26 @@ struct SummonRevealView: View {
     /// clock (`chargeStart`) begins, so the wait is never a frozen picture.
     @State private var ambientStart = Date()
     @State private var revealed = false
-    @State private var shownStars = 0
-    @State private var nameSlam = false
-    @State private var detailsShown = false
-    /// The sequence whose words have been set going (`startWords`), so the
-    /// figure's first frame and the fallback cannot start them twice.
-    @State private var wordsFor: Int?
+    /// The name card's moment (Docs/FEEL.md W2.13): its two keyframe
+    /// timelines replace the three timers the words ran on (`shownStars`,
+    /// `nameSlam`, `detailsShown`).
+    @State private var cardBeat: RevealCardBeat = .hidden
+    @State private var cardTiming = RevealCardTiming.standard(stars: 3)
+    /// The sequence whose card has arrived (`cardArrives`) and whose name has
+    /// landed (`nameLands`), so the figure's first frame, the clip's high
+    /// point and their fallbacks each act once.
+    @State private var arrivedFor: Int?
+    @State private var namedFor: Int?
+    /// A tap during a 5★'s charge that came before its stage was ready: the
+    /// charge lands the moment the stage is (Docs/FEEL.md W2.23).
+    @State private var landOnReady = false
+    /// This pull plays as a Quick summons flash (`RevealSkip.playsQuick`).
+    @State private var quickPull = false
+    /// The CI's one automatic Skip has been pressed (`-tour-reveal-skip`).
+    @State private var tourSkipped = false
+    /// This reveal's step back of the music (`AudioLibrary.duck`), let go
+    /// when it leaves.
+    @State private var musicDuck: Int?
     @State private var rays: Double = 0
     /// Bumped whenever a sequence is started or cut short, so a stale timer
     /// from a skipped reveal cannot land on the next one.
@@ -62,7 +76,9 @@ struct SummonRevealView: View {
         results.indices.contains(index) ? results[index] : nil
     }
 
-    private var isFullyRevealed: Bool { detailsShown }
+    /// The pull's name is on its card: a tap moves on rather than finishing
+    /// the words.
+    private var isFullyRevealed: Bool { namedFor == sequence }
 
     var body: some View {
         ZStack {
@@ -85,7 +101,8 @@ struct SummonRevealView: View {
                         result: current,
                         revealed: revealed,
                         onReady: { stageReady(key) },
-                        onShown: { stageShown(key) }
+                        onShown: { plan in stageShown(key, plan: plan) },
+                        onApex: { stageApex(key) }
                     )
                     .id(key)
                     .ignoresSafeArea()
@@ -122,19 +139,18 @@ struct SummonRevealView: View {
                 .allowsHitTesting(false)
             }
 
+            // Skip never swallows a 5★ (Docs/FEEL.md W2.23): a tap goes to
+            // the next pull worth seeing and says which; a hold of 0.6 s
+            // skips everything.
             VStack {
                 HStack {
                     Spacer()
-                    Button(showAll ? "Done" : "Skip") {
-                        AudioLibrary.shared.play(.uiTap)
-                        if showAll { onFinish() } else { enterGrid() }
-                    }
-                    .font(Theme.title(13))
-                    .tracking(1.2)
-                    .foregroundStyle(Color(hex: "#FFE9A8"))
-                    .padding(.horizontal, 16)
-                    .frame(height: 34)
-                    .background(GlassPlate(radius: 17))
+                    RevealSkipControl(
+                        label: skipLabel,
+                        offersHold: !showAll && results.count > 1,
+                        onTap: { skipTapped() },
+                        onHold: { skipAll() }
+                    )
                     .padding(12)
                 }
                 Spacer()
@@ -143,6 +159,9 @@ struct SummonRevealView: View {
         .preferredColorScheme(.light)
         .onAppear {
             LightningArt.prepare()
+            RevealFlipbook.prepare()
+            // The music steps back for the rite (Docs/FEEL.md W2.7).
+            musicDuck = AudioLibrary.shared.duck(to: Self.musicUnderReveal, fade: 0.5)
             revealNext()
         }
         // The stage goes when the reveal does (2026-09-24). A dismissed
@@ -155,8 +174,21 @@ struct SummonRevealView: View {
             awaitingStage = nil
             mountedStage = nil
             readyStage = nil
+            hushCharge(over: 0.2)
+            AudioLibrary.shared.unduck(musicDuck, fade: 1.0)
         }
     }
+
+    /// What Skip says: where a tap on it goes, or Done over the summary.
+    private var skipLabel: RevealSkipLabel {
+        if showAll { return .done }
+        let target: RevealSkipTarget = RevealSkip.target(in: results, at: index, landed: revealed)
+        return RevealSkip.label(in: results, for: target, at: index)
+    }
+
+    /// The island's music under a reveal, as a share of its own level: about
+    /// 10 dB down, so the charge's stems and the burst sit on top of it.
+    private static let musicUnderReveal: Float = 0.3
 
     // MARK: - Backdrop
 
@@ -957,226 +989,59 @@ struct SummonRevealView: View {
 
     // MARK: - One at a time
 
-    /// Landscape: the stage fills the left half and the words the right, so
-    /// a short screen gives the figure its full height.
+    /// Landscape: the stage fills the frame with the figure on the left, and
+    /// the name card (`RevealNameCard`, Docs/FEEL.md W2.13) stands in the
+    /// right 45% of the screen, its left edge at 55% of the width wherever
+    /// the phone's safe area falls, clear of the figure on its 26% line.
+    /// Read off the whole screen (`ignoresSafeArea`), so the column is the
+    /// same share of the glass on every phone.
     private func single(_ result: SummonResult) -> some View {
-        VStack(spacing: 0) {
-            // The stage is behind this whole view (see `body`), its camera
-            // offset so the figure lands on the left; the words take the right.
-            HStack(spacing: 12) {
-            Color.clear
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-
-            VStack(spacing: 8) {
-                // Stars tick in one at a time, each one arriving oversized.
-                HStack(spacing: 4) {
-                    ForEach(0..<max(1, result.stars), id: \.self) { i in
-                        Image(systemName: "star.fill")
-                            .font(.system(size: 32, weight: .black))
-                            .foregroundStyle(
-                                LinearGradient(colors: [Color(hex: "#FFF3C4"), Theme.gold, Color(hex: "#C9992F")],
-                                               startPoint: .top, endPoint: .bottom)
-                            )
-                            .shadow(color: .black.opacity(0.8), radius: 1, y: 1)
-                            .shadow(color: Theme.gold.opacity(0.8), radius: 6)
-                            .opacity(i < shownStars ? 1 : 0)
-                            .scaleEffect(i < shownStars ? 1 : 2.4)
-                            .animation(.spring(response: 0.28, dampingFraction: 0.5), value: shownStars)
-                    }
-                }
-                .frame(height: 34)
-
-                Text(result.isAwakening ? (result.blueprint.awakening?.awakenedName ?? result.blueprint.name) : result.blueprint.name)
-                    .font(Theme.display(46))
-                    .lineLimit(2)
-                    .minimumScaleFactor(0.6)
-                    .multilineTextAlignment(.center)
-                    .foregroundStyle(Self.nameGold)
-                    .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
-                    .shadow(color: tint(for: result).opacity(0.9), radius: 14)
-                    .scaleEffect(nameSlam ? 1 : 1.9)
-                    .opacity(nameSlam ? 1 : 0)
-                    .animation(.spring(response: 0.36, dampingFraction: 0.55), value: nameSlam)
-
-                VStack(spacing: 6) {
-                    Text(result.blueprint.epithet)
-                        .font(Theme.title(15))
-                        .foregroundStyle(Self.duskInk)
-
-                    HStack(spacing: 8) {
-                        ElementBadge(element: result.blueprint.element)
-                        Text(result.blueprint.pantheon.displayName)
-                            .font(Theme.body(11).weight(.semibold))
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(result.blueprint.pantheon.color.opacity(0.18)))
-                            .foregroundStyle(result.blueprint.pantheon.color)
-                    }
-                    .padding(.top, 2)
-
-                    // In the name's own gold with a hard black edge (run
-                    // 221): `Theme.gold` in a gold glow measured (157,118,63)
-                    // on the dusk, about 3:1, the dimmest thing on the card.
-                    if result.isAwakening {
-                        Text("AWAKENED")
-                            .font(Theme.title(14))
-                            .tracking(3.0)
-                            .foregroundStyle(Self.nameGold)
-                            .shadow(color: .black.opacity(0.9), radius: 1, y: 1)
-                    } else if result.isNew {
-                        Text("NEW")
-                            .font(Theme.title(14))
-                            .tracking(3.0)
-                            .foregroundStyle(Self.nameGold)
-                            .shadow(color: .black.opacity(0.9), radius: 1, y: 1)
-                        if let pay = result.codexDivinity, pay > 0 {
-                            codexLine(pay)
-                        }
-                    } else {
-                        duplicateLine(result)
-                    }
-
-                    if result.fromPity {
-                        Text("Guaranteed by pity")
-                            .font(Theme.body(11))
-                            .foregroundStyle(Self.duskInk)
-                    }
-                }
-                .opacity(detailsShown ? 1 : 0)
-                .offset(y: detailsShown ? 0 : 10)
-                .animation(.easeOut(duration: 0.3), value: detailsShown)
+        GeometryReader { frame in
+            let size: CGSize = frame.size
+            let insets: EdgeInsets = frame.safeAreaInsets
+            let left: CGFloat = size.width * RevealNameCard.clearOfFigure
+            let right: CGFloat = size.width - insets.trailing - RevealNameCard.trailingMargin
+            let column: CGFloat = min(RevealNameCard.widest, max(RevealNameCard.narrowest, right - left))
+            let hintY: CGFloat = size.height - max(insets.bottom, 8) - 22
+            ZStack(alignment: .topLeading) {
+                Color.clear
+                RevealNameCard(result: result, beat: cardBeat, timing: cardTiming)
+                    .frame(width: column, alignment: .leading)
+                    .id(index)
+                    .position(x: right - column / 2, y: size.height * 0.47)
+                // On a glass plate over the lit floor of the set: bare text
+                // there read as a caption lost on the stone (runs 217–221).
+                Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
+                    .font(Theme.body(13))
+                    .foregroundStyle(Theme.onGlass)
+                    .fixedSize()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 5)
+                    .background(GlassPlate(radius: 12))
+                    .opacity(isFullyRevealed ? 1 : 0)
+                    .animation(.easeOut(duration: 0.3), value: isFullyRevealed)
+                    .position(x: size.width / 2, y: hintY)
             }
-            .frame(maxWidth: .infinity)
-            }
-
-            // On a glass plate over the lit floor of the set: bare text there
-            // read as a caption lost on the stone (runs 217–221).
-            Text(index + 1 < results.count ? "Tap to continue  (\(index + 1)/\(results.count))" : "Tap to finish")
-                .font(Theme.body(13))
-                .foregroundStyle(Theme.onGlass)
-                .fixedSize()
-                .padding(.horizontal, 12)
-                .padding(.vertical, 5)
-                .background(GlassPlate(radius: 12))
-                .opacity(isFullyRevealed ? 1 : 0)
-                .padding(.bottom, 12)
+            .frame(width: size.width, height: size.height)
         }
+        .ignoresSafeArea()
         .contentShape(Rectangle())
         .onTapGesture { advance() }
-    }
-
-    // MARK: - What the pull did
-
-    /// What a duplicate did, as the summon did it (2026-09-24,
-    /// `SummonSkillUp`). Every duplicate said "one skill levelled up", even
-    /// when every skill was at its cap. Now: the skill that rose, as its own
-    /// icon, and its levels; or that the kit is capped and the copy is the
-    /// Regalia's; or, for a result that did not record it, only that the
-    /// form is already in the book.
-    @ViewBuilder
-    private func duplicateLine(_ result: SummonResult) -> some View {
-        if let skillUp = result.skillUp {
-            switch skillUp {
-            case .levelled(let skill, let from, let to):
-                skillUpLine(result, skill: skill, from: from, to: to)
-            case .maxed:
-                maxedLine(result)
-            }
-        } else {
-            // Cream on the dusk: the interface's ink-brown secondary sat on
-            // the dark sky at about 2:1.
-            Text("Already in the Codex")
-                .font(Theme.body(12))
-                .foregroundStyle(Self.duskInk)
-        }
-    }
-
-    /// The skill that rose: its icon as the unit sheet draws it (the kit's
-    /// own resolution, `SkillArt.keys`), its name and "Lv 3 → 4", on glass.
-    private func skillUpLine(_ result: SummonResult, skill index: Int, from: Int, to: Int) -> some View {
-        let blueprint: UnitBlueprint = result.blueprint
-        let ranged: Bool = !blueprint.model.melee
-        let keys: [String] = SkillArt.keys(for: blueprint.skills, element: blueprint.element, ranged: ranged)
-        let key: String? = keys.indices.contains(index) ? keys[index] : nil
-        let skill: Skill? = blueprint.skills.indices.contains(index) ? blueprint.skills[index] : nil
-        let name: String = skill?.name ?? "A skill"
-        return HStack(spacing: 10) {
-            if let skill {
-                SkillIcon(skill: skill, element: blueprint.element, ranged: ranged, resolvedKey: key,
-                          size: 38, socket: true)
-            }
-            VStack(alignment: .leading, spacing: 1) {
-                Text("SKILL UP")
-                    .font(Theme.title(11))
-                    .tracking(1.6)
-                    .foregroundStyle(Theme.onGlassEyebrow)
-                Text(name)
-                    .font(Theme.body(12).weight(.semibold))
-                    .foregroundStyle(Theme.onGlass)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("Lv \(from) → \(to)")
-                    .font(Theme.numeric(12))
-                    .foregroundStyle(Theme.onGlassGold)
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(GlassPlate(radius: 14))
-    }
-
-    /// Every skill at its cap: nothing rose, and the copy is food for the
-    /// family's Regalia in the Hall of Ka, named when the family has one.
-    private func maxedLine(_ result: SummonResult) -> some View {
-        let regalia: String? = RegaliaService.regalia(forBlueprint: result.blueprint.id)?.name
-        return HStack(spacing: 10) {
-            Image(systemName: "crown.fill")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Theme.onGlassGold)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("Skills maxed — feed to the Regalia")
-                    .font(Theme.body(12).weight(.semibold))
-                    .foregroundStyle(Theme.onGlass)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let regalia {
-                    Text(regalia)
-                        .font(Theme.body(11))
-                        .foregroundStyle(Theme.onGlassDim)
-                }
-            }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(GlassPlate(radius: 14))
-    }
-
-    /// A new form's Codex page and what claiming it pays (2026-09-24,
-    /// `SummonService.codexPay`): the book's own glyph and the divinity as
-    /// the Codex prints it. Paid on the claim in the Codex, never here.
-    private func codexLine(_ pay: Int) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "book.closed.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Theme.onGlassGold)
-            Text("Codex page")
-                .font(Theme.body(12).weight(.semibold))
-                .foregroundStyle(Theme.onGlass)
-            ItemIcon(key: "divinity", size: 20, glow: false)
-            Text("+\(pay) to claim")
-                .font(Theme.numeric(12))
-                .foregroundStyle(Theme.onGlassGold)
-        }
-        .fixedSize()
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(GlassPlate(radius: 14))
     }
 
     // MARK: - Sequencing
 
     private func advance() {
         if !isFullyRevealed {
-            // A tap mid-sequence finishes it now rather than being ignored.
             guard let current else { return }
+            // A tap during a 5★'s charge jumps to its flash, never past it
+            // (Docs/FEEL.md W2.23): the one pull a thumb must not swallow.
+            if !revealed && current.stars >= 5 {
+                landNow()
+                return
+            }
+            // Any other tap mid-sequence finishes it now rather than being
+            // ignored.
             sequence += 1
             completeInstantly(current)
             return
@@ -1192,6 +1057,55 @@ struct SummonRevealView: View {
         }
     }
 
+    // MARK: - Skip (Docs/FEEL.md W2.23)
+
+    /// A tap on Skip: to the flash of the pull on the beam while it is worth
+    /// seeing and still charging, else on to the next pull worth seeing,
+    /// else the summary (`RevealSkip.target`); Done over the summary.
+    private func skipTapped() {
+        if showAll {
+            onFinish()
+            return
+        }
+        switch RevealSkip.target(in: results, at: index, landed: revealed) {
+        case .land:
+            landNow()
+        case .pull(let next):
+            jump(to: next)
+        case .summary:
+            enterGrid()
+        }
+    }
+
+    /// A hold on Skip: everything, straight to the summary.
+    private func skipAll() {
+        guard !showAll else { return }
+        enterGrid()
+    }
+
+    /// On to pull `next`, the ones between left for the summary. Its figure
+    /// starts parsing now, while the stage it replaces comes down.
+    private func jump(to next: Int) {
+        guard results.indices.contains(next), next != index else { return }
+        let target = results[next]
+        ModelLibrary.shared.warm(forms: [(spec: target.blueprint.model, awakened: target.isAwakening || target.unit.isAwakened)])
+        index = next
+        revealNext()
+    }
+
+    /// The pull on the beam lands now: its charge cut short at the flash,
+    /// the flash and the figure's entrance played whole. A stage still
+    /// building lands the moment it is ready (`beginCharge`).
+    private func landNow() {
+        guard let result = current, !revealed else { return }
+        guard chargeStart != nil else {
+            landOnReady = true
+            return
+        }
+        sequence += 1
+        land(sequence, result: result)
+    }
+
     /// The grid of every pull, from Skip or the last pull of a ten-pull.
     /// Skip mid-charge left `charging` true (review, 2026-09-24), and the
     /// charge sky's `TimelineView` behind the grid redrew every frame for
@@ -1204,17 +1118,29 @@ struct SummonRevealView: View {
         awaitingStage = nil
         flashAt = nil
         showAll = true
+        hushCharge(over: 0.2)
     }
 
     private func completeInstantly(_ result: SummonResult) {
+        hushCharge(over: 0.15)
         charging = false
         awaitingStage = nil
         revealed = true
-        wordsFor = sequence
-        shownStars = result.stars
-        nameSlam = true
-        detailsShown = true
+        arrivedFor = sequence
+        namedFor = sequence
+        cardTiming = RevealCardTiming.standard(stars: result.stars)
+        cardBeat = .complete(sequence)
         flashAt = nil
+    }
+
+    /// Fades out what is left of a pull's sound over `fade` seconds: its
+    /// charge's stems, and with `bursts` the flash's burst still ringing
+    /// (Docs/FEEL.md W2.7). Nothing that is not sounding is touched.
+    private func hushCharge(over fade: TimeInterval, bursts: Bool = false) {
+        let sounds: [AudioLibrary.Sound] = bursts
+            ? ChargeLadder.stemSounds + ChargeLadder.burstSounds
+            : ChargeLadder.stemSounds
+        AudioLibrary.shared.fadeOut(sounds, over: fade)
     }
 
     /// What is on the beam: the pull's place in the list, the family and
@@ -1244,13 +1170,18 @@ struct SummonRevealView: View {
         sequence += 1
         let mine = sequence
         let key = stageKey(result)
+        // What is left of the last pull's sound goes: a skipped charge's
+        // stems, and a burst still ringing — a 5★'s choir holds three
+        // seconds in E, and under this charge's open fifth on D it clashes.
+        hushCharge(over: 0.3, bursts: true)
 
         charging = true
         revealed = false
-        shownStars = 0
-        nameSlam = false
-        detailsShown = false
-        wordsFor = nil
+        cardBeat = .hidden
+        arrivedFor = nil
+        namedFor = nil
+        landOnReady = false
+        quickPull = RevealSkip.playsQuick(result, quick: RevealSkip.quickSummons)
         flashAt = nil
         ambientStart = Date()
         chargeStart = nil
@@ -1291,10 +1222,18 @@ struct SummonRevealView: View {
         beginCharge(waiting)
     }
 
-    /// The figure has been DRAWN on the beam: the words land on it now.
-    private func stageShown(_ key: String) {
+    /// The figure has been DRAWN on the beam: the card arrives on it now.
+    private func stageShown(_ key: String, plan: RevealEntrancePlan) {
         guard revealed, let current, stageKey(current) == key else { return }
-        startWords(sequence)
+        cardArrives(sequence, plan: plan)
+    }
+
+    /// The figure's victory clip has reached its high point, on the scene's
+    /// own clock (`SummonStageView.Coordinator.apexReached`): the name
+    /// slams now.
+    private func stageApex(_ key: String) {
+        guard revealed, let current, stageKey(current) == key else { return }
+        nameLands(sequence)
     }
 
     /// Starts the charge's clock, and at its end the flash and the figure.
@@ -1303,99 +1242,182 @@ struct SummonRevealView: View {
     /// held up behind the stage let every timer fire at once — all five
     /// star ticks inside 70 ms — and the 3-second frame was the name card
     /// over an empty dais.
+    ///
+    /// The charge SOUNDS (Docs/FEEL.md W2.7) are three stems on the ladder's
+    /// own rungs: the base under every pull from its first frame, the rise
+    /// (a timpani roll and a cymbal) from the violet rung for a 4★ or
+    /// better, the tell (the key lifting, a bell, a choir) from the gold
+    /// rung for a 5★ alone — each read off the pull's own stars, never
+    /// anything looser, and none of them louder for a better pull before
+    /// its rung. The Light & Dark scroll adds its bell tree and choir from
+    /// the first frame, read off the scroll SPENT (never off the result's
+    /// element, which would tell the pull).
     private func beginCharge(_ mine: Int) {
         guard mine == sequence, let result = current else { return }
         awaitingStage = nil
         chargeStart = Date()
-        let big = result.stars >= 4
+        // A Quick 3★, or a 5★ tapped while its stage was still building,
+        // goes straight to the flash.
+        if quickPull || landOnReady {
+            landOnReady = false
+            land(mine, result: result)
+            return
+        }
         let chargeTime = ChargeLadder.span(stars: result.stars)
 
-        // One volume for every grade (2026-09-24): a louder start for a 4★
-        // was a tell before the first rung.
-        AudioLibrary.shared.play(.summonCharge, volume: 0.85)
+        // The stems that start with the charge: the same for every grade.
+        for stem in ChargeLadder.stems(stars: result.stars, scroll: scroll) where stem.at <= 0 {
+            AudioLibrary.shared.play(stem.sound, volume: stem.volume)
+        }
         let held: TimeInterval? = Self.chargeHold.map { chargeTime * $0 }
         scheduleRungs(result, mine: mine, until: held)
+        scheduleTourSkip(mine)
         if held != nil { return }
 
         after(chargeTime) {
-            guard mine == sequence else { return }
-            charging = false
-            let stamp = Date()
-            let span: TimeInterval = big ? 0.55 : 0.4
-            flashSpan = span
-            flashAt = stamp
-            revealed = true
-            AudioLibrary.shared.play(.summonBurst, volume: big ? 1.0 : 0.75)
-            Juice.haptic(big ? .heavy : .medium)
-            // Off the screen once it has faded, so nothing redraws it.
-            after(span + 0.1) {
-                if flashAt == stamp { flashAt = nil }
-            }
-            // Should the stage never say its figure has drawn, the words
-            // land anyway rather than never.
-            after(Self.wordsFallback) { startWords(mine) }
+            land(mine, result: result)
         }
     }
 
-    /// The stars tick in one at a time, the name slams down, the details
-    /// follow: timed from the figure's first drawn frame (or the fallback),
-    /// once per sequence. The first star lands 0.3 s after the figure, as
-    /// the flash clears, which is where it landed when the flash and the
-    /// figure were one timer.
-    private func startWords(_ mine: Int) {
-        guard mine == sequence, wordsFor != mine, let result = current else { return }
-        wordsFor = mine
-        let stars = result.stars
-        let big = stars >= 4
+    /// The flash: the charge ends, the figure is on the beam under a white
+    /// that clears on the wall clock, and the grade's burst sounds — a chime
+    /// for a 3★, a brass stab for a 4★, a gong under a choir for a 5★
+    /// (Docs/FEEL.md W2.7). An awakening's reveal sounds its grade's burst
+    /// too: its own rite rang at the altar's pillar before the reveal.
+    private func land(_ mine: Int, result: SummonResult) {
+        guard mine == sequence else { return }
+        charging = false
+        awaitingStage = nil
+        let big = result.stars >= 4
+        let stamp = Date()
+        let span: TimeInterval = quickPull ? RevealSkip.quickFlash : (big ? 0.55 : 0.4)
+        flashSpan = span
+        flashAt = stamp
+        revealed = true
+        // The charge gives way to the burst: its stems fade out over 50 ms
+        // and the burst sounds 40 ms after the flash on the audio clock, so
+        // it lands on its own and the sum never clips (`ChargeLadder`).
+        AudioLibrary.shared.fadeOut(ChargeLadder.stemSounds, over: ChargeLadder.stemFade)
+        AudioLibrary.shared.schedule(
+            AudioLibrary.Sound.burst(forStars: result.stars),
+            volume: quickPull ? ChargeLadder.quickBurstVolume : 1,
+            in: ChargeLadder.burstLead
+        )
+        Juice.haptic(big ? .heavy : .medium)
+        // Off the screen once it has faded, so nothing redraws it.
+        after(span + 0.1) {
+            if flashAt == stamp { flashAt = nil }
+        }
+        // Should the stage never say its figure has drawn, the card lands
+        // anyway rather than never.
+        after(Self.wordsFallback) { cardArrives(mine, plan: nil) }
+    }
 
-        let starStart: TimeInterval = 0.3
+    /// The card arrives with the figure's first drawn frame (or the
+    /// fallback), once per sequence: the plaque slides in, the crest pops,
+    /// and the stars stamp in one by one, each on the next note of the
+    /// glockenspiel's climb. The name waits for the clip's high point
+    /// (`stageApex`), with a fallback past it should that never come; a
+    /// Quick 3★ does not wait for the pose.
+    private func cardArrives(_ mine: Int, plan: RevealEntrancePlan?) {
+        guard mine == sequence, arrivedFor != mine, let result = current else { return }
+        arrivedFor = mine
+        let timing: RevealCardTiming = quickPull
+            ? RevealCardTiming.quick(stars: result.stars)
+            : RevealCardTiming.standard(stars: result.stars)
+        cardTiming = timing
+        cardBeat = .arrived(mine)
+        scheduleStarTicks(result, timing: timing, mine: mine)
+        if quickPull {
+            after(Self.quickName) { nameLands(mine) }
+        } else {
+            let apex: TimeInterval = plan?.apexDelay ?? RevealEntrance.defaultApex
+            after(apex + Self.apexFallback) { nameLands(mine) }
+        }
+    }
+
+    /// The name slams onto the card, the details follow: once per sequence,
+    /// on the clip's high point or its fallback.
+    private func nameLands(_ mine: Int) {
+        guard mine == sequence, namedFor != mine, let result = current else { return }
+        if arrivedFor != mine {
+            cardArrives(mine, plan: nil)
+        }
+        namedFor = mine
+        cardBeat = .named(mine)
+        Juice.haptic(result.stars >= 4 ? .heavy : .medium)
+        #if DEBUG
+        if RevealEntrance.touring { print("[TourCue] reveal-named \(result.blueprint.id)") }
+        #endif
+    }
+
+    /// The stars' ticks: each star lands on the next note of the
+    /// glockenspiel's scale (`AudioLibrary.Sound.star`), a light touch each
+    /// and a firmer one on a 4★'s or 5★'s last. Side effects, so timers
+    /// like the flash's, silenced by a skip or the next pull.
+    private func scheduleStarTicks(_ result: SummonResult, timing: RevealCardTiming, mine: Int) {
+        let stars: Int = max(1, result.stars)
+        let big: Bool = stars >= 4
+        let volume: Float = ChargeLadder.starVolume(stars: stars)
         for i in 0..<stars {
-            after(starStart + Double(i) * 0.14) {
+            after(timing.landing(i)) {
                 guard mine == sequence else { return }
-                shownStars = i + 1
-                AudioLibrary.shared.play(.starTick, volume: 0.8)
+                AudioLibrary.shared.play(AudioLibrary.Sound.star(i), volume: volume)
                 Juice.haptic(i == stars - 1 && big ? .medium : .light)
             }
         }
-
-        let nameAt = starStart + Double(stars) * 0.14 + 0.12
-        after(nameAt) {
-            guard mine == sequence else { return }
-            nameSlam = true
-            if big { Juice.haptic(.heavy) }
-        }
-        after(nameAt + 0.28) {
-            guard mine == sequence else { return }
-            detailsShown = true
-        }
     }
 
-    /// The rungs' sting and touch (2026-09-24), each once, at the second the
-    /// charge's picture climbs it (`ChargeLadder`): at violet `hit_magic`'s
-    /// swell and climbing pings and a medium tap, at gold `thunder` under
-    /// the lightning and a heavy one. The picture is a pure function of the
-    /// clock; these are the side effects, so they are timers like the flash,
-    /// and a skip or the next pull (`sequence`) silences one still waiting.
-    /// A held charge (the CI) sounds only the rungs before its hold. The
-    /// stings borrow two effects the game already has: a sound of their own
-    /// for each rung belongs with the other new sounds in `tools/sfx.py`.
+    /// The rungs' stems and touch, each once, at the second the charge's
+    /// picture climbs it (`ChargeLadder`): at violet the rise (a timpani
+    /// roll swelling under a cymbal) and a medium tap, at gold the tell (a
+    /// bell, the choir swelling in the lifted key, the lightning's crackle)
+    /// and a heavy one. The picture is a pure function of the clock; these
+    /// are the side effects, so they are timers like the flash, and a skip
+    /// or the next pull (`sequence`) silences one still waiting. A held
+    /// charge (the CI) sounds only the rungs before its hold.
     private func scheduleRungs(_ result: SummonResult, mine: Int, until hold: TimeInterval?) {
         let limit: TimeInterval = hold ?? .infinity
-        if result.stars >= 4, ChargeLadder.violetAt <= limit {
-            after(ChargeLadder.violetAt) {
+        for stem in ChargeLadder.stems(stars: result.stars, scroll: scroll) where stem.at > 0 && stem.at <= limit {
+            after(stem.at) {
                 guard mine == sequence else { return }
-                AudioLibrary.shared.play(.hitMagic, volume: 0.7)
-                Juice.haptic(.medium)
-            }
-        }
-        if result.stars >= 5, ChargeLadder.goldAt <= limit {
-            after(ChargeLadder.goldAt) {
-                guard mine == sequence else { return }
-                AudioLibrary.shared.play(.thunder, volume: 0.55)
-                Juice.haptic(.heavy)
+                AudioLibrary.shared.play(stem.sound, volume: stem.volume)
+                if let touch = stem.touch { Juice.haptic(touch) }
             }
         }
     }
+
+    /// `-tour-reveal-skip` (DEBUG, the CI's frame of a Skip that could not
+    /// swallow a 5★): Skip is pressed once, half a second into the first
+    /// pull's charge, as a thumb would press it.
+    private func scheduleTourSkip(_ mine: Int) {
+        #if DEBUG
+        guard Self.tourAutoSkip, !tourSkipped else { return }
+        tourSkipped = true
+        after(0.5) {
+            guard mine == sequence else { return }
+            let target = RevealSkip.target(in: results, at: index, landed: revealed)
+            print("[TourCue] reveal-skip \(target)")
+            skipTapped()
+        }
+        #endif
+    }
+
+    /// Whether the CI presses Skip once (`scheduleTourSkip`).
+    private static let tourAutoSkip: Bool = {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-tour-reveal-skip")
+        #else
+        return false
+        #endif
+    }()
+
+    /// A Quick 3★'s name, not waiting for the pose.
+    private static let quickName: TimeInterval = 0.22
+
+    /// How long past the clip's expected high point the name lands should
+    /// the stage never report it.
+    private static let apexFallback: TimeInterval = 0.6
 
     /// How long a pull waits on a stage that never reports before its charge
     /// starts anyway: past the stage's build and its own warm-up limit.
@@ -1553,9 +1575,13 @@ struct SummonStageView: UIViewRepresentable {
     /// reveal starts its charge's clock from here, not from `onAppear`.
     var onReady: (() -> Void)? = nil
     /// Called once, on the main queue, after the first frame that DREW the
-    /// figure on the beam: the reveal times its stars and its name from
-    /// here, so they can never land on an empty dais.
-    var onShown: (() -> Void)? = nil
+    /// figure on the beam, with the entrance's plan: the reveal times its
+    /// card's stars from here, so they can never land on an empty dais.
+    var onShown: ((RevealEntrancePlan) -> Void)? = nil
+    /// Called once, on the main queue, when the figure's victory clip
+    /// reaches its high point on the scene's own clock (Docs/FEEL.md W2.4):
+    /// the reveal slams the name down on it.
+    var onApex: (() -> Void)? = nil
 
     /// Where the figure's centre line stands, as a fraction of the width
     /// from the left: the camera is solved for it (`frameCamera`) and the
@@ -1769,7 +1795,23 @@ struct SummonStageView: UIViewRepresentable {
         var warmBeam: SCNNode?
         weak var view: SCNView?
         var onReady: (() -> Void)?
-        var onShown: (() -> Void)?
+        var onShown: ((RevealEntrancePlan) -> Void)?
+        var onApex: (() -> Void)?
+        /// The entrance (Docs/FEEL.md W2.4): the victory clip wrapped in its
+        /// player in `makeUIView`, the pull's grade (the hold's length), the
+        /// flipbook planes on the dais, and the rig the camera kicks on.
+        var entrance: RevealEntranceClip?
+        var stars = 3
+        var flipbook: RevealFlipbookPlayer?
+        var cameraRig: SCNNode?
+        /// Where the slow push-in ends: the camera waits pulled back through
+        /// the entrance, so a victory's raised arms stay in the frame, and
+        /// pushes in once the figure settles into its idle (`startPush`).
+        var pushHome: SCNVector3?
+        /// The main queue's alone: the hold in progress, and the stage has
+        /// begun to come down (`beginTeardown`).
+        private var holdGeneration = 0
+        private var tornDown = false
         /// The camera and the three numbers its framing was solved from, kept
         /// so the push-in on the reveal and a re-frame after a layout can both
         /// work from the same solve rather than each guessing at it.
@@ -1874,6 +1916,11 @@ struct SummonStageView: UIViewRepresentable {
                 figure?.opacity = 0
                 contactShadow?.opacity = 0
             }
+            // The entrance's flipbook planes were drawn at full strength for
+            // the warm-up; out of sight until their frames play.
+            if flipbook?.hasStarted != true {
+                flipbook?.hideAll()
+            }
             lock.lock()
             phase = .clearing
             lock.unlock()
@@ -1902,11 +1949,148 @@ struct SummonStageView: UIViewRepresentable {
             }
         }
 
-        /// The first frame with the figure on the beam: it settles toward the
-        /// player from here, and the reveal's words are timed from here.
+        /// The first frame with the figure on the beam: the reveal's card is
+        /// timed from here. A figure with no entrance settles toward the
+        /// player from here too; one with an entrance turns once its victory
+        /// has handed back to its idle (`entranceDone`).
         func figureShown() {
-            if let figure { SummonStageView.settle(figure) }
-            onShown?()
+            if entrance == nil, let figure { SummonStageView.settle(figure) }
+            onShown?(entrancePlan)
+        }
+
+        /// What the reveal's card is told: how long from this frame until
+        /// the clip's high point.
+        var entrancePlan: RevealEntrancePlan {
+            let hold: TimeInterval = RevealEntrance.hold(stars: stars)
+            guard let entrance else {
+                return RevealEntrancePlan(apexDelay: hold + RevealEntrance.defaultApex, plays: false)
+            }
+            return RevealEntrancePlan(apexDelay: hold + entrance.apexIn, plays: true)
+        }
+
+        // MARK: The entrance (Docs/FEEL.md W2.4)
+
+        /// The flash: the scene HOLDS — every clip, particle and action
+        /// stopped under the white, the fight's own freeze (`Juice.impact`)
+        /// — for 70 ms, 110 ms for a 5★, and then the entrance goes. The
+        /// view keeps drawing through the hold, so the figure's first frame
+        /// is still reported (`figureShown`) and the card arrives under the
+        /// flash.
+        func beginEntrance() {
+            guard !tornDown, let scene else { return }
+            holdGeneration += 1
+            let generation = holdGeneration
+            scene.isPaused = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + RevealEntrance.hold(stars: stars)) { [weak self] in
+                self?.releaseHold(generation)
+            }
+        }
+
+        /// The hold lets go: the victory clip plays from its cut, the camera
+        /// kicks, the flipbooks play, and the clip's own clock — an action
+        /// on the figure, which runs and pauses with the scene exactly as
+        /// the clip does — reports its high point, its end and its hand-back
+        /// to the idle. A figure with no clip gets the high point at the
+        /// flash's clearing and pushes in at once.
+        private func releaseHold(_ generation: Int) {
+            guard generation == holdGeneration, !tornDown, let scene, let figure else { return }
+            scene.isPaused = false
+            kickCamera()
+            flipbook?.start()
+            guard let entrance else {
+                figure.runAction(.sequence([
+                    .wait(duration: RevealEntrance.defaultApex),
+                    .run { [weak self] _ in
+                        DispatchQueue.main.async { self?.apexReached() }
+                    },
+                ]), forKey: RevealEntrance.clockKey)
+                startPush()
+                return
+            }
+            // Into the live scene first, then the player, then `play()`: the
+            // one order SceneKit starts a clip in (`SCNNode.startLoop`).
+            figure.addAnimationPlayer(entrance.player, forKey: RevealEntrance.playerKey)
+            entrance.player.play()
+            let apexIn: TimeInterval = entrance.apexIn
+            let endIn: TimeInterval = entrance.endIn
+            let tail: TimeInterval = max(0, endIn - apexIn)
+            figure.runAction(.sequence([
+                .wait(duration: apexIn),
+                .run { [weak self] _ in
+                    DispatchQueue.main.async { self?.apexReached() }
+                },
+                .wait(duration: tail),
+                .run { [weak self] _ in
+                    DispatchQueue.main.async { self?.entranceEnding() }
+                },
+                .wait(duration: RevealEntrance.blendOut),
+                .run { [weak self] _ in
+                    DispatchQueue.main.async { self?.entranceDone() }
+                },
+            ]), forKey: RevealEntrance.clockKey)
+        }
+
+        /// The clip's high point: the reveal slams the name down. Under the
+        /// CI's `-tour-reveal-hold apex` the scene stops here for good, the
+        /// frames of the flipbooks with it.
+        func apexReached() {
+            guard !tornDown else { return }
+            if RevealEntrance.touring { print("[TourCue] reveal-apex") }
+            if RevealEntrance.tourHoldsAtApex {
+                scene?.isPaused = true
+                flipbook?.freeze()
+            }
+            onApex?()
+        }
+
+        /// The window of the clip is over: it blends back into the idle,
+        /// which has run under it all along.
+        private func entranceEnding() {
+            guard !tornDown else { return }
+            entrance?.player.stop(withBlendOutDuration: RevealEntrance.blendOut)
+        }
+
+        /// The idle has the figure again: the player comes off, the figure
+        /// turns to face the player and breathes (`settle`), and the camera
+        /// pushes in on it.
+        private func entranceDone() {
+            guard !tornDown, let figure else { return }
+            figure.removeAnimation(forKey: RevealEntrance.playerKey)
+            SummonStageView.settle(figure)
+            startPush()
+        }
+
+        /// The kick: the camera's rig jumps back along the line of sight by
+        /// 4% of the camera's distance in 70 ms and springs home over 0.6 s
+        /// with a small overshoot. Not under Reduce Motion.
+        private func kickCamera() {
+            guard !MotionComfort.isReduced, let rig = cameraRig, let cameraNode else { return }
+            let front = cameraNode.worldFront
+            let reach: Float = distance * RevealEntrance.kickShare
+            let back = SCNVector3(-front.x * reach, -front.y * reach, -front.z * reach)
+            let out = SCNAction.move(to: back, duration: RevealEntrance.kickOut)
+            out.timingMode = .easeOut
+            let home = SCNAction.move(to: SCNVector3(0, 0, 0), duration: RevealEntrance.kickBack)
+            home.timingFunction = { progress in RevealEntrance.kickReturn(progress) }
+            rig.runAction(.sequence([out, home]), forKey: RevealEntrance.kickKey)
+        }
+
+        /// The slow push toward the figure, a twelfth of the distance, eased
+        /// out: the shot settling on the god once its entrance is done.
+        func startPush() {
+            guard !tornDown, let cameraNode, let home = pushHome else { return }
+            pushHome = nil
+            let push = SCNAction.move(to: home, duration: 1.7)
+            push.timingMode = .easeOut
+            cameraNode.runAction(push, forKey: "push")
+        }
+
+        /// The stage has begun to come down (`dismantleUIView`): the hold
+        /// never lets go and the flipbooks stop.
+        func beginTeardown() {
+            tornDown = true
+            holdGeneration += 1
+            flipbook?.stop()
         }
 
         /// THE HOUSE GOES DOWN (2026-09-24, Docs/FEEL.md L1): after the flash
@@ -1933,14 +2117,19 @@ struct SummonStageView: UIViewRepresentable {
         /// Lets go of every node and the scene (`dismantleUIView`), on the
         /// main thread once the renderer has stopped.
         func release() {
+            flipbook?.stop()
+            flipbook = nil
+            entrance = nil
             figure = nil
             scene = nil
             contactShadow = nil
             warmBeam = nil
             cameraNode = nil
+            cameraRig = nil
             view = nil
             onReady = nil
             onShown = nil
+            onApex = nil
             houseMaterials = []
         }
 
@@ -1986,6 +2175,7 @@ struct SummonStageView: UIViewRepresentable {
     /// reset: `ClothStepper` holds none, and `ClothSimulation` drops a chain
     /// the moment its figure is gone.
     static func dismantleUIView(_ uiView: SCNView, coordinator: Coordinator) {
+        coordinator.beginTeardown()
         uiView.isPlaying = false
         uiView.rendersContinuously = false
         uiView.delegate = nil
@@ -2086,14 +2276,30 @@ struct SummonStageView: UIViewRepresentable {
             ?? ModelLibrary.shared.animation(.idleCombat, for: assetName) {
             node.startLoop(idle, key: "idle")
         }
-        // A three-quarter stance to open on. The turn itself waits for the
-        // reveal (see `show`), and it is no longer a perpetual full spin: a
-        // 16-second revolution had the character showing the player its back
-        // for four seconds out of every sixteen, and the name slams down at a
-        // fixed beat, so a fair share of reveals put the unit's name over its
-        // shoulder blades. A model's authored facing is +Z and the camera sits
-        // on +Z, so zero yaw is face-on.
-        node.eulerAngles.y = -0.42
+        // THE ENTRANCE'S CLIP (Docs/FEEL.md W2.4): the family's victory,
+        // wrapped in its player now so the flash only adds and plays it —
+        // from the model cache the summon room's warm pass filled, or parsed
+        // here, in the build the charge's opening pose already covers, never
+        // at the flash (`RevealEntranceClip`, `RevealEntrance`).
+        let entrance: RevealEntranceClip? = Self.entranceClip(for: assetName)
+        context.coordinator.entrance = entrance
+        context.coordinator.stars = result.stars
+        if let entrance {
+            let length = String(format: "%.2f", entrance.length)
+            print("[Reveal] entrance: \(assetName) plays its victory as \(entrance.cut.preset) (\(length) s clip, "
+                  + "\(entrance.cut.start)–\(entrance.cut.end) s, high point \(entrance.cut.apex) s)")
+        }
+        // The stance to open on. With a victory, the preset's own, measured
+        // so the chest faces a little toward the words through the window
+        // the reveal plays (`RevealEntranceCut.stance`); without one, the
+        // three-quarter stance the reveal always opened on. The turn to face
+        // the player waits for the entrance (see `show`), and it is no longer
+        // a perpetual full spin: a 16-second revolution had the character
+        // showing the player its back for four seconds out of every sixteen,
+        // and a fair share of reveals put the unit's name over its shoulder
+        // blades. A model's authored facing is +Z and the camera sits on +Z,
+        // so zero yaw is face-on.
+        node.eulerAngles.y = entrance?.cut.stance ?? -0.42
 
         // The summoning circle: a rune dais on a floating rock, a half-ring of
         // pillars and braziers behind the figure, mist and dust, in the
@@ -2119,6 +2325,25 @@ struct SummonStageView: UIViewRepresentable {
         let twin = Self.warmBeamTwin(tint: tint)
         scene.rootNode.addChildNode(twin)
         context.coordinator.warmBeam = twin
+        // And the entrance's flipbooks (W2.4), at full strength for the
+        // warm-up like everything else the flash shows: the shockwave flat
+        // on the dais, and for a 5★ the sunburst standing behind the figure.
+        var tracks: [RevealFlipbookPlayer.Track] = []
+        let ringTint: UIColor = tint.mixed(with: .white, amount: 0.5)
+        if let ring = RevealFlipbook.groundRing(height: height, tint: ringTint) {
+            scene.rootNode.addChildNode(ring.node)
+            tracks.append(RevealFlipbookPlayer.Track(node: ring.node, frames: ring.frames,
+                                                     delay: 0, life: RevealEntrance.ringLife))
+        }
+        if result.stars >= 5 {
+            let gold: UIColor = UIColor(Rarity(stars: 5).glow).mixed(with: tint, amount: 0.25)
+            if let burst = RevealFlipbook.standingBurst(height: height, tint: gold.withAlphaComponent(0.85)) {
+                scene.rootNode.addChildNode(burst.node)
+                tracks.append(RevealFlipbookPlayer.Track(node: burst.node, frames: burst.frames,
+                                                         delay: RevealEntrance.burstDelay, life: RevealEntrance.burstLife))
+            }
+        }
+        context.coordinator.flipbook = tracks.isEmpty ? nil : RevealFlipbookPlayer(tracks: tracks)
 
         // MARK: The framing
         //
@@ -2206,7 +2431,16 @@ struct SummonStageView: UIViewRepresentable {
 
         let cameraNode = SCNNode()
         cameraNode.camera = camera
-        scene.rootNode.addChildNode(cameraNode)
+        // On a rig of its own (W2.4): the entrance's kick moves the rig and
+        // the push-in moves the camera, so the two never fight over one
+        // position. The rig stands on the origin, so the camera's place in
+        // it is its place in the world.
+        let rig = SCNNode()
+        rig.name = "reveal_camera_rig"
+        scene.rootNode.addChildNode(rig)
+        rig.addChildNode(cameraNode)
+        view.pointOfView = cameraNode
+        context.coordinator.cameraRig = rig
         context.coordinator.cameraNode = cameraNode
         context.coordinator.visibleHeight = visibleHeight
         context.coordinator.distance = distance
@@ -2348,6 +2582,7 @@ struct SummonStageView: UIViewRepresentable {
         context.coordinator.view = view
         context.coordinator.onReady = onReady
         context.coordinator.onShown = onShown
+        context.coordinator.onApex = onApex
         if revealed { show(context.coordinator) }
         DispatchQueue.main.asyncAfter(deadline: .now() + Self.warmUpLimit) { [weak coordinator = context.coordinator] in
             coordinator?.giveUpWarmUp()
@@ -2358,6 +2593,7 @@ struct SummonStageView: UIViewRepresentable {
     func updateUIView(_ view: SCNView, context: Context) {
         context.coordinator.onReady = onReady
         context.coordinator.onShown = onShown
+        context.coordinator.onApex = onApex
         frameCamera(view, context.coordinator)
         if revealed { show(context.coordinator) }
     }
@@ -2394,6 +2630,8 @@ struct SummonStageView: UIViewRepresentable {
         // A camera node looks along its own -Z, and the aim shares the camera's
         // x so that this is a pure tilt.
         cameraNode.look(at: SCNVector3(x, coordinator.aimY, 0))
+        // Home now: a push-in still waiting would end on the old framing.
+        coordinator.pushHome = nil
     }
 
     /// The figure arrives on the beam, once: whole and at once, under the
@@ -2421,14 +2659,18 @@ struct SummonStageView: UIViewRepresentable {
                 coordinator?.dimTheHouse()
             }
         }
-        // The turn toward the player waits for the figure's first frame on
-        // the beam (`settle`, from the coordinator's `figureShown`).
+        // The turn toward the player waits for the entrance to hand back to
+        // the idle (`Coordinator.entranceDone`), or, with no clip, for the
+        // figure's first frame on the beam (`figureShown`).
 
-        // A slow push toward the figure over the beat the name lands on. It is
-        // small — a twelfth of the distance — and it eases out, so it reads as
-        // the shot settling rather than as a zoom, and it is the one camera
-        // move in the reveal. Backing off along the node's own front keeps the
-        // aim exactly where the solve put it, so nothing drifts on the way in.
+        // The camera starts a twelfth of the distance back and pushes in once
+        // the entrance is done (`Coordinator.startPush`): it pushed in over
+        // the beat the name landed on until 2026-09-24, and a victory's
+        // raised arms and weapons (the hands reach 1.11 of the figure's
+        // height in the cheer) left the top of the frame as it closed in.
+        // It eases out, so it reads as the shot settling rather than as a
+        // zoom. Backing off along the node's own front keeps the aim exactly
+        // where the solve put it, so nothing drifts on the way in.
         if let cameraNode = coordinator.cameraNode {
             let home = cameraNode.position
             let front = cameraNode.worldFront
@@ -2436,10 +2678,12 @@ struct SummonStageView: UIViewRepresentable {
             cameraNode.position = SCNVector3(home.x - front.x * back,
                                              home.y - front.y * back,
                                              home.z - front.z * back)
-            let push = SCNAction.move(to: home, duration: 1.7)
-            push.timingMode = .easeOut
-            cameraNode.runAction(push, forKey: "push")
+            coordinator.pushHome = home
         }
+
+        // THE ENTRANCE (Docs/FEEL.md W2.4): the hold, then the victory, the
+        // kick, the flipbooks and the high point (`Coordinator.beginEntrance`).
+        coordinator.beginEntrance()
     }
 
     /// The figure settles out of its three-quarter stance to face the player
@@ -2550,6 +2794,15 @@ struct SummonStageView: UIViewRepresentable {
         return node
     }
 
+    /// The family's victory clip wrapped for the entrance, unless the family
+    /// is denied one (`RevealEntrance.denied`) or has none; nil enters the
+    /// figure idling, as every reveal did before 2026-09-24.
+    private static func entranceClip(for assetName: String) -> RevealEntranceClip? {
+        guard !RevealEntrance.denied.contains(assetName),
+              let clip = ModelLibrary.shared.animation(.victory, for: assetName) else { return nil }
+        return RevealEntranceClip(clip: clip)
+    }
+
     /// The column of `VFXLibrary.summonBeam` — the same cylinder under the
     /// same material, which is what its shader is compiled for — drawn in
     /// the warm-up only and taken down after it. The beam itself is spawned
@@ -2642,6 +2895,9 @@ enum RuneLinesArt {
         DispatchQueue.global(qos: .utility).async { _ = image }
         // The gold rung's lightning, cut on the same visit (2026-09-24).
         LightningArt.prepare()
+        // And the entrance's flipbooks (Docs/FEEL.md W2.4), so the first
+        // reveal's stage never cuts them on the main thread.
+        RevealFlipbook.prepare()
     }
 
     private static func keyed() -> UIImage? {
@@ -2754,6 +3010,79 @@ enum ChargeLadder {
 
     static func span(stars: Int) -> TimeInterval {
         stars >= 5 ? fiveStarSpan : baseSpan
+    }
+
+    /// One stem of the charge's sound (Docs/FEEL.md W2.7): what plays, how
+    /// many seconds into the charge, how loud, and the touch that comes
+    /// with it.
+    struct Stem: Equatable {
+        let sound: AudioLibrary.Sound
+        let at: TimeInterval
+        let volume: Float
+        let touch: UIImpactFeedbackGenerator.FeedbackStyle?
+    }
+
+    /// The charge's stems for a pull of `stars` from `scroll`, the sound of
+    /// the ladder: the base under every pull from the first frame, and the
+    /// Light & Dark scroll's bell tree and choir with it when that is the
+    /// scroll SPENT; the rise from the violet rung for a 4★ or better; the
+    /// tell from the gold rung for a 5★ alone. The rungs read the pull's own
+    /// stars and nothing looser — the scroll, a feature, the element never
+    /// ring one — and everything at the first frame is the same for every
+    /// grade, so no sound tells the pull before its rung does.
+    static func stems(stars: Int, scroll: ScrollType?) -> [Stem] {
+        var stems: [Stem] = [Stem(sound: .summonChargeBase, at: 0, volume: stemVolume, touch: nil)]
+        if scroll == .lightDark {
+            stems.append(Stem(sound: .summonChargeLightDark, at: 0, volume: stemVolume, touch: nil))
+        }
+        if stars >= 4 {
+            stems.append(Stem(sound: .summonChargeRise, at: violetAt, volume: stemVolume, touch: .medium))
+        }
+        if stars >= 5 {
+            stems.append(Stem(sound: .summonChargeTell, at: goldAt, volume: stemVolume, touch: .heavy))
+        }
+        return stems
+    }
+
+    // The reveal's MIX (Docs/FEEL.md W2.7). A phone's mixer sums its
+    // players with nothing after it to catch a sum over full scale, and the
+    // reveal plays up to four sounds at once, so these numbers are the ones
+    // `summon_mix_check` in tools/sfx.py sums (`STEM_VOLUME`, `STEM_FADE`,
+    // `BURST_LEAD`, `STAR_VOLUMES`, `QUICK_BURST_VOLUME`), kept in step with
+    // it by hand: every grade's sum peaks at or under 0.90 of full scale.
+
+    /// Every stem plays at this volume; the files are levelled as a mix.
+    static let stemVolume: Float = 0.85
+
+    /// Every sound a stem can be, for the fade that clears them.
+    static let stemSounds: [AudioLibrary.Sound] = [
+        .summonChargeBase, .summonChargeLightDark, .summonChargeRise, .summonChargeTell,
+    ]
+
+    /// Every burst a flash can sound, for the fade on to the next pull: a
+    /// 5★'s choir in E major rings three seconds, and under the next
+    /// charge's open fifth on D it would be a clash.
+    static let burstSounds: [AudioLibrary.Sound] = [.summonBurst3, .summonBurst4, .summonBurst5]
+
+    /// At the flash the stems fade out over this long…
+    static let stemFade: TimeInterval = 0.05
+
+    /// …and the burst sounds this long after it, on the audio clock
+    /// (`AudioLibrary.schedule`), so it lands on its own. Sound 40 ms behind
+    /// the picture is well inside what reads as together; sound AHEAD of it
+    /// would not be.
+    static let burstLead: TimeInterval = 0.04
+
+    /// A Quick 3★'s burst: its stars stamp inside the chime's first 300 ms.
+    static let quickBurstVolume: Float = 0.8
+
+    /// The stars ring over the grade's burst, a little softer the bigger
+    /// the burst under them: over a 3★'s chime 0.7, a 4★'s brass 0.65, a
+    /// 5★'s choir 0.55 (at 0.7 the 5★'s sum reached 1.04 of full scale).
+    static func starVolume(stars: Int) -> Float {
+        if stars >= 5 { return 0.55 }
+        if stars == 4 { return 0.65 }
+        return 0.7
     }
 
     /// 0 at the foot of the rung at `rungAt`, 1 once it is climbed, a

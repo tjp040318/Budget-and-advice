@@ -150,6 +150,7 @@ struct GraphicsSettingsView: View {
     @AppStorage(GraphicsSettings.shadowsKey) private var shadows: Bool = true
     @AppStorage(MotionComfort.key) private var reduceMotion: Bool = false
     @AppStorage(CameraDirector.cinematicKey) private var cinematicCamera: Bool = false
+    @AppStorage(UltimateSplash.key) private var ultimateSplash: String = SplashChoice.always.rawValue
 
     var body: some View {
         GameScreen("Graphics & comfort", subtitle: "How the fight looks, and how much it moves", dismiss: { dismiss() }) {
@@ -180,13 +181,19 @@ struct GraphicsSettingsView: View {
                     ScrollView(.vertical, showsIndicators: false) {
                         VStack(alignment: .leading, spacing: 12) {
                             Toggle(isOn: $reduceMotion) {
-                                SettingsLabel(title: "Reduce motion", caption: "No camera shake, no white flash on an ultimate, a gentler skill zoom and no cinematic cuts.")
+                                SettingsLabel(title: "Reduce motion", caption: "No camera shake, a calmer ultimate (no burst of light, its splash fades in), a gentler skill zoom and no cinematic cuts.")
                             }
                             if systemReduceMotion {
                                 SettingsCaption(text: "iOS's Reduce Motion is on, so every fight is calm whatever this switch says.")
                             }
                             Toggle(isOn: $cinematicCamera) {
                                 SettingsLabel(title: "Cinematic battle camera", caption: cinematicCaption)
+                            }
+                            // Docs/FEEL.md W2.1: the ultimate's splash every
+                            // time, each unit's first in a fight, or never —
+                            // for a player farming on auto.
+                            choiceRow(title: "Ultimate splash", caption: splashCaption) {
+                                BarSegments(options: splashOptions, selection: $ultimateSplash)
                             }
                         }
                         .toggleStyle(GameToggleStyle())
@@ -255,6 +262,22 @@ struct GraphicsSettingsView: View {
     private var cinematicCaption: String {
         if reduceMotion || systemReduceMotion { return "Held off while Reduce Motion is on." }
         return cinematicCamera ? "On: cuts, leans and orbits on skills." : "Off: one fixed view, the genre's way."
+    }
+
+    private var splashOptions: [(value: String, title: String)] {
+        [
+            (value: SplashChoice.always.rawValue, title: "Always"),
+            (value: SplashChoice.first.rawValue, title: "First"),
+            (value: SplashChoice.off.rawValue, title: "Off"),
+        ]
+    }
+
+    private var splashCaption: String {
+        switch SplashChoice(rawValue: ultimateSplash) ?? .always {
+        case .always: return "Every ultimate owns the screen for a moment: the caster's card and the skill's name."
+        case .first: return "First each fight: each unit's first ultimate, then straight to the blow."
+        case .off: return "Off: the ultimate strikes at once, for farming on auto."
+        }
     }
 }
 

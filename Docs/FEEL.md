@@ -1021,6 +1021,34 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
 - **Risk:** the timing of the playback queue; hence pause strictly before the
   clip.
 
+**As built (2026-09-24):** `BattleSceneController.holdForCutIn` holds the
+world (`Juice.holdWorld`, a token that outranks any freeze in flight) and
+hands the splash's length to the queue as frozen time, so the cast's hold
+(its contact frame) still lands the damage on the blow; the cast's picture —
+the camera, the clip, the ring, the charge, the projectile and the burst — is
+drawn by `performCast` as the splash lets go, strictly before the clip
+starts. The view draws `UltimateSplashView` (FieldBeatViews.swift): the
+field darkened 55%, a band 60% tall leaned 12° wiping in with a knife edge
+(`SplashBand`), the caster's card at the band's full height through
+`PortraitPainting`, streaks of the element on a `Canvas`, the unit's name in
+its colour and the skill's carved in gold at 34 points, landing at 0.34 of
+the way with `.summonBurst` over the element's impact sound and a heavy
+haptic. 0.9 s at ×1, 0.45 s at ×2, a 0.3-s name flash at ×3; under Reduce
+Motion the band fades where it would wipe. The setting is Settings → Graphics
+& comfort → Ultimate splash: Always (the default) / First / Off
+(`UltimateSplash.key`, `ultimateSplash`; First is once per unit per fight;
+always under `-tour`). Enemy ultimates splash too. The view model's old
+cut-in is gone (`cutIn` is `bossSpeech`, a chapter boss's line alone), and
+so is the white `ultimateFlash` (W2.9). A card is decoded off the main
+thread only when a splash will draw it: as a turn's events reach the scene
+the view model names every ultimate they cast and the unit the engine now
+waits on when its ultimate is ready (`BattleViewModel.splashCasters`), and
+`warmSplashCards` decodes the cards the player's choice and the speed will
+draw — none under Off, each once under First, none for ×3's name flash. It
+had decoded every fighter's four-megabyte card at each of its turns.
+`-tour-cutin` casts the first ultimate the team has and holds its splash at
+the middle for 16 s (`[TourCue] cutin`, frame `6-battle-cutin`).
+
 **W2.2 The reward box by rarity, with its own sounds.**
 - **What:**
   - **Tiers:** each spoil gets a tier (plain, rare, epic, legend) from its
@@ -1105,6 +1133,51 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
   - With every family on preset 412 until the motion roll-out lands, the
     entrance looks the same for all of them.
 
+**As built (2026-09-24):** `Pantheon/UI/Summon/RevealEntrance.swift` and
+`SummonStageView.Coordinator` (`beginEntrance`, `releaseHold`, `apexReached`,
+`entranceEnding`, `entranceDone`, `kickCamera`, `startPush`). MEASURED first:
+all 115 `*_victory.usdz` were posed frame by frame with usd-core, and the
+palette dealt three presets, not one — 298 Cheer (34 families, 1.90 s: a
+crouch and a hop, both arms up, the hands at 1.11 of the height at 0.70 s),
+412 Victory (53, 3.93 s: the arms spread and rise, then the figure turns 58°
+left, back, 56° right) and 88 Chest Pound Taunt (28, 3.87 s: it opens turned
+55° away and pounds the chest at 2.1–2.9 s). The options for the high point
+were a table per family (115 rows to keep), a marker in the clip (the exports
+carry none) or a row per PRESET found by the length SceneKit reports; the
+preset won: `RevealEntrance.cut(forClipLength:)` plays its window (the cheer
+whole, 412's first 1.6 s — the raise, one turn and the return — and 88's
+1.1–3.35 s), stands the figure at the preset's `stance` (+5°, +38°, −11°, so
+the chest averages a few degrees toward the words) and names the high point
+(0.68, 0.45, 2.25 s); a clip no preset made gets a window of its own. No clip
+moves the hips over the floor (0.00 m on all 115), so the deny list
+(`RevealEntrance.denied`) is empty. At the flash the scene holds
+(`SCNScene.isPaused`, which stops the idle, the particles and the actions
+while the view keeps drawing) for 70 ms, 110 ms for a 5★; the victory's
+`SCNAnimationPlayer`, wrapped in `makeUIView` so the flash only adds it to the
+live figure and calls `play()`, blends in over 0.18 s above the idle still
+running under it and back into it over 0.45 s. The camera stands on a rig of
+its own (`reveal_camera_rig`) so the kick and the push-in never fight over one
+position: it kicks back 4% of its distance in 70 ms and comes home over 0.6 s
+on a damped spring with a 6% overshoot (`kickReturn`, a pure function the
+render thread calls). The shockwave sheet lies flat under the feet (1.9 figure
+heights, 0.8 s) and a 5★'s sunburst stands behind the figure (2.2 heights,
+0.95 s) with its floor fade BAKED into its `multiply` — planes, not particles
+(run 234's hard floor line), no shader modifier (run 235) — both additive with
+alpha writes off (the stage's view is transparent), stepped on a
+`FrameTicker`, drawn at full strength through the warm-up and hidden after it
+(the run-221 lesson). The high point is reported by an `SCNAction` on the
+figure, which runs and pauses with the scene exactly as the clip does, never
+by a main-thread timer: the name slams on it (`onApex` →
+`SummonRevealView.nameLands`, with a fallback 0.6 s past it). The turn to face
+the player (`settle`) and the slow push-in wait for the hand-back to the idle:
+pushing in during the entrance put the cheer's raised hands out of the frame.
+The sheets are cut once per launch when the summon room appears
+(`RuneLinesArt.prepare` → `RevealFlipbook.prepare`, about 8 MB) and dropped on
+a memory warning (`MemoryRelief`). Reduce Motion drops the kick. CI:
+`-tour-reveal-hold apex` stops the scene on the high point (`[TourCue]
+reveal-apex`): frames `5-reveal-apex` and `5-reveal-awakened-apex`. Tests: the
+entrance rows of `SummonRevealFeelTests`.
+
 **W2.5 The chapter map plays the clear.**
 - **What:** on returning to the map after a first clear or a new best:
   1. The medallion flips from bronze to gold and its stars stamp in one by one.
@@ -1178,6 +1251,47 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
 - **Risk:** the tell must read `result.stars` and nothing looser. It must never
   fire on anything but a 5★.
 
+**As built (2026-09-24):** `python3 tools/sfx.py summon --vsco DIR`
+(`build_summon`) writes seventeen files from VSCO 2 CE's recordings — string
+sections in tremolo, a timpani roll, a suspended cymbal rolled and struck soft
+and a triangle joined the harp, glockenspiel, bell tree, brass, gong and drums
+already used — and sfx.py's synthesised choir (VSCO has none): `summon_ignite`
+at the summon button; the charge's stems, `summon_charge_base` (every pull:
+the strings' tremolo on an open fifth on D swelling late, the harp climbing
+faster, a quickening heartbeat, air rising), `_rise` (4★ and up, from the
+violet rung: the timpani roll and the cymbal's crescendo to the flash, a horn
+under them), `_tell` (a 5★ alone, from the gold rung, 62.5% of its 1.4 s
+charge: the glockenspiel's ping on E and B, the high violins LIFTING to E
+major — the key change — a choir swelling in on it, the lightning's crackle)
+and `_lightdark` (the scroll spent, never the result: a bell tree, two
+sopranos on a fifth true over D and E, glockenspiel twinkles); the bursts
+`summon_burst_3` (a chime up D major over the harp), `_4` (a brass stab on D
+major over the timpani) and `_5` (in E: a HIT of gong, bass drum, timpani and
+crash, and a BLOOM of trumpets and horns forte-piano with the choir settling
+under them); `star_1`…`star_6` (the glockenspiel over a felt stamp, up A
+major's pentatonic, whose notes sit in D major and E major both); and
+`rite_awaken`, `rite_evolve`, `rite_relic_awaken`. The reveal plays them as a
+MIX (`ChargeLadder`): the stems start on their rungs off `result.stars` alone
+at `stemVolume` 0.85, fade out over 50 ms at the flash
+(`AudioLibrary.fadeOut`), and the burst sounds 40 ms behind the flash on the
+audio device's own clock (`AudioLibrary.schedule`, `play(atTime:)`), sound
+behind the picture being the side the ear forgives; the stars ring at 0.7,
+0.65 and 0.55 over a 3★'s, 4★'s and 5★'s burst (`starVolume`), a Quick 3★'s
+burst at 0.8; the next pull fades what is left of the last; and the island's
+music ducks to 0.3 of its level under the reveal (`duck(to:fade:)`, `unduck`).
+A phone's mixer sums its players with nothing after it, so the files are
+levelled together and `summon_mix_check` sums every grade at the reveal's own
+offsets: the first levels summed to 1.36 of full scale over a 5★'s stars and
+1.07 in its charge; now the loudest sum is 0.895, the charge climbs −16.6 /
+−14.8 / −12.7 LUFS and the whole −12.6 / −11.7 / −10.8. `AudioLibrary` gained
+no pitch parameter and no `enableRate`: an `AVAudioPlayer`'s rate stretches
+time and keeps the pitch, so it cannot climb a scale, and six recorded notes
+are the real instrument at every step. An awakening's reveal sounds its
+grade's burst; its rite rings at the altar (`TrainingView`'s Awaken), the
+evolution's in `commitEvolution` and the relic's in
+`RelicDetailView.performAwakening`. `summon_charge.wav` stays in the bundle,
+unused. Tests: the sound rows of `SummonRevealFeelTests`.
+
 **W2.8 Deaths that leave the field.**
 - **What:** after the death clip:
   1. The figure fades over 0.7 s while a column of element motes rises.
@@ -1195,6 +1309,29 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
 - **Cost:** free, half a day.
 - **Risk:** revive targeting must read the glyph.
 
+**As built (2026-09-24):** `UnitNode.onFallen` is told once a death is both
+played and marked (the final blow starts the fall before `.defeated`, so
+either may come first); `BattleSceneController.leaveTheField` then fades the
+body over 0.7 s (its aura quieted, never taken off a live node; the old 0.6
+fade is kept off the battle), raises a column of the element's motes from a
+cylinder emitter (`VFXLibrary.soulColumn`, sparser at ×3), lifts a soul light
+2 m over 1 s that winks out with `.starTick` (`soulLight`; not at ×3 nor
+under Reduce Motion), and leaves a faint glyph of the element on the mark
+(`leaveMark`: a ring and the element's symbol, added at 0.38, 60% of that on
+the pale marble), turned to read upright from the camera and hung on the
+unit, so a tap on it reaches the unit for a revive. The body's ground oval
+goes with it and stays gone (`UnitNode.restingShadowOpacity`: every turn
+walks the fallen home, and that had brought the oval back at half under the
+empty mark). A revive takes the glyph up and brings the body and its oval
+back out of the air — a revive a Skip dropped as well (`sync`), which would
+otherwise leave a living unit fighting as a glyph with no body — and the
+ending of a death clip still in flight across a revive is not counted for
+the new life (`lifeSerial`). A boss sinks 0.9 of its height below the rim
+over 1.6 s in dust and thrown stone (`rimDust`), its warm spot going out
+with it. No shader: an opacity, particles and quads. `-tour-dissolve` fells
+an enemy three seconds after the stage is seen and holds it half dissolved
+(`[TourCue] dissolve`, frame `6-battle-dissolve`).
+
 **W2.9 The ultimate spotlight.** Needs L1.
 - **What:** during an ultimate's wind-up:
   1. The SET's lights fall to 35% and the backdrop to 0.45.
@@ -1211,6 +1348,24 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
   the dim.
 - **Cost:** free, half a day.
 - **Risk:** without L1 it dims the caster too.
+
+**As built (2026-09-24):** on the renderer's thread, in `renderUpdate` beside
+the impact frame, a `SpotlightTimeline` (in over 0.18 s, held until the next
+event after the cast — the blow — then out over 0.4 s; never longer than 6 s)
+drives a `SpotlightRig`: the set's fill, ambient and braziers to 35% (the
+flicker multiplies by `StageBuilder.battleSetDimmer`), the shared key to 35%
+with a key of the figures' own (category 2 | 1, no shadow, built with the
+stage at a thousandth of the key so nothing compiles mid-fight) taking up the
+other 65%, the painting's diffuse intensity 0.999 → 0.45 (armed off 1 at the
+build for the same reason), and the camera's saturation 0.35 down — not
+written during an impact frame's two frames, nor once a loss drains the
+colour. The white `ultimateFlash` is a two-frame exposure punch now (+1.1
+stops, `CameraDirector.exposurePunch`, through the impact frame's queue) at
+the splash's end, or at the cast when no splash plays. Nothing under
+`-tour-layers off`. The saturation is the camera's, so the figures lose some
+colour with the set; W3.26's mask is the fix. `-tour-cutin` holds the
+wind-up three fifths of the way to its blow for a frame (`[TourCue]
+spotlight`, frame `6-battle-spotlight`).
 
 **W2.10 Waves walk in.**
 - **What:**
@@ -1230,6 +1385,31 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
   - Re-time `6-battle-a` so it is not taken mid-walk.
 - **Cost:** free, half a day.
 - **Risk:** about 1.2 s more per wave; hence the ×3 rule.
+
+**As built (2026-09-24):** a later wave's arrival whose rig shipped a walk
+(`UnitNode.hasWalkClip`) walks its two metres onto its mark on the walk clip
+at the island's stroll — 1.05 m/s for a 1.9-m figure, in proportion to
+height (`WalkOn`), about 1.9 s at ×1, the clip and the move both at the
+fight's pace — started once it is in the scene, then takes the combat idle;
+the wave's hold waits for the longest walk (`place` returns it). A rig
+without a walk glides on as before; at ×3 the arrivals fade up on their
+marks. A NEW wave without a boss gets its stamp (`WaveStampView`,
+`WaveStamp.stamps`): WAVE 2, or FINAL WAVE between wine rules, carved on the
+stamps' dark band, in from the right, landing with a drum (`.hitBlunt`) at
+0.22 of its 1.3 s (0.65 s at ×2 and ×3), away to the left. A raid's guard
+coming back is reported under the wave the fight is already on
+(`BattleEngine.summonGuard`): it walks on unstamped — every Titan's guard
+had been stamped FINAL WAVE, drum and all, each time it came back. A chapter
+boss's line, in its speech band, waits for its wave's stamp to go — FINAL
+WAVE, then the boss speaks — and is said on the wave the boss walks on with
+(`Stage.speakerWave`, the last wave that fields its kind), no longer by the
+first mob of its kind a wave or two early, as seven chapters' last stages
+had it. The later waves' figures and clips are warmed as the fight begins
+(`BattleViewModel.warmArrivals`). The team's walk on from behind the camera
+was not built: the fight opens under the veil while its shaders compile,
+and from eighteen metres behind the team the walk would begin behind the
+lens. `-tour-waves` holds the first stamp over its walkers (`[TourCue]
+wave-stamp`, frame `18-dungeon_battle-wave`).
 
 **W2.11 The boss entrance.**
 - **What:** a 2.4 s entrance at ×1:
@@ -1251,6 +1431,26 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
 - **Cost:** free, half a day.
 - **Risk:** some bosses' heavy attack lunges; read each of the five on its
   board.
+
+**As built (2026-09-24):** `BattleSceneController.beginBossEntrance`, scene
+actions on the boss keyed `boss_entrance` (a freeze or a CI hold pauses
+them; a skip, a forfeit or a new run stands the boss on its mark and brings
+the lights back, `cancelBeats`): the HUD fades and the key light dims 40%
+(the spotlight's `.bossEntrance`); the ground rumbles while the boss climbs
+4.5 m through dust and thrown stone from under the rim over 1.2 s (a fade up
+on its mark under Reduce Motion); it ROARS in its heavy attack with a 0.3
+shake, a heavy haptic and `.hitHeavy`; its wine ribbon (`BossRibbonView`:
+BOSS, its name carved in gold, its epithet, the stage's line when it is the
+speaker — a giant says it here rather than in the speech band — and a
+Titan's weakness in its colour) lands as its bar fills from empty over
+0.9 s; at 2.4 s the lights and the HUD come back. A wave's boss holds the
+wave's event; a Titan in the opening line waits under the rim until the
+stage has been seen and the veil lifts, and the queue waits for it
+(`queueHeldOpen`, `queueHeldUntil`, `continueWhenFree`); its boom
+(`.bossArrival`) sounds as it rises, not under the veil with the fight's
+first event. The five bosses' heavy clips were not read on their boards.
+`-tour-waves` holds the first ribbon over the roar (`[TourCue] boss-ribbon`,
+frame `18-dungeon_battle-boss`).
 
 **W2.12 Missions: Claim All.**
 - **What:**
@@ -1290,6 +1490,48 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
   - One `keyframeAnimator` replaces three `@State` timers.
 - **Cost:** free, a day. An optional painted star is 6–9 credits.
 - **Risk:** keep it in the right 45%, clear of the figure.
+
+**As built (2026-09-24):** `RevealNameCard` (Pantheon/UI/Summon/
+RevealNameCard.swift), placed by `SummonRevealView.single` off the whole
+screen: its column's left edge at 55% of the width (`clearOfFigure`; the
+figure stands on the 26% line), its right edge 18 pt inside the safe area,
+220–410 pt wide, centred 47% down. The plaque is dark glass (#120D0A at 0.8
+under a top sheen) rimmed 2 pt in the grade's metal (`Rarity.frame`, the
+gradient every card of the grade wears) with a hairline inside; the crest is
+56 pt — the element's colour in a ring of the grade's metal, its glyph carved
+in it — pinned half over the plaque's left edge. Both are drawn in
+`GlassPlate`'s and `ElementBadge`'s language rather than from them, so the rim
+can take the grade's metal gradient at this size. The stars are SF stars in a
+three-stop painted gold over a dark offset shadow (the painted star, 6–9
+credits, is not bought), stamped from 2.2× through 0.92× to 1×
+(`RevealCardTiming.stampScale`) 0.26 s after the card arrives and 0.13 s
+apart, each throwing six gold motes and ringing its note of the glockenspiel's
+climb (W2.7). The name is `Theme.display` 36 (28 on two lines past eleven
+letters) with `.carved`, slammed from 1.8× through a 0.955 dip onto a spring,
+a light band run across it once (the same text laid over itself in a moving
+white band, `.plusLighter`), the rim flashing in the grade's glow on the
+impact; an awakened title "Name, Epithet" carves the name and sets the rest
+over it as an eyebrow. The second line is epithet · pantheon · role; the chips
+(AWAKENED, NEW, W1.5's duplicate chip, FEATURED) pin over the plaque's top
+right; the Codex page, the skill that rose or the maxed line, and "Guaranteed
+by pity" follow under it. TWO `keyframeAnimator`s replace the three `@State`
+timers, not one: the ARRIVAL (plaque, crest, the stars' clock) starts on the
+figure's first drawn frame and the NAMING (name, scale, sweep, flash, details)
+on the victory's high point (W2.4), which falls during the stars for 412
+(0.52–0.56 s after the figure) and after them for 88 (1.22–1.26 s): one
+timeline would have had to restart the stars or hold the name back. Each
+publishes its value into the environment (`revealArrival`, `revealNaming`),
+every track has the same shape on every beat, and a card rebuilt mid-reveal
+stands at the end of what it has passed. Reduce Motion (`Motion`'s contract:
+a spring's travel and overshoot become a short ease): no slide, the crest
+dissolved in at its own size, the stars from 1.25×, the name from 1.12× with
+no dip and no sweep, and no spring on the card that rings — the crest and the
+name settle on the plaque's panel curve, damped to within half a per cent (a
+review caught the crest still popping from a third of its size on the pop
+spring, about 5% past it). The three pure helpers the tests call
+(`names(for:)`, `secondLine(for:)`, `sweepStops`) are `nonisolated static`:
+a `View` is main-actor isolated in the iOS 18 SDK, and so is a static on one.
+Tests: the card rows of `SummonRevealFeelTests`.
 
 **W2.14 One continuous shot into the summon.**
 - **What:** the room's scroll lifts off the ring and grows to the exact place
@@ -1486,6 +1728,60 @@ Larger builds and the items that depend on Wave 1, in ranked order (the row orde
   `onLongPressGesture(minimumDuration:perform:onPressingChanged:)`.
 - **Cost:** free, half a day.
 - **Risk:** tour step 5 and the stress loop.
+
+**As built (2026-09-24):** `Pantheon/UI/Summon/RevealSkip.swift` and
+`SummonRevealView.skipTapped`, `skipAll`, `jump(to:)`, `landNow`. A pull worth
+stopping for is a 5★, or a NEW 4★ or better (`RevealSkip.isWorthSeeing`); a
+tap on Skip goes, IN ORDER, to the flash of the pull on the beam while it is
+worth seeing and still charging, else to the next such pull's charge (the
+pulls between are left for the summary), else to the summary — so a new 4★
+before a 5★ is a stop on the way — and the control says where: "Skip to
+★★★★★", "Skip to NEW ★★★★", "Skip", "Done". The words never tell the grade
+of the pull on the beam before its rung (W1.5; a review caught the first cut
+reading "Skip to ★★★★★" on a single 5★'s first frame): in a SINGLE the pull
+they would name is the one charging, so it reads plain Skip whatever it holds
+(a tap on a 5★ still lands its flash); in a pull of several the words change
+only when a pull LANDS — a charge opens on the words the last pull's landing
+left up, and the first pull on the ten's own first stop, which could be any
+of the ten (`RevealSkip.label`). Plain Skip on the stop's own charge, the
+obvious fix, would itself be the tell: the words would change on that
+charge's first frame and on no other. Holding it 0.6 s, a gold ring filling
+round its glyph, skips everything. It is ONE press,
+`DragGesture(minimumDistance: 0)` read from touch to lift, not
+`onLongPressGesture` beside a tap and not a `Button`: with two gestures,
+whether the tap still fires on the lift that ends a finished hold is SwiftUI's
+to decide, and after a hold the control reads Done, so that tap would close
+the summary the hold opened; the tick and the touch come on touch-down, as
+every press does (W1.8), and VoiceOver has its default action and "Skip all".
+A CANCELLED press — an edge swipe iOS takes for its centres (the control
+stands 12 points under the top edge), a call — never reaches `onEnded`, so
+the finger is followed through the gesture's own state as well
+(`@GestureState touching`, which SwiftUI resets on a cancel too): a press
+still down on the main queue's turn after that reset was cancelled, and
+springs back with no tap and no hold (`RevealSkipControl.letGo`); a lift that
+reached `onEnded` after the reset is still judged as the lift
+(`releasedPress`), so neither order can drop a tap or turn a hold into one.
+Read from `onEnded` alone, a cancelled press stayed down: its hold skipped a
+ten-pull past its 5★ 0.6 s later, and the control refused every touch after
+it. A tap anywhere during a 5★'s charge lands its flash (`landNow`, or
+`landOnReady` while its stage is still building), never past it. Quick
+summons is a per-device setting (`UserDefaults` `summon.quick`, never a save
+field) on a glass chip in the summon room's header beside the mileage chip —
+not in Settings, another lane's file on the day — and plays every 3★ pull, a
+single's or a ten-pull's, as a 0.5 s flash with no charge, its stars in a
+blink (0.06 s apart) and its name at 0.22 s; never a 4★, a 5★ or an
+awakening. It trades the violet rung's suspense for the time: with it on, a
+pull that charges at all is a 4★ or better from its first frame (the gold
+rung's 4-or-5 suspense stays). The honest variant — a Quick 3★'s charge
+ending at the violet rung, 0.44 s, where the ladder itself says "no more" —
+costs 0.44 s a common and is the owner's call. CI: `-tour-reveal ten` (a
+ten-pull with the fire Sekhmet fifth and a NEW 4★ seventh) photographs the
+first pull's "Skip to ★★★★★" (`5-reveal-ten`), and with `-tour-reveal-skip`
+Skip is pressed half a second into the first charge and the frame is the 5★'s
+card, not the grid (`5-reveal-ten-skipped`); every single's frame reads plain
+Skip. Tests: the Skip rows of `SummonRevealFeelTests`, among them
+`testASinglesSkipNeverTellsItsGrade` and
+`testAPullOfSeveralChangesItsWordsOnlyAtALanding`.
 
 **W2.24 The way into a fight.** After the camera job commits.
 - **What:**

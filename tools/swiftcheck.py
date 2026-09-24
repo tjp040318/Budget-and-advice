@@ -1000,6 +1000,10 @@ def check_unknown_types(files, declared, errors):
         # keyframes and springs, and the environment key the press sets.
         "ButtonStyleConfiguration","KeyframeTrack","CubicKeyframe","SpringKeyframe",
         "LinearKeyframe","MoveKeyframe","Spring","EnvironmentKey","EnvironmentValues",
+        # The reveal's Skip follows the finger through the gesture's own state,
+        # which SwiftUI resets on a CANCELLED press, where onEnded never comes
+        # (2026-09-24, FEEL.md W2.23).
+        "GestureState",
         "XCTest","XCTestCase","XCTAssert","XCTAssertEqual","XCTAssertNotEqual","XCTAssertTrue",
         "XCTAssertFalse","XCTAssertNil","XCTAssertNotNil","XCTAssertGreaterThan",
         "XCTAssertGreaterThanOrEqual","XCTAssertLessThan","XCTAssertLessThanOrEqual",
@@ -1097,6 +1101,43 @@ def check_accessor_keywords(files, errors):
                 f"as the {word} accessor, not as the property named `{word}` — "
                 f"write `self.{word}`")
 
+
+
+# ---------------------------------------------------------------------------
+# Rule: a constant or variable named with a reserved word
+# ---------------------------------------------------------------------------
+#
+# `let internal = info.internal / 1_048_576` (MemoryProbe.breakdown, run 249,
+# 2026-09-24) is "keyword 'internal' cannot be used as an identifier here" to
+# the compiler, and every later read of the name is an error of its own. A
+# MEMBER of that name is fine after a dot (`info.internal`, SE-0071); the
+# binding needs another name or backticks. `self` is left out: `guard let
+# self` is legal.
+
+RESERVED_WORDS = {
+    "associatedtype", "class", "deinit", "enum", "extension", "fileprivate",
+    "func", "import", "init", "inout", "internal", "let", "operator",
+    "private", "precedencegroup", "protocol", "public", "rethrows", "static",
+    "struct", "subscript", "typealias", "var", "break", "case", "catch",
+    "continue", "default", "defer", "do", "else", "fallthrough", "for",
+    "guard", "if", "in", "repeat", "return", "throw", "switch", "where",
+    "while", "Any", "as", "false", "is", "nil", "super", "throws", "true",
+    "try",
+}
+KEYWORD_BINDING = re.compile(
+    r"\b(?:let|var)\s+(" + "|".join(sorted(RESERVED_WORDS)) + r")\b(?!`)")
+
+
+def check_keyword_bindings(files, errors):
+    for path in files:
+        src = strip_noise(open(path, encoding="utf-8", errors="replace").read())
+        for m in KEYWORD_BINDING.finditer(src):
+            line = src.count("\n", 0, m.start()) + 1
+            word = m.group(1)
+            errors.append(
+                f"{path}:{line}: `{word}` is a Swift keyword and cannot name a "
+                f"constant or variable — rename it, or write it `{word}` in "
+                f"backticks everywhere it is used")
 
 
 # ---------------------------------------------------------------------------
@@ -1741,6 +1782,7 @@ def main():
     check_patterns(files, enum_cases, errors)
     check_enum_dot_defaults(files, errors)
     check_accessor_keywords(files, errors)
+    check_keyword_bindings(files, errors)
     check_duplicate_funcs(files, errors)
     check_bundle_resources(errors)
     check_spliced_lines(files, errors)

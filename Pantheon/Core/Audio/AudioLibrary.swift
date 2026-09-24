@@ -73,6 +73,32 @@ final class AudioLibrary {
         case turnChime = "turn_chime"
         // The player's level-up fanfare (W1.6).
         case levelUp = "level_up"
+        // The summon that climbs with the grade (FEEL.md W2.7), built by
+        // `tools/sfx.py` `build_summon()`. The circle catching light at the
+        // summon button; the charge's three stems on the ladder's rungs —
+        // the base under every pull, the rise from the violet rung (a 4★ or
+        // better), the tell from the gold one (a 5★ alone) — and the Light &
+        // Dark scroll's own layer; the burst by grade at the flash; the
+        // stars' climb up a glockenspiel scale, one note a star.
+        case summonIgnite = "summon_ignite"
+        case summonChargeBase = "summon_charge_base"
+        case summonChargeRise = "summon_charge_rise"
+        case summonChargeTell = "summon_charge_tell"
+        case summonChargeLightDark = "summon_charge_lightdark"
+        case summonBurst3 = "summon_burst_3"
+        case summonBurst4 = "summon_burst_4"
+        case summonBurst5 = "summon_burst_5"
+        case star1 = "star_1"
+        case star2 = "star_2"
+        case star3 = "star_3"
+        case star4 = "star_4"
+        case star5 = "star_5"
+        case star6 = "star_6"
+        // The three rites that reused the summon's burst: an awakening, an
+        // evolution and a relic's awakening each sound as themselves.
+        case riteAwaken = "rite_awaken"
+        case riteEvolve = "rite_evolve"
+        case riteRelicAwaken = "rite_relic_awaken"
 
         /// The cue for a status landing on a unit. The barriers ring as
         /// crystal, the five that change how a fight plays have their own,
@@ -115,6 +141,31 @@ final class AudioLibrary {
             }
         }
 
+        /// The flash's burst for a pull of `stars` (FEEL.md W2.7): a chime
+        /// for a 3★ or less, a brass stab for a 4★, a gong under a choir for
+        /// a 5★ or better. Read off the pull's stars at the flash, when the
+        /// grade is already on the screen. An awakening's reveal is a reveal
+        /// like any other: its rite (`riteAwaken`) sounds at the altar's
+        /// pillar before it, so it is not sounded twice.
+        static func burst(forStars stars: Int) -> Sound {
+            if stars >= 5 { return .summonBurst5 }
+            if stars == 4 { return .summonBurst4 }
+            return .summonBurst3
+        }
+
+        /// The note star `index` (from 0) lands on: the scale climbs one
+        /// step a star, and a sixth star rings the octave.
+        static func star(_ index: Int) -> Sound {
+            switch min(5, max(0, index)) {
+            case 0: return .star1
+            case 1: return .star2
+            case 2: return .star3
+            case 3: return .star4
+            case 4: return .star5
+            default: return .star6
+            }
+        }
+
         /// The loudest this sound may play, whatever the caller asks. The
         /// turn chime rings on every one of the player's turns, so it stays
         /// a murmur under the fight (FEEL.md W1.4). Nil lets the caller's
@@ -134,9 +185,13 @@ final class AudioLibrary {
         /// voice restarted mid-ring clicks. Nil is the usual four.
         var voices: Int? {
             switch self {
-            case .waveEgypt, .waveGreece, .waveNorse, .waveRome, .waveJade, .bossArrival, .levelUp:
+            case .waveEgypt, .waveGreece, .waveNorse, .waveRome, .waveJade, .bossArrival, .levelUp,
+                 .riteAwaken, .riteEvolve, .riteRelicAwaken:
                 return 1
-            case .revive, .death, .extraTurn, .counter, .turnChime:
+            case .revive, .death, .extraTurn, .counter, .turnChime,
+                 .summonIgnite, .summonChargeBase, .summonChargeRise, .summonChargeTell, .summonChargeLightDark,
+                 .summonBurst3, .summonBurst4, .summonBurst5,
+                 .star1, .star2, .star3, .star4, .star5, .star6:
                 return 2
             default:
                 return nil
@@ -164,7 +219,7 @@ final class AudioLibrary {
             if isMusicMuted {
                 current?.player.pause()
             } else if let player = current?.player {
-                player.volume = musicVolume
+                player.volume = musicVolume * duckLevel
                 player.play()
             }
         }
@@ -173,6 +228,40 @@ final class AudioLibrary {
     private var current: (music: Music, player: AVAudioPlayer)?
     /// Music sits under the effects, not level with them.
     private let musicVolume: Float = 0.32
+    /// The share of `musicVolume` the music plays at: 1, or less while a
+    /// rite has it stepped back (`duck(to:fade:)`). Main thread.
+    private var duckLevel: Float = 1
+
+    /// The latest duck's number (`duck(to:fade:)`). Main thread.
+    private var duckToken = 0
+
+    /// Steps the music back under a moment that has its own sound — the
+    /// summon's reveal (FEEL.md W2.7) — to `level` of its own volume over
+    /// `fade` seconds. A loop that starts while ducked starts ducked.
+    /// `AVAudioPlayer` changes a player's volume only, so this is a volume,
+    /// never a filter. Returns the duck's number for `unduck(_:fade:)`.
+    /// Main thread.
+    @discardableResult
+    func duck(to level: Float, fade: TimeInterval = 0.4) -> Int {
+        duckToken += 1
+        setDuck(level, fade: fade)
+        return duckToken
+    }
+
+    /// The music back at its own level. Given a duck's number, only while
+    /// that duck is the latest: a reveal replaced by the next one (the
+    /// cover's content changed under it) leaves AFTER the new one has
+    /// ducked, and must not bring the music back up under it.
+    func unduck(_ token: Int? = nil, fade: TimeInterval = 1.0) {
+        if let token, token != duckToken { return }
+        setDuck(1, fade: fade)
+    }
+
+    private func setDuck(_ level: Float, fade: TimeInterval) {
+        duckLevel = min(1, max(0, level))
+        guard !isMusicMuted, let player = current?.player else { return }
+        player.setVolume(musicVolume * duckLevel, fadeDuration: fade)
+    }
 
     /// Starts a loop, crossfading out whatever was playing. Asking for the
     /// loop that is already playing does nothing, so every screen can ask for
@@ -192,7 +281,7 @@ final class AudioLibrary {
         current = (music, player)
         guard !isMusicMuted else { return }
         player.play()
-        player.setVolume(musicVolume, fadeDuration: fade)
+        player.setVolume(musicVolume * duckLevel, fadeDuration: fade)
     }
 
     func stopMusic(fade: TimeInterval = 0.8) {
@@ -246,20 +335,79 @@ final class AudioLibrary {
             }
             return
         }
-        guard let players = pool(for: sound), !players.isEmpty else { return }
+        guard let player = takeVoice(for: sound) else { return }
+        setStartVolume(player, sound.volumeCap.map { min(volume, $0) } ?? volume)
+        player.currentTime = 0
+        player.play()
+    }
 
+    /// Plays `sound` `lead` seconds from now on the audio device's own clock
+    /// (`AVAudioPlayer.play(atTime:)`), not on a main-thread timer: the
+    /// summon's burst (FEEL.md W2.7) sounds a set 40 ms after the flash,
+    /// once the charge's stems have given way to it, however busy the main
+    /// thread is drawing that flash. A voice still ringing is stopped where
+    /// it stands first. Main thread.
+    func schedule(_ sound: Sound, volume: Float = 1.0, in lead: TimeInterval) {
+        guard !isMuted else { return }
+        guard let player = takeVoice(for: sound) else { return }
+        if player.isPlaying { player.pause() }
+        setStartVolume(player, sound.volumeCap.map { min(volume, $0) } ?? volume)
+        player.currentTime = 0
+        let start: TimeInterval = player.deviceCurrentTime + max(0, lead)
+        if lead <= 0 || !player.play(atTime: start) {
+            player.play()
+        }
+    }
+
+    /// Fades out every voice of `sounds` that is sounding, over `fade`
+    /// seconds: the summon's charge giving way to its burst at the flash,
+    /// or to the next pull (FEEL.md W2.7). A phone's mixer sums its players
+    /// with nothing after it to catch a sum over full scale, so the stems
+    /// step aside rather than play under the burst (`summon_mix_check` in
+    /// `tools/sfx.py`). A voice `play` starts again is at its own volume
+    /// again. Main thread.
+    func fadeOut(_ sounds: [Sound], over fade: TimeInterval) {
+        for sound in sounds {
+            lock.lock()
+            let players: [AVAudioPlayer] = pools[sound] ?? []
+            lock.unlock()
+            for player in players where player.isPlaying {
+                lock.lock()
+                fadedVoices.insert(ObjectIdentifier(player))
+                lock.unlock()
+                player.setVolume(0, fadeDuration: max(0.01, fade))
+            }
+        }
+    }
+
+    /// Voices `fadeOut` has turned down. The next start of one sets its
+    /// volume with a ramp of nothing (`setVolume(_:fadeDuration: 0)`), so
+    /// neither a fade still running nor the ramp it set can carry into the
+    /// new sound's attack; every other start sets `volume` as it always has.
+    private var fadedVoices: Set<ObjectIdentifier> = []
+
+    private func setStartVolume(_ player: AVAudioPlayer, _ volume: Float) {
+        lock.lock()
+        let faded: Bool = fadedVoices.remove(ObjectIdentifier(player)) != nil
+        lock.unlock()
+        if faded {
+            player.setVolume(volume, fadeDuration: 0)
+        } else {
+            player.volume = volume
+        }
+    }
+
+    /// The next voice of `sound`'s pool, round the pool in turn. The index
+    /// is taken modulo THIS pool's size: the launch preload and a first
+    /// play can each build a pool for the same sound, and an index advanced
+    /// on a larger one must not run past a smaller (2026-09-24).
+    private func takeVoice(for sound: Sound) -> AVAudioPlayer? {
+        guard let players = pool(for: sound), !players.isEmpty else { return nil }
         lock.lock()
         let index = nextVoice[sound, default: 0]
         nextVoice[sound] = (index + 1) % players.count
         lock.unlock()
-
-        // The index is taken modulo THIS pool's size: the launch preload and
-        // a first play can each build a pool for the same sound, and an index
-        // advanced on a larger one must not run past a smaller (2026-09-24).
-        let player = players[index % players.count]
-        player.volume = sound.volumeCap.map { min(volume, $0) } ?? volume
-        player.currentTime = 0
-        player.play()
+        return players[index % players.count]
     }
 
     private func pool(for sound: Sound) -> [AVAudioPlayer]? {

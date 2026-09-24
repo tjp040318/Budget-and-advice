@@ -46,6 +46,7 @@ what each recording is for.
 
     python3 tools/sfx.py                     # write them all
     python3 tools/sfx.py status flow         # only the named sections
+    python3 tools/sfx.py summon --vsco DIR   # the summon's (FEEL.md W2.7)
     python3 tools/sfx.py flow --out /tmp/x   # somewhere else, to audition
     python3 tools/sfx.py --check             # measure what is on disk
 """
@@ -492,7 +493,9 @@ def build_rest():
 #   and the boss's roar.
 #
 #   Recordings, for what a synth only imitates: harp, glockenspiel, bell tree,
-#   horn, trumpet, oboe, gong, cymbal, timpani, bass drum and an anvil, all
+#   horn, trumpet, oboe, gong, cymbal, timpani, bass drum and an anvil (and,
+#   for the summon, string sections in tremolo, a timpani roll, a suspended
+#   cymbal and a triangle), all
 #   from VSCO 2 Community Edition by Versilian Studios (recorded by Sam
 #   Gossner and Simon Dalzell): https://github.com/sgossner/VSCO-2-CE at
 #   commit 44030090 (`VSCO_COMMIT`). Its LICENSE file, read 2026-09-24, is
@@ -528,6 +531,19 @@ def build_rest():
 #     the turn chime                -15     AudioLibrary also caps it at 0.35,
 #                                           about 7 dB over the battle music
 #                                           at its 0.32 (-31.6 LUFS)
+#
+# The summon's (`build_summon`, W2.7) are levelled as a MIX, because the
+# reveal plays up to four of them at once and a phone's mixer sums them
+# with no limiter after it: the charge's base -15, its rise -16 and tell
+# -16 laid over it, the Light & Dark layer -18 — a 3★'s charge -16.6 at
+# the reveal's 0.85, a 4★'s -14.8, a 5★'s -12.7; the bursts -13 (3★), -12
+# (4★) and -11 (5★), each a step over its charge; the stars -17.5 rising to
+# -15.5; the rites -11 (the awakening) and -12 (an evolution, a relic's
+# awakening); the scroll catching light at the button -15.
+# `summon_mix_check` plays them at the reveal's own offsets and volumes:
+# every grade's sum peaks at or under 0.90 of full scale. The first levels
+# (the bursts at -12/-11/-9, the charge's stems 1.5 dB hotter) summed to
+# 1.36 over a 5★'s stars and 1.07 in its charge.
 # ==============================================================================
 
 try:
@@ -851,6 +867,28 @@ VSCO = {
     "muted_D5": ("Brass/Trumpet/harmonM-sus/Sum_SHTrumpet_harmonM-sus_D4_v3_rr1.wav", 587.64),
     # the Jade Court's suona, played on an oboe and roughened
     "oboe_F5": ("Woodwinds/Oboe/Vib/Oboe_Vib_F4_v3_Main.wav", 699.70),
+    # The summon (FEEL.md W2.7, 2026-09-24). String sections in tremolo, the
+    # sound of a charge gathering in every film score: the violins are
+    # named an octave under what they play (VlnEns "A3" sounds A4), the
+    # cellos too. Measured on 0.6 s of steady tremolo 0.25 s in (harmonic
+    # product spectrum): the ensemble's pitch wanders a few cents inside a
+    # note, so these are its centre.
+    "vtrem_D4": ("Strings/Violin Section/Trem/VlnEns_Trem_D3_v1.wav", 294.10),
+    "vtrem_F#4": ("Strings/Violin Section/Trem/VlnEns_Trem_F#3_v1.wav", 371.80),
+    "vtrem_A4": ("Strings/Violin Section/Trem/VlnEns_Trem_A3_v1.wav", 437.40),
+    "vtrem_E5": ("Strings/Violin Section/Trem/VlnEns_Trem_E4_v1.wav", 657.80),
+    "vtrem_G5": ("Strings/Violin Section/Trem/VlnEns_Trem_G4_v1.wav", 782.60),
+    "vtrem_B5": ("Strings/Violin Section/Trem/VlnEns_Trem_B4_v1.wav", 987.80),
+    "vtrem_D6": ("Strings/Violin Section/Trem/VlnEns_Trem_D5_v1.wav", 1173.90),
+    "ctrem_D3": ("Strings/Cello Section/trem/trem_D2_v1_1.wav", 147.00),
+    "ctrem_A3": ("Strings/Cello Section/trem/trem_A2_v1_1.wav", 218.40),
+    # the rise: a real timpani roll (the small drum, about D3) and a
+    # suspended cymbal rolled with soft mallets in a crescendo that peaks
+    # 3.8 s in; the cymbal's soft single stroke; a triangle for the bells
+    "timproll_D3": ("Percussion/Timpani/Rolls/Timpani3_Roll_v5_rr1_Sum.wav", 146.00),
+    "susproll": ("VSCO 1 Percussion/varMetal/Cymbals/susp/susp_hit_softmall_roll2_cresc.wav", None),
+    "susp_soft": ("VSCO 1 Percussion/varMetal/Cymbals/susp/susp_hit_softmall_mp.wav", None),
+    "triangle": ("Percussion/Triangle3-Hit_v2_rr1_Sum.wav", None),
 }
 
 def have_vsco(names):
@@ -1485,6 +1523,396 @@ def build_flow():
         boss_arrival(); level_up()
 
 # ==============================================================================
+# build_summon: the summon that climbs with the grade (FEEL.md W2.7,
+# 2026-09-24). One file played at two volumes was the whole summon; now the
+# charge is three stems laid on the ladder's own rungs (`ChargeLadder.stems`
+# in SummonRevealView.swift) and the burst is the grade's:
+#
+#   summon_ignite            the scroll catching light at the summon button
+#   summon_charge_base       every pull, from the charge's first frame
+#   summon_charge_rise       a 4★ or better, from the violet rung (0.44 s)
+#   summon_charge_tell       a 5★ alone, from the gold rung (0.88 s)
+#   summon_charge_lightdark  the Light & Dark scroll, from the first frame
+#   summon_burst_3/_4/_5     the flash: a chime, a brass stab, a gong and choir
+#   star_1 … star_6          the stars climbing a glockenspiel's scale
+#   rite_awaken / _evolve / _relic_awaken   the three rites that reused the
+#                            summon's burst, each its own
+#
+# The harmony is chosen so every layer agrees with every other whichever of
+# them play. The base holds an OPEN FIFTH on D (D3 A3 D4 A4, with E5 over
+# it and the harp's D-A-E): no third, so it is neither major nor minor yet.
+# A 3★ or a 4★ resolves it to D major at the flash. A 5★'s tell LIFTS it a
+# whole step — E major in the high violins and a choir, over the base's
+# fifth still ringing, E over D, the tension film scores put before a
+# release — and its burst lands in E: the key change the item asks for, on
+# the 5★ alone. The stars climb A major's pentatonic (A B C# E F# A), whose
+# notes sit in D major and in E major both, so they ring true over either
+# burst.
+# ==============================================================================
+
+def tremolo(note, dur, start=0.3):
+    """A string section's tremolo at `note`, from `start` seconds into the
+    recording (past the bow's first accent, where the tremolo is steady),
+    `dur` seconds long: the level the envelope laid on it is the only one
+    heard."""
+    f = pitch(note) if isinstance(note, str) else note
+    fam = "ctrem" if f < 260 else "vtrem"
+    keys = [k for k in VSCO if k.startswith(fam + "_")]
+    key = min(keys, key=lambda k: abs(math.log(f / VSCO[k][1])))
+    x = recording(key)[N(start):]
+    x = repitch(x, f / VSCO[key][1])
+    x = x[:N(dur + 0.05)]
+    return fade_tail(steady(x, after=0.02, win=0.06), 0.05)
+
+def swell(n, points, curve=1.0):
+    """`shape` bent by `curve`: over 1 the rise hangs back and arrives late,
+    which is how a crescendo is played, not a straight ramp."""
+    return shape(n, points) ** curve
+
+def summon_ignite():
+    r = seeded("summon_ignite")
+    # The painted scroll catching light over the ring: the bell tree's stroke
+    # for the shimmer, a breath of flame (noise under a band climbing
+    # 600 Hz -> 3 kHz and letting go), a low soft whoomp as it takes, and the
+    # harp's open D-A-E flicking up an octave and a half. Short, so the
+    # reveal's own charge is the one that climbs.
+    b = Bus()
+    b.add(hp(recording("belltree"), 1200)[:N(1.0)], 0.0, 0.5)
+    n = N(0.7)
+    b.add(travel(r.standard_normal(n), [(0, 600), (0.45, 3000), (1, 1800)], q=1.2)
+          * shape(n, [(0, 0), (0.18, 1.0), (0.7, 0)]), 0.0, 0.3)
+    b.add(drop(0.5, 110, 48, 0.06, 0.14, attack=0.02), 0.02, 0.35)
+    for i, note in enumerate(["D5", "A5", "E6"]):
+        b.add(played("harp", note, dur=0.35, release=0.25), 0.05 + 0.045 * i, 0.4 + 0.15 * i)
+    save("summon_ignite", room(b.x, rt60=1.1, wet=0.2, seed="hall")[:N(1.0)], -15, tail=0.3)
+
+def summon_charge_base():
+    r = seeded("summon_charge_base")
+    # Every pull's charge, the same file for every grade (no sound may tell
+    # the pull before its rung): 1.25 s to the flash (1.4 for a 5★, which
+    # holds at the top for the extra 0.15 s). The string sections in
+    # tremolo on the open fifth, swelling from nothing (the crescendo bent
+    # to arrive late); the harp's D-A-E climbing, its notes coming faster
+    # and louder as the charge gathers; a heartbeat under it, quickening; and
+    # air rising through a band 400 Hz -> 5 kHz.
+    n = N(1.62); b = Bus()
+    body = [(0, 0.05), (0.06, 0.1), (1.25, 1.0), (1.42, 1.0), (1.62, 0.0)]
+    for note, g, at in (("D3", 0.55, 0.0), ("A3", 0.5, 0.01), ("D4", 0.5, 0.02), ("A4", 0.42, 0.03), ("E5", 0.26, 0.05)):
+        x = tremolo(note, 1.6)
+        b.add(x * swell(len(x), body, 2.2), at, g)
+    run = ["D4", "A4", "E5", "D5", "A5", "E6", "D6", "A6", "E6", "D7"]
+    for i, note in enumerate(run):
+        k = i / (len(run) - 1)
+        at = 1.18 * (1 - (1 - k) ** 1.7)
+        b.add(played("harp" if note not in ("D7",) else "glock", note, dur=0.3, release=0.2), at, 0.2 + 0.25 * k)
+    for at, g in ((0.0, 0.5), (0.46, 0.55), (0.78, 0.62), (1.0, 0.66), (1.15, 0.7)):
+        b.add(drop(0.3, 78, 44, 0.03, 0.08, attack=0.004), at, 0.26 * g)
+    air = travel(r.standard_normal(n), [(0, 400), (0.78, 5000), (1, 3000)], q=0.9)
+    b.add(air * swell(n, [(0, 0), (1.25, 1.0), (1.42, 0.8), (1.62, 0)], 2.0), 0.0, 0.1)
+    save("summon_charge_base", room(b.x, rt60=1.4, wet=0.22, seed="hall")[:N(1.75)], -15, tail=0.3)
+
+def summon_charge_rise():
+    # A 4★ or better, from the violet rung: a real timpani roll on D (the
+    # small drum, steady from 2 s into the recording) and the suspended
+    # cymbal's rolled crescendo, both pushed into a crescendo that peaks at
+    # 0.81 s, the 4★'s flash, and holds to 0.96 s, the 5★'s; a horn on D
+    # swelling under them for the weight. The burst covers the release.
+    b = Bus()
+    n = N(1.25)
+    roll = recording("timproll_D3")[N(2.0):N(2.0) + n]
+    roll = repitch(roll, pitch("D3") / VSCO["timproll_D3"][1])[:n]
+    b.add(roll * swell(len(roll), [(0, 0.08), (0.81, 1.0), (0.97, 1.0), (1.25, 0.0)], 2.2), 0.0, 0.9)
+    cym = recording("susproll")[N(2.9):N(3.95)]
+    b.add(hp(cym, 300) * swell(len(cym), [(0, 0.05), (0.81, 1.0), (0.97, 1.0), (1.05, 0.0)], 1.8), 0.0, 0.55)
+    b.add(_call_note("horn", "D3", 0.95, 0.25, swell=[(0, 0.1), (0.81, 1.0), (1.2, 1.0)]), 0.0, 0.3)
+    save("summon_charge_rise", room(b.x, rt60=1.5, wet=0.2, seed="hall")[:N(1.45)], -16, tail=0.3)
+
+def summon_charge_tell():
+    r = seeded("summon_charge_tell")
+    # A 5★ alone, from the gold rung, 0.525 s before the flash: the bell's
+    # ping (the glockenspiel's E6 and B6 struck together over a triangle),
+    # the high violins LIFTING to E major (E5 G#5 B5, the key change), a
+    # choir swelling in on E major, and the lightning's crackle round it.
+    # The ping lands on the base and the rise near their loudest, so it is
+    # a bell and not a blow: struck under the body that follows it, its
+    # peak kept for the sum (`summon_mix_check`).
+    b = Bus()
+    b.add(played("glock", "E6", dur=0.8, release=0.4), 0.0, 0.5)
+    b.add(played("glock", "B6", dur=0.8, release=0.4), 0.012, 0.4)
+    b.add(hp(recording("triangle"), 2500)[:N(0.9)], 0.0, 0.25)
+    lift = [(0, 0.35), (0.5, 1.0), (0.62, 1.0), (0.85, 0.0)]
+    for note, g in (("E5", 0.45), ("G#5", 0.4), ("B5", 0.35)):
+        x = tremolo(note, 0.85)
+        b.add(x * swell(len(x), lift, 1.0), 0.0, g)
+    n = N(0.85); choir = Bus()
+    for part, notes, g in (("bass", "E3", 0.9), ("tenor", "B3", 0.8), ("alto", "G#4", 0.75), ("soprano", "B4", 0.7), ("soprano", "E5", 0.45)):
+        choir.add(choir_part(r, part, [(0, pitch(notes))], n), 0.0, g)
+    voices = choir.x[:n] / np.max(np.abs(choir.x))
+    b.add(voices * swell(n, [(0, 0.0), (0.52, 1.0), (0.62, 1.0), (0.85, 0.0)], 1.5), 0.0, 0.55)
+    b.add(hp(pops(r, 0.55, 46, 2500, 9500, bias=1.1), 1500), 0.0, 0.5)
+    b.add(click(r, 0.006, 0.002, 11000, 2500), 0.0, 0.2)
+    save("summon_charge_tell", room(b.x, rt60=1.6, wet=0.24, seed="hall")[:N(1.2)], -16, tail=0.35)
+
+def summon_charge_lightdark():
+    r = seeded("summon_charge_lightdark")
+    # The Light & Dark scroll, from the first frame of every one of its
+    # pulls (the scroll, never the result: it tells nothing): the bell
+    # tree's stroke and, reversed, a second climbing into the flash; two
+    # sopranos on A5 and E6 swelling out of nothing (a fifth, true over D
+    # and over E); the glockenspiel twinkling A6 and E6 above it.
+    b = Bus()
+    tree = hp(recording("belltree"), 1500)
+    b.add(tree[:N(1.2)], 0.02, 0.4)
+    rise = tree[:N(0.7)][::-1] * shape(N(0.7), [(0, 0), (0.7, 1)]) ** 2
+    b.add(rise, 0.55, 0.3)
+    n = N(1.5); choir = Bus()
+    choir.add(choir_part(r, "soprano", [(0, pitch("A5"))], n), 0.0, 0.8)
+    choir.add(choir_part(r, "soprano", [(0, pitch("E6"))], n), 0.0, 0.5)
+    voices = choir.x[:n] / np.max(np.abs(choir.x))
+    b.add(voices * swell(n, [(0, 0), (1.2, 1.0), (1.35, 1.0), (1.5, 0)], 1.4), 0.0, 0.5)
+    for at, note, g in ((0.25, "A6", 0.25), (0.55, "E6", 0.3), (0.85, "A6", 0.35), (1.1, "E6", 0.4)):
+        b.add(played("glock", note, dur=0.5, release=0.3), at, g)
+    save("summon_charge_lightdark", room(b.x, rt60=1.8, wet=0.3, seed="hall")[:N(1.8)], -18, tail=0.35)
+
+def summon_burst_3():
+    r = seeded("summon_burst_3")
+    # A 3★'s flash: a chime. The glockenspiel runs up D major (D6 F#6 A6
+    # D7, 35 ms apart) over the harp rolling the chord, a triangle's ping,
+    # a breath of air for the flash, the cymbal touched softly.
+    b = Bus()
+    for i, note in enumerate(["D6", "F#6", "A6", "D7"]):
+        b.add(played("glock", note, dur=0.9, release=0.45), 0.035 * i, 0.6 + 0.1 * i)
+    for i, note in enumerate(["D4", "F#4", "A4", "D5"]):
+        b.add(played("harp", note, dur=0.9, release=0.5), 0.012 * i, 0.4)
+    b.add(hp(recording("triangle"), 2500)[:N(1.2)], 0.0, 0.3)
+    n = N(0.5)
+    b.add(bp(r.standard_normal(n), 2500, 9000) * fall(n, 0.12, 0.004), 0.0, 0.2)
+    b.add(hp(recording("susp_soft"), 400)[:N(1.4)], 0.0, 0.25)
+    save("summon_burst_3", room(b.x, rt60=1.5, wet=0.24, seed="hall")[:N(1.8)], -13, tail=0.45)
+
+def summon_burst_4():
+    r = seeded("summon_burst_4")
+    # A 4★'s flash: a brass stab on D major — three trumpets (D5 F#5 A5,
+    # their staccato takes, the scoop settled out of the attack) over horns
+    # on D3 A3 cut short — the timpani struck on D2 under them, the cymbal
+    # struck, the glockenspiel's D7 sparkling off the top.
+    b = Bus()
+    for i, note in enumerate(["D5", "F#5", "A5"]):
+        b.add(_call_note("tptshort", note, 0.16, 0.12, settled=True), 0.004 * i, 0.85)
+    for note in ("D3", "A3"):
+        b.add(_call_note("horn", note, 0.3, 0.25), 0.008, 0.55)
+    timp = repitch(recording("timpani"), pitch("D2") / VSCO["timpani"][1])[:N(1.6)]
+    b.add(timp, 0.0, 0.55)
+    b.add(hp(recording("crash"), 450)[:N(1.8)], 0.012, 0.4)
+    b.add(played("glock", "D7", dur=0.8, release=0.4), 0.02, 0.45)
+    b.add(click(r, 0.005, 0.002, 9000, 1500), 0.0, 0.2)
+    save("summon_burst_4", room(b.x, rt60=1.7, wet=0.24, seed="hall")[:N(2.0)], -12, tail=0.5)
+
+def summon_burst_5():
+    r = seeded("summon_burst_5")
+    # A 5★'s flash, in the key the tell lifted to, E major, as a HIT and a
+    # BLOOM. The hit: the gong and the bass drum struck together over a sub
+    # falling to E1, the timpani on E2, the crash. The bloom: trumpets on
+    # E5 G#5 B5 over horns on E3 and B3, played forte-piano — struck with
+    # the drums, falling back by half inside 0.3 s and held — and a choir
+    # on the whole chord (E3 B3 G#4 B4 E5) swelling in over 120 ms and
+    # settling under the brass for two seconds; the glockenspiel's E6 and
+    # B6 and the bell tree glittering off the top. The loudest moment the
+    # summon has is its first 300 ms. Held at full for two seconds it was
+    # a wall the limiter pressed flat, and the stars stamped onto it summed
+    # to 1.36 of full scale; settled, the stars ring out over the choir.
+    b = Bus()
+    b.add(hp(recording("gong"), 60)[:N(3.0)], 0.0, 0.55)
+    b.add(recording("bass_drum")[:N(2.0)], 0.0, 0.35)
+    b.add(drop(1.6, 70, pitch("E1"), 0.08, 0.5, attack=0.004), 0.0, 0.15)
+    timp = repitch(recording("timpani"), pitch("E2") / VSCO["timpani"][1])[:N(2.0)]
+    b.add(timp, 0.012, 0.45)
+    b.add(hp(recording("crash"), 400)[:N(2.4)], 0.01, 0.6)
+    n = N(2.6); choir = Bus()
+    for part, note, g in (("bass", "E3", 1.0), ("tenor", "B3", 0.85), ("alto", "G#4", 0.8), ("soprano", "B4", 0.75), ("soprano", "E5", 0.55)):
+        choir.add(choir_part(r, part, [(0, pitch(note))], n), 0.0, g)
+    voices = choir.x[:n] / np.max(np.abs(choir.x))
+    b.add(voices * shape(n, [(0, 0), (0.12, 1.0), (0.45, 0.6), (2.1, 0.52), (2.6, 0)]), 0.02, 0.85)
+    fp = [(0, 1.0), (0.28, 0.5), (1.6, 0.45)]
+    for note in ("E5", "G#5", "B5"):
+        b.add(_call_note("tpt", note, 1.5, 0.5, swell=fp), 0.03, 0.5)
+    for note in ("E3", "B3"):
+        b.add(_call_note("horn", note, 1.5, 0.5, swell=fp), 0.04, 0.5)
+    b.add(played("glock", "E6", dur=1.0, release=0.5), 0.05, 0.4)
+    b.add(played("glock", "B6", dur=1.0, release=0.5), 0.09, 0.35)
+    b.add(hp(recording("belltree"), 1500)[:N(1.4)], 0.06, 0.3)
+    b.add(click(r, 0.007, 0.0025, 11000, 2000), 0.0, 0.4)
+    save("summon_burst_5", room(b.x, rt60=2.4, wet=0.28, seed="hall")[:N(3.2)], -11, tail=0.7)
+
+# The stars' scale: A major's pentatonic, true over D major and E major both.
+STAR_NOTES = ["A5", "B5", "C#6", "E6", "F#6", "A6"]
+
+# The reveal's own mix (`ChargeLadder` in SummonRevealView.swift), kept in
+# step with it by hand: every stem at 0.85; at the flash the stems fade out
+# over 0.05 s (`AudioLibrary.fadeOut`) and the burst sounds 0.04 s after it
+# on the audio device's clock (`AudioLibrary.schedule`), so it lands alone;
+# the stars at 0.7 over a 3★'s chime, 0.65 over a 4★'s brass and 0.55 over
+# a 5★'s choir (`ChargeLadder.starVolume`); a Quick 3★ (W2.23) has no
+# charge, its burst at 0.8 and its stars in a blink. `summon_mix_check`
+# sums them.
+STEM_VOLUME = 0.85
+STEM_FADE = 0.05
+BURST_LEAD = 0.04
+STAR_VOLUMES = {3: 0.7, 4: 0.65, 5: 0.55}
+QUICK_BURST_VOLUME = 0.8
+
+def star_notes():
+    r = seeded("star_notes")
+    # Each star lands on the next note: the glockenspiel's bar over a felt
+    # stamp (a short low thud and a tap, the star pressed into the plaque),
+    # a little louder and brighter a step as it climbs, the bell tree's
+    # glitter joining from the fourth. `star_1` … `star_6`.
+    for i, note in enumerate(STAR_NOTES):
+        b = Bus()
+        b.add(played("glock", note, dur=0.7, release=0.35), 0.0, 1.0)
+        b.add(drop(0.12, 230, 130, 0.015, 0.03, attack=0.001), 0.0, 0.22)
+        b.add(click(r, 0.003, 0.0012, 7000, 1800), 0.0, 0.18)
+        if i >= 3:
+            b.add(hp(recording("belltree"), 3000)[:N(0.6)], 0.01, 0.08 + 0.04 * (i - 3))
+        save(f"star_{i + 1}", room(b.x, rt60=0.9, wet=0.18, seed="small")[:N(1.0)], -17.5 + 0.4 * i, tail=0.3)
+
+def rite_awaken():
+    r = seeded("rite_awaken")
+    # An awakening's reveal lands on this instead of a summon's burst: an
+    # ascent into light. The gong breathed, not struck (a soft stroke under
+    # the rest); the harp sweeping up two octaves of D's pentatonic; the
+    # violins' tremolo opening onto D major (F#5 A5 D6); a choir rising
+    # from D major's fifth to its full chord; the glockenspiel's D7 at the
+    # top of the sweep.
+    b = Bus()
+    b.add(lp(hp(recording("gong"), 60)[:N(2.6)], 2500), 0.0, 0.35)
+    run = ["D4", "E4", "F#4", "A4", "B4", "D5", "E5", "F#5", "A5", "B5", "D6", "E6", "F#6"]
+    for i, note in enumerate(run):
+        k = i / (len(run) - 1)
+        b.add(played("harp", note, dur=0.5 + 0.4 * k, release=0.3), 0.03 * i, 0.4 + 0.45 * k)
+    b.add(played("glock", "D7", dur=1.1, release=0.5), 0.4, 0.5)
+    for note, g in (("F#5", 0.35), ("A5", 0.35), ("D6", 0.3)):
+        x = tremolo(note, 2.2)
+        b.add(x * swell(len(x), [(0, 0.0), (0.5, 1.0), (1.8, 0.9), (2.2, 0.0)], 1.2), 0.05, g)
+    n = N(2.4); choir = Bus()
+    choir.add(choir_part(r, "bass", [(0, pitch("D3"))], n), 0.0, 0.9)
+    choir.add(choir_part(r, "tenor", [(0, pitch("A3"))], n), 0.0, 0.8)
+    choir.add(choir_part(r, "alto", [(0, pitch("E4")), (0.35, pitch("E4")), (0.5, pitch("F#4"))], n), 0.0, 0.75)
+    choir.add(choir_part(r, "soprano", [(0, pitch("A4")), (0.35, pitch("A4")), (0.5, pitch("D5"))], n), 0.0, 0.7)
+    voices = choir.x[:n] / np.max(np.abs(choir.x))
+    b.add(voices * swell(n, [(0, 0), (0.45, 1.0), (1.9, 0.9), (2.4, 0)], 1.3), 0.0, 0.6)
+    save("rite_awaken", room(b.x, rt60=2.2, wet=0.3, seed="hall")[:N(2.9)], -11, tail=0.6)
+
+def rite_evolve():
+    r = seeded("rite_evolve")
+    # An evolution: a grade climbs, so the sound climbs a step at a time —
+    # the harp rolled up D major, then four staccato trumpets stepping up
+    # it (D5 F#5 A5 D6, 90 ms apart, the scoop settled out) and on the last
+    # the timpani on D2, the cymbal touched and the horns holding D3 A3, the
+    # glockenspiel's D7 over the top. Shorter than the level-up's fanfare
+    # and without its pickups, so the two are never mistaken.
+    b = Bus()
+    for i, note in enumerate(["D4", "F#4", "A4", "D5"]):
+        b.add(played("harp", note, dur=0.6, release=0.3), 0.025 * i, 0.45)
+    steps = ["D5", "F#5", "A5", "D6"]
+    for i, note in enumerate(steps):
+        last = i == len(steps) - 1
+        b.add(_call_note("tptshort", note, 0.3 if last else 0.09, 0.2 if last else 0.04, take=1 + i % 2,
+                         settled=True), 0.12 + 0.09 * i, 0.55 + 0.1 * i)
+    top = 0.12 + 0.09 * 3
+    timp = repitch(recording("timpani"), pitch("D2") / VSCO["timpani"][1])[:N(1.4)]
+    b.add(timp, top, 0.6)
+    b.add(hp(recording("susp_soft"), 400)[:N(1.5)], top, 0.35)
+    for note in ("D3", "A3"):
+        b.add(_call_note("horn", note, 0.8, 0.35, swell=[(0, 0.7), (0.3, 1.0), (1.15, 0.9)]), top, 0.4)
+    b.add(played("glock", "D7", dur=0.9, release=0.4), top + 0.02, 0.45)
+    b.add(click(r, 0.005, 0.002, 9000, 1500), top, 0.25)
+    save("rite_evolve", room(b.x, rt60=1.7, wet=0.24, seed="hall")[:N(2.2)], -12, tail=0.5)
+
+def rite_relic_awaken():
+    r = seeded("rite_relic_awaken")
+    # A relic's awakening: a stone waking, so glass and metal rather than
+    # voices and brass. Crystal struck twice (a fifth, E6 then B6: modes at
+    # glass's ratios, each split into a slow beating pair), the triangle
+    # and the bell tree reversed rising into the first strike, a low hum on
+    # B2 swelling under it, the anvil touched and pitched up a fourth for the
+    # setting, and a thin soprano shimmer on E5 and B5.
+    b = Bus()
+    tree = hp(recording("belltree"), 1500)[:N(0.55)][::-1] * shape(N(0.55), [(0, 0), (0.55, 1)]) ** 2
+    b.add(tree, 0.0, 0.35)
+    strike = 0.5
+    b.add(modes(2.0, pitch("E6"), (1, 2.32, 4.25, 6.63), (1.1, 0.6, 0.35, 0.2), (1, 0.45, 0.25, 0.12), split=2.5, rng=r), strike, 0.6)
+    b.add(modes(1.8, pitch("B6"), (1, 2.32, 4.25), (0.9, 0.5, 0.3), (1, 0.4, 0.2), split=3.0, rng=r), strike + 0.16, 0.45)
+    b.add(hp(recording("triangle"), 2500)[:N(1.6)], strike, 0.3)
+    anvil = fade_tail(lp(hp(repitch(recording("anvil"), 2 ** (5 / 12)), 600), 7000)[:N(0.6)], 0.3)
+    b.add(anvil, strike, 0.25)
+    n = N(2.2)
+    hum = tone(pitch("B2"), n) * swell(n, [(0, 0), (0.6, 1.0), (1.6, 0.8), (2.2, 0)], 1.5)
+    b.add(hum, 0.1, 0.18)
+    choir = Bus()
+    choir.add(choir_part(r, "soprano", [(0, pitch("E5"))], n), 0.0, 0.7)
+    choir.add(choir_part(r, "soprano", [(0, pitch("B5"))], n), 0.0, 0.5)
+    voices = choir.x[:n] / np.max(np.abs(choir.x))
+    b.add(voices * swell(n, [(0, 0), (0.7, 1.0), (1.7, 0.8), (2.2, 0)], 1.4), strike - 0.2, 0.3)
+    save("rite_relic_awaken", room(b.x, rt60=2.0, wet=0.3, seed="hall")[:N(2.8)], -12, tail=0.6)
+
+def build_summon():
+    _need()
+    if have_vsco("summon_*, star_*, rite_*"):
+        summon_ignite(); summon_charge_base(); summon_charge_rise(); summon_charge_tell()
+        summon_charge_lightdark(); summon_burst_3(); summon_burst_4(); summon_burst_5()
+        star_notes(); rite_awaken(); rite_evolve(); rite_relic_awaken()
+        summon_mix_check()
+
+def _read(name):
+    with wave.open(os.path.join(OUT, f"{name}.wav"), "rb") as w:
+        return np.frombuffer(w.readframes(w.getnframes()), dtype="<i2").astype(float) / 32767.0
+
+def summon_mix_check():
+    """The reveal plays several of these at once (`SummonRevealView`,
+    `ChargeLadder`): the base and the Light & Dark layer from the charge's
+    first frame, the rise from 0.4375 s, the tell from 0.875 s; at the flash
+    (1.25 s, 1.4 for a 5★) the stems give way over `STEM_FADE` and the
+    burst sounds `BURST_LEAD` after it; the card arrives on the figure's
+    first drawn frame, about 0.03 s on, and a star lands every 0.13 s from
+    0.26 + 0.11 s after that (`RevealCardTiming.landing`). A phone's mixer
+    sums the players, and a sum over full scale clips there. Prints each
+    grade's sum: its peak, and the loudness of the charge and of the whole."""
+    base, ld, rise, tell = (_read(k) for k in ("summon_charge_base", "summon_charge_lightdark",
+                                               "summon_charge_rise", "summon_charge_tell"))
+    stars = [_read(f"star_{i + 1}") for i in range(6)]
+    def given_way(x, at, flash):
+        k = N(max(0.0, flash - at)); y = x.copy()
+        if k < len(y):
+            y[k:] *= np.clip(1 - T(len(y) - k) / STEM_FADE, 0, 1)
+        return y
+    worst = 0.0
+    for grade, flash, burst in ((3, 1.25, "summon_burst_3"), (4, 1.25, "summon_burst_4"), (5, 1.4, "summon_burst_5")):
+        for scroll in ("", " + light & dark"):
+            b = Bus()
+            b.add(given_way(base, 0.0, flash), 0.0, STEM_VOLUME)
+            if scroll: b.add(given_way(ld, 0.0, flash), 0.0, STEM_VOLUME)
+            if grade >= 4: b.add(given_way(rise, 0.4375, flash), 0.4375, STEM_VOLUME)
+            if grade >= 5: b.add(given_way(tell, 0.875, flash), 0.875, STEM_VOLUME)
+            b.add(_read(burst), flash + BURST_LEAD, 1.0)
+            for i in range(grade):
+                b.add(stars[i], flash + 0.03 + 0.26 + 0.13 * i + 0.16 * 0.7, STAR_VOLUMES[grade])
+            peak = float(np.max(np.abs(b.x))); worst = max(worst, peak)
+            charge = b.x[:N(flash)]
+            print(f"  mix {grade}★{scroll:16s}  peak {peak:.3f}  charge {loudness(charge):6.1f} LUFS"
+                  f"  whole {loudness(b.x):6.1f} LUFS{'   ! over 0.95' if peak > 0.95 else ''}")
+    # A Quick 3★: the flash at once, the stars from 0.06 s, 0.06 apart
+    # (`RevealCardTiming.quick`).
+    b = Bus()
+    b.add(_read("summon_burst_3"), BURST_LEAD, QUICK_BURST_VOLUME)
+    for i in range(3):
+        b.add(stars[i], 0.03 + 0.06 + 0.06 * i + 0.1 * 0.7, STAR_VOLUMES[3])
+    peak = float(np.max(np.abs(b.x))); worst = max(worst, peak)
+    print(f"  mix quick 3★              peak {peak:.3f}  whole {loudness(b.x):6.1f} LUFS"
+          f"{'   ! over 0.95' if peak > 0.95 else ''}")
+    print(f"  the loudest sum {worst:.3f} of full scale" + ("" if worst <= 0.95 else "   ! the reveal would clip"))
+
+# ==============================================================================
 # Measurement. There is no listening in this environment, so the only check on
 # any of the above is the numbers: `python3 tools/sfx.py --check`.
 # ==============================================================================
@@ -1566,7 +1994,7 @@ def main():
     VSCO_DIR = option("--vsco") or VSCO_DIR
     sections = {"hits": build_hits, "kinds": build_kinds, "elements": build_elements,
                 "defence": build_defence, "rest": build_rest,
-                "status": build_status, "flow": build_flow}
+                "status": build_status, "flow": build_flow, "summon": build_summon}
     for name in args or list(sections):
         if name not in sections:
             sys.exit(f"no section {name!r}; the sections are {', '.join(sections)}")

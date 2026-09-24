@@ -102,9 +102,9 @@ enum MemoryProbe {
         }
         guard result == KERN_SUCCESS else { return "heap \(live) of \(held) MB" }
         let graphics = info.ledger_tag_graphics_footprint / 1_048_576
-        let internal = info.internal / 1_048_576
+        let anonymous = info.internal / 1_048_576
         let compressed = info.compressed / 1_048_576
-        return "heap \(live) of \(held) MB, graphics \(graphics) MB, internal \(internal) MB, compressed \(compressed) MB"
+        return "heap \(live) of \(held) MB, graphics \(graphics) MB, internal \(anonymous) MB, compressed \(compressed) MB"
     }
 
     /// Bytes the process may still take before iOS kills it; 0 where the OS

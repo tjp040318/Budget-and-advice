@@ -8494,3 +8494,206 @@ Still to do:
   under DEFEAT (they pose at `.battleEnded`, at the fight's speed); the
   heal, shield, status and block sounds, off at ×3 by W1.4's rule.
 - **Not photographed:** the scene's lab `-tour-triumph win|loss`.
+
+## The premium feel, Wave 2: the summon (2026-09-24; `Docs/FEEL.md` W2.4, W2.13, W2.23, W2.7)
+
+Built by one agent on the summon's own files (`SummonRevealView`,
+`SummonView`, three new files in `Pantheon/UI/Summon`, `AudioLibrary`,
+`tools/sfx.py`) while another built the fight's half; the shared files
+(`TourView`, build.yml, the Hall of Ka's and the relic card's sound calls,
+these docs) were handed over as changes. `Docs/FEEL.md` has an *As built*
+paragraph under each item. The genre, first: Summoners War reveals a unit
+posing on its portal with its stars stamped over it; Epic Seven and Raid end
+on the hero's pose and a designed name plate; Genshin keeps its 5★ splash
+through a skip; Star Rail's 5★ has music of its own and Arknights' 6★ is
+heard before it is seen [recalled]. Ours arrived idling, its words were loose
+lines over the sky, Skip swallowed a 5★ still to come, and one file played at
+two volumes was the whole sound [ours].
+
+- **W2.4, the entrance.** The high point needed a source. Options: a table
+  per family (115 rows), a marker in the clip (the exports carry none), or
+  one row per motion PRESET, found by the clip's length. Measured: the 115
+  victories are three presets (298 Cheer ×34, 1.90 s; 412 Victory ×53, 3.93
+  s; 88 Chest Pound ×28, 3.87 s), none moves the hips, so the preset row won
+  — three rows, and a new family on a preset needs nothing. The hold is the
+  scene's own pause (the idle, the particles and the actions stop together,
+  as `Juice.impact` stops the fight); the camera kicks on a rig of its own
+  so the push-in keeps its own position; the flipbooks are planes with baked
+  masks (particles cut a hard line at the floor, run 234; a shader modifier
+  drew nothing, run 235); the name waits for the clip's high point reported
+  on the scene's clock, never a main-thread timer (run 221).
+- **W2.13, the name card.** Options: one keyframe timeline (the spec), two,
+  or the old timers. Two: the high point falls during the stars for 412 and
+  after them for 88, and one timeline would restart the stars or hold the
+  name back. The painted star (6–9 credits) is the upgrade; the card draws an
+  SF star in painted gold today.
+- **W2.23, Skip.** Options: Genshin's (skip everything, show the 5★'s splash
+  on the way) or stops in order. Stops, each named on the control ("Skip to
+  ★★★★★"), so a new 4★ before the 5★ is not swallowed either; a 0.6 s hold
+  is the old skip-all. One press gesture, not a tap beside a long press:
+  whether a tap fires on the lift that ends a hold is SwiftUI's call, and the
+  control reads Done by then. Quick summons sits on the summon room's header,
+  not in Settings (another lane's file today; one line to move).
+- **W2.7, the sound.** Options: one file per grade (a skip cannot cut it
+  cleanly, and the charge would be chosen before its rung), a pitch
+  parameter on one file (an `AVAudioPlayer`'s rate keeps the pitch, so it
+  cannot climb a scale), or stems on the rungs and recorded notes. Stems and
+  notes, from VSCO 2 CE's CC0 recordings; the choir is synthesised (VSCO has
+  none). Levelled one by one they summed to 1.36 of full scale on a 5★ — a
+  phone's mixer has no limiter after it — so they are levelled as a MIX: the
+  stems fade over 50 ms at the flash, the burst is scheduled 40 ms behind it
+  on the audio clock, the stars step down over a bigger burst, and
+  `summon_mix_check` holds every grade's sum at or under 0.90.
+
+Still to do:
+
+- **Judge the CI frames** — `5-reveal-a`–`c`, `-apex`, `-awakened-apex`,
+  `-ten`, `-ten-skipped`, and the stress step's MEMORY curve (a victory clip,
+  about 200 KB, is now parsed for every new family revealed) — and send them
+  to the owner before he tests (rule 1).
+- **On the phone only:** every sound (nothing here has speakers: they were
+  judged on loudness, peaks, the mix check and a spectrogram sheet); whether
+  `play(atTime:)` lands the burst 40 ms behind the flash; whether a new
+  `setVolume` cuts a fade still running (a faded voice's next start sets its
+  volume with `setVolume(_:fadeDuration: 0)` to be sure); the hold under the
+  white; the Skip press under VoiceOver.
+- **The owner's calls:** the painted star; a recorded choir and a composed
+  5★ stinger (the paid list); Quick summons in Settings.
+
+## The premium feel, Wave 2: the battle's half (2026-09-24; `Docs/FEEL.md` W2.1, W2.8–W2.11)
+
+Five items, built in the battle's files while another agent built the
+summon's: the ultimate's splash, its spotlight, deaths that leave the field,
+waves that walk in, and the boss's entrance. The research first, then the
+options for each and the one chosen. The genre's own pages (the Com2uS
+forum, the wikis and the press sites) are refused by this environment's
+network policy, so the genre's side is what is known of the games
+[recalled], and ours is measured in the code and the frames [ours].
+
+### What the genre does
+
+- **Summoners War** has no ultimate splash at all: a skill plays on the
+  field and the camera stays where it is [recalled]. Its dungeon bosses are
+  standing when the last wave opens, under a wide bar across the top, and a
+  new wave is a short "WAVE 2/3" over the field while the team steps up
+  [recalled]. A dead monster fades where it fell [recalled].
+- **Epic Seven** gives a 5★ hero's third skill a painted cut-in and a
+  camera move, and lets the player turn the skill animations off for auto
+  [recalled]. **Honkai: Star Rail** holds the world for an ultimate — the
+  field darkens, the character's art sweeps across, the name lands — and
+  its bosses enter with a title card [recalled]. **Genshin** darkens the
+  world around a burst and a defeated enemy dissolves in motes [recalled].
+  **Raid** names its bosses before the fight and lets its skill animations
+  be skipped [recalled].
+- Ours: the ultimate was a 64-point card on an 84-point band while the fight
+  played under it, then a white full-screen flash; the set stayed fully
+  lit round the caster (`8-arena_battle-aoe-*`); a dead body lay at 0.6
+  until the next wave; arrivals slid two metres in 0.7 s; the Colossus's
+  wave arrived as a quiet fade (`18-dungeon_battle-c`) [ours].
+
+### The options, and the choice
+
+- **W2.1, the splash.** (a) The band rebuilt in SwiftUI over the held
+  scene — a parallelogram mask, a `Canvas` of streaks, the card through
+  `PortraitPainting` — with the hold handed to the queue as frozen time, so
+  the contact table stays true. (b) A plane in front of the SceneKit camera
+  — the card would pass through the realm's grade, the bloom and the white
+  point, and ride the camera's moves. (c) A painted or filmed flipbook per
+  unit — the best, and a paid batch per family. **Chosen: (a)**; (c) is the
+  step after it, on the owner's word. With the setting Always / First each
+  fight / Off, since the genre lets auto farming skip it. A card is decoded
+  ahead only when a splash will draw it (`warmSplashCards`): four megabytes
+  a card, and the first cut decoded every fighter's at every turn.
+- **W2.9, the spotlight.** (a) The set's lights down to 35% on the
+  renderer's thread, with a key of the figures' own (category 2, no shadow)
+  taking up what the shared key lost, the painting to 0.45 and the camera's
+  colour 0.35 down. (b) Everything down and a spot on the caster — the
+  victims go dark too. (c) A mask pass that keeps the figures in colour
+  (W3.26) — a Metal technique that cannot be compiled here, two or three CI
+  runs. **Chosen: (a)**; the camera's saturation is the whole frame's, so
+  the figures lose some colour with the set until (c) is built.
+- **W2.8, deaths.** (a) The body faded, a particle column, a soul light, a
+  glyph on the mark — no shader. (b) A noise-threshold burn — the genre's
+  best dissolve, and a custom shader on an effect, which run 235 showed
+  draws nothing here. (c) The body left lying, as before. **Chosen: (a).**
+- **W2.10, waves.** (a) The walk clip at the stride it was made for (the
+  island's stroll, in proportion to height), the move at the fight's pace.
+  (b) Root motion — Meshy's walk is in place, there is none. (c) The team
+  walking on from behind the camera as well. **Chosen: (a)**, with the
+  stamp — a NEW wave's only (a raid's returning guard is none) — and a
+  chapter boss's line after it, on the boss's own wave; (c) was not built:
+  the fight opens under the veil while its shaders compile, and from
+  eighteen metres behind the team the walk would begin behind the lens.
+- **W2.11, the boss.** (a) A scripted entrance on scene actions — the
+  rise, the roar, the ribbon, the bar filling — held by the wave's event,
+  or for a Titan in the opening line by the queue until the stage has been
+  seen. (b) A camera move round the boss — the fixed camera and the floor
+  that never turns are the owner's rules. (c) A filmed intro per boss —
+  paid. **Chosen: (a).**
+
+### As built
+
+`Docs/FEEL.md` has an *As built* paragraph under each item. The numbers are
+FieldBeats.swift's (`UltimateSplash`, `Spotlight`, `WaveStamp`, `WalkOn`,
+`Dissolve`, `BossEntrance`), pinned by `FieldBeatsTests`; the views are
+FieldBeatViews.swift's. A review of the first cut found seven faults, all
+fixed before the first CI run: every Titan's returning guard stamped FINAL
+WAVE; a dissolved body's ground oval came back under its empty mark at the
+next turn; the WAVE stamp and a non-giant boss's speech band stood one over
+the other on seven chapters' last stages (and the line was said by the
+first mob of the boss's kind, a wave early); every fighter's card was
+decoded at every turn; a Skip that dropped a revive left the unit fighting
+as a glyph; an opening Titan's boom sounded under the veil; and two texts
+still promised no white flash under Reduce Motion.
+
+### Still to do
+
+- **Judge the frames:** `6-battle-cutin` (the splash at its middle),
+  `6-battle-spotlight` (the wind-up with the set dimmed — `framelight.py`
+  beside `6-battle-a`), `6-battle-dissolve`, `18-dungeon_battle-wave` (the
+  stamp over its walkers) and `18-dungeon_battle-boss` (the ribbon over the
+  roar), and send them to the owner before he tests (rule 1).
+- **On the phone only:** whether the band's first frame hitches (the card
+  is decoded as the turn's events reach the scene, only when a splash will
+  draw it); the heavy haptic on the name; whether the figures' key and the
+  dimmer read as the caster lit in a dark world or as the whole frame
+  dimmed; whether the walk's stride matches its speed on the tall families;
+  the five bosses' heavy clips as a roar (read none on their boards here —
+  a lunge would carry the boss off its rim).
+- **The owner's calls:** Always as the default; enemy ultimates splashing
+  too; the stamp on a wave with no boss only (a boss's wave has its ribbon
+  instead of FINAL WAVE); a non-giant boss's line after the FINAL WAVE
+  stamp rather than over it; the realm's horn still sounding when a raid's
+  guard comes back (W1.4's, left as it was).
+- **Sounds wanted** (none made; `tools/sfx.py` is the other lane's): a
+  sting per element for the splash (it is `.summonBurst` over the element's
+  impact now), a riser under the band's wipe, a bell for the soul light's
+  wink (`.starTick` now), a low rumble under a boss's climb and a war drum
+  for the stamp (`.hitBlunt` now).
+
+### The area cast's light, and run 249's red build (2026-09-24)
+
+**The area cast relit the set.** Two of the eight area-cast frames of runs
+246–248 came out washed pale: run 247's tide rite over the team (aoe-a, the
+middle band 6.2% blown, a 64-px patch 78%) and run 246's Wrath of the Eye
+(aoe-c, 2.6% and 49%); the other six were under 1.2%. Looked at, the white
+was the FLOOR and the figures, not the painted sheet: the one light a row
+cast brings peaked at 1,440 (`flash`'s 2,400 cap × the row's 0.6), a quarter
+over the battle's key light (1,150), and reached six metres. It is
+`VFXLibrary.rowLightStrength` 0.35 now (peak 840, under the key) for the row
+and for the light an each-draws-its-own cast shares, and the painted sheet
+over a row went 0.5 → 0.4 (`rowSheetStrength`). Options weighed: a
+luminance-normalised strength per element (the tide and the ember mixes
+measure 0.73 and 0.69 luminance, so it would move nothing), screen blending
+for the sheets (it darkens a surface the HDR buffer holds over 1.0, which
+every lit marble floor here does), and a mask over the figures (the shader
+route runs 235 proved draws nothing). THE RULE stands as written in
+*An effect may not relight the set*: a cast's light stays under the key.
+
+**Run 249 did not compile**, on the memory probe's own line: `let internal =
+info.internal / 1_048_576`. A member of that name is fine after a dot
+(SE-0071), but `internal` cannot name a constant, and the read in the string
+was a second error. The local is `anonymous`, and swiftcheck has a rule for
+the whole class (`check_keyword_bindings`: a `let` or `var` named with any
+reserved word but `self`), proven on this line and silent on the rest of the
+tree.

@@ -258,6 +258,71 @@ final class BattleSceneController: NSObject {
     /// Set once the triumph has played (`celebrate`), and cleared by a new run.
     private var celebrated = false
 
+    // MARK: The beats over the field (Docs/FEEL.md W2.1, W2.8–W2.11)
+
+    /// Told, on the main thread, of every beat the battle view draws over
+    /// the field — an ultimate's splash, a wave's stamp, a boss's entrance —
+    /// and of each one's end (`FieldCue`). The view sets and clears it, and
+    /// it holds nothing of the view model's, so no cycle.
+    var onFieldCue: ((FieldCue) -> Void)?
+    /// Each fighter's card, name and colour, for its splash.
+    private var castCards: [UUID: (portrait: String, name: String, accentHex: String)] = [:]
+    /// The fighters whose ultimate has owned the screen this fight, for
+    /// "First each fight".
+    private var splashedCasters: Set<UUID> = []
+    private var splashSerial = 0
+    private var stampSerial = 0
+    private var entranceSerial = 0
+    /// The wave the field is on, as this scene has put it there: 1 from the
+    /// build, raised by each `.waveStarted` that brings a NEW wave. A raid's
+    /// guard coming back is reported as `.waveStarted` under the wave the
+    /// fight is already on (`BattleEngine.summonGuard`, so the HUD's counter
+    /// never lies): it walks on, but it is no wave of its own and wears no
+    /// stamp — every Titan's guard was stamped FINAL WAVE, drum and all, each
+    /// time it came back (review, 2026-09-24).
+    private var fieldWave = 1
+    /// The boss making its entrance, and a boss in the opening line waiting
+    /// below the rim for the stage to be seen.
+    private weak var entranceBoss: UnitNode?
+    private weak var openingBoss: UnitNode?
+    /// The playback queue waits past an event's own hold while a beat that
+    /// is not the event's holds it: until `queueHeldUntil` on
+    /// `CACurrentMediaTime`'s clock, or for as long as `queueHeldOpen`
+    /// (an opening boss waiting for its stage to be seen). `queueDueAt` is
+    /// when the event now playing is due to hand on, for a CI frame's hold
+    /// to add to (`freezeForTour`).
+    private var queueHeldUntil: CFTimeInterval = 0
+    private var queueHeldOpen = false
+    private var queueDueAt: CFTimeInterval = 0
+    /// Whether the renderer has drawn this build's stage, and what waits to
+    /// be seen. `buildSerial` tells a late wait which build it was for.
+    private var stageIsShown = false
+    private var stageShownActions: [() -> Void] = []
+    private var buildSerial = 0
+    /// The spotlight (W2.9, W2.11): the lights it dims and its timeline,
+    /// both read by the renderer's thread under `firstFramesLock`; whether
+    /// the rest is owed at once (a skip, a new run); whether the camera's
+    /// colour is the drain's for good; and whether an ultimate's dim waits
+    /// for its blow to land.
+    private var spotlightRig: SpotlightRig?
+    private var spotlightTimeline: SpotlightTimeline?
+    private var spotlightRestoreDue = false
+    private var spotlightGradeHeld = false
+    private var spotlightAwaitsBlow = false
+    /// The lights `buildLighting` made that the spotlight turns: the key, the
+    /// figures' own key, and the set's fill and ambient. Nil under
+    /// `-tour-layers off`, where there are no set lights to dim apart.
+    private var riggedLights: (key: SCNLight, figureKey: SCNLight, fill: SCNLight, ambient: SCNLight)?
+    #if DEBUG
+    /// The CI labs' one-shot holds (`-tour-cutin`, `-tour-waves`,
+    /// `-tour-dissolve`): each beat is held once for its frame.
+    private var tourCutInSpent = false
+    private var tourSpotlightSpent = false
+    private var tourStampSpent = false
+    private var tourRibbonSpent = false
+    private var tourDissolveVictim: UUID?
+    #endif
+
     // MARK: - Setup
 
     func build(combatants: [Combatant], environment: BattleEnvironment) {
@@ -271,12 +336,19 @@ final class BattleSceneController: NSObject {
         // the plates, their EXP bars and every float go with the old units.
         endSlowMotion()
         cancelImpact()
+        // The last run's beats over the field end with it (W2.1–W2.11): the
+        // splash and the stamp come down, the queue waits for nothing, the
+        // set's lights are the new build's.
+        cancelBeats()
         Juice.release(scene)
         retirePreviousStage()
         ledge = nil
         unitNodes.removeAll()
         homeMarks.removeAll()
         skillArt.removeAll()
+        castCards.removeAll()
+        splashedCasters.removeAll()
+        fieldWave = 1
         plates.removeAllPlates()
         plates.removeAllFloats()
         refreshPlateTargets()
@@ -287,6 +359,9 @@ final class BattleSceneController: NSObject {
         lastCastWasUltimate = false
         actingID = nil
         celebrated = false
+        buildSerial += 1
+        stageIsShown = false
+        stageShownActions.removeAll()
 
         // Where the build's main-thread seconds go (task #138): run 245's
         // arena fight kept the main thread about 4.3 s at its build, under
@@ -298,6 +373,7 @@ final class BattleSceneController: NSObject {
         let lightBegan = Perf.begin()
         buildLighting()
         buildCamera()
+        installSpotlightRig()
         let lightMs = Perf.end(lightBegan, "battle light", over: .infinity)
         registerMaxHealth(combatants)
         let unitsBegan = Perf.begin()
@@ -305,6 +381,7 @@ final class BattleSceneController: NSObject {
         let unitsMs = Perf.end(unitsBegan, "battle units", over: .infinity)
         startTourAreaDrill()
         startTourTriumph()
+        startTourDissolve()
         awaitFirstFrames()
         let totalMs = Perf.end(began, "battle build", over: .infinity)
         Perf.note(String(format: "battle build: stage %.0f ms, light and camera %.0f ms, %d unit(s) %.0f ms, %.0f ms in all",
@@ -447,6 +524,7 @@ final class BattleSceneController: NSObject {
     }
 
     private func buildLighting() {
+        riggedLights = nil
         // Key: a shadow-casting directional light from the front-left.
         let key = SCNLight()
         key.type = .directional
@@ -557,6 +635,53 @@ final class BattleSceneController: NSObject {
         let figureAmbientNode = SCNNode()
         figureAmbientNode.light = figureAmbient
         scene.rootNode.addChildNode(figureAmbientNode)
+
+        // The figures' own key (Docs/FEEL.md W2.9): the key's colour, from
+        // the key's place, on the figures alone and with no shadow. Idle at
+        // a thousandth of the key; an ultimate's spotlight turns the shared
+        // key down to 35% and this up by what it took, so the figures keep
+        // the key's whole light while the stone loses most of it. Built with
+        // the stage and never at nothing: a light lit from nothing in the
+        // middle of a fight changes every figure material's light list, and
+        // the ultimate would pay for the shaders on its first frame.
+        let figureKey = SCNLight()
+        figureKey.type = .directional
+        figureKey.color = key.color
+        figureKey.intensity = key.intensity * Spotlight.figureKeyIdle
+        figureKey.categoryBitMask = StageBuilder.figureLights
+        let figureKeyNode = SCNNode()
+        figureKeyNode.light = figureKey
+        figureKeyNode.position = keyNode.position
+        figureKeyNode.eulerAngles = keyNode.eulerAngles
+        scene.rootNode.addChildNode(figureKeyNode)
+        riggedLights = (key: key, figureKey: figureKey, fill: fill, ambient: ambient)
+    }
+
+    /// The spotlight's rig for this build (Docs/FEEL.md W2.9): the lights
+    /// `buildLighting` left for it, the painting's material — its intensity
+    /// set a hair off 1 now, under the veil, so dimming it later changes a
+    /// number rather than building a shader — and the camera, whose rest
+    /// saturation is read here, before any impact frame can move it. The
+    /// braziers' dimmer back at 1 for the new set.
+    private func installSpotlightRig() {
+        // The new stage's painting: the last run's stands hidden under
+        // `previous_run` for a moment, so the search starts from the stage
+        // that is a direct child of the root.
+        let stage = scene.rootNode.childNodes.first { $0.name == "stage" }
+        let backdrop = stage?.childNode(withName: "backdrop", recursively: false)?.geometry?.firstMaterial
+        backdrop?.diffuse.intensity = Spotlight.backdropRest
+        StageBuilder.battleSetDimmer.level = 1
+        var rig: SpotlightRig?
+        if let lights = riggedLights {
+            rig = SpotlightRig(key: lights.key, figureKey: lights.figureKey, fill: lights.fill, ambient: lights.ambient,
+                               backdrop: backdrop, camera: cameraNode.camera, dimmer: StageBuilder.battleSetDimmer)
+        }
+        firstFramesLock.lock()
+        spotlightRig = rig
+        spotlightTimeline = nil
+        spotlightRestoreDue = false
+        spotlightGradeHeld = false
+        firstFramesLock.unlock()
     }
 
     /// How far toward white the figures' own fill and ambient are taken from
@@ -657,7 +782,13 @@ final class BattleSceneController: NSObject {
     /// who face +Z — toward the player and the camera. A model's authored
     /// facing is +Z (Docs/ART_PIPELINE.md), hence the half-turn on the near
     /// side. Ranks are staggered so nobody is hidden behind anybody.
-    private func place(combatants: [Combatant], entering: Bool = false) {
+    ///
+    /// Returns, for a wave that walks on (Docs/FEEL.md W2.10), the longest
+    /// walk in authored seconds, which the wave's hold waits out; 0 when
+    /// nobody walks.
+    @discardableResult
+    private func place(combatants: [Combatant], entering: Bool = false) -> TimeInterval {
+        var longestWalk: TimeInterval = 0
         // A 5v5 is ten characters plus a full post stack; a 1v1 can afford the
         // detailed mesh. The loader falls back to the full model when no reduced
         // export has been shipped.
@@ -699,15 +830,39 @@ final class BattleSceneController: NSObject {
             node.eulerAngles.y = combatant.isBoss
                 ? atan2(-home.x, -home.z)
                 : (combatant.side == .player ? .pi : 0)
-            if entering, combatant.isBoss {
+            // Its card for its splash (W2.1), and the battle told when its
+            // death has played out, to take it off the field (W2.8).
+            castCards[combatant.id] = (portrait: combatant.model.portraitName(awakened: combatant.isAwakened),
+                                       name: combatant.name, accentHex: combatant.element.accentHex)
+            node.onFallen = { [weak self] fallen in self?.leaveTheField(fallen) }
+            // How long this arrival walks, when it walks (W2.10).
+            var walk: TimeInterval?
+            if combatant.isBoss, entering || openingBoss == nil {
                 // A boss RISES over the far rim from the dark under the
                 // platform, rather than walking on: there is no floor where
-                // it stands.
-                node.position = SCNVector3(home.x, home.y - 4.5, home.z)
+                // it stands. It waits below, unseen, for its entrance
+                // (W2.11, `beginBossEntrance`): at once for a wave's boss,
+                // once it is in the scene below; for one in the opening
+                // line (a Titan), when the stage has been seen
+                // (`.battleStart`).
+                node.position = SCNVector3(home.x, home.y - BossEntrance.depth, home.z)
                 node.opacity = 0
-                let rise = SCNAction.move(to: home, duration: beat(1.2))
-                rise.timingMode = .easeOut
-                node.runAction(.group([rise, .fadeIn(duration: beat(0.6))]))
+                if !entering { openingBoss = node }
+            } else if entering, WalkOn.walks(hasClip: node.hasWalkClip, speed: speedMultiplier) {
+                // A later wave WALKS on from two metres behind its marks
+                // (W2.10): its walk clip, at the stride the clip was made
+                // for, started once the unit is in the scene below.
+                node.position = SCNVector3(home.x, home.y, home.z - WalkOn.distance)
+                node.opacity = 0
+                let seconds = WalkOn.duration(distance: WalkOn.distance, height: combatant.model.height)
+                walk = seconds
+                longestWalk = max(longestWalk, seconds)
+            } else if entering, Juice.isFast(speedMultiplier) {
+                // At ×3 a wave's stamp is all of its arrival that plays: the
+                // arrivals fade up on their marks.
+                node.position = home
+                node.opacity = 0
+                node.runAction(.fadeIn(duration: beat(0.3)))
             } else if entering {
                 // A later wave walks on from the far side of the field —
                 // from two metres behind its mark since 2026-09-24 (three
@@ -724,11 +879,14 @@ final class BattleSceneController: NSObject {
                 // guard 0.82 m, and even a four-a-side's outer start keeps
                 // 0.18 m from the Lair's dead tree, where the figure is
                 // still fading in.
-                node.position = SCNVector3(home.x, home.y, home.z - 2.0)
+                // A family whose rig has no walk (those rigged before
+                // 2026-09-17) still glides the two metres, as every arrival
+                // did before W2.10.
+                node.position = SCNVector3(home.x, home.y, home.z - WalkOn.distance)
                 node.opacity = 0
-                let walk = SCNAction.move(to: home, duration: beat(0.7))
-                walk.timingMode = .easeOut
-                node.runAction(.group([walk, .fadeIn(duration: beat(0.45))]))
+                let slide = SCNAction.move(to: home, duration: beat(0.7))
+                slide.timingMode = .easeOut
+                node.runAction(.group([slide, .fadeIn(duration: beat(0.45))]))
             } else {
                 node.position = home
             }
@@ -807,8 +965,17 @@ final class BattleSceneController: NSObject {
                 scene.rootNode.addChildNode(rock)
                 ledge = rock
             }
+            // Its arrival, now that it is in the scene (a clip attached
+            // before that never starts): a wave's boss makes its entrance
+            // (W2.11), a walker walks on (W2.10).
+            if entering, combatant.isBoss {
+                beginBossEntrance(node)
+            } else if let walk {
+                node.walkOn(to: home, over: beat(walk), fadeIn: beat(WalkOn.fadeIn))
+            }
         }
         refreshPlateTargets()
+        return longestWalk
     }
 
     /// The width of each side's line, in marks, fixed when the fight opens.
@@ -966,7 +1133,16 @@ final class BattleSceneController: NSObject {
 
     func enqueue(_ events: [BattleEvent]) {
         queue.append(contentsOf: events)
-        if !isPlaying { playNext() }
+        guard !isPlaying else { return }
+        // A beat still holding the field (a CI frame's hold over an idle
+        // turn) keeps a new turn waiting for it rather than playing it
+        // under the held world.
+        if queueHeldOpen || queueHeldUntil > CACurrentMediaTime() {
+            isPlaying = true
+            continueWhenFree(playbackGeneration)
+        } else {
+            playNext()
+        }
     }
 
     /// Drops queued animation and snaps to the end state. Used by the skip button.
@@ -986,8 +1162,11 @@ final class BattleSceneController: NSObject {
         for node in unitNodes.values { node.cancelPendingClip() }
         // Skip is the one way to watch a turn with no feedback (W1.1): no
         // freeze, no tremble, no slow motion left running, and no TOTAL
-        // owed to a multi-hit whose last hit will never be shown.
+        // owed to a multi-hit whose last hit will never be shown. Nor a
+        // splash, a stamp or an entrance: the set's lights come straight
+        // back and a rising boss stands on its mark (W2.1–W2.11).
         endSlowMotion()
+        cancelBeats()
         Juice.release(scene)
         hitLedger = MultiHitLedger()
         sync(combatants: combatants)
@@ -1012,6 +1191,7 @@ final class BattleSceneController: NSObject {
         scene.rootNode.removeAction(forKey: "cast_projectile")
         for node in unitNodes.values { node.cancelPendingClip() }
         endSlowMotion()
+        cancelBeats()
         Juice.release(scene)
         hitLedger = MultiHitLedger()
         returnEveryoneHome()
@@ -1023,6 +1203,13 @@ final class BattleSceneController: NSObject {
     func sync(combatants: [Combatant]) {
         for combatant in combatants {
             guard let node = unitNodes[combatant.id] else { continue }
+            // A revive the skip dropped: the engine has the unit standing
+            // again, and since a fallen body leaves the field (W2.8) a unit
+            // left defeated here would fight on as a glyph on the floor with
+            // no body — `revive` takes the glyph up and brings it back.
+            if combatant.isAlive, node.isDefeated {
+                node.revive(healthFraction: combatant.healthFraction)
+            }
             node.setHealth(fraction: combatant.healthFraction, animated: false)
             node.setStatuses(combatant.statuses)
             node.plate?.setAttackBar(combatant.attackBar, animated: true)
@@ -1081,10 +1268,55 @@ final class BattleSceneController: NSObject {
         // cadence between hits stays what the event durations say it is.
         let hold = max(0.02, beat(span)) + frozen
         let generation = playbackGeneration
+        queueDueAt = CACurrentMediaTime() + hold
         DispatchQueue.main.asyncAfter(deadline: .now() + hold) { [weak self] in
             guard let self, self.playbackGeneration == generation else { return }
-            self.playNext()
+            self.continueWhenFree(generation)
         }
+    }
+
+    /// Plays the next event once nothing holds the queue past its own hold:
+    /// an opening boss's entrance waiting for its stage to be seen
+    /// (`queueHeldOpen`), or a beat running longer than the event it came
+    /// with (`queueHeldUntil`). It looks again a few times a second rather
+    /// than scheduling the whole wait ahead, so a wait that grows (a CI
+    /// frame's hold) is honoured, and a skip — the generation — is heard at
+    /// once. With nothing holding it, it is the plain `playNext` it always
+    /// was.
+    private func continueWhenFree(_ generation: Int) {
+        let wait: TimeInterval = queueHeldOpen ? Self.queuePoll : queueHeldUntil - CACurrentMediaTime()
+        guard wait > 0.005 else {
+            playNext()
+            return
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + min(Self.queuePoll, wait)) { [weak self] in
+            guard let self, self.playbackGeneration == generation else { return }
+            self.continueWhenFree(generation)
+        }
+    }
+
+    /// How often a held queue looks again.
+    private static let queuePoll: TimeInterval = 0.1
+
+    /// Every beat drawn over the field ends where it stands — a skip, a
+    /// forfeit, a new run (Docs/FEEL.md W2.1–W2.11): a boss still rising or
+    /// still waiting below stands on its mark, the queue waits for nothing,
+    /// the set's lights come straight back, the plates come up from under a
+    /// splash, and the view takes the splash, the stamp and the ribbon down.
+    private func cancelBeats() {
+        for boss in [entranceBoss, openingBoss].compactMap({ $0 }) {
+            boss.removeAction(forKey: "boss_entrance")
+            if let home = homeMarks[boss.combatantID] { boss.position = home }
+            boss.opacity = 1
+        }
+        entranceBoss = nil
+        openingBoss = nil
+        queueHeldOpen = false
+        queueHeldUntil = 0
+        spotlightAwaitsBlow = false
+        endSpotlight()
+        plates.setPlatesDimmed(false)
+        onFieldCue?(.clear)
     }
 
     // MARK: - Presenting one event
@@ -1092,14 +1324,40 @@ final class BattleSceneController: NSObject {
     /// Returns how long the world froze for this event, if it did.
     @discardableResult
     private func present(_ event: BattleEvent) -> TimeInterval {
+        // An ultimate's blow has landed — whatever comes after its cast is
+        // presented on the contact frame — and the set comes back up round
+        // its caster over 0.4 s (Docs/FEEL.md W2.9).
+        if spotlightAwaitsBlow {
+            spotlightAwaitsBlow = false
+            releaseSpotlight(over: beat(Spotlight.releaseAfterBlow))
+        }
         switch event {
         case .battleStart:
             for node in unitNodes.values { node.play(.idleCombat) }
             // The fight was silent between its blows (Docs/FEEL.md W1.4,
             // 2026-09-24): the realm's horn call opens it, a boss's arrival
             // its own boom, roar and cymbal.
-            AudioLibrary.shared.play(unitNodes.values.contains(where: { $0.side == .opponent && $0.isBoss })
-                                     ? .bossArrival : .waveCall(for: environment.pantheon), volume: 0.85)
+            if openingBoss != nil {
+                // A boss in the opening line (a Titan) makes its entrance the
+                // moment its stage is seen — under the veil it would be spent
+                // on nobody — and the fight waits for it (W2.11). Its boom
+                // comes WITH its rise: here it sounded under the veil, seconds
+                // before anyone saw the boss come (review, 2026-09-24).
+                queueHeldOpen = true
+                let generation = playbackGeneration
+                whenStageShown { [weak self] in
+                    guard let self, self.playbackGeneration == generation else { return }
+                    self.queueHeldOpen = false
+                    guard let boss = self.openingBoss else { return }
+                    self.openingBoss = nil
+                    AudioLibrary.shared.play(.bossArrival, volume: 0.85)
+                    let span = self.beginBossEntrance(boss)
+                    self.queueHeldUntil = max(self.queueHeldUntil, CACurrentMediaTime() + span)
+                }
+            } else {
+                AudioLibrary.shared.play(unitNodes.values.contains(where: { $0.side == .opponent && $0.isBoss })
+                                         ? .bossArrival : .waveCall(for: environment.pantheon), volume: 0.85)
+            }
 
         case .turnBegan(let actor, _):
             // A random-target multi-hit's victim missed on its last hit
@@ -1138,8 +1396,6 @@ final class BattleSceneController: NSObject {
             } else {
                 lastCastColour = animation == .attackHeavy ? .blunt : .blade
             }
-            Juice.prepareHaptics()
-            AudioLibrary.shared.play(.whoosh, volume: animation == .ultimate ? 1.0 : 0.6)
             // A melee unit closes on its one victim before the swing and stays
             // there through the hits; casters, archers and line-wide skills
             // strike from where they stand. A boss has no floor to cross: it
@@ -1153,60 +1409,25 @@ final class BattleSceneController: NSObject {
             // a push-in aimed at the caster's mark held on empty floor while
             // the caster fought four metres away (2026-09-15).
             let landing = closes ? targetNode.map { casterNode.dashDestination(toward: $0) } : nil
-            director?.perform(shot, on: casterNode, target: targetNode, focus: landing)
+            var leap: TimeInterval = 0
             var walkUp: TimeInterval = 0
-            if let targetNode, closes {
+            if closes {
                 let from = casterNode.position
                 let to = landing ?? from
                 let dx = to.x - from.x
                 let dz = to.z - from.z
                 let travel: Float = (dx * dx + dz * dz).squareRoot()
                 let stretch: Double = max(1, min(Self.dashStretchCap, Double(travel / Self.dashReach)))
-                let leap: TimeInterval = Self.dashDuration * stretch
-                casterNode.dash(toward: targetNode, duration: beat(leap))
-                // The swing waits for the feet. These two lines used to be
-                // consecutive statements, so the clip and the leap started on
-                // the same frame and the wind-up — the only part of an attack
-                // that carries anticipation — played four metres away in
-                // mid-air; the figure arrived a quarter of the way through its
-                // own cut. The 80 ms overlap is deliberate: the wind-up begins
-                // as the weight comes down, which is what ties a leap and a
-                // swing into one motion.
+                leap = Self.dashDuration * stretch
+                // The swing waits for the feet. The clip and the leap used to
+                // start on the same frame, so the wind-up — the only part of
+                // an attack that carries anticipation — played four metres
+                // away in mid-air; the figure arrived a quarter of the way
+                // through its own cut. The 80 ms overlap is deliberate: the
+                // wind-up begins as the weight comes down, which is what ties
+                // a leap and a swing into one motion.
                 walkUp = max(0, leap
                     * (UnitNode.dashGather + UnitNode.dashFlight) - 0.08)
-            }
-            casterNode.play(animation, after: beat(walkUp))
-            // What the swing leaves behind and what the spell stands on: a
-            // blade's trail through every melee clip, in steel for a strike
-            // and in the element for an ultimate; a rune ring under a caster
-            // for the length of the cast. The owner: "the effects of attacks
-            // ... summoners war quality — even animations of characters."
-            let elementTint = UIColor(hex: casterNode.element.accentHex) ?? .white
-            let clipLength = beat(animation.fallbackDuration)
-            if animation == .castRelease || animation == .ultimate {
-                casterNode.castRing(tint: elementTint, duration: clipLength, after: beat(walkUp))
-            }
-            // An ultimate gathers before it lands: motes drawn up round the
-            // caster and a swelling core through the wind-up (2026-09-15).
-            if animation == .ultimate {
-                VFXLibrary.charge(on: casterNode, tint: elementTint,
-                                  duration: beat(walkUp + animation.fallbackDuration * Self.contactFraction(of: animation, for: casterNode.spec.assetName)),
-                                  scale: Self.effectScale(for: casterNode))
-            }
-            if casterNode.spec.melee, animation != .castRelease, !casterNode.isBoss {
-                let steel = UIColor(hex: "#D9E4F2") ?? .white
-                casterNode.swingTrail(tint: animation == .ultimate ? elementTint : steel,
-                                      duration: clipLength, after: beat(walkUp), in: scene)
-            }
-            // The skill's BANNER over its caster (Docs/FEEL.md W1.9, the
-            // owner's Summoners War frame): its painted icon in a gold frame
-            // beside its name, followed through the leap (a plain name hung
-            // over the EMPTY mark a closing caster had left, run 220). It
-            // replaces the plain name that floated here in pale gold. Not for
-            // an ultimate: the cut-in is its name, and the two at once put it
-            // on the screen twice.
-            if animation != .ultimate {
-                floatBanner(name, iconKey: skillArt[actor]?[skillID], over: casterNode)
             }
 
             // The frame the blade lands, measured from the start of the CLIP
@@ -1218,103 +1439,25 @@ final class BattleSceneController: NSObject {
             holdOverride = contact
             castRecovery = animation.fallbackDuration * (1 - blowAt)
 
-            // A ranged strike flies: the element's painted sprite leaves the
-            // caster's chest and lands on the victim's on the frame of
-            // contact, where the burst below is waiting for it.
-            scene.rootNode.removeAction(forKey: "cast_projectile")
-            if let targetNode, !casterNode.spec.melee, !casterNode.isBoss, targets.count == 1,
-               targetNode.side != casterNode.side,
-               animation == .attackBasic || animation == .attackHeavy || animation == .castRelease {
-                let flight = min(0.45, max(0.22, beat(contact) * 0.6))
-                let victimID = targets[0]
-                let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
-                scene.rootNode.runAction(.sequence([
-                    .wait(duration: max(0, beat(contact) - flight)),
-                    SCNAction.run { [weak self] _ in
-                        DispatchQueue.main.async {
-                            guard let self, let victim = self.unitNodes[victimID] else { return }
-                            VFXLibrary.projectile(
-                                casterNode.element, from: casterNode.chestWorldPosition, to: victim.chestWorldPosition,
-                                in: self.scene, tint: tint, duration: flight, scale: casterNode.spec.height / 1.9
-                            )
-                        }
-                    }
-                ]), forKey: "cast_projectile")
+            let plan = CastPlan(actor: actor, skillID: skillID, name: name, targets: targets, shot: shot,
+                                animation: animation, vfx: vfx, closes: closes, landing: landing, leap: leap,
+                                walkUp: walkUp, contact: contact)
+            // AN ULTIMATE OWNS THE SCREEN FIRST (Docs/FEEL.md W2.1): the
+            // world held under the caster's card and the skill's name, and
+            // only then the cast. The splash's length is handed back as
+            // time the world stood still, so the queue still presents the
+            // damage on the contact frame — the hold is added in front of
+            // the clip, never inside it.
+            if animation == .ultimate, let splash = splashCue(for: actor, skillName: name) {
+                return holdForCutIn(splash, then: plan)
             }
-
-            // A skill with no effect of its own lands in its caster's element,
-            // and a closing strike draws its slash across the victim.
-            let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
-            let effect = vfx == "impact_generic" ? "impact_\(casterNode.element.rawValue)" : vfx
-            let slashes = casterNode.spec.melee && targets.count == 1
-                && (animation == .attackBasic || animation == .attackHeavy)
-            // The burst is a SCENE action, not a `DispatchQueue.asyncAfter`: a
-            // hit freezes the scene for up to 150 ms and a wall-clock timer
-            // keeps counting through a freeze that the animation it is timed
-            // against does not. The key means a second cast cancels the first
-            // one's pending burst instead of letting it fire into a field that
-            // has moved on, and the position is read when it fires, so an
-            // effect can no longer bloom where a victim used to stand.
-            scene.rootNode.removeAction(forKey: "cast_impact")
-            scene.rootNode.runAction(.sequence([
-                .wait(duration: beat(contact)),
-                SCNAction.run { [weak self] _ in
-                    // SceneKit runs this on its rendering thread; everything
-                    // below touches the scene graph, so it hops to main first.
-                    DispatchQueue.main.async {
-                        guard let self else { return }
-                        // Lightning has its own sound; everything else lands on
-                        // the hit sound `Juice` picks from the damage that
-                        // arrives on this same frame.
-                        if vfx == "thunderbolt" || vfx == "thunderclap" || vfx == "keraunos" {
-                            AudioLibrary.shared.play(.thunder, volume: vfx == "keraunos" ? 1.0 : 0.7)
-                        }
-                        let victims = targets.compactMap { self.unitNodes[$0] }
-                        // A cast on several victims is drawn ONCE over the
-                        // row (`VFXLibrary.spawnArea`): drawn on each of
-                        // them, four white sheets 2.4 m apart added up to a
-                        // slab over the whole team (run 224, 8-b).
-                        if victims.count > 1 {
-                            let scale = victims.map { Self.effectScale(for: $0) }.reduce(0, +) / Float(victims.count)
-                            VFXLibrary.spawnArea(
-                                effect, over: victims.map { $0.chestWorldPosition }, in: self.scene,
-                                tint: tint, scale: scale
-                            )
-                            // A heavy blow on the row breaks the ground once,
-                            // under its middle.
-                            if animation == .attackHeavy, casterNode.spec.melee {
-                                let feet = victims.map { $0.position }
-                                let count = Float(feet.count)
-                                let middle = SCNVector3(
-                                    feet.reduce(Float(0)) { $0 + $1.x } / count, 0,
-                                    feet.reduce(Float(0)) { $0 + $1.z } / count
-                                )
-                                VFXLibrary.spawn("shockwave", at: middle, in: self.scene, tint: tint, scale: scale,
-                                                 reach: .row(span: 0))
-                            }
-                            return
-                        }
-                        for node in victims {
-                            let scale = Self.effectScale(for: node)
-                            VFXLibrary.spawn(
-                                effect, at: node.chestWorldPosition, in: self.scene,
-                                tint: tint, scale: scale
-                            )
-                            if slashes {
-                                VFXLibrary.spawn(
-                                    "slash", at: node.chestWorldPosition, in: self.scene,
-                                    tint: tint, scale: scale * (animation == .attackHeavy ? 1.3 : 1.0)
-                                )
-                            }
-                            // A heavy blow breaks the ground under its victim.
-                            if animation == .attackHeavy, casterNode.spec.melee {
-                                VFXLibrary.spawn("shockwave", at: node.position, in: self.scene, tint: tint,
-                                                 scale: scale)
-                            }
-                        }
-                    }
-                }
-            ]), forKey: "cast_impact")
+            // With the splash off (or spent, under "First each fight") an
+            // ultimate still arrives as light: the same two-frame exposure
+            // punch the splash ends on (W2.9).
+            if animation == .ultimate, let punch = director?.exposurePunch() {
+                queueImpact(punch)
+            }
+            performCast(plan)
 
         case .damage(let source, let target, let amount, let isCritical, let isGlancing, _, let remaining, let hitIndex, let hitCount):
             guard let node = unitNodes[target] else { return 0 }
@@ -1504,7 +1647,7 @@ final class BattleSceneController: NSObject {
             unitNodes[target]?.markDefeated()
             AudioLibrary.shared.play(.death, volume: 0.85)
 
-        case .waveStarted(_, _, let opponents):
+        case .waveStarted(let wave, let count, let opponents):
             // The fallen wave leaves the field so the marks are free, and
             // the next one comes on from the back.
             for (id, node) in unitNodes where node.side == .opponent && node.isDefeated {
@@ -1518,12 +1661,18 @@ final class BattleSceneController: NSObject {
                 VFXLibrary.retire(node, after: 0.3, reportsLive: false)
                 unitNodes[id] = nil
                 skillArt[id] = nil
+                castCards[id] = nil
                 plates.removePlate(for: id)
             }
             closeOpenTotals()
             registerMaxHealth(opponents)
-            place(combatants: opponents, entering: true)
-            AudioLibrary.shared.play(opponents.contains(where: \.isBoss) ? .bossArrival : .waveCall(for: environment.pantheon))
+            // A new wave, or a raid's guard back under the wave the fight is
+            // already on (`fieldWave`): only a new one is stamped.
+            let bossArrives = opponents.contains(where: \.isBoss)
+            let stamped = WaveStamp.stamps(wave: wave, onField: fieldWave, bossArrives: bossArrives)
+            fieldWave = max(fieldWave, wave)
+            let walk = place(combatants: opponents, entering: true)
+            AudioLibrary.shared.play(bossArrives ? .bossArrival : .waveCall(for: environment.pantheon))
             // Measure the field with the new wave on it now, not at the next
             // drain: in an auto fight the queue never drains between turns,
             // so a boss arriving with the third wave was never measured and
@@ -1531,6 +1680,14 @@ final class BattleSceneController: NSObject {
             // Colossus at the far end of the ordinary 58° shot.
             director?.frameField()
             Juice.haptic(.light)
+            // The wave holds until its arrivals stand on their marks (W2.10)
+            // or its boss has made its entrance (W2.11); the stamp names a
+            // new wave that has no boss to announce it.
+            var span: TimeInterval = event.presentationDuration
+            if walk > 0 { span = max(span, walk + WalkOn.settle) }
+            if entranceBoss != nil { span = max(span, BossEntrance.length + BossEntrance.settle) }
+            holdOverride = span
+            if stamped { showWaveStamp(wave: wave, count: count) }
 
         case .battleEnded(let result):
             closeOpenTotals()
@@ -1553,6 +1710,626 @@ final class BattleSceneController: NSObject {
             }
         }
         return 0
+    }
+
+    // MARK: - Drawing a cast
+
+    /// What a cast puts on the field, worked out as it is presented
+    /// (`present`, `.skillCast`) and drawn by `performCast`: at once, or —
+    /// for an ultimate that owns the screen first — when its splash lets go
+    /// (`holdForCutIn`).
+    private struct CastPlan {
+        let actor: UUID
+        let skillID: String
+        let name: String
+        let targets: [UUID]
+        let shot: CameraShot
+        let animation: AnimationClip
+        let vfx: String
+        /// Whether a melee caster leaps at its victim first, where it lands,
+        /// and the leap's authored length.
+        let closes: Bool
+        let landing: SCNVector3?
+        let leap: TimeInterval
+        /// Authored seconds from the start of the cast to the clip's start,
+        /// and to the blow.
+        let walkUp: TimeInterval
+        let contact: TimeInterval
+    }
+
+    /// Draws a cast: the camera's move, the leap, the clip, what the swing
+    /// leaves behind and what the spell stands on, the banner, and the
+    /// burst and the projectile timed to the contact frame. An ultimate's
+    /// also dims the set round its caster through the wind-up (W2.9).
+    private func performCast(_ plan: CastPlan) {
+        guard let casterNode = unitNodes[plan.actor] else { return }
+        let targetNode = plan.targets.first.flatMap { unitNodes[$0] }
+        let animation = plan.animation
+        let targets = plan.targets
+        let vfx = plan.vfx
+        let walkUp = plan.walkUp
+        let contact = plan.contact
+        Juice.prepareHaptics()
+        AudioLibrary.shared.play(.whoosh, volume: animation == .ultimate ? 1.0 : 0.6)
+        director?.perform(plan.shot, on: casterNode, target: targetNode, focus: plan.landing)
+        if let targetNode, plan.closes {
+            casterNode.dash(toward: targetNode, duration: beat(plan.leap))
+        }
+        casterNode.play(animation, after: beat(walkUp))
+        // What the swing leaves behind and what the spell stands on: a
+        // blade's trail through every melee clip, in steel for a strike
+        // and in the element for an ultimate; a rune ring under a caster
+        // for the length of the cast. The owner: "the effects of attacks
+        // ... summoners war quality — even animations of characters."
+        let elementTint = UIColor(hex: casterNode.element.accentHex) ?? .white
+        let clipLength = beat(animation.fallbackDuration)
+        if animation == .castRelease || animation == .ultimate {
+            casterNode.castRing(tint: elementTint, duration: clipLength, after: beat(walkUp))
+        }
+        // An ultimate gathers before it lands: motes drawn up round the
+        // caster and a swelling core through the wind-up (2026-09-15).
+        if animation == .ultimate {
+            VFXLibrary.charge(on: casterNode, tint: elementTint,
+                              duration: beat(walkUp + animation.fallbackDuration * Self.contactFraction(of: animation, for: casterNode.spec.assetName)),
+                              scale: Self.effectScale(for: casterNode))
+            // THE SPOTLIGHT (Docs/FEEL.md W2.9): the set's lights fall to
+            // 35% round the caster, the painting to 0.45 and the colour
+            // 0.35, the figures keeping their light, until the blow lands
+            // (`present`, the next event) and 0.4 s after it.
+            beginSpotlight(.ultimate, attack: beat(Spotlight.attack), longest: Spotlight.longest + tourHoldAllowance())
+            spotlightAwaitsBlow = true
+            holdSpotlightForTour(contact: contact)
+        }
+        if casterNode.spec.melee, animation != .castRelease, !casterNode.isBoss {
+            let steel = UIColor(hex: "#D9E4F2") ?? .white
+            casterNode.swingTrail(tint: animation == .ultimate ? elementTint : steel,
+                                  duration: clipLength, after: beat(walkUp), in: scene)
+        }
+        // The skill's BANNER over its caster (Docs/FEEL.md W1.9, the
+        // owner's Summoners War frame): its painted icon in a gold frame
+        // beside its name, followed through the leap (a plain name hung
+        // over the EMPTY mark a closing caster had left, run 220). It
+        // replaces the plain name that floated here in pale gold. Not for
+        // an ultimate: the splash is its name (W2.1), and the two at once
+        // put it on the screen twice.
+        if animation != .ultimate {
+            floatBanner(plan.name, iconKey: skillArt[plan.actor]?[plan.skillID], over: casterNode)
+        }
+
+        // A ranged strike flies: the element's painted sprite leaves the
+        // caster's chest and lands on the victim's on the frame of
+        // contact, where the burst below is waiting for it.
+        scene.rootNode.removeAction(forKey: "cast_projectile")
+        if let targetNode, !casterNode.spec.melee, !casterNode.isBoss, targets.count == 1,
+           targetNode.side != casterNode.side,
+           animation == .attackBasic || animation == .attackHeavy || animation == .castRelease {
+            let flight = min(0.45, max(0.22, beat(contact) * 0.6))
+            let victimID = targets[0]
+            let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
+            scene.rootNode.runAction(.sequence([
+                .wait(duration: max(0, beat(contact) - flight)),
+                SCNAction.run { [weak self] _ in
+                    DispatchQueue.main.async {
+                        guard let self, let victim = self.unitNodes[victimID] else { return }
+                        VFXLibrary.projectile(
+                            casterNode.element, from: casterNode.chestWorldPosition, to: victim.chestWorldPosition,
+                            in: self.scene, tint: tint, duration: flight, scale: casterNode.spec.height / 1.9
+                        )
+                    }
+                }
+            ]), forKey: "cast_projectile")
+        }
+
+        // A skill with no effect of its own lands in its caster's element,
+        // and a closing strike draws its slash across the victim.
+        let tint = UIColor(hex: casterNode.spec.auraHex) ?? .white
+        let effect = vfx == "impact_generic" ? "impact_\(casterNode.element.rawValue)" : vfx
+        let slashes = casterNode.spec.melee && targets.count == 1
+            && (animation == .attackBasic || animation == .attackHeavy)
+        // The burst is a SCENE action, not a `DispatchQueue.asyncAfter`: a
+        // hit freezes the scene for up to 150 ms and a wall-clock timer
+        // keeps counting through a freeze that the animation it is timed
+        // against does not. The key means a second cast cancels the first
+        // one's pending burst instead of letting it fire into a field that
+        // has moved on, and the position is read when it fires, so an
+        // effect can no longer bloom where a victim used to stand.
+        scene.rootNode.removeAction(forKey: "cast_impact")
+        scene.rootNode.runAction(.sequence([
+            .wait(duration: beat(contact)),
+            SCNAction.run { [weak self] _ in
+                // SceneKit runs this on its rendering thread; everything
+                // below touches the scene graph, so it hops to main first.
+                DispatchQueue.main.async {
+                    guard let self else { return }
+                    // Lightning has its own sound; everything else lands on
+                    // the hit sound `Juice` picks from the damage that
+                    // arrives on this same frame.
+                    if vfx == "thunderbolt" || vfx == "thunderclap" || vfx == "keraunos" {
+                        AudioLibrary.shared.play(.thunder, volume: vfx == "keraunos" ? 1.0 : 0.7)
+                    }
+                    let victims = targets.compactMap { self.unitNodes[$0] }
+                    // A cast on several victims is drawn ONCE over the
+                    // row (`VFXLibrary.spawnArea`): drawn on each of
+                    // them, four white sheets 2.4 m apart added up to a
+                    // slab over the whole team (run 224, 8-b).
+                    if victims.count > 1 {
+                        let scale = victims.map { Self.effectScale(for: $0) }.reduce(0, +) / Float(victims.count)
+                        VFXLibrary.spawnArea(
+                            effect, over: victims.map { $0.chestWorldPosition }, in: self.scene,
+                            tint: tint, scale: scale
+                        )
+                        // A heavy blow on the row breaks the ground once,
+                        // under its middle.
+                        if animation == .attackHeavy, casterNode.spec.melee {
+                            let feet = victims.map { $0.position }
+                            let count = Float(feet.count)
+                            let middle = SCNVector3(
+                                feet.reduce(Float(0)) { $0 + $1.x } / count, 0,
+                                feet.reduce(Float(0)) { $0 + $1.z } / count
+                            )
+                            VFXLibrary.spawn("shockwave", at: middle, in: self.scene, tint: tint, scale: scale,
+                                             reach: .row(span: 0))
+                        }
+                        return
+                    }
+                    for node in victims {
+                        let scale = Self.effectScale(for: node)
+                        VFXLibrary.spawn(
+                            effect, at: node.chestWorldPosition, in: self.scene,
+                            tint: tint, scale: scale
+                        )
+                        if slashes {
+                            VFXLibrary.spawn(
+                                "slash", at: node.chestWorldPosition, in: self.scene,
+                                tint: tint, scale: scale * (animation == .attackHeavy ? 1.3 : 1.0)
+                            )
+                        }
+                        // A heavy blow breaks the ground under its victim.
+                        if animation == .attackHeavy, casterNode.spec.melee {
+                            VFXLibrary.spawn("shockwave", at: node.position, in: self.scene, tint: tint,
+                                             scale: scale)
+                        }
+                    }
+                }
+            }
+        ]), forKey: "cast_impact")
+    }
+
+    // MARK: - The ultimate's splash (Docs/FEEL.md W2.1)
+
+    /// The splash an ultimate cast now would play, or nil: the player's
+    /// choice (`UltimateSplash.choice`: always, each unit's first in the
+    /// fight, or never), at the form the speed allows.
+    private func splashCue(for actor: UUID, skillName: String) -> UltimateSplashCue? {
+        guard UltimateSplash.plays(UltimateSplash.choice(), castBefore: splashedCasters.contains(actor)),
+              let card = castCards[actor] else { return nil }
+        splashedCasters.insert(actor)
+        splashSerial += 1
+        let form = UltimateSplash.form(speed: speedMultiplier)
+        return UltimateSplashCue(serial: splashSerial, portrait: card.portrait, unitName: card.name, skillName: skillName,
+                                 accentHex: card.accentHex, form: form, duration: UltimateSplash.duration(of: form),
+                                 frozenFor: tourSplashHold())
+    }
+
+    /// Holds the world for an ultimate's splash and returns how long, for
+    /// the queue to add to the cast's hold as time the world stood still:
+    /// the scene paused (`Juice.holdWorld`) with every clip and action in
+    /// it, the plates dimmed under the band, the view told (`onFieldCue`),
+    /// the band's whoosh; the sting and the heavy haptic as the name lands;
+    /// and at its end the world let go on a two-frame exposure punch — the
+    /// fight's own light where the white full-screen flash used to be
+    /// (W2.9) — and the cast drawn (`performCast`), strictly before its clip
+    /// starts. A skip or a forfeit in between (the generation) leaves the
+    /// cast undrawn and `cancelBeats` takes the splash down.
+    private func holdForCutIn(_ cue: UltimateSplashCue, then plan: CastPlan) -> TimeInterval {
+        let generation = playbackGeneration
+        let hold = Juice.holdWorld(scene)
+        plates.setPlatesDimmed(true)
+        onFieldCue?(.splash(cue))
+        AudioLibrary.shared.play(.whoosh, volume: 0.7)
+        let element = unitNodes[plan.actor]?.element
+        DispatchQueue.main.asyncAfter(deadline: .now() + UltimateSplash.landing(of: cue.form)) { [weak self] in
+            guard let self, self.playbackGeneration == generation else { return }
+            // The sting: a summon's burst over the caster's element.
+            AudioLibrary.shared.play(.summonBurst, volume: 0.55)
+            if let element {
+                AudioLibrary.shared.play(Juice.HitColour.element(element).sound, volume: 0.5, delay: 0.02)
+            }
+            Juice.haptic(.heavy)
+        }
+        #if DEBUG
+        if cue.frozenFor > 0 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + cue.duration * 0.5 + 0.2) { [weak self] in
+                guard let self, self.playbackGeneration == generation else { return }
+                print("[TourCue] cutin")
+            }
+        }
+        #endif
+        let span: TimeInterval = cue.duration + cue.frozenFor
+        DispatchQueue.main.asyncAfter(deadline: .now() + span) { [weak self] in
+            guard let self, self.playbackGeneration == generation else { return }
+            Juice.releaseWorld(self.scene, hold: hold)
+            self.plates.setPlatesDimmed(false)
+            self.onFieldCue?(.splashEnded(cue.serial))
+            if let punch = self.director?.exposurePunch() { self.queueImpact(punch) }
+            self.performCast(plan)
+        }
+        return span
+    }
+
+    /// Decodes, off the main thread and at the size the band draws them, the
+    /// cards of the fighters whose ultimate's splash may play next — the
+    /// battle's model names them as it hands the scene a turn's events
+    /// (`BattleViewModel.splashCasters`: every ultimate the turn casts, and
+    /// the unit the engine now waits on when its ultimate is ready) — so the
+    /// decode (tens of milliseconds for a 1,024-pixel card) never lands on
+    /// the splash's first frame. Only where a splash would draw one: the
+    /// player's choice lets this caster's play (`UltimateSplash.plays`) and
+    /// the speed draws the band, not the ×3 name flash, which has no card.
+    /// It used to decode every fighter's card at each of its turns, four
+    /// megabytes apiece kept in the thumbnail cache, whatever the setting
+    /// (review, 2026-09-24).
+    func warmSplashCards(for casters: [Combatant]) {
+        guard UltimateSplash.form(speed: speedMultiplier) != .flash else { return }
+        let choice = UltimateSplash.choice()
+        var names: [String] = []
+        for caster in casters where UltimateSplash.plays(choice, castBefore: splashedCasters.contains(caster.id)) {
+            let name = caster.model.portraitName(awakened: caster.isAwakened)
+            if !names.contains(name) { names.append(name) }
+        }
+        guard !names.isEmpty else { return }
+        let cards: [String] = names
+        DispatchQueue.global(qos: .userInitiated).async {
+            BundleArt.warmThumbnails(cards, maxPixel: UltimateSplash.cardPixels)
+        }
+    }
+
+    // MARK: - The spotlight (Docs/FEEL.md W2.9, W2.11)
+
+    /// Dims the set to `look` over `attack` seconds and holds it there until
+    /// `releaseSpotlight` (or `longest`). Nothing without a rig: under
+    /// `-tour-layers off` the set and the figures share their lights, and a
+    /// dim would darken the caster with the stone.
+    private func beginSpotlight(_ look: SpotlightLook, attack: TimeInterval, longest: TimeInterval = Spotlight.longest) {
+        firstFramesLock.lock()
+        defer { firstFramesLock.unlock() }
+        guard spotlightRig != nil else { return }
+        spotlightTimeline = SpotlightTimeline(look: look, began: CACurrentMediaTime(), attack: max(0.01, attack),
+                                              longest: longest, release: Spotlight.releaseAfterBlow)
+    }
+
+    /// Lets the set come back up over `seconds`, from wherever the dim
+    /// stands; a dim already coming back is left to it.
+    private func releaseSpotlight(over seconds: TimeInterval) {
+        firstFramesLock.lock()
+        defer { firstFramesLock.unlock() }
+        guard var timeline = spotlightTimeline else { return }
+        let now = CACurrentMediaTime()
+        guard now < timeline.letGo else { return }
+        timeline.releasedAt = now
+        timeline.release = max(0.01, seconds)
+        spotlightTimeline = timeline
+    }
+
+    /// The set's lights back at once, on the next frame the renderer draws.
+    private func endSpotlight() {
+        firstFramesLock.lock()
+        if spotlightTimeline != nil { spotlightRestoreDue = true }
+        spotlightTimeline = nil
+        firstFramesLock.unlock()
+    }
+
+    // MARK: - A boss's entrance (Docs/FEEL.md W2.11)
+
+    /// A boss's entrance, 2.4 s at ×1: the HUD fades and the key light dims
+    /// 40% (`.bossEntrance`); the ground rumbles as the boss climbs through
+    /// the rim's dust and thrown stone from `BossEntrance.depth` below it,
+    /// fading up; at 1.2 s it ROARS in its heavy attack — a big shake and a
+    /// heavy thump in the hand — and its wine ribbon lands with its name and
+    /// epithet (a Titan's weakness on it) while its bar fills from empty;
+    /// then the lights and the HUD come back. Scene actions on the boss,
+    /// keyed, so a hit-stop or a CI frame's hold pauses it and `cancelBeats`
+    /// ends it. Under Reduce Motion it fades up on its mark instead of
+    /// climbing (the camera's shake already keeps still there). Returns its
+    /// length on the wall clock and the breath after it, the queue's wait.
+    @discardableResult
+    private func beginBossEntrance(_ node: UnitNode) -> TimeInterval {
+        guard let home = homeMarks[node.combatantID] else { return 0 }
+        entranceSerial += 1
+        let serial = entranceSerial
+        let generation = playbackGeneration
+        entranceBoss = node
+        let span = beat(BossEntrance.length)
+        let roarAt = beat(BossEntrance.roarAt)
+        onFieldCue?(.bossEntrance(BossEntranceCue(serial: serial, bossID: node.combatantID)))
+        beginSpotlight(.bossEntrance, attack: beat(0.3), longest: span + Spotlight.longest + tourHoldAllowance())
+        node.removeAction(forKey: "boss_entrance")
+        node.opacity = 0
+        let rise: SCNAction
+        if MotionComfort.isReduced {
+            node.position = home
+            rise = .fadeIn(duration: beat(0.6))
+        } else {
+            node.position = SCNVector3(home.x, home.y - BossEntrance.depth, home.z)
+            let climb = SCNAction.move(to: home, duration: roarAt)
+            climb.timingMode = .easeOut
+            rise = .group([climb, .fadeIn(duration: beat(0.5))])
+        }
+        let rim = SCNVector3(home.x, 0, home.z)
+        VFXLibrary.rimDust(at: rim, in: scene, tint: rimDustTint, width: node.spec.height * 0.6)
+        // The ground rumbles under the team as it climbs: a hop behind the
+        // wave's re-framing (`.waveStarted` measures the field with the boss
+        // on it once it is placed, and a camera put home drops its shake).
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.playbackGeneration == generation, self.entranceSerial == serial else { return }
+            self.director?.shake(intensity: BossEntrance.rumble, duration: roarAt)
+        }
+        // SceneKit runs these blocks on its render thread: they only hop.
+        let roars = SCNAction.run { [weak self, weak node] _ in
+            DispatchQueue.main.async {
+                guard let self, let node, self.playbackGeneration == generation else { return }
+                self.roar(node, serial: serial)
+            }
+        }
+        let end = SCNAction.run { [weak self] _ in
+            DispatchQueue.main.async {
+                guard let self, self.playbackGeneration == generation else { return }
+                self.endBossEntrance(serial)
+            }
+        }
+        node.runAction(.sequence([rise, roars, .wait(duration: max(0, span - roarAt)), end]), forKey: "boss_entrance")
+        return span + beat(BossEntrance.settle)
+    }
+
+    /// The roar: its heavy attack played where it towers, the shake, the
+    /// thump, a second burst of dust off the rim, and the ribbon.
+    private func roar(_ node: UnitNode, serial: Int) {
+        guard serial == entranceSerial, !node.isDefeated else { return }
+        node.play(.attackHeavy)
+        director?.shake(intensity: BossEntrance.roarShake, duration: BossEntrance.roarShakeLength)
+        Juice.haptic(.heavy)
+        AudioLibrary.shared.play(.hitHeavy, volume: 0.9)
+        if let home = homeMarks[node.combatantID] {
+            VFXLibrary.rimDust(at: SCNVector3(home.x, 0, home.z), in: scene, tint: rimDustTint,
+                               width: node.spec.height * 0.6, strength: 0.5)
+        }
+        onFieldCue?(.bossRibbon(serial))
+        holdRibbonForTour()
+    }
+
+    private func endBossEntrance(_ serial: Int) {
+        guard serial == entranceSerial, entranceBoss != nil else { return }
+        entranceBoss = nil
+        releaseSpotlight(over: beat(0.5))
+        onFieldCue?(.entranceEnded(serial))
+    }
+
+    /// The dust a boss throws off the rim: the set's own dust, taken toward
+    /// a stone grey.
+    private var rimDustTint: UIColor {
+        let dust = UIColor(hex: StageBuilder.recipe(for: environment).dustHex) ?? .white
+        return dust.mixed(with: UIColor(white: 0.42, alpha: 1), amount: 0.55)
+    }
+
+    // MARK: - A wave's stamp (Docs/FEEL.md W2.10)
+
+    /// WAVE 2, or FINAL WAVE, carved and sweeping across as the arrivals
+    /// walk on, with a drum as it lands (the realm's horn has already
+    /// called the wave). Half its length at ×2 and ×3, where at ×3 it is
+    /// all of the arrival that plays; the thumb only at ×1 and ×2.
+    private func showWaveStamp(wave: Int, count: Int) {
+        stampSerial += 1
+        let length = WaveStamp.length(speed: speedMultiplier)
+        let frozen = tourStampHold()
+        onFieldCue?(.waveStamp(WaveStampCue(serial: stampSerial, wave: wave, count: count, duration: length,
+                                            frozenFor: frozen)))
+        let generation = playbackGeneration
+        let fast = Juice.isFast(speedMultiplier)
+        DispatchQueue.main.asyncAfter(deadline: .now() + length * WaveStamp.landsAt) { [weak self] in
+            guard let self, self.playbackGeneration == generation else { return }
+            AudioLibrary.shared.play(.hitBlunt, volume: 0.8)
+            if !fast { Juice.haptic(.medium) }
+            #if DEBUG
+            if frozen > 0 { self.freezeForTour(frozen, cue: "wave-stamp") }
+            #endif
+        }
+    }
+
+    // MARK: - Leaving the field (Docs/FEEL.md W2.8)
+
+    /// A fallen unit leaves the field once its death has played
+    /// (`UnitNode.onFallen`): the body fades over 0.7 s as a column of its
+    /// element's motes rises out of it, a small soul light lifts 2 m and
+    /// winks out with a chime, and a faint glyph of its element stays on its
+    /// mark until a revive — a tap on it reaches the unit, so a reviver's
+    /// target is where the body lay. A boss sinks back below the rim in
+    /// dust instead. ×2 halves it all; ×3 keeps the fade, a sparser column
+    /// and the glyph; Reduce Motion keeps all but the rising light. No
+    /// shader anywhere in it (the run-235 rule): an opacity, particles and
+    /// quads.
+    private func leaveTheField(_ node: UnitNode) {
+        guard unitNodes[node.combatantID] === node, node.isDefeated else { return }
+        let feet = node.position
+        if node.isBoss {
+            let sink = beat(Dissolve.bossSink)
+            node.sinkBelowRim(over: sink)
+            VFXLibrary.rimDust(at: SCNVector3(feet.x, 0, feet.z), in: scene, tint: rimDustTint,
+                               width: node.spec.height * 0.6, strength: 0.8)
+            director?.shake(intensity: BossEntrance.rumble * 1.4, duration: sink * 0.7)
+            AudioLibrary.shared.play(.hitBlunt, volume: 0.6)
+            return
+        }
+        let tint = UIColor(hex: node.element.accentHex) ?? .white
+        let fade = beat(Dissolve.fade)
+        node.dissolveBody(over: fade)
+        VFXLibrary.soulColumn(at: feet, in: scene, tint: tint, height: node.spec.height, duration: fade,
+                              sparse: Juice.isFast(speedMultiplier))
+        if Dissolve.showsSoulLight(speed: speedMultiplier, calm: MotionComfort.isReduced) {
+            let start = SCNVector3(feet.x, feet.y + node.spec.height * 0.3, feet.z)
+            VFXLibrary.soulLight(from: start, in: scene, tint: tint, rise: Dissolve.soulRise,
+                                 duration: beat(Dissolve.soulFlight), size: CGFloat(node.spec.height) * 0.22) {
+                AudioLibrary.shared.play(.starTick, volume: 0.45)
+            }
+        }
+        let pale: CGFloat = StageBuilder.isPaleSet(environment) ? Dissolve.paleMarkShare : 1
+        node.leaveMark(opacity: Dissolve.markOpacity * pale, fade: beat(Dissolve.markFade))
+        holdDissolveForTour(node, fade: fade)
+    }
+
+    // MARK: - The stage, seen (the veil)
+
+    /// Runs `action` once this build's stage has been drawn, or now if it
+    /// has: an opening boss's entrance, a CI lab.
+    private func whenStageShown(_ action: @escaping () -> Void) {
+        if stageIsShown {
+            action()
+        } else {
+            stageShownActions.append(action)
+        }
+    }
+
+    /// Main thread: this build's stage has been drawn (or the wait for it
+    /// ran out): whatever waited to be seen begins.
+    private func runStageShownActions() {
+        guard !stageIsShown else { return }
+        stageIsShown = true
+        let waiting = stageShownActions
+        stageShownActions.removeAll()
+        for action in waiting { action() }
+    }
+
+    /// The longest a build waits to be seen before what waits for it begins
+    /// anyway: the battle view's veil lifts by its own limit then too
+    /// (`BattleView.veilLimit`), and an opening boss must never hold the
+    /// fight for good behind a renderer that draws nothing.
+    static let stageShownLimit: TimeInterval = 5
+
+    // MARK: - The CI labs (-tour-cutin, -tour-waves, -tour-dissolve)
+
+    /// How long a lab holds its beat: a simulator screenshot of a live
+    /// fight lands six to nine seconds after it is asked for (run 245), so
+    /// a beat is held long past that for its frame.
+    static let tourHold: TimeInterval = 16
+
+    #if DEBUG
+    private static let tourArguments = ProcessInfo.processInfo.arguments
+    /// `-tour-cutin`: the first splash stands at its middle, and then its
+    /// caster's wind-up under the spotlight (the view model casts the first
+    /// ultimate the player has, `BattleViewModel.castTourUltimate`).
+    private static let touringCutIn = tourArguments.contains("-tour") && tourArguments.contains("-tour-cutin")
+    /// `-tour-waves`: the first WAVE stamp over its walkers, and the first
+    /// boss's ribbon over its roar.
+    private static let touringWaves = tourArguments.contains("-tour") && tourArguments.contains("-tour-waves")
+    /// `-tour-dissolve`: an enemy falls three seconds after the stage is
+    /// seen, the scene's picture only, and is held half dissolved.
+    private static let touringDissolve = tourArguments.contains("-tour") && tourArguments.contains("-tour-dissolve")
+
+    /// Holds the world `seconds` for a CI frame, and the queue with it —
+    /// the event now playing keeps what was left of its hold after the
+    /// frame — and prints the cue the job waits on.
+    private func freezeForTour(_ seconds: TimeInterval, cue: String) {
+        let hold = Juice.holdWorld(scene)
+        let generation = playbackGeneration
+        let base: CFTimeInterval = max(queueHeldUntil, queueDueAt, CACurrentMediaTime())
+        queueHeldUntil = base + seconds
+        print("[TourCue] \(cue)")
+        DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+            guard let self, self.playbackGeneration == generation else { return }
+            Juice.releaseWorld(self.scene, hold: hold)
+        }
+    }
+    #endif
+
+    /// The first splash's hold under `-tour-cutin`; nothing otherwise.
+    private func tourSplashHold() -> TimeInterval {
+        #if DEBUG
+        guard Self.touringCutIn, !tourCutInSpent else { return 0 }
+        tourCutInSpent = true
+        return Self.tourHold
+        #else
+        return 0
+        #endif
+    }
+
+    /// Under `-tour-cutin`, the wind-up after the held splash is held too,
+    /// three fifths of the way to its blow, with the set dimmed round it.
+    private func holdSpotlightForTour(contact: TimeInterval) {
+        #if DEBUG
+        guard Self.touringCutIn, tourCutInSpent, !tourSpotlightSpent else { return }
+        tourSpotlightSpent = true
+        let generation = playbackGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + beat(contact) * 0.6) { [weak self] in
+            guard let self, self.playbackGeneration == generation else { return }
+            self.freezeForTour(Self.tourHold - 2, cue: "spotlight")
+        }
+        #endif
+    }
+
+    /// The first WAVE stamp's hold under `-tour-waves`; nothing otherwise.
+    private func tourStampHold() -> TimeInterval {
+        #if DEBUG
+        guard Self.touringWaves, !tourStampSpent else { return 0 }
+        tourStampSpent = true
+        return Self.tourHold - 2
+        #else
+        return 0
+        #endif
+    }
+
+    /// What a dim may be held for under a lab that holds its beat (the
+    /// ultimate's wind-up under `-tour-cutin`, the roar under `-tour-waves`),
+    /// so the set stays dark through the frame; nothing otherwise.
+    private func tourHoldAllowance() -> TimeInterval {
+        #if DEBUG
+        return Self.touringCutIn || Self.touringWaves ? Self.tourHold : 0
+        #else
+        return 0
+        #endif
+    }
+
+    /// Under `-tour-waves`, the first ribbon is held a moment after it lands,
+    /// over the roar.
+    private func holdRibbonForTour() {
+        #if DEBUG
+        guard Self.touringWaves, !tourRibbonSpent else { return }
+        tourRibbonSpent = true
+        let generation = playbackGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { [weak self] in
+            guard let self, self.playbackGeneration == generation else { return }
+            self.freezeForTour(Self.tourHold - 2, cue: "boss-ribbon")
+        }
+        #endif
+    }
+
+    /// Under `-tour-dissolve`, three seconds after the stage is seen the
+    /// first standing enemy falls — the scene's picture only; the engine
+    /// fights on — and `holdDissolveForTour` holds its dissolve half way.
+    private func startTourDissolve() {
+        #if DEBUG
+        guard Self.touringDissolve else { return }
+        let serial = buildSerial
+        whenStageShown { [weak self] in
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+                guard let self, self.buildSerial == serial else { return }
+                let standing = self.unitNodes.values.filter { $0.side == .opponent && !$0.isBoss && !$0.isDefeated }
+                guard let victim = standing.min(by: { $0.position.x < $1.position.x }) else { return }
+                self.tourDissolveVictim = victim.combatantID
+                victim.markDefeated()
+            }
+        }
+        #endif
+    }
+
+    private func holdDissolveForTour(_ node: UnitNode, fade: TimeInterval) {
+        #if DEBUG
+        guard tourDissolveVictim == node.combatantID else { return }
+        tourDissolveVictim = nil
+        let generation = playbackGeneration
+        DispatchQueue.main.asyncAfter(deadline: .now() + fade * 0.45) { [weak self] in
+            guard let self, self.playbackGeneration == generation else { return }
+            self.freezeForTour(Self.tourHold - 2, cue: "dissolve")
+        }
+        #endif
     }
 
     /// The share of its victim's maximum health a blow took (W1.3's freeze
@@ -2019,9 +2796,30 @@ final class BattleSceneController: NSObject {
             restore = impactRestore
             impactRestore = nil
         }
+        // The spotlight's lights for this frame (Docs/FEEL.md W2.9, W2.11),
+        // written here with the impact frame's so the two never race for
+        // the camera: its colour is the spotlight's to write only outside an
+        // impact frame's two frames — after a restore, in the same frame —
+        // and never once a loss has taken the colour.
+        let rig = spotlightRig
+        var shares: SpotlightShares?
+        if let timeline = spotlightTimeline {
+            let now = CACurrentMediaTime()
+            if timeline.isOver(at: now) {
+                spotlightTimeline = nil
+                shares = Spotlight.rest
+            } else {
+                shares = Spotlight.shares(for: timeline.look, level: timeline.level(at: now))
+            }
+        } else if spotlightRestoreDue {
+            shares = Spotlight.rest
+        }
+        spotlightRestoreDue = false
+        let grades: Bool = punch == nil && impactFramesLeft == 0 && !spotlightGradeHeld
         firstFramesLock.unlock()
         punch?()
         restore?()
+        if let rig, let shares { rig.apply(shares, grade: grades) }
     }
 
     /// The renderer's thread, after every frame (`BattleSceneView`).
@@ -2038,9 +2836,14 @@ final class BattleSceneController: NSObject {
         firstFramesLock.unlock()
         guard let left, left <= 1 else { return }
         DispatchQueue.main.async { [weak self] in
-            guard let self, let told = self.onStageShown else { return }
-            self.onStageShown = nil
-            told()
+            guard let self else { return }
+            if let told = self.onStageShown {
+                self.onStageShown = nil
+                told()
+            }
+            // And whatever waited for this build's stage to be seen: an
+            // opening boss's entrance, a CI lab (W2.11).
+            self.runStageShownActions()
         }
     }
 
@@ -2048,6 +2851,14 @@ final class BattleSceneController: NSObject {
         firstFramesLock.lock()
         framesToShow = Self.framesBeforeShown
         firstFramesLock.unlock()
+        // Never later than the veil's own limit: a renderer that draws
+        // nothing must not hold an opening boss's entrance, and the fight
+        // behind it, for good.
+        let serial = buildSerial
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.stageShownLimit) { [weak self] in
+            guard let self, self.buildSerial == serial else { return }
+            self.runStageShownActions()
+        }
     }
 
     /// The field's chrome — the plates and the floating words — faded out
@@ -2810,6 +3621,13 @@ extension BattleSceneController {
     func drainColour(duration: TimeInterval) {
         endSlowMotion()
         cancelImpact()
+        // The colour is the drain's from here (W2.9): a spotlight still
+        // coming back up gives its lights back and never writes the
+        // camera's saturation again.
+        firstFramesLock.lock()
+        spotlightGradeHeld = true
+        firstFramesLock.unlock()
+        endSpotlight()
         director?.drainColour(to: Self.drainedSaturation, over: duration)
     }
 

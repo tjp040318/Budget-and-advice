@@ -299,6 +299,19 @@ jobs:
                 sleep 5; shoot "$step-${names[$step]}-charge-violet"
                 xcrun simctl launch --terminate-running-process "$UDID" com.pantheon.game -tour -tour-step $step -tour-reveal-hold charge:0.8 >/dev/null
                 sleep 5; shoot "$step-${names[$step]}-charge"
+                # The entrance and the name card (Docs/FEEL.md W2.4, W2.13):
+                # the scene stopped on the victory's high point, where the
+                # name slams, the card finished over it — the fire Sekhmet
+                # (298 Cheer) and the awakened Ares on his own rig. The wait
+                # is the app's own cue, printed when the clip peaks.
+                again -tour-reveal-hold apex; cue_again reveal-apex 25; sleep 2; shoot "$step-${names[$step]}-apex"
+                again -tour-reveal awakened -tour-reveal-hold apex; cue_again reveal-apex 25; sleep 2; shoot "$step-${names[$step]}-awakened-apex"
+                # Skip never swallows a 5★ (W2.23): a ten-pull whose fifth
+                # pull is the 5★. The first pull's card, its Skip saying
+                # "Skip to ★★★★★"; then Skip pressed half a second into the
+                # first charge, and the frame is the 5★'s card, not the grid.
+                again -tour-reveal ten; sleep 9; shoot "$step-${names[$step]}-ten"
+                again -tour-reveal ten -tour-reveal-skip; cue_again reveal-named 30; sleep 2; shoot "$step-${names[$step]}-ten-skipped"
                 # And the awakened Ares under the reveal's light as it was
                 # before the figure and the temple had lights of their own
                 # (Docs/FEEL.md L1): the control for 5-reveal-awakened.
@@ -308,6 +321,16 @@ jobs:
                 # The skill panel: the first player turn opens with a skill
                 # chosen and what it does over the skill squares.
                 again -tour-skill-info; sleep 12; shoot "$step-${names[$step]}-skill"
+                # The ultimate's splash at its middle, then its caster's
+                # wind-up with the set dimmed round it (Docs/FEEL.md W2.1,
+                # W2.9): -tour-cutin casts the first ultimate the team has
+                # and holds each beat for its frame (16 s, then 14 s).
+                again -tour-cutin; cue_again cutin 90; sleep 1; shoot_timed "$step-${names[$step]}-cutin"
+                cue_again spotlight 60; sleep 1; shoot_timed "$step-${names[$step]}-spotlight"
+                # A death leaving the field (W2.8): -tour-dissolve fells the
+                # first enemy three seconds after the stage is seen and holds
+                # it half dissolved, its soul light rising, for 14 s.
+                again -tour-dissolve; cue_again dissolve 60; sleep 1; shoot_timed "$step-${names[$step]}-dissolve"
                 # The fight under the light rig from before the figures and
                 # the set had lights of their own (Docs/FEEL.md L1): the
                 # control 6-battle-a is judged against, as the reveal's
@@ -327,7 +350,14 @@ jobs:
                 shoot_timed "$step-${names[$step]}-aoe-a"; sleep 0.5; shoot_timed "$step-${names[$step]}-aoe-b"
                 again -tour-aoe wrath_of_the_eye:ember; cue_again shown 40; sleep 5
                 shoot_timed "$step-${names[$step]}-aoe-c"; sleep 0.5; shoot_timed "$step-${names[$step]}-aoe-d" ;;
-              dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d" ;;
+              # The waves walking on under their stamp and the Colossus's
+              # entrance under its ribbon (Docs/FEEL.md W2.10, W2.11): the
+              # step's four frames as they were, then -tour-waves holds the
+              # first WAVE stamp over its walkers and the first ribbon over
+              # the roar, 14 s each.
+              dungeon_battle) sleep 8; shoot "$step-${names[$step]}-a"; sleep 12; shoot "$step-${names[$step]}-b"; sleep 12; shoot "$step-${names[$step]}-c"; sleep 12; shoot "$step-${names[$step]}-d"
+                again -tour-waves; cue_again wave-stamp 150; sleep 1; shoot_timed "$step-${names[$step]}-wave"
+                cue_again boss-ribbon 240; sleep 1; shoot_timed "$step-${names[$step]}-boss" ;;
               # The reckoning (about 3 s in), the chest with its lid coming
               # up (about 7.6 s), the spoils panel with every tile and
               # Continue (about 14 s); a screenshot itself takes a second

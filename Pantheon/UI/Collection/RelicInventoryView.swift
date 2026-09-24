@@ -1964,7 +1964,7 @@ struct RelicDetailView: View {
         guard store.awakenRelic(relicID, paying: element) != nil else { return }
         lastOutcome = nil
         runSummary = nil
-        AudioLibrary.shared.play(.summonBurst, volume: 0.9)
+        AudioLibrary.shared.play(.riteRelicAwaken, volume: 0.9)
         Juice.haptic(.heavy)
         withAnimation(.easeOut(duration: 0.3)) { riteShown = true }
     }

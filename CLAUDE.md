@@ -86,6 +86,9 @@ And a STATIC member on a class named `Coordinator` makes the checker read
 every `Coordinator.x` in the tree as that class's — the battle view's
 `#selector(Coordinator.handleTap(_:))` is another class of the name — so the
 island's coordinator keeps its constants as instance lets (2026-09-17, twice).
+And no constant or variable may be named with a keyword: `let internal =
+info.internal` failed run 249 (the member after a dot is fine, the binding is
+not), and `check_keyword_bindings` reads every `let`/`var` for one.
 Every rule in the checker was
 proven by reintroducing a real bug and watching it fail.
 
@@ -1448,6 +1451,81 @@ environment can and cannot do. The short version:
   three seconds late) gives `20-victory-0`, `-triumph` and `-levelup`, and
   `-tour-victory defeat` gives `20-victory-defeat`; `-tour-triumph win|loss`
   is a lab nobody photographs. The job's limit is 110 minutes.
+- **The premium feel's Wave 2, the battle's half (2026-09-24; `Docs/FEEL.md`
+  W2.1, W2.8–W2.11, each with its *As built*).** The numbers are
+  `Pantheon/Render/FieldBeats.swift`'s (`UltimateSplash`, `Spotlight`,
+  `WaveStamp`, `WalkOn`, `Dissolve`, `BossEntrance`; `FieldBeatsTests`), the
+  views `Pantheon/UI/Battle/FieldBeatViews.swift`'s, and the scene tells the
+  view through ONE closure, `BattleSceneController.onFieldCue` (`FieldCue`,
+  written into `BattleView`'s state through bindings by `receive`). **An
+  ultimate owns the screen:** `holdForCutIn` holds the world
+  (`Juice.holdWorld`/`releaseWorld`, a token that outranks a freeze) and
+  hands the splash's length to the queue as frozen time; the cast's picture
+  is drawn by `performCast` (a `CastPlan`) as it lets go, strictly before
+  the clip starts, so `contactFraction` stays true — never draw a cast in
+  `present` again. The setting is `ultimateSplash` (Always / First / Off,
+  always under `-tour`). A splash's card is decoded ahead only when a splash
+  will draw it (`BattleViewModel.splashCasters` → `warmSplashCards`, as a
+  turn's events reach the scene), never every fighter's at every turn: four
+  megabytes a card. The view model's `cutIn` is `bossSpeech` (a chapter
+  boss's line; a giant's rides its entrance's ribbon) and the white
+  `ultimateFlash` is gone: an ultimate's light is a two-frame exposure punch
+  (`CameraDirector.exposurePunch`) through the impact frame's queue.
+  **The spotlight** is written on the render thread in `renderUpdate` with
+  the impact frame (`SpotlightRig`, `SpotlightTimeline`): the set's lights
+  to 35% with a figures' own key (category 2 | 1, idle at 0.001 of the key —
+  never add or light one from nothing mid-fight, it compiles every figure's
+  shader) taking up what the key lost, the painting's diffuse intensity
+  armed at 0.999, the braziers through `StageBuilder.battleSetDimmer`.
+  **Deaths leave:** `UnitNode.onFallen` (a death played AND marked, in the
+  same life — `lifeSerial`) → `leaveTheField` (fade, `VFXLibrary.soulColumn`,
+  `soulLight`, a glyph on the mark that a tap reaches, the ground oval gone
+  for good — `restingShadowOpacity`, since every turn walks the fallen home;
+  a boss `sinkBelowRim` in `rimDust`); a revive takes it all back, and so
+  does a Skip's `sync` when it dropped the revive. **Waves walk** on their
+  walk clip at the island's stroll (`WalkOn`), under a WAVE stamp that only
+  a NEW wave wears (`WaveStamp.stamps`: a raid's guard comes back under the
+  wave the fight is on); a chapter boss's line waits for the stamp and
+  belongs to the wave the boss walks on with (`Stage.speakerWave`, the last
+  wave that fields its kind). **A boss enters** (`beginBossEntrance`: rise,
+  roar, ribbon, its bar filling from empty), a Titan in the opening line
+  only once the stage is seen, booming as it rises — the queue waits on
+  `queueHeldOpen`/`queueHeldUntil` through `continueWhenFree`, and
+  `cancelBeats` (skip, forfeit, a new run) ends every beat where it stands.
+  Labs: `-tour-cutin` (`6-battle-cutin`, `-spotlight`), `-tour-dissolve`
+  (`6-battle-dissolve`), `-tour-waves` (`18-dungeon_battle-wave`, `-boss`).
+- **The premium feel's summon half (2026-09-24; `Docs/FEEL.md` W2.4, W2.13,
+  W2.23, W2.7, each with its *As built*).** At the flash the reveal's scene
+  holds 70 ms (110 for a 5★), then the figure plays its VICTORY clip's
+  measured window (`RevealEntrance.swift`: the three motion presets are known
+  by the length SceneKit reports, 1.90 / 3.93 / 3.87 s) and blends back into
+  its idle, the camera kicks on its own rig, the shockwave lies under the
+  feet and a 5★'s sunburst stands behind, and the name slams on the clip's
+  high point reported on the scene's clock (`onApex`). The words are
+  `RevealNameCard`: a plaque in the grade's metal, the element's crest, stars
+  stamped on two `keyframeAnimator`s (the arrival from the figure's first
+  drawn frame, the naming from the high point); under Reduce Motion no
+  spring on it rings. Skip goes to the next 5★ or NEW 4★ and says so, but
+  NEVER names the pull on the beam before its rung: a single's reads plain
+  Skip, and a pull of several changes its words only when a pull lands
+  (`RevealSkip.label`) — plain Skip on the stop's own charge would be the
+  tell. A 0.6 s hold skips all, a tap on a 5★'s charge lands its flash, and
+  Quick summons (`summon.quick`, the room's header) flashes a 3★ in 0.5 s
+  (`RevealSkip.swift`). **A `DragGesture`'s `onEnded` never comes for a
+  CANCELLED touch** (an edge swipe iOS takes, a call): a press read from
+  touch to lift also follows the finger through `@GestureState`, which
+  SwiftUI resets on a cancel, springs the press back a main-queue turn after
+  that reset if no lift came, and still accepts a lift that came late
+  (`RevealSkipControl.letGo`, `releasedPress`). The sound is `tools/sfx.py
+  summon --vsco DIR`: charge stems on the ladder's rungs off `result.stars`
+  alone, a Light & Dark layer off the scroll spent, a burst per grade (the
+  5★'s in E, the key the tell lifts to), six star notes and three rites,
+  LEVELLED AS A MIX — the stems fade over 50 ms at the flash and the burst is
+  scheduled 40 ms after it on the audio clock (`AudioLibrary.fadeOut`,
+  `schedule`), and `summon_mix_check` sums every grade at the reveal's
+  offsets (the loudest 0.895 of full scale); change a volume in
+  `ChargeLadder` and sfx.py's `STEM_VOLUME`/`STAR_VOLUMES` together. Tour:
+  `-tour-reveal-hold apex`, `-tour-reveal ten`, `-tour-reveal-skip`.
 - **The fight reads.** **Every unit's bars are a screen-space plate OVER
   ITS HEAD (2026-09-15; under the feet from 2026-09-11 until the owner,
   with Summoners War's frame beside ours: "The health bars are not above
@@ -1915,8 +1993,9 @@ environment can and cannot do. The short version:
   resumed*):** the chapter map's haze is Core Image's clamped blur
   (`SoftMapPainting`; SwiftUI's opaque blur takes in black at its
   bounds). **A cast on several victims is drawn ONCE over the row**
-  (`VFXLibrary.spawnArea`, `Reach.row`: its sheets off white, at half
-  strength and at most 3.4 m, one light, and every victim its own sparks;
+  (`VFXLibrary.spawnArea`, `Reach.row`: its sheets off white, at 0.4
+  strength and at most 3.4 m, one light kept under the key
+  (`rowLightStrength` 0.35), and every victim its own sparks;
   an element's hit or a heal stays on each victim as `Reach.member`, with
   no light of its own). Drawn per victim, four white sheets made a slab
   over the whole team. A sheet that would reach the floor STANDS as a

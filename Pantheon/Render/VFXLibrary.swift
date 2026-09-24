@@ -28,8 +28,8 @@ enum VFXLibrary {
         /// The whole row at once, drawn ONCE at its centre: the sheets off
         /// white (0.6 of the caster's tint, at `rowSheetStrength`), as wide
         /// as the row asks up to `areaSheetLimit` and faded into the floor
-        /// (`standingFlipbook`), half the sparks, one light at 0.6 strength
-        /// no wider than 4 m.
+        /// (`standingFlipbook`), half the sparks, one light at
+        /// `rowLightStrength` no wider than 4 m.
         case row(span: Float)
     }
 
@@ -44,8 +44,20 @@ enum VFXLibrary {
     /// row: the colour is scaled, not the alpha, so an additive sheet is
     /// dimmed whatever the blend reads. At 0.7 a sunburst's white core over
     /// the Duat's lit floor went past 240 across a 64-px patch (76%, run
-    /// 234); at half it adds about 100 of luminance at its brightest.
-    static let rowSheetStrength: CGFloat = 0.5
+    /// 234); at half it added about 100 of luminance at its brightest, and
+    /// it is 0.4 since runs 246 and 247 (`rowLightStrength` says why).
+    static let rowSheetStrength: CGFloat = 0.4
+
+    /// The one light a cast over a row brings, as a share of `flash`'s own
+    /// peak. At 0.6 a 4 m row light peaked at 1,440 (2,400 x 0.6), a quarter
+    /// over the battle's key light (1,150), reached six metres and lit the
+    /// whole team and the marble under it: run 247's tide rite (aoe-a, the
+    /// middle band 6.2% blown and a 64-px patch 78%) and run 246's Wrath of
+    /// the Eye (aoe-c, 2.6% and 49%) were the floor and the figures washed
+    /// pale, not the painted sheets. At 0.35 it peaks at 840, under the key,
+    /// so the row glows in the caster's colour and nothing relights the set.
+    /// The painted sheet came down with it, 0.5 to 0.4 (`rowSheetStrength`).
+    static let rowLightStrength: CGFloat = 0.35
 
     /// The height, in metres above the floor, over which a sheet standing
     /// over a row fades out (`standingFlipbook`).
@@ -88,7 +100,7 @@ enum VFXLibrary {
                 spawn(identifier, at: position, in: scene, tint: tint, scale: scale, reach: .member)
             }
             let reach: Float = min(4, span * 0.5 + 1)
-            flash(at: centre, in: scene, color: tint, radius: reach, duration: 0.3, strength: 0.6)
+            flash(at: centre, in: scene, color: tint, radius: reach, duration: 0.3, strength: rowLightStrength)
             return
         }
         spawn(identifier, at: centre, in: scene, tint: tint, scale: scale, reach: .row(span: span))
@@ -186,7 +198,7 @@ enum VFXLibrary {
                 break
             case .row:
                 let wide: Float = min(4, radius * Float(spread))
-                flash(at: position, in: scene, color: color, radius: wide, duration: duration, strength: 0.6)
+                flash(at: position, in: scene, color: color, radius: wide, duration: duration, strength: rowLightStrength)
             }
         }
         func skyLight(duration: TimeInterval) {
@@ -1463,6 +1475,171 @@ enum VFXLibrary {
         host.name = "vfx_summon_beam"
         host.addParticleSystem(rising(tint: tint, count: 200, scale: 2.0))
         retire(host, after: 4)
+    }
+
+    // MARK: - Leaving the field (Docs/FEEL.md W2.8, W2.11)
+
+    /// The motes a fallen unit leaves the field in: a column of its
+    /// element's light rising out of where it lies, the body's own height,
+    /// born for `duration` (the body's fade) and each gone a second or so
+    /// after. A cylinder emitter over the mark, the painted flare added over
+    /// the stone and faded in and out along its life; `sparse` for ×3, where
+    /// the column is a glance. The host stands at the stage's root and
+    /// leaves through `retire` once its last mote is out.
+    static func soulColumn(at feet: SCNVector3, in scene: SCNScene, tint: UIColor, height: Float,
+                           duration: TimeInterval, sparse: Bool) {
+        let host = SCNNode()
+        host.name = "vfx_soul_column"
+        host.position = SCNVector3(feet.x, feet.y + height * 0.45, feet.z)
+        scene.rootNode.addChildNode(host)
+        let emitting = CGFloat(max(0.2, duration))
+        let count: CGFloat = sparse ? 16 : 40
+        let life: CGFloat = 1.3
+        let size = CGFloat(height) * 0.045
+        let system = SCNParticleSystem()
+        system.loops = false
+        system.emissionDuration = emitting
+        system.birthRate = count / emitting
+        system.birthLocation = .volume
+        system.emitterShape = SCNCylinder(radius: CGFloat(height) * 0.16, height: CGFloat(height) * 0.9)
+        system.particleImage = sprite("flare") ?? UIImage(named: "spark")
+        system.particleSize = size
+        system.particleSizeVariation = size * 0.4
+        system.particleLifeSpan = life
+        system.particleLifeSpanVariation = life * 0.3
+        system.particleVelocity = 0.55
+        system.particleVelocityVariation = 0.3
+        system.emittingDirection = SCNVector3(0, 1, 0)
+        system.spreadingAngle = 14
+        system.acceleration = SCNVector3(0, 0.9, 0)
+        system.particleColor = tint
+        system.particleColorVariation = SCNVector4(0.03, 0.06, 0.08, 0)
+        system.blendMode = .additive
+        system.isLightingEnabled = false
+        system.isAffectedByGravity = false
+        system.orientationMode = .billboardScreenAligned
+        system.sortingMode = .distance
+        system.propertyControllers = [
+            .opacity: curve([0, 1, 1, 0], [0, 0.15, 0.6, 1]),
+            .size: curve([NSNumber(value: Double(size) * 0.6), NSNumber(value: Double(size) * 1.4)], [0, 1]),
+        ]
+        host.addParticleSystem(system)
+        // The last mote is born at `duration` and lives at most 1.3 × its
+        // life; a second over that before the host goes.
+        retire(host, after: Double(emitting) + Double(life) * 1.3 + 1.0)
+    }
+
+    /// A small soul light (W2.8): one painted flare lifting `rise` metres off
+    /// the fallen over `duration`, trailing a few motes, then winking out —
+    /// a quick swell and gone — with `onWink` on the main thread (the chime).
+    /// Its motion is scene time, so a hit's freeze or a CI frame's hold
+    /// stops it where it is.
+    static func soulLight(from start: SCNVector3, in scene: SCNScene, tint: UIColor, rise: Float,
+                          duration: TimeInterval, size: CGFloat, onWink: @escaping () -> Void) {
+        let host = SCNNode()
+        host.name = "vfx_soul_light"
+        host.position = start
+        scene.rootNode.addChildNode(host)
+
+        let orb = SCNNode(geometry: SCNPlane(width: size, height: size))
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = sprite("flare") ?? UIImage(named: "spark")
+        material.multiply.contents = tint.mixed(with: .white, amount: 0.35)
+        material.blendMode = .add
+        // Adds light and writes no alpha, as every additive quad must
+        // (`StageBuilder.runeRing` says why).
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        material.writesToDepthBuffer = false
+        material.isDoubleSided = true
+        orb.geometry?.firstMaterial = material
+        let billboard = SCNBillboardConstraint()
+        billboard.freeAxes = .all
+        orb.constraints = [billboard]
+        orb.opacity = 0
+        orb.castsShadow = false
+        host.addChildNode(orb)
+
+        let flight = max(0.2, duration)
+        let trailLife: CGFloat = 0.6
+        let trail = SCNParticleSystem()
+        trail.loops = false
+        trail.emissionDuration = CGFloat(flight)
+        trail.birthRate = 14 / CGFloat(flight)
+        trail.birthLocation = .volume
+        trail.emitterShape = SCNSphere(radius: size * 0.2)
+        trail.particleImage = sprite("flare") ?? UIImage(named: "spark")
+        trail.particleSize = size * 0.22
+        trail.particleSizeVariation = size * 0.08
+        trail.particleLifeSpan = trailLife
+        trail.particleLifeSpanVariation = trailLife * 0.3
+        trail.particleVelocity = 0.1
+        trail.spreadingAngle = 180
+        trail.particleColor = tint
+        trail.blendMode = .additive
+        trail.isLightingEnabled = false
+        trail.isAffectedByGravity = false
+        trail.orientationMode = .billboardScreenAligned
+        trail.propertyControllers = [.opacity: curve([1, 0], [0, 1])]
+        host.addParticleSystem(trail)
+
+        let lift = SCNAction.moveBy(x: 0, y: CGFloat(rise), z: 0, duration: flight)
+        lift.timingMode = .easeOut
+        host.runAction(lift)
+        // SceneKit runs the block on its render thread: it only hops.
+        let wink = SCNAction.run { _ in
+            DispatchQueue.main.async { onWink() }
+        }
+        orb.runAction(.sequence([
+            .fadeIn(duration: 0.12),
+            .wait(duration: max(0, flight - 0.12)),
+            wink,
+            .group([.scale(to: 1.8, duration: 0.1), .fadeOut(duration: 0.14)]),
+        ]))
+        retire(host, after: flight + Double(trailLife) * 1.3 + 1.0)
+    }
+
+    /// A boss breaking over the rim, or going back under it (W2.8, W2.11):
+    /// dust rolling off the edge along `width` metres and chips of stone
+    /// thrown up and falling back. Alpha-blended — dust and stone are
+    /// things, not light — `strength` 1 for the climb and less for the roar
+    /// and the fall; retired once the last of it has settled.
+    static func rimDust(at position: SCNVector3, in scene: SCNScene, tint: UIColor, width: Float, strength: Float = 1) {
+        let host = SCNNode()
+        host.name = "vfx_rim_dust"
+        host.position = position
+        scene.rootNode.addChildNode(host)
+        let share = max(0.2, strength)
+        let span = CGFloat(max(1, width))
+        let cloudLife: CGFloat = 1.8
+        if let smoke = sprite("smoke") {
+            let clouds = max(4, Int(16 * share))
+            let dust = puff(smoke, tint: tint.withAlphaComponent(0.85), count: clouds, speed: 1.4, size: span * 0.3,
+                            life: cloudLife, spread: 60, lift: 0.5, spin: 0.4, blend: .alpha, grow: 2.4)
+            dust.emitterShape = SCNBox(width: span, height: 0.3, length: 1.2, chamferRadius: 0)
+            dust.emissionDuration = 0.25
+            dust.birthRate = CGFloat(clouds) / 0.25
+            host.addParticleSystem(dust)
+        }
+        let chips = base(scale: 1)
+        let pieces = max(6, Int(30 * share))
+        chips.birthRate = CGFloat(pieces) / 0.12
+        chips.emitterShape = SCNBox(width: span, height: 0.2, length: 0.8, chamferRadius: 0)
+        chips.particleSize = 0.09
+        chips.particleSizeVariation = 0.05
+        chips.particleVelocity = 4.2
+        chips.particleVelocityVariation = 2
+        chips.spreadingAngle = 35
+        chips.emittingDirection = SCNVector3(0, 1, 0.25)
+        chips.acceleration = SCNVector3(0, -9, 0)
+        chips.particleColor = tint.mixed(with: .black, amount: 0.45)
+        chips.blendMode = .alpha
+        chips.particleLifeSpan = 1.1
+        chips.particleLifeSpanVariation = 0.3
+        chips.particleAngularVelocity = 240
+        chips.particleAngularVelocityVariation = 180
+        host.addParticleSystem(chips)
+        retire(host, after: 0.25 + Double(cloudLife) * 1.3 + 1.0)
     }
 
     // MARK: - Retiring a node that carries particles

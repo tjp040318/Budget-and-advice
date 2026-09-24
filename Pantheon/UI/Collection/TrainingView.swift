@@ -1521,7 +1521,7 @@ struct TrainingView: View {
         if let after = store.resolved(target.id), after.stars > target.stars {
             outcome = "\(after.name) evolved to \(after.stars)★"
             Juice.notify(.success)
-            AudioLibrary.shared.play(.summonBurst, volume: 0.8)
+            AudioLibrary.shared.play(.riteEvolve, volume: 0.9)
             play(.evolve, tint: target.blueprint.element.accentHex)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
                 show("EVOLVED", String(repeating: "★", count: after.stars))
@@ -1693,7 +1693,7 @@ struct TrainingView: View {
                         if let after = store.resolved(target.id), after.unit.isAwakened {
                             outcome = "\(after.name) awakened"
                             Juice.notify(.success)
-                            AudioLibrary.shared.play(.summonBurst, volume: 0.9)
+                            AudioLibrary.shared.play(.riteAwaken, volume: 0.9)
                             // The altar's pillar first; the reveal of the
                             // new form follows it up.
                             play(.awaken, tint: target.blueprint.element.accentHex)

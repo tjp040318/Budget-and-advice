@@ -1090,6 +1090,39 @@ final class CameraDirector {
         return (punch: punch, restore: restore)
     }
 
+    /// How far the splash's end pushes the exposure, in stops (Docs/FEEL.md
+    /// W2.9): the ultimate's light arriving.
+    static let splashExposure: CGFloat = 1.1
+
+    /// Main thread: the end of an ultimate's splash as two changes to the
+    /// camera, run by the controller on the renderer's thread two drawn
+    /// frames apart exactly as `impactFrame`'s are — the exposure pushed
+    /// `splashExposure` stops, then the realm's own. It replaces the white
+    /// full-screen flash the cut-in used to fire, which read as a UI flash
+    /// over the fight; this is the fight's own light, through the bloom and
+    /// the white point. Never under Reduce Motion, never over a draining
+    /// field; nil when there is nothing to punch.
+    func exposurePunch() -> (punch: () -> Void, restore: () -> Void)? {
+        guard !MotionComfort.isReduced, !draining, let camera = cameraNode.camera else { return nil }
+        let pushed: CGFloat = restExposure + Self.splashExposure
+        let exposure = restExposure
+        let saturation = restSaturation
+        let contrast = restContrast
+        let punch: () -> Void = { [weak camera] in
+            camera?.exposureOffset = pushed
+        }
+        // The whole grade back, not the exposure alone: this pair takes an
+        // impact frame's place in the controller's queue, and a crit's punch
+        // whose restore it replaced must not be left on the camera.
+        let restore: () -> Void = { [weak camera] in
+            guard let camera else { return }
+            camera.saturation = saturation
+            camera.contrast = contrast
+            camera.exposureOffset = exposure
+        }
+        return (punch: punch, restore: restore)
+    }
+
     /// The realm's grade, exactly.
     private func restoreGrade() {
         guard let camera = cameraNode.camera else { return }

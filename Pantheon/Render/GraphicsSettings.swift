@@ -141,7 +141,7 @@ enum GraphicsSettings {
 
 /// Comfort: iOS's Reduce Motion, or the game's own switch on the Settings
 /// screen. With either on, the fight's camera never shakes, an ultimate's
-/// cut-in never flashes the screen white, the skill zoom travels
+/// splash fades in and ends on no burst of light, the skill zoom travels
 /// `zoomReach` of its way at a gentler ease, and the cinematic camera's cuts
 /// and orbits are held off (`CameraDirector`, `BattleView`).
 enum MotionComfort {

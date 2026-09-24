@@ -1037,6 +1037,9 @@ struct TourView: View {
     /// A 5★ reveal without spending a scroll, so the stage is caught with a
     /// real model on it.
     private static func demoReveal(awakened: Bool = false) -> [SummonResult] {
+        // `-tour-reveal ten` (Docs/FEEL.md W2.23): the ten-pull whose first
+        // pull's Skip reads "Skip to ★★★★★" (`SummonRevealView.tourTenPull`).
+        if let ten = SummonRevealView.tourTenPull() { return ten }
         // Awakened: Ares in light, the owner's own frame, on the shipped
         // `ares_awakened` mesh; otherwise the fire Sekhmet as before.
         let wanted = awakened ? "ares_radiance" : "sekhmet_ember"

@@ -399,7 +399,8 @@ enum StageBuilder {
             // Only depth moves with the edge, so `placed.x != position.x`
             // below still means "sent out to the wing line".
             let placed = Self.withTheFarEdge(Self.clearOfTheWings(position))
-            let fire = brazier(asset: recipe.brazierAsset, at: placed, flame: flame, glow: Self.battleBrazierGlow)
+            let fire = brazier(asset: recipe.brazierAsset, at: placed, flame: flame, glow: Self.battleBrazierGlow,
+                               dimmer: Self.battleSetDimmer)
             // A built bowl sent out to the wing line steps clear of the piece
             // already standing there (`standClear`).
             if placed.x != position.x, fire.childNode(withName: Self.builtBowl, recursively: false) != nil {
@@ -1443,10 +1444,19 @@ enum StageBuilder {
     /// not shipped (`standClear` moves only those).
     static let builtBowl = "brazier_bowl"
 
+    /// The battle's braziers read this on every frame of their flicker, so
+    /// an ultimate's spotlight (Docs/FEEL.md W2.9, `SpotlightRig`) takes
+    /// their fire down with the set's other lights rather than having the
+    /// flicker write its own level straight back over the dim. One for the
+    /// fight: a battle is the only stage built at a time, and every build
+    /// puts it back to 1.
+    static let battleSetDimmer = SetLightDimmer()
+
     /// A brazier prop (or a stone bowl) with a flame and a flickering light.
     /// `glow`: the fire's light at rest, 300 as it was built; the battle
-    /// passes `battleBrazierGlow`.
-    static func brazier(asset: String, at position: SCNVector3, flame: UIColor, glow: CGFloat = 300) -> SCNNode {
+    /// passes `battleBrazierGlow`, and its `battleSetDimmer` as `dimmer`.
+    static func brazier(asset: String, at position: SCNVector3, flame: UIColor, glow: CGFloat = 300,
+                        dimmer: SetLightDimmer? = nil) -> SCNNode {
         let height = propHeights[asset] ?? 1.4
         let node = prop(Placement(asset: asset, position: position, standIn: .none))
         if node.childNodes.isEmpty {
@@ -1479,7 +1489,8 @@ enum StageBuilder {
             let t = Float(elapsed)
             let quick: Float = rest * 0.233 * sin(t * 11.3)
             let slow: Float = rest * 0.133 * sin(t * 4.7 + 1.3)
-            let level: Float = rest + quick + slow
+            let dim: Float = Float(dimmer?.level ?? 1)
+            let level: Float = (rest + quick + slow) * dim
             node.light?.intensity = CGFloat(level)
         }
         fire.runAction(.repeatForever(flicker))

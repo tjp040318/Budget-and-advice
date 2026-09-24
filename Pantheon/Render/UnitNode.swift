@@ -57,6 +57,36 @@ final class UnitNode: SCNNode {
     /// boss whose paint is not a picture this can read.
     let paintAlbedo: Double?
 
+    // MARK: Leaving the field (Docs/FEEL.md W2.8)
+
+    /// Told once, on the main thread, when this unit's death has played
+    /// out — its death clip ended AND it is marked defeated, in whichever
+    /// order those came (the final blow starts the fall before the engine's
+    /// `.defeated` is presented) — so the battle can take the body off the
+    /// field. Nil on the island and the figure stages, where nobody falls;
+    /// while it is nil a death ends as it always did, the body left at 0.6.
+    var onFallen: ((UnitNode) -> Void)?
+    /// The death clip has run its length.
+    private var deathPlayedOut = false
+    /// `onFallen` has been told for this death.
+    private var fallReported = false
+    /// Which life this is: a revive begins the next one, so the ending of a
+    /// death clip still in flight from the last life (its clock had fired
+    /// and its hop to the main thread was queued when a skip's `sync`
+    /// revived the unit) cannot tell THIS life its death has played out,
+    /// which would dissolve the body at the next death's first frame.
+    private var lifeSerial = 0
+    /// The body has been dissolved or sunk, so a revive brings it back.
+    private(set) var hasLeftTheField = false
+    /// The glyph left on the mark (`leaveMark`), taken up by a revive.
+    private var fallenMark: SCNNode?
+    /// The looping systems quieted as the body went (the awakened aura),
+    /// with the birth rate each had.
+    private var quietedSystems: [(system: SCNParticleSystem, rate: CGFloat)] = []
+    /// A sunk boss's place before it sank, and its lights' strengths.
+    private var sunkFrom: SCNVector3?
+    private var sunkLights: [(light: SCNLight, rest: CGFloat)] = []
+
     /// Nil until the first clip plays. It used to start as `.idleCombat`, so
     /// the `play(.idleCombat)` in `init` was refused as "already running" and
     /// every unit stood in its bind pose — the A-pose in the first battle
@@ -460,7 +490,17 @@ final class UnitNode: SCNNode {
         guard let shadow = groundShadow else { return }
         shadow.removeAllActions()
         shadow.scale = SCNVector3(1, 1, 1)
-        shadow.opacity = isDefeated ? 0.5 : 1
+        shadow.opacity = restingShadowOpacity
+    }
+
+    /// The shadow's strength while nothing moves the figure: whole under a
+    /// living unit, half under a body, none once the body has left the field
+    /// (W2.8). Every turn walks the fallen home too (`returnHome`), and it
+    /// brought a body's oval back at half under the empty mark for the rest
+    /// of the fight (review, 2026-09-24).
+    private var restingShadowOpacity: CGFloat {
+        if hasLeftTheField { return 0 }
+        return isDefeated ? 0.5 : 1
     }
 
     /// One material for every unit's shadow: black, its alpha a radial
@@ -589,8 +629,12 @@ final class UnitNode: SCNNode {
                 let played = animation.duration > 0
                     ? animation.duration / Double(max(0.05, animation.speed))
                     : beat(clip.fallbackDuration)
-                if clip == .death {
-                    modelContainer.runAction(.sequence([.wait(duration: played), .fadeOpacity(to: 0.6, duration: 0.6)]))
+                // Off the battle's field the body stays, faded to 0.6; on it,
+                // it leaves once the clip has played (`onFallen`, W2.8), and
+                // stands whole until it does.
+                if clip == .death, onFallen == nil {
+                    modelContainer.runAction(.sequence([.wait(duration: played), .fadeOpacity(to: 0.6, duration: 0.6)]),
+                                             forKey: "death_fade")
                 }
                 scheduleClipEnd(clip, after: played, completion: completion)
             } else {
@@ -925,7 +969,7 @@ final class UnitNode: SCNNode {
             // Scale and strength only: this runs on the render thread.
             if let self, let shadow = self.groundShadow {
                 shadow.scale = SCNVector3(1, 1, 1)
-                shadow.opacity = self.isDefeated ? 0.5 : 1
+                shadow.opacity = self.restingShadowOpacity
             }
             if self?.dashOwnsPitch == true { node.eulerAngles.x = 0 }
         }]), forKey: "hop")
@@ -1261,7 +1305,10 @@ final class UnitNode: SCNNode {
         guard !isDefeated else { return }
         // The final blow starts the fall on the blow itself
         // (`beginFinalFall`); it is not played a second time.
-        if currentClip != .death { play(.death) }
+        if currentClip != .death {
+            let life = lifeSerial
+            play(.death) { [weak self] in self?.deathClipEnded(life: life) }
+        }
         isDefeated = true
         plate?.setDefeated(true)
         plate?.setMatchup(nil)
@@ -1270,6 +1317,8 @@ final class UnitNode: SCNNode {
         groundShadow?.runAction(.fadeOpacity(to: 0.5, duration: 0.8))
         discLit = false
         turnDisc.runAction(.fadeOpacity(to: 0, duration: 0.3), forKey: "turn")
+        // A fall that began on the final blow may have played out already.
+        reportFallen()
     }
 
     /// The final blow's fall (Docs/FEEL.md W1.7) begins on the blow itself,
@@ -1277,7 +1326,213 @@ final class UnitNode: SCNNode {
     /// the fall is what the slow motion slows.
     func beginFinalFall() {
         guard !isDefeated else { return }
-        play(.death)
+        let life = lifeSerial
+        play(.death) { [weak self] in self?.deathClipEnded(life: life) }
+    }
+
+    /// Main thread: the death clip has run its length (its counted clock, or
+    /// the procedural fall's action) — the death of `life`, which a revive
+    /// since has left behind.
+    private func deathClipEnded(life: Int) {
+        guard life == lifeSerial else { return }
+        deathPlayedOut = true
+        reportFallen()
+    }
+
+    /// `onFallen`, once a death is both played and marked.
+    private func reportFallen() {
+        guard isDefeated, deathPlayedOut, !fallReported else { return }
+        fallReported = true
+        onFallen?(self)
+    }
+
+    /// The body fades from the field (W2.8): the model to nothing over
+    /// `duration` — its aura quieted first, so the motes already up die out
+    /// on their own and no system is taken off a live node — and its ground
+    /// shadow with it. The node stays, hidden in plain sight, with its plate
+    /// and its mark: the engine may revive it.
+    func dissolveBody(over duration: TimeInterval) {
+        guard isDefeated, !hasLeftTheField else { return }
+        hasLeftTheField = true
+        quietAura()
+        let span: TimeInterval = max(0.01, duration)
+        let fade = SCNAction.fadeOpacity(to: 0, duration: span)
+        fade.timingMode = .easeIn
+        modelContainer.runAction(fade, forKey: "death_fade")
+        groundShadow?.removeAllActions()
+        groundShadow?.runAction(.fadeOpacity(to: 0, duration: span))
+    }
+
+    /// A boss's death (W2.8): it goes back under the rim it climbed over —
+    /// `Dissolve.bossDepth` of its height, gathering speed — fading in the
+    /// last part of the fall, its warm spot going out with it.
+    func sinkBelowRim(over duration: TimeInterval) {
+        guard isDefeated, !hasLeftTheField else { return }
+        hasLeftTheField = true
+        quietAura()
+        sunkFrom = position
+        let span: TimeInterval = max(0.01, duration)
+        let depth = CGFloat(spec.height * Dissolve.bossDepth)
+        let sink = SCNAction.moveBy(x: 0, y: -depth, z: 0, duration: span)
+        sink.timingMode = .easeIn
+        let fade = SCNAction.sequence([.wait(duration: span * 0.55), .fadeOut(duration: span * 0.45)])
+        runAction(.group([sink, fade]), forKey: "sink")
+        var lights: [(light: SCNLight, rest: CGFloat)] = []
+        enumerateHierarchy { child, _ in
+            if let light = child.light { lights.append((light: light, rest: light.intensity)) }
+        }
+        sunkLights = lights
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = span
+        for entry in lights { entry.light.intensity = 0 }
+        SCNTransaction.commit()
+    }
+
+    /// A faint glyph of the unit's element left on its mark (W2.8): a ring
+    /// and the element's symbol, added over the stone at `opacity`, faded up
+    /// over `fade`. A child of the unit, so a tap on it reaches the unit — a
+    /// reviver's target is found where the body lay — and turned against
+    /// the unit's resting facing so it reads upright from the camera on
+    /// either side. A revive takes it up (`revive`).
+    func leaveMark(opacity: CGFloat, fade: TimeInterval) {
+        guard fallenMark == nil, !isBoss else { return }
+        let side = CGFloat(spec.height) * 0.62
+        let plane = SCNPlane(width: side, height: side)
+        plane.firstMaterial = UnitNode.markMaterial(for: element)
+        let glyph = SCNNode(geometry: plane)
+        glyph.eulerAngles = SCNVector3(-Float.pi / 2, 0, 0)
+        let mark = SCNNode()
+        mark.name = "fallen_mark"
+        mark.position = SCNVector3(0, 0.022, 0)
+        mark.eulerAngles = SCNVector3(0, -restingYaw, 0)
+        mark.addChildNode(glyph)
+        mark.enumerateHierarchy { node, _ in
+            node.castsShadow = false
+            // Over the ground shadow, under the turn disc.
+            node.renderingOrder = 4
+        }
+        mark.opacity = 0
+        addChildNode(mark)
+        mark.runAction(.fadeOpacity(to: opacity, duration: max(0.01, fade)))
+        fallenMark = mark
+    }
+
+    /// The way this unit faces at its mark: its home yaw once it has dashed
+    /// (`dash` records it), its yaw now otherwise.
+    private var restingYaw: Float {
+        homePosition != nil ? homeYaw : eulerAngles.y
+    }
+
+    /// Every looping system on the model (the awakened aura) stops being
+    /// born, remembering its rate. Never taken off: a system's instance
+    /// outliving its node was the crash of 2026-09-15.
+    private func quietAura() {
+        guard quietedSystems.isEmpty else { return }
+        for system in modelContainer.particleSystems ?? [] {
+            quietedSystems.append((system: system, rate: system.birthRate))
+            system.birthRate = 0
+        }
+    }
+
+    private func restoreAura() {
+        for entry in quietedSystems { entry.system.birthRate = entry.rate }
+        quietedSystems = []
+    }
+
+    /// Back from leaving the field, for a revive: the aura lit again, the
+    /// mark taken up, a sunk boss put back where it sank from with its lights.
+    private func comeBack() {
+        hasLeftTheField = false
+        restoreAura()
+        removeAction(forKey: "sink")
+        if let from = sunkFrom { position = from }
+        sunkFrom = nil
+        opacity = 1
+        for entry in sunkLights { entry.light.intensity = entry.rest }
+        sunkLights = []
+    }
+
+    /// The glyph a fallen unit leaves, per element: a double ring and the
+    /// element's symbol in grey on black, for an additive quad whose
+    /// multiply is the element's colour (`markMaterial`).
+    private static var markImages: [String: UIImage] = [:]
+
+    private static func markImage(for element: Element) -> UIImage {
+        if let cached = markImages[element.rawValue] { return cached }
+        let side: CGFloat = 256
+        let format = UIGraphicsImageRendererFormat.default()
+        format.scale = 1
+        format.opaque = true
+        let image = UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { context in
+            let cg = context.cgContext
+            cg.setFillColor(UIColor.black.cgColor)
+            cg.fill(CGRect(x: 0, y: 0, width: side, height: side))
+            cg.setStrokeColor(UIColor(white: 0.6, alpha: 1).cgColor)
+            cg.setLineWidth(6)
+            cg.strokeEllipse(in: CGRect(x: 14, y: 14, width: side - 28, height: side - 28))
+            cg.setStrokeColor(UIColor(white: 0.35, alpha: 1).cgColor)
+            cg.setLineWidth(2)
+            cg.strokeEllipse(in: CGRect(x: 32, y: 32, width: side - 64, height: side - 64))
+            let configuration = UIImage.SymbolConfiguration(pointSize: 92, weight: .semibold)
+            if let symbol = UIImage(systemName: element.glyph, withConfiguration: configuration)?
+                .withTintColor(UIColor(white: 0.9, alpha: 1), renderingMode: .alwaysOriginal) {
+                let size = symbol.size
+                let rect = CGRect(x: (side - size.width) / 2, y: (side - size.height) / 2,
+                                  width: size.width, height: size.height)
+                symbol.draw(in: rect)
+            }
+        }
+        markImages[element.rawValue] = image
+        return image
+    }
+
+    private static func markMaterial(for element: Element) -> SCNMaterial {
+        let material = SCNMaterial()
+        material.lightingModel = .constant
+        material.diffuse.contents = markImage(for: element)
+        material.diffuse.mipFilter = .linear
+        material.multiply.contents = (UIColor(hex: element.accentHex) ?? .white).mixed(with: .white, amount: 0.15)
+        material.blendMode = .add
+        // Adds light and writes no alpha (`StageBuilder.runeRing`).
+        material.colorBufferWriteMask = [.red, .green, .blue]
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
+        material.isDoubleSided = true
+        return material
+    }
+
+    // MARK: - Walking on (Docs/FEEL.md W2.10)
+
+    /// Whether this unit's rig shipped a walk (Meshy's Casual Walk, preset
+    /// 30; the families rigged before 2026-09-17 have none). The briefing's
+    /// warm pass has parsed it for every wave; a fight started without one
+    /// parses it here, once.
+    var hasWalkClip: Bool {
+        ModelLibrary.shared.animation(.walk, for: clipAsset) != nil
+    }
+
+    /// A wave's arrival walks onto its mark: its walk clip at the fight's
+    /// pace, the node carried at the stride the clip was made for
+    /// (`WalkOn.speed`, the caller's `duration`), faded up as it comes out
+    /// of the far set, and the combat idle once it stands there. Called
+    /// once the unit is in the scene: a clip attached before that never
+    /// starts (the Hall of Ka's Zeus, 2026-09-17).
+    func walkOn(to mark: SCNVector3, over duration: TimeInterval, fadeIn: TimeInterval) {
+        play(.walk)
+        let move = SCNAction.move(to: mark, duration: max(0.01, duration))
+        move.timingMode = .linear
+        // SceneKit runs the block on its render thread: it only hops.
+        let arrive = SCNAction.run { [weak self] _ in
+            DispatchQueue.main.async { self?.settleFromWalk() }
+        }
+        runAction(.group([.sequence([move, arrive]), .fadeIn(duration: max(0.01, fadeIn))]), forKey: "walk_on")
+    }
+
+    /// On its mark: the walk gives way to the combat idle, unless something
+    /// has already taken the figure over.
+    private func settleFromWalk() {
+        guard !isDefeated, currentClip == .walk else { return }
+        play(.idleCombat)
     }
 
     /// Whether a status of this kind is on the unit now (a resisted status
@@ -1330,6 +1585,16 @@ final class UnitNode: SCNNode {
 
     func revive(healthFraction: Double) {
         isDefeated = false
+        // A new life: its next death is told again, and whatever the last
+        // one left on the field is taken back (W2.8) — the aura, the glyph
+        // on its mark, a sunk boss's place and light.
+        lifeSerial += 1
+        deathPlayedOut = false
+        fallReported = false
+        let wasGone = hasLeftTheField
+        if wasGone { comeBack() }
+        fallenMark?.removeFromParentNode()
+        fallenMark = nil
         modelContainer.removeAllActions()
         modelContainer.removeAnimation(forKey: AnimationClip.death.rawValue)
         modelContainer.eulerAngles = SCNVector3Zero
@@ -1339,9 +1604,20 @@ final class UnitNode: SCNNode {
         // sees.
         modelContainer.position = containerRest
         modelContainer.opacity = 1
+        // A body that had left the field comes back out of the air rather
+        // than popping in whole.
+        if wasGone {
+            modelContainer.opacity = 0
+            modelContainer.runAction(.fadeIn(duration: beat(0.35)))
+        }
         plate?.setDefeated(false)
         healthBarRoot.runAction(.fadeIn(duration: 0.3))
         settleGroundShadow()
+        // Its shadow comes back with it, not ahead of it.
+        if wasGone, let shadow = groundShadow {
+            shadow.opacity = 0
+            shadow.runAction(.fadeOpacity(to: 1, duration: beat(0.35)))
+        }
         setHealth(fraction: healthFraction, animated: false)
         play(restingIdle)
     }

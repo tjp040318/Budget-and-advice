@@ -356,7 +356,13 @@ struct SummonView: View {
                         pityChip
                     }
                 }
-                mileageChip
+                HStack(spacing: 6) {
+                    // Quick summons (Docs/FEEL.md W2.23): a 3★ plays as a
+                    // half-second flash; a per-device choice, beside the
+                    // readings of the scroll it spends.
+                    SummonQuickToggle()
+                    mileageChip
+                }
             }
         }
     }
@@ -659,7 +665,10 @@ struct SummonView: View {
         let results = store.summon(banner: selectedBanner, count: count)
         guard !results.isEmpty else { return }
         warmFirstFigure(results)
-        AudioLibrary.shared.play(.summonCharge)
+        // The scroll catching light over the ring (Docs/FEEL.md W2.7): a
+        // shimmer and a breath of flame, short, so the reveal's own charge
+        // is the one that climbs.
+        AudioLibrary.shared.play(.summonIgnite, volume: 0.9)
         Juice.haptic(.medium)
         withAnimation(.easeIn(duration: 0.2)) { isCharging = true }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {

@@ -261,6 +261,27 @@ enum Juice {
         scene.isPaused = false
     }
 
+    // MARK: - A beat that holds the world (Docs/FEEL.md W2.1)
+
+    /// Pauses the scene for a beat longer than any hit's — an ultimate's
+    /// splash, a CI frame's hold — and returns the hold's token. It takes
+    /// the pause over from a freeze in flight, whose release then steps
+    /// aside, so only `releaseWorld` with this token (or `release`) lets go.
+    static func holdWorld(_ scene: SCNScene) -> Int {
+        pauseGeneration += 1
+        stopTremor()
+        scene.isPaused = true
+        return pauseGeneration
+    }
+
+    /// Lets a hold go, unless something newer has taken the pause over (a
+    /// freeze after it, a skip's `release`).
+    static func releaseWorld(_ scene: SCNScene, hold: Int) {
+        guard hold == pauseGeneration else { return }
+        pauseGeneration += 1
+        scene.isPaused = false
+    }
+
     // MARK: - The tremble inside the freeze (W1.3)
 
     /// The tremble's rate: about two frames a swing at 60 Hz, the rate a
