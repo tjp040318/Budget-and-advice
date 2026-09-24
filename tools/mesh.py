@@ -304,6 +304,21 @@ def run_family(name, args):
         import weapon_pass
         print(f"\n  weapon pass: {out_name}")
         weapon_pass.process(out_name, in_place=True)
+    # A hand stitched to a thigh (or a leg's skin to a hand) is cut apart
+    # (weapon_pass --welds, 2026-09-24), then a garment torn between the hip
+    # and the hand is re-weighted by the cloth optimiser (tools/cloth_opt.py)
+    # — each for the families judged on their boards, in this order, since
+    # each reads the weights the one before it wrote.
+    if only is None and not args.no_weapon:
+        import weapon_pass
+        if out_name.lower() in weapon_pass.WELD_FAMILIES:
+            print(f"\n  weld pass: {out_name}")
+            weapon_pass.process_welds(out_name, in_place=True)
+    if only is None and not args.no_cloth:
+        import cloth_opt
+        if out_name.lower() in cloth_opt.CLOTH_FAMILIES:
+            print(f"\n  cloth optimiser: {out_name}")
+            cloth_opt.process(out_name, in_place=True)
 
     total = sum(p.stat().st_size for p in BUNDLE_DIR.glob(f"{out_name}*.usdz"))
     print(f"\n  {out_name}: {total / 1048576:.1f} MB in the bundle folder")
@@ -341,6 +356,7 @@ def main():
     ap.add_argument("--no-cape", action="store_true", help="skip the cape re-bind (character.reweight_cape)")
     ap.add_argument("--no-skirt", action="store_true", help="skip the skirt re-bind (character.reweight_skirt)")
     ap.add_argument("--no-weapon", action="store_true", help="skip the weapon pass (tools/weapon_pass.py) on a WEAPON_FAMILIES name")
+    ap.add_argument("--no-cloth", action="store_true", help="skip the cloth optimiser (tools/cloth_opt.py) on a CLOTH_FAMILIES name")
     ap.add_argument("--no-robe", action="store_true", help="skip the robe ring (character.reweight_robe)")
     ap.add_argument("--maps-from", help="a textured stage file (.glb/.usdz) to take the metallic-roughness and normal maps from; "
                                         "default: <name>_image or <name>_refine beside the source")

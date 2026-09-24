@@ -1411,7 +1411,7 @@ def reweight_cape(char, back=0.03, floor=0.16, min_share=0.04, rings=4):
 # bones through the sheet. Three (Anubis, Bes, Nezha) change nothing a
 # frame shows, so nothing is risked on them. mesh.py runs the pass on
 # these names alone; a new family is judged on its board and added here.
-SKIRT_FAMILIES = ("anhur", "atalanta", "sekhmet_awakened")
+SKIRT_FAMILIES = ("anhur", "atalanta", "sekhmet_awakened", "skadi")   # skadi: her coat panel, 2026-09-24 (clip_fix)
 
 # The weapon pass's judged families (tools/weapon_pass.py, 2026-09-23): a
 # held thing the rigger bound partly to the thigh — because the rigger's own
@@ -1430,7 +1430,12 @@ SKIRT_FAMILIES = ("anhur", "atalanta", "sekhmet_awakened")
 # board and added here.
 WEAPON_FAMILIES = ("ra_awakened", "horus_awakened", "ares_awakened", "freya_awakened", "zeus_awakened",
                    "isis_awakened", "siren", "thor", "taweret", "gladiator", "vestal", "sekhmet", "serqet",
-                   "ptah", "einherjar", "athena", "satyr", "cobra_priestess", "cyclops")
+                   "ptah", "einherjar", "athena", "satyr", "cobra_priestess", "cyclops",
+                   # round 2 (2026-09-24), each judged on its board: the jar, the crook, the goblet, the
+                   # drum and knife, the fist, the whip, the bowstring, the scroll, the khopesh, the
+                   # caduceus (left hand only, weapon_pass.ONLY_HANDS) and the axe (the crease cut)
+                   "nymph", "osiris", "dionysus", "bes", "nezha", "bellona", "medjay", "thoth", "anhur",
+                   "mercury", "minotaur")
 
 
 def cut_seam(char, moved, ji_before, jw_before, against=None):
