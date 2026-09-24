@@ -842,7 +842,7 @@ final class BattleSceneController: NSObject {
             if casterNode.spec.melee, animation != .castRelease, !casterNode.isBoss {
                 let steel = UIColor(hex: "#D9E4F2") ?? .white
                 casterNode.swingTrail(tint: animation == .ultimate ? elementTint : steel,
-                                      duration: clipLength, after: beat(walkUp))
+                                      duration: clipLength, after: beat(walkUp), in: scene)
             }
             // The skill's name over its caster, followed through the leap
             // (it hung over the EMPTY mark a closing caster had left, run
@@ -1077,7 +1077,14 @@ final class BattleSceneController: NSObject {
             // The fallen wave leaves the field so the marks are free, and
             // the next one comes on from the back.
             for (id, node) in unitNodes where node.side == .opponent && node.isDefeated {
-                node.runAction(.sequence([.fadeOut(duration: 0.3), .removeFromParentNode()]))
+                // Faded as before, but taken off the stage through
+                // `VFXLibrary.retire`, never by a removal action: an awakened
+                // unit or a boss carries a LOOPING aura on its model, alive
+                // as it lies there, and a node removed on the render thread
+                // with a particle instance on it is the crash of 2026-09-15
+                // (the family run 239's arena crash belongs to).
+                node.runAction(.fadeOut(duration: 0.3))
+                VFXLibrary.retire(node, after: 0.3, reportsLive: false)
                 unitNodes[id] = nil
                 plates.removePlate(for: id)
             }

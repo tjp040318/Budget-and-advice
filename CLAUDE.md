@@ -907,7 +907,19 @@ environment can and cannot do. The short version:
   crash report the CI job now publishes read it). Every `spawn` host waits
   3 s over sub-second bursts; the ultimate's charge waits 1.5 wind-ups + 1
   s. And nothing swaps a texture or touches the scene graph inside an
-  `SCNAction` block — hygiene, not the cause.
+  `SCNAction` block — hygiene, not the cause. **Run 239 (2026-09-24)
+  crashed the same way on the render queue** (an element the pipeline
+  should have dropped, drawn from freed memory, a tenth of a second after
+  the "Hidden nodes should have been removed" assertion) as Set's
+  ultimate's swing trail came off the stage: `UnitNode.swingTrail` set a
+  geometry sixty times a second from a `customAction`. It is a main-thread
+  `Timer` now (it counts only while the scene runs, so a hit-stop holds
+  it), and every effect host leaves through `VFXLibrary.retire` /
+  `dismiss` — scene time first, then on the main thread its particle
+  systems taken off and hidden, then removed half a second later — with
+  a `[VFX] … still carried N particle system(s)` line if one was live and
+  stamped `[VFX] HH:mm:ss` retire lines under `-tour` to name the node on
+  a repeat. A projectile is dismissed the same way on arrival.
 - **A card's wear scales with the card (2026-09-14).** The owner, of the
   popup's 50-point enemy cards: "Do the elemental symbols need to be so
   big? We can't see the picture." `UnitCard.wear` is `size / 80` clamped

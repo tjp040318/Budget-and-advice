@@ -2393,15 +2393,22 @@ struct AltarStageView: UIViewRepresentable {
                     .wait(duration: 0.06 * Double(index)),
                     .fadeIn(duration: 0.12),
                     fly,
-                    .run { _ in VFXLibrary.spawn("buff", at: chest, in: scene, tint: tint, scale: 0.5) },
+                    // Action blocks run on SceneKit's render thread: the
+                    // burst is added from the main thread (run 239's rule
+                    // for anything that carries particles).
+                    .run { _ in
+                        DispatchQueue.main.async { VFXLibrary.spawn("buff", at: chest, in: scene, tint: tint, scale: 0.5) }
+                    },
                     .removeFromParentNode(),
                 ]))
             }
             figure.runAction(.sequence([
                 .wait(duration: 0.06 * Double(orbs) + 0.55),
                 .run { node in
-                    Self.flare(node)
-                    VFXLibrary.summonBeam(at: SCNVector3(0, 0, 0), in: scene, tint: tint)
+                    DispatchQueue.main.async {
+                        Self.flare(node)
+                        VFXLibrary.summonBeam(at: SCNVector3(0, 0, 0), in: scene, tint: tint)
+                    }
                 },
             ]))
         case .evolve, .awaken:

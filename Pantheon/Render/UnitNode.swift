@@ -1111,7 +1111,21 @@ final class UnitNode: SCNNode {
     /// blade is taken to run a metre out along the hand bone, which is where
     /// a blade is; a rig with no hand draws nothing. The ribbon lives in the
     /// stage, not in the figure, so the trail stays where the swing was.
-    func swingTrail(tint: UIColor, duration: TimeInterval, after delay: TimeInterval = 0) {
+    ///
+    /// Rebuilt on the MAIN thread, on a timer, as the flipbooks step their
+    /// frames (run 239). It was an `SCNAction.customAction` that set the
+    /// node's geometry sixty times a second on SceneKit's render thread, in
+    /// the middle of the render loop's update, with a fade and a removal
+    /// action after it: the one scene-graph change in a fight still made
+    /// there, against the rule the shockwave's crash left (2026-09-15). Run
+    /// 239's arena died on that thread a tenth of a second after the
+    /// pipeline asserted on an element it should have dropped, at the
+    /// moment Set's ultimate's trail — 2.4 s of sampling, the 0.12 s fade,
+    /// three hit-stops — was being taken off the stage. The timer keeps the
+    /// action's clock: it counts only while `scene` runs, so a hit-stop
+    /// holds the ribbon as it holds the clip, and it reads the hand exactly
+    /// as the action did.
+    func swingTrail(tint: UIColor, duration: TimeInterval, after delay: TimeInterval = 0, in scene: SCNScene) {
         guard let hand = weaponNode, let stage = parent else { return }
         let trail = SCNNode()
         trail.name = "swing_trail"
@@ -1128,19 +1142,41 @@ final class UnitNode: SCNNode {
         var samples: [(root: SCNVector3, tip: SCNVector3)] = []
         let keep = 12
         let reach: Float = min(1.1, spec.height * 0.5)
-        let sampler = SCNAction.customAction(duration: duration) { node, _ in
-            let root = hand.worldPosition
-            let tip = hand.convertPosition(SCNVector3(0, reach, 0), to: nil)
-            samples.append((root, tip))
-            if samples.count > keep { samples.removeFirst() }
-            node.geometry = UnitNode.ribbon(samples, material: material)
+        let fade: TimeInterval = 0.12
+        let owner = spec.assetName
+        // Seconds of scene time since the trail was asked for.
+        var clock: TimeInterval = 0
+        var last = CACurrentMediaTime()
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak trail, weak hand, weak scene] timer in
+            let now = CACurrentMediaTime()
+            let step = now - last
+            last = now
+            guard let trail, trail.parent != nil else { timer.invalidate(); return }
+            guard let hand, let scene else {
+                timer.invalidate()
+                trail.removeFromParentNode()
+                return
+            }
+            // A hit-stop freezes the clip and, as the action did, the ribbon.
+            guard !scene.isPaused else { return }
+            clock += step
+            guard clock >= delay else { return }
+            let into = clock - delay
+            if into < duration {
+                let root = hand.worldPosition
+                let tip = hand.convertPosition(SCNVector3(0, reach, 0), to: nil)
+                samples.append((root, tip))
+                if samples.count > keep { samples.removeFirst() }
+                trail.geometry = UnitNode.ribbon(samples, material: material)
+            } else if into < duration + fade {
+                trail.opacity = CGFloat(max(0, 1 - (into - duration) / fade))
+            } else {
+                timer.invalidate()
+                trail.removeFromParentNode()
+                VFXLibrary.trace("swing trail of \(owner) taken off")
+            }
         }
-        trail.runAction(.sequence([
-            .wait(duration: delay),
-            sampler,
-            .fadeOut(duration: 0.12),
-            .removeFromParentNode(),
-        ]))
+        RunLoop.main.add(timer, forMode: .common)
     }
 
     /// A triangle strip through the samples, oldest first, darkening toward

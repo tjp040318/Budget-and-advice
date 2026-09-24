@@ -94,10 +94,11 @@ enum VFXLibrary {
         spawn(identifier, at: centre, in: scene, tint: tint, scale: scale, reach: .row(span: span))
         for position in positions {
             let host = SCNNode()
+            host.name = "vfx_\(identifier)_sparks"
             host.position = position
             scene.rootNode.addChildNode(host)
             host.addParticleSystem(sparks(tint: tint, count: 36, speed: 5, scale: scale))
-            host.runAction(.sequence([.wait(duration: 3.0), .removeFromParentNode()]))
+            retire(host, after: 3.0)
         }
     }
 
@@ -118,6 +119,9 @@ enum VFXLibrary {
         reach: Reach = .single
     ) {
         let host = SCNNode()
+        // Named, so the console's retirement line (`retire`) says which
+        // effect a host belonged to.
+        host.name = "vfx_\(identifier)"
         host.position = position
         scene.rootNode.addChildNode(host)
 
@@ -201,7 +205,7 @@ enum VFXLibrary {
             host.addParticleSystem(authored)
             host.scale = SCNVector3(scale, scale, scale)
             lightUp(tint, radius: 1.4 * scale, duration: 0.2)
-            host.runAction(.sequence([.wait(duration: 3.0), .removeFromParentNode()]))
+            retire(host, after: 3.0)
             return
         }
 
@@ -408,8 +412,10 @@ enum VFXLibrary {
             host.addParticleSystem(sparks(tint: tint, count: sparkCount(40), speed: 4, scale: scale))
         }
 
-        // Particle hosts clean themselves up; nothing accumulates in the scene.
-        host.runAction(.sequence([.wait(duration: 3.0), .removeFromParentNode()]))
+        // Particle hosts clean themselves up; nothing accumulates in the
+        // scene. Through `retire`, never a `.removeFromParentNode()` action:
+        // see there for why.
+        retire(host, after: 3.0)
     }
 
     /// A painted sheet on a screen-facing particle at the host, `lift` metres
@@ -642,10 +648,21 @@ enum VFXLibrary {
     /// The gathering before an ultimate: motes of the element drawn up round
     /// the caster and a swelling flare at its chest for the wind-up, so the
     /// blow is announced the way the genre announces one. Removes itself.
+    ///
+    /// The host stands in the STAGE at the caster's chest, never under the
+    /// figure (run 239): it was the one particle host in a fight that hung
+    /// from a unit — beside the skinned model and its skeleton, under a node
+    /// a wave change fades out and removes with an action — and everything
+    /// else in this file already lives at the root. An ultimate is cast from
+    /// the caster's mark (only a basic or a heavy closes), the emitter is a
+    /// sphere and every direction here is world up, so the motes gather
+    /// exactly where and how they did.
     static func charge(on caster: SCNNode, tint: UIColor, duration: TimeInterval, scale: Float) {
+        guard let stage = caster.parent else { return }
         let host = SCNNode()
-        host.position = SCNVector3(0, 1.0 * scale, 0)
-        caster.addChildNode(host)
+        host.name = "vfx_charge"
+        host.position = caster.convertPosition(SCNVector3(0, 1.0 * scale, 0), to: stage)
+        stage.addChildNode(host)
         // The motes are born through the wind-up and are gone by the blow.
         let moteLife = CGFloat(max(0.3, duration * 0.45))
         let emitting = CGFloat(max(0.2, duration * 0.85))
@@ -670,8 +687,8 @@ enum VFXLibrary {
         // (SCNNodeRemoveDeadParticleInstance, the dungeon's crash report).
         // The first build removed this host at the wind-up + 1.5 s with motes
         // living to 2.1 wind-ups. Every host in this file waits for its
-        // systems to finish before it goes.
-        host.runAction(.sequence([.wait(duration: duration * 1.5 + 1.0), .removeFromParentNode()]))
+        // systems to finish before it goes, and goes through `retire`.
+        retire(host, after: duration * 1.5 + 1.0)
     }
 
     // MARK: - Authored systems
@@ -853,6 +870,7 @@ enum VFXLibrary {
         guard let image = sprite(name) else { return }
 
         let host = SCNNode()
+        host.name = "vfx_projectile_\(name)"
         host.position = start
         host.constraints = [SCNBillboardConstraint()]
         scene.rootNode.addChildNode(host)
@@ -898,7 +916,19 @@ enum VFXLibrary {
                 start.z + flight.z * t
             )
         }
-        host.runAction(.sequence([fly, .removeFromParentNode()]))
+        // Gone on arrival — the sprite and its trail together, as ever — but
+        // the trail is a LOOPING system with motes alive in it, and removing
+        // its node inside an action was the removal that tripped SceneKit's
+        // hidden-element assertion on 2026-09-15. So the arrival only hops to
+        // the main thread, where `dismiss` takes the trail off, hides the
+        // host and lets it leave the scene once the particle manager has let
+        // go of it.
+        host.runAction(.sequence([
+            fly,
+            SCNAction.run { node in
+                DispatchQueue.main.async { VFXLibrary.dismiss(node, reportsLive: false) }
+            },
+        ]))
     }
 
     // MARK: - Particle systems
@@ -1430,7 +1460,99 @@ enum VFXLibrary {
             .removeFromParentNode()
         ]))
 
+        host.name = "vfx_summon_beam"
         host.addParticleSystem(rising(tint: tint, count: 200, scale: 2.0))
-        host.runAction(.sequence([.wait(duration: 4), .removeFromParentNode()]))
+        retire(host, after: 4)
     }
+
+    // MARK: - Retiring a node that carries particles
+
+    /// Seconds of SCENE time a retired node stands hidden, its particle
+    /// systems taken off, before it leaves the scene: frames enough for
+    /// SceneKit's particle manager to let go of every instance it held on
+    /// the node before the node can be freed.
+    private static let retireSettle: TimeInterval = 0.5
+
+    /// The one way a node that carries — or carried — a particle system
+    /// leaves the scene: `delay` seconds of SCENE time from now (a hit-stop
+    /// pauses the wait as it pauses the particles), then on the MAIN thread
+    /// its systems are taken off and it is hidden, and `retireSettle`
+    /// seconds of scene time later, on the main thread again, it goes.
+    ///
+    /// Run 239's arena died 3.1 s into Set's Red Land Blaze on SceneKit's
+    /// render queue, drawing a particle system through a freed pointer
+    /// (`C3DParticleSystemInstanceDraw` → `_executeDrawCommand` →
+    /// `C3DSkinnerGetEffectiveCalculationMode`, EXC_BAD_ACCESS), a tenth of
+    /// a second after the pipeline asserted on an element it should already
+    /// have dropped ("Hidden nodes should have been removed from the
+    /// pipeline already", the one such line in the whole tour's log) — the
+    /// signature of 2026-09-15's two crashes. No host here was due to leave
+    /// at that moment (the ultimate's swing trail was, and moving its
+    /// geometry swaps off the render thread is the change most likely to
+    /// answer the crash: `UnitNode.swingTrail`), but every one of them
+    /// left by a `.removeFromParentNode()` ACTION, on the render thread in
+    /// the middle of its update, with whatever the particle manager still
+    /// kept for it, and a projectile's host went that way with its LOOPING
+    /// trail alive. Now nothing that carries particles is removed there: the
+    /// systems come off first, through a main-thread transaction the
+    /// pipeline applies under its own lock, and the node itself only once
+    /// the manager has had half a second of frames to drop them.
+    /// `reportsLive` prints a line naming the node when it still carried a
+    /// system at its time — a burst outliving its host's wait, the mistake
+    /// of 2026-09-15 — and is off for the hosts whose looping systems are
+    /// expected to be alive (a projectile's trail, a fallen unit's aura).
+    static func retire(_ node: SCNNode, after delay: TimeInterval, reportsLive: Bool = true) {
+        node.runAction(.sequence([
+            .wait(duration: max(0, delay)),
+            // SceneKit runs this block on its render thread: it only hops.
+            SCNAction.run { target in
+                DispatchQueue.main.async { VFXLibrary.dismiss(target, reportsLive: reportsLive) }
+            },
+        ]), forKey: retireKey)
+    }
+
+    private static let retireKey = "vfx_retire"
+
+    /// On the main thread: every particle system in the node's subtree off,
+    /// the node hidden, and its removal (on the main thread as well) queued
+    /// `retireSettle` seconds of scene time on. A node already out of the
+    /// scene (a battle torn down) is let go as it is.
+    static func dismiss(_ node: SCNNode, reportsLive: Bool) {
+        guard node.parent != nil else { return }
+        var live = 0
+        node.enumerateHierarchy { child, _ in
+            guard let systems = child.particleSystems, !systems.isEmpty else { return }
+            live += systems.count
+            child.removeAllParticleSystems()
+        }
+        if live > 0, reportsLive {
+            let line = "[VFX] \(node.name ?? "an unnamed host") still carried \(live) particle system(s) when it was retired"
+            print(line)
+            DiagnosticsLog.shared.record(line)
+        }
+        trace("\(node.name ?? "node") retired, \(live) system(s) taken off")
+        node.isHidden = true
+        node.runAction(.sequence([
+            .wait(duration: retireSettle),
+            SCNAction.run { target in
+                DispatchQueue.main.async { target.removeFromParentNode() }
+            },
+        ]), forKey: retireKey)
+    }
+
+    /// Under the CI tour only: one stamped line per effect node leaving the
+    /// stage, so a console that ends in a render-thread crash says which
+    /// node went last and when, to set beside the system log's stamp.
+    static func trace(_ message: String) {
+        guard tracing else { return }
+        print("[VFX] \(traceClock.string(from: Date())) \(message)")
+    }
+
+    private static let tracing = ProcessInfo.processInfo.arguments.contains("-tour")
+
+    private static let traceClock: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "HH:mm:ss.SSS"
+        return formatter
+    }()
 }

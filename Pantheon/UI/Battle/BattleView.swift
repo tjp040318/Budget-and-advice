@@ -1852,7 +1852,11 @@ struct RewardChestView: UIViewRepresentable {
             sparkHost.position = SCNVector3(0, 0.55, 0)
             sparkHost.addParticleSystem(sparks)
             chest.addChildNode(sparkHost)
-            sparkHost.runAction(.sequence([.wait(duration: 2.5), .removeFromParentNode()]))
+            // Through `VFXLibrary.retire`, as every node that carries a
+            // particle system leaves a scene: on the main thread, never a
+            // removal action on the render thread.
+            sparkHost.name = "vfx_chest_sparks"
+            VFXLibrary.retire(sparkHost, after: 2.5)
 
             // And the gold the box throws on its own lid and rim: a small
             // lamp in its mouth, reaching a metre and a half.
