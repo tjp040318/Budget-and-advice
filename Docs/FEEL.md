@@ -531,11 +531,15 @@ target is a `WeakTickTarget` holding only the step, because swiftcheck's
 `Juice.release` (every skip, forfeit and new run). The impact frame is
 `CameraDirector.impactFrame()`: saturation 0.25, contrast +0.35 and exposure
 +0.3 on the realm's grade, which the director reads when it is made and puts
-back exactly — once the renderer has DRAWN the punch three times, counted on
-its own thread (`BattleSceneController.impactFrames`, `frameDrawn`), since a
-restore queued on the main thread waited out every stall behind it and run
-245 photographed the arena held grey under THUNDERCLAP; never under Reduce
-Motion or over a draining field — with the victim burnt white for two frames
+back exactly. Both halves run on the renderer's thread, in
+`renderer(_:updateAtTime:)` where SceneKit applies a change directly, two
+DRAWN frames apart (`BattleSceneController.impactFrames`, counted in
+`frameDrawn`); the main thread only queues them. A restore queued on the main
+thread waited out every stall behind it, and run 245 photographed the arena
+held grey under THUNDERCLAP; a review then caught that a restore written on
+the render thread could overtake a punch still waiting in the main thread's
+transaction. Never under Reduce Motion or over a draining field — with the
+victim burnt white for two frames
 (`UnitNode.flashHit(strength: 1.4)`). A kill adds sixteen speed lines and a
 core in the striker's colour for about a quarter of a second, drawn in the
 plate overlay's SpriteKit burst layer rather than a SwiftUI `Canvas`, because

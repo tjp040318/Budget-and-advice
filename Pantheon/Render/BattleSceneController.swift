@@ -270,6 +270,7 @@ final class BattleSceneController: NSObject {
         // the team after a win — is built anew below with the realm's grade;
         // the plates, their EXP bars and every float go with the old units.
         endSlowMotion()
+        cancelImpact()
         Juice.release(scene)
         retirePreviousStage()
         ledge = nil
@@ -1392,8 +1393,8 @@ final class BattleSceneController: NSObject {
                 floatTotal(total, on: node)
             }
             if isGlancing { AudioLibrary.shared.play(.dodge, volume: 0.5) }
-            if punches, let restore = director?.impactFrame() {
-                restoreAfterDrawn(frames: Self.impactFrames, restore)
+            if punches, let grade = director?.impactFrame() {
+                queueImpact(grade)
             }
             if punches {
                 // A kill's speed lines, in the striker's colour.
@@ -1963,54 +1964,78 @@ final class BattleSceneController: NSObject {
     /// Frames still to draw before `onStageShown`; nil when not waiting.
     private var framesToShow: Int?
 
-    /// The impact frame's grade (Docs/FEEL.md W1.3) comes back once the
-    /// renderer has DRAWN it `impactFrames` times, counted here on the
-    /// renderer's thread under the same lock. The restore used to be queued
-    /// on the main thread two sixtieths of a second on, and it waited out
-    /// every stall behind it: run 245's 8-b photographed the arena bleached
-    /// grey under THUNDERCLAP, the punch held for as long as the main thread
-    /// was busy after the blow. Three, because the first frame drawn after
-    /// the punch may have begun before it.
-    static let impactFrames = 3
-    private var impactFramesLeft = 0
+    /// The impact frame (Docs/FEEL.md W1.3) is put on the camera and taken
+    /// off it on the renderer's thread, in `renderUpdate` (the coordinator's
+    /// `renderer(_:updateAtTime:)`, where SceneKit applies a change
+    /// directly), `impactFrames` drawn frames apart, counted in `frameDrawn`
+    /// under the veil's lock. The main thread only queues the two changes
+    /// (`CameraDirector.impactFrame`): run 245's 8-b photographed the arena
+    /// held grey under THUNDERCLAP while a restore queued on the main queue
+    /// waited out a stall, and a restore written on the render thread could
+    /// land before a punch still waiting in the main thread's transaction.
+    static let impactFrames = 2
+    private var impactPunch: (() -> Void)?
     private var impactRestore: (() -> Void)?
+    private var impactFramesLeft = 0
+    private var impactRestoreDue = false
 
-    /// Main thread: `restore` runs on the renderer's thread after the next
-    /// `frames` frames have been drawn. A later punch replaces an earlier
-    /// one's count and restore.
-    private func restoreAfterDrawn(frames: Int, _ restore: @escaping () -> Void) {
+    /// Main thread: the next frame the renderer prepares wears `punch`, and
+    /// `restore` follows `impactFrames` drawn frames later. A later impact
+    /// replaces an earlier one's pair; the camera's rest grade is the same.
+    private func queueImpact(_ grade: (punch: () -> Void, restore: () -> Void)) {
         firstFramesLock.lock()
-        impactFramesLeft = frames
-        impactRestore = restore
+        impactPunch = grade.punch
+        impactRestore = grade.restore
+        impactFramesLeft = 0
+        impactRestoreDue = false
         firstFramesLock.unlock()
     }
 
-    /// Main thread: a pending impact restore is dropped (the field's colour
-    /// is draining, and the drain puts the grade back itself).
-    private func cancelImpactRestore() {
+    /// Main thread: a queued or pending impact is dropped — the field's
+    /// colour is draining (the drain puts the grade back itself), or a new
+    /// run builds a new camera.
+    private func cancelImpact() {
         firstFramesLock.lock()
-        impactFramesLeft = 0
+        impactPunch = nil
         impactRestore = nil
+        impactFramesLeft = 0
+        impactRestoreDue = false
         firstFramesLock.unlock()
+    }
+
+    /// The renderer's thread, before each frame's animations
+    /// (`BattleSceneView.Coordinator`, `renderer(_:updateAtTime:)`): the
+    /// impact frame's punch goes on, or its restore once it is due.
+    func renderUpdate() {
+        firstFramesLock.lock()
+        let punch = impactPunch
+        impactPunch = nil
+        var restore: (() -> Void)?
+        if punch != nil {
+            impactFramesLeft = Self.impactFrames
+            impactRestoreDue = false
+        } else if impactRestoreDue {
+            impactRestoreDue = false
+            restore = impactRestore
+            impactRestore = nil
+        }
+        firstFramesLock.unlock()
+        punch?()
+        restore?()
     }
 
     /// The renderer's thread, after every frame (`BattleSceneView`).
     func frameDrawn() {
         firstFramesLock.lock()
-        var restore: (() -> Void)?
         if impactFramesLeft > 0 {
             impactFramesLeft -= 1
-            if impactFramesLeft == 0 {
-                restore = impactRestore
-                impactRestore = nil
-            }
+            if impactFramesLeft == 0 { impactRestoreDue = true }
         }
         let left = framesToShow
         if let left {
             framesToShow = left > 1 ? left - 1 : nil
         }
         firstFramesLock.unlock()
-        restore?()
         guard let left, left <= 1 else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self, let told = self.onStageShown else { return }
@@ -2784,7 +2809,7 @@ extension BattleSceneController {
     /// the duration (restored when a new run is built).
     func drainColour(duration: TimeInterval) {
         endSlowMotion()
-        cancelImpactRestore()
+        cancelImpact()
         director?.drainColour(to: Self.drainedSaturation, over: duration)
     }
 

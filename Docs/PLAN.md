@@ -8239,15 +8239,25 @@ the team (0.6% of the frame blown, from 82%), VICTORY over the live field,
 LEVEL 2, the chest and DEFEAT. Three things were wrong:
 
 1. **The arena bleached grey under THUNDERCLAP** (8-b, 11% of the frame
-   clipped). The impact frame punches the grade for two frames and queued
-   its restore on the main thread two sixtieths of a second later; a busy
-   main thread held it for as long as it was busy. The restore now runs on
-   the renderer's thread once the punch has been DRAWN three times
-   (`BattleSceneController.impactFrames`, counted in `frameDrawn` under the
-   veil's lock). Options weighed: an `SCNAction` wait (scene time, which the
-   hit-stop itself freezes) and a wall-clock timer off the main queue (still
-   blind to whether a frame was drawn); counting drawn frames is the only
-   one that means "two frames" whatever the phone is doing.
+   clipped). The impact frame punched the grade on the main thread and
+   queued its restore there two sixtieths of a second later; a busy main
+   thread held it for as long as it was busy. Both halves now run on the
+   renderer's thread in `renderer(_:updateAtTime:)`, where SceneKit applies a
+   change directly, two DRAWN frames apart (`BattleSceneController
+   .impactFrames`, counted in `frameDrawn` under the veil's lock); the main
+   thread only queues them. The first cut kept the punch on the main thread
+   and moved only the restore, and the review of the diff caught why that
+   is worse: the main thread's write waits in its implicit transaction until
+   the pass ends, so after a stall of three frames the restore would land
+   FIRST and the punch after it, grey for good. Options weighed: an
+   `SCNAction` wait (scene time, which the hit-stop itself freezes), a
+   wall-clock timer off the main queue (blind to whether a frame was drawn)
+   and `SCNTransaction.flush()` after the punch (it commits the main
+   thread's whole half-done pass); counting drawn frames on the one thread
+   that draws them is the only one that means "two frames" whatever the
+   phone is doing. The victim's white burn still ends on the main queue, so
+   a stall can hold a white figure a little past the grade — never a grey
+   world.
 2. **The victory beats were photographed one beat late** — -0 caught the
    reckoning, -triumph the level-up, -levelup the chest, -defeat the
    defeat's reckoning. The app's clock was right (the fanfare's sounds in
@@ -8339,9 +8349,9 @@ paragraph under each item.
   inside it (`Tremor` on a `FrameTicker`, a 120-Hz main-run-loop `Timer` —
   no `CADisplayLink`, which swiftcheck's list lacks); the impact frame
   (`CameraDirector.impactFrame`, saturation 0.25, contrast +0.35, exposure
-  +0.3, the grade restored exactly after the renderer has drawn it three
-  times — counted on the render thread since run 245, whose restore on the
-  main thread waited out a stall and held the arena grey) with a two-frame white
+  +0.3, put on and taken off on the render thread in `updateAtTime`, two
+  drawn frames apart — since run 245, whose restore on the main thread
+  waited out a stall and held the arena grey) with a two-frame white
   burn (`flashHit(strength: 1.4)`) and, on a kill, speed lines in the plate
   overlay; one per cast, the final blow's when the cast has one.
 - **W1.9 turn circle and banner:** a rune disc 0.6 × the height in the

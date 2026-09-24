@@ -781,23 +781,26 @@ final class ModelLibrary {
     /// checked), so decoded for display each map was 16 MB, three quarters of
     /// it copies; one channel is 4 MB at 2048. Read byte for byte through
     /// vImage in the file's own colour space — these are numbers, not
-    /// colours, and a conversion to a grey space would move the darks. Nil
-    /// when the file is not 8 bits a channel: the caller decodes it for
-    /// display instead.
+    /// colours, and a conversion to a grey space would move the darks — and
+    /// tagged LINEAR grey, as the USD tags them (`sourceColorSpace = "raw"`,
+    /// read through `outputs:r`): a gamma-tagged grey could be linearised on
+    /// its way to the GPU and read roughness 0.5 as about 0.22. Nil when the
+    /// file is not 8 bits a channel: the caller decodes it for display.
     private static func grayscaleMap(from data: Data) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateImageAtIndex(source, 0, nil),
               image.bitsPerComponent == 8,
               let space = image.colorSpace else { return nil }
+        let linear = CGColorSpace(name: CGColorSpace.linearGray) ?? CGColorSpaceCreateDeviceGray()
         let grayOut = vImage_CGImageFormat(bitsPerComponent: 8, bitsPerPixel: 8,
-                                           colorSpace: CGColorSpaceCreateDeviceGray(),
+                                           colorSpace: linear,
                                            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue))
         guard let grayOut else { return nil }
         if space.model == .monochrome {
             // Already one channel: decoded here, on the parsing thread.
             guard let grayIn = vImage_CGImageFormat(bitsPerComponent: 8, bitsPerPixel: 8, colorSpace: space,
                                                     bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue)),
-                  var plane = try? vImage_Buffer(cgImage: image, format: grayIn) else { return nil }
+                  let plane = try? vImage_Buffer(cgImage: image, format: grayIn) else { return nil }
             defer { plane.free() }
             guard let made = try? plane.createCGImage(format: grayOut) else { return nil }
             return UIImage(cgImage: made)

@@ -141,6 +141,13 @@ struct BattleSceneView: UIViewRepresentable {
             }
         }
 
+        /// Before the frame's animations, where SceneKit applies a change
+        /// directly: the impact frame's grade goes on or comes off the
+        /// camera (`BattleSceneController.renderUpdate`).
+        func renderer(_ renderer: SCNSceneRenderer, updateAtTime time: TimeInterval) {
+            controller?.renderUpdate()
+        }
+
         /// The clips have been applied for this frame: swing every cape on
         /// the field from the pose its figure now holds.
         func renderer(_ renderer: SCNSceneRenderer, didApplyAnimationsAtTime time: TimeInterval) {

@@ -1002,9 +1002,12 @@ final class UnitNode: SCNNode {
     ///
     /// `strength` over 1 is the IMPACT FRAME's burn (Docs/FEEL.md W1.3, a
     /// crit or a kill): the figure goes fully white, its emission `strength`
-    /// times as bright, for `burnHold` — the two frames the camera's grade is
-    /// punched for (`CameraDirector.impactFrame`) — and then falls to the
-    /// ordinary flash and fades as that does.
+    /// times as bright, for `burnHold` on the main queue, and then falls to
+    /// the ordinary flash and fades as that does. The camera's grade is
+    /// punched for two DRAWN frames on the renderer's thread
+    /// (`BattleSceneController.impactFrames`), so a main thread stalled after
+    /// the blow can hold the burn a little past the grade: a white figure for
+    /// the length of a stall, never a grey world.
     ///
     /// The emission it puts back is the one the figure was BUILT with
     /// (`restEmission`), not whatever it holds when the flash lands: a

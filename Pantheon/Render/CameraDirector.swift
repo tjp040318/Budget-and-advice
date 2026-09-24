@@ -1051,30 +1051,43 @@ final class CameraDirector {
     static let impactContrast: CGFloat = 0.35
     static let impactExposure: CGFloat = 0.3
 
-    /// Main thread: the realm's grade punched, and handed back the restore
-    /// that puts it back exactly as `StageBuilder.grade(for:)` set it (read
-    /// when this director was made) — the caller runs it on the renderer's
-    /// thread once the punch has been drawn its frames
-    /// (`BattleSceneController.impactFrames`), so a busy main thread can
-    /// never hold the world grey. Set straight on the camera, not through an
-    /// action: it lands at the start of the hit's freeze, when every action
-    /// in the scene is paused and the view is still drawing. Never under
-    /// Reduce Motion, and not over a field whose colour is draining; nil
-    /// when nothing was punched.
-    func impactFrame() -> (() -> Void)? {
+    /// Main thread: the impact frame as two changes to the camera, the punch
+    /// and the restore that puts the grade back exactly as
+    /// `StageBuilder.grade(for:)` set it (read when this director was made).
+    /// The controller runs BOTH on the renderer's thread, in
+    /// `renderer(_:updateAtTime:)`, where SceneKit applies a change directly,
+    /// and counts the drawn frames between them
+    /// (`BattleSceneController.impactFrames`). The punch used to be written
+    /// here, into the main thread's implicit transaction, and the restore
+    /// queued on the main queue two sixtieths of a second on: a busy main
+    /// thread held the world grey (run 245's 8-b), and a restore written on
+    /// the render thread could have landed before a punch still waiting for
+    /// its transaction to commit, and left it grey for good (review,
+    /// 2026-09-24). Not through an action: it lands at the start of the
+    /// hit's freeze, when every action in the scene is paused and the view
+    /// is still drawing. Never under Reduce Motion, and not over a field
+    /// whose colour is draining; nil when there is nothing to punch.
+    func impactFrame() -> (punch: () -> Void, restore: () -> Void)? {
         guard !MotionComfort.isReduced, !draining, let camera = cameraNode.camera else { return nil }
-        camera.saturation = Self.impactSaturation
-        camera.contrast = restContrast + Self.impactContrast
-        camera.exposureOffset = restExposure + Self.impactExposure
+        let punchSaturation: CGFloat = Self.impactSaturation
+        let punchContrast: CGFloat = restContrast + Self.impactContrast
+        let punchExposure: CGFloat = restExposure + Self.impactExposure
         let saturation = restSaturation
         let contrast = restContrast
         let exposure = restExposure
-        return { [weak camera] in
+        let punch: () -> Void = { [weak camera] in
+            guard let camera else { return }
+            camera.saturation = punchSaturation
+            camera.contrast = punchContrast
+            camera.exposureOffset = punchExposure
+        }
+        let restore: () -> Void = { [weak camera] in
             guard let camera else { return }
             camera.saturation = saturation
             camera.contrast = contrast
             camera.exposureOffset = exposure
         }
+        return (punch: punch, restore: restore)
     }
 
     /// The realm's grade, exactly.
