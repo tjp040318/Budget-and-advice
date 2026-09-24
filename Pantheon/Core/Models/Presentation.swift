@@ -107,7 +107,19 @@ enum BundleArt {
         lock.unlock()
         if absent { return nil }
         let started = Perf.begin()
-        var loaded = UIImage(named: name)
+        // A painting (a JPEG: every card, backdrop and map) is read from its
+        // file, so this cache is the only one that keeps it (2026-09-24).
+        // `UIImage(named:)` also files what it loads in the system's own
+        // image cache, which lets go only under memory pressure — never in
+        // the simulator, and on a phone not before the pressure has come:
+        // every card a summon showed stayed decoded there after this cache
+        // had let it go, beside run 243's climb of about 18 MB a reveal. The
+        // PNGs keep the old lookup, which picks a UI piece's @3x file.
+        var loaded: UIImage? = nil
+        if let painting = Bundle.main.url(forResource: name, withExtension: "jpg") {
+            loaded = UIImage(contentsOfFile: painting.path)
+        }
+        if loaded == nil { loaded = UIImage(named: name) }
         if loaded == nil, let url = url(name) {
             loaded = UIImage(contentsOfFile: url.path)
         }

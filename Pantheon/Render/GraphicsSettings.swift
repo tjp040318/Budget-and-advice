@@ -197,6 +197,46 @@ final class StageRenderGovernor: NSObject, SCNSceneRendererDelegate {
         self.stage = stage
         self.inner = inner
         super.init()
+        Self.adjustLive(stage, by: 1)
+    }
+
+    deinit {
+        Self.adjustLive(stage, by: -1)
+    }
+
+    // MARK: Live views (2026-09-24)
+    //
+    // A governor is its view's own associated object, so it lives exactly as
+    // long as the view: this counts the live battle, island and reveal
+    // views. Run 243's summon stress still climbed about 18 MB a reveal
+    // with every reveal's stage released ("[Mem] reveal stage released"),
+    // and a view SwiftUI let go of that something else kept would hold its
+    // render targets and its uploaded textures; `MemoryProbe` prints this
+    // on every line, so the next run says whether the views pile up.
+
+    private static let liveLock = NSLock()
+    private static var liveCounts: [String: Int] = [:]
+
+    private static func liveName(_ stage: RenderStage) -> String {
+        switch stage {
+        case .battle: return "battle"
+        case .island: return "island"
+        case .reveal: return "reveal"
+        }
+    }
+
+    private static func adjustLive(_ stage: RenderStage, by step: Int) {
+        liveLock.lock()
+        liveCounts[liveName(stage), default: 0] += step
+        liveLock.unlock()
+    }
+
+    /// "views battle 0, island 1, reveal 1".
+    static func liveViewSummary() -> String {
+        liveLock.lock()
+        defer { liveLock.unlock() }
+        let parts = [RenderStage.battle, .island, .reveal].map { "\(liveName($0)) \(liveCounts[liveName($0), default: 0])" }
+        return "views " + parts.joined(separator: ", ")
     }
 
     // MARK: - Forwarding

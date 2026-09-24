@@ -84,7 +84,7 @@ enum MemoryProbe {
     static func log(_ label: String) -> Reading {
         let reading = read()
         state.note(reading, label: label)
-        let line = "[Mem] \(label) footprint \(reading.footprintMB) MB, available \(reading.availableText) MB, peak \(state.peakMB) MB; \(ModelLibrary.shared.cacheSummary())"
+        let line = "[Mem] \(label) footprint \(reading.footprintMB) MB, available \(reading.availableText) MB, peak \(state.peakMB) MB; \(ModelLibrary.shared.cacheSummary()); \(StageRenderGovernor.liveViewSummary())"
         print(line)
         DiagnosticsLog.shared.record(line)
         return reading
